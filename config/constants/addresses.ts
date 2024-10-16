@@ -44,6 +44,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         token: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
         dataFeed: '0x3aAc6fd73fA4e16Ec683BD4aaF5Ec89bb2C0EdC2',
       },
+      dai: {
+        aggregator: '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9',
+        token: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+        dataFeed: '0xeDBA9943FC91983D1BF53d6F8Af346a5E162747D',
+      },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     // TODO: remove this data feed
