@@ -37,7 +37,7 @@ contract mBTC is mTBILL {
      */
     function initialize(address _accessControl) external override initializer {
         __Blacklistable_init(_accessControl);
-        __ERC20_init("mBTC", "mBTC");
+        __ERC20_init("Midas BTC Yield Token", "mBTC");
     }
 
     /**
