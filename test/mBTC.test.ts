@@ -23,7 +23,7 @@ describe('mBTC', function () {
   it('deployment', async () => {
     const { mBTC } = await loadFixture(defaultDeploy);
 
-    expect(await mBTC.name()).eq('mBTC');
+    expect(await mBTC.name()).eq('Midas BTC Yield Token');
     expect(await mBTC.symbol()).eq('mBTC');
 
     expect(await mBTC.paused()).eq(false);
@@ -400,32 +400,27 @@ describe('MBtcRedemptionVault', function () {
       );
     });
   });
-  describe.only('redeemInstant', () => {
+  describe('redeemInstant', () => {
     it('redeem 1 mBTC to WBTC when mBTC/BTC price is 1', async () => {
       const fixture = await loadFixture(defaultDeploy);
       const {
         otherCoins,
         owner,
-        mBtcDepositVault: depositVault,
         WBTCToBtcDataFeed,
         mBTC,
         mBtcRedemptionVault: redemptionVault,
       } = fixture;
-      console.log('1')
+
       await mintToken(mBTC, owner, 1);
-      console.log('2')
 
       await mintToken(otherCoins.wbtc, redemptionVault, 1.1);
-      console.log('3')
 
       await setMinAmountTest({ vault: redemptionVault, owner }, 0);
-      console.log('4')
 
       await approveBase18(owner, mBTC, redemptionVault, 1);
-      console.log('5')
 
       await addPaymentTokenTest(
-        { vault: depositVault, owner },
+        { vault: redemptionVault, owner },
         otherCoins.wbtc,
         WBTCToBtcDataFeed.address,
         0,
@@ -433,9 +428,9 @@ describe('MBtcRedemptionVault', function () {
       );
 
       await changeTokenAllowanceTest(
-        { vault: depositVault, owner },
+        { vault: redemptionVault, owner },
         otherCoins.wbtc.address,
-        parseUnits('1'),
+        parseUnits('1.1'),
       );
 
       await redeemInstantTest(
@@ -445,7 +440,7 @@ describe('MBtcRedemptionVault', function () {
           mTokenToUsdDataFeed: fixture.mBTCToBtcDataFeed,
           owner: fixture.owner,
         },
-        fixture.otherCoins.wbtc,
+        otherCoins.wbtc.address,
         1,
       );
     });
