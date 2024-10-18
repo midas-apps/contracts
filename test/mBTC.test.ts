@@ -7,6 +7,7 @@ import { blackList, acErrors, unBlackList } from './common/ac.helpers';
 import { defaultDeploy } from './common/fixtures';
 import { burn, mint, setMetadataTest } from './common/mTBILL.helpers';
 import {
+  MBtcCustomAggregatorFeed__factory,
   MBtcDepositVault__factory,
   MBtcRedemptionVault__factory,
 } from '../typechain-types';
@@ -444,5 +445,19 @@ describe('MBtcRedemptionVault', function () {
         1,
       );
     });
+  });
+});
+
+describe('MBtcCustomAggregatorFeed', () => {
+  it('check admin role', async () => {
+    const fixture = await loadFixture(defaultDeploy);
+
+    const tester = await new MBtcCustomAggregatorFeed__factory(
+      fixture.owner,
+    ).deploy();
+
+    expect(await tester.feedAdminRole()).eq(
+      await tester.M_BTC_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE(),
+    );
   });
 });
