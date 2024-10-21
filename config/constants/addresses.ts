@@ -80,6 +80,10 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
     mBTC: {
       token: '0x007115416AB6c266329a03B09a8aa39aC2eF7d9d',
+      customFeed: '0xA537EF0343e83761ED42B8E017a1e495c9a189Ee',
+      dataFeed: '0x9987BE0c1dc5Cd284a4D766f4B5feB4F3cb3E28e',
+      depositVault: '0x10cC8dbcA90Db7606013d8CD2E77eb024dF693bD',
+      redemptionVault: '0x30d9D1e76869516AEa980390494AaEd45C3EfC1a',
     },
     eUSD: {
       tokensReceiver: '0x9d13371c8DeA0361ac78B4c109ea3CB748427CF5',

@@ -13,7 +13,7 @@ export const M_BASIS_REDEMPTION_VAULT_CONTRACT_NAME = 'MBasisRedemptionVault';
 export const M_BASIS_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME =
   'MBasisRedemptionVaultWithSwapper';
 
-export const M_BTC_REDEMPTION_VAULT_CONTRACT_NAME = 'MBasisRedemptionVault';
+export const M_BTC_REDEMPTION_VAULT_CONTRACT_NAME = 'MBtcRedemptionVault';
 
 export const E_USD_REDEMPTION_VAULT_DEPLOY_TAG = 'EUsdRedemptionVault';
 export const E_USD_REDEMPTION_VAULT_CONTRACT_NAME = 'EUsdRedemptionVault';
