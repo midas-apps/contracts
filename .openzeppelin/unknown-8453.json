@@ -64,6 +64,11 @@
       "address": "0xF804a646C034749b5484bF7dfE875F6A4F969840",
       "txHash": "0x363882050e991c1212b38bafb0cb0c7d568e5f3fdcb117ed6be294c5141e81ce",
       "kind": "transparent"
+    },
+    {
+      "address": "0x6390b84321663d6fB1C911077d1CB97a7114dc56",
+      "txHash": "0x39a450536e470e18f30d05f75e96f6d6733f13461a2cea24077118726593ff76",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -812,7 +817,11 @@
           },
           "t_enum(RequestStatus)7309": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -1299,7 +1308,11 @@
           },
           "t_enum(RequestStatus)7384": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -2266,7 +2279,11 @@
           },
           "t_enum(RequestStatus)10382": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -2789,7 +2806,11 @@
           },
           "t_enum(RequestStatus)10382": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -2929,6 +2950,118 @@
               }
             ],
             "numberOfBytes": "128"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "f5b08af613206c57ba0b39c2e7e3761b52ba788690258a9f52f88d3b201552f3": {
+      "address": "0x27C0D44B02E1B732F37ba31C466a35053A7780B8",
+      "txHash": "0xadcb6ead7635730d81419aab632210b02c529458168272aa5f6cef2f0ebe5f83",
+      "layout": {
+        "solcVersion": "0.8.9",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "accessControl",
+            "offset": 2,
+            "slot": "0",
+            "type": "t_contract(MidasAccessControl)3369",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:24"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:29"
+          },
+          {
+            "label": "aggregator",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_contract(AggregatorV3Interface)45",
+            "contract": "DataFeed",
+            "src": "contracts/feeds/DataFeed.sol:22"
+          },
+          {
+            "label": "healthyDiff",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_uint256",
+            "contract": "DataFeed",
+            "src": "contracts/feeds/DataFeed.sol:27"
+          },
+          {
+            "label": "minExpectedAnswer",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_int256",
+            "contract": "DataFeed",
+            "src": "contracts/feeds/DataFeed.sol:32"
+          },
+          {
+            "label": "maxExpectedAnswer",
+            "offset": 0,
+            "slot": "54",
+            "type": "t_int256",
+            "contract": "DataFeed",
+            "src": "contracts/feeds/DataFeed.sol:37"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "55",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "DataFeed",
+            "src": "contracts/feeds/DataFeed.sol:42"
+          }
+        ],
+        "types": {
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(AggregatorV3Interface)45": {
+            "label": "contract AggregatorV3Interface",
+            "numberOfBytes": "20"
+          },
+          "t_contract(MidasAccessControl)3369": {
+            "label": "contract MidasAccessControl",
+            "numberOfBytes": "20"
+          },
+          "t_int256": {
+            "label": "int256",
+            "numberOfBytes": "32"
           },
           "t_uint256": {
             "label": "uint256",

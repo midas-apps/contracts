@@ -16,6 +16,11 @@ const configs: Record<number, DeployDataFeedConfig> = {
     minPrice: parseUnits('0.997', 8),
     maxPrice: parseUnits('1.003', 8),
   },
+  8453: {
+    healthyDiff: 24 * 60 * 60,
+    minPrice: parseUnits('0.997', 8),
+    maxPrice: parseUnits('1.003', 8),
+  },
 };
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
