@@ -52,6 +52,7 @@ import {
   RedemptionVaultWithBUIDLTest__factory,
   // eslint-disable-next-line camelcase
   MBasisRedemptionVaultWithSwapperTest__factory,
+  // eslint-disable-next-line camelcase
   MBTCTest__factory,
 } from '../../typechain-types';
 
@@ -1053,6 +1054,6 @@ export const defaultDeploy = async () => {
     mockedAggregatorMBTC,
     mBTCToBtcDataFeed,
     otherCoins,
-    WBTCToBtcDataFeed
+    WBTCToBtcDataFeed,
   };
 };

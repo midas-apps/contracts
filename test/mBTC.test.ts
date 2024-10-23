@@ -4,21 +4,25 @@ import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
 import { blackList, acErrors, unBlackList } from './common/ac.helpers';
-import { defaultDeploy } from './common/fixtures';
-import { burn, mint, setMetadataTest } from './common/mTBILL.helpers';
-import {
-  MBtcCustomAggregatorFeed__factory,
-  MBtcDepositVault__factory,
-  MBtcRedemptionVault__factory,
-} from '../typechain-types';
-import { depositInstantTest } from './common/deposit-vault.helpers';
 import { approveBase18, mintToken } from './common/common.helpers';
+import { depositInstantTest } from './common/deposit-vault.helpers';
+import { defaultDeploy } from './common/fixtures';
 import {
   addPaymentTokenTest,
   changeTokenAllowanceTest,
   setMinAmountTest,
 } from './common/manageable-vault.helpers';
+import { burn, mint, setMetadataTest } from './common/mTBILL.helpers';
 import { redeemInstantTest } from './common/redemption-vault.helpers';
+
+import {
+  // eslint-disable-next-line camelcase
+  MBtcCustomAggregatorFeed__factory,
+  // eslint-disable-next-line camelcase
+  MBtcDepositVault__factory,
+  // eslint-disable-next-line camelcase
+  MBtcRedemptionVault__factory,
+} from '../typechain-types';
 
 describe('mBTC', function () {
   it('deployment', async () => {
@@ -452,6 +456,7 @@ describe('MBtcCustomAggregatorFeed', () => {
   it('check admin role', async () => {
     const fixture = await loadFixture(defaultDeploy);
 
+    // eslint-disable-next-line camelcase
     const tester = await new MBtcCustomAggregatorFeed__factory(
       fixture.owner,
     ).deploy();

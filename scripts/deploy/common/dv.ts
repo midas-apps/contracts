@@ -6,7 +6,11 @@ import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
 } from '../../../helpers/utils';
-import { DepositVault, MBasisDepositVault, MBtcDepositVault } from '../../../typechain-types';
+import {
+  DepositVault,
+  MBasisDepositVault,
+  MBtcDepositVault,
+} from '../../../typechain-types';
 
 export type DeployDvConfig = {
   feeReceiver?: string;

@@ -9,10 +9,7 @@ import "./MBtcMidasAccessControlRoles.sol";
  * @notice Smart contract that handles mBTC redemption
  * @author RedDuck Software
  */
-contract MBtcRedemptionVault is
-    RedemptionVault,
-    MBtcMidasAccessControlRoles
-{
+contract MBtcRedemptionVault is RedemptionVault, MBtcMidasAccessControlRoles {
     /**
      * @dev leaving a storage gap for futures updates
      */

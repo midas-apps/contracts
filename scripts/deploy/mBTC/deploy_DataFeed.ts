@@ -49,11 +49,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     await deployment.deployTransaction.wait(5);
     console.log('Waited.');
   }
-  await logDeployProxy(
-    hre,
-    M_BTC_DATA_FEED_CONTRACT_NAME,
-    deployment.address,
-  );
+  await logDeployProxy(hre, M_BTC_DATA_FEED_CONTRACT_NAME, deployment.address);
   await tryEtherscanVerifyImplementation(hre, deployment.address);
 };
 

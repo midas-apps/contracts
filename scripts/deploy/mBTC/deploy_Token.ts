@@ -1,12 +1,13 @@
 import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
+
+import { M_BTC_CONTRACT_NAME } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
 } from '../../../helpers/utils';
-import { M_BTC_CONTRACT_NAME } from '../../../config';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const addresses = getCurrentAddresses(hre);
