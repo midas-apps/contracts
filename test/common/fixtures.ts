@@ -52,6 +52,8 @@ import {
   RedemptionVaultWithBUIDLTest__factory,
   // eslint-disable-next-line camelcase
   MBasisRedemptionVaultWithSwapperTest__factory,
+  // eslint-disable-next-line camelcase
+  MBTCTest__factory,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -96,11 +98,24 @@ export const defaultDeploy = async () => {
   await expect(eUSD.initialize(ethers.constants.AddressZero)).to.be.reverted;
   await eUSD.initialize(accessControl.address);
 
+  const mBTC = await new MBTCTest__factory(owner).deploy();
+  await expect(mBTC.initialize(ethers.constants.AddressZero)).to.be.reverted;
+  await mBTC.initialize(accessControl.address);
+
   await accessControl.grantRoleMult(
     [
       await mBASIS.M_BASIS_BURN_OPERATOR_ROLE(),
       await mBASIS.M_BASIS_MINT_OPERATOR_ROLE(),
       await mBASIS.M_BASIS_PAUSE_OPERATOR_ROLE(),
+    ],
+    [owner.address, owner.address, owner.address],
+  );
+
+  await accessControl.grantRoleMult(
+    [
+      await mBTC.M_BTC_BURN_OPERATOR_ROLE(),
+      await mBTC.M_BTC_MINT_OPERATOR_ROLE(),
+      await mBTC.M_BTC_PAUSE_OPERATOR_ROLE(),
     ],
     [owner.address, owner.address, owner.address],
   );
@@ -128,6 +143,15 @@ export const defaultDeploy = async () => {
   ).deploy();
   const mockedAggregatorMBASISDecimals =
     await mockedAggregatorMBASIS.decimals();
+  const mockedAggregatorMBTC = await new AggregatorV3Mock__factory(
+    owner,
+  ).deploy();
+  const mockedAggregatorMBTCDecimals = await mockedAggregatorMBTC.decimals();
+
+  const mockedAggregatorWBTC = await new AggregatorV3Mock__factory(
+    owner,
+  ).deploy();
+  const mockedAggregatorWBTCDecimals = await mockedAggregatorWBTC.decimals();
 
   await mockedAggregator.setRoundData(
     parseUnits('1.02', mockedAggregatorDecimals),
@@ -139,6 +163,14 @@ export const defaultDeploy = async () => {
 
   await mockedAggregatorMBASIS.setRoundData(
     parseUnits('3', mockedAggregatorMBASISDecimals),
+  );
+
+  await mockedAggregatorMBTC.setRoundData(
+    parseUnits('1.01', mockedAggregatorMBTCDecimals),
+  );
+
+  await mockedAggregatorWBTC.setRoundData(
+    parseUnits('1', mockedAggregatorWBTCDecimals),
   );
 
   const dataFeed = await new DataFeedTest__factory(owner).deploy();
@@ -166,6 +198,82 @@ export const defaultDeploy = async () => {
     3 * 24 * 3600,
     parseUnits('0.1', mockedAggregatorMBASISDecimals),
     parseUnits('10000', mockedAggregatorMBASISDecimals),
+  );
+
+  const mBTCToBtcDataFeed = await new DataFeedTest__factory(owner).deploy();
+  await mBTCToBtcDataFeed.initialize(
+    accessControl.address,
+    mockedAggregatorMBTC.address,
+    3 * 24 * 3600,
+    parseUnits('0.1', mockedAggregatorMBTCDecimals),
+    parseUnits('10000', mockedAggregatorMBTCDecimals),
+  );
+
+  const WBTCToBtcDataFeed = await new DataFeedTest__factory(owner).deploy();
+  await WBTCToBtcDataFeed.initialize(
+    accessControl.address,
+    mockedAggregatorWBTC.address,
+    3 * 24 * 3600,
+    parseUnits('0.1', mockedAggregatorWBTCDecimals),
+    parseUnits('10000', mockedAggregatorWBTCDecimals),
+  );
+
+  const mBtcDepositVault = await new DepositVaultTest__factory(owner).deploy();
+
+  await mBtcDepositVault.initialize(
+    accessControl.address,
+    {
+      mToken: mBTC.address,
+      mTokenDataFeed: mBTCToBtcDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    parseUnits('100'),
+    0,
+  );
+
+  const mBtcRedemptionVault = await new RedemptionVaultTest__factory(
+    owner,
+  ).deploy();
+  await mBtcRedemptionVault.initialize(
+    accessControl.address,
+    {
+      mToken: mBTC.address,
+      mTokenDataFeed: mBTCToBtcDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    1000,
+    {
+      fiatAdditionalFee: 100,
+      fiatFlatFee: parseUnits('1'),
+      minFiatRedeemAmount: 1000,
+    },
+    requestRedeemer.address,
+  );
+
+  await accessControl.grantRoleMult(
+    [
+      await mBTC.M_BTC_MINT_OPERATOR_ROLE(),
+      await mBTC.M_BTC_BURN_OPERATOR_ROLE(),
+    ],
+    [mBtcDepositVault.address, mBtcRedemptionVault.address],
   );
 
   const depositVault = await new DepositVaultTest__factory(owner).deploy();
@@ -699,6 +807,10 @@ export const defaultDeploy = async () => {
     dai: await new ERC20Mock__factory(owner).deploy(9),
   };
 
+  const otherCoins = {
+    wbtc: await new ERC20Mock__factory(owner).deploy(8),
+  };
+
   const buidl = await new ERC20Mock__factory(owner).deploy(8);
 
   const buidlRedemption = await new RedemptionTest__factory(owner).deploy(
@@ -903,6 +1015,7 @@ export const defaultDeploy = async () => {
     eUsdOwner,
     mBASIS,
     eUSD,
+    mBTC,
     accessControl,
     wAccessControlTester,
     roles: { ...roles, greenlistToggler },
@@ -936,5 +1049,11 @@ export const defaultDeploy = async () => {
     mBASISToUsdDataFeed,
     mockedAggregatorMBASIS,
     liquidityProvider,
+    mBtcDepositVault,
+    mBtcRedemptionVault,
+    mockedAggregatorMBTC,
+    mBTCToBtcDataFeed,
+    otherCoins,
+    WBTCToBtcDataFeed,
   };
 };

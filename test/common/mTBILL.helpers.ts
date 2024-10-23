@@ -11,16 +11,17 @@ type CommonParams = {
   mTBILL?: MTBILL;
   eUSD?: MTBILL;
   mBASIS?: MTBILL;
+  mBTC?: MTBILL;
   owner: SignerWithAddress;
 };
 
 export const setMetadataTest = async (
-  { mTBILL, mBASIS, eUSD, owner }: CommonParams,
+  { mTBILL, mBASIS, eUSD, mBTC, owner }: CommonParams,
   key: string,
   value: string,
   opt?: OptionalCommonParams,
 ) => {
-  mTBILL ??= mBASIS ?? eUSD!;
+  mTBILL ??= mBASIS ?? eUSD ?? mBTC!;
 
   const keyBytes32 = solidityKeccak256(['string'], [key]);
   const valueBytes = defaultAbiCoder.encode(['string'], [value]);
@@ -40,12 +41,12 @@ export const setMetadataTest = async (
 };
 
 export const mint = async (
-  { mTBILL, mBASIS, eUSD, owner }: CommonParams,
+  { mTBILL, mBASIS, eUSD, mBTC, owner }: CommonParams,
   to: Account,
   amount: BigNumberish,
   opt?: OptionalCommonParams,
 ) => {
-  mTBILL ??= mBASIS ?? eUSD!;
+  mTBILL ??= mBASIS ?? eUSD ?? mBTC!;
 
   to = getAccount(to);
 
@@ -69,12 +70,12 @@ export const mint = async (
 };
 
 export const burn = async (
-  { mTBILL, mBASIS, eUSD, owner }: CommonParams,
+  { mTBILL, mBASIS, eUSD, mBTC, owner }: CommonParams,
   from: Account,
   amount: BigNumberish,
   opt?: OptionalCommonParams,
 ) => {
-  mTBILL ??= mBASIS ?? eUSD!;
+  mTBILL ??= mBASIS ?? eUSD ?? mBTC!;
 
   from = getAccount(from);
 

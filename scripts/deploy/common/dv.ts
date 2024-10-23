@@ -6,7 +6,11 @@ import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
 } from '../../../helpers/utils';
-import { DepositVault, MBasisDepositVault } from '../../../typechain-types';
+import {
+  DepositVault,
+  MBasisDepositVault,
+  MBtcDepositVault,
+} from '../../../typechain-types';
 
 export type DeployDvConfig = {
   feeReceiver?: string;
@@ -22,7 +26,7 @@ export type DeployDvConfig = {
 export const deployDepositVault = async (
   hre: HardhatRuntimeEnvironment,
   vaultFactory: ContractFactory,
-  token: 'mTBILL' | 'mBASIS',
+  token: 'mTBILL' | 'mBASIS' | 'mBTC',
   networkConfig?: DeployDvConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
@@ -60,6 +64,7 @@ export const deployDepositVault = async (
     networkConfig.minMTokenAmountForFirstDeposit,
   ] as
     | Parameters<MBasisDepositVault['initialize']>
+    | Parameters<MBtcDepositVault['initialize']>
     | Parameters<DepositVault['initialize']>;
 
   const deployment = await hre.upgrades.deployProxy(

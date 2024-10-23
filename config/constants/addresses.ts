@@ -15,6 +15,7 @@ type TokenAddresses = {
 export interface MidasAddresses {
   mTBILL?: TokenAddresses;
   mBASIS?: TokenAddresses;
+  mBTC?: TokenAddresses;
   eUSD?: TokenAddresses;
   etfDataFeed?: string;
   eurToUsdFeed?: string;
@@ -49,6 +50,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         token: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
         dataFeed: '0xeDBA9943FC91983D1BF53d6F8Af346a5E162747D',
       },
+      wbtc: {
+        aggregator: '0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23',
+        token: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
+        dataFeed: '0x488F2Ab54fEeF6B4431834d34126e103cE573796',
+      },
       m: {
         aggregator: '0x77E7d36CA1649183aabd90E8dB738925f2f9C32c',
         token: '0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b',
@@ -77,6 +83,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVault: '0x19AB19e61A930bc5C7B75Bf06cDd954218Ca9F0b',
       redemptionVaultSwapper: '0x0D89C1C4799353F3805A3E6C4e1Cbbb83217D123',
     },
+    mBTC: {
+      token: '0x007115416AB6c266329a03B09a8aa39aC2eF7d9d',
+      customFeed: '0xA537EF0343e83761ED42B8E017a1e495c9a189Ee',
+      dataFeed: '0x9987BE0c1dc5Cd284a4D766f4B5feB4F3cb3E28e',
+      depositVault: '0x10cC8dbcA90Db7606013d8CD2E77eb024dF693bD',
+      redemptionVault: '0x30d9D1e76869516AEa980390494AaEd45C3EfC1a',
+    },
     eUSD: {
       tokensReceiver: '0x9d13371c8DeA0361ac78B4c109ea3CB748427CF5',
       token: '0xb5C5f2f9d9d9e7c2E885549AFb857306d119c701',
@@ -95,6 +108,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         dataFeed: '0x0e0eb6cdad90174f1Db606EC186ddD0B5eD80847',
         aggregator: '0x7811C1Bf5db28630F303267Cc613797EB9A81188',
         token: '0xEa22F8C1624c17C1B58727235292684831A08d56',
+      },
+      wbtc: {
+        token: '0xa7c6c173D38DCf0543B5C479B845a430529A9a96',
+        aggregator: '0x798910CBbE311E14C3B61301b3bCb76a3348A6fb',
+        dataFeed: '0xaa7BeE2d7dE06cB4E30564323Fb17C5029e7D567',
       },
     },
     mTBILL: {
@@ -115,6 +133,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVault: '0xF6e51d24F4793Ac5e71e0502213a9BBE3A6d4517',
       redemptionVaultSwapper: '0x460cec7f88e7813D7b0a297160e6718D9fE33908',
       // swapper with regular mTBILL rv: 0x3897445701132efb82362324D59D0f35c23B0170
+    },
+    mBTC: {
+      customFeed: '0x22Ee16244Db2504dbdCb6f4F1F3e154886630854',
+      dataFeed: '0x0136E7F79b13E918FA6786f6D1ebC59e273773Cc',
+      token: '0xB14561FcC3100EBFD4024D1B1060B0b3b3a9a3D7',
+      depositVault: '0x156f6Eb2E8fa8F72f53aceBB839bF9728657Ce8E',
+      redemptionVault: '0x307267989A7bec3A57FD7fd96017C49803589Fd0',
     },
     eUSD: {
       token: '0xDd5a54bA2aB379A5e642c58F98aD793A183960E2',

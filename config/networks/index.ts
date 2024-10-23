@@ -21,8 +21,8 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
 
 export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
   etherlink: undefined,
-  main: 'auto',
-  sepolia: 'auto',
+  main: undefined,
+  sepolia: undefined,
   hardhat: 'auto',
   base: 'auto',
   localhost: 70 * GWEI,
