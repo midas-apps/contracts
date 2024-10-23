@@ -19,8 +19,7 @@ const config = {
   minAnswer: parseUnits('0', 8),
   maxAnswer: parseUnits('100000', 8),
   maxAnswerDeviation: parseUnits('0.05', 8),
-  description: 'mBTC/USD',
-  healthyDiff: BigNumber.from(2592000),
+  description: 'mBTC/USD'
 };
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
