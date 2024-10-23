@@ -188,6 +188,13 @@
     {
       "address": "0x10cC8dbcA90Db7606013d8CD2E77eb024dF693bD",
       "txHash": "0x3072d69b8746056f1b7f7eb4c15c0e0cbf970215f2528914e0febb31b379537c",
+      "address": "0x77E7d36CA1649183aabd90E8dB738925f2f9C32c",
+      "txHash": "0x4f6087022a798ab690a50665d44abb03cd443f748e6b9bc3c7dec5787183c664",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x1C04A3f615CD594088482be77df6e077EEebF085",
+      "txHash": "0xb2b7155c48106af7092c3d1d09fe2f1c823a61c0740d55f2010553d95e256d47",
       "kind": "transparent"
     }
   ],
