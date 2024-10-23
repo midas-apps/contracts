@@ -34,7 +34,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       tokenAddresses?.token,
       addresses?.eurToUsdFeed,
       hre.ethers.utils.parseUnits('100000'),
-      tokenAddresses?.tokensReceiver,
+      'FIXME',
     ],
     {
       unsafeAllow: ['constructor'],

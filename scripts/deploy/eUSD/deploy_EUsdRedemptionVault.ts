@@ -32,7 +32,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     [
       addresses?.accessControl,
       tokenAddresses?.token,
-      tokenAddresses?.tokensReceiver,
+      'FIXME',
     ],
     {
       unsafeAllow: ['constructor'],

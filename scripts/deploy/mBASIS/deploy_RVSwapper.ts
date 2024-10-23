@@ -40,6 +40,21 @@ const configs: Record<number, DeployRvConfig> = {
     liquidityProvider: '0x7388e98baCfFF1B3618d7d5bEbeDe483C9526FEd',
     mTbillRedemptionVault: '0x569D7dccBF6923350521ecBC28A555A500c4f0Ec',
   },
+  8453: {
+    type: 'SWAPPER',
+    feeReceiver: '0xE4D0BCF0732d18aE0b213424647608bac8006824',
+    tokensReceiver: '0xE4D0BCF0732d18aE0b213424647608bac8006824',
+    instantDailyLimit: parseUnits('1000'),
+    instantFee: parseUnits('3', 2),
+    minAmount: parseUnits('0.1'),
+    variationTolerance: parseUnits('5', 2),
+    fiatAdditionalFee: parseUnits('0.1', 2),
+    fiatFlatFee: parseUnits('30', 18),
+    minFiatRedeemAmount: parseUnits('1000', 18),
+    requestRedeemer: '0xE4D0BCF0732d18aE0b213424647608bac8006824',
+    liquidityProvider: '0xE4D0BCF0732d18aE0b213424647608bac8006824',
+    mTbillRedemptionVault: '0x2a8c22E3b10036f3AEF5875d04f8441d4188b656',
+  },
 };
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
