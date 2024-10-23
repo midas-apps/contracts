@@ -51,7 +51,7 @@ const configs: Record<number, DeployRvConfig> = {
     fiatAdditionalFee: parseUnits('0.1', 2),
     fiatFlatFee: parseUnits('30', 18),
     minFiatRedeemAmount: parseUnits('1000', 18),
-    requestRedeemer: '0xE4D0BCF0732d18aE0b213424647608bac8006824'
+    requestRedeemer: '0xE4D0BCF0732d18aE0b213424647608bac8006824',
   },
 };
 

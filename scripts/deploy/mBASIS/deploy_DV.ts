@@ -38,7 +38,7 @@ const configs: Record<number, DeployDvConfig> = {
     instantFee: parseUnits('0.1', 2),
     minMTokenAmountForFirstDeposit: parseUnits('0'),
     minAmount: parseUnits('0.1'),
-    variationTolerance: parseUnits('5', 2)
+    variationTolerance: parseUnits('5', 2),
   },
 };
 
