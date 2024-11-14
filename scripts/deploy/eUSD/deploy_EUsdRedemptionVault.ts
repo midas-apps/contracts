@@ -29,11 +29,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       E_USD_REDEMPTION_VAULT_CONTRACT_NAME,
       owner,
     ),
-    [
-      addresses?.accessControl,
-      tokenAddresses?.token,
-      tokenAddresses?.tokensReceiver,
-    ],
+    [addresses?.accessControl, tokenAddresses?.token, 'FIXME'],
     {
       unsafeAllow: ['constructor'],
     },

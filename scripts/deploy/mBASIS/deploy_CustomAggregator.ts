@@ -16,7 +16,6 @@ const config = {
   maxAnswer: parseUnits('100000', 8),
   maxAnswerDeviation: parseUnits('0.35', 8),
   description: 'mBASIS/USD',
-  healthyDiff: BigNumber.from(2592000),
 };
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {

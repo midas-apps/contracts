@@ -40,6 +40,19 @@ const configs: Record<number, DeployRvConfig> = {
     requestRedeemer: '0x1Bd4d8D25Ec7EBA10e94BE71Fd9c6BF672e31E06',
     sanctionsList: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
   },
+  8453: {
+    type: 'REGULAR',
+    feeReceiver: '0xE4D0BCF0732d18aE0b213424647608bac8006824',
+    tokensReceiver: '0xE4D0BCF0732d18aE0b213424647608bac8006824',
+    instantDailyLimit: parseUnits('1000'),
+    instantFee: parseUnits('0.07', 2),
+    minAmount: parseUnits('0.1'),
+    variationTolerance: parseUnits('0.1', 2),
+    fiatAdditionalFee: parseUnits('0.1', 2),
+    fiatFlatFee: parseUnits('30', 18),
+    minFiatRedeemAmount: parseUnits('1000', 18),
+    requestRedeemer: '0xE4D0BCF0732d18aE0b213424647608bac8006824',
+  },
 };
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
