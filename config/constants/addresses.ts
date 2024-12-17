@@ -117,6 +117,12 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVaultSwapper: '0xF804a646C034749b5484bF7dfE875F6A4F969840',
     },
   },
+  oasis: {
+    accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    mTBILL: {
+      token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
+    },
+  },
   sepolia: {
     dataFeeds: {
       usdc: {

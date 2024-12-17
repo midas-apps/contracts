@@ -1,6 +1,12 @@
 import { type HardhatUserConfig } from 'hardhat/config';
 
-import '@nomicfoundation/hardhat-toolbox';
+import '@nomicfoundation/hardhat-chai-matchers';
+import '@nomicfoundation/hardhat-network-helpers';
+import '@nomiclabs/hardhat-ethers';
+import '@typechain/hardhat';
+import 'hardhat-gas-reporter';
+import 'solidity-coverage';
+import '@nomicfoundation/hardhat-verify';
 import '@openzeppelin/hardhat-upgrades';
 import 'hardhat-contract-sizer';
 import 'hardhat-deploy';
@@ -41,6 +47,7 @@ const config: HardhatUserConfig = {
       sepolia: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       etherlink: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       base: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+      oasis: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
     },
   },
   verify: {
@@ -53,6 +60,7 @@ const config: HardhatUserConfig = {
     etherlink: getNetworkConfig('etherlink', []),
     sepolia: getNetworkConfig('sepolia'),
     base: getNetworkConfig('base'),
+    oasis: getNetworkConfig('oasis'),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     hardhat: FORKING_NETWORK
       ? getForkNetworkConfig(FORKING_NETWORK)
@@ -70,6 +78,7 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: ETHERSCAN_API_KEY,
+    enabled: ENV.VERIFY_ONLY_SOURCIFY === false,
     customChains: [
       {
         chainId: chainIds.etherlink,
@@ -87,7 +96,18 @@ const config: HardhatUserConfig = {
           browserURL: 'https://basescan.org',
         },
       },
+      {
+        chainId: chainIds.oasis,
+        network: 'oasis',
+        urls: {
+          apiURL: '',
+          browserURL: '',
+        },
+      },
     ],
+  },
+  sourcify: {
+    enabled: true,
   },
   paths: {
     deploy: 'deploy/',
