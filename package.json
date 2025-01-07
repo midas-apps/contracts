@@ -46,7 +46,8 @@
     "deploy:dv": "yarn hh:run scripts/deploy/deploy_DepositVault.ts",
     "deploy:rv": "yarn hh:run scripts/deploy/deploy_RedemptionVault.ts",
     "deploy:main:roles": "yarn hh:run:main scripts/deploy/grantRoles.ts",
-    "deploy:main:validate": "yarn hh:run:main scripts/deploy/postDeploy.ts"
+    "deploy:main:validate": "yarn hh:run:main scripts/deploy/postDeploy.ts",
+    "verify:proxy": "yarn hardhat verify --contract @openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy"
   },
   "devDependencies": {
     "@chainlink/contracts": "^0.6.1",
@@ -58,10 +59,10 @@
     "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
     "@nomicfoundation/hardhat-toolbox": "^1.0.1",
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@0.3.0-beta.13",
-    "@nomiclabs/hardhat-etherscan": "^3.1.2",
     "@openzeppelin/contracts": "^4.8.3",
     "@openzeppelin/contracts-upgradeable": "^4.9.0",
     "@openzeppelin/hardhat-upgrades": "^1.27.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.11",
     "@typechain/ethers-v5": "^10.1.0",
     "@typechain/hardhat": "^6.1.3",
     "@types/mocha": "^10.0.0",
