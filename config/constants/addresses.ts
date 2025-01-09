@@ -123,6 +123,12 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
     },
   },
+  plume: {
+    accessControl: '0xd1871c36560539f010C548c702C67F397CD97d27',
+    mBASIS: {
+      token: '0x27E572586Db60e2d4d9d32bAC43a73B0aCE7884A',
+    },
+  },
   sepolia: {
     dataFeeds: {
       usdc: {

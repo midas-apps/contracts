@@ -7,7 +7,8 @@ export type Network =
   | 'localhost'
   | 'etherlink'
   | 'base'
-  | 'oasis';
+  | 'oasis'
+  | 'plume';
 export type RpcUrl =
   | `https://eth-${RpcNetwork}.g.alchemy.com/v2/${string}`
   | `https://${RpcNetwork}.infura.io/v3/${string}`
@@ -26,5 +27,6 @@ export interface Environment {
   readonly MNEMONIC_DEV?: string;
   readonly MNEMONIC_PROD: string;
   readonly FORKING_NETWORK?: Network;
-  readonly VERIFY_ONLY_SOURCIFY?: boolean;
+  readonly VERIFY_SOURCIFY?: boolean;
+  readonly VERIFY_ETHERSCAN?: boolean;
 }

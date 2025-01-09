@@ -18,6 +18,7 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   localhost: 'http://localhost:8545',
   base: 'https://base.meowrpc.com',
   oasis: 'https://sapphire.oasis.io',
+  plume: 'https://rpc.plumenetwork.xyz',
 };
 
 export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
@@ -28,6 +29,7 @@ export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
   base: 'auto',
   localhost: 70 * GWEI,
   oasis: undefined,
+  plume: undefined,
 };
 
 export const chainIds: ConfigPerNetwork<number> = {
@@ -38,6 +40,7 @@ export const chainIds: ConfigPerNetwork<number> = {
   hardhat: 31337,
   localhost: 31337,
   oasis: 23294,
+  plume: 98865,
 };
 
 export const mnemonics: ConfigPerNetwork<string | undefined> = {
@@ -48,6 +51,7 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   hardhat: MNEMONIC_DEV,
   localhost: MNEMONIC_DEV,
   oasis: MNEMONIC_PROD,
+  plume: MNEMONIC_PROD,
 };
 
 export const gases: ConfigPerNetwork<number | undefined> = {
@@ -58,6 +62,7 @@ export const gases: ConfigPerNetwork<number | undefined> = {
   localhost: undefined,
   base: undefined,
   oasis: undefined,
+  plume: undefined,
 };
 
 export const timeouts: ConfigPerNetwork<number | undefined> = {
@@ -68,6 +73,7 @@ export const timeouts: ConfigPerNetwork<number | undefined> = {
   etherlink: undefined,
   base: undefined,
   oasis: undefined,
+  plume: undefined,
 };
 
 export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
@@ -78,6 +84,7 @@ export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
   localhost: undefined,
   base: undefined,
   oasis: undefined,
+  plume: undefined,
 };
 
 export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
@@ -88,6 +95,7 @@ export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
   localhost: undefined,
   base: undefined,
   oasis: undefined,
+  plume: undefined,
 };
 
 export const getBaseNetworkConfig = (

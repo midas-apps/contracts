@@ -48,6 +48,7 @@ const config: HardhatUserConfig = {
       etherlink: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       base: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       oasis: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+      plume: '0x1Ded0c1E3dC80634b8d615f84aeAf1fA13B913Cc',
     },
   },
   verify: {
@@ -61,6 +62,7 @@ const config: HardhatUserConfig = {
     sepolia: getNetworkConfig('sepolia'),
     base: getNetworkConfig('base'),
     oasis: getNetworkConfig('oasis'),
+    plume: getNetworkConfig('plume'),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     hardhat: FORKING_NETWORK
       ? getForkNetworkConfig(FORKING_NETWORK)
@@ -78,7 +80,7 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: ETHERSCAN_API_KEY,
-    enabled: ENV.VERIFY_ONLY_SOURCIFY === false,
+    enabled: ENV.VERIFY_ETHERSCAN === true,
     customChains: [
       {
         chainId: chainIds.etherlink,
@@ -104,10 +106,18 @@ const config: HardhatUserConfig = {
           browserURL: '',
         },
       },
+      {
+        network: 'plume',
+        chainId: 98865,
+        urls: {
+          apiURL: 'https://explorer.plumenetwork.xyz/api',
+          browserURL: 'https://explorer.plumenetwork.xyz',
+        },
+      },
     ],
   },
   sourcify: {
-    enabled: true,
+    enabled: ENV.VERIFY_SOURCIFY === true,
   },
   paths: {
     deploy: 'deploy/',
