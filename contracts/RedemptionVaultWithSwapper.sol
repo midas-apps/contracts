@@ -27,6 +27,12 @@ contract RedemptionVaultWithSwapper is
     using SafeERC20 for IERC20;
 
     /**
+     * @dev added second gap here to match the storage layout
+     * from the previous contracts inheritance tree
+     */
+    uint256[50] private ___gap;
+
+    /**
      * @notice mToken1 redemption vault
      * @dev The naming was not altered to maintain
      * compatibility with the currently deployed contracts.
