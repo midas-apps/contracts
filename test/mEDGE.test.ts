@@ -28,7 +28,7 @@ describe('mEDGE', function () {
   it('deployment', async () => {
     const { mEDGE } = await loadFixture(defaultDeploy);
 
-    expect(await mEDGE.name()).eq('mEDGE');
+    expect(await mEDGE.name()).eq('Midas mEDGE');
     expect(await mEDGE.symbol()).eq('mEDGE');
 
     expect(await mEDGE.paused()).eq(false);

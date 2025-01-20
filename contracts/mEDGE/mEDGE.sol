@@ -37,7 +37,7 @@ contract mEDGE is mTBILL {
      */
     function initialize(address _accessControl) external override initializer {
         __Blacklistable_init(_accessControl);
-        __ERC20_init("mEDGE", "mEDGE");
+        __ERC20_init("Midas mEDGE", "mEDGE");
     }
 
     /**
