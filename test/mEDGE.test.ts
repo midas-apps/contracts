@@ -21,6 +21,7 @@ import {
   // eslint-disable-next-line camelcase
   MEdgeDepositVault__factory,
   // eslint-disable-next-line camelcase,
+  MEdgeRedemptionVaultWithSwapper__factory,
 } from '../typechain-types';
 
 describe('mEDGE', function () {
@@ -356,108 +357,23 @@ describe('MEdgeDepositVault', function () {
       );
     });
   });
-
-  // describe('depositInstant', () => {
-  //   it('mint using 1 WBTC when mEDGE/BTC price is 1.', async () => {
-  //     const fixture = await loadFixture(defaultDeploy);
-  //     const {
-  //       otherCoins,
-  //       owner,
-  //       mBtcDepositVault: depositVault,
-  //       WBTCToBtcDataFeed,
-  //     } = fixture;
-  //     await mintToken(otherCoins.wbtc, owner, 1);
-  //     await setMinAmountTest({ vault: depositVault, owner }, 0);
-  //     await approveBase18(owner, otherCoins.wbtc, depositVault, 1);
-
-  //     await addPaymentTokenTest(
-  //       { vault: depositVault, owner },
-  //       otherCoins.wbtc,
-  //       WBTCToBtcDataFeed.address,
-  //       0,
-  //       true,
-  //     );
-
-  //     await changeTokenAllowanceTest(
-  //       { vault: depositVault, owner },
-  //       otherCoins.wbtc.address,
-  //       parseUnits('1.1'),
-  //     );
-
-  //     await depositInstantTest(
-  //       {
-  //         depositVault,
-  //         mTBILL: fixture.mEDGE,
-  //         mTokenToUsdDataFeed: fixture.mBTCToBtcDataFeed,
-  //         owner: fixture.owner,
-  //       },
-  //       fixture.otherCoins.wbtc,
-  //       1,
-  //     );
-  //   });
-  // });
 });
 
-// describe.skip('MBtcRedemptionVault', function () {
-//   describe('deployment', () => {
-//     it('vaultRole', async () => {
-//       const fixture = await loadFixture(defaultDeploy);
+describe('MEdgeRedemptionVaultWithSwapper', function () {
+  describe('deployment', () => {
+    it('vaultRole', async () => {
+      const fixture = await loadFixture(defaultDeploy);
 
-//       const tester = await new MBtcRedemptionVault__factory(
-//         fixture.owner,
-//       ).deploy();
+      const tester = await new MEdgeRedemptionVaultWithSwapper__factory(
+        fixture.owner,
+      ).deploy();
 
-//       expect(await tester.vaultRole()).eq(
-//         await tester.M_BTC_REDEMPTION_VAULT_ADMIN_ROLE(),
-//       );
-//     });
-//   });
-//   describe('redeemInstant', () => {
-//     it('redeem 1 mEDGE to WBTC when mEDGE/BTC price is 1', async () => {
-//       const fixture = await loadFixture(defaultDeploy);
-//       const {
-//         otherCoins,
-//         owner,
-//         WBTCToBtcDataFeed,
-//         mEDGE,
-//         mBtcRedemptionVault: redemptionVault,
-//       } = fixture;
-
-//       await mintToken(mEDGE, owner, 1);
-
-//       await mintToken(otherCoins.wbtc, redemptionVault, 1.1);
-
-//       await setMinAmountTest({ vault: redemptionVault, owner }, 0);
-
-//       await approveBase18(owner, mEDGE, redemptionVault, 1);
-
-//       await addPaymentTokenTest(
-//         { vault: redemptionVault, owner },
-//         otherCoins.wbtc,
-//         WBTCToBtcDataFeed.address,
-//         0,
-//         true,
-//       );
-
-//       await changeTokenAllowanceTest(
-//         { vault: redemptionVault, owner },
-//         otherCoins.wbtc.address,
-//         parseUnits('1.1'),
-//       );
-
-//       await redeemInstantTest(
-//         {
-//           redemptionVault,
-//           mTBILL: fixture.mEDGE,
-//           mTokenToUsdDataFeed: fixture.mBTCToBtcDataFeed,
-//           owner: fixture.owner,
-//         },
-//         otherCoins.wbtc.address,
-//         1,
-//       );
-//     });
-//   });
-// });
+      expect(await tester.vaultRole()).eq(
+        await tester.M_EDGE_REDEMPTION_VAULT_ADMIN_ROLE(),
+      );
+    });
+  });
+});
 
 describe('MEdgeCustomAggregatorFeed', () => {
   it('check admin role', async () => {

@@ -19,7 +19,7 @@ import "./libraries/DecimalsCorrectionLibrary.sol";
  * current vault don`t have enough liquidity
  * @author RedDuck Software
  */
-abstract contract RedemptionVaultWithSwapper is
+contract RedemptionVaultWithSwapper is
     IRedemptionVaultWithSwapper,
     RedemptionVault
 {
