@@ -54,7 +54,9 @@ import {
   MBasisRedemptionVaultWithSwapperTest__factory,
   // eslint-disable-next-line camelcase
   MBTCTest__factory,
+  MEDGETest__factory,
 } from '../../typechain-types';
+import { mEdge } from '../../typechain-types/contracts';
 
 export const defaultDeploy = async () => {
   const [
@@ -102,6 +104,10 @@ export const defaultDeploy = async () => {
   await expect(mBTC.initialize(ethers.constants.AddressZero)).to.be.reverted;
   await mBTC.initialize(accessControl.address);
 
+  const mEDGE = await new MEDGETest__factory(owner).deploy();
+  await expect(mEDGE.initialize(ethers.constants.AddressZero)).to.be.reverted;
+  await mEDGE.initialize(accessControl.address);
+
   await accessControl.grantRoleMult(
     [
       await mBASIS.M_BASIS_BURN_OPERATOR_ROLE(),
@@ -116,6 +122,15 @@ export const defaultDeploy = async () => {
       await mBTC.M_BTC_BURN_OPERATOR_ROLE(),
       await mBTC.M_BTC_MINT_OPERATOR_ROLE(),
       await mBTC.M_BTC_PAUSE_OPERATOR_ROLE(),
+    ],
+    [owner.address, owner.address, owner.address],
+  );
+
+  await accessControl.grantRoleMult(
+    [
+      await mEDGE.M_EDGE_BURN_OPERATOR_ROLE(),
+      await mEDGE.M_EDGE_MINT_OPERATOR_ROLE(),
+      await mEDGE.M_EDGE_PAUSE_OPERATOR_ROLE(),
     ],
     [owner.address, owner.address, owner.address],
   );
@@ -143,6 +158,12 @@ export const defaultDeploy = async () => {
   ).deploy();
   const mockedAggregatorMBASISDecimals =
     await mockedAggregatorMBASIS.decimals();
+
+  const mockedAggregatorMEDGE = await new AggregatorV3Mock__factory(
+    owner,
+  ).deploy();
+  const mockedAggregatorMEDGEDecimals = await mockedAggregatorMEDGE.decimals();
+
   const mockedAggregatorMBTC = await new AggregatorV3Mock__factory(
     owner,
   ).deploy();
@@ -207,6 +228,15 @@ export const defaultDeploy = async () => {
     3 * 24 * 3600,
     parseUnits('0.1', mockedAggregatorMBTCDecimals),
     parseUnits('10000', mockedAggregatorMBTCDecimals),
+  );
+
+  const mEDGEToUsdDataFeed = await new DataFeedTest__factory(owner).deploy();
+  await mEDGEToUsdDataFeed.initialize(
+    accessControl.address,
+    mockedAggregatorMEDGE.address,
+    3 * 24 * 3600,
+    parseUnits('0.1', mockedAggregatorMEDGEDecimals),
+    parseUnits('10000', mockedAggregatorMEDGEDecimals),
   );
 
   const WBTCToBtcDataFeed = await new DataFeedTest__factory(owner).deploy();
@@ -1055,5 +1085,6 @@ export const defaultDeploy = async () => {
     mBTCToBtcDataFeed,
     otherCoins,
     WBTCToBtcDataFeed,
+    mEDGE,
   };
 };
