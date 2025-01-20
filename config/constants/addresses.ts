@@ -129,6 +129,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     mBASIS: {
       token: '0x27E572586Db60e2d4d9d32bAC43a73B0aCE7884A',
     },
+    mEDGE: {
+      token: '0x2BF237b9e35d281DCD81eF4B20E07Dd679E598C3',
+    },
   },
   sepolia: {
     dataFeeds: {
