@@ -4,10 +4,10 @@ pragma solidity 0.8.9;
 import "./IRedemptionVault.sol";
 
 /**
- * @title IMBASISRedemptionVaultWithSwapper
+ * @title IRedemptionVaultWithSwapper
  * @author RedDuck Software
  */
-interface IMBASISRedemptionVaultWithSwapper is IRedemptionVault {
+interface IRedemptionVaultWithSwapper is IRedemptionVault {
     /**
      * @param caller caller address (msg.sender)
      * @param provider new LP address
