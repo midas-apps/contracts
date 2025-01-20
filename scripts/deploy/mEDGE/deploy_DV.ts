@@ -19,14 +19,13 @@ const configs: Record<number, DeployDvConfig> = {
   },
   // plume
   198865: {
-    feeReceiver: 'TODO',
-    tokensReceiver: 'TODO',
-    instantDailyLimit: parseUnits('TODO'),
-    instantFee: parseUnits('TODO', 2),
-    minMTokenAmountForFirstDeposit: parseUnits('TODO'),
-    minAmount: parseUnits('TODO'),
-    variationTolerance: parseUnits('TODO', 2),
-    sanctionsList: 'TODO',
+    feeReceiver: '0xc69F99ab9C6b03cEacfE6FB9D753D5dD29C2f354',
+    tokensReceiver: '0x518FBF72dAC0CC09BF8492037e80BDaA7FF3F44f',
+    instantDailyLimit: parseUnits('10000000'),
+    instantFee: parseUnits('0', 2),
+    minMTokenAmountForFirstDeposit: parseUnits('0'),
+    minAmount: parseUnits('0'),
+    variationTolerance: parseUnits('5', 2),
   },
 };
 

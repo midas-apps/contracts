@@ -17,7 +17,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const addresses = getCurrentAddresses(hre);
 
-  const customAggregator = addresses?.mBASIS?.customFeed;
+  const customAggregator = addresses?.mEDGE?.customFeed;
 
   if (!addresses) {
     throw new Error('Addresses for network are not defined');
