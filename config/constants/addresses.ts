@@ -172,6 +172,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x156f6Eb2E8fa8F72f53aceBB839bF9728657Ce8E',
       redemptionVault: '0x307267989A7bec3A57FD7fd96017C49803589Fd0',
     },
+    mEDGE: {
+      token: '0x1FE17936c1CdC73c857263997716e3A60B9291C7',
+    },
     eUSD: {
       token: '0xDd5a54bA2aB379A5e642c58F98aD793A183960E2',
       depositVault: '0x056339C044055819E8Db84E71f5f2E1F536b2E5b',
