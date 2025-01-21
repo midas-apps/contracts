@@ -18,7 +18,7 @@ const configs: Record<number, DeployDvConfig> = {
     variationTolerance: parseUnits('0.1', 2),
   },
   // plume
-  198865: {
+  98865: {
     feeReceiver: '0xc69F99ab9C6b03cEacfE6FB9D753D5dD29C2f354',
     tokensReceiver: '0x518FBF72dAC0CC09BF8492037e80BDaA7FF3F44f',
     instantDailyLimit: parseUnits('10000000'),

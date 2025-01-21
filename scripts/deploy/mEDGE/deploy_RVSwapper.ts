@@ -22,10 +22,11 @@ const configs: Record<number, DeployRvConfig> = {
     minFiatRedeemAmount: parseUnits('1', 18),
     requestRedeemer: undefined,
     liquidityProvider: undefined,
+    // mBASIS swapper RV
     mTbillRedemptionVault: '0x460cec7f88e7813D7b0a297160e6718D9fE33908',
   },
   // plume
-  // 198865: {
+  // 98865: {
   //   type: 'SWAPPER',
   //   feeReceiver: 'TODO',
   //   tokensReceiver: 'TODO',

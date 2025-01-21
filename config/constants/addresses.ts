@@ -141,6 +141,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
     mEDGE: {
       token: '0x2BF237b9e35d281DCD81eF4B20E07Dd679E598C3',
+      customFeed: '0xec39305dE263275DF65F1BD6D209Baf9c8711560',
+      dataFeed: '0x1e8861d7372F661844acc0025681936f190C6016',
+      depositVault: '0x51229E6A95ea251432cA5c695704deB4D18D19B9',
     },
   },
   sepolia: {
