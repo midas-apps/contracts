@@ -19,6 +19,21 @@
       "address": "0x2BF237b9e35d281DCD81eF4B20E07Dd679E598C3",
       "txHash": "0x65dee82f3ea7e2325a1ffc7b2936373bcadec914b182b25321e0344dd65f79dd",
       "kind": "transparent"
+    },
+    {
+      "address": "0x9011aF09487Ca467e956b3038E9da0f071b2D18e",
+      "txHash": "0x238947a81f666169df524d0c8252c5dff32c29232a5e39c4dccbf94bb82b3a83",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x53733dD0268a2316C90FcCc01611D6f98F206DA2",
+      "txHash": "0x193d9011654ffb402f1a93c3bb2bf5b26eb587b157d77637a3420e7cec11511f",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x8899A7363EFA9091DA11A84064cd669685544C88",
+      "txHash": "0x6552e5c3ff9de9166ede1f638f4a7fb465064071bdfe5f5f43f44bb2199598cf",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -547,6 +562,118 @@
           },
           "t_string_storage": {
             "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "f5b08af613206c57ba0b39c2e7e3761b52ba788690258a9f52f88d3b201552f3": {
+      "address": "0x69020311836D29BA7d38C1D3578736fD3dED03ED",
+      "txHash": "0x56ffc89c152f60761b7ed3e07be65990828c6926e82a18a6213dc4ab5196e984",
+      "layout": {
+        "solcVersion": "0.8.9",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "accessControl",
+            "offset": 2,
+            "slot": "0",
+            "type": "t_contract(MidasAccessControl)10446",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:24"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:29"
+          },
+          {
+            "label": "aggregator",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_contract(AggregatorV3Interface)45",
+            "contract": "DataFeed",
+            "src": "contracts/feeds/DataFeed.sol:22"
+          },
+          {
+            "label": "healthyDiff",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_uint256",
+            "contract": "DataFeed",
+            "src": "contracts/feeds/DataFeed.sol:27"
+          },
+          {
+            "label": "minExpectedAnswer",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_int256",
+            "contract": "DataFeed",
+            "src": "contracts/feeds/DataFeed.sol:32"
+          },
+          {
+            "label": "maxExpectedAnswer",
+            "offset": 0,
+            "slot": "54",
+            "type": "t_int256",
+            "contract": "DataFeed",
+            "src": "contracts/feeds/DataFeed.sol:37"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "55",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "DataFeed",
+            "src": "contracts/feeds/DataFeed.sol:42"
+          }
+        ],
+        "types": {
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(AggregatorV3Interface)45": {
+            "label": "contract AggregatorV3Interface",
+            "numberOfBytes": "20"
+          },
+          "t_contract(MidasAccessControl)10446": {
+            "label": "contract MidasAccessControl",
+            "numberOfBytes": "20"
+          },
+          "t_int256": {
+            "label": "int256",
             "numberOfBytes": "32"
           },
           "t_uint256": {

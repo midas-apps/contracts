@@ -128,6 +128,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
   },
   plume: {
+    dataFeeds: {
+      pusd: {
+        aggregator: '0xE398B6C1E3B6cfc9204a4eCce200f2A90A4845db',
+        token: '0xdddD73F5Df1F0DC31373357beAC77545dC5A6f3F',
+        dataFeed: '0x8899A7363EFA9091DA11A84064cd669685544C88',
+      },
+    },
     accessControl: '0xd1871c36560539f010C548c702C67F397CD97d27',
     mBASIS: {
       token: '0x27E572586Db60e2d4d9d32bAC43a73B0aCE7884A',

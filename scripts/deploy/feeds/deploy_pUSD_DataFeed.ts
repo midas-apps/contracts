@@ -11,10 +11,10 @@ import { deployDepositVault, DeployDvConfig } from '../common';
 import { DeployDataFeedConfig, deployTokenDataFeed } from '../common/data-feed';
 
 const configs: Record<number, DeployDataFeedConfig> = {
-  1: {
+  98865: {
     healthyDiff: 12 * 60 * 60,
-    minPrice: parseUnits('0.997', 8),
-    maxPrice: parseUnits('1.003', 8),
+    minPrice: parseUnits('0.997', 18),
+    maxPrice: parseUnits('1.003', 18),
   },
   11155111: {
     healthyDiff: constants.MaxUint256,
