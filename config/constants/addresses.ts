@@ -90,6 +90,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
     mEDGE: {
       token: '0xbB51E2a15A9158EBE2b0Ceb8678511e063AB7a55',
+      customFeed: '0x698dA5D987a71b68EbF30C1555cfd38F190406b7',
+      dataFeed: '0x20cd58F72cF1727a2937eB1816593390cf8d91cB',
+      depositVault: '0xfE8de16F2663c61187C1e15Fb04D773E6ac668CC',
     },
     eUSD: {
       token: '0xb5C5f2f9d9d9e7c2E885549AFb857306d119c701',
