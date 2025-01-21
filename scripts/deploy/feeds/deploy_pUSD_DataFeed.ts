@@ -12,7 +12,7 @@ import { DeployDataFeedConfig, deployTokenDataFeed } from '../common/data-feed';
 
 const configs: Record<number, DeployDataFeedConfig> = {
   98865: {
-    healthyDiff: 12 * 60 * 60,
+    healthyDiff: 60 * 60,
     minPrice: parseUnits('0.997', 18),
     maxPrice: parseUnits('1.003', 18),
   },
