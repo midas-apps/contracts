@@ -18,8 +18,20 @@ interface IRedemptionVaultWithSwapper is IRedemptionVault {
     );
 
     /**
-     * @notice set new liquidity provider address
+     * @param caller caller address (msg.sender)
+     * @param vault new underlying vault for swapper
+     */
+    event SetSwapperVault(address indexed caller, address indexed vault);
+
+    /**
+     * @notice sets new liquidity provider address
      * @param provider new liquidity provider address
      */
     function setLiquidityProvider(address provider) external;
+
+    /**
+     * @notice sets new underlying vault for swapper
+     * @param vault new underlying vault for swapper
+     */
+    function setSwapperVault(address vault) external;
 }

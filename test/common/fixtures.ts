@@ -54,9 +54,9 @@ import {
   MBasisRedemptionVaultWithSwapperTest__factory,
   // eslint-disable-next-line camelcase
   MBTCTest__factory,
+  // eslint-disable-next-line camelcase
   MEDGETest__factory,
 } from '../../typechain-types';
-import { mEdge } from '../../typechain-types/contracts';
 
 export const defaultDeploy = async () => {
   const [

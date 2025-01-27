@@ -31,6 +31,7 @@ import {
 import {
   redeemInstantWithSwapperTest,
   setLiquidityProviderTest,
+  setSwapperVaultTest,
 } from './common/mbasis-redemption-vault.helpers';
 import {
   approveRedeemRequestTest,
@@ -231,6 +232,47 @@ describe('RedemptionVault', function () {
       });
     });
 
+    describe('setSwapperVault()', () => {
+      it('should fail: call from address without M_BASIS_REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
+        const { mBasisRedemptionVaultWithSwapper, regularAccounts, owner } =
+          await loadFixture(defaultDeploy);
+        await setSwapperVaultTest(
+          { vault: mBasisRedemptionVaultWithSwapper, owner },
+          constants.AddressZero,
+          { revertMessage: acErrors.WMAC_HASNT_ROLE, from: regularAccounts[0] },
+        );
+      });
+
+      it('should fail: if provider address zero', async () => {
+        const { mBasisRedemptionVaultWithSwapper, owner } = await loadFixture(
+          defaultDeploy,
+        );
+        await setSwapperVaultTest(
+          { vault: mBasisRedemptionVaultWithSwapper, owner },
+          constants.AddressZero,
+          { revertMessage: 'zero address' },
+        );
+      });
+
+      it('should fail: if provider address equal current provider address', async () => {
+        const { mBasisRedemptionVaultWithSwapper, redemptionVault, owner } =
+          await loadFixture(defaultDeploy);
+        await setSwapperVaultTest(
+          { vault: mBasisRedemptionVaultWithSwapper, owner },
+          redemptionVault.address,
+          { revertMessage: 'MRVS: already provider' },
+        );
+      });
+
+      it('call from address with M_BASIS_REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
+        const { mBasisRedemptionVaultWithSwapper, regularAccounts, owner } =
+          await loadFixture(defaultDeploy);
+        await setSwapperVaultTest(
+          { vault: mBasisRedemptionVaultWithSwapper, owner },
+          regularAccounts[0].address,
+        );
+      });
+    });
     describe('redeemInstant()', () => {
       it('should fail: when there is no token in vault', async () => {
         const {

@@ -210,6 +210,21 @@ contract RedemptionVaultWithSwapper is
     }
 
     /**
+     * @inheritdoc IRedemptionVaultWithSwapper
+     */
+    function setSwapperVault(address newVault) external onlyVaultAdmin {
+        require(
+            newVault != address(mTbillRedemptionVault),
+            "MRVS: already provider"
+        );
+        _validateAddress(newVault, true);
+
+        mTbillRedemptionVault = IRedemptionVault(newVault);
+
+        emit SetSwapperVault(msg.sender, newVault);
+    }
+
+    /**
      * @notice Transfers mToken1 to liquidity provider
      * Transfers mToken2 from liquidity provider to contract
      * Returns amount on mToken2 using exchange rates
