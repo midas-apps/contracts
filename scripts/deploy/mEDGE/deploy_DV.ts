@@ -27,7 +27,6 @@ const configs: Record<number, DeployDvConfig> = {
     minAmount: parseUnits('0'),
     variationTolerance: parseUnits('5', 2),
   },
-  // plume
   1: {
     feeReceiver: '0xF9C2E91d6d43B2A7e7c4A9dDb3E56564F1a7f7d4',
     tokensReceiver: '0xc93437a52aF5190C536ce6d994331f2Cc3e44E18',

@@ -40,6 +40,22 @@ const configs: Record<number, DeployRvConfig> = {
     liquidityProvider: '0x38C25B85BC5F9Dac55F974e4eE4A895961418267',
     mTbillRedemptionVault: '0x0D89C1C4799353F3805A3E6C4e1Cbbb83217D123',
   },
+  98865: {
+    type: 'SWAPPER',
+    feeReceiver: '0xc69F99ab9C6b03cEacfE6FB9D753D5dD29C2f354',
+    tokensReceiver: '0x518FBF72dAC0CC09BF8492037e80BDaA7FF3F44f',
+    instantDailyLimit: parseUnits('1000000'),
+    instantFee: parseUnits('0.5', 2),
+    minAmount: parseUnits('0'),
+    variationTolerance: parseUnits('5', 2),
+    fiatAdditionalFee: parseUnits('0.1', 2),
+    fiatFlatFee: parseUnits('30'),
+    minFiatRedeemAmount: parseUnits('1000'),
+    requestRedeemer: '0xb304565BFF139af52E30F06D9617e814C775f95A',
+    liquidityProvider: '0x59CFA14DEa1af37F0D6bDD5888bDbB8014fc6906',
+    // this value is a temp. plug as there is no mBASIS vault deployed to plume yet
+    mTbillRedemptionVault: '0x59CFA14DEa1af37F0D6bDD5888bDbB8014fc6906',
+  },
 };
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
