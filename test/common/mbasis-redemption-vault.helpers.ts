@@ -199,6 +199,29 @@ export const setLiquidityProviderTest = async (
   expect(provider).eq(newProvider);
 };
 
+export const setSwapperVaultTest = async (
+  { vault, owner }: CommonParamsProvider,
+  newVault: string,
+  opt?: OptionalCommonParams,
+) => {
+  if (opt?.revertMessage) {
+    await expect(
+      vault.connect(opt?.from ?? owner).setSwapperVault(newVault),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  await expect(vault.connect(opt?.from ?? owner).setSwapperVault(newVault))
+    .to.emit(
+      vault,
+      vault.interface.events['SetSwapperVault(address,address)'].name,
+    )
+    .withArgs((opt?.from ?? owner).address, newVault).to.not.reverted;
+
+  const provider = await vault.mTbillRedemptionVault();
+  expect(provider).eq(newVault);
+};
+
 const getFeePercent = async (
   sender: string,
   token: string,
