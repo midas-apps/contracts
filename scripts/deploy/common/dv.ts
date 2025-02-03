@@ -26,7 +26,7 @@ export type DeployDvConfig = {
 export const deployDepositVault = async (
   hre: HardhatRuntimeEnvironment,
   vaultFactory: ContractFactory,
-  token: 'mTBILL' | 'mBASIS' | 'mBTC' | 'mEDGE',
+  token: 'mTBILL' | 'mBASIS' | 'mBTC' | 'mEDGE' | 'mRE7',
   networkConfig?: DeployDvConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
