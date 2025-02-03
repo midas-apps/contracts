@@ -56,6 +56,8 @@ import {
   MBTCTest__factory,
   // eslint-disable-next-line camelcase
   MEDGETest__factory,
+  // eslint-disable-next-line camelcase
+  MRE7Test__factory,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -108,6 +110,10 @@ export const defaultDeploy = async () => {
   await expect(mEDGE.initialize(ethers.constants.AddressZero)).to.be.reverted;
   await mEDGE.initialize(accessControl.address);
 
+  const mRE7 = await new MRE7Test__factory(owner).deploy();
+  await expect(mRE7.initialize(ethers.constants.AddressZero)).to.be.reverted;
+  await mRE7.initialize(accessControl.address);
+
   await accessControl.grantRoleMult(
     [
       await mBASIS.M_BASIS_BURN_OPERATOR_ROLE(),
@@ -131,6 +137,15 @@ export const defaultDeploy = async () => {
       await mEDGE.M_EDGE_BURN_OPERATOR_ROLE(),
       await mEDGE.M_EDGE_MINT_OPERATOR_ROLE(),
       await mEDGE.M_EDGE_PAUSE_OPERATOR_ROLE(),
+    ],
+    [owner.address, owner.address, owner.address],
+  );
+
+  await accessControl.grantRoleMult(
+    [
+      await mRE7.M_RE7_BURN_OPERATOR_ROLE(),
+      await mRE7.M_RE7_MINT_OPERATOR_ROLE(),
+      await mRE7.M_RE7_PAUSE_OPERATOR_ROLE(),
     ],
     [owner.address, owner.address, owner.address],
   );
@@ -163,6 +178,11 @@ export const defaultDeploy = async () => {
     owner,
   ).deploy();
   const mockedAggregatorMEDGEDecimals = await mockedAggregatorMEDGE.decimals();
+
+  const mockedAggregatorMRE7 = await new AggregatorV3Mock__factory(
+    owner,
+  ).deploy();
+  const mockedAggregatorMRE7Decimals = await mockedAggregatorMRE7.decimals();
 
   const mockedAggregatorMBTC = await new AggregatorV3Mock__factory(
     owner,
@@ -237,6 +257,15 @@ export const defaultDeploy = async () => {
     3 * 24 * 3600,
     parseUnits('0.1', mockedAggregatorMEDGEDecimals),
     parseUnits('10000', mockedAggregatorMEDGEDecimals),
+  );
+
+  const mRE7ToUsdDataFeed = await new DataFeedTest__factory(owner).deploy();
+  await mRE7ToUsdDataFeed.initialize(
+    accessControl.address,
+    mockedAggregatorMRE7.address,
+    3 * 24 * 3600,
+    parseUnits('0.1', mockedAggregatorMRE7Decimals),
+    parseUnits('10000', mockedAggregatorMRE7Decimals),
   );
 
   const WBTCToBtcDataFeed = await new DataFeedTest__factory(owner).deploy();
@@ -1086,5 +1115,6 @@ export const defaultDeploy = async () => {
     otherCoins,
     WBTCToBtcDataFeed,
     mEDGE,
+    mRE7,
   };
 };
