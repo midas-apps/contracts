@@ -6,6 +6,7 @@ import {
   M_BASIS_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
   M_BASIS_REDEMPTION_VAULT_CONTRACT_NAME,
   M_BTC_REDEMPTION_VAULT_CONTRACT_NAME,
+  M_RE7_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
   M_EDGE_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
   REDEMPTION_VAULT_BUIDL_CONTRACT_NAME,
   REDEMPTION_VAULT_CONTRACT_NAME,
@@ -59,7 +60,7 @@ export type DeployRvConfig =
 
 export const deployRedemptionVault = async (
   hre: HardhatRuntimeEnvironment,
-  token: 'mTBILL' | 'mBASIS' | 'mBTC' | 'mEDGE',
+  token: 'mTBILL' | 'mBASIS' | 'mBTC' | 'mEDGE' | 'mRE7',
   networkConfig?: DeployRvConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
@@ -116,6 +117,14 @@ export const deployRedemptionVault = async (
       );
     } else {
       throw new Error('Cannot deploy regular redeemer for mEDGE');
+    }
+  } else if (token === 'mRE7') {
+    if (networkConfig.type === 'SWAPPER') {
+      vaultFactory = await hre.ethers.getContractFactory(
+        M_RE7_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
+      );
+    } else {
+      throw new Error('Cannot deploy regular redeemer for mRE7');
     }
   } else {
     throw new Error('Unsupported token type');

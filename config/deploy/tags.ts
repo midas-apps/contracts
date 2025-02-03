@@ -18,6 +18,8 @@ export const M_BASIS_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME =
   'MBasisRedemptionVaultWithSwapper';
 export const M_EDGE_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME =
   'MEdgeRedemptionVaultWithSwapper';
+export const M_RE7_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME =
+  'MRe7RedemptionVaultWithSwapper';
 
 export const M_BTC_REDEMPTION_VAULT_CONTRACT_NAME = 'MBtcRedemptionVault';
 

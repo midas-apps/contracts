@@ -11,9 +11,12 @@ import { burn, mint, setMetadataTest } from './common/mTBILL.helpers';
 import {
   // eslint-disable-next-line camelcase
   MRe7CustomAggregatorFeed__factory,
+  // eslint-disable-next-line camelcase
   MRe7DataFeed__factory,
+  // eslint-disable-next-line camelcase
   MRe7DepositVault__factory,
 } from '../typechain-types';
+import { MRe7RedemptionVaultWithSwapper__factory } from '../typechain-types/factories/contracts/mRE7/MRe7RedemptionVaultWithSwapper__factory';
 
 describe('mRE7', function () {
   it('deployment', async () => {
@@ -342,22 +345,21 @@ describe('MRe7DepositVault', function () {
   });
 });
 
-// TODO: uncomment when get rv info from the team
-// describe('MRe7RedemptionVault', function () {
-//   describe('deployment', () => {
-//     it('vaultRole', async () => {
-//       const fixture = await loadFixture(defaultDeploy);
+describe('MRe7RedemptionVault', function () {
+  describe('deployment', () => {
+    it('vaultRole', async () => {
+      const fixture = await loadFixture(defaultDeploy);
 
-//       const tester = await new MRe7RedemptionVault__factory(
-//         fixture.owner,
-//       ).deploy();
+      const tester = await new MRe7RedemptionVaultWithSwapper__factory(
+        fixture.owner,
+      ).deploy();
 
-//       expect(await tester.vaultRole()).eq(
-//         await tester.M_RE7_REDEMPTION_VAULT_ADMIN_ROLE(),
-//       );
-//     });
-//   });
-// });
+      expect(await tester.vaultRole()).eq(
+        await tester.M_RE7_REDEMPTION_VAULT_ADMIN_ROLE(),
+      );
+    });
+  });
+});
 
 describe('MRe7CustomAggregatorFeed', () => {
   it('check admin role', async () => {
