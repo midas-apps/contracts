@@ -7,6 +7,10 @@ import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { deployRedemptionVault, DeployRvConfig } from '../common/rv';
+import {
+  getCurrentAddresses,
+  midasAddressesPerNetwork,
+} from '../../../config/constants/addresses';
 
 const configs: Record<number, DeployRvConfig> = {
   11155111: {
@@ -22,8 +26,8 @@ const configs: Record<number, DeployRvConfig> = {
     minFiatRedeemAmount: parseUnits('1', 18),
     requestRedeemer: undefined,
     liquidityProvider: undefined,
-
-    mTbillRedemptionVault: '0x', // FIXME:
+    mTbillRedemptionVault:
+      midasAddressesPerNetwork.sepolia?.mBASIS?.redemptionVaultSwapper ?? '0x',
   },
   1: {
     type: 'SWAPPER',

@@ -14,7 +14,7 @@ import {
 const config = {
   minAnswer: parseUnits('0', 8),
   maxAnswer: parseUnits('100000', 8),
-  maxAnswerDeviation: parseUnits('0.35', 8),
+  maxAnswerDeviation: parseUnits('0.5', 8),
   description: 'mRE7/USD',
 };
 
