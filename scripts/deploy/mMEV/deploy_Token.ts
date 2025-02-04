@@ -27,7 +27,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     },
   );
 
-  console.log('Deployed mRE7:', deployment.address);
+  console.log('Deployed mMEV:', deployment.address);
 
   if (deployment.deployTransaction) {
     console.log('Waiting 5 blocks...');

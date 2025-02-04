@@ -3,10 +3,7 @@ import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import {
-  M_MEV_DATA_FEED_CONTRACT_NAME,
-  M_RE7_DATA_FEED_CONTRACT_NAME,
-} from '../../../config';
+import { M_MEV_DATA_FEED_CONTRACT_NAME } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import {
   logDeployProxy,

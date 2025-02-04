@@ -26,18 +26,18 @@ const configs: Record<number, DeployRvConfig> = {
   },
   1: {
     type: 'SWAPPER',
-    feeReceiver: '0x', // FIXME:
-    tokensReceiver: '0x', // FIXME:
-    instantDailyLimit: parseUnits('1000000'), // FIXME:
-    instantFee: parseUnits('0.5', 2), // FIXME:
-    minAmount: parseUnits('0'), // FIXME:
-    variationTolerance: parseUnits('5', 2), // FIXME:
-    fiatAdditionalFee: parseUnits('0.1', 2), // FIXME:
-    fiatFlatFee: parseUnits('30'), // FIXME:
-    minFiatRedeemAmount: parseUnits('1000'), // FIXME:
-    requestRedeemer: '0x', // FIXME:
-    liquidityProvider: '0x', // FIXME:
-    mTbillRedemptionVault: '0x', // FIXME:
+    feeReceiver: '0xceca5D043DAdc38Bcb2e1F13296254Cb4798019d',
+    tokensReceiver: '0xE92A723af33A7aC8D54b6b1A0e1BF1Ca6E94231B',
+    instantDailyLimit: parseUnits('1000000'),
+    instantFee: parseUnits('0.5', 2),
+    minAmount: parseUnits('0'),
+    variationTolerance: parseUnits('5', 2),
+    fiatAdditionalFee: parseUnits('0.1', 2),
+    fiatFlatFee: parseUnits('30'),
+    minFiatRedeemAmount: parseUnits('1000'),
+    requestRedeemer: '0x745CaeAa070319cBfFF1AF29EF73bb594624d389',
+    liquidityProvider: '0x2Dbb5eC76A17E13Ecb85b8483dc762642d3D07bf',
+    mTbillRedemptionVault: '0x0D89C1C4799353F3805A3E6C4e1Cbbb83217D123',
   },
 };
 
