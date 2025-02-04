@@ -13,7 +13,7 @@ const configs: Record<number, DeployDvConfig> = {
     tokensReceiver: undefined,
     instantDailyLimit: constants.MaxUint256,
     instantFee: parseUnits('1', 2),
-    minMTokenAmountForFirstDeposit: parseUnits('100'),
+    minMTokenAmountForFirstDeposit: parseUnits('0'),
     minAmount: parseUnits('0.01'),
     variationTolerance: parseUnits('0.1', 2),
   },
