@@ -17,6 +17,7 @@ export interface MidasAddresses {
   mBTC?: TokenAddresses;
   mEDGE?: TokenAddresses;
   mRE7?: TokenAddresses;
+  mMEV?: TokenAddresses;
   eUSD?: TokenAddresses;
   etfDataFeed?: string;
   eurToUsdFeed?: string;

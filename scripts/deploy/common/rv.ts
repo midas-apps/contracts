@@ -2,7 +2,6 @@ import { BigNumberish, constants, ContractFactory } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
-  M_BASIS_DEPOSIT_VAULT_CONTRACT_NAME,
   M_BASIS_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
   M_BASIS_REDEMPTION_VAULT_CONTRACT_NAME,
   M_BTC_REDEMPTION_VAULT_CONTRACT_NAME,
@@ -10,6 +9,7 @@ import {
   M_EDGE_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
   REDEMPTION_VAULT_BUIDL_CONTRACT_NAME,
   REDEMPTION_VAULT_CONTRACT_NAME,
+  M_MEV_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
 } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import {
@@ -60,7 +60,7 @@ export type DeployRvConfig =
 
 export const deployRedemptionVault = async (
   hre: HardhatRuntimeEnvironment,
-  token: 'mTBILL' | 'mBASIS' | 'mBTC' | 'mEDGE' | 'mRE7',
+  token: 'mTBILL' | 'mBASIS' | 'mBTC' | 'mEDGE' | 'mRE7' | 'mMEV',
   networkConfig?: DeployRvConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
@@ -125,6 +125,14 @@ export const deployRedemptionVault = async (
       );
     } else {
       throw new Error('Cannot deploy regular redeemer for mRE7');
+    }
+  } else if (token === 'mMEV') {
+    if (networkConfig.type === 'SWAPPER') {
+      vaultFactory = await hre.ethers.getContractFactory(
+        M_MEV_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
+      );
+    } else {
+      throw new Error('Cannot deploy regular redeemer for mMEV');
     }
   } else {
     throw new Error('Unsupported token type');
