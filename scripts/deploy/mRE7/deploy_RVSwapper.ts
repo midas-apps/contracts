@@ -6,11 +6,11 @@ import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { deployRedemptionVault, DeployRvConfig } from '../common/rv';
 import {
   getCurrentAddresses,
   midasAddressesPerNetwork,
 } from '../../../config/constants/addresses';
+import { deployRedemptionVault, DeployRvConfig } from '../common/rv';
 
 const configs: Record<number, DeployRvConfig> = {
   11155111: {
