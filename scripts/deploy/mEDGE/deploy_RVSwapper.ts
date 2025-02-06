@@ -55,6 +55,7 @@ const configs: Record<number, DeployRvConfig> = {
     liquidityProvider: '0x59CFA14DEa1af37F0D6bDD5888bDbB8014fc6906',
     // this value is a temp. plug as there is no mBASIS vault deployed to plume yet
     mTbillRedemptionVault: '0x59CFA14DEa1af37F0D6bDD5888bDbB8014fc6906',
+    sanctionsList: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
   },
 };
 

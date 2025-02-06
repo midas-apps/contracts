@@ -37,8 +37,7 @@ contract mRE7 is mTBILL {
      */
     function initialize(address _accessControl) external override initializer {
         __Blacklistable_init(_accessControl);
-        // FIXME: name and symb
-        __ERC20_init("Midas mRE7", "mRE7");
+        __ERC20_init("Midas Re7 Yield", "mRe7YIELD");
     }
 
     /**

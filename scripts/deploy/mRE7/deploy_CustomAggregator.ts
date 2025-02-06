@@ -14,8 +14,8 @@ import {
 const config = {
   minAnswer: parseUnits('0', 8),
   maxAnswer: parseUnits('100000', 8),
-  maxAnswerDeviation: parseUnits('0.5', 8),
-  description: 'mRE7/USD',
+  maxAnswerDeviation: parseUnits('2', 8),
+  description: 'mRe7YIELD/USD',
 };
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {

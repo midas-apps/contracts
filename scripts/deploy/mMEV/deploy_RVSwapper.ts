@@ -38,6 +38,7 @@ const configs: Record<number, DeployRvConfig> = {
     requestRedeemer: '0x745CaeAa070319cBfFF1AF29EF73bb594624d389',
     liquidityProvider: '0x2Dbb5eC76A17E13Ecb85b8483dc762642d3D07bf',
     mTbillRedemptionVault: '0x0D89C1C4799353F3805A3E6C4e1Cbbb83217D123',
+    sanctionsList: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
   },
 };
 

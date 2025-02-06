@@ -18,13 +18,14 @@ const configs: Record<number, DeployDvConfig> = {
     variationTolerance: parseUnits('0.1', 2),
   },
   1: {
-    feeReceiver: 'TODO', // FIXME:
-    tokensReceiver: 'TODO', // FIXME:
-    instantDailyLimit: parseUnits('0'), // FIXME:
-    instantFee: parseUnits('0', 2), // FIXME:
-    minMTokenAmountForFirstDeposit: parseUnits('0'), // FIXME:
-    minAmount: parseUnits('0'), // FIXME:
-    variationTolerance: parseUnits('5', 2), // FIXME:
+    feeReceiver: '0x4be07162e3A4e372e74121B418bdC057a4E31b43',
+    tokensReceiver: '0x246778D5cD7ab54DB8Ad160f8b3Ab0b213983dfc',
+    instantDailyLimit: parseUnits('10000000'),
+    instantFee: parseUnits('0', 2),
+    minMTokenAmountForFirstDeposit: parseUnits('0'),
+    minAmount: parseUnits('0'),
+    variationTolerance: parseUnits('5', 2),
+    sanctionsList: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
   },
 };
 

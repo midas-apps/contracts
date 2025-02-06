@@ -34,7 +34,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     [
       addresses?.accessControl,
       customAggregator,
-      2592000,
+      8208000,
       parseUnits('0.1', 8),
       parseUnits('100000', 8),
     ],

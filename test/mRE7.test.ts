@@ -22,8 +22,8 @@ describe('mRE7', function () {
   it('deployment', async () => {
     const { mRE7 } = await loadFixture(defaultDeploy);
 
-    expect(await mRE7.name()).eq('Midas mRE7');
-    expect(await mRE7.symbol()).eq('mRE7');
+    expect(await mRE7.name()).eq('Midas Re7 Yield');
+    expect(await mRE7.symbol()).eq('mRe7YIELD');
 
     expect(await mRE7.paused()).eq(false);
   });
