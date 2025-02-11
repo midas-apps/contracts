@@ -14,23 +14,24 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { deployer } = await hre.getNamedAccounts();
   const owner = await hre.ethers.getSigner(deployer);
 
-  console.log('Deploying mEDGE...', { addresses });
+  console.log('Deploying BandStdChailinkAdapter...', { addresses });
 
   // TODO: implement
   // if (!addresses?.accessControl)
   //   throw new Error('Access control address is not set');
 
-  // const fac = await hre.ethers.getContractFactory(
-  //   'StorkChainlinkAdapter',
-  //   owner,
-  // );
+  const fac = await hre.ethers.getContractFactory(
+    'BandStdChailinkAdapter',
+    owner,
+  );
 
-  // const tx = await fac.deploy(
-  //   '0xacC0a0cF13571d30B4b8637996F5D6D774d4fd62',
-  //   '0xe78fbac639b951bb7d4d8a6a7e4e3be7be423f4056b225ec071544c48dc303ef',
-  // );
+  const tx = await fac.deploy(
+    '0xDA7a001b254CD22e46d3eAB04d937489c93174C3',
+    'USDC',
+    'USD',
+  );
 
-  // console.log('Deployed mEDGE:', tx.address);
+  console.log('Deployed BandStdChailinkAdapter:', tx.address);
 };
 
 func(hre).then(console.log).catch(console.error);

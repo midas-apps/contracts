@@ -142,6 +142,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
   },
   oasis: {
+    dataFeeds: {
+      usdc: {
+        token: '0x97eec1c29f745dC7c267F90292AA663d997a601D',
+        aggregator: '0xa97522073dDfe39e31e606338a5Df433291DE238',
+        dataFeed: '0xd8C1BC10DCf652949dF110e823999e7c3B298c46',
+      },
+    },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     mTBILL: {
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',

@@ -49,11 +49,11 @@ contract BandStdChailinkAdapter {
     }
 
     function latestAnswer() public view virtual returns (int256) {
-        return int256(ref.getReferenceData(base, quote).rate);
+        return int256(_getBandReferenceData().rate);
     }
 
     function latestTimestamp() public view returns (uint256) {
-        return ref.getReferenceData(base, quote).lastUpdatedBase;
+        return _getBandReferenceData().lastUpdatedBase;
     }
 
     function latestRound() public view returns (uint256) {
@@ -86,10 +86,7 @@ contract BandStdChailinkAdapter {
             uint80 answeredInRound
         )
     {
-        IStdReference.ReferenceData memory value = ref.getReferenceData(
-            base,
-            quote
-        );
+        IStdReference.ReferenceData memory value = _getBandReferenceData();
 
         return (
             _roundId,
@@ -111,10 +108,7 @@ contract BandStdChailinkAdapter {
             uint80 answeredInRound
         )
     {
-        IStdReference.ReferenceData memory value = ref.getReferenceData(
-            base,
-            quote
-        );
+        IStdReference.ReferenceData memory value = _getBandReferenceData();
 
         roundId = uint80(value.lastUpdatedBase);
 
@@ -125,5 +119,13 @@ contract BandStdChailinkAdapter {
             value.lastUpdatedBase,
             roundId
         );
+    }
+
+    function _getBandReferenceData()
+        private
+        view
+        returns (IStdReference.ReferenceData memory)
+    {
+        return ref.getReferenceData(base, quote);
     }
 }
