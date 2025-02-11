@@ -154,6 +154,8 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
       customFeed: '0xF76d11D4473EA49a420460B72798fc3B38D4d0CF',
       dataFeed: '0x1075762cb143B495dbccE139712add38Eff19dAb',
+      depositVault: '0xD7Fe0e91C05CAfdd26dA4B176eEc2b883795BDcC',
+      redemptionVault: '0xf939E88ecAd43115116c7106DfdbdC4b1315a7Ee',
     },
   },
   plume: {
