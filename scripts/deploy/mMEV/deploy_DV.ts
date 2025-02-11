@@ -4,7 +4,7 @@ import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME } from '../../../config';
+import { M_MEV_DEPOSIT_VAULT_CONTRACT_NAME } from '../../../config';
 import { deployDepositVault, DeployDvConfig } from '../common';
 
 const configs: Record<number, DeployDvConfig> = {
@@ -13,23 +13,13 @@ const configs: Record<number, DeployDvConfig> = {
     tokensReceiver: undefined,
     instantDailyLimit: constants.MaxUint256,
     instantFee: parseUnits('1', 2),
-    minMTokenAmountForFirstDeposit: parseUnits('100'),
+    minMTokenAmountForFirstDeposit: parseUnits('0'),
     minAmount: parseUnits('0.01'),
     variationTolerance: parseUnits('0.1', 2),
   },
-  // plume
-  98865: {
-    feeReceiver: '0xc69F99ab9C6b03cEacfE6FB9D753D5dD29C2f354',
-    tokensReceiver: '0x518FBF72dAC0CC09BF8492037e80BDaA7FF3F44f',
-    instantDailyLimit: parseUnits('10000000'),
-    instantFee: parseUnits('0', 2),
-    minMTokenAmountForFirstDeposit: parseUnits('0'),
-    minAmount: parseUnits('0'),
-    variationTolerance: parseUnits('5', 2),
-  },
   1: {
-    feeReceiver: '0xF9C2E91d6d43B2A7e7c4A9dDb3E56564F1a7f7d4',
-    tokensReceiver: '0xc93437a52aF5190C536ce6d994331f2Cc3e44E18',
+    feeReceiver: '0xceca5D043DAdc38Bcb2e1F13296254Cb4798019d',
+    tokensReceiver: '0xE92A723af33A7aC8D54b6b1A0e1BF1Ca6E94231B',
     instantDailyLimit: parseUnits('10000000'),
     instantFee: parseUnits('0', 2),
     minMTokenAmountForFirstDeposit: parseUnits('0'),
@@ -44,8 +34,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   await deployDepositVault(
     hre,
-    await hre.ethers.getContractFactory(M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME),
-    'mEDGE',
+    await hre.ethers.getContractFactory(M_MEV_DEPOSIT_VAULT_CONTRACT_NAME),
+    'mMEV',
     networkConfig,
   );
 };

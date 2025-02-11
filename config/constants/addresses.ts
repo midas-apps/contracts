@@ -16,6 +16,8 @@ export interface MidasAddresses {
   mBASIS?: TokenAddresses;
   mBTC?: TokenAddresses;
   mEDGE?: TokenAddresses;
+  mRE7?: TokenAddresses;
+  mMEV?: TokenAddresses;
   eUSD?: TokenAddresses;
   etfDataFeed?: string;
   eurToUsdFeed?: string;
@@ -94,6 +96,20 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x20cd58F72cF1727a2937eB1816593390cf8d91cB',
       depositVault: '0xfE8de16F2663c61187C1e15Fb04D773E6ac668CC',
       redemptionVaultSwapper: '0x9B2C5E30E3B1F6369FC746A1C1E47277396aF15D',
+    },
+    mMEV: {
+      token: '0x030b69280892c888670EDCDCD8B69Fd8026A0BF3',
+      customFeed: '0x5f09Aff8B9b1f488B7d1bbaD4D89648579e55d61',
+      dataFeed: '0x9BF00b7CFC00D6A7a2e2C994DB8c8dCa467ee359',
+      depositVault: '0xE092737D412E0B290380F9c8548cB5A58174704f',
+      redemptionVaultSwapper: '0xac14a14f578C143625Fc8F54218911e8F634184D',
+    },
+    mRE7: {
+      token: '0x87C9053C819bB28e0D73d33059E1b3DA80AFb0cf',
+      customFeed: '0x0a2a51f2f206447dE3E3a80FCf92240244722395',
+      dataFeed: '0x7E8C632ab231479886AF1Bc02B9D646e4634Da93',
+      depositVault: '0xcE0A2953a5d46400Af601a9857235312d1924aC7',
+      redemptionVaultSwapper: '0x5356B8E06589DE894D86B24F4079c629E8565234',
     },
     eUSD: {
       token: '0xb5C5f2f9d9d9e7c2E885549AFb857306d119c701',
@@ -204,6 +220,20 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x164645fbC7220a3b4f8f5C6B473bCf1b6db146DD',
       depositVault: '0x5463A2651cea746606ABf3FAe10EfABE7ce06912',
       redemptionVaultSwapper: '0xf51ad2f863FB9728231a234DFC7574463317A237',
+    },
+    mMEV: {
+      token: '0x8335d94170C4275EbeE7c0Ff8AD3F4C0752eCe2d',
+      customFeed: '0x5AD2e3d65f8eCDc36eeba38BAE3Cc6Ff258D2dfa',
+      dataFeed: '0xFaAE52c6A6d477f859a740a76B29c33559ace18c',
+      depositVault: '0xa1150cd4A014e06F5E0A6ec9453fE0208dA5adAb',
+      redemptionVaultSwapper: '0xEA6a495bA398FAE5f9780335FE27f33E6cCC995E',
+    },
+    mRE7: {
+      token: '0xC93bb8D5581D74272F0E304593af9Ab4E3A0181b',
+      customFeed: '0xE042678e6c6871Fa279e037C11e390f31334ba0B',
+      dataFeed: '0x6b6b870C7f449266a9F40F94eCa5A6fF9b0857E4',
+      depositVault: '0x65C4e04Cc26aAdd1eC95C54Cd6dBa61a270F15ca',
+      redemptionVaultSwapper: '0x5A096AC89eaEF68930352a15Da49e4eB8590Bf1d',
     },
     eUSD: {
       token: '0xDd5a54bA2aB379A5e642c58F98aD793A183960E2',
