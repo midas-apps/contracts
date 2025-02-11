@@ -145,6 +145,8 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     mTBILL: {
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
+      customFeed: '0xF76d11D4473EA49a420460B72798fc3B38D4d0CF',
+      dataFeed: '0x1075762cb143B495dbccE139712add38Eff19dAb',
     },
   },
   plume: {
