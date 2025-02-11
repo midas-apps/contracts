@@ -23,8 +23,8 @@ const configs: Record<number, DeployDataFeedConfig> = {
   },
   [chainIds.oasis]: {
     healthyDiff: 24 * 60 * 60,
-    minPrice: parseUnits('0.997', 8),
-    maxPrice: parseUnits('1.003', 8),
+    minPrice: parseUnits('0.997', 18),
+    maxPrice: parseUnits('1.003', 18),
   },
 };
 
