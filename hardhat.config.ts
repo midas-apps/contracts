@@ -45,10 +45,10 @@ const config: HardhatUserConfig = {
       hardhat: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       localhost: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       sepolia: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
-      etherlink: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       base: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       oasis: '0xa690AB0543514D04411Bb1D12b2E277D675D4939',
       plume: '0x1Ded0c1E3dC80634b8d615f84aeAf1fA13B913Cc',
+      etherlink: '0xaF940292B68B668A1De0e0729Ce0D60e95018b17',
     },
   },
   verify: {
@@ -86,8 +86,8 @@ const config: HardhatUserConfig = {
         chainId: chainIds.etherlink,
         network: 'etherlink',
         urls: {
-          apiURL: 'https://testnet-explorer.etherlink.com/api',
-          browserURL: 'https://testnet-explorer.etherlink.com',
+          apiURL: 'https://explorer.etherlink.com/api',
+          browserURL: 'https://explorer.etherlink.com',
         },
       },
       {

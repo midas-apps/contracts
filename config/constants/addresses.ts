@@ -257,10 +257,12 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   hardhat: undefined,
   etherlink: {
-    accessControl: '0xa8a5c4FF4c86a459EBbDC39c5BE77833B3A15d88',
-    eUSD: {
-      token: '0x19AB19e61A930bc5C7B75Bf06cDd954218Ca9F0b',
-      redemptionVault: '0x0D89C1C4799353F3805A3E6C4e1Cbbb83217D123',
+    accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    mTBILL: {
+      token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
+    },
+    mBASIS: {
+      token: '0x2247B5A46BB79421a314aB0f0b67fFd11dd37Ee4',
     },
   },
   localhost: {
