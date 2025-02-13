@@ -47,7 +47,7 @@ const config: HardhatUserConfig = {
       sepolia: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       etherlink: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       base: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
-      oasis: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+      oasis: '0xa690AB0543514D04411Bb1D12b2E277D675D4939',
       plume: '0x1Ded0c1E3dC80634b8d615f84aeAf1fA13B913Cc',
     },
   },
