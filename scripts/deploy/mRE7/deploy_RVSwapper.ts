@@ -6,14 +6,12 @@ import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import {
-  getCurrentAddresses,
-  midasAddressesPerNetwork,
-} from '../../../config/constants/addresses';
+import { midasAddressesPerNetwork } from '../../../config/constants/addresses';
 import { deployRedemptionVault, DeployRvConfig } from '../common/rv';
+import { chainIds } from '../../../config';
 
 const configs: Record<number, DeployRvConfig> = {
-  11155111: {
+  [chainIds.sepolia]: {
     type: 'SWAPPER',
     feeReceiver: undefined,
     tokensReceiver: undefined,
@@ -29,7 +27,7 @@ const configs: Record<number, DeployRvConfig> = {
     mTbillRedemptionVault:
       midasAddressesPerNetwork.sepolia?.mBASIS?.redemptionVaultSwapper ?? '0x',
   },
-  1: {
+  [chainIds.main]: {
     type: 'SWAPPER',
     feeReceiver: '0x4be07162e3A4e372e74121B418bdC057a4E31b43',
     tokensReceiver: '0x246778D5cD7ab54DB8Ad160f8b3Ab0b213983dfc',
@@ -45,6 +43,22 @@ const configs: Record<number, DeployRvConfig> = {
     mTbillRedemptionVault:
       midasAddressesPerNetwork.main?.mBASIS?.redemptionVaultSwapper ?? '0x',
     sanctionsList: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
+  },
+  [chainIds.base]: {
+    type: 'SWAPPER',
+    feeReceiver: '0x4be07162e3A4e372e74121B418bdC057a4E31b43',
+    tokensReceiver: '0x246778D5cD7ab54DB8Ad160f8b3Ab0b213983dfc',
+    instantDailyLimit: parseUnits('1000000'),
+    instantFee: parseUnits('0', 2),
+    minAmount: parseUnits('0'),
+    variationTolerance: parseUnits('5', 2),
+    fiatAdditionalFee: parseUnits('0.1', 2),
+    fiatFlatFee: parseUnits('30'),
+    minFiatRedeemAmount: parseUnits('1000'),
+    requestRedeemer: '0xC9be8B77Efa255978F3be805e620A9edF528CFc2',
+    liquidityProvider: '0xD7c27BCF825094a1732a83369Ca9475aE702522b',
+    mTbillRedemptionVault:
+      midasAddressesPerNetwork.main?.mBASIS?.redemptionVaultSwapper ?? '0x',
   },
 };
 

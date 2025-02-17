@@ -4,11 +4,11 @@ import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { M_MEV_DEPOSIT_VAULT_CONTRACT_NAME } from '../../../config';
+import { chainIds, M_MEV_DEPOSIT_VAULT_CONTRACT_NAME } from '../../../config';
 import { deployDepositVault, DeployDvConfig } from '../common';
 
 const configs: Record<number, DeployDvConfig> = {
-  11155111: {
+  [chainIds.sepolia]: {
     feeReceiver: undefined,
     tokensReceiver: undefined,
     instantDailyLimit: constants.MaxUint256,
@@ -17,7 +17,7 @@ const configs: Record<number, DeployDvConfig> = {
     minAmount: parseUnits('0.01'),
     variationTolerance: parseUnits('0.1', 2),
   },
-  1: {
+  [chainIds.main]: {
     feeReceiver: '0xceca5D043DAdc38Bcb2e1F13296254Cb4798019d',
     tokensReceiver: '0xE92A723af33A7aC8D54b6b1A0e1BF1Ca6E94231B',
     instantDailyLimit: parseUnits('10000000'),
@@ -26,6 +26,15 @@ const configs: Record<number, DeployDvConfig> = {
     minAmount: parseUnits('0'),
     variationTolerance: parseUnits('5', 2),
     sanctionsList: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
+  },
+  [chainIds.base]: {
+    feeReceiver: '0xceca5D043DAdc38Bcb2e1F13296254Cb4798019d',
+    tokensReceiver: '0xE92A723af33A7aC8D54b6b1A0e1BF1Ca6E94231B',
+    instantDailyLimit: parseUnits('10000000'),
+    instantFee: parseUnits('0', 2),
+    minMTokenAmountForFirstDeposit: parseUnits('0'),
+    minAmount: parseUnits('0'),
+    variationTolerance: parseUnits('5', 2),
   },
 };
 

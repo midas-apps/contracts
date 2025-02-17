@@ -16,7 +16,7 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   etherlink: 'https://node.mainnet.etherlink.com',
   hardhat: 'http://localhost:8545',
   localhost: 'http://localhost:8545',
-  base: 'https://base.meowrpc.com',
+  base: 'https://mainnet.base.org',
   oasis: 'https://sapphire.oasis.io',
   plume: 'https://rpc.plumenetwork.xyz',
 };

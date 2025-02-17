@@ -7,9 +7,11 @@ import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { deployRedemptionVault, DeployRvConfig } from '../common/rv';
+import { chainIds } from '../../../config';
+import { midasAddressesPerNetwork } from '../../../config/constants/addresses';
 
 const configs: Record<number, DeployRvConfig> = {
-  11155111: {
+  [chainIds.sepolia]: {
     type: 'SWAPPER',
     feeReceiver: undefined,
     tokensReceiver: undefined,
@@ -25,7 +27,7 @@ const configs: Record<number, DeployRvConfig> = {
     // mBASIS swapper RV
     mTbillRedemptionVault: '0x460cec7f88e7813D7b0a297160e6718D9fE33908',
   },
-  1: {
+  [chainIds.main]: {
     type: 'SWAPPER',
     feeReceiver: '0xF9C2E91d6d43B2A7e7c4A9dDb3E56564F1a7f7d4',
     tokensReceiver: '0xc93437a52aF5190C536ce6d994331f2Cc3e44E18',
@@ -40,7 +42,7 @@ const configs: Record<number, DeployRvConfig> = {
     liquidityProvider: '0x38C25B85BC5F9Dac55F974e4eE4A895961418267',
     mTbillRedemptionVault: '0x0D89C1C4799353F3805A3E6C4e1Cbbb83217D123',
   },
-  98865: {
+  [chainIds.plume]: {
     type: 'SWAPPER',
     feeReceiver: '0xc69F99ab9C6b03cEacfE6FB9D753D5dD29C2f354',
     tokensReceiver: '0x518FBF72dAC0CC09BF8492037e80BDaA7FF3F44f',
@@ -56,6 +58,22 @@ const configs: Record<number, DeployRvConfig> = {
     // this value is a temp. plug as there is no mBASIS vault deployed to plume yet
     mTbillRedemptionVault: '0x59CFA14DEa1af37F0D6bDD5888bDbB8014fc6906',
     sanctionsList: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
+  },
+  [chainIds.base]: {
+    type: 'SWAPPER',
+    feeReceiver: '0xF9C2E91d6d43B2A7e7c4A9dDb3E56564F1a7f7d4',
+    tokensReceiver: '0xc93437a52aF5190C536ce6d994331f2Cc3e44E18',
+    instantDailyLimit: parseUnits('1000000'),
+    instantFee: parseUnits('0.5', 2),
+    minAmount: parseUnits('0'),
+    variationTolerance: parseUnits('5', 2),
+    fiatAdditionalFee: parseUnits('0.1', 2),
+    fiatFlatFee: parseUnits('30'),
+    minFiatRedeemAmount: parseUnits('1000'),
+    requestRedeemer: '0x9ffFe9FcE62204de42aE91b965b44062c0f3c70F',
+    liquidityProvider: '0xD7c27BCF825094a1732a83369Ca9475aE702522b',
+    mTbillRedemptionVault:
+      midasAddressesPerNetwork.base?.mBASIS?.redemptionVaultSwapper ?? '0x',
   },
 };
 
