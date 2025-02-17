@@ -13,7 +13,7 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   sepolia: ALCHEMY_KEY
     ? `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_KEY}`
     : `https://sepolia.infura.io/v3/${INFURA_KEY}`,
-  etherlink: 'https://etherlink-testnet.rpc.thirdweb.com',
+  etherlink: 'https://node.mainnet.etherlink.com',
   hardhat: 'http://localhost:8545',
   localhost: 'http://localhost:8545',
   base: 'https://base.meowrpc.com',
@@ -36,7 +36,7 @@ export const chainIds: ConfigPerNetwork<number> = {
   main: 1,
   base: 8453,
   sepolia: 11155111,
-  etherlink: 128123,
+  etherlink: 42793,
   hardhat: 31337,
   localhost: 31337,
   oasis: 23294,
