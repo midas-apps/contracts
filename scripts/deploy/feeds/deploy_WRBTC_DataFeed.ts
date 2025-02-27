@@ -21,7 +21,7 @@ const configs: Record<number, DeployDataFeedConfig> = {
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const networkConfig = configs[hre.network.config.chainId!];
 
-  await deployTokenDataFeed(hre, 'wbtc', networkConfig);
+  await deployTokenDataFeed(hre, 'wrbtc', networkConfig);
 };
 
 func(hre).then(console.log).catch(console.error);

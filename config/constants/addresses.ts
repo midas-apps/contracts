@@ -206,6 +206,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         token: '0x74C9F2B00581F1b11Aa7Ff05aa9f608B7389de67',
         dataFeed: '0x6A3A467CCA184E395042fAb35d9fc7Eb789885De',
       },
+      wrbtc: {
+        aggregator: '0x032Ce76Fd927431Bdb532EcFAc5Db0D6B6Ea0De3',
+        token: '0x542fda317318ebf1d3deaf76e0b632741a7e677d',
+        dataFeed: '0x442e9888bdE0E7009A11638Bba94244A697050E6',
+      },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     mTBILL: {

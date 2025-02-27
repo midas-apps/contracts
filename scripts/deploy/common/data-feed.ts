@@ -19,7 +19,7 @@ export type DeployDataFeedConfig = {
 
 export const deployTokenDataFeed = async (
   hre: HardhatRuntimeEnvironment,
-  token: 'usdc' | 'usdt' | 'dai' | 'm' | 'wbtc' | 'pusd',
+  token: 'usdc' | 'usdt' | 'dai' | 'm' | 'wbtc' | 'pusd' | 'wrbtc',
   networkConfig?: DeployDataFeedConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
