@@ -199,6 +199,25 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
     accessControl: '0xd1871c36560539f010C548c702C67F397CD97d27',
   },
+  rootstock: {
+    accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    mTBILL: {
+      token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
+      customFeed: '0x0Ca36aF4915a73DAF06912dd256B8a4737131AE7',
+      dataFeed: '0x088A4bE7e9b164241cd4b9cAdeEa60999c2CE916',
+      depositVault: '0xf454A52DA2157686Ef99702C0C19c0E8D66bC03c',
+      redemptionVault: '0x99D22115Fd6706B78703fF015DE897d43667D12F',
+    },
+  },
+  etherlink: {
+    accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    mTBILL: {
+      token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
+    },
+    mBASIS: {
+      token: '0x2247B5A46BB79421a314aB0f0b67fFd11dd37Ee4',
+    },
+  },
   sepolia: {
     dataFeeds: {
       usdc: {
@@ -277,52 +296,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     accessControl: '0xbf25b58cB8DfaD688F7BcB2b87D71C23A6600AaC',
   },
   hardhat: undefined,
-  etherlink: {
-    accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
-    mTBILL: {
-      token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
-    },
-    mBASIS: {
-      token: '0x2247B5A46BB79421a314aB0f0b67fFd11dd37Ee4',
-    },
-  },
-  localhost: {
-    dataFeeds: {
-      usdt: {
-        aggregator: '0x3E7d1eAB13ad0104d2750B8863b489D65364e32D',
-        token: '0xdac17f958d2ee523a2206206994597c13d831ec7',
-        dataFeed: '0x7811C1Bf5db28630F303267Cc613797EB9A81188',
-      },
-      usdc: {
-        aggregator: '0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6',
-        token: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-        dataFeed: '0x3aAc6fd73fA4e16Ec683BD4aaF5Ec89bb2C0EdC2',
-      },
-    },
-    accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
-    // TODO: remove this data feed
-    etfDataFeed: '0xc747FdDFC46CDC915bEA866D519dFc5Eae5c947f',
-    eurToUsdFeed: '0x6022a020Ca5c611304B9E97F37AEE0C38455081A',
-    mTBILL: {
-      dataFeed: '0xfCEE9754E8C375e145303b7cE7BEca3201734A2B',
-      customFeed: '0x056339C044055819E8Db84E71f5f2E1F536b2E5b',
-      token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
-      depositVault: '0x99361435420711723aF805F08187c9E6bF796683',
-      redemptionVault: '0x8978e327FE7C72Fa4eaF4649C23147E279ae1470',
-    },
-    mBASIS: {
-      dataFeed: '0x1615cBC603192ae8A9FF20E98dd0e40a405d76e4',
-      customFeed: '0xE4f2AE539442e1D3Fb40F03ceEbF4A372a390d24',
-      token: '0x2a8c22E3b10036f3AEF5875d04f8441d4188b656',
-      depositVault: '0x27C0D44B02E1B732F37ba31C466a35053A7780B8',
-      redemptionVault: '0x73cB9a00cEB8FC9134a46eEE20D1fd00BEEe9D84',
-    },
-    eUSD: {
-      token: '0xb5C5f2f9d9d9e7c2E885549AFb857306d119c701',
-      depositVault: '0xdD2EC1Da19950B6B836D46882897D0D8fe4cF487',
-      redemptionVault: '0x672DCEE688aa1685701a4A4138CB20d07272D116',
-    },
-  },
+  localhost: undefined,
 };
 
 export const getCurrentAddresses = (hre: HardhatRuntimeEnvironment) => {

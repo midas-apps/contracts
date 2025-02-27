@@ -8,7 +8,8 @@ export type Network =
   | 'etherlink'
   | 'base'
   | 'oasis'
-  | 'plume';
+  | 'plume'
+  | 'rootstock';
 export type RpcUrl =
   | `https://eth-${RpcNetwork}.g.alchemy.com/v2/${string}`
   | `https://${RpcNetwork}.infura.io/v3/${string}`

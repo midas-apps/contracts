@@ -46,6 +46,7 @@ const config: HardhatUserConfig = {
       localhost: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       sepolia: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       base: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+      rootstock: '0x548F80f9f4af495aF5eaEf97bbC5c61223e96A01',
       oasis: '0xa690AB0543514D04411Bb1D12b2E277D675D4939',
       plume: '0x1Ded0c1E3dC80634b8d615f84aeAf1fA13B913Cc',
       etherlink: '0xaF940292B68B668A1De0e0729Ce0D60e95018b17',
@@ -63,6 +64,7 @@ const config: HardhatUserConfig = {
     base: getNetworkConfig('base'),
     oasis: getNetworkConfig('oasis'),
     plume: getNetworkConfig('plume'),
+    rootstock: getNetworkConfig('rootstock'),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     hardhat: FORKING_NETWORK
       ? getForkNetworkConfig(FORKING_NETWORK)
@@ -108,10 +110,18 @@ const config: HardhatUserConfig = {
       },
       {
         network: 'plume',
-        chainId: 98865,
+        chainId: chainIds.plume,
         urls: {
           apiURL: 'https://explorer.plumenetwork.xyz/api',
           browserURL: 'https://explorer.plumenetwork.xyz',
+        },
+      },
+      {
+        network: 'rootstock',
+        chainId: chainIds.rootstock,
+        urls: {
+          apiURL: 'https://rootstock.blockscout.com/api/',
+          browserURL: 'https://rootstock.blockscout.com/',
         },
       },
     ],
