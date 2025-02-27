@@ -200,6 +200,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     accessControl: '0xd1871c36560539f010C548c702C67F397CD97d27',
   },
   rootstock: {
+    dataFeeds: {
+      usdc: {
+        aggregator: '0x83c6f7F61A55Fc7A1337AbD45733AD9c1c68076D',
+        token: '0x74C9F2B00581F1b11Aa7Ff05aa9f608B7389de67',
+        dataFeed: '0x6A3A467CCA184E395042fAb35d9fc7Eb789885De',
+      },
+    },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     mTBILL: {
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
@@ -207,6 +214,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x088A4bE7e9b164241cd4b9cAdeEa60999c2CE916',
       depositVault: '0xf454A52DA2157686Ef99702C0C19c0E8D66bC03c',
       redemptionVault: '0x99D22115Fd6706B78703fF015DE897d43667D12F',
+    },
+    mBTC: {
+      token: '0xEF85254Aa4a8490bcC9C02Ae38513Cae8303FB53',
+      customFeed: '0xa167BFbeEB48815EfB3E3393d91EC586c2421821',
+      dataFeed: '0xa3A252Babc8A576660c6B8B9e3bD096D2f5017cE',
+      depositVault: '0x79A15707E2766d486681569Bd1041821f5e32998',
+      redemptionVault: '0xe7a1A676D0CCA2e20A69adD500985C7271a40205',
     },
   },
   etherlink: {
