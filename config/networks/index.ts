@@ -16,9 +16,10 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   etherlink: 'https://node.mainnet.etherlink.com',
   hardhat: 'http://localhost:8545',
   localhost: 'http://localhost:8545',
-  base: 'https://base.meowrpc.com',
+  base: 'https://mainnet.base.org',
   oasis: 'https://sapphire.oasis.io',
   plume: 'https://rpc.plumenetwork.xyz',
+  rootstock: 'https://mycrypto.rsk.co',
 };
 
 export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
@@ -30,6 +31,7 @@ export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
   localhost: 70 * GWEI,
   oasis: undefined,
   plume: undefined,
+  rootstock: undefined,
 };
 
 export const chainIds: ConfigPerNetwork<number> = {
@@ -41,6 +43,7 @@ export const chainIds: ConfigPerNetwork<number> = {
   localhost: 31337,
   oasis: 23294,
   plume: 98865,
+  rootstock: 30,
 };
 
 export const mnemonics: ConfigPerNetwork<string | undefined> = {
@@ -52,6 +55,7 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   localhost: MNEMONIC_DEV,
   oasis: MNEMONIC_PROD,
   plume: MNEMONIC_PROD,
+  rootstock: MNEMONIC_PROD,
 };
 
 export const gases: ConfigPerNetwork<number | undefined> = {
@@ -63,6 +67,7 @@ export const gases: ConfigPerNetwork<number | undefined> = {
   base: undefined,
   oasis: undefined,
   plume: undefined,
+  rootstock: undefined,
 };
 
 export const timeouts: ConfigPerNetwork<number | undefined> = {
@@ -74,6 +79,7 @@ export const timeouts: ConfigPerNetwork<number | undefined> = {
   base: undefined,
   oasis: undefined,
   plume: undefined,
+  rootstock: undefined,
 };
 
 export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
@@ -85,6 +91,7 @@ export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
   base: undefined,
   oasis: undefined,
   plume: undefined,
+  rootstock: undefined,
 };
 
 export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
@@ -96,6 +103,7 @@ export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
   base: undefined,
   oasis: undefined,
   plume: undefined,
+  rootstock: undefined,
 };
 
 export const getBaseNetworkConfig = (

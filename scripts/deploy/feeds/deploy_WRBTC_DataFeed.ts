@@ -11,23 +11,8 @@ import { deployDepositVault, DeployDvConfig } from '../common';
 import { DeployDataFeedConfig, deployTokenDataFeed } from '../common/data-feed';
 
 const configs: Record<number, DeployDataFeedConfig> = {
-  1: {
-    healthyDiff: 24 * 60 * 60,
-    minPrice: parseUnits('0.997', 8),
-    maxPrice: parseUnits('1.003', 8),
-  },
-  8453: {
-    healthyDiff: 24 * 60 * 60,
-    minPrice: parseUnits('0.997', 8),
-    maxPrice: parseUnits('1.003', 8),
-  },
-  [chainIds.oasis]: {
-    healthyDiff: 24 * 60 * 60,
-    minPrice: parseUnits('0.997', 18),
-    maxPrice: parseUnits('1.003', 18),
-  },
   [chainIds.rootstock]: {
-    healthyDiff: 24 * 60 * 60,
+    healthyDiff: 365 * 10 * 24 * 60 * 60,
     minPrice: parseUnits('0.997', 8),
     maxPrice: parseUnits('1.003', 8),
   },
@@ -36,7 +21,7 @@ const configs: Record<number, DeployDataFeedConfig> = {
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const networkConfig = configs[hre.network.config.chainId!];
 
-  await deployTokenDataFeed(hre, 'usdc', networkConfig);
+  await deployTokenDataFeed(hre, 'wrbtc', networkConfig);
 };
 
 func(hre).then(console.log).catch(console.error);

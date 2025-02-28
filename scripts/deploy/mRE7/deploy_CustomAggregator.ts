@@ -12,7 +12,7 @@ import {
 } from '../../../helpers/utils';
 
 const config = {
-  minAnswer: parseUnits('0', 8),
+  minAnswer: parseUnits('0.1', 8),
   maxAnswer: parseUnits('100000', 8),
   maxAnswerDeviation: parseUnits('2', 8),
   description: 'mRe7YIELD/USD',
