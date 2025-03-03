@@ -1,5 +1,3 @@
-import { expect } from 'chai';
-import chalk from 'chalk';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import * as hre from 'hardhat';
@@ -57,6 +55,22 @@ const configs: Record<number, DeployRvConfig> = {
     liquidityProvider: '0xD7c27BCF825094a1732a83369Ca9475aE702522b',
     mTbillRedemptionVault:
       midasAddressesPerNetwork.base?.mBASIS?.redemptionVaultSwapper ?? '0x',
+  },
+  [chainIds.arbitrum]: {
+    type: 'SWAPPER',
+    feeReceiver: '0xceca5D043DAdc38Bcb2e1F13296254Cb4798019d',
+    tokensReceiver: '0xE92A723af33A7aC8D54b6b1A0e1BF1Ca6E94231B',
+    instantDailyLimit: parseUnits('1000000'),
+    instantFee: parseUnits('0.5', 2),
+    minAmount: parseUnits('0'),
+    variationTolerance: parseUnits('5', 2),
+    fiatAdditionalFee: parseUnits('0.1', 2),
+    fiatFlatFee: parseUnits('30'),
+    minFiatRedeemAmount: parseUnits('1000'),
+    requestRedeemer: '0x745CaeAa070319cBfFF1AF29EF73bb594624d389',
+    liquidityProvider: '0x915E287EEa9594963B33FD12bF908312B5D860d2',
+    mTbillRedemptionVault:
+      midasAddressesPerNetwork.arbitrum?.mBASIS?.redemptionVaultSwapper ?? '0x',
   },
 };
 
