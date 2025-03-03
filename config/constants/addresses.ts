@@ -121,18 +121,28 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     mTBILL: {
       token: '0xdd629e5241cbc5919847783e6c96b2de4754e438',
+      customFeed: '0x45964181FA0Ecc8fFFd169499730FFD60fbe3308',
+      dataFeed: '0x8B6Dd8573FF97C08dD731B0A55E51E897aBeD03E',
     },
     mBASIS: {
       token: '0x2448Cf256192Ee8e122E52026758Ae28398AfB4F',
+      customFeed: '0xbfAAdf20cFB858CD274FBC8027d5276E6a61A64B',
+      dataFeed: '0xF675E328d4AAe03ca97a965fFa32498741Bc6947',
     },
     mEDGE: {
       token: '0x130F99c2396e02DBaaa4c1643B10e06EcFe7eDAB',
+      customFeed: '0x5a4E7FC0e4b329d8c6C124e442e34Aae001815bf',
+      dataFeed: '0xE3118A926cde694bFd8D2dCb894dcBEF443961EB',
     },
     mMEV: {
       token: '0xeCacb5434F05A548FAf92a31874e0c014bEeee91',
+      customFeed: '0xa28140D669Edf5c6529Ee50160F5B2702ecAA73b',
+      dataFeed: '0x2da917Ab125B0e88dB1eb896ebdA93a31FA2b804',
     },
     mRE7: {
       token: '0x27329B57666413b84dcb872fe611eDbFe9A1a9ad',
+      customFeed: '0x028c6A15C60827ee60c1Dc6585E54055e462effc',
+      dataFeed: '0xb7860740190BAf70eFd38B9c3db0CCeb88525315',
     },
   },
   base: {

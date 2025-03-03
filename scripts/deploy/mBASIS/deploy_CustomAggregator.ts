@@ -12,8 +12,8 @@ import {
 } from '../../../helpers/utils';
 
 const config = {
-  minAnswer: parseUnits('0', 8),
-  maxAnswer: parseUnits('100000', 8),
+  minAnswer: parseUnits('0.1', 8),
+  maxAnswer: parseUnits('1000', 8),
   maxAnswerDeviation: parseUnits('0.35', 8),
   description: 'mBASIS/USD',
 };
