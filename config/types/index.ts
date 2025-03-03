@@ -9,7 +9,8 @@ export type Network =
   | 'base'
   | 'oasis'
   | 'plume'
-  | 'rootstock';
+  | 'rootstock'
+  | 'arbitrum';
 export type RpcUrl =
   | `https://eth-${RpcNetwork}.g.alchemy.com/v2/${string}`
   | `https://${RpcNetwork}.infura.io/v3/${string}`

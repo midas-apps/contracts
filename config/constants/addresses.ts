@@ -117,6 +117,24 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVault: '0x672DCEE688aa1685701a4A4138CB20d07272D116',
     },
   },
+  arbitrum: {
+    accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    mTBILL: {
+      token: '0xdd629e5241cbc5919847783e6c96b2de4754e438',
+    },
+    mBASIS: {
+      token: '0x2448Cf256192Ee8e122E52026758Ae28398AfB4F',
+    },
+    mEDGE: {
+      token: '0x130F99c2396e02DBaaa4c1643B10e06EcFe7eDAB',
+    },
+    mMEV: {
+      token: '0xeCacb5434F05A548FAf92a31874e0c014bEeee91',
+    },
+    mRE7: {
+      token: '0x27329B57666413b84dcb872fe611eDbFe9A1a9ad',
+    },
+  },
   base: {
     dataFeeds: {
       usdc: {
