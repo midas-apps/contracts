@@ -119,6 +119,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    dataFeeds: {
+      usdc: {
+        aggregator: '0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3',
+        dataFeed: '0xf1fE2d3Ea52773BBA5FB13816B46C2A8dbce59ED',
+        token: '0xaf88d065e77c8cc2239327c5edb3a432268e5831',
+      },
+    },
     mTBILL: {
       token: '0xdd629e5241cbc5919847783e6c96b2de4754e438',
       customFeed: '0x45964181FA0Ecc8fFFd169499730FFD60fbe3308',
