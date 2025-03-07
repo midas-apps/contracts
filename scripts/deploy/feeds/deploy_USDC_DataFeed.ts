@@ -11,12 +11,12 @@ import { deployDepositVault, DeployDvConfig } from '../common';
 import { DeployDataFeedConfig, deployTokenDataFeed } from '../common/data-feed';
 
 const configs: Record<number, DeployDataFeedConfig> = {
-  1: {
+  [chainIds.sepolia]: {
     healthyDiff: 24 * 60 * 60,
     minPrice: parseUnits('0.997', 8),
     maxPrice: parseUnits('1.003', 8),
   },
-  8453: {
+  [chainIds.base]: {
     healthyDiff: 24 * 60 * 60,
     minPrice: parseUnits('0.997', 8),
     maxPrice: parseUnits('1.003', 8),
@@ -27,6 +27,11 @@ const configs: Record<number, DeployDataFeedConfig> = {
     maxPrice: parseUnits('1.003', 18),
   },
   [chainIds.rootstock]: {
+    healthyDiff: 24 * 60 * 60,
+    minPrice: parseUnits('0.997', 8),
+    maxPrice: parseUnits('1.003', 8),
+  },
+  [chainIds.arbitrum]: {
     healthyDiff: 24 * 60 * 60,
     minPrice: parseUnits('0.997', 8),
     maxPrice: parseUnits('1.003', 8),

@@ -47,6 +47,7 @@ const config: HardhatUserConfig = {
       sepolia: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       base: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       rootstock: '0x548F80f9f4af495aF5eaEf97bbC5c61223e96A01',
+      arbitrum: '0x165894140c591Ea3E57fA337E90Ce0bdB475e814',
       oasis: '0xa690AB0543514D04411Bb1D12b2E277D675D4939',
       plume: '0x1Ded0c1E3dC80634b8d615f84aeAf1fA13B913Cc',
       etherlink: '0xaF940292B68B668A1De0e0729Ce0D60e95018b17',
@@ -65,6 +66,7 @@ const config: HardhatUserConfig = {
     oasis: getNetworkConfig('oasis'),
     plume: getNetworkConfig('plume'),
     rootstock: getNetworkConfig('rootstock'),
+    arbitrum: getNetworkConfig('arbitrum'),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     hardhat: FORKING_NETWORK
       ? getForkNetworkConfig(FORKING_NETWORK)

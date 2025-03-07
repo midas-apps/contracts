@@ -20,6 +20,7 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   oasis: 'https://sapphire.oasis.io',
   plume: 'https://rpc.plumenetwork.xyz',
   rootstock: 'https://mycrypto.rsk.co',
+  arbitrum: 'https://arbitrum.drpc.org',
 };
 
 export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
@@ -32,6 +33,7 @@ export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
   oasis: undefined,
   plume: undefined,
   rootstock: undefined,
+  arbitrum: undefined,
 };
 
 export const chainIds: ConfigPerNetwork<number> = {
@@ -44,6 +46,7 @@ export const chainIds: ConfigPerNetwork<number> = {
   oasis: 23294,
   plume: 98865,
   rootstock: 30,
+  arbitrum: 42161,
 };
 
 export const mnemonics: ConfigPerNetwork<string | undefined> = {
@@ -56,6 +59,7 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   oasis: MNEMONIC_PROD,
   plume: MNEMONIC_PROD,
   rootstock: MNEMONIC_PROD,
+  arbitrum: MNEMONIC_PROD,
 };
 
 export const gases: ConfigPerNetwork<number | undefined> = {
@@ -68,6 +72,7 @@ export const gases: ConfigPerNetwork<number | undefined> = {
   oasis: undefined,
   plume: undefined,
   rootstock: undefined,
+  arbitrum: undefined,
 };
 
 export const timeouts: ConfigPerNetwork<number | undefined> = {
@@ -80,6 +85,7 @@ export const timeouts: ConfigPerNetwork<number | undefined> = {
   oasis: undefined,
   plume: undefined,
   rootstock: undefined,
+  arbitrum: undefined,
 };
 
 export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
@@ -92,6 +98,7 @@ export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
   oasis: undefined,
   plume: undefined,
   rootstock: undefined,
+  arbitrum: undefined,
 };
 
 export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
@@ -104,6 +111,7 @@ export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
   oasis: undefined,
   plume: undefined,
   rootstock: undefined,
+  arbitrum: undefined,
 };
 
 export const getBaseNetworkConfig = (

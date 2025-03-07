@@ -79,6 +79,19 @@ const configs: Record<number, DeployRvConfig> = {
     minFiatRedeemAmount: parseUnits('1000', 18),
     requestRedeemer: '0xf6a88ac1ca66332346cb859b9bc672fc74816c98',
   },
+  [chainIds.arbitrum]: {
+    type: 'REGULAR',
+    feeReceiver: '0x0B831fAc838E3752F99D70C2b00532CeDC393DAB',
+    tokensReceiver: '0xd375cA22d63bf0408C5967Cc08Cc656A76791653',
+    instantDailyLimit: parseUnits('5000000'),
+    instantFee: parseUnits('0.07', 2),
+    minAmount: parseUnits('0'),
+    variationTolerance: parseUnits('0.1', 2),
+    fiatAdditionalFee: parseUnits('0.1', 2),
+    fiatFlatFee: parseUnits('30', 18),
+    minFiatRedeemAmount: parseUnits('1000', 18),
+    requestRedeemer: '0x0B6968D937D9435d093F6cF38362047c3F44e3bc',
+  },
 };
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
