@@ -6,6 +6,8 @@ import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { chainIds } from '../../../config';
+import { midasAddressesPerNetwork } from '../../../config/constants/addresses';
 import { deployRedemptionVault, DeployRvConfig } from '../common/rv';
 
 const configs: Record<number, DeployRvConfig> = {
@@ -54,6 +56,22 @@ const configs: Record<number, DeployRvConfig> = {
     requestRedeemer: '0xE4D0BCF0732d18aE0b213424647608bac8006824',
     liquidityProvider: '0xE4D0BCF0732d18aE0b213424647608bac8006824',
     mTbillRedemptionVault: '0x2a8c22E3b10036f3AEF5875d04f8441d4188b656',
+  },
+  [chainIds.arbitrum]: {
+    type: 'SWAPPER',
+    feeReceiver: '0x6d4de22e3298963351475b32f6fa9fe97e867c4a',
+    tokensReceiver: '0x1cd6be043852b91ea09660391b9928b015986246',
+    instantDailyLimit: parseUnits('1000000'),
+    instantFee: parseUnits('0.5', 2),
+    minAmount: parseUnits('0'),
+    variationTolerance: parseUnits('5', 2),
+    fiatAdditionalFee: parseUnits('0.1', 2),
+    fiatFlatFee: parseUnits('30', 18),
+    minFiatRedeemAmount: parseUnits('1000', 18),
+    requestRedeemer: '0x3C5bbD59929940fF85E1Cf529627efb5B0E44764',
+    liquidityProvider: '0x915E287EEa9594963B33FD12bF908312B5D860d2',
+    mTbillRedemptionVault:
+      midasAddressesPerNetwork.arbitrum?.mTBILL?.redemptionVault ?? '0x',
   },
 };
 

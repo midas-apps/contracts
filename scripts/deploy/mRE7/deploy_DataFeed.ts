@@ -36,7 +36,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       customAggregator,
       8208000,
       parseUnits('0.1', 8),
-      parseUnits('100000', 8),
+      parseUnits('1000', 8),
     ],
     {
       unsafeAllow: ['constructor'],

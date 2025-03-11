@@ -36,6 +36,15 @@ const configs: Record<number, DeployDvConfig> = {
     minAmount: parseUnits('0'),
     variationTolerance: parseUnits('5', 2),
   },
+  [chainIds.arbitrum]: {
+    feeReceiver: '0x4be07162e3A4e372e74121B418bdC057a4E31b43',
+    tokensReceiver: '0x246778D5cD7ab54DB8Ad160f8b3Ab0b213983dfc',
+    instantDailyLimit: parseUnits('10000000'),
+    instantFee: parseUnits('0', 2),
+    minMTokenAmountForFirstDeposit: parseUnits('0'),
+    minAmount: parseUnits('0'),
+    variationTolerance: parseUnits('5', 2),
+  },
 };
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
