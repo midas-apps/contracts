@@ -19,6 +19,9 @@ export interface MidasAddresses {
   mRE7?: TokenAddresses;
   mMEV?: TokenAddresses;
   eUSD?: TokenAddresses;
+  TACmBTC?: TokenAddresses;
+  TACmEDGE?: TokenAddresses;
+  TACmMEV?: TokenAddresses;
   etfDataFeed?: string;
   eurToUsdFeed?: string;
   accessControl?: string;
@@ -110,6 +113,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x7E8C632ab231479886AF1Bc02B9D646e4634Da93',
       depositVault: '0xcE0A2953a5d46400Af601a9857235312d1924aC7',
       redemptionVaultSwapper: '0x5356B8E06589DE894D86B24F4079c629E8565234',
+    },
+    TACmBTC: {
+      token: '0x307267989A7bec3A57FD7fd96017C49803589Fd0',
+      depositVault: '0xD1c5cBaBb367783FB6b40935c64512EF06cBB4f4',
+      redemptionVault: '0xa7c6c173D38DCf0543B5C479B845a430529A9a96',
     },
     eUSD: {
       token: '0xb5C5f2f9d9d9e7c2E885549AFb857306d119c701',

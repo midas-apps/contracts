@@ -14,6 +14,9 @@ export const M_BTC_DEPOSIT_VAULT_CONTRACT_NAME = 'MBtcDepositVault';
 export const M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME = 'MEdgeDepositVault';
 export const M_RE7_DEPOSIT_VAULT_CONTRACT_NAME = 'MRe7DepositVault';
 export const M_MEV_DEPOSIT_VAULT_CONTRACT_NAME = 'MMevDepositVault';
+export const TAC_M_BTC_DEPOSIT_VAULT_CONTRACT_NAME = 'TACmBtcDepositVault';
+export const TAC_M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME = 'TACmEdgeDepositVault';
+export const TAC_M_MEV_DEPOSIT_VAULT_CONTRACT_NAME = 'TACmMevDepositVault';
 
 export const M_BASIS_REDEMPTION_VAULT_CONTRACT_NAME = 'MBasisRedemptionVault';
 export const M_BASIS_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME =
@@ -27,6 +30,13 @@ export const M_MEV_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME =
   'MMevRedemptionVaultWithSwapper';
 
 export const M_BTC_REDEMPTION_VAULT_CONTRACT_NAME = 'MBtcRedemptionVault';
+
+export const TAC_M_BTC_REDEMPTION_VAULT_CONTRACT_NAME =
+  'TACmBtcRedemptionVault';
+export const TAC_M_EDGE_REDEMPTION_VAULT_CONTRACT_NAME =
+  'TACmEdgeRedemptionVault';
+export const TAC_M_MEV_REDEMPTION_VAULT_CONTRACT_NAME =
+  'TACmMevRedemptionVault';
 
 export const E_USD_REDEMPTION_VAULT_CONTRACT_NAME = 'EUsdRedemptionVault';
 
@@ -46,6 +56,9 @@ export const M_BTC_CONTRACT_NAME = 'mBTC';
 export const M_EDGE_CONTRACT_NAME = 'mEDGE';
 export const M_RE7_CONTRACT_NAME = 'mRE7';
 export const M_MEV_CONTRACT_NAME = 'mMEV';
+export const TAC_M_BTC_CONTRACT_NAME = 'TACmBTC';
+export const TAC_M_EDGE_CONTRACT_NAME = 'TACmEDGE';
+export const TAC_M_MEV_CONTRACT_NAME = 'TACmMEV';
 
 export const E_USD_CONTRACT_NAME = 'eUSD';
 export const E_USD_DEPLOY_TAG = 'eUSD';
