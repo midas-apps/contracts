@@ -119,6 +119,16 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0xD1c5cBaBb367783FB6b40935c64512EF06cBB4f4',
       redemptionVault: '0xa7c6c173D38DCf0543B5C479B845a430529A9a96',
     },
+    TACmEDGE: {
+      token: '0xaa7BeE2d7dE06cB4E30564323Fb17C5029e7D567',
+      redemptionVault: '0xa85b5Dd222A71602FcA40410bc1f158bff1fa458',
+      depositVault: '0x8F382ae7BBdBEcda835D26CE3Ba64010EAEe1386',
+    },
+    TACmMEV: {
+      token: '0xC2C26520256D5920B8aa1DA91F211222B2083B46',
+      redemptionVault: '0x1A57Aba59d50b192F8440e205E3B8B885bE128cC',
+      depositVault: '0x18f7f9f20C495a7F4868ba807c64a5D0a9EE8648',
+    },
     eUSD: {
       token: '0xb5C5f2f9d9d9e7c2E885549AFb857306d119c701',
       depositVault: '0xdD2EC1Da19950B6B836D46882897D0D8fe4cF487',
