@@ -21,6 +21,7 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   plume: 'https://rpc.plumenetwork.xyz',
   rootstock: 'https://mycrypto.rsk.co',
   arbitrum: 'https://arbitrum.drpc.org',
+  tacTestnet: 'https://turin.rpc.tac.build',
 };
 
 export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
@@ -34,6 +35,7 @@ export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
   plume: undefined,
   rootstock: undefined,
   arbitrum: undefined,
+  tacTestnet: undefined,
 };
 
 export const chainIds: ConfigPerNetwork<number> = {
@@ -47,6 +49,7 @@ export const chainIds: ConfigPerNetwork<number> = {
   plume: 98865,
   rootstock: 30,
   arbitrum: 42161,
+  tacTestnet: 2390,
 };
 
 export const mnemonics: ConfigPerNetwork<string | undefined> = {
@@ -60,6 +63,7 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   plume: MNEMONIC_PROD,
   rootstock: MNEMONIC_PROD,
   arbitrum: MNEMONIC_PROD,
+  tacTestnet: MNEMONIC_DEV,
 };
 
 export const gases: ConfigPerNetwork<number | undefined> = {
@@ -73,6 +77,7 @@ export const gases: ConfigPerNetwork<number | undefined> = {
   plume: undefined,
   rootstock: undefined,
   arbitrum: undefined,
+  tacTestnet: undefined,
 };
 
 export const timeouts: ConfigPerNetwork<number | undefined> = {
@@ -86,6 +91,7 @@ export const timeouts: ConfigPerNetwork<number | undefined> = {
   plume: undefined,
   rootstock: undefined,
   arbitrum: undefined,
+  tacTestnet: undefined,
 };
 
 export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
@@ -99,6 +105,7 @@ export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
   plume: undefined,
   rootstock: undefined,
   arbitrum: undefined,
+  tacTestnet: undefined,
 };
 
 export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
@@ -112,6 +119,7 @@ export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
   plume: undefined,
   rootstock: undefined,
   arbitrum: undefined,
+  tacTestnet: undefined,
 };
 
 export const getBaseNetworkConfig = (

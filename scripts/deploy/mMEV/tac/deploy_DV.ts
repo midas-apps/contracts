@@ -23,6 +23,15 @@ const configs: Record<number, DeployDvConfig> = {
     minAmount: parseUnits('0.00001'),
     variationTolerance: parseUnits('0.1', 2),
   },
+  [chainIds.tacTestnet]: {
+    feeReceiver: undefined,
+    tokensReceiver: undefined,
+    instantDailyLimit: constants.MaxUint256,
+    instantFee: parseUnits('1', 2),
+    minMTokenAmountForFirstDeposit: parseUnits('0.001'),
+    minAmount: parseUnits('0.00001'),
+    variationTolerance: parseUnits('0.1', 2),
+  },
   [chainIds.main]: {
     feeReceiver: '0xC7549dA15C20b50f305979b091C8a76dB2ba5f37',
     tokensReceiver: midasAddressesPerNetwork?.main?.TACmMEV?.redemptionVault,
