@@ -379,6 +379,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   tacTestnet: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    dataFeeds: {
+      usdt: {
+        token: '0x35e1BAF9Edb192536E68d0B5c1214a7DA21e0F32',
+        aggregator: '0x8A880Cd417E6782B2d764e54D2e929dbD6f92373',
+        dataFeed: '0x7C32e4AfB7a86AE4D14Ab44D3a3E52EfDD562a23',
+      },
+    },
     mMEV: {
       customFeed: '0x56687fC05451028fe4747804C9507aBE655F1DF6',
       dataFeed: '0x94A186a032D9e43C7488D046C8465cfEBD7f830d',
