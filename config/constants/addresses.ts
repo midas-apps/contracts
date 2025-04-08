@@ -387,12 +387,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
     },
     mMEV: {
-      token: '0x04Bf4Cf9d7241f62F2493411c8D1690D8b5032b9',
+      token: '0xC0e42a27A53AF273a3AA1D87A10C4d547a5822cb',
       customFeed: '0x56687fC05451028fe4747804C9507aBE655F1DF6',
       dataFeed: '0x94A186a032D9e43C7488D046C8465cfEBD7f830d',
-    },
-    TACmMEV: {
-      token: '0xC0e42a27A53AF273a3AA1D87A10C4d547a5822cb',
       depositVault: '0xCFd53AABD43AD31a229194b60b90eF26dfEB5FCB',
       redemptionVault: '0x06A317991F2F479a6213278b32D17a126FcaB501',
     },
