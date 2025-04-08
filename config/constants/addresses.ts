@@ -387,6 +387,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
     },
     mMEV: {
+      token: '0x04Bf4Cf9d7241f62F2493411c8D1690D8b5032b9',
       customFeed: '0x56687fC05451028fe4747804C9507aBE655F1DF6',
       dataFeed: '0x94A186a032D9e43C7488D046C8465cfEBD7f830d',
     },
