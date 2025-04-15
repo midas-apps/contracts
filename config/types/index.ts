@@ -10,7 +10,8 @@ export type Network =
   | 'oasis'
   | 'plume'
   | 'rootstock'
-  | 'arbitrum';
+  | 'arbitrum'
+  | 'tacTestnet';
 export type RpcUrl =
   | `https://eth-${RpcNetwork}.g.alchemy.com/v2/${string}`
   | `https://${RpcNetwork}.infura.io/v3/${string}`

@@ -23,10 +23,21 @@ export type DeployDvConfig = {
   minMTokenAmountForFirstDeposit: BigNumberish;
 };
 
+type TokenName =
+  | 'mTBILL'
+  | 'mBASIS'
+  | 'mBTC'
+  | 'mEDGE'
+  | 'mRE7'
+  | 'mMEV'
+  | 'TACmBTC'
+  | 'TACmEDGE'
+  | 'TACmMEV';
 export const deployDepositVault = async (
   hre: HardhatRuntimeEnvironment,
   vaultFactory: ContractFactory,
-  token: 'mTBILL' | 'mBASIS' | 'mBTC' | 'mEDGE' | 'mRE7' | 'mMEV',
+  token: TokenName,
+
   networkConfig?: DeployDvConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
@@ -44,11 +55,23 @@ export const deployDepositVault = async (
 
   console.log('Deploying DV...');
 
+  let dataFeed: string | undefined;
+
+  if (token.startsWith('TAC')) {
+    const originalTokenName = token.replace('TAC', '');
+    dataFeed = addresses?.[originalTokenName as TokenName]?.dataFeed;
+    console.log(
+      `Detected TAC wrapper, will be used data feed from ${originalTokenName}: ${dataFeed}`,
+    );
+  } else {
+    dataFeed = tokenAddresses?.dataFeed;
+  }
+
   const params = [
     addresses?.accessControl,
     {
       mToken: tokenAddresses?.token,
-      mTokenDataFeed: tokenAddresses?.dataFeed,
+      mTokenDataFeed: dataFeed,
     },
     {
       feeReceiver: networkConfig.feeReceiver ?? owner.address,

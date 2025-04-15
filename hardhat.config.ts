@@ -51,6 +51,7 @@ const config: HardhatUserConfig = {
       oasis: '0xa690AB0543514D04411Bb1D12b2E277D675D4939',
       plume: '0x1Ded0c1E3dC80634b8d615f84aeAf1fA13B913Cc',
       etherlink: '0xaF940292B68B668A1De0e0729Ce0D60e95018b17',
+      tacTestnet: '0x12dE1B534B879b4e3a2f1D05a299eD448dC45FD3',
     },
   },
   verify: {
@@ -67,6 +68,7 @@ const config: HardhatUserConfig = {
     plume: getNetworkConfig('plume'),
     rootstock: getNetworkConfig('rootstock'),
     arbitrum: getNetworkConfig('arbitrum'),
+    tacTestnet: getNetworkConfig('tacTestnet'),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     hardhat: FORKING_NETWORK
       ? getForkNetworkConfig(FORKING_NETWORK)
@@ -124,6 +126,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: 'https://rootstock.blockscout.com/api/',
           browserURL: 'https://rootstock.blockscout.com/',
+        },
+      },
+      {
+        network: 'tacTestnet',
+        chainId: chainIds.tacTestnet,
+        urls: {
+          apiURL: 'https://turin.explorer.tac.build/api',
+          browserURL: 'https://turin.explorer.tac.build',
         },
       },
     ],

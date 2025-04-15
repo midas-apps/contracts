@@ -6,12 +6,17 @@ import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { M_BASIS_DEPOSIT_VAULT_CONTRACT_NAME } from '../../../config';
+import { chainIds, M_BASIS_DEPOSIT_VAULT_CONTRACT_NAME } from '../../../config';
 import { deployDepositVault, DeployDvConfig } from '../common';
 import { DeployDataFeedConfig, deployTokenDataFeed } from '../common/data-feed';
 
 const configs: Record<number, DeployDataFeedConfig> = {
-  1: {
+  [chainIds.main]: {
+    healthyDiff: 24 * 60 * 60,
+    minPrice: parseUnits('0.997', 8),
+    maxPrice: parseUnits('1.003', 8),
+  },
+  [chainIds.tacTestnet]: {
     healthyDiff: 24 * 60 * 60,
     minPrice: parseUnits('0.997', 8),
     maxPrice: parseUnits('1.003', 8),

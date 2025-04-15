@@ -10,6 +10,9 @@ import {
   REDEMPTION_VAULT_BUIDL_CONTRACT_NAME,
   REDEMPTION_VAULT_CONTRACT_NAME,
   M_MEV_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
+  TAC_M_BTC_REDEMPTION_VAULT_CONTRACT_NAME,
+  TAC_M_EDGE_REDEMPTION_VAULT_CONTRACT_NAME,
+  TAC_M_MEV_REDEMPTION_VAULT_CONTRACT_NAME,
 } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import {
@@ -58,9 +61,21 @@ export type DeployRvConfig =
   | DeployRvBuidlConfig
   | DeployRvSwapperConfig;
 
+type TokenName =
+  | 'mTBILL'
+  | 'mBASIS'
+  | 'mBTC'
+  | 'mEDGE'
+  | 'mRE7'
+  | 'mMEV'
+  | 'TACmBTC'
+  | 'TACmEDGE'
+  | 'TACmMEV';
+
 export const deployRedemptionVault = async (
   hre: HardhatRuntimeEnvironment,
-  token: 'mTBILL' | 'mBASIS' | 'mBTC' | 'mEDGE' | 'mRE7' | 'mMEV',
+  token: TokenName,
+
   networkConfig?: DeployRvConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
@@ -78,6 +93,7 @@ export const deployRedemptionVault = async (
 
   let vaultFactory: ContractFactory;
 
+  // TODO: refactor this
   if (token === 'mBASIS') {
     if (networkConfig.type === 'REGULAR') {
       vaultFactory = await hre.ethers.getContractFactory(
@@ -102,21 +118,27 @@ export const deployRedemptionVault = async (
     } else {
       throw new Error('Cannot deploy swapper for mTBILL');
     }
-  } else if (token === 'mBTC') {
+  } else if (token === 'mBTC' || token === 'TACmBTC') {
     if (networkConfig.type === 'REGULAR') {
       vaultFactory = await hre.ethers.getContractFactory(
-        M_BTC_REDEMPTION_VAULT_CONTRACT_NAME,
+        token === 'mBTC'
+          ? M_BTC_REDEMPTION_VAULT_CONTRACT_NAME
+          : TAC_M_BTC_REDEMPTION_VAULT_CONTRACT_NAME,
       );
     } else {
       throw new Error('Unsupported vault type for mBTC');
     }
-  } else if (token === 'mEDGE') {
-    if (networkConfig.type === 'SWAPPER') {
+  } else if (token === 'mEDGE' || token === 'TACmEDGE') {
+    if (token === 'mEDGE' && networkConfig.type === 'SWAPPER') {
       vaultFactory = await hre.ethers.getContractFactory(
         M_EDGE_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
       );
+    } else if (token === 'TACmEDGE' && networkConfig.type === 'REGULAR') {
+      vaultFactory = await hre.ethers.getContractFactory(
+        TAC_M_EDGE_REDEMPTION_VAULT_CONTRACT_NAME,
+      );
     } else {
-      throw new Error('Cannot deploy regular redeemer for mEDGE');
+      throw new Error('Cannot deploy a redeemer for a provided token');
     }
   } else if (token === 'mRE7') {
     if (networkConfig.type === 'SWAPPER') {
@@ -126,13 +148,17 @@ export const deployRedemptionVault = async (
     } else {
       throw new Error('Cannot deploy regular redeemer for mRE7');
     }
-  } else if (token === 'mMEV') {
-    if (networkConfig.type === 'SWAPPER') {
+  } else if (token === 'mMEV' || token === 'TACmMEV') {
+    if (token === 'mMEV' && networkConfig.type === 'SWAPPER') {
       vaultFactory = await hre.ethers.getContractFactory(
         M_MEV_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
       );
+    } else if (token === 'TACmMEV' && networkConfig.type === 'REGULAR') {
+      vaultFactory = await hre.ethers.getContractFactory(
+        TAC_M_MEV_REDEMPTION_VAULT_CONTRACT_NAME,
+      );
     } else {
-      throw new Error('Cannot deploy regular redeemer for mMEV');
+      throw new Error('Cannot deploy a redeemer for a provided token');
     }
   } else {
     throw new Error('Unsupported token type');
@@ -152,11 +178,23 @@ export const deployRedemptionVault = async (
     extraParams.push(networkConfig.liquidityProvider ?? owner.address);
   }
 
+  let dataFeed: string | undefined;
+
+  if (token.startsWith('TAC')) {
+    const originalTokenName = token.replace('TAC', '');
+    dataFeed = addresses?.[originalTokenName as TokenName]?.dataFeed;
+    console.log(
+      `Detected TAC wrapper, will be used data feed from ${originalTokenName}: ${dataFeed}`,
+    );
+  } else {
+    dataFeed = tokenAddresses?.dataFeed;
+  }
+
   const params = [
     addresses?.accessControl,
     {
       mToken: tokenAddresses?.token,
-      mTokenDataFeed: tokenAddresses?.dataFeed,
+      mTokenDataFeed: dataFeed,
     },
     {
       feeReceiver: networkConfig.feeReceiver ?? owner.address,

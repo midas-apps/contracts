@@ -19,6 +19,9 @@ export interface MidasAddresses {
   mRE7?: TokenAddresses;
   mMEV?: TokenAddresses;
   eUSD?: TokenAddresses;
+  TACmBTC?: TokenAddresses;
+  TACmEDGE?: TokenAddresses;
+  TACmMEV?: TokenAddresses;
   etfDataFeed?: string;
   eurToUsdFeed?: string;
   accessControl?: string;
@@ -110,6 +113,21 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x7E8C632ab231479886AF1Bc02B9D646e4634Da93',
       depositVault: '0xcE0A2953a5d46400Af601a9857235312d1924aC7',
       redemptionVaultSwapper: '0x5356B8E06589DE894D86B24F4079c629E8565234',
+    },
+    TACmBTC: {
+      token: '0x307267989A7bec3A57FD7fd96017C49803589Fd0',
+      depositVault: '0xD1c5cBaBb367783FB6b40935c64512EF06cBB4f4',
+      redemptionVault: '0xa7c6c173D38DCf0543B5C479B845a430529A9a96',
+    },
+    TACmEDGE: {
+      token: '0xaa7BeE2d7dE06cB4E30564323Fb17C5029e7D567',
+      redemptionVault: '0xa85b5Dd222A71602FcA40410bc1f158bff1fa458',
+      depositVault: '0x8F382ae7BBdBEcda835D26CE3Ba64010EAEe1386',
+    },
+    TACmMEV: {
+      token: '0xC2C26520256D5920B8aa1DA91F211222B2083B46',
+      redemptionVault: '0x1A57Aba59d50b192F8440e205E3B8B885bE128cC',
+      depositVault: '0x18f7f9f20C495a7F4868ba807c64a5D0a9EE8648',
     },
     eUSD: {
       token: '0xb5C5f2f9d9d9e7c2E885549AFb857306d119c701',
@@ -358,6 +376,23 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     etfDataFeed: '0x4E677F7FE252DE44682a913f609EA3eb6F29DC3E',
     eurToUsdFeed: '0xE23c07Ecad6D822500CbE8306d72A90578CA9F11',
     accessControl: '0xbf25b58cB8DfaD688F7BcB2b87D71C23A6600AaC',
+  },
+  tacTestnet: {
+    accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    dataFeeds: {
+      usdt: {
+        token: '0x35e1BAF9Edb192536E68d0B5c1214a7DA21e0F32',
+        aggregator: '0x8A880Cd417E6782B2d764e54D2e929dbD6f92373',
+        dataFeed: '0x7C32e4AfB7a86AE4D14Ab44D3a3E52EfDD562a23',
+      },
+    },
+    mMEV: {
+      token: '0xC0e42a27A53AF273a3AA1D87A10C4d547a5822cb',
+      customFeed: '0x56687fC05451028fe4747804C9507aBE655F1DF6',
+      dataFeed: '0x94A186a032D9e43C7488D046C8465cfEBD7f830d',
+      depositVault: '0xCFd53AABD43AD31a229194b60b90eF26dfEB5FCB',
+      redemptionVault: '0x06A317991F2F479a6213278b32D17a126FcaB501',
+    },
   },
   hardhat: undefined,
   localhost: undefined,
