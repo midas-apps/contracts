@@ -11,6 +11,7 @@ import {
   MBasisDepositVault,
   MBtcDepositVault,
 } from '../../../typechain-types';
+import { MTokenName } from '../../../config';
 
 export type DeployDvConfig = {
   feeReceiver?: string;
@@ -23,21 +24,10 @@ export type DeployDvConfig = {
   minMTokenAmountForFirstDeposit: BigNumberish;
 };
 
-type TokenName =
-  | 'mTBILL'
-  | 'mBASIS'
-  | 'mBTC'
-  | 'mEDGE'
-  | 'mRE7'
-  | 'mMEV'
-  | 'TACmBTC'
-  | 'TACmEDGE'
-  | 'TACmMEV';
 export const deployDepositVault = async (
   hre: HardhatRuntimeEnvironment,
   vaultFactory: ContractFactory,
-  token: TokenName,
-
+  token: MTokenName,
   networkConfig?: DeployDvConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
@@ -59,7 +49,7 @@ export const deployDepositVault = async (
 
   if (token.startsWith('TAC')) {
     const originalTokenName = token.replace('TAC', '');
-    dataFeed = addresses?.[originalTokenName as TokenName]?.dataFeed;
+    dataFeed = addresses?.[originalTokenName as MTokenName]?.dataFeed;
     console.log(
       `Detected TAC wrapper, will be used data feed from ${originalTokenName}: ${dataFeed}`,
     );
