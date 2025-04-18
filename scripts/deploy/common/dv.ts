@@ -1,6 +1,7 @@
 import { BigNumberish, constants, ContractFactory } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { MTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import {
   logDeployProxy,
@@ -23,21 +24,10 @@ export type DeployDvConfig = {
   minMTokenAmountForFirstDeposit: BigNumberish;
 };
 
-type TokenName =
-  | 'mTBILL'
-  | 'mBASIS'
-  | 'mBTC'
-  | 'mEDGE'
-  | 'mRE7'
-  | 'mMEV'
-  | 'TACmBTC'
-  | 'TACmEDGE'
-  | 'TACmMEV';
 export const deployDepositVault = async (
   hre: HardhatRuntimeEnvironment,
   vaultFactory: ContractFactory,
-  token: TokenName,
-
+  token: MTokenName,
   networkConfig?: DeployDvConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
@@ -59,7 +49,7 @@ export const deployDepositVault = async (
 
   if (token.startsWith('TAC')) {
     const originalTokenName = token.replace('TAC', '');
-    dataFeed = addresses?.[originalTokenName as TokenName]?.dataFeed;
+    dataFeed = addresses?.[originalTokenName as MTokenName]?.dataFeed;
     console.log(
       `Detected TAC wrapper, will be used data feed from ${originalTokenName}: ${dataFeed}`,
     );

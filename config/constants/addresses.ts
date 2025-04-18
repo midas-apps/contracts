@@ -1,6 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { ConfigPerNetwork } from '../types/index';
+import { ConfigPerNetwork, MTokenName } from '../types/index';
 
 type TokenAddresses = {
   customFeed?: string;
@@ -11,19 +11,10 @@ type TokenAddresses = {
   redemptionVaultBuidl?: string;
   redemptionVaultSwapper?: string;
 };
-export interface MidasAddresses {
-  mTBILL?: TokenAddresses;
-  mBASIS?: TokenAddresses;
-  mBTC?: TokenAddresses;
-  mEDGE?: TokenAddresses;
-  mRE7?: TokenAddresses;
-  mMEV?: TokenAddresses;
+
+export type MidasAddresses = Partial<Record<MTokenName, TokenAddresses>> & {
+  // TODO: remove?
   eUSD?: TokenAddresses;
-  TACmBTC?: TokenAddresses;
-  TACmEDGE?: TokenAddresses;
-  TACmMEV?: TokenAddresses;
-  etfDataFeed?: string;
-  eurToUsdFeed?: string;
   accessControl?: string;
   dataFeeds?: Record<
     string,
@@ -33,7 +24,7 @@ export interface MidasAddresses {
       aggregator?: string;
     }
   >;
-}
+};
 
 export const midasAddressesPerNetwork: ConfigPerNetwork<
   MidasAddresses | undefined
@@ -67,9 +58,6 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
-    // TODO: remove this data feed
-    etfDataFeed: '0xc747FdDFC46CDC915bEA866D519dFc5Eae5c947f',
-    eurToUsdFeed: '0x6022a020Ca5c611304B9E97F37AEE0C38455081A',
     mTBILL: {
       dataFeed: '0xfCEE9754E8C375e145303b7cE7BEca3201734A2B',
       customFeed: '0x056339C044055819E8Db84E71f5f2E1F536b2E5b',
@@ -113,6 +101,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x7E8C632ab231479886AF1Bc02B9D646e4634Da93',
       depositVault: '0xcE0A2953a5d46400Af601a9857235312d1924aC7',
       redemptionVaultSwapper: '0x5356B8E06589DE894D86B24F4079c629E8565234',
+    },
+    mSL: {
+      token: '0x76CC16608aA7Cd32631bb151801bb095313F7bbd',
+      customFeed: '0x12570b84b633629b1DB532fD3420F34a30ACfc68',
+      dataFeed: '0xbdc0304210972be75Fd2247838BFF2b64474f15c',
+      depositVault: '0xD0Bbc3a811E3a3502A07B130346DCc4cc9355c95',
+      redemptionVaultSwapper: '0x8Bee3870Ad8293dcE79E6f4cb049F7531Bd57c22',
     },
     TACmBTC: {
       token: '0x307267989A7bec3A57FD7fd96017C49803589Fd0',
@@ -368,13 +363,18 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x65C4e04Cc26aAdd1eC95C54Cd6dBa61a270F15ca',
       redemptionVaultSwapper: '0x5A096AC89eaEF68930352a15Da49e4eB8590Bf1d',
     },
+    mSL: {
+      token: '0x19569a89fEf7276a7f5967b6F6910c0573616f07',
+      customFeed: '0xb64C014307622eB15046C66fF71D04258F5963DC',
+      dataFeed: '0xffd462e0602Dd9FF3F038fd4e77a533f8c474b65',
+      depositVault: '0x56814399caaEDCEE4F58D2e55DA058A81DDE744f',
+      redemptionVaultSwapper: '0xFeB770Ae942ef5ed377c6D4BbC50f9d3b25Cf69b',
+    },
     eUSD: {
       token: '0xDd5a54bA2aB379A5e642c58F98aD793A183960E2',
       depositVault: '0x056339C044055819E8Db84E71f5f2E1F536b2E5b',
       redemptionVault: '0xE4f2AE539442e1D3Fb40F03ceEbF4A372a390d24',
     },
-    etfDataFeed: '0x4E677F7FE252DE44682a913f609EA3eb6F29DC3E',
-    eurToUsdFeed: '0xE23c07Ecad6D822500CbE8306d72A90578CA9F11',
     accessControl: '0xbf25b58cB8DfaD688F7BcB2b87D71C23A6600AaC',
   },
   tacTestnet: {
