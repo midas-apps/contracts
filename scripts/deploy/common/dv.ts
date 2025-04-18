@@ -1,6 +1,7 @@
 import { BigNumberish, constants, ContractFactory } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { MTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import {
   logDeployProxy,
@@ -11,7 +12,6 @@ import {
   MBasisDepositVault,
   MBtcDepositVault,
 } from '../../../typechain-types';
-import { MTokenName } from '../../../config';
 
 export type DeployDvConfig = {
   feeReceiver?: string;
