@@ -13,6 +13,8 @@ import {
   TAC_M_BTC_REDEMPTION_VAULT_CONTRACT_NAME,
   TAC_M_EDGE_REDEMPTION_VAULT_CONTRACT_NAME,
   TAC_M_MEV_REDEMPTION_VAULT_CONTRACT_NAME,
+  MTokenName,
+  M_SL_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
 } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import {
@@ -61,20 +63,9 @@ export type DeployRvConfig =
   | DeployRvBuidlConfig
   | DeployRvSwapperConfig;
 
-type TokenName =
-  | 'mTBILL'
-  | 'mBASIS'
-  | 'mBTC'
-  | 'mEDGE'
-  | 'mRE7'
-  | 'mMEV'
-  | 'TACmBTC'
-  | 'TACmEDGE'
-  | 'TACmMEV';
-
 export const deployRedemptionVault = async (
   hre: HardhatRuntimeEnvironment,
-  token: TokenName,
+  token: MTokenName,
 
   networkConfig?: DeployRvConfig,
 ) => {
@@ -160,6 +151,14 @@ export const deployRedemptionVault = async (
     } else {
       throw new Error('Cannot deploy a redeemer for a provided token');
     }
+  } else if (token === 'mSL') {
+    if (networkConfig.type === 'SWAPPER') {
+      vaultFactory = await hre.ethers.getContractFactory(
+        M_SL_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
+      );
+    } else {
+      throw new Error('Cannot deploy a redeemer for a provided token');
+    }
   } else {
     throw new Error('Unsupported token type');
   }
@@ -182,7 +181,7 @@ export const deployRedemptionVault = async (
 
   if (token.startsWith('TAC')) {
     const originalTokenName = token.replace('TAC', '');
-    dataFeed = addresses?.[originalTokenName as TokenName]?.dataFeed;
+    dataFeed = addresses?.[originalTokenName as MTokenName]?.dataFeed;
     console.log(
       `Detected TAC wrapper, will be used data feed from ${originalTokenName}: ${dataFeed}`,
     );
