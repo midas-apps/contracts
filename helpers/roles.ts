@@ -1,6 +1,7 @@
-import { solidityKeccak256 } from 'ethers/lib/utils';
-import { MTokenName } from '../config';
 import { constants } from 'ethers';
+import { solidityKeccak256 } from 'ethers/lib/utils';
+
+import { MTokenName } from '../config';
 
 const prefixes: Record<MTokenName, string> = {
   mTBILL: 'M_TBILL',

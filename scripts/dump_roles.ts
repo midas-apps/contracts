@@ -1,5 +1,6 @@
-import { getAllRoles } from '../helpers/roles';
 import { writeFile } from 'fs/promises';
+
+import { getAllRoles } from '../helpers/roles';
 
 const formatKey = (k: string) => {
   return `***${k}***`;
