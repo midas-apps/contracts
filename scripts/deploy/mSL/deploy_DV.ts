@@ -27,6 +27,15 @@ const configs: Record<number, DeployDvConfig> = {
     variationTolerance: parseUnits('0.1', 2),
     sanctionsList: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
   },
+  [chainIds.base]: {
+    feeReceiver: '0x6ccb0b29De830C51270e4FB9BDE8b1754A94B554',
+    tokensReceiver: '0x0461bD693caE49bE9d030E5c212e080F9c78B846',
+    instantDailyLimit: parseUnits('10000000'),
+    instantFee: parseUnits('0', 2),
+    minMTokenAmountForFirstDeposit: parseUnits('0'),
+    minAmount: parseUnits('0'),
+    variationTolerance: parseUnits('0.1', 2),
+  },
 };
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {

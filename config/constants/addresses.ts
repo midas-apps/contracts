@@ -219,6 +219,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x3aAc6fd73fA4e16Ec683BD4aaF5Ec89bb2C0EdC2',
       redemptionVaultSwapper: '0xa8a5c4FF4c86a459EBbDC39c5BE77833B3A15d88',
     },
+    mSL: {
+      token: '0x34BDdA6beb128130158811E5b881Da67902325B2',
+      customFeed: '0xc4Fb2B5Ddd40764914B1A3C38a01079259Ab31C5',
+      dataFeed: '0xf4612868e55149e12F32DCd68Aefcc0F618381AE',
+      depositVault: '0xFecc6FDFF76fB2A2De42B787dC3D02B634a8b6D9',
+      redemptionVaultSwapper: '0x5CB155D19696ED296dc4942BEDB6EEc69367c332',
+    },
   },
   oasis: {
     dataFeeds: {
