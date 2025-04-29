@@ -47,7 +47,8 @@
     "deploy:rv": "yarn hh:run scripts/deploy/deploy_RedemptionVault.ts",
     "deploy:main:roles": "yarn hh:run:main scripts/deploy/grantRoles.ts",
     "deploy:main:validate": "yarn hh:run:main scripts/deploy/postDeploy.ts",
-    "verify:proxy": "yarn hardhat verify --contract @openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy"
+    "verify:proxy": "yarn hardhat verify --contract @openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy",
+    "dump:roles": "yarn hh:run scripts/dump_roles.ts"
   },
   "devDependencies": {
     "@chainlink/contracts": "^0.6.1",
