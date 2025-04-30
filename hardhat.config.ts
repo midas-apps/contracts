@@ -49,7 +49,7 @@ const config: HardhatUserConfig = {
       rootstock: '0x548F80f9f4af495aF5eaEf97bbC5c61223e96A01',
       arbitrum: '0x165894140c591Ea3E57fA337E90Ce0bdB475e814',
       oasis: '0xa690AB0543514D04411Bb1D12b2E277D675D4939',
-      plume: '0x1Ded0c1E3dC80634b8d615f84aeAf1fA13B913Cc',
+      plume: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       etherlink: '0xaF940292B68B668A1De0e0729Ce0D60e95018b17',
       tacTestnet: '0x12dE1B534B879b4e3a2f1D05a299eD448dC45FD3',
     },
@@ -116,8 +116,8 @@ const config: HardhatUserConfig = {
         network: 'plume',
         chainId: chainIds.plume,
         urls: {
-          apiURL: 'https://explorer.plumenetwork.xyz/api',
-          browserURL: 'https://explorer.plumenetwork.xyz',
+          apiURL: 'https://phoenix-explorer.plumenetwork.xyz/api',
+          browserURL: 'https://phoenix-explorer.plumenetwork.xyz',
         },
       },
       {

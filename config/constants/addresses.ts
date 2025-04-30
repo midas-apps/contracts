@@ -245,24 +245,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
   },
   plume: {
-    dataFeeds: {
-      pusd: {
-        aggregator: '0xE398B6C1E3B6cfc9204a4eCce200f2A90A4845db',
-        token: '0xdddD73F5Df1F0DC31373357beAC77545dC5A6f3F',
-        dataFeed: '0x7588139737f32A6da49b9BB03A0a91a45603b45F',
-      },
+    dataFeeds: {},
+    mTBILL: {
+      token: '0xE85f2B707Ec5Ae8e07238F99562264f304E30109',
     },
-    mBASIS: {
-      token: '0x27E572586Db60e2d4d9d32bAC43a73B0aCE7884A',
-    },
-    mEDGE: {
-      token: '0x2BF237b9e35d281DCD81eF4B20E07Dd679E598C3',
-      customFeed: '0xec39305dE263275DF65F1BD6D209Baf9c8711560',
-      dataFeed: '0x1e8861d7372F661844acc0025681936f190C6016',
-      depositVault: '0x51229E6A95ea251432cA5c695704deB4D18D19B9',
-      redemptionVaultSwapper: '0x9B0d0bDAE237116F711E8C9d900B5dDCC8eF8B5D',
-    },
-    accessControl: '0xd1871c36560539f010C548c702C67F397CD97d27',
+    accessControl: '0xefED40D1eb1577d1073e9C4F277463486D39b084',
   },
   rootstock: {
     dataFeeds: {
