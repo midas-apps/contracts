@@ -1,12 +1,11 @@
-import { expect } from 'chai';
-import chalk from 'chalk';
-import { BigNumber, BigNumberish, constants } from 'ethers';
+import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { chainIds, DEPOSIT_VAULT_CONTRACT_NAME } from '../../../config';
+import { midasAddressesPerNetwork } from '../../../config/constants/addresses';
 import { deployDepositVault, DeployDvConfig } from '../common';
 
 const configs: Record<number, DeployDvConfig> = {
@@ -60,6 +59,15 @@ const configs: Record<number, DeployDvConfig> = {
     feeReceiver: '0x0B831fAc838E3752F99D70C2b00532CeDC393DAB',
     tokensReceiver: '0xd375cA22d63bf0408C5967Cc08Cc656A76791653',
     instantDailyLimit: parseUnits('10000000'),
+    instantFee: parseUnits('0', 2),
+    minMTokenAmountForFirstDeposit: parseUnits('0'),
+    minAmount: parseUnits('0'),
+    variationTolerance: parseUnits('0.1', 2),
+  },
+  [chainIds.plume]: {
+    feeReceiver: '0x831c65a1AF585D88B56dF730A7CC00e805B49Fd2',
+    tokensReceiver: midasAddressesPerNetwork.plume?.mTBILL?.redemptionVault,
+    instantDailyLimit: parseUnits('1000'),
     instantFee: parseUnits('0', 2),
     minMTokenAmountForFirstDeposit: parseUnits('0'),
     minAmount: parseUnits('0'),

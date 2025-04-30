@@ -1,13 +1,9 @@
-import { BigNumber } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import {
-  M_BASIS_CONTRACT_NAME,
-  M_TBILL_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-} from '../../../config';
+import { M_TBILL_CUSTOM_AGGREGATOR_CONTRACT_NAME } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import {
   logDeployProxy,
