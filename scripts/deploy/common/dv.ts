@@ -1,7 +1,19 @@
 import { BigNumberish, constants, ContractFactory } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { MTokenName } from '../../../config';
+import {
+  DEPOSIT_VAULT_CONTRACT_NAME,
+  M_BASIS_DEPOSIT_VAULT_CONTRACT_NAME,
+  M_BTC_DEPOSIT_VAULT_CONTRACT_NAME,
+  M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME,
+  M_MEV_DEPOSIT_VAULT_CONTRACT_NAME,
+  M_RE7_DEPOSIT_VAULT_CONTRACT_NAME,
+  M_SL_DEPOSIT_VAULT_CONTRACT_NAME,
+  MTokenName,
+  TAC_M_BTC_DEPOSIT_VAULT_CONTRACT_NAME,
+  TAC_M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME,
+  TAC_M_MEV_DEPOSIT_VAULT_CONTRACT_NAME,
+} from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import {
   logDeployProxy,
@@ -12,6 +24,19 @@ import {
   MBasisDepositVault,
   MBtcDepositVault,
 } from '../../../typechain-types';
+
+const dvContractNamePerToken: Record<MTokenName, string> = {
+  mTBILL: DEPOSIT_VAULT_CONTRACT_NAME,
+  mBASIS: M_BASIS_DEPOSIT_VAULT_CONTRACT_NAME,
+  mBTC: M_BTC_DEPOSIT_VAULT_CONTRACT_NAME,
+  mEDGE: M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME,
+  mMEV: M_MEV_DEPOSIT_VAULT_CONTRACT_NAME,
+  mRE7: M_RE7_DEPOSIT_VAULT_CONTRACT_NAME,
+  mSL: M_SL_DEPOSIT_VAULT_CONTRACT_NAME,
+  TACmBTC: TAC_M_BTC_DEPOSIT_VAULT_CONTRACT_NAME,
+  TACmEDGE: TAC_M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME,
+  TACmMEV: TAC_M_MEV_DEPOSIT_VAULT_CONTRACT_NAME,
+};
 
 export type DeployDvConfig = {
   feeReceiver?: string;
@@ -26,7 +51,6 @@ export type DeployDvConfig = {
 
 export const deployDepositVault = async (
   hre: HardhatRuntimeEnvironment,
-  vaultFactory: ContractFactory,
   token: MTokenName,
   networkConfig?: DeployDvConfig,
 ) => {
@@ -56,6 +80,14 @@ export const deployDepositVault = async (
   } else {
     dataFeed = tokenAddresses?.dataFeed;
   }
+
+  const dvContractName = dvContractNamePerToken[token as MTokenName];
+
+  if (!dvContractName) {
+    throw new Error('DV contract name is not found');
+  }
+
+  const vaultFactory = await hre.ethers.getContractFactory(dvContractName);
 
   const params = [
     addresses?.accessControl,
