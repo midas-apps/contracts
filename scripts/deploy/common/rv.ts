@@ -63,6 +63,44 @@ export type DeployRvConfig =
   | DeployRvBuidlConfig
   | DeployRvSwapperConfig;
 
+const rvContractNamePerToken: Record<
+  MTokenName,
+  Partial<Record<DeployRvConfig['type'], string>>
+> = {
+  mBASIS: {
+    REGULAR: M_BASIS_REDEMPTION_VAULT_CONTRACT_NAME,
+    SWAPPER: M_BASIS_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
+  },
+  mTBILL: {
+    REGULAR: REDEMPTION_VAULT_CONTRACT_NAME,
+    BUIDL: REDEMPTION_VAULT_BUIDL_CONTRACT_NAME,
+  },
+  mBTC: {
+    REGULAR: M_BTC_REDEMPTION_VAULT_CONTRACT_NAME,
+  },
+  mEDGE: {
+    SWAPPER: M_EDGE_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
+  },
+  mRE7: {
+    SWAPPER: M_RE7_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
+  },
+  mMEV: {
+    SWAPPER: M_MEV_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
+  },
+  mSL: {
+    SWAPPER: M_SL_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
+  },
+  TACmBTC: {
+    REGULAR: TAC_M_BTC_REDEMPTION_VAULT_CONTRACT_NAME,
+  },
+  TACmEDGE: {
+    REGULAR: TAC_M_EDGE_REDEMPTION_VAULT_CONTRACT_NAME,
+  },
+  TACmMEV: {
+    REGULAR: TAC_M_MEV_REDEMPTION_VAULT_CONTRACT_NAME,
+  },
+};
+
 export const deployRedemptionVault = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
@@ -84,85 +122,15 @@ export const deployRedemptionVault = async (
 
   let vaultFactory: ContractFactory;
 
-  // TODO: refactor this
-  if (token === 'mBASIS') {
-    if (networkConfig.type === 'REGULAR') {
-      vaultFactory = await hre.ethers.getContractFactory(
-        M_BASIS_REDEMPTION_VAULT_CONTRACT_NAME,
-      );
-    } else if (networkConfig.type === 'SWAPPER') {
-      vaultFactory = await hre.ethers.getContractFactory(
-        M_BASIS_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
-      );
-    } else {
-      throw new Error('Cannot deploy buidl for mBASIS');
-    }
-  } else if (token === 'mTBILL') {
-    if (networkConfig.type === 'REGULAR') {
-      vaultFactory = await hre.ethers.getContractFactory(
-        REDEMPTION_VAULT_CONTRACT_NAME,
-      );
-    } else if (networkConfig.type === 'BUIDL') {
-      vaultFactory = await hre.ethers.getContractFactory(
-        REDEMPTION_VAULT_BUIDL_CONTRACT_NAME,
-      );
-    } else {
-      throw new Error('Cannot deploy swapper for mTBILL');
-    }
-  } else if (token === 'mBTC' || token === 'TACmBTC') {
-    if (networkConfig.type === 'REGULAR') {
-      vaultFactory = await hre.ethers.getContractFactory(
-        token === 'mBTC'
-          ? M_BTC_REDEMPTION_VAULT_CONTRACT_NAME
-          : TAC_M_BTC_REDEMPTION_VAULT_CONTRACT_NAME,
-      );
-    } else {
-      throw new Error('Unsupported vault type for mBTC');
-    }
-  } else if (token === 'mEDGE' || token === 'TACmEDGE') {
-    if (token === 'mEDGE' && networkConfig.type === 'SWAPPER') {
-      vaultFactory = await hre.ethers.getContractFactory(
-        M_EDGE_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
-      );
-    } else if (token === 'TACmEDGE' && networkConfig.type === 'REGULAR') {
-      vaultFactory = await hre.ethers.getContractFactory(
-        TAC_M_EDGE_REDEMPTION_VAULT_CONTRACT_NAME,
-      );
-    } else {
-      throw new Error('Cannot deploy a redeemer for a provided token');
-    }
-  } else if (token === 'mRE7') {
-    if (networkConfig.type === 'SWAPPER') {
-      vaultFactory = await hre.ethers.getContractFactory(
-        M_RE7_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
-      );
-    } else {
-      throw new Error('Cannot deploy regular redeemer for mRE7');
-    }
-  } else if (token === 'mMEV' || token === 'TACmMEV') {
-    if (token === 'mMEV' && networkConfig.type === 'SWAPPER') {
-      vaultFactory = await hre.ethers.getContractFactory(
-        M_MEV_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
-      );
-    } else if (token === 'TACmMEV' && networkConfig.type === 'REGULAR') {
-      vaultFactory = await hre.ethers.getContractFactory(
-        TAC_M_MEV_REDEMPTION_VAULT_CONTRACT_NAME,
-      );
-    } else {
-      throw new Error('Cannot deploy a redeemer for a provided token');
-    }
-  } else if (token === 'mSL') {
-    if (networkConfig.type === 'SWAPPER') {
-      vaultFactory = await hre.ethers.getContractFactory(
-        M_SL_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
-      );
-    } else {
-      throw new Error('Cannot deploy a redeemer for a provided token');
-    }
-  } else {
-    throw new Error('Unsupported token type');
+  const contractName = rvContractNamePerToken[token]?.[networkConfig.type];
+
+  if (!contractName) {
+    throw new Error('Unsupported token/type combination');
   }
-  console.log('Deploying RV...');
+
+  vaultFactory = await hre.ethers.getContractFactory(contractName);
+
+  console.log(`Deploying RV ${contractName}...`);
 
   const extraParams: unknown[] = [];
 
