@@ -265,6 +265,12 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     mEDGE: {
       token: '0x69020311836D29BA7d38C1D3578736fD3dED03ED',
     },
+    mMEV: {
+      token: '0x53733dD0268a2316C90FcCc01611D6f98F206DA2',
+    },
+    mSL: {
+      token: '0x8899A7363EFA9091DA11A84064cd669685544C88',
+    },
     accessControl: '0xefED40D1eb1577d1073e9C4F277463486D39b084',
   },
   rootstock: {
