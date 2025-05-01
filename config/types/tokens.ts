@@ -9,3 +9,12 @@ export type MTokenName =
   | 'TACmBTC'
   | 'TACmEDGE'
   | 'TACmMEV';
+
+export type PaymentTokenName =
+  | 'usdc'
+  | 'usdt'
+  | 'dai'
+  | 'm'
+  | 'wbtc'
+  | 'pusd'
+  | 'wrbtc';

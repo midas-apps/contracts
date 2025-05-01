@@ -4,7 +4,7 @@ import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { DATA_FEED_CONTRACT_NAME } from '../../../config';
+import { DATA_FEED_CONTRACT_NAME, PaymentTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import {
   logDeployProxy,
@@ -19,7 +19,7 @@ export type DeployDataFeedConfig = {
 
 export const deployTokenDataFeed = async (
   hre: HardhatRuntimeEnvironment,
-  token: 'usdc' | 'usdt' | 'dai' | 'm' | 'wbtc' | 'pusd' | 'wrbtc',
+  token: PaymentTokenName,
   networkConfig?: DeployDataFeedConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
