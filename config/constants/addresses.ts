@@ -12,18 +12,17 @@ type TokenAddresses = {
   redemptionVaultSwapper?: string;
 };
 
+export type DataFeedAddresses = {
+  token?: string;
+  dataFeed?: string;
+  aggregator?: string;
+};
+
 export type MidasAddresses = Partial<Record<MTokenName, TokenAddresses>> & {
   // TODO: remove?
   eUSD?: TokenAddresses;
   accessControl?: string;
-  dataFeeds?: Record<
-    string,
-    {
-      token?: string;
-      dataFeed?: string;
-      aggregator?: string;
-    }
-  >;
+  dataFeeds?: Record<string, DataFeedAddresses>;
 };
 
 export const midasAddressesPerNetwork: ConfigPerNetwork<

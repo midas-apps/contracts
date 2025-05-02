@@ -78,12 +78,7 @@ const configs: Record<number, DeployDvConfig> = {
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const networkConfig = configs[hre.network.config.chainId!];
 
-  await deployDepositVault(
-    hre,
-    await hre.ethers.getContractFactory(DEPOSIT_VAULT_CONTRACT_NAME),
-    'mTBILL',
-    networkConfig,
-  );
+  await deployDepositVault(hre, 'mTBILL', networkConfig);
 };
 
 func(hre).then(console.log).catch(console.error);

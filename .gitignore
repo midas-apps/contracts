@@ -22,3 +22,6 @@ deployments/localhost
 deployments/hardhat
 
 .DS_Store
+
+secrets/*
+!secrets/.gitkeep

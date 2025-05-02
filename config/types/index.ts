@@ -33,4 +33,5 @@ export interface Environment {
   readonly FORKING_NETWORK?: Network;
   readonly VERIFY_SOURCIFY?: boolean;
   readonly VERIFY_ETHERSCAN?: boolean;
+  readonly FORDEFI_API_USER_TOKEN?: string;
 }
