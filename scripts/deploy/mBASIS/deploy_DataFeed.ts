@@ -1,11 +1,12 @@
 import { parseUnits } from 'ethers/lib/utils';
 import * as hre from 'hardhat';
+import { DeployFunction } from 'hardhat-deploy/types';
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
+
 import {
   DeployDataFeedConfig,
   deployMTokenDataFeed,
 } from '../common/data-feed';
-import { DeployFunction } from 'hardhat-deploy/types';
-import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 const config: DeployDataFeedConfig = {
   minAnswer: parseUnits('0.1', 8),
