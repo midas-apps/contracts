@@ -2,7 +2,7 @@ import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { getCurrentAddresses } from '../../config/constants/addresses';
+import { getCurrentAddresses } from '../../../../config/constants/addresses';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const addresses = getCurrentAddresses(hre);
