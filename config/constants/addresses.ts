@@ -407,6 +407,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x056339C044055819E8Db84E71f5f2E1F536b2E5b',
       redemptionVault: '0xE4f2AE539442e1D3Fb40F03ceEbF4A372a390d24',
     },
+    hbUSDT: {
+      token: '0x43881B05C3BE68B2d33eb70aDdF9F666C5005f68',
+      customFeed: '0x92004DCC5359eD67f287F32d12715A37916deCdE',
+      dataFeed: '0xbA9FD2850965053Ffab368Df8AA7eD2486f11024',
+      depositVault: '0x6Be2f55816efd0d91f52720f096006d63c366e98',
+      redemptionVaultSwapper: '0x9aEBf5d6F9411BAc355021ddFbe9B2c756BDD358',
+    },
     accessControl: '0xbf25b58cB8DfaD688F7BcB2b87D71C23A6600AaC',
   },
   tacTestnet: {
