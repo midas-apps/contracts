@@ -72,6 +72,22 @@ const configs: Record<number, DeployRvConfig> = {
     mTbillRedemptionVault:
       midasAddressesPerNetwork.arbitrum?.mBASIS?.redemptionVaultSwapper ?? '0x',
   },
+  [chainIds.plume]: {
+    type: 'SWAPPER',
+    feeReceiver: '0x0461bD693caE49bE9d030E5c212e080F9c78B846',
+    tokensReceiver: '0x1AA522B985FB76039A0c43b6f0eC0e30e490918e',
+    instantDailyLimit: parseUnits('1000000'),
+    instantFee: parseUnits('0.5', 2),
+    minAmount: parseUnits('0'),
+    variationTolerance: parseUnits('0.77', 2),
+    fiatAdditionalFee: parseUnits('0.1', 2),
+    fiatFlatFee: parseUnits('30', 18),
+    minFiatRedeemAmount: parseUnits('1000', 18),
+    requestRedeemer: '0x0551390A7Dca6d0eb5089c1ba13300a2fbb12393',
+    liquidityProvider: '0x0461bD693caE49bE9d030E5c212e080F9c78B846',
+    mTbillRedemptionVault:
+      midasAddressesPerNetwork.plume?.mTBILL?.redemptionVault ?? '0x',
+  },
 };
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
