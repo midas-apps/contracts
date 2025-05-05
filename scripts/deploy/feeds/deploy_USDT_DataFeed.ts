@@ -20,6 +20,11 @@ const configs: Record<number, DeployDataFeedConfig> = {
     minAnswer: parseUnits('0.997', 8),
     maxAnswer: parseUnits('1.003', 8),
   },
+  [chainIds.hyperevm]: {
+    healthyDiff: 6 * 60 * 60,
+    minAnswer: parseUnits('0.997', 8),
+    maxAnswer: parseUnits('1.003', 8),
+  },
 };
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {

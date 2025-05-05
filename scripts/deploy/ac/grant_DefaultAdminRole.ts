@@ -10,6 +10,7 @@ import {
 
 const configs: Record<number, GrantDefaultAdminRoleToAcAdminConfig> = {
   [chainIds.sepolia]: {},
+  [chainIds.hyperevm]: {},
 };
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {

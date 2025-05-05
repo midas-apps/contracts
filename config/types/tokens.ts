@@ -6,6 +6,7 @@ export type MTokenName =
   | 'mRE7'
   | 'mMEV'
   | 'mSL'
+  | 'hbUSDT'
   | 'TACmBTC'
   | 'TACmEDGE'
   | 'TACmMEV';

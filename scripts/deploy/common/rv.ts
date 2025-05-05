@@ -15,6 +15,7 @@ import {
   TAC_M_MEV_REDEMPTION_VAULT_CONTRACT_NAME,
   MTokenName,
   M_SL_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
+  HB_USDT_REDEMPTION_VAULT_SWAPPER_CONTRACT_NAME,
 } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import {
@@ -90,6 +91,9 @@ const rvContractNamePerToken: Record<
   mSL: {
     SWAPPER: M_SL_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
   },
+  hbUSDT: {
+    SWAPPER: HB_USDT_REDEMPTION_VAULT_SWAPPER_CONTRACT_NAME,
+  },
   TACmBTC: {
     REGULAR: TAC_M_BTC_REDEMPTION_VAULT_CONTRACT_NAME,
   },
@@ -120,15 +124,13 @@ export const deployRedemptionVault = async (
     throw new Error('Token config is not found');
   }
 
-  let vaultFactory: ContractFactory;
-
   const contractName = rvContractNamePerToken[token]?.[networkConfig.type];
 
   if (!contractName) {
     throw new Error('Unsupported token/type combination');
   }
 
-  vaultFactory = await hre.ethers.getContractFactory(contractName);
+  const vaultFactory = await hre.ethers.getContractFactory(contractName);
 
   console.log(`Deploying RV ${contractName}...`);
 

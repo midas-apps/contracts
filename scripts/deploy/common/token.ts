@@ -1,6 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
+  HB_USDT_CONTRACT_NAME,
   M_BASIS_CONTRACT_NAME,
   M_BTC_CONTRACT_NAME,
   M_EDGE_CONTRACT_NAME,
@@ -27,6 +28,7 @@ const tokenContractNamePerToken: Record<MTokenName, string> = {
   mRE7: M_RE7_CONTRACT_NAME,
   mMEV: M_MEV_CONTRACT_NAME,
   mSL: M_SL_CONTRACT_NAME,
+  hbUSDT: HB_USDT_CONTRACT_NAME,
   TACmBTC: TAC_M_BTC_CONTRACT_NAME,
   TACmEDGE: TAC_M_EDGE_CONTRACT_NAME,
   TACmMEV: TAC_M_MEV_CONTRACT_NAME,
