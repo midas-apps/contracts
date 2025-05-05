@@ -1,11 +1,12 @@
 import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
+
+import { chainIds } from '../../../config';
 import {
   grantDefaultAdminRoleToAcAdmin,
   GrantDefaultAdminRoleToAcAdminConfig,
 } from '../common/roles';
-import { chainIds } from '../../../config';
 
 const configs: Record<number, GrantDefaultAdminRoleToAcAdminConfig> = {
   [chainIds.sepolia]: {},

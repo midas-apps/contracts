@@ -1,10 +1,11 @@
 import { EvmChainId, FordefiWeb3Provider } from '@fordefi/web3-provider';
+import { providers } from 'ethers';
+import * as hre from 'hardhat';
+
+import fs from 'fs';
+import path from 'path';
 
 import { ENV, Network, rpcUrls } from '../config';
-import path from 'path';
-import * as hre from 'hardhat';
-import { providers } from 'ethers';
-import fs from 'fs';
 const privateKeyFilePath = path.join(__dirname, '../secrets/fordefi-pk.key');
 
 export const getFordefiProvider = ({

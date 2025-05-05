@@ -1,11 +1,12 @@
-import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { getCurrentAddresses } from '../../../config/constants/addresses';
-import { getFordefiProvider } from '../../../helpers/fordefi-provider';
-import { MIDAS_AC_CONTRACT_NAME, MTokenName } from '../../../config';
-import { MidasAccessControl } from '../../../typechain-types';
-import { getAllRoles } from '../../../helpers/roles';
 import { Provider } from '@ethersproject/providers';
 import { Signer } from 'ethers';
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
+
+import { MIDAS_AC_CONTRACT_NAME, MTokenName } from '../../../config';
+import { getCurrentAddresses } from '../../../config/constants/addresses';
+import { getFordefiProvider } from '../../../helpers/fordefi-provider';
+import { getAllRoles } from '../../../helpers/roles';
+import { MidasAccessControl } from '../../../typechain-types';
 
 type Address = `0x${string}`;
 
@@ -84,7 +85,7 @@ export const revokeDefaultRolesFromDeployer = async (
   hre: HardhatRuntimeEnvironment,
 ) => {
   const allRoles = getAllRoles();
-  const mTBILLRoles = allRoles.tokenRoles['mTBILL'];
+  const mTBILLRoles = allRoles.tokenRoles.mTBILL;
   const { deployer } = await hre.getNamedAccounts();
   const deployerSigner = await hre.ethers.getSigner(deployer);
 
