@@ -106,9 +106,10 @@ abstract contract CustomAggregatorV3CompatibleFeed is
      * @notice sets the max deviation for the feed
      * @param _maxAnswerDeviation max deviation in `10 ** decimals()` precision
      */
-    function setMaxAnswerDeviation(
-        uint256 _maxAnswerDeviation
-    ) external onlyAggregatorAdmin {
+    function setMaxAnswerDeviation(uint256 _maxAnswerDeviation)
+        external
+        onlyAggregatorAdmin
+    {
         _validateMaxAnswerDeviation(_maxAnswerDeviation);
         maxAnswerDeviation = _maxAnswerDeviation;
         emit MaxAnswerDeviationUpdated(_maxAnswerDeviation);
@@ -197,9 +198,7 @@ abstract contract CustomAggregatorV3CompatibleFeed is
     /**
      * @inheritdoc AggregatorV3Interface
      */
-    function getRoundData(
-        uint80 _roundId
-    )
+    function getRoundData(uint80 _roundId)
         public
         view
         returns (
@@ -237,12 +236,13 @@ abstract contract CustomAggregatorV3CompatibleFeed is
      * @dev calculates a deviation in % between `_lastPrice` and `_newPrice`
      * @return deviation in `10 ** decimals()` precision
      */
-    function _getDeviation(
-        int256 _lastPrice,
-        int256 _newPrice
-    ) internal pure returns (uint256) {
-        if (_newPrice == 0) return 100 * 10 ** decimals();
-        int256 one = int256(10 ** decimals());
+    function _getDeviation(int256 _lastPrice, int256 _newPrice)
+        internal
+        pure
+        returns (uint256)
+    {
+        if (_newPrice == 0) return 100 * 10**decimals();
+        int256 one = int256(10**decimals());
         int256 priceDif = _newPrice - _lastPrice;
         int256 deviation = (priceDif * one * 100) / _lastPrice;
         deviation = deviation < 0 ? deviation * -1 : deviation;
@@ -253,11 +253,12 @@ abstract contract CustomAggregatorV3CompatibleFeed is
      * @dev validates the max answer deviation
      * @param _maxAnswerDeviation max answer deviation
      */
-    function _validateMaxAnswerDeviation(
-        uint256 _maxAnswerDeviation
-    ) private pure {
+    function _validateMaxAnswerDeviation(uint256 _maxAnswerDeviation)
+        private
+        pure
+    {
         require(
-            _maxAnswerDeviation <= 100 * (10 ** decimals()),
+            _maxAnswerDeviation <= 100 * (10**decimals()),
             "CA: !max deviation"
         );
     }
