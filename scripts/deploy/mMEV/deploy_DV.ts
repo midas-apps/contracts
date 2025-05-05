@@ -1,10 +1,10 @@
-import { BigNumber, BigNumberish, constants } from 'ethers';
+import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { chainIds, M_MEV_DEPOSIT_VAULT_CONTRACT_NAME } from '../../../config';
+import { chainIds } from '../../../config';
 import { deployDepositVault, DeployDvConfig } from '../common';
 
 const configs: Record<number, DeployDvConfig> = {
@@ -44,6 +44,15 @@ const configs: Record<number, DeployDvConfig> = {
     minMTokenAmountForFirstDeposit: parseUnits('0'),
     minAmount: parseUnits('0'),
     variationTolerance: parseUnits('5', 2),
+  },
+  [chainIds.plume]: {
+    feeReceiver: '0x0461bD693caE49bE9d030E5c212e080F9c78B846',
+    tokensReceiver: '0x1AA522B985FB76039A0c43b6f0eC0e30e490918e',
+    instantDailyLimit: parseUnits('1000'),
+    instantFee: parseUnits('0', 2),
+    minMTokenAmountForFirstDeposit: parseUnits('0'),
+    minAmount: parseUnits('0'),
+    variationTolerance: parseUnits('0.77', 2),
   },
 };
 
