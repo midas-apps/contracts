@@ -63,6 +63,12 @@ abstract contract CustomAggregatorV3CompatibleFeed is
     );
 
     /**
+     * @notice event emitted when max answer deviation is updated
+     * @param maxAnswerDeviation new max answer deviation
+     */
+    event MaxAnswerDeviationUpdated(uint256 indexed maxAnswerDeviation);
+
+    /**
      * @dev checks that msg.sender do have a feedAdminRole() role
      */
     modifier onlyAggregatorAdmin() {
@@ -88,15 +94,25 @@ abstract contract CustomAggregatorV3CompatibleFeed is
         __WithMidasAccessControl_init(_accessControl);
 
         require(_minAnswer < _maxAnswer, "CA: !min/max");
-        require(
-            _maxAnswerDeviation <= 100 * (10**decimals()),
-            "CA: !max deviation"
-        );
+        _validateMaxAnswerDeviation(_maxAnswerDeviation);
 
         minAnswer = _minAnswer;
         maxAnswer = _maxAnswer;
         maxAnswerDeviation = _maxAnswerDeviation;
         description = _description;
+    }
+
+    /**
+     * @notice sets the max deviation for the feed
+     * @param _maxAnswerDeviation max deviation in `10 ** decimals()` precision
+     */
+    function setMaxAnswerDeviation(uint256 _maxAnswerDeviation)
+        external
+        onlyAggregatorAdmin
+    {
+        _validateMaxAnswerDeviation(_maxAnswerDeviation);
+        maxAnswerDeviation = _maxAnswerDeviation;
+        emit MaxAnswerDeviationUpdated(_maxAnswerDeviation);
     }
 
     /**
@@ -231,5 +247,19 @@ abstract contract CustomAggregatorV3CompatibleFeed is
         int256 deviation = (priceDif * one * 100) / _lastPrice;
         deviation = deviation < 0 ? deviation * -1 : deviation;
         return uint256(deviation);
+    }
+
+    /**
+     * @dev validates the max answer deviation
+     * @param _maxAnswerDeviation max answer deviation
+     */
+    function _validateMaxAnswerDeviation(uint256 _maxAnswerDeviation)
+        private
+        pure
+    {
+        require(
+            _maxAnswerDeviation <= 100 * (10**decimals()),
+            "CA: !max deviation"
+        );
     }
 }
