@@ -18,10 +18,11 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   localhost: 'http://localhost:8545',
   base: 'https://mainnet.base.org',
   oasis: 'https://sapphire.oasis.io',
-  plume: 'https://rpc.plumenetwork.xyz',
+  plume: 'https://rpc.plume.org',
   rootstock: 'https://mycrypto.rsk.co',
   arbitrum: 'https://arbitrum.drpc.org',
   tacTestnet: 'https://turin.rpc.tac.build',
+  hyperevm: 'https://rpc.hyperliquid.xyz/evm',
 };
 
 export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
@@ -36,6 +37,7 @@ export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
   rootstock: undefined,
   arbitrum: undefined,
   tacTestnet: undefined,
+  hyperevm: undefined,
 };
 
 export const chainIds: ConfigPerNetwork<number> = {
@@ -46,10 +48,11 @@ export const chainIds: ConfigPerNetwork<number> = {
   hardhat: 31337,
   localhost: 31337,
   oasis: 23294,
-  plume: 98865,
+  plume: 98866,
   rootstock: 30,
   arbitrum: 42161,
   tacTestnet: 2390,
+  hyperevm: 999,
 };
 
 export const mnemonics: ConfigPerNetwork<string | undefined> = {
@@ -64,6 +67,7 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   rootstock: MNEMONIC_PROD,
   arbitrum: MNEMONIC_PROD,
   tacTestnet: MNEMONIC_DEV,
+  hyperevm: MNEMONIC_PROD,
 };
 
 export const gases: ConfigPerNetwork<number | undefined> = {
@@ -78,6 +82,7 @@ export const gases: ConfigPerNetwork<number | undefined> = {
   rootstock: undefined,
   arbitrum: undefined,
   tacTestnet: undefined,
+  hyperevm: undefined,
 };
 
 export const timeouts: ConfigPerNetwork<number | undefined> = {
@@ -92,6 +97,7 @@ export const timeouts: ConfigPerNetwork<number | undefined> = {
   rootstock: undefined,
   arbitrum: undefined,
   tacTestnet: undefined,
+  hyperevm: undefined,
 };
 
 export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
@@ -106,6 +112,7 @@ export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
   rootstock: undefined,
   arbitrum: undefined,
   tacTestnet: undefined,
+  hyperevm: undefined,
 };
 
 export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
@@ -120,6 +127,7 @@ export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
   rootstock: undefined,
   arbitrum: undefined,
   tacTestnet: undefined,
+  hyperevm: undefined,
 };
 
 export const getBaseNetworkConfig = (

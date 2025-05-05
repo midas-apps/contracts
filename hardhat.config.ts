@@ -52,6 +52,7 @@ const config: HardhatUserConfig = {
       plume: '0x1Ded0c1E3dC80634b8d615f84aeAf1fA13B913Cc',
       etherlink: '0xaF940292B68B668A1De0e0729Ce0D60e95018b17',
       tacTestnet: '0x12dE1B534B879b4e3a2f1D05a299eD448dC45FD3',
+      hyperevm: '0x0144936A17ce450a6Eb499C00104890592814F0F',
     },
   },
   verify: {
@@ -77,6 +78,7 @@ const config: HardhatUserConfig = {
     localhost: FORKING_NETWORK
       ? getForkNetworkConfig(FORKING_NETWORK)
       : getNetworkConfig('localhost', [], FORKING_NETWORK as any),
+    hyperevm: getNetworkConfig('hyperevm'),
   },
   gasReporter: {
     enabled: REPORT_GAS,
@@ -113,11 +115,19 @@ const config: HardhatUserConfig = {
         },
       },
       {
+        chainId: chainIds.hyperevm,
+        network: 'hyperevm',
+        urls: {
+          apiURL: '',
+          browserURL: '',
+        },
+      },
+      {
         network: 'plume',
         chainId: chainIds.plume,
         urls: {
-          apiURL: 'https://explorer.plumenetwork.xyz/api',
-          browserURL: 'https://explorer.plumenetwork.xyz',
+          apiURL: 'https://phoenix-explorer.plumenetwork.xyz/api',
+          browserURL: 'https://phoenix-explorer.plumenetwork.xyz',
         },
       },
       {
@@ -140,6 +150,7 @@ const config: HardhatUserConfig = {
   },
   sourcify: {
     enabled: ENV.VERIFY_SOURCIFY === true,
+    apiUrl: ENV.SOURCIFY_API_URL,
   },
   paths: {
     deploy: 'deploy/',

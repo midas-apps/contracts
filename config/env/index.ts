@@ -15,4 +15,6 @@ export const ENV: Environment = {
   FORKING_NETWORK: process.env.FORKING_NETWORK
     ? (process.env.FORKING_NETWORK as Network)
     : undefined,
+  FORDEFI_API_USER_TOKEN: process.env.FORDEFI_API_USER_TOKEN,
+  SOURCIFY_API_URL: process.env.SOURCIFY_API_URL,
 };

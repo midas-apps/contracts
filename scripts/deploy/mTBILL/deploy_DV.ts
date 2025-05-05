@@ -1,12 +1,11 @@
-import { expect } from 'chai';
-import chalk from 'chalk';
-import { BigNumber, BigNumberish, constants } from 'ethers';
+import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { chainIds, DEPOSIT_VAULT_CONTRACT_NAME } from '../../../config';
+import { midasAddressesPerNetwork } from '../../../config/constants/addresses';
 import { deployDepositVault, DeployDvConfig } from '../common';
 
 const configs: Record<number, DeployDvConfig> = {
@@ -65,17 +64,21 @@ const configs: Record<number, DeployDvConfig> = {
     minAmount: parseUnits('0'),
     variationTolerance: parseUnits('0.1', 2),
   },
+  [chainIds.plume]: {
+    feeReceiver: '0x831c65a1AF585D88B56dF730A7CC00e805B49Fd2',
+    tokensReceiver: midasAddressesPerNetwork.plume?.mTBILL?.redemptionVault,
+    instantDailyLimit: parseUnits('1000'),
+    instantFee: parseUnits('0', 2),
+    minMTokenAmountForFirstDeposit: parseUnits('0'),
+    minAmount: parseUnits('0'),
+    variationTolerance: parseUnits('0.1', 2),
+  },
 };
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const networkConfig = configs[hre.network.config.chainId!];
 
-  await deployDepositVault(
-    hre,
-    await hre.ethers.getContractFactory(DEPOSIT_VAULT_CONTRACT_NAME),
-    'mTBILL',
-    networkConfig,
-  );
+  await deployDepositVault(hre, 'mTBILL', networkConfig);
 };
 
 func(hre).then(console.log).catch(console.error);
