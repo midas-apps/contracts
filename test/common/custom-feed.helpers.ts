@@ -120,5 +120,42 @@ export const setRoundDataSafe = async (
   expect(await customFeed.lastAnswer()).eq(lastRoundDataAfter.answer);
 };
 
+export const setMaxAnswerDeviation = async (
+  { customFeed, owner }: CommonParamsSetRoundData,
+  newMaxAnswerDeviation: number,
+  opt?: OptionalCommonParams,
+) => {
+  const sender = opt?.from ?? owner;
+
+  const newMaxAnswerDeviationParsed = parseUnits(
+    newMaxAnswerDeviation.toFixed(8).replace(/\.?0+$/, ''),
+    8,
+  );
+
+  if (opt?.revertMessage) {
+    await expect(
+      customFeed
+        .connect(sender)
+        .setMaxAnswerDeviation(newMaxAnswerDeviationParsed),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  await expect(
+    customFeed
+      .connect(sender)
+      .setMaxAnswerDeviation(newMaxAnswerDeviationParsed),
+  )
+    .to.emit(
+      customFeed,
+      customFeed.interface.events['MaxAnswerDeviationUpdated(uint256)'].name,
+    )
+    .withArgs(newMaxAnswerDeviationParsed).to.not.reverted;
+
+  const maxAnswerDeviationAfter = await customFeed.maxAnswerDeviation();
+
+  expect(maxAnswerDeviationAfter).eq(newMaxAnswerDeviationParsed);
+};
+
 export const calculatePriceDiviation = (last: number, next: number) =>
   Math.abs(((next - last) * 100) / last);
