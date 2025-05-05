@@ -7,14 +7,16 @@ export const M_EDGE_DATA_FEED_CONTRACT_NAME = 'MEdgeDataFeed';
 export const M_RE7_DATA_FEED_CONTRACT_NAME = 'MRe7DataFeed';
 export const M_MEV_DATA_FEED_CONTRACT_NAME = 'MMevDataFeed';
 export const M_SL_DATA_FEED_CONTRACT_NAME = 'MSlDataFeed';
-export const DEPOSIT_VAULT_CONTRACT_NAME = 'DepositVault';
+export const HB_USDT_DATA_FEED_CONTRACT_NAME = 'HBUsdtDataFeed';
 
+export const DEPOSIT_VAULT_CONTRACT_NAME = 'DepositVault';
 export const M_BASIS_DEPOSIT_VAULT_CONTRACT_NAME = 'MBasisDepositVault';
 export const M_BTC_DEPOSIT_VAULT_CONTRACT_NAME = 'MBtcDepositVault';
 export const M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME = 'MEdgeDepositVault';
 export const M_RE7_DEPOSIT_VAULT_CONTRACT_NAME = 'MRe7DepositVault';
 export const M_MEV_DEPOSIT_VAULT_CONTRACT_NAME = 'MMevDepositVault';
 export const M_SL_DEPOSIT_VAULT_CONTRACT_NAME = 'MSlDepositVault';
+export const HB_USDT_DEPOSIT_VAULT_CONTRACT_NAME = 'HBUsdtDepositVault';
 export const TAC_M_BTC_DEPOSIT_VAULT_CONTRACT_NAME = 'TACmBtcDepositVault';
 export const TAC_M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME = 'TACmEdgeDepositVault';
 export const TAC_M_MEV_DEPOSIT_VAULT_CONTRACT_NAME = 'TACmMevDepositVault';
@@ -31,6 +33,9 @@ export const M_SL_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME =
 
 export const M_MEV_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME =
   'MMevRedemptionVaultWithSwapper';
+
+export const HB_USDT_REDEMPTION_VAULT_SWAPPER_CONTRACT_NAME =
+  'HBUsdtRedemptionVaultWithSwapper';
 
 export const M_BTC_REDEMPTION_VAULT_CONTRACT_NAME = 'MBtcRedemptionVault';
 
@@ -60,6 +65,7 @@ export const M_EDGE_CONTRACT_NAME = 'mEDGE';
 export const M_RE7_CONTRACT_NAME = 'mRE7';
 export const M_MEV_CONTRACT_NAME = 'mMEV';
 export const M_SL_CONTRACT_NAME = 'mSL';
+export const HB_USDT_CONTRACT_NAME = 'hbUSDT';
 export const TAC_M_BTC_CONTRACT_NAME = 'TACmBTC';
 export const TAC_M_EDGE_CONTRACT_NAME = 'TACmEDGE';
 export const TAC_M_MEV_CONTRACT_NAME = 'TACmMEV';
@@ -87,6 +93,9 @@ export const M_SL_CUSTOM_AGGREGATOR_CONTRACT_NAME =
 
 export const M_MEV_CUSTOM_AGGREGATOR_CONTRACT_NAME =
   'MMevCustomAggregatorFeed' as const;
+
+export const HB_USDT_CUSTOM_AGGREGATOR_CONTRACT_NAME =
+  'HBUsdtCustomAggregatorFeed' as const;
 
 export const GRANT_ROLES_TAG = 'GANT_ROLES';
 

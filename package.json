@@ -69,6 +69,7 @@
     "@types/mocha": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^5.41.0",
     "@typescript-eslint/parser": "^5.41.0",
+    "@fordefi/web3-provider": "^0.2.5",
     "chai": "^4.3.6",
     "chalk": "^4.1.2",
     "cross-env": "^7.0.3",

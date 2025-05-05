@@ -1,15 +1,10 @@
-import { expect } from 'chai';
-import chalk from 'chalk';
-import { BigNumber, BigNumberish, constants } from 'ethers';
+import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { chainIds, M_BASIS_DEPOSIT_VAULT_CONTRACT_NAME } from '../../../config';
-import { getCurrentAddresses } from '../../../config/constants/addresses';
-import { MBasisDepositVault } from '../../../typechain-types';
-import { deployDepositVault, DeployDvConfig } from '../common';
+import { chainIds } from '../../../config';
 import { deployRedemptionVault, DeployRvConfig } from '../common/rv';
 
 const configs: Record<number, DeployRvConfig> = {
@@ -91,6 +86,19 @@ const configs: Record<number, DeployRvConfig> = {
     fiatFlatFee: parseUnits('30', 18),
     minFiatRedeemAmount: parseUnits('1000', 18),
     requestRedeemer: '0x0B6968D937D9435d093F6cF38362047c3F44e3bc',
+  },
+  [chainIds.plume]: {
+    type: 'REGULAR',
+    feeReceiver: '0x831c65a1AF585D88B56dF730A7CC00e805B49Fd2',
+    tokensReceiver: '0x63e000C7Ed1E2036Ef7a5297ACFDfE6d79606a34',
+    instantDailyLimit: parseUnits('1000'),
+    instantFee: parseUnits('0.07', 2),
+    minAmount: parseUnits('0'),
+    variationTolerance: parseUnits('0.5', 2),
+    fiatAdditionalFee: parseUnits('0.1', 2),
+    fiatFlatFee: parseUnits('30', 18),
+    minFiatRedeemAmount: parseUnits('1000', 18),
+    requestRedeemer: '0x8c89ddB8E8c64325Ea2728828e7b1185C89EfE9c',
   },
 };
 

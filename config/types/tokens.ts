@@ -6,6 +6,16 @@ export type MTokenName =
   | 'mRE7'
   | 'mMEV'
   | 'mSL'
+  | 'hbUSDT'
   | 'TACmBTC'
   | 'TACmEDGE'
   | 'TACmMEV';
+
+export type PaymentTokenName =
+  | 'usdc'
+  | 'usdt'
+  | 'dai'
+  | 'm'
+  | 'wbtc'
+  | 'pusd'
+  | 'wrbtc';

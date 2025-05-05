@@ -11,6 +11,7 @@ const prefixes: Record<MTokenName, string> = {
   mMEV: 'M_MEV',
   mRE7: 'M_RE7',
   mSL: 'M_SL',
+  hbUSDT: 'HB_USDT',
   TACmBTC: 'TAC_M_BTC',
   TACmEDGE: 'TAC_M_EDGE',
   TACmMEV: 'TAC_M_MEV',
