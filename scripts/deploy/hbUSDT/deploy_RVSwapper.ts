@@ -24,8 +24,7 @@ const configs: Record<number, DeployRvConfig> = {
     minFiatRedeemAmount: parseUnits('1', 18),
     requestRedeemer: undefined,
     liquidityProvider: undefined,
-    mTbillRedemptionVault:
-      midasAddressesPerNetwork.sepolia?.mTBILL?.redemptionVaultBuidl ?? '',
+    mTbillRedemptionVault: '0x77930a9cd3db2a9e49f730db8743bece140260c9', // dummy address
   },
   [chainIds.hyperevm]: {
     type: 'SWAPPER',
