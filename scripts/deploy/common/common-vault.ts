@@ -1,13 +1,14 @@
-import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { MTokenName, PaymentTokenName } from '../../../config';
-import { ManageableVault } from '../../../typechain-types';
-import { BigNumber, Signer } from 'ethers';
 import { Provider } from '@ethersproject/providers';
+import { BigNumber, Signer } from 'ethers';
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
+
+import { MTokenName, PaymentTokenName } from '../../../config';
 import {
   DataFeedAddresses,
   getCurrentAddresses,
 } from '../../../config/constants/addresses';
 import { getFordefiProvider } from '../../../helpers/fordefi-provider';
+import { ManageableVault } from '../../../typechain-types';
 
 type VaultType =
   | 'depositVault'

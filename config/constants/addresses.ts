@@ -301,6 +301,23 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVault: '0xe7a1A676D0CCA2e20A69adD500985C7271a40205',
     },
   },
+  hyperevm: {
+    dataFeeds: {
+      usdt: {
+        token: 'TODO',
+        aggregator: '0x5e21f6530f656A38caE4F55500944753F662D184',
+        dataFeed: '0xCB01C192F223e3c55Ae1E1885A9464131aA985C2',
+      },
+    },
+    accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    hbUSDT: {
+      token: '0x5e105266db42f78FA814322Bce7f388B4C2e61eb',
+      customFeed: '0xAc3d811f5ff30Aa3ab4b26760d0560faf379536A',
+      dataFeed: '0x2812076947e07FF85734afEa2c438BA6dcEb2083',
+      depositVault: '0xbE8A4f1a312b94A712F8E5367B02ae6E378E6F19',
+      redemptionVaultSwapper: '0xC898a5cbDb81F260bd5306D9F9B9A893D0FdF042',
+    },
+  },
   etherlink: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     mTBILL: {

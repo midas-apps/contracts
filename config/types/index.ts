@@ -12,7 +12,8 @@ export type Network =
   | 'plume'
   | 'rootstock'
   | 'arbitrum'
-  | 'tacTestnet';
+  | 'tacTestnet'
+  | 'hyperevm';
 export type RpcUrl =
   | `https://eth-${RpcNetwork}.g.alchemy.com/v2/${string}`
   | `https://${RpcNetwork}.infura.io/v3/${string}`
@@ -34,4 +35,5 @@ export interface Environment {
   readonly VERIFY_SOURCIFY?: boolean;
   readonly VERIFY_ETHERSCAN?: boolean;
   readonly FORDEFI_API_USER_TOKEN?: string;
+  readonly SOURCIFY_API_URL?: string;
 }

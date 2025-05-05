@@ -1,11 +1,12 @@
-import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { getCurrentAddresses } from '../../../config/constants/addresses';
-import { getFordefiProvider } from '../../../helpers/fordefi-provider';
-import { MIDAS_AC_CONTRACT_NAME, MTokenName } from '../../../config';
-import { MidasAccessControl } from '../../../typechain-types';
-import { getAllRoles } from '../../../helpers/roles';
 import { Provider } from '@ethersproject/providers';
 import { Signer } from 'ethers';
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
+
+import { MIDAS_AC_CONTRACT_NAME, MTokenName } from '../../../config';
+import { getCurrentAddresses } from '../../../config/constants/addresses';
+import { getFordefiProvider } from '../../../helpers/fordefi-provider';
+import { getAllRoles } from '../../../helpers/roles';
+import { MidasAccessControl } from '../../../typechain-types';
 
 type Address = `0x${string}`;
 
@@ -25,6 +26,13 @@ export const grantAllTokenRoles = async (
 ) => {
   if (!networkConfig) {
     throw new Error('Network config is not found');
+  }
+
+  const addresses = getCurrentAddresses(hre);
+  const tokenAddresses = addresses?.[token];
+
+  if (!tokenAddresses) {
+    throw new Error(`Token addresses are not found for ${token}`);
   }
 
   const allRoles = getAllRoles();
@@ -56,14 +64,20 @@ export const grantAllTokenRoles = async (
   ];
 
   const oracleManagerRoles = [tokenRoles.customFeedAdmin];
+  const contractsRoles = [tokenRoles.minter, tokenRoles.burner];
 
   const defaultManager =
     networkConfig.providerType === 'fordefi'
       ? 'invalid' // for fordefi there is no default address so tx will just throw error
       : deployerSigner.address;
 
-  await accessControl.grantRoleMult(
-    [...tokenManagerRoles, ...vaultManagerRoles, ...oracleManagerRoles],
+  const tx = await accessControl.grantRoleMult(
+    [
+      ...tokenManagerRoles,
+      ...vaultManagerRoles,
+      ...oracleManagerRoles,
+      ...contractsRoles,
+    ],
     [
       ...tokenManagerRoles.map(
         () => networkConfig.tokenManagerAddress ?? defaultManager,
@@ -74,17 +88,23 @@ export const grantAllTokenRoles = async (
       ...oracleManagerRoles.map(
         () => networkConfig.oracleManagerAddress ?? defaultManager,
       ),
+      ...[
+        tokenAddresses.depositVault!,
+        tokenAddresses.redemptionVaultSwapper ??
+          tokenAddresses.redemptionVaultBuidl ??
+          tokenAddresses.redemptionVault!,
+      ],
     ],
   );
 
-  console.log('Transaction is initiated successfully');
+  console.log('Transaction is initiated successfully', tx.hash);
 };
 
 export const revokeDefaultRolesFromDeployer = async (
   hre: HardhatRuntimeEnvironment,
 ) => {
   const allRoles = getAllRoles();
-  const mTBILLRoles = allRoles.tokenRoles['mTBILL'];
+  const mTBILLRoles = allRoles.tokenRoles.mTBILL;
   const { deployer } = await hre.getNamedAccounts();
   const deployerSigner = await hre.ethers.getSigner(deployer);
 
@@ -101,7 +121,7 @@ export const revokeDefaultRolesFromDeployer = async (
     allRoles.common.defaultAdmin,
   ];
 
-  await accessControl.grantRoleMult(
+  await accessControl.revokeRoleMult(
     roles,
     roles.map(() => deployerSigner.address),
   );
@@ -144,7 +164,7 @@ const getAcContract = async (
   return (
     await hre.ethers.getContractAt(
       MIDAS_AC_CONTRACT_NAME,
-      addresses?.accessControl!,
+      addresses!.accessControl!,
     )
   ).connect(provider) as MidasAccessControl;
 };
