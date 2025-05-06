@@ -357,6 +357,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x75C32818ce59D913f9E2aeDEcd5697566Ff9aE4A',
       redemptionVaultSwapper: '0x02e58De067a0c63B3656D7e1DF9ECBCbc9E5ffC6',
     },
+    mMEV: {
+      token: '0x5542F82389b76C23f5848268893234d8A63fd5c8',
+      customFeed: '0x077670B2138Cc23f9a9d0c735c3ae1D4747Bb516',
+      dataFeed: '0xB26f6F2821F85112aD0f452d18265Ce9BdC73aCE',
+      depositVault: '0x577617613C4FaC5A7561F8f3F2Cb128A560774Bc',
+      redemptionVaultSwapper: '0x403a92A980903707FD8A3A1101f48Eb3ebd58166',
+    },
   },
   sepolia: {
     dataFeeds: {
