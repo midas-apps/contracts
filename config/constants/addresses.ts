@@ -336,11 +336,26 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   etherlink: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    dataFeeds: {
+      usdc: {
+        token: '0x796Ea11Fa2dD751eD01b53C372fFDB4AAa8f00F9',
+        aggregator: '0x4F9A119FbE04F89A0491F7c983B9363ED42b187b',
+        dataFeed: '0x57F06e32d99227D65eb6BD87EDeA3a18fe4D79dE',
+      },
+    },
     mTBILL: {
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
+      customFeed: '0x80dA45b66c4CBaB140aE53c9accB01BE4F41B7Dd',
+      dataFeed: '0x2bDC9c452a4F52DfFD92B0cad371aCbCaeabf918',
+      depositVault: '0xd65BFeB71271A4408ff335E59eCf6c5b21A33a70',
+      redemptionVault: '0x7f938d26b6179A96870afaECfB0578110E53A3b2',
     },
     mBASIS: {
       token: '0x2247B5A46BB79421a314aB0f0b67fFd11dd37Ee4',
+      customFeed: '0x31D211312D9cF5A67436517C324504ebd5BD50a0',
+      dataFeed: '0xF6Ca9280cAF31Ce24b7d9f6A96E331b3830797fb',
+      depositVault: '0x75C32818ce59D913f9E2aeDEcd5697566Ff9aE4A',
+      redemptionVaultSwapper: '0x02e58De067a0c63B3656D7e1DF9ECBCbc9E5ffC6',
     },
   },
   sepolia: {
