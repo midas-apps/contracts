@@ -54,6 +54,15 @@ const configs: Record<number, DeployDvConfig> = {
     minAmount: parseUnits('0'),
     variationTolerance: parseUnits('0.77', 2),
   },
+  [chainIds.etherlink]: {
+    feeReceiver: '0x6ccb0b29De830C51270e4FB9BDE8b1754A94B554',
+    tokensReceiver: '0x1AA522B985FB76039A0c43b6f0eC0e30e490918e',
+    instantDailyLimit: parseUnits('1000'),
+    instantFee: parseUnits('0', 2),
+    minMTokenAmountForFirstDeposit: parseUnits('0'),
+    minAmount: parseUnits('0'),
+    variationTolerance: parseUnits('1.5', 2),
+  },
 };
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {

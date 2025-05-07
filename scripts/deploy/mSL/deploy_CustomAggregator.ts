@@ -18,7 +18,7 @@ import {
 const config: DeployCustomAggregatorConfig = {
   minAnswer: parseUnits('0.1', 8),
   maxAnswer: parseUnits('1000', 8),
-  maxAnswerDeviation: parseUnits('0.05', 8),
+  maxAnswerDeviation: parseUnits('0.35', 8),
   description: 'mSL/USD',
 };
 

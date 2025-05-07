@@ -320,7 +320,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   hyperevm: {
     dataFeeds: {
       usdt: {
-        token: 'TODO',
+        token: '0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb',
         aggregator: '0x5e21f6530f656A38caE4F55500944753F662D184',
         dataFeed: '0xCB01C192F223e3c55Ae1E1885A9464131aA985C2',
       },
@@ -336,11 +336,40 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   etherlink: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    dataFeeds: {
+      usdc: {
+        token: '0x796Ea11Fa2dD751eD01b53C372fFDB4AAa8f00F9',
+        aggregator: '0x4F9A119FbE04F89A0491F7c983B9363ED42b187b',
+        dataFeed: '0x57F06e32d99227D65eb6BD87EDeA3a18fe4D79dE',
+      },
+    },
     mTBILL: {
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
+      customFeed: '0x80dA45b66c4CBaB140aE53c9accB01BE4F41B7Dd',
+      dataFeed: '0x2bDC9c452a4F52DfFD92B0cad371aCbCaeabf918',
+      depositVault: '0xd65BFeB71271A4408ff335E59eCf6c5b21A33a70',
+      redemptionVault: '0x7f938d26b6179A96870afaECfB0578110E53A3b2',
     },
     mBASIS: {
       token: '0x2247B5A46BB79421a314aB0f0b67fFd11dd37Ee4',
+      customFeed: '0x31D211312D9cF5A67436517C324504ebd5BD50a0',
+      dataFeed: '0xF6Ca9280cAF31Ce24b7d9f6A96E331b3830797fb',
+      depositVault: '0x75C32818ce59D913f9E2aeDEcd5697566Ff9aE4A',
+      redemptionVaultSwapper: '0x02e58De067a0c63B3656D7e1DF9ECBCbc9E5ffC6',
+    },
+    mMEV: {
+      token: '0x5542F82389b76C23f5848268893234d8A63fd5c8',
+      customFeed: '0x077670B2138Cc23f9a9d0c735c3ae1D4747Bb516',
+      dataFeed: '0xB26f6F2821F85112aD0f452d18265Ce9BdC73aCE',
+      depositVault: '0x577617613C4FaC5A7561F8f3F2Cb128A560774Bc',
+      redemptionVaultSwapper: '0x403a92A980903707FD8A3A1101f48Eb3ebd58166',
+    },
+    mSL: {
+      token: '0x86fc2Be8eE946AFB4c7D8a9Cc8b95E175D8a74A0',
+      customFeed: '0xbECb6eDDC52b5ddC83A1239D4377558BB660473E',
+      dataFeed: '0x5B08BC0D0881Bd4Eabe744845c9BdeD23a2E2931',
+      depositVault: '0x80D8226fE5D67803AB2D9d56EE184f7C6C6692e5',
+      redemptionVaultSwapper: '0x9645e020e7E3eD2400739702efDaa50F52C22aBa',
     },
   },
   sepolia: {

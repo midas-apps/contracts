@@ -3,12 +3,6 @@ import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { M_TBILL_CUSTOM_AGGREGATOR_CONTRACT_NAME } from '../../../config';
-import { getCurrentAddresses } from '../../../config/constants/addresses';
-import {
-  logDeployProxy,
-  tryEtherscanVerifyImplementation,
-} from '../../../helpers/utils';
 import {
   DeployCustomAggregatorConfig,
   deployMTokenCustomAggregator,
