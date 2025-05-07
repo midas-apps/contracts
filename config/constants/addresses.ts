@@ -320,7 +320,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   hyperevm: {
     dataFeeds: {
       usdt: {
-        token: 'TODO',
+        token: '0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb',
         aggregator: '0x5e21f6530f656A38caE4F55500944753F662D184',
         dataFeed: '0xCB01C192F223e3c55Ae1E1885A9464131aA985C2',
       },
