@@ -45,6 +45,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         token: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
         dataFeed: '0xeDBA9943FC91983D1BF53d6F8Af346a5E162747D',
       },
+      usds: {
+        aggregator: '0xfF30586cD0F29eD462364C7e81375FC0C71219b1',
+        token: '0xdc035d45d973e3ec169d2276ddab16f1e407384f',
+        dataFeed: '0x62c81E9A3BC0032CB504A850b1B7172604F15e5e',
+      },
       wbtc: {
         aggregator: '0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23',
         token: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
@@ -107,6 +112,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xbdc0304210972be75Fd2247838BFF2b64474f15c',
       depositVault: '0xD0Bbc3a811E3a3502A07B130346DCc4cc9355c95',
       redemptionVaultSwapper: '0x8Bee3870Ad8293dcE79E6f4cb049F7531Bd57c22',
+    },
+    mFONE: {
+      token: '0x238a700eD6165261Cf8b2e544ba797BC11e466Ba',
+      customFeed: '0x8D51DBC85cEef637c97D02bdaAbb5E274850e68C',
+      dataFeed: '0xCF4e49f5e750Af8F2f9Aa1642B68E5839D9c1C00',
+      depositVault: '0x41438435c20B1C2f1fcA702d387889F346A0C3DE',
+      redemptionVaultSwapper: '0x44b0440e35c596e858cEA433D0d82F5a985fD19C',
     },
     TACmBTC: {
       token: '0x307267989A7bec3A57FD7fd96017C49803589Fd0',

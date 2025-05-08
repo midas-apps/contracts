@@ -1,4 +1,4 @@
-import { BigNumberish, constants, ContractFactory } from 'ethers';
+import { BigNumberish, constants } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
@@ -16,6 +16,7 @@ import {
   MTokenName,
   M_SL_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
   HB_USDT_REDEMPTION_VAULT_SWAPPER_CONTRACT_NAME,
+  M_FONE_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
 } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import {
@@ -93,6 +94,9 @@ const rvContractNamePerToken: Record<
   },
   hbUSDT: {
     SWAPPER: HB_USDT_REDEMPTION_VAULT_SWAPPER_CONTRACT_NAME,
+  },
+  mFONE: {
+    SWAPPER: M_FONE_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
   },
   TACmBTC: {
     REGULAR: TAC_M_BTC_REDEMPTION_VAULT_CONTRACT_NAME,
