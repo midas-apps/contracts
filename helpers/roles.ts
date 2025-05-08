@@ -12,9 +12,14 @@ const prefixes: Record<MTokenName, string> = {
   mRE7: 'M_RE7',
   mSL: 'M_SL',
   hbUSDT: 'HB_USDT',
+  mFONE: 'M_FONE',
   TACmBTC: 'TAC_M_BTC',
   TACmEDGE: 'TAC_M_EDGE',
   TACmMEV: 'TAC_M_MEV',
+};
+
+const mappedTokenNames: Partial<Record<MTokenName, string>> = {
+  mFONE: 'mF-ONE',
 };
 
 type TokenRoles = {
@@ -72,7 +77,7 @@ export const getAllRoles = (): AllRoles => ({
   },
   tokenRoles: Object.fromEntries(
     Object.keys(prefixes).map((token) => [
-      token,
+      mappedTokenNames[token as MTokenName] ?? token,
       getRolesForToken(token as MTokenName),
     ]),
   ) as Record<MTokenName, TokenRoles>,

@@ -13,15 +13,25 @@ const formatValue = (v: string) => {
 const func = async () => {
   const { common, tokenRoles } = getAllRoles();
 
-  const mdHeaders = ['MToken', ...Object.keys(tokenRoles.mTBILL)];
-  const mdRows = Object.entries(tokenRoles).map(([mToken, roles]) => [
-    formatKey(mToken),
-    ...Object.values(roles).map(formatValue),
-  ]);
+  const mdHeaders = ['Role Name', 'Role'];
 
-  const tokensTable = [mdHeaders, mdHeaders.map((_) => '---'), ...mdRows]
-    .map((row) => '| ' + row.join(' | ') + ' |')
-    .join('\n');
+  const tokensTables = Object.entries(tokenRoles).reduce(
+    (prev, [mToken, roles]) => {
+      const mdRows = Object.entries(roles).map(([role, value]) => [
+        formatKey(role),
+        formatValue(value),
+      ]);
+
+      prev += `### ${mToken} Roles\n\n`;
+
+      prev +=
+        [mdHeaders, mdHeaders.map((_) => '---'), ...mdRows]
+          .map((row) => '| ' + row.join(' | ') + ' |')
+          .join('\n') + '\n\n';
+      return prev;
+    },
+    '',
+  );
 
   const commonHeaders = ['Role Name', 'Role'];
   const commonTable = [
@@ -49,8 +59,8 @@ ${commonTable}
 
 ## Token Roles
 
-${tokensTable}
-`;
+${tokensTables}
+`.trimEnd();
 
   await writeFile('ROLES.md', content, {
     encoding: 'utf-8',
