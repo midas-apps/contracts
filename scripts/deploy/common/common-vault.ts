@@ -1,5 +1,5 @@
 import { Provider } from '@ethersproject/providers';
-import { BigNumber, Signer } from 'ethers';
+import { BigNumber, constants, Signer } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { MTokenName, PaymentTokenName } from '../../../config';
@@ -71,12 +71,21 @@ export const addPaymentTokens = async (
     token,
     networkConfig,
     async (vaultType, vaultContract, tokenConfig, paymentToken) => {
+      const token = await vaultContract.tokensConfig(tokenConfig.token!);
+
+      if (token.dataFeed !== constants.AddressZero) {
+        console.log('Token is already added, skipping...', paymentToken.token);
+        return;
+      }
+
       const tx = await vaultContract.addPaymentToken(
         tokenConfig.token!,
         tokenConfig.dataFeed!,
         paymentToken.fee ?? BigNumber.from(0),
         paymentToken.isStable ?? true,
       );
+
+      await tx.wait();
 
       console.log(
         `${vaultType}:${paymentToken.token} tx initiated: ${tx.hash}`,

@@ -6,13 +6,19 @@ import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { chainIds } from '../../../config';
 import {
   DeployDataFeedConfig,
   deployPaymentTokenDataFeed,
 } from '../common/data-feed';
 
 const configs: Record<number, DeployDataFeedConfig> = {
-  1: {
+  [chainIds.sepolia]: {
+    healthyDiff: 365 * 24 * 60 * 60,
+    minAnswer: parseUnits('0.997', 8),
+    maxAnswer: parseUnits('1.003', 8),
+  },
+  [chainIds.main]: {
     healthyDiff: 24 * 60 * 60,
     minAnswer: parseUnits('0.997', 8),
     maxAnswer: parseUnits('1.003', 8),
