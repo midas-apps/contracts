@@ -18,6 +18,10 @@ const prefixes: Record<MTokenName, string> = {
   TACmMEV: 'TAC_M_MEV',
 };
 
+const mappedTokenNames: Partial<Record<MTokenName, string>> = {
+  mFONE: 'mF-ONE',
+};
+
 type TokenRoles = {
   minter: string;
   burner: string;
@@ -73,7 +77,7 @@ export const getAllRoles = (): AllRoles => ({
   },
   tokenRoles: Object.fromEntries(
     Object.keys(prefixes).map((token) => [
-      token,
+      mappedTokenNames[token as MTokenName] ?? token,
       getRolesForToken(token as MTokenName),
     ]),
   ) as Record<MTokenName, TokenRoles>,
