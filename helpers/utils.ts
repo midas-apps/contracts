@@ -2,9 +2,15 @@ import { getImplementationAddress } from '@openzeppelin/upgrades-core';
 import { ethers } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { MTokenName, MTokenNameEnum } from '../config';
+
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+export const isMTokenName = (name: string): name is MTokenName => {
+  return Object.values(MTokenNameEnum).includes(name as MTokenNameEnum);
+};
 
 export const getImplAddressFromProxy = async (
   hre: HardhatRuntimeEnvironment,

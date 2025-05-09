@@ -6,6 +6,7 @@ import './prepareTx';
 import {
   etherscanVerify,
   etherscanVerifyImplementation,
+  isMTokenName,
 } from '../helpers/utils';
 
 export const logPopulatedTx = (tx: PopulatedTransaction) => {
@@ -14,6 +15,21 @@ export const logPopulatedTx = (tx: PopulatedTransaction) => {
     to: tx.to,
   });
 };
+
+task('run', 'Runs a user-defined script')
+  .addOptionalParam('mtoken', 'MToken')
+  .setAction(async (taskArgs, hre, runSuper) => {
+    const mtoken = taskArgs.mtoken;
+
+    if (mtoken) {
+      if (!isMTokenName(mtoken)) {
+        throw new Error('Invalid mtoken parameter');
+      }
+
+      hre.mtoken = mtoken;
+    }
+    return runSuper(taskArgs);
+  });
 
 task('verifyProxy')
   .addPositionalParam('proxyAddress')

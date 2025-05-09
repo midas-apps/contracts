@@ -12,7 +12,8 @@
     "./test",
     "./typechain-types",
     "./deploy",
-    "./helpers"
+    "./helpers",
+    "./types"
   ],
   "files": ["./hardhat.config.ts"]
 }
