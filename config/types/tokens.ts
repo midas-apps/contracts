@@ -20,4 +20,5 @@ export type PaymentTokenName =
   | 'wbtc'
   | 'pusd'
   | 'wrbtc'
-  | 'usds';
+  | 'usds'
+  | 'usde';
