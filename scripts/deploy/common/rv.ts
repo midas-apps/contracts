@@ -17,8 +17,13 @@ import {
   M_SL_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
   HB_USDT_REDEMPTION_VAULT_SWAPPER_CONTRACT_NAME,
   M_FONE_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
+  chainIds,
 } from '../../../config';
-import { getCurrentAddresses } from '../../../config/constants/addresses';
+import {
+  getCurrentAddresses,
+  RedemptionVaultType,
+  sanctionListContracts,
+} from '../../../config/constants/addresses';
 import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
@@ -34,7 +39,7 @@ export type DeployRvConfigCommon = {
   tokensReceiver?: string;
   instantDailyLimit: BigNumberish;
   instantFee: BigNumberish;
-  sanctionsList?: string;
+  enableSanctionsList?: boolean;
   variationTolerance: BigNumberish;
   minAmount: BigNumberish;
   fiatAdditionalFee: BigNumberish;
@@ -54,10 +59,17 @@ export type DeployRvBuidlConfig = {
   minBuidlToRedeem: BigNumberish;
 } & DeployRvConfigCommon;
 
+type SwapperVault =
+  | {
+      mToken: MTokenName;
+      redemptionVaultType: RedemptionVaultType;
+    }
+  | 'dummy';
+
 export type DeployRvSwapperConfig = {
   type: 'SWAPPER';
-  mTbillRedemptionVault?: string;
-  liquidityProvider?: string;
+  swapperVault: SwapperVault;
+  liquidityProvider?: `0x${string}` | 'dummy';
 } & DeployRvConfigCommon;
 
 export type DeployRvConfig =
@@ -109,6 +121,8 @@ const rvContractNamePerToken: Record<
   },
 };
 
+const DUMMY_ADDRESS = '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF';
+
 export const deployRedemptionVault = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
@@ -145,10 +159,32 @@ export const deployRedemptionVault = async (
     extraParams.push(networkConfig.minBuidlToRedeem);
     extraParams.push(networkConfig.minBuidlBalance);
   } else if (networkConfig.type === 'SWAPPER') {
-    extraParams.push(
-      networkConfig.mTbillRedemptionVault ?? addresses.mTBILL?.redemptionVault,
-    );
-    extraParams.push(networkConfig.liquidityProvider ?? owner.address);
+    const swapperVault = networkConfig.swapperVault;
+
+    let swapperVaultAddress: string | undefined;
+
+    if (swapperVault === 'dummy') {
+      swapperVaultAddress = DUMMY_ADDRESS;
+    } else {
+      swapperVaultAddress =
+        addresses[swapperVault.mToken]?.[swapperVault.redemptionVaultType];
+    }
+
+    if (!swapperVaultAddress) {
+      throw new Error('Swapper vault address is not found');
+    }
+
+    if (swapperVaultAddress === DUMMY_ADDRESS) {
+      console.log('Using dummy swapper vault address');
+    }
+
+    const liquidityProvider =
+      networkConfig.liquidityProvider === 'dummy'
+        ? DUMMY_ADDRESS
+        : networkConfig.liquidityProvider ?? owner.address;
+
+    extraParams.push(swapperVaultAddress);
+    extraParams.push(liquidityProvider);
   }
 
   let dataFeed: string | undefined;
@@ -161,6 +197,14 @@ export const deployRedemptionVault = async (
     );
   } else {
     dataFeed = tokenAddresses?.dataFeed;
+  }
+
+  const sanctionsList = networkConfig.enableSanctionsList
+    ? sanctionListContracts[hre.network.config.chainId!]
+    : constants.AddressZero;
+
+  if (!sanctionsList) {
+    throw new Error('Sanctions list address is not found');
   }
 
   const params = [
@@ -177,7 +221,7 @@ export const deployRedemptionVault = async (
       instantDailyLimit: networkConfig.instantDailyLimit,
       instantFee: networkConfig.instantFee,
     },
-    networkConfig.sanctionsList ?? constants.AddressZero,
+    sanctionsList,
     networkConfig.variationTolerance,
     networkConfig.minAmount,
     {

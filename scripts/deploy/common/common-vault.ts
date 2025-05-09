@@ -6,15 +6,10 @@ import { MTokenName, PaymentTokenName } from '../../../config';
 import {
   DataFeedAddresses,
   getCurrentAddresses,
+  VaultType,
 } from '../../../config/constants/addresses';
 import { getFordefiProvider } from '../../../helpers/fordefi-provider';
 import { ManageableVault } from '../../../typechain-types';
-
-type VaultType =
-  | 'depositVault'
-  | 'redemptionVault'
-  | 'redemptionVaultBuidl'
-  | 'redemptionVaultSwapper';
 
 export type AddPaymentTokensConfig = {
   providerType: 'fordefi' | 'hardhat';

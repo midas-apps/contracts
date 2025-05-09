@@ -41,7 +41,7 @@ const configs: Record<number, DeployRvConfig> = {
     fiatFlatFee: parseUnits('30', 18),
     minFiatRedeemAmount: parseUnits('1000', 18),
     requestRedeemer: '0x1Bd4d8D25Ec7EBA10e94BE71Fd9c6BF672e31E06',
-    sanctionsList: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
+    enableSanctionsList: true,
     buidlRedemption: '0x31D3F59Ad4aAC0eeE2247c65EBE8Bf6E9E470a53',
     minBuidlBalance: parseUnits('1', 6),
     minBuidlToRedeem: parseUnits('1', 6),

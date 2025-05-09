@@ -33,7 +33,7 @@ const configs: Record<number, DeployRvConfig> = {
     fiatFlatFee: parseUnits('0', 18),
     minFiatRedeemAmount: parseUnits('1', 18),
     requestRedeemer: '0x0A648D34b5ad40560cD145E38C7167859E91dDFB',
-    sanctionsList: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
+    enableSanctionsList: true,
   },
   [chainIds.rootstock]: {
     type: 'REGULAR',

@@ -24,8 +24,10 @@ const configs: Record<number, DeployRvConfig> = {
     minFiatRedeemAmount: parseUnits('1', 18),
     requestRedeemer: undefined,
     liquidityProvider: undefined,
-    mTbillRedemptionVault:
-      midasAddressesPerNetwork.sepolia?.mBASIS?.redemptionVaultSwapper ?? '0x',
+    swapperVault: {
+      mToken: 'mBASIS',
+      redemptionVaultType: 'redemptionVaultSwapper',
+    },
   },
   [chainIds.main]: {
     type: 'SWAPPER',
@@ -40,9 +42,11 @@ const configs: Record<number, DeployRvConfig> = {
     minFiatRedeemAmount: parseUnits('1000'),
     requestRedeemer: '0xC9be8B77Efa255978F3be805e620A9edF528CFc2',
     liquidityProvider: '0x33485Ef31Bddf267F47A044Ab832Bde51469db2b',
-    mTbillRedemptionVault:
-      midasAddressesPerNetwork.main?.mBASIS?.redemptionVaultSwapper ?? '0x',
-    sanctionsList: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
+    swapperVault: {
+      mToken: 'mBASIS',
+      redemptionVaultType: 'redemptionVaultSwapper',
+    },
+    enableSanctionsList: true,
   },
   [chainIds.base]: {
     type: 'SWAPPER',
@@ -57,8 +61,10 @@ const configs: Record<number, DeployRvConfig> = {
     minFiatRedeemAmount: parseUnits('1000'),
     requestRedeemer: '0xC9be8B77Efa255978F3be805e620A9edF528CFc2',
     liquidityProvider: '0xD7c27BCF825094a1732a83369Ca9475aE702522b',
-    mTbillRedemptionVault:
-      midasAddressesPerNetwork.base?.mBASIS?.redemptionVaultSwapper ?? '0x',
+    swapperVault: {
+      mToken: 'mBASIS',
+      redemptionVaultType: 'redemptionVaultSwapper',
+    },
   },
   [chainIds.arbitrum]: {
     type: 'SWAPPER',
@@ -73,8 +79,10 @@ const configs: Record<number, DeployRvConfig> = {
     minFiatRedeemAmount: parseUnits('1000'),
     requestRedeemer: '0xC9be8B77Efa255978F3be805e620A9edF528CFc2',
     liquidityProvider: '0x915E287EEa9594963B33FD12bF908312B5D860d2',
-    mTbillRedemptionVault:
-      midasAddressesPerNetwork.arbitrum?.mBASIS?.redemptionVaultSwapper ?? '0x',
+    swapperVault: {
+      mToken: 'mBASIS',
+      redemptionVaultType: 'redemptionVaultSwapper',
+    },
   },
 };
 

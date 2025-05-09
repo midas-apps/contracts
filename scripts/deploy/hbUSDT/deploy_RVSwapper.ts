@@ -24,7 +24,7 @@ const configs: Record<number, DeployRvConfig> = {
     minFiatRedeemAmount: parseUnits('1', 18),
     requestRedeemer: undefined,
     liquidityProvider: undefined,
-    mTbillRedemptionVault: '0x77930a9cd3db2a9e49f730db8743bece140260c9', // dummy address
+    swapperVault: 'dummy',
   },
   [chainIds.hyperevm]: {
     type: 'SWAPPER',
@@ -38,8 +38,8 @@ const configs: Record<number, DeployRvConfig> = {
     fiatFlatFee: parseUnits('30'),
     minFiatRedeemAmount: parseUnits('1000'),
     requestRedeemer: '0x77930A9cd3Db2A9e49f730Db8743bece140260C9',
-    liquidityProvider: '0x77930A9cd3Db2A9e49f730Db8743bece140260C9', // dummy address
-    mTbillRedemptionVault: '0x77930a9cd3db2a9e49f730db8743bece140260c9', // dummy address
+    liquidityProvider: 'dummy',
+    swapperVault: 'dummy',
   },
 };
 

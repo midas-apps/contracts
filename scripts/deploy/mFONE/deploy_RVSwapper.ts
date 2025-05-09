@@ -24,8 +24,10 @@ const configs: Record<number, DeployRvConfig> = {
     minFiatRedeemAmount: parseUnits('1', 18),
     requestRedeemer: undefined,
     liquidityProvider: undefined,
-    mTbillRedemptionVault:
-      midasAddressesPerNetwork.sepolia?.mTBILL?.redemptionVaultBuidl ?? '',
+    swapperVault: {
+      mToken: 'mTBILL',
+      redemptionVaultType: 'redemptionVaultBuidl',
+    },
   },
   [chainIds.main]: {
     type: 'SWAPPER',
@@ -40,9 +42,11 @@ const configs: Record<number, DeployRvConfig> = {
     minFiatRedeemAmount: parseUnits('1000'),
     requestRedeemer: '0x82FB69DD7f31eD9FF8A44579D674e5032A4adc9C',
     liquidityProvider: '0x4dc293e0d6BEfe6FCF9d1FFDEaA5266BD15C3071',
-    mTbillRedemptionVault:
-      midasAddressesPerNetwork.main?.mTBILL?.redemptionVaultBuidl ?? '',
-    sanctionsList: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
+    swapperVault: {
+      mToken: 'mTBILL',
+      redemptionVaultType: 'redemptionVaultBuidl',
+    },
+    enableSanctionsList: true,
   },
 };
 

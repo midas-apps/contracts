@@ -25,7 +25,7 @@ const configs: Record<number, DeployDvConfig> = {
     minMTokenAmountForFirstDeposit: parseUnits('0'),
     minAmount: parseUnits('0'),
     variationTolerance: parseUnits('5', 2),
-    sanctionsList: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
+    enableSanctionsList: true,
   },
   [chainIds.base]: {
     feeReceiver: '0xceca5D043DAdc38Bcb2e1F13296254Cb4798019d',

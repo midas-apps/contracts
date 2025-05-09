@@ -16,7 +16,10 @@ import {
   TAC_M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME,
   TAC_M_MEV_DEPOSIT_VAULT_CONTRACT_NAME,
 } from '../../../config';
-import { getCurrentAddresses } from '../../../config/constants/addresses';
+import {
+  getCurrentAddresses,
+  sanctionListContracts,
+} from '../../../config/constants/addresses';
 import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
@@ -47,7 +50,7 @@ export type DeployDvConfig = {
   tokensReceiver?: string;
   instantDailyLimit: BigNumberish;
   instantFee: BigNumberish;
-  sanctionsList?: string;
+  enableSanctionsList?: boolean;
   variationTolerance: BigNumberish;
   minAmount: BigNumberish;
   minMTokenAmountForFirstDeposit: BigNumberish;
@@ -93,6 +96,14 @@ export const deployDepositVault = async (
 
   const vaultFactory = await hre.ethers.getContractFactory(dvContractName);
 
+  const sanctionsList = networkConfig.enableSanctionsList
+    ? sanctionListContracts[hre.network.config.chainId!]
+    : constants.AddressZero;
+
+  if (!sanctionsList) {
+    throw new Error('Sanctions list address is not found');
+  }
+
   const params = [
     addresses?.accessControl,
     {
@@ -107,7 +118,7 @@ export const deployDepositVault = async (
       instantDailyLimit: networkConfig.instantDailyLimit,
       instantFee: networkConfig.instantFee,
     },
-    networkConfig.sanctionsList ?? constants.AddressZero,
+    sanctionsList,
     networkConfig.variationTolerance,
     networkConfig.minAmount,
     networkConfig.minMTokenAmountForFirstDeposit,

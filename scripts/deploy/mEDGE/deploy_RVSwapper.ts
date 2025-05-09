@@ -22,8 +22,10 @@ const configs: Record<number, DeployRvConfig> = {
     minFiatRedeemAmount: parseUnits('1', 18),
     requestRedeemer: undefined,
     liquidityProvider: undefined,
-    // mBASIS swapper RV
-    mTbillRedemptionVault: '0x460cec7f88e7813D7b0a297160e6718D9fE33908',
+    swapperVault: {
+      mToken: 'mBASIS',
+      redemptionVaultType: 'redemptionVaultSwapper',
+    },
   },
   [chainIds.main]: {
     type: 'SWAPPER',
@@ -38,7 +40,10 @@ const configs: Record<number, DeployRvConfig> = {
     minFiatRedeemAmount: parseUnits('1000'),
     requestRedeemer: '0x9ffFe9FcE62204de42aE91b965b44062c0f3c70F',
     liquidityProvider: '0x38C25B85BC5F9Dac55F974e4eE4A895961418267',
-    mTbillRedemptionVault: '0x0D89C1C4799353F3805A3E6C4e1Cbbb83217D123',
+    swapperVault: {
+      mToken: 'mBASIS',
+      redemptionVaultType: 'redemptionVaultSwapper',
+    },
   },
   [chainIds.base]: {
     type: 'SWAPPER',
@@ -53,8 +58,10 @@ const configs: Record<number, DeployRvConfig> = {
     minFiatRedeemAmount: parseUnits('1000'),
     requestRedeemer: '0x9ffFe9FcE62204de42aE91b965b44062c0f3c70F',
     liquidityProvider: '0xD7c27BCF825094a1732a83369Ca9475aE702522b',
-    mTbillRedemptionVault:
-      midasAddressesPerNetwork.base?.mBASIS?.redemptionVaultSwapper ?? '0x',
+    swapperVault: {
+      mToken: 'mBASIS',
+      redemptionVaultType: 'redemptionVaultSwapper',
+    },
   },
   [chainIds.arbitrum]: {
     type: 'SWAPPER',
@@ -69,8 +76,10 @@ const configs: Record<number, DeployRvConfig> = {
     minFiatRedeemAmount: parseUnits('1000'),
     requestRedeemer: '0x9ffFe9FcE62204de42aE91b965b44062c0f3c70F',
     liquidityProvider: '0x915E287EEa9594963B33FD12bF908312B5D860d2',
-    mTbillRedemptionVault:
-      midasAddressesPerNetwork.arbitrum?.mBASIS?.redemptionVaultSwapper ?? '0x',
+    swapperVault: {
+      mToken: 'mBASIS',
+      redemptionVaultType: 'redemptionVaultSwapper',
+    },
   },
   [chainIds.plume]: {
     type: 'SWAPPER',
@@ -85,8 +94,10 @@ const configs: Record<number, DeployRvConfig> = {
     minFiatRedeemAmount: parseUnits('1000', 18),
     requestRedeemer: '0x45E8D67683E93F9A265932Dcf4b7Aa41cd16786c',
     liquidityProvider: '0x0461bD693caE49bE9d030E5c212e080F9c78B846',
-    mTbillRedemptionVault:
-      midasAddressesPerNetwork.plume?.mTBILL?.redemptionVault ?? '0x',
+    swapperVault: {
+      mToken: 'mTBILL',
+      redemptionVaultType: 'redemptionVault',
+    },
   },
 };
 
