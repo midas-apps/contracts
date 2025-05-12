@@ -12,6 +12,14 @@ export const isMTokenName = (name: string): name is MTokenName => {
   return Object.values(MTokenNameEnum).includes(name as MTokenNameEnum);
 };
 
+export const getMTokenOrThrow = (hre: HardhatRuntimeEnvironment) => {
+  const mToken = hre.mtoken;
+  if (!mToken) {
+    throw new Error('MToken parameter not found');
+  }
+  return mToken;
+};
+
 export const getImplAddressFromProxy = async (
   hre: HardhatRuntimeEnvironment,
   proxyAddress: string,

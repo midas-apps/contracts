@@ -1,6 +1,8 @@
 import { BigNumberish, constants, ContractFactory } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { getNetworkConfig } from './utils';
+
 import {
   DEPOSIT_VAULT_CONTRACT_NAME,
   HB_USDT_DEPOSIT_VAULT_CONTRACT_NAME,
@@ -29,6 +31,7 @@ import {
   MBasisDepositVault,
   MBtcDepositVault,
 } from '../../../typechain-types';
+import { configsPerToken } from '../configs';
 
 const dvContractNamePerToken: Record<MTokenName, string> = {
   mTBILL: DEPOSIT_VAULT_CONTRACT_NAME,
@@ -59,19 +62,16 @@ export type DeployDvConfig = {
 export const deployDepositVault = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
-  networkConfig?: DeployDvConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
   const { deployer } = await hre.getNamedAccounts();
   const owner = await hre.ethers.getSigner(deployer);
   const tokenAddresses = addresses?.[token];
 
+  const networkConfig = getNetworkConfig(hre, token, 'dv');
+
   if (!tokenAddresses) {
     throw new Error('Token config is not found');
-  }
-
-  if (!networkConfig) {
-    throw new Error('Network config is not found');
   }
 
   console.log('Deploying DV...');

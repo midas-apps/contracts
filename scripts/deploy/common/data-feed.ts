@@ -1,6 +1,8 @@
 import { BigNumberish } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { getDeploymentGenericConfig } from './utils';
+
 import {
   DATA_FEED_CONTRACT_NAME,
   HB_USDT_CUSTOM_AGGREGATOR_CONTRACT_NAME,
@@ -99,7 +101,6 @@ export const deployPaymentTokenDataFeed = async (
 export const deployMTokenDataFeed = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
-  networkConfig?: DeployDataFeedConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
   const tokenAddresses = addresses?.[token];
@@ -118,14 +119,13 @@ export const deployMTokenDataFeed = async (
     hre,
     tokenAddresses.customFeed,
     dataFeedContractName,
-    networkConfig,
+    getDeploymentGenericConfig(hre, token, 'dataFeed'),
   );
 };
 
 export const deployMTokenCustomAggregator = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
-  networkConfig?: DeployCustomAggregatorConfig,
 ) => {
   const customAggregatorContractName =
     customAggregatorContractNamesPerToken[token];
@@ -137,7 +137,7 @@ export const deployMTokenCustomAggregator = async (
   await deployCustomAggregator(
     hre,
     customAggregatorContractName,
-    networkConfig,
+    getDeploymentGenericConfig(hre, token, 'customAggregator'),
   );
 };
 

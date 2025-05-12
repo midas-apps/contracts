@@ -1,6 +1,9 @@
 import { BigNumberish, constants } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { DeploymentConfig } from './types';
+import { getNetworkConfig } from './utils';
+
 import {
   M_BASIS_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
   M_BASIS_REDEMPTION_VAULT_CONTRACT_NAME,
@@ -126,17 +129,14 @@ const DUMMY_ADDRESS = '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF';
 export const deployRedemptionVault = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
-
-  networkConfig?: DeployRvConfig,
+  type: 'rv' | 'rvBuidl' | 'rvSwapper',
 ) => {
   const addresses = getCurrentAddresses(hre);
   const { deployer } = await hre.getNamedAccounts();
   const owner = await hre.ethers.getSigner(deployer);
   const tokenAddresses = addresses?.[token];
 
-  if (!networkConfig) {
-    throw new Error('Network config is not found');
-  }
+  const networkConfig = getNetworkConfig(hre, token, type);
 
   if (!tokenAddresses) {
     throw new Error('Token config is not found');
