@@ -201,7 +201,7 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
     [chainIds.plume]: {
       dv: {
         feeReceiver: '0x831c65a1AF585D88B56dF730A7CC00e805B49Fd2',
-        tokensReceiver: midasAddressesPerNetwork.plume?.mTBILL?.redemptionVault,
+        tokensReceiver: '0x3aC6b2Bf09f470e5674C3DA60Be7D2DA2791F897',
         instantDailyLimit: parseUnits('1000'),
         instantFee: parseUnits('0', 2),
         minMTokenAmountForFirstDeposit: parseUnits('0'),
