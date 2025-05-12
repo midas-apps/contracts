@@ -120,6 +120,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x41438435c20B1C2f1fcA702d387889F346A0C3DE',
       redemptionVaultSwapper: '0x44b0440e35c596e858cEA433D0d82F5a985fD19C',
     },
+    mLIQUIDITY: {
+      token: '0x841EEb3e2489B2282b0E14202Dc8Bd8F7624e29A',
+      customFeed: '0x74508886cDFEF22FddEDcA0d9Caf9E00E876C5aF',
+      dataFeed: '0xBF2a93B420225558a76FC9888C687c14977E6E7C',
+      depositVault: '0xf89fEbef93c54618C4420Ee4173e69Cd21B27e3a',
+      redemptionVault: '0x97acdfb3956403c4c6bbe837dc611e3a6ba1b3a7',
+    },
     TACmBTC: {
       token: '0x307267989A7bec3A57FD7fd96017C49803589Fd0',
       depositVault: '0xD1c5cBaBb367783FB6b40935c64512EF06cBB4f4',

@@ -9,7 +9,7 @@ export const M_MEV_DATA_FEED_CONTRACT_NAME = 'MMevDataFeed';
 export const M_SL_DATA_FEED_CONTRACT_NAME = 'MSlDataFeed';
 export const HB_USDT_DATA_FEED_CONTRACT_NAME = 'HBUsdtDataFeed';
 export const M_FONE_DATA_FEED_CONTRACT_NAME = 'MFOneDataFeed';
-
+export const M_LIQUIDITY_DATA_FEED_CONTRACT_NAME = 'MLiquidityDataFeed';
 export const DEPOSIT_VAULT_CONTRACT_NAME = 'DepositVault';
 export const M_BASIS_DEPOSIT_VAULT_CONTRACT_NAME = 'MBasisDepositVault';
 export const M_BTC_DEPOSIT_VAULT_CONTRACT_NAME = 'MBtcDepositVault';
@@ -19,6 +19,7 @@ export const M_MEV_DEPOSIT_VAULT_CONTRACT_NAME = 'MMevDepositVault';
 export const M_SL_DEPOSIT_VAULT_CONTRACT_NAME = 'MSlDepositVault';
 export const HB_USDT_DEPOSIT_VAULT_CONTRACT_NAME = 'HBUsdtDepositVault';
 export const M_FONE_DEPOSIT_VAULT_CONTRACT_NAME = 'MFOneDepositVault';
+export const M_LIQUIDITY_DEPOSIT_VAULT_CONTRACT_NAME = 'MLiquidityDepositVault';
 export const TAC_M_BTC_DEPOSIT_VAULT_CONTRACT_NAME = 'TACmBtcDepositVault';
 export const TAC_M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME = 'TACmEdgeDepositVault';
 export const TAC_M_MEV_DEPOSIT_VAULT_CONTRACT_NAME = 'TACmMevDepositVault';
@@ -44,6 +45,9 @@ export const HB_USDT_REDEMPTION_VAULT_SWAPPER_CONTRACT_NAME =
 
 export const M_BTC_REDEMPTION_VAULT_CONTRACT_NAME = 'MBtcRedemptionVault';
 
+export const M_LIQUIDITY_REDEMPTION_VAULT_CONTRACT_NAME =
+  'MLiquidityRedemptionVault';
+
 export const TAC_M_BTC_REDEMPTION_VAULT_CONTRACT_NAME =
   'TACmBtcRedemptionVault';
 export const TAC_M_EDGE_REDEMPTION_VAULT_CONTRACT_NAME =
@@ -58,6 +62,8 @@ export const E_USD_DEPOSIT_VAULT_CONTRACT_NAME = 'EUsdDepositVault';
 export const MIDAS_AC_CONTRACT_NAME = 'MidasAccessControl';
 
 export const REDEMPTION_VAULT_CONTRACT_NAME = 'RedemptionVault';
+export const REDEMPTION_VAULT_SWAPPER_CONTRACT_NAME =
+  'RedemptionVaultWithSwapper';
 export const REDEMPTION_VAULT_BUIDL_CONTRACT_NAME = 'RedemptionVaultWIthBUIDL';
 
 export const M_BASIS_CUSTOM_FEED_CONTRACT_NAME = 'MBasisCustomAggregatorFeed';
@@ -75,7 +81,7 @@ export const HB_USDT_CONTRACT_NAME = 'hbUSDT';
 export const TAC_M_BTC_CONTRACT_NAME = 'TACmBTC';
 export const TAC_M_EDGE_CONTRACT_NAME = 'TACmEDGE';
 export const TAC_M_MEV_CONTRACT_NAME = 'TACmMEV';
-
+export const M_LIQUIDITY_CONTRACT_NAME = 'mLIQUIDITY';
 export const E_USD_CONTRACT_NAME = 'eUSD';
 export const E_USD_DEPLOY_TAG = 'eUSD';
 
@@ -105,6 +111,9 @@ export const HB_USDT_CUSTOM_AGGREGATOR_CONTRACT_NAME =
 
 export const M_FONE_CUSTOM_AGGREGATOR_CONTRACT_NAME =
   'MFOneCustomAggregatorFeed' as const;
+
+export const M_LIQUIDITY_CUSTOM_AGGREGATOR_CONTRACT_NAME =
+  'MLiquidityCustomAggregatorFeed' as const;
 
 export const GRANT_ROLES_TAG = 'GANT_ROLES';
 

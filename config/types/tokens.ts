@@ -10,7 +10,8 @@ export type MTokenName =
   | 'hbUSDT'
   | 'TACmBTC'
   | 'TACmEDGE'
-  | 'TACmMEV';
+  | 'TACmMEV'
+  | 'mLIQUIDITY';
 
 export type PaymentTokenName =
   | 'usdc'
