@@ -125,6 +125,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       customFeed: '0x74508886cDFEF22FddEDcA0d9Caf9E00E876C5aF',
       dataFeed: '0xBF2a93B420225558a76FC9888C687c14977E6E7C',
       depositVault: '0xf89fEbef93c54618C4420Ee4173e69Cd21B27e3a',
+      redemptionVault: '0x97acdfb3956403c4c6bbe837dc611e3a6ba1b3a7',
     },
     TACmBTC: {
       token: '0x307267989A7bec3A57FD7fd96017C49803589Fd0',
