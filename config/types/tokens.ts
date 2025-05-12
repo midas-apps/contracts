@@ -11,6 +11,7 @@ export enum MTokenNameEnum {
   TACmBTC = 'TACmBTC',
   TACmEDGE = 'TACmEDGE',
   TACmMEV = 'TACmMEV',
+  mLIQUIDITY = 'mLIQUIDITY',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
