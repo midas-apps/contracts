@@ -1,12 +1,13 @@
 import * as hre from 'hardhat';
-import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { MIDAS_AC_CONTRACT_NAME } from '../../../config';
+import { DeployFunction } from './common/types';
+
+import { MIDAS_AC_CONTRACT_NAME } from '../../config';
 import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
-} from '../../../helpers/utils';
+} from '../../helpers/utils';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { deployer } = await hre.getNamedAccounts();
@@ -14,7 +15,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const owner = await hre.ethers.getSigner(deployer);
 
-  console.log('Deploying MidasAccessControl...');
+  console.log(`Deploying ${MIDAS_AC_CONTRACT_NAME}...`);
 
   const deployment = await hre.upgrades.deployProxy(
     await hre.ethers.getContractFactory(MIDAS_AC_CONTRACT_NAME, owner),
@@ -34,4 +35,4 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   await tryEtherscanVerifyImplementation(hre, deployment.address);
 };
 
-func(hre).then(console.log).catch(console.error);
+export default func;

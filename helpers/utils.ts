@@ -2,7 +2,12 @@ import { getImplementationAddress } from '@openzeppelin/upgrades-core';
 import { ethers } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { MTokenName, MTokenNameEnum } from '../config';
+import {
+  MTokenName,
+  MTokenNameEnum,
+  PaymentTokenName,
+  PaymentTokenNameEnum,
+} from '../config';
 
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -12,12 +17,26 @@ export const isMTokenName = (name: string): name is MTokenName => {
   return Object.values(MTokenNameEnum).includes(name as MTokenNameEnum);
 };
 
+export const isPaymentTokenName = (name: string): name is PaymentTokenName => {
+  return Object.values(PaymentTokenNameEnum).includes(
+    name as PaymentTokenNameEnum,
+  );
+};
+
 export const getMTokenOrThrow = (hre: HardhatRuntimeEnvironment) => {
   const mToken = hre.mtoken;
   if (!mToken) {
     throw new Error('MToken parameter not found');
   }
   return mToken;
+};
+
+export const getPaymentTokenOrThrow = (hre: HardhatRuntimeEnvironment) => {
+  const paymentToken = hre.paymentToken;
+  if (!paymentToken) {
+    throw new Error('PaymentToken parameter not found');
+  }
+  return paymentToken;
 };
 
 export const getImplAddressFromProxy = async (

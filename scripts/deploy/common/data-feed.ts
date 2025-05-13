@@ -33,6 +33,7 @@ import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
 } from '../../../helpers/utils';
+import { paymentTokenDeploymentConfigs } from '../configs/payment-tokens';
 
 const customAggregatorContractNamesPerToken: Record<
   MTokenName,
@@ -85,10 +86,14 @@ export type DeployCustomAggregatorConfig = {
 export const deployPaymentTokenDataFeed = async (
   hre: HardhatRuntimeEnvironment,
   token: PaymentTokenName,
-  networkConfig?: DeployDataFeedConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
   const tokenAddresses = addresses?.dataFeeds?.[token];
+
+  const networkConfig =
+    paymentTokenDeploymentConfigs.networkConfigs[hre.network.config.chainId!]?.[
+      token
+    ]?.dataFeed;
 
   if (!tokenAddresses?.aggregator) {
     throw new Error('Token config is not found or aggregator is not set');

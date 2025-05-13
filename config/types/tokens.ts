@@ -16,14 +16,17 @@ export enum MTokenNameEnum {
 
 export type MTokenName = keyof typeof MTokenNameEnum;
 
-export type PaymentTokenName =
-  | 'usdc'
-  | 'usdt'
-  | 'dai'
-  | 'm'
-  | 'wbtc'
-  | 'pusd'
-  | 'wrbtc'
-  | 'usds'
-  | 'usde'
-  | 'usr';
+export enum PaymentTokenNameEnum {
+  usdc = 'usdc',
+  usdt = 'usdt',
+  dai = 'dai',
+  m = 'm',
+  wbtc = 'wbtc',
+  pusd = 'pusd',
+  wrbtc = 'wrbtc',
+  usds = 'usds',
+  usde = 'usde',
+  usr = 'usr',
+}
+
+export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;

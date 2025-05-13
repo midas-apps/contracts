@@ -1,3 +1,5 @@
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
+
 import { AddPaymentTokensConfig } from './common-vault';
 import {
   DeployCustomAggregatorConfig,
@@ -56,3 +58,5 @@ export type NetworkDeploymentConfig = Record<
     grantDefaultAdminRole?: GrantDefaultAdminRoleToAcAdminConfig;
   }
 >;
+
+export type DeployFunction = (hre: HardhatRuntimeEnvironment) => Promise<void>;

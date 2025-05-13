@@ -1,14 +1,17 @@
 import chalk from 'chalk';
 import { PopulatedTransaction } from 'ethers';
-import { task, types } from 'hardhat/config';
+import { extendEnvironment, task, types } from 'hardhat/config';
 
 import './prepareTx';
+import path from 'path';
+
+import { MTokenName, PaymentTokenName } from '../config';
 import {
   etherscanVerify,
   etherscanVerifyImplementation,
   isMTokenName,
+  isPaymentTokenName,
 } from '../helpers/utils';
-
 export const logPopulatedTx = (tx: PopulatedTransaction) => {
   console.log({
     data: tx.data,
@@ -16,10 +19,14 @@ export const logPopulatedTx = (tx: PopulatedTransaction) => {
   });
 };
 
-task('run', 'Runs a user-defined script')
+task('runscript', 'Runs a user-defined script')
+  .addPositionalParam('path', 'Path to the script')
   .addOptionalParam('mtoken', 'MToken')
-  .setAction(async (taskArgs, hre, runSuper) => {
+  .addOptionalParam('ptoken', 'Payment Token')
+  .setAction(async (taskArgs, hre) => {
     const mtoken = taskArgs.mtoken;
+    const ptoken = taskArgs.ptoken;
+    const scriptPath = taskArgs.path;
 
     if (mtoken) {
       if (!isMTokenName(mtoken)) {
@@ -28,7 +35,22 @@ task('run', 'Runs a user-defined script')
 
       hre.mtoken = mtoken;
     }
-    return runSuper(taskArgs);
+
+    if (ptoken) {
+      if (!isPaymentTokenName(ptoken)) {
+        throw new Error('Invalid ptoken parameter');
+      }
+      hre.paymentToken = ptoken;
+    }
+
+    const scriptPathResolved = path.resolve(scriptPath);
+    const { default: run } = await import(scriptPathResolved);
+
+    if (!run) {
+      throw new Error('Script not found or it doesnt have a default export');
+    }
+
+    await run(hre);
   });
 
 task('verifyProxy')
