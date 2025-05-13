@@ -1,10 +1,9 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { DeploymentConfig, PaymentTokenDeploymentConfig } from './types';
+import { DeploymentConfig } from './types';
 
-import { MTokenName, PaymentTokenName } from '../../../config';
+import { MTokenName } from '../../../config';
 import { configsPerToken } from '../configs';
-import { paymentTokenDeploymentConfigs } from '../configs/payment-tokens';
 
 export const executeFuncAsync = async <T>(
   hre: HardhatRuntimeEnvironment,

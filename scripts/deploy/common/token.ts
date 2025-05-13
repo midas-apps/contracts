@@ -1,42 +1,12 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import {
-  HB_USDT_CONTRACT_NAME,
-  M_BASIS_CONTRACT_NAME,
-  M_BTC_CONTRACT_NAME,
-  M_EDGE_CONTRACT_NAME,
-  M_FONE_CONTRACT_NAME,
-  M_LIQUIDITY_CONTRACT_NAME,
-  M_MEV_CONTRACT_NAME,
-  M_RE7_CONTRACT_NAME,
-  M_SL_CONTRACT_NAME,
-  M_TBILL_CONTRACT_NAME,
-  MTokenName,
-  TAC_M_BTC_CONTRACT_NAME,
-  TAC_M_EDGE_CONTRACT_NAME,
-  TAC_M_MEV_CONTRACT_NAME,
-} from '../../../config';
+import { MTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
+import { getTokenContractNames } from '../../../helpers/contracts';
 import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
 } from '../../../helpers/utils';
-
-const tokenContractNamePerToken: Record<MTokenName, string> = {
-  mTBILL: M_TBILL_CONTRACT_NAME,
-  mBASIS: M_BASIS_CONTRACT_NAME,
-  mBTC: M_BTC_CONTRACT_NAME,
-  mEDGE: M_EDGE_CONTRACT_NAME,
-  mRE7: M_RE7_CONTRACT_NAME,
-  mMEV: M_MEV_CONTRACT_NAME,
-  mSL: M_SL_CONTRACT_NAME,
-  hbUSDT: HB_USDT_CONTRACT_NAME,
-  mFONE: M_FONE_CONTRACT_NAME,
-  mLIQUIDITY: M_LIQUIDITY_CONTRACT_NAME,
-  TACmBTC: TAC_M_BTC_CONTRACT_NAME,
-  TACmEDGE: TAC_M_EDGE_CONTRACT_NAME,
-  TACmMEV: TAC_M_MEV_CONTRACT_NAME,
-};
 
 export const deployMToken = async (
   hre: HardhatRuntimeEnvironment,
@@ -49,7 +19,7 @@ export const deployMToken = async (
   if (!addresses?.accessControl)
     throw new Error('Access control address is not set');
 
-  const tokenContractName = tokenContractNamePerToken[token];
+  const tokenContractName = getTokenContractNames(token).token;
 
   if (!tokenContractName) {
     throw new Error('Token contract name is not set');

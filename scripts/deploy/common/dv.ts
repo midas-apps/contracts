@@ -3,26 +3,12 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { getNetworkConfig } from './utils';
 
-import {
-  DEPOSIT_VAULT_CONTRACT_NAME,
-  HB_USDT_DEPOSIT_VAULT_CONTRACT_NAME,
-  M_BASIS_DEPOSIT_VAULT_CONTRACT_NAME,
-  M_BTC_DEPOSIT_VAULT_CONTRACT_NAME,
-  M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME,
-  M_FONE_DEPOSIT_VAULT_CONTRACT_NAME,
-  M_LIQUIDITY_DEPOSIT_VAULT_CONTRACT_NAME,
-  M_MEV_DEPOSIT_VAULT_CONTRACT_NAME,
-  M_RE7_DEPOSIT_VAULT_CONTRACT_NAME,
-  M_SL_DEPOSIT_VAULT_CONTRACT_NAME,
-  MTokenName,
-  TAC_M_BTC_DEPOSIT_VAULT_CONTRACT_NAME,
-  TAC_M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME,
-  TAC_M_MEV_DEPOSIT_VAULT_CONTRACT_NAME,
-} from '../../../config';
+import { MTokenName } from '../../../config';
 import {
   getCurrentAddresses,
   sanctionListContracts,
 } from '../../../config/constants/addresses';
+import { getTokenContractNames } from '../../../helpers/contracts';
 import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
@@ -32,23 +18,6 @@ import {
   MBasisDepositVault,
   MBtcDepositVault,
 } from '../../../typechain-types';
-import { configsPerToken } from '../configs';
-
-const dvContractNamePerToken: Record<MTokenName, string> = {
-  mTBILL: DEPOSIT_VAULT_CONTRACT_NAME,
-  mBASIS: M_BASIS_DEPOSIT_VAULT_CONTRACT_NAME,
-  mBTC: M_BTC_DEPOSIT_VAULT_CONTRACT_NAME,
-  mEDGE: M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME,
-  mMEV: M_MEV_DEPOSIT_VAULT_CONTRACT_NAME,
-  mRE7: M_RE7_DEPOSIT_VAULT_CONTRACT_NAME,
-  mSL: M_SL_DEPOSIT_VAULT_CONTRACT_NAME,
-  mFONE: M_FONE_DEPOSIT_VAULT_CONTRACT_NAME,
-  mLIQUIDITY: M_LIQUIDITY_DEPOSIT_VAULT_CONTRACT_NAME,
-  TACmBTC: TAC_M_BTC_DEPOSIT_VAULT_CONTRACT_NAME,
-  TACmEDGE: TAC_M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME,
-  TACmMEV: TAC_M_MEV_DEPOSIT_VAULT_CONTRACT_NAME,
-  hbUSDT: HB_USDT_DEPOSIT_VAULT_CONTRACT_NAME,
-};
 
 export type DeployDvConfig = {
   feeReceiver?: string;
@@ -90,7 +59,7 @@ export const deployDepositVault = async (
     dataFeed = tokenAddresses?.dataFeed;
   }
 
-  const dvContractName = dvContractNamePerToken[token as MTokenName];
+  const dvContractName = getTokenContractNames(token).dv;
 
   if (!dvContractName) {
     throw new Error('DV contract name is not found');

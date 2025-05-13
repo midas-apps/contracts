@@ -2,8 +2,8 @@ import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { M_BASIS_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME } from '../../config';
 import { getCurrentAddresses } from '../../config/constants/addresses';
+import { getTokenContractNames } from '../../helpers/contracts';
 import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
@@ -18,7 +18,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const deployment = await hre.upgrades.upgradeProxy(
     addresses?.mBASIS?.redemptionVaultSwapper ?? '',
     await hre.ethers.getContractFactory(
-      M_BASIS_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
+      getTokenContractNames('mBASIS').rvSwapper!,
       owner,
     ),
     {
@@ -32,7 +32,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   }
   await logDeployProxy(
     hre,
-    M_BASIS_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
+    getTokenContractNames('mBASIS').rvSwapper!,
     deployment.address,
   );
   await tryEtherscanVerifyImplementation(hre, deployment.address);

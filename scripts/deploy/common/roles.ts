@@ -2,8 +2,9 @@ import { Provider } from '@ethersproject/providers';
 import { Signer } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { MIDAS_AC_CONTRACT_NAME, MTokenName } from '../../../config';
+import { MTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
+import { getCommonContractNames } from '../../../helpers/contracts';
 import { getFordefiProvider } from '../../../helpers/fordefi-provider';
 import { getAllRoles } from '../../../helpers/roles';
 import { MidasAccessControl } from '../../../typechain-types';
@@ -167,7 +168,7 @@ const getAcContract = async (
 
   return (
     await hre.ethers.getContractAt(
-      MIDAS_AC_CONTRACT_NAME,
+      getCommonContractNames().ac,
       addresses!.accessControl!,
     )
   ).connect(provider) as MidasAccessControl;

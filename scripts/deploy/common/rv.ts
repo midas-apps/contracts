@@ -1,33 +1,15 @@
 import { BigNumberish, constants } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { DeploymentConfig } from './types';
 import { getNetworkConfig } from './utils';
 
-import {
-  M_BASIS_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
-  M_BASIS_REDEMPTION_VAULT_CONTRACT_NAME,
-  M_BTC_REDEMPTION_VAULT_CONTRACT_NAME,
-  M_RE7_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
-  M_EDGE_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
-  REDEMPTION_VAULT_BUIDL_CONTRACT_NAME,
-  REDEMPTION_VAULT_CONTRACT_NAME,
-  M_MEV_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
-  TAC_M_BTC_REDEMPTION_VAULT_CONTRACT_NAME,
-  TAC_M_EDGE_REDEMPTION_VAULT_CONTRACT_NAME,
-  TAC_M_MEV_REDEMPTION_VAULT_CONTRACT_NAME,
-  MTokenName,
-  M_SL_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
-  HB_USDT_REDEMPTION_VAULT_SWAPPER_CONTRACT_NAME,
-  M_FONE_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
-  chainIds,
-  M_LIQUIDITY_REDEMPTION_VAULT_CONTRACT_NAME,
-} from '../../../config';
+import { MTokenName } from '../../../config';
 import {
   getCurrentAddresses,
   RedemptionVaultType,
   sanctionListContracts,
 } from '../../../config/constants/addresses';
+import { getTokenContractNames } from '../../../helpers/contracts';
 import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
@@ -81,53 +63,6 @@ export type DeployRvConfig =
   | DeployRvBuidlConfig
   | DeployRvSwapperConfig;
 
-const rvContractNamePerToken: Record<
-  MTokenName,
-  Partial<Record<DeployRvConfig['type'], string>>
-> = {
-  mBASIS: {
-    REGULAR: M_BASIS_REDEMPTION_VAULT_CONTRACT_NAME,
-    SWAPPER: M_BASIS_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
-  },
-  mTBILL: {
-    REGULAR: REDEMPTION_VAULT_CONTRACT_NAME,
-    BUIDL: REDEMPTION_VAULT_BUIDL_CONTRACT_NAME,
-  },
-  mBTC: {
-    REGULAR: M_BTC_REDEMPTION_VAULT_CONTRACT_NAME,
-  },
-  mEDGE: {
-    SWAPPER: M_EDGE_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
-  },
-  mRE7: {
-    SWAPPER: M_RE7_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
-  },
-  mMEV: {
-    SWAPPER: M_MEV_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
-  },
-  mSL: {
-    SWAPPER: M_SL_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
-  },
-  hbUSDT: {
-    SWAPPER: HB_USDT_REDEMPTION_VAULT_SWAPPER_CONTRACT_NAME,
-  },
-  mFONE: {
-    SWAPPER: M_FONE_REDEMPTION_SWAPPER_VAULT_CONTRACT_NAME,
-  },
-  mLIQUIDITY: {
-    REGULAR: M_LIQUIDITY_REDEMPTION_VAULT_CONTRACT_NAME,
-  },
-  TACmBTC: {
-    REGULAR: TAC_M_BTC_REDEMPTION_VAULT_CONTRACT_NAME,
-  },
-  TACmEDGE: {
-    REGULAR: TAC_M_EDGE_REDEMPTION_VAULT_CONTRACT_NAME,
-  },
-  TACmMEV: {
-    REGULAR: TAC_M_MEV_REDEMPTION_VAULT_CONTRACT_NAME,
-  },
-};
-
 const DUMMY_ADDRESS = '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF';
 
 export const deployRedemptionVault = async (
@@ -146,7 +81,7 @@ export const deployRedemptionVault = async (
     throw new Error('Token config is not found');
   }
 
-  const contractName = rvContractNamePerToken[token]?.[networkConfig.type];
+  const contractName = getTokenContractNames(token)[type];
 
   if (!contractName) {
     throw new Error('Unsupported token/type combination');

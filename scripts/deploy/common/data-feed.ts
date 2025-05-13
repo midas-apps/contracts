@@ -3,72 +3,17 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { getDeploymentGenericConfig } from './utils';
 
-import {
-  DATA_FEED_CONTRACT_NAME,
-  HB_USDT_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  HB_USDT_DATA_FEED_CONTRACT_NAME,
-  M_BASIS_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  M_BASIS_DATA_FEED_CONTRACT_NAME,
-  M_BTC_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  M_BTC_DATA_FEED_CONTRACT_NAME,
-  M_EDGE_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  M_EDGE_DATA_FEED_CONTRACT_NAME,
-  M_FONE_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  M_FONE_DATA_FEED_CONTRACT_NAME,
-  M_LIQUIDITY_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  M_LIQUIDITY_DATA_FEED_CONTRACT_NAME,
-  M_MEV_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  M_MEV_DATA_FEED_CONTRACT_NAME,
-  M_RE7_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  M_RE7_DATA_FEED_CONTRACT_NAME,
-  M_SL_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  M_SL_DATA_FEED_CONTRACT_NAME,
-  M_TBILL_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  M_TBILL_DATA_FEED_CONTRACT_NAME,
-  MTokenName,
-  PaymentTokenName,
-} from '../../../config';
+import { MTokenName, PaymentTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
+import {
+  getCommonContractNames,
+  getTokenContractNames,
+} from '../../../helpers/contracts';
 import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
 } from '../../../helpers/utils';
 import { paymentTokenDeploymentConfigs } from '../configs/payment-tokens';
-
-const customAggregatorContractNamesPerToken: Record<
-  MTokenName,
-  string | undefined
-> = {
-  mTBILL: M_TBILL_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  mBASIS: M_BASIS_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  mBTC: M_BTC_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  mEDGE: M_EDGE_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  mRE7: M_RE7_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  mMEV: M_MEV_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  mSL: M_SL_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  hbUSDT: HB_USDT_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  mFONE: M_FONE_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  mLIQUIDITY: M_LIQUIDITY_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  TACmBTC: undefined,
-  TACmEDGE: undefined,
-  TACmMEV: undefined,
-};
-
-const dataFeedContractNamesPerToken: Record<MTokenName, string | undefined> = {
-  mTBILL: M_TBILL_DATA_FEED_CONTRACT_NAME,
-  mBASIS: M_BASIS_DATA_FEED_CONTRACT_NAME,
-  mBTC: M_BTC_DATA_FEED_CONTRACT_NAME,
-  mEDGE: M_EDGE_DATA_FEED_CONTRACT_NAME,
-  mRE7: M_RE7_DATA_FEED_CONTRACT_NAME,
-  mMEV: M_MEV_DATA_FEED_CONTRACT_NAME,
-  mSL: M_SL_DATA_FEED_CONTRACT_NAME,
-  hbUSDT: HB_USDT_DATA_FEED_CONTRACT_NAME,
-  mFONE: M_FONE_DATA_FEED_CONTRACT_NAME,
-  mLIQUIDITY: M_LIQUIDITY_DATA_FEED_CONTRACT_NAME,
-  TACmBTC: undefined,
-  TACmEDGE: undefined,
-  TACmMEV: undefined,
-};
 
 export type DeployDataFeedConfig = {
   minAnswer: BigNumberish;
@@ -98,11 +43,16 @@ export const deployPaymentTokenDataFeed = async (
   if (!tokenAddresses?.aggregator) {
     throw new Error('Token config is not found or aggregator is not set');
   }
+  const contractName = getCommonContractNames().dataFeed;
+
+  if (!contractName) {
+    throw new Error('Data feed contract name is not set');
+  }
 
   await deployTokenDataFeed(
     hre,
     tokenAddresses.aggregator,
-    DATA_FEED_CONTRACT_NAME,
+    contractName,
     networkConfig,
   );
 };
@@ -118,7 +68,7 @@ export const deployMTokenDataFeed = async (
     throw new Error('Token config is not found or customFeed is not set');
   }
 
-  const dataFeedContractName = dataFeedContractNamesPerToken[token];
+  const dataFeedContractName = getTokenContractNames(token).dataFeed;
 
   if (!dataFeedContractName) {
     throw new Error('Data feed contract name is not set');
@@ -137,7 +87,7 @@ export const deployMTokenCustomAggregator = async (
   token: MTokenName,
 ) => {
   const customAggregatorContractName =
-    customAggregatorContractNamesPerToken[token];
+    getTokenContractNames(token).customAggregator;
 
   if (!customAggregatorContractName) {
     throw new Error('Custom aggregator contract name is not set');

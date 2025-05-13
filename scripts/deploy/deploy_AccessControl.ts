@@ -3,7 +3,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { DeployFunction } from './common/types';
 
-import { MIDAS_AC_CONTRACT_NAME } from '../../config';
+import { getCommonContractNames } from '../../helpers/contracts';
 import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
@@ -15,10 +15,11 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const owner = await hre.ethers.getSigner(deployer);
 
-  console.log(`Deploying ${MIDAS_AC_CONTRACT_NAME}...`);
+  const contractName = getCommonContractNames().ac;
+  console.log(`Deploying ${contractName}...`);
 
   const deployment = await hre.upgrades.deployProxy(
-    await hre.ethers.getContractFactory(MIDAS_AC_CONTRACT_NAME, owner),
+    await hre.ethers.getContractFactory(contractName, owner),
     [],
     {
       unsafeAllow: ['constructor'],
@@ -31,7 +32,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     console.log('Waited.');
   }
 
-  await logDeployProxy(hre, MIDAS_AC_CONTRACT_NAME, deployment.address);
+  await logDeployProxy(hre, contractName, deployment.address);
   await tryEtherscanVerifyImplementation(hre, deployment.address);
 };
 
