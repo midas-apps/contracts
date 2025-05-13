@@ -25,4 +25,5 @@ export type PaymentTokenName =
   | 'pusd'
   | 'wrbtc'
   | 'usds'
-  | 'usde';
+  | 'usde'
+  | 'usr';
