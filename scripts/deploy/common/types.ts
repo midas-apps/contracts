@@ -4,7 +4,10 @@ import {
   DeployDataFeedConfig,
 } from './data-feed';
 import { DeployDvConfig } from './dv';
-import { GrantAllTokenRolesConfig } from './roles';
+import {
+  GrantAllTokenRolesConfig,
+  GrantDefaultAdminRoleToAcAdminConfig,
+} from './roles';
 import {
   DeployRvBuidlConfig,
   DeployRvRegularConfig,
@@ -46,3 +49,10 @@ export type PaymentTokenDeploymentConfig = {
     >
   >;
 };
+
+export type NetworkDeploymentConfig = Record<
+  number,
+  {
+    grantDefaultAdminRole?: GrantDefaultAdminRoleToAcAdminConfig;
+  }
+>;

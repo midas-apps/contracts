@@ -7,6 +7,7 @@ import { getCurrentAddresses } from '../../../config/constants/addresses';
 import { getFordefiProvider } from '../../../helpers/fordefi-provider';
 import { getAllRoles } from '../../../helpers/roles';
 import { MidasAccessControl } from '../../../typechain-types';
+import { networkDeploymentConfigs } from '../configs/network-configs';
 
 type Address = `0x${string}`;
 
@@ -135,8 +136,11 @@ export type GrantDefaultAdminRoleToAcAdminConfig = {
 
 export const grantDefaultAdminRoleToAcAdmin = async (
   hre: HardhatRuntimeEnvironment,
-  networkConfig?: GrantDefaultAdminRoleToAcAdminConfig,
 ) => {
+  const networkConfig =
+    networkDeploymentConfigs[hre.network.config.chainId!]
+      ?.grantDefaultAdminRole;
+
   if (!networkConfig) {
     throw new Error('Network config is not found');
   }
