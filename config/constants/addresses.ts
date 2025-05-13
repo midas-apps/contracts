@@ -348,6 +348,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0xcA727511c9d542AAb9eF406d24E5bbbE4567c22d',
         dataFeed: '0x1CC42c97E7c598A1d1b2E71C84A9C0AD9b3D42E7',
       },
+      usr: {
+        token: '0x0aD339d66BF4AeD5ce31c64Bc37B3244b6394A77',
+        aggregator: '0x29d2fEC890B037B2d34f061F9a50f76F85ddBcAE',
+        dataFeed: '0x47FddEC235Aa35625Fd2bAd34FB373b3A4B6Dd74',
+      },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     hbUSDT: {
