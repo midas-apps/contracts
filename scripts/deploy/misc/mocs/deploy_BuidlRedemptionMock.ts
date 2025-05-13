@@ -8,15 +8,16 @@ import {
   RedemptionTest__factory,
 } from '../../../../typechain-types';
 import { DeployFunction } from '../../common/types';
+import { getDeployer } from '../../common/utils';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const { deployer } = await hre.getNamedAccounts();
-  const owner = await hre.ethers.getSigner(deployer);
+  const deployer = await getDeployer(hre);
+
   const addresses = getCurrentAddresses(hre);
 
   console.log('Deploying BuidlRedemptionMock...');
 
-  const deployment = await new RedemptionTest__factory(owner).deploy(
+  const deployment = await new RedemptionTest__factory(deployer).deploy(
     '0xE6e05cf306d41585BEE8Ae48F9f2DD7E0955e6D3', // test BUIDL token on sepolia
     addresses!.dataFeeds!.usdc!.token!,
   );

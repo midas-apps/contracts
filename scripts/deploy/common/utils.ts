@@ -1,8 +1,14 @@
+import { DeployProxyOptions } from '@openzeppelin/hardhat-upgrades/dist/utils';
+import { Signer } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { DeploymentConfig } from './types';
 
 import { MTokenName } from '../../../config';
+import {
+  logDeployProxy,
+  tryEtherscanVerifyImplementation,
+} from '../../../helpers/utils';
 import { configsPerToken } from '../configs';
 
 export const executeFuncAsync = async <T>(
@@ -16,6 +22,55 @@ export const executeFuncAsync = async <T>(
     console.error(err);
     process.exit(1);
   }
+};
+
+export const getDeployer = async (hre: HardhatRuntimeEnvironment) => {
+  const { deployer } = await hre.getNamedAccounts();
+  return await hre.ethers.getSigner(deployer);
+};
+
+export const deployProxy = async (
+  hre: HardhatRuntimeEnvironment,
+  contractName: string,
+  params: unknown[],
+  deployer?: Signer,
+  opts: DeployProxyOptions = { unsafeAllow: ['constructor'] },
+) => {
+  deployer ??= await getDeployer(hre);
+
+  const deployment = await hre.upgrades.deployProxy(
+    await hre.ethers.getContractFactory(contractName, deployer),
+    params,
+    opts,
+  );
+  return deployment;
+};
+
+export const deployAndVerifyProxy = async (
+  hre: HardhatRuntimeEnvironment,
+  contractName: string,
+  params: unknown[],
+  deployer?: Signer,
+  opts: DeployProxyOptions = { unsafeAllow: ['constructor'] },
+) => {
+  const deployment = await deployProxy(
+    hre,
+    contractName,
+    params,
+    deployer,
+    opts,
+  );
+
+  if (deployment.deployTransaction) {
+    console.log('Waiting 5 blocks...');
+    await deployment.deployTransaction.wait(5);
+    console.log('Waited.');
+  }
+
+  await logDeployProxy(hre, contractName, deployment.address);
+  await tryEtherscanVerifyImplementation(hre, deployment.address);
+
+  return deployment;
 };
 
 export const getDeploymentGenericConfig = <

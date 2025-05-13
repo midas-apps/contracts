@@ -1,7 +1,7 @@
 import { BigNumberish, constants } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { getNetworkConfig } from './utils';
+import { deployAndVerifyProxy, getDeployer, getNetworkConfig } from './utils';
 
 import { MTokenName } from '../../../config';
 import {
@@ -10,10 +10,6 @@ import {
   sanctionListContracts,
 } from '../../../config/constants/addresses';
 import { getTokenContractNames } from '../../../helpers/contracts';
-import {
-  logDeployProxy,
-  tryEtherscanVerifyImplementation,
-} from '../../../helpers/utils';
 import {
   MBasisRedemptionVaultWithSwapper,
   RedemptionVault,
@@ -71,8 +67,7 @@ export const deployRedemptionVault = async (
   type: 'rv' | 'rvBuidl' | 'rvSwapper',
 ) => {
   const addresses = getCurrentAddresses(hre);
-  const { deployer } = await hre.getNamedAccounts();
-  const owner = await hre.ethers.getSigner(deployer);
+  const deployer = await getDeployer(hre);
   const tokenAddresses = addresses?.[token];
 
   const networkConfig = getNetworkConfig(hre, token, type);
@@ -86,10 +81,6 @@ export const deployRedemptionVault = async (
   if (!contractName) {
     throw new Error('Unsupported token/type combination');
   }
-
-  const vaultFactory = await hre.ethers.getContractFactory(contractName);
-
-  console.log(`Deploying RV ${contractName}...`);
 
   const extraParams: unknown[] = [];
 
@@ -120,7 +111,7 @@ export const deployRedemptionVault = async (
     const liquidityProvider =
       networkConfig.liquidityProvider === 'dummy'
         ? DUMMY_ADDRESS
-        : networkConfig.liquidityProvider ?? owner.address;
+        : networkConfig.liquidityProvider ?? deployer.address;
 
     extraParams.push(swapperVaultAddress);
     extraParams.push(liquidityProvider);
@@ -153,8 +144,8 @@ export const deployRedemptionVault = async (
       mTokenDataFeed: dataFeed,
     },
     {
-      feeReceiver: networkConfig.feeReceiver ?? owner.address,
-      tokensReceiver: networkConfig.tokensReceiver ?? owner.address,
+      feeReceiver: networkConfig.feeReceiver ?? deployer.address,
+      tokensReceiver: networkConfig.tokensReceiver ?? deployer.address,
     },
     {
       instantDailyLimit: networkConfig.instantDailyLimit,
@@ -168,7 +159,7 @@ export const deployRedemptionVault = async (
       fiatFlatFee: networkConfig.fiatFlatFee,
       minFiatRedeemAmount: networkConfig.minFiatRedeemAmount,
     },
-    networkConfig.requestRedeemer ?? owner.address,
+    networkConfig.requestRedeemer ?? deployer.address,
     ...extraParams,
   ] as
     | Parameters<RedemptionVault['initialize']>
@@ -179,27 +170,13 @@ export const deployRedemptionVault = async (
         MBasisRedemptionVaultWithSwapper['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)']
       >;
 
-  const deployment = await hre.upgrades.deployProxy(
-    vaultFactory.connect(owner),
-    params,
-    {
-      unsafeAllow: ['constructor'],
-      initializer:
-        networkConfig.type === 'SWAPPER'
-          ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)'
-          : networkConfig.type === 'BUIDL'
-          ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,uint256,uint256)'
-          : 'initialize',
-    },
-  );
-
-  console.log('Deployed RV:', deployment.address);
-
-  if (deployment.deployTransaction) {
-    console.log('Waiting 5 blocks...');
-    await deployment.deployTransaction.wait(5);
-    console.log('Waited.');
-  }
-  await logDeployProxy(hre, 'RV', deployment.address);
-  await tryEtherscanVerifyImplementation(hre, deployment.address);
+  await deployAndVerifyProxy(hre, contractName, params, undefined, {
+    unsafeAllow: ['constructor'],
+    initializer:
+      networkConfig.type === 'SWAPPER'
+        ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)'
+        : networkConfig.type === 'BUIDL'
+        ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,uint256,uint256)'
+        : 'initialize',
+  });
 };

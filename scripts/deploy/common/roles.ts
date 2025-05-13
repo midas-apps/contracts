@@ -2,6 +2,8 @@ import { Provider } from '@ethersproject/providers';
 import { Signer } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { getDeployer } from './utils';
+
 import { MTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import { getCommonContractNames } from '../../../helpers/contracts';
@@ -40,15 +42,13 @@ export const grantAllTokenRoles = async (
   const allRoles = getAllRoles();
   const tokenRoles = allRoles.tokenRoles[token];
 
-  const { deployer } = await hre.getNamedAccounts();
-  const deployerSigner = await hre.ethers.getSigner(deployer);
-
+  const deployer = await getDeployer(hre);
   const provider =
     networkConfig.providerType === 'fordefi'
       ? getFordefiProvider({
           vaultAddress: acAdminVaultAddress,
         })
-      : deployerSigner;
+      : deployer;
 
   const accessControl = await getAcContract(hre, provider);
 
@@ -71,7 +71,7 @@ export const grantAllTokenRoles = async (
   const defaultManager =
     networkConfig.providerType === 'fordefi'
       ? 'invalid' // for fordefi there is no default address so tx will just throw error
-      : deployerSigner.address;
+      : deployer.address;
 
   const tx = await accessControl.grantRoleMult(
     [
@@ -107,10 +107,9 @@ export const revokeDefaultRolesFromDeployer = async (
 ) => {
   const allRoles = getAllRoles();
   const mTBILLRoles = allRoles.tokenRoles.mTBILL;
-  const { deployer } = await hre.getNamedAccounts();
-  const deployerSigner = await hre.ethers.getSigner(deployer);
+  const deployer = await getDeployer(hre);
 
-  const accessControl = await getAcContract(hre, deployerSigner);
+  const accessControl = await getAcContract(hre, deployer);
 
   const roles = [
     allRoles.common.blacklistedOperator,
@@ -125,7 +124,7 @@ export const revokeDefaultRolesFromDeployer = async (
 
   await accessControl.revokeRoleMult(
     roles,
-    roles.map(() => deployerSigner.address),
+    roles.map(() => deployer.address),
   );
 
   console.log('Transaction is initiated successfully');
@@ -147,10 +146,9 @@ export const grantDefaultAdminRoleToAcAdmin = async (
   }
 
   const allRoles = getAllRoles();
-  const { deployer } = await hre.getNamedAccounts();
-  const deployerSigner = await hre.ethers.getSigner(deployer);
+  const deployer = await getDeployer(hre);
 
-  const accessControl = await getAcContract(hre, deployerSigner);
+  const accessControl = await getAcContract(hre, deployer);
 
   await accessControl.grantRole(
     allRoles.common.defaultAdmin,

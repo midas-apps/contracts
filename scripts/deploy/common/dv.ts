@@ -1,7 +1,7 @@
-import { BigNumberish, constants, ContractFactory } from 'ethers';
+import { BigNumberish, constants } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { getNetworkConfig } from './utils';
+import { deployAndVerifyProxy, getDeployer, getNetworkConfig } from './utils';
 
 import { MTokenName } from '../../../config';
 import {
@@ -9,10 +9,6 @@ import {
   sanctionListContracts,
 } from '../../../config/constants/addresses';
 import { getTokenContractNames } from '../../../helpers/contracts';
-import {
-  logDeployProxy,
-  tryEtherscanVerifyImplementation,
-} from '../../../helpers/utils';
 import {
   DepositVault,
   MBasisDepositVault,
@@ -35,8 +31,7 @@ export const deployDepositVault = async (
   token: MTokenName,
 ) => {
   const addresses = getCurrentAddresses(hre);
-  const { deployer } = await hre.getNamedAccounts();
-  const owner = await hre.ethers.getSigner(deployer);
+  const deployer = await getDeployer(hre);
   const tokenAddresses = addresses?.[token];
 
   const networkConfig = getNetworkConfig(hre, token, 'dv');
@@ -44,8 +39,6 @@ export const deployDepositVault = async (
   if (!tokenAddresses) {
     throw new Error('Token config is not found');
   }
-
-  console.log('Deploying DV...');
 
   let dataFeed: string | undefined;
 
@@ -65,8 +58,6 @@ export const deployDepositVault = async (
     throw new Error('DV contract name is not found');
   }
 
-  const vaultFactory = await hre.ethers.getContractFactory(dvContractName);
-
   const sanctionsList = networkConfig.enableSanctionsList
     ? sanctionListContracts[hre.network.config.chainId!]
     : constants.AddressZero;
@@ -82,8 +73,8 @@ export const deployDepositVault = async (
       mTokenDataFeed: dataFeed,
     },
     {
-      feeReceiver: networkConfig.feeReceiver ?? owner.address,
-      tokensReceiver: networkConfig.tokensReceiver ?? owner.address,
+      feeReceiver: networkConfig.feeReceiver ?? deployer.address,
+      tokensReceiver: networkConfig.tokensReceiver ?? deployer.address,
     },
     {
       instantDailyLimit: networkConfig.instantDailyLimit,
@@ -98,21 +89,5 @@ export const deployDepositVault = async (
     | Parameters<MBtcDepositVault['initialize']>
     | Parameters<DepositVault['initialize']>;
 
-  const deployment = await hre.upgrades.deployProxy(
-    vaultFactory.connect(owner),
-    params,
-    {
-      unsafeAllow: ['constructor'],
-    },
-  );
-
-  console.log('Deployed DV:', deployment.address);
-
-  if (deployment.deployTransaction) {
-    console.log('Waiting 5 blocks...');
-    await deployment.deployTransaction.wait(5);
-    console.log('Waited.');
-  }
-  await logDeployProxy(hre, 'DV', deployment.address);
-  await tryEtherscanVerifyImplementation(hre, deployment.address);
+  await deployAndVerifyProxy(hre, dvContractName, params);
 };

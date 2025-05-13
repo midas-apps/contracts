@@ -3,11 +3,11 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
 import { DeployFunction } from '../../common/types';
+import { getDeployer } from '../../common/utils';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const addresses = getCurrentAddresses(hre);
-  const { deployer } = await hre.getNamedAccounts();
-  const owner = await hre.ethers.getSigner(deployer);
+  const deployer = await getDeployer(hre);
 
   console.log('Deploying BandStdChailinkAdapter...', { addresses });
 
@@ -17,7 +17,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const fac = await hre.ethers.getContractFactory(
     'BandStdChailinkAdapter',
-    owner,
+    deployer,
   );
 
   const tx = await fac.deploy(

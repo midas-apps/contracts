@@ -1,13 +1,13 @@
 import { MTokenName } from '../config';
 
 export type TokenContractNames = {
-  dv?: string;
-  rv?: string;
-  rvSwapper?: string;
-  rvBuidl?: string;
+  dv: string;
+  rv: string;
+  rvSwapper: string;
+  rvBuidl: string;
   dataFeed?: string;
   customAggregator?: string;
-  token?: string;
+  token: string;
 };
 
 type CommonContractNames = Omit<

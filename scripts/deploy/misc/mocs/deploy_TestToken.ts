@@ -7,14 +7,14 @@ import {
   ERC20MockWithName__factory,
 } from '../../../../typechain-types';
 import { DeployFunction } from '../../common/types';
+import { getDeployer } from '../../common/utils';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const { deployer } = await hre.getNamedAccounts();
-  const owner = await hre.ethers.getSigner(deployer);
+  const deployer = await getDeployer(hre);
 
   console.log('Deploying ERC20MockWithName...');
 
-  const deployment = await new ERC20MockWithName__factory(owner).deploy(
+  const deployment = await new ERC20MockWithName__factory(deployer).deploy(
     6,
     'USDS',
     'USDS',

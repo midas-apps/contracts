@@ -8,18 +8,18 @@ import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
 } from '../../helpers/utils';
+import { getDeployer } from '../deploy/common/utils';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const addresses = getCurrentAddresses(hre);
 
-  const { deployer } = await hre.getNamedAccounts();
-  const owner = await hre.ethers.getSigner(deployer);
+  const deployer = await getDeployer(hre);
 
   const deployment = await hre.upgrades.upgradeProxy(
     addresses?.mBASIS?.redemptionVaultSwapper ?? '',
     await hre.ethers.getContractFactory(
       getTokenContractNames('mBASIS').rvSwapper!,
-      owner,
+      deployer,
     ),
     {
       unsafeAllow: ['constructor'],

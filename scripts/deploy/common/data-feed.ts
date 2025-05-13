@@ -1,7 +1,7 @@
 import { BigNumberish } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { getDeploymentGenericConfig } from './utils';
+import { deployAndVerifyProxy, getDeploymentGenericConfig } from './utils';
 
 import { MTokenName, PaymentTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
@@ -9,10 +9,6 @@ import {
   getCommonContractNames,
   getTokenContractNames,
 } from '../../../helpers/contracts';
-import {
-  logDeployProxy,
-  tryEtherscanVerifyImplementation,
-} from '../../../helpers/utils';
 import { paymentTokenDeploymentConfigs } from '../configs/payment-tokens';
 
 export type DeployDataFeedConfig = {
@@ -107,38 +103,18 @@ const deployTokenDataFeed = async (
   networkConfig?: DeployDataFeedConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
-  const { deployer } = await hre.getNamedAccounts();
-  const owner = await hre.ethers.getSigner(deployer);
 
   if (!networkConfig) {
     throw new Error('Network config is not found');
   }
 
-  console.log(`Deploying ${dataFeedContractName}...`);
-
-  const deployment = await hre.upgrades.deployProxy(
-    await hre.ethers.getContractFactory(dataFeedContractName, owner),
-    [
-      addresses?.accessControl,
-      aggregator,
-      networkConfig.healthyDiff,
-      networkConfig.minAnswer,
-      networkConfig.maxAnswer,
-    ],
-    {
-      unsafeAllow: ['constructor'],
-    },
-  );
-
-  console.log(`Deployed ${dataFeedContractName}:`, deployment.address);
-
-  if (deployment.deployTransaction) {
-    console.log('Waiting 5 blocks...');
-    await deployment.deployTransaction.wait(5);
-    console.log('Waited.');
-  }
-  await logDeployProxy(hre, dataFeedContractName, deployment.address);
-  await tryEtherscanVerifyImplementation(hre, deployment.address);
+  await deployAndVerifyProxy(hre, dataFeedContractName, [
+    addresses?.accessControl,
+    aggregator,
+    networkConfig.healthyDiff,
+    networkConfig.minAnswer,
+    networkConfig.maxAnswer,
+  ]);
 };
 
 const deployCustomAggregator = async (
@@ -147,36 +123,16 @@ const deployCustomAggregator = async (
   networkConfig?: DeployCustomAggregatorConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
-  const { deployer } = await hre.getNamedAccounts();
-  const owner = await hre.ethers.getSigner(deployer);
 
   if (!networkConfig) {
     throw new Error('Network config is not found');
   }
 
-  console.log(`Deploying ${customAggregatorContractName}...`);
-
-  const deployment = await hre.upgrades.deployProxy(
-    await hre.ethers.getContractFactory(customAggregatorContractName, owner),
-    [
-      addresses?.accessControl,
-      networkConfig.minAnswer,
-      networkConfig.maxAnswer,
-      networkConfig.maxAnswerDeviation,
-      networkConfig.description,
-    ],
-    {
-      unsafeAllow: ['constructor'],
-    },
-  );
-
-  console.log(`Deployed ${customAggregatorContractName}:`, deployment.address);
-
-  if (deployment.deployTransaction) {
-    console.log('Waiting 5 blocks...');
-    await deployment.deployTransaction.wait(5);
-    console.log('Waited.');
-  }
-  await logDeployProxy(hre, customAggregatorContractName, deployment.address);
-  await tryEtherscanVerifyImplementation(hre, deployment.address);
+  await deployAndVerifyProxy(hre, customAggregatorContractName, [
+    addresses?.accessControl,
+    networkConfig.minAnswer,
+    networkConfig.maxAnswer,
+    networkConfig.maxAnswerDeviation,
+    networkConfig.description,
+  ]);
 };

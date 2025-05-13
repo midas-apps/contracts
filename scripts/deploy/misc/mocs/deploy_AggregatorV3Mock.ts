@@ -6,14 +6,14 @@ import {
   AggregatorV3Mock__factory,
 } from '../../../../typechain-types';
 import { DeployFunction } from '../../common/types';
+import { getDeployer } from '../../common/utils';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const { deployer } = await hre.getNamedAccounts();
-  const owner = await hre.ethers.getSigner(deployer);
+  const deployer = await getDeployer(hre);
 
   console.log('Deploying AggregatorV3Mock...');
 
-  const deployment = await new AggregatorV3Mock__factory(owner).deploy();
+  const deployment = await new AggregatorV3Mock__factory(deployer).deploy();
 
   console.log('Deployed AggregatorV3Mock:', deployment.address);
 

@@ -2,6 +2,8 @@ import { Provider } from '@ethersproject/providers';
 import { BigNumber, constants, Signer } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { getDeployer } from './utils';
+
 import { MTokenName, PaymentTokenName } from '../../../config';
 import {
   DataFeedAddresses,
@@ -36,15 +38,14 @@ export const addPaymentTokens = async (
     throw new Error('Network config is not found');
   }
 
-  const { deployer } = await hre.getNamedAccounts();
-  const deployerSigner = await hre.ethers.getSigner(deployer);
+  const deployer = await getDeployer(hre);
 
   const provider =
     networkConfig.providerType === 'fordefi'
       ? getFordefiProvider({
           vaultAddress: vaultsManagerAddress,
         })
-      : deployerSigner;
+      : deployer;
 
   // simulation step to ensure that all the loop iterations wont fail on
   // simple checks step
