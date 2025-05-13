@@ -1,5 +1,4 @@
 import * as hre from 'hardhat';
-import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { etherscanVerify } from '../../../../helpers/utils';
@@ -7,6 +6,7 @@ import {
   // eslint-disable-next-line camelcase
   ERC20MockWithName__factory,
 } from '../../../../typechain-types';
+import { DeployFunction } from '../../common/types';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { deployer } = await hre.getNamedAccounts();
@@ -30,4 +30,4 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   await etherscanVerify(hre, deployment.address);
 };
 
-func(hre).then(console.log).catch(console.error);
+export default func;

@@ -1,8 +1,8 @@
 import * as hre from 'hardhat';
-import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
+import { DeployFunction } from '../../common/types';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const addresses = getCurrentAddresses(hre);
@@ -29,4 +29,4 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   console.log('Deployed stork adapter:', tx.address);
 };
 
-func(hre).then(console.log).catch(console.error);
+export default func;

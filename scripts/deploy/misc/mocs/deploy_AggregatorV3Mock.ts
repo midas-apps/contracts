@@ -1,5 +1,3 @@
-import * as hre from 'hardhat';
-import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { etherscanVerify } from '../../../../helpers/utils';
@@ -7,7 +5,8 @@ import {
   // eslint-disable-next-line camelcase
   AggregatorV3Mock__factory,
 } from '../../../../typechain-types';
-// 0x7811C1Bf5db28630F303267Cc613797EB9A81188
+import { DeployFunction } from '../../common/types';
+
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { deployer } = await hre.getNamedAccounts();
   const owner = await hre.ethers.getSigner(deployer);
@@ -26,4 +25,4 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   await etherscanVerify(hre, deployment.address);
 };
 
-func(hre).then(console.log).catch(console.error);
+export default func;
