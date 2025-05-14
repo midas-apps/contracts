@@ -1,55 +1,26 @@
-import { BigNumberish, constants, ContractFactory } from 'ethers';
+import { BigNumberish, constants } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { deployAndVerifyProxy, getDeployer, getNetworkConfig } from './utils';
+
+import { MTokenName } from '../../../config';
 import {
-  DEPOSIT_VAULT_CONTRACT_NAME,
-  HB_USDT_DEPOSIT_VAULT_CONTRACT_NAME,
-  M_BASIS_DEPOSIT_VAULT_CONTRACT_NAME,
-  M_BTC_DEPOSIT_VAULT_CONTRACT_NAME,
-  M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME,
-  M_FONE_DEPOSIT_VAULT_CONTRACT_NAME,
-  M_LIQUIDITY_DEPOSIT_VAULT_CONTRACT_NAME,
-  M_MEV_DEPOSIT_VAULT_CONTRACT_NAME,
-  M_RE7_DEPOSIT_VAULT_CONTRACT_NAME,
-  M_SL_DEPOSIT_VAULT_CONTRACT_NAME,
-  MTokenName,
-  TAC_M_BTC_DEPOSIT_VAULT_CONTRACT_NAME,
-  TAC_M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME,
-  TAC_M_MEV_DEPOSIT_VAULT_CONTRACT_NAME,
-} from '../../../config';
-import { getCurrentAddresses } from '../../../config/constants/addresses';
-import {
-  logDeployProxy,
-  tryEtherscanVerifyImplementation,
-} from '../../../helpers/utils';
+  getCurrentAddresses,
+  sanctionListContracts,
+} from '../../../config/constants/addresses';
+import { getTokenContractNames } from '../../../helpers/contracts';
 import {
   DepositVault,
   MBasisDepositVault,
   MBtcDepositVault,
 } from '../../../typechain-types';
 
-const dvContractNamePerToken: Record<MTokenName, string> = {
-  mTBILL: DEPOSIT_VAULT_CONTRACT_NAME,
-  mBASIS: M_BASIS_DEPOSIT_VAULT_CONTRACT_NAME,
-  mBTC: M_BTC_DEPOSIT_VAULT_CONTRACT_NAME,
-  mEDGE: M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME,
-  mMEV: M_MEV_DEPOSIT_VAULT_CONTRACT_NAME,
-  mRE7: M_RE7_DEPOSIT_VAULT_CONTRACT_NAME,
-  mSL: M_SL_DEPOSIT_VAULT_CONTRACT_NAME,
-  mFONE: M_FONE_DEPOSIT_VAULT_CONTRACT_NAME,
-  mLIQUIDITY: M_LIQUIDITY_DEPOSIT_VAULT_CONTRACT_NAME,
-  TACmBTC: TAC_M_BTC_DEPOSIT_VAULT_CONTRACT_NAME,
-  TACmEDGE: TAC_M_EDGE_DEPOSIT_VAULT_CONTRACT_NAME,
-  TACmMEV: TAC_M_MEV_DEPOSIT_VAULT_CONTRACT_NAME,
-  hbUSDT: HB_USDT_DEPOSIT_VAULT_CONTRACT_NAME,
-};
-
 export type DeployDvConfig = {
   feeReceiver?: string;
   tokensReceiver?: string;
   instantDailyLimit: BigNumberish;
   instantFee: BigNumberish;
-  sanctionsList?: string;
+  enableSanctionsList?: boolean;
   variationTolerance: BigNumberish;
   minAmount: BigNumberish;
   minMTokenAmountForFirstDeposit: BigNumberish;
@@ -58,22 +29,16 @@ export type DeployDvConfig = {
 export const deployDepositVault = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
-  networkConfig?: DeployDvConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
-  const { deployer } = await hre.getNamedAccounts();
-  const owner = await hre.ethers.getSigner(deployer);
+  const deployer = await getDeployer(hre);
   const tokenAddresses = addresses?.[token];
+
+  const networkConfig = getNetworkConfig(hre, token, 'dv');
 
   if (!tokenAddresses) {
     throw new Error('Token config is not found');
   }
-
-  if (!networkConfig) {
-    throw new Error('Network config is not found');
-  }
-
-  console.log('Deploying DV...');
 
   let dataFeed: string | undefined;
 
@@ -87,13 +52,19 @@ export const deployDepositVault = async (
     dataFeed = tokenAddresses?.dataFeed;
   }
 
-  const dvContractName = dvContractNamePerToken[token as MTokenName];
+  const dvContractName = getTokenContractNames(token).dv;
 
   if (!dvContractName) {
     throw new Error('DV contract name is not found');
   }
 
-  const vaultFactory = await hre.ethers.getContractFactory(dvContractName);
+  const sanctionsList = networkConfig.enableSanctionsList
+    ? sanctionListContracts[hre.network.config.chainId!]
+    : constants.AddressZero;
+
+  if (!sanctionsList) {
+    throw new Error('Sanctions list address is not found');
+  }
 
   const params = [
     addresses?.accessControl,
@@ -102,14 +73,14 @@ export const deployDepositVault = async (
       mTokenDataFeed: dataFeed,
     },
     {
-      feeReceiver: networkConfig.feeReceiver ?? owner.address,
-      tokensReceiver: networkConfig.tokensReceiver ?? owner.address,
+      feeReceiver: networkConfig.feeReceiver ?? deployer.address,
+      tokensReceiver: networkConfig.tokensReceiver ?? deployer.address,
     },
     {
       instantDailyLimit: networkConfig.instantDailyLimit,
       instantFee: networkConfig.instantFee,
     },
-    networkConfig.sanctionsList ?? constants.AddressZero,
+    sanctionsList,
     networkConfig.variationTolerance,
     networkConfig.minAmount,
     networkConfig.minMTokenAmountForFirstDeposit,
@@ -118,21 +89,5 @@ export const deployDepositVault = async (
     | Parameters<MBtcDepositVault['initialize']>
     | Parameters<DepositVault['initialize']>;
 
-  const deployment = await hre.upgrades.deployProxy(
-    vaultFactory.connect(owner),
-    params,
-    {
-      unsafeAllow: ['constructor'],
-    },
-  );
-
-  console.log('Deployed DV:', deployment.address);
-
-  if (deployment.deployTransaction) {
-    console.log('Waiting 5 blocks...');
-    await deployment.deployTransaction.wait(5);
-    console.log('Waited.');
-  }
-  await logDeployProxy(hre, 'DV', deployment.address);
-  await tryEtherscanVerifyImplementation(hre, deployment.address);
+  await deployAndVerifyProxy(hre, dvContractName, params);
 };

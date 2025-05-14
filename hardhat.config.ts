@@ -41,7 +41,7 @@ const config: HardhatUserConfig = {
   },
   namedAccounts: {
     deployer: {
-      1: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+      main: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       hardhat: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       localhost: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       sepolia: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',

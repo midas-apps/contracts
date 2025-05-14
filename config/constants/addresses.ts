@@ -1,16 +1,21 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { chainIds } from '../networks';
 import { ConfigPerNetwork, MTokenName } from '../types/index';
+
+export type RedemptionVaultType =
+  | 'redemptionVault'
+  | 'redemptionVaultBuidl'
+  | 'redemptionVaultSwapper';
 
 type TokenAddresses = {
   customFeed?: string;
   dataFeed?: string;
   token?: string;
   depositVault?: string;
-  redemptionVault?: string;
-  redemptionVaultBuidl?: string;
-  redemptionVaultSwapper?: string;
-};
+} & Partial<Record<RedemptionVaultType, string>>;
+
+export type VaultType = RedemptionVaultType | 'depositVault';
 
 export type DataFeedAddresses = {
   token?: string;
@@ -521,6 +526,12 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   hardhat: undefined,
   localhost: undefined,
+};
+
+export const sanctionListContracts: Partial<Record<number, string>> = {
+  [chainIds.main]: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
+  [chainIds.arbitrum]: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
+  [chainIds.base]: '0x3A91A31cB3dC49b4db9Ce721F50a9D076c8D739B',
 };
 
 export const getCurrentAddresses = (hre: HardhatRuntimeEnvironment) => {

@@ -1,71 +1,15 @@
 import { BigNumberish } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import {
-  DATA_FEED_CONTRACT_NAME,
-  HB_USDT_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  HB_USDT_DATA_FEED_CONTRACT_NAME,
-  M_BASIS_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  M_BASIS_DATA_FEED_CONTRACT_NAME,
-  M_BTC_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  M_BTC_DATA_FEED_CONTRACT_NAME,
-  M_EDGE_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  M_EDGE_DATA_FEED_CONTRACT_NAME,
-  M_FONE_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  M_FONE_DATA_FEED_CONTRACT_NAME,
-  M_LIQUIDITY_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  M_LIQUIDITY_DATA_FEED_CONTRACT_NAME,
-  M_MEV_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  M_MEV_DATA_FEED_CONTRACT_NAME,
-  M_RE7_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  M_RE7_DATA_FEED_CONTRACT_NAME,
-  M_SL_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  M_SL_DATA_FEED_CONTRACT_NAME,
-  M_TBILL_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  M_TBILL_DATA_FEED_CONTRACT_NAME,
-  MTokenName,
-  PaymentTokenName,
-} from '../../../config';
+import { deployAndVerifyProxy, getDeploymentGenericConfig } from './utils';
+
+import { MTokenName, PaymentTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import {
-  logDeployProxy,
-  tryEtherscanVerifyImplementation,
-} from '../../../helpers/utils';
-
-const customAggregatorContractNamesPerToken: Record<
-  MTokenName,
-  string | undefined
-> = {
-  mTBILL: M_TBILL_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  mBASIS: M_BASIS_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  mBTC: M_BTC_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  mEDGE: M_EDGE_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  mRE7: M_RE7_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  mMEV: M_MEV_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  mSL: M_SL_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  hbUSDT: HB_USDT_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  mFONE: M_FONE_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  mLIQUIDITY: M_LIQUIDITY_CUSTOM_AGGREGATOR_CONTRACT_NAME,
-  TACmBTC: undefined,
-  TACmEDGE: undefined,
-  TACmMEV: undefined,
-};
-
-const dataFeedContractNamesPerToken: Record<MTokenName, string | undefined> = {
-  mTBILL: M_TBILL_DATA_FEED_CONTRACT_NAME,
-  mBASIS: M_BASIS_DATA_FEED_CONTRACT_NAME,
-  mBTC: M_BTC_DATA_FEED_CONTRACT_NAME,
-  mEDGE: M_EDGE_DATA_FEED_CONTRACT_NAME,
-  mRE7: M_RE7_DATA_FEED_CONTRACT_NAME,
-  mMEV: M_MEV_DATA_FEED_CONTRACT_NAME,
-  mSL: M_SL_DATA_FEED_CONTRACT_NAME,
-  hbUSDT: HB_USDT_DATA_FEED_CONTRACT_NAME,
-  mFONE: M_FONE_DATA_FEED_CONTRACT_NAME,
-  mLIQUIDITY: M_LIQUIDITY_DATA_FEED_CONTRACT_NAME,
-  TACmBTC: undefined,
-  TACmEDGE: undefined,
-  TACmMEV: undefined,
-};
+  getCommonContractNames,
+  getTokenContractNames,
+} from '../../../helpers/contracts';
+import { paymentTokenDeploymentConfigs } from '../configs/payment-tokens';
 
 export type DeployDataFeedConfig = {
   minAnswer: BigNumberish;
@@ -83,19 +27,28 @@ export type DeployCustomAggregatorConfig = {
 export const deployPaymentTokenDataFeed = async (
   hre: HardhatRuntimeEnvironment,
   token: PaymentTokenName,
-  networkConfig?: DeployDataFeedConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
   const tokenAddresses = addresses?.dataFeeds?.[token];
 
+  const networkConfig =
+    paymentTokenDeploymentConfigs.networkConfigs[hre.network.config.chainId!]?.[
+      token
+    ]?.dataFeed;
+
   if (!tokenAddresses?.aggregator) {
     throw new Error('Token config is not found or aggregator is not set');
+  }
+  const contractName = getCommonContractNames().dataFeed;
+
+  if (!contractName) {
+    throw new Error('Data feed contract name is not set');
   }
 
   await deployTokenDataFeed(
     hre,
     tokenAddresses.aggregator,
-    DATA_FEED_CONTRACT_NAME,
+    contractName,
     networkConfig,
   );
 };
@@ -103,7 +56,6 @@ export const deployPaymentTokenDataFeed = async (
 export const deployMTokenDataFeed = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
-  networkConfig?: DeployDataFeedConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
   const tokenAddresses = addresses?.[token];
@@ -112,7 +64,7 @@ export const deployMTokenDataFeed = async (
     throw new Error('Token config is not found or customFeed is not set');
   }
 
-  const dataFeedContractName = dataFeedContractNamesPerToken[token];
+  const dataFeedContractName = getTokenContractNames(token).dataFeed;
 
   if (!dataFeedContractName) {
     throw new Error('Data feed contract name is not set');
@@ -122,17 +74,16 @@ export const deployMTokenDataFeed = async (
     hre,
     tokenAddresses.customFeed,
     dataFeedContractName,
-    networkConfig,
+    getDeploymentGenericConfig(hre, token, 'dataFeed'),
   );
 };
 
 export const deployMTokenCustomAggregator = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
-  networkConfig?: DeployCustomAggregatorConfig,
 ) => {
   const customAggregatorContractName =
-    customAggregatorContractNamesPerToken[token];
+    getTokenContractNames(token).customAggregator;
 
   if (!customAggregatorContractName) {
     throw new Error('Custom aggregator contract name is not set');
@@ -141,7 +92,7 @@ export const deployMTokenCustomAggregator = async (
   await deployCustomAggregator(
     hre,
     customAggregatorContractName,
-    networkConfig,
+    getDeploymentGenericConfig(hre, token, 'customAggregator'),
   );
 };
 
@@ -152,38 +103,18 @@ const deployTokenDataFeed = async (
   networkConfig?: DeployDataFeedConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
-  const { deployer } = await hre.getNamedAccounts();
-  const owner = await hre.ethers.getSigner(deployer);
 
   if (!networkConfig) {
     throw new Error('Network config is not found');
   }
 
-  console.log(`Deploying ${dataFeedContractName}...`);
-
-  const deployment = await hre.upgrades.deployProxy(
-    await hre.ethers.getContractFactory(dataFeedContractName, owner),
-    [
-      addresses?.accessControl,
-      aggregator,
-      networkConfig.healthyDiff,
-      networkConfig.minAnswer,
-      networkConfig.maxAnswer,
-    ],
-    {
-      unsafeAllow: ['constructor'],
-    },
-  );
-
-  console.log(`Deployed ${dataFeedContractName}:`, deployment.address);
-
-  if (deployment.deployTransaction) {
-    console.log('Waiting 5 blocks...');
-    await deployment.deployTransaction.wait(5);
-    console.log('Waited.');
-  }
-  await logDeployProxy(hre, dataFeedContractName, deployment.address);
-  await tryEtherscanVerifyImplementation(hre, deployment.address);
+  await deployAndVerifyProxy(hre, dataFeedContractName, [
+    addresses?.accessControl,
+    aggregator,
+    networkConfig.healthyDiff,
+    networkConfig.minAnswer,
+    networkConfig.maxAnswer,
+  ]);
 };
 
 const deployCustomAggregator = async (
@@ -192,36 +123,16 @@ const deployCustomAggregator = async (
   networkConfig?: DeployCustomAggregatorConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
-  const { deployer } = await hre.getNamedAccounts();
-  const owner = await hre.ethers.getSigner(deployer);
 
   if (!networkConfig) {
     throw new Error('Network config is not found');
   }
 
-  console.log(`Deploying ${customAggregatorContractName}...`);
-
-  const deployment = await hre.upgrades.deployProxy(
-    await hre.ethers.getContractFactory(customAggregatorContractName, owner),
-    [
-      addresses?.accessControl,
-      networkConfig.minAnswer,
-      networkConfig.maxAnswer,
-      networkConfig.maxAnswerDeviation,
-      networkConfig.description,
-    ],
-    {
-      unsafeAllow: ['constructor'],
-    },
-  );
-
-  console.log(`Deployed ${customAggregatorContractName}:`, deployment.address);
-
-  if (deployment.deployTransaction) {
-    console.log('Waiting 5 blocks...');
-    await deployment.deployTransaction.wait(5);
-    console.log('Waited.');
-  }
-  await logDeployProxy(hre, customAggregatorContractName, deployment.address);
-  await tryEtherscanVerifyImplementation(hre, deployment.address);
+  await deployAndVerifyProxy(hre, customAggregatorContractName, [
+    addresses?.accessControl,
+    networkConfig.minAnswer,
+    networkConfig.maxAnswer,
+    networkConfig.maxAnswerDeviation,
+    networkConfig.description,
+  ]);
 };

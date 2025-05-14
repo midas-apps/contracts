@@ -1,26 +1,32 @@
-export type MTokenName =
-  | 'mTBILL'
-  | 'mBASIS'
-  | 'mBTC'
-  | 'mEDGE'
-  | 'mRE7'
-  | 'mMEV'
-  | 'mSL'
-  | 'mFONE'
-  | 'hbUSDT'
-  | 'TACmBTC'
-  | 'TACmEDGE'
-  | 'TACmMEV'
-  | 'mLIQUIDITY';
+export enum MTokenNameEnum {
+  mTBILL = 'mTBILL',
+  mBASIS = 'mBASIS',
+  mBTC = 'mBTC',
+  mEDGE = 'mEDGE',
+  mRE7 = 'mRE7',
+  mMEV = 'mMEV',
+  mSL = 'mSL',
+  mFONE = 'mFONE',
+  hbUSDT = 'hbUSDT',
+  TACmBTC = 'TACmBTC',
+  TACmEDGE = 'TACmEDGE',
+  TACmMEV = 'TACmMEV',
+  mLIQUIDITY = 'mLIQUIDITY',
+}
 
-export type PaymentTokenName =
-  | 'usdc'
-  | 'usdt'
-  | 'dai'
-  | 'm'
-  | 'wbtc'
-  | 'pusd'
-  | 'wrbtc'
-  | 'usds'
-  | 'usde'
-  | 'usr';
+export type MTokenName = keyof typeof MTokenNameEnum;
+
+export enum PaymentTokenNameEnum {
+  usdc = 'usdc',
+  usdt = 'usdt',
+  dai = 'dai',
+  m = 'm',
+  wbtc = 'wbtc',
+  pusd = 'pusd',
+  wrbtc = 'wrbtc',
+  usds = 'usds',
+  usde = 'usde',
+  usr = 'usr',
+}
+
+export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;

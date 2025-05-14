@@ -2,11 +2,15 @@ import { Provider } from '@ethersproject/providers';
 import { Signer } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { MIDAS_AC_CONTRACT_NAME, MTokenName } from '../../../config';
+import { getDeployer } from './utils';
+
+import { MTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
+import { getCommonContractNames } from '../../../helpers/contracts';
 import { getFordefiProvider } from '../../../helpers/fordefi-provider';
 import { getAllRoles } from '../../../helpers/roles';
 import { MidasAccessControl } from '../../../typechain-types';
+import { networkDeploymentConfigs } from '../configs/network-configs';
 
 type Address = `0x${string}`;
 
@@ -38,15 +42,13 @@ export const grantAllTokenRoles = async (
   const allRoles = getAllRoles();
   const tokenRoles = allRoles.tokenRoles[token];
 
-  const { deployer } = await hre.getNamedAccounts();
-  const deployerSigner = await hre.ethers.getSigner(deployer);
-
+  const deployer = await getDeployer(hre);
   const provider =
     networkConfig.providerType === 'fordefi'
       ? getFordefiProvider({
           vaultAddress: acAdminVaultAddress,
         })
-      : deployerSigner;
+      : deployer;
 
   const accessControl = await getAcContract(hre, provider);
 
@@ -69,7 +71,7 @@ export const grantAllTokenRoles = async (
   const defaultManager =
     networkConfig.providerType === 'fordefi'
       ? 'invalid' // for fordefi there is no default address so tx will just throw error
-      : deployerSigner.address;
+      : deployer.address;
 
   const tx = await accessControl.grantRoleMult(
     [
@@ -105,10 +107,9 @@ export const revokeDefaultRolesFromDeployer = async (
 ) => {
   const allRoles = getAllRoles();
   const mTBILLRoles = allRoles.tokenRoles.mTBILL;
-  const { deployer } = await hre.getNamedAccounts();
-  const deployerSigner = await hre.ethers.getSigner(deployer);
+  const deployer = await getDeployer(hre);
 
-  const accessControl = await getAcContract(hre, deployerSigner);
+  const accessControl = await getAcContract(hre, deployer);
 
   const roles = [
     allRoles.common.blacklistedOperator,
@@ -123,7 +124,7 @@ export const revokeDefaultRolesFromDeployer = async (
 
   await accessControl.revokeRoleMult(
     roles,
-    roles.map(() => deployerSigner.address),
+    roles.map(() => deployer.address),
   );
 
   console.log('Transaction is initiated successfully');
@@ -135,17 +136,19 @@ export type GrantDefaultAdminRoleToAcAdminConfig = {
 
 export const grantDefaultAdminRoleToAcAdmin = async (
   hre: HardhatRuntimeEnvironment,
-  networkConfig?: GrantDefaultAdminRoleToAcAdminConfig,
 ) => {
+  const networkConfig =
+    networkDeploymentConfigs[hre.network.config.chainId!]
+      ?.grantDefaultAdminRole;
+
   if (!networkConfig) {
     throw new Error('Network config is not found');
   }
 
   const allRoles = getAllRoles();
-  const { deployer } = await hre.getNamedAccounts();
-  const deployerSigner = await hre.ethers.getSigner(deployer);
+  const deployer = await getDeployer(hre);
 
-  const accessControl = await getAcContract(hre, deployerSigner);
+  const accessControl = await getAcContract(hre, deployer);
 
   await accessControl.grantRole(
     allRoles.common.defaultAdmin,
@@ -163,7 +166,7 @@ const getAcContract = async (
 
   return (
     await hre.ethers.getContractAt(
-      MIDAS_AC_CONTRACT_NAME,
+      getCommonContractNames().ac,
       addresses!.accessControl!,
     )
   ).connect(provider) as MidasAccessControl;
