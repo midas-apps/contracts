@@ -1,10 +1,10 @@
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
-import { chainIds } from '../../../config';
-import { DeploymentConfig } from '../common/types';
+import { chainIds } from '../../../../config';
+import { DeploymentConfig } from '../../common/types';
 
-export const TACmBTCeploymentConfig: DeploymentConfig = {
+export const TACmBTCDeploymentConfig: DeploymentConfig = {
   genericConfigs: {},
   networkConfigs: {
     [chainIds.sepolia]: {
