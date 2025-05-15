@@ -6,6 +6,7 @@ import { ethers } from 'hardhat';
 import { acErrors } from './common/ac.helpers';
 import {
   calculatePriceDiviation,
+  setMaxAnswerDeviation,
   setRoundData,
   setRoundDataSafe,
 } from './common/custom-feed.helpers';
@@ -160,6 +161,33 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
       const fixture = await loadFixture(defaultDeploy);
       await setRoundDataSafe(fixture, 100);
       await setRoundDataSafe(fixture, 100.9);
+    });
+  });
+
+  describe('setMaxAnswerDeviation', async () => {
+    it('call from owner', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setMaxAnswerDeviation(fixture, 10);
+    });
+
+    it('call from owner when new deviation is 100%', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setMaxAnswerDeviation(fixture, 100);
+    });
+
+    it('should fail: call from non owner', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setMaxAnswerDeviation(fixture, 10, {
+        from: fixture.regularAccounts[0],
+        revertMessage: acErrors.WMAC_HASNT_ROLE,
+      });
+    });
+
+    it('should fail: when new deviation > 100%', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setMaxAnswerDeviation(fixture, 101, {
+        revertMessage: 'CA: !max deviation',
+      });
     });
   });
 
