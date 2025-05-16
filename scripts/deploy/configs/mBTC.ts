@@ -4,7 +4,7 @@ import { parseUnits } from 'ethers/lib/utils';
 import { chainIds } from '../../../config';
 import { DeploymentConfig } from '../common/types';
 
-export const mBTCeploymentConfig: DeploymentConfig = {
+export const mBTCDeploymentConfig: DeploymentConfig = {
   genericConfigs: {
     customAggregator: {
       minAnswer: parseUnits('0.1', 8),
