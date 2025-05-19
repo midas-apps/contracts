@@ -134,6 +134,17 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
     hypeETH: {
       token: '0x8E2C2C9dEF45efB9Bd3C448945830Ddb254154BE',
+      customFeed: '0x1ce3E159F37c36fD1FF9C3b5Af8725EF890955DD',
+      dataFeed: '0xE451b79DfC4A808537A3521A7A5717f4e04ebf5d',
+      depositVault: '0x416ec6E04c009F9Bae99a47ef836BF2cc64Ec93c',
+      redemptionVaultSwapper: '0x1FE17936c1CdC73c857263997716e3A60B9291C7',
+    },
+    hypeBTC: {
+      token: '0xFFa36b4b011d87D89Fef3098aB30fEf7bcC3571e',
+      customFeed: '0xF89D50aff35f9e57125B7eDfE6394e943Ed2b3C7',
+      dataFeed: '0x57DA0556F85Aa7e59B8053A2929B759236dfE27E',
+      depositVault: '0x164645fbC7220a3b4f8f5C6B473bCf1b6db146DD',
+      redemptionVaultSwapper: '0x4BCfDA0A844B49dA8Bb19562EE52Cc385395001A',
     },
     TACmBTC: {
       token: '0x307267989A7bec3A57FD7fd96017C49803589Fd0',

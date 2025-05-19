@@ -128,6 +128,28 @@ All the roles for the Midas protocol smart contracts are listed below.
 | ***depositVaultAdmin*** | `0x4ae10937608921453c928fd22bad34da4971f9071b8fd6ad79ea29afc5c6afe7` |
 | ***redemptionVaultAdmin*** | `0xbba515ef02587c62bf179bced88e29e0477a897d3720d05c096e7ed9ee151d86` |
 
+### hypeETH Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0xe408f8c3692f36da7672d2b9fdc1e041daf807812637e62bf1d699d16b486089` |
+| ***burner*** | `0x16fd1e6a234269e7a8c970b12bf4fe704b0fe94e3ee7c6b621ff0d408182c3a5` |
+| ***pauser*** | `0x009928c7ed4a91f415198fac4307d0e2875923342a245018f4a79f443174e780` |
+| ***customFeedAdmin*** | `0x764eb035040faf73d2287eafcba7e6337ae76fdc3ee35ba8ef40e1a09a23de68` |
+| ***depositVaultAdmin*** | `0xae553d551009abb750be60f0012aa8c3ddd983693b8dff01c72865ce4a168e3d` |
+| ***redemptionVaultAdmin*** | `0x95e83dad8318203a8f5403e876f060568bd41bd30657932e74ed22179b9f74fa` |
+
+### hypeBTC Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0xffdfb286414c43d25819d9273a73dff8d084fe9747118f414b3765a807d4fc0b` |
+| ***burner*** | `0xc4b74a501262e59fb72ec213d855066b36ebd29c9ff027c332838ca884c1909f` |
+| ***pauser*** | `0x2e693f913d4e535d83e026a72a07024b2b6a176b4c4f12e9ac82ef038091e8fc` |
+| ***customFeedAdmin*** | `0xe81d2e411cf48d8070dfd236034f5656d19658a97844d351d55c2536afbf8321` |
+| ***depositVaultAdmin*** | `0x474c3b5a03a85f7ac94c9ded863a405764a213bd8bed7770e569f81bd232ad75` |
+| ***redemptionVaultAdmin*** | `0x8b9bcd8fb4b73ecd219ebec8d58d51d733b323c22f603782b1e81dd39a873410` |
+
 ### TACmBTC Roles
 
 | Role Name | Role |
