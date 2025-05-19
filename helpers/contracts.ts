@@ -28,6 +28,8 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   mFONE: 'MFOne',
   hbUSDT: 'HBUsdt',
   mLIQUIDITY: 'MLiquidity',
+  hypeETH: 'HypeEth',
+  hypeBTC: 'HypeBtc',
   TACmBTC: 'TACmBtc',
   TACmEDGE: 'TACmEdge',
   TACmMEV: 'TACmMev',
