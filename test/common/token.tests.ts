@@ -16,7 +16,15 @@ import {
   getRolesNamesCommon,
   getRolesNamesForToken,
 } from '../../helpers/roles';
-import { MTBILL } from '../../typechain-types';
+import {
+  CustomAggregatorV3CompatibleFeed,
+  DataFeed,
+  DepositVault,
+  MTBILL,
+  RedemptionVault,
+  RedemptionVaultWIthBUIDL,
+  RedemptionVaultWithSwapper,
+} from '../../typechain-types';
 
 const expectedTokenNameSymb: Record<
   MTokenName,
@@ -89,8 +97,9 @@ export const tokenContractsTests = (token: MTokenName) => {
     return await ethers.getContractFactory(contract);
   };
 
-  const deployProxyContract = async (
+  const deployProxyContract = async <TContract extends Contract = Contract>(
     contractKey: keyof typeof contractNames,
+    initializer = 'initialize',
     ...initParams: unknown[]
   ) => {
     const factory = await getContractFactory(contractNames[contractKey]!);
@@ -101,14 +110,17 @@ export const tokenContractsTests = (token: MTokenName) => {
       await getContractFactory('ERC1967Proxy')
     ).deploy(
       impl.address,
-      factory.interface.encodeFunctionData('initialize', initParams),
+      factory.interface.encodeFunctionData(initializer, initParams),
     );
 
-    return factory.attach(proxy.address);
+    return factory.attach(proxy.address) as TContract;
   };
 
-  const deployProxyContractIfExists = async (
+  const deployProxyContractIfExists = async <
+    TContract extends Contract = Contract,
+  >(
     contractKey: keyof typeof contractNames,
+    initializer = 'initialize',
     ...initParams: unknown[]
   ) => {
     const factory = await getContractFactory(contractNames[contractKey]!).catch(
@@ -127,10 +139,10 @@ export const tokenContractsTests = (token: MTokenName) => {
       await getContractFactory('ERC1967Proxy')
     ).deploy(
       impl.address,
-      factory.interface.encodeFunctionData('initialize', initParams),
+      factory.interface.encodeFunctionData(initializer, initParams),
     );
 
-    return factory.attach(proxy.address);
+    return factory.attach(proxy.address) as TContract;
   };
 
   const deployMTokenWithFixture = async () => {
@@ -138,6 +150,7 @@ export const tokenContractsTests = (token: MTokenName) => {
 
     const tokenContract = (await deployProxyContract(
       'token',
+      undefined,
       fixture.accessControl.address,
     )) as MTBILL;
 
@@ -147,19 +160,22 @@ export const tokenContractsTests = (token: MTokenName) => {
   const deployMTokenVaultsWithFixture = async () => {
     const { tokenContract, ...fixture } = await deployMTokenWithFixture();
 
-    const customAggregatorFeed = await deployProxyContract(
-      'customAggregator',
-      fixture.accessControl.address,
-      2,
-      parseUnits('10000', 8),
-      parseUnits('1', 8),
-      'Custom Data Feed',
-    );
+    const customAggregatorFeed =
+      await deployProxyContract<CustomAggregatorV3CompatibleFeed>(
+        'customAggregator',
+        undefined,
+        fixture.accessControl.address,
+        2,
+        parseUnits('10000', 8),
+        parseUnits('1', 8),
+        'Custom Data Feed',
+      );
 
-    await customAggregatorFeed.setRoundData(parseUnits('1', 8));
+    await customAggregatorFeed.setRoundData(parseUnits('1.01', 8));
 
-    const dataFeed = await deployProxyContract(
+    const dataFeed = await deployProxyContract<DataFeed>(
       'dataFeed',
+      undefined,
       fixture.accessControl.address,
       customAggregatorFeed.address,
       3 * 24 * 3600,
@@ -167,8 +183,9 @@ export const tokenContractsTests = (token: MTokenName) => {
       parseUnits('10000', 8),
     );
 
-    const depositVault = await deployProxyContract(
+    const depositVault = await deployProxyContract<DepositVault>(
       'dv',
+      undefined,
       fixture.accessControl.address,
       {
         mToken: tokenContract.address,
@@ -188,8 +205,9 @@ export const tokenContractsTests = (token: MTokenName) => {
       0,
     );
 
-    const redemptionVault = await deployProxyContractIfExists(
+    const redemptionVault = await deployProxyContractIfExists<RedemptionVault>(
       'rv',
+      undefined,
       fixture.accessControl.address,
       {
         mToken: tokenContract.address,
@@ -213,44 +231,81 @@ export const tokenContractsTests = (token: MTokenName) => {
       },
       fixture.requestRedeemer.address,
     );
-    const redemptionVaultWithSwapper = await deployProxyContractIfExists(
-      'rvSwapper',
-      fixture.accessControl.address,
-      {
-        mToken: tokenContract.address,
-        mTokenDataFeed: dataFeed.address,
-      },
-      {
-        feeReceiver: fixture.feeReceiver.address,
-        tokensReceiver: fixture.tokensReceiver.address,
-      },
-      {
-        instantFee: 100,
-        instantDailyLimit: parseUnits('100000'),
-      },
-      fixture.mockedSanctionsList.address,
-      1,
-      1000,
-      {
-        fiatAdditionalFee: 100,
-        fiatFlatFee: parseUnits('1'),
-        minFiatRedeemAmount: 1000,
-      },
-      fixture.requestRedeemer.address,
-      redemptionVault.address,
-      fixture.liquidityProvider.address,
+
+    const redemptionVaultWithSwapper =
+      await deployProxyContractIfExists<RedemptionVaultWithSwapper>(
+        'rvSwapper',
+        'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)',
+        fixture.accessControl.address,
+        {
+          mToken: tokenContract.address,
+          mTokenDataFeed: dataFeed.address,
+        },
+        {
+          feeReceiver: fixture.feeReceiver.address,
+          tokensReceiver: fixture.tokensReceiver.address,
+        },
+        {
+          instantFee: 100,
+          instantDailyLimit: parseUnits('100000'),
+        },
+        fixture.mockedSanctionsList.address,
+        1,
+        1000,
+        {
+          fiatAdditionalFee: 100,
+          fiatFlatFee: parseUnits('1'),
+          minFiatRedeemAmount: 1000,
+        },
+        fixture.requestRedeemer.address,
+        fixture.redemptionVault.address,
+        fixture.liquidityProvider.address,
+      );
+
+    await redemptionVaultWithSwapper?.addWaivedFeeAccount(
+      fixture.redemptionVault.address,
     );
-    const redemptionVaultWithBuidl = await deployProxyContractIfExists(
-      'rvBuidl',
-    );
+
+    const redemptionVaultWithBuidl =
+      await deployProxyContractIfExists<RedemptionVaultWIthBUIDL>(
+        'rvBuidl',
+        'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,uint256,uint256)',
+        fixture.accessControl.address,
+        {
+          mToken: tokenContract.address,
+          mTokenDataFeed: dataFeed.address,
+        },
+        {
+          feeReceiver: fixture.feeReceiver.address,
+          tokensReceiver: fixture.tokensReceiver.address,
+        },
+        {
+          instantFee: 100,
+          instantDailyLimit: parseUnits('100000'),
+        },
+        fixture.mockedSanctionsList.address,
+        1,
+        1000,
+        {
+          fiatAdditionalFee: 100,
+          fiatFlatFee: parseUnits('1'),
+          minFiatRedeemAmount: 1000,
+        },
+        fixture.requestRedeemer.address,
+        fixture.buidlRedemption.address,
+        parseUnits('250000', 6),
+        parseUnits('250000', 6),
+      );
 
     return {
       ...fixture,
       tokenContract,
-      depositVault,
-      redemptionVault,
-      redemptionVaultWithSwapper,
-      redemptionVaultWithBuidl,
+      tokenDataFeed: dataFeed,
+      tokenCustomAggregatorFeed: customAggregatorFeed,
+      tokenDepositVault: depositVault,
+      tokenRedemptionVault: redemptionVault,
+      tokenRedemptionVaultWithSwapper: redemptionVaultWithSwapper,
+      tokenRedemptionVaultWithBuidl: redemptionVaultWithBuidl,
     };
   };
 
@@ -609,135 +664,99 @@ export const tokenContractsTests = (token: MTokenName) => {
       });
     });
   });
+  describe('roles check', () => {
+    it('DataFeed', async function () {
+      const fixture = await deployMTokenVaultsWithFixture();
+      const dataFeed = fixture.tokenDataFeed as Contract;
 
-  describe('MBtcDepositVault', function () {
-    describe('deployment', () => {
-      it('vaultRole', async () => {
-        const fixture = await loadFixture(defaultDeploy);
+      if (!dataFeed || !tokenRoleNames.customFeedAdmin) {
+        (this as any).skip();
+        return;
+      }
 
-        const tester = await new MBtcDepositVault__factory(
-          fixture.owner,
-        ).deploy();
-
-        expect(await tester.vaultRole()).eq(
-          await tester.M_BTC_DEPOSIT_VAULT_ADMIN_ROLE(),
-        );
-      });
+      expect(await dataFeed.feedAdminRole()).eq(
+        await dataFeed[tokenRoleNames.customFeedAdmin](),
+      );
+      expect(await dataFeed.feedAdminRole()).eq(tokenRoles.customFeedAdmin);
     });
 
-    describe('depositInstant', () => {
-      it('mint using 1 WBTC when mBTC/BTC price is 1.', async () => {
-        const fixture = await loadFixture(defaultDeploy);
-        const {
-          otherCoins,
-          owner,
-          mBtcDepositVault: depositVault,
-          WBTCToBtcDataFeed,
-        } = fixture;
-        await mintToken(otherCoins.wbtc, owner, 1);
-        await setMinAmountTest({ vault: depositVault, owner }, 0);
-        await approveBase18(owner, otherCoins.wbtc, depositVault, 1);
+    it('CustomAggregator', async function () {
+      const fixture = await deployMTokenVaultsWithFixture();
+      const customAggregator = fixture.tokenCustomAggregatorFeed as Contract;
 
-        await addPaymentTokenTest(
-          { vault: depositVault, owner },
-          otherCoins.wbtc,
-          WBTCToBtcDataFeed.address,
-          0,
-          true,
-        );
+      if (!customAggregator || !tokenRoleNames.customFeedAdmin) {
+        (this as any).skip();
+        return;
+      }
 
-        await changeTokenAllowanceTest(
-          { vault: depositVault, owner },
-          otherCoins.wbtc.address,
-          parseUnits('1.1'),
-        );
-
-        await depositInstantTest(
-          {
-            depositVault,
-            mTBILL: fixture.mBTC,
-            mTokenToUsdDataFeed: fixture.mBTCToBtcDataFeed,
-            owner: fixture.owner,
-          },
-          fixture.otherCoins.wbtc,
-          1,
-        );
-      });
+      expect(await customAggregator.feedAdminRole()).eq(
+        await customAggregator[tokenRoleNames.customFeedAdmin](),
+      );
+      expect(await customAggregator.feedAdminRole()).eq(
+        tokenRoles.customFeedAdmin,
+      );
     });
-  });
 
-  describe('MBtcRedemptionVault', function () {
-    describe('deployment', () => {
-      it('vaultRole', async () => {
-        const fixture = await loadFixture(defaultDeploy);
+    it('DepositVault', async function () {
+      const fixture = await deployMTokenVaultsWithFixture();
+      const depositVault = fixture.tokenDepositVault as Contract;
 
-        const tester = await new MBtcRedemptionVault__factory(
-          fixture.owner,
-        ).deploy();
-
-        expect(await tester.vaultRole()).eq(
-          await tester.M_BTC_REDEMPTION_VAULT_ADMIN_ROLE(),
-        );
-      });
+      expect(await depositVault.vaultRole()).eq(
+        await depositVault[tokenRoleNames.depositVaultAdmin](),
+      );
+      expect(await depositVault.vaultRole()).eq(tokenRoles.depositVaultAdmin);
     });
-    describe('redeemInstant', () => {
-      it('redeem 1 mBTC to WBTC when mBTC/BTC price is 1', async () => {
-        const fixture = await loadFixture(defaultDeploy);
-        const {
-          otherCoins,
-          owner,
-          WBTCToBtcDataFeed,
-          mBTC,
-          mBtcRedemptionVault: redemptionVault,
-        } = fixture;
 
-        await mintToken(mBTC, owner, 1);
+    it('RedemptionVault', async function () {
+      const fixture = await deployMTokenVaultsWithFixture();
+      const redemptionVault = fixture.tokenRedemptionVault as Contract;
 
-        await mintToken(otherCoins.wbtc, redemptionVault, 1.1);
+      if (!redemptionVault) {
+        (this as any).skip();
+        return;
+      }
 
-        await setMinAmountTest({ vault: redemptionVault, owner }, 0);
-
-        await approveBase18(owner, mBTC, redemptionVault, 1);
-
-        await addPaymentTokenTest(
-          { vault: redemptionVault, owner },
-          otherCoins.wbtc,
-          WBTCToBtcDataFeed.address,
-          0,
-          true,
-        );
-
-        await changeTokenAllowanceTest(
-          { vault: redemptionVault, owner },
-          otherCoins.wbtc.address,
-          parseUnits('1.1'),
-        );
-
-        await redeemInstantTest(
-          {
-            redemptionVault,
-            mTBILL: fixture.mBTC,
-            mTokenToUsdDataFeed: fixture.mBTCToBtcDataFeed,
-            owner: fixture.owner,
-          },
-          otherCoins.wbtc.address,
-          1,
-        );
-      });
+      expect(await redemptionVault.vaultRole()).eq(
+        await redemptionVault[tokenRoleNames.redemptionVaultAdmin](),
+      );
+      expect(await redemptionVault.vaultRole()).eq(
+        tokenRoles.redemptionVaultAdmin,
+      );
     });
-  });
 
-  describe('MBtcCustomAggregatorFeed', () => {
-    it('check admin role', async () => {
-      const fixture = await loadFixture(defaultDeploy);
+    it('RedemptionVaultWithSwapper', async function () {
+      const fixture = await deployMTokenVaultsWithFixture();
+      const redemptionVaultWithSwapper =
+        fixture.tokenRedemptionVaultWithSwapper as Contract;
 
-      // eslint-disable-next-line camelcase
-      const tester = await new MBtcCustomAggregatorFeed__factory(
-        fixture.owner,
-      ).deploy();
+      if (!redemptionVaultWithSwapper) {
+        (this as any).skip();
+        return;
+      }
 
-      expect(await tester.feedAdminRole()).eq(
-        await tester.M_BTC_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE(),
+      expect(await redemptionVaultWithSwapper.vaultRole()).eq(
+        await redemptionVaultWithSwapper[tokenRoleNames.redemptionVaultAdmin](),
+      );
+      expect(await redemptionVaultWithSwapper.vaultRole()).eq(
+        tokenRoles.redemptionVaultAdmin,
+      );
+    });
+
+    it('RedemptionVaultWithBuidl', async function () {
+      const fixture = await deployMTokenVaultsWithFixture();
+      const redemptionVaultWithBuidl =
+        fixture.tokenRedemptionVaultWithBuidl as Contract;
+
+      if (!redemptionVaultWithBuidl) {
+        (this as any).skip();
+        return;
+      }
+
+      expect(await redemptionVaultWithBuidl.vaultRole()).eq(
+        await redemptionVaultWithBuidl[tokenRoleNames.redemptionVaultAdmin](),
+      );
+      expect(await redemptionVaultWithBuidl.vaultRole()).eq(
+        tokenRoles.redemptionVaultAdmin,
       );
     });
   });
