@@ -1,4 +1,6 @@
 import { hbUSDTDeploymentConfig } from './hbUSDT';
+import { hypeBTCDeploymentConfig } from './hypeBTC';
+import { hypeETHDeploymentConfig } from './hypeETH';
 import { mBASISDeploymentConfig } from './mBASIS';
 import { mBTCDeploymentConfig } from './mBTC';
 import { mEDGEDeploymentConfig } from './mEDGE';
@@ -29,4 +31,6 @@ export const configsPerToken: Partial<Record<MTokenName, DeploymentConfig>> = {
   TACmBTC: TACmBTCDeploymentConfig,
   TACmEDGE: TACmEDGEDeploymentConfig,
   TACmMEV: TACmMEVDeploymentConfig,
+  hypeETH: hypeETHDeploymentConfig,
+  hypeBTC: hypeBTCDeploymentConfig,
 };
