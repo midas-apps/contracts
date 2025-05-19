@@ -29,7 +29,7 @@ type TokenRoles = {
   pauser: string;
   depositVaultAdmin: string;
   redemptionVaultAdmin: string;
-  customFeedAdmin: string;
+  customFeedAdmin: string | null;
 };
 
 type CommonRoles = {
@@ -49,7 +49,7 @@ const keccak256 = (role: string) => {
   return solidityKeccak256(['string'], [role]);
 };
 
-const getRolesForToken = (token: MTokenName): TokenRoles => {
+export const getRolesNamesForToken = (token: MTokenName): TokenRoles => {
   const isMTBILL = token === 'mTBILL';
   const isTAC = token.startsWith('TAC');
 
@@ -57,29 +57,50 @@ const getRolesForToken = (token: MTokenName): TokenRoles => {
   const restPrefix = isMTBILL ? '' : tokenPrefix + '_';
 
   return {
-    minter: keccak256(`${tokenPrefix}_MINT_OPERATOR_ROLE`),
-    burner: keccak256(`${tokenPrefix}_BURN_OPERATOR_ROLE`),
-    pauser: keccak256(`${tokenPrefix}_PAUSE_OPERATOR_ROLE`),
+    minter: `${tokenPrefix}_MINT_OPERATOR_ROLE`,
+    burner: `${tokenPrefix}_BURN_OPERATOR_ROLE`,
+    pauser: `${tokenPrefix}_PAUSE_OPERATOR_ROLE`,
     customFeedAdmin: isTAC
-      ? '-'
-      : keccak256(`${tokenPrefix}_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE`),
-    depositVaultAdmin: keccak256(`${restPrefix}DEPOSIT_VAULT_ADMIN_ROLE`),
-    redemptionVaultAdmin: keccak256(`${restPrefix}REDEMPTION_VAULT_ADMIN_ROLE`),
+      ? null
+      : `${tokenPrefix}_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE`,
+    depositVaultAdmin: `${restPrefix}DEPOSIT_VAULT_ADMIN_ROLE`,
+    redemptionVaultAdmin: `${restPrefix}REDEMPTION_VAULT_ADMIN_ROLE`,
+  };
+};
+export const getRolesNamesCommon = (): CommonRoles => {
+  return {
+    defaultAdmin: 'DEFAULT_ADMIN_ROLE',
+    greenlisted: 'GREENLISTED_ROLE',
+    greenlistedOperator: 'GREENLIST_OPERATOR_ROLE',
+    blacklisted: 'BLACKLISTED_ROLE',
+    blacklistedOperator: 'BLACKLIST_OPERATOR_ROLE',
   };
 };
 
-export const getAllRoles = (): AllRoles => ({
-  common: {
-    defaultAdmin: constants.HashZero,
-    greenlisted: keccak256('GREENLISTED_ROLE'),
-    greenlistedOperator: keccak256('GREENLIST_OPERATOR_ROLE'),
-    blacklisted: keccak256('BLACKLISTED_ROLE'),
-    blacklistedOperator: keccak256('BLACKLIST_OPERATOR_ROLE'),
-  },
-  tokenRoles: Object.fromEntries(
-    Object.keys(prefixes).map((token) => [
-      mappedTokenNames[token as MTokenName] ?? token,
-      getRolesForToken(token as MTokenName),
-    ]),
-  ) as Record<MTokenName, TokenRoles>,
-});
+export const getRolesForToken = (token: MTokenName): TokenRoles => {
+  const rolesNames = getRolesNamesForToken(token);
+  return Object.fromEntries(
+    Object.entries(rolesNames).map(([key, value]) => {
+      return [key, value ? keccak256(value) : '-'];
+    }),
+  ) as TokenRoles;
+};
+
+export const getAllRoles = (): AllRoles => {
+  const rolesNamesCommon = getRolesNamesCommon();
+  return {
+    common: {
+      defaultAdmin: constants.HashZero,
+      greenlisted: keccak256(rolesNamesCommon.greenlisted),
+      greenlistedOperator: keccak256(rolesNamesCommon.greenlistedOperator),
+      blacklisted: keccak256(rolesNamesCommon.blacklisted),
+      blacklistedOperator: keccak256(rolesNamesCommon.blacklistedOperator),
+    },
+    tokenRoles: Object.fromEntries(
+      Object.keys(prefixes).map((token) => [
+        mappedTokenNames[token as MTokenName] ?? token,
+        getRolesForToken(token as MTokenName),
+      ]),
+    ) as Record<MTokenName, TokenRoles>,
+  };
+};

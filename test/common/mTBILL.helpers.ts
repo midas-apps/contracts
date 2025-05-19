@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { BigNumberish } from 'ethers';
+import { BigNumberish, Contract } from 'ethers';
 import { defaultAbiCoder, solidityKeccak256 } from 'ethers/lib/utils';
 
 import { Account, OptionalCommonParams, getAccount } from './common.helpers';
@@ -15,16 +15,27 @@ type CommonParams = {
   mEDGE?: MTBILL;
   mRE7?: MTBILL;
   mMEV?: MTBILL;
+  tokenContract?: MTBILL;
   owner: SignerWithAddress;
 };
 
 export const setMetadataTest = async (
-  { mTBILL, mBASIS, eUSD, mBTC, mEDGE, mRE7, mMEV, owner }: CommonParams,
+  {
+    mTBILL,
+    mBASIS,
+    eUSD,
+    mBTC,
+    mEDGE,
+    mRE7,
+    mMEV,
+    tokenContract,
+    owner,
+  }: CommonParams,
   key: string,
   value: string,
   opt?: OptionalCommonParams,
 ) => {
-  mTBILL ??= mBASIS ?? eUSD ?? mBTC ?? mEDGE ?? mRE7 ?? mMEV!;
+  mTBILL ??= mBASIS ?? eUSD ?? mBTC ?? mEDGE ?? mRE7 ?? mMEV ?? tokenContract!;
 
   const keyBytes32 = solidityKeccak256(['string'], [key]);
   const valueBytes = defaultAbiCoder.encode(['string'], [value]);
@@ -44,12 +55,22 @@ export const setMetadataTest = async (
 };
 
 export const mint = async (
-  { mTBILL, mBASIS, eUSD, mBTC, mEDGE, mRE7, mMEV, owner }: CommonParams,
+  {
+    mTBILL,
+    mBASIS,
+    eUSD,
+    mBTC,
+    mEDGE,
+    mRE7,
+    mMEV,
+    tokenContract,
+    owner,
+  }: CommonParams,
   to: Account,
   amount: BigNumberish,
   opt?: OptionalCommonParams,
 ) => {
-  mTBILL ??= mBASIS ?? eUSD ?? mBTC ?? mEDGE ?? mRE7 ?? mMEV!;
+  mTBILL ??= mBASIS ?? eUSD ?? mBTC ?? mEDGE ?? mRE7 ?? mMEV ?? tokenContract!;
 
   to = getAccount(to);
 
@@ -73,12 +94,22 @@ export const mint = async (
 };
 
 export const burn = async (
-  { mTBILL, mBASIS, eUSD, mBTC, mEDGE, mRE7, mMEV, owner }: CommonParams,
+  {
+    mTBILL,
+    mBASIS,
+    eUSD,
+    mBTC,
+    mEDGE,
+    mRE7,
+    mMEV,
+    tokenContract,
+    owner,
+  }: CommonParams,
   from: Account,
   amount: BigNumberish,
   opt?: OptionalCommonParams,
 ) => {
-  mTBILL ??= mBASIS ?? eUSD ?? mBTC ?? mEDGE ?? mRE7 ?? mMEV!;
+  mTBILL ??= mBASIS ?? eUSD ?? mBTC ?? mEDGE ?? mRE7 ?? mMEV ?? tokenContract!;
 
   from = getAccount(from);
 
