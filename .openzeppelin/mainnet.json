@@ -404,6 +404,11 @@
       "address": "0x97ACDFb3956403c4c6BbE837DC611e3a6bA1b3a7",
       "txHash": "0x4df0fc5cb65b27ccfb8a9d32aa978104e4e842e18c8257ce25c0e20211caf2b0",
       "kind": "transparent"
+    },
+    {
+      "address": "0x8E2C2C9dEF45efB9Bd3C448945830Ddb254154BE",
+      "txHash": "0x03cb7b6ccd1b22704577890650403defeeca35a6aa88ee1f4dcdeadf5c01f541",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -3812,7 +3817,11 @@
           },
           "t_enum(RequestStatus)9670": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -4299,7 +4308,11 @@
           },
           "t_enum(RequestStatus)12165": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -4818,7 +4831,11 @@
           },
           "t_enum(RequestStatus)12165": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -5293,7 +5310,11 @@
           },
           "t_enum(RequestStatus)9670": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -5902,7 +5923,11 @@
           },
           "t_enum(RequestStatus)7404": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -6421,7 +6446,11 @@
           },
           "t_enum(RequestStatus)7404": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -7404,7 +7433,11 @@
           },
           "t_enum(RequestStatus)10382": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -7879,7 +7912,11 @@
           },
           "t_enum(RequestStatus)10382": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -8850,7 +8887,11 @@
           },
           "t_enum(RequestStatus)11919": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -9381,7 +9422,11 @@
           },
           "t_enum(RequestStatus)11919": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -10348,7 +10393,11 @@
           },
           "t_enum(RequestStatus)11955": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -10879,7 +10928,11 @@
           },
           "t_enum(RequestStatus)11955": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -11846,7 +11899,11 @@
           },
           "t_enum(RequestStatus)11955": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -12377,7 +12434,11 @@
           },
           "t_enum(RequestStatus)11955": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -13080,7 +13141,11 @@
           },
           "t_enum(RequestStatus)11955": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -13555,7 +13620,11 @@
           },
           "t_enum(RequestStatus)11955": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -14262,7 +14331,11 @@
           },
           "t_enum(RequestStatus)11955": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -14737,7 +14810,11 @@
           },
           "t_enum(RequestStatus)11955": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -15444,7 +15521,11 @@
           },
           "t_enum(RequestStatus)11955": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -15919,7 +16000,11 @@
           },
           "t_enum(RequestStatus)11955": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -16890,7 +16975,11 @@
           },
           "t_enum(RequestStatus)9329": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -17421,7 +17510,11 @@
           },
           "t_enum(RequestStatus)9329": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -17948,7 +18041,11 @@
           },
           "t_enum(RequestStatus)9329": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -19107,7 +19204,11 @@
           },
           "t_enum(RequestStatus)12156": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -19638,7 +19739,11 @@
           },
           "t_enum(RequestStatus)12156": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -20621,7 +20726,11 @@
           },
           "t_enum(RequestStatus)12156": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -21116,7 +21225,11 @@
           },
           "t_enum(RequestStatus)12156": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -21643,7 +21756,11 @@
           },
           "t_enum(RequestStatus)12156": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -22162,7 +22279,11 @@
           },
           "t_enum(RequestStatus)12156": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -22705,7 +22826,11 @@
           },
           "t_enum(RequestStatus)12165": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -22845,6 +22970,218 @@
               }
             ],
             "numberOfBytes": "128"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "42264eb404bc3f43669c1a53576ddff2f86c734a541e8374de3a124c0a5f3db9": {
+      "address": "0x140E71CD72d7aB5735Fe8a73028bBE71821Ff8aB",
+      "txHash": "0xefa9da86617c054c937160e677c813d59bd50d6fc741b1c08db99702fd9004b8",
+      "layout": {
+        "solcVersion": "0.8.9",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_balances",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "ERC20Upgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol:40"
+          },
+          {
+            "label": "_allowances",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))",
+            "contract": "ERC20Upgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol:42"
+          },
+          {
+            "label": "_totalSupply",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_uint256",
+            "contract": "ERC20Upgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol:44"
+          },
+          {
+            "label": "_name",
+            "offset": 0,
+            "slot": "54",
+            "type": "t_string_storage",
+            "contract": "ERC20Upgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol:46"
+          },
+          {
+            "label": "_symbol",
+            "offset": 0,
+            "slot": "55",
+            "type": "t_string_storage",
+            "contract": "ERC20Upgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol:47"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "56",
+            "type": "t_array(t_uint256)45_storage",
+            "contract": "ERC20Upgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol:376"
+          },
+          {
+            "label": "_paused",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_bool",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:29"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:116"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC20PausableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol:48"
+          },
+          {
+            "label": "accessControl",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_contract(MidasAccessControl)10482",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:24"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:29"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "252",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "Blacklistable",
+            "src": "contracts/access/Blacklistable.sol:16"
+          },
+          {
+            "label": "metadata",
+            "offset": 0,
+            "slot": "302",
+            "type": "t_mapping(t_bytes32,t_bytes_storage)",
+            "contract": "mTBILL",
+            "src": "contracts/mTBILL/mTBILL.sol:18"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "303",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "mTBILL",
+            "src": "contracts/mTBILL/mTBILL.sol:23"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "353",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "hypeETH",
+            "src": "contracts/hypeETH/hypeETH.sol:32"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)45_storage": {
+            "label": "uint256[45]",
+            "numberOfBytes": "1440"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_bytes_storage": {
+            "label": "bytes",
+            "numberOfBytes": "32"
+          },
+          "t_contract(MidasAccessControl)10482": {
+            "label": "contract MidasAccessControl",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_mapping(t_address,t_uint256))": {
+            "label": "mapping(address => mapping(address => uint256))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_bytes_storage)": {
+            "label": "mapping(bytes32 => bytes)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
           },
           "t_uint256": {
             "label": "uint256",

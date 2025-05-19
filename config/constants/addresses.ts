@@ -132,6 +132,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0xf89fEbef93c54618C4420Ee4173e69Cd21B27e3a',
       redemptionVault: '0x97acdfb3956403c4c6bbe837dc611e3a6ba1b3a7',
     },
+    hypeETH: {
+      token: '0x8E2C2C9dEF45efB9Bd3C448945830Ddb254154BE',
+    },
     TACmBTC: {
       token: '0x307267989A7bec3A57FD7fd96017C49803589Fd0',
       depositVault: '0xD1c5cBaBb367783FB6b40935c64512EF06cBB4f4',
