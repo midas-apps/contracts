@@ -473,8 +473,6 @@ export const safeApproveRedeemRequestTest = async (
 
   const tokenDecimals = await tokenContract.decimals();
 
-  console.log(requestDataBefore.amountMToken, requestDataBefore.tokenOutRate);
-
   const amountOut = requestDataBefore.amountMToken
     .mul(newTokenRate)
     .div(requestDataBefore.tokenOutRate)
