@@ -35,12 +35,6 @@ import {
   // eslint-disable-next-line camelcase
   AggregatorV3UnhealthyMock__factory,
   // eslint-disable-next-line camelcase
-  MBASISTest__factory,
-  // eslint-disable-next-line camelcase
-  EUSDTest__factory,
-  // eslint-disable-next-line camelcase
-  EUsdRedemptionVaultTest__factory,
-  // eslint-disable-next-line camelcase
   CustomAggregatorV3CompatibleFeedTester__factory,
   // eslint-disable-next-line camelcase
   SanctionsListMock__factory,
@@ -51,21 +45,12 @@ import {
   // eslint-disable-next-line camelcase
   RedemptionVaultWithBUIDLTest__factory,
   // eslint-disable-next-line camelcase
-  MBasisRedemptionVaultWithSwapperTest__factory,
-  // eslint-disable-next-line camelcase
-  MBTCTest__factory,
-  // eslint-disable-next-line camelcase
-  MEDGETest__factory,
-  // eslint-disable-next-line camelcase
-  MRE7Test__factory,
-  // eslint-disable-next-line camelcase
-  MMEVTest__factory,
+  RedemptionVaultWithSwapperTest__factory,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
   const [
     owner,
-    eUsdOwner,
     tokensReceiver,
     feeReceiver,
     requestRedeemer,
@@ -98,41 +83,28 @@ export const defaultDeploy = async () => {
   await expect(mTBILL.initialize(ethers.constants.AddressZero)).to.be.reverted;
   await mTBILL.initialize(accessControl.address);
 
-  const mBASIS = await new MBASISTest__factory(owner).deploy();
-  await expect(mBASIS.initialize(ethers.constants.AddressZero)).to.be.reverted;
+  // separate mTBILL instance for swapper testing
+  const mBASIS = await new MTBILLTest__factory(owner).deploy();
   await mBASIS.initialize(accessControl.address);
 
-  const eUSD = await new EUSDTest__factory(owner).deploy();
-  await expect(eUSD.initialize(ethers.constants.AddressZero)).to.be.reverted;
-  await eUSD.initialize(accessControl.address);
-
-  const mBTC = await new MBTCTest__factory(owner).deploy();
-  await expect(mBTC.initialize(ethers.constants.AddressZero)).to.be.reverted;
-  await mBTC.initialize(accessControl.address);
-
-  const mEDGE = await new MEDGETest__factory(owner).deploy();
-  await expect(mEDGE.initialize(ethers.constants.AddressZero)).to.be.reverted;
-  await mEDGE.initialize(accessControl.address);
-
-  const mRE7 = await new MRE7Test__factory(owner).deploy();
-  await expect(mRE7.initialize(ethers.constants.AddressZero)).to.be.reverted;
-  await mRE7.initialize(accessControl.address);
-
-  const mMEV = await new MMEVTest__factory(owner).deploy();
-  await expect(mMEV.initialize(ethers.constants.AddressZero)).to.be.reverted;
-  await mMEV.initialize(accessControl.address);
+  const excludedRoles = [
+    allRoles.common.blacklisted,
+    allRoles.common.greenlisted,
+  ];
 
   const rolesFlat = [
     Object.values(allRoles.common),
     Object.values(allRoles.tokenRoles).map((v) => Object.values(v)),
   ]
     .flat(2)
-    .filter((v) => v !== '-');
+    .filter((v) => v !== '-' && !!v && !excludedRoles.includes(v)) as string[];
 
-  await accessControl.grantRoleMult(
-    rolesFlat,
-    rolesFlat.map((_) => owner.address),
-  );
+  await expect(
+    accessControl.grantRoleMult(
+      rolesFlat,
+      rolesFlat.map((_) => owner.address),
+    ),
+  ).not.reverted;
 
   const mockedAggregator = await new AggregatorV3Mock__factory(owner).deploy();
   const mockedAggregatorDecimals = await mockedAggregator.decimals();
@@ -140,6 +112,11 @@ export const defaultDeploy = async () => {
   const mockedAggregatorMToken = await new AggregatorV3Mock__factory(
     owner,
   ).deploy();
+
+  const mockedAggregatorMBasis = await new AggregatorV3Mock__factory(
+    owner,
+  ).deploy();
+
   const mockedAggregatorMTokenDecimals =
     await mockedAggregatorMToken.decimals();
 
@@ -149,6 +126,10 @@ export const defaultDeploy = async () => {
 
   await mockedAggregatorMToken.setRoundData(
     parseUnits('5', mockedAggregatorMTokenDecimals),
+  );
+
+  await mockedAggregatorMBasis.setRoundData(
+    parseUnits('3', await mockedAggregatorMBasis.decimals()),
   );
 
   const dataFeed = await new DataFeedTest__factory(owner).deploy();
@@ -167,6 +148,15 @@ export const defaultDeploy = async () => {
     3 * 24 * 3600,
     parseUnits('0.1', mockedAggregatorMTokenDecimals),
     parseUnits('10000', mockedAggregatorMTokenDecimals),
+  );
+
+  const mBasisToUsdDataFeed = await new DataFeedTest__factory(owner).deploy();
+  await mBasisToUsdDataFeed.initialize(
+    accessControl.address,
+    mockedAggregatorMBasis.address,
+    3 * 24 * 3600,
+    parseUnits('0.1', await mockedAggregatorMBasis.decimals()),
+    parseUnits('10000', await mockedAggregatorMBasis.decimals()),
   );
 
   const depositVault = await new DepositVaultTest__factory(owner).deploy();
@@ -622,6 +612,105 @@ export const defaultDeploy = async () => {
     mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
     redemptionVaultWithBUIDL.address,
   );
+  const redemptionVaultWithSwapper =
+    await new RedemptionVaultWithSwapperTest__factory(owner).deploy();
+
+  await expect(
+    redemptionVaultWithSwapper[
+      'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)'
+    ](
+      accessControl.address,
+      {
+        mToken: mBASIS.address,
+        mTokenDataFeed: mBasisToUsdDataFeed.address,
+      },
+      {
+        feeReceiver: feeReceiver.address,
+        tokensReceiver: tokensReceiver.address,
+      },
+      {
+        instantFee: 100,
+        instantDailyLimit: parseUnits('100000'),
+      },
+      mockedSanctionsList.address,
+      1,
+      1000,
+      {
+        fiatAdditionalFee: 100,
+        fiatFlatFee: parseUnits('1'),
+        minFiatRedeemAmount: 1000,
+      },
+      requestRedeemer.address,
+      constants.AddressZero,
+      liquidityProvider.address,
+    ),
+  ).to.be.reverted;
+
+  await expect(
+    redemptionVaultWithSwapper[
+      'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)'
+    ](
+      accessControl.address,
+      {
+        mToken: mBASIS.address,
+        mTokenDataFeed: mBasisToUsdDataFeed.address,
+      },
+      {
+        feeReceiver: feeReceiver.address,
+        tokensReceiver: tokensReceiver.address,
+      },
+      {
+        instantFee: 100,
+        instantDailyLimit: parseUnits('100000'),
+      },
+      mockedSanctionsList.address,
+      1,
+      1000,
+      {
+        fiatAdditionalFee: 100,
+        fiatFlatFee: parseUnits('1'),
+        minFiatRedeemAmount: 1000,
+      },
+      requestRedeemer.address,
+      redemptionVault.address,
+      constants.AddressZero,
+    ),
+  ).to.be.reverted;
+
+  await redemptionVaultWithSwapper[
+    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)'
+  ](
+    accessControl.address,
+    {
+      mToken: mBASIS.address,
+      mTokenDataFeed: mBasisToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    1000,
+    {
+      fiatAdditionalFee: 100,
+      fiatFlatFee: parseUnits('1'),
+      minFiatRedeemAmount: 1000,
+    },
+    requestRedeemer.address,
+    redemptionVault.address,
+    liquidityProvider.address,
+  );
+
+  await redemptionVault.addWaivedFeeAccount(redemptionVaultWithSwapper.address);
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
+    redemptionVaultWithSwapper.address,
+  );
 
   // eslint-disable-next-line camelcase
   const customFeed = await new CustomAggregatorV3CompatibleFeedTester__factory(
@@ -738,10 +827,9 @@ export const defaultDeploy = async () => {
   return {
     customFeed,
     mTBILL,
-    eUsdOwner,
     mBASIS,
-    eUSD,
-    mBTC,
+    redemptionVaultWithSwapper,
+    mBasisToUsdDataFeed,
     accessControl,
     wAccessControlTester,
     roles: { ...allRoles, greenlistToggler },
@@ -759,6 +847,7 @@ export const defaultDeploy = async () => {
     manualFulfillmentToken,
     mTokenToUsdDataFeed,
     mockedAggregatorMToken,
+    mockedAggregatorMBasis,
     offChainUsdToken,
     mockedAggregatorMTokenDecimals,
     tokensReceiver,
@@ -773,8 +862,5 @@ export const defaultDeploy = async () => {
     redemptionVaultWithBUIDL,
     liquidityProvider,
     otherCoins,
-    mEDGE,
-    mRE7,
-    mMEV,
   };
 };

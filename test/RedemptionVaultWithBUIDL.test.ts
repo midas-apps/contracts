@@ -89,7 +89,7 @@ describe('RedemptionVaultWithBUIDL', function () {
     expect(await redemptionVaultWithBUIDL.variationTolerance()).eq(1);
 
     expect(await redemptionVaultWithBUIDL.vaultRole()).eq(
-      roles.redemptionVaultAdmin,
+      roles.tokenRoles.mTBILL.redemptionVaultAdmin,
     );
 
     expect(await redemptionVaultWithBUIDL.MANUAL_FULLFILMENT_TOKEN()).eq(

@@ -12,7 +12,7 @@ import {
   ERC20,
   // eslint-disable-next-line camelcase
   ERC20__factory,
-  MBasisRedemptionVaultWithSwapper,
+  RedemptionVaultWithSwapper,
 } from '../../typechain-types';
 
 type CommonParamsRedeem = Pick<
@@ -20,22 +20,22 @@ type CommonParamsRedeem = Pick<
   | 'owner'
   | 'mTBILL'
   | 'mBASIS'
-  | 'mBasisRedemptionVaultWithSwapper'
-  | 'mBASISToUsdDataFeed'
+  | 'redemptionVaultWithSwapper'
   | 'mTokenToUsdDataFeed'
+  | 'mBasisToUsdDataFeed'
 >;
 type CommonParamsProvider = {
-  vault: MBasisRedemptionVaultWithSwapper;
+  vault: RedemptionVaultWithSwapper;
   owner: SignerWithAddress;
 };
 
 export const redeemInstantWithSwapperTest = async (
   {
-    mBasisRedemptionVaultWithSwapper,
+    redemptionVaultWithSwapper,
     owner,
     mTBILL,
     mBASIS,
-    mBASISToUsdDataFeed,
+    mBasisToUsdDataFeed,
     mTokenToUsdDataFeed,
     swap,
     minAmount,
@@ -52,15 +52,14 @@ export const redeemInstantWithSwapperTest = async (
   const sender = opt?.from ?? owner;
 
   const amountIn = parseUnits(amountTBillIn.toString());
-  const tokensReceiver =
-    await mBasisRedemptionVaultWithSwapper.tokensReceiver();
-  const feeReceiver = await mBasisRedemptionVaultWithSwapper.feeReceiver();
+  const tokensReceiver = await redemptionVaultWithSwapper.tokensReceiver();
+  const feeReceiver = await redemptionVaultWithSwapper.feeReceiver();
   const liquidityProvider =
-    await mBasisRedemptionVaultWithSwapper.liquidityProvider();
+    await redemptionVaultWithSwapper.liquidityProvider();
 
   if (opt?.revertMessage) {
     await expect(
-      mBasisRedemptionVaultWithSwapper
+      redemptionVaultWithSwapper
         .connect(sender)
         .redeemInstant(tokenOut, amountIn, minAmount ?? constants.Zero),
     ).revertedWith(opt?.revertMessage);
@@ -71,10 +70,10 @@ export const redeemInstantWithSwapperTest = async (
   const balanceBeforeUserMBASIS = await mBASIS.balanceOf(sender.address);
 
   const balanceBeforeContractMTBILL = await mTBILL.balanceOf(
-    mBasisRedemptionVaultWithSwapper.address,
+    redemptionVaultWithSwapper.address,
   );
   const balanceBeforeContractMBASIS = await mBASIS.balanceOf(
-    mBasisRedemptionVaultWithSwapper.address,
+    redemptionVaultWithSwapper.address,
   );
 
   const balanceBeforeProviderMTBILL = await mTBILL.balanceOf(liquidityProvider);
@@ -91,14 +90,14 @@ export const redeemInstantWithSwapperTest = async (
   const supplyBeforeMTBILL = await mTBILL.totalSupply();
   const supplyBeforeMBASIS = await mBASIS.totalSupply();
 
-  const mBasisRate = await mBASISToUsdDataFeed.getDataInBase18();
+  const mBasisRate = await mBasisToUsdDataFeed.getDataInBase18();
   const mTokenRate = await mTokenToUsdDataFeed.getDataInBase18();
 
   const { fee, amountOut, amountInWithoutFee } =
     await calcExpectedTokenOutAmount(
       sender,
       tokenContract,
-      mBasisRedemptionVaultWithSwapper,
+      redemptionVaultWithSwapper,
       mBasisRate,
       amountIn,
       true,
@@ -107,13 +106,13 @@ export const redeemInstantWithSwapperTest = async (
   const expectedMToken = amountInWithoutFee.mul(mBasisRate).div(mTokenRate);
 
   await expect(
-    mBasisRedemptionVaultWithSwapper
+    redemptionVaultWithSwapper
       .connect(sender)
       .redeemInstant(tokenOut, amountIn, minAmount ?? constants.Zero),
   )
     .to.emit(
-      mBasisRedemptionVaultWithSwapper,
-      mBasisRedemptionVaultWithSwapper.interface.events[
+      redemptionVaultWithSwapper,
+      redemptionVaultWithSwapper.interface.events[
         'RedeemInstant(address,address,uint256,uint256,uint256)'
       ].name,
     )
@@ -123,10 +122,10 @@ export const redeemInstantWithSwapperTest = async (
   const balanceAfterUserMBASIS = await mBASIS.balanceOf(sender.address);
 
   const balanceAfterContractMTBILL = await mTBILL.balanceOf(
-    mBasisRedemptionVaultWithSwapper.address,
+    redemptionVaultWithSwapper.address,
   );
   const balanceAfterContractMBASIS = await mBASIS.balanceOf(
-    mBasisRedemptionVaultWithSwapper.address,
+    redemptionVaultWithSwapper.address,
   );
 
   const balanceAfterProviderMTBILL = await mTBILL.balanceOf(liquidityProvider);
@@ -225,7 +224,7 @@ export const setSwapperVaultTest = async (
 const getFeePercent = async (
   sender: string,
   token: string,
-  redemptionVault: MBasisRedemptionVaultWithSwapper,
+  redemptionVault: RedemptionVaultWithSwapper,
   isInstant: boolean,
   additionalFee?: BigNumber,
 ) => {
@@ -245,7 +244,7 @@ const getFeePercent = async (
 const calcExpectedTokenOutAmount = async (
   sender: SignerWithAddress,
   token: ERC20,
-  redemptionVault: MBasisRedemptionVaultWithSwapper,
+  redemptionVault: RedemptionVaultWithSwapper,
   mTokenRate: BigNumber,
   amountIn: BigNumber,
   isInstant: boolean,

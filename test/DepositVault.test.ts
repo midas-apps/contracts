@@ -77,7 +77,9 @@ describe('DepositVault', function () {
     expect(await depositVault.mTokenDataFeed()).eq(mTokenToUsdDataFeed.address);
     expect(await depositVault.variationTolerance()).eq(1);
 
-    expect(await depositVault.vaultRole()).eq(roles.depositVaultAdmin);
+    expect(await depositVault.vaultRole()).eq(
+      roles.tokenRoles.mTBILL.depositVaultAdmin,
+    );
 
     expect(await depositVault.MANUAL_FULLFILMENT_TOKEN()).eq(
       ethers.constants.AddressZero,

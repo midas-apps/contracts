@@ -66,6 +66,14 @@ const expectedTokenNameSymb: Record<
     name: 'Hyperbeat USDT',
     symbol: 'hbUSDT',
   },
+  hypeBTC: {
+    name: 'HyperBTC Vault',
+    symbol: 'hypeBTC',
+  },
+  hypeETH: {
+    name: 'HyperETH Vault',
+    symbol: 'hypeETH',
+  },
   TACmBTC: {
     name: 'Midas TACmBTC Token',
     symbol: 'TACmBTC',
@@ -90,8 +98,12 @@ export const tokenContractsTests = (token: MTokenName) => {
   const allRoleNames = getRolesNamesCommon();
 
   const tokenRoles = getRolesForToken(token);
-  console.log(tokenRoles);
   const tokenRoleNames = getRolesNamesForToken(token);
+
+  const isTac = token.startsWith('TAC');
+  const contractNamesForTac = getTokenContractNames(
+    token.replace('TAC', '') as MTokenName,
+  );
 
   const getContractFactory = async (contract: string) => {
     return await ethers.getContractFactory(contract);
@@ -102,7 +114,15 @@ export const tokenContractsTests = (token: MTokenName) => {
     initializer = 'initialize',
     ...initParams: unknown[]
   ) => {
-    const factory = await getContractFactory(contractNames[contractKey]!);
+    const shouldReplaceTacContracts =
+      isTac &&
+      (contractKey === 'customAggregator' || contractKey === 'dataFeed');
+
+    const factory = await getContractFactory(
+      shouldReplaceTacContracts
+        ? contractNamesForTac[contractKey]!
+        : contractNames[contractKey]!,
+    );
 
     const impl = await factory.deploy();
 
@@ -123,11 +143,17 @@ export const tokenContractsTests = (token: MTokenName) => {
     initializer = 'initialize',
     ...initParams: unknown[]
   ) => {
-    const factory = await getContractFactory(contractNames[contractKey]!).catch(
-      (err) => {
-        return null;
-      },
-    );
+    const shouldReplaceTacContracts =
+      isTac &&
+      (contractKey === 'customAggregator' || contractKey === 'dataFeed');
+
+    const factory = await getContractFactory(
+      shouldReplaceTacContracts
+        ? contractNamesForTac[contractKey]!
+        : contractNames[contractKey]!,
+    ).catch((err) => {
+      return null;
+    });
 
     if (!factory) {
       return null;
@@ -159,7 +185,6 @@ export const tokenContractsTests = (token: MTokenName) => {
 
   const deployMTokenVaultsWithFixture = async () => {
     const { tokenContract, ...fixture } = await deployMTokenWithFixture();
-
     const customAggregatorFeed =
       await deployProxyContract<CustomAggregatorV3CompatibleFeed>(
         'customAggregator',
@@ -669,7 +694,7 @@ export const tokenContractsTests = (token: MTokenName) => {
       const fixture = await deployMTokenVaultsWithFixture();
       const dataFeed = fixture.tokenDataFeed as Contract;
 
-      if (!dataFeed || !tokenRoleNames.customFeedAdmin) {
+      if (!dataFeed || !tokenRoleNames.customFeedAdmin || isTac) {
         (this as any).skip();
         return;
       }
@@ -684,7 +709,7 @@ export const tokenContractsTests = (token: MTokenName) => {
       const fixture = await deployMTokenVaultsWithFixture();
       const customAggregator = fixture.tokenCustomAggregatorFeed as Contract;
 
-      if (!customAggregator || !tokenRoleNames.customFeedAdmin) {
+      if (!customAggregator || !tokenRoleNames.customFeedAdmin || isTac) {
         (this as any).skip();
         return;
       }
@@ -700,6 +725,11 @@ export const tokenContractsTests = (token: MTokenName) => {
     it('DepositVault', async function () {
       const fixture = await deployMTokenVaultsWithFixture();
       const depositVault = fixture.tokenDepositVault as Contract;
+
+      if (!depositVault) {
+        (this as any).skip();
+        return;
+      }
 
       expect(await depositVault.vaultRole()).eq(
         await depositVault[tokenRoleNames.depositVaultAdmin](),
@@ -742,7 +772,7 @@ export const tokenContractsTests = (token: MTokenName) => {
       );
     });
 
-    it('RedemptionVaultWithBuidl', async function () {
+    it('RedemptionVaultWithBUIDL', async function () {
       const fixture = await deployMTokenVaultsWithFixture();
       const redemptionVaultWithBuidl =
         fixture.tokenRedemptionVaultWithBuidl as Contract;

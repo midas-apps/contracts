@@ -17,7 +17,7 @@ describe('Blacklistable', function () {
 
     expect(
       await accessControl.hasRole(
-        roles.blacklistedOperator,
+        roles.common.blacklistedOperator,
         blackListableTester.address,
       ),
     ).eq(true);

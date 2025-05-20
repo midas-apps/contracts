@@ -23,7 +23,7 @@ describe('Greenlistable', function () {
 
     expect(
       await accessControl.hasRole(
-        roles.greenlistedOperator,
+        roles.common.greenlistedOperator,
         greenListableTester.address,
       ),
     ).eq(true);
