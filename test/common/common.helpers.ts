@@ -28,23 +28,6 @@ export const getAccount = (account: AccountOrContract) => {
   );
 };
 
-export const getAllRoles = async (accessControl: MidasAccessControl) => {
-  const roles = {
-    blacklisted: await accessControl.BLACKLISTED_ROLE(),
-    greenlisted: await accessControl.GREENLISTED_ROLE(),
-    minter: await accessControl.M_TBILL_MINT_OPERATOR_ROLE(),
-    burner: await accessControl.M_TBILL_BURN_OPERATOR_ROLE(),
-    pauser: await accessControl.M_TBILL_PAUSE_OPERATOR_ROLE(),
-    greenlistedOperator: await accessControl.GREENLIST_OPERATOR_ROLE(),
-    blacklistedOperator: await accessControl.BLACKLIST_OPERATOR_ROLE(),
-    defaultAdmin: await accessControl.DEFAULT_ADMIN_ROLE(),
-    depositVaultAdmin: await accessControl.DEPOSIT_VAULT_ADMIN_ROLE(),
-    redemptionVaultAdmin: await accessControl.REDEMPTION_VAULT_ADMIN_ROLE(),
-  };
-
-  return roles;
-};
-
 export const pauseVault = async (
   vault: Pausable,
   opt?: OptionalCommonParams,

@@ -19,7 +19,7 @@ describe('Pausable', () => {
   it('deployment', async () => {
     const { pausableTester, roles } = await loadFixture(defaultDeploy);
 
-    expect(await pausableTester.pauseAdminRole()).eq(roles.defaultAdmin);
+    expect(await pausableTester.pauseAdminRole()).eq(roles.common.defaultAdmin);
 
     expect(await pausableTester.paused()).eq(false);
   });

@@ -3,8 +3,7 @@ import { expect } from 'chai';
 import { BigNumberish } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { getAllRoles } from './common.helpers';
-
+import { getAllRoles } from '../../helpers/roles';
 import {
   AggregatorV3Interface,
   DataFeed,
@@ -31,42 +30,6 @@ type Params = {
   execute?: (role: string, address: string) => Promise<any>;
 };
 
-export const initGrantRoles = async (
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _: // accessControl,
-  // depositVault,
-  // redemptionVault,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  // mTBILL,
-  // owner,
-  // execute,
-  Omit<
-    Params,
-    | 'aggregator'
-    | 'dataFeed'
-    | 'dataFeedMToken'
-    | 'aggregatorMToken'
-    | 'minAmountToDeposit'
-    | 'tokensReceiver'
-  >,
-) => {
-  // const roles = await getAllRoles(accessControl);
-  // const checkAndExecute = async (role: string, address: string) => {
-  //   if (!(await accessControl.hasRole(role, address))) {
-  //     if (execute) await execute(role, address);
-  //     else {
-  //       await accessControl
-  //         .connect(owner)
-  //         .grantRole(role, address)
-  //         .then((tx) => tx.wait());
-  //     }
-  //   }
-  // };
-  // await checkAndExecute(roles.minter, depositVault.address);
-  // await checkAndExecute(roles.minter, redemptionVault.address);
-  // await checkAndExecute(roles.burner, redemptionVault.address);
-};
-
 export const postDeploymentTest = async (
   { ethers }: HardhatRuntimeEnvironment,
   {
@@ -82,7 +45,7 @@ export const postDeploymentTest = async (
     minAmount,
   }: Params,
 ) => {
-  const roles = await getAllRoles(accessControl);
+  const roles = getAllRoles();
 
   /** mTBILL tests start */
   expect(await mTBILL.name()).eq('Midas US Treasury Bill Token');
@@ -141,13 +104,17 @@ export const postDeploymentTest = async (
   /** Owners roles tests start */
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { blacklisted: _, greenlisted: __, ...rolesToCheck } = roles;
+  const { blacklisted: _, greenlisted: __, ...rolesToCheck } = roles.common;
 
   for (const role of Object.values(rolesToCheck)) {
     expect(await accessControl.hasRole(role, owner.address)).to.eq(true);
   }
 
-  expect(await accessControl.getRoleAdmin(roles.blacklisted)).eq(
-    roles.blacklistedOperator,
+  expect(await accessControl.getRoleAdmin(roles.common.blacklisted)).eq(
+    roles.common.blacklistedOperator,
+  );
+
+  expect(await accessControl.getRoleAdmin(roles.common.greenlisted)).eq(
+    roles.common.greenlistedOperator,
   );
 };

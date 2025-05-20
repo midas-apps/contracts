@@ -47,6 +47,8 @@ import {
   ManageableVaultTester__factory,
   // eslint-disable-next-line camelcase
   MBasisRedemptionVaultWithBUIDL__factory,
+  // eslint-disable-next-line camelcase
+  RedemptionVaultWithBUIDLTest__factory,
 } from '../typechain-types';
 
 describe('RedemptionVaultWithBUIDL', function () {
@@ -89,7 +91,7 @@ describe('RedemptionVaultWithBUIDL', function () {
     expect(await redemptionVaultWithBUIDL.variationTolerance()).eq(1);
 
     expect(await redemptionVaultWithBUIDL.vaultRole()).eq(
-      roles.redemptionVaultAdmin,
+      roles.tokenRoles.mTBILL.redemptionVaultAdmin,
     );
 
     expect(await redemptionVaultWithBUIDL.MANUAL_FULLFILMENT_TOKEN()).eq(
@@ -102,6 +104,50 @@ describe('RedemptionVaultWithBUIDL', function () {
     expect(await redemptionVaultWithBUIDL.minBuidlToRedeem()).eq(
       parseUnits('250000', 6),
     );
+  });
+
+  it('failing deployment', async () => {
+    const {
+      mTBILL,
+      tokensReceiver,
+      feeReceiver,
+      mTokenToUsdDataFeed,
+      accessControl,
+      mockedSanctionsList,
+      owner,
+    } = await loadFixture(defaultDeploy);
+
+    const redemptionVaultWithBUIDL =
+      await new RedemptionVaultWithBUIDLTest__factory(owner).deploy();
+
+    await expect(
+      redemptionVaultWithBUIDL[
+        'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address)'
+      ](
+        accessControl.address,
+        {
+          mToken: mTBILL.address,
+          mTokenDataFeed: mTokenToUsdDataFeed.address,
+        },
+        {
+          feeReceiver: feeReceiver.address,
+          tokensReceiver: tokensReceiver.address,
+        },
+        {
+          instantFee: 100,
+          instantDailyLimit: parseUnits('100000'),
+        },
+        mockedSanctionsList.address,
+        1,
+        parseUnits('100'),
+        {
+          fiatAdditionalFee: 10000,
+          fiatFlatFee: parseUnits('1'),
+          minFiatRedeemAmount: parseUnits('100'),
+        },
+        constants.AddressZero,
+      ),
+    ).to.be.reverted;
   });
 
   it('MBasisRedemptionVault', async () => {
