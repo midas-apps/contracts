@@ -14,15 +14,27 @@ describe('MidasAccessControl', function () {
   it('deployment', async () => {
     const { accessControl, roles, owner } = await loadFixture(defaultDeploy);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { blacklisted: _, greenlisted: __, ...rolesToCheck } = roles;
+    const initGrantedRoles = [
+      roles.common.blacklistedOperator,
+      roles.common.greenlistedOperator,
+      roles.common.defaultAdmin,
+      roles.tokenRoles.mTBILL.burner,
+      roles.tokenRoles.mTBILL.minter,
+      roles.tokenRoles.mTBILL.pauser,
+      roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+      roles.tokenRoles.mTBILL.depositVaultAdmin,
+    ];
 
-    for (const role of Object.values(rolesToCheck)) {
+    for (const role of initGrantedRoles) {
       expect(await accessControl.hasRole(role, owner.address)).to.eq(true);
     }
 
-    expect(await accessControl.getRoleAdmin(roles.blacklisted)).eq(
-      roles.blacklistedOperator,
+    expect(await accessControl.getRoleAdmin(roles.common.blacklisted)).eq(
+      roles.common.blacklistedOperator,
+    );
+
+    expect(await accessControl.getRoleAdmin(roles.common.greenlisted)).eq(
+      roles.common.greenlistedOperator,
     );
   });
 
@@ -158,7 +170,7 @@ describe('WithMidasAccessControl', function () {
       await expect(
         wAccessControlTester
           .connect(regularAccounts[1])
-          .withOnlyRole(roles.blacklisted, regularAccounts[0].address),
+          .withOnlyRole(roles.common.blacklisted, regularAccounts[0].address),
       ).revertedWith('WMAC: hasnt role');
     });
 
@@ -168,7 +180,7 @@ describe('WithMidasAccessControl', function () {
       );
       await expect(
         wAccessControlTester.withOnlyRole(
-          roles.blacklistedOperator,
+          roles.common.blacklistedOperator,
           owner.address,
         ),
       ).not.reverted;
@@ -182,7 +194,7 @@ describe('WithMidasAccessControl', function () {
       );
       await expect(
         wAccessControlTester.withOnlyNotRole(
-          roles.blacklistedOperator,
+          roles.common.blacklistedOperator,
           owner.address,
         ),
       ).revertedWith('WMAC: has role');
@@ -193,7 +205,7 @@ describe('WithMidasAccessControl', function () {
         await loadFixture(defaultDeploy);
       await expect(
         wAccessControlTester.withOnlyNotRole(
-          roles.blacklisted,
+          roles.common.blacklisted,
           regularAccounts[1].address,
         ),
       ).not.reverted;
@@ -206,13 +218,13 @@ describe('WithMidasAccessControl', function () {
         await loadFixture(defaultDeploy);
       expect(
         await accessControl.hasRole(
-          roles.blacklistedOperator,
+          roles.common.blacklistedOperator,
           wAccessControlTester.address,
         ),
       ).eq(false);
       await expect(
         wAccessControlTester.grantRoleTester(
-          roles.blacklisted,
+          roles.common.blacklisted,
           regularAccounts[1].address,
         ),
       ).reverted;
@@ -222,12 +234,12 @@ describe('WithMidasAccessControl', function () {
       const { accessControl, wAccessControlTester, regularAccounts, roles } =
         await loadFixture(defaultDeploy);
       await accessControl.grantRole(
-        roles.blacklistedOperator,
+        roles.common.blacklistedOperator,
         wAccessControlTester.address,
       );
       await expect(
         wAccessControlTester.grantRoleTester(
-          roles.blacklisted,
+          roles.common.blacklisted,
           regularAccounts[1].address,
         ),
       ).not.reverted;
@@ -240,13 +252,13 @@ describe('WithMidasAccessControl', function () {
         await loadFixture(defaultDeploy);
       expect(
         await accessControl.hasRole(
-          roles.blacklistedOperator,
+          roles.common.blacklistedOperator,
           wAccessControlTester.address,
         ),
       ).eq(false);
       await expect(
         wAccessControlTester.revokeRoleTester(
-          roles.blacklisted,
+          roles.common.blacklisted,
           regularAccounts[1].address,
         ),
       ).reverted;
@@ -256,24 +268,24 @@ describe('WithMidasAccessControl', function () {
       const { accessControl, wAccessControlTester, regularAccounts, roles } =
         await loadFixture(defaultDeploy);
       await accessControl.grantRole(
-        roles.blacklistedOperator,
+        roles.common.blacklistedOperator,
         wAccessControlTester.address,
       );
       await wAccessControlTester.grantRoleTester(
-        roles.blacklisted,
+        roles.common.blacklisted,
         regularAccounts[1].address,
       );
 
       await expect(
         wAccessControlTester.revokeRoleTester(
-          roles.blacklisted,
+          roles.common.blacklisted,
           regularAccounts[1].address,
         ),
       ).not.reverted;
 
       expect(
         await accessControl.hasRole(
-          roles.blacklisted,
+          roles.common.blacklisted,
           regularAccounts[1].address,
         ),
       ).eq(false);
