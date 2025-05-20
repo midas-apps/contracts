@@ -14,6 +14,7 @@ import {
   ERC20__factory,
   RedemptionVault,
   RedemptionVaultWIthBUIDL,
+  RedemptionVaultWithSwapper,
 } from '../../typechain-types';
 
 type CommonParamsRedeem = Pick<
@@ -646,10 +647,13 @@ export const setRequestRedeemerTest = async (
   expect(newRedeemer).eq(redeemer);
 };
 
-const getFeePercent = async (
+export const getFeePercent = async (
   sender: string,
   token: string,
-  redemptionVault: RedemptionVault | RedemptionVaultWIthBUIDL,
+  redemptionVault:
+    | RedemptionVault
+    | RedemptionVaultWIthBUIDL
+    | RedemptionVaultWithSwapper,
   isInstant: boolean,
   additionalFee?: BigNumber,
 ) => {
@@ -666,10 +670,13 @@ const getFeePercent = async (
   return feePercent;
 };
 
-const calcExpectedTokenOutAmount = async (
+export const calcExpectedTokenOutAmount = async (
   sender: SignerWithAddress,
   token: ERC20,
-  redemptionVault: RedemptionVault | RedemptionVaultWIthBUIDL,
+  redemptionVault:
+    | RedemptionVault
+    | RedemptionVaultWIthBUIDL
+    | RedemptionVaultWithSwapper,
   mTokenRate: BigNumber,
   amountIn: BigNumber,
   isInstant: boolean,

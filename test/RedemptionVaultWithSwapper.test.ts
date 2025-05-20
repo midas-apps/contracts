@@ -23,7 +23,7 @@ import {
   redeemInstantWithSwapperTest,
   setLiquidityProviderTest,
   setSwapperVaultTest,
-} from './common/mbasis-redemption-vault.helpers';
+} from './common/redemption-vault-swapper.helpers';
 import { sanctionUser } from './common/with-sanctions-list.helpers';
 
 import { encodeFnSelector } from '../helpers/utils';

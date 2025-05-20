@@ -1,14 +1,13 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { BigNumber, BigNumberish, constants } from 'ethers';
+import { BigNumberish, constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import { OptionalCommonParams, getAccount } from './common.helpers';
 import { defaultDeploy } from './fixtures';
+import { calcExpectedTokenOutAmount } from './redemption-vault.helpers';
 
 import {
-  // eslint-disable-next-line camelcase
-  DataFeedTest__factory,
   ERC20,
   // eslint-disable-next-line camelcase
   ERC20__factory,
@@ -219,76 +218,4 @@ export const setSwapperVaultTest = async (
 
   const provider = await vault.mTbillRedemptionVault();
   expect(provider).eq(newVault);
-};
-
-const getFeePercent = async (
-  sender: string,
-  token: string,
-  redemptionVault: RedemptionVaultWithSwapper,
-  isInstant: boolean,
-  additionalFee?: BigNumber,
-) => {
-  const tokenConfig = await redemptionVault.tokensConfig(token);
-  let feePercent = constants.Zero;
-  const isWaived = await redemptionVault.waivedFeeRestriction(sender);
-  if (!isWaived) {
-    feePercent = additionalFee ?? tokenConfig.fee;
-    if (isInstant) {
-      const instantFee = await redemptionVault.instantFee();
-      feePercent = feePercent.add(instantFee);
-    }
-  }
-  return feePercent;
-};
-
-const calcExpectedTokenOutAmount = async (
-  sender: SignerWithAddress,
-  token: ERC20,
-  redemptionVault: RedemptionVaultWithSwapper,
-  mTokenRate: BigNumber,
-  amountIn: BigNumber,
-  isInstant: boolean,
-) => {
-  const tokenConfig = await redemptionVault.tokensConfig(token.address);
-  // eslint-disable-next-line camelcase
-  const dataFeedContract = DataFeedTest__factory.connect(
-    tokenConfig.dataFeed,
-    sender,
-  );
-  const currentStableRate = tokenConfig.stable
-    ? constants.WeiPerEther
-    : await dataFeedContract.getDataInBase18();
-  if (currentStableRate.isZero())
-    return {
-      amountOut: constants.Zero,
-      amountInWithoutFee: constants.Zero,
-      fee: constants.Zero,
-      currentStableRate: constants.Zero,
-    };
-
-  const feePercent = await getFeePercent(
-    sender.address,
-    token.address,
-    redemptionVault,
-    isInstant,
-  );
-
-  const hundredPercent = await redemptionVault.ONE_HUNDRED_PERCENT();
-  const fee = amountIn.mul(feePercent).div(hundredPercent);
-
-  const amountInWithoutFee = amountIn.sub(fee);
-
-  const tokenDecimals = await token.decimals();
-
-  const amountOut = amountInWithoutFee
-    .mul(mTokenRate)
-    .div(currentStableRate)
-    .div(10 ** (18 - tokenDecimals));
-
-  return {
-    amountOut,
-    amountInWithoutFee,
-    fee,
-    currentStableRate,
-  };
 };
