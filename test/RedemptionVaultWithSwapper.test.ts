@@ -2,56 +2,34 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
-import { ethers } from 'hardhat';
 
-import { acErrors, blackList, greenList } from './common/ac.helpers';
+import { acErrors, blackList } from './common/ac.helpers';
 import {
   approveBase18,
   mintToken,
-  pauseVault,
   pauseVaultFn,
 } from './common/common.helpers';
 import { setRoundData } from './common/data-feed.helpers';
 import { defaultDeploy } from './common/fixtures';
 import {
   addPaymentTokenTest,
-  addWaivedFeeAccountTest,
   changeTokenAllowanceTest,
-  removePaymentTokenTest,
-  removeWaivedFeeAccountTest,
   setInstantFeeTest,
   setInstantDailyLimitTest,
   setMinAmountTest,
-  setVariabilityToleranceTest,
-  withdrawTest,
   changeTokenFeeTest,
-  setMinBuidlToRedeem,
 } from './common/manageable-vault.helpers';
 import {
   redeemInstantWithSwapperTest,
   setLiquidityProviderTest,
   setSwapperVaultTest,
 } from './common/mbasis-redemption-vault.helpers';
-import {
-  approveRedeemRequestTest,
-  redeemFiatRequestTest,
-  redeemInstantTest,
-  redeemRequestTest,
-  rejectRedeemRequestTest,
-  safeApproveRedeemRequestTest,
-  setFiatAdditionalFeeTest,
-  setMinFiatRedeemAmountTest,
-} from './common/redemption-vault.helpers';
 import { sanctionUser } from './common/with-sanctions-list.helpers';
 
 import { encodeFnSelector } from '../helpers/utils';
 import {
   // eslint-disable-next-line camelcase
-  EUsdRedemptionVaultWithBUIDL__factory,
-  // eslint-disable-next-line camelcase
-  ManageableVaultTester__factory,
-  // eslint-disable-next-line camelcase
-  MBasisRedemptionVaultWithBUIDL__factory,
+  RedemptionVaultWithSwapperTest__factory,
 } from '../typechain-types';
 
 describe('MBasisRedemptionVaultWithSwapper', () => {
@@ -89,6 +67,86 @@ describe('MBasisRedemptionVaultWithSwapper', () => {
           constants.AddressZero,
         ),
       ).revertedWith('Initializable: contract is already initialized');
+    });
+
+    it('should fail: incorrect initialize parameters', async () => {
+      const {
+        accessControl,
+        tokensReceiver,
+        feeReceiver,
+        mBASIS,
+        mBasisToUsdDataFeed,
+        mockedSanctionsList,
+        owner,
+        requestRedeemer,
+        liquidityProvider,
+        redemptionVault,
+      } = await loadFixture(defaultDeploy);
+
+      const redemptionVaultWithSwapper =
+        await new RedemptionVaultWithSwapperTest__factory(owner).deploy();
+
+      await expect(
+        redemptionVaultWithSwapper[
+          'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)'
+        ](
+          accessControl.address,
+          {
+            mToken: mBASIS.address,
+            mTokenDataFeed: mBasisToUsdDataFeed.address,
+          },
+          {
+            feeReceiver: feeReceiver.address,
+            tokensReceiver: tokensReceiver.address,
+          },
+          {
+            instantFee: 100,
+            instantDailyLimit: parseUnits('100000'),
+          },
+          mockedSanctionsList.address,
+          1,
+          1000,
+          {
+            fiatAdditionalFee: 100,
+            fiatFlatFee: parseUnits('1'),
+            minFiatRedeemAmount: 1000,
+          },
+          requestRedeemer.address,
+          constants.AddressZero,
+          liquidityProvider.address,
+        ),
+      ).to.be.reverted;
+
+      await expect(
+        redemptionVaultWithSwapper[
+          'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)'
+        ](
+          accessControl.address,
+          {
+            mToken: mBASIS.address,
+            mTokenDataFeed: mBasisToUsdDataFeed.address,
+          },
+          {
+            feeReceiver: feeReceiver.address,
+            tokensReceiver: tokensReceiver.address,
+          },
+          {
+            instantFee: 100,
+            instantDailyLimit: parseUnits('100000'),
+          },
+          mockedSanctionsList.address,
+          1,
+          1000,
+          {
+            fiatAdditionalFee: 100,
+            fiatFlatFee: parseUnits('1'),
+            minFiatRedeemAmount: 1000,
+          },
+          requestRedeemer.address,
+          redemptionVault.address,
+          constants.AddressZero,
+        ),
+      ).to.be.reverted;
     });
   });
 

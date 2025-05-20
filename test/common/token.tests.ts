@@ -151,7 +151,7 @@ export const tokenContractsTests = (token: MTokenName) => {
       shouldReplaceTacContracts
         ? contractNamesForTac[contractKey]!
         : contractNames[contractKey]!,
-    ).catch((err) => {
+    ).catch((_) => {
       return null;
     });
 

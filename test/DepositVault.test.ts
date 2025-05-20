@@ -40,6 +40,8 @@ import { sanctionUser } from './common/with-sanctions-list.helpers';
 import { encodeFnSelector } from '../helpers/utils';
 import {
   // eslint-disable-next-line camelcase
+  DepositVaultTest__factory,
+  // eslint-disable-next-line camelcase
   EUsdDepositVault__factory,
   // eslint-disable-next-line camelcase
   ManageableVaultTester__factory,
@@ -84,6 +86,146 @@ describe('DepositVault', function () {
     expect(await depositVault.MANUAL_FULLFILMENT_TOKEN()).eq(
       ethers.constants.AddressZero,
     );
+  });
+
+  it('failing deployment', async () => {
+    const {
+      accessControl,
+      mTBILL,
+      owner,
+      mTokenToUsdDataFeed,
+      feeReceiver,
+      tokensReceiver,
+      mockedSanctionsList,
+    } = await loadFixture(defaultDeploy);
+    const depositVault = await new DepositVaultTest__factory(owner).deploy();
+
+    await expect(
+      depositVault.initialize(
+        ethers.constants.AddressZero,
+        {
+          mToken: mTBILL.address,
+          mTokenDataFeed: mTokenToUsdDataFeed.address,
+        },
+        {
+          feeReceiver: feeReceiver.address,
+          tokensReceiver: tokensReceiver.address,
+        },
+        {
+          instantFee: 100,
+          instantDailyLimit: parseUnits('100000'),
+        },
+        mockedSanctionsList.address,
+        1,
+        parseUnits('100'),
+        parseUnits('100'),
+      ),
+    ).to.be.reverted;
+    await expect(
+      depositVault.initialize(
+        accessControl.address,
+        {
+          mToken: ethers.constants.AddressZero,
+          mTokenDataFeed: mTokenToUsdDataFeed.address,
+        },
+        {
+          feeReceiver: feeReceiver.address,
+          tokensReceiver: tokensReceiver.address,
+        },
+        {
+          instantFee: 100,
+          instantDailyLimit: parseUnits('100000'),
+        },
+        mockedSanctionsList.address,
+        1,
+        parseUnits('100'),
+        parseUnits('100'),
+      ),
+    ).to.be.reverted;
+    await expect(
+      depositVault.initialize(
+        accessControl.address,
+        {
+          mToken: mTBILL.address,
+          mTokenDataFeed: ethers.constants.AddressZero,
+        },
+        {
+          feeReceiver: feeReceiver.address,
+          tokensReceiver: tokensReceiver.address,
+        },
+        {
+          instantFee: 100,
+          instantDailyLimit: parseUnits('100000'),
+        },
+        mockedSanctionsList.address,
+        1,
+        parseUnits('100'),
+        parseUnits('100'),
+      ),
+    ).to.be.reverted;
+    await expect(
+      depositVault.initialize(
+        accessControl.address,
+        {
+          mToken: mTBILL.address,
+          mTokenDataFeed: mTokenToUsdDataFeed.address,
+        },
+        {
+          feeReceiver: ethers.constants.AddressZero,
+          tokensReceiver: tokensReceiver.address,
+        },
+        {
+          instantFee: 100,
+          instantDailyLimit: parseUnits('100000'),
+        },
+        mockedSanctionsList.address,
+        1,
+        parseUnits('100'),
+        parseUnits('100'),
+      ),
+    ).to.be.reverted;
+    await expect(
+      depositVault.initialize(
+        accessControl.address,
+        {
+          mToken: mTBILL.address,
+          mTokenDataFeed: mTokenToUsdDataFeed.address,
+        },
+        {
+          feeReceiver: feeReceiver.address,
+          tokensReceiver: ethers.constants.AddressZero,
+        },
+        {
+          instantFee: 100,
+          instantDailyLimit: parseUnits('100000'),
+        },
+        mockedSanctionsList.address,
+        1,
+        parseUnits('100'),
+        parseUnits('100'),
+      ),
+    ).to.be.reverted;
+    await expect(
+      depositVault.initialize(
+        accessControl.address,
+        {
+          mToken: mTBILL.address,
+          mTokenDataFeed: mTokenToUsdDataFeed.address,
+        },
+        {
+          feeReceiver: feeReceiver.address,
+          tokensReceiver: tokensReceiver.address,
+        },
+        {
+          instantFee: 100001,
+          instantDailyLimit: parseUnits('100000'),
+        },
+        mockedSanctionsList.address,
+        1,
+        parseUnits('100'),
+        parseUnits('100'),
+      ),
+    ).to.be.reverted;
   });
 
   it('MBasisDepositVault', async () => {

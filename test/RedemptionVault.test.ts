@@ -29,11 +29,6 @@ import {
   setFeeReceiverTest,
 } from './common/manageable-vault.helpers';
 import {
-  redeemInstantWithSwapperTest,
-  setLiquidityProviderTest,
-  setSwapperVaultTest,
-} from './common/mbasis-redemption-vault.helpers';
-import {
   approveRedeemRequestTest,
   redeemFiatRequestTest,
   redeemInstantTest,
@@ -50,11 +45,11 @@ import { sanctionUser } from './common/with-sanctions-list.helpers';
 import { encodeFnSelector } from '../helpers/utils';
 import {
   // eslint-disable-next-line camelcase
-  EUsdRedemptionVaultTest__factory,
-  // eslint-disable-next-line camelcase
   ManageableVaultTester__factory,
   // eslint-disable-next-line camelcase
   MBasisRedemptionVault__factory,
+  // eslint-disable-next-line camelcase
+  RedemptionVaultTest__factory,
 } from '../typechain-types';
 
 describe('RedemptionVault', function () {
@@ -106,7 +101,198 @@ describe('RedemptionVault', function () {
       tokensReceiver,
       mockedSanctionsList,
       requestRedeemer,
+      accessControl,
+      owner,
+      mTBILL,
     } = await loadFixture(defaultDeploy);
+
+    const redemptionVaultUninitialized = await new RedemptionVaultTest__factory(
+      owner,
+    ).deploy();
+
+    await expect(
+      redemptionVaultUninitialized.initialize(
+        ethers.constants.AddressZero,
+        {
+          mToken: ethers.constants.AddressZero,
+          mTokenDataFeed: mTokenToUsdDataFeed.address,
+        },
+        {
+          feeReceiver: feeReceiver.address,
+          tokensReceiver: tokensReceiver.address,
+        },
+        {
+          instantFee: 100,
+          instantDailyLimit: parseUnits('100000'),
+        },
+        mockedSanctionsList.address,
+        1,
+        parseUnits('100'),
+        {
+          fiatAdditionalFee: 100,
+          fiatFlatFee: parseUnits('1'),
+          minFiatRedeemAmount: parseUnits('100'),
+        },
+        requestRedeemer.address,
+      ),
+    ).to.be.reverted;
+    await expect(
+      redemptionVaultUninitialized.initialize(
+        accessControl.address,
+        {
+          mToken: mTBILL.address,
+          mTokenDataFeed: ethers.constants.AddressZero,
+        },
+        {
+          feeReceiver: feeReceiver.address,
+          tokensReceiver: tokensReceiver.address,
+        },
+        {
+          instantFee: 100,
+          instantDailyLimit: parseUnits('100000'),
+        },
+        mockedSanctionsList.address,
+        1,
+        parseUnits('100'),
+        {
+          fiatAdditionalFee: 100,
+          fiatFlatFee: parseUnits('1'),
+          minFiatRedeemAmount: parseUnits('100'),
+        },
+        requestRedeemer.address,
+      ),
+    ).to.be.reverted;
+    await expect(
+      redemptionVaultUninitialized.initialize(
+        accessControl.address,
+        {
+          mToken: mTBILL.address,
+          mTokenDataFeed: mTokenToUsdDataFeed.address,
+        },
+        {
+          feeReceiver: ethers.constants.AddressZero,
+          tokensReceiver: tokensReceiver.address,
+        },
+        {
+          instantFee: 100,
+          instantDailyLimit: parseUnits('100000'),
+        },
+        mockedSanctionsList.address,
+        1,
+        parseUnits('100'),
+        {
+          fiatAdditionalFee: 100,
+          fiatFlatFee: parseUnits('1'),
+          minFiatRedeemAmount: parseUnits('100'),
+        },
+        requestRedeemer.address,
+      ),
+    ).to.be.reverted;
+    await expect(
+      redemptionVaultUninitialized.initialize(
+        accessControl.address,
+        {
+          mToken: mTBILL.address,
+          mTokenDataFeed: mTokenToUsdDataFeed.address,
+        },
+        {
+          feeReceiver: feeReceiver.address,
+          tokensReceiver: ethers.constants.AddressZero,
+        },
+        {
+          instantFee: 100,
+          instantDailyLimit: parseUnits('100000'),
+        },
+        mockedSanctionsList.address,
+        1,
+        parseUnits('100'),
+        {
+          fiatAdditionalFee: 100,
+          fiatFlatFee: parseUnits('1'),
+          minFiatRedeemAmount: parseUnits('100'),
+        },
+        requestRedeemer.address,
+      ),
+    ).to.be.reverted;
+    await expect(
+      redemptionVaultUninitialized.initialize(
+        accessControl.address,
+        {
+          mToken: mTBILL.address,
+          mTokenDataFeed: mTokenToUsdDataFeed.address,
+        },
+        {
+          feeReceiver: feeReceiver.address,
+          tokensReceiver: tokensReceiver.address,
+        },
+        {
+          instantFee: 10001,
+          instantDailyLimit: parseUnits('100000'),
+        },
+        mockedSanctionsList.address,
+        1,
+        parseUnits('100'),
+        {
+          fiatAdditionalFee: 100,
+          fiatFlatFee: parseUnits('1'),
+          minFiatRedeemAmount: parseUnits('100'),
+        },
+        requestRedeemer.address,
+      ),
+    ).to.be.reverted;
+    await expect(
+      redemptionVaultUninitialized.initialize(
+        accessControl.address,
+        {
+          mToken: mTBILL.address,
+          mTokenDataFeed: mTokenToUsdDataFeed.address,
+        },
+        {
+          feeReceiver: feeReceiver.address,
+          tokensReceiver: tokensReceiver.address,
+        },
+        {
+          instantFee: 100,
+          instantDailyLimit: parseUnits('100000'),
+        },
+        mockedSanctionsList.address,
+        1,
+        parseUnits('100'),
+        {
+          fiatAdditionalFee: 10001,
+          fiatFlatFee: parseUnits('1'),
+          minFiatRedeemAmount: parseUnits('100'),
+        },
+        requestRedeemer.address,
+      ),
+    ).to.be.reverted;
+
+    await expect(
+      redemptionVaultUninitialized.initialize(
+        accessControl.address,
+        {
+          mToken: mTBILL.address,
+          mTokenDataFeed: mTokenToUsdDataFeed.address,
+        },
+        {
+          feeReceiver: feeReceiver.address,
+          tokensReceiver: tokensReceiver.address,
+        },
+        {
+          instantFee: 100,
+          instantDailyLimit: parseUnits('100000'),
+        },
+        mockedSanctionsList.address,
+        1,
+        parseUnits('100'),
+        {
+          fiatAdditionalFee: 100,
+          fiatFlatFee: parseUnits('1'),
+          minFiatRedeemAmount: parseUnits('100'),
+        },
+        constants.AddressZero,
+      ),
+    ).to.be.reverted;
 
     await expect(
       redemptionVault.initializeWithoutInitializer(
