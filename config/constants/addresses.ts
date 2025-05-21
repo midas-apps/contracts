@@ -540,6 +540,20 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x6Be2f55816efd0d91f52720f096006d63c366e98',
       redemptionVaultSwapper: '0x9aEBf5d6F9411BAc355021ddFbe9B2c756BDD358',
     },
+    hypeETH: {
+      token: '0x8Cf94465f8Db8A273673dFe950Bd1c9e34442aAB',
+      customFeed: '0xc665f0C1d2EADbCBb65bE08a05E0B9a170b9a0b4',
+      dataFeed: '0xfEE6365E6C4dBd77CEC9740234A03D65b7ee6950',
+      depositVault: '0xAc79Fed395C2238C4fA13084EE440E19e4dEB0FE',
+      redemptionVaultSwapper: '0xaA192F810106B6161cbe5FE531289C0e3B196DEB',
+    },
+    hypeBTC: {
+      token: '0x091074f37e8C72Ddb8720AfaE77c44A855080e8A',
+      customFeed: '0x54E5b341770c34Af6bc5645415036fF2D5b3d871',
+      dataFeed: '0xa7eA8D927f99F0d1Ab2c8006Df40fa7c437D8606',
+      depositVault: '0x3d09a1c088C6b8B971FF5F5D29C79C4cDbF45b04',
+      redemptionVaultSwapper: '0xF0C91Bbae7f67c4e595d723ef5FB38B59F2008cf',
+    },
     accessControl: '0xbf25b58cB8DfaD688F7BcB2b87D71C23A6600AaC',
   },
   tacTestnet: {
