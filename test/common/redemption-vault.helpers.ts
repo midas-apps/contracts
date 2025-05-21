@@ -15,17 +15,24 @@ import {
   RedemptionVault,
   RedemptionVaultWIthBUIDL,
   RedemptionVaultWithSwapper,
+  RedemptionVaultWithUSTB,
 } from '../../typechain-types';
 
 type CommonParamsRedeem = Pick<
   Awaited<ReturnType<typeof defaultDeploy>>,
   'owner' | 'mTBILL' | 'mTokenToUsdDataFeed'
 > & {
-  redemptionVault: RedemptionVault | RedemptionVaultWIthBUIDL;
+  redemptionVault:
+    | RedemptionVault
+    | RedemptionVaultWIthBUIDL
+    | RedemptionVaultWithUSTB;
 };
 
 type CommonParams = Pick<Awaited<ReturnType<typeof defaultDeploy>>, 'owner'> & {
-  redemptionVault: RedemptionVault | RedemptionVaultWIthBUIDL;
+  redemptionVault:
+    | RedemptionVault
+    | RedemptionVaultWIthBUIDL
+    | RedemptionVaultWithUSTB;
 };
 
 export const redeemInstantTest = async (
@@ -651,7 +658,8 @@ export const getFeePercent = async (
   redemptionVault:
     | RedemptionVault
     | RedemptionVaultWIthBUIDL
-    | RedemptionVaultWithSwapper,
+    | RedemptionVaultWithSwapper
+    | RedemptionVaultWithUSTB,
   isInstant: boolean,
   additionalFee?: BigNumber,
 ) => {
@@ -674,7 +682,8 @@ export const calcExpectedTokenOutAmount = async (
   redemptionVault:
     | RedemptionVault
     | RedemptionVaultWIthBUIDL
-    | RedemptionVaultWithSwapper,
+    | RedemptionVaultWithSwapper
+    | RedemptionVaultWithUSTB,
   mTokenRate: BigNumber,
   amountIn: BigNumber,
   isInstant: boolean,

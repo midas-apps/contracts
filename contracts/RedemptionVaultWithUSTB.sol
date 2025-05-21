@@ -18,22 +18,9 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
 
-    /**
-     * @notice USTB redemption contract interface
-     */
     IRedemption public ustbRedemption;
 
-    /**
-     * @notice USDC token address that this contract uses for redemptions
-     */
-    address public usdcToken;
-
-    /**
-     * @notice USTB token address
-     */
-    address public ustbToken;
-
-    uint256[48] private __gap;
+    uint256[50] private __gap;
 
     /**
      * @notice upgradeable pattern contract`s initializer
@@ -47,8 +34,6 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
      * @param _fiatRedemptionInitParams params fiatAdditionalFee, fiatFlatFee, minFiatRedeemAmount
      * @param _ustbRedemption USTB redemption contract address
      * @param _requestRedeemer address is designated for standard redemptions, allowing tokens to be pulled from this address
-     * @param _usdcToken USDC token address
-     * @param _ustbToken USTB token address
      */
     function initialize(
         address _ac,
@@ -60,9 +45,7 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
         uint256 _minAmount,
         FiatRedeptionInitParams calldata _fiatRedemptionInitParams,
         address _requestRedeemer,
-        address _ustbRedemption,
-        address _usdcToken,
-        address _ustbToken
+        address _ustbRedemption
     ) external initializer {
         __RedemptionVault_init(
             _ac,
@@ -76,11 +59,7 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
             _requestRedeemer
         );
         _validateAddress(_ustbRedemption, false);
-        _validateAddress(_usdcToken, false);
-        _validateAddress(_ustbToken, false);
         ustbRedemption = IRedemption(_ustbRedemption);
-        usdcToken = _usdcToken;
-        ustbToken = _ustbToken;
     }
 
     /**
@@ -106,8 +85,6 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
         onlyNotSanctioned(msg.sender)
     {
         address user = msg.sender;
-
-        require(tokenOut == usdcToken, "RVU: invalid token");
 
         (
             uint256 feeAmount,
@@ -175,6 +152,8 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
         address tokenOut,
         uint256 amountTokenOut
     ) internal {
+        require(tokenOut == ustbRedemption.USDC(), "RVU: invalid token");
+
         uint256 contractBalanceTokenOut = IERC20(tokenOut).balanceOf(
             address(this)
         );
@@ -185,16 +164,11 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
             missingAmount
         );
 
-        IERC20 ustb = IERC20(ustbToken);
+        IERC20 ustb = IERC20(ustbRedemption.SUPERSTATE_TOKEN());
         uint256 ustbBalance = ustb.balanceOf(address(this));
 
         if (ustbBalance < ustbToRedeem) {
             revert("RVU: insufficient USTB balance");
-        }
-
-        (uint256 maxUstbAmount, ) = ustbRedemption.maxUstbRedemptionAmount();
-        if (ustbToRedeem > maxUstbAmount) {
-            revert("RVU: insufficient liquidity in redemption contract");
         }
 
         ustb.safeIncreaseAllowance(address(ustbRedemption), ustbToRedeem);
