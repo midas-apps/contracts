@@ -146,6 +146,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x164645fbC7220a3b4f8f5C6B473bCf1b6db146DD',
       redemptionVaultSwapper: '0x4BCfDA0A844B49dA8Bb19562EE52Cc385395001A',
     },
+    hypeUSD: {
+      token: '0xA48CfD53263ADe6abDb0ac75287Cc0d5A2EEE17F',
+      customFeed: '0x0f50b401509798F1919a4e8D38192F78734e49C0',
+      dataFeed: '0x3DE2e700d220928fF5180691004824d8Ad42F5d4',
+      depositVault: '0xd6FD5D4Fa64Fc7131e0ec3A4A53dC620A0FFc1Bc',
+      redemptionVaultSwapper: '0x7b83aA7b4CE8C7a021Cafc862a030129cEbf799d',
+    },
     TACmBTC: {
       token: '0x307267989A7bec3A57FD7fd96017C49803589Fd0',
       depositVault: '0xD1c5cBaBb367783FB6b40935c64512EF06cBB4f4',
@@ -540,6 +547,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x6Be2f55816efd0d91f52720f096006d63c366e98',
       redemptionVaultSwapper: '0x9aEBf5d6F9411BAc355021ddFbe9B2c756BDD358',
     },
+    mLIQUIDITY: {
+      token: '0x649f8698068ad143A7e18Ba9cb0Be112D5986AEb',
+      customFeed: '0xc470e9fC12A60F72C543516dC23de1F55C29E3D5',
+      dataFeed: '0xc4fB4B8641ac466758Dc05276c00EB570F587ED1',
+      depositVault: '0x15A4c3E5a3e955A81A570e617D83680f57EE3862',
+      redemptionVault: '0x30aCCEeDFf97A3fe11aB52EE7425Af4589338C06',
+    },
     hypeETH: {
       token: '0x8Cf94465f8Db8A273673dFe950Bd1c9e34442aAB',
       customFeed: '0xc665f0C1d2EADbCBb65bE08a05E0B9a170b9a0b4',
@@ -553,6 +567,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xa7eA8D927f99F0d1Ab2c8006Df40fa7c437D8606',
       depositVault: '0x3d09a1c088C6b8B971FF5F5D29C79C4cDbF45b04',
       redemptionVaultSwapper: '0xF0C91Bbae7f67c4e595d723ef5FB38B59F2008cf',
+    },
+    hypeUSD: {
+      token: '0x48E284D0729EB1925066307072758d95dbBb49C4',
+      customFeed: '0x8c7400777bD4B05864f21c446f6a3e996BC047d2',
+      dataFeed: '0x39F0507060c12bB88cb68a496544011D2f341455',
+      depositVault: '0x2ddC913e4C7674A7E42c55db48a92c47158E91C6',
+      redemptionVaultSwapper: '0x5572Eb7f4fB679Ff6A99203f12B0484dC1062d78',
     },
     accessControl: '0xbf25b58cB8DfaD688F7BcB2b87D71C23A6600AaC',
   },
