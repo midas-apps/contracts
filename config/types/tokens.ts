@@ -30,6 +30,9 @@ export enum PaymentTokenNameEnum {
   usds = 'usds',
   usde = 'usde',
   usr = 'usr',
+  stone = 'stone',
+  weth = 'weth',
+  cmeth = 'cmeth',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;

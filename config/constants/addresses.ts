@@ -65,6 +65,21 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         token: '0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b',
         dataFeed: '0x1C04A3f615CD594088482be77df6e077EEebF085',
       },
+      stone: {
+        aggregator: '0x057f30e63A69175C69A4Af5656b8C9EE647De3D0',
+        token: '0x7122985656e38bdc0302db86685bb972b145bd3c',
+        dataFeed: '0x7188756da3D736C3b2acBd1935a1AdB64E5D5B56',
+      },
+      weth: {
+        token: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+        aggregator: '0xfE052C2447753f448d656450e675Df59b251b1e1',
+        dataFeed: '0x4CFd862d774356AB825B503b4AA2e6F95bC76Fd3',
+      },
+      cmeth: {
+        token: '0xe6829d9a7ee3040e1276fa75293bde931859e8fa',
+        aggregator: '0xa59729aa4680019aD173e182D85B76c0D7dBAE9b',
+        dataFeed: '0x2A2bDBc40672684e3913b7C20950a9029aB75fB7',
+      },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     mTBILL: {

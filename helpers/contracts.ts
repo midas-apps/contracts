@@ -10,11 +10,9 @@ export type TokenContractNames = {
   token: string;
 };
 
-type CommonContractNames = Omit<
-  TokenContractNames,
-  'token' | 'customAggregator'
-> & {
+type CommonContractNames = Omit<TokenContractNames, 'token'> & {
   ac: string;
+  customAggregator: string;
 };
 
 export const contractNamesPrefixes: Record<MTokenName, string> = {
@@ -44,6 +42,7 @@ export const getCommonContractNames = (): CommonContractNames => {
     rvSwapper: 'RedemptionVaultWithSwapper',
     rvBuidl: 'RedemptionVaultWithBuidl',
     dataFeed: 'DataFeed',
+    customAggregator: 'CustomAggregatorV3CompatibleFeed',
   };
 };
 

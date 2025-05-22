@@ -72,6 +72,33 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           maxAnswer: parseUnits('1.003', 8),
         },
       },
+      stone: {
+        dataFeed: {
+          healthyDiff: 6 * 60 * 60,
+          minAnswer: parseUnits('1.0425108', 18),
+          maxAnswer: parseUnits('1.081161', 18),
+        },
+      },
+      weth: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        customAggregator: {
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          description: 'WETH/ETH',
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+      },
+      cmeth: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('1.06405951', 18),
+          maxAnswer: parseUnits('1.10350861', 18),
+        },
+      },
     },
     [chainIds.base]: {
       usdc: {
