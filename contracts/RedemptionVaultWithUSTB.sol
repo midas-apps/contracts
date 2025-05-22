@@ -152,12 +152,12 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
         address tokenOut,
         uint256 amountTokenOut
     ) internal {
-        require(tokenOut == ustbRedemption.USDC(), "RVU: invalid token");
-
         uint256 contractBalanceTokenOut = IERC20(tokenOut).balanceOf(
             address(this)
         );
         if (contractBalanceTokenOut >= amountTokenOut) return;
+
+        require(tokenOut == ustbRedemption.USDC(), "RVU: invalid token");
 
         uint256 missingAmount = amountTokenOut - contractBalanceTokenOut;
         (uint256 ustbToRedeem, ) = ustbRedemption.calculateUstbIn(
