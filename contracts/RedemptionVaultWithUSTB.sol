@@ -11,15 +11,22 @@ import "./libraries/DecimalsCorrectionLibrary.sol";
 
 /**
  * @title RedemptionVaultWithUSTB
- * @notice Smart contract that handles mTBILL redemptions using USTB
+ * @notice Smart contract that handles redemptions using USTB
  * @author RedDuck Software
  */
 contract RedemptionVaultWithUSTB is RedemptionVault {
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
 
+    /**
+     * @notice USTB redemption contract interface
+     * @dev Used to handle USTB redemptions when vault has insufficient USDC
+     */
     IUSTBRedemption public ustbRedemption;
 
+    /**
+     * @dev leaving a storage gap for futures updates
+     */
     uint256[50] private __gap;
 
     /**
@@ -63,10 +70,10 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
     }
 
     /**
-     * @notice redeem mToken to USDC if daily limit and allowance not exceeded
-     * If contract doesn't have enough USDC, USTB redemption flow will be triggered
+     * @notice Redeem mToken to the selected payment token if daily limit and allowance are not exceeded.
+     * If USDC is the payment token and the contract doesn't have enough USDC, the USTB redemption flow will be triggered for the missing amount.
      * Burns mToken from the user.
-     * Transfers fee in mToken to feeReceiver
+     * Transfers fee in mToken to feeReceiver.
      * Transfers tokenOut to user.
      * @param tokenOut token out address
      * @param amountMTokenIn amount of mToken to redeem
