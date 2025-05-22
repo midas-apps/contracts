@@ -9,14 +9,6 @@ import "../interfaces/ustb/IRedemption.sol";
 contract USTBRedemptionMock {
     using SafeERC20 for IERC20;
 
-    event RedeemV2(
-        address indexed redeemer,
-        address indexed to,
-        uint256 superstateTokenInAmount,
-        uint256 usdcOutAmountAfterFee,
-        uint256 usdcOutAmountBeforeFee
-    );
-
     uint256 public constant USDC_DECIMALS = 8; // Mock to match our tests
     uint256 public constant USDC_PRECISION = 10 ** USDC_DECIMALS;
     uint256 public constant SUPERSTATE_TOKEN_DECIMALS = 6;
@@ -157,14 +149,6 @@ contract USTBRedemptionMock {
             value: superstateTokenInAmount
         });
         USDC.safeTransfer({to: to, value: usdcOutAmountAfterFee});
-
-        emit RedeemV2({
-            redeemer: msg.sender,
-            to: to,
-            superstateTokenInAmount: superstateTokenInAmount,
-            usdcOutAmountAfterFee: usdcOutAmountAfterFee,
-            usdcOutAmountBeforeFee: usdcOutAmountBeforeFee
-        });
     }
 
     function withdraw(address _token, address to, uint256 amount) external {

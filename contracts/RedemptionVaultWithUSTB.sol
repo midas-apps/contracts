@@ -6,7 +6,7 @@ import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgrade
 
 import "./RedemptionVault.sol";
 
-import "./interfaces/ustb/IRedemption.sol";
+import "./interfaces/ustb/IUSTBRedemption.sol";
 import "./libraries/DecimalsCorrectionLibrary.sol";
 
 /**
@@ -18,7 +18,7 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
 
-    IRedemption public ustbRedemption;
+    IUSTBRedemption public ustbRedemption;
 
     uint256[50] private __gap;
 
@@ -59,7 +59,7 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
             _requestRedeemer
         );
         _validateAddress(_ustbRedemption, false);
-        ustbRedemption = IRedemption(_ustbRedemption);
+        ustbRedemption = IUSTBRedemption(_ustbRedemption);
     }
 
     /**

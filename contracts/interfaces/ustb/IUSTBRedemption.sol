@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-interface IRedemption {
-    error InsufficientBalance();
-
+interface IUSTBRedemption {
     function USDC() external view returns (address);
 
     function SUPERSTATE_TOKEN() external view returns (address);
