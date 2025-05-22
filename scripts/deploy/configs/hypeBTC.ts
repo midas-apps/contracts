@@ -10,7 +10,7 @@ export const hypeBTCDeploymentConfig: DeploymentConfig = {
       minAnswer: parseUnits('0.1', 8),
       maxAnswer: parseUnits('1000', 8),
       maxAnswerDeviation: parseUnits('0.4', 8),
-      description: 'hypeBTC/USD',
+      description: 'hypeBTC/BTC',
     },
     dataFeed: {
       minAnswer: parseUnits('0.1', 8),

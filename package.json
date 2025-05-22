@@ -34,6 +34,7 @@
     "deploy:ac": "yarn hh:run:script scripts/deploy/deploy_AccessControl.ts",
     "deploy:token": "yarn hh:run:script scripts/deploy/deploy_Token.ts",
     "deploy:aggregator": "yarn hh:run:script scripts/deploy/deploy_CustomAggregator.ts",
+    "deploy:aggregator:ptoken": "yarn hh:run:script scripts/deploy/deploy_PaymentToken_CustomAggregator.ts",
     "deploy:feed": "yarn hh:run:script scripts/deploy/deploy_DataFeed.ts",
     "deploy:feed:ptoken": "yarn hh:run:script scripts/deploy/deploy_PaymentToken_DataFeed.ts",
     "deploy:dv": "yarn hh:run:script scripts/deploy/deploy_DV.ts",

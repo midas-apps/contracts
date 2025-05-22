@@ -46,6 +46,7 @@ export type PaymentTokenDeploymentConfig = {
         PaymentTokenName,
         {
           dataFeed?: DeployDataFeedConfig;
+          customAggregator?: DeployCustomAggregatorConfig;
         }
       >
     >

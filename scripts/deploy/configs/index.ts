@@ -1,6 +1,7 @@
 import { hbUSDTDeploymentConfig } from './hbUSDT';
 import { hypeBTCDeploymentConfig } from './hypeBTC';
 import { hypeETHDeploymentConfig } from './hypeETH';
+import { hypeUSDDeploymentConfig } from './hypeUSD';
 import { mBASISDeploymentConfig } from './mBASIS';
 import { mBTCDeploymentConfig } from './mBTC';
 import { mEDGEDeploymentConfig } from './mEDGE';
@@ -17,7 +18,7 @@ import { TACmMEVDeploymentConfig } from './tac/TACmMEV';
 import { MTokenName } from '../../../config';
 import { DeploymentConfig } from '../common/types';
 
-export const configsPerToken: Partial<Record<MTokenName, DeploymentConfig>> = {
+export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mTBILL: mTBILLDeploymentConfig,
   mLIQUIDITY: mLIQUIDITYDeploymentConfig,
   mBASIS: mBASISDeploymentConfig,
@@ -33,4 +34,5 @@ export const configsPerToken: Partial<Record<MTokenName, DeploymentConfig>> = {
   TACmMEV: TACmMEVDeploymentConfig,
   hypeETH: hypeETHDeploymentConfig,
   hypeBTC: hypeBTCDeploymentConfig,
+  hypeUSD: hypeUSDDeploymentConfig,
 };
