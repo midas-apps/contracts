@@ -7,7 +7,7 @@ import {
   DecimalsCorrectionTester,
   // eslint-disable-next-line camelcase
   DecimalsCorrectionTester__factory,
-} from '../typechain-types';
+} from '../../typechain-types';
 
 describe('DecimalsCorrectionLibrary', function () {
   let decimalsCorrection: DecimalsCorrectionTester;

@@ -155,10 +155,9 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
      * @param tokenOut tokenOut address
      * @param amountTokenOut amount of tokenOut needed
      */
-    function _checkAndRedeemUSTB(
-        address tokenOut,
-        uint256 amountTokenOut
-    ) internal {
+    function _checkAndRedeemUSTB(address tokenOut, uint256 amountTokenOut)
+        internal
+    {
         uint256 contractBalanceTokenOut = IERC20(tokenOut).balanceOf(
             address(this)
         );

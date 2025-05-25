@@ -1,3 +1,4 @@
+// solhint-disable
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
@@ -10,12 +11,12 @@ contract USTBRedemptionMock {
     using SafeERC20 for IERC20;
 
     uint256 public constant USDC_DECIMALS = 8; // Mock to match our tests
-    uint256 public constant USDC_PRECISION = 10 ** USDC_DECIMALS;
+    uint256 public constant USDC_PRECISION = 10**USDC_DECIMALS;
     uint256 public constant SUPERSTATE_TOKEN_DECIMALS = 6;
     uint256 public constant SUPERSTATE_TOKEN_PRECISION =
-        10 ** SUPERSTATE_TOKEN_DECIMALS;
+        10**SUPERSTATE_TOKEN_DECIMALS;
     uint256 public constant FEE_DENOMINATOR = 10_000;
-    uint256 public constant CHAINLINK_FEED_PRECISION = 10 ** 8;
+    uint256 public constant CHAINLINK_FEED_PRECISION = 10**8;
 
     IERC20 public immutable SUPERSTATE_TOKEN;
     IERC20 public immutable USDC;
@@ -41,9 +42,7 @@ contract USTBRedemptionMock {
         return (amount * redemptionFee) / FEE_DENOMINATOR;
     }
 
-    function calculateUstbIn(
-        uint256 usdcOutAmount
-    )
+    function calculateUstbIn(uint256 usdcOutAmount)
         public
         view
         returns (uint256 ustbInAmount, uint256 usdPerUstbChainlinkRaw)
@@ -70,9 +69,7 @@ contract USTBRedemptionMock {
         ustbInAmount = (numerator + denominator - 1) / denominator;
     }
 
-    function calculateUsdcOut(
-        uint256 superstateTokenInAmount
-    )
+    function calculateUsdcOut(uint256 superstateTokenInAmount)
         external
         view
         returns (uint256 usdcOutAmountAfterFee, uint256 usdPerUstbChainlinkRaw)
@@ -82,9 +79,7 @@ contract USTBRedemptionMock {
         );
     }
 
-    function _calculateUsdcOut(
-        uint256 superstateTokenInAmount
-    )
+    function _calculateUsdcOut(uint256 superstateTokenInAmount)
         internal
         view
         returns (
@@ -134,11 +129,9 @@ contract USTBRedemptionMock {
     function _redeem(address to, uint256 superstateTokenInAmount) internal {
         _requireNotPaused();
 
-        (
-            uint256 usdcOutAmountAfterFee,
-            uint256 usdcOutAmountBeforeFee,
-
-        ) = _calculateUsdcOut(superstateTokenInAmount);
+        (uint256 usdcOutAmountAfterFee, , ) = _calculateUsdcOut(
+            superstateTokenInAmount
+        );
 
         if (USDC.balanceOf(address(this)) < usdcOutAmountAfterFee)
             revert("USTBRedemptionMock: InsufficientBalance");
@@ -151,7 +144,11 @@ contract USTBRedemptionMock {
         USDC.safeTransfer({to: to, value: usdcOutAmountAfterFee});
     }
 
-    function withdraw(address _token, address to, uint256 amount) external {
+    function withdraw(
+        address _token,
+        address to,
+        uint256 amount
+    ) external {
         if (amount == 0) revert("USTBRedemptionMock: BadArgs");
 
         IERC20 token = IERC20(_token);
@@ -165,7 +162,11 @@ contract USTBRedemptionMock {
     function _getChainlinkPrice()
         internal
         view
-        returns (bool _isBadData, uint256 _updatedAt, uint256 _price)
+        returns (
+            bool _isBadData,
+            uint256 _updatedAt,
+            uint256 _price
+        )
     {
         return (_chainlinkIsBadData, block.timestamp, _chainlinkPrice);
     }
@@ -187,9 +188,9 @@ contract USTBRedemptionMock {
         _isPaused = paused;
     }
 
-    function setMaxUstbRedemptionAmount(
-        uint256 maxUstbRedemptionAmount_
-    ) external {
+    function setMaxUstbRedemptionAmount(uint256 maxUstbRedemptionAmount_)
+        external
+    {
         _maxUstbRedemptionAmount = maxUstbRedemptionAmount_;
     }
 }
