@@ -184,22 +184,11 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         smallUSTBAmount,
       );
 
-      // Should revert due to insufficient USTB balance
-      // await expect(
-      //   redemptionVaultWithUSTB
-      //     .connect(testUser)
-      //     .redeemInstant(usdc.address, mTBILLAmount, 0),
-      // ).to.be.rejected;
-
-      try {
-        const tx = await redemptionVaultWithUSTB
+      await expect(
+        redemptionVaultWithUSTB
           .connect(testUser)
-          .redeemInstant(usdc.address, mTBILLAmount, 0);
-        const receipt = await tx.wait();
-        console.log('receipt ==>', receipt);
-      } catch (error) {
-        console.log('error ==>', (error as Error).message);
-      }
+          .redeemInstant(usdc.address, mTBILLAmount, 0),
+      ).rejectedWith('RVU: insufficient USTB balance');
     });
   });
 });

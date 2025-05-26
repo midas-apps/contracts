@@ -3,6 +3,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers, network } from 'hardhat';
 
+import { rpcUrls } from '../../../config';
 import { getAllRoles } from '../../../helpers/roles';
 import {
   MidasAccessControlTest,
@@ -59,12 +60,13 @@ export async function ustbRedemptionFixture(): Promise<DeployedContracts> {
     params: [
       {
         forking: {
-          jsonRpcUrl: process.env.MAINNET_RPC_URL,
+          jsonRpcUrl: rpcUrls.main,
           blockNumber: FORK_BLOCK_NUMBER,
         },
       },
     ],
   });
+  await network.provider.send('evm_setAutomine', [true]);
 
   const [
     owner,

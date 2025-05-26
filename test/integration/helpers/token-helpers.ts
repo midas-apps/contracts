@@ -85,6 +85,11 @@ async function setupUSTBAllowlist(
     // Set entity ID
     const currentEntityId = await allowListV2.addressEntityIds(addr);
     if (currentEntityId.toNumber() !== entityId) {
+      if (currentEntityId.toNumber() !== 0) {
+        await allowListV2
+          .connect(allowListOwner)
+          .setEntityIdForAddress(0, addr);
+      }
       await allowListV2
         .connect(allowListOwner)
         .setEntityIdForAddress(entityId, addr);
