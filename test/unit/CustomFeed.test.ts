@@ -3,14 +3,6 @@ import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import { acErrors } from './common/ac.helpers';
-import {
-  calculatePriceDiviation,
-  setRoundData,
-  setRoundDataSafe,
-} from './common/custom-feed.helpers';
-import { defaultDeploy } from './common/fixtures';
-
 import {
   // eslint-disable-next-line camelcase
   CustomAggregatorV3CompatibleFeedTester__factory,
@@ -18,7 +10,14 @@ import {
   MBasisCustomAggregatorFeed__factory,
   // eslint-disable-next-line camelcase
   MTBillCustomAggregatorFeed__factory,
-} from '../typechain-types';
+} from '../../typechain-types';
+import { acErrors } from '../common/ac.helpers';
+import {
+  calculatePriceDiviation,
+  setRoundData,
+  setRoundDataSafe,
+} from '../common/custom-feed.helpers';
+import { defaultDeploy } from '../common/fixtures';
 
 describe('CustomAggregatorV3CompatibleFeed', function () {
   it('deployment', async () => {

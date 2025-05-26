@@ -3,14 +3,19 @@ import { expect } from 'chai';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
-import { acErrors, blackList } from './common/ac.helpers';
+import { encodeFnSelector } from '../../helpers/utils';
+import {
+  // eslint-disable-next-line camelcase
+  RedemptionVaultWithSwapperTest__factory,
+} from '../../typechain-types';
+import { acErrors, blackList } from '../common/ac.helpers';
 import {
   approveBase18,
   mintToken,
   pauseVaultFn,
-} from './common/common.helpers';
-import { setRoundData } from './common/data-feed.helpers';
-import { defaultDeploy } from './common/fixtures';
+} from '../common/common.helpers';
+import { setRoundData } from '../common/data-feed.helpers';
+import { defaultDeploy } from '../common/fixtures';
 import {
   addPaymentTokenTest,
   changeTokenAllowanceTest,
@@ -18,19 +23,13 @@ import {
   setInstantDailyLimitTest,
   setMinAmountTest,
   changeTokenFeeTest,
-} from './common/manageable-vault.helpers';
+} from '../common/manageable-vault.helpers';
 import {
   redeemInstantWithSwapperTest,
   setLiquidityProviderTest,
   setSwapperVaultTest,
-} from './common/redemption-vault-swapper.helpers';
-import { sanctionUser } from './common/with-sanctions-list.helpers';
-
-import { encodeFnSelector } from '../helpers/utils';
-import {
-  // eslint-disable-next-line camelcase
-  RedemptionVaultWithSwapperTest__factory,
-} from '../typechain-types';
+} from '../common/redemption-vault-swapper.helpers';
+import { sanctionUser } from '../common/with-sanctions-list.helpers';
 
 describe('MBasisRedemptionVaultWithSwapper', () => {
   describe('deployment', () => {

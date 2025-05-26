@@ -11,9 +11,11 @@ import {
   ERC20,
   // eslint-disable-next-line camelcase
   ERC20__factory,
+  IERC20,
   RedemptionVault,
   RedemptionVaultWIthBUIDL,
   RedemptionVaultWithSwapper,
+  RedemptionVaultWithUSTB,
 } from '../../typechain-types';
 
 type CommonParamsChangePaymentToken = {
@@ -21,7 +23,8 @@ type CommonParamsChangePaymentToken = {
     | DepositVault
     | RedemptionVault
     | RedemptionVaultWIthBUIDL
-    | RedemptionVaultWithSwapper;
+    | RedemptionVaultWithSwapper
+    | RedemptionVaultWithUSTB;
   owner: SignerWithAddress;
 };
 type CommonParams = Pick<
@@ -385,7 +388,7 @@ export const removePaymentTokenTest = async (
 
 export const withdrawTest = async (
   { vault, owner }: CommonParamsChangePaymentToken,
-  token: ERC20 | string,
+  token: IERC20 | ERC20 | string,
   amount: BigNumberish,
   withdrawTo: Account,
   opt?: OptionalCommonParams,

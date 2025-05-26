@@ -4,15 +4,24 @@ import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import { acErrors, blackList, greenList } from './common/ac.helpers';
+import { encodeFnSelector } from '../../helpers/utils';
+import {
+  // eslint-disable-next-line camelcase
+  ManageableVaultTester__factory,
+  // eslint-disable-next-line camelcase
+  MBasisRedemptionVault__factory,
+  // eslint-disable-next-line camelcase
+  RedemptionVaultTest__factory,
+} from '../../typechain-types';
+import { acErrors, blackList, greenList } from '../common/ac.helpers';
 import {
   approveBase18,
   mintToken,
   pauseVault,
   pauseVaultFn,
-} from './common/common.helpers';
-import { setRoundData } from './common/data-feed.helpers';
-import { defaultDeploy } from './common/fixtures';
+} from '../common/common.helpers';
+import { setRoundData } from '../common/data-feed.helpers';
+import { defaultDeploy } from '../common/fixtures';
 import {
   addPaymentTokenTest,
   addWaivedFeeAccountTest,
@@ -27,7 +36,7 @@ import {
   changeTokenFeeTest,
   setTokensReceiverTest,
   setFeeReceiverTest,
-} from './common/manageable-vault.helpers';
+} from '../common/manageable-vault.helpers';
 import {
   approveRedeemRequestTest,
   redeemFiatRequestTest,
@@ -39,18 +48,8 @@ import {
   setFiatFlatFeeTest,
   setMinFiatRedeemAmountTest,
   setRequestRedeemerTest,
-} from './common/redemption-vault.helpers';
-import { sanctionUser } from './common/with-sanctions-list.helpers';
-
-import { encodeFnSelector } from '../helpers/utils';
-import {
-  // eslint-disable-next-line camelcase
-  ManageableVaultTester__factory,
-  // eslint-disable-next-line camelcase
-  MBasisRedemptionVault__factory,
-  // eslint-disable-next-line camelcase
-  RedemptionVaultTest__factory,
-} from '../typechain-types';
+} from '../common/redemption-vault.helpers';
+import { sanctionUser } from '../common/with-sanctions-list.helpers';
 
 describe('RedemptionVault', function () {
   it('deployment', async () => {

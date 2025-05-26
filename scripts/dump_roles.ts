@@ -19,7 +19,7 @@ const func = async () => {
     (prev, [mToken, roles]) => {
       const mdRows = Object.entries(roles).map(([role, value]) => [
         formatKey(role),
-        formatValue(value),
+        formatValue(value as string),
       ]);
 
       prev += `### ${mToken} Roles\n\n`;

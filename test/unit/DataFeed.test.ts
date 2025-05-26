@@ -3,14 +3,13 @@ import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import { acErrors } from './common/ac.helpers';
-import { setRoundData } from './common/data-feed.helpers';
-import { defaultDeploy } from './common/fixtures';
-
 import {
   // eslint-disable-next-line camelcase
   DataFeedTest__factory,
-} from '../typechain-types';
+} from '../../typechain-types';
+import { acErrors } from '../common/ac.helpers';
+import { setRoundData } from '../common/data-feed.helpers';
+import { defaultDeploy } from '../common/fixtures';
 
 describe('DataFeed', function () {
   it('deployment', async () => {

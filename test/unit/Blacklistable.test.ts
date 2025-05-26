@@ -1,13 +1,12 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 
-import { acErrors, blackList, unBlackList } from './common/ac.helpers';
-import { defaultDeploy } from './common/fixtures';
-
 import {
   // eslint-disable-next-line camelcase
   BlacklistableTester__factory,
-} from '../typechain-types';
+} from '../../typechain-types';
+import { acErrors, blackList, unBlackList } from '../common/ac.helpers';
+import { defaultDeploy } from '../common/fixtures';
 
 describe('Blacklistable', function () {
   it('deployment', async () => {

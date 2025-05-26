@@ -4,23 +4,34 @@ import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import { acErrors, blackList, greenList } from './common/ac.helpers';
+import { encodeFnSelector } from '../../helpers/utils';
+import {
+  // eslint-disable-next-line camelcase
+  DepositVaultTest__factory,
+  // eslint-disable-next-line camelcase
+  EUsdDepositVault__factory,
+  // eslint-disable-next-line camelcase
+  ManageableVaultTester__factory,
+  // eslint-disable-next-line camelcase
+  MBasisDepositVault__factory,
+} from '../../typechain-types';
+import { acErrors, blackList, greenList } from '../common/ac.helpers';
 import {
   approveBase18,
   mintToken,
   pauseVault,
   pauseVaultFn,
-} from './common/common.helpers';
-import { setRoundData } from './common/data-feed.helpers';
+} from '../common/common.helpers';
+import { setRoundData } from '../common/data-feed.helpers';
 import {
   approveRequestTest,
   depositInstantTest,
   depositRequestTest,
   rejectRequestTest,
   safeApproveRequestTest,
-} from './common/deposit-vault.helpers';
-import { defaultDeploy } from './common/fixtures';
-import { greenListEnable } from './common/greenlist.helpers';
+} from '../common/deposit-vault.helpers';
+import { defaultDeploy } from '../common/fixtures';
+import { greenListEnable } from '../common/greenlist.helpers';
 import {
   addPaymentTokenTest,
   addWaivedFeeAccountTest,
@@ -34,20 +45,8 @@ import {
   setVariabilityToleranceTest,
   withdrawTest,
   changeTokenFeeTest,
-} from './common/manageable-vault.helpers';
-import { sanctionUser } from './common/with-sanctions-list.helpers';
-
-import { encodeFnSelector } from '../helpers/utils';
-import {
-  // eslint-disable-next-line camelcase
-  DepositVaultTest__factory,
-  // eslint-disable-next-line camelcase
-  EUsdDepositVault__factory,
-  // eslint-disable-next-line camelcase
-  ManageableVaultTester__factory,
-  // eslint-disable-next-line camelcase
-  MBasisDepositVault__factory,
-} from '../typechain-types';
+} from '../common/manageable-vault.helpers';
+import { sanctionUser } from '../common/with-sanctions-list.helpers';
 
 describe('DepositVault', function () {
   it('deployment', async () => {
