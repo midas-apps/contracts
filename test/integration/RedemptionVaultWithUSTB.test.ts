@@ -43,7 +43,6 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
       );
 
       // Get balances before
-      const userUSDCBefore = await usdc.balanceOf(testUser.address);
       const vaultUSDCBefore = await usdc.balanceOf(
         redemptionVaultWithUSTB.address,
       );
@@ -127,7 +126,6 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
       const vaultUSTBBefore = await ustbToken.balanceOf(
         redemptionVaultWithUSTB.address,
       );
-      const userUSDCBefore = await usdc.balanceOf(testUser.address);
 
       // Perform redemption
       const result = await redeemInstantWithUstbTest(
@@ -144,11 +142,7 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
       );
 
       // Check that USTB was used
-      const vaultUSTBAfter = await ustbToken.balanceOf(
-        redemptionVaultWithUSTB.address,
-      );
-      const ustbUsed = vaultUSTBBefore.sub(vaultUSTBAfter);
-      expect(ustbUsed).to.be.gt(0);
+      expect(result?.ustbUsed).to.be.gt(0);
 
       // Verify user received USDC
       expect(result?.userUSDCReceived).to.equal(parseUnits('4950', 6));
@@ -167,7 +161,6 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         redemptionVaultWithUSTB,
         usdc,
         ustbToken,
-        vaultAdmin,
         ustbWhale,
         mTokenToUsdDataFeed,
       } = await loadFixture(ustbRedemptionVaultFixture);
