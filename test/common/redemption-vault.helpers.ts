@@ -12,6 +12,7 @@ import {
   ERC20,
   // eslint-disable-next-line camelcase
   ERC20__factory,
+  IERC20,
   RedemptionVault,
   RedemptionVaultWIthBUIDL,
   RedemptionVaultWithSwapper,
@@ -44,7 +45,7 @@ export const redeemInstantTest = async (
     waivedFee,
     minAmount,
   }: CommonParamsRedeem & { waivedFee?: boolean; minAmount?: BigNumberish },
-  tokenOut: ERC20 | string,
+  tokenOut: IERC20 | ERC20 | string,
   amountTBillIn: number,
   opt?: OptionalCommonParams,
 ) => {

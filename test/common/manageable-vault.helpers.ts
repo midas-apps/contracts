@@ -11,6 +11,7 @@ import {
   ERC20,
   // eslint-disable-next-line camelcase
   ERC20__factory,
+  IERC20,
   RedemptionVault,
   RedemptionVaultWIthBUIDL,
   RedemptionVaultWithSwapper,
@@ -387,7 +388,7 @@ export const removePaymentTokenTest = async (
 
 export const withdrawTest = async (
   { vault, owner }: CommonParamsChangePaymentToken,
-  token: ERC20 | string,
+  token: IERC20 | ERC20 | string,
   amount: BigNumberish,
   withdrawTo: Account,
   opt?: OptionalCommonParams,

@@ -3,7 +3,11 @@ import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 
 import { ustbRedemptionVaultFixture } from './fixtures/ustb.fixture';
-import { transferUSTBFromWhale } from './helpers/usdtb-helpers';
+import { transferUSTBFromWhale } from './helpers/ustb-helpers';
+
+import { mintToken, approveBase18 } from '../common/common.helpers';
+import { withdrawTest } from '../common/manageable-vault.helpers';
+import { redeemInstantTest } from '../common/redemption-vault.helpers';
 
 describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function () {
   this.timeout(120000);
@@ -17,9 +21,10 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         redemptionVaultWithUSTB,
         usdc,
         usdcWhale,
+        mTokenToUsdDataFeed,
       } = await loadFixture(ustbRedemptionVaultFixture);
 
-      const mTBILLAmount = parseUnits('1000', 18);
+      const mTBILLAmount = 1000;
 
       // Fund vault with USDC
       await usdc
@@ -27,12 +32,15 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         .transfer(redemptionVaultWithUSTB.address, parseUnits('10000', 6));
 
       // Mint mTBILL to user
-      await mTBILL.connect(owner).mint(testUser.address, mTBILLAmount);
+      await mintToken(mTBILL, testUser, mTBILLAmount);
 
       // Approve vault
-      await mTBILL
-        .connect(testUser)
-        .approve(redemptionVaultWithUSTB.address, mTBILLAmount);
+      await approveBase18(
+        testUser,
+        mTBILL,
+        redemptionVaultWithUSTB,
+        mTBILLAmount,
+      );
 
       // Get balances before
       const userUSDCBefore = await usdc.balanceOf(testUser.address);
@@ -41,11 +49,17 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
       );
 
       // Perform redemption
-      const tx = await redemptionVaultWithUSTB
-        .connect(testUser)
-        .redeemInstant(usdc.address, mTBILLAmount, 0);
-
-      await tx.wait();
+      await redeemInstantTest(
+        {
+          redemptionVault: redemptionVaultWithUSTB,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        usdc,
+        mTBILLAmount,
+        { from: testUser },
+      );
 
       // Check balances after
       const userUSDCAfter = await usdc.balanceOf(testUser.address);
@@ -79,9 +93,10 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         ustbWhale,
         usdcWhale,
         redemptionIdle,
+        mTokenToUsdDataFeed,
       } = await loadFixture(ustbRedemptionVaultFixture);
 
-      const mTBILLAmount = parseUnits('5000', 18);
+      const mTBILLAmount = 5000;
 
       // Fund RedemptionIdle with USDC for USTB redemptions
       await usdc
@@ -102,12 +117,15 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
       );
 
       // Mint mTBILL to user
-      await mTBILL.connect(owner).mint(testUser.address, mTBILLAmount);
+      await mintToken(mTBILL, testUser, mTBILLAmount);
 
       // Approve vault
-      await mTBILL
-        .connect(testUser)
-        .approve(redemptionVaultWithUSTB.address, mTBILLAmount);
+      await approveBase18(
+        testUser,
+        mTBILL,
+        redemptionVaultWithUSTB,
+        mTBILLAmount,
+      );
 
       // Get balances before
       const vaultUSTBBefore = await ustbToken.balanceOf(
@@ -116,11 +134,17 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
       const userUSDCBefore = await usdc.balanceOf(testUser.address);
 
       // Perform redemption
-      const tx = await redemptionVaultWithUSTB
-        .connect(testUser)
-        .redeemInstant(usdc.address, mTBILLAmount, 0);
-
-      await tx.wait();
+      await redeemInstantTest(
+        {
+          redemptionVault: redemptionVaultWithUSTB,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        usdc,
+        mTBILLAmount,
+        { from: testUser },
+      );
 
       // Check that USTB was used
       const vaultUSTBAfter = await ustbToken.balanceOf(
@@ -150,13 +174,21 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         ustbToken,
         vaultAdmin,
         ustbWhale,
+        mTokenToUsdDataFeed,
       } = await loadFixture(ustbRedemptionVaultFixture);
 
-      const mTBILLAmount = parseUnits('100000000', 18); // 100 million mTBILL
-      await mTBILL.connect(owner).mint(testUser.address, mTBILLAmount);
-      await mTBILL
-        .connect(testUser)
-        .approve(redemptionVaultWithUSTB.address, mTBILLAmount);
+      const mTBILLAmount = 100000000; // 100 million mTBILL
+
+      // Mint mTBILL
+      await mintToken(mTBILL, testUser, mTBILLAmount);
+
+      // Approve
+      await approveBase18(
+        testUser,
+        mTBILL,
+        redemptionVaultWithUSTB,
+        mTBILLAmount,
+      );
 
       const vaultUSDC = await usdc.balanceOf(redemptionVaultWithUSTB.address);
       const vaultUSTB = await ustbToken.balanceOf(
@@ -164,15 +196,23 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
       );
 
       if (vaultUSDC.gt(0)) {
-        await redemptionVaultWithUSTB
-          .connect(vaultAdmin)
-          .withdrawToken(usdc.address, vaultUSDC, vaultAdmin.address);
+        await withdrawTest(
+          { vault: redemptionVaultWithUSTB, owner: vaultAdmin },
+          usdc,
+          vaultUSDC,
+          vaultAdmin,
+          { from: vaultAdmin },
+        );
       }
 
       if (vaultUSTB.gt(0)) {
-        await redemptionVaultWithUSTB
-          .connect(vaultAdmin)
-          .withdrawToken(ustbToken.address, vaultUSTB, vaultAdmin.address);
+        await withdrawTest(
+          { vault: redemptionVaultWithUSTB, owner: vaultAdmin },
+          ustbToken,
+          vaultUSTB,
+          vaultAdmin,
+          { from: vaultAdmin },
+        );
       }
 
       // Add a small amount of USTB that's insufficient for the large redemption
@@ -184,11 +224,20 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         smallUSTBAmount,
       );
 
-      await expect(
-        redemptionVaultWithUSTB
-          .connect(testUser)
-          .redeemInstant(usdc.address, mTBILLAmount, 0),
-      ).revertedWith('RVU: insufficient USTB balance');
+      await redeemInstantTest(
+        {
+          redemptionVault: redemptionVaultWithUSTB,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        usdc,
+        mTBILLAmount,
+        {
+          from: testUser,
+          revertMessage: 'RVU: insufficient USTB balance',
+        },
+      );
     });
   });
 });
