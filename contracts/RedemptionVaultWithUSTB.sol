@@ -19,7 +19,7 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
     using SafeERC20 for IERC20;
 
     /**
-     * @notice USTB redemption contract interface
+     * @notice USTB redemption contract address
      * @dev Used to handle USTB redemptions when vault has insufficient USDC
      */
     IUSTBRedemption public ustbRedemption;
@@ -39,8 +39,8 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
      * @param _variationTolerance percent of prices diviation 1% = 100
      * @param _minAmount basic min amount for operations
      * @param _fiatRedemptionInitParams params fiatAdditionalFee, fiatFlatFee, minFiatRedeemAmount
-     * @param _ustbRedemption USTB redemption contract address
      * @param _requestRedeemer address is designated for standard redemptions, allowing tokens to be pulled from this address
+     * @param _ustbRedemption USTB redemption contract address
      */
     function initialize(
         address _ac,
