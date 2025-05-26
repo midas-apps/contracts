@@ -2,8 +2,8 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 
-import { ustbRedemptionFixture } from './fixtures/ustb.fixture';
-import { transferFromWhaleWithPermissions } from './helpers/token-helpers';
+import { ustbRedemptionVaultFixture } from './fixtures/ustb.fixture';
+import { transferUSTBFromWhale } from './helpers/usdtb-helpers';
 
 describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function () {
   this.timeout(120000);
@@ -17,7 +17,7 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         redemptionVaultWithUSTB,
         usdc,
         usdcWhale,
-      } = await loadFixture(ustbRedemptionFixture);
+      } = await loadFixture(ustbRedemptionVaultFixture);
 
       const mTBILLAmount = parseUnits('1000', 18);
 
@@ -79,7 +79,7 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         ustbWhale,
         usdcWhale,
         redemptionIdle,
-      } = await loadFixture(ustbRedemptionFixture);
+      } = await loadFixture(ustbRedemptionVaultFixture);
 
       const mTBILLAmount = parseUnits('5000', 18);
 
@@ -94,7 +94,7 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         .transfer(redemptionVaultWithUSTB.address, parseUnits('1000', 6));
 
       // Fund vault with USTB
-      await transferFromWhaleWithPermissions(
+      await transferUSTBFromWhale(
         ustbToken,
         ustbWhale,
         redemptionVaultWithUSTB.address,
@@ -150,7 +150,7 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         ustbToken,
         vaultAdmin,
         ustbWhale,
-      } = await loadFixture(ustbRedemptionFixture);
+      } = await loadFixture(ustbRedemptionVaultFixture);
 
       const mTBILLAmount = parseUnits('100000000', 18); // 100 million mTBILL
       await mTBILL.connect(owner).mint(testUser.address, mTBILLAmount);
@@ -177,7 +177,7 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
 
       // Add a small amount of USTB that's insufficient for the large redemption
       const smallUSTBAmount = parseUnits('1000', 6); // Only 1000 USTB
-      await transferFromWhaleWithPermissions(
+      await transferUSTBFromWhale(
         ustbToken,
         ustbWhale,
         redemptionVaultWithUSTB.address,

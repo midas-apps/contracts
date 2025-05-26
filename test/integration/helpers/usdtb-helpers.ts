@@ -4,11 +4,11 @@ import { BigNumber } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers, network } from 'hardhat';
 
-import { MAINNET_ADDRESSES } from './mainnet-whale-addresses';
+import { MAINNET_ADDRESSES } from './mainnet-addresses';
 
 import { IERC20 } from '../../../typechain-types';
 
-export async function transferFromWhaleWithPermissions(
+export async function transferUSTBFromWhale(
   token: IERC20,
   whaleAddressOrSigner: string | SignerWithAddress,
   recipient: string,

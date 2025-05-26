@@ -10,38 +10,10 @@ import {
   MTBILLTest,
   RedemptionVaultWithUSTBTest,
   DataFeedTest,
-  IERC20,
-  ISuperstateToken,
-  IUSTBRedemption,
   AggregatorV3Mock,
 } from '../../../typechain-types';
 import { deployProxyContract } from '../../common/deploy.helpers';
-import {
-  FORK_BLOCK_NUMBER,
-  MAINNET_ADDRESSES,
-} from '../helpers/mainnet-whale-addresses';
-
-interface DeployedContracts {
-  accessControl: MidasAccessControlTest;
-  mTBILL: MTBILLTest;
-  dataFeed: DataFeedTest;
-  mTokenToUsdDataFeed: DataFeedTest;
-  mockedAggregator: AggregatorV3Mock;
-  mockedAggregatorMToken: AggregatorV3Mock;
-  redemptionVaultWithUSTB: RedemptionVaultWithUSTBTest;
-  usdc: IERC20;
-  ustbToken: ISuperstateToken;
-  redemptionIdle: IUSTBRedemption;
-  owner: SignerWithAddress;
-  tokensReceiver: SignerWithAddress;
-  feeReceiver: SignerWithAddress;
-  requestRedeemer: SignerWithAddress;
-  vaultAdmin: SignerWithAddress;
-  testUser: SignerWithAddress;
-  usdcWhale: SignerWithAddress;
-  ustbWhale: SignerWithAddress;
-  roles: ReturnType<typeof getAllRoles>;
-}
+import { MAINNET_ADDRESSES } from '../helpers/mainnet-addresses';
 
 async function impersonateAndFundAccount(
   address: string,
@@ -54,7 +26,10 @@ async function impersonateAndFundAccount(
   return ethers.getSigner(address);
 }
 
-export async function ustbRedemptionFixture(): Promise<DeployedContracts> {
+// Fork block number where we know all fixture related addresses have funds
+export const FORK_BLOCK_NUMBER = 22540000;
+
+export async function ustbRedemptionVaultFixture() {
   await network.provider.request({
     method: 'hardhat_reset',
     params: [
@@ -227,3 +202,7 @@ export async function ustbRedemptionFixture(): Promise<DeployedContracts> {
     roles: allRoles,
   };
 }
+
+export type DeployedContracts = Awaited<
+  ReturnType<typeof ustbRedemptionVaultFixture>
+>;

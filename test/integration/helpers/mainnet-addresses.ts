@@ -11,6 +11,3 @@ export const MAINNET_ADDRESSES = {
   USDC_WHALE: '0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503', // Binance
   USTB_WHALE: '0x5138D77d51dC57983e5A653CeA6e1C1aa9750A39', // Large USTB holder
 };
-
-// Fork block number where we know these addresses have funds
-export const FORK_BLOCK_NUMBER = 22540000; // Adjust based on your needs
