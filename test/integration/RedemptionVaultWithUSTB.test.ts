@@ -6,8 +6,7 @@ import { ustbRedemptionVaultFixture } from './fixtures/ustb.fixture';
 import { transferUSTBFromWhale } from './helpers/ustb-helpers';
 
 import { mintToken, approveBase18 } from '../common/common.helpers';
-import { withdrawTest } from '../common/manageable-vault.helpers';
-import { redeemInstantTest } from '../common/redemption-vault.helpers';
+import { redeemInstantWithUstbTest } from '../common/redemption-vault-ustb.helpers';
 
 describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function () {
   this.timeout(120000);
@@ -20,6 +19,7 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         mTBILL,
         redemptionVaultWithUSTB,
         usdc,
+        ustbToken,
         usdcWhale,
         mTokenToUsdDataFeed,
       } = await loadFixture(ustbRedemptionVaultFixture);
@@ -49,35 +49,31 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
       );
 
       // Perform redemption
-      await redeemInstantTest(
+      const result = await redeemInstantWithUstbTest(
         {
           redemptionVault: redemptionVaultWithUSTB,
           owner,
           mTBILL,
           mTokenToUsdDataFeed,
+          usdc,
+          ustbToken,
+          expectedUstbUsed: parseUnits('0', 6),
+          expectedUsdcUsed: parseUnits('990', 6), // 990 USDC (1000 - 1% fee)
         },
-        usdc,
         mTBILLAmount,
         { from: testUser },
       );
 
-      // Check balances after
-      const userUSDCAfter = await usdc.balanceOf(testUser.address);
-      const userMTBILLAfter = await mTBILL.balanceOf(testUser.address);
-      const vaultUSDCAfter = await usdc.balanceOf(
-        redemptionVaultWithUSTB.address,
-      );
-
       // Verify user received USDC (990 after 1% fee)
-      expect(userUSDCAfter.sub(userUSDCBefore)).to.equal(parseUnits('990', 6));
-
-      // Verify mTBILL was burned from user
-      expect(userMTBILLAfter).to.equal(0);
+      expect(result?.userUSDCReceived).to.equal(parseUnits('990', 6));
 
       // Verify vault USDC decreased
-      expect(vaultUSDCBefore.sub(vaultUSDCAfter)).to.equal(
+      expect(vaultUSDCBefore.sub(result?.vaultUSDCAfter ?? '0')).to.equal(
         parseUnits('990', 6),
       );
+
+      // Verify mTBILL was burned from user
+      expect(await mTBILL.balanceOf(testUser.address)).to.equal(0);
     });
   });
 
@@ -134,14 +130,15 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
       const userUSDCBefore = await usdc.balanceOf(testUser.address);
 
       // Perform redemption
-      await redeemInstantTest(
+      const result = await redeemInstantWithUstbTest(
         {
           redemptionVault: redemptionVaultWithUSTB,
           owner,
           mTBILL,
           mTokenToUsdDataFeed,
+          usdc,
+          ustbToken,
         },
-        usdc,
         mTBILLAmount,
         { from: testUser },
       );
@@ -151,15 +148,13 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         redemptionVaultWithUSTB.address,
       );
       const ustbUsed = vaultUSTBBefore.sub(vaultUSTBAfter);
-
       expect(ustbUsed).to.be.gt(0);
 
       // Verify user received USDC
-      const userUSDCAfter = await usdc.balanceOf(testUser.address);
-      const usdcReceived = userUSDCAfter.sub(userUSDCBefore);
+      expect(result?.userUSDCReceived).to.equal(parseUnits('4950', 6));
 
-      // Should receive 4950 USDC (5000 - 1% fee)
-      expect(usdcReceived).to.equal(parseUnits('4950', 6));
+      // Verify mTBILL was burned from user
+      expect(await mTBILL.balanceOf(testUser.address)).to.equal(0);
     });
   });
 
@@ -190,31 +185,6 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         mTBILLAmount,
       );
 
-      const vaultUSDC = await usdc.balanceOf(redemptionVaultWithUSTB.address);
-      const vaultUSTB = await ustbToken.balanceOf(
-        redemptionVaultWithUSTB.address,
-      );
-
-      if (vaultUSDC.gt(0)) {
-        await withdrawTest(
-          { vault: redemptionVaultWithUSTB, owner: vaultAdmin },
-          usdc,
-          vaultUSDC,
-          vaultAdmin,
-          { from: vaultAdmin },
-        );
-      }
-
-      if (vaultUSTB.gt(0)) {
-        await withdrawTest(
-          { vault: redemptionVaultWithUSTB, owner: vaultAdmin },
-          ustbToken,
-          vaultUSTB,
-          vaultAdmin,
-          { from: vaultAdmin },
-        );
-      }
-
       // Add a small amount of USTB that's insufficient for the large redemption
       const smallUSTBAmount = parseUnits('1000', 6); // Only 1000 USTB
       await transferUSTBFromWhale(
@@ -224,14 +194,15 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         smallUSTBAmount,
       );
 
-      await redeemInstantTest(
+      await redeemInstantWithUstbTest(
         {
           redemptionVault: redemptionVaultWithUSTB,
           owner,
           mTBILL,
           mTokenToUsdDataFeed,
+          usdc,
+          ustbToken,
         },
-        usdc,
         mTBILLAmount,
         {
           from: testUser,
