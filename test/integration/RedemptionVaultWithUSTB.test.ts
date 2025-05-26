@@ -188,7 +188,7 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         redemptionVaultWithUSTB
           .connect(testUser)
           .redeemInstant(usdc.address, mTBILLAmount, 0),
-      ).rejectedWith('RVU: insufficient USTB balance');
+      ).revertedWith('RVU: insufficient USTB balance');
     });
   });
 });
