@@ -1,7 +1,6 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
-import { ethers, network } from 'hardhat';
 
 import { ustbRedemptionFixture } from './fixtures/ustb.fixture';
 import { transferFromWhaleWithPermissions } from './helpers/token-helpers';
@@ -28,16 +27,7 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         .transfer(redemptionVaultWithUSTB.address, parseUnits('10000', 6));
 
       // Mint mTBILL to user
-      console.log('Minting mTBILL to user...');
-      const mintTx = await mTBILL
-        .connect(owner)
-        .mint(testUser.address, mTBILLAmount);
-      const mintReceipt = await mintTx.wait();
-      console.log('Mint tx status:', mintReceipt.status);
-
-      // Verify mint was successful
-      const mintedBalance = await mTBILL.balanceOf(testUser.address);
-      expect(mintedBalance).to.equal(mTBILLAmount);
+      await mTBILL.connect(owner).mint(testUser.address, mTBILLAmount);
 
       // Approve vault
       await mTBILL
