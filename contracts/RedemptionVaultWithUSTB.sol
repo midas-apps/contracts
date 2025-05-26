@@ -173,9 +173,7 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
         IERC20 ustb = IERC20(ustbRedemption.SUPERSTATE_TOKEN());
         uint256 ustbBalance = ustb.balanceOf(address(this));
 
-        if (ustbBalance < ustbToRedeem) {
-            revert("RVU: insufficient USTB balance");
-        }
+        require(ustbBalance >= ustbToRedeem, "RVU: insufficient USTB balance");
 
         ustb.safeIncreaseAllowance(address(ustbRedemption), ustbToRedeem);
         ustbRedemption.redeem(ustbToRedeem);
