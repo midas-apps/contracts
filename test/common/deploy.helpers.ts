@@ -14,11 +14,9 @@ export const deployProxyContract = async <
   initParams?: unknown[],
   initializer = 'initialize',
 ): Promise<TContract> => {
-  console.log(`[dpc] Deploying ${contractName}`);
   const factory = await ethers.getContractFactory(contractName);
   const impl = await factory.deploy();
   await impl.deployed();
-  console.log(`[dpc] Implementation deployed at: ${impl.address}`);
 
   const proxyFactory = await ethers.getContractFactory('ERC1967Proxy');
   const proxy = await proxyFactory.deploy(
@@ -26,7 +24,6 @@ export const deployProxyContract = async <
     factory.interface.encodeFunctionData(initializer, initParams),
   );
   await proxy.deployed();
-  console.log(`[dpc] Proxy deployed at: ${proxy.address}\n`);
 
   const attached = factory.attach(proxy.address) as TContract;
   return attached;
