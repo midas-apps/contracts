@@ -590,6 +590,27 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x2ddC913e4C7674A7E42c55db48a92c47158E91C6',
       redemptionVaultSwapper: '0x5572Eb7f4fB679Ff6A99203f12B0484dC1062d78',
     },
+    tUSDe: {
+      token: '0x091F974e277A19485B9A713AC768850bc5AF383b',
+      customFeed: '0xFb28042FA2Ab1752060C33D7F7c753348D0EF23E',
+      dataFeed: '0xeb6A96967549cA5DC8F96E2198b9F36933e10148',
+      depositVault: '0x1D9953C4E85e6d249520e8fF2b134E5dED875615',
+      redemptionVaultSwapper: '0xE3EEe3e0D2398799C884a47FC40C029C8e241852',
+    },
+    tETH: {
+      token: '0x7B9A4eE7C64d0f5593D3b6eA0bd98DF06578c151',
+      customFeed: '0xEcdFD5942eb5f7f16C612616E9B551adC7940270',
+      dataFeed: '0x3f5E04A7E8DE96955ef0774F29858D05c630a855',
+      depositVault: '0x906D241DF94CfCC7b0796C0841737d489B224A9d',
+      redemptionVaultSwapper: '0x48f42C2dfc8560Af244a5a2F5Ddba02F877ca724',
+    },
+    tBTC: {
+      token: '0x75515E49fC93e3EE157cF7581c4Edc3715754De9',
+      customFeed: '0xd0402B29d7BbAfeBbCeE32970cAC3A5234B8515d',
+      dataFeed: '0x3549f6936dafb87f456dca3A061Bc9225Ff44B3C',
+      depositVault: '0x807f2CF75EC43b11De43a529A0Dd9FEF754a9801',
+      redemptionVaultSwapper: '0x313C76eCd990B728681f29464978D5637Cb78164',
+    },
     accessControl: '0xbf25b58cB8DfaD688F7BcB2b87D71C23A6600AaC',
   },
   tacTestnet: {
