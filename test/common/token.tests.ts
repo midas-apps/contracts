@@ -94,6 +94,18 @@ const expectedTokenNameSymb: Record<
     name: 'Midas mLIQUIDITY',
     symbol: 'mLIQUIDITY',
   },
+  tUSDe: {
+    name: 'Terminal USDe',
+    symbol: 'tUSDe',
+  },
+  tBTC: {
+    name: 'Terminal WBTC',
+    symbol: 'tBTC',
+  },
+  tETH: {
+    name: 'Terminal WETH',
+    symbol: 'tETH',
+  },
 };
 
 export const tokenContractsTests = (token: MTokenName) => {
