@@ -13,7 +13,7 @@ import "../interfaces/IDataFeed.sol";
  * @notice AggregatorV3 compatible feed, where price is submitted manually by feed admins
  * @author RedDuck Software
  */
-abstract contract CustomAggregatorV3CompatibleFeed is
+contract CustomAggregatorV3CompatibleFeed is
     WithMidasAccessControl,
     AggregatorV3Interface
 {
@@ -207,7 +207,9 @@ abstract contract CustomAggregatorV3CompatibleFeed is
      * @dev describes a role, owner of which can update prices in this feed
      * @return role descriptor
      */
-    function feedAdminRole() public view virtual returns (bytes32);
+    function feedAdminRole() public view virtual returns (bytes32) {
+        return DEFAULT_ADMIN_ROLE;
+    }
 
     /**
      * @inheritdoc AggregatorV3Interface
