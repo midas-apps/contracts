@@ -60,4 +60,9 @@ export type NetworkDeploymentConfig = Record<
   }
 >;
 
+export type RvType =
+  | 'redemptionVault'
+  | 'redemptionVaultBuidl'
+  | 'redemptionVaultSwapper';
+
 export type DeployFunction = (hre: HardhatRuntimeEnvironment) => Promise<void>;
