@@ -161,6 +161,39 @@ All the roles for the Midas protocol smart contracts are listed below.
 | ***depositVaultAdmin*** | `0x7220536b5d20cb1a8c46de14f2477acabbe0406a3bb145148014db34f5320ca1` |
 | ***redemptionVaultAdmin*** | `0x7cc4d19b3d33bc058b66d70205654d56c5b97d2bfbb6db726b4853de3503e416` |
 
+### tETH Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0x5edd1d545b63c7a3e4b31117904b3d0f449bd898ba9c8f5477cf67ffda39f070` |
+| ***burner*** | `0x637157f6d06e6eb655f4cbaac065e147a7824d39111ea5e8033d5a258f903112` |
+| ***pauser*** | `0x22b95cd4d0cf3d6f05a146f09437a790fba650185360b5a262bf4bca8536d3c1` |
+| ***customFeedAdmin*** | `0x15a9a8831d7e86b8cacded60e5295dd3f73e83a49069ee92480fc811440c5c3e` |
+| ***depositVaultAdmin*** | `0xed5678b978fd67f3777524a00f27c79e5552efeca1f047f9e805a5dc7c2dadff` |
+| ***redemptionVaultAdmin*** | `0x7bd1951470f20c89a15b10ee03824a5ddb66ad1f15509a43080312e5afb004b7` |
+
+### tUSDe Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0x2be847b67574c2fd671886b27c0509f93e61da53dc84096f4174ebc8ea52e5d3` |
+| ***burner*** | `0xc083776a0ea9be162e9e17d8f0e0b9bcbea5268494899cf66c802358f658370d` |
+| ***pauser*** | `0x9417b4b2fdde57e15889a1a42ffaab97f7cd1492c76d8861d0dda28eb0f976ee` |
+| ***customFeedAdmin*** | `0x8b327b58b2c3abc1a461e6623e61b8b0404e1e91a4d9ca6e1af4bdf0bad2d4b9` |
+| ***depositVaultAdmin*** | `0x1cd832df82a54ef7800c554190a44c6835fb6308758d0426bf0e85d781b2f073` |
+| ***redemptionVaultAdmin*** | `0x32398e3056e30f5c1dd6941eafb112330604efa8280fcf2bf5ef4dbdeb136eba` |
+
+### tBTC Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0x01c914ff7b7832115abac519eebde0444fabfa3c596c8043f24f4acb24a07d76` |
+| ***burner*** | `0x8f109d1840fca924055964ad04bf767d9897705dcf101e4f300935d5eea72559` |
+| ***pauser*** | `0x9b7f20020eb5b9eb88f2cd4055ff87ee9bf9a70f6900dccd013202bb6c92ea00` |
+| ***customFeedAdmin*** | `0x49751bf2540718c600c491dd4da359346fb58d59d9f77d86299120a903126697` |
+| ***depositVaultAdmin*** | `0x9562e90a6c3b1619669a0d4c8c5f655585009190c4d3109c5377837bf98bff05` |
+| ***redemptionVaultAdmin*** | `0x01276c74fcbd62f81a3fba8e104829892f528bebcc43b3881d27774e716f4366` |
+
 ### TACmBTC Roles
 
 | Role Name | Role |

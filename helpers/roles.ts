@@ -17,12 +17,12 @@ const prefixes: Record<MTokenName, string> = {
   hypeETH: 'HYPE_ETH',
   hypeBTC: 'HYPE_BTC',
   hypeUSD: 'HYPE_USD',
-  TACmBTC: 'TAC_M_BTC',
-  TACmEDGE: 'TAC_M_EDGE',
-  TACmMEV: 'TAC_M_MEV',
   tETH: 'T_ETH',
   tUSDe: 'T_USDE',
   tBTC: 'T_BTC',
+  TACmBTC: 'TAC_M_BTC',
+  TACmEDGE: 'TAC_M_EDGE',
+  TACmMEV: 'TAC_M_MEV',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {
