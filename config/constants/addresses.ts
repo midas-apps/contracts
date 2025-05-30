@@ -91,7 +91,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         dataFeed: '0x6D233Cd3912FAFa6aDB872775Bf00C0D54cfF437',
       },
       usde: {
-        token: '0x4c9edd5852cd905f086c759e8383e09bff1e68b3F',
+        token: '0x4c9edd5852cd905f086c759e8383e09bff1e68b3',
         aggregator: '0xa569d910839Ae8865Da8F8e70FfFb0cBA869F961',
         dataFeed: '0xe7eCe9331f9B03638D17791bC46b8386960ad2D6',
       },
