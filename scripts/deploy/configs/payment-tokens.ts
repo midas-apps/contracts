@@ -99,6 +99,27 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           maxAnswer: parseUnits('1.10350861', 18),
         },
       },
+      usde: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+      susde: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('1.17454296', 18),
+          maxAnswer: parseUnits('1.3', 18),
+        },
+      },
+      weeth: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('1.06856921', 18),
+          maxAnswer: parseUnits('1.1', 18),
+        },
+      },
     },
     [chainIds.base]: {
       usdc: {

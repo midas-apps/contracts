@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-interface IMantleLspStaking {
-    function mETHToETH(uint256 mETHAmount) external view returns (uint256);
+interface IWrappedEEth {
+    function getRate() external view returns (uint256);
 }
 
 /**
- * @title ChainlinkAggregatorV3 compatible adapter for Mantle LSP Staking
- * @notice example https://etherscan.io/address/0xe3cBd06D7dadB3F4e6557bAb7EdD924CD1489E8f
+ * @title ChainlinkAggregatorV3 compatible adapter for Wrapped EEth
+ * @notice example https://etherscan.io/address/0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee
  */
-contract MantleLspStakingAdapter {
-    IMantleLspStaking public lspStaking;
+contract WrappedEEthAdapter {
+    IWrappedEEth public wrappedEEth;
 
-    constructor(address _lspStaking) {
-        lspStaking = IMantleLspStaking(_lspStaking);
+    constructor(address _wrappedEEth) {
+        wrappedEEth = IWrappedEEth(_wrappedEEth);
     }
 
     function decimals() external pure returns (uint8) {
@@ -21,8 +21,7 @@ contract MantleLspStakingAdapter {
     }
 
     function description() public pure returns (string memory) {
-        return
-            "A ChainlinkAggregatorV3 compatible adapter for Mantle LSP Staking";
+        return "A ChainlinkAggregatorV3 compatible adapter for Wrapped EEth";
     }
 
     function version() public pure returns (uint256) {
@@ -30,7 +29,7 @@ contract MantleLspStakingAdapter {
     }
 
     function latestAnswer() public view virtual returns (int256) {
-        return int256(lspStaking.mETHToETH(1e18));
+        return int256(wrappedEEth.getRate());
     }
 
     function latestTimestamp() public view returns (uint256) {
@@ -43,10 +42,18 @@ contract MantleLspStakingAdapter {
         return latestTimestamp();
     }
 
+    /*
+     * @notice There is no way to access historical answer, so
+     this will always revert
+     */
     function getAnswer(uint256) public view returns (int256) {
         revert("Not implemented");
     }
 
+    /*
+     * @notice There is no way to access historical timestamp, so
+     this will always revert
+     */
     function getTimestamp(uint256) external view returns (uint256) {
         revert("Not implemented");
     }

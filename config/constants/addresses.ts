@@ -80,6 +80,21 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0xa59729aa4680019aD173e182D85B76c0D7dBAE9b',
         dataFeed: '0x2A2bDBc40672684e3913b7C20950a9029aB75fB7',
       },
+      weeth: {
+        token: '0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee',
+        aggregator: '0x6E3B7fb913991eD1fFbb26b314132Dae0AAE8522',
+        dataFeed: '0x2AeE3eaFf5e323948De261cDABE49024e3Dbb7dc',
+      },
+      susde: {
+        token: '0x9D39A5DE30e57443BfF2A8307A4256c8797A3497',
+        aggregator: '0xcE2326260C168525A3E905391E8bFEE00EBd0CEa',
+        dataFeed: '0x6D233Cd3912FAFa6aDB872775Bf00C0D54cfF437',
+      },
+      usde: {
+        token: '0x4c9edd5852cd905f086c759e8383e09bff1e68b3F',
+        aggregator: '0xa569d910839Ae8865Da8F8e70FfFb0cBA869F961',
+        dataFeed: '0xe7eCe9331f9B03638D17791bC46b8386960ad2D6',
+      },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     mTBILL: {

@@ -36,6 +36,8 @@ export enum PaymentTokenNameEnum {
   stone = 'stone',
   weth = 'weth',
   cmeth = 'cmeth',
+  weeth = 'weeth',
+  susde = 'susde',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;
