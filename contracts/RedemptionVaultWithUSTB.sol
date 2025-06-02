@@ -123,20 +123,23 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
         uint256 amountTokenOutWithoutFee = (amountMTokenWithoutFee *
             mTokenRate) / tokenOutRate;
 
-        require(
-            amountTokenOutWithoutFee >= minReceiveAmountCopy,
-            "RVU: minReceiveAmount > actual"
-        );
-
         uint256 amountTokenOutWithoutFeeFrom18 = amountTokenOutWithoutFee
             .convertFromBase18(tokenDecimals);
+
+        uint256 amountTokenOutWithoutFeeTruncated = amountTokenOutWithoutFeeFrom18
+                .convertToBase18(tokenDecimals);
+
+        require(
+            amountTokenOutWithoutFeeTruncated >= minReceiveAmountCopy,
+            "RVU: minReceiveAmount > actual"
+        );
 
         _checkAndRedeemUSTB(tokenOutCopy, amountTokenOutWithoutFeeFrom18);
 
         _tokenTransferToUser(
             tokenOutCopy,
             user,
-            amountTokenOutWithoutFeeFrom18.convertToBase18(tokenDecimals),
+            amountTokenOutWithoutFeeTruncated,
             tokenDecimals
         );
 
@@ -145,7 +148,7 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
             tokenOutCopy,
             amountMTokenInCopy,
             feeAmount,
-            amountTokenOutWithoutFee
+            amountTokenOutWithoutFeeTruncated
         );
     }
 
