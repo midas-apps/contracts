@@ -208,7 +208,7 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         mTBILLAmount,
         {
           from: testUser,
-          revertMessage: 'RVU: USTB redemption fee not zero',
+          revertMessage: 'RVU: ustb fee not zero',
         },
       );
     });
