@@ -120,11 +120,8 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
         if (feeAmount > 0)
             _tokenTransferFromUser(address(mToken), feeReceiver, feeAmount, 18);
 
-        uint256 amountTokenOutWithoutFee = (amountMTokenWithoutFee *
-            mTokenRate) / tokenOutRate;
-
-        uint256 amountTokenOutWithoutFeeFrom18 = amountTokenOutWithoutFee
-            .convertFromBase18(tokenDecimals);
+        uint256 amountTokenOutWithoutFeeFrom18 = ((amountMTokenWithoutFee *
+            mTokenRate) / tokenOutRate).convertFromBase18(tokenDecimals);
 
         uint256 amountTokenOutWithoutFeeTruncated = amountTokenOutWithoutFeeFrom18
                 .convertToBase18(tokenDecimals);
