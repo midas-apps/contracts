@@ -122,11 +122,6 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         mTBILLAmount,
       );
 
-      // Get balances before
-      const vaultUSTBBefore = await ustbToken.balanceOf(
-        redemptionVaultWithUSTB.address,
-      );
-
       // Perform redemption
       const result = await redeemInstantWithUstbTest(
         {
@@ -149,6 +144,73 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
 
       // Verify mTBILL was burned from user
       expect(await mTBILL.balanceOf(testUser.address)).to.equal(0);
+    });
+
+    it('should revert if redemption fee is not zero', async function () {
+      const {
+        owner,
+        testUser,
+        mTBILL,
+        redemptionVaultWithUSTB,
+        usdc,
+        ustbToken,
+        ustbWhale,
+        usdcWhale,
+        redemptionIdle,
+        mTokenToUsdDataFeed,
+        ustbOwner,
+      } = await loadFixture(ustbRedemptionVaultFixture);
+
+      const mTBILLAmount = 5000;
+
+      // Fund RedemptionIdle with USDC for USTB redemptions
+      await usdc
+        .connect(usdcWhale)
+        .transfer(redemptionIdle.address, parseUnits('1000000', 6));
+
+      // Fund vault with minimal USDC (only 1000 USDC)
+      await usdc
+        .connect(usdcWhale)
+        .transfer(redemptionVaultWithUSTB.address, parseUnits('1000', 6));
+
+      // Fund vault with USTB
+      await transferUSTBFromWhale(
+        ustbToken,
+        ustbWhale,
+        redemptionVaultWithUSTB.address,
+        parseUnits('10000', 6),
+      );
+
+      // Mint mTBILL to user
+      await mintToken(mTBILL, testUser, mTBILLAmount);
+
+      // Approve vault
+      await approveBase18(
+        testUser,
+        mTBILL,
+        redemptionVaultWithUSTB,
+        mTBILLAmount,
+      );
+
+      // Set redemption fee to 0.1% (max fee)
+      await redemptionIdle.connect(ustbOwner).setRedemptionFee(10);
+
+      // Perform redemption
+      await redeemInstantWithUstbTest(
+        {
+          redemptionVault: redemptionVaultWithUSTB,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          usdc,
+          ustbToken,
+        },
+        mTBILLAmount,
+        {
+          from: testUser,
+          revertMessage: 'RVU: USTB redemption fee not zero',
+        },
+      );
     });
   });
 
