@@ -180,6 +180,10 @@ export async function ustbRedemptionVaultFixture() {
     true, // is stable
   );
 
+  const ustbOwner = await impersonateAndFundAccount(
+    await redemptionIdle.owner(),
+  );
+
   return {
     accessControl,
     mTBILL,
@@ -199,6 +203,7 @@ export async function ustbRedemptionVaultFixture() {
     testUser,
     usdcWhale,
     ustbWhale,
+    ustbOwner,
     roles: allRoles,
   };
 }

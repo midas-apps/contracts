@@ -166,6 +166,10 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
         require(tokenOut == ustbRedemption.USDC(), "RVU: invalid token");
 
         uint256 missingAmount = amountTokenOut - contractBalanceTokenOut;
+
+        uint256 fee = ustbRedemption.calculateFee(missingAmount);
+        require(fee == 0, "RVU: ustb fee not zero");
+
         (uint256 ustbToRedeem, ) = ustbRedemption.calculateUstbIn(
             missingAmount
         );
