@@ -8,12 +8,14 @@ export type TokenContractNames = {
   rvUstb: string;
   dataFeed?: string;
   customAggregator?: string;
+  customAggregatorDiscounted?: string;
   token: string;
 };
 
 type CommonContractNames = Omit<TokenContractNames, 'token'> & {
   ac: string;
   customAggregator: string;
+  customAggregatorDiscounted: string;
 };
 
 export const contractNamesPrefixes: Record<MTokenName, string> = {
@@ -45,6 +47,7 @@ export const getCommonContractNames = (): CommonContractNames => {
     rvUstb: 'RedemptionVaultWithUSTB',
     dataFeed: 'DataFeed',
     customAggregator: 'CustomAggregatorV3CompatibleFeed',
+    customAggregatorDiscounted: 'CustomAggregatorV3CompatibleFeedDiscounted',
   };
 };
 
@@ -66,6 +69,9 @@ export const getTokenContractNames = (
     rvUstb: `${tokenPrefix}${commonContractNames.rvUstb}`,
     dataFeed: isTac ? undefined : `${prefix}${commonContractNames.dataFeed}`,
     customAggregator: isTac ? undefined : `${prefix}CustomAggregatorFeed`,
+    customAggregatorDiscounted: isTac
+      ? undefined
+      : `${prefix}CustomAggregatorFeedDiscounted`,
     token: `${token}`,
   };
 };

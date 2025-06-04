@@ -11,6 +11,10 @@ contract CustomAggregatorV3CompatibleFeedDiscountedTester is
 
     function _disableInitializers() internal override {}
 
+    function setDiscountPercentage(uint256 _discountPercentage) external {
+        discountPercentage = _discountPercentage;
+    }
+
     function feedAdminRole() public pure override returns (bytes32) {
         return CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE;
     }
