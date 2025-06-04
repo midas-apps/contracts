@@ -6,7 +6,13 @@ interface IUSTBRedemption {
 
     function USDC() external view returns (address);
 
+    function owner() external view returns (address);
+
     function redeem(uint256 superstateTokenInAmount) external;
+
+    function setRedemptionFee(uint256 _newFee) external;
+
+    function calculateFee(uint256 amount) external view returns (uint256);
 
     function calculateUstbIn(uint256 usdcOutAmount)
         external
