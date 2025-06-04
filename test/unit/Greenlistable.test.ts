@@ -2,18 +2,17 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 
 import {
+  // eslint-disable-next-line camelcase
+  GreenlistableTester__factory,
+} from '../../typechain-types';
+import {
   acErrors,
   greenList,
   greenListToggler,
   unGreenList,
-} from './common/ac.helpers';
-import { defaultDeploy } from './common/fixtures';
-import { greenListEnable } from './common/greenlist.helpers';
-
-import {
-  // eslint-disable-next-line camelcase
-  GreenlistableTester__factory,
-} from '../typechain-types';
+} from '../common/ac.helpers';
+import { defaultDeploy } from '../common/fixtures';
+import { greenListEnable } from '../common/greenlist.helpers';
 
 describe('Greenlistable', function () {
   it('deployment', async () => {
