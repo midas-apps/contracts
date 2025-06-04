@@ -12,20 +12,28 @@ import {
   ERC20,
   // eslint-disable-next-line camelcase
   ERC20__factory,
+  IERC20,
   RedemptionVault,
   RedemptionVaultWIthBUIDL,
   RedemptionVaultWithSwapper,
+  RedemptionVaultWithUSTB,
 } from '../../typechain-types';
 
 type CommonParamsRedeem = Pick<
   Awaited<ReturnType<typeof defaultDeploy>>,
   'owner' | 'mTBILL' | 'mTokenToUsdDataFeed'
 > & {
-  redemptionVault: RedemptionVault | RedemptionVaultWIthBUIDL;
+  redemptionVault:
+    | RedemptionVault
+    | RedemptionVaultWIthBUIDL
+    | RedemptionVaultWithUSTB;
 };
 
 type CommonParams = Pick<Awaited<ReturnType<typeof defaultDeploy>>, 'owner'> & {
-  redemptionVault: RedemptionVault | RedemptionVaultWIthBUIDL;
+  redemptionVault:
+    | RedemptionVault
+    | RedemptionVaultWIthBUIDL
+    | RedemptionVaultWithUSTB;
 };
 
 export const redeemInstantTest = async (
@@ -37,7 +45,7 @@ export const redeemInstantTest = async (
     waivedFee,
     minAmount,
   }: CommonParamsRedeem & { waivedFee?: boolean; minAmount?: BigNumberish },
-  tokenOut: ERC20 | string,
+  tokenOut: IERC20 | ERC20 | string,
   amountTBillIn: number,
   opt?: OptionalCommonParams,
 ) => {
@@ -651,7 +659,8 @@ export const getFeePercent = async (
   redemptionVault:
     | RedemptionVault
     | RedemptionVaultWIthBUIDL
-    | RedemptionVaultWithSwapper,
+    | RedemptionVaultWithSwapper
+    | RedemptionVaultWithUSTB,
   isInstant: boolean,
   additionalFee?: BigNumber,
 ) => {
@@ -674,7 +683,8 @@ export const calcExpectedTokenOutAmount = async (
   redemptionVault:
     | RedemptionVault
     | RedemptionVaultWIthBUIDL
-    | RedemptionVaultWithSwapper,
+    | RedemptionVaultWithSwapper
+    | RedemptionVaultWithUSTB,
   mTokenRate: BigNumber,
   amountIn: BigNumber,
   isInstant: boolean,

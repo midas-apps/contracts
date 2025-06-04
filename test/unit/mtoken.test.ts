@@ -1,6 +1,5 @@
-import { tokenContractsTests } from './common/token.tests';
-
-import { MTokenNameEnum } from '../config';
+import { MTokenNameEnum } from '../../config';
+import { tokenContractsTests } from '../common/token.tests';
 
 const mProducts = Object.values(MTokenNameEnum);
 

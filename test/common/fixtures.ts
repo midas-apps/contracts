@@ -43,7 +43,11 @@ import {
   // eslint-disable-next-line camelcase
   RedemptionTest__factory,
   // eslint-disable-next-line camelcase
+  USTBRedemptionMock__factory,
+  // eslint-disable-next-line camelcase
   RedemptionVaultWithBUIDLTest__factory,
+  // eslint-disable-next-line camelcase
+  RedemptionVaultWithUSTBTest__factory,
   // eslint-disable-next-line camelcase
   RedemptionVaultWithSwapperTest__factory,
   // eslint-disable-next-line camelcase
@@ -232,13 +236,13 @@ export const defaultDeploy = async () => {
     wbtc: await new ERC20Mock__factory(owner).deploy(8),
   };
 
-  const buidl = await new ERC20Mock__factory(owner).deploy(8);
+  /* Redemption Vault With BUIDL */
 
+  const buidl = await new ERC20Mock__factory(owner).deploy(8);
   const buidlRedemption = await new RedemptionTest__factory(owner).deploy(
     buidl.address,
     stableCoins.usdc.address,
   );
-
   await stableCoins.usdc.mint(buidlRedemption.address, parseUnits('1000000'));
 
   const redemptionVaultWithBUIDL =
@@ -277,6 +281,53 @@ export const defaultDeploy = async () => {
     mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
     redemptionVaultWithBUIDL.address,
   );
+
+  /* Redemption Vault With USTB */
+
+  const ustbToken = await new ERC20Mock__factory(owner).deploy(6);
+  const ustbRedemption = await new USTBRedemptionMock__factory(owner).deploy(
+    ustbToken.address,
+    stableCoins.usdc.address,
+  );
+  await stableCoins.usdc.mint(ustbRedemption.address, parseUnits('1000000'));
+
+  const redemptionVaultWithUSTB =
+    await new RedemptionVaultWithUSTBTest__factory(owner).deploy();
+
+  await redemptionVaultWithUSTB[
+    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
+  ](
+    accessControl.address,
+    {
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    1000,
+    {
+      fiatAdditionalFee: 100,
+      fiatFlatFee: parseUnits('1'),
+      minFiatRedeemAmount: 1000,
+    },
+    requestRedeemer.address,
+    ustbRedemption.address,
+  );
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
+    redemptionVaultWithUSTB.address,
+  );
+
+  /* Redemption Vault With Swapper */
+
   const redemptionVaultWithSwapper =
     await new RedemptionVaultWithSwapperTest__factory(owner).deploy();
 
@@ -475,7 +526,10 @@ export const defaultDeploy = async () => {
     buidl,
     buidlRedemption,
     redemptionVaultWithBUIDL,
+    redemptionVaultWithUSTB,
     liquidityProvider,
     otherCoins,
+    ustbToken,
+    ustbRedemption,
   };
 };
