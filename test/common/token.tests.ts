@@ -74,6 +74,10 @@ const expectedTokenNameSymb: Record<
     name: 'HyperETH Vault',
     symbol: 'hypeETH',
   },
+  hypeUSD: {
+    name: 'HyperUSD Vault',
+    symbol: 'hypeUSD',
+  },
   TACmBTC: {
     name: 'Midas TACmBTC Token',
     symbol: 'TACmBTC',

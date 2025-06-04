@@ -53,6 +53,29 @@ export const deployPaymentTokenDataFeed = async (
   );
 };
 
+export const deployPaymentTokenCustomAggregator = async (
+  hre: HardhatRuntimeEnvironment,
+  paymentToken: PaymentTokenName,
+) => {
+  const customAggregatorContractName =
+    getCommonContractNames().customAggregator;
+
+  if (!customAggregatorContractName) {
+    throw new Error('Custom aggregator contract name is not set');
+  }
+
+  const networkConfig =
+    paymentTokenDeploymentConfigs.networkConfigs[hre.network.config.chainId!]?.[
+      paymentToken
+    ]?.customAggregator;
+
+  await deployCustomAggregator(
+    hre,
+    customAggregatorContractName,
+    networkConfig,
+  );
+};
+
 export const deployMTokenDataFeed = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,

@@ -11,11 +11,9 @@ export type TokenContractNames = {
   token: string;
 };
 
-type CommonContractNames = Omit<
-  TokenContractNames,
-  'token' | 'customAggregator'
-> & {
+type CommonContractNames = Omit<TokenContractNames, 'token'> & {
   ac: string;
+  customAggregator: string;
 };
 
 export const contractNamesPrefixes: Record<MTokenName, string> = {
@@ -31,6 +29,7 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   mLIQUIDITY: 'MLiquidity',
   hypeETH: 'HypeEth',
   hypeBTC: 'HypeBtc',
+  hypeUSD: 'HypeUsd',
   TACmBTC: 'TACmBtc',
   TACmEDGE: 'TACmEdge',
   TACmMEV: 'TACmMev',
@@ -45,6 +44,7 @@ export const getCommonContractNames = (): CommonContractNames => {
     rvBuidl: 'RedemptionVaultWithBUIDL',
     rvUstb: 'RedemptionVaultWithUSTB',
     dataFeed: 'DataFeed',
+    customAggregator: 'CustomAggregatorV3CompatibleFeed',
   };
 };
 
