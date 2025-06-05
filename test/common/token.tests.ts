@@ -203,15 +203,6 @@ export const tokenContractsTests = (token: MTokenName) => {
 
     await customAggregatorFeed.setRoundData(parseUnits('1.01', 8));
 
-    const customAggregatorFeedDiscounted =
-      await deployProxyContractIfExists<CustomAggregatorV3CompatibleFeedDiscounted>(
-        'customAggregatorDiscounted',
-        undefined,
-        fixture.accessControl.address,
-        customAggregatorFeed.address,
-        parseUnits('10', 8),
-      );
-
     const dataFeed = await deployProxyContract<DataFeed>(
       'dataFeed',
       undefined,
@@ -341,7 +332,6 @@ export const tokenContractsTests = (token: MTokenName) => {
       tokenContract,
       tokenDataFeed: dataFeed,
       tokenCustomAggregatorFeed: customAggregatorFeed,
-      tokenCustomAggregatorFeedDiscounted: customAggregatorFeedDiscounted,
       tokenDepositVault: depositVault,
       tokenRedemptionVault: redemptionVault,
       tokenRedemptionVaultWithSwapper: redemptionVaultWithSwapper,
@@ -733,28 +723,6 @@ export const tokenContractsTests = (token: MTokenName) => {
         await customAggregator[tokenRoleNames.customFeedAdmin](),
       );
       expect(await customAggregator.feedAdminRole()).eq(
-        tokenRoles.customFeedAdmin,
-      );
-    });
-
-    it('CustomAggregatorDiscounted', async function () {
-      const fixture = await deployMTokenVaultsWithFixture();
-      const customAggregatorDiscounted =
-        fixture.tokenCustomAggregatorFeedDiscounted as Contract;
-
-      if (
-        !customAggregatorDiscounted ||
-        !tokenRoleNames.customFeedAdmin ||
-        isTac
-      ) {
-        (this as any).skip();
-        return;
-      }
-
-      expect(await customAggregatorDiscounted.feedAdminRole()).eq(
-        await customAggregatorDiscounted[tokenRoleNames.customFeedAdmin](),
-      );
-      expect(await customAggregatorDiscounted.feedAdminRole()).eq(
         tokenRoles.customFeedAdmin,
       );
     });

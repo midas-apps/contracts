@@ -382,13 +382,7 @@ export const defaultDeploy = async () => {
   const customFeedDiscounted =
     await new CustomAggregatorV3CompatibleFeedDiscountedTester__factory(
       owner,
-    ).deploy();
-
-  await customFeedDiscounted.initialize(
-    accessControl.address,
-    customFeed.address,
-    parseUnits('10', 8),
-  );
+    ).deploy(customFeed.address, parseUnits('10', 8));
 
   // role granting testers
   await accessControl.grantRole(

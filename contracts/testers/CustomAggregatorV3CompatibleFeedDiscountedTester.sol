@@ -6,18 +6,12 @@ import "../feeds/CustomAggregatorV3CompatibleFeedDiscounted.sol";
 contract CustomAggregatorV3CompatibleFeedDiscountedTester is
     CustomAggregatorV3CompatibleFeedDiscounted
 {
-    bytes32 public constant CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE =
-        keccak256("CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE");
-
-    function _disableInitializers() internal override {}
-
-    function setDiscountPercentage(uint256 _discountPercentage) external {
-        discountPercentage = _discountPercentage;
-    }
-
-    function feedAdminRole() public pure override returns (bytes32) {
-        return CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE;
-    }
+    constructor(address _underlyingFeed, uint256 _discountPercentage)
+        CustomAggregatorV3CompatibleFeedDiscounted(
+            _underlyingFeed,
+            _discountPercentage
+        )
+    {}
 
     function getDiscountedAnswer(int256 _answer) public view returns (int256) {
         return _calculateDiscountedAnswer(_answer);

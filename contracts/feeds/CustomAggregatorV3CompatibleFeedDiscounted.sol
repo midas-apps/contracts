@@ -14,27 +14,24 @@ import "../interfaces/IDataFeed.sol";
  * of an underlying chainlink compatible feed by a given percentage
  * @author RedDuck Software
  */
-contract CustomAggregatorV3CompatibleFeedDiscounted is
-    AggregatorV3Interface,
-    WithMidasAccessControl
-{
+contract CustomAggregatorV3CompatibleFeedDiscounted is AggregatorV3Interface {
     /**
      * @notice the underlying chainlink compatible feed
      */
-    AggregatorV3Interface public underlyingFeed;
+    AggregatorV3Interface public immutable underlyingFeed;
 
     /**
      * @notice the discount percentage. Expressed in 10 ** decimals() precision
      * Example: 10 ** decimals() = 1%
      */
-    uint256 public discountPercentage;
+    uint256 public immutable discountPercentage;
 
-    function initialize(
-        address _accessControl,
-        address _underlyingFeed,
-        uint256 _discountPercentage
-    ) external initializer {
-        __WithMidasAccessControl_init(_accessControl);
+    /**
+     * @notice constructor
+     * @param _underlyingFeed the underlying chainlink compatible feed
+     * @param _discountPercentage the discount percentage. Expressed in 10 ** decimals() precision
+     */
+    constructor(address _underlyingFeed, uint256 _discountPercentage) {
         require(_underlyingFeed != address(0), "CAD: !underlying feed");
         underlyingFeed = AggregatorV3Interface(_underlyingFeed);
 
@@ -100,14 +97,6 @@ contract CustomAggregatorV3CompatibleFeedDiscounted is
             answeredInRound
         ) = underlyingFeed.getRoundData(_roundId);
         answer = _calculateDiscountedAnswer(answer);
-    }
-
-    /**
-     * @dev describes a role, owner of which can manage this feed
-     * @return role descriptor
-     */
-    function feedAdminRole() public view virtual returns (bytes32) {
-        return DEFAULT_ADMIN_ROLE;
     }
 
     /**

@@ -6,6 +6,7 @@ import { DeploymentConfig } from './types';
 
 import { MTokenName } from '../../../config';
 import {
+  logDeploy,
   logDeployProxy,
   tryEtherscanVerifyImplementation,
 } from '../../../helpers/utils';
@@ -68,6 +69,28 @@ export const deployAndVerifyProxy = async (
   }
 
   await logDeployProxy(hre, contractName, deployment.address);
+  await tryEtherscanVerifyImplementation(hre, deployment.address);
+
+  return deployment;
+};
+
+export const deployAndVerify = async (
+  hre: HardhatRuntimeEnvironment,
+  contractName: string,
+  params: unknown[],
+  deployer?: Signer,
+) => {
+  const factory = await hre.ethers.getContractFactory(contractName, deployer);
+
+  const deployment = await factory.deploy(...params);
+
+  if (deployment.deployTransaction) {
+    console.log('Waiting 5 blocks...');
+    await deployment.deployTransaction.wait(5);
+    console.log('Waited.');
+  }
+
+  logDeploy(contractName, 'Proxy', deployment.address);
   await tryEtherscanVerifyImplementation(hre, deployment.address);
 
   return deployment;

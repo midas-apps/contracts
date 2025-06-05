@@ -15,25 +15,15 @@ import { defaultDeploy } from '../common/fixtures';
 
 describe('CustomAggregatorV3CompatibleFeedDiscounted', function () {
   it('deployment', async () => {
-    const { customFeedDiscounted, customFeed, owner } = await loadFixture(
+    const { customFeedDiscounted, customFeed } = await loadFixture(
       defaultDeploy,
     );
-
-    const roles = getAllRoles();
-    const discounted =
-      await new CustomAggregatorV3CompatibleFeedDiscounted__factory(
-        owner,
-      ).deploy();
-
-    expect(await discounted.feedAdminRole()).eq(roles.common.defaultAdmin);
 
     expect(await customFeedDiscounted.underlyingFeed()).eq(customFeed.address);
     expect(await customFeedDiscounted.discountPercentage()).eq(
       parseUnits('10', 8),
     );
-    expect(await customFeedDiscounted.feedAdminRole()).eq(
-      await customFeedDiscounted.CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE(),
-    );
+
     expect(await customFeedDiscounted.decimals()).eq(
       await customFeed.decimals(),
     );
@@ -47,40 +37,15 @@ describe('CustomAggregatorV3CompatibleFeedDiscounted', function () {
     const fixture = await loadFixture(defaultDeploy);
 
     await expect(
-      fixture.customFeedDiscounted.initialize(
-        ethers.constants.AddressZero,
-        ethers.constants.AddressZero,
-        0,
-      ),
-    ).revertedWith('Initializable: contract is already initialized');
-
-    const testFeed =
-      await new CustomAggregatorV3CompatibleFeedDiscountedTester__factory(
+      new CustomAggregatorV3CompatibleFeedDiscountedTester__factory(
         fixture.owner,
-      ).deploy();
-
-    await expect(
-      testFeed.initialize(
-        ethers.constants.AddressZero,
-        ethers.constants.AddressZero,
-        0,
-      ),
-    ).revertedWith('zero address');
-
-    await expect(
-      testFeed.initialize(
-        fixture.accessControl.address,
-        ethers.constants.AddressZero,
-        parseUnits('10', 8),
-      ),
+      ).deploy(ethers.constants.AddressZero, 0),
     ).revertedWith('CAD: !underlying feed');
 
     await expect(
-      testFeed.initialize(
-        fixture.accessControl.address,
-        fixture.customFeed.address,
-        parseUnits('100.1', 8),
-      ),
+      new CustomAggregatorV3CompatibleFeedDiscountedTester__factory(
+        fixture.owner,
+      ).deploy(fixture.customFeed.address, parseUnits('100.1', 8)),
     ).revertedWith('CAD: !discount percentage');
   });
 
@@ -107,13 +72,16 @@ describe('CustomAggregatorV3CompatibleFeedDiscounted', function () {
     });
 
     it('when answer is 1, discount is 100%, should return 0', async () => {
-      const { customFeed, customFeedDiscounted, owner } = await loadFixture(
+      let { customFeed, customFeedDiscounted, owner } = await loadFixture(
         defaultDeploy,
       );
 
       await setRoundData({ customFeed, owner }, 1);
 
-      await customFeedDiscounted.setDiscountPercentage(parseUnits('100', 8));
+      customFeedDiscounted =
+        await new CustomAggregatorV3CompatibleFeedDiscountedTester__factory(
+          owner,
+        ).deploy(customFeed.address, parseUnits('100', 8));
 
       const latestRoundDataDiscounted =
         await customFeedDiscounted.latestRoundData();
@@ -156,7 +124,7 @@ describe('CustomAggregatorV3CompatibleFeedDiscounted', function () {
     });
 
     it('when answer is 1, discount is 100%, should return 0', async () => {
-      const { customFeed, customFeedDiscounted, owner } = await loadFixture(
+      let { customFeed, customFeedDiscounted, owner } = await loadFixture(
         defaultDeploy,
       );
 
@@ -164,8 +132,10 @@ describe('CustomAggregatorV3CompatibleFeedDiscounted', function () {
       const roundId = await customFeed.latestRound();
       await setRoundData({ customFeed, owner }, 1);
 
-      await customFeedDiscounted.setDiscountPercentage(parseUnits('100', 8));
-
+      customFeedDiscounted =
+        await new CustomAggregatorV3CompatibleFeedDiscountedTester__factory(
+          owner,
+        ).deploy(customFeed.address, parseUnits('100', 8));
       const latestRoundDataDiscounted = await customFeedDiscounted.getRoundData(
         roundId,
       );

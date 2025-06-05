@@ -8,7 +8,6 @@ export type TokenContractNames = {
   rvUstb: string;
   dataFeed?: string;
   customAggregator?: string;
-  customAggregatorDiscounted?: string;
   token: string;
 };
 
@@ -69,9 +68,6 @@ export const getTokenContractNames = (
     rvUstb: `${tokenPrefix}${commonContractNames.rvUstb}`,
     dataFeed: isTac ? undefined : `${prefix}${commonContractNames.dataFeed}`,
     customAggregator: isTac ? undefined : `${prefix}CustomAggregatorFeed`,
-    customAggregatorDiscounted: isTac
-      ? undefined
-      : `${prefix}CustomAggregatorFeedDiscounted`,
     token: `${token}`,
   };
 };

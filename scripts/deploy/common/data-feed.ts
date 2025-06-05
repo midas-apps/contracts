@@ -1,7 +1,11 @@
 import { BigNumberish } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { deployAndVerifyProxy, getDeploymentGenericConfig } from './utils';
+import {
+  deployAndVerify,
+  deployAndVerifyProxy,
+  getDeploymentGenericConfig,
+} from './utils';
 
 import { MTokenName, PaymentTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
@@ -110,16 +114,8 @@ export const deployMTokenCustomAggregatorDiscounted = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
 ) => {
-  const customAggregatorDiscountedContractName =
-    getTokenContractNames(token).customAggregatorDiscounted;
-
-  if (!customAggregatorDiscountedContractName) {
-    throw new Error('Custom aggregator contract name is not set');
-  }
-
   await deployCustomAggregatorDiscounted(
     hre,
-    customAggregatorDiscountedContractName,
     token,
     getDeploymentGenericConfig(hre, token, 'customAggregatorDiscounted'),
   );
@@ -186,7 +182,6 @@ const deployCustomAggregator = async (
 
 const deployCustomAggregatorDiscounted = async (
   hre: HardhatRuntimeEnvironment,
-  customAggregatorDiscountedContractName: string,
   token: MTokenName,
   networkConfig?: DeployCustomAggregatorDiscountedConfig,
 ) => {
@@ -205,9 +200,9 @@ const deployCustomAggregatorDiscounted = async (
     throw new Error('Underlying feed is not found');
   }
 
-  await deployAndVerifyProxy(hre, customAggregatorDiscountedContractName, [
-    addresses?.accessControl,
-    underlyingFeed,
-    networkConfig.discountPercentage,
-  ]);
+  await deployAndVerify(
+    hre,
+    getCommonContractNames().customAggregatorDiscounted,
+    [underlyingFeed, networkConfig.discountPercentage],
+  );
 };
