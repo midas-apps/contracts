@@ -3,6 +3,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { AddPaymentTokensConfig } from './common-vault';
 import {
   DeployCustomAggregatorConfig,
+  DeployCustomAggregatorDiscountedConfig,
   DeployDataFeedConfig,
 } from './data-feed';
 import { DeployDvConfig } from './dv';
@@ -21,6 +22,7 @@ import { PaymentTokenName } from '../../../config';
 export type DeploymentConfig = {
   genericConfigs: {
     customAggregator?: DeployCustomAggregatorConfig;
+    customAggregatorDiscounted?: DeployCustomAggregatorDiscountedConfig;
     dataFeed?: DeployDataFeedConfig;
   };
   networkConfigs: Record<

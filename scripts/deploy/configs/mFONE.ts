@@ -12,6 +12,10 @@ export const mFONEDeploymentConfig: DeploymentConfig = {
       maxAnswerDeviation: parseUnits('0.4', 8),
       description: 'mF-ONE/USD',
     },
+    customAggregatorDiscounted: {
+      discountPercentage: parseUnits('10', 8),
+      underlyingFeed: 'customFeed',
+    },
     dataFeed: {
       minAnswer: parseUnits('0.1', 8),
       maxAnswer: parseUnits('1000', 8),

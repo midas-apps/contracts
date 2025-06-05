@@ -24,6 +24,11 @@ export type DeployCustomAggregatorConfig = {
   description: string;
 };
 
+export type DeployCustomAggregatorDiscountedConfig = {
+  discountPercentage: BigNumberish;
+  underlyingFeed: `0x${string}` | 'customFeed';
+};
+
 export const deployPaymentTokenDataFeed = async (
   hre: HardhatRuntimeEnvironment,
   token: PaymentTokenName,
@@ -101,6 +106,25 @@ export const deployMTokenDataFeed = async (
   );
 };
 
+export const deployMTokenCustomAggregatorDiscounted = async (
+  hre: HardhatRuntimeEnvironment,
+  token: MTokenName,
+) => {
+  const customAggregatorDiscountedContractName =
+    getTokenContractNames(token).customAggregatorDiscounted;
+
+  if (!customAggregatorDiscountedContractName) {
+    throw new Error('Custom aggregator contract name is not set');
+  }
+
+  await deployCustomAggregatorDiscounted(
+    hre,
+    customAggregatorDiscountedContractName,
+    token,
+    getDeploymentGenericConfig(hre, token, 'customAggregatorDiscounted'),
+  );
+};
+
 export const deployMTokenCustomAggregator = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
@@ -157,5 +181,33 @@ const deployCustomAggregator = async (
     networkConfig.maxAnswer,
     networkConfig.maxAnswerDeviation,
     networkConfig.description,
+  ]);
+};
+
+const deployCustomAggregatorDiscounted = async (
+  hre: HardhatRuntimeEnvironment,
+  customAggregatorDiscountedContractName: string,
+  token: MTokenName,
+  networkConfig?: DeployCustomAggregatorDiscountedConfig,
+) => {
+  const addresses = getCurrentAddresses(hre);
+
+  if (!networkConfig) {
+    throw new Error('Network config is not found');
+  }
+
+  const underlyingFeed =
+    networkConfig.underlyingFeed === 'customFeed'
+      ? addresses?.[token]?.customFeed
+      : networkConfig.underlyingFeed;
+
+  if (!underlyingFeed) {
+    throw new Error('Underlying feed is not found');
+  }
+
+  await deployAndVerifyProxy(hre, customAggregatorDiscountedContractName, [
+    addresses?.accessControl,
+    underlyingFeed,
+    networkConfig.discountPercentage,
   ]);
 };
