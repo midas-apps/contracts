@@ -6,6 +6,7 @@ import { DeploymentConfig } from './types';
 
 import { MTokenName } from '../../../config';
 import {
+  etherscanVerify,
   logDeploy,
   logDeployProxy,
   tryEtherscanVerifyImplementation,
@@ -91,7 +92,7 @@ export const deployAndVerify = async (
   }
 
   logDeploy(contractName, 'Proxy', deployment.address);
-  await tryEtherscanVerifyImplementation(hre, deployment.address);
+  await etherscanVerify(hre, deployment.address, ...params);
 
   return deployment;
 };

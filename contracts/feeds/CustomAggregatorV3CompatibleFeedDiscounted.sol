@@ -31,7 +31,7 @@ contract CustomAggregatorV3CompatibleFeedDiscounted is AggregatorV3Interface {
         underlyingFeed = AggregatorV3Interface(_underlyingFeed);
 
         require(
-            _discountPercentage <= 100 * (10 ** decimals()),
+            _discountPercentage <= 100 * (10**decimals()),
             "CAD: !discount percentage"
         );
 
@@ -73,9 +73,7 @@ contract CustomAggregatorV3CompatibleFeedDiscounted is AggregatorV3Interface {
     /**
      * @inheritdoc AggregatorV3Interface
      */
-    function getRoundData(
-        uint80 _roundId
-    )
+    function getRoundData(uint80 _roundId)
         public
         view
         returns (
@@ -118,13 +116,15 @@ contract CustomAggregatorV3CompatibleFeedDiscounted is AggregatorV3Interface {
      * @param _answer the answer to discount
      * @return the discounted answer
      */
-    function _calculateDiscountedAnswer(
-        int256 _answer
-    ) internal view returns (int256) {
+    function _calculateDiscountedAnswer(int256 _answer)
+        internal
+        view
+        returns (int256)
+    {
         require(_answer >= 0, "CAD: !_answer");
 
         int256 discount = (_answer * int256(discountPercentage)) /
-            int256(100 * 10 ** decimals());
+            int256(100 * 10**decimals());
 
         return _answer - discount;
     }
