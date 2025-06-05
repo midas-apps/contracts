@@ -1,6 +1,7 @@
 import { BigNumberish, constants } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { RvType } from './types';
 import { deployAndVerifyProxy, getDeployer, getNetworkConfig } from './utils';
 
 import { MTokenName } from '../../../config';
@@ -17,13 +18,17 @@ import {
 
 export type DeployDvConfig = {
   feeReceiver?: string;
-  tokensReceiver?: string;
+  tokensReceiver?: `0x${string}` | RvType;
   instantDailyLimit: BigNumberish;
   instantFee: BigNumberish;
   enableSanctionsList?: boolean;
   variationTolerance: BigNumberish;
   minAmount: BigNumberish;
   minMTokenAmountForFirstDeposit: BigNumberish;
+};
+
+const isAddress = (value: string): value is `0x${string}` => {
+  return value.startsWith('0x');
 };
 
 export const deployDepositVault = async (
@@ -66,6 +71,23 @@ export const deployDepositVault = async (
     throw new Error('Sanctions list address is not found');
   }
 
+  let tokensReceiver: string | undefined;
+
+  if (
+    !networkConfig.tokensReceiver ||
+    isAddress(networkConfig.tokensReceiver)
+  ) {
+    tokensReceiver = networkConfig.tokensReceiver ?? deployer.address;
+  } else {
+    tokensReceiver = tokenAddresses[networkConfig.tokensReceiver];
+  }
+
+  if (!tokensReceiver) {
+    throw new Error('Tokens receiver is not found');
+  }
+
+  console.log('tokensReceiver', tokensReceiver);
+
   const params = [
     addresses?.accessControl,
     {
@@ -74,7 +96,7 @@ export const deployDepositVault = async (
     },
     {
       feeReceiver: networkConfig.feeReceiver ?? deployer.address,
-      tokensReceiver: networkConfig.tokensReceiver ?? deployer.address,
+      tokensReceiver,
     },
     {
       instantDailyLimit: networkConfig.instantDailyLimit,

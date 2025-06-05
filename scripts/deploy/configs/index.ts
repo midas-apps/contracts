@@ -14,6 +14,9 @@ import { mTBILLDeploymentConfig } from './mTBILL';
 import { TACmBTCDeploymentConfig } from './tac/TACmBTC';
 import { TACmEDGEDeploymentConfig } from './tac/TACmEDGE';
 import { TACmMEVDeploymentConfig } from './tac/TACmMEV';
+import { tBTCDeploymentConfig } from './tBTC';
+import { tETHDeploymentConfig } from './tETH';
+import { tUSDeDeploymentConfig } from './tUSDe';
 
 import { MTokenName } from '../../../config';
 import { DeploymentConfig } from '../common/types';
@@ -35,4 +38,7 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   hypeETH: hypeETHDeploymentConfig,
   hypeBTC: hypeBTCDeploymentConfig,
   hypeUSD: hypeUSDDeploymentConfig,
+  tETH: tETHDeploymentConfig,
+  tUSDe: tUSDeDeploymentConfig,
+  tBTC: tBTCDeploymentConfig,
 };
