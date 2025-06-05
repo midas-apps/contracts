@@ -1,7 +1,11 @@
 import { BigNumberish } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { deployAndVerifyProxy, getDeploymentGenericConfig } from './utils';
+import {
+  deployAndVerify,
+  deployAndVerifyProxy,
+  getDeploymentGenericConfig,
+} from './utils';
 
 import { MTokenName, PaymentTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
@@ -22,6 +26,11 @@ export type DeployCustomAggregatorConfig = {
   maxAnswer: BigNumberish;
   maxAnswerDeviation: BigNumberish;
   description: string;
+};
+
+export type DeployCustomAggregatorDiscountedConfig = {
+  discountPercentage: BigNumberish;
+  underlyingFeed: `0x${string}` | 'customFeed';
 };
 
 export const deployPaymentTokenDataFeed = async (
@@ -101,6 +110,17 @@ export const deployMTokenDataFeed = async (
   );
 };
 
+export const deployMTokenCustomAggregatorDiscounted = async (
+  hre: HardhatRuntimeEnvironment,
+  token: MTokenName,
+) => {
+  await deployCustomAggregatorDiscounted(
+    hre,
+    token,
+    getDeploymentGenericConfig(hre, token, 'customAggregatorDiscounted'),
+  );
+};
+
 export const deployMTokenCustomAggregator = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
@@ -158,4 +178,31 @@ const deployCustomAggregator = async (
     networkConfig.maxAnswerDeviation,
     networkConfig.description,
   ]);
+};
+
+const deployCustomAggregatorDiscounted = async (
+  hre: HardhatRuntimeEnvironment,
+  token: MTokenName,
+  networkConfig?: DeployCustomAggregatorDiscountedConfig,
+) => {
+  const addresses = getCurrentAddresses(hre);
+
+  if (!networkConfig) {
+    throw new Error('Network config is not found');
+  }
+
+  const underlyingFeed =
+    networkConfig.underlyingFeed === 'customFeed'
+      ? addresses?.[token]?.customFeed
+      : networkConfig.underlyingFeed;
+
+  if (!underlyingFeed) {
+    throw new Error('Underlying feed is not found');
+  }
+
+  await deployAndVerify(
+    hre,
+    getCommonContractNames().customAggregatorDiscounted,
+    [underlyingFeed, networkConfig.discountPercentage],
+  );
 };

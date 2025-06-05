@@ -50,6 +50,8 @@ import {
   RedemptionVaultWithUSTBTest__factory,
   // eslint-disable-next-line camelcase
   RedemptionVaultWithSwapperTest__factory,
+  // eslint-disable-next-line camelcase
+  CustomAggregatorV3CompatibleFeedDiscountedTester__factory,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -377,6 +379,11 @@ export const defaultDeploy = async () => {
     'Custom Data Feed',
   );
 
+  const customFeedDiscounted =
+    await new CustomAggregatorV3CompatibleFeedDiscountedTester__factory(
+      owner,
+    ).deploy(customFeed.address, parseUnits('10', 8));
+
   // role granting testers
   await accessControl.grantRole(
     await customFeed.CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE(),
@@ -478,6 +485,7 @@ export const defaultDeploy = async () => {
 
   return {
     customFeed,
+    customFeedDiscounted,
     mTBILL,
     mBASIS,
     redemptionVaultWithSwapper,

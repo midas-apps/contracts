@@ -18,6 +18,7 @@ import {
 } from '../../helpers/roles';
 import {
   CustomAggregatorV3CompatibleFeed,
+  CustomAggregatorV3CompatibleFeedDiscounted,
   DataFeed,
   DepositVault,
   MTBILL,

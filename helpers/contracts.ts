@@ -14,6 +14,7 @@ export type TokenContractNames = {
 type CommonContractNames = Omit<TokenContractNames, 'token'> & {
   ac: string;
   customAggregator: string;
+  customAggregatorDiscounted: string;
 };
 
 export const contractNamesPrefixes: Record<MTokenName, string> = {
@@ -45,6 +46,7 @@ export const getCommonContractNames = (): CommonContractNames => {
     rvUstb: 'RedemptionVaultWithUSTB',
     dataFeed: 'DataFeed',
     customAggregator: 'CustomAggregatorV3CompatibleFeed',
+    customAggregatorDiscounted: 'CustomAggregatorV3CompatibleFeedDiscounted',
   };
 };
 
