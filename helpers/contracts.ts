@@ -5,6 +5,7 @@ export type TokenContractNames = {
   rv: string;
   rvSwapper: string;
   rvBuidl: string;
+  rvUstb: string;
   dataFeed?: string;
   customAggregator?: string;
   token: string;
@@ -13,6 +14,7 @@ export type TokenContractNames = {
 type CommonContractNames = Omit<TokenContractNames, 'token'> & {
   ac: string;
   customAggregator: string;
+  customAggregatorDiscounted: string;
 };
 
 export const contractNamesPrefixes: Record<MTokenName, string> = {
@@ -43,9 +45,11 @@ export const getCommonContractNames = (): CommonContractNames => {
     dv: 'DepositVault',
     rv: 'RedemptionVault',
     rvSwapper: 'RedemptionVaultWithSwapper',
-    rvBuidl: 'RedemptionVaultWithBuidl',
+    rvBuidl: 'RedemptionVaultWithBUIDL',
+    rvUstb: 'RedemptionVaultWithUSTB',
     dataFeed: 'DataFeed',
     customAggregator: 'CustomAggregatorV3CompatibleFeed',
+    customAggregatorDiscounted: 'CustomAggregatorV3CompatibleFeedDiscounted',
   };
 };
 
@@ -64,6 +68,7 @@ export const getTokenContractNames = (
     rv: `${tokenPrefix}${commonContractNames.rv}`,
     rvSwapper: `${tokenPrefix}${commonContractNames.rvSwapper}`,
     rvBuidl: `${tokenPrefix}${commonContractNames.rvBuidl}`,
+    rvUstb: `${tokenPrefix}${commonContractNames.rvUstb}`,
     dataFeed: isTac ? undefined : `${prefix}${commonContractNames.dataFeed}`,
     customAggregator: isTac ? undefined : `${prefix}CustomAggregatorFeed`,
     token: `${token}`,

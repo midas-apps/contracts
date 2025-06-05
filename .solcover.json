@@ -1,6 +1,6 @@
 {
   "norpc": true,
-  "testCommand": "yarn test",
+  "testCommand": "yarn test:unit",
   "compileCommand": "yarn compile",
   "skipFiles": ["mocks", "testers", "eUSD"],
   "configureYulOptimizer": true,
