@@ -1,4 +1,5 @@
 import { hbUSDTDeploymentConfig } from './hbUSDT';
+import { hbXAUtDeploymentConfig } from './hbXAUt';
 import { hypeBTCDeploymentConfig } from './hypeBTC';
 import { hypeETHDeploymentConfig } from './hypeETH';
 import { hypeUSDDeploymentConfig } from './hypeUSD';
@@ -41,4 +42,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   tETH: tETHDeploymentConfig,
   tUSDe: tUSDeDeploymentConfig,
   tBTC: tBTCDeploymentConfig,
+  hbXAUt: hbXAUtDeploymentConfig,
 };
