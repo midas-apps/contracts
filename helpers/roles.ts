@@ -12,6 +12,7 @@ const prefixes: Record<MTokenName, string> = {
   mRE7: 'M_RE7',
   mSL: 'M_SL',
   hbUSDT: 'HB_USDT',
+  hbXAUt: 'HB_XAUT',
   mFONE: 'M_FONE',
   mLIQUIDITY: 'M_LIQUIDITY',
   hypeETH: 'HYPE_ETH',
