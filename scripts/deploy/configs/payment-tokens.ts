@@ -35,6 +35,19 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           maxAnswer: parseUnits('1.1', 8),
         },
       },
+      xaut0: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99', 8),
+          maxAnswer: parseUnits('1.01', 8),
+        },
+        customAggregator: {
+          description: 'XAUt0/XAUt',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+      },
     },
     [chainIds.main]: {
       dai: {
@@ -202,6 +215,19 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           healthyDiff: 6 * 60 * 60,
           minAnswer: parseUnits('0.997', 8),
           maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+      xaut0: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99', 8),
+          maxAnswer: parseUnits('1.01', 8),
+        },
+        customAggregator: {
+          description: 'XAUt0/XAUt',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
         },
       },
     },

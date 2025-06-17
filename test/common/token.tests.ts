@@ -18,7 +18,6 @@ import {
 } from '../../helpers/roles';
 import {
   CustomAggregatorV3CompatibleFeed,
-  CustomAggregatorV3CompatibleFeedDiscounted,
   DataFeed,
   DepositVault,
   MTBILL,
@@ -106,6 +105,10 @@ const expectedTokenNameSymb: Record<
   tETH: {
     name: 'Terminal WETH',
     symbol: 'tETH',
+  },
+  hbXAUt: {
+    name: 'Hyperbeat XAUt',
+    symbol: 'hbXAUt',
   },
 };
 
