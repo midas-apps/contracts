@@ -120,6 +120,138 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           maxAnswer: parseUnits('1.1', 18),
         },
       },
+      rseth: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('1.04717604', 18),
+          maxAnswer: parseUnits('1.1', 18),
+        },
+      },
+      rsweth: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('1.03332344', 18),
+          maxAnswer: parseUnits('1.1', 18),
+        },
+      },
+      sweth: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('1.08392731', 18),
+          maxAnswer: parseUnits('1.2', 18),
+        },
+      },
+      wsteth: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('1.1936797', 18),
+          maxAnswer: parseUnits('1.3', 18),
+        },
+      },
+      lbtc: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        customAggregator: {
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          description: 'LBTC/BTC',
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+      },
+      solvbtc: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        customAggregator: {
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          description: 'solvBTC/BTC',
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+      },
+      cbbtc: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        customAggregator: {
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          description: 'cbBTC/BTC',
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+      },
+      sbtc: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        customAggregator: {
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          description: 'sBTC/BTC',
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+      },
+      enzobtc: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        customAggregator: {
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          description: 'enzoBTC/BTC',
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+      },
+      ebtc: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        customAggregator: {
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          description: 'eBTC/BTC',
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+      },
+      swbtc: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        customAggregator: {
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          description: 'swBTC/BTC',
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+      },
+      pumpbtc: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        customAggregator: {
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          description: 'pumpBTC/BTC',
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+      },
     },
     [chainIds.base]: {
       usdc: {

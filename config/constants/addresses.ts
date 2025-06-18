@@ -95,6 +95,54 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0xa569d910839Ae8865Da8F8e70FfFb0cBA869F961',
         dataFeed: '0xe7eCe9331f9B03638D17791bC46b8386960ad2D6',
       },
+      rseth: {
+        aggregator: '0xD52ba087E30928886BAbA15b1584d4ac9ABaAB2a',
+        dataFeed: '0xfCC991035F74FC2bC203c816237eb7132a00aD56',
+      },
+      rsweth: {
+        aggregator: '0x0C3f5fafB87318C0dEaEBfF096aBA019501fCb69',
+        dataFeed: '0x24aea62B7F250aB579B62817C46Ed356b2473e10',
+      },
+      sweth: {
+        aggregator: '0xB79301126F9641B20771e3276b9011A481534BcC',
+        dataFeed: '0x1498dDc5387Bc9f6dc8cDa60f420A4fCE056BAF7',
+      },
+      wsteth: {
+        aggregator: '0xA74F994672f232a30067DA820f0E54881EdBB9D7',
+        dataFeed: '0x452A721F7536dE765DE4dfEB7b0dC9984448F9d2',
+      },
+      lbtc: {
+        aggregator: '0x9e6050589879b2e95dd829Cfe02E88DE82F4279C',
+        dataFeed: '0xA37cfCd0bB43214Ac9ED7249983F29A2Ef324C1b',
+      },
+      solvbtc: {
+        aggregator: '0xfcf0Fd056f999115ED29f203897C6bf7109602e7',
+        dataFeed: '0x24722255b156F7F666543b99C01a85284bcB1A69',
+      },
+      cbbtc: {
+        aggregator: '0xFa4f57E80AC77A2679e1ADFD9906977769457718',
+        dataFeed: '0x6545603e5C6B7f59085c230B2C0Bf2658b83aAc3',
+      },
+      sbtc: {
+        aggregator: '0x90cd346249AE3be7898ADF54F87585B7415b8508',
+        dataFeed: '0x53a709f891c6E88148E0d2C4570523be1dEAf113',
+      },
+      enzobtc: {
+        aggregator: '0x2C2d0C67d1486b7D45cbC0AD06CaE35C6c721499',
+        dataFeed: '0x6e043378aba34B0e61eB0889462835CbD50D30dF',
+      },
+      ebtc: {
+        aggregator: '0x7DAEe1240a0D21f5C800A328712787211bf837Cd',
+        dataFeed: '0x63F4fE61C6D9eaDE190fccA5A5432660eA5BF8B3',
+      },
+      swbtc: {
+        aggregator: '0x3E45D8Cf3c9119af1483b7F6B79483aFcD4Dd14C',
+        dataFeed: '0x4323c738548A0C3Cdde9F4B150ad4dcef8116aA1',
+      },
+      pumpbtc: {
+        aggregator: '0x95A17B75ab2A83a5ffE2F21F17cEe52eBBD5b87d',
+        dataFeed: '0x3c24Ec0dd9d33a0ad0d331D008D32268Ee441AE9',
+      },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     mTBILL: {
