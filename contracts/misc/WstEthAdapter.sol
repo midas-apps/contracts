@@ -62,9 +62,17 @@ contract WstEthAdapter {
      * @notice There is no way to access historical rate data, so
      this will always revert
      */
-    function getRoundData(
-        uint80
-    ) external view returns (uint80, int256, uint256, uint256, uint80) {
+    function getRoundData(uint80)
+        external
+        view
+        returns (
+            uint80,
+            int256,
+            uint256,
+            uint256,
+            uint80
+        )
+    {
         revert("Not implemented");
     }
 
