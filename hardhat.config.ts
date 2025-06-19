@@ -146,6 +146,14 @@ const config: HardhatUserConfig = {
           browserURL: 'https://turin.explorer.tac.build',
         },
       },
+      {
+        network: 'hyperevm',
+        chainId: chainIds.hyperevm,
+        urls: {
+          apiURL: 'https://www.hyperscan.com/api',
+          browserURL: 'https://www.hyperscan.com',
+        },
+      },
     ],
   },
   sourcify: {

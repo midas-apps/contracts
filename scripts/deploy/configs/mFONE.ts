@@ -13,7 +13,7 @@ export const mFONEDeploymentConfig: DeploymentConfig = {
       description: 'mF-ONE/USD',
     },
     customAggregatorDiscounted: {
-      discountPercentage: parseUnits('10', 8),
+      discountPercentage: parseUnits('7.7', 8),
       underlyingFeed: 'customFeed',
     },
     dataFeed: {
