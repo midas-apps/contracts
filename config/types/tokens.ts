@@ -39,6 +39,18 @@ export enum PaymentTokenNameEnum {
   cmeth = 'cmeth',
   weeth = 'weeth',
   susde = 'susde',
+  rseth = 'rseth',
+  rsweth = 'rsweth',
+  sweth = 'sweth',
+  wsteth = 'wsteth',
+  lbtc = 'lbtc',
+  solvbtc = 'solvbtc',
+  cbbtc = 'cbbtc',
+  sbtc = 'sbtc',
+  enzobtc = 'enzobtc',
+  ebtc = 'ebtc',
+  swbtc = 'swbtc',
+  pumpbtc = 'pumpbtc',
   xaut0 = 'xaut0',
 }
 
