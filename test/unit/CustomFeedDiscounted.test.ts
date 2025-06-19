@@ -96,6 +96,23 @@ describe('CustomAggregatorV3CompatibleFeedDiscounted', function () {
         latestRoundData.answeredInRound,
       );
     });
+
+    it('when answer is 1.01234568, discount 7.7% should return 0.93439507', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      const customFeedDiscounted =
+        await new CustomAggregatorV3CompatibleFeedDiscountedTester__factory(
+          fixture.owner,
+        ).deploy(fixture.customFeed.address, parseUnits('7.7', 8));
+
+      await setRoundData(
+        { customFeed: fixture.customFeed, owner: fixture.owner },
+        1.01234568,
+      );
+      const roundData = await customFeedDiscounted.latestRoundData();
+
+      expect(roundData.answer).eq(parseUnits('0.93439507', 8));
+    });
   });
 
   describe('getRoundData', () => {
@@ -150,6 +167,25 @@ describe('CustomAggregatorV3CompatibleFeedDiscounted', function () {
         latestRoundData.answeredInRound,
       );
     });
+
+    it('when answer is 1.01234568, discount 7.7% should return 0.93439507', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      const customFeedDiscounted =
+        await new CustomAggregatorV3CompatibleFeedDiscountedTester__factory(
+          fixture.owner,
+        ).deploy(fixture.customFeed.address, parseUnits('7.7', 8));
+
+      await setRoundData(
+        { customFeed: fixture.customFeed, owner: fixture.owner },
+        1.01234568,
+      );
+      const roundId = await fixture.customFeed.latestRound();
+
+      const roundData = await customFeedDiscounted.getRoundData(roundId);
+
+      expect(roundData.answer).eq(parseUnits('0.93439507', 8));
+    });
   });
 
   describe('_calculateDiscountedAnswer', async () => {
@@ -179,6 +215,21 @@ describe('CustomAggregatorV3CompatibleFeedDiscounted', function () {
           parseUnits('100', 8),
         ),
       ).eq(parseUnits('90', 8));
+    });
+
+    it('when answer is 1.01234568, discount 7.7% should return 0.93439507', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      const customFeedDiscounted =
+        await new CustomAggregatorV3CompatibleFeedDiscountedTester__factory(
+          fixture.owner,
+        ).deploy(fixture.customFeed.address, parseUnits('7.7', 8));
+
+      expect(
+        await customFeedDiscounted.getDiscountedAnswer(
+          parseUnits('1.01234568', 8),
+        ),
+      ).eq(parseUnits('0.93439507', 8));
     });
 
     it('when answer is 0 should return 0', async () => {
