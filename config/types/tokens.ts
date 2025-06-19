@@ -8,6 +8,7 @@ export enum MTokenNameEnum {
   mSL = 'mSL',
   mFONE = 'mFONE',
   hbUSDT = 'hbUSDT',
+  hbXAUt = 'hbXAUt',
   TACmBTC = 'TACmBTC',
   TACmEDGE = 'TACmEDGE',
   TACmMEV = 'TACmMEV',
@@ -50,6 +51,7 @@ export enum PaymentTokenNameEnum {
   ebtc = 'ebtc',
   swbtc = 'swbtc',
   pumpbtc = 'pumpbtc',
+  xaut0 = 'xaut0',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;

@@ -106,6 +106,17 @@ All the roles for the Midas protocol smart contracts are listed below.
 | ***depositVaultAdmin*** | `0x67c435dd03cae84170ef8ae997cd606604e3fe867e73e8b73001eaf8b09a2729` |
 | ***redemptionVaultAdmin*** | `0x856107334cd53181a978573c21093cf543862499f00c157be5bcc123ccf9f869` |
 
+### hbXAUt Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0xdec9131499ff7f27de6411e347d38cbfea3714324d84187c215225bf1f9c9572` |
+| ***burner*** | `0x1a1fd934f60b2d3cdd7e41a4e042430e4dec5b9e543caddacf22077acbc7080e` |
+| ***pauser*** | `0x9611082d60ce5abfc0b4f7736e59694080d2a4fb1c10627093eb16366f392216` |
+| ***customFeedAdmin*** | `0x8e7c1e63e33b695f8bd5baad16a1b3d924c6664bafadfaf89a30f168c3b4dc86` |
+| ***depositVaultAdmin*** | `0x5f0716459fa0edab42d200fcf71ca5098a061b13e7bdee99a7a9189f34bbc03c` |
+| ***redemptionVaultAdmin*** | `0xedeb6b0f7208dd2541c532419cf72c97d5dfe49ba9f62d7ae77829625560bd9f` |
+
 ### mF-ONE Roles
 
 | Role Name | Role |

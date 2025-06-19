@@ -504,6 +504,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x29d2fEC890B037B2d34f061F9a50f76F85ddBcAE',
         dataFeed: '0x47FddEC235Aa35625Fd2bAd34FB373b3A4B6Dd74',
       },
+      xaut0: {
+        token: '0xf4D9235269a96aaDaFc9aDAe454a0618eBE37949',
+        aggregator: '0xE90348C06e1adeEC6AB04eF899dC579597c62637',
+        dataFeed: '0xcC10c5689ADC11bEf3Ea9e11Da0BD9268a4a3Fa7',
+      },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     hbUSDT: {
@@ -512,6 +517,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x2812076947e07FF85734afEa2c438BA6dcEb2083',
       depositVault: '0xbE8A4f1a312b94A712F8E5367B02ae6E378E6F19',
       redemptionVaultSwapper: '0xC898a5cbDb81F260bd5306D9F9B9A893D0FdF042',
+    },
+    hbXAUt: {
+      token: '0x6EB6724D8D3D4FF9E24d872E8c38403169dC05f8',
+      customFeed: '0xf3dB9f59f9C90495D1c9556fC5737A679720921d',
+      dataFeed: '0xdb981793d483B612AF23e29F0282aD23Fe6C3845',
+      depositVault: '0x48fb106Ef0c0C1a19EdDC9C5d27A945E66DA1C4E',
+      redemptionVaultSwapper: '0xD26bB9B45140D17eF14FbD4fCa8Cf0d610ac50E7',
     },
   },
   etherlink: {
@@ -657,6 +669,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xbA9FD2850965053Ffab368Df8AA7eD2486f11024',
       depositVault: '0x6Be2f55816efd0d91f52720f096006d63c366e98',
       redemptionVaultSwapper: '0x9aEBf5d6F9411BAc355021ddFbe9B2c756BDD358',
+    },
+    hbXAUt: {
+      token: '0x0d1C52C7cd203e4F84d084a33A062C61D51762fC',
+      customFeed: '0x489a797714708cf088D158714a376d8FF740d701',
+      dataFeed: '0x6808E4D8ADD893D0227690F435e1ff734d9CcdF4',
+      depositVault: '0xCE41173A54d7f22e08d5800C627F17cB62e01afC',
+      redemptionVaultSwapper: '0xF4376c15559052d35D4efff05EA20D06f7718324',
     },
     mLIQUIDITY: {
       token: '0x649f8698068ad143A7e18Ba9cb0Be112D5986AEb',
