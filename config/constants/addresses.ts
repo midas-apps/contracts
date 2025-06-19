@@ -131,7 +131,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         dataFeed: '0x6545603e5C6B7f59085c230B2C0Bf2658b83aAc3',
       },
       sbtc: {
-        token: '0xfE18be6b3Bd88A2D2A7f928d00292E7a9963CfC6',
+        token: '0x094c0e36210634c3CfA25DC11B96b562E0b07624',
         aggregator: '0x90cd346249AE3be7898ADF54F87585B7415b8508',
         dataFeed: '0x53a709f891c6E88148E0d2C4570523be1dEAf113',
       },
@@ -151,7 +151,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         dataFeed: '0x4323c738548A0C3Cdde9F4B150ad4dcef8116aA1',
       },
       pumpbtc: {
-        token: '0xB7C0007ab75350c582d5eAb1862b872B5cF53F0C',
+        token: '0xF469fBD2abcd6B9de8E169d128226C0Fc90a012e',
         aggregator: '0x95A17B75ab2A83a5ffE2F21F17cEe52eBBD5b87d',
         dataFeed: '0x3c24Ec0dd9d33a0ad0d331D008D32268Ee441AE9',
       },
