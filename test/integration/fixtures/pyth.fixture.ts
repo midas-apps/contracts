@@ -10,7 +10,6 @@ export const PYTH_CONFIGS = {
     pythContract: '0xe9d69CdD6Fe41e7B621B4A688C5D1a68cB5c8ADc',
     usdhlUsdPriceId:
       '0x1497fb795ae65533d36d147b1b88c8b7226866a201589904c13acd314f694799',
-    forkBlockNumber: 6878000,
     rpcUrl: rpcUrls.hyperevm,
   },
 } as const;
@@ -29,7 +28,7 @@ export async function pythAdapterFixture(
       {
         forking: {
           jsonRpcUrl: config.rpcUrl,
-          blockNumber: config.forkBlockNumber,
+          // uses latest block for fresh Pyth data
         },
       },
     ],
