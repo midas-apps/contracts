@@ -509,6 +509,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0xE90348C06e1adeEC6AB04eF899dC579597c62637',
         dataFeed: '0xcC10c5689ADC11bEf3Ea9e11Da0BD9268a4a3Fa7',
       },
+      usdhl: {
+        token: '0xb50A96253aBDF803D85efcDce07Ad8becBc52BD5',
+        aggregator: '0xbC8c568cF0fDFd5898297B76dC623343aE001Fa3',
+        dataFeed: '0x289584e63A61C69EEE170cD553cff8B3FFD56EA7',
+      },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     hbUSDT: {

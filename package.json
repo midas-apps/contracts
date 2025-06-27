@@ -44,6 +44,7 @@
     "deploy:rv:swapper": "yarn hh:run:script scripts/deploy/deploy_RVSwapper.ts",
     "deploy:rv:buidl": "yarn hh:run:script scripts/deploy/deploy_RVSwapper.ts",
     "verify:proxy": "yarn hardhat verify --contract @openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy",
+    "verify:sourcify": "VERIFY_SOURCIFY=true VERIFY_ETHERSCAN=false yarn hardhat verify",
     "dump:roles": "yarn hh:run scripts/dump_roles.ts"
   },
   "devDependencies": {
