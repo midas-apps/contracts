@@ -52,6 +52,7 @@ export enum PaymentTokenNameEnum {
   swbtc = 'swbtc',
   pumpbtc = 'pumpbtc',
   xaut0 = 'xaut0',
+  usdhl = 'usdhl',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;
