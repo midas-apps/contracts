@@ -511,7 +511,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
       usdhl: {
         token: '0xb50A96253aBDF803D85efcDce07Ad8becBc52BD5',
-        aggregator: '0xbC8c568cF0fDFd5898297B76dC623343aE001Fa3',
+        aggregator: '0x215ADBE371A3664640c67d754466CCeE102e9349',
         dataFeed: '0x289584e63A61C69EEE170cD553cff8B3FFD56EA7',
       },
     },
