@@ -12,7 +12,7 @@
     "compile": "hardhat compile",
     "build": "run-s clean compile",
     "test:unit": "hardhat test $(find test/unit -name \"*.test.ts\")",
-    "test:integration": "FORKING_NETWORK=main hardhat test $(find test/integration -name \"*.test.ts\")",
+    "test:integration": "hardhat test $(find test/integration -name \"*.test.ts\")",
     "test": "yarn test:unit && yarn run test:integration",
     "coverage": "cross-env COVERAGE=true hardhat coverage --solcoverjs ./.solcover.json --testfiles 'test/unit/*.test.ts'",
     "slither": "slither . --config-file ./slither.config.json",

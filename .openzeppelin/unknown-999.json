@@ -1129,11 +1129,7 @@
           },
           "t_enum(RequestStatus)12156": {
             "label": "enum RequestStatus",
-            "members": [
-              "Pending",
-              "Processed",
-              "Canceled"
-            ],
+            "members": ["Pending", "Processed", "Canceled"],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -1608,11 +1604,7 @@
           },
           "t_enum(RequestStatus)12156": {
             "label": "enum RequestStatus",
-            "members": [
-              "Pending",
-              "Processed",
-              "Canceled"
-            ],
+            "members": ["Pending", "Processed", "Canceled"],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -2711,11 +2703,7 @@
           },
           "t_enum(RequestStatus)9872": {
             "label": "enum RequestStatus",
-            "members": [
-              "Pending",
-              "Processed",
-              "Canceled"
-            ],
+            "members": ["Pending", "Processed", "Canceled"],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -3246,11 +3234,7 @@
           },
           "t_enum(RequestStatus)9872": {
             "label": "enum RequestStatus",
-            "members": [
-              "Pending",
-              "Processed",
-              "Canceled"
-            ],
+            "members": ["Pending", "Processed", "Canceled"],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
