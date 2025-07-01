@@ -114,6 +114,7 @@ const config: HardhatUserConfig = {
           browserURL: '',
         },
       },
+      // Use Sourcify for contract verification on HyperEVM network
       {
         chainId: chainIds.hyperevm,
         network: 'hyperevm',
