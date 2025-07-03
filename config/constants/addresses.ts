@@ -155,6 +155,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x95A17B75ab2A83a5ffE2F21F17cEe52eBBD5b87d',
         dataFeed: '0x3c24Ec0dd9d33a0ad0d331D008D32268Ee441AE9',
       },
+      usr: {
+        token: '0x66a1E37c9b0eAddca17d3662D6c05F4DECf3e110',
+        dataFeed: '0x3aAc6fd73fA4e16Ec683BD4aaF5Ec89bb2C0EdC2',
+        aggregator: '0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6',
+      },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     mTBILL: {
