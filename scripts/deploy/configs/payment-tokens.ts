@@ -349,6 +349,13 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           maxAnswer: parseUnits('1.003', 8),
         },
       },
+      usdhl: {
+        dataFeed: {
+          healthyDiff: 6 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
       xaut0: {
         dataFeed: {
           healthyDiff: constants.MaxUint256,

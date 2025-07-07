@@ -55,6 +55,7 @@ export enum PaymentTokenNameEnum {
   xaut0 = 'xaut0',
   usol = 'usol',
   jitosol = 'jitosol',
+  usdhl = 'usdhl',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;

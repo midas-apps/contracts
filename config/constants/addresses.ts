@@ -155,6 +155,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x95A17B75ab2A83a5ffE2F21F17cEe52eBBD5b87d',
         dataFeed: '0x3c24Ec0dd9d33a0ad0d331D008D32268Ee441AE9',
       },
+      usr: {
+        token: '0x66a1E37c9b0eAddca17d3662D6c05F4DECf3e110',
+        dataFeed: '0x3aAc6fd73fA4e16Ec683BD4aaF5Ec89bb2C0EdC2',
+        aggregator: '0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6',
+      },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     mTBILL: {
@@ -508,6 +513,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         token: '0xf4D9235269a96aaDaFc9aDAe454a0618eBE37949',
         aggregator: '0xE90348C06e1adeEC6AB04eF899dC579597c62637',
         dataFeed: '0xcC10c5689ADC11bEf3Ea9e11Da0BD9268a4a3Fa7',
+      },
+      usdhl: {
+        token: '0xb50A96253aBDF803D85efcDce07Ad8becBc52BD5',
+        aggregator: '0x215ADBE371A3664640c67d754466CCeE102e9349',
+        dataFeed: '0x289584e63A61C69EEE170cD553cff8B3FFD56EA7',
       },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
