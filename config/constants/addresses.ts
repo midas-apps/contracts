@@ -536,6 +536,28 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVaultSwapper: '0xD26bB9B45140D17eF14FbD4fCa8Cf0d610ac50E7',
     },
   },
+  katana: {
+    accessControl: '0x980f57b62060824799F23f87d6FA321653b6f069',
+    dataFeeds: {
+      usol: {
+        token: '0x9B8Df6E244526ab5F6e6400d331DB28C8fdDdb55',
+        aggregator: '0xA9cBAa1ae3525d1F4164780903A7c771B13468ee',
+        dataFeed: '0x5E40aB9A3128E603Bf368e5F62767ae8A744aFA9',
+      },
+      jitosol: {
+        token: '0x6C16E26013f2431e8B2e1Ba7067ECCcad0Db6C52',
+        // aggregator: '',
+        // dataFeed: '',
+      },
+    },
+    mRE7SOL: {
+      token: '0xC6135d59F8D10c9C035963ce9037B3635170D716',
+      customFeed: '0x3E4b4b3Aed4c51a6652cdB96732AC98c37b9837B',
+      dataFeed: '0x001b3731c706fEd93BDA240A5BF848C28ae1cC12',
+      depositVault: '0x175A9b122bf22ac2b193a0A775D7370D5A75268E',
+      redemptionVault: '0xE93E6Cf151588d63bB669138277D20f28C2E7cdA',
+    },
+  },
   etherlink: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     dataFeeds: {

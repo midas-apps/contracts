@@ -4,6 +4,7 @@ export enum MTokenNameEnum {
   mBTC = 'mBTC',
   mEDGE = 'mEDGE',
   mRE7 = 'mRE7',
+  mRE7SOL = 'mRE7SOL',
   mMEV = 'mMEV',
   mSL = 'mSL',
   mFONE = 'mFONE',
@@ -52,6 +53,8 @@ export enum PaymentTokenNameEnum {
   swbtc = 'swbtc',
   pumpbtc = 'pumpbtc',
   xaut0 = 'xaut0',
+  usol = 'usol',
+  jitosol = 'jitosol',
   usdhl = 'usdhl',
 }
 

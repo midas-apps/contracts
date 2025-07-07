@@ -370,6 +370,28 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
         },
       },
     },
+    [chainIds.katana]: {
+      usol: {
+        customAggregator: {
+          description: 'USOL/SOL',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+      },
+      jitosol: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+    },
     [chainIds.tacTestnet]: {
       usdt: {
         dataFeed: {

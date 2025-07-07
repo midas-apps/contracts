@@ -13,7 +13,8 @@ export type Network =
   | 'rootstock'
   | 'arbitrum'
   | 'tacTestnet'
-  | 'hyperevm';
+  | 'hyperevm'
+  | 'katana';
 export type RpcUrl =
   | `https://eth-${RpcNetwork}.g.alchemy.com/v2/${string}`
   | `https://${RpcNetwork}.infura.io/v3/${string}`
@@ -25,6 +26,7 @@ export type ConfigPerNetwork<T> = Record<Network, T>;
 export interface Environment {
   readonly ALCHEMY_KEY?: string;
   readonly INFURA_KEY?: string;
+  readonly CONDUIT_API_KEY?: string;
   readonly ETHERSCAN_API_KEY?: string;
   readonly OPTIMIZER: boolean;
   readonly COVERAGE: boolean;
