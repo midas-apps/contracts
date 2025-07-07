@@ -84,6 +84,17 @@ All the roles for the Midas protocol smart contracts are listed below.
 | ***depositVaultAdmin*** | `0x798b653d5cbe36c6e86307a13d8f1a22454184746c0735462d6b79b73856d732` |
 | ***redemptionVaultAdmin*** | `0x08d94ed677925f6d75bed3697c6ebebd14565082d8c4481840c66da1586fdd12` |
 
+### mRE7SOL Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0xc3ecd632d492d13089576eabd83a3aca018ab9323e6c5f0e67fd434856826959` |
+| ***burner*** | `0x7f375d5beff621b0adfe6eaddfefd92b47d05d32e736ba9049b29ae547f4f4d9` |
+| ***pauser*** | `0x01ad7974fed695b822ef16b3b3073efb316142e56ab3e6f654828552e7e58b5f` |
+| ***customFeedAdmin*** | `0x4d94b4292928820575e235996b429e6637143146fc4a1b5c3e054e8d79456756` |
+| ***depositVaultAdmin*** | `0x9b4e55e8de230bedd27d0e7c47d1fbab2b169fb1e77d738bf687b70d7cd90fe1` |
+| ***redemptionVaultAdmin*** | `0x06eedf8d6f31879c73bbae06fd13a702c2faed8dd4116d3cc7808bea58436654` |
+
 ### mSL Roles
 
 | Role Name | Role |

@@ -4,7 +4,13 @@ import { GWEI, MOCK_AGGREGATOR_NETWORK_TAG } from '../constants';
 import { ENV } from '../env';
 import { ConfigPerNetwork, Network, RpcUrl } from '../types';
 
-const { ALCHEMY_KEY, INFURA_KEY, MNEMONIC_DEV, MNEMONIC_PROD } = ENV;
+const {
+  ALCHEMY_KEY,
+  INFURA_KEY,
+  CONDUIT_API_KEY,
+  MNEMONIC_DEV,
+  MNEMONIC_PROD,
+} = ENV;
 
 export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   main: ALCHEMY_KEY
@@ -23,6 +29,7 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   arbitrum: 'https://arbitrum.drpc.org',
   tacTestnet: 'https://turin.rpc.tac.build',
   hyperevm: 'https://rpc.hyperliquid.xyz/evm',
+  katana: `https://rpc-katana.t.conduit.xyz/${CONDUIT_API_KEY}`,
 };
 
 export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
@@ -38,6 +45,7 @@ export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
   arbitrum: undefined,
   tacTestnet: undefined,
   hyperevm: undefined,
+  katana: undefined,
 };
 
 export const chainIds: ConfigPerNetwork<number> = {
@@ -53,6 +61,7 @@ export const chainIds: ConfigPerNetwork<number> = {
   arbitrum: 42161,
   tacTestnet: 2390,
   hyperevm: 999,
+  katana: 747474,
 };
 
 export const mnemonics: ConfigPerNetwork<string | undefined> = {
@@ -68,6 +77,7 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   arbitrum: MNEMONIC_PROD,
   tacTestnet: MNEMONIC_DEV,
   hyperevm: MNEMONIC_PROD,
+  katana: MNEMONIC_PROD,
 };
 
 export const gases: ConfigPerNetwork<number | undefined> = {
@@ -83,6 +93,7 @@ export const gases: ConfigPerNetwork<number | undefined> = {
   arbitrum: undefined,
   tacTestnet: undefined,
   hyperevm: undefined,
+  katana: undefined,
 };
 
 export const timeouts: ConfigPerNetwork<number | undefined> = {
@@ -98,6 +109,7 @@ export const timeouts: ConfigPerNetwork<number | undefined> = {
   arbitrum: undefined,
   tacTestnet: undefined,
   hyperevm: undefined,
+  katana: undefined,
 };
 
 export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
@@ -113,6 +125,7 @@ export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
   arbitrum: undefined,
   tacTestnet: undefined,
   hyperevm: undefined,
+  katana: undefined,
 };
 
 export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
@@ -128,6 +141,7 @@ export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
   arbitrum: undefined,
   tacTestnet: undefined,
   hyperevm: undefined,
+  katana: undefined,
 };
 
 export const getBaseNetworkConfig = (

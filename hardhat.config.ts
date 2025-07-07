@@ -53,6 +53,7 @@ const config: HardhatUserConfig = {
       etherlink: '0xaF940292B68B668A1De0e0729Ce0D60e95018b17',
       tacTestnet: '0x12dE1B534B879b4e3a2f1D05a299eD448dC45FD3',
       hyperevm: '0x0144936A17ce450a6Eb499C00104890592814F0F',
+      katana: '0xf0db11c80894c0b26681e7ba035574721012bb7e',
     },
   },
   verify: {
@@ -79,6 +80,7 @@ const config: HardhatUserConfig = {
       ? getForkNetworkConfig(FORKING_NETWORK)
       : getNetworkConfig('localhost', [], FORKING_NETWORK as any),
     hyperevm: getNetworkConfig('hyperevm'),
+    katana: getNetworkConfig('katana'),
   },
   gasReporter: {
     enabled: REPORT_GAS,
@@ -115,14 +117,6 @@ const config: HardhatUserConfig = {
         },
       },
       {
-        chainId: chainIds.hyperevm,
-        network: 'hyperevm',
-        urls: {
-          apiURL: '',
-          browserURL: '',
-        },
-      },
-      {
         network: 'plume',
         chainId: chainIds.plume,
         urls: {
@@ -152,6 +146,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: 'https://www.hyperscan.com/api',
           browserURL: 'https://www.hyperscan.com',
+        },
+      },
+      {
+        chainId: chainIds.katana,
+        network: 'katana',
+        urls: {
+          apiURL: 'https://explorer.katanarpc.com/api',
+          browserURL: 'https://explorer.katanarpc.com',
         },
       },
     ],

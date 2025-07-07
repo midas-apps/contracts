@@ -50,6 +50,10 @@ const expectedTokenNameSymb: Record<
     name: 'Midas Re7 Yield',
     symbol: 'mRe7YIELD',
   },
+  mRE7SOL: {
+    name: 'Midas Re7SOL',
+    symbol: 'mRe7SOL',
+  },
   mMEV: {
     name: 'Midas MEV',
     symbol: 'mMEV',
