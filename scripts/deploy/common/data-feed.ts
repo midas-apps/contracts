@@ -170,7 +170,6 @@ const deployCustomAggregator = async (
   if (!networkConfig) {
     throw new Error('Network config is not found');
   }
-
   await deployAndVerifyProxy(hre, customAggregatorContractName, [
     addresses?.accessControl,
     networkConfig.minAnswer,
