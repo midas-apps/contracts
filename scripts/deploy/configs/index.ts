@@ -6,10 +6,12 @@ import { hypeUSDDeploymentConfig } from './hypeUSD';
 import { mBASISDeploymentConfig } from './mBASIS';
 import { mBTCDeploymentConfig } from './mBTC';
 import { mEDGEDeploymentConfig } from './mEDGE';
+import { mevBTCDeploymentConfig } from './mevBTC';
 import { mFONEDeploymentConfig } from './mFONE';
 import { mLIQUIDITYDeploymentConfig } from './mLIQUIDITY';
 import { mMEVDeploymentConfig } from './mMEV';
 import { mRE7DeploymentConfig } from './mRE7';
+import { mRE7SOLDeploymentConfig } from './mRE7SOL';
 import { mSLDeploymentConfig } from './mSL';
 import { mTBILLDeploymentConfig } from './mTBILL';
 import { TACmBTCDeploymentConfig } from './tac/TACmBTC';
@@ -43,4 +45,6 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   tUSDe: tUSDeDeploymentConfig,
   tBTC: tBTCDeploymentConfig,
   hbXAUt: hbXAUtDeploymentConfig,
+  mRE7SOL: mRE7SOLDeploymentConfig,
+  mevBTC: mevBTCDeploymentConfig,
 };

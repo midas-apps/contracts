@@ -20,6 +20,7 @@ export enum MTokenNameEnum {
   tETH = 'tETH',
   tUSDe = 'tUSDe',
   tBTC = 'tBTC',
+  mevBTC = 'mevBTC',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
@@ -56,6 +57,7 @@ export enum PaymentTokenNameEnum {
   usol = 'usol',
   jitosol = 'jitosol',
   usdhl = 'usdhl',
+  tbtc = 'tbtc',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;

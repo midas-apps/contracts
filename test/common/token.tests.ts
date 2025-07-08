@@ -114,6 +114,10 @@ const expectedTokenNameSymb: Record<
     name: 'Hyperbeat XAUt',
     symbol: 'hbXAUt',
   },
+  mevBTC: {
+    name: 'Bitcoin MEV Capital',
+    symbol: 'mevBTC',
+  },
 };
 
 export const tokenContractsTests = (token: MTokenName) => {

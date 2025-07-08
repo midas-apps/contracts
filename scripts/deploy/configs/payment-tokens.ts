@@ -265,6 +265,19 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           maxAnswerDeviation: parseUnits('0', 8),
         },
       },
+      tbtc: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        customAggregator: {
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+          description: 'tBTC/BTC',
+        },
+      },
     },
     [chainIds.base]: {
       usdc: {
