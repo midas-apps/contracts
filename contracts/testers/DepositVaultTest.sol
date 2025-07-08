@@ -41,18 +41,7 @@ contract DepositVaultTest is DepositVault {
         address tokenIn,
         uint256 amountToken,
         bool isInstant
-    )
-        external
-        returns (
-            uint256 tokenAmountInUsd,
-            uint256 feeTokenAmount,
-            uint256 amountTokenWithoutFee,
-            uint256 mintAmount,
-            uint256 tokenInRate,
-            uint256 tokenOutRate,
-            uint256 tokenDecimals
-        )
-    {
+    ) external returns (CalcAndValidateDepositResult memory) {
         return _calcAndValidateDeposit(user, tokenIn, amountToken, isInstant);
     }
 

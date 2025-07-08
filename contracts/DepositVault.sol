@@ -20,6 +20,23 @@ import "./abstract/ManageableVault.sol";
 contract DepositVault is ManageableVault, IDepositVault {
     using Counters for Counters.Counter;
 
+    struct CalcAndValidateDepositResult {
+        // tokenIn amount converted to USD
+        uint256 tokenAmountInUsd;
+        // fee amount in tokenIn
+        uint256 feeTokenAmount;
+        // tokenIn amount without fee
+        uint256 amountTokenWithoutFee;
+        // mToken amount for mint
+        uint256 mintAmount;
+        // tokenIn rate
+        uint256 tokenInRate;
+        // mToken rate
+        uint256 tokenOutRate;
+        // tokenIn decimals
+        uint256 tokenDecimals;
+    }
+
     /**
      * @notice minimal USD amount for first user`s deposit
      */
@@ -83,62 +100,63 @@ contract DepositVault is ManageableVault, IDepositVault {
         bytes32 referrerId
     )
         external
-        whenFnNotPaused(this.depositInstant.selector)
-        onlyGreenlisted(msg.sender)
-        onlyNotBlacklisted(msg.sender)
-        onlyNotSanctioned(msg.sender)
+        whenFnNotPaused(
+            bytes4(keccak256("depositInstant(address,uint256,uint256,bytes32)"))
+        )
     {
-        address user = msg.sender;
-
-        address tokenInCopy = tokenIn;
-        uint256 amountTokenCopy = amountToken;
-
-        (
-            uint256 tokenAmountInUsd,
-            uint256 feeTokenAmount,
-            uint256 amountTokenWithoutFee,
-            uint256 mintAmount,
-            ,
-            ,
-            uint256 tokenDecimals
-        ) = _calcAndValidateDeposit(user, tokenInCopy, amountTokenCopy, true);
-
-        require(
-            mintAmount >= minReceiveAmount,
-            "DV: minReceiveAmount > actual"
+        CalcAndValidateDepositResult memory result = _depositInstant(
+            tokenIn,
+            amountToken,
+            minReceiveAmount,
+            msg.sender
         );
-
-        totalMinted[user] += mintAmount;
-
-        _requireAndUpdateLimit(mintAmount);
-
-        _tokenTransferFromUser(
-            tokenInCopy,
-            tokensReceiver,
-            amountTokenWithoutFee,
-            tokenDecimals
-        );
-
-        if (feeTokenAmount > 0)
-            _tokenTransferFromUser(
-                tokenInCopy,
-                feeReceiver,
-                feeTokenAmount,
-                tokenDecimals
-            );
-
-        mToken.mint(user, mintAmount);
-
-        bytes32 referrerIdCopy = referrerId;
 
         emit DepositInstant(
-            user,
-            tokenInCopy,
-            tokenAmountInUsd,
-            amountTokenCopy,
-            feeTokenAmount,
-            mintAmount,
-            referrerIdCopy
+            msg.sender,
+            tokenIn,
+            result.tokenAmountInUsd,
+            amountToken,
+            result.feeTokenAmount,
+            result.mintAmount,
+            referrerId
+        );
+    }
+
+    /**
+     * @inheritdoc IDepositVault
+     */
+    function depositInstant(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 minReceiveAmount,
+        bytes32 referrerId,
+        address recipient
+    )
+        external
+        whenFnNotPaused(
+            bytes4(
+                keccak256(
+                    "depositInstant(address,uint256,uint256,bytes32,address)"
+                )
+            )
+        )
+    {
+        CalcAndValidateDepositResult memory result = _depositInstant(
+            tokenIn,
+            amountToken,
+            minReceiveAmount,
+            recipient
+        );
+
+        emit DepositInstantWithCustomRecipient(
+            msg.sender,
+            tokenIn,
+            recipient,
+            result.tokenAmountInUsd,
+            amountToken,
+            result.feeTokenAmount,
+            result.mintAmount,
+            referrerId
         );
     }
 
@@ -151,67 +169,69 @@ contract DepositVault is ManageableVault, IDepositVault {
         bytes32 referrerId
     )
         external
-        whenFnNotPaused(this.depositRequest.selector)
-        onlyGreenlisted(msg.sender)
-        onlyNotBlacklisted(msg.sender)
-        onlyNotSanctioned(msg.sender)
-        returns (uint256 requestId)
+        whenFnNotPaused(
+            bytes4(keccak256("depositRequest(address,uint256,bytes32)"))
+        )
+        returns (
+            uint256 /*requestId*/
+        )
     {
-        address user = msg.sender;
-
-        address tokenInCopy = tokenIn;
-        uint256 amountTokenCopy = amountToken;
-        bytes32 referrerIdCopy = referrerId;
-
-        uint256 currentId = currentRequestId.current();
-        requestId = currentId;
-        currentRequestId.increment();
-
         (
-            uint256 tokenAmountInUsd,
-            uint256 feeAmount,
-            uint256 amountTokenWithoutFee,
-            ,
-            uint256 tokenInRate,
-            uint256 tokenOutRate,
-            uint256 tokenDecimals
-        ) = _calcAndValidateDeposit(user, tokenInCopy, amountTokenCopy, false);
-
-        _tokenTransferFromUser(
-            tokenInCopy,
-            tokensReceiver,
-            amountTokenWithoutFee,
-            tokenDecimals
-        );
-
-        if (feeAmount > 0)
-            _tokenTransferFromUser(
-                tokenInCopy,
-                feeReceiver,
-                feeAmount,
-                tokenDecimals
-            );
-
-        mintRequests[currentId] = Request({
-            sender: user,
-            tokenIn: tokenInCopy,
-            status: RequestStatus.Pending,
-            depositedUsdAmount: tokenAmountInUsd,
-            usdAmountWithoutFees: (amountTokenWithoutFee * tokenInRate) /
-                10**18,
-            tokenOutRate: tokenOutRate
-        });
+            uint256 requestId,
+            CalcAndValidateDepositResult memory calcResult
+        ) = _depositRequest(tokenIn, amountToken, msg.sender);
 
         emit DepositRequest(
-            currentId,
-            user,
-            tokenInCopy,
-            amountTokenCopy,
-            tokenAmountInUsd,
-            feeAmount,
-            tokenOutRate,
+            requestId,
+            msg.sender,
+            tokenIn,
+            amountToken,
+            calcResult.tokenAmountInUsd,
+            calcResult.feeTokenAmount,
+            calcResult.tokenOutRate,
+            referrerId
+        );
+
+        return requestId;
+    }
+
+    /**
+     * @inheritdoc IDepositVault
+     */
+    function depositRequest(
+        address tokenIn,
+        uint256 amountToken,
+        bytes32 referrerId,
+        address recipient
+    )
+        external
+        whenFnNotPaused(
+            bytes4(keccak256("depositRequest(address,uint256,bytes32,address)"))
+        )
+        returns (
+            uint256 /*requestId*/
+        )
+    {
+        (
+            uint256 requestId,
+            CalcAndValidateDepositResult memory calcResult
+        ) = _depositRequest(tokenIn, amountToken, recipient);
+
+        bytes32 referrerIdCopy = referrerId;
+
+        emit DepositRequestWithCustomRecipient(
+            requestId,
+            msg.sender,
+            tokenIn,
+            recipient,
+            amountToken,
+            calcResult.tokenAmountInUsd,
+            calcResult.feeTokenAmount,
+            calcResult.tokenOutRate,
             referrerIdCopy
         );
+
+        return requestId;
     }
 
     /**
@@ -294,6 +314,96 @@ contract DepositVault is ManageableVault, IDepositVault {
         );
     }
 
+    function _depositInstant(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 minReceiveAmount,
+        address recipient
+    )
+        private
+        onlyGreenlisted(msg.sender)
+        onlyNotBlacklisted(msg.sender)
+        onlyNotSanctioned(msg.sender)
+        returns (CalcAndValidateDepositResult memory result)
+    {
+        address user = msg.sender;
+
+        result = _calcAndValidateDeposit(user, tokenIn, amountToken, true);
+
+        require(
+            result.mintAmount >= minReceiveAmount,
+            "DV: minReceiveAmount > actual"
+        );
+
+        totalMinted[user] += result.mintAmount;
+
+        _requireAndUpdateLimit(result.mintAmount);
+
+        _tokenTransferFromUser(
+            tokenIn,
+            tokensReceiver,
+            result.amountTokenWithoutFee,
+            result.tokenDecimals
+        );
+
+        if (result.feeTokenAmount > 0)
+            _tokenTransferFromUser(
+                tokenIn,
+                feeReceiver,
+                result.feeTokenAmount,
+                result.tokenDecimals
+            );
+
+        mToken.mint(recipient, result.mintAmount);
+    }
+
+    function _depositRequest(
+        address tokenIn,
+        uint256 amountToken,
+        address recipient
+    )
+        private
+        onlyGreenlisted(msg.sender)
+        onlyNotBlacklisted(msg.sender)
+        onlyNotSanctioned(msg.sender)
+        returns (
+            uint256 requestId,
+            CalcAndValidateDepositResult memory calcResult
+        )
+    {
+        address user = msg.sender;
+
+        requestId = currentRequestId.current();
+        currentRequestId.increment();
+
+        calcResult = _calcAndValidateDeposit(user, tokenIn, amountToken, false);
+
+        _tokenTransferFromUser(
+            tokenIn,
+            tokensReceiver,
+            calcResult.amountTokenWithoutFee,
+            calcResult.tokenDecimals
+        );
+
+        if (calcResult.feeTokenAmount > 0)
+            _tokenTransferFromUser(
+                tokenIn,
+                feeReceiver,
+                calcResult.feeTokenAmount,
+                calcResult.tokenDecimals
+            );
+
+        mintRequests[requestId] = Request({
+            sender: recipient,
+            tokenIn: tokenIn,
+            status: RequestStatus.Pending,
+            depositedUsdAmount: calcResult.tokenAmountInUsd,
+            usdAmountWithoutFees: (calcResult.amountTokenWithoutFee *
+                calcResult.tokenInRate) / 10**18,
+            tokenOutRate: calcResult.tokenOutRate
+        });
+    }
+
     /**
      * @dev approving request
      * Checks price diviation if safe
@@ -336,34 +446,17 @@ contract DepositVault is ManageableVault, IDepositVault {
      * @param amountToken tokenIn amount (decimals 18)
      * @param isInstant is instant operation
      *
-     * @return tokenAmountInUsd tokenIn amount converted to USD
-     * @return feeTokenAmount fee amount in tokenIn
-     * @return amountTokenWithoutFee tokenIn amount without fee
-     * @return mintAmount mToken amount for mint
-     * @return tokenInRate tokenIn rate
-     * @return tokenOutRate mToken rate
-     * @return tokenDecimals tokenIn decimals
+     * @return result calculated deposit result
      */
     function _calcAndValidateDeposit(
         address user,
         address tokenIn,
         uint256 amountToken,
         bool isInstant
-    )
-        internal
-        returns (
-            uint256 tokenAmountInUsd,
-            uint256 feeTokenAmount,
-            uint256 amountTokenWithoutFee,
-            uint256 mintAmount,
-            uint256 tokenInRate,
-            uint256 tokenOutRate,
-            uint256 tokenDecimals
-        )
-    {
+    ) internal returns (CalcAndValidateDepositResult memory result) {
         require(amountToken > 0, "DV: invalid amount");
 
-        tokenDecimals = _tokenDecimals(tokenIn);
+        result.tokenDecimals = _tokenDecimals(tokenIn);
 
         _requireTokenExists(tokenIn);
 
@@ -371,30 +464,31 @@ contract DepositVault is ManageableVault, IDepositVault {
             tokenIn,
             amountToken
         );
-        tokenAmountInUsd = amountInUsd;
-        tokenInRate = tokenInUSDRate;
+        result.tokenAmountInUsd = amountInUsd;
+        result.tokenInRate = tokenInUSDRate;
         address userCopy = user;
 
         _requireAndUpdateAllowance(tokenIn, amountToken);
 
-        feeTokenAmount = _truncate(
+        result.feeTokenAmount = _truncate(
             _getFeeAmount(userCopy, tokenIn, amountToken, isInstant, 0),
-            tokenDecimals
+            result.tokenDecimals
         );
-        amountTokenWithoutFee = amountToken - feeTokenAmount;
+        result.amountTokenWithoutFee = amountToken - result.feeTokenAmount;
 
-        uint256 feeInUsd = (feeTokenAmount * tokenInRate) / 10**18;
+        uint256 feeInUsd = (result.feeTokenAmount * result.tokenInRate) /
+            10**18;
 
         (uint256 mTokenAmount, uint256 mTokenRate) = _convertUsdToMToken(
-            tokenAmountInUsd - feeInUsd
+            result.tokenAmountInUsd - feeInUsd
         );
-        mintAmount = mTokenAmount;
-        tokenOutRate = mTokenRate;
+        result.mintAmount = mTokenAmount;
+        result.tokenOutRate = mTokenRate;
 
         if (!isFreeFromMinAmount[userCopy]) {
-            _validateMinAmount(userCopy, mintAmount);
+            _validateMinAmount(userCopy, result.mintAmount);
         }
-        require(mintAmount > 0, "DV: invalid mint amount");
+        require(result.mintAmount > 0, "DV: invalid mint amount");
     }
 
     /**
