@@ -112,7 +112,7 @@ contract RedemptionVaultWIthBUIDL is RedemptionVault {
     }
 
     /**
-     * @notice redeem mToken to USDC if daily limit and allowance not exceeded
+     * @dev redeem mToken to USDC if daily limit and allowance not exceeded
      * If contract don't have enough USDC, BUIDL redemption flow will be triggered
      * Burns mToken from the user.
      * Transfers fee in mToken to feeReceiver

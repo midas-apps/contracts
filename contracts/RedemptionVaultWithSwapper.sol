@@ -92,7 +92,7 @@ contract RedemptionVaultWithSwapper is
     }
 
     /**
-     * @notice redeem mToken1 to tokenOut if daily limit and allowance not exceeded
+     * @dev redeem mToken1 to tokenOut if daily limit and allowance not exceeded
      * If contract don't have enough tokenOut, mToken1 will swap to mToken2 and redeem on mToken2 vault
      * Burns mToken1 from the user, if swap need mToken1 just tranfers to contract.
      * Transfers fee in mToken1 to feeReceiver

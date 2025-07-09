@@ -161,7 +161,7 @@ interface IDepositVault is IManageableVault {
     ) external;
 
     /**
-     * @notice Does the same as `depositInstant` but allows specifying a custom tokensReceiver address.
+     * @notice Does the same as original `depositInstant` but allows specifying a custom tokensReceiver address.
      * @param tokenIn address of tokenIn
      * @param amountToken amount of `tokenIn` that will be taken from user (decimals 18)
      * @param minReceiveAmount minimum expected amount of mToken to receive (decimals 18)
@@ -194,7 +194,7 @@ interface IDepositVault is IManageableVault {
     ) external returns (uint256);
 
     /**
-     * @notice Does the same as `depositRequest` but allows specifying a custom tokensReceiver address.
+     * @notice Does the same as original `depositRequest` but allows specifying a custom tokensReceiver address.
      * @param tokenIn address of tokenIn
      * @param amountToken amount of `tokenIn` that will be taken from user (decimals 18)
      * @param referrerId referrer id

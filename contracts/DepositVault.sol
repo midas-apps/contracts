@@ -20,22 +20,52 @@ import "./abstract/ManageableVault.sol";
 contract DepositVault is ManageableVault, IDepositVault {
     using Counters for Counters.Counter;
 
+    /**
+     * @notice return data of _calcAndValidateDeposit
+     * packed into a struct to avoid stack too deep errors
+     */
     struct CalcAndValidateDepositResult {
-        // tokenIn amount converted to USD
+        /// @notice tokenIn amount converted to USD
         uint256 tokenAmountInUsd;
-        // fee amount in tokenIn
+        /// @notice fee amount in tokenIn
         uint256 feeTokenAmount;
-        // tokenIn amount without fee
+        /// @notice tokenIn amount without fee
         uint256 amountTokenWithoutFee;
-        // mToken amount for mint
+        /// @notice mToken amount for mint
         uint256 mintAmount;
-        // tokenIn rate
+        /// @notice tokenIn rate
         uint256 tokenInRate;
-        // mToken rate
+        /// @notice mToken rate
         uint256 tokenOutRate;
-        // tokenIn decimals
+        /// @notice tokenIn decimals
         uint256 tokenDecimals;
     }
+
+    /**
+     * @dev selector for deposit instant
+     */
+    bytes4 private constant _DEPOSIT_INSTANT_SELECTOR =
+        bytes4(keccak256("depositInstant(address,uint256,uint256,bytes32)"));
+
+    /**
+     * @dev selector for deposit instant with custom recipient
+     */
+    bytes4 private constant _DEPOSIT_INSTANT_WITH_CUSTOM_RECIPIENT_SELECTOR =
+        bytes4(
+            keccak256("depositInstant(address,uint256,uint256,bytes32,address)")
+        );
+
+    /**
+     * @dev selector for deposit request
+     */
+    bytes4 private constant _DEPOSIT_REQUEST_SELECTOR =
+        bytes4(keccak256("depositRequest(address,uint256,bytes32)"));
+
+    /**
+     * @dev selector for deposit request with custom recipient
+     */
+    bytes4 private constant _DEPOSIT_REQUEST_WITH_CUSTOM_RECIPIENT_SELECTOR =
+        bytes4(keccak256("depositRequest(address,uint256,bytes32,address)"));
 
     /**
      * @notice minimal USD amount for first user`s deposit
@@ -98,12 +128,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 amountToken,
         uint256 minReceiveAmount,
         bytes32 referrerId
-    )
-        external
-        whenFnNotPaused(
-            bytes4(keccak256("depositInstant(address,uint256,uint256,bytes32)"))
-        )
-    {
+    ) external whenFnNotPaused(_DEPOSIT_INSTANT_SELECTOR) {
         _validateUserAccess(msg.sender);
 
         CalcAndValidateDepositResult memory result = _depositInstant(
@@ -135,13 +160,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         address recipient
     )
         external
-        whenFnNotPaused(
-            bytes4(
-                keccak256(
-                    "depositInstant(address,uint256,uint256,bytes32,address)"
-                )
-            )
-        )
+        whenFnNotPaused(_DEPOSIT_INSTANT_WITH_CUSTOM_RECIPIENT_SELECTOR)
     {
         _validateUserAccess(msg.sender);
 
@@ -177,9 +196,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         bytes32 referrerId
     )
         external
-        whenFnNotPaused(
-            bytes4(keccak256("depositRequest(address,uint256,bytes32)"))
-        )
+        whenFnNotPaused(_DEPOSIT_REQUEST_SELECTOR)
         returns (
             uint256 /*requestId*/
         )
@@ -215,9 +232,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         address recipient
     )
         external
-        whenFnNotPaused(
-            bytes4(keccak256("depositRequest(address,uint256,bytes32,address)"))
-        )
+        whenFnNotPaused(_DEPOSIT_REQUEST_WITH_CUSTOM_RECIPIENT_SELECTOR)
         returns (
             uint256 /*requestId*/
         )
@@ -330,6 +345,15 @@ contract DepositVault is ManageableVault, IDepositVault {
         );
     }
 
+    /**
+     * @dev internal deposit instant logic
+     * @param tokenIn tokenIn address
+     * @param amountToken amount of tokenIn (decimals 18)
+     * @param minReceiveAmount min amount of mToken to receive (decimals 18)
+     * @param recipient recipient address
+     *
+     * @return result calculated deposit result
+     */
     function _depositInstant(
         address tokenIn,
         uint256 amountToken,
@@ -367,6 +391,15 @@ contract DepositVault is ManageableVault, IDepositVault {
         mToken.mint(recipient, result.mintAmount);
     }
 
+    /**
+     * @dev internal deposit request logic
+     * @param tokenIn tokenIn address
+     * @param amountToken amount of tokenIn (decimals 18)
+     * @param recipient recipient address
+     *
+     * @return requestId request id
+     * @return calcResult calculated deposit result
+     */
     function _depositRequest(
         address tokenIn,
         uint256 amountToken,

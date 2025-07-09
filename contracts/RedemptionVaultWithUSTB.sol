@@ -70,7 +70,7 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
     }
 
     /**
-     * @notice Redeem mToken to the selected payment token if daily limit and allowance are not exceeded.
+     * @dev Redeem mToken to the selected payment token if daily limit and allowance are not exceeded.
      * If USDC is the payment token and the contract doesn't have enough USDC, the USTB redemption flow will be triggered for the missing amount.
      * Burns mToken from the user.
      * Transfers fee in mToken to feeReceiver.

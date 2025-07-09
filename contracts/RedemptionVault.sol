@@ -22,12 +22,40 @@ import "./access/Greenlistable.sol";
 contract RedemptionVault is ManageableVault, IRedemptionVault {
     using Counters for Counters.Counter;
 
+    /**
+     * @notice return data of _calcAndValidateRedeem
+     * packed into a struct to avoid stack too deep errors
+     */
     struct CalcAndValidateRedeemResult {
-        // fee amount in mToken
+        /// @notice fee amount in mToken
         uint256 feeAmount;
-        // amount of mToken without fee
+        /// @notice amount of mToken without fee
         uint256 amountMTokenWithoutFee;
     }
+
+    /**
+     * @dev selector for redeem instant
+     */
+    bytes4 private constant _REDEEM_INSTANT_SELECTOR =
+        bytes4(keccak256("redeemInstant(address,uint256,uint256)"));
+
+    /**
+     * @dev selector for redeem instant with custom recipient
+     */
+    bytes4 private constant _REDEEM_INSTANT_WITH_CUSTOM_RECIPIENT_SELECTOR =
+        bytes4(keccak256("redeemInstant(address,uint256,uint256,address)"));
+
+    /**
+     * @dev selector for redeem request
+     */
+    bytes4 private constant _REDEEM_REQUEST_SELECTOR =
+        bytes4(keccak256("redeemRequest(address,uint256)"));
+
+    /**
+     * @dev selector for redeem request with custom recipient
+     */
+    bytes4 private constant _REDEEM_REQUEST_WITH_CUSTOM_RECIPIENT_SELECTOR =
+        bytes4(keccak256("redeemRequest(address,uint256,address)"));
 
     /**
      * @notice min amount for fiat requests
@@ -132,12 +160,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address tokenOut,
         uint256 amountMTokenIn,
         uint256 minReceiveAmount
-    )
-        external
-        whenFnNotPaused(
-            bytes4(keccak256("redeemInstant(address,uint256,uint256)"))
-        )
-    {
+    ) external whenFnNotPaused(_REDEEM_INSTANT_SELECTOR) {
         _validateUserAccess(msg.sender);
 
         (
@@ -167,12 +190,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 amountMTokenIn,
         uint256 minReceiveAmount,
         address recipient
-    )
-        external
-        whenFnNotPaused(
-            bytes4(keccak256("redeemInstant(address,uint256,uint256,address)"))
-        )
-    {
+    ) external whenFnNotPaused(_REDEEM_INSTANT_WITH_CUSTOM_RECIPIENT_SELECTOR) {
         _validateUserAccess(msg.sender);
 
         if (recipient != msg.sender) {
@@ -204,7 +222,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function redeemRequest(address tokenOut, uint256 amountMTokenIn)
         external
-        whenFnNotPaused(bytes4(keccak256("redeemRequest(address,uint256)")))
+        whenFnNotPaused(_REDEEM_REQUEST_SELECTOR)
         returns (
             uint256 /*requestId*/
         )
@@ -236,9 +254,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address recipient
     )
         external
-        whenFnNotPaused(
-            bytes4(keccak256("redeemRequest(address,uint256,address)"))
-        )
+        whenFnNotPaused(_REDEEM_REQUEST_WITH_CUSTOM_RECIPIENT_SELECTOR)
         returns (
             uint256 /*requestId*/
         )
@@ -448,6 +464,16 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         require(status == RequestStatus.Pending, "RV: request not pending");
     }
 
+    /**
+     * @dev internal redeem instant logic
+     * @param tokenOut tokenOut address
+     * @param amountMTokenIn amount of mToken (decimals 18)
+     * @param minReceiveAmount min amount of tokenOut to receive (decimals 18)
+     * @param recipient recipient address
+     *
+     * @return calcResult calculated redeem result
+     * @return amountTokenOutWithoutFee amount of tokenOut without fee
+     */
     function _redeemInstant(
         address tokenOut,
         uint256 amountMTokenIn,
@@ -514,7 +540,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     }
 
     /**
-     * @notice Creating request depends on tokenOut
+     * @notice internal redeem request logic
      * @param tokenOut tokenOut address
      * @param amountMTokenIn amount of mToken (decimals 18)
      *

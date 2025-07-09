@@ -154,7 +154,7 @@ interface IRedemptionVault is IManageableVault {
     ) external;
 
     /**
-     * @notice Does the same as `redeemInstant` but allows specifying a custom tokensReceiver address.
+     * @notice Does the same as original `redeemInstant` but allows specifying a custom tokensReceiver address.
      * @param tokenOut stable coin token address to redeem to
      * @param amountMTokenIn amount of mTBILL to redeem (decimals 18)
      * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
@@ -180,7 +180,7 @@ interface IRedemptionVault is IManageableVault {
         returns (uint256);
 
     /**
-     * @notice Does the same as `redeemRequest` but allows specifying a custom tokensReceiver address.
+     * @notice Does the same as original `redeemRequest` but allows specifying a custom tokensReceiver address.
      * @param tokenOut stable coin token address to redeem to
      * @param amountMTokenIn amount of mToken to redeem (decimals 18)
      * @param recipient address that receives tokens
