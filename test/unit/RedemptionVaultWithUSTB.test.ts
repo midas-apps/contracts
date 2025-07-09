@@ -2344,6 +2344,49 @@ describe('RedemptionVaultWithUSTB', function () {
       );
     });
 
+    it('redeem 100 mTBILL when recipient == msg.sender (custom recipient overload)', async () => {
+      const {
+        owner,
+        redemptionVaultWithUSTB,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.usdc, redemptionVaultWithUSTB, 100000);
+      await mintToken(mTBILL, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        mTBILL,
+        redemptionVaultWithUSTB,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: redemptionVaultWithUSTB, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await redeemInstantTest(
+        {
+          redemptionVault: redemptionVaultWithUSTB,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          customRecipient: regularAccounts[0],
+        },
+        stableCoins.usdc,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
     it('redeem 100 mTBILL when other fn overload is paused (custom recipient overload)', async () => {
       const {
         owner,
@@ -3247,6 +3290,7 @@ describe('RedemptionVaultWithUSTB', function () {
         100,
       );
     });
+
     it('redeem request 100 mTBILL (custom recipient overload)', async () => {
       const {
         owner,
@@ -3282,6 +3326,49 @@ describe('RedemptionVaultWithUSTB', function () {
           mTBILL,
           mTokenToUsdDataFeed,
           customRecipient,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('redeem request 100 mTBILL when recipient == msg.sender (custom recipient overload)', async () => {
+      const {
+        owner,
+        redemptionVaultWithUSTB,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.usdc, redemptionVaultWithUSTB, 100000);
+      await mintToken(mTBILL, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        mTBILL,
+        redemptionVaultWithUSTB,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: redemptionVaultWithUSTB, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await redeemRequestTest(
+        {
+          redemptionVault: redemptionVaultWithUSTB,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          customRecipient: regularAccounts[0],
         },
         stableCoins.usdc,
         100,

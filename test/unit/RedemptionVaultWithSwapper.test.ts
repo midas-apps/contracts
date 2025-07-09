@@ -1327,6 +1327,53 @@ describe('MBasisRedemptionVaultWithSwapper', () => {
     );
   });
 
+  it('redeem 100 mTBILL when recipient == msg.sender (custom recipient overload)', async () => {
+    const {
+      owner,
+      redemptionVaultWithSwapper,
+      stableCoins,
+      mTokenToUsdDataFeed,
+      regularAccounts,
+      dataFeed,
+      mBasisToUsdDataFeed,
+      mBASIS,
+      mTBILL,
+    } = await loadFixture(defaultDeploy);
+
+    await mintToken(stableCoins.dai, redemptionVaultWithSwapper, 100000);
+    await mintToken(mBASIS, regularAccounts[0], 100);
+    await approveBase18(
+      regularAccounts[0],
+      mBASIS,
+      redemptionVaultWithSwapper,
+      100,
+    );
+    await addPaymentTokenTest(
+      { vault: redemptionVaultWithSwapper, owner },
+      stableCoins.dai,
+      dataFeed.address,
+      0,
+      true,
+    );
+
+    await redeemInstantWithSwapperTest(
+      {
+        redemptionVaultWithSwapper,
+        owner,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        customRecipient: regularAccounts[0],
+        mBasisToUsdDataFeed,
+        mBASIS,
+      },
+      stableCoins.dai,
+      100,
+      {
+        from: regularAccounts[0],
+      },
+    );
+  });
+
   it('redeem 100 mTBILL when other fn overload is paused (custom recipient overload)', async () => {
     const {
       owner,

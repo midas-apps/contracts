@@ -2021,7 +2021,7 @@ describe('DepositVault', function () {
       );
     });
 
-    it('deposit 100 DAI with custom recipient passed', async () => {
+    it('deposit 100 DAI (custom recipient overload)', async () => {
       const {
         owner,
         depositVault,
@@ -2058,6 +2058,49 @@ describe('DepositVault', function () {
           mTBILL,
           mTokenToUsdDataFeed,
           customRecipient,
+        },
+        stableCoins.dai,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('deposit 100 DAI when recipient == msg.sender (custom recipient overload)', async () => {
+      const {
+        owner,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.dai,
+        depositVault,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositInstantTest(
+        {
+          depositVault,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          customRecipient: regularAccounts[0],
         },
         stableCoins.dai,
         100,
@@ -2867,6 +2910,49 @@ describe('DepositVault', function () {
 
       await depositRequestTest(
         { depositVault, owner, mTBILL, mTokenToUsdDataFeed, customRecipient },
+        stableCoins.dai,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('deposit 100 when recipient == msg.sender (custom recipient overload)', async () => {
+      const {
+        owner,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.dai,
+        depositVault,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositRequestTest(
+        {
+          depositVault,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          customRecipient: regularAccounts[0],
+        },
         stableCoins.dai,
         100,
         {
