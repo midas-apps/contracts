@@ -20,7 +20,7 @@ export const sanctionUser = async (
 ) => {
   user = getAccount(user);
 
-  await expect(sanctionsList.setSunctioned(user, true)).to.not.reverted;
+  await expect(sanctionsList.setSanctioned(user, true)).to.not.reverted;
 };
 
 export const setSanctionsList = async (

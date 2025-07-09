@@ -56,8 +56,8 @@ interface IDepositVault is IManageableVault {
 
     /**
      * @param user function caller (msg.sender)
-     * @param recipient address that receives the mTokens
      * @param tokenIn address of tokenIn
+     * @param recipient address that receives the mTokens
      * @param amountUsd amount of tokenIn converted to USD
      * @param amountToken amount of tokenIn
      * @param fee fee amount in tokenIn

@@ -575,6 +575,14 @@ abstract contract ManageableVault is
         );
     }
 
+    function _validateUserAccess(address user)
+        internal
+        view
+        onlyGreenlisted(user)
+        onlyNotBlacklisted(user)
+        onlyNotSanctioned(user)
+    {}
+
     /**
      * @dev convert value to inputted decimals precision
      * @param value value for format

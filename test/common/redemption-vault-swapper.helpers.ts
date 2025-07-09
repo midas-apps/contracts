@@ -3,9 +3,16 @@ import { expect } from 'chai';
 import { BigNumberish, constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
-import { OptionalCommonParams, getAccount } from './common.helpers';
+import {
+  AccountOrContract,
+  OptionalCommonParams,
+  getAccount,
+} from './common.helpers';
 import { defaultDeploy } from './fixtures';
-import { calcExpectedTokenOutAmount } from './redemption-vault.helpers';
+import {
+  calcExpectedTokenOutAmount,
+  redeemInstantTest,
+} from './redemption-vault.helpers';
 
 import {
   ERC20,
@@ -38,7 +45,14 @@ export const redeemInstantWithSwapperTest = async (
     mTokenToUsdDataFeed,
     swap,
     minAmount,
-  }: CommonParamsRedeem & { swap?: boolean; minAmount?: BigNumberish },
+    waivedFee,
+    customRecipient,
+  }: CommonParamsRedeem & {
+    swap?: boolean;
+    waivedFee?: boolean;
+    minAmount?: BigNumberish;
+    customRecipient?: AccountOrContract;
+  },
   tokenOut: ERC20 | string,
   amountTBillIn: number,
   opt?: OptionalCommonParams,
@@ -57,11 +71,22 @@ export const redeemInstantWithSwapperTest = async (
     await redemptionVaultWithSwapper.liquidityProvider();
 
   if (opt?.revertMessage) {
-    await expect(
-      redemptionVaultWithSwapper
-        .connect(sender)
-        .redeemInstant(tokenOut, amountIn, minAmount ?? constants.Zero),
-    ).revertedWith(opt?.revertMessage);
+    await redeemInstantTest(
+      {
+        redemptionVault: redemptionVaultWithSwapper,
+        owner,
+        mTBILL: mBASIS,
+        mTokenToUsdDataFeed: mBasisToUsdDataFeed,
+        waivedFee,
+        minAmount,
+        customRecipient,
+        checkSupply: !swap,
+      },
+      tokenOut,
+      amountTBillIn,
+      opt,
+    );
+
     return;
   }
 
@@ -79,12 +104,8 @@ export const redeemInstantWithSwapperTest = async (
   const balanceBeforeProviderMBASIS = await mBASIS.balanceOf(liquidityProvider);
 
   const balanceBeforeReceiverMTBILL = await mTBILL.balanceOf(tokensReceiver);
-  const balanceBeforeReceiverMBASIS = await mBASIS.balanceOf(tokensReceiver);
 
   const balanceBeforeFeeReceiverMTBILL = await mTBILL.balanceOf(feeReceiver);
-  const balanceBeforeFeeReceiverMBASIS = await mBASIS.balanceOf(feeReceiver);
-
-  const balanceBeforeTokenOut = await tokenContract.balanceOf(sender.address);
 
   const supplyBeforeMTBILL = await mTBILL.totalSupply();
   const supplyBeforeMBASIS = await mBASIS.totalSupply();
@@ -92,30 +113,32 @@ export const redeemInstantWithSwapperTest = async (
   const mBasisRate = await mBasisToUsdDataFeed.getDataInBase18();
   const mTokenRate = await mTokenToUsdDataFeed.getDataInBase18();
 
-  const { fee, amountOut, amountInWithoutFee } =
-    await calcExpectedTokenOutAmount(
-      sender,
-      tokenContract,
-      redemptionVaultWithSwapper,
-      mBasisRate,
-      amountIn,
-      true,
-    );
+  const { amountInWithoutFee } = await calcExpectedTokenOutAmount(
+    sender,
+    tokenContract,
+    redemptionVaultWithSwapper,
+    mBasisRate,
+    amountIn,
+    true,
+  );
 
   const expectedMToken = amountInWithoutFee.mul(mBasisRate).div(mTokenRate);
 
-  await expect(
-    redemptionVaultWithSwapper
-      .connect(sender)
-      .redeemInstant(tokenOut, amountIn, minAmount ?? constants.Zero),
-  )
-    .to.emit(
-      redemptionVaultWithSwapper,
-      redemptionVaultWithSwapper.interface.events[
-        'RedeemInstant(address,address,uint256,uint256,uint256)'
-      ].name,
-    )
-    .withArgs(sender, tokenOut, amountTBillIn, fee, amountOut).to.not.reverted;
+  await redeemInstantTest(
+    {
+      redemptionVault: redemptionVaultWithSwapper,
+      owner,
+      mTBILL: mBASIS,
+      mTokenToUsdDataFeed: mBasisToUsdDataFeed,
+      waivedFee,
+      minAmount,
+      customRecipient,
+      checkSupply: !swap,
+    },
+    tokenOut,
+    amountTBillIn,
+    opt,
+  );
 
   const balanceAfterUserMTBILL = await mTBILL.balanceOf(sender.address);
   const balanceAfterUserMBASIS = await mBASIS.balanceOf(sender.address);
@@ -131,31 +154,21 @@ export const redeemInstantWithSwapperTest = async (
   const balanceAfterProviderMBASIS = await mBASIS.balanceOf(liquidityProvider);
 
   const balanceAfterReceiverMTBILL = await mTBILL.balanceOf(tokensReceiver);
-  const balanceAfterReceiverMBASIS = await mBASIS.balanceOf(tokensReceiver);
 
   const balanceAfterFeeReceiverMTBILL = await mTBILL.balanceOf(feeReceiver);
-  const balanceAfterFeeReceiverMBASIS = await mBASIS.balanceOf(feeReceiver);
-
-  const balanceAfterTokenOut = await tokenContract.balanceOf(sender.address);
 
   const supplyAfterMTBILL = await mTBILL.totalSupply();
   const supplyAfterMBASIS = await mBASIS.totalSupply();
-
-  expect(balanceAfterTokenOut).eq(balanceBeforeTokenOut.add(amountOut));
 
   expect(balanceAfterUserMBASIS).eq(balanceBeforeUserMBASIS.sub(amountIn));
   expect(balanceAfterUserMTBILL).eq(balanceBeforeUserMTBILL);
 
   expect(balanceAfterReceiverMTBILL).eq(balanceBeforeReceiverMTBILL);
-  expect(balanceAfterReceiverMBASIS).eq(balanceBeforeReceiverMBASIS);
 
   expect(balanceAfterContractMTBILL).eq(balanceBeforeContractMTBILL);
   expect(balanceAfterContractMBASIS).eq(balanceBeforeContractMBASIS);
 
   expect(balanceAfterFeeReceiverMTBILL).eq(balanceBeforeFeeReceiverMTBILL);
-  expect(balanceAfterFeeReceiverMBASIS).eq(
-    balanceBeforeFeeReceiverMBASIS.add(fee),
-  );
 
   if (swap) {
     expect(supplyAfterMTBILL).eq(supplyBeforeMTBILL.sub(expectedMToken));

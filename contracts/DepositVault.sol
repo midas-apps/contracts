@@ -104,6 +104,8 @@ contract DepositVault is ManageableVault, IDepositVault {
             bytes4(keccak256("depositInstant(address,uint256,uint256,bytes32)"))
         )
     {
+        _validateUserAccess(msg.sender);
+
         CalcAndValidateDepositResult memory result = _depositInstant(
             tokenIn,
             amountToken,
@@ -141,6 +143,12 @@ contract DepositVault is ManageableVault, IDepositVault {
             )
         )
     {
+        _validateUserAccess(msg.sender);
+
+        if (recipient != msg.sender) {
+            _validateUserAccess(recipient);
+        }
+
         CalcAndValidateDepositResult memory result = _depositInstant(
             tokenIn,
             amountToken,
@@ -176,6 +184,8 @@ contract DepositVault is ManageableVault, IDepositVault {
             uint256 /*requestId*/
         )
     {
+        _validateUserAccess(msg.sender);
+
         (
             uint256 requestId,
             CalcAndValidateDepositResult memory calcResult
@@ -212,6 +222,12 @@ contract DepositVault is ManageableVault, IDepositVault {
             uint256 /*requestId*/
         )
     {
+        _validateUserAccess(msg.sender);
+
+        if (recipient != msg.sender) {
+            _validateUserAccess(recipient);
+        }
+
         (
             uint256 requestId,
             CalcAndValidateDepositResult memory calcResult
@@ -319,13 +335,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 amountToken,
         uint256 minReceiveAmount,
         address recipient
-    )
-        private
-        onlyGreenlisted(msg.sender)
-        onlyNotBlacklisted(msg.sender)
-        onlyNotSanctioned(msg.sender)
-        returns (CalcAndValidateDepositResult memory result)
-    {
+    ) internal virtual returns (CalcAndValidateDepositResult memory result) {
         address user = msg.sender;
 
         result = _calcAndValidateDeposit(user, tokenIn, amountToken, true);
@@ -363,9 +373,6 @@ contract DepositVault is ManageableVault, IDepositVault {
         address recipient
     )
         private
-        onlyGreenlisted(msg.sender)
-        onlyNotBlacklisted(msg.sender)
-        onlyNotSanctioned(msg.sender)
         returns (
             uint256 requestId,
             CalcAndValidateDepositResult memory calcResult

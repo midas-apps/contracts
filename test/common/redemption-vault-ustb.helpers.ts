@@ -2,7 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumber, BigNumberish } from 'ethers';
 
-import { OptionalCommonParams } from './common.helpers';
+import { AccountOrContract, OptionalCommonParams } from './common.helpers';
 import { redeemInstantTest } from './redemption-vault.helpers';
 
 import {
@@ -23,6 +23,7 @@ type RedemptionWithUSTBParams = {
   minAmount?: BigNumberish;
   expectedUstbUsed?: BigNumber;
   expectedUsdcUsed?: BigNumber;
+  customRecipient?: AccountOrContract;
 };
 
 export const redeemInstantWithUstbTest = async (
@@ -39,6 +40,7 @@ export const redeemInstantWithUstbTest = async (
     ustbToken,
     expectedUstbUsed,
     expectedUsdcUsed,
+    customRecipient,
   } = params;
 
   if (opt?.revertMessage) {
@@ -50,6 +52,7 @@ export const redeemInstantWithUstbTest = async (
         mTokenToUsdDataFeed,
         waivedFee: params.waivedFee,
         minAmount: params.minAmount,
+        customRecipient,
       },
       usdc,
       amountTBillIn,
@@ -73,6 +76,7 @@ export const redeemInstantWithUstbTest = async (
       mTokenToUsdDataFeed,
       waivedFee: params.waivedFee,
       minAmount: params.minAmount,
+      customRecipient,
     },
     usdc,
     amountTBillIn,

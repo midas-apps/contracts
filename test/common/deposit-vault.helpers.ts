@@ -114,15 +114,6 @@ export const depositInstantTest = async (
       true,
     );
 
-  const eventArgsCommon = [
-    sender.address,
-    tokenContract.address,
-    actualAmountInUsd,
-    amountUsdIn,
-    fee,
-    0,
-    constants.HashZero,
-  ];
   await expect(callFn())
     .to.emit(
       depositVault,
@@ -132,8 +123,18 @@ export const depositInstantTest = async (
           : 'DepositInstant(address,address,uint256,uint256,uint256,uint256,bytes32)'
       ].name,
     )
-    .withArgs(...eventArgsCommon, withRecipient ? recipient : undefined).to.not
-    .reverted;
+    .withArgs(
+      ...[
+        sender.address,
+        tokenContract.address,
+        withRecipient ? recipient : undefined,
+        actualAmountInUsd,
+        amountUsdIn,
+        fee,
+        0,
+        constants.HashZero,
+      ].filter((v) => v !== undefined),
+    ).to.not.reverted;
 
   const totalMintedAfter = await depositVault.totalMinted(sender.address);
   const totalMintedAfterRecipient = await depositVault.totalMinted(recipient);
@@ -259,15 +260,17 @@ export const depositRequestTest = async (
       ].name,
     )
     .withArgs(
-      latestRequestIdBefore.add(1),
-      sender.address,
-      tokenContract.address,
-      amountIn,
-      actualAmountInUsd,
-      fee,
-      mintAmount,
-      constants.HashZero,
-      withRecipient ? recipient : undefined,
+      ...[
+        latestRequestIdBefore.add(1),
+        sender.address,
+        tokenContract.address,
+        withRecipient ? recipient : undefined,
+        amountIn,
+        actualAmountInUsd,
+        fee,
+        mintAmount,
+        constants.HashZero,
+      ].filter((v) => v !== undefined),
     ).to.not.reverted;
 
   const latestRequestIdAfter = await depositVault.currentRequestId();

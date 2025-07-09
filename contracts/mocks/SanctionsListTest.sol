@@ -6,7 +6,7 @@ import "../interfaces/ISanctionsList.sol";
 contract SanctionsListMock is ISanctionsList {
     mapping(address => bool) public override isSanctioned;
 
-    function setSunctioned(address addr, bool sanctioned) external {
+    function setSanctioned(address addr, bool sanctioned) external {
         isSanctioned[addr] = sanctioned;
     }
 }

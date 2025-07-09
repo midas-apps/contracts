@@ -48,15 +48,50 @@ interface IRedemptionVault is IManageableVault {
     );
 
     /**
+     * @param user function caller (msg.sender)
+     * @param tokenOut address of tokenOut
+     * @param recipient address that receives tokens
+     * @param amount amount of mToken
+     * @param feeAmount fee amount in mToken
+     * @param amountTokenOut amount of tokenOut
+     */
+    event RedeemInstantWithCustomRecipient(
+        address indexed user,
+        address indexed tokenOut,
+        address recipient,
+        uint256 amount,
+        uint256 feeAmount,
+        uint256 amountTokenOut
+    );
+
+    /**
      * @param requestId request id
      * @param user function caller (msg.sender)
      * @param tokenOut address of tokenOut
      * @param amountMTokenIn amount of mToken
+     * @param feeAmount fee amount in mToken
      */
     event RedeemRequest(
         uint256 indexed requestId,
         address indexed user,
         address indexed tokenOut,
+        uint256 amountMTokenIn,
+        uint256 feeAmount
+    );
+
+    /**
+     * @param requestId request id
+     * @param user function caller (msg.sender)
+     * @param tokenOut address of tokenOut
+     * @param recipient address that receives tokens
+     * @param amountMTokenIn amount of mToken
+     * @param feeAmount fee amount in mToken
+     */
+    event RedeemRequestWithCustomRecipient(
+        uint256 indexed requestId,
+        address indexed user,
+        address indexed tokenOut,
+        address recipient,
         uint256 amountMTokenIn,
         uint256 feeAmount
     );
@@ -119,6 +154,20 @@ interface IRedemptionVault is IManageableVault {
     ) external;
 
     /**
+     * @notice Does the same as `redeemInstant` but allows specifying a custom tokensReceiver address.
+     * @param tokenOut stable coin token address to redeem to
+     * @param amountMTokenIn amount of mTBILL to redeem (decimals 18)
+     * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
+     * @param recipient address that receives tokens
+     */
+    function redeemInstant(
+        address tokenOut,
+        uint256 amountMTokenIn,
+        uint256 minReceiveAmount,
+        address recipient
+    ) external;
+
+    /**
      * @notice creating redeem request if tokenOut not fiat
      * Transfers amount in mToken to contract
      * Transfers fee in mToken to feeReceiver
@@ -129,6 +178,19 @@ interface IRedemptionVault is IManageableVault {
     function redeemRequest(address tokenOut, uint256 amountMTokenIn)
         external
         returns (uint256);
+
+    /**
+     * @notice Does the same as `redeemRequest` but allows specifying a custom tokensReceiver address.
+     * @param tokenOut stable coin token address to redeem to
+     * @param amountMTokenIn amount of mToken to redeem (decimals 18)
+     * @param recipient address that receives tokens
+     * @return request id
+     */
+    function redeemRequest(
+        address tokenOut,
+        uint256 amountMTokenIn,
+        address recipient
+    ) external returns (uint256);
 
     /**
      * @notice creating redeem request if tokenOut is fiat

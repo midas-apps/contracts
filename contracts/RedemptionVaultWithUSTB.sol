@@ -79,24 +79,28 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
      * @param amountMTokenIn amount of mToken to redeem
      * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
      */
-    function redeemInstant(
+    function _redeemInstant(
         address tokenOut,
         uint256 amountMTokenIn,
-        uint256 minReceiveAmount
+        uint256 minReceiveAmount,
+        address recipient
     )
-        external
+        internal
         override
-        whenFnNotPaused(this.redeemInstant.selector)
-        onlyGreenlisted(msg.sender)
-        onlyNotBlacklisted(msg.sender)
-        onlyNotSanctioned(msg.sender)
+        returns (
+            CalcAndValidateRedeemResult memory calcResult,
+            uint256 amountTokenOutWithoutFee
+        )
     {
         address user = msg.sender;
 
-        (
-            uint256 feeAmount,
-            uint256 amountMTokenWithoutFee
-        ) = _calcAndValidateRedeem(user, tokenOut, amountMTokenIn, true, false);
+        calcResult = _calcAndValidateRedeem(
+            user,
+            tokenOut,
+            amountMTokenIn,
+            true,
+            false
+        );
 
         _requireAndUpdateLimit(amountMTokenIn);
 
@@ -116,18 +120,24 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
 
         _requireAndUpdateAllowance(tokenOutCopy, amountTokenOut);
 
-        mToken.burn(user, amountMTokenWithoutFee);
-        if (feeAmount > 0)
-            _tokenTransferFromUser(address(mToken), feeReceiver, feeAmount, 18);
+        mToken.burn(user, calcResult.amountMTokenWithoutFee);
+        if (calcResult.feeAmount > 0)
+            _tokenTransferFromUser(
+                address(mToken),
+                feeReceiver,
+                calcResult.feeAmount,
+                18
+            );
 
-        uint256 amountTokenOutWithoutFeeFrom18 = ((amountMTokenWithoutFee *
-            mTokenRate) / tokenOutRate).convertFromBase18(tokenDecimals);
+        uint256 amountTokenOutWithoutFeeFrom18 = ((calcResult
+            .amountMTokenWithoutFee * mTokenRate) / tokenOutRate)
+            .convertFromBase18(tokenDecimals);
 
-        uint256 amountTokenOutWithoutFeeTruncated = amountTokenOutWithoutFeeFrom18
-                .convertToBase18(tokenDecimals);
+        amountTokenOutWithoutFee = amountTokenOutWithoutFeeFrom18
+            .convertToBase18(tokenDecimals);
 
         require(
-            amountTokenOutWithoutFeeTruncated >= minReceiveAmountCopy,
+            amountTokenOutWithoutFee >= minReceiveAmountCopy,
             "RVU: minReceiveAmount > actual"
         );
 
@@ -135,17 +145,9 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
 
         _tokenTransferToUser(
             tokenOutCopy,
-            user,
-            amountTokenOutWithoutFeeTruncated,
+            recipient,
+            amountTokenOutWithoutFee,
             tokenDecimals
-        );
-
-        emit RedeemInstant(
-            user,
-            tokenOutCopy,
-            amountMTokenInCopy,
-            feeAmount,
-            amountTokenOutWithoutFeeTruncated
         );
     }
 
