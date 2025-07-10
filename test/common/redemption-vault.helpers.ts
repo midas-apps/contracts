@@ -3,7 +3,11 @@ import { expect } from 'chai';
 import { BigNumber, BigNumberish, constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
-import { OptionalCommonParams, getAccount } from './common.helpers';
+import {
+  AccountOrContract,
+  OptionalCommonParams,
+  getAccount,
+} from './common.helpers';
 import { defaultDeploy } from './fixtures';
 
 import {
@@ -26,14 +30,16 @@ type CommonParamsRedeem = Pick<
   redemptionVault:
     | RedemptionVault
     | RedemptionVaultWIthBUIDL
-    | RedemptionVaultWithUSTB;
+    | RedemptionVaultWithUSTB
+    | RedemptionVaultWithSwapper;
 };
 
 type CommonParams = Pick<Awaited<ReturnType<typeof defaultDeploy>>, 'owner'> & {
   redemptionVault:
     | RedemptionVault
     | RedemptionVaultWIthBUIDL
-    | RedemptionVaultWithUSTB;
+    | RedemptionVaultWithUSTB
+    | RedemptionVaultWithSwapper;
 };
 
 export const redeemInstantTest = async (
@@ -44,7 +50,14 @@ export const redeemInstantTest = async (
     mTokenToUsdDataFeed,
     waivedFee,
     minAmount,
-  }: CommonParamsRedeem & { waivedFee?: boolean; minAmount?: BigNumberish },
+    customRecipient,
+    checkSupply = true,
+  }: CommonParamsRedeem & {
+    waivedFee?: boolean;
+    minAmount?: BigNumberish;
+    customRecipient?: AccountOrContract;
+    checkSupply?: boolean;
+  },
   tokenOut: IERC20 | ERC20 | string,
   amountTBillIn: number,
   opt?: OptionalCommonParams,
@@ -60,12 +73,32 @@ export const redeemInstantTest = async (
   const tokensReceiver = await redemptionVault.tokensReceiver();
   const feeReceiver = await redemptionVault.feeReceiver();
 
-  if (opt?.revertMessage) {
-    await expect(
-      redemptionVault
+  const withRecipient = customRecipient !== undefined;
+  const recipient = customRecipient
+    ? getAccount(customRecipient)
+    : sender.address;
+
+  const callFn = withRecipient
+    ? redemptionVault
         .connect(sender)
-        .redeemInstant(tokenOut, amountIn, minAmount ?? constants.Zero),
-    ).revertedWith(opt?.revertMessage);
+        ['redeemInstant(address,uint256,uint256,address)'].bind(
+          this,
+          tokenOut,
+          amountIn,
+          minAmount ?? constants.Zero,
+          recipient,
+        )
+    : redemptionVault
+        .connect(sender)
+        ['redeemInstant(address,uint256,uint256)'].bind(
+          this,
+          tokenOut,
+          amountIn,
+          minAmount ?? constants.Zero,
+        );
+
+  if (opt?.revertMessage) {
+    await expect(callFn()).revertedWith(opt?.revertMessage);
     return;
   }
 
@@ -73,6 +106,9 @@ export const redeemInstantTest = async (
   const balanceBeforeReceiver = await mTBILL.balanceOf(tokensReceiver);
   const balanceBeforeFeeReceiver = await mTBILL.balanceOf(feeReceiver);
 
+  const balanceBeforeTokenOutRecipient = await tokenContract.balanceOf(
+    recipient,
+  );
   const balanceBeforeTokenOut = await tokenContract.balanceOf(sender.address);
 
   const supplyBefore = await mTBILL.totalSupply();
@@ -89,32 +125,49 @@ export const redeemInstantTest = async (
       true,
     );
 
-  await expect(
-    redemptionVault
-      .connect(sender)
-      .redeemInstant(tokenOut, amountIn, minAmount ?? constants.Zero),
-  )
+  await expect(callFn())
     .to.emit(
       redemptionVault,
       redemptionVault.interface.events[
-        'RedeemInstant(address,address,uint256,uint256,uint256)'
+        withRecipient
+          ? 'RedeemInstantWithCustomRecipient(address,address,address,uint256,uint256,uint256)'
+          : 'RedeemInstant(address,address,uint256,uint256,uint256)'
       ].name,
     )
-    .withArgs(sender, tokenOut, amountTBillIn, fee, amountOut).to.not.reverted;
+    .withArgs(
+      ...[
+        sender,
+        tokenOut,
+        withRecipient ? recipient : undefined,
+        amountTBillIn,
+        fee,
+        amountOut,
+      ].filter((v) => v !== undefined),
+    ).to.not.reverted;
 
   const balanceAfterUser = await mTBILL.balanceOf(sender.address);
   const balanceAfterReceiver = await mTBILL.balanceOf(tokensReceiver);
   const balanceAfterFeeReceiver = await mTBILL.balanceOf(feeReceiver);
 
+  const balanceAfterTokenOutRecipient = await tokenContract.balanceOf(
+    recipient,
+  );
   const balanceAfterTokenOut = await tokenContract.balanceOf(sender.address);
 
   const supplyAfter = await mTBILL.totalSupply();
 
-  expect(supplyAfter).eq(supplyBefore.sub(amountInWithoutFee));
+  if (checkSupply) {
+    expect(supplyAfter).eq(supplyBefore.sub(amountInWithoutFee));
+  }
   expect(balanceAfterUser).eq(balanceBeforeUser.sub(amountIn));
   expect(balanceAfterReceiver).eq(balanceBeforeReceiver);
   expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver.add(fee));
-  expect(balanceAfterTokenOut).eq(balanceBeforeTokenOut.add(amountOut));
+  expect(balanceAfterTokenOutRecipient).eq(
+    balanceBeforeTokenOutRecipient.add(amountOut),
+  );
+  if (recipient !== sender.address) {
+    expect(balanceAfterTokenOut).eq(balanceBeforeTokenOut);
+  }
   if (waivedFee) {
     expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver);
   }
@@ -127,7 +180,11 @@ export const redeemRequestTest = async (
     mTBILL,
     mTokenToUsdDataFeed,
     waivedFee,
-  }: CommonParamsRedeem & { waivedFee?: boolean },
+    customRecipient,
+  }: CommonParamsRedeem & {
+    waivedFee?: boolean;
+    customRecipient?: AccountOrContract;
+  },
   tokenOut: ERC20 | string,
   amountTBillIn: number,
   opt?: OptionalCommonParams,
@@ -143,10 +200,26 @@ export const redeemRequestTest = async (
   const tokensReceiver = await redemptionVault.tokensReceiver();
   const feeReceiver = await redemptionVault.feeReceiver();
 
+  const withRecipient = customRecipient !== undefined;
+  const recipient = customRecipient
+    ? getAccount(customRecipient)
+    : sender.address;
+
+  const callFn = withRecipient
+    ? redemptionVault
+        .connect(sender)
+        ['redeemRequest(address,uint256,address)'].bind(
+          this,
+          tokenOut,
+          amountIn,
+          recipient,
+        )
+    : redemptionVault
+        .connect(sender)
+        ['redeemRequest(address,uint256)'].bind(this, tokenOut, amountIn);
+
   if (opt?.revertMessage) {
-    await expect(
-      redemptionVault.connect(sender).redeemRequest(tokenOut, amountIn),
-    ).revertedWith(opt?.revertMessage);
+    await expect(callFn()).revertedWith(opt?.revertMessage);
     return;
   }
 
@@ -172,27 +245,30 @@ export const redeemRequestTest = async (
       false,
     );
 
-  await expect(
-    redemptionVault.connect(sender).redeemRequest(tokenOut, amountIn),
-  )
+  await expect(callFn())
     .to.emit(
       redemptionVault,
       redemptionVault.interface.events[
-        'RedeemRequest(uint256,address,address,uint256,uint256)'
+        withRecipient
+          ? 'RedeemRequestWithCustomRecipient(uint256,address,address,address,uint256,uint256)'
+          : 'RedeemRequest(uint256,address,address,uint256,uint256)'
       ].name,
     )
     .withArgs(
-      latestRequestIdBefore.add(1),
-      sender,
-      tokenOut,
-      amountTBillIn,
-      fee,
+      ...[
+        latestRequestIdBefore.add(1),
+        sender,
+        tokenOut,
+        withRecipient ? recipient : undefined,
+        amountTBillIn,
+        fee,
+      ].filter((v) => v !== undefined),
     ).to.not.reverted;
 
   const latestRequestIdAfter = await redemptionVault.currentRequestId();
   const request = await redemptionVault.redeemRequests(latestRequestIdBefore);
 
-  expect(request.sender).eq(sender.address);
+  expect(request.sender).eq(recipient);
   expect(request.tokenOut).eq(tokenOut);
   expect(request.amountMToken).eq(amountInWithoutFee);
   expect(request.mTokenRate).eq(mTokenRate);

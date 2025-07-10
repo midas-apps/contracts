@@ -55,6 +55,27 @@ interface IDepositVault is IManageableVault {
     );
 
     /**
+     * @param user function caller (msg.sender)
+     * @param tokenIn address of tokenIn
+     * @param recipient address that receives the mTokens
+     * @param amountUsd amount of tokenIn converted to USD
+     * @param amountToken amount of tokenIn
+     * @param fee fee amount in tokenIn
+     * @param minted amount of minted mTokens
+     * @param referrerId referrer id
+     */
+    event DepositInstantWithCustomRecipient(
+        address indexed user,
+        address indexed tokenIn,
+        address recipient,
+        uint256 amountUsd,
+        uint256 amountToken,
+        uint256 fee,
+        uint256 minted,
+        bytes32 referrerId
+    );
+
+    /**
      * @param requestId mint request id
      * @param user function caller (msg.sender)
      * @param tokenIn address of tokenIn
@@ -68,6 +89,29 @@ interface IDepositVault is IManageableVault {
         uint256 indexed requestId,
         address indexed user,
         address indexed tokenIn,
+        uint256 amountToken,
+        uint256 amountUsd,
+        uint256 fee,
+        uint256 tokenOutRate,
+        bytes32 referrerId
+    );
+
+    /**
+     * @param requestId mint request id
+     * @param user function caller (msg.sender)
+     * @param recipient address that receives the mTokens
+     * @param tokenIn address of tokenIn
+     * @param amountToken amount of tokenIn
+     * @param amountUsd amount of tokenIn converted to USD
+     * @param fee fee amount in tokenIn
+     * @param tokenOutRate mToken rate
+     * @param referrerId referrer id
+     */
+    event DepositRequestWithCustomRecipient(
+        uint256 indexed requestId,
+        address indexed user,
+        address indexed tokenIn,
+        address recipient,
         uint256 amountToken,
         uint256 amountUsd,
         uint256 fee,
@@ -117,6 +161,22 @@ interface IDepositVault is IManageableVault {
     ) external;
 
     /**
+     * @notice Does the same as original `depositInstant` but allows specifying a custom tokensReceiver address.
+     * @param tokenIn address of tokenIn
+     * @param amountToken amount of `tokenIn` that will be taken from user (decimals 18)
+     * @param minReceiveAmount minimum expected amount of mToken to receive (decimals 18)
+     * @param referrerId referrer id
+     * @param tokensReceiver address to receive the tokens (instead of msg.sender)
+     */
+    function depositInstant(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 minReceiveAmount,
+        bytes32 referrerId,
+        address tokensReceiver
+    ) external;
+
+    /**
      * @notice depositing proccess with mint request creating if
      * account fit token allowance.
      * Transfers token from the user.
@@ -131,6 +191,21 @@ interface IDepositVault is IManageableVault {
         address tokenIn,
         uint256 amountToken,
         bytes32 referrerId
+    ) external returns (uint256);
+
+    /**
+     * @notice Does the same as original `depositRequest` but allows specifying a custom tokensReceiver address.
+     * @param tokenIn address of tokenIn
+     * @param amountToken amount of `tokenIn` that will be taken from user (decimals 18)
+     * @param referrerId referrer id
+     * @param recipient address that receives the mTokens
+     * @return request id
+     */
+    function depositRequest(
+        address tokenIn,
+        uint256 amountToken,
+        bytes32 referrerId,
+        address recipient
     ) external returns (uint256);
 
     /**

@@ -57,6 +57,7 @@ import {
 export const defaultDeploy = async () => {
   const [
     owner,
+    customRecipient,
     tokensReceiver,
     feeReceiver,
     requestRedeemer,
@@ -525,5 +526,6 @@ export const defaultDeploy = async () => {
     otherCoins,
     ustbToken,
     ustbRedemption,
+    customRecipient,
   };
 };
