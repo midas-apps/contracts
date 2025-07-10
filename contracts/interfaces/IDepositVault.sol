@@ -209,7 +209,30 @@ interface IDepositVault is IManageableVault {
     ) external returns (uint256);
 
     /**
-     * @notice approving request if inputted token rate fit price diviation percent
+     * @notice approving requests from the `requestIds` array
+     * with the current mToken rate.
+     * Does same validation as `safeApproveRequest`.
+     * Mints mToken to request users.
+     * Sets request flags to Processed.
+     * @param requestIds request ids array
+     */
+    function safeBulkApproveRequest(uint256[] calldata requestIds) external;
+
+    /**
+     * @notice approving requests from the `requestIds` array using the `newOutRate`.
+     * Does same validation as `safeApproveRequest`.
+     * Mints mToken to request users.
+     * Sets request flags to Processed.
+     * @param requestIds request ids array
+     * @param newOutRate new mToken rate inputted by vault admin
+     */
+    function safeBulkApproveRequest(
+        uint256[] calldata requestIds,
+        uint256 newOutRate
+    ) external;
+
+    /**
+     * @notice approving request if inputted token rate fit price deviation percent
      * Mints mToken to user.
      * Sets request flag to Processed.
      * @param requestId request id
@@ -218,7 +241,7 @@ interface IDepositVault is IManageableVault {
     function safeApproveRequest(uint256 requestId, uint256 newOutRate) external;
 
     /**
-     * @notice approving request without price diviation check
+     * @notice approving request without price deviation check
      * Mints mToken to user.
      * Sets request flag to Processed.
      * @param requestId request id

@@ -29,6 +29,7 @@ import {
   depositRequestTest,
   rejectRequestTest,
   safeApproveRequestTest,
+  safeBulkApproveRequestTest,
 } from '../common/deposit-vault.helpers';
 import { defaultDeploy } from '../common/fixtures';
 import { greenListEnable } from '../common/greenlist.helpers';
@@ -3398,6 +3399,932 @@ describe('DepositVault', function () {
         { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
         requestId,
         parseUnits('5.000000001'),
+      );
+    });
+  });
+
+  describe('safeBulkApproveRequest() (custom price overload)', async () => {
+    it('should fail: call from address without vault admin role', async () => {
+      const { depositVault, regularAccounts, mTokenToUsdDataFeed, mTBILL } =
+        await loadFixture(defaultDeploy);
+      await safeBulkApproveRequestTest(
+        {
+          depositVault,
+          owner: regularAccounts[1],
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        [{ id: 1 }],
+        parseUnits('1'),
+        {
+          revertMessage: 'WMAC: hasnt role',
+        },
+      );
+    });
+
+    it('should fail: request by id not exist', async () => {
+      const {
+        owner,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await safeBulkApproveRequestTest(
+        {
+          depositVault,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        [{ id: 1 }],
+        parseUnits('1'),
+        {
+          revertMessage: 'DV: request not exist',
+        },
+      );
+    });
+
+    it('should fail: if new rate greater then variabilityTolerance', async () => {
+      const {
+        owner,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        mockedAggregator,
+        mockedAggregatorMToken,
+      } = await loadFixture(defaultDeploy);
+      await mintToken(stableCoins.dai, owner, 100);
+      await approveBase18(owner, stableCoins.dai, depositVault, 100);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+      const requestId = 0;
+      await safeBulkApproveRequestTest(
+        {
+          depositVault,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        [{ id: requestId }],
+        parseUnits('6'),
+        {
+          revertMessage: 'MV: exceed price diviation',
+        },
+      );
+    });
+
+    it('should fail: if new rate lower then variabilityTolerance', async () => {
+      const {
+        owner,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        mockedAggregator,
+        mockedAggregatorMToken,
+      } = await loadFixture(defaultDeploy);
+      await mintToken(stableCoins.dai, owner, 100);
+      await approveBase18(owner, stableCoins.dai, depositVault, 100);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+      const requestId = 0;
+      await safeBulkApproveRequestTest(
+        {
+          depositVault,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        [{ id: requestId }],
+        parseUnits('4'),
+        {
+          revertMessage: 'MV: exceed price diviation',
+        },
+      );
+    });
+
+    it('should fail: request already precessed', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 100);
+      await approveBase18(owner, stableCoins.dai, depositVault, 100);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+      const requestId = 0;
+
+      await safeBulkApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        [{ id: requestId }],
+        parseUnits('5.000001'),
+      );
+      await safeBulkApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        [{ id: requestId }],
+        parseUnits('5.000001'),
+        { revertMessage: 'DV: request not pending' },
+      );
+    });
+
+    it('should fail: process multiple requests, when one of them already precessed', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 200);
+      await approveBase18(owner, stableCoins.dai, depositVault, 200);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+
+      await safeApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        0,
+        parseUnits('5.000001'),
+      );
+
+      await safeBulkApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        [{ id: 1 }, { id: 0 }],
+        parseUnits('5.000001'),
+        { revertMessage: 'DV: request not pending' },
+      );
+    });
+
+    it('should fail: process multiple requests, when couple of them have equal id', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 200);
+      await approveBase18(owner, stableCoins.dai, depositVault, 200);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+
+      await safeApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        0,
+        parseUnits('5.000001'),
+      );
+
+      await safeBulkApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        [{ id: 1 }, { id: 1 }],
+        parseUnits('5.000001'),
+        { revertMessage: 'DV: request not pending' },
+      );
+    });
+
+    it('approve 1 request from vaut admin account', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 100);
+      await approveBase18(owner, stableCoins.dai, depositVault, 100);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+      const requestId = 0;
+
+      await safeBulkApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        [{ id: requestId }],
+        parseUnits('5.000000001'),
+      );
+    });
+
+    it('approve 2 requests from vaut admin account', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 200);
+      await approveBase18(owner, stableCoins.dai, depositVault, 200);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+
+      await safeBulkApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        [{ id: 0 }, { id: 1 }],
+        parseUnits('5.000000001'),
+      );
+    });
+
+    it('approve 10 requests from vaut admin account', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 1000);
+      await approveBase18(owner, stableCoins.dai, depositVault, 1000);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      for (let i = 0; i < 10; i++) {
+        await depositRequestTest(
+          { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+          stableCoins.dai,
+          100,
+        );
+      }
+
+      await safeBulkApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        Array.from({ length: 10 }, (_, i) => ({ id: i })),
+        parseUnits('5.000000001'),
+      );
+    });
+  });
+
+  describe('safeBulkApproveRequest() (current price overload)', async () => {
+    it('should fail: call from address without vault admin role', async () => {
+      const { depositVault, regularAccounts, mTokenToUsdDataFeed, mTBILL } =
+        await loadFixture(defaultDeploy);
+      await safeBulkApproveRequestTest(
+        {
+          depositVault,
+          owner: regularAccounts[1],
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        [{ id: 1 }],
+        undefined,
+        {
+          revertMessage: 'WMAC: hasnt role',
+        },
+      );
+    });
+
+    it('should fail: request by id not exist', async () => {
+      const {
+        owner,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await safeBulkApproveRequestTest(
+        {
+          depositVault,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        [{ id: 1 }],
+        undefined,
+        {
+          revertMessage: 'DV: request not exist',
+        },
+      );
+    });
+
+    it('should fail: if new rate greater then variabilityTolerance', async () => {
+      const {
+        owner,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        mockedAggregator,
+        mockedAggregatorMToken,
+      } = await loadFixture(defaultDeploy);
+      await mintToken(stableCoins.dai, owner, 100);
+      await approveBase18(owner, stableCoins.dai, depositVault, 100);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 10);
+
+      const requestId = 0;
+      await safeBulkApproveRequestTest(
+        {
+          depositVault,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        [{ id: requestId }],
+        undefined,
+        {
+          revertMessage: 'MV: exceed price diviation',
+        },
+      );
+    });
+
+    it('should fail: if new rate lower then variabilityTolerance', async () => {
+      const {
+        owner,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        mockedAggregator,
+        mockedAggregatorMToken,
+      } = await loadFixture(defaultDeploy);
+      await mintToken(stableCoins.dai, owner, 100);
+      await approveBase18(owner, stableCoins.dai, depositVault, 100);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 3);
+
+      const requestId = 0;
+      await safeBulkApproveRequestTest(
+        {
+          depositVault,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        [{ id: requestId }],
+        undefined,
+        {
+          revertMessage: 'MV: exceed price diviation',
+        },
+      );
+    });
+
+    it('should fail: request already precessed', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 100);
+      await approveBase18(owner, stableCoins.dai, depositVault, 100);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+      const requestId = 0;
+
+      await safeBulkApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        [{ id: requestId }],
+        undefined,
+      );
+      await safeBulkApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        [{ id: requestId }],
+        undefined,
+        { revertMessage: 'DV: request not pending' },
+      );
+    });
+
+    it('should fail: process multiple requests, when one of them already precessed', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 200);
+      await approveBase18(owner, stableCoins.dai, depositVault, 200);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+
+      await safeBulkApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        [{ id: 0 }],
+        undefined,
+      );
+
+      await safeBulkApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        [{ id: 1 }, { id: 0 }],
+        undefined,
+        { revertMessage: 'DV: request not pending' },
+      );
+    });
+
+    it('should fail: process multiple requests, when couple of the have equal id', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 200);
+      await approveBase18(owner, stableCoins.dai, depositVault, 200);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+
+      await safeBulkApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        [{ id: 0 }],
+        undefined,
+      );
+
+      await safeBulkApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        [{ id: 1 }, { id: 1 }],
+        undefined,
+        { revertMessage: 'DV: request not pending' },
+      );
+    });
+
+    it('approve 1 request from vaut admin account', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 100);
+      await approveBase18(owner, stableCoins.dai, depositVault, 100);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+      const requestId = 0;
+
+      await safeBulkApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        [{ id: requestId }],
+        undefined,
+      );
+    });
+
+    it('approve 2 requests from vaut admin account', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 200);
+      await approveBase18(owner, stableCoins.dai, depositVault, 200);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+
+      await safeBulkApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        [{ id: 0 }, { id: 1 }],
+        undefined,
+      );
+    });
+
+    it('approve 10 requests from vaut admin account', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 1000);
+      await approveBase18(owner, stableCoins.dai, depositVault, 1000);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      for (let i = 0; i < 10; i++) {
+        await depositRequestTest(
+          { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+          stableCoins.dai,
+          100,
+        );
+      }
+
+      await safeBulkApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        Array.from({ length: 10 }, (_, i) => ({ id: i })),
+        undefined,
+      );
+    });
+
+    it('approve 10 requests from vaut admin account when different users are recievers', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 1000);
+      await approveBase18(owner, stableCoins.dai, depositVault, 1000);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      for (let i = 0; i < 10; i++) {
+        await depositRequestTest(
+          {
+            depositVault,
+            owner,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            customRecipient: regularAccounts[i],
+          },
+          stableCoins.dai,
+          100,
+        );
+      }
+
+      await safeBulkApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        Array.from({ length: 10 }, (_, i) => ({ id: i })),
+        undefined,
+      );
+    });
+
+    it('approve 2 requests from vaut admin account when each request has different token', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 100);
+      await mintToken(stableCoins.usdc, owner, 100);
+      await approveBase18(owner, stableCoins.dai, depositVault, 100);
+      await approveBase18(owner, stableCoins.usdc, depositVault, 100);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.usdc,
+        100,
+      );
+
+      await safeBulkApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        [{ id: 0 }, { id: 1 }],
+        undefined,
       );
     });
   });
