@@ -20,6 +20,7 @@ import "./access/Greenlistable.sol";
  * @author RedDuck Software
  */
 contract RedemptionVault is ManageableVault, IRedemptionVault {
+    using DecimalsCorrectionLibrary for uint256;
     using Counters for Counters.Counter;
 
     /**
@@ -318,11 +319,19 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
+    function safeBulkApproveRequest(uint256[] calldata requestIds) external {
+        uint256 currentMTokenRate = _getMTokenRate();
+        safeBulkApproveRequest(requestIds, currentMTokenRate);
+    }
+
+    /**
+     * @inheritdoc IRedemptionVault
+     */
     function approveRequest(uint256 requestId, uint256 newMTokenRate)
         external
         onlyVaultAdmin
     {
-        _approveRequest(requestId, newMTokenRate, false);
+        _approveRequest(requestId, newMTokenRate, false, false);
 
         emit ApproveRequest(requestId, newMTokenRate);
     }
@@ -334,7 +343,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         external
         onlyVaultAdmin
     {
-        _approveRequest(requestId, newMTokenRate, true);
+        _approveRequest(requestId, newMTokenRate, true, false);
 
         emit SafeApproveRequest(requestId, newMTokenRate);
     }
@@ -393,6 +402,29 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     }
 
     /**
+     * @inheritdoc IRedemptionVault
+     */
+    function safeBulkApproveRequest(
+        uint256[] calldata requestIds,
+        uint256 newOutRate
+    ) public onlyVaultAdmin {
+        for (uint256 i = 0; i < requestIds.length; i++) {
+            bool success = _approveRequest(
+                requestIds[i],
+                newOutRate,
+                true,
+                true
+            );
+
+            if (!success) {
+                continue;
+            }
+
+            emit SafeApproveRequest(requestIds[i], newOutRate);
+        }
+    }
+
+    /**
      * @inheritdoc ManageableVault
      */
     function vaultRole() public pure virtual override returns (bytes32) {
@@ -400,19 +432,30 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     }
 
     /**
-     * @notice validates approve
+     * @dev validates approve
      * burns amount from contract
      * transfer tokenOut to user if not fiat
      * sets flag Processed
      * @param requestId request id
      * @param newMTokenRate new mToken rate
      * @param isSafe new mToken rate
+     * @param safeValidateLiquidity if true, checks if there is enough liquidity
+     * and if its not sufficient, function wont fail
+     *
+     * @return success true if success, false only in case if
+     * safeValidateLiquidity == true and there is not enough liquidity
      */
     function _approveRequest(
         uint256 requestId,
         uint256 newMTokenRate,
-        bool isSafe
-    ) internal {
+        bool isSafe,
+        bool safeValidateLiquidity
+    )
+        internal
+        returns (
+            bool /* success */
+        )
+    {
         Request memory request = redeemRequests[requestId];
 
         _validateRequest(request.sender, request.status);
@@ -420,8 +463,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         if (isSafe) {
             _requireVariationTolerance(request.mTokenRate, newMTokenRate);
         }
-
-        mToken.burn(address(this), request.amountMToken);
 
         bool isFiat = request.tokenOut == MANUAL_FULLFILMENT_TOKEN;
 
@@ -432,9 +473,18 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             tokenDecimals
         );
 
-        _requireAndUpdateAllowance(request.tokenOut, amountTokenOutWithoutFee);
-
         if (!isFiat) {
+            if (
+                safeValidateLiquidity &&
+                !_validateLiquidity(
+                    request.tokenOut,
+                    amountTokenOutWithoutFee,
+                    tokenDecimals
+                )
+            ) {
+                return false;
+            }
+
             _tokenTransferFromTo(
                 request.tokenOut,
                 requestRedeemer,
@@ -444,9 +494,15 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             );
         }
 
+        _requireAndUpdateAllowance(request.tokenOut, amountTokenOutWithoutFee);
+
+        mToken.burn(address(this), request.amountMToken);
+
         request.status = RequestStatus.Processed;
         request.mTokenRate = newMTokenRate;
         redeemRequests[requestId] = request;
+
+        return true;
     }
 
     /**
@@ -655,8 +711,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     {
         require(amountMToken > 0, "RV: amount zero");
 
-        mTokenRate = _getTokenRate(address(mTokenDataFeed), false);
-        require(mTokenRate > 0, "RV: rate zero");
+        mTokenRate = _getMTokenRate();
 
         amountUsd = (amountMToken * mTokenRate) / (10**18);
     }
@@ -706,5 +761,37 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         require(amountMTokenIn > result.feeAmount, "RV: amountMTokenIn < fee");
 
         result.amountMTokenWithoutFee = amountMTokenIn - result.feeAmount;
+    }
+
+    /*
+     * @dev validates that liquidity of provided token on `requestRedeemer` is enough
+     * @param token token address
+     * @param requiredLiquidity minimum required liquidity of `requestRedeemer`
+     * @param tokenDecimals `token` decimals
+     *
+     * @return false if not enough liquidity, otherwise true
+     */
+    function _validateLiquidity(
+        address token,
+        uint256 requiredLiquidity,
+        uint256 tokenDecimals
+    )
+        internal
+        view
+        returns (
+            bool /* success */
+        )
+    {
+        uint256 balance = IERC20(token).balanceOf(requestRedeemer);
+        return balance >= requiredLiquidity.convertFromBase18(tokenDecimals);
+    }
+
+    /**
+     * @dev gets and validates mToken rate
+     * @return mTokenRate mToken rate
+     */
+    function _getMTokenRate() private view returns (uint256 mTokenRate) {
+        mTokenRate = _getTokenRate(address(mTokenDataFeed), false);
+        require(mTokenRate > 0, "RV: rate zero");
     }
 }

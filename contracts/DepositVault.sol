@@ -268,6 +268,14 @@ contract DepositVault is ManageableVault, IDepositVault {
     /**
      * @inheritdoc IDepositVault
      */
+    function safeBulkApproveRequest(uint256[] calldata requestIds) external {
+        uint256 currentMTokenRate = _getMTokenRate();
+        safeBulkApproveRequest(requestIds, currentMTokenRate);
+    }
+
+    /**
+     * @inheritdoc IDepositVault
+     */
     function safeApproveRequest(uint256 requestId, uint256 newOutRate)
         external
         onlyVaultAdmin
@@ -316,6 +324,19 @@ contract DepositVault is ManageableVault, IDepositVault {
         minMTokenAmountForFirstDeposit = newValue;
 
         emit SetMinMTokenAmountForFirstDeposit(msg.sender, newValue);
+    }
+
+    /**
+     * @inheritdoc IDepositVault
+     */
+    function safeBulkApproveRequest(
+        uint256[] calldata requestIds,
+        uint256 newOutRate
+    ) public onlyVaultAdmin {
+        for (uint256 i = 0; i < requestIds.length; i++) {
+            _approveRequest(requestIds[i], newOutRate, true);
+            emit SafeApproveRequest(requestIds[i], newOutRate);
+        }
     }
 
     /**
@@ -568,9 +589,17 @@ contract DepositVault is ManageableVault, IDepositVault {
         virtual
         returns (uint256 amountMToken, uint256 mTokenRate)
     {
-        mTokenRate = _getTokenRate(address(mTokenDataFeed), false);
-        require(mTokenRate > 0, "DV: rate zero");
+        mTokenRate = _getMTokenRate();
 
         amountMToken = (amountUsd * (10**18)) / mTokenRate;
+    }
+
+    /**
+     * @dev gets and validates mToken rate
+     * @return mTokenRate mToken rate
+     */
+    function _getMTokenRate() private view returns (uint256 mTokenRate) {
+        mTokenRate = _getTokenRate(address(mTokenDataFeed), false);
+        require(mTokenRate > 0, "DV: rate zero");
     }
 }

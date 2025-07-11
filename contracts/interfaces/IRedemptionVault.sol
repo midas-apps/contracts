@@ -204,6 +204,31 @@ interface IRedemptionVault is IManageableVault {
         returns (uint256);
 
     /**
+     * @notice approving requests from the `requestIds` array with the
+     * current mToken rate. WONT fail even if there is not enough liquidity
+     * to process all requests.
+     * Does same validation as `safeApproveRequest`.
+     * Transfers tokenOut to users
+     * Sets request flags to Processed.
+     * @param requestIds request ids array
+     */
+    function safeBulkApproveRequest(uint256[] calldata requestIds) external;
+
+    /**
+     * @notice approving requests from the `requestIds` array using the `newMTokenRate`.
+     * WONT fail even if there is not enough liquidity to process all requests.
+     * Does same validation as `safeApproveRequest`.
+     * Transfers tokenOut to user
+     * Sets request flags to Processed.
+     * @param requestIds request ids array
+     * @param newMTokenRate new mToken rate inputted by vault admin
+     */
+    function safeBulkApproveRequest(
+        uint256[] calldata requestIds,
+        uint256 newMTokenRate
+    ) external;
+
+    /**
      * @notice approving redeem request if not exceed tokenOut allowance
      * Burns amount mToken from contract
      * Transfers tokenOut to user

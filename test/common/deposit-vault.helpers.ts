@@ -424,6 +424,148 @@ export const safeApproveRequestTest = async (
   expect(requestDataAfter.status).eq(1);
 };
 
+export const safeBulkApproveRequestTest = async (
+  { depositVault, owner, mTBILL, mTokenToUsdDataFeed }: CommonParamsDeposit,
+  requests: { id: BigNumberish }[],
+  newRate?: BigNumberish,
+  opt?: OptionalCommonParams,
+) => {
+  const sender = opt?.from ?? owner;
+
+  const requestIds = requests.map(({ id }) => id);
+
+  const callFn = newRate
+    ? depositVault
+        .connect(sender)
+        ['safeBulkApproveRequest(uint256[],uint256)'].bind(
+          this,
+          requestIds,
+          newRate,
+        )
+    : depositVault
+        .connect(sender)
+        ['safeBulkApproveRequest(uint256[])'].bind(this, requestIds);
+
+  if (opt?.revertMessage) {
+    await expect(callFn()).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  const requestDatasBefore = await Promise.all(
+    requestIds.map((requestId) => depositVault.mintRequests(requestId)),
+  );
+
+  const balancesBefore = await Promise.all(
+    requestDatasBefore.map(({ sender }) => balanceOfBase18(mTBILL, sender)),
+  );
+
+  const totalDepositedsBefore = await Promise.all(
+    requestDatasBefore.map(({ sender }) => depositVault.totalMinted(sender)),
+  );
+
+  const feePercents = await Promise.all(
+    requestDatasBefore.map((requestData) =>
+      getFeePercent(
+        requestData.sender,
+        requestData.tokenIn,
+        depositVault,
+        false,
+      ),
+    ),
+  );
+  const currentRate = await mTokenToUsdDataFeed.getDataInBase18();
+  const newExpectedRate = newRate ?? currentRate;
+
+  const expectedMintAmounts = requestDatasBefore.map((requestData, i) =>
+    requestData.depositedUsdAmount
+      .sub(requestData.depositedUsdAmount.mul(feePercents[i]).div(10000))
+      .mul(constants.WeiPerEther)
+      .div(newExpectedRate),
+  );
+
+  const groupedDataBefore = requests.map(({ id }, index) => {
+    return {
+      id,
+      request: requestDatasBefore[index],
+      feePercent: feePercents[index],
+      expectedMintAmount: expectedMintAmounts[index],
+      balance: balancesBefore[index],
+      totalDeposited: totalDepositedsBefore[index],
+    };
+  });
+
+  const txPromise = callFn();
+  await expect(txPromise).to.not.reverted;
+
+  const txReceipt = await (await txPromise).wait();
+
+  const parsedLogs = txReceipt.logs
+    .filter((v) => v.address === depositVault.address)
+    .map((log) => depositVault.interface.parseLog(log))
+    .filter((v) => v.name === 'SafeApproveRequest')
+    .map((v) => v.args);
+
+  const requestDatasAfter = await Promise.all(
+    requestIds.map((requestId) => depositVault.mintRequests(requestId)),
+  );
+
+  const balancesAfter = await Promise.all(
+    requestDatasAfter.map(({ sender }) => balanceOfBase18(mTBILL, sender)),
+  );
+
+  const totalDepositedsAfter = await Promise.all(
+    requestDatasAfter.map(({ sender }) => depositVault.totalMinted(sender)),
+  );
+
+  const groupedDataAfter = requests.map(({ id }, index) => {
+    return {
+      id,
+      request: requestDatasAfter[index],
+      balance: balancesAfter[index],
+      totalDeposited: totalDepositedsAfter[index],
+    };
+  });
+
+  for (const [i, { id, ...dataBefore }] of groupedDataBefore.entries()) {
+    const dataAfter = groupedDataAfter[i];
+
+    const requestDataBefore = dataBefore.request;
+    const requestDataAfter = dataAfter.request;
+
+    const balanceAfter = dataAfter.balance;
+    const balanceBefore = dataBefore.balance;
+
+    const totalDepositedAfter = dataAfter.totalDeposited;
+    const totalDepositedBefore = dataBefore.totalDeposited;
+
+    expect(requestDataAfter.sender).eq(requestDataBefore.sender);
+    expect(requestDataAfter.tokenIn).eq(requestDataBefore.tokenIn);
+    expect(requestDataAfter.depositedUsdAmount).eq(
+      requestDataBefore.depositedUsdAmount,
+    );
+
+    const logs = parsedLogs.filter((log) => log.requestId.eq(id));
+
+    const expectedMintedAggregatedByUser = groupedDataBefore
+      .filter((v) => v.request.sender === requestDataBefore.sender)
+      .reduce((prev, curr) => {
+        return prev.add(curr.expectedMintAmount);
+      }, BigNumber.from(0));
+
+    expect(logs.length).eq(1);
+    expect(requestDataAfter.tokenOutRate).eq(newExpectedRate);
+    expect(requestDataAfter.status).eq(1);
+    expect(balanceAfter).eq(balanceBefore.add(expectedMintedAggregatedByUser));
+    expect(totalDepositedAfter).eq(
+      totalDepositedBefore.add(expectedMintedAggregatedByUser),
+    );
+    const log = logs[0];
+
+    expect(log.newOutRate).eq(newExpectedRate);
+    expect(log.requestId).eq(id);
+  }
+};
+
 export const rejectRequestTest = async (
   { depositVault, owner, mTBILL }: CommonParamsDeposit,
   requestId: BigNumberish,
