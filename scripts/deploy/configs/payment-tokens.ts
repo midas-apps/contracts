@@ -382,6 +382,33 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           maxAnswerDeviation: parseUnits('0', 8),
         },
       },
+      wsthype: {
+        dataFeed: {
+          minAnswer: parseUnits('1.00767018', 8),
+          maxAnswer: parseUnits('1.03767018', 8),
+          healthyDiff: 86400,
+        },
+      },
+      khype: {
+        dataFeed: {
+          minAnswer: parseUnits('0.999', 8),
+          maxAnswer: parseUnits('1.03', 8),
+          healthyDiff: 6 * 3600,
+        },
+      },
+      whype: {
+        customAggregator: {
+          description: 'wHYPE/HYPE',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+      },
     },
     [chainIds.katana]: {
       usol: {

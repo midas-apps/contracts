@@ -45,7 +45,8 @@
     "deploy:rv:buidl": "yarn hh:run:script scripts/deploy/deploy_RVSwapper.ts",
     "verify:proxy": "yarn hardhat verify --contract @openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy",
     "verify:sourcify": "VERIFY_SOURCIFY=true VERIFY_ETHERSCAN=false yarn hardhat verify",
-    "dump:roles": "yarn hh:run scripts/dump_roles.ts"
+    "dump:roles": "yarn hh:run scripts/dump_roles.ts",
+    "verify:all:impl": "yarn hh:run:script scripts/verify_contracts.ts"
   },
   "devDependencies": {
     "@chainlink/contracts": "^0.6.1",
@@ -57,7 +58,7 @@
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.4",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
     "@nomicfoundation/hardhat-toolbox": "^1.0.1",
-    "@nomicfoundation/hardhat-verify": "^2.0.11",
+    "@nomicfoundation/hardhat-verify": "^2.0.14",
     "@nomiclabs/hardhat-ethers": "2.2.3",
     "@openzeppelin/contracts": "^4.8.3",
     "@openzeppelin/contracts-upgradeable": "^4.9.0",
