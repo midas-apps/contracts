@@ -531,6 +531,21 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x215ADBE371A3664640c67d754466CCeE102e9349',
         dataFeed: '0x289584e63A61C69EEE170cD553cff8B3FFD56EA7',
       },
+      wsthype: {
+        token: '0x94e8396e0869c9F2200760aF0621aFd240E1CF38',
+        aggregator: '0xe6E8baDBB469d16e2060e1Ebeb60F92B2a1250A9',
+        dataFeed: '0xD28b1AB7098E7434a7b4eFdC99c35fb85CfD92C1',
+      },
+      khype: {
+        token: '0xfD739d4e423301CE9385c1fb8850539D657C296D',
+        aggregator: '0xFfe5F5e9e18b88FBdD7e28d4A583a111C874fB47',
+        dataFeed: '0x5A55899f324bF45DD2dA0b97E145774a4668A9E4',
+      },
+      whype: {
+        token: '0x5555555555555555555555555555555555555555',
+        aggregator: '0x7F1f3E3D57E5549828909AE3381C7bFF05A4fE09',
+        dataFeed: '0xE1C769D56Cb6448813732F7736041425AA0A4A75',
+      },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     hbUSDT: {
@@ -546,6 +561,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xdb981793d483B612AF23e29F0282aD23Fe6C3845',
       depositVault: '0x48fb106Ef0c0C1a19EdDC9C5d27A945E66DA1C4E',
       redemptionVaultSwapper: '0xD26bB9B45140D17eF14FbD4fCa8Cf0d610ac50E7',
+    },
+    lstHYPE: {
+      token: '0x81e064d0eB539de7c3170EDF38C1A42CBd752A76',
+      customFeed: '0x2b959a9Deb8e62FaaEA1b226F3bbcbcC0Af31560',
+      dataFeed: '0x7d876E544F12bD3347B9e904F0fb2d83bEd59a27',
+      depositVault: '0x2b158D44eEbb03a025F75B79F1d8B3004Ac97737',
+      redemptionVaultSwapper: '0x1eff01e0784ae8d06a17AF29A2300D2A9cdA5440',
     },
   },
   katana: {

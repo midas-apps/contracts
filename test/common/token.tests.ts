@@ -118,6 +118,10 @@ const expectedTokenNameSymb: Record<
     name: 'Bitcoin MEV Capital',
     symbol: 'mevBTC',
   },
+  lstHYPE: {
+    name: 'Hyperbeat LST Vault',
+    symbol: 'lstHYPE',
+  },
 };
 
 export const tokenContractsTests = (token: MTokenName) => {
