@@ -15,6 +15,8 @@ const prefixes: Record<MTokenName, string> = {
   hbUSDT: 'HB_USDT',
   hbXAUt: 'HB_XAUT',
   mFONE: 'M_FONE',
+  mHYPER: 'M_HYPER',
+  mAPOLLO: 'M_APOLLO',
   mLIQUIDITY: 'M_LIQUIDITY',
   hypeETH: 'HYPE_ETH',
   hypeBTC: 'HYPE_BTC',
