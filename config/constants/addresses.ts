@@ -532,7 +532,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         dataFeed: '0x289584e63A61C69EEE170cD553cff8B3FFD56EA7',
       },
       wsthype: {
-        token: '0xfFaa4a3D97fE9107Cef8a3F48c069F577Ff76cC1',
+        token: '0x94e8396e0869c9F2200760aF0621aFd240E1CF38',
         aggregator: '0xe6E8baDBB469d16e2060e1Ebeb60F92B2a1250A9',
         dataFeed: '0xD28b1AB7098E7434a7b4eFdC99c35fb85CfD92C1',
       },
