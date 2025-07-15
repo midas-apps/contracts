@@ -139,6 +139,28 @@ All the roles for the Midas protocol smart contracts are listed below.
 | ***depositVaultAdmin*** | `0xc36e0ff97dfe3349dafe1988294b64f3512b08a634f42b52895a3c3559879a23` |
 | ***redemptionVaultAdmin*** | `0xe48f52da9588e92d268adb569f098fc35caa5a1913185feefe9c4e62554590bd` |
 
+### mHYPER Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0xe6046a6e8c55ddf579e30dbcefd2018a368c8b9d4836e839e4858921fb6305d7` |
+| ***burner*** | `0xc01eb6e1b4773016d504457dce3f5e83f90f9aad6448a1cac83788ac51b02b68` |
+| ***pauser*** | `0x81b54f25b57244cec3082584e702e3d8145a58ff31a5f48fd4a8768cb875788b` |
+| ***customFeedAdmin*** | `0xf579edbdfe71eecb0735bb2656b6d53f5b7ee74072467c73e651c84bd4f94e1b` |
+| ***depositVaultAdmin*** | `0x5375b38f2ad9c8c8833b90d06ab20e4199feca9d6a6c8f2369d8f717325f4732` |
+| ***redemptionVaultAdmin*** | `0xa6095bf1d1689844730f85ea9c1edf7d9e1566838e1baa0327271b6c8c31dd8a` |
+
+### mAPOLLO Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0x59407f5c6daac4079fa24b515198321ffd28cbdf6f85639037afa72b911a29cf` |
+| ***burner*** | `0xa200dd77df4b34ae6c19cb3e3dc83d679195101d9cd5cb8bd0ad2def1b96390b` |
+| ***pauser*** | `0xe2244752dbb382338a8c397a21467f95453df086aaf28e473476e12eca96891b` |
+| ***customFeedAdmin*** | `0xcdd2c3a00a01651579d9e60180508ef1b0735d9ea12d2ccc6a5a17304c3865e0` |
+| ***depositVaultAdmin*** | `0x257642c7a907c8e097f048c5aec3671d93280c2ea79e740dbf3db850fbbfe87c` |
+| ***redemptionVaultAdmin*** | `0xba606c08c0542611892ee357c770c7db19d0a4746e65e6ed76098fab6f5a1f74` |
+
 ### mLIQUIDITY Roles
 
 | Role Name | Role |

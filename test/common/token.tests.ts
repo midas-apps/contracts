@@ -66,6 +66,14 @@ const expectedTokenNameSymb: Record<
     name: 'Midas Fasanara ONE',
     symbol: 'mF-ONE',
   },
+  mHYPER: {
+    name: 'Midas Hyperithm',
+    symbol: 'mHYPER',
+  },
+  mAPOLLO: {
+    name: 'Midas Apollo Crypto',
+    symbol: 'mAPOLLO',
+  },
   hbUSDT: {
     name: 'Hyperbeat USDT',
     symbol: 'hbUSDT',

@@ -8,6 +8,8 @@ export enum MTokenNameEnum {
   mMEV = 'mMEV',
   mSL = 'mSL',
   mFONE = 'mFONE',
+  mHYPER = 'mHYPER',
+  mAPOLLO = 'mAPOLLO',
   hbUSDT = 'hbUSDT',
   hbXAUt = 'hbXAUt',
   TACmBTC = 'TACmBTC',

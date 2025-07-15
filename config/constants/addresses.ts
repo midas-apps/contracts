@@ -225,6 +225,20 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x41438435c20B1C2f1fcA702d387889F346A0C3DE',
       redemptionVaultSwapper: '0x44b0440e35c596e858cEA433D0d82F5a985fD19C',
     },
+    mHYPER: {
+      token: '0x9b5528528656DBC094765E2abB79F293c21191B9',
+      customFeed: '0x43881B05C3BE68B2d33eb70aDdF9F666C5005f68',
+      dataFeed: '0x92004DCC5359eD67f287F32d12715A37916deCdE',
+      depositVault: '0xbA9FD2850965053Ffab368Df8AA7eD2486f11024',
+      redemptionVaultSwapper: '0x6Be2f55816efd0d91f52720f096006d63c366e98',
+    },
+    mAPOLLO: {
+      token: '0x7CF9DEC92ca9FD46f8d86e7798B72624Bc116C05',
+      customFeed: '0x84303e5568C7B167fa4fEBc6253CDdfe12b7Ee4B',
+      dataFeed: '0x9aEBf5d6F9411BAc355021ddFbe9B2c756BDD358',
+      depositVault: '0xc21511EDd1E6eCdc36e8aD4c82117033e50D5921',
+      redemptionVaultSwapper: '0x5aeA6D35ED7B3B7aE78694B7da2Ee880756Af5C0',
+    },
     mLIQUIDITY: {
       token: '0x841EEb3e2489B2282b0E14202Dc8Bd8F7624e29A',
       customFeed: '0x74508886cDFEF22FddEDcA0d9Caf9E00E876C5aF',
