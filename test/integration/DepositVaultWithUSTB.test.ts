@@ -61,7 +61,7 @@ describe('DepositVaultWithUSTB - Mainnet Fork Integration Tests', function () {
   });
 
   describe('Scenario 2: USTB does not support stablecoin', function () {
-    it('should not deposit in USTB if USTB does not support stablecoin', async function () {
+    it('should fail: USTB does not support stablecoin', async function () {
       const {
         owner,
         vaultAdmin,
@@ -113,7 +113,65 @@ describe('DepositVaultWithUSTB - Mainnet Fork Integration Tests', function () {
         },
         usdc,
         usdcAmount,
-        { from: testUser },
+        { from: testUser, revertMessage: 'DVU: unsupported USTB token' },
+      );
+    });
+
+    it('should fail: USTB stablecoin fee is not 0', async function () {
+      const {
+        owner,
+        vaultAdmin,
+        testUser,
+        mTBILL,
+        depositVaultWithUSTB,
+        usdc,
+        ustbToken,
+        ustbTokenOwner,
+        usdcWhale,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(ustbRedemptionVaultFixture);
+
+      const usdcAmount = 100;
+
+      await setUstbDepositsEnabledTest({ depositVaultWithUSTB, owner }, true, {
+        from: vaultAdmin,
+      });
+
+      // Fund vault with USDC
+      await usdc
+        .connect(usdcWhale)
+        .transfer(testUser.address, parseUnits('100', 6));
+
+      // Approve vault
+      await approveBase18(testUser, usdc, depositVaultWithUSTB, usdcAmount);
+
+      const currentConfig = await ustbToken.supportedStablecoins(usdc.address);
+
+      await setMockUstbStablecoinConfig(
+        { ustbToken },
+        usdc,
+        {
+          sweepDestination: currentConfig.sweepDestination,
+          fee: currentConfig.fee.add(1),
+        },
+        {
+          from: ustbTokenOwner,
+        },
+      );
+
+      // Perform deposit
+      await depositInstantWithUstbTest(
+        {
+          depositVaultWithUSTB,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          ustbToken,
+          expectedUstbDeposited: false,
+        },
+        usdc,
+        usdcAmount,
+        { from: testUser, revertMessage: 'DVU: USTB fee is not 0' },
       );
     });
   });

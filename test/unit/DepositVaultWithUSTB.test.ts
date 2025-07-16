@@ -1995,7 +1995,7 @@ describe('DepositVaultWithUSTB', function () {
       );
     });
 
-    it('when ustbDepositsEnabled is true and payment token is not set in USTB contract', async () => {
+    it('should fail: when ustbDepositsEnabled is true and payment token is not set in USTB contract', async () => {
       const {
         owner,
         depositVaultWithUSTB,
@@ -2044,6 +2044,66 @@ describe('DepositVaultWithUSTB', function () {
         100,
         {
           from: regularAccounts[0],
+          revertMessage: 'DVU: unsupported USTB token',
+        },
+      );
+    });
+
+    it('should fail: when ustbDepositsEnabled is true and payment token is set in USTB contract but fee is not 0', async () => {
+      const {
+        owner,
+        depositVaultWithUSTB,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
+        ustbToken,
+      } = await loadFixture(defaultDeploy);
+
+      await setUstbDepositsEnabledTest(
+        {
+          depositVaultWithUSTB,
+          owner,
+        },
+        true,
+      );
+
+      await setMockUstbStablecoinConfig({ ustbToken }, stableCoins.usdc, {
+        fee: 100,
+        sweepDestination: ustbToken.address,
+      });
+
+      await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.usdc,
+        depositVaultWithUSTB,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithUSTB, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVaultWithUSTB, owner }, 10);
+
+      await depositInstantWithUstbTest(
+        {
+          depositVaultWithUSTB,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          ustbToken,
+          expectedUstbDeposited: false,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'DVU: USTB fee is not 0',
         },
       );
     });

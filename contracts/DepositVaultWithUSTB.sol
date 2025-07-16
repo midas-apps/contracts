@@ -106,13 +106,7 @@ contract DepositVaultWithUSTB is DepositVault {
         uint256 amountToken,
         uint256 tokensDecimals
     ) internal override {
-        if (
-            !ustbDepositsEnabled ||
-            ISuperstateToken(ustb)
-                .supportedStablecoins(tokenIn)
-                .sweepDestination ==
-            address(0)
-        ) {
+        if (!ustbDepositsEnabled) {
             return
                 super._instantTransferTokensToTokensReceiver(
                     tokenIn,
@@ -120,6 +114,16 @@ contract DepositVaultWithUSTB is DepositVault {
                     tokensDecimals
                 );
         }
+
+        ISuperstateToken.StablecoinConfig memory config = ISuperstateToken(ustb)
+            .supportedStablecoins(tokenIn);
+
+        require(
+            config.sweepDestination != address(0),
+            "DVU: unsupported USTB token"
+        );
+
+        require(config.fee == 0, "DVU: USTB fee is not 0");
 
         address ustbToken = ustb;
         uint256 transferredAmount = _tokenTransferFromUser(

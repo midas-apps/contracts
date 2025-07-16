@@ -22,7 +22,7 @@ import {
 } from '../../typechain-types';
 
 type CommonParamsDeposit = {
-  ustbToken: ISuperstateToken;
+  ustbToken: ISuperstateToken | USTBMock;
 } & Pick<
   Awaited<ReturnType<typeof defaultDeploy>>,
   'depositVaultWithUSTB' | 'owner' | 'mTBILL' | 'mTokenToUsdDataFeed'

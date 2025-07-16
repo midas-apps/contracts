@@ -32,6 +32,10 @@ contract USTBMock is ERC20, ISuperstateToken {
         return ERC20.symbol();
     }
 
+    function decimals() public view override returns (uint8) {
+        return 6;
+    }
+
     function mint(address to, uint256 amount) external {
         _mint(to, amount);
     }
