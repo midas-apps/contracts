@@ -16,17 +16,16 @@ import {
   ERC20,
   // eslint-disable-next-line camelcase
   ERC20__factory,
+  IERC20Metadata,
   ISuperstateToken,
   USTBMock,
 } from '../../typechain-types';
 
-type CommonParamsDeposit = Pick<
+type CommonParamsDeposit = {
+  ustbToken: ISuperstateToken;
+} & Pick<
   Awaited<ReturnType<typeof defaultDeploy>>,
-  | 'depositVaultWithUSTB'
-  | 'owner'
-  | 'mTBILL'
-  | 'mTokenToUsdDataFeed'
-  | 'ustbToken'
+  'depositVaultWithUSTB' | 'owner' | 'mTBILL' | 'mTokenToUsdDataFeed'
 >;
 
 type CommonParamsSetUstbDepositsEnabled = Pick<
@@ -35,15 +34,27 @@ type CommonParamsSetUstbDepositsEnabled = Pick<
 >;
 
 export const setMockUstbStablecoinConfig = async (
-  { ustbToken }: { ustbToken: USTBMock },
+  { ustbToken }: { ustbToken: USTBMock | ISuperstateToken },
   stablecoin: AccountOrContract,
   config: ISuperstateToken.StablecoinConfigStruct = {
     fee: BigNumber.from(0),
     sweepDestination: ustbToken.address,
   },
+  opt?: OptionalCommonParams,
 ) => {
   stablecoin = getAccount(stablecoin);
-  await ustbToken.setStablecoinConfig(stablecoin, config);
+
+  if (opt?.from) {
+    ustbToken = ustbToken.connect(opt.from);
+  }
+
+  await expect(
+    ustbToken.setStablecoinConfig(
+      stablecoin,
+      config.sweepDestination,
+      config.fee,
+    ),
+  ).to.not.reverted;
 };
 
 export const setUstbDepositsEnabledTest = async (
@@ -84,13 +95,15 @@ export const depositInstantWithUstbTest = async (
     customRecipient,
     ustbToken,
     expectedUstbDeposited = true,
+    expectedUstbMinted,
   }: CommonParamsDeposit & {
     expectedUstbDeposited?: boolean;
     waivedFee?: boolean;
     minAmount?: BigNumberish;
     customRecipient?: AccountOrContract;
+    expectedUstbMinted?: BigNumberish;
   },
-  tokenIn: ERC20 | string,
+  tokenIn: ERC20 | IERC20Metadata | string,
   amountUsdIn: number,
   opt?: OptionalCommonParams,
 ) => {
@@ -161,9 +174,11 @@ export const depositInstantWithUstbTest = async (
   expect(ustbEnabledAfter).eq(ustbEnabledBefore);
 
   if (ustbEnabledAfter && expectedUstbDeposited) {
-    expect(ustbSupplyAfter.sub(ustbSupplyBefore)).eq(amountInWithoutFee);
+    expectedUstbMinted ??= amountInWithoutFee;
+
+    expect(ustbSupplyAfter.sub(ustbSupplyBefore)).eq(expectedUstbMinted);
     expect(ustbReceiverBalanceAfter.sub(ustbReceiverBalanceBefore)).eq(
-      amountInWithoutFee,
+      expectedUstbMinted,
     );
   }
 };

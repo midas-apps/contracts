@@ -17,7 +17,11 @@ contract USTBMock is ERC20, ISuperstateToken {
 
     mapping(address => bool) private _isAllowed;
 
-    constructor() ERC20("USTB", "USTB") {}
+    address public override owner;
+
+    constructor() ERC20("USTB", "USTB") {
+        owner = msg.sender;
+    }
 
     function symbol()
         public
@@ -46,9 +50,13 @@ contract USTBMock is ERC20, ISuperstateToken {
 
     function setStablecoinConfig(
         address stablecoin,
-        ISuperstateToken.StablecoinConfig calldata config
+        address newSweepDestination,
+        uint96 newFee
     ) external {
-        _stablecoinConfigs[stablecoin] = config;
+        _stablecoinConfigs[stablecoin] = ISuperstateToken.StablecoinConfig(
+            newSweepDestination,
+            newFee
+        );
     }
 
     function setAllowListV2(address allowListV2_) external {

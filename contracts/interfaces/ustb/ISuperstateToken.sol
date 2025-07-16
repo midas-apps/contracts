@@ -15,12 +15,20 @@ interface ISuperstateToken is IERC20 {
         address stablecoin
     ) external;
 
+    function setStablecoinConfig(
+        address stablecoin,
+        address newSweepDestination,
+        uint96 newFee
+    ) external;
+
     function supportedStablecoins(address stablecoin)
         external
         view
         returns (StablecoinConfig memory);
 
     function symbol() external view returns (string memory);
+
+    function owner() external view returns (address);
 
     function allowListV2() external view returns (address);
 
