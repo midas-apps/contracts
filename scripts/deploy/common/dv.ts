@@ -137,7 +137,7 @@ export const deployDepositVault = async (
     unsafeAllow: ['constructor'],
     initializer:
       networkConfig.type === 'USTB'
-        ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,address,address)'
+        ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,address)'
         : 'initialize',
   });
 };
