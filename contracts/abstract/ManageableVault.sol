@@ -410,8 +410,8 @@ abstract contract ManageableVault is
         address to,
         uint256 amount,
         uint256 tokenDecimals
-    ) internal {
-        uint256 transferAmount = amount.convertFromBase18(tokenDecimals);
+    ) internal returns (uint256 transferAmount) {
+        transferAmount = amount.convertFromBase18(tokenDecimals);
 
         require(
             amount == transferAmount.convertToBase18(tokenDecimals),

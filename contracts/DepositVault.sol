@@ -108,6 +108,29 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 _minAmount,
         uint256 _minMTokenAmountForFirstDeposit
     ) external initializer {
+        __DepositVault_init(
+            _ac,
+            _mTokenInitParams,
+            _receiversInitParams,
+            _instantInitParams,
+            _sanctionsList,
+            _variationTolerance,
+            _minAmount,
+            _minMTokenAmountForFirstDeposit
+        );
+    }
+
+    // solhint-disable func-name-mixedcase
+    function __DepositVault_init(
+        address _ac,
+        MTokenInitParams calldata _mTokenInitParams,
+        ReceiversInitParams calldata _receiversInitParams,
+        InstantInitParams calldata _instantInitParams,
+        address _sanctionsList,
+        uint256 _variationTolerance,
+        uint256 _minAmount,
+        uint256 _minMTokenAmountForFirstDeposit
+    ) internal onlyInitializing {
         __ManageableVault_init(
             _ac,
             _mTokenInitParams,
@@ -394,9 +417,8 @@ contract DepositVault is ManageableVault, IDepositVault {
 
         _requireAndUpdateLimit(result.mintAmount);
 
-        _tokenTransferFromUser(
+        _instantTransferTokensToTokensReceiver(
             tokenIn,
-            tokensReceiver,
             result.amountTokenWithoutFee,
             result.tokenDecimals
         );
@@ -498,6 +520,25 @@ contract DepositVault is ManageableVault, IDepositVault {
         request.status = RequestStatus.Processed;
         request.tokenOutRate = newOutRate;
         mintRequests[requestId] = request;
+    }
+
+    /**
+     * @dev internal transfer tokens to tokens receiver
+     * @param tokenIn tokenIn address
+     * @param amountToken amount of tokenIn (decimals 18)
+     * @param tokensDecimals tokens decimals
+     */
+    function _instantTransferTokensToTokensReceiver(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 tokensDecimals
+    ) internal virtual {
+        _tokenTransferFromUser(
+            tokenIn,
+            tokensReceiver,
+            amountToken,
+            tokensDecimals
+        );
     }
 
     /**

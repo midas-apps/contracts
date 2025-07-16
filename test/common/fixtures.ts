@@ -52,6 +52,10 @@ import {
   RedemptionVaultWithSwapperTest__factory,
   // eslint-disable-next-line camelcase
   CustomAggregatorV3CompatibleFeedDiscountedTester__factory,
+  // eslint-disable-next-line camelcase
+  DepositVaultWithUSTBTest__factory,
+  // eslint-disable-next-line camelcase
+  USTBMock__factory,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -283,9 +287,44 @@ export const defaultDeploy = async () => {
     redemptionVaultWithBUIDL.address,
   );
 
+  const ustbToken = await new USTBMock__factory(owner).deploy();
+
+  /* Deposit Vault With USTB */
+
+  const depositVaultWithUSTB = await new DepositVaultWithUSTBTest__factory(
+    owner,
+  ).deploy();
+
+  await depositVaultWithUSTB[
+    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,address)'
+  ](
+    accessControl.address,
+    {
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    parseUnits('100'),
+    0,
+    ustbToken.address,
+  );
+
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_MINT_OPERATOR_ROLE(),
+    depositVaultWithUSTB.address,
+  );
+
   /* Redemption Vault With USTB */
 
-  const ustbToken = await new ERC20Mock__factory(owner).deploy(6);
   const ustbRedemption = await new USTBRedemptionMock__factory(owner).deploy(
     ustbToken.address,
     stableCoins.usdc.address,
@@ -527,5 +566,6 @@ export const defaultDeploy = async () => {
     ustbToken,
     ustbRedemption,
     customRecipient,
+    depositVaultWithUSTB,
   };
 };

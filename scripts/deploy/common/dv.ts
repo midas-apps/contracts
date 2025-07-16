@@ -8,15 +8,12 @@ import { MTokenName } from '../../../config';
 import {
   getCurrentAddresses,
   sanctionListContracts,
+  ustbContracts,
 } from '../../../config/constants/addresses';
 import { getTokenContractNames } from '../../../helpers/contracts';
-import {
-  DepositVault,
-  MBasisDepositVault,
-  MBtcDepositVault,
-} from '../../../typechain-types';
+import { DepositVault, DepositVaultWithUSTB } from '../../../typechain-types';
 
-export type DeployDvConfig = {
+export type DeployDvConfigCommon = {
   feeReceiver?: string;
   tokensReceiver?: `0x${string}` | RvType;
   instantDailyLimit: BigNumberish;
@@ -27,6 +24,16 @@ export type DeployDvConfig = {
   minMTokenAmountForFirstDeposit: BigNumberish;
 };
 
+export type DeployDvRegularConfig = DeployDvConfigCommon & {
+  type?: 'REGULAR';
+};
+
+export type DeployDvUstbConfig = DeployDvConfigCommon & {
+  type: 'USTB';
+};
+
+export type DeployDvConfig = DeployDvRegularConfig | DeployDvUstbConfig;
+
 const isAddress = (value: string): value is `0x${string}` => {
   return value.startsWith('0x');
 };
@@ -34,12 +41,13 @@ const isAddress = (value: string): value is `0x${string}` => {
 export const deployDepositVault = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
+  type: 'dv' | 'dvUstb',
 ) => {
   const addresses = getCurrentAddresses(hre);
   const deployer = await getDeployer(hre);
   const tokenAddresses = addresses?.[token];
 
-  const networkConfig = getNetworkConfig(hre, token, 'dv');
+  const networkConfig = getNetworkConfig(hre, token, type);
 
   if (!tokenAddresses) {
     throw new Error('Token config is not found');
@@ -57,7 +65,7 @@ export const deployDepositVault = async (
     dataFeed = tokenAddresses?.dataFeed;
   }
 
-  const dvContractName = getTokenContractNames(token).dv;
+  const dvContractName = getTokenContractNames(token)[type];
 
   if (!dvContractName) {
     throw new Error('DV contract name is not found');
@@ -88,6 +96,18 @@ export const deployDepositVault = async (
 
   console.log('tokensReceiver', tokensReceiver);
 
+  const extraParams: unknown[] = [];
+
+  if (networkConfig.type === 'USTB') {
+    const ustbContract = ustbContracts[hre.network.config.chainId!];
+
+    if (!ustbContract) {
+      throw new Error('USTB contract is not found');
+    }
+
+    extraParams.push(ustbContract);
+  }
+
   const params = [
     addresses?.accessControl,
     {
@@ -106,10 +126,18 @@ export const deployDepositVault = async (
     networkConfig.variationTolerance,
     networkConfig.minAmount,
     networkConfig.minMTokenAmountForFirstDeposit,
+    ...extraParams,
   ] as
-    | Parameters<MBasisDepositVault['initialize']>
-    | Parameters<MBtcDepositVault['initialize']>
-    | Parameters<DepositVault['initialize']>;
+    | Parameters<DepositVault['initialize']>
+    | Parameters<
+        DepositVaultWithUSTB['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,address)']
+      >;
 
-  await deployAndVerifyProxy(hre, dvContractName, params);
+  await deployAndVerifyProxy(hre, dvContractName, params, undefined, {
+    unsafeAllow: ['constructor'],
+    initializer:
+      networkConfig.type === 'USTB'
+        ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,address,address)'
+        : 'initialize',
+  });
 };

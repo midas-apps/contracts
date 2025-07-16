@@ -40,6 +40,7 @@
     "deploy:feed": "yarn hh:run:script scripts/deploy/deploy_DataFeed.ts",
     "deploy:feed:ptoken": "yarn hh:run:script scripts/deploy/deploy_PaymentToken_DataFeed.ts",
     "deploy:dv": "yarn hh:run:script scripts/deploy/deploy_DV.ts",
+    "deploy:dv:ustb": "yarn hh:run:script scripts/deploy/deploy_DVUstb.ts",
     "deploy:rv": "yarn hh:run:script scripts/deploy/deploy_RV.ts",
     "deploy:rv:swapper": "yarn hh:run:script scripts/deploy/deploy_RVSwapper.ts",
     "deploy:rv:buidl": "yarn hh:run:script scripts/deploy/deploy_RVSwapper.ts",

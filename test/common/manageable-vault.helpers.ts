@@ -8,6 +8,7 @@ import { defaultDeploy } from './fixtures';
 
 import {
   DepositVault,
+  DepositVaultWithUSTB,
   ERC20,
   // eslint-disable-next-line camelcase
   ERC20__factory,
@@ -21,16 +22,16 @@ import {
 type CommonParamsChangePaymentToken = {
   vault:
     | DepositVault
+    | DepositVaultWithUSTB
     | RedemptionVault
     | RedemptionVaultWIthBUIDL
     | RedemptionVaultWithSwapper
     | RedemptionVaultWithUSTB;
   owner: SignerWithAddress;
 };
-type CommonParams = Pick<
-  Awaited<ReturnType<typeof defaultDeploy>>,
-  'depositVault' | 'owner'
->;
+type CommonParams = {
+  depositVault: DepositVault | DepositVaultWithUSTB;
+} & Pick<Awaited<ReturnType<typeof defaultDeploy>>, 'owner'>;
 
 export const setInstantFeeTest = async (
   { vault, owner }: CommonParamsChangePaymentToken,
