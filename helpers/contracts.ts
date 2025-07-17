@@ -2,6 +2,7 @@ import { MTokenName } from '../config';
 
 export type TokenContractNames = {
   dv: string;
+  dvUstb: string;
   rv: string;
   rvSwapper: string;
   rvBuidl: string;
@@ -46,6 +47,7 @@ export const getCommonContractNames = (): CommonContractNames => {
   return {
     ac: 'MidasAccessControl',
     dv: 'DepositVault',
+    dvUstb: 'DepositVaultWithUSTB',
     rv: 'RedemptionVault',
     rvSwapper: 'RedemptionVaultWithSwapper',
     rvBuidl: 'RedemptionVaultWithBUIDL',
@@ -68,6 +70,7 @@ export const getTokenContractNames = (
 
   return {
     dv: `${tokenPrefix}${commonContractNames.dv}`,
+    dvUstb: `${tokenPrefix}${commonContractNames.dvUstb}`,
     rv: `${tokenPrefix}${commonContractNames.rv}`,
     rvSwapper: `${tokenPrefix}${commonContractNames.rvSwapper}`,
     rvBuidl: `${tokenPrefix}${commonContractNames.rvBuidl}`,

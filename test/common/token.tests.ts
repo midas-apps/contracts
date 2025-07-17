@@ -20,6 +20,7 @@ import {
   CustomAggregatorV3CompatibleFeed,
   DataFeed,
   DepositVault,
+  DepositVaultWithUSTB,
   MTBILL,
   RedemptionVault,
   RedemptionVaultWIthBUIDL,
@@ -258,6 +259,30 @@ export const tokenContractsTests = (token: MTokenName) => {
       0,
     );
 
+    const depositVaultUstb =
+      await deployProxyContractIfExists<DepositVaultWithUSTB>(
+        'dvUstb',
+        'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,address)',
+        fixture.accessControl.address,
+        {
+          mToken: tokenContract.address,
+          mTokenDataFeed: dataFeed.address,
+        },
+        {
+          feeReceiver: fixture.feeReceiver.address,
+          tokensReceiver: fixture.tokensReceiver.address,
+        },
+        {
+          instantFee: 100,
+          instantDailyLimit: parseUnits('100000'),
+        },
+        fixture.mockedSanctionsList.address,
+        1,
+        parseUnits('100'),
+        0,
+        fixture.ustbToken.address,
+      );
+
     const redemptionVault = await deployProxyContractIfExists<RedemptionVault>(
       'rv',
       undefined,
@@ -356,6 +381,7 @@ export const tokenContractsTests = (token: MTokenName) => {
       tokenDataFeed: dataFeed,
       tokenCustomAggregatorFeed: customAggregatorFeed,
       tokenDepositVault: depositVault,
+      tokenDepositVaultUstb: depositVaultUstb,
       tokenRedemptionVault: redemptionVault,
       tokenRedemptionVaultWithSwapper: redemptionVaultWithSwapper,
       tokenRedemptionVaultWithBuidl: redemptionVaultWithBuidl,
@@ -763,6 +789,23 @@ export const tokenContractsTests = (token: MTokenName) => {
         await depositVault[tokenRoleNames.depositVaultAdmin](),
       );
       expect(await depositVault.vaultRole()).eq(tokenRoles.depositVaultAdmin);
+    });
+
+    it('DepositVaultWithUSTB', async function () {
+      const fixture = await deployMTokenVaultsWithFixture();
+      const depositVaultUstb = fixture.tokenDepositVaultUstb as Contract;
+
+      if (!depositVaultUstb) {
+        (this as any).skip();
+        return;
+      }
+
+      expect(await depositVaultUstb.vaultRole()).eq(
+        await depositVaultUstb[tokenRoleNames.depositVaultAdmin](),
+      );
+      expect(await depositVaultUstb.vaultRole()).eq(
+        tokenRoles.depositVaultAdmin,
+      );
     });
 
     it('RedemptionVault', async function () {

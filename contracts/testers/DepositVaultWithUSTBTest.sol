@@ -1,35 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import "../DepositVault.sol";
+import "../DepositVaultWithUSTB.sol";
 
-contract DepositVaultTest is DepositVault {
+contract DepositVaultWithUSTBTest is DepositVaultWithUSTB {
     bool private _overrideGetTokenRate;
     uint256 private _getTokenRateValue;
 
     function _disableInitializers() internal override {}
-
-    function initializeWithoutInitializer(
-        address _ac,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount,
-        uint256 _minMTokenAmountForFirstDeposit
-    ) external {
-        __DepositVault_init(
-            _ac,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount,
-            _minMTokenAmountForFirstDeposit
-        );
-    }
 
     function tokenTransferFromToTester(
         address token,

@@ -7,7 +7,7 @@ import { ethers } from 'hardhat';
 import {
   ERC20,
   ERC20Mock,
-  MidasAccessControl,
+  IERC20Metadata,
   MTBILL,
   Pausable,
 } from '../../typechain-types';
@@ -123,7 +123,7 @@ export const mintToken = async (
 
 export const approveBase18 = async (
   from: SignerWithAddress,
-  token: ERC20,
+  token: ERC20 | IERC20Metadata,
   to: AccountOrContract,
   amountN: number,
 ) => {
@@ -152,7 +152,7 @@ export const amountFromBase18 = async (
 };
 
 export const tokenAmountToBase18 = async (
-  token: ERC20,
+  token: ERC20 | IERC20Metadata,
   amount: BigNumberish,
 ) => {
   const decimals = await token.decimals();
@@ -160,14 +160,17 @@ export const tokenAmountToBase18 = async (
 };
 
 export const tokenAmountFromBase18 = async (
-  token: ERC20,
+  token: ERC20 | IERC20Metadata,
   amount: BigNumberish,
 ) => {
   const decimals = await token.decimals();
   return amountFromBase18(decimals, amount);
 };
 
-export const balanceOfBase18 = async (token: ERC20, of: AccountOrContract) => {
+export const balanceOfBase18 = async (
+  token: ERC20 | IERC20Metadata,
+  of: AccountOrContract,
+) => {
   if (token.address === ethers.constants.AddressZero)
     return ethers.constants.Zero;
   of = getAccount(of);

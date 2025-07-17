@@ -15,14 +15,17 @@ import {
   // eslint-disable-next-line camelcase
   DataFeedTest__factory,
   DepositVaultTest,
+  DepositVaultWithUSTBTest,
   ERC20,
   // eslint-disable-next-line camelcase
   ERC20__factory,
 } from '../../typechain-types';
 
-type CommonParamsDeposit = Pick<
+type CommonParamsDeposit = {
+  depositVault: DepositVaultTest | DepositVaultWithUSTBTest;
+} & Pick<
   Awaited<ReturnType<typeof defaultDeploy>>,
-  'depositVault' | 'owner' | 'mTBILL' | 'mTokenToUsdDataFeed'
+  'owner' | 'mTBILL' | 'mTokenToUsdDataFeed'
 >;
 
 export const depositInstantTest = async (
@@ -34,10 +37,12 @@ export const depositInstantTest = async (
     waivedFee,
     minAmount,
     customRecipient,
+    checkTokensReceiver = true,
   }: CommonParamsDeposit & {
     waivedFee?: boolean;
     minAmount?: BigNumberish;
     customRecipient?: AccountOrContract;
+    checkTokensReceiver?: boolean;
   },
   tokenIn: ERC20 | string,
   amountUsdIn: number,
@@ -155,9 +160,13 @@ export const depositInstantTest = async (
   if (recipient !== sender.address) {
     expect(totalMintedAfterRecipient).eq(totalMintedBeforeRecipient);
   }
-  expect(balanceAfterContract).eq(
-    balanceBeforeContract.add(amountInWithoutFee),
-  );
+
+  if (checkTokensReceiver) {
+    expect(balanceAfterContract).eq(
+      balanceBeforeContract.add(amountInWithoutFee),
+    );
+  }
+
   expect(feeReceiverBalanceAfterContract).eq(
     feeReceiverBalanceBeforeContract.add(fee),
   );
@@ -609,10 +618,10 @@ export const rejectRequestTest = async (
   expect(requestDataAfter.status).eq(2);
 };
 
-const getFeePercent = async (
+export const getFeePercent = async (
   sender: string,
   token: string,
-  depositVault: DepositVaultTest,
+  depositVault: DepositVaultTest | DepositVaultWithUSTBTest,
   isInstant: boolean,
 ) => {
   const tokenConfig = await depositVault.tokensConfig(token);
@@ -628,10 +637,10 @@ const getFeePercent = async (
   return feePercent;
 };
 
-const calcExpectedMintAmount = async (
+export const calcExpectedMintAmount = async (
   sender: SignerWithAddress,
   token: string,
-  depositVault: DepositVaultTest,
+  depositVault: DepositVaultTest | DepositVaultWithUSTBTest,
   mTokenRate: BigNumber,
   amountIn: BigNumber,
   isInstant: boolean,
