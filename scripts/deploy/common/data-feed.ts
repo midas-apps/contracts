@@ -21,17 +21,33 @@ export type DeployDataFeedConfig = {
   healthyDiff: BigNumberish;
 };
 
-export type DeployCustomAggregatorConfig = {
+type DeployCustomAggregatorCommonConfig = {
   minAnswer: BigNumberish;
   maxAnswer: BigNumberish;
   maxAnswerDeviation: BigNumberish;
   description: string;
 };
+export type DeployCustomAggregatorRegularConfig =
+  DeployCustomAggregatorCommonConfig & {
+    type?: 'REGULAR';
+  };
 
 export type DeployCustomAggregatorDiscountedConfig = {
   discountPercentage: BigNumberish;
   underlyingFeed: `0x${string}` | 'customFeed';
 };
+
+export type DeployCustomAggregatorGrowthConfig =
+  DeployCustomAggregatorCommonConfig & {
+    type: 'GROWTH';
+    onlyUp: boolean;
+    minGrowthApr: BigNumberish;
+    maxGrowthApr: BigNumberish;
+  };
+
+export type DeployCustomAggregatorConfig =
+  | DeployCustomAggregatorRegularConfig
+  | DeployCustomAggregatorGrowthConfig;
 
 export const deployPaymentTokenDataFeed = async (
   hre: HardhatRuntimeEnvironment,
@@ -170,13 +186,26 @@ const deployCustomAggregator = async (
   if (!networkConfig) {
     throw new Error('Network config is not found');
   }
-  await deployAndVerifyProxy(hre, customAggregatorContractName, [
+
+  const isGrowth = networkConfig.type === 'GROWTH';
+
+  const params = [
     addresses?.accessControl,
     networkConfig.minAnswer,
     networkConfig.maxAnswer,
     networkConfig.maxAnswerDeviation,
+    isGrowth ? networkConfig.minGrowthApr : undefined,
+    isGrowth ? networkConfig.maxGrowthApr : undefined,
+    isGrowth ? networkConfig.onlyUp : undefined,
     networkConfig.description,
-  ]);
+  ].filter((v) => v !== undefined);
+
+  await deployAndVerifyProxy(
+    hre,
+    customAggregatorContractName,
+    params,
+    undefined,
+  );
 };
 
 const deployCustomAggregatorDiscounted = async (

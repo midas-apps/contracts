@@ -60,6 +60,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
         0,
         0,
         0,
+        false,
         '',
       ),
     ).revertedWith('Initializable: contract is already initialized');
@@ -70,7 +71,16 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       ).deploy();
 
     await expect(
-      testFeed.initialize(fixture.accessControl.address, 1, 0, 0, 0, 0, ''),
+      testFeed.initialize(
+        fixture.accessControl.address,
+        1,
+        0,
+        0,
+        0,
+        0,
+        false,
+        '',
+      ),
     ).revertedWith('CAG: !min/max');
 
     await expect(
@@ -81,6 +91,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
         parseUnits('101', 8),
         1,
         2,
+        false,
         '',
       ),
     ).revertedWith('CAG: !max deviation');
@@ -93,6 +104,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
         parseUnits('99', 8),
         3,
         2,
+        false,
         '',
       ),
     ).revertedWith('CAG: !min/max growth');

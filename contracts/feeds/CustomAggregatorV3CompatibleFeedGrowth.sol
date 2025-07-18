@@ -100,9 +100,10 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
      * @param _minAnswer init value for `minAnswer`. Should be < `_maxAnswer`
      * @param _maxAnswer init value for `maxAnswer`. Should be > `_minAnswer`
      * @param _maxAnswerDeviation init value for `maxAnswerDeviation`
-     * @param _description init value for `description`
      * @param _minGrowthApr init value for `minGrowthApr`
      * @param _maxGrowthApr init value for `maxGrowthApr`
+     * @param _onlyUp init value for `onlyUp`
+     * @param _description init value for `description`
      */
     function initialize(
         address _accessControl,
@@ -111,6 +112,7 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
         uint256 _maxAnswerDeviation,
         int80 _minGrowthApr,
         int80 _maxGrowthApr,
+        bool _onlyUp,
         string calldata _description
     ) external initializer {
         __WithMidasAccessControl_init(_accessControl);
@@ -126,6 +128,7 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
         minGrowthApr = _minGrowthApr;
         maxGrowthApr = _maxGrowthApr;
         description = _description;
+        onlyUp = _onlyUp;
     }
 
     /**

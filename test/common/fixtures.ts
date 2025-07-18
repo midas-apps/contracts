@@ -434,6 +434,7 @@ export const defaultDeploy = async () => {
     parseUnits('1', 8),
     parseUnits('0', 8),
     parseUnits('100', 8),
+    false,
     'Custom Data Feed Growth',
   );
 
