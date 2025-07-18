@@ -132,29 +132,34 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     }
 
     /**
-     * @notice updates onlyUp flag
-     * @param _onlyUp new onlyUp flag
+     * @inheritdoc IAggregatorV3CompatibleFeedGrowth
      */
-    function setOnlyUp(bool _onlyUp) external onlyAggregatorAdmin {
+    function setOnlyUp(bool _onlyUp) external override onlyAggregatorAdmin {
         onlyUp = _onlyUp;
         emit OnlyUpUpdated(_onlyUp);
     }
 
     /**
-     * @notice updates max growth apr
-     * @param _maxGrowthApr new max growth apr
+     * @inheritdoc IAggregatorV3CompatibleFeedGrowth
      */
-    function setMaxGrowthApr(int80 _maxGrowthApr) external onlyAggregatorAdmin {
+    function setMaxGrowthApr(int80 _maxGrowthApr)
+        external
+        override
+        onlyAggregatorAdmin
+    {
         require(_maxGrowthApr >= minGrowthApr, "CAG: !max growth");
         maxGrowthApr = _maxGrowthApr;
         emit MaxGrowthAprUpdated(_maxGrowthApr);
     }
 
     /**
-     * @notice updates min growth apr
-     * @param _minGrowthApr new min growth apr
+     * @inheritdoc IAggregatorV3CompatibleFeedGrowth
      */
-    function setMinGrowthApr(int80 _minGrowthApr) external onlyAggregatorAdmin {
+    function setMinGrowthApr(int80 _minGrowthApr)
+        external
+        override
+        onlyAggregatorAdmin
+    {
         require(_minGrowthApr <= maxGrowthApr, "CAG: !min growth");
         minGrowthApr = _minGrowthApr;
         emit MinGrowthAprUpdated(_minGrowthApr);

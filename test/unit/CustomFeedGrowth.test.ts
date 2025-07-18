@@ -592,4 +592,108 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       ).revertedWith('CAG: deviation is negative');
     });
   });
+
+  describe('applyGrowth (2 timestamps overload)', () => {
+    it('price is 100, growthApr is 10% and passed seconds = 3600', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      expect(
+        await fixture.customFeedGrowth[
+          'applyGrowth(int256,int80,uint256,uint256)'
+        ](parseUnits('100', 8), parseUnits('10', 8), 0, 3600),
+      ).eq(parseUnits('100.00114155', 8));
+    });
+
+    it('price is 1, growthApr is -4% and passed seconds = 100', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      expect(
+        await fixture.customFeedGrowth[
+          'applyGrowth(int256,int80,uint256,uint256)'
+        ](parseUnits('1', 8), parseUnits('-4', 8), 0, 100),
+      ).eq(parseUnits('0.99999988', 8));
+    });
+
+    it('price is 10, growthApr is -0.001% and passed seconds = 1', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      expect(
+        await fixture.customFeedGrowth[
+          'applyGrowth(int256,int80,uint256,uint256)'
+        ](parseUnits('10', 8), parseUnits('-0.001', 8), 0, 1),
+      ).eq(parseUnits('10', 8));
+    });
+
+    it('price is 10, growthApr is -100% and passed seconds = 1', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      expect(
+        await fixture.customFeedGrowth[
+          'applyGrowth(int256,int80,uint256,uint256)'
+        ](parseUnits('10', 8), parseUnits('-100', 8), 0, 1),
+      ).eq(parseUnits('9.99999969', 8));
+    });
+  });
+
+  describe('applyGrowth (1 timestamps + block.timestamp overload)', () => {
+    it('price is 100, growthApr is 10% and passed seconds = 3600', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      const currentTimestamp = (await ethers.provider.getBlock('latest'))
+        .timestamp;
+
+      expect(
+        await fixture.customFeedGrowth['applyGrowth(int256,int80,uint256)'](
+          parseUnits('100', 8),
+          parseUnits('10', 8),
+          currentTimestamp - 3600,
+        ),
+      ).eq(parseUnits('100.00114155', 8));
+    });
+
+    it('price is 1, growthApr is -4% and passed seconds = 100', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      const currentTimestamp = (await ethers.provider.getBlock('latest'))
+        .timestamp;
+
+      expect(
+        await fixture.customFeedGrowth['applyGrowth(int256,int80,uint256)'](
+          parseUnits('1', 8),
+          parseUnits('-4', 8),
+          currentTimestamp - 100,
+        ),
+      ).eq(parseUnits('0.99999988', 8));
+    });
+
+    it('price is 10, growthApr is -0.001% and passed seconds = 1', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      const currentTimestamp = (await ethers.provider.getBlock('latest'))
+        .timestamp;
+
+      expect(
+        await fixture.customFeedGrowth['applyGrowth(int256,int80,uint256)'](
+          parseUnits('10', 8),
+          parseUnits('-0.001', 8),
+          currentTimestamp - 1,
+        ),
+      ).eq(parseUnits('10', 8));
+    });
+
+    it('price is 10, growthApr is -100% and passed seconds = 1', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      const currentTimestamp = (await ethers.provider.getBlock('latest'))
+        .timestamp;
+
+      expect(
+        await fixture.customFeedGrowth['applyGrowth(int256,int80,uint256)'](
+          parseUnits('10', 8),
+          parseUnits('-100', 8),
+          currentTimestamp - 1,
+        ),
+      ).eq(parseUnits('9.99999969', 8));
+    });
+  });
 });

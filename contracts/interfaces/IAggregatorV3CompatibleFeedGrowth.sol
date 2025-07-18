@@ -45,6 +45,27 @@ interface IAggregatorV3CompatibleFeedGrowth is AggregatorV3Interface {
     event OnlyUpUpdated(bool newOnlyUp);
 
     /**
+     * @notice updates onlyUp flag
+     *
+     * @param _onlyUp new onlyUp flag
+     */
+    function setOnlyUp(bool _onlyUp) external;
+
+    /**
+     * @notice updates max growth apr
+     *
+     * @param _maxGrowthApr new max growth apr
+     */
+    function setMaxGrowthApr(int80 _maxGrowthApr) external;
+
+    /**
+     * @notice updates min growth apr
+     *
+     * @param _minGrowthApr new min growth apr
+     */
+    function setMinGrowthApr(int80 _minGrowthApr) external;
+
+    /**
      * @notice works as `setRoundData()`, but also checks the
      * deviation with the lattest submitted data
      * @dev deviation with previous data needs to be <= `maxAnswerDeviation`
@@ -129,6 +150,7 @@ interface IAggregatorV3CompatibleFeedGrowth is AggregatorV3Interface {
 
     /**
      * @notice applies growth to the answer until current timestamp
+     *
      * @param _answer answer
      * @param _growthApr growth apr
      * @param _timestampFrom timestamp from
@@ -143,6 +165,7 @@ interface IAggregatorV3CompatibleFeedGrowth is AggregatorV3Interface {
 
     /**
      * @notice applies growth to the answer between two timestamps
+     *
      * @param _answer answer
      * @param _growthApr growth apr
      * @param _timestampFrom timestamp from
