@@ -24,6 +24,7 @@ export enum MTokenNameEnum {
   tBTC = 'tBTC',
   mevBTC = 'mevBTC',
   lstHYPE = 'lstHYPE',
+  liquidHYPE = 'liquidHYPE',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;

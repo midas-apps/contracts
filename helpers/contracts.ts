@@ -43,6 +43,7 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   tBTC: 'TBtc',
   mevBTC: 'MevBtc',
   lstHYPE: 'LstHype',
+  liquidHYPE: 'LiquidHype',
 };
 
 export const getCommonContractNames = (): CommonContractNames => {

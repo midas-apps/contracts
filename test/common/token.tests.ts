@@ -130,6 +130,10 @@ const expectedTokenNameSymb: Record<
     name: 'Hyperbeat LST Vault',
     symbol: 'lstHYPE',
   },
+  liquidHYPE: {
+    name: 'Liquid HYPE Yield',
+    symbol: 'liquidHYPE',
+  },
 };
 
 export const tokenContractsTests = (token: MTokenName) => {

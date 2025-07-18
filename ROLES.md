@@ -260,6 +260,17 @@ All the roles for the Midas protocol smart contracts are listed below.
 | ***depositVaultAdmin*** | `0x35f1adb8c633db7cf4cc370ccfb50b8aa56b5e38a8cdf1bf5d3a58f82dc21cc0` |
 | ***redemptionVaultAdmin*** | `0x22e39eb53f44668fbc61c98ca3b75d9c269561162df7cd08bf1b4b51ee2d40c6` |
 
+### liquidHYPE Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0x5652862ba278bea9c37b31899106e05dde7b59edb9efa32f699274a11a9e5ce0` |
+| ***burner*** | `0x3ad6caa208563575bbc20537065b7758606cfc02093977c82f21d01f1cc5f521` |
+| ***pauser*** | `0xbfc742108d04824c9a3d911362fa7f2a8b8e60064178e809c134e9698f0f8512` |
+| ***customFeedAdmin*** | `0xc8008cecd14e51254a5f110598d40e4f0176f51948f29516417e78147adb3b4f` |
+| ***depositVaultAdmin*** | `0x8eb8d75c3e48abb8e2dd66f0c7051267ad19ead14e551bc18d1833986047eba9` |
+| ***redemptionVaultAdmin*** | `0x00788a6cc736b61867c5eef2e9b994a921eb9dd76db6909af6b392748456e8e5` |
+
 ### TACmBTC Roles
 
 | Role Name | Role |

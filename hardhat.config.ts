@@ -10,7 +10,6 @@ import '@nomicfoundation/hardhat-verify';
 import '@openzeppelin/hardhat-upgrades';
 import 'hardhat-contract-sizer';
 import 'hardhat-deploy';
-// import 'hardhat-docgen';
 import 'solidity-docgen';
 import './tasks';
 
