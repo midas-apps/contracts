@@ -6450,7 +6450,7 @@
             "slot": "576",
             "type": "t_array(t_uint256)50_storage",
             "contract": "LiquidHypeRedemptionVaultWithSwapper",
-            "src": "contracts/liquidHYPE/LstHypeRedemptionVaultWithSwapper.sol:19"
+            "src": "contracts/liquidHYPE/LiquidHypeRedemptionVaultWithSwapper.sol:19"
           }
         ],
         "types": {
@@ -6650,7 +6650,11 @@
             "numberOfBytes": "1"
           }
         }
-      }
+      },
+      "allAddresses": [
+        "0xA69ca6052A4eBf72Ce3497a7F7c5599382825Cd2",
+        "0x6b1331D4e885aE3143ee23726573AcaDAbE2E137"
+      ]
     }
   }
 }
