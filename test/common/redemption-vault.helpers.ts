@@ -53,11 +53,13 @@ export const redeemInstantTest = async (
     minAmount,
     customRecipient,
     checkSupply = true,
+    expectedAmountOut,
   }: CommonParamsRedeem & {
     waivedFee?: boolean;
     minAmount?: BigNumberish;
     customRecipient?: AccountOrContract;
     checkSupply?: boolean;
+    expectedAmountOut?: BigNumberish;
   },
   tokenOut: IERC20 | ERC20 | string,
   amountTBillIn: number,
@@ -163,8 +165,10 @@ export const redeemInstantTest = async (
   expect(balanceAfterUser).eq(balanceBeforeUser.sub(amountIn));
   expect(balanceAfterReceiver).eq(balanceBeforeReceiver);
   expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver.add(fee));
+
+  const expectedAmountToReceive = expectedAmountOut ?? amountOut;
   expect(balanceAfterTokenOutRecipient).eq(
-    balanceBeforeTokenOutRecipient.add(amountOut),
+    balanceBeforeTokenOutRecipient.add(expectedAmountToReceive),
   );
   if (recipient !== sender.address) {
     expect(balanceAfterTokenOut).eq(balanceBeforeTokenOut);

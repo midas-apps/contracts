@@ -22,6 +22,10 @@ import {
   pauseVault,
   pauseVaultFn,
 } from '../common/common.helpers';
+import {
+  setMinGrowthApr,
+  setRoundDataGrowth,
+} from '../common/custom-feed-growth.helpers';
 import { setRoundData } from '../common/data-feed.helpers';
 import {
   approveRequestTest,
@@ -1869,6 +1873,119 @@ describe('DepositVault', function () {
       );
     });
 
+    it('deposit 100 DAI when 10% growth is applied', async () => {
+      const {
+        owner,
+        depositVault,
+        customFeedGrowth,
+        stableCoins,
+        mTBILL,
+        greenListableTester,
+        mTokenToUsdDataFeed,
+        accessControl,
+        regularAccounts,
+        dataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await depositVault.setGreenlistEnable(true);
+
+      await mTokenToUsdDataFeed.changeAggregator(customFeedGrowth.address);
+      await setRoundDataGrowth({ owner, customFeedGrowth }, 1, -1000, 10);
+
+      await greenList(
+        { greenlistable: greenListableTester, accessControl, owner },
+        regularAccounts[0],
+      );
+
+      await mintToken(stableCoins.dai, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.dai,
+        depositVault,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositInstantTest(
+        {
+          depositVault,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          expectedMintAmount: parseUnits('98.999684191007430686', 18),
+        },
+        stableCoins.dai,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('deposit 100 DAI when -10% growth is applied', async () => {
+      const {
+        owner,
+        depositVault,
+        customFeedGrowth,
+        stableCoins,
+        mTBILL,
+        greenListableTester,
+        mTokenToUsdDataFeed,
+        accessControl,
+        regularAccounts,
+        dataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await depositVault.setGreenlistEnable(true);
+
+      await setMinGrowthApr({ owner, customFeedGrowth }, -10);
+      await mTokenToUsdDataFeed.changeAggregator(customFeedGrowth.address);
+      await setRoundDataGrowth({ owner, customFeedGrowth }, 1, -1000, -10);
+
+      await greenList(
+        { greenlistable: greenListableTester, accessControl, owner },
+        regularAccounts[0],
+      );
+
+      await mintToken(stableCoins.dai, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.dai,
+        depositVault,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositInstantTest(
+        {
+          depositVault,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          expectedMintAmount: parseUnits('99.000315811007437113', 18),
+        },
+        stableCoins.dai,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
     it('deposit 100 DAI, greenlist enabled and user in greenlist, tokenIn not stablecoin', async () => {
       const {
         owner,
@@ -2737,6 +2854,113 @@ describe('DepositVault', function () {
         regularAccounts,
         dataFeed,
       } = await loadFixture(defaultDeploy);
+
+      await greenListEnable(
+        { greenlistable: greenListableTester, owner },
+        true,
+      );
+
+      await greenList(
+        { greenlistable: greenListableTester, accessControl, owner },
+        regularAccounts[0],
+      );
+
+      await mintToken(stableCoins.dai, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.dai,
+        depositVault,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('deposit 100 DAI when 10% growth is applied', async () => {
+      const {
+        owner,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        greenListableTester,
+        mTokenToUsdDataFeed,
+        accessControl,
+        regularAccounts,
+        dataFeed,
+        customFeedGrowth,
+      } = await loadFixture(defaultDeploy);
+
+      await mTokenToUsdDataFeed.changeAggregator(customFeedGrowth.address);
+      await setRoundDataGrowth({ owner, customFeedGrowth }, 1, -1000, 10);
+
+      await greenListEnable(
+        { greenlistable: greenListableTester, owner },
+        true,
+      );
+
+      await greenList(
+        { greenlistable: greenListableTester, accessControl, owner },
+        regularAccounts[0],
+      );
+
+      await mintToken(stableCoins.dai, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.dai,
+        depositVault,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('deposit 100 DAI when -10% growth is applied', async () => {
+      const {
+        owner,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        greenListableTester,
+        mTokenToUsdDataFeed,
+        accessControl,
+        regularAccounts,
+        dataFeed,
+        customFeedGrowth,
+      } = await loadFixture(defaultDeploy);
+
+      await mTokenToUsdDataFeed.changeAggregator(customFeedGrowth.address);
+      await setMinGrowthApr({ owner, customFeedGrowth }, -10);
+      await setRoundDataGrowth({ owner, customFeedGrowth }, 1, -1000, -10);
 
       await greenListEnable(
         { greenlistable: greenListableTester, owner },
@@ -4161,6 +4385,52 @@ describe('DepositVault', function () {
 
       await safeBulkApproveRequestTest(
         { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        [{ id: requestId }],
+        undefined,
+      );
+    });
+
+    it('approve 1 request from vaut admin account when growth is applied', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        customFeedGrowth,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 100);
+      await approveBase18(owner, stableCoins.dai, depositVault, 100);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+      await setRoundDataGrowth({ owner, customFeedGrowth }, 1, -1000, 5);
+      await mTokenToUsdDataFeed.changeAggregator(customFeedGrowth.address);
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+      const requestId = 0;
+
+      await safeBulkApproveRequestTest(
+        {
+          depositVault,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
         [{ id: requestId }],
         undefined,
       );

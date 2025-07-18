@@ -1,4 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
 import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
@@ -8,6 +9,10 @@ import {
   DataFeedTest__factory,
 } from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
+import {
+  setMinGrowthApr,
+  setRoundDataGrowth,
+} from '../common/custom-feed-growth.helpers';
 import { setRoundData } from '../common/data-feed.helpers';
 import { defaultDeploy } from '../common/fixtures';
 
@@ -109,6 +114,37 @@ describe('DataFeed', function () {
       await setRoundData({ mockedAggregator }, +price);
       expect(await dataFeed.getDataInBase18()).eq(parseUnits(price));
     });
+
+    it('with underlying growth aggregator with positive growth', async () => {
+      const { dataFeedGrowth, ...fixture } = await loadFixture(defaultDeploy);
+
+      const expectedPrice = 10.00022831;
+      await setRoundDataGrowth(
+        { ...fixture, expectedAnswer: expectedPrice },
+        10,
+        -7200,
+        10,
+      );
+      expect(await dataFeedGrowth.getDataInBase18()).eq(
+        parseUnits(expectedPrice.toString()),
+      );
+    });
+
+    it('with underlying growth aggregator with negative growth', async () => {
+      const { dataFeedGrowth, ...fixture } = await loadFixture(defaultDeploy);
+
+      const expectedPrice = 9.99977169;
+      await setMinGrowthApr(fixture, -10);
+      await setRoundDataGrowth(
+        { ...fixture, expectedAnswer: expectedPrice },
+        10,
+        -7200,
+        -10,
+      );
+      expect(await dataFeedGrowth.getDataInBase18()).eq(
+        parseUnits(expectedPrice.toString()),
+      );
+    });
   });
 });
 
@@ -116,6 +152,17 @@ describe('DataFeed Deprecated', function () {
   it('should fail when: feed is deprecated', async () => {
     const { dataFeedDeprecated } = await loadFixture(defaultDeploy);
     await expect(dataFeedDeprecated.getDataInBase18()).to.be.reverted;
+  });
+});
+
+describe('DataFeed Deprecated with growth', function () {
+  it('should fail when: feed is deprecated (price < 0)', async () => {
+    const { dataFeedGrowth, ...fixture } = await loadFixture(defaultDeploy);
+    await setMinGrowthApr(fixture, -1000000);
+    await setRoundDataGrowth(fixture, 0.001, -1000000, -1000000);
+    await expect(dataFeedGrowth.getDataInBase18()).revertedWith(
+      'DF: feed is deprecated',
+    );
   });
 });
 
@@ -138,5 +185,40 @@ describe('DataFeed Unhealthy', function () {
     await expect(dataFeed.getDataInBase18()).to.be.not.reverted;
     await setRoundData({ mockedAggregator }, 10001);
     await expect(dataFeed.getDataInBase18()).to.be.reverted;
+  });
+});
+
+describe('DataFeed Unhealthy with growth', function () {
+  it('should fail when: feed is unhealthy (by time)', async () => {
+    const { dataFeedGrowth, ...fixture } = await loadFixture(defaultDeploy);
+    await setRoundDataGrowth(fixture, 0.1, -10, 0);
+
+    await increase(3 * 24 * 3600 + 1);
+    await expect(dataFeedGrowth.getDataInBase18()).revertedWith(
+      'DF: feed is unhealthy',
+    );
+  });
+  it('should fail when: feed is unhealthy (by min answer)', async () => {
+    const { dataFeedGrowth, ...fixture } = await loadFixture(defaultDeploy);
+    await setRoundDataGrowth(fixture, 0.1, -100, 0);
+    await expect(dataFeedGrowth.getDataInBase18()).to.be.not.reverted;
+    await setRoundDataGrowth(fixture, 0.099, -100, 0);
+    await expect(dataFeedGrowth.getDataInBase18()).revertedWith(
+      'DF: feed is unhealthy',
+    );
+  });
+
+  it('should fail when: feed is unhealthy (by max answer)', async () => {
+    const { dataFeedGrowth, ...fixture } = await loadFixture(defaultDeploy);
+
+    await dataFeedGrowth.setMinExpectedAnswer(parseUnits('10', 8));
+    await dataFeedGrowth.setMaxExpectedAnswer(parseUnits('100', 8));
+
+    await setRoundDataGrowth(fixture, 100, -100, 0);
+    await expect(dataFeedGrowth.getDataInBase18()).to.be.not.reverted;
+    await setRoundDataGrowth(fixture, 101, -100, 0);
+    await expect(dataFeedGrowth.getDataInBase18()).revertedWith(
+      'DF: feed is unhealthy',
+    );
   });
 });

@@ -437,6 +437,15 @@ export const defaultDeploy = async () => {
     'Custom Data Feed Growth',
   );
 
+  const dataFeedGrowth = await new DataFeedTest__factory(owner).deploy();
+  await dataFeedGrowth.initialize(
+    accessControl.address,
+    customFeedGrowth.address,
+    3 * 24 * 3600,
+    parseUnits('0.1', mockedAggregatorDecimals),
+    parseUnits('10000', mockedAggregatorDecimals),
+  );
+
   const customFeedDiscounted =
     await new CustomAggregatorV3CompatibleFeedDiscountedTester__factory(
       owner,
@@ -586,5 +595,6 @@ export const defaultDeploy = async () => {
     ustbRedemption,
     customRecipient,
     depositVaultWithUSTB,
+    dataFeedGrowth,
   };
 };
