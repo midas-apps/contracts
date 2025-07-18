@@ -26,20 +26,30 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     }
 
     /**
+     * @dev decimals of the aggregator
+     */
+    uint8 private constant _DECIMALS = 8;
+
+    /**
+     * @dev 1 with `_DECIMALS` precision
+     */
+    uint256 private constant _ONE = 10**_DECIMALS;
+
+    /**
      * @notice feed description
      */
     string public override description;
-
-    /**
-     * @notice last round id
-     */
-    uint80 public latestRound;
 
     /**
      * @notice max deviation from lattest price in %
      * @dev 10 ** decimals() is a percentage precision
      */
     uint256 public maxAnswerDeviation;
+
+    /**
+     * @notice last timestamp when setRoundData or setRoundDataSafe were called
+     */
+    uint256 public lastUpdatedAt;
 
     /**
      * @notice minimal possible answer that feed can return
@@ -60,6 +70,11 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
      * @notice maximal possible growth apr value that can be set
      */
     int80 public maxGrowthApr;
+
+    /**
+     * @notice last round id
+     */
+    uint80 public latestRound;
 
     /**
      * @notice if true, the price
@@ -103,10 +118,7 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
         require(_minAnswer < _maxAnswer, "CAG: !min/max");
         require(_minGrowthApr <= _maxGrowthApr, "CAG: !min/max growth");
 
-        require(
-            _maxAnswerDeviation <= 100 * (10**decimals()),
-            "CAG: !max deviation"
-        );
+        require(_maxAnswerDeviation <= 100 * _ONE, "CAG: !max deviation");
 
         minAnswer = _minAnswer;
         maxAnswer = _maxAnswer;
@@ -155,7 +167,9 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     ) external {
         bool _onlyUp = onlyUp;
 
-        if (lastTimestamp() != 0) {
+        uint256 _lastUpdatedAt = lastUpdatedAt;
+
+        if (_lastUpdatedAt != 0) {
             uint256 deviation = _getDeviation(
                 lastAnswer(),
                 applyGrowth(_data, _growthApr, _dataTimestamp),
@@ -169,7 +183,7 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
         }
 
         require(
-            block.timestamp - lastTimestamp() > 1 hours,
+            block.timestamp - _lastUpdatedAt > 1 hours,
             "CAG: not enough time passed"
         );
 
@@ -212,6 +226,8 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
         });
 
         latestRound = roundId;
+
+        lastUpdatedAt = block.timestamp;
 
         emit AnswerUpdated(_data, roundId, _dataTimestamp, _growthApr);
     }
@@ -390,7 +406,7 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     ) public pure returns (int256) {
         int256 passedSeconds = int256(_timestampTo - _timestampFrom);
         int256 interest = (_answer * passedSeconds * _growthApr) /
-            int256(100 * (10**decimals()) * 365 days);
+            int256(100 * _ONE * 365 days);
 
         return _answer + interest;
     }
@@ -399,7 +415,7 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
      * @inheritdoc AggregatorV3Interface
      */
     function decimals() public pure returns (uint8) {
-        return 8;
+        return _DECIMALS;
     }
 
     /**
@@ -409,15 +425,15 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
      * @param _newPrice new price
      * @param _validateOnlyUp if true, will validate that deviation is positive
      *
-     * @return deviation in `10 ** decimals()` precision
+     * @return deviation in `decimals()` precision
      */
     function _getDeviation(
         int256 _lastPrice,
         int256 _newPrice,
         bool _validateOnlyUp
     ) internal pure returns (uint256) {
-        if (_newPrice == 0) return 100 * 10**decimals();
-        int256 one = int256(10**decimals());
+        if (_newPrice == 0) return 100 * _ONE;
+        int256 one = int256(_ONE);
         int256 priceDif = _newPrice - _lastPrice;
         int256 deviation = (priceDif * one * 100) / _lastPrice;
 

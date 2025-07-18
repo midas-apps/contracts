@@ -184,6 +184,9 @@ export const setRoundDataGrowth = async (
     lastRoundDataRawAfter.roundId,
   );
 
+  const lastUpdatedAt = await customFeedGrowth.lastUpdatedAt();
+
+  expect(lastUpdatedAt).eq(timestampAfter);
   expect(lastRoundIdAfter).eq(lastRoundIdBefore.add(1));
   expect(lastRoundDataAfter.roundId).eq(lastRoundDataBefore.roundId.add(1));
   expect(lastRoundDataRawAfter.roundId).eq(lastRoundDataAfter.roundId);

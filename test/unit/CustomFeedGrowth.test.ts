@@ -1,13 +1,14 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
 import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
 import {
   // eslint-disable-next-line camelcase
-  CustomAggregatorV3CompatibleFeedGrowthTester__factory,
+  CustomAggregatorV3CompatibleFeedGrowth__factory,
   // eslint-disable-next-line camelcase
-  MBasisCustomAggregatorFeed__factory,
+  CustomAggregatorV3CompatibleFeedGrowthTester__factory,
 } from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
 import {
@@ -22,7 +23,7 @@ import { defaultDeploy } from '../common/fixtures';
 
 describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
   it('deployment', async () => {
-    const { customFeedGrowth } = await loadFixture(defaultDeploy);
+    const { customFeedGrowth, owner } = await loadFixture(defaultDeploy);
 
     expect(await customFeedGrowth.maxAnswer()).eq(parseUnits('10000', 8));
     expect(await customFeedGrowth.minAnswer()).eq(2);
@@ -37,6 +38,14 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
     expect(await customFeedGrowth.lastTimestamp()).eq(0);
     expect(await customFeedGrowth.feedAdminRole()).eq(
       await customFeedGrowth.CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE(),
+    );
+
+    const newFeed = await new CustomAggregatorV3CompatibleFeedGrowth__factory(
+      owner,
+    ).deploy();
+
+    expect(await newFeed.feedAdminRole()).eq(
+      await newFeed.DEFAULT_ADMIN_ROLE(),
     );
   });
 
@@ -89,19 +98,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
     ).revertedWith('CAG: !min/max growth');
   });
 
-  it('MBasisCustomAggregatorFeed', async () => {
-    const fixture = await loadFixture(defaultDeploy);
-
-    const tester = await new MBasisCustomAggregatorFeed__factory(
-      fixture.owner,
-    ).deploy();
-
-    expect(await tester.feedAdminRole()).eq(
-      await tester.M_BASIS_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE(),
-    );
-  });
-
-  describe('setRoundDataGrowth', async () => {
+  describe('setRoundData', async () => {
     it('call from owner', async () => {
       const fixture = await loadFixture(defaultDeploy);
       await setRoundDataGrowth(fixture, 10, -100, 0);
@@ -224,6 +221,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
     it('call from owner when prev data is set', async () => {
       const fixture = await loadFixture(defaultDeploy);
       await setRoundDataSafeGrowth(fixture, 10, -10000, 0);
+      await increase(3600);
       await setRoundDataSafeGrowth(fixture, 10.1, -100, 0);
     });
 
@@ -283,12 +281,20 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       const fixture = await loadFixture(defaultDeploy);
       await setMaxGrowthApr(fixture, 10000);
       await setRoundDataSafeGrowth(fixture, 100, -100000, 0);
+      await increase(3600);
       await setRoundDataSafeGrowth(
         { ...fixture, expectedAnswer: 100.63419583 },
         100,
         -10000,
         2000,
       );
+    });
+
+    it('when 2 updates happens and lastTimestamps are > 1h diff ', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setRoundDataSafeGrowth(fixture, 10, -1000000, 0);
+      await increase(3600);
+      await setRoundDataSafeGrowth(fixture, 10, -100, 0);
     });
 
     it('should fail: call when growthApr == -1% and passed seconds = 3600 and onlyUp is true and its the first price set', async () => {
@@ -377,10 +383,131 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       });
     });
 
+    it('should fail: when 2 updates happens within 1 hour', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setRoundDataSafeGrowth(fixture, 10, -100, 100);
+      await setRoundDataSafeGrowth(fixture, 10, -100, 100, {
+        revertMessage: 'CAG: not enough time passed',
+      });
+    });
+
+    it('should fail: when timestamp is < then previous', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      await setRoundDataSafeGrowth(fixture, 10, -100, 10);
+      await increase(3600);
+      await setRoundDataSafeGrowth(fixture, 10, -10000, 10, {
+        revertMessage: 'CAG: invalid timestamp',
+      });
+    });
+
     it('when deviation is < 1%', async () => {
       const fixture = await loadFixture(defaultDeploy);
       await setRoundDataSafeGrowth(fixture, 100, -10000, 0);
+      await increase(3600);
       await setRoundDataSafeGrowth(fixture, 100.9, -100, 0);
+    });
+  });
+
+  describe('setMinGrowthApr', () => {
+    it('call from owner', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setMinGrowthApr(fixture, 10);
+    });
+
+    it('when min value equals max value', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setMinGrowthApr(fixture, 100);
+    });
+
+    it('when negative value is passed', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setMinGrowthApr(fixture, -10);
+    });
+
+    it('should fail: call from non owner', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setMinGrowthApr(fixture, 10, {
+        from: fixture.regularAccounts[0],
+        revertMessage: acErrors.WMAC_HASNT_ROLE,
+      });
+    });
+
+    it('should fail: when min value is greater than max value', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setMinGrowthApr(fixture, 101, {
+        revertMessage: 'CAG: !min growth',
+      });
+    });
+  });
+
+  describe('setMaxGrowthApr', () => {
+    it('call from owner', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setMaxGrowthApr(fixture, 10);
+    });
+
+    it('when min value equals min value', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setMaxGrowthApr(fixture, 0);
+    });
+
+    it('when negative value is passed', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setMinGrowthApr(fixture, -100);
+      await setMaxGrowthApr(fixture, -10);
+    });
+
+    it('should fail: call from non owner', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setMaxGrowthApr(fixture, 10, {
+        from: fixture.regularAccounts[0],
+        revertMessage: acErrors.WMAC_HASNT_ROLE,
+      });
+    });
+
+    it('should fail: when max value is less than min value', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setMaxGrowthApr(fixture, -1, {
+        revertMessage: 'CAG: !max growth',
+      });
+    });
+  });
+
+  describe('setOnlyUp', () => {
+    it('call from owner', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setOnlyUp(fixture, true);
+    });
+
+    it('from false to true', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setOnlyUp(fixture, true);
+    });
+
+    it('from true to false', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setOnlyUp(fixture, true);
+      await setOnlyUp(fixture, false);
+    });
+
+    it('from true to true', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setOnlyUp(fixture, true);
+      await setOnlyUp(fixture, true);
+    });
+
+    it('from false to false', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setOnlyUp(fixture, false);
+    });
+
+    it('should fail: call from non owner', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setOnlyUp(fixture, true, {
+        from: fixture.regularAccounts[0],
+        revertMessage: acErrors.WMAC_HASNT_ROLE,
+      });
     });
   });
 
