@@ -591,6 +591,7 @@ describe('DepositVault', function () {
         ethers.constants.AddressZero,
         0,
         false,
+        constants.MaxUint256,
         { revertMessage: acErrors.WMAC_HASNT_ROLE, from: regularAccounts[0] },
       );
     });
@@ -612,6 +613,7 @@ describe('DepositVault', function () {
         dataFeed.address,
         0,
         false,
+        constants.MaxUint256,
         {
           revertMessage: 'MV: already added',
         },
@@ -628,6 +630,7 @@ describe('DepositVault', function () {
         constants.AddressZero,
         0,
         false,
+        constants.MaxUint256,
         {
           revertMessage: 'zero address',
         },
@@ -644,6 +647,34 @@ describe('DepositVault', function () {
         dataFeed.address,
         0,
         false,
+      );
+    });
+
+    it('call when allowance is zero', async () => {
+      const { depositVault, stableCoins, owner, dataFeed } = await loadFixture(
+        defaultDeploy,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        false,
+        constants.Zero,
+      );
+    });
+
+    it('call when allowance is not uint256 max', async () => {
+      const { depositVault, stableCoins, owner, dataFeed } = await loadFixture(
+        defaultDeploy,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        false,
+        parseUnits('100'),
       );
     });
 

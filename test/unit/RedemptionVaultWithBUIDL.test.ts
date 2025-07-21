@@ -565,6 +565,7 @@ describe('RedemptionVaultWithBUIDL', function () {
         ethers.constants.AddressZero,
         0,
         true,
+        constants.MaxUint256,
         { revertMessage: acErrors.WMAC_HASNT_ROLE, from: regularAccounts[0] },
       );
     });
@@ -585,6 +586,7 @@ describe('RedemptionVaultWithBUIDL', function () {
         dataFeed.address,
         0,
         true,
+        constants.MaxUint256,
         {
           revertMessage: 'MV: already added',
         },
@@ -600,9 +602,36 @@ describe('RedemptionVaultWithBUIDL', function () {
         constants.AddressZero,
         0,
         true,
+        constants.MaxUint256,
         {
           revertMessage: 'zero address',
         },
+      );
+    });
+
+    it('call when allowance is zero', async () => {
+      const { redemptionVaultWithBUIDL, stableCoins, owner, dataFeed } =
+        await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: redemptionVaultWithBUIDL, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        false,
+        constants.Zero,
+      );
+    });
+
+    it('call when allowance is not uint256 max', async () => {
+      const { redemptionVaultWithBUIDL, stableCoins, owner, dataFeed } =
+        await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: redemptionVaultWithBUIDL, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        false,
+        parseUnits('100'),
       );
     });
 
