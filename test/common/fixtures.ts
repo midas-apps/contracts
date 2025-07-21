@@ -56,6 +56,8 @@ import {
   DepositVaultWithUSTBTest__factory,
   // eslint-disable-next-line camelcase
   USTBMock__factory,
+  // eslint-disable-next-line camelcase
+  CustomAggregatorV3CompatibleFeedGrowthTester__factory,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -419,6 +421,32 @@ export const defaultDeploy = async () => {
     'Custom Data Feed',
   );
 
+  // eslint-disable-next-line camelcase
+  const customFeedGrowth =
+    await new CustomAggregatorV3CompatibleFeedGrowthTester__factory(
+      owner,
+    ).deploy();
+
+  await customFeedGrowth.initialize(
+    accessControl.address,
+    2,
+    parseUnits('10000', 8),
+    parseUnits('1', 8),
+    parseUnits('0', 8),
+    parseUnits('100', 8),
+    false,
+    'Custom Data Feed Growth',
+  );
+
+  const dataFeedGrowth = await new DataFeedTest__factory(owner).deploy();
+  await dataFeedGrowth.initialize(
+    accessControl.address,
+    customFeedGrowth.address,
+    3 * 24 * 3600,
+    parseUnits('0.1', mockedAggregatorDecimals),
+    parseUnits('10000', mockedAggregatorDecimals),
+  );
+
   const customFeedDiscounted =
     await new CustomAggregatorV3CompatibleFeedDiscountedTester__factory(
       owner,
@@ -526,6 +554,7 @@ export const defaultDeploy = async () => {
   return {
     customFeed,
     customFeedDiscounted,
+    customFeedGrowth,
     mTBILL,
     mBASIS,
     redemptionVaultWithSwapper,
@@ -567,5 +596,6 @@ export const defaultDeploy = async () => {
     ustbRedemption,
     customRecipient,
     depositVaultWithUSTB,
+    dataFeedGrowth,
   };
 };

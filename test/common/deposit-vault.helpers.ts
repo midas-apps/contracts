@@ -38,11 +38,13 @@ export const depositInstantTest = async (
     minAmount,
     customRecipient,
     checkTokensReceiver = true,
+    expectedMintAmount,
   }: CommonParamsDeposit & {
     waivedFee?: boolean;
     minAmount?: BigNumberish;
     customRecipient?: AccountOrContract;
     checkTokensReceiver?: boolean;
+    expectedMintAmount?: BigNumberish;
   },
   tokenIn: ERC20 | string,
   amountUsdIn: number,
@@ -155,8 +157,12 @@ export const depositInstantTest = async (
   const balanceAfterUser = await balanceOfBase18(tokenContract, sender.address);
   const balanceMtBillAfterUser = await balanceOfBase18(mTBILL, recipient);
 
-  expect(balanceMtBillAfterUser.sub(balanceMtBillBeforeUser)).eq(mintAmount);
-  expect(totalMintedAfter).eq(totalMintedBefore.add(mintAmount));
+  const expectedMinted = expectedMintAmount ?? mintAmount;
+
+  expect(balanceMtBillAfterUser.sub(balanceMtBillBeforeUser)).eq(
+    expectedMinted,
+  );
+  expect(totalMintedAfter).eq(totalMintedBefore.add(expectedMinted));
   if (recipient !== sender.address) {
     expect(totalMintedAfterRecipient).eq(totalMintedBeforeRecipient);
   }
@@ -482,6 +488,10 @@ export const safeBulkApproveRequestTest = async (
       ),
     ),
   );
+
+  const txPromise = callFn();
+  await expect(txPromise).to.not.reverted;
+
   const currentRate = await mTokenToUsdDataFeed.getDataInBase18();
   const newExpectedRate = newRate ?? currentRate;
 
@@ -502,9 +512,6 @@ export const safeBulkApproveRequestTest = async (
       totalDeposited: totalDepositedsBefore[index],
     };
   });
-
-  const txPromise = callFn();
-  await expect(txPromise).to.not.reverted;
 
   const txReceipt = await (await txPromise).wait();
 

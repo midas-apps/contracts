@@ -5,6 +5,8 @@ import { ethers } from 'hardhat';
 
 import {
   // eslint-disable-next-line camelcase
+  CustomAggregatorV3CompatibleFeed__factory,
+  // eslint-disable-next-line camelcase
   CustomAggregatorV3CompatibleFeedTester__factory,
   // eslint-disable-next-line camelcase
   MBasisCustomAggregatorFeed__factory,
@@ -21,7 +23,7 @@ import { defaultDeploy } from '../common/fixtures';
 
 describe('CustomAggregatorV3CompatibleFeed', function () {
   it('deployment', async () => {
-    const { customFeed } = await loadFixture(defaultDeploy);
+    const { customFeed, owner } = await loadFixture(defaultDeploy);
 
     expect(await customFeed.maxAnswer()).eq(parseUnits('10000', 8));
     expect(await customFeed.minAnswer()).eq(2);
@@ -34,6 +36,14 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
     expect(await customFeed.lastTimestamp()).eq(0);
     expect(await customFeed.feedAdminRole()).eq(
       await customFeed.CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE(),
+    );
+
+    const newFeed = await new CustomAggregatorV3CompatibleFeed__factory(
+      owner,
+    ).deploy();
+
+    expect(await newFeed.feedAdminRole()).eq(
+      await newFeed.DEFAULT_ADMIN_ROLE(),
     );
   });
 
