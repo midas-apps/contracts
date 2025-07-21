@@ -41,15 +41,10 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     string public override description;
 
     /**
-     * @notice max deviation from lattest price in %
+     * @notice max deviation from latest price in %
      * @dev 10 ** decimals() is a percentage precision
      */
     uint256 public maxAnswerDeviation;
-
-    /**
-     * @notice last timestamp when setRoundData or setRoundDataSafe were called
-     */
-    uint256 public lastUpdatedAt;
 
     /**
      * @notice minimal possible answer that feed can return
@@ -176,7 +171,7 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     ) external {
         bool _onlyUp = onlyUp;
 
-        uint256 _lastUpdatedAt = lastUpdatedAt;
+        uint256 _lastUpdatedAt = lastTimestamp();
 
         if (_lastUpdatedAt != 0) {
             uint256 deviation = _getDeviation(
@@ -218,7 +213,7 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
         );
 
         require(
-            _dataTimestamp > lastTimestamp() &&
+            _dataTimestamp > lastStartedAt() &&
                 _dataTimestamp < block.timestamp,
             "CAG: invalid timestamp"
         );
@@ -229,14 +224,12 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
             roundId: roundId,
             answer: _data,
             startedAt: _dataTimestamp,
-            updatedAt: _dataTimestamp,
+            updatedAt: block.timestamp,
             answeredInRound: roundId,
             growthApr: _growthApr
         });
 
         latestRound = roundId;
-
-        lastUpdatedAt = block.timestamp;
 
         emit AnswerUpdated(_data, roundId, _dataTimestamp, _growthApr);
     }
@@ -246,8 +239,8 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
      *
      * @return roundId roundId
      * @return answer answer with growth applied
-     * @return startedAt startedAt
-     * @return updatedAt updatedAt
+     * @return startedAt timestamp passed to setRoundData
+     * @return updatedAt timestamp of the last price submission
      * @return answeredInRound answeredInRound
      */
     function latestRoundData()
@@ -290,14 +283,14 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     }
 
     /**
-     * @return answer of lattest price submission
+     * @return answer of latest price submission
      */
     function lastAnswer() public view returns (int256) {
         return
             applyGrowth(
                 _roundData[latestRound].answer,
                 lastGrowthApr(),
-                lastTimestamp()
+                lastStartedAt()
             );
     }
 
@@ -309,23 +302,30 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     }
 
     /**
-     * @return timestamp of lattest price submission
+     * @return `updatedAt` timestamp of latest price submission
      */
     function lastTimestamp() public view returns (uint256) {
         return _roundData[latestRound].updatedAt;
     }
 
     /**
+     * @return `startedAt` timestamp of latest price submission
+     */
+    function lastStartedAt() public view returns (uint256) {
+        return _roundData[latestRound].startedAt;
+    }
+
+    /**
      * @notice returns data for a specific round with growth applied
-     * @dev growth to answer is only applied between [roundTimestamp,nextRoundTimestamp]
-     * or if roundId is latestRound, block.timestamp will be used as nextRoundTimestamp
+     * @dev growth to answer is only applied between [roundStartedAt,nextRoundUpdatedAt]
+     * or if roundId is latestRound, block.timestamp will be used as nextRoundUpdatedAt
      *
      * @param _roundId roundId
      *
      * @return roundId roundId
      * @return answer answer with growth applied
-     * @return startedAt startedAt
-     * @return updatedAt updatedAt
+     * @return startedAt timestamp passed to setRoundData
+     * @return updatedAt timestamp of the last price submission
      * @return answeredInRound answeredInRound
      */
     function getRoundData(uint80 _roundId)
@@ -347,7 +347,7 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
             applyGrowth(
                 roundData.answer,
                 roundData.growthApr,
-                roundData.updatedAt,
+                roundData.startedAt,
                 isLatestRound
                     ? block.timestamp
                     : _roundData[_roundId + 1].updatedAt

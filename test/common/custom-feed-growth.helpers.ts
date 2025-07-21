@@ -184,9 +184,11 @@ export const setRoundDataGrowth = async (
     lastRoundDataRawAfter.roundId,
   );
 
-  const lastUpdatedAt = await customFeedGrowth.lastUpdatedAt();
+  const lastUpdatedAt = await customFeedGrowth.lastTimestamp();
+  const lastStartedAt = await customFeedGrowth.lastStartedAt();
 
   expect(lastUpdatedAt).eq(timestampAfter);
+  expect(lastStartedAt).eq(timestamp);
   expect(lastRoundIdAfter).eq(lastRoundIdBefore.add(1));
   expect(lastRoundDataAfter.roundId).eq(lastRoundDataBefore.roundId.add(1));
   expect(lastRoundDataRawAfter.roundId).eq(lastRoundDataAfter.roundId);
@@ -200,8 +202,8 @@ export const setRoundDataGrowth = async (
   expect(lastRoundDataAfter.startedAt).eq(timestamp);
   expect(lastRoundDataRawAfter.startedAt).eq(timestamp);
 
-  expect(lastRoundDataAfter.updatedAt).eq(timestamp);
-  expect(lastRoundDataRawAfter.updatedAt).eq(timestamp);
+  expect(lastRoundDataAfter.updatedAt).eq(timestampAfter);
+  expect(lastRoundDataRawAfter.updatedAt).eq(timestampAfter);
 
   expect(lastRoundDataAfter.answer).eq(expectedNextAnswer);
   expect(lastRoundDataRawAfter.answer).eq(dataParsed);
@@ -222,6 +224,10 @@ export const setRoundDataGrowth = async (
   expect(await customFeedGrowth.lastTimestamp()).eq(
     lastRoundDataAfter.updatedAt,
   );
+  expect(await customFeedGrowth.lastStartedAt()).eq(
+    lastRoundDataAfter.startedAt,
+  );
+
   expect(await customFeedGrowth.lastAnswer()).eq(expectedNextAnswer);
 };
 
