@@ -3,6 +3,7 @@ import { hbXAUtDeploymentConfig } from './hbXAUt';
 import { hypeBTCDeploymentConfig } from './hypeBTC';
 import { hypeETHDeploymentConfig } from './hypeETH';
 import { hypeUSDDeploymentConfig } from './hypeUSD';
+import { liquidHYPEDeploymentConfig } from './liquidHYPE';
 import { lstHYPEDeploymentConfig } from './lstHYPE';
 import { mAPOLLODeploymentConfig } from './mAPOLLO';
 import { mBASISDeploymentConfig } from './mBASIS';
@@ -53,4 +54,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mRE7SOL: mRE7SOLDeploymentConfig,
   mevBTC: mevBTCDeploymentConfig,
   lstHYPE: lstHYPEDeploymentConfig,
+  liquidHYPE: liquidHYPEDeploymentConfig,
 };

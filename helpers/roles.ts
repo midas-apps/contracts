@@ -26,6 +26,7 @@ const prefixes: Record<MTokenName, string> = {
   tBTC: 'T_BTC',
   mevBTC: 'MEV_BTC',
   lstHYPE: 'LST_HYPE',
+  liquidHYPE: 'LIQUID_HYPE',
   TACmBTC: 'TAC_M_BTC',
   TACmEDGE: 'TAC_M_EDGE',
   TACmMEV: 'TAC_M_MEV',

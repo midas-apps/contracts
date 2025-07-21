@@ -1,7 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { chainIds } from '../networks';
-import { ConfigPerNetwork, MTokenName } from '../types/index';
+import { ConfigPerNetwork, MTokenName } from '../types';
 
 export type RedemptionVaultType =
   | 'redemptionVault'
@@ -582,6 +582,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x7d876E544F12bD3347B9e904F0fb2d83bEd59a27',
       depositVault: '0x2b158D44eEbb03a025F75B79F1d8B3004Ac97737',
       redemptionVaultSwapper: '0x1eff01e0784ae8d06a17AF29A2300D2A9cdA5440',
+    },
+    liquidHYPE: {
+      token: '0x441794D6a8F9A3739F5D4E98a728937b33489D29',
+      customFeed: '0x1CeaB703956e24b18a0AF6b272E0bF3F499aCa0F',
+      dataFeed: '0x70519793f50c95f435972637E1190f41cfc907Bd',
+      depositVault: '0xF538675D292d8b372712f44eaf306Cc66cF6d8DC',
+      redemptionVaultSwapper: '0x558806a80b42cAB4ED75c74bfB178EDc9087AA32',
     },
   },
   katana: {
