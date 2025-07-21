@@ -191,6 +191,11 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
             "CAG: not enough time passed"
         );
 
+        require(
+            _dataTimestamp > lastStartedAt(),
+            "CAG: timestamp <= last startedAt"
+        );
+
         return setRoundData(_data, _dataTimestamp, _growthApr);
     }
 
@@ -212,11 +217,7 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
             "CAG: out of [min;max] growth"
         );
 
-        require(
-            _dataTimestamp > lastStartedAt() &&
-                _dataTimestamp < block.timestamp,
-            "CAG: invalid timestamp"
-        );
+        require(_dataTimestamp < block.timestamp, "CAG: timestamp >= now");
 
         uint80 roundId = latestRound + 1;
 
@@ -413,7 +414,9 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
         uint256 _timestampFrom,
         uint256 _timestampTo
     ) public pure returns (int256) {
-        int256 passedSeconds = int256(_timestampTo - _timestampFrom);
+        int256 passedSeconds = int256(_timestampTo) - int256(_timestampFrom);
+        require(passedSeconds >= 0, "CAG: timestampTo < timestampFrom");
+
         int256 interest = (_answer * passedSeconds * _growthApr) /
             int256(100 * _ONE * 365 days);
 

@@ -223,6 +223,14 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
         revertMessage: 'CAG: out of [min;max] growth',
       });
     });
+
+    it('should fail: when timestamp is >= now', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      await setRoundDataSafeGrowth(fixture, 10, 100000000, 10, {
+        revertMessage: 'CAG: timestamp >= now',
+      });
+    });
   });
 
   describe('setRoundDataSafe', async () => {
@@ -409,7 +417,25 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       await setRoundDataSafeGrowth(fixture, 10, -100, 10);
       await increase(3600);
       await setRoundDataSafeGrowth(fixture, 10, -10000, 10, {
-        revertMessage: 'CAG: invalid timestamp',
+        revertMessage: 'CAG: timestamp <= last startedAt',
+      });
+    });
+
+    it('should fail: when timestamp is >= now and its not first price set', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      await setRoundDataSafeGrowth(fixture, 10, -100, 10);
+      await increase(3600);
+      await setRoundDataSafeGrowth(fixture, 10, 100000000, 10, {
+        revertMessage: 'CAG: timestampTo < timestampFrom',
+      });
+    });
+
+    it('should fail: when timestamp is >= now and its first price set', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      await setRoundDataSafeGrowth(fixture, 10, 100000000, 10, {
+        revertMessage: 'CAG: timestamp >= now',
       });
     });
 
@@ -633,6 +659,29 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
         ](parseUnits('10', 8), parseUnits('-100', 8), 0, 1),
       ).eq(parseUnits('9.99999969', 8));
     });
+
+    it('when timestampFrom === timestampTo', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      expect(
+        await fixture.customFeedGrowth[
+          'applyGrowth(int256,int80,uint256,uint256)'
+        ](parseUnits('10', 8), parseUnits('-100', 8), 0, 0),
+      ).eq(parseUnits('10', 8));
+    });
+
+    it('should fail: when timestampTo < timestampFrom', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      expect(
+        fixture.customFeedGrowth['applyGrowth(int256,int80,uint256,uint256)'](
+          parseUnits('100', 8),
+          parseUnits('10', 8),
+          1,
+          0,
+        ),
+      ).revertedWith('CAG: timestampTo < timestampFrom');
+    });
   });
 
   describe('applyGrowth (1 timestamps + block.timestamp overload)', () => {
@@ -694,6 +743,36 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
           currentTimestamp - 1,
         ),
       ).eq(parseUnits('9.99999969', 8));
+    });
+
+    it('when timestampFrom === timestampTo', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      const currentTimestamp = (await ethers.provider.getBlock('latest'))
+        .timestamp;
+
+      expect(
+        await fixture.customFeedGrowth['applyGrowth(int256,int80,uint256)'](
+          parseUnits('10', 8),
+          parseUnits('-100', 8),
+          currentTimestamp,
+        ),
+      ).eq(parseUnits('10', 8));
+    });
+
+    it('should fail: when timestampTo < timestampFrom', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      const currentTimestamp = (await ethers.provider.getBlock('latest'))
+        .timestamp;
+
+      expect(
+        fixture.customFeedGrowth['applyGrowth(int256,int80,uint256)'](
+          parseUnits('100', 8),
+          parseUnits('10', 8),
+          currentTimestamp + 1,
+        ),
+      ).revertedWith('CAG: timestampTo < timestampFrom');
     });
   });
 });
