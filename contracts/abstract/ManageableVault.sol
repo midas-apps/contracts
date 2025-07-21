@@ -198,12 +198,12 @@ abstract contract ManageableVault is
 
     /**
      * @inheritdoc IManageableVault
-     * @dev reverts if token is already added
      */
     function addPaymentToken(
         address token,
         address dataFeed,
         uint256 tokenFee,
+        uint256 allowance,
         bool stable
     ) external onlyVaultAdmin {
         require(_paymentTokens.add(token), "MV: already added");
@@ -213,10 +213,17 @@ abstract contract ManageableVault is
         tokensConfig[token] = TokenConfig({
             dataFeed: dataFeed,
             fee: tokenFee,
-            allowance: MAX_UINT,
+            allowance: allowance,
             stable: stable
         });
-        emit AddPaymentToken(msg.sender, token, dataFeed, tokenFee, stable);
+        emit AddPaymentToken(
+            msg.sender,
+            token,
+            dataFeed,
+            tokenFee,
+            allowance,
+            stable
+        );
     }
 
     /**

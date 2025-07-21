@@ -586,6 +586,7 @@ describe('DepositVaultWithUSTB', function () {
         ethers.constants.AddressZero,
         0,
         false,
+        constants.MaxUint256,
         { revertMessage: acErrors.WMAC_HASNT_ROLE, from: regularAccounts[0] },
       );
     });
@@ -606,6 +607,7 @@ describe('DepositVaultWithUSTB', function () {
         dataFeed.address,
         0,
         false,
+        constants.MaxUint256,
         {
           revertMessage: 'MV: already added',
         },
@@ -622,9 +624,36 @@ describe('DepositVaultWithUSTB', function () {
         constants.AddressZero,
         0,
         false,
+        constants.MaxUint256,
         {
           revertMessage: 'zero address',
         },
+      );
+    });
+
+    it('call when allowance is zero', async () => {
+      const { depositVaultWithUSTB, stableCoins, owner, dataFeed } =
+        await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithUSTB, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        false,
+        constants.Zero,
+      );
+    });
+
+    it('call when allowance is not uint256 max', async () => {
+      const { depositVaultWithUSTB, stableCoins, owner, dataFeed } =
+        await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithUSTB, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        false,
+        parseUnits('100'),
       );
     });
 

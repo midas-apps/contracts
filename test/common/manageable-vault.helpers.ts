@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { BigNumber, BigNumberish } from 'ethers';
+import { BigNumber, BigNumberish, constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import { Account, OptionalCommonParams, getAccount } from './common.helpers';
@@ -331,6 +331,7 @@ export const addPaymentTokenTest = async (
   dataFeed: string,
   fee: BigNumberish,
   isStable: boolean,
+  allowance: BigNumberish = constants.MaxUint256,
   opt?: OptionalCommonParams,
 ) => {
   token = (token as ERC20).address ?? (token as string);
@@ -339,7 +340,7 @@ export const addPaymentTokenTest = async (
     await expect(
       vault
         .connect(opt?.from ?? owner)
-        .addPaymentToken(token, dataFeed, fee, isStable),
+        .addPaymentToken(token, dataFeed, fee, allowance, isStable),
     ).revertedWith(opt?.revertMessage);
     return;
   }
@@ -347,11 +348,11 @@ export const addPaymentTokenTest = async (
   await expect(
     vault
       .connect(opt?.from ?? owner)
-      .addPaymentToken(token, dataFeed, fee, isStable),
+      .addPaymentToken(token, dataFeed, fee, allowance, isStable),
   ).to.emit(
     vault,
     vault.interface.events[
-      'AddPaymentToken(address,address,address,uint256,bool)'
+      'AddPaymentToken(address,address,address,uint256,uint256,bool)'
     ].name,
   ).to.not.reverted;
 
@@ -360,6 +361,7 @@ export const addPaymentTokenTest = async (
   const tokenConfig = await vault.tokensConfig(token);
   expect(tokenConfig.dataFeed).eq(dataFeed);
   expect(tokenConfig.fee).eq(fee);
+  expect(tokenConfig.allowance).eq(allowance);
 };
 
 export const removePaymentTokenTest = async (

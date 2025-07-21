@@ -220,6 +220,7 @@ export async function ustbRedemptionVaultFixture() {
     usdc.address,
     usdcDataFeed.address,
     0, // no fee
+    ethers.constants.MaxUint256,
     true, // is stable
   );
 
@@ -227,6 +228,7 @@ export async function ustbRedemptionVaultFixture() {
     usdc.address,
     usdcDataFeed.address,
     0, // no fee
+    ethers.constants.MaxUint256,
     true, // is stable
   );
 
