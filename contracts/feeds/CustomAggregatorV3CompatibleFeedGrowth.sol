@@ -77,7 +77,8 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     uint80 public latestRound;
 
     /**
-     * @notice if true, the price
+     * @notice if true, the price can only increase
+     * @dev applicable only for setRoundDataSafe
      */
     bool public onlyUp;
 
