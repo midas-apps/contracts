@@ -8,6 +8,8 @@ export enum MTokenNameEnum {
   mMEV = 'mMEV',
   mSL = 'mSL',
   mFONE = 'mFONE',
+  mHYPER = 'mHYPER',
+  mAPOLLO = 'mAPOLLO',
   hbUSDT = 'hbUSDT',
   hbXAUt = 'hbXAUt',
   TACmBTC = 'TACmBTC',
@@ -21,6 +23,8 @@ export enum MTokenNameEnum {
   tUSDe = 'tUSDe',
   tBTC = 'tBTC',
   mevBTC = 'mevBTC',
+  lstHYPE = 'lstHYPE',
+  liquidHYPE = 'liquidHYPE',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
@@ -58,6 +62,9 @@ export enum PaymentTokenNameEnum {
   jitosol = 'jitosol',
   usdhl = 'usdhl',
   tbtc = 'tbtc',
+  wsthype = 'wsthype',
+  khype = 'khype',
+  whype = 'whype',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;

@@ -1,7 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { chainIds } from '../networks';
-import { ConfigPerNetwork, MTokenName } from '../types/index';
+import { ConfigPerNetwork, MTokenName } from '../types';
 
 export type RedemptionVaultType =
   | 'redemptionVault'
@@ -225,6 +225,20 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xCF4e49f5e750Af8F2f9Aa1642B68E5839D9c1C00',
       depositVault: '0x41438435c20B1C2f1fcA702d387889F346A0C3DE',
       redemptionVaultSwapper: '0x44b0440e35c596e858cEA433D0d82F5a985fD19C',
+    },
+    mHYPER: {
+      token: '0x9b5528528656DBC094765E2abB79F293c21191B9',
+      customFeed: '0x43881B05C3BE68B2d33eb70aDdF9F666C5005f68',
+      dataFeed: '0x92004DCC5359eD67f287F32d12715A37916deCdE',
+      depositVault: '0xbA9FD2850965053Ffab368Df8AA7eD2486f11024',
+      redemptionVaultSwapper: '0x6Be2f55816efd0d91f52720f096006d63c366e98',
+    },
+    mAPOLLO: {
+      token: '0x7CF9DEC92ca9FD46f8d86e7798B72624Bc116C05',
+      customFeed: '0x84303e5568C7B167fa4fEBc6253CDdfe12b7Ee4B',
+      dataFeed: '0x9aEBf5d6F9411BAc355021ddFbe9B2c756BDD358',
+      depositVault: '0xc21511EDd1E6eCdc36e8aD4c82117033e50D5921',
+      redemptionVaultSwapper: '0x5aeA6D35ED7B3B7aE78694B7da2Ee880756Af5C0',
     },
     mLIQUIDITY: {
       token: '0x841EEb3e2489B2282b0E14202Dc8Bd8F7624e29A',
@@ -532,6 +546,21 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x215ADBE371A3664640c67d754466CCeE102e9349',
         dataFeed: '0x289584e63A61C69EEE170cD553cff8B3FFD56EA7',
       },
+      wsthype: {
+        token: '0x94e8396e0869c9F2200760aF0621aFd240E1CF38',
+        aggregator: '0xe6E8baDBB469d16e2060e1Ebeb60F92B2a1250A9',
+        dataFeed: '0xD28b1AB7098E7434a7b4eFdC99c35fb85CfD92C1',
+      },
+      khype: {
+        token: '0xfD739d4e423301CE9385c1fb8850539D657C296D',
+        aggregator: '0xFfe5F5e9e18b88FBdD7e28d4A583a111C874fB47',
+        dataFeed: '0x5A55899f324bF45DD2dA0b97E145774a4668A9E4',
+      },
+      whype: {
+        token: '0x5555555555555555555555555555555555555555',
+        aggregator: '0x7F1f3E3D57E5549828909AE3381C7bFF05A4fE09',
+        dataFeed: '0xE1C769D56Cb6448813732F7736041425AA0A4A75',
+      },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     hbUSDT: {
@@ -547,6 +576,20 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xdb981793d483B612AF23e29F0282aD23Fe6C3845',
       depositVault: '0x48fb106Ef0c0C1a19EdDC9C5d27A945E66DA1C4E',
       redemptionVaultSwapper: '0xD26bB9B45140D17eF14FbD4fCa8Cf0d610ac50E7',
+    },
+    lstHYPE: {
+      token: '0x81e064d0eB539de7c3170EDF38C1A42CBd752A76',
+      customFeed: '0x2b959a9Deb8e62FaaEA1b226F3bbcbcC0Af31560',
+      dataFeed: '0x7d876E544F12bD3347B9e904F0fb2d83bEd59a27',
+      depositVault: '0x2b158D44eEbb03a025F75B79F1d8B3004Ac97737',
+      redemptionVaultSwapper: '0x1eff01e0784ae8d06a17AF29A2300D2A9cdA5440',
+    },
+    liquidHYPE: {
+      token: '0x441794D6a8F9A3739F5D4E98a728937b33489D29',
+      customFeed: '0x1CeaB703956e24b18a0AF6b272E0bF3F499aCa0F',
+      dataFeed: '0x70519793f50c95f435972637E1190f41cfc907Bd',
+      depositVault: '0xF538675D292d8b372712f44eaf306Cc66cF6d8DC',
+      redemptionVaultSwapper: '0x558806a80b42cAB4ED75c74bfB178EDc9087AA32',
     },
   },
   katana: {

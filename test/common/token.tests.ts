@@ -67,6 +67,14 @@ const expectedTokenNameSymb: Record<
     name: 'Midas Fasanara ONE',
     symbol: 'mF-ONE',
   },
+  mHYPER: {
+    name: 'Midas Hyperithm',
+    symbol: 'mHYPER',
+  },
+  mAPOLLO: {
+    name: 'Midas Apollo Crypto',
+    symbol: 'mAPOLLO',
+  },
   hbUSDT: {
     name: 'Hyperbeat USDT',
     symbol: 'hbUSDT',
@@ -118,6 +126,14 @@ const expectedTokenNameSymb: Record<
   mevBTC: {
     name: 'Bitcoin MEV Capital',
     symbol: 'mevBTC',
+  },
+  lstHYPE: {
+    name: 'Hyperbeat LST Vault',
+    symbol: 'lstHYPE',
+  },
+  liquidHYPE: {
+    name: 'Liquid HYPE Yield',
+    symbol: 'liquidHYPE',
   },
 };
 

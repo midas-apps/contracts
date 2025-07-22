@@ -4,10 +4,6 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { getCurrentAddresses } from '../../config/constants/addresses';
 import { getTokenContractNames } from '../../helpers/contracts';
-import {
-  logDeployProxy,
-  tryEtherscanVerifyImplementation,
-} from '../../helpers/utils';
 import { getDeployer } from '../deploy/common/utils';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
@@ -15,27 +11,24 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const deployer = await getDeployer(hre);
 
-  const deployment = await hre.upgrades.upgradeProxy(
-    addresses?.mBASIS?.redemptionVaultSwapper ?? '',
+  const deployment = await hre.upgrades.prepareUpgrade(
+    addresses?.liquidHYPE?.redemptionVaultSwapper ?? '',
     await hre.ethers.getContractFactory(
-      getTokenContractNames('mBASIS').rvSwapper!,
+      getTokenContractNames('liquidHYPE').rvSwapper!,
       deployer,
     ),
     {
       unsafeAllow: ['constructor'],
-      redeployImplementation: 'onchange',
+      redeployImplementation: 'always',
     },
   );
 
-  if (deployment.deployTransaction) {
-    await deployment.deployTransaction.wait(5);
+  if (typeof deployment !== 'string') {
+    await deployment.wait(5);
+    console.log(deployment.to);
+  } else {
+    console.log(deployment);
   }
-  await logDeployProxy(
-    hre,
-    getTokenContractNames('mBASIS').rvSwapper!,
-    deployment.address,
-  );
-  await tryEtherscanVerifyImplementation(hre, deployment.address);
 };
 
 func(hre).then(console.log).catch(console.error);
