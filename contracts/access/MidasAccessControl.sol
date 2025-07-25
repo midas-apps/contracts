@@ -70,17 +70,7 @@ contract MidasAccessControl is
     function _setupRoles(address admin) private {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
-        _grantRole(DEPOSIT_VAULT_ADMIN_ROLE, admin);
-        _grantRole(REDEMPTION_VAULT_ADMIN_ROLE, admin);
-
         _setRoleAdmin(BLACKLISTED_ROLE, BLACKLIST_OPERATOR_ROLE);
         _setRoleAdmin(GREENLISTED_ROLE, GREENLIST_OPERATOR_ROLE);
-
-        _grantRole(GREENLIST_OPERATOR_ROLE, admin);
-        _grantRole(BLACKLIST_OPERATOR_ROLE, admin);
-
-        _grantRole(M_TBILL_MINT_OPERATOR_ROLE, admin);
-        _grantRole(M_TBILL_BURN_OPERATOR_ROLE, admin);
-        _grantRole(M_TBILL_PAUSE_OPERATOR_ROLE, admin);
     }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import "./IMTbill.sol";
+import "./IMToken.sol";
 import "./IDataFeed.sol";
 
 /**
@@ -165,7 +165,7 @@ interface IManageableVault {
      * @notice The mToken contract address.
      * @return The address of the mToken contract.
      */
-    function mToken() external view returns (IMTbill);
+    function mToken() external view returns (IMToken);
 
     /**
      * @notice withdraws `amount` of a given `token` from the contract.

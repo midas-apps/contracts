@@ -26,4 +26,14 @@ contract GreenlistableTester is Greenlistable {
     }
 
     function _disableInitializers() internal override {}
+
+    function greenlistTogglerRole()
+        public
+        view
+        virtual
+        override
+        returns (bytes32)
+    {
+        return keccak256("GREENLIST_TOGGLER_ROLE");
+    }
 }
