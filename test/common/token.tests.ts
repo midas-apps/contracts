@@ -802,7 +802,9 @@ export const tokenContractsTests = (token: MTokenName) => {
       }
 
       expect(await depositVault.vaultRole()).eq(
-        await depositVault[tokenRoleNames.depositVaultAdmin](),
+        token === 'mTBILL'
+          ? tokenRoles.depositVaultAdmin
+          : await depositVault[tokenRoleNames.depositVaultAdmin](),
       );
       expect(await depositVault.vaultRole()).eq(tokenRoles.depositVaultAdmin);
     });
@@ -817,7 +819,9 @@ export const tokenContractsTests = (token: MTokenName) => {
       }
 
       expect(await depositVaultUstb.vaultRole()).eq(
-        await depositVaultUstb[tokenRoleNames.depositVaultAdmin](),
+        token === 'mTBILL'
+          ? tokenRoles.depositVaultAdmin
+          : await depositVaultUstb[tokenRoleNames.depositVaultAdmin](),
       );
       expect(await depositVaultUstb.vaultRole()).eq(
         tokenRoles.depositVaultAdmin,
@@ -834,7 +838,9 @@ export const tokenContractsTests = (token: MTokenName) => {
       }
 
       expect(await redemptionVault.vaultRole()).eq(
-        await redemptionVault[tokenRoleNames.redemptionVaultAdmin](),
+        token === 'mTBILL'
+          ? tokenRoles.redemptionVaultAdmin
+          : await redemptionVault[tokenRoleNames.redemptionVaultAdmin](),
       );
       expect(await redemptionVault.vaultRole()).eq(
         tokenRoles.redemptionVaultAdmin,
@@ -852,7 +858,11 @@ export const tokenContractsTests = (token: MTokenName) => {
       }
 
       expect(await redemptionVaultWithSwapper.vaultRole()).eq(
-        await redemptionVaultWithSwapper[tokenRoleNames.redemptionVaultAdmin](),
+        token === 'mTBILL'
+          ? tokenRoles.redemptionVaultAdmin
+          : await redemptionVaultWithSwapper[
+              tokenRoleNames.redemptionVaultAdmin
+            ](),
       );
       expect(await redemptionVaultWithSwapper.vaultRole()).eq(
         tokenRoles.redemptionVaultAdmin,

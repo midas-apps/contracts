@@ -7,14 +7,13 @@ import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contrac
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 
 import "./interfaces/IDepositVault.sol";
-import "./interfaces/IMTbill.sol";
 import "./interfaces/IDataFeed.sol";
 
 import "./abstract/ManageableVault.sol";
 
 /**
  * @title DepositVault
- * @notice Smart contract that handles mTBILL minting
+ * @notice Smart contract that handles mToken minting
  * @author RedDuck Software
  */
 contract DepositVault is ManageableVault, IDepositVault {

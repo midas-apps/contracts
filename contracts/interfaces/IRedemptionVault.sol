@@ -140,11 +140,11 @@ interface IRedemptionVault is IManageableVault {
 
     /**
      * @notice redeem mToken to tokenOut if daily limit and allowance not exceeded
-     * Burns mTBILL from the user.
+     * Burns mToken from the user.
      * Transfers fee in mToken to feeReceiver
      * Transfers tokenOut to user.
      * @param tokenOut stable coin token address to redeem to
-     * @param amountMTokenIn amount of mTBILL to redeem (decimals 18)
+     * @param amountMTokenIn amount of mToken to redeem (decimals 18)
      * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
      */
     function redeemInstant(
@@ -156,7 +156,7 @@ interface IRedemptionVault is IManageableVault {
     /**
      * @notice Does the same as original `redeemInstant` but allows specifying a custom tokensReceiver address.
      * @param tokenOut stable coin token address to redeem to
-     * @param amountMTokenIn amount of mTBILL to redeem (decimals 18)
+     * @param amountMTokenIn amount of mToken to redeem (decimals 18)
      * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
      * @param recipient address that receives tokens
      */

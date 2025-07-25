@@ -7,7 +7,7 @@ import "./DepositVault.sol";
 
 /**
  * @title DepositVaultWithUSTB
- * @notice Smart contract that handles mTBILL minting and invests
+ * @notice Smart contract that handles mToken minting and invests
  * proceeds into USTB
  * @author RedDuck Software
  */

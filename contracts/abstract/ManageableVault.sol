@@ -10,7 +10,7 @@ import {EnumerableSetUpgradeable as EnumerableSet} from "@openzeppelin/contracts
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 
 import "../interfaces/IManageableVault.sol";
-import "../interfaces/IMTbill.sol";
+import "../interfaces/IMToken.sol";
 import "../interfaces/IDataFeed.sol";
 
 import "../access/Greenlistable.sol";
@@ -63,7 +63,7 @@ abstract contract ManageableVault is
     /**
      * @notice mToken token
      */
-    IMTbill public mToken;
+    IMToken public mToken;
 
     /**
      * @notice mToken data feed contract
@@ -168,7 +168,7 @@ abstract contract ManageableVault is
         _validateFee(_variationTolerance, true);
         _validateFee(_instantInitParams.instantFee, false);
 
-        mToken = IMTbill(_mTokenInitParams.mToken);
+        mToken = IMToken(_mTokenInitParams.mToken);
         __Pausable_init(_ac);
         __Greenlistable_init_unchained();
         __Blacklistable_init_unchained();
