@@ -50,11 +50,11 @@
   },
   "devDependencies": {
     "@chainlink/contracts": "^0.6.1",
+    "@clack/prompts": "^0.11.0",
     "@commitlint/cli": "^17.1.2",
     "@commitlint/config-conventional": "^17.1.0",
     "@ethersproject/abi": "^5.7.0",
     "@ethersproject/providers": "^5.7.2",
-    "@fordefi/web3-provider": "^0.2.5",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.4",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
     "@nomicfoundation/hardhat-toolbox": "^1.0.1",

@@ -2,12 +2,15 @@ import { Provider } from '@ethersproject/providers';
 import { Signer } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { getDeployer } from './utils';
+import {
+  getDeployer,
+  getNetworkConfig,
+  sendAndWaitForCustomTxSign,
+} from './utils';
 
 import { MTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import { getCommonContractNames } from '../../../helpers/contracts';
-import { getFordefiProvider } from '../../../helpers/fordefi-provider';
 import { getAllRoles } from '../../../helpers/roles';
 import { MidasAccessControl } from '../../../typechain-types';
 import { networkDeploymentConfigs } from '../configs/network-configs';
@@ -15,19 +18,23 @@ import { networkDeploymentConfigs } from '../configs/network-configs';
 type Address = `0x${string}`;
 
 export type GrantAllTokenRolesConfig = {
-  providerType: 'fordefi' | 'hardhat';
   tokenManagerAddress?: Address;
   vaultsManagerAddress?: Address;
   oracleManagerAddress?: Address;
 };
 
-const acAdminVaultAddress = '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227';
+const acAdminAddress = '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227';
 
-export const grantAllTokenRoles = async (
+export const grantAllProductRoles = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
-  networkConfig?: GrantAllTokenRolesConfig,
 ) => {
+  const { grantRoles: networkConfig } = getNetworkConfig(
+    hre,
+    token,
+    'postDeploy',
+  );
+
   if (!networkConfig) {
     throw new Error('Network config is not found');
   }
@@ -43,12 +50,7 @@ export const grantAllTokenRoles = async (
   const tokenRoles = allRoles.tokenRoles[token];
 
   const deployer = await getDeployer(hre);
-  const provider =
-    networkConfig.providerType === 'fordefi'
-      ? getFordefiProvider({
-          vaultAddress: acAdminVaultAddress,
-        })
-      : deployer;
+  const provider = deployer;
 
   const accessControl = await getAcContract(hre, provider);
 
@@ -65,41 +67,47 @@ export const grantAllTokenRoles = async (
     tokenRoles.redemptionVaultAdmin,
   ];
 
-  const oracleManagerRoles = [tokenRoles.customFeedAdmin];
+  const oracleManagerRoles = [tokenRoles.customFeedAdmin!];
   const contractsRoles = [tokenRoles.minter, tokenRoles.burner];
 
-  const defaultManager =
-    networkConfig.providerType === 'fordefi'
-      ? 'invalid' // for fordefi there is no default address so tx will just throw error
-      : deployer.address;
+  const defaultManager = deployer.address;
 
-  const tx = await accessControl.grantRoleMult(
-    [
-      ...tokenManagerRoles,
-      ...vaultManagerRoles,
-      ...oracleManagerRoles,
-      ...contractsRoles,
-    ],
-    [
-      ...tokenManagerRoles.map(
-        () => networkConfig.tokenManagerAddress ?? defaultManager,
-      ),
-      ...vaultManagerRoles.map(
-        () => networkConfig.vaultsManagerAddress ?? defaultManager,
-      ),
-      ...oracleManagerRoles.map(
-        () => networkConfig.oracleManagerAddress ?? defaultManager,
-      ),
-      ...[
-        tokenAddresses.depositVault!,
-        tokenAddresses.redemptionVaultSwapper ??
-          tokenAddresses.redemptionVaultBuidl ??
-          tokenAddresses.redemptionVault!,
+  const tx = await sendAndWaitForCustomTxSign(
+    hre,
+    await accessControl.populateTransaction.grantRoleMult(
+      [
+        ...tokenManagerRoles,
+        ...vaultManagerRoles,
+        ...oracleManagerRoles,
+        ...contractsRoles,
       ],
-    ],
+      [
+        ...tokenManagerRoles.map(
+          () => networkConfig.tokenManagerAddress ?? defaultManager,
+        ),
+        ...vaultManagerRoles.map(
+          () => networkConfig.vaultsManagerAddress ?? defaultManager,
+        ),
+        ...oracleManagerRoles.map(
+          () => networkConfig.oracleManagerAddress ?? defaultManager,
+        ),
+        ...[
+          tokenAddresses.depositVault!,
+          tokenAddresses.redemptionVaultSwapper ??
+            tokenAddresses.redemptionVaultBuidl ??
+            tokenAddresses.redemptionVaultUstb ??
+            tokenAddresses.redemptionVault!,
+        ],
+      ],
+    ),
+    {
+      action: 'update-ac',
+      subAction: 'grant-token-roles',
+      comment: `grant all ${token} roles`,
+    },
   );
 
-  console.log('Transaction is initiated successfully', tx.hash);
+  console.log('Transaction is initiated successfully', tx);
 };
 
 export const revokeDefaultRolesFromDeployer = async (
@@ -152,7 +160,7 @@ export const grantDefaultAdminRoleToAcAdmin = async (
 
   await accessControl.grantRole(
     allRoles.common.defaultAdmin,
-    networkConfig?.acAdminAddress ?? acAdminVaultAddress,
+    networkConfig?.acAdminAddress ?? acAdminAddress,
   );
 
   console.log('Transaction is initiated successfully');

@@ -2,7 +2,11 @@ import { Provider } from '@ethersproject/providers';
 import { BigNumber, constants, Signer } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { getDeployer } from './utils';
+import {
+  getDeployer,
+  getNetworkConfig,
+  sendAndWaitForCustomTxSign,
+} from './utils';
 
 import { MTokenName, PaymentTokenName } from '../../../config';
 import {
@@ -10,11 +14,9 @@ import {
   getCurrentAddresses,
   VaultType,
 } from '../../../config/constants/addresses';
-import { getFordefiProvider } from '../../../helpers/fordefi-provider';
 import { ManageableVault } from '../../../typechain-types';
 
 export type AddPaymentTokensConfig = {
-  providerType: 'fordefi' | 'hardhat';
   vaults: {
     type: VaultType;
     paymentTokens: {
@@ -27,25 +29,23 @@ export type AddPaymentTokensConfig = {
   }[];
 };
 
-const vaultsManagerAddress = '0x';
-
 export const addPaymentTokens = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
-  networkConfig?: AddPaymentTokensConfig,
 ) => {
+  const { addPaymentTokens: networkConfig } = getNetworkConfig(
+    hre,
+    token,
+    'postDeploy',
+  );
+
   if (!networkConfig) {
     throw new Error('Network config is not found');
   }
 
   const deployer = await getDeployer(hre);
 
-  const provider =
-    networkConfig.providerType === 'fordefi'
-      ? getFordefiProvider({
-          vaultAddress: vaultsManagerAddress,
-        })
-      : deployer;
+  const provider = deployer;
 
   // simulation step to ensure that all the loop iterations wont fail on
   // simple checks step
@@ -74,18 +74,20 @@ export const addPaymentTokens = async (
         return;
       }
 
-      const tx = await vaultContract.addPaymentToken(
+      const tx = await vaultContract.populateTransaction.addPaymentToken(
         tokenConfig.token!,
         tokenConfig.dataFeed!,
         paymentToken.fee ?? BigNumber.from(0),
         paymentToken.isStable ?? true,
       );
 
-      await tx.wait();
+      const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
+        action: 'update-vault',
+        subAction: 'add-payment-token',
+        comment: `add ${paymentToken.token} to ${vaultType}`,
+      });
 
-      console.log(
-        `${vaultType}:${paymentToken.token} tx initiated: ${tx.hash}`,
-      );
+      console.log(`${vaultType}:${paymentToken.token} tx initiated: ${txRes}`);
     },
   );
 };

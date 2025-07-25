@@ -9,6 +9,7 @@ export type TokenContractNames = {
   dataFeed?: string;
   customAggregator?: string;
   token: string;
+  roles: string;
 };
 
 type CommonContractNames = Omit<TokenContractNames, 'token'> & {
@@ -57,6 +58,7 @@ export const getCommonContractNames = (): CommonContractNames => {
     dataFeed: 'DataFeed',
     customAggregator: 'CustomAggregatorV3CompatibleFeed',
     customAggregatorDiscounted: 'CustomAggregatorV3CompatibleFeedDiscounted',
+    roles: 'MidasAccessControlRoles',
   };
 };
 
@@ -79,5 +81,6 @@ export const getTokenContractNames = (
     dataFeed: isTac ? undefined : `${prefix}${commonContractNames.dataFeed}`,
     customAggregator: isTac ? undefined : `${prefix}CustomAggregatorFeed`,
     token: `${token}`,
+    roles: `${prefix}${commonContractNames.roles}`,
   };
 };
