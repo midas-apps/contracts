@@ -35,6 +35,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     }
 
     /**
+     * @dev default role that grants admin rights to the contract
+     */
+    bytes32 private constant _DEFAULT_REDEMPTION_VAULT_ADMIN_ROLE =
+        keccak256("REDEMPTION_VAULT_ADMIN_ROLE");
+
+    /**
      * @dev selector for redeem instant
      */
     bytes4 private constant _REDEEM_INSTANT_SELECTOR =
@@ -428,7 +434,20 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @inheritdoc ManageableVault
      */
     function vaultRole() public pure virtual override returns (bytes32) {
-        return REDEMPTION_VAULT_ADMIN_ROLE;
+        return _DEFAULT_REDEMPTION_VAULT_ADMIN_ROLE;
+    }
+
+    /**
+     * @inheritdoc Greenlistable
+     */
+    function greenlistTogglerRole()
+        public
+        view
+        virtual
+        override
+        returns (bytes32)
+    {
+        return vaultRole();
     }
 
     /**

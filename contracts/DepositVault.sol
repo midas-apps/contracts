@@ -42,6 +42,12 @@ contract DepositVault is ManageableVault, IDepositVault {
     }
 
     /**
+     * @dev default role that grants admin rights to the contract
+     */
+    bytes32 private constant _DEFAULT_DEPOSIT_VAULT_ADMIN_ROLE =
+        keccak256("DEPOSIT_VAULT_ADMIN_ROLE");
+
+    /**
      * @dev selector for deposit instant
      */
     bytes4 private constant _DEPOSIT_INSTANT_SELECTOR =
@@ -366,7 +372,20 @@ contract DepositVault is ManageableVault, IDepositVault {
      * @inheritdoc ManageableVault
      */
     function vaultRole() public pure virtual override returns (bytes32) {
-        return DEPOSIT_VAULT_ADMIN_ROLE;
+        return _DEFAULT_DEPOSIT_VAULT_ADMIN_ROLE;
+    }
+
+    /**
+     * @inheritdoc Greenlistable
+     */
+    function greenlistTogglerRole()
+        public
+        view
+        virtual
+        override
+        returns (bytes32)
+    {
+        return vaultRole();
     }
 
     /**

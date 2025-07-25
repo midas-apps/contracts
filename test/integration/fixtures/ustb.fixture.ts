@@ -70,6 +70,7 @@ export async function ustbRedemptionVaultFixture() {
     allRoles.tokenRoles.mTBILL.burner,
     allRoles.tokenRoles.mTBILL.pauser,
     allRoles.tokenRoles.mTBILL.redemptionVaultAdmin,
+    allRoles.tokenRoles.mTBILL.depositVaultAdmin,
     allRoles.common.greenlistedOperator,
   ];
 
