@@ -35,20 +35,20 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     /**
      * @inheritdoc IMToken
      */
-    function mint(
-        address to,
-        uint256 amount
-    ) external onlyRole(_minterRole(), msg.sender) {
+    function mint(address to, uint256 amount)
+        external
+        onlyRole(_minterRole(), msg.sender)
+    {
         _mint(to, amount);
     }
 
     /**
      * @inheritdoc IMToken
      */
-    function burn(
-        address from,
-        uint256 amount
-    ) external onlyRole(_burnerRole(), msg.sender) {
+    function burn(address from, uint256 amount)
+        external
+        onlyRole(_burnerRole(), msg.sender)
+    {
         _burn(from, amount);
     }
 
@@ -69,10 +69,10 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     /**
      * @inheritdoc IMToken
      */
-    function setMetadata(
-        bytes32 key,
-        bytes memory data
-    ) external onlyRole(DEFAULT_ADMIN_ROLE, msg.sender) {
+    function setMetadata(bytes32 key, bytes memory data)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE, msg.sender)
+    {
         metadata[key] = data;
     }
 
