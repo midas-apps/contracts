@@ -7,7 +7,6 @@ import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contrac
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 
 import "./interfaces/IRedemptionVault.sol";
-import "./interfaces/IMTbill.sol";
 import "./interfaces/IDataFeed.sol";
 
 import "./abstract/ManageableVault.sol";
@@ -16,7 +15,7 @@ import "./access/Greenlistable.sol";
 
 /**
  * @title RedemptionVault
- * @notice Smart contract that handles mTBILL redemptions
+ * @notice Smart contract that handles mToken redemptions
  * @author RedDuck Software
  */
 contract RedemptionVault is ManageableVault, IRedemptionVault {
@@ -33,6 +32,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         /// @notice amount of mToken without fee
         uint256 amountMTokenWithoutFee;
     }
+
+    /**
+     * @dev default role that grants admin rights to the contract
+     */
+    bytes32 private constant _DEFAULT_REDEMPTION_VAULT_ADMIN_ROLE =
+        keccak256("REDEMPTION_VAULT_ADMIN_ROLE");
 
     /**
      * @dev selector for redeem instant
@@ -428,7 +433,20 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @inheritdoc ManageableVault
      */
     function vaultRole() public pure virtual override returns (bytes32) {
-        return REDEMPTION_VAULT_ADMIN_ROLE;
+        return _DEFAULT_REDEMPTION_VAULT_ADMIN_ROLE;
+    }
+
+    /**
+     * @inheritdoc Greenlistable
+     */
+    function greenlistTogglerRole()
+        public
+        view
+        virtual
+        override
+        returns (bytes32)
+    {
+        return vaultRole();
     }
 
     /**

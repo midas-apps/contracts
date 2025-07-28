@@ -7,14 +7,13 @@ import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contrac
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 
 import "./interfaces/IDepositVault.sol";
-import "./interfaces/IMTbill.sol";
 import "./interfaces/IDataFeed.sol";
 
 import "./abstract/ManageableVault.sol";
 
 /**
  * @title DepositVault
- * @notice Smart contract that handles mTBILL minting
+ * @notice Smart contract that handles mToken minting
  * @author RedDuck Software
  */
 contract DepositVault is ManageableVault, IDepositVault {
@@ -40,6 +39,12 @@ contract DepositVault is ManageableVault, IDepositVault {
         /// @notice tokenIn decimals
         uint256 tokenDecimals;
     }
+
+    /**
+     * @dev default role that grants admin rights to the contract
+     */
+    bytes32 private constant _DEFAULT_DEPOSIT_VAULT_ADMIN_ROLE =
+        keccak256("DEPOSIT_VAULT_ADMIN_ROLE");
 
     /**
      * @dev selector for deposit instant
@@ -366,7 +371,20 @@ contract DepositVault is ManageableVault, IDepositVault {
      * @inheritdoc ManageableVault
      */
     function vaultRole() public pure virtual override returns (bytes32) {
-        return DEPOSIT_VAULT_ADMIN_ROLE;
+        return _DEFAULT_DEPOSIT_VAULT_ADMIN_ROLE;
+    }
+
+    /**
+     * @inheritdoc Greenlistable
+     */
+    function greenlistTogglerRole()
+        public
+        view
+        virtual
+        override
+        returns (bytes32)
+    {
+        return vaultRole();
     }
 
     /**

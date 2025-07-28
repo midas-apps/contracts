@@ -11,7 +11,7 @@ import "./libraries/DecimalsCorrectionLibrary.sol";
 
 /**
  * @title RedemptionVault
- * @notice Smart contract that handles mTBILL redemptions
+ * @notice Smart contract that handles mToken redemptions
  * @author RedDuck Software
  */
 contract RedemptionVaultWIthBUIDL is RedemptionVault {

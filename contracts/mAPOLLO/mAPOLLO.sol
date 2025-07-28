@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
-import "../mTBILL/mTBILL.sol";
+import "../mToken.sol";
 
 /**
  * @title mAPOLLO
  * @author RedDuck Software
  */
 //solhint-disable contract-name-camelcase
-contract mAPOLLO is mTBILL {
+contract mAPOLLO is mToken {
     /**
      * @notice actor that can mint mAPOLLO
      */
@@ -32,12 +32,15 @@ contract mAPOLLO is mTBILL {
     uint256[50] private __gap;
 
     /**
-     * @notice upgradeable pattern contract`s initializer
-     * @param _accessControl address of MidasAccessControl contract
+     * @inheritdoc mToken
      */
-    function initialize(address _accessControl) external override initializer {
-        __Blacklistable_init(_accessControl);
-        __ERC20_init("Midas Apollo Crypto", "mAPOLLO");
+    function _getNameSymbol()
+        internal
+        pure
+        override
+        returns (string memory, string memory)
+    {
+        return ("Midas Apollo Crypto", "mAPOLLO");
     }
 
     /**

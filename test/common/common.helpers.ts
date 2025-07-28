@@ -1,7 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumber, BigNumberish, Contract } from 'ethers';
-import { parseUnits } from 'ethers/lib/utils';
+import { parseUnits, solidityKeccak256 } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
 import {
@@ -19,6 +19,10 @@ export type OptionalCommonParams = {
 
 export type Account = SignerWithAddress | string;
 export type AccountOrContract = Account | Contract;
+
+export const keccak256 = (role: string) => {
+  return solidityKeccak256(['string'], [role]);
+};
 
 export const getAccount = (account: AccountOrContract) => {
   return (
