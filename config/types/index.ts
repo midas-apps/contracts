@@ -37,4 +37,5 @@ export interface Environment {
   readonly VERIFY_SOURCIFY?: boolean;
   readonly VERIFY_ETHERSCAN?: boolean;
   readonly SOURCIFY_API_URL?: string;
+  readonly CUSTOM_SIGNER_SCRIPT_PATH?: string;
 }

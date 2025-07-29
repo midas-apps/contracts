@@ -17,4 +17,5 @@ export const ENV: Environment = {
     ? (process.env.FORKING_NETWORK as Network)
     : undefined,
   SOURCIFY_API_URL: process.env.SOURCIFY_API_URL,
+  CUSTOM_SIGNER_SCRIPT_PATH: process.env.CUSTOM_SIGNER_SCRIPT_PATH,
 };

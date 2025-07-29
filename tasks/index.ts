@@ -3,6 +3,7 @@ import { task } from 'hardhat/config';
 
 import path from 'path';
 
+import { ENV } from '../config';
 import {
   etherscanVerify,
   etherscanVerifyImplementation,
@@ -24,7 +25,8 @@ task('runscript', 'Runs a user-defined script')
   .setAction(async (taskArgs, hre) => {
     const mtoken = taskArgs.mtoken;
     const ptoken = taskArgs.ptoken;
-    const customSignerScript = taskArgs.customSignerScript;
+    const customSignerScript =
+      taskArgs.customSignerScript ?? ENV.CUSTOM_SIGNER_SCRIPT_PATH;
     const scriptPath = taskArgs.path;
 
     const { deployer } = await hre.getNamedAccounts();
@@ -58,7 +60,6 @@ task('runscript', 'Runs a user-defined script')
       };
     } else {
       const scriptPathResolved = path.resolve(customSignerScript);
-      console.log(scriptPathResolved);
       const { signTransaction } = await import(scriptPathResolved);
 
       hre.customSigner = {

@@ -104,6 +104,9 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
         minBuidlBalance: parseUnits('1', 6),
         minBuidlToRedeem: parseUnits('1', 6),
       },
+      postDeploy: {
+        grantRoles: {},
+      },
     },
     [chainIds.base]: {
       dv: {

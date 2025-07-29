@@ -162,7 +162,10 @@ export const sendAndWaitForCustomTxSign = async (
     console.log('Custom tx sign result detected, skipping...');
     return res.payload;
   }
+
+  console.log('Sending tx...');
   const tx = await hre.ethers.provider.sendTransaction(res.signedTx);
+  console.log('Sending tx...', tx.hash);
 
   await tx.wait(confirmations);
 
