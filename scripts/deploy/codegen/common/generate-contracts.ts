@@ -23,7 +23,7 @@ const getTokenContractFromTemplate = (mToken: MTokenName) => {
     content: `
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
-import "../../mTBILL/mTBILL.sol";
+import "../mTBILL/mTBILL.sol";
 
 /**
  * @title ${contractNames.token}
@@ -56,7 +56,7 @@ contract ${contractNames.token} is mTBILL {
 
     /**
      * @notice upgradeable pattern contract\`s initializer
-     * @param _accessControl address of MidasAccessControll contract
+     * @param _accessControl address of MidasAccessControl contract
      */
     function initialize(address _accessControl) external override initializer {
         __Blacklistable_init(_accessControl);
@@ -134,7 +134,7 @@ const getDvContractFromTemplate = (mToken: MTokenName) => {
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import "../../DepositVault.sol";
+import "../DepositVault.sol";
 import "./${contractNames.roles}.sol";
 
 /**
@@ -168,7 +168,7 @@ const getRvContractFromTemplate = (mToken: MTokenName) => {
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import "../../RedemptionVault.sol";
+import "../RedemptionVault.sol";
 import "./${contractNames.roles}.sol";
 
 /**
@@ -205,7 +205,7 @@ const getRvSwapperContractFromTemplate = (mToken: MTokenName) => {
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import "../../RedemptionVaultWithSwapper.sol";
+import "../RedemptionVaultWithSwapper.sol";
 import "./${contractNames.roles}.sol";
 
 /**
@@ -242,7 +242,7 @@ const getRvUstbContractFromTemplate = (mToken: MTokenName) => {
   // SPDX-License-Identifier: MIT
   pragma solidity 0.8.9;
 
-  import "../../RedemptionVaultWithUSTB.sol";
+  import "../RedemptionVaultWithUSTB.sol";
   import "./${contractNames.roles}.sol";
 
   /**
@@ -282,7 +282,7 @@ const getDataFeedContractFromTemplate = (mToken: MTokenName) => {
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import "../../feeds/DataFeed.sol";
+import "../feeds/DataFeed.sol";
 import "./${contractNames.roles}.sol";
 
 /**
@@ -320,7 +320,7 @@ const getCustomAggregatorContractFromTemplate = (mToken: MTokenName) => {
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import "../../feeds/CustomAggregatorV3CompatibleFeed.sol";
+import "../feeds/CustomAggregatorV3CompatibleFeed.sol";
 import "./${contractNames.roles}.sol";
 
 /**
@@ -372,11 +372,7 @@ export const generateContracts = async (
   hre: HardhatRuntimeEnvironment,
   mToken: MTokenName,
 ) => {
-  const folder = path.join(
-    hre.config.paths.root,
-    'contracts',
-    `products/${mToken}`,
-  );
+  const folder = path.join(hre.config.paths.root, 'contracts', `${mToken}`);
 
   console.log(folder);
 
