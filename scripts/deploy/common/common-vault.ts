@@ -43,9 +43,7 @@ export const addPaymentTokens = async (
     throw new Error('Network config is not found');
   }
 
-  const deployer = await getDeployer(hre);
-
-  const provider = deployer;
+  const provider = await getDeployer(hre);
 
   // simulation step to ensure that all the loop iterations wont fail on
   // simple checks step

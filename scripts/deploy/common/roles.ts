@@ -49,8 +49,7 @@ export const grantAllProductRoles = async (
   const allRoles = getAllRoles();
   const tokenRoles = allRoles.tokenRoles[token];
 
-  const deployer = await getDeployer(hre);
-  const provider = deployer;
+  const provider = await getDeployer(hre);
 
   const accessControl = await getAcContract(hre, provider);
 
@@ -70,7 +69,7 @@ export const grantAllProductRoles = async (
   const oracleManagerRoles = [tokenRoles.customFeedAdmin!];
   const contractsRoles = [tokenRoles.minter, tokenRoles.burner];
 
-  const defaultManager = deployer.address;
+  const defaultManager = provider.address;
 
   const tx = await sendAndWaitForCustomTxSign(
     hre,
