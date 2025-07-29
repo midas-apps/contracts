@@ -141,18 +141,18 @@ export const deployMTokenCustomAggregator = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
 ) => {
-  const customAggregatorContractName =
-    getTokenContractNames(token).customAggregator;
+  const config = getDeploymentGenericConfig(hre, token, 'customAggregator');
+  const isGrowth = config.type === 'GROWTH';
+
+  const customAggregatorContractName = isGrowth
+    ? getTokenContractNames(token).customAggregatorGrowth
+    : getTokenContractNames(token).customAggregator;
 
   if (!customAggregatorContractName) {
     throw new Error('Custom aggregator contract name is not set');
   }
 
-  await deployCustomAggregator(
-    hre,
-    customAggregatorContractName,
-    getDeploymentGenericConfig(hre, token, 'customAggregator'),
-  );
+  await deployCustomAggregator(hre, customAggregatorContractName, config);
 };
 
 const deployTokenDataFeed = async (

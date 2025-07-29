@@ -689,7 +689,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
     mTBILL: {
       dataFeed: '0x4E677F7FE252DE44682a913f609EA3eb6F29DC3E',
-      customFeed: '0x5CB155D19696ED296dc4942BEDB6EEc69367c332',
+      customFeed: '0x1E2165801d84865587252155Fb4580381f7A3FC4',
       depositVault: '0x1615cBC603192ae8A9FF20E98dd0e40a405d76e4',
       redemptionVault: '0x2fD18B0878967E19292E9a8BF38Bb1415F6ad653',
       redemptionVaultBuidl: '0x6B35F2E4C9D4c1da0eDaf7fd7Dc90D9bCa4b0873',

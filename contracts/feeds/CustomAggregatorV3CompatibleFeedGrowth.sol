@@ -83,6 +83,11 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     mapping(uint80 => RoundDataWithGrowth) private _roundData;
 
     /**
+     * @dev leaving a storage gap for futures updates
+     */
+    uint256[50] private __gap;
+
+    /**
      * @dev checks that msg.sender do have a feedAdminRole() role
      */
     modifier onlyAggregatorAdmin() {

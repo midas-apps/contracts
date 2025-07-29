@@ -12,9 +12,9 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const deployer = await getDeployer(hre);
 
   const deployment = await hre.upgrades.upgradeProxy(
-    addresses?.mRE7SOL?.depositVault ?? '',
+    addresses?.mTBILL?.depositVault ?? '',
     await hre.ethers.getContractFactory(
-      getTokenContractNames('mRE7SOL').dv!,
+      getTokenContractNames('mTBILL').dv!,
       deployer,
     ),
     {

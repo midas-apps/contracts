@@ -9,6 +9,7 @@ export type TokenContractNames = {
   rvUstb: string;
   dataFeed?: string;
   customAggregator?: string;
+  customAggregatorGrowth?: string;
   token: string;
 };
 
@@ -54,10 +55,11 @@ export const getCommonContractNames = (): CommonContractNames => {
     dvUstb: 'DepositVaultWithUSTB',
     rv: 'RedemptionVault',
     rvSwapper: 'RedemptionVaultWithSwapper',
-    rvBuidl: 'RedemptionVaultWithBUIDL',
+    rvBuidl: 'RedemptionVaultWIthBUIDL',
     rvUstb: 'RedemptionVaultWithUSTB',
     dataFeed: 'DataFeed',
     customAggregator: 'CustomAggregatorV3CompatibleFeed',
+    customAggregatorGrowth: 'CustomAggregatorV3CompatibleFeedGrowth',
     customAggregatorDiscounted: 'CustomAggregatorV3CompatibleFeedDiscounted',
   };
 };
@@ -81,6 +83,9 @@ export const getTokenContractNames = (
     rvUstb: `${tokenPrefix}${commonContractNames.rvUstb}`,
     dataFeed: isTac ? undefined : `${prefix}${commonContractNames.dataFeed}`,
     customAggregator: isTac ? undefined : `${prefix}CustomAggregatorFeed`,
+    customAggregatorGrowth: isTac
+      ? undefined
+      : `${prefix}CustomAggregatorFeedGrowth`,
     token: `${token}`,
   };
 };
