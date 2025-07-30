@@ -4,6 +4,13 @@ import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import * as hre from 'hardhat';
 
+import { approve, approveBase18, mintToken } from './common.helpers';
+import {
+  addPaymentTokenTest,
+  addWaivedFeeAccountTest,
+  setInstantFeeTest,
+  setMinAmountTest,
+} from './manageable-vault.helpers';
 import { postDeploymentTest } from './post-deploy.helpers';
 
 import { getAllRoles } from '../../helpers/roles';
@@ -58,6 +65,8 @@ import {
   USTBMock__factory,
   // eslint-disable-next-line camelcase
   CustomAggregatorV3CompatibleFeedGrowthTester__factory,
+  // eslint-disable-next-line camelcase
+  AcreAdapter__factory,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -598,4 +607,87 @@ export const defaultDeploy = async () => {
     depositVaultWithUSTB,
     dataFeedGrowth,
   };
+};
+
+export const acreAdapterFixture = async () => {
+  const defaultFixture = await defaultDeploy();
+
+  const acreUsdcMTbillAdapter = await new AcreAdapter__factory(
+    defaultFixture.owner,
+  ).deploy(
+    defaultFixture.depositVault.address,
+    defaultFixture.redemptionVault.address,
+    defaultFixture.stableCoins.usdc.address,
+  );
+
+  // prepare vaults for tests
+  await setMinAmountTest(
+    { vault: defaultFixture.depositVault, owner: defaultFixture.owner },
+    0,
+  );
+  await setInstantFeeTest(
+    { vault: defaultFixture.depositVault, owner: defaultFixture.owner },
+    0,
+  );
+
+  await setMinAmountTest(
+    { vault: defaultFixture.redemptionVault, owner: defaultFixture.owner },
+    0,
+  );
+  await setInstantFeeTest(
+    { vault: defaultFixture.redemptionVault, owner: defaultFixture.owner },
+    0,
+  );
+
+  await addWaivedFeeAccountTest(
+    { vault: defaultFixture.redemptionVault, owner: defaultFixture.owner },
+    acreUsdcMTbillAdapter.address,
+  );
+
+  await addPaymentTokenTest(
+    { vault: defaultFixture.depositVault, owner: defaultFixture.owner },
+    defaultFixture.stableCoins.usdc,
+    defaultFixture.dataFeed.address,
+    0,
+    true,
+  );
+
+  await addPaymentTokenTest(
+    { vault: defaultFixture.redemptionVault, owner: defaultFixture.owner },
+    defaultFixture.stableCoins.usdc,
+    defaultFixture.dataFeed.address,
+    0,
+    true,
+  );
+
+  // prepare caller for tests
+  await approve(
+    defaultFixture.regularAccounts[0],
+    defaultFixture.stableCoins.usdc,
+    acreUsdcMTbillAdapter.address,
+    parseUnits('100', 8),
+  );
+
+  await mintToken(
+    defaultFixture.stableCoins.usdc,
+    defaultFixture.regularAccounts[0],
+    100,
+  );
+
+  await mintToken(
+    defaultFixture.stableCoins.usdc,
+    defaultFixture.redemptionVault,
+    100,
+  );
+
+  await approveBase18(
+    defaultFixture.regularAccounts[0],
+    defaultFixture.mTBILL,
+    acreUsdcMTbillAdapter.address,
+    20,
+  );
+
+  await mintToken(defaultFixture.mTBILL, defaultFixture.regularAccounts[0], 20);
+
+  return { acreUsdcMTbillAdapter, ...defaultFixture };
 };
