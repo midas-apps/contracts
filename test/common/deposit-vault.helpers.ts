@@ -14,18 +14,21 @@ import { defaultDeploy } from './fixtures';
 import {
   // eslint-disable-next-line camelcase
   DataFeedTest__factory,
+  DepositVault,
   DepositVaultTest,
   DepositVaultWithUSTBTest,
   ERC20,
   // eslint-disable-next-line camelcase
   ERC20__factory,
+  MToken,
 } from '../../typechain-types';
 
 type CommonParamsDeposit = {
-  depositVault: DepositVaultTest | DepositVaultWithUSTBTest;
+  depositVault: DepositVault | DepositVaultTest | DepositVaultWithUSTBTest;
+  mTBILL: MToken;
 } & Pick<
   Awaited<ReturnType<typeof defaultDeploy>>,
-  'owner' | 'mTBILL' | 'mTokenToUsdDataFeed'
+  'owner' | 'mTokenToUsdDataFeed'
 >;
 
 export const depositInstantTest = async (
@@ -236,7 +239,7 @@ export const depositRequestTest = async (
 
   if (opt?.revertMessage) {
     await expect(callFn()).revertedWith(opt?.revertMessage);
-    return;
+    return {};
   }
 
   const balanceBeforeContract = await balanceOfBase18(
@@ -319,6 +322,11 @@ export const depositRequestTest = async (
     );
   }
   expect(balanceAfterUser).eq(balanceBeforeUser.sub(amountIn));
+
+  return {
+    requestId: latestRequestIdBefore,
+    rate: mTokenRate,
+  };
 };
 
 export const approveRequestTest = async (
@@ -393,11 +401,16 @@ export const safeApproveRequestTest = async (
     ).revertedWith(opt?.revertMessage);
     return;
   }
-  const balanceMtBillBeforeUser = await balanceOfBase18(mTBILL, sender.address);
-
-  const totalDepositedBefore = await depositVault.totalMinted(sender.address);
-
   const requestData = await depositVault.mintRequests(requestId);
+
+  const balanceMtBillBeforeUser = await balanceOfBase18(
+    mTBILL,
+    requestData.sender,
+  );
+
+  const totalDepositedBefore = await depositVault.totalMinted(
+    requestData.sender,
+  );
 
   const feePercent = await getFeePercent(
     requestData.sender,
@@ -422,9 +435,14 @@ export const safeApproveRequestTest = async (
 
   const requestDataAfter = await depositVault.mintRequests(requestId);
 
-  const totalDepositedAfter = await depositVault.totalMinted(sender.address);
+  const totalDepositedAfter = await depositVault.totalMinted(
+    requestData.sender,
+  );
 
-  const balanceMtBillAfterUser = await balanceOfBase18(mTBILL, sender.address);
+  const balanceMtBillAfterUser = await balanceOfBase18(
+    mTBILL,
+    requestData.sender,
+  );
 
   expect(balanceMtBillAfterUser.sub(balanceMtBillBeforeUser)).eq(
     expectedMintAmount,
@@ -628,7 +646,7 @@ export const rejectRequestTest = async (
 export const getFeePercent = async (
   sender: string,
   token: string,
-  depositVault: DepositVaultTest | DepositVaultWithUSTBTest,
+  depositVault: DepositVault | DepositVaultTest | DepositVaultWithUSTBTest,
   isInstant: boolean,
 ) => {
   const tokenConfig = await depositVault.tokensConfig(token);
@@ -647,7 +665,7 @@ export const getFeePercent = async (
 export const calcExpectedMintAmount = async (
   sender: SignerWithAddress,
   token: string,
-  depositVault: DepositVaultTest | DepositVaultWithUSTBTest,
+  depositVault: DepositVault | DepositVaultTest | DepositVaultWithUSTBTest,
   mTokenRate: BigNumber,
   amountIn: BigNumber,
   isInstant: boolean,
