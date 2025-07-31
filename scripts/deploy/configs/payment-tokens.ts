@@ -427,8 +427,8 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
       jitosol: {
         dataFeed: {
           healthyDiff: 24 * 60 * 60,
-          minAnswer: parseUnits('0.997', 8),
-          maxAnswer: parseUnits('1.003', 8),
+          minAnswer: parseUnits('1.218324664671500500', 18),
+          maxAnswer: parseUnits('1.306653202860184320', 18),
         },
       },
     },
