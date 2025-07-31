@@ -190,7 +190,6 @@ export const getForkNetworkConfig = (
   forking: {
     url: rpcUrls[network],
     enabled: true,
-    blockNumber: 22540000,
   },
 });
 
