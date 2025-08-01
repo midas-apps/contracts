@@ -72,7 +72,6 @@ export const hbUSDTDeploymentConfig: DeploymentConfig = {
       },
       postDeploy: {
         grantRoles: {
-          providerType: 'hardhat',
           tokenManagerAddress: '0xa715F0BdbAC0c81f8dA0F8F7356EfC3Ae02561C0',
           vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
           oracleManagerAddress: '0x0c43e66CF6e5F285D12E76316837E55177eD72B1',

@@ -5,6 +5,7 @@ import {
   DeployCustomAggregatorConfig,
   DeployCustomAggregatorDiscountedConfig,
   DeployDataFeedConfig,
+  SetRoundDataConfig,
 } from './data-feed';
 import { DeployDvRegularConfig, DeployDvUstbConfig } from './dv';
 import {
@@ -36,6 +37,7 @@ export type DeploymentConfig = {
       postDeploy?: {
         addPaymentTokens?: AddPaymentTokensConfig;
         grantRoles?: GrantAllTokenRolesConfig;
+        setRoundData?: SetRoundDataConfig;
       };
     }
   >;
@@ -50,6 +52,9 @@ export type PaymentTokenDeploymentConfig = {
         {
           dataFeed?: DeployDataFeedConfig;
           customAggregator?: DeployCustomAggregatorConfig;
+          postDeploy?: {
+            setRoundData?: SetRoundDataConfig;
+          };
         }
       >
     >

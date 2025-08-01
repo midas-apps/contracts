@@ -6,7 +6,8 @@ import { ConfigPerNetwork, MTokenName } from '../types';
 export type RedemptionVaultType =
   | 'redemptionVault'
   | 'redemptionVaultBuidl'
-  | 'redemptionVaultSwapper';
+  | 'redemptionVaultSwapper'
+  | 'redemptionVaultUstb';
 
 type TokenAddresses = {
   customFeed?: string;
@@ -602,8 +603,8 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
       jitosol: {
         token: '0x6C16E26013f2431e8B2e1Ba7067ECCcad0Db6C52',
-        // aggregator: '',
-        // dataFeed: '',
+        aggregator: '0x1C0a310cf42F357087Be122e69ee402D19A265dC',
+        dataFeed: '0x2e1Ed451e2d5C0f9EcD095497b59ecA4284559c0',
       },
     },
     mRE7SOL: {

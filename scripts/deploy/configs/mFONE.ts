@@ -52,9 +52,7 @@ export const mFONEDeploymentConfig: DeploymentConfig = {
         },
       },
       postDeploy: {
-        grantRoles: {
-          providerType: 'hardhat',
-        },
+        grantRoles: {},
       },
     },
     [chainIds.main]: {
