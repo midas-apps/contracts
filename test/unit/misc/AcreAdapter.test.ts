@@ -1,3 +1,4 @@
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 
@@ -23,7 +24,7 @@ import {
 
 describe('AcreAdapter', () => {
   it('initialize', async () => {
-    const fixture = await acreAdapterFixture();
+    const fixture = await loadFixture(acreAdapterFixture);
 
     expect(await fixture.acreUsdcMTbillAdapter.depositVault()).eq(
       fixture.depositVault.address,
@@ -99,19 +100,19 @@ describe('AcreAdapter', () => {
 
   describe('deposit', () => {
     it('should deposit USDC to the deposit vault', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       await acreWrapperDepositTest(fixture, 100);
     });
 
     it('should deposit USDC to the deposit vault when receiver is different from msg.sender', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       await acreWrapperDepositTest(fixture, 100, fixture.regularAccounts[1]);
     });
 
     it('should deposit USDC to the deposit vault when all fees are waived', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       await setInstantFeeTest(
         { vault: fixture.depositVault, owner: fixture.owner },
@@ -126,7 +127,7 @@ describe('AcreAdapter', () => {
     });
 
     it('should deposit USDC to the deposit vault when asset is not stable', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       await removePaymentTokenTest(
         { vault: fixture.depositVault, owner: fixture.owner },
@@ -145,7 +146,7 @@ describe('AcreAdapter', () => {
     });
 
     it('should fail: when instant fee is not 0', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       await setInstantFeeTest(
         { vault: fixture.depositVault, owner: fixture.owner },
@@ -158,7 +159,7 @@ describe('AcreAdapter', () => {
     });
 
     it('should fail: when token fee is not 0', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       await changeTokenFeeTest(
         { vault: fixture.depositVault, owner: fixture.owner },
@@ -174,13 +175,13 @@ describe('AcreAdapter', () => {
 
   describe('redeemRequest', () => {
     it('should create redeem request for USDC', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       await acreWrapperRequestRedeemTest(fixture, 20);
     });
 
     it('should create redeem request for USDC when receiver is different from msg.sender', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       await acreWrapperRequestRedeemTest(
         fixture,
@@ -190,7 +191,7 @@ describe('AcreAdapter', () => {
     });
 
     it('should deposit USDC to the deposit vault when all fees are waived', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       await setInstantFeeTest(
         { vault: fixture.redemptionVault, owner: fixture.owner },
@@ -201,7 +202,7 @@ describe('AcreAdapter', () => {
     });
 
     it('should deposit USDC to the deposit vault when asset is not stable', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       await removePaymentTokenTest(
         { vault: fixture.redemptionVault, owner: fixture.owner },
@@ -220,7 +221,7 @@ describe('AcreAdapter', () => {
     });
 
     it('when instant fee is not 0', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       await setInstantFeeTest(
         { vault: fixture.redemptionVault, owner: fixture.owner },
@@ -231,7 +232,7 @@ describe('AcreAdapter', () => {
     });
 
     it('when token fee is not 0', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       await changeTokenFeeTest(
         { vault: fixture.redemptionVault, owner: fixture.owner },
@@ -243,7 +244,7 @@ describe('AcreAdapter', () => {
     });
 
     it('should fail: when not fee waived', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       await removeWaivedFeeAccountTest(
         { vault: fixture.redemptionVault, owner: fixture.owner },
@@ -258,7 +259,7 @@ describe('AcreAdapter', () => {
 
   describe('convertToAssets', () => {
     it('1 share = 5 asset', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       expect(
         await fixture.acreUsdcMTbillAdapter.convertToAssets(parseUnits('1')),
@@ -266,13 +267,13 @@ describe('AcreAdapter', () => {
     });
 
     it('0 share = 0 asset', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       expect(await fixture.acreUsdcMTbillAdapter.convertToAssets(0)).eq(0);
     });
 
     it('when isStable flag is false', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       await removePaymentTokenTest(
         { vault: fixture.redemptionVault, owner: fixture.owner },
@@ -293,7 +294,7 @@ describe('AcreAdapter', () => {
     });
 
     it('should not account any fees', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       await removeWaivedFeeAccountTest(
         { vault: fixture.redemptionVault, owner: fixture.owner },
@@ -313,7 +314,7 @@ describe('AcreAdapter', () => {
 
   describe('convertToShares', () => {
     it('1 asset = 0.2 share', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       expect(
         await fixture.acreUsdcMTbillAdapter.convertToShares(parseUnits('1', 8)),
@@ -321,13 +322,13 @@ describe('AcreAdapter', () => {
     });
 
     it('0 asset = 0 share', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       expect(await fixture.acreUsdcMTbillAdapter.convertToShares(0)).eq(0);
     });
 
     it('when isStable flag is false', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       await removePaymentTokenTest(
         { vault: fixture.depositVault, owner: fixture.owner },
@@ -348,7 +349,7 @@ describe('AcreAdapter', () => {
     });
 
     it('should not account any fees', async () => {
-      const fixture = await acreAdapterFixture();
+      const fixture = await loadFixture(acreAdapterFixture);
 
       await setInstantFeeTest(
         { vault: fixture.depositVault, owner: fixture.owner },
