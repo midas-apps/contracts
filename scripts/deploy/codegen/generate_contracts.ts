@@ -1,6 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { generateContracts } from './common/generate-contracts';
+import { generateContracts } from './common';
 
 import { getMTokenOrThrow } from '../../../helpers/utils';
 import { DeployFunction } from '../common/types';
