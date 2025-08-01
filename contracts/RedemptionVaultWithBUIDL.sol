@@ -11,7 +11,7 @@ import "./libraries/DecimalsCorrectionLibrary.sol";
 
 /**
  * @title RedemptionVault
- * @notice Smart contract that handles mTBILL redemptions
+ * @notice Smart contract that handles mToken redemptions
  * @author RedDuck Software
  */
 contract RedemptionVaultWIthBUIDL is RedemptionVault {
@@ -112,7 +112,7 @@ contract RedemptionVaultWIthBUIDL is RedemptionVault {
     }
 
     /**
-     * @notice redeem mToken to USDC if daily limit and allowance not exceeded
+     * @dev redeem mToken to USDC if daily limit and allowance not exceeded
      * If contract don't have enough USDC, BUIDL redemption flow will be triggered
      * Burns mToken from the user.
      * Transfers fee in mToken to feeReceiver
@@ -121,26 +121,30 @@ contract RedemptionVaultWIthBUIDL is RedemptionVault {
      * @param amountMTokenIn amount of mToken to redeem
      * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
      */
-    function redeemInstant(
+    function _redeemInstant(
         address tokenOut,
         uint256 amountMTokenIn,
-        uint256 minReceiveAmount
+        uint256 minReceiveAmount,
+        address recipient
     )
-        external
+        internal
         override
-        whenFnNotPaused(this.redeemInstant.selector)
-        onlyGreenlisted(msg.sender)
-        onlyNotBlacklisted(msg.sender)
-        onlyNotSanctioned(msg.sender)
+        returns (
+            CalcAndValidateRedeemResult memory calcResult,
+            uint256 amountTokenOutWithoutFee
+        )
     {
         address user = msg.sender;
 
         require(buidlRedemption.liquidity() == tokenOut, "RVB: invalid token");
 
-        (
-            uint256 feeAmount,
-            uint256 amountMTokenWithoutFee
-        ) = _calcAndValidateRedeem(user, tokenOut, amountMTokenIn, true, false);
+        calcResult = _calcAndValidateRedeem(
+            user,
+            tokenOut,
+            amountMTokenIn,
+            true,
+            false
+        );
 
         _requireAndUpdateLimit(amountMTokenIn);
 
@@ -160,12 +164,18 @@ contract RedemptionVaultWIthBUIDL is RedemptionVault {
 
         _requireAndUpdateAllowance(tokenOutCopy, amountTokenOut);
 
-        mToken.burn(user, amountMTokenWithoutFee);
-        if (feeAmount > 0)
-            _tokenTransferFromUser(address(mToken), feeReceiver, feeAmount, 18);
+        mToken.burn(user, calcResult.amountMTokenWithoutFee);
+        if (calcResult.feeAmount > 0)
+            _tokenTransferFromUser(
+                address(mToken),
+                feeReceiver,
+                calcResult.feeAmount,
+                18
+            );
 
-        uint256 amountTokenOutWithoutFee = (amountMTokenWithoutFee *
-            mTokenRate) / tokenOutRate;
+        amountTokenOutWithoutFee =
+            (calcResult.amountMTokenWithoutFee * mTokenRate) /
+            tokenOutRate;
 
         require(
             amountTokenOutWithoutFee >= minReceiveAmountCopy,
@@ -179,17 +189,9 @@ contract RedemptionVaultWIthBUIDL is RedemptionVault {
 
         _tokenTransferToUser(
             tokenOutCopy,
-            user,
+            recipient,
             amountTokenOutWithoutFeeFrom18.convertToBase18(tokenDecimals),
             tokenDecimals
-        );
-
-        emit RedeemInstant(
-            user,
-            tokenOutCopy,
-            amountMTokenInCopy,
-            feeAmount,
-            amountTokenOutWithoutFee
         );
     }
 

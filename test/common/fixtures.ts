@@ -52,11 +52,18 @@ import {
   RedemptionVaultWithSwapperTest__factory,
   // eslint-disable-next-line camelcase
   CustomAggregatorV3CompatibleFeedDiscountedTester__factory,
+  // eslint-disable-next-line camelcase
+  DepositVaultWithUSTBTest__factory,
+  // eslint-disable-next-line camelcase
+  USTBMock__factory,
+  // eslint-disable-next-line camelcase
+  CustomAggregatorV3CompatibleFeedGrowthTester__factory,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
   const [
     owner,
+    customRecipient,
     tokensReceiver,
     feeReceiver,
     requestRedeemer,
@@ -282,9 +289,44 @@ export const defaultDeploy = async () => {
     redemptionVaultWithBUIDL.address,
   );
 
+  const ustbToken = await new USTBMock__factory(owner).deploy();
+
+  /* Deposit Vault With USTB */
+
+  const depositVaultWithUSTB = await new DepositVaultWithUSTBTest__factory(
+    owner,
+  ).deploy();
+
+  await depositVaultWithUSTB[
+    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,address)'
+  ](
+    accessControl.address,
+    {
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    parseUnits('100'),
+    0,
+    ustbToken.address,
+  );
+
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_MINT_OPERATOR_ROLE(),
+    depositVaultWithUSTB.address,
+  );
+
   /* Redemption Vault With USTB */
 
-  const ustbToken = await new ERC20Mock__factory(owner).deploy(6);
   const ustbRedemption = await new USTBRedemptionMock__factory(owner).deploy(
     ustbToken.address,
     stableCoins.usdc.address,
@@ -379,6 +421,32 @@ export const defaultDeploy = async () => {
     'Custom Data Feed',
   );
 
+  // eslint-disable-next-line camelcase
+  const customFeedGrowth =
+    await new CustomAggregatorV3CompatibleFeedGrowthTester__factory(
+      owner,
+    ).deploy();
+
+  await customFeedGrowth.initialize(
+    accessControl.address,
+    2,
+    parseUnits('10000', 8),
+    parseUnits('1', 8),
+    parseUnits('0', 8),
+    parseUnits('100', 8),
+    false,
+    'Custom Data Feed Growth',
+  );
+
+  const dataFeedGrowth = await new DataFeedTest__factory(owner).deploy();
+  await dataFeedGrowth.initialize(
+    accessControl.address,
+    customFeedGrowth.address,
+    3 * 24 * 3600,
+    parseUnits('0.1', mockedAggregatorDecimals),
+    parseUnits('10000', mockedAggregatorDecimals),
+  );
+
   const customFeedDiscounted =
     await new CustomAggregatorV3CompatibleFeedDiscountedTester__factory(
       owner,
@@ -423,7 +491,7 @@ export const defaultDeploy = async () => {
     allRoles.common.greenlistedOperator,
     greenListableTester.address,
   );
-  const greenlistToggler = await greenListableTester.GREENLIST_TOGGLER_ROLE();
+  const greenlistToggler = await greenListableTester.greenlistTogglerRole();
   await accessControl.grantRole(greenlistToggler, owner.address);
 
   await postDeploymentTest(hre, {
@@ -486,6 +554,7 @@ export const defaultDeploy = async () => {
   return {
     customFeed,
     customFeedDiscounted,
+    customFeedGrowth,
     mTBILL,
     mBASIS,
     redemptionVaultWithSwapper,
@@ -525,5 +594,8 @@ export const defaultDeploy = async () => {
     otherCoins,
     ustbToken,
     ustbRedemption,
+    customRecipient,
+    depositVaultWithUSTB,
+    dataFeedGrowth,
   };
 };

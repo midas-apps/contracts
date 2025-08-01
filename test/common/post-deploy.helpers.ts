@@ -3,6 +3,8 @@ import { expect } from 'chai';
 import { BigNumberish } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { keccak256 } from './common.helpers';
+
 import { getAllRoles } from '../../helpers/roles';
 import {
   AggregatorV3Interface,
@@ -74,7 +76,7 @@ export const postDeploymentTest = async (
   expect(await depositVault.minAmount()).eq(minAmount);
 
   expect(await depositVault.vaultRole()).eq(
-    await accessControl.DEPOSIT_VAULT_ADMIN_ROLE(),
+    keccak256('DEPOSIT_VAULT_ADMIN_ROLE'),
   );
 
   expect(await depositVault.MANUAL_FULLFILMENT_TOKEN()).eq(
@@ -92,7 +94,7 @@ export const postDeploymentTest = async (
   expect(await redemptionVault.ONE_HUNDRED_PERCENT()).eq('10000');
 
   expect(await redemptionVault.vaultRole()).eq(
-    await accessControl.REDEMPTION_VAULT_ADMIN_ROLE(),
+    keccak256('REDEMPTION_VAULT_ADMIN_ROLE'),
   );
 
   expect(await redemptionVault.MANUAL_FULLFILMENT_TOKEN()).eq(

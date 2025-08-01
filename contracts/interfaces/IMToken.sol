@@ -4,12 +4,12 @@ pragma solidity 0.8.9;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 /**
- * @title IMTbill
+ * @title IMToken
  * @author RedDuck Software
  */
-interface IMTbill is IERC20Upgradeable {
+interface IMToken is IERC20Upgradeable {
     /**
-     * @notice mints mTBILL token `amount` to a given `to` address.
+     * @notice mints mToken token `amount` to a given `to` address.
      * should be called only from permissioned actor
      * @param to addres to mint tokens to
      * @param amount amount to mint
@@ -17,7 +17,7 @@ interface IMTbill is IERC20Upgradeable {
     function mint(address to, uint256 amount) external;
 
     /**
-     * @notice burns mTBILL token `amount` to a given `to` address.
+     * @notice burns mToken token `amount` to a given `to` address.
      * should be called only from permissioned actor
      * @param from addres to burn tokens from
      * @param amount amount to burn
@@ -33,13 +33,13 @@ interface IMTbill is IERC20Upgradeable {
     function setMetadata(bytes32 key, bytes memory data) external;
 
     /**
-     * @notice puts mTBILL token on pause.
+     * @notice puts mToken token on pause.
      * should be called only from permissioned actor
      */
     function pause() external;
 
     /**
-     * @notice puts mTBILL token on pause.
+     * @notice puts mToken token on pause.
      * should be called only from permissioned actor
      */
     function unpause() external;

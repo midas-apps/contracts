@@ -47,7 +47,7 @@ contract RedemptionVaultTest is RedemptionVault {
         uint256 amountMTokenIn,
         bool isInstant,
         bool isFiat
-    ) external returns (uint256 feeAmount, uint256 amountMTokenWithoutFee) {
+    ) external returns (CalcAndValidateRedeemResult memory calcResult) {
         return
             _calcAndValidateRedeem(
                 user,

@@ -6,7 +6,6 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
   deployAndVerify,
   deployAndVerifyProxy,
-  getDeployer,
   getDeploymentGenericConfig,
   getNetworkConfig,
   sendAndWaitForCustomTxSign,
@@ -27,17 +26,33 @@ export type DeployDataFeedConfig = {
   healthyDiff: BigNumberish;
 };
 
-export type DeployCustomAggregatorConfig = {
+type DeployCustomAggregatorCommonConfig = {
   minAnswer: BigNumberish;
   maxAnswer: BigNumberish;
   maxAnswerDeviation: BigNumberish;
   description: string;
 };
+export type DeployCustomAggregatorRegularConfig =
+  DeployCustomAggregatorCommonConfig & {
+    type?: 'REGULAR';
+  };
 
 export type DeployCustomAggregatorDiscountedConfig = {
   discountPercentage: BigNumberish;
   underlyingFeed: `0x${string}` | 'customFeed';
 };
+
+export type DeployCustomAggregatorGrowthConfig =
+  DeployCustomAggregatorCommonConfig & {
+    type: 'GROWTH';
+    onlyUp: boolean;
+    minGrowthApr: BigNumberish;
+    maxGrowthApr: BigNumberish;
+  };
+
+export type DeployCustomAggregatorConfig =
+  | DeployCustomAggregatorRegularConfig
+  | DeployCustomAggregatorGrowthConfig;
 
 export type SetRoundDataConfig = {
   data: BigNumberish;
@@ -232,18 +247,18 @@ export const deployMTokenCustomAggregator = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
 ) => {
-  const customAggregatorContractName =
-    getTokenContractNames(token).customAggregator;
+  const config = getDeploymentGenericConfig(hre, token, 'customAggregator');
+  const isGrowth = config.type === 'GROWTH';
+
+  const customAggregatorContractName = isGrowth
+    ? getTokenContractNames(token).customAggregatorGrowth
+    : getTokenContractNames(token).customAggregator;
 
   if (!customAggregatorContractName) {
     throw new Error('Custom aggregator contract name is not set');
   }
 
-  await deployCustomAggregator(
-    hre,
-    customAggregatorContractName,
-    getDeploymentGenericConfig(hre, token, 'customAggregator'),
-  );
+  await deployCustomAggregator(hre, customAggregatorContractName, config);
 };
 
 const deployTokenDataFeed = async (
@@ -277,13 +292,26 @@ const deployCustomAggregator = async (
   if (!networkConfig) {
     throw new Error('Network config is not found');
   }
-  await deployAndVerifyProxy(hre, customAggregatorContractName, [
+
+  const isGrowth = networkConfig.type === 'GROWTH';
+
+  const params = [
     addresses?.accessControl,
     networkConfig.minAnswer,
     networkConfig.maxAnswer,
     networkConfig.maxAnswerDeviation,
+    isGrowth ? networkConfig.minGrowthApr : undefined,
+    isGrowth ? networkConfig.maxGrowthApr : undefined,
+    isGrowth ? networkConfig.onlyUp : undefined,
     networkConfig.description,
-  ]);
+  ].filter((v) => v !== undefined);
+
+  await deployAndVerifyProxy(
+    hre,
+    customAggregatorContractName,
+    params,
+    undefined,
+  );
 };
 
 const deployCustomAggregatorDiscounted = async (

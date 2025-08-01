@@ -92,7 +92,7 @@ contract RedemptionVaultWithSwapper is
     }
 
     /**
-     * @notice redeem mToken1 to tokenOut if daily limit and allowance not exceeded
+     * @dev redeem mToken1 to tokenOut if daily limit and allowance not exceeded
      * If contract don't have enough tokenOut, mToken1 will swap to mToken2 and redeem on mToken2 vault
      * Burns mToken1 from the user, if swap need mToken1 just tranfers to contract.
      * Transfers fee in mToken1 to feeReceiver
@@ -101,24 +101,28 @@ contract RedemptionVaultWithSwapper is
      * @param amountMTokenIn amount of mToken1 to redeem
      * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
      */
-    function redeemInstant(
+    function _redeemInstant(
         address tokenOut,
         uint256 amountMTokenIn,
-        uint256 minReceiveAmount
+        uint256 minReceiveAmount,
+        address recipient
     )
-        external
-        override(IRedemptionVault, RedemptionVault)
-        whenFnNotPaused(this.redeemInstant.selector)
-        onlyGreenlisted(msg.sender)
-        onlyNotBlacklisted(msg.sender)
-        onlyNotSanctioned(msg.sender)
+        internal
+        override
+        returns (
+            CalcAndValidateRedeemResult memory calcResult,
+            uint256 amountTokenOutWithoutFee
+        )
     {
         address user = msg.sender;
 
-        (
-            uint256 feeAmount,
-            uint256 amountMTokenWithoutFee
-        ) = _calcAndValidateRedeem(user, tokenOut, amountMTokenIn, true, false);
+        calcResult = _calcAndValidateRedeem(
+            user,
+            tokenOut,
+            amountMTokenIn,
+            true,
+            false
+        );
 
         uint256 tokenDecimals = _tokenDecimals(tokenOut);
 
@@ -134,8 +138,8 @@ contract RedemptionVaultWithSwapper is
             tokenOutCopy
         );
 
-        uint256 amountTokenOutWithoutFee = _truncate(
-            (amountMTokenWithoutFee * mTokenRate) / tokenOutRate,
+        amountTokenOutWithoutFee = _truncate(
+            (calcResult.amountMTokenWithoutFee * mTokenRate) / tokenOutRate,
             tokenDecimals
         );
 
@@ -144,8 +148,13 @@ contract RedemptionVaultWithSwapper is
             "RVS: minReceiveAmount > actual"
         );
 
-        if (feeAmount > 0)
-            _tokenTransferFromUser(address(mToken), feeReceiver, feeAmount, 18);
+        if (calcResult.feeAmount > 0)
+            _tokenTransferFromUser(
+                address(mToken),
+                feeReceiver,
+                calcResult.feeAmount,
+                18
+            );
 
         uint256 contractTokenOutBalance = IERC20(tokenOutCopy).balanceOf(
             address(this)
@@ -158,10 +167,10 @@ contract RedemptionVaultWithSwapper is
             contractTokenOutBalance >=
             amountTokenOutWithoutFee.convertFromBase18(tokenDecimals)
         ) {
-            mToken.burn(user, amountMTokenWithoutFee);
+            mToken.burn(user, calcResult.amountMTokenWithoutFee);
         } else {
             uint256 mTbillAmount = _swapMToken1ToMToken2(
-                amountMTokenWithoutFee
+                calcResult.amountMTokenWithoutFee
             );
 
             IERC20(mTbillRedemptionVault.mToken()).safeIncreaseAllowance(
@@ -183,17 +192,9 @@ contract RedemptionVaultWithSwapper is
 
         _tokenTransferToUser(
             tokenOutCopy,
-            user,
+            recipient,
             amountTokenOutWithoutFee,
             tokenDecimals
-        );
-
-        emit RedeemInstant(
-            user,
-            tokenOutCopy,
-            amountMTokenInCopy,
-            feeAmount,
-            amountTokenOutWithoutFee
         );
     }
 

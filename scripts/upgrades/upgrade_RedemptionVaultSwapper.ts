@@ -12,14 +12,14 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const deployer = await getDeployer(hre);
 
   const deployment = await hre.upgrades.prepareUpgrade(
-    addresses?.liquidHYPE?.redemptionVaultSwapper ?? '',
+    addresses?.hbXAUt?.redemptionVaultSwapper ?? '',
     await hre.ethers.getContractFactory(
-      getTokenContractNames('liquidHYPE').rvSwapper!,
+      getTokenContractNames('hbXAUt').rvSwapper!,
       deployer,
     ),
     {
       unsafeAllow: ['constructor'],
-      redeployImplementation: 'always',
+      redeployImplementation: 'onchange',
     },
   );
 

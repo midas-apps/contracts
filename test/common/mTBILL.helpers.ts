@@ -1,14 +1,14 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { BigNumberish, Contract } from 'ethers';
+import { BigNumberish } from 'ethers';
 import { defaultAbiCoder, solidityKeccak256 } from 'ethers/lib/utils';
 
 import { Account, OptionalCommonParams, getAccount } from './common.helpers';
 
-import { MTBILL } from '../../typechain-types';
+import { MTBILL, MToken } from '../../typechain-types';
 
 type CommonParams = {
-  tokenContract: MTBILL;
+  tokenContract: MToken | MTBILL;
   owner: SignerWithAddress;
 };
 

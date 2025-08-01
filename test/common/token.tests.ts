@@ -21,6 +21,7 @@ import {
   CustomAggregatorV3CompatibleFeed,
   DataFeed,
   DepositVault,
+  DepositVaultWithUSTB,
   MTBILL,
   RedemptionVault,
   RedemptionVaultWIthBUIDL,
@@ -165,6 +166,30 @@ export const tokenContractsTests = (token: MTokenName) => {
       0,
     );
 
+    const depositVaultUstb =
+      await deployProxyContractIfExists<DepositVaultWithUSTB>(
+        'dvUstb',
+        'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,address)',
+        fixture.accessControl.address,
+        {
+          mToken: tokenContract.address,
+          mTokenDataFeed: dataFeed.address,
+        },
+        {
+          feeReceiver: fixture.feeReceiver.address,
+          tokensReceiver: fixture.tokensReceiver.address,
+        },
+        {
+          instantFee: 100,
+          instantDailyLimit: parseUnits('100000'),
+        },
+        fixture.mockedSanctionsList.address,
+        1,
+        parseUnits('100'),
+        0,
+        fixture.ustbToken.address,
+      );
+
     const redemptionVault = await deployProxyContractIfExists<RedemptionVault>(
       'rv',
       undefined,
@@ -263,6 +288,7 @@ export const tokenContractsTests = (token: MTokenName) => {
       tokenDataFeed: dataFeed,
       tokenCustomAggregatorFeed: customAggregatorFeed,
       tokenDepositVault: depositVault,
+      tokenDepositVaultUstb: depositVaultUstb,
       tokenRedemptionVault: redemptionVault,
       tokenRedemptionVaultWithSwapper: redemptionVaultWithSwapper,
       tokenRedemptionVaultWithBuidl: redemptionVaultWithBuidl,
@@ -667,9 +693,30 @@ export const tokenContractsTests = (token: MTokenName) => {
       }
 
       expect(await depositVault.vaultRole()).eq(
-        await depositVault[tokenRoleNames.depositVaultAdmin](),
+        token === 'mTBILL'
+          ? tokenRoles.depositVaultAdmin
+          : await depositVault[tokenRoleNames.depositVaultAdmin](),
       );
       expect(await depositVault.vaultRole()).eq(tokenRoles.depositVaultAdmin);
+    });
+
+    it('DepositVaultWithUSTB', async function () {
+      const fixture = await deployMTokenVaultsWithFixture();
+      const depositVaultUstb = fixture.tokenDepositVaultUstb as Contract;
+
+      if (!depositVaultUstb) {
+        (this as any).skip();
+        return;
+      }
+
+      expect(await depositVaultUstb.vaultRole()).eq(
+        token === 'mTBILL'
+          ? tokenRoles.depositVaultAdmin
+          : await depositVaultUstb[tokenRoleNames.depositVaultAdmin](),
+      );
+      expect(await depositVaultUstb.vaultRole()).eq(
+        tokenRoles.depositVaultAdmin,
+      );
     });
 
     it('RedemptionVault', async function () {
@@ -682,7 +729,9 @@ export const tokenContractsTests = (token: MTokenName) => {
       }
 
       expect(await redemptionVault.vaultRole()).eq(
-        await redemptionVault[tokenRoleNames.redemptionVaultAdmin](),
+        token === 'mTBILL'
+          ? tokenRoles.redemptionVaultAdmin
+          : await redemptionVault[tokenRoleNames.redemptionVaultAdmin](),
       );
       expect(await redemptionVault.vaultRole()).eq(
         tokenRoles.redemptionVaultAdmin,
@@ -700,7 +749,11 @@ export const tokenContractsTests = (token: MTokenName) => {
       }
 
       expect(await redemptionVaultWithSwapper.vaultRole()).eq(
-        await redemptionVaultWithSwapper[tokenRoleNames.redemptionVaultAdmin](),
+        token === 'mTBILL'
+          ? tokenRoles.redemptionVaultAdmin
+          : await redemptionVaultWithSwapper[
+              tokenRoleNames.redemptionVaultAdmin
+            ](),
       );
       expect(await redemptionVaultWithSwapper.vaultRole()).eq(
         tokenRoles.redemptionVaultAdmin,
@@ -718,7 +771,11 @@ export const tokenContractsTests = (token: MTokenName) => {
       }
 
       expect(await redemptionVaultWithBuidl.vaultRole()).eq(
-        await redemptionVaultWithBuidl[tokenRoleNames.redemptionVaultAdmin](),
+        token === 'mTBILL'
+          ? tokenRoles.redemptionVaultAdmin
+          : await redemptionVaultWithBuidl[
+              tokenRoleNames.redemptionVaultAdmin
+            ](),
       );
       expect(await redemptionVaultWithBuidl.vaultRole()).eq(
         tokenRoles.redemptionVaultAdmin,

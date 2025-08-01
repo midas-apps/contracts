@@ -1,13 +1,13 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumber, BigNumberish, Contract } from 'ethers';
-import { parseUnits } from 'ethers/lib/utils';
+import { parseUnits, solidityKeccak256 } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
 import {
   ERC20,
   ERC20Mock,
-  MidasAccessControl,
+  IERC20Metadata,
   MTBILL,
   Pausable,
 } from '../../typechain-types';
@@ -19,6 +19,10 @@ export type OptionalCommonParams = {
 
 export type Account = SignerWithAddress | string;
 export type AccountOrContract = Account | Contract;
+
+export const keccak256 = (role: string) => {
+  return solidityKeccak256(['string'], [role]);
+};
 
 export const getAccount = (account: AccountOrContract) => {
   return (
@@ -123,7 +127,7 @@ export const mintToken = async (
 
 export const approveBase18 = async (
   from: SignerWithAddress,
-  token: ERC20,
+  token: ERC20 | IERC20Metadata,
   to: AccountOrContract,
   amountN: number,
 ) => {
@@ -152,7 +156,7 @@ export const amountFromBase18 = async (
 };
 
 export const tokenAmountToBase18 = async (
-  token: ERC20,
+  token: ERC20 | IERC20Metadata,
   amount: BigNumberish,
 ) => {
   const decimals = await token.decimals();
@@ -160,14 +164,17 @@ export const tokenAmountToBase18 = async (
 };
 
 export const tokenAmountFromBase18 = async (
-  token: ERC20,
+  token: ERC20 | IERC20Metadata,
   amount: BigNumberish,
 ) => {
   const decimals = await token.decimals();
   return amountFromBase18(decimals, amount);
 };
 
-export const balanceOfBase18 = async (token: ERC20, of: AccountOrContract) => {
+export const balanceOfBase18 = async (
+  token: ERC20 | IERC20Metadata,
+  of: AccountOrContract,
+) => {
   if (token.address === ethers.constants.AddressZero)
     return ethers.constants.Zero;
   of = getAccount(of);

@@ -35,7 +35,8 @@ export async function transferUSTBFromWhale(
     token.address.toLowerCase() ===
     MAINNET_ADDRESSES.SUPERSTATE_TOKEN_PROXY.toLowerCase()
   ) {
-    await setupUSTBAllowlist(token, whaleAddress, recipient);
+    await setupUSTBAllowlist(token, whaleAddress);
+    await setupUSTBAllowlist(token, recipient);
   }
 
   // Perform transfer
@@ -43,10 +44,9 @@ export async function transferUSTBFromWhale(
   await tx.wait();
 }
 
-async function setupUSTBAllowlist(
+export async function setupUSTBAllowlist(
   token: IERC20,
-  whaleAddress: string,
-  recipient: string,
+  addr: string,
 ): Promise<void> {
   const ustb = await ethers.getContractAt('ISuperstateToken', token.address);
   const allowListV2Addr = await ustb.allowListV2();
@@ -67,33 +67,26 @@ async function setupUSTBAllowlist(
 
   const entityId = 1;
 
-  for (const addr of [whaleAddress, recipient]) {
-    // Clear protocol permissions if needed
-    const hasProtocolPerms = await allowListV2.hasAnyProtocolPermissions(addr);
-    if (hasProtocolPerms) {
-      const hasUstbPerm = await allowListV2.protocolPermissions(
-        addr,
-        fundSymbol,
-      );
-      if (hasUstbPerm) {
-        await allowListV2
-          .connect(allowListOwner)
-          .setProtocolAddressPermission(addr, fundSymbol, false);
-      }
-    }
-
-    // Set entity ID
-    const currentEntityId = await allowListV2.addressEntityIds(addr);
-    if (currentEntityId.toNumber() !== entityId) {
-      if (currentEntityId.toNumber() !== 0) {
-        await allowListV2
-          .connect(allowListOwner)
-          .setEntityIdForAddress(0, addr);
-      }
+  // Clear protocol permissions if needed
+  const hasProtocolPerms = await allowListV2.hasAnyProtocolPermissions(addr);
+  if (hasProtocolPerms) {
+    const hasUstbPerm = await allowListV2.protocolPermissions(addr, fundSymbol);
+    if (hasUstbPerm) {
       await allowListV2
         .connect(allowListOwner)
-        .setEntityIdForAddress(entityId, addr);
+        .setProtocolAddressPermission(addr, fundSymbol, false);
     }
+  }
+
+  // Set entity ID
+  const currentEntityId = await allowListV2.addressEntityIds(addr);
+  if (currentEntityId.toNumber() !== entityId) {
+    if (currentEntityId.toNumber() !== 0) {
+      await allowListV2.connect(allowListOwner).setEntityIdForAddress(0, addr);
+    }
+    await allowListV2
+      .connect(allowListOwner)
+      .setEntityIdForAddress(entityId, addr);
   }
 
   // Ensure entity is allowed for fund

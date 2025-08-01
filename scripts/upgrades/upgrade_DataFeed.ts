@@ -1,3 +1,4 @@
+import { parseUnits } from 'ethers/lib/utils';
 import * as hre from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
@@ -12,13 +13,23 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const deployer = await getDeployer(hre);
 
   const deployment = await hre.upgrades.upgradeProxy(
-    addresses?.mRE7SOL?.dataFeed ?? '',
+    addresses?.mTBILL?.dataFeed ?? '',
     await hre.ethers.getContractFactory(
-      getTokenContractNames('mRE7SOL').dataFeed!,
+      getTokenContractNames('mTBILL').dataFeed!,
       deployer,
     ),
     {
       unsafeAllow: ['constructor'],
+      call: {
+        fn: 'initializeV2',
+        args: [
+          addresses?.accessControl ?? '',
+          addresses?.mTBILL?.customFeed ?? '',
+          hre.ethers.constants.MaxUint256,
+          parseUnits('0.1', 8),
+          parseUnits('1000', 8),
+        ],
+      },
       redeployImplementation: 'onchange',
     },
   );

@@ -105,7 +105,7 @@ export const greenListToggler = async (
       accessControl
         .connect(opt?.from ?? owner)
         .grantRole(
-          role ?? (await greenlistable.GREENLIST_TOGGLER_ROLE()),
+          role ?? (await greenlistable.greenlistTogglerRole()),
           account,
         ),
     ).revertedWith(opt?.revertMessage);
@@ -115,10 +115,7 @@ export const greenListToggler = async (
   await expect(
     accessControl
       .connect(opt?.from ?? owner)
-      .grantRole(
-        role ?? (await greenlistable.GREENLIST_TOGGLER_ROLE()),
-        account,
-      ),
+      .grantRole(role ?? (await greenlistable.greenlistTogglerRole()), account),
   ).to.emit(
     accessControl,
     accessControl.interface.events['RoleGranted(bytes32,address,address)'].name,
@@ -126,7 +123,7 @@ export const greenListToggler = async (
 
   expect(
     await accessControl.hasRole(
-      role ?? (await greenlistable.GREENLIST_TOGGLER_ROLE()),
+      role ?? (await greenlistable.greenlistTogglerRole()),
       account,
     ),
   ).eq(true);

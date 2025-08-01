@@ -11,21 +11,21 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const deployer = await getDeployer(hre);
 
-  const deployment = await hre.upgrades.prepareUpgrade(
+  const deployment = await hre.upgrades.upgradeProxy(
     addresses?.mTBILL?.redemptionVaultBuidl ?? '',
     await hre.ethers.getContractFactory(
-      getTokenContractNames('mTBILL').rvUstb!,
+      getTokenContractNames('mTBILL').rvBuidl!,
       deployer,
     ),
     {
       unsafeAllow: ['constructor'],
-      unsafeAllowRenames: true,
+      // unsafeAllowRenames: true,
       redeployImplementation: 'onchange',
     },
   );
 
   if (typeof deployment !== 'string') {
-    await deployment.wait(5);
+    await deployment.deployTransaction.wait(5);
     console.log(deployment.to);
   } else {
     console.log(deployment);

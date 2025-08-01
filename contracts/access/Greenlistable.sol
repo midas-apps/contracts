@@ -11,12 +11,6 @@ import "./WithMidasAccessControl.sol";
  */
 abstract contract Greenlistable is WithMidasAccessControl {
     /**
-     * @notice actor that can change green list enable
-     */
-    bytes32 public constant GREENLIST_TOGGLER_ROLE =
-        keccak256("GREENLIST_TOGGLER_ROLE");
-
-    /**
      * @notice is greenlist enabled
      */
     bool public greenlistEnabled;
@@ -87,12 +81,10 @@ abstract contract Greenlistable is WithMidasAccessControl {
     }
 
     /**
-     * @notice AC role of a greenlist
+     * @notice AC role of a greenlist toggler
      * @return role bytes32 role
      */
-    function greenlistTogglerRole() public view virtual returns (bytes32) {
-        return GREENLIST_TOGGLER_ROLE;
-    }
+    function greenlistTogglerRole() public view virtual returns (bytes32);
 
     /**
      * @dev checks that a given `account`
