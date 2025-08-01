@@ -6,13 +6,15 @@ import { ConfigPerNetwork, MTokenName } from '../types';
 export type RedemptionVaultType =
   | 'redemptionVault'
   | 'redemptionVaultBuidl'
-  | 'redemptionVaultSwapper';
+  | 'redemptionVaultSwapper'
+  | 'redemptionVaultUstb';
 
 type TokenAddresses = {
   customFeed?: string;
   dataFeed?: string;
   token?: string;
   depositVault?: string;
+  depositVaultUstb?: string;
 } & Partial<Record<RedemptionVaultType, string>>;
 
 export type VaultType = RedemptionVaultType | 'depositVault';
@@ -840,6 +842,10 @@ export const sanctionListContracts: Partial<Record<number, string>> = {
   [chainIds.main]: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
   [chainIds.arbitrum]: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
   [chainIds.base]: '0x3A91A31cB3dC49b4db9Ce721F50a9D076c8D739B',
+};
+
+export const ustbContracts: Partial<Record<number, string>> = {
+  [chainIds.main]: '0x43415eB6ff9DB7E26A15b704e7A3eDCe97d31C4e',
 };
 
 export const getCurrentAddresses = (hre: HardhatRuntimeEnvironment) => {

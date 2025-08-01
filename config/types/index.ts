@@ -36,6 +36,6 @@ export interface Environment {
   readonly FORKING_NETWORK?: Network;
   readonly VERIFY_SOURCIFY?: boolean;
   readonly VERIFY_ETHERSCAN?: boolean;
-  readonly FORDEFI_API_USER_TOKEN?: string;
   readonly SOURCIFY_API_URL?: string;
+  readonly CUSTOM_SIGNER_SCRIPT_PATH?: string;
 }

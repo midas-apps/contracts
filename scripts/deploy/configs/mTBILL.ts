@@ -58,6 +58,9 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
         minBuidlBalance: parseUnits('250000', 18),
         minBuidlToRedeem: parseUnits('250000', 18),
       },
+      postDeploy: {
+        grantRoles: {},
+      },
     },
     [chainIds.main]: {
       dv: {
@@ -100,6 +103,9 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
         buidlRedemption: '0x31D3F59Ad4aAC0eeE2247c65EBE8Bf6E9E470a53',
         minBuidlBalance: parseUnits('1', 6),
         minBuidlToRedeem: parseUnits('1', 6),
+      },
+      postDeploy: {
+        grantRoles: {},
       },
     },
     [chainIds.base]: {
