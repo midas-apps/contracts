@@ -150,7 +150,7 @@ contract AcreAdapter is IAcreAdapter {
      * @dev Internal mToken to asset conversion function
      */
     function _mTokenToAsset(uint256 mTokenAmount)
-        internal
+        private
         view
         returns (uint256)
     {
@@ -174,7 +174,7 @@ contract AcreAdapter is IAcreAdapter {
     /**
      * @dev Internal asset to mToken conversion function
      */
-    function _assetToMToken(uint256 assets) internal view returns (uint256) {
+    function _assetToMToken(uint256 assets) private view returns (uint256) {
         uint256 amountTokenInBase18 = assets.convertToBase18(
             assetTokenDecimals
         );
@@ -204,9 +204,8 @@ contract AcreAdapter is IAcreAdapter {
      * @return rate of token
      */
     function _getTokenRate(address dataFeed, bool stable)
-        internal
+        private
         view
-        virtual
         returns (uint256)
     {
         // if dataFeed returns rate, all peg checks passed
@@ -225,7 +224,7 @@ contract AcreAdapter is IAcreAdapter {
      * @return stable is stablecoin (if true 1:1 rate should be used)
      */
     function _getTokenConfig(address vault, address token)
-        internal
+        private
         view
         returns (address dataFeed, bool stable)
     {
