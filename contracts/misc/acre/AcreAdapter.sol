@@ -62,36 +62,39 @@ contract AcreAdapter is IAcreAdapter {
         _mToken = _mTokenDv;
         mTokenDataFeed = _mTokenDataFeed;
         assetTokenDecimals = IERC20Metadata(assetToken_).decimals();
+
+        IERC20(assetToken_).safeApprove(depositVault_, type(uint256).max);
+        IERC20(_mTokenDv).safeApprove(redemptionVault_, type(uint256).max);
     }
 
     /**
      * @inheritdoc IAcreAdapter
      */
-    function deposit(uint256 assets) external returns (uint256 shares) {
+    function deposit(uint256 assets, address receiver)
+        external
+        returns (uint256 shares)
+    {
         IERC20(asset()).safeTransferFrom(msg.sender, address(this), assets);
 
         // calculate expected shares to mint to pass as slippage parameter
         // to avoid discrepancy between `convertToShares` and actual shares minted
         shares = _assetToMToken(assets);
 
-        IERC20(asset()).safeIncreaseAllowance(depositVault, assets);
-
         IDepositVault(depositVault).depositInstant(
             asset(),
             assets.convertToBase18(assetTokenDecimals),
             shares,
             bytes32(0),
-            // passing msg.sender as shares receiver
-            msg.sender
+            receiver
         );
 
-        emit Deposit(address(this), msg.sender, assets, shares);
+        emit Deposit(msg.sender, receiver, assets, shares);
     }
 
     /**
      * @inheritdoc IAcreAdapter
      */
-    function requestRedeem(uint256 shares)
+    function requestRedeem(uint256 shares, address receiver)
         external
         returns (uint256 requestId)
     {
@@ -106,16 +109,13 @@ contract AcreAdapter is IAcreAdapter {
 
         IERC20(share()).safeTransferFrom(msg.sender, address(this), shares);
 
-        IERC20(share()).safeIncreaseAllowance(redemptionVault, shares);
-
         requestId = IRedemptionVault(redemptionVault).redeemRequest(
             asset(),
             shares,
-            // passing msg.sender as assets receiver after request is approved
-            msg.sender
+            receiver
         );
 
-        emit RedeemRequest(requestId, address(this), shares);
+        emit RedeemRequest(requestId, msg.sender, receiver, shares);
     }
 
     /**

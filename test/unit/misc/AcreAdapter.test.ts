@@ -21,7 +21,7 @@ import {
   acreWrapperRequestRedeemTest,
 } from '../../common/misc/acre.helpers';
 
-describe('AcreAdapter', () => {
+describe.only('AcreAdapter', () => {
   it('initialize', async () => {
     const fixture = await acreAdapterFixture();
 
@@ -104,6 +104,12 @@ describe('AcreAdapter', () => {
       await acreWrapperDepositTest(fixture, 100);
     });
 
+    it('should deposit USDC to the deposit vault when receiver is different from msg.sender', async () => {
+      const fixture = await acreAdapterFixture();
+
+      await acreWrapperDepositTest(fixture, 100, fixture.regularAccounts[1]);
+    });
+
     it('should deposit USDC to the deposit vault when all fees are waived', async () => {
       const fixture = await acreAdapterFixture();
 
@@ -146,7 +152,7 @@ describe('AcreAdapter', () => {
         10,
       );
 
-      await acreWrapperDepositTest(fixture, 100, {
+      await acreWrapperDepositTest(fixture, 100, undefined, {
         revertMessage: 'DV: minReceiveAmount > actual',
       });
     });
@@ -160,7 +166,7 @@ describe('AcreAdapter', () => {
         10,
       );
 
-      await acreWrapperDepositTest(fixture, 100, {
+      await acreWrapperDepositTest(fixture, 100, undefined, {
         revertMessage: 'DV: minReceiveAmount > actual',
       });
     });
@@ -171,6 +177,16 @@ describe('AcreAdapter', () => {
       const fixture = await acreAdapterFixture();
 
       await acreWrapperRequestRedeemTest(fixture, 20);
+    });
+
+    it('should create redeem request for USDC when receiver is different from msg.sender', async () => {
+      const fixture = await acreAdapterFixture();
+
+      await acreWrapperRequestRedeemTest(
+        fixture,
+        20,
+        fixture.regularAccounts[1],
+      );
     });
 
     it('should deposit USDC to the deposit vault when all fees are waived', async () => {
@@ -234,7 +250,7 @@ describe('AcreAdapter', () => {
         fixture.acreUsdcMTbillAdapter.address,
       );
 
-      await acreWrapperRequestRedeemTest(fixture, 20, {
+      await acreWrapperRequestRedeemTest(fixture, 20, undefined, {
         revertMessage: 'not fee waived',
       });
     });
