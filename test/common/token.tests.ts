@@ -880,7 +880,11 @@ export const tokenContractsTests = (token: MTokenName) => {
       }
 
       expect(await redemptionVaultWithBuidl.vaultRole()).eq(
-        await redemptionVaultWithBuidl[tokenRoleNames.redemptionVaultAdmin](),
+        token === 'mTBILL'
+          ? tokenRoles.redemptionVaultAdmin
+          : await redemptionVaultWithBuidl[
+              tokenRoleNames.redemptionVaultAdmin
+            ](),
       );
       expect(await redemptionVaultWithBuidl.vaultRole()).eq(
         tokenRoles.redemptionVaultAdmin,

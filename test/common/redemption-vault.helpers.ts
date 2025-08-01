@@ -18,22 +18,26 @@ import {
   // eslint-disable-next-line camelcase
   ERC20__factory,
   IERC20,
+  MTBILL,
+  MToken,
   RedemptionVault,
   RedemptionVaultWIthBUIDL,
   RedemptionVaultWithSwapper,
   RedemptionVaultWithUSTB,
 } from '../../typechain-types';
 
-type CommonParamsRedeem = Pick<
+type CommonParamsRedeem = {
+  mTBILL: MToken | MTBILL;
+} & Pick<
   Awaited<ReturnType<typeof defaultDeploy>>,
-  'owner' | 'mTBILL' | 'mTokenToUsdDataFeed'
+  'owner' | 'mTokenToUsdDataFeed'
 > & {
-  redemptionVault:
-    | RedemptionVault
-    | RedemptionVaultWIthBUIDL
-    | RedemptionVaultWithUSTB
-    | RedemptionVaultWithSwapper;
-};
+    redemptionVault:
+      | RedemptionVault
+      | RedemptionVaultWIthBUIDL
+      | RedemptionVaultWithUSTB
+      | RedemptionVaultWithSwapper;
+  };
 
 type CommonParams = Pick<Awaited<ReturnType<typeof defaultDeploy>>, 'owner'> & {
   redemptionVault:
@@ -162,9 +166,15 @@ export const redeemInstantTest = async (
   if (checkSupply) {
     expect(supplyAfter).eq(supplyBefore.sub(amountInWithoutFee));
   }
-  expect(balanceAfterUser).eq(balanceBeforeUser.sub(amountIn));
-  expect(balanceAfterReceiver).eq(balanceBeforeReceiver);
+
+  expect(balanceAfterReceiver).eq(
+    balanceBeforeReceiver.add(
+      tokensReceiver === feeReceiver ? fee : constants.Zero,
+    ),
+  );
   expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver.add(fee));
+
+  expect(balanceAfterUser).eq(balanceBeforeUser.sub(amountIn));
 
   const expectedAmountToReceive = expectedAmountOut ?? amountOut;
   expect(balanceAfterTokenOutRecipient).eq(
@@ -225,7 +235,7 @@ export const redeemRequestTest = async (
 
   if (opt?.revertMessage) {
     await expect(callFn()).revertedWith(opt?.revertMessage);
-    return;
+    return {};
   }
 
   const balanceBeforeUser = await mTBILL.balanceOf(sender.address);
@@ -300,6 +310,11 @@ export const redeemRequestTest = async (
   if (waivedFee) {
     expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver);
   }
+
+  return {
+    requestId: latestRequestIdBefore,
+    rate: mTokenRate,
+  };
 };
 
 export const redeemFiatRequestTest = async (
@@ -405,7 +420,7 @@ export const approveRedeemRequestTest = async (
     mTBILL,
     waivedFee,
   }: CommonParamsRedeem & { waivedFee?: boolean },
-  requestId: number,
+  requestId: BigNumberish,
   newTokenRate: BigNumber,
   opt?: OptionalCommonParams,
 ) => {
@@ -524,7 +539,7 @@ export const safeApproveRedeemRequestTest = async (
     owner,
   );
 
-  const balanceBeforeUser = await mTBILL.balanceOf(sender.address);
+  const balanceBeforeUser = await mTBILL.balanceOf(requestDataBefore.sender);
   const balanceBeforeContract = await mTBILL.balanceOf(redemptionVault.address);
   const balanceBeforeReceiver = await mTBILL.balanceOf(tokensReceiver);
   const balanceBeforeFeeReceiver = await mTBILL.balanceOf(feeReceiver);
@@ -532,7 +547,7 @@ export const safeApproveRedeemRequestTest = async (
   const supplyBefore = await mTBILL.totalSupply();
 
   const balanceUserTokenOutBefore = await tokenContract.balanceOf(
-    sender.address,
+    requestDataBefore.sender,
   );
 
   await expect(
@@ -555,7 +570,7 @@ export const safeApproveRedeemRequestTest = async (
   const balanceAfterFeeReceiver = await mTBILL.balanceOf(feeReceiver);
   const balanceAfterContract = await mTBILL.balanceOf(redemptionVault.address);
   const balanceUserTokenOutAfter = await tokenContract.balanceOf(
-    sender.address,
+    requestDataAfter.sender,
   );
 
   const supplyAfter = await mTBILL.totalSupply();
