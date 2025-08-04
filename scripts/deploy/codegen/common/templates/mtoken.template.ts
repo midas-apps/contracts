@@ -24,14 +24,15 @@ export const getTokenContractFromTemplate = async (mToken: MTokenName) => {
     content: `
   // SPDX-License-Identifier: MIT
   pragma solidity 0.8.9;
-  import "../mTBILL/mTBILL.sol";
+
+  import "../mToken.sol";
 
   /**
    * @title ${contractNames.token}
    * @author RedDuck Software
    */
   //solhint-disable contract-name-camelcase
-  contract ${contractNames.token} is mTBILL {
+  contract ${contractNames.token} is mToken {
       /**
        * @notice actor that can mint ${contractNames.token}
        */
@@ -56,12 +57,15 @@ export const getTokenContractFromTemplate = async (mToken: MTokenName) => {
       uint256[50] private __gap;
 
       /**
-       * @notice upgradeable pattern contract\`s initializer
-       * @param _accessControl address of MidasAccessControl contract
+       * @inheritdoc mToken
        */
-      function initialize(address _accessControl) external override initializer {
-          __Blacklistable_init(_accessControl);
-          __ERC20_init("${metadata.name}", "${metadata.symbol}");
+      function _getNameSymbol()
+          internal
+          pure
+          override
+          returns (string memory, string memory)
+      {
+          return ("${metadata.name}", "${metadata.symbol}");
       }
 
       /**

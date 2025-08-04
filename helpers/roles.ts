@@ -30,6 +30,7 @@ const prefixes: Record<MTokenName, string> = {
   TACmBTC: 'TAC_M_BTC',
   TACmEDGE: 'TAC_M_EDGE',
   TACmMEV: 'TAC_M_MEV',
+  hbUSDC: 'HB_USDC',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {
