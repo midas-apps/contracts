@@ -562,6 +562,10 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x7F1f3E3D57E5549828909AE3381C7bFF05A4fE09',
         dataFeed: '0xE1C769D56Cb6448813732F7736041425AA0A4A75',
       },
+      usdc: {
+        aggregator: '0x4C89968338b75551243C99B452c84a01888282fD',
+        dataFeed: '0x0C59a087922f21eb49FFa0fe33E0D17B62Ff4C70',
+      },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     hbUSDT: {
