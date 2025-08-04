@@ -139,51 +139,70 @@ export const updateConfigFiles = (
   mTokensFile.saveSync();
 };
 
+const requireNotCancelled = <T>(value: T | symbol) => {
+  if (isCancel(value)) {
+    cancel('Operation cancelled.');
+    process.exit(0);
+  }
+
+  return value;
+};
+
 const getConfigFromUser = async () => {
-  const tokenContractName = (await text({
-    message: 'What is the token contract name?',
-    placeholder: 'mRe7SOL',
-    initialValue: undefined,
-    validate(value) {
-      if (!value || value.length === 0) return `Value is required!`;
-    },
-  })) as string;
+  const tokenContractName = requireNotCancelled(
+    await text({
+      message: 'What is the token contract name?',
+      placeholder: 'mRe7SOL',
+      initialValue: undefined,
+      validate(value) {
+        if (!value || value.length === 0) return `Value is required!`;
+      },
+    }),
+  );
 
-  const tokenName = (await text({
-    message: 'What is the token name?',
-    placeholder: 'Midas Re7SOL',
-    initialValue: undefined,
-    validate(value) {
-      if (!value || value.length === 0) return `Value is required!`;
-    },
-  })) as string;
+  const tokenName = requireNotCancelled(
+    await text({
+      message: 'What is the token name?',
+      placeholder: 'Midas Re7SOL',
+      initialValue: undefined,
+      validate(value) {
+        if (!value || value.length === 0) return `Value is required!`;
+      },
+    }),
+  );
 
-  const tokenSymbol = (await text({
-    message: 'What is the token symbol?',
-    placeholder: 'mRe7SOL',
-    initialValue: tokenContractName,
-    validate(value) {
-      if (!value || value.length === 0) return `Value is required!`;
-    },
-  })) as string;
+  const tokenSymbol = requireNotCancelled(
+    await text({
+      message: 'What is the token symbol?',
+      placeholder: 'mRe7SOL',
+      initialValue: tokenContractName,
+      validate(value) {
+        if (!value || value.length === 0) return `Value is required!`;
+      },
+    }),
+  );
 
-  const contractNamePrefix = (await text({
-    message: 'What is the contract name prefix?',
-    placeholder: 'MRe7Sol',
-    initialValue: undefined,
-    validate(value) {
-      if (!value || value.length === 0) return `Value is required!`;
-    },
-  })) as string;
+  const contractNamePrefix = requireNotCancelled(
+    await text({
+      message: 'What is the contract name prefix?',
+      placeholder: 'MRe7Sol',
+      initialValue: undefined,
+      validate(value) {
+        if (!value || value.length === 0) return `Value is required!`;
+      },
+    }),
+  );
 
-  const rolesPrefix = (await text({
-    message: 'What is the roles prefix?',
-    placeholder: 'M_RE7SOL',
-    initialValue: undefined,
-    validate(value) {
-      if (!value || value.length === 0) return `Value is required!`;
-    },
-  })) as string;
+  const rolesPrefix = requireNotCancelled(
+    await text({
+      message: 'What is the roles prefix?',
+      placeholder: 'M_RE7SOL',
+      initialValue: undefined,
+      validate(value) {
+        if (!value || value.length === 0) return `Value is required!`;
+      },
+    }),
+  );
 
   return {
     tokenName,
@@ -196,42 +215,45 @@ const getConfigFromUser = async () => {
 export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
   const config = await getConfigFromUser();
 
-  const contractsToGenerate = await multiselect<keyof TokenContractNames>({
-    message:
-      'Select contracts to generate. (Space to select, Enter to confirm)',
-    options: [
-      { value: 'token', label: 'Token', hint: 'Token contract' },
-      { value: 'dv', label: 'Deposit Vault', hint: 'Deposit Vault contract' },
-      {
-        value: 'rv',
-        label: 'Redemption Vault',
-        hint: 'Redemption Vault contract',
-      },
-      {
-        value: 'rvSwapper',
-        label: 'Redemption Vault With Swapper',
-        hint: 'Redemption Vault With Swapper contract',
-      },
-      {
-        value: 'rvUstb',
-        label: 'Redemption Vault With USTB',
-        hint: 'Redemption Vault With USTB contract',
-      },
-      { value: 'dataFeed', label: 'Data Feed', hint: 'Data Feed contract' },
-      {
-        value: 'customAggregator',
-        label: 'Custom Aggregator',
-        hint: 'Custom Aggregator contract',
-      },
-    ],
-    initialValues: ['token', 'dv', 'rvSwapper', 'dataFeed', 'customAggregator'],
-    required: true,
-  });
-
-  if (isCancel(contractsToGenerate)) {
-    cancel('Operation cancelled.');
-    process.exit(0);
-  }
+  const contractsToGenerate = requireNotCancelled(
+    await multiselect<keyof TokenContractNames>({
+      message:
+        'Select contracts to generate. (Space to select, Enter to confirm)',
+      options: [
+        { value: 'token', label: 'Token', hint: 'Token contract' },
+        { value: 'dv', label: 'Deposit Vault', hint: 'Deposit Vault contract' },
+        {
+          value: 'rv',
+          label: 'Redemption Vault',
+          hint: 'Redemption Vault contract',
+        },
+        {
+          value: 'rvSwapper',
+          label: 'Redemption Vault With Swapper',
+          hint: 'Redemption Vault With Swapper contract',
+        },
+        {
+          value: 'rvUstb',
+          label: 'Redemption Vault With USTB',
+          hint: 'Redemption Vault With USTB contract',
+        },
+        { value: 'dataFeed', label: 'Data Feed', hint: 'Data Feed contract' },
+        {
+          value: 'customAggregator',
+          label: 'Custom Aggregator',
+          hint: 'Custom Aggregator contract',
+        },
+      ],
+      initialValues: [
+        'token',
+        'dv',
+        'rvSwapper',
+        'dataFeed',
+        'customAggregator',
+      ],
+      required: true,
+    }),
+  );
 
   const mToken = config.tokenContractName;
 
