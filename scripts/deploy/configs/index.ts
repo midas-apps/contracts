@@ -1,3 +1,4 @@
+import { hbUSDCDeploymentConfig } from './hbUSDC';
 import { hbUSDTDeploymentConfig } from './hbUSDT';
 import { hbXAUtDeploymentConfig } from './hbXAUt';
 import { hypeBTCDeploymentConfig } from './hypeBTC';
@@ -55,4 +56,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mevBTC: mevBTCDeploymentConfig,
   lstHYPE: lstHYPEDeploymentConfig,
   liquidHYPE: liquidHYPEDeploymentConfig,
+  hbUSDC: hbUSDCDeploymentConfig,
 };

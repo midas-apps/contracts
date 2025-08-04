@@ -592,6 +592,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0xF538675D292d8b372712f44eaf306Cc66cF6d8DC',
       redemptionVaultSwapper: '0x558806a80b42cAB4ED75c74bfB178EDc9087AA32',
     },
+    hbUSDC: {
+      token: '0x057ced81348D57Aad579A672d521d7b4396E8a61',
+      customFeed: '0xc82CAd78983436BddfcAf0F21316207D87b87462',
+      dataFeed: '0xb013A5956f8b838B7E668DFbdf1efA978Ccc7a23',
+      depositVault: '0xd202CF41a607627cd1A31f650D13599b588eBd1c',
+      redemptionVaultSwapper: '0xBb820D0c85C0B5D1B0dC8C6D3541fbb1AB4C7a60',
+    },
   },
   katana: {
     accessControl: '0x980f57b62060824799F23f87d6FA321653b6f069',
