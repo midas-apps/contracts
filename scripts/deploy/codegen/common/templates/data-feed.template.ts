@@ -3,11 +3,11 @@ import { importWithoutCache } from '../../../../../helpers/utils';
 
 export const getDataFeedContractFromTemplate = async (mToken: MTokenName) => {
   const { getTokenContractNames } = await importWithoutCache(
-    '../../../../../helpers/contracts',
+    require.resolve('../../../../../helpers/contracts'),
   );
 
   const { getRolesNamesForToken } = await importWithoutCache(
-    '../../../../../helpers/roles',
+    require.resolve('../../../../../helpers/roles'),
   );
   const contractNames = getTokenContractNames(mToken);
   const roles = getRolesNamesForToken(mToken);

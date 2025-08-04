@@ -152,8 +152,7 @@ export const verify = async (
 export const encodeFnSelector = (selector: string) =>
   ethers.utils.id(selector).substring(0, 10);
 
-export const importWithoutCache = async (path: string) => {
-  const pathResolved = require.resolve(path);
+export const importWithoutCache = async (pathResolved: string) => {
   delete require.cache[pathResolved];
   return await import(pathResolved);
 };

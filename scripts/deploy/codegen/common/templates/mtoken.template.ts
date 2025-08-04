@@ -3,15 +3,15 @@ import { importWithoutCache } from '../../../../../helpers/utils';
 
 export const getTokenContractFromTemplate = async (mToken: MTokenName) => {
   const { getTokenContractNames } = await importWithoutCache(
-    '../../../../../helpers/contracts',
+    require.resolve('../../../../../helpers/contracts'),
   );
 
   const { getRolesNamesForToken } = await importWithoutCache(
-    '../../../../../helpers/roles',
+    require.resolve('../../../../../helpers/roles'),
   );
 
   const { mTokensMetadata } = await importWithoutCache(
-    '../../../../../helpers/mtokens-metadata',
+    require.resolve('../../../../../helpers/mtokens-metadata'),
   );
 
   const metadata = mTokensMetadata[mToken];
