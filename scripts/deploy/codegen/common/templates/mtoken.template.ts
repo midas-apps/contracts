@@ -1,12 +1,23 @@
 import { MTokenName } from '../../../../../config';
-import { getTokenContractNames } from '../../../../../helpers/contracts';
-import { mTokensMetadata } from '../../../../../helpers/mtokens-metadata';
-import { getRolesNamesForToken } from '../../../../../helpers/roles';
+import { importWithoutCache } from '../../../../../helpers/utils';
 
-export const getTokenContractFromTemplate = (mToken: MTokenName) => {
+export const getTokenContractFromTemplate = async (mToken: MTokenName) => {
+  const { getTokenContractNames } = await importWithoutCache(
+    '../../../../../helpers/contracts',
+  );
+
+  const { getRolesNamesForToken } = await importWithoutCache(
+    '../../../../../helpers/roles',
+  );
+
+  const { mTokensMetadata } = await importWithoutCache(
+    '../../../../../helpers/mtokens-metadata',
+  );
+
+  const metadata = mTokensMetadata[mToken];
+
   const contractNames = getTokenContractNames(mToken);
   const roles = getRolesNamesForToken(mToken);
-  const metadata = mTokensMetadata[mToken];
 
   return {
     name: contractNames.token,

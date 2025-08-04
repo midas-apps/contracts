@@ -1,8 +1,14 @@
 import { MTokenName } from '../../../../../config';
-import { getTokenContractNames } from '../../../../../helpers/contracts';
-import { getRolesNamesForToken } from '../../../../../helpers/roles';
+import { importWithoutCache } from '../../../../../helpers/utils';
 
-export const getRvUstbContractFromTemplate = (mToken: MTokenName) => {
+export const getRvUstbContractFromTemplate = async (mToken: MTokenName) => {
+  const { getTokenContractNames } = await importWithoutCache(
+    '../../../../../helpers/contracts',
+  );
+
+  const { getRolesNamesForToken } = await importWithoutCache(
+    '../../../../../helpers/roles',
+  );
   const contractNames = getTokenContractNames(mToken);
   const roles = getRolesNamesForToken(mToken);
 

@@ -1,5 +1,6 @@
-import { cancel, isCancel, multiselect } from '@clack/prompts';
+import { cancel, isCancel, multiselect, text } from '@clack/prompts';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { Project, SyntaxKind } from 'ts-morph';
 
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -23,6 +24,13 @@ const generatorPerContract: Partial<
   Record<
     keyof TokenContractNames,
     (mToken: MTokenName) =>
+      | Promise<
+          | {
+              name: string;
+              content: string;
+            }
+          | undefined
+        >
       | {
           name: string;
           content: string;
@@ -39,21 +47,154 @@ const generatorPerContract: Partial<
   customAggregator: getCustomAggregatorContractFromTemplate,
 };
 
-export const generateContracts = async (
+export const updateConfigFiles = (
   hre: HardhatRuntimeEnvironment,
-  mToken: MTokenName,
+  {
+    contractNamePrefix,
+    rolesPrefix,
+    name,
+    symbol,
+    mToken,
+  }: {
+    contractNamePrefix: string;
+    rolesPrefix: string;
+    name: string;
+    symbol: string;
+    mToken: string;
+  },
 ) => {
-  const folder = path.join(hre.config.paths.root, 'contracts', `${mToken}`);
+  const project = new Project();
 
-  console.log(folder);
+  const mTokensFile = project.addSourceFileAtPath(
+    path.join(hre.config.paths.root, 'config/types/tokens.ts'),
+  );
 
-  const isFolderExists = fs.existsSync(folder);
+  const contractPrefixesFile = project.addSourceFileAtPath(
+    path.join(hre.config.paths.root, 'helpers', 'contracts.ts'),
+  );
 
-  if (isFolderExists) {
-    fs.rmSync(folder, { recursive: true });
+  const rolesFile = project.addSourceFileAtPath(
+    path.join(hre.config.paths.root, 'helpers', 'roles.ts'),
+  );
+
+  const contractNameFile = project.addSourceFileAtPath(
+    path.join(hre.config.paths.root, 'helpers', 'mtokens-metadata.ts'),
+  );
+
+  const mTokensEnum = mTokensFile.getEnumOrThrow('MTokenNameEnum');
+
+  const contractPrefixesVar =
+    contractPrefixesFile.getVariableDeclarationOrThrow('contractNamesPrefixes');
+
+  const rolesVar = rolesFile.getVariableDeclarationOrThrow('prefixes');
+
+  const contractNameVar =
+    contractNameFile.getVariableDeclarationOrThrow('mTokensMetadata');
+
+  mTokensEnum.addMember({
+    name: mToken,
+    initializer: `"${mToken}"`,
+  });
+
+  {
+    const initializer = contractPrefixesVar.getInitializerOrThrow();
+    const objLiteral = initializer.asKindOrThrow(
+      SyntaxKind.ObjectLiteralExpression,
+    );
+
+    objLiteral.addPropertyAssignment({
+      name: mToken,
+      initializer: (writer) => writer.write(`'${contractNamePrefix}'`),
+    });
   }
 
-  fs.mkdirSync(folder, { recursive: true });
+  {
+    const initializer = rolesVar.getInitializerOrThrow();
+    const objLiteral = initializer.asKindOrThrow(
+      SyntaxKind.ObjectLiteralExpression,
+    );
+
+    objLiteral.addPropertyAssignment({
+      name: mToken,
+      initializer: (writer) => writer.write(`'${rolesPrefix}'`),
+    });
+  }
+
+  {
+    const initializer = contractNameVar.getInitializerOrThrow();
+    const objLiteral = initializer.asKindOrThrow(
+      SyntaxKind.ObjectLiteralExpression,
+    );
+
+    objLiteral.addPropertyAssignment({
+      name: mToken,
+      initializer: (writer) =>
+        writer.write(`{ name: '${name}', symbol: '${symbol}' }`),
+    });
+  }
+
+  contractPrefixesFile.saveSync();
+  rolesFile.saveSync();
+  contractNameFile.saveSync();
+  mTokensFile.saveSync();
+};
+
+const getConfigFromUser = async () => {
+  const tokenContractName = (await text({
+    message: 'What is the token contract name?',
+    placeholder: 'mRe7SOL',
+    initialValue: undefined,
+    validate(value) {
+      if (!value || value.length === 0) return `Value is required!`;
+    },
+  })) as string;
+
+  const tokenName = (await text({
+    message: 'What is the token name?',
+    placeholder: 'Midas Re7SOL',
+    initialValue: undefined,
+    validate(value) {
+      if (!value || value.length === 0) return `Value is required!`;
+    },
+  })) as string;
+
+  const tokenSymbol = (await text({
+    message: 'What is the token symbol?',
+    placeholder: 'mRe7SOL',
+    initialValue: tokenContractName,
+    validate(value) {
+      if (!value || value.length === 0) return `Value is required!`;
+    },
+  })) as string;
+
+  const contractNamePrefix = (await text({
+    message: 'What is the contract name prefix?',
+    placeholder: 'MRe7Sol',
+    initialValue: undefined,
+    validate(value) {
+      if (!value || value.length === 0) return `Value is required!`;
+    },
+  })) as string;
+
+  const rolesPrefix = (await text({
+    message: 'What is the roles prefix?',
+    placeholder: 'M_RE7SOL',
+    initialValue: undefined,
+    validate(value) {
+      if (!value || value.length === 0) return `Value is required!`;
+    },
+  })) as string;
+
+  return {
+    tokenName,
+    contractNamePrefix,
+    rolesPrefix,
+    tokenSymbol,
+    tokenContractName,
+  };
+};
+export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
+  const config = await getConfigFromUser();
 
   const contractsToGenerate = await multiselect<keyof TokenContractNames>({
     message:
@@ -92,12 +233,36 @@ export const generateContracts = async (
     process.exit(0);
   }
 
+  const mToken = config.tokenContractName;
+
+  updateConfigFiles(hre, {
+    contractNamePrefix: config.contractNamePrefix,
+    rolesPrefix: config.rolesPrefix,
+    name: config.tokenName,
+    symbol: config.tokenSymbol,
+    mToken,
+  });
+
+  const folder = path.join(hre.config.paths.root, 'contracts', `${mToken}`);
+
+  console.log(folder);
+
+  const isFolderExists = fs.existsSync(folder);
+
+  if (isFolderExists) {
+    fs.rmSync(folder, { recursive: true });
+  }
+
+  fs.mkdirSync(folder, { recursive: true });
+
   const generators = [
     getTokenRolesContractFromTemplate,
     ...contractsToGenerate.map((contract) => generatorPerContract[contract]),
   ].filter((v) => v !== undefined);
 
-  const generatedContracts = generators.map((generator) => generator(mToken));
+  const generatedContracts = await Promise.all(
+    generators.map((generator) => generator(mToken as MTokenName)),
+  );
 
   for (const contract of generatedContracts) {
     if (!contract) {
