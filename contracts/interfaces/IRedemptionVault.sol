@@ -48,15 +48,50 @@ interface IRedemptionVault is IManageableVault {
     );
 
     /**
+     * @param user function caller (msg.sender)
+     * @param tokenOut address of tokenOut
+     * @param recipient address that receives tokens
+     * @param amount amount of mToken
+     * @param feeAmount fee amount in mToken
+     * @param amountTokenOut amount of tokenOut
+     */
+    event RedeemInstantWithCustomRecipient(
+        address indexed user,
+        address indexed tokenOut,
+        address recipient,
+        uint256 amount,
+        uint256 feeAmount,
+        uint256 amountTokenOut
+    );
+
+    /**
      * @param requestId request id
      * @param user function caller (msg.sender)
      * @param tokenOut address of tokenOut
      * @param amountMTokenIn amount of mToken
+     * @param feeAmount fee amount in mToken
      */
     event RedeemRequest(
         uint256 indexed requestId,
         address indexed user,
         address indexed tokenOut,
+        uint256 amountMTokenIn,
+        uint256 feeAmount
+    );
+
+    /**
+     * @param requestId request id
+     * @param user function caller (msg.sender)
+     * @param tokenOut address of tokenOut
+     * @param recipient address that receives tokens
+     * @param amountMTokenIn amount of mToken
+     * @param feeAmount fee amount in mToken
+     */
+    event RedeemRequestWithCustomRecipient(
+        uint256 indexed requestId,
+        address indexed user,
+        address indexed tokenOut,
+        address recipient,
         uint256 amountMTokenIn,
         uint256 feeAmount
     );
@@ -105,17 +140,31 @@ interface IRedemptionVault is IManageableVault {
 
     /**
      * @notice redeem mToken to tokenOut if daily limit and allowance not exceeded
-     * Burns mTBILL from the user.
+     * Burns mToken from the user.
      * Transfers fee in mToken to feeReceiver
      * Transfers tokenOut to user.
      * @param tokenOut stable coin token address to redeem to
-     * @param amountMTokenIn amount of mTBILL to redeem (decimals 18)
+     * @param amountMTokenIn amount of mToken to redeem (decimals 18)
      * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
      */
     function redeemInstant(
         address tokenOut,
         uint256 amountMTokenIn,
         uint256 minReceiveAmount
+    ) external;
+
+    /**
+     * @notice Does the same as original `redeemInstant` but allows specifying a custom tokensReceiver address.
+     * @param tokenOut stable coin token address to redeem to
+     * @param amountMTokenIn amount of mToken to redeem (decimals 18)
+     * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
+     * @param recipient address that receives tokens
+     */
+    function redeemInstant(
+        address tokenOut,
+        uint256 amountMTokenIn,
+        uint256 minReceiveAmount,
+        address recipient
     ) external;
 
     /**
@@ -131,6 +180,19 @@ interface IRedemptionVault is IManageableVault {
         returns (uint256);
 
     /**
+     * @notice Does the same as original `redeemRequest` but allows specifying a custom tokensReceiver address.
+     * @param tokenOut stable coin token address to redeem to
+     * @param amountMTokenIn amount of mToken to redeem (decimals 18)
+     * @param recipient address that receives tokens
+     * @return request id
+     */
+    function redeemRequest(
+        address tokenOut,
+        uint256 amountMTokenIn,
+        address recipient
+    ) external returns (uint256);
+
+    /**
      * @notice creating redeem request if tokenOut is fiat
      * Transfers amount in mToken to contract
      * Transfers fee in mToken to feeReceiver
@@ -140,6 +202,31 @@ interface IRedemptionVault is IManageableVault {
     function redeemFiatRequest(uint256 amountMTokenIn)
         external
         returns (uint256);
+
+    /**
+     * @notice approving requests from the `requestIds` array with the
+     * current mToken rate. WONT fail even if there is not enough liquidity
+     * to process all requests.
+     * Does same validation as `safeApproveRequest`.
+     * Transfers tokenOut to users
+     * Sets request flags to Processed.
+     * @param requestIds request ids array
+     */
+    function safeBulkApproveRequest(uint256[] calldata requestIds) external;
+
+    /**
+     * @notice approving requests from the `requestIds` array using the `newMTokenRate`.
+     * WONT fail even if there is not enough liquidity to process all requests.
+     * Does same validation as `safeApproveRequest`.
+     * Transfers tokenOut to user
+     * Sets request flags to Processed.
+     * @param requestIds request ids array
+     * @param newMTokenRate new mToken rate inputted by vault admin
+     */
+    function safeBulkApproveRequest(
+        uint256[] calldata requestIds,
+        uint256 newMTokenRate
+    ) external;
 
     /**
      * @notice approving redeem request if not exceed tokenOut allowance

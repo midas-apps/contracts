@@ -10,7 +10,7 @@ import {EnumerableSetUpgradeable as EnumerableSet} from "@openzeppelin/contracts
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 
 import "../interfaces/IManageableVault.sol";
-import "../interfaces/IMTbill.sol";
+import "../interfaces/IMToken.sol";
 import "../interfaces/IDataFeed.sol";
 
 import "../access/Greenlistable.sol";
@@ -63,7 +63,7 @@ abstract contract ManageableVault is
     /**
      * @notice mToken token
      */
-    IMTbill public mToken;
+    IMToken public mToken;
 
     /**
      * @notice mToken data feed contract
@@ -168,7 +168,7 @@ abstract contract ManageableVault is
         _validateFee(_variationTolerance, true);
         _validateFee(_instantInitParams.instantFee, false);
 
-        mToken = IMTbill(_mTokenInitParams.mToken);
+        mToken = IMToken(_mTokenInitParams.mToken);
         __Pausable_init(_ac);
         __Greenlistable_init_unchained();
         __Blacklistable_init_unchained();
@@ -198,12 +198,12 @@ abstract contract ManageableVault is
 
     /**
      * @inheritdoc IManageableVault
-     * @dev reverts if token is already added
      */
     function addPaymentToken(
         address token,
         address dataFeed,
         uint256 tokenFee,
+        uint256 allowance,
         bool stable
     ) external onlyVaultAdmin {
         require(_paymentTokens.add(token), "MV: already added");
@@ -213,10 +213,17 @@ abstract contract ManageableVault is
         tokensConfig[token] = TokenConfig({
             dataFeed: dataFeed,
             fee: tokenFee,
-            allowance: MAX_UINT,
+            allowance: allowance,
             stable: stable
         });
-        emit AddPaymentToken(msg.sender, token, dataFeed, tokenFee, stable);
+        emit AddPaymentToken(
+            msg.sender,
+            token,
+            dataFeed,
+            tokenFee,
+            allowance,
+            stable
+        );
     }
 
     /**
@@ -410,8 +417,8 @@ abstract contract ManageableVault is
         address to,
         uint256 amount,
         uint256 tokenDecimals
-    ) internal {
-        uint256 transferAmount = amount.convertFromBase18(tokenDecimals);
+    ) internal returns (uint256 transferAmount) {
+        transferAmount = amount.convertFromBase18(tokenDecimals);
 
         require(
             amount == transferAmount.convertToBase18(tokenDecimals),
@@ -574,6 +581,14 @@ abstract contract ManageableVault is
             "MV: exceed price diviation"
         );
     }
+
+    function _validateUserAccess(address user)
+        internal
+        view
+        onlyGreenlisted(user)
+        onlyNotBlacklisted(user)
+        onlyNotSanctioned(user)
+    {}
 
     /**
      * @dev convert value to inputted decimals precision

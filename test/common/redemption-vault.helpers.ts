@@ -3,7 +3,12 @@ import { expect } from 'chai';
 import { BigNumber, BigNumberish, constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
-import { OptionalCommonParams, getAccount } from './common.helpers';
+import {
+  AccountOrContract,
+  OptionalCommonParams,
+  balanceOfBase18,
+  getAccount,
+} from './common.helpers';
 import { defaultDeploy } from './fixtures';
 
 import {
@@ -13,27 +18,33 @@ import {
   // eslint-disable-next-line camelcase
   ERC20__factory,
   IERC20,
+  MTBILL,
+  MToken,
   RedemptionVault,
   RedemptionVaultWIthBUIDL,
   RedemptionVaultWithSwapper,
   RedemptionVaultWithUSTB,
 } from '../../typechain-types';
 
-type CommonParamsRedeem = Pick<
+type CommonParamsRedeem = {
+  mTBILL: MToken | MTBILL;
+} & Pick<
   Awaited<ReturnType<typeof defaultDeploy>>,
-  'owner' | 'mTBILL' | 'mTokenToUsdDataFeed'
+  'owner' | 'mTokenToUsdDataFeed'
 > & {
-  redemptionVault:
-    | RedemptionVault
-    | RedemptionVaultWIthBUIDL
-    | RedemptionVaultWithUSTB;
-};
+    redemptionVault:
+      | RedemptionVault
+      | RedemptionVaultWIthBUIDL
+      | RedemptionVaultWithUSTB
+      | RedemptionVaultWithSwapper;
+  };
 
 type CommonParams = Pick<Awaited<ReturnType<typeof defaultDeploy>>, 'owner'> & {
   redemptionVault:
     | RedemptionVault
     | RedemptionVaultWIthBUIDL
-    | RedemptionVaultWithUSTB;
+    | RedemptionVaultWithUSTB
+    | RedemptionVaultWithSwapper;
 };
 
 export const redeemInstantTest = async (
@@ -44,7 +55,16 @@ export const redeemInstantTest = async (
     mTokenToUsdDataFeed,
     waivedFee,
     minAmount,
-  }: CommonParamsRedeem & { waivedFee?: boolean; minAmount?: BigNumberish },
+    customRecipient,
+    checkSupply = true,
+    expectedAmountOut,
+  }: CommonParamsRedeem & {
+    waivedFee?: boolean;
+    minAmount?: BigNumberish;
+    customRecipient?: AccountOrContract;
+    checkSupply?: boolean;
+    expectedAmountOut?: BigNumberish;
+  },
   tokenOut: IERC20 | ERC20 | string,
   amountTBillIn: number,
   opt?: OptionalCommonParams,
@@ -60,12 +80,32 @@ export const redeemInstantTest = async (
   const tokensReceiver = await redemptionVault.tokensReceiver();
   const feeReceiver = await redemptionVault.feeReceiver();
 
-  if (opt?.revertMessage) {
-    await expect(
-      redemptionVault
+  const withRecipient = customRecipient !== undefined;
+  const recipient = customRecipient
+    ? getAccount(customRecipient)
+    : sender.address;
+
+  const callFn = withRecipient
+    ? redemptionVault
         .connect(sender)
-        .redeemInstant(tokenOut, amountIn, minAmount ?? constants.Zero),
-    ).revertedWith(opt?.revertMessage);
+        ['redeemInstant(address,uint256,uint256,address)'].bind(
+          this,
+          tokenOut,
+          amountIn,
+          minAmount ?? constants.Zero,
+          recipient,
+        )
+    : redemptionVault
+        .connect(sender)
+        ['redeemInstant(address,uint256,uint256)'].bind(
+          this,
+          tokenOut,
+          amountIn,
+          minAmount ?? constants.Zero,
+        );
+
+  if (opt?.revertMessage) {
+    await expect(callFn()).revertedWith(opt?.revertMessage);
     return;
   }
 
@@ -73,6 +113,9 @@ export const redeemInstantTest = async (
   const balanceBeforeReceiver = await mTBILL.balanceOf(tokensReceiver);
   const balanceBeforeFeeReceiver = await mTBILL.balanceOf(feeReceiver);
 
+  const balanceBeforeTokenOutRecipient = await tokenContract.balanceOf(
+    recipient,
+  );
   const balanceBeforeTokenOut = await tokenContract.balanceOf(sender.address);
 
   const supplyBefore = await mTBILL.totalSupply();
@@ -89,32 +132,57 @@ export const redeemInstantTest = async (
       true,
     );
 
-  await expect(
-    redemptionVault
-      .connect(sender)
-      .redeemInstant(tokenOut, amountIn, minAmount ?? constants.Zero),
-  )
+  await expect(callFn())
     .to.emit(
       redemptionVault,
       redemptionVault.interface.events[
-        'RedeemInstant(address,address,uint256,uint256,uint256)'
+        withRecipient
+          ? 'RedeemInstantWithCustomRecipient(address,address,address,uint256,uint256,uint256)'
+          : 'RedeemInstant(address,address,uint256,uint256,uint256)'
       ].name,
     )
-    .withArgs(sender, tokenOut, amountTBillIn, fee, amountOut).to.not.reverted;
+    .withArgs(
+      ...[
+        sender,
+        tokenOut,
+        withRecipient ? recipient : undefined,
+        amountTBillIn,
+        fee,
+        amountOut,
+      ].filter((v) => v !== undefined),
+    ).to.not.reverted;
 
   const balanceAfterUser = await mTBILL.balanceOf(sender.address);
   const balanceAfterReceiver = await mTBILL.balanceOf(tokensReceiver);
   const balanceAfterFeeReceiver = await mTBILL.balanceOf(feeReceiver);
 
+  const balanceAfterTokenOutRecipient = await tokenContract.balanceOf(
+    recipient,
+  );
   const balanceAfterTokenOut = await tokenContract.balanceOf(sender.address);
 
   const supplyAfter = await mTBILL.totalSupply();
 
-  expect(supplyAfter).eq(supplyBefore.sub(amountInWithoutFee));
-  expect(balanceAfterUser).eq(balanceBeforeUser.sub(amountIn));
-  expect(balanceAfterReceiver).eq(balanceBeforeReceiver);
+  if (checkSupply) {
+    expect(supplyAfter).eq(supplyBefore.sub(amountInWithoutFee));
+  }
+
+  expect(balanceAfterReceiver).eq(
+    balanceBeforeReceiver.add(
+      tokensReceiver === feeReceiver ? fee : constants.Zero,
+    ),
+  );
   expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver.add(fee));
-  expect(balanceAfterTokenOut).eq(balanceBeforeTokenOut.add(amountOut));
+
+  expect(balanceAfterUser).eq(balanceBeforeUser.sub(amountIn));
+
+  const expectedAmountToReceive = expectedAmountOut ?? amountOut;
+  expect(balanceAfterTokenOutRecipient).eq(
+    balanceBeforeTokenOutRecipient.add(expectedAmountToReceive),
+  );
+  if (recipient !== sender.address) {
+    expect(balanceAfterTokenOut).eq(balanceBeforeTokenOut);
+  }
   if (waivedFee) {
     expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver);
   }
@@ -127,7 +195,11 @@ export const redeemRequestTest = async (
     mTBILL,
     mTokenToUsdDataFeed,
     waivedFee,
-  }: CommonParamsRedeem & { waivedFee?: boolean },
+    customRecipient,
+  }: CommonParamsRedeem & {
+    waivedFee?: boolean;
+    customRecipient?: AccountOrContract;
+  },
   tokenOut: ERC20 | string,
   amountTBillIn: number,
   opt?: OptionalCommonParams,
@@ -143,11 +215,27 @@ export const redeemRequestTest = async (
   const tokensReceiver = await redemptionVault.tokensReceiver();
   const feeReceiver = await redemptionVault.feeReceiver();
 
+  const withRecipient = customRecipient !== undefined;
+  const recipient = customRecipient
+    ? getAccount(customRecipient)
+    : sender.address;
+
+  const callFn = withRecipient
+    ? redemptionVault
+        .connect(sender)
+        ['redeemRequest(address,uint256,address)'].bind(
+          this,
+          tokenOut,
+          amountIn,
+          recipient,
+        )
+    : redemptionVault
+        .connect(sender)
+        ['redeemRequest(address,uint256)'].bind(this, tokenOut, amountIn);
+
   if (opt?.revertMessage) {
-    await expect(
-      redemptionVault.connect(sender).redeemRequest(tokenOut, amountIn),
-    ).revertedWith(opt?.revertMessage);
-    return;
+    await expect(callFn()).revertedWith(opt?.revertMessage);
+    return {};
   }
 
   const balanceBeforeUser = await mTBILL.balanceOf(sender.address);
@@ -172,27 +260,30 @@ export const redeemRequestTest = async (
       false,
     );
 
-  await expect(
-    redemptionVault.connect(sender).redeemRequest(tokenOut, amountIn),
-  )
+  await expect(callFn())
     .to.emit(
       redemptionVault,
       redemptionVault.interface.events[
-        'RedeemRequest(uint256,address,address,uint256,uint256)'
+        withRecipient
+          ? 'RedeemRequestWithCustomRecipient(uint256,address,address,address,uint256,uint256)'
+          : 'RedeemRequest(uint256,address,address,uint256,uint256)'
       ].name,
     )
     .withArgs(
-      latestRequestIdBefore.add(1),
-      sender,
-      tokenOut,
-      amountTBillIn,
-      fee,
+      ...[
+        latestRequestIdBefore.add(1),
+        sender,
+        tokenOut,
+        withRecipient ? recipient : undefined,
+        amountTBillIn,
+        fee,
+      ].filter((v) => v !== undefined),
     ).to.not.reverted;
 
   const latestRequestIdAfter = await redemptionVault.currentRequestId();
   const request = await redemptionVault.redeemRequests(latestRequestIdBefore);
 
-  expect(request.sender).eq(sender.address);
+  expect(request.sender).eq(recipient);
   expect(request.tokenOut).eq(tokenOut);
   expect(request.amountMToken).eq(amountInWithoutFee);
   expect(request.mTokenRate).eq(mTokenRate);
@@ -219,6 +310,11 @@ export const redeemRequestTest = async (
   if (waivedFee) {
     expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver);
   }
+
+  return {
+    requestId: latestRequestIdBefore,
+    rate: mTokenRate,
+  };
 };
 
 export const redeemFiatRequestTest = async (
@@ -324,7 +420,7 @@ export const approveRedeemRequestTest = async (
     mTBILL,
     waivedFee,
   }: CommonParamsRedeem & { waivedFee?: boolean },
-  requestId: number,
+  requestId: BigNumberish,
   newTokenRate: BigNumber,
   opt?: OptionalCommonParams,
 ) => {
@@ -443,7 +539,7 @@ export const safeApproveRedeemRequestTest = async (
     owner,
   );
 
-  const balanceBeforeUser = await mTBILL.balanceOf(sender.address);
+  const balanceBeforeUser = await mTBILL.balanceOf(requestDataBefore.sender);
   const balanceBeforeContract = await mTBILL.balanceOf(redemptionVault.address);
   const balanceBeforeReceiver = await mTBILL.balanceOf(tokensReceiver);
   const balanceBeforeFeeReceiver = await mTBILL.balanceOf(feeReceiver);
@@ -451,7 +547,7 @@ export const safeApproveRedeemRequestTest = async (
   const supplyBefore = await mTBILL.totalSupply();
 
   const balanceUserTokenOutBefore = await tokenContract.balanceOf(
-    sender.address,
+    requestDataBefore.sender,
   );
 
   await expect(
@@ -474,7 +570,7 @@ export const safeApproveRedeemRequestTest = async (
   const balanceAfterFeeReceiver = await mTBILL.balanceOf(feeReceiver);
   const balanceAfterContract = await mTBILL.balanceOf(redemptionVault.address);
   const balanceUserTokenOutAfter = await tokenContract.balanceOf(
-    sender.address,
+    requestDataAfter.sender,
   );
 
   const supplyAfter = await mTBILL.totalSupply();
@@ -501,6 +597,181 @@ export const safeApproveRedeemRequestTest = async (
   expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver);
   if (waivedFee) {
     expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver);
+  }
+};
+
+export const safeBulkApproveRequestTest = async (
+  { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed }: CommonParamsRedeem,
+  requests: { id: BigNumberish; expectedToExecute?: boolean }[],
+  newRate?: BigNumberish,
+  opt?: OptionalCommonParams,
+) => {
+  const sender = opt?.from ?? owner;
+
+  const requestIds = requests.map(({ id }) => id);
+
+  const callFn = newRate
+    ? redemptionVault
+        .connect(sender)
+        ['safeBulkApproveRequest(uint256[],uint256)'].bind(
+          this,
+          requestIds,
+          newRate,
+        )
+    : redemptionVault
+        .connect(sender)
+        ['safeBulkApproveRequest(uint256[])'].bind(this, requestIds);
+
+  if (opt?.revertMessage) {
+    await expect(callFn()).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  const requestDatasBefore = await Promise.all(
+    requestIds.map((requestId) => redemptionVault.redeemRequests(requestId)),
+  );
+
+  const balancesBefore = await Promise.all(
+    requestDatasBefore.map(({ tokenOut, sender }) =>
+      // eslint-disable-next-line camelcase
+      balanceOfBase18(ERC20__factory.connect(tokenOut, owner), sender),
+    ),
+  );
+
+  const totalSupplyBefore = await mTBILL.totalSupply();
+
+  const tokenDecimals = await Promise.all(
+    requestDatasBefore.map(({ tokenOut }) =>
+      // eslint-disable-next-line camelcase
+      ERC20__factory.connect(tokenOut, owner).decimals(),
+    ),
+  );
+
+  const feePercents = await Promise.all(
+    requestDatasBefore.map((requestData) =>
+      getFeePercent(
+        requestData.sender,
+        requestData.tokenOut,
+        redemptionVault,
+        false,
+      ),
+    ),
+  );
+
+  const currentRate = await mTokenToUsdDataFeed.getDataInBase18();
+  const newExpectedRate = newRate ?? currentRate;
+
+  const expectedReceivedAmounts = requestDatasBefore.map((requestData, i) =>
+    requestData.amountMToken
+      .mul(newExpectedRate)
+      .div(requestData.tokenOutRate)
+      .div(10 ** (18 - tokenDecimals[i]))
+      .mul(10 ** (18 - tokenDecimals[i])),
+  );
+
+  const groupedDataBefore = requests.map(({ id, expectedToExecute }, index) => {
+    return {
+      id,
+      expectedToExecute: expectedToExecute ?? true,
+      request: requestDatasBefore[index],
+      expectedReceivedAmount: expectedReceivedAmounts[index],
+      balance: balancesBefore[index],
+      feePercent: feePercents[index],
+    };
+  });
+  const hundredPercent = await redemptionVault.ONE_HUNDRED_PERCENT();
+
+  const expectedTotalBurned = groupedDataBefore
+    .filter((v) => v.expectedToExecute)
+    .reduce((prev, curr) => {
+      return prev.add(
+        curr.request.amountMToken.sub(
+          curr.request.amountMToken.mul(curr.feePercent).div(hundredPercent),
+        ),
+      );
+    }, BigNumber.from(0));
+
+  const txPromise = callFn();
+  await expect(txPromise).to.not.reverted;
+
+  const txReceipt = await (await txPromise).wait();
+
+  const parsedLogs = txReceipt.logs
+    .filter((v) => v.address === redemptionVault.address)
+    .map((log) => redemptionVault.interface.parseLog(log))
+    .filter((v) => v.name === 'SafeApproveRequest')
+    .map((v) => v.args);
+
+  const requestDatasAfter = await Promise.all(
+    requestIds.map((requestId) => redemptionVault.redeemRequests(requestId)),
+  );
+
+  const balancesAfter = await Promise.all(
+    requestDatasAfter.map(({ tokenOut, sender }) =>
+      // eslint-disable-next-line camelcase
+      balanceOfBase18(ERC20__factory.connect(tokenOut, owner), sender),
+    ),
+  );
+
+  const totalSupplyAfter = await mTBILL.totalSupply();
+
+  const groupedDataAfter = requests.map(({ id, expectedToExecute }, index) => {
+    return {
+      id,
+      expectedToExecute,
+      request: requestDatasAfter[index],
+      balance: balancesAfter[index],
+    };
+  });
+
+  expect(totalSupplyAfter).eq(totalSupplyBefore.sub(expectedTotalBurned));
+
+  for (const [
+    i,
+    { expectedToExecute, id, ...dataBefore },
+  ] of groupedDataBefore.entries()) {
+    const dataAfter = groupedDataAfter[i];
+
+    const requestDataBefore = dataBefore.request;
+    const requestDataAfter = dataAfter.request;
+
+    const balanceAfter = dataAfter.balance;
+    const balanceBefore = dataBefore.balance;
+
+    expect(requestDataAfter.sender).eq(requestDataBefore.sender);
+    expect(requestDataAfter.tokenOut).eq(requestDataBefore.tokenOut);
+    expect(requestDataAfter.amountMToken).eq(requestDataBefore.amountMToken);
+    expect(requestDataAfter.tokenOutRate).eq(requestDataBefore.tokenOutRate);
+
+    const logs = parsedLogs.filter((log) => log.requestId.eq(id));
+
+    const expectedReceivedAggregatedByUser = groupedDataBefore
+      .filter(
+        (v) =>
+          v.request.sender === requestDataBefore.sender &&
+          v.request.tokenOut === requestDataBefore.tokenOut &&
+          v.expectedToExecute,
+      )
+      .reduce((prev, curr) => {
+        return prev.add(curr.expectedReceivedAmount);
+      }, BigNumber.from(0));
+
+    if (expectedToExecute) {
+      expect(logs.length).eq(1);
+      expect(requestDataAfter.mTokenRate).eq(newExpectedRate);
+      expect(requestDataAfter.status).eq(1);
+      expect(balanceAfter).eq(
+        balanceBefore.add(expectedReceivedAggregatedByUser),
+      );
+      const log = logs[0];
+
+      expect(log.newMTokenRate).eq(newExpectedRate);
+      expect(log.requestId).eq(id);
+    } else {
+      expect(logs.length).eq(0);
+      expect(requestDataAfter.mTokenRate).eq(requestDataBefore.mTokenRate);
+      expect(requestDataAfter.status).eq(0);
+    }
   }
 };
 

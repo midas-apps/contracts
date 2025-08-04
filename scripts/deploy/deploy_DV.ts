@@ -7,7 +7,7 @@ import { getMTokenOrThrow } from '../../helpers/utils';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const mToken = getMTokenOrThrow(hre);
-  await deployDepositVault(hre, mToken);
+  await deployDepositVault(hre, mToken, 'dv');
 };
 
 export default func;

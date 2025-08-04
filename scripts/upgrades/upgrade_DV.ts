@@ -11,10 +11,10 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const deployer = await getDeployer(hre);
 
-  const deployment = await hre.upgrades.upgradeProxy(
-    addresses?.mRE7SOL?.depositVault ?? '',
+  const deployment = await hre.upgrades.prepareUpgrade(
+    addresses?.hbXAUt?.depositVault ?? '',
     await hre.ethers.getContractFactory(
-      getTokenContractNames('mRE7SOL').dv!,
+      getTokenContractNames('hbXAUt').dv!,
       deployer,
     ),
     {
@@ -24,12 +24,10 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   );
 
   if (typeof deployment !== 'string') {
-    await deployment.deployTransaction.wait(5);
-    console.log('deployment', deployment);
-    // console.log('deployment.to', deployment.to);
-    // await etherscanVerify(hre, deployment.to!);
+    await deployment.wait(5);
+    console.log(deployment.to);
   } else {
-    console.log('deployment', deployment);
+    console.log(deployment);
   }
 };
 

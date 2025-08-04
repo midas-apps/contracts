@@ -11,9 +11,11 @@ import {
   RedemptionVaultWithUSTBTest,
   DataFeedTest,
   AggregatorV3Mock,
+  DepositVaultWithUSTBTest,
 } from '../../../typechain-types';
 import { deployProxyContract } from '../../common/deploy.helpers';
 import { MAINNET_ADDRESSES } from '../helpers/mainnet-addresses';
+import { setupUSTBAllowlist } from '../helpers/ustb-helpers';
 
 async function impersonateAndFundAccount(
   address: string,
@@ -68,6 +70,7 @@ export async function ustbRedemptionVaultFixture() {
     allRoles.tokenRoles.mTBILL.burner,
     allRoles.tokenRoles.mTBILL.pauser,
     allRoles.tokenRoles.mTBILL.redemptionVaultAdmin,
+    allRoles.tokenRoles.mTBILL.depositVaultAdmin,
     allRoles.common.greenlistedOperator,
   ];
 
@@ -77,6 +80,11 @@ export async function ustbRedemptionVaultFixture() {
 
   await accessControl.grantRole(
     allRoles.tokenRoles.mTBILL.redemptionVaultAdmin,
+    vaultAdmin.address,
+  );
+
+  await accessControl.grantRole(
+    allRoles.tokenRoles.mTBILL.depositVaultAdmin,
     vaultAdmin.address,
   );
 
@@ -116,6 +124,33 @@ export async function ustbRedemptionVaultFixture() {
   );
 
   // Deploy RedemptionVaultWithUSTB
+  const depositVaultWithUSTB =
+    await deployProxyContract<DepositVaultWithUSTBTest>(
+      'DepositVaultWithUSTBTest',
+      [
+        accessControl.address,
+        {
+          mToken: mTBILL.address,
+          mTokenDataFeed: mtbillDataFeed.address,
+        },
+        {
+          feeReceiver: feeReceiver.address,
+          tokensReceiver: tokensReceiver.address,
+        },
+        {
+          instantFee: 100,
+          instantDailyLimit: ethers.constants.MaxUint256,
+        },
+        ethers.constants.AddressZero, // sanctions list
+        200,
+        parseUnits('0'),
+        0,
+        MAINNET_ADDRESSES.SUPERSTATE_TOKEN_PROXY,
+      ],
+      'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,address)',
+    );
+
+  // Deploy RedemptionVaultWithUSTB
   const redemptionVaultWithUSTB =
     await deployProxyContract<RedemptionVaultWithUSTBTest>(
       'RedemptionVaultWithUSTBTest',
@@ -147,6 +182,12 @@ export async function ustbRedemptionVaultFixture() {
       'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)',
     );
 
+  // Grant MINTER_ROLE to vault
+  await accessControl.grantRole(
+    allRoles.tokenRoles.mTBILL.minter,
+    depositVaultWithUSTB.address,
+  );
+
   // Grant BURN_ROLE to vault
   await accessControl.grantRole(
     allRoles.tokenRoles.mTBILL.burner,
@@ -154,7 +195,10 @@ export async function ustbRedemptionVaultFixture() {
   );
 
   // Get mainnet contracts
-  const usdc = await ethers.getContractAt('IERC20', MAINNET_ADDRESSES.USDC);
+  const usdc = await ethers.getContractAt(
+    'IERC20Metadata',
+    MAINNET_ADDRESSES.USDC,
+  );
   const ustbToken = await ethers.getContractAt(
     'ISuperstateToken',
     MAINNET_ADDRESSES.SUPERSTATE_TOKEN_PROXY,
@@ -173,16 +217,32 @@ export async function ustbRedemptionVaultFixture() {
   );
 
   // Setup payment token
+  await depositVaultWithUSTB.connect(owner).addPaymentToken(
+    usdc.address,
+    usdcDataFeed.address,
+    0, // no fee
+    ethers.constants.MaxUint256,
+    true, // is stable
+  );
+
   await redemptionVaultWithUSTB.connect(owner).addPaymentToken(
     usdc.address,
     usdcDataFeed.address,
     0, // no fee
+    ethers.constants.MaxUint256,
     true, // is stable
   );
 
   const ustbOwner = await impersonateAndFundAccount(
     await redemptionIdle.owner(),
   );
+
+  const ustbTokenOwner = await impersonateAndFundAccount(
+    await ustbToken.owner(),
+  );
+
+  await setupUSTBAllowlist(ustbToken, depositVaultWithUSTB.address);
+  await setupUSTBAllowlist(ustbToken, tokensReceiver.address);
 
   return {
     accessControl,
@@ -205,6 +265,8 @@ export async function ustbRedemptionVaultFixture() {
     ustbWhale,
     ustbOwner,
     roles: allRoles,
+    ustbTokenOwner,
+    depositVaultWithUSTB,
   };
 }
 

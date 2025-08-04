@@ -2,12 +2,14 @@ import { MTokenName } from '../config';
 
 export type TokenContractNames = {
   dv: string;
+  dvUstb: string;
   rv: string;
   rvSwapper: string;
   rvBuidl: string;
   rvUstb: string;
   dataFeed?: string;
   customAggregator?: string;
+  customAggregatorGrowth?: string;
   token: string;
   roles: string;
 };
@@ -51,12 +53,14 @@ export const getCommonContractNames = (): CommonContractNames => {
   return {
     ac: 'MidasAccessControl',
     dv: 'DepositVault',
+    dvUstb: 'DepositVaultWithUSTB',
     rv: 'RedemptionVault',
     rvSwapper: 'RedemptionVaultWithSwapper',
-    rvBuidl: 'RedemptionVaultWithBUIDL',
+    rvBuidl: 'RedemptionVaultWIthBUIDL',
     rvUstb: 'RedemptionVaultWithUSTB',
     dataFeed: 'DataFeed',
     customAggregator: 'CustomAggregatorV3CompatibleFeed',
+    customAggregatorGrowth: 'CustomAggregatorV3CompatibleFeedGrowth',
     customAggregatorDiscounted: 'CustomAggregatorV3CompatibleFeedDiscounted',
     roles: 'MidasAccessControlRoles',
   };
@@ -74,12 +78,16 @@ export const getTokenContractNames = (
 
   return {
     dv: `${tokenPrefix}${commonContractNames.dv}`,
+    dvUstb: `${tokenPrefix}${commonContractNames.dvUstb}`,
     rv: `${tokenPrefix}${commonContractNames.rv}`,
     rvSwapper: `${tokenPrefix}${commonContractNames.rvSwapper}`,
     rvBuidl: `${tokenPrefix}${commonContractNames.rvBuidl}`,
     rvUstb: `${tokenPrefix}${commonContractNames.rvUstb}`,
     dataFeed: isTac ? undefined : `${prefix}${commonContractNames.dataFeed}`,
     customAggregator: isTac ? undefined : `${prefix}CustomAggregatorFeed`,
+    customAggregatorGrowth: isTac
+      ? undefined
+      : `${prefix}CustomAggregatorFeedGrowth`,
     token: `${token}`,
     roles: `${prefix}${commonContractNames.roles}`,
   };

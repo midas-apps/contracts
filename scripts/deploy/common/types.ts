@@ -7,7 +7,7 @@ import {
   DeployDataFeedConfig,
   SetRoundDataConfig,
 } from './data-feed';
-import { DeployDvConfig } from './dv';
+import { DeployDvRegularConfig, DeployDvUstbConfig } from './dv';
 import {
   GrantAllTokenRolesConfig,
   GrantDefaultAdminRoleToAcAdminConfig,
@@ -29,7 +29,8 @@ export type DeploymentConfig = {
   networkConfigs: Record<
     number,
     {
-      dv?: DeployDvConfig;
+      dv?: DeployDvRegularConfig;
+      dvUstb?: DeployDvUstbConfig;
       rv?: DeployRvRegularConfig;
       rvBuidl?: DeployRvBuidlConfig;
       rvSwapper?: DeployRvSwapperConfig;

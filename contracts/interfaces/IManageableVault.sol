@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import "./IMTbill.sol";
+import "./IMToken.sol";
 import "./IDataFeed.sol";
 
 /**
@@ -58,6 +58,7 @@ interface IManageableVault {
      * @param token address of token that
      * @param dataFeed token dataFeed address
      * @param fee fee 1% = 100
+     * @param allowance token allowance (decimals 18)
      * @param stable stablecoin flag
      */
     event AddPaymentToken(
@@ -65,6 +66,7 @@ interface IManageableVault {
         address indexed token,
         address indexed dataFeed,
         uint256 fee,
+        uint256 allowance,
         bool stable
     );
 
@@ -163,7 +165,7 @@ interface IManageableVault {
      * @notice The mToken contract address.
      * @return The address of the mToken contract.
      */
-    function mToken() external view returns (IMTbill);
+    function mToken() external view returns (IMToken);
 
     /**
      * @notice withdraws `amount` of a given `token` from the contract.
@@ -184,12 +186,14 @@ interface IManageableVault {
      * @param token token address
      * @param dataFeed dataFeed address
      * @param fee 1% = 100
+     * @param allowance token allowance (decimals 18)
      * @param stable is stablecoin flag
      */
     function addPaymentToken(
         address token,
         address dataFeed,
         uint256 fee,
+        uint256 allowance,
         bool stable
     ) external;
 

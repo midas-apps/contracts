@@ -13,6 +13,7 @@
     "private-vars-leading-underscore": "error",
     "var-name-mixedcase": "error",
     "imports-on-top": "error",
-    "no-empty-blocks": "off"
+    "no-empty-blocks": "off",
+    "not-rely-on-time": "off"
   }
 }
