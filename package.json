@@ -34,6 +34,7 @@
     "hh:run": "yarn hardhat run",
     "hh:run:script": "yarn hardhat runscript",
     "deploy:ac": "yarn hh:run:script scripts/deploy/deploy_AccessControl.ts",
+    "deploy:timelock": "yarn hh:run:script scripts/deploy/deploy_TimeLock.ts",
     "deploy:token": "yarn hh:run:script scripts/deploy/deploy_Token.ts",
     "deploy:aggregator": "yarn hh:run:script scripts/deploy/deploy_CustomAggregator.ts",
     "deploy:aggregator:ptoken": "yarn hh:run:script scripts/deploy/deploy_PaymentToken_CustomAggregator.ts",

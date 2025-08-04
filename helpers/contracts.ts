@@ -18,6 +18,7 @@ type CommonContractNames = Omit<TokenContractNames, 'token'> & {
   ac: string;
   customAggregator: string;
   customAggregatorDiscounted: string;
+  timelock: string;
 };
 
 export const contractNamesPrefixes: Record<MTokenName, string> = {
@@ -63,6 +64,7 @@ export const getCommonContractNames = (): CommonContractNames => {
     customAggregatorGrowth: 'CustomAggregatorV3CompatibleFeedGrowth',
     customAggregatorDiscounted: 'CustomAggregatorV3CompatibleFeedDiscounted',
     roles: 'MidasAccessControlRoles',
+    timelock: 'TimelockController',
   };
 };
 

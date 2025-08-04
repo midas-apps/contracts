@@ -29,6 +29,7 @@ export type MidasAddresses = Partial<Record<MTokenName, TokenAddresses>> & {
   // TODO: remove?
   eUSD?: TokenAddresses;
   accessControl?: string;
+  timelock?: string;
   dataFeeds?: Record<string, DataFeedAddresses>;
 };
 
@@ -815,6 +816,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x807f2CF75EC43b11De43a529A0Dd9FEF754a9801',
       redemptionVaultSwapper: '0x313C76eCd990B728681f29464978D5637Cb78164',
     },
+    timelock: '0x7d5B8ab9C948fb11433e0eDdADD718dc5Cb040bb',
     accessControl: '0xbf25b58cB8DfaD688F7BcB2b87D71C23A6600AaC',
   },
   tacTestnet: {
