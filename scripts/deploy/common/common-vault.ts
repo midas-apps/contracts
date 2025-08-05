@@ -69,9 +69,9 @@ export const addFeeWaived = async (
     provider,
     token,
     networkConfig,
-    async (vaultType, _, feeWaiveAddress) => {
+    async (vaultType, _, __, ___, feeWaiveLabel) => {
       console.log(
-        `successfully simulated ${feeWaiveAddress} processing for ${vaultType}`,
+        `successfully simulated ${feeWaiveLabel} processing for ${vaultType}`,
       );
     },
   );
@@ -81,7 +81,13 @@ export const addFeeWaived = async (
     provider,
     token,
     networkConfig,
-    async (vaultType, vaultMToken, vaultContract, feeWaiveAddress) => {
+    async (
+      vaultType,
+      vaultMToken,
+      vaultContract,
+      feeWaiveAddress,
+      feeWaiveLabel,
+    ) => {
       const waived = await vaultContract.waivedFeeRestriction(feeWaiveAddress!);
 
       if (waived) {
@@ -96,11 +102,11 @@ export const addFeeWaived = async (
       const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
         action: 'update-vault',
         subAction: 'add-fee-waived',
-        comment: `waive fee for ${feeWaiveAddress} in ${vaultMToken} ${vaultType}`,
+        comment: `waive fee for ${feeWaiveLabel} in ${vaultMToken} ${vaultType}`,
         mToken: vaultMToken,
       });
 
-      console.log(`${vaultType}:${feeWaiveAddress} tx initiated: ${txRes}`);
+      console.log(`${vaultType} tx initiated`, txRes);
     },
   );
 };
@@ -177,6 +183,7 @@ const foreachFeeWaiveAddress = async (
     vaultMToken: MTokenName,
     vaultContract: ManageableVault,
     feeWaiveAddress: string,
+    feeWaiveLabel: string,
   ) => Promise<void>,
 ) => {
   const addresses = getCurrentAddresses(hre);
@@ -185,7 +192,7 @@ const foreachFeeWaiveAddress = async (
     const vaultContract = await getVaultContract(
       hre,
       provider,
-      token,
+      vault.fromVault.mToken,
       vault.fromVault.type,
     );
 
@@ -204,6 +211,9 @@ const foreachFeeWaiveAddress = async (
         vault.fromVault.mToken,
         vaultContract,
         address,
+        typeof toWaive === 'string'
+          ? toWaive
+          : `${toWaive.mToken ?? token} ${toWaive.type}`,
       );
     }
   }
