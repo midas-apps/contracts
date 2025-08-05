@@ -143,6 +143,11 @@ const setRoundData = async (
     action: isMToken ? 'update-feed-mtoken' : 'update-feed-ptoken',
     comment: `${token} set price to ${formatUnits(networkConfig.data, 8)}`,
   });
+
+  console.log(
+    `${token} set price to ${formatUnits(networkConfig.data, 8)}`,
+    txRes,
+  );
 };
 
 const getAggregatorContract = async (
