@@ -1,6 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { AddPaymentTokensConfig } from './common-vault';
+import { AddFeeWaivedConfig, AddPaymentTokensConfig } from './common-vault';
 import {
   DeployCustomAggregatorConfig,
   DeployCustomAggregatorDiscountedConfig,
@@ -38,6 +38,7 @@ export type DeploymentConfig = {
         addPaymentTokens?: AddPaymentTokensConfig;
         grantRoles?: GrantAllTokenRolesConfig;
         setRoundData?: SetRoundDataConfig;
+        addFeeWaived?: AddFeeWaivedConfig;
       };
     }
   >;

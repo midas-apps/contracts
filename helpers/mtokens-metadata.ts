@@ -112,4 +112,8 @@ export const mTokensMetadata: Record<
     name: 'Hyperbeat USDC',
     symbol: 'hbUSDC',
   },
+  mFARM: {
+    name: 'Midas Farm Capital',
+    symbol: 'mFARM',
+  },
 };

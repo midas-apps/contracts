@@ -19,6 +19,7 @@ declare module 'hardhat/types/runtime' {
           comment?: string;
           action?: string;
           from?: string;
+          mToken?: string;
         },
       ) => Promise<
         | { type: 'hardhatSigner'; signedTx: string }

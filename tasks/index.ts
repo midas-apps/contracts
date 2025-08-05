@@ -67,12 +67,12 @@ task('runscript', 'Runs a user-defined script')
           return {
             type: 'customSigner',
             payload: await signTransaction(transaction, {
-              ...txSignMetadata,
               chain: {
                 name: hre.network.name,
                 id: hre.network.config.chainId,
               },
               mToken: hre.mtoken,
+              ...txSignMetadata,
             }),
           };
         },

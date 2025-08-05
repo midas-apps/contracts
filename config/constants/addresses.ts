@@ -175,7 +175,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
       depositVault: '0x99361435420711723aF805F08187c9E6bF796683',
       redemptionVault: '0xF6e51d24F4793Ac5e71e0502213a9BBE3A6d4517',
-      redemptionVaultBuidl: '0x569D7dccBF6923350521ecBC28A555A500c4f0Ec',
+      redemptionVaultUstb: '0x569D7dccBF6923350521ecBC28A555A500c4f0Ec',
     },
     mBASIS: {
       dataFeed: '0x1615cBC603192ae8A9FF20E98dd0e40a405d76e4',
@@ -296,6 +296,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x56814399caaEDCEE4F58D2e55DA058A81DDE744f',
       depositVault: '0xA6d60A71844bc134f4303F5E40169D817b491E37',
       redemptionVaultSwapper: '0x2d7d5b1706653796602617350571B3F8999B950c',
+    },
+    mFARM: {
+      token: '0xA19f6e0dF08a7917F2F8A33Db66D0AF31fF5ECA6',
+      customFeed: '0x65df7299A9010E399A38d6B7159d25239cDF039b',
+      dataFeed: '0x9f49B0980B141b539e2A94Ec0864Faf699fF9524',
+      depositVault: '0x695fb34B07a8cEc2411B1bb519fD8F1731850c81',
+      redemptionVaultSwapper: '0xf4F042D90f0C0d3ABA4A30Caa6Ac124B14A7e600',
     },
     TACmBTC: {
       token: '0x307267989A7bec3A57FD7fd96017C49803589Fd0',

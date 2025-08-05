@@ -137,13 +137,18 @@ export const sendAndWaitForCustomTxSign = async (
   hre: HardhatRuntimeEnvironment,
   populatedTx: PopulatedTransaction,
   txSignMetadata?: {
+    mToken?: MTokenName;
     comment?: string;
     action?:
       | 'update-vault'
       | 'update-ac'
       | 'update-feed-mtoken'
       | 'update-feed-ptoken';
-    subAction?: 'add-payment-token' | 'grant-token-roles';
+    subAction?:
+      | 'add-payment-token'
+      | 'grant-token-roles'
+      | 'add-fee-waived'
+      | 'set-round-data';
   },
   confirmations = 2,
 ) => {
