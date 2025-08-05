@@ -1,9 +1,16 @@
-import { cancel, isCancel, multiselect, text } from '@clack/prompts';
+import {
+  cancel,
+  group,
+  isCancel,
+  multiselect,
+  spinner,
+  text,
+} from '@clack/prompts';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { Project, SyntaxKind } from 'ts-morph';
 
 import { execSync } from 'child_process';
-import fs from 'fs';
+import fs from 'fs/promises';
 import path from 'path';
 
 import {
@@ -102,10 +109,12 @@ export const updateConfigFiles = (
       SyntaxKind.ObjectLiteralExpression,
     );
 
-    objLiteral.addPropertyAssignment({
-      name: mToken,
-      initializer: (writer) => writer.write(`'${contractNamePrefix}'`),
-    });
+    if (!objLiteral.getProperty(mToken)) {
+      objLiteral.addPropertyAssignment({
+        name: mToken,
+        initializer: (writer) => writer.write(`'${contractNamePrefix}'`),
+      });
+    }
   }
 
   {
@@ -114,10 +123,12 @@ export const updateConfigFiles = (
       SyntaxKind.ObjectLiteralExpression,
     );
 
-    objLiteral.addPropertyAssignment({
-      name: mToken,
-      initializer: (writer) => writer.write(`'${rolesPrefix}'`),
-    });
+    if (!objLiteral.getProperty(mToken)) {
+      objLiteral.addPropertyAssignment({
+        name: mToken,
+        initializer: (writer) => writer.write(`'${rolesPrefix}'`),
+      });
+    }
   }
 
   {
@@ -126,17 +137,29 @@ export const updateConfigFiles = (
       SyntaxKind.ObjectLiteralExpression,
     );
 
-    objLiteral.addPropertyAssignment({
-      name: mToken,
-      initializer: (writer) =>
-        writer.write(`{ name: '${name}', symbol: '${symbol}' }`),
-    });
+    if (!objLiteral.getProperty(mToken)) {
+      objLiteral.addPropertyAssignment({
+        name: mToken,
+        initializer: (writer) =>
+          writer.write(`{
+            name: '${name}',
+            symbol: '${symbol}'
+          }`),
+      });
+    }
   }
 
-  contractPrefixesFile.saveSync();
-  rolesFile.saveSync();
-  contractNameFile.saveSync();
-  mTokensFile.saveSync();
+  const files = [
+    mTokensFile,
+    contractPrefixesFile,
+    rolesFile,
+    contractNameFile,
+  ];
+
+  for (const file of files) {
+    file.saveSync();
+    lintAndFormatTs(file.getFilePath());
+  }
 };
 
 const requireNotCancelled = <T>(value: T | symbol) => {
@@ -149,69 +172,105 @@ const requireNotCancelled = <T>(value: T | symbol) => {
 };
 
 const getConfigFromUser = async () => {
-  const tokenContractName = requireNotCancelled(
-    await text({
-      message: 'What is the token contract name?',
-      placeholder: 'mRe7SOL',
-      initialValue: undefined,
-      validate(value) {
-        if (!value || value.length === 0) return `Value is required!`;
-      },
-    }),
-  );
+  const {
+    tokenContractName,
+    tokenName,
+    tokenSymbol,
+    contractNamePrefix,
+    rolesPrefix,
+  } = await group({
+    tokenContractName: () =>
+      text({
+        message: 'What is the token contract name?',
+        placeholder: 'mRe7SOL',
+        initialValue: undefined,
+        validate(value) {
+          if (!value || value.length === 0) return `Value is required!`;
+        },
+      }),
 
-  const tokenName = requireNotCancelled(
-    await text({
-      message: 'What is the token name?',
-      placeholder: 'Midas Re7SOL',
-      initialValue: undefined,
-      validate(value) {
-        if (!value || value.length === 0) return `Value is required!`;
-      },
-    }),
-  );
+    tokenName: () =>
+      text({
+        message: 'What is the token name?',
+        placeholder: 'Midas Re7SOL',
+        initialValue: undefined,
+        validate(value) {
+          if (!value || value.length === 0) return `Value is required!`;
+        },
+      }),
 
-  const tokenSymbol = requireNotCancelled(
-    await text({
-      message: 'What is the token symbol?',
-      placeholder: 'mRe7SOL',
-      initialValue: tokenContractName,
-      validate(value) {
-        if (!value || value.length === 0) return `Value is required!`;
-      },
-    }),
-  );
+    tokenSymbol: ({ results: { tokenContractName } }) =>
+      text({
+        message: 'What is the token symbol?',
+        placeholder: 'mRe7SOL',
+        initialValue: tokenContractName!,
+        validate(value) {
+          if (!value || value.length === 0) return `Value is required!`;
+        },
+      }),
 
-  const contractNamePrefix = requireNotCancelled(
-    await text({
-      message: 'What is the contract name prefix?',
-      placeholder: 'MRe7Sol',
-      initialValue: undefined,
-      validate(value) {
-        if (!value || value.length === 0) return `Value is required!`;
-      },
-    }),
-  );
+    contractNamePrefix: () =>
+      text({
+        message: 'What is the contract name prefix?',
+        placeholder: 'MRe7Sol',
+        initialValue: undefined,
+        validate(value) {
+          if (!value || value.length === 0) return `Value is required!`;
+        },
+      }),
 
-  const rolesPrefix = requireNotCancelled(
-    await text({
-      message: 'What is the roles prefix?',
-      placeholder: 'M_RE7SOL',
-      initialValue: undefined,
-      validate(value) {
-        if (!value || value.length === 0) return `Value is required!`;
-      },
-    }),
-  );
+    rolesPrefix: () =>
+      text({
+        message: 'What is the roles prefix?',
+        placeholder: 'M_RE7SOL',
+        initialValue: undefined,
+        validate(value) {
+          if (!value || value.length === 0) return `Value is required!`;
+        },
+      }),
+  });
 
   return {
     tokenName,
     contractNamePrefix,
     rolesPrefix,
-    tokenSymbol,
+    tokenSymbol: tokenSymbol as string,
     tokenContractName,
   };
 };
+
+const lintAndFormatTs = (path: string) => {
+  try {
+    execSync(
+      `yarn prettier "${path}" --write > /dev/null && eslint "${path}" --fix > /dev/null`,
+      {
+        stdio: 'inherit',
+      },
+    );
+  } catch (error) {
+    cancel('Failed to run lint&format fix for generated contracts');
+    process.exit(1);
+  }
+};
+
+const lintAndFormatSol = (folder: string) => {
+  try {
+    execSync(
+      `yarn solhint ${folder}/**/*.sol --quiet --fix > /dev/null & yarn prettier ${folder}/**/*.sol --write > /dev/null`,
+      {
+        stdio: 'inherit',
+      },
+    );
+  } catch (error) {
+    cancel('Failed to run lint&format fix for generated contracts');
+    process.exit(1);
+  }
+};
+
+async function asyncWrap(fn: () => any) {
+  return await new Promise((resolve) => setImmediate(() => resolve(fn())));
+}
+
 export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
   const config = await getConfigFromUser();
 
@@ -257,25 +316,28 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
 
   const mToken = config.tokenContractName;
 
-  updateConfigFiles(hre, {
-    contractNamePrefix: config.contractNamePrefix,
-    rolesPrefix: config.rolesPrefix,
-    name: config.tokenName,
-    symbol: config.tokenSymbol,
-    mToken,
-  });
+  await asyncWrap(() =>
+    updateConfigFiles(hre, {
+      contractNamePrefix: config.contractNamePrefix,
+      rolesPrefix: config.rolesPrefix,
+      name: config.tokenName,
+      symbol: config.tokenSymbol,
+      mToken,
+    }),
+  );
 
   const folder = path.join(hre.config.paths.root, 'contracts', `${mToken}`);
 
-  console.log(folder);
-
-  const isFolderExists = fs.existsSync(folder);
+  const isFolderExists = await fs
+    .access(folder)
+    .then(() => true)
+    .catch(() => false);
 
   if (isFolderExists) {
-    fs.rmSync(folder, { recursive: true });
+    await fs.rm(folder, { recursive: true });
   }
 
-  fs.mkdirSync(folder, { recursive: true });
+  await fs.mkdir(folder, { recursive: true });
 
   const generators = [
     getTokenRolesContractFromTemplate,
@@ -292,22 +354,12 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
       process.exit(0);
     }
 
-    fs.writeFileSync(
+    await fs.writeFile(
       path.join(folder, `${contract.name}.sol`),
       contract.content,
+      'utf-8',
     );
   }
 
-  // run lint&format fix for generated contracts
-  try {
-    execSync(
-      `yarn solhint ${folder}/**/*.sol --quiet --fix > /dev/null & yarn prettier ${folder}/**/*.sol --write > /dev/null`,
-      {
-        stdio: 'inherit',
-      },
-    );
-  } catch (error) {
-    cancel('Failed to run lint&format fix for generated contracts');
-    process.exit(1);
-  }
+  await asyncWrap(() => lintAndFormatSol(folder));
 };
