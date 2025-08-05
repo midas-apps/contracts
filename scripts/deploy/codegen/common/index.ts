@@ -267,10 +267,6 @@ const lintAndFormatSol = (folder: string) => {
   }
 };
 
-async function asyncWrap(fn: () => any) {
-  return await new Promise((resolve) => setImmediate(() => resolve(fn())));
-}
-
 export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
   const config = await getConfigFromUser();
 
@@ -316,15 +312,13 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
 
   const mToken = config.tokenContractName;
 
-  await asyncWrap(() =>
-    updateConfigFiles(hre, {
-      contractNamePrefix: config.contractNamePrefix,
-      rolesPrefix: config.rolesPrefix,
-      name: config.tokenName,
-      symbol: config.tokenSymbol,
-      mToken,
-    }),
-  );
+  updateConfigFiles(hre, {
+    contractNamePrefix: config.contractNamePrefix,
+    rolesPrefix: config.rolesPrefix,
+    name: config.tokenName,
+    symbol: config.tokenSymbol,
+    mToken,
+  });
 
   const folder = path.join(hre.config.paths.root, 'contracts', `${mToken}`);
 
@@ -361,5 +355,5 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
     );
   }
 
-  await asyncWrap(() => lintAndFormatSol(folder));
+  lintAndFormatSol(folder);
 };
