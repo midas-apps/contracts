@@ -31,6 +31,86 @@ export type AddPaymentTokensConfig = {
   }[];
 };
 
+export type AddFeeWaivedConfig = {
+  fromVault: {
+    mToken: MTokenName;
+    type: VaultType;
+  };
+  toWaive: (
+    | {
+        // default: hre.mtoken
+        mToken?: MTokenName;
+        type: VaultType;
+      }
+    | string
+  )[];
+}[];
+
+export const addFeeWaived = async (
+  hre: HardhatRuntimeEnvironment,
+  token: MTokenName,
+) => {
+  const { addFeeWaived: networkConfig } = getNetworkConfig(
+    hre,
+    token,
+    'postDeploy',
+  );
+
+  if (!networkConfig) {
+    throw new Error('Network config is not found');
+  }
+
+  const provider = await getDeployer(hre);
+
+  // simulation step to ensure that all the loop iterations wont fail on
+  // simple checks step
+  await foreachFeeWaiveAddress(
+    hre,
+    provider,
+    token,
+    networkConfig,
+    async (vaultType, _, __, ___, feeWaiveLabel) => {
+      console.log(
+        `successfully simulated ${feeWaiveLabel} processing for ${vaultType}`,
+      );
+    },
+  );
+
+  await foreachFeeWaiveAddress(
+    hre,
+    provider,
+    token,
+    networkConfig,
+    async (
+      vaultType,
+      vaultMToken,
+      vaultContract,
+      feeWaiveAddress,
+      feeWaiveLabel,
+    ) => {
+      const waived = await vaultContract.waivedFeeRestriction(feeWaiveAddress!);
+
+      if (waived) {
+        console.log('Fee is already waived, skipping...', feeWaiveAddress);
+        return;
+      }
+
+      const tx = await vaultContract.populateTransaction.addWaivedFeeAccount(
+        feeWaiveAddress!,
+      );
+
+      const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
+        action: 'update-vault',
+        subAction: 'add-fee-waived',
+        comment: `waive fee for ${feeWaiveLabel} in ${vaultMToken} ${vaultType}`,
+        mToken: vaultMToken,
+      });
+
+      console.log(`${vaultType} tx initiated`, txRes);
+    },
+  );
+};
+
 export const addPaymentTokens = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
@@ -91,6 +171,52 @@ export const addPaymentTokens = async (
       console.log(`${vaultType}:${paymentToken.token} tx initiated: ${txRes}`);
     },
   );
+};
+
+const foreachFeeWaiveAddress = async (
+  hre: HardhatRuntimeEnvironment,
+  provider: Provider | Signer,
+  token: MTokenName,
+  networkConfig: AddFeeWaivedConfig,
+  callback?: (
+    vaultType: VaultType,
+    vaultMToken: MTokenName,
+    vaultContract: ManageableVault,
+    feeWaiveAddress: string,
+    feeWaiveLabel: string,
+  ) => Promise<void>,
+) => {
+  const addresses = getCurrentAddresses(hre);
+
+  for (const vault of networkConfig) {
+    const vaultContract = await getVaultContract(
+      hre,
+      provider,
+      vault.fromVault.mToken,
+      vault.fromVault.type,
+    );
+
+    for (const toWaive of vault.toWaive) {
+      const address =
+        typeof toWaive === 'string'
+          ? toWaive
+          : addresses?.[toWaive.mToken ?? token]?.[toWaive.type];
+
+      if (!address) {
+        throw new Error('Invalid address to waive');
+      }
+
+      await callback?.(
+        vault.fromVault.type,
+        vault.fromVault.mToken,
+        vaultContract,
+        address,
+        typeof toWaive === 'string'
+          ? toWaive
+          : `${toWaive.mToken ?? token} ${toWaive.type}`,
+      );
+    }
+  }
 };
 
 const foreachVaultPaymentToken = async (
