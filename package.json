@@ -4,6 +4,9 @@
   "description": "",
   "license": "AGPL-3.0",
   "author": "RedDuck Software",
+  "engines": {
+    "node": "20 || >=22"
+  },
   "scripts": {
     "prepare": "husky install",
     "hardhat": "hardhat",
