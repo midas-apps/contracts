@@ -143,12 +143,14 @@ export const sendAndWaitForCustomTxSign = async (
       | 'update-vault'
       | 'update-ac'
       | 'update-feed-mtoken'
-      | 'update-feed-ptoken';
+      | 'update-feed-ptoken'
+      | 'update-timelock';
     subAction?:
       | 'add-payment-token'
       | 'grant-token-roles'
       | 'add-fee-waived'
-      | 'set-round-data';
+      | 'set-round-data'
+      | 'timelock-call-upgrade';
   },
   confirmations = 2,
 ) => {
