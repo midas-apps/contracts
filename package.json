@@ -4,6 +4,9 @@
   "description": "",
   "license": "AGPL-3.0",
   "author": "RedDuck Software",
+  "engines": {
+    "node": "20 || >=22"
+  },
   "scripts": {
     "prepare": "husky install",
     "hardhat": "hardhat",
@@ -51,6 +54,7 @@
     "deploy:post:grant:admin": "yarn hh:run:script scripts/deploy/post-deploy/grant_DefaultAdminRole.ts",
     "deploy:post:revoke:roles": "yarn hh:run:script scripts/deploy/post-deploy/revoke_DeployerRoles.ts",
     "deploy:post:set:price": "yarn hh:run:script scripts/deploy/post-deploy/set_RoundData.ts",
+    "deploy:post:set:waived": "yarn hh:run:script scripts/deploy/post-deploy/add_FeeWaived.ts",
     "verify:proxy": "yarn hardhat verify --contract @openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy",
     "verify:sourcify": "VERIFY_SOURCIFY=true VERIFY_ETHERSCAN=false yarn hardhat verify",
     "dump:roles": "yarn hh:run scripts/dump_roles.ts",
@@ -102,6 +106,7 @@
     "solhint": "^3.3.7",
     "solidity-coverage": "^0.8.16",
     "solidity-docgen": "^0.6.0-beta.35",
+    "ts-morph": "^26.0.0",
     "ts-node": "^10.9.1",
     "typechain": "^8.1.0",
     "typescript": "^4.8.4"

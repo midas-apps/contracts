@@ -176,7 +176,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
       depositVault: '0x99361435420711723aF805F08187c9E6bF796683',
       redemptionVault: '0xF6e51d24F4793Ac5e71e0502213a9BBE3A6d4517',
-      redemptionVaultBuidl: '0x569D7dccBF6923350521ecBC28A555A500c4f0Ec',
+      redemptionVaultUstb: '0x569D7dccBF6923350521ecBC28A555A500c4f0Ec',
     },
     mBASIS: {
       dataFeed: '0x1615cBC603192ae8A9FF20E98dd0e40a405d76e4',
@@ -297,6 +297,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x56814399caaEDCEE4F58D2e55DA058A81DDE744f',
       depositVault: '0xA6d60A71844bc134f4303F5E40169D817b491E37',
       redemptionVaultSwapper: '0x2d7d5b1706653796602617350571B3F8999B950c',
+    },
+    mFARM: {
+      token: '0xA19f6e0dF08a7917F2F8A33Db66D0AF31fF5ECA6',
+      customFeed: '0x65df7299A9010E399A38d6B7159d25239cDF039b',
+      dataFeed: '0x9f49B0980B141b539e2A94Ec0864Faf699fF9524',
+      depositVault: '0x695fb34B07a8cEc2411B1bb519fD8F1731850c81',
+      redemptionVaultSwapper: '0xf4F042D90f0C0d3ABA4A30Caa6Ac124B14A7e600',
     },
     TACmBTC: {
       token: '0x307267989A7bec3A57FD7fd96017C49803589Fd0',
@@ -563,6 +570,10 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x7F1f3E3D57E5549828909AE3381C7bFF05A4fE09',
         dataFeed: '0xE1C769D56Cb6448813732F7736041425AA0A4A75',
       },
+      usdc: {
+        aggregator: '0x4C89968338b75551243C99B452c84a01888282fD',
+        dataFeed: '0x0C59a087922f21eb49FFa0fe33E0D17B62Ff4C70',
+      },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     hbUSDT: {
@@ -592,6 +603,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x70519793f50c95f435972637E1190f41cfc907Bd',
       depositVault: '0xF538675D292d8b372712f44eaf306Cc66cF6d8DC',
       redemptionVaultSwapper: '0x558806a80b42cAB4ED75c74bfB178EDc9087AA32',
+    },
+    hbUSDC: {
+      token: '0x057ced81348D57Aad579A672d521d7b4396E8a61',
+      customFeed: '0xc82CAd78983436BddfcAf0F21316207D87b87462',
+      dataFeed: '0xb013A5956f8b838B7E668DFbdf1efA978Ccc7a23',
+      depositVault: '0xd202CF41a607627cd1A31f650D13599b588eBd1c',
+      redemptionVaultSwapper: '0xBb820D0c85C0B5D1B0dC8C6D3541fbb1AB4C7a60',
     },
   },
   katana: {

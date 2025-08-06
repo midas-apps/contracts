@@ -108,4 +108,12 @@ export const mTokensMetadata: Record<
     name: 'Liquid HYPE Yield',
     symbol: 'liquidHYPE',
   },
+  hbUSDC: {
+    name: 'Hyperbeat USDC',
+    symbol: 'hbUSDC',
+  },
+  mFARM: {
+    name: 'Midas Farm Capital',
+    symbol: 'mFARM',
+  },
 };

@@ -1,26 +1,38 @@
 import { MTokenName } from '../../../../../config';
-import { getTokenContractNames } from '../../../../../helpers/contracts';
-import { mTokensMetadata } from '../../../../../helpers/mtokens-metadata';
-import { getRolesNamesForToken } from '../../../../../helpers/roles';
+import { importWithoutCache } from '../../../../../helpers/utils';
 
-export const getTokenContractFromTemplate = (mToken: MTokenName) => {
+export const getTokenContractFromTemplate = async (mToken: MTokenName) => {
+  const { getTokenContractNames } = await importWithoutCache(
+    require.resolve('../../../../../helpers/contracts'),
+  );
+
+  const { getRolesNamesForToken } = await importWithoutCache(
+    require.resolve('../../../../../helpers/roles'),
+  );
+
+  const { mTokensMetadata } = await importWithoutCache(
+    require.resolve('../../../../../helpers/mtokens-metadata'),
+  );
+
+  const metadata = mTokensMetadata[mToken];
+
   const contractNames = getTokenContractNames(mToken);
   const roles = getRolesNamesForToken(mToken);
-  const metadata = mTokensMetadata[mToken];
 
   return {
     name: contractNames.token,
     content: `
   // SPDX-License-Identifier: MIT
   pragma solidity 0.8.9;
-  import "../mTBILL/mTBILL.sol";
+
+  import "../mToken.sol";
 
   /**
    * @title ${contractNames.token}
    * @author RedDuck Software
    */
   //solhint-disable contract-name-camelcase
-  contract ${contractNames.token} is mTBILL {
+  contract ${contractNames.token} is mToken {
       /**
        * @notice actor that can mint ${contractNames.token}
        */
@@ -45,12 +57,15 @@ export const getTokenContractFromTemplate = (mToken: MTokenName) => {
       uint256[50] private __gap;
 
       /**
-       * @notice upgradeable pattern contract\`s initializer
-       * @param _accessControl address of MidasAccessControl contract
+       * @inheritdoc mToken
        */
-      function initialize(address _accessControl) external override initializer {
-          __Blacklistable_init(_accessControl);
-          __ERC20_init("${metadata.name}", "${metadata.symbol}");
+      function _getNameSymbol()
+          internal
+          pure
+          override
+          returns (string memory, string memory)
+      {
+          return ("${metadata.name}", "${metadata.symbol}");
       }
 
       /**

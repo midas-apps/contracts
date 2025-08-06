@@ -1,3 +1,4 @@
+import { hbUSDCDeploymentConfig } from './hbUSDC';
 import { hbUSDTDeploymentConfig } from './hbUSDT';
 import { hbXAUtDeploymentConfig } from './hbXAUt';
 import { hypeBTCDeploymentConfig } from './hypeBTC';
@@ -10,6 +11,7 @@ import { mBASISDeploymentConfig } from './mBASIS';
 import { mBTCDeploymentConfig } from './mBTC';
 import { mEDGEDeploymentConfig } from './mEDGE';
 import { mevBTCDeploymentConfig } from './mevBTC';
+import { mFARMDeploymentConfig } from './mFARM';
 import { mFONEDeploymentConfig } from './mFONE';
 import { mHYPERDeploymentConfig } from './mHYPER';
 import { mLIQUIDITYDeploymentConfig } from './mLIQUIDITY';
@@ -55,4 +57,6 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mevBTC: mevBTCDeploymentConfig,
   lstHYPE: lstHYPEDeploymentConfig,
   liquidHYPE: liquidHYPEDeploymentConfig,
+  hbUSDC: hbUSDCDeploymentConfig,
+  mFARM: mFARMDeploymentConfig,
 };
