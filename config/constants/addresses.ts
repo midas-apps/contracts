@@ -562,6 +562,10 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x7F1f3E3D57E5549828909AE3381C7bFF05A4fE09',
         dataFeed: '0xE1C769D56Cb6448813732F7736041425AA0A4A75',
       },
+      usdc: {
+        aggregator: '0x4C89968338b75551243C99B452c84a01888282fD',
+        dataFeed: '0x0C59a087922f21eb49FFa0fe33E0D17B62Ff4C70',
+      },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     hbUSDT: {
@@ -591,6 +595,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x70519793f50c95f435972637E1190f41cfc907Bd',
       depositVault: '0xF538675D292d8b372712f44eaf306Cc66cF6d8DC',
       redemptionVaultSwapper: '0x558806a80b42cAB4ED75c74bfB178EDc9087AA32',
+    },
+    hbUSDC: {
+      token: '0x057ced81348D57Aad579A672d521d7b4396E8a61',
+      customFeed: '0xc82CAd78983436BddfcAf0F21316207D87b87462',
+      dataFeed: '0xb013A5956f8b838B7E668DFbdf1efA978Ccc7a23',
+      depositVault: '0xd202CF41a607627cd1A31f650D13599b588eBd1c',
+      redemptionVaultSwapper: '0xBb820D0c85C0B5D1B0dC8C6D3541fbb1AB4C7a60',
     },
   },
   katana: {

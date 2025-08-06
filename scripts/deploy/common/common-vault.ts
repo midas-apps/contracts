@@ -1,5 +1,5 @@
 import { Provider } from '@ethersproject/providers';
-import { BigNumber, constants, Signer } from 'ethers';
+import { BigNumber, BigNumberish, constants, Signer } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
@@ -24,7 +24,9 @@ export type AddPaymentTokensConfig = {
       // default: true
       isStable?: boolean;
       // default: 0
-      fee?: BigNumber;
+      fee?: BigNumberish;
+      // default: infinite
+      allowance?: BigNumberish;
     }[];
   }[];
 };
@@ -76,6 +78,7 @@ export const addPaymentTokens = async (
         tokenConfig.token!,
         tokenConfig.dataFeed!,
         paymentToken.fee ?? BigNumber.from(0),
+        paymentToken.allowance ?? constants.MaxUint256,
         paymentToken.isStable ?? true,
       );
 

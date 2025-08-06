@@ -1,8 +1,15 @@
 import { MTokenName } from '../../../../../config';
-import { getTokenContractNames } from '../../../../../helpers/contracts';
-import { getRolesNamesForToken } from '../../../../../helpers/roles';
+import { importWithoutCache } from '../../../../../helpers/utils';
 
-export const getRvContractFromTemplate = (mToken: MTokenName) => {
+export const getRvContractFromTemplate = async (mToken: MTokenName) => {
+  const { getTokenContractNames } = await importWithoutCache(
+    require.resolve('../../../../../helpers/contracts'),
+  );
+
+  const { getRolesNamesForToken } = await importWithoutCache(
+    require.resolve('../../../../../helpers/roles'),
+  );
+
   const contractNames = getTokenContractNames(mToken);
   const roles = getRolesNamesForToken(mToken);
 

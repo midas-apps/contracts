@@ -2,12 +2,10 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { generateContracts } from './common';
 
-import { getMTokenOrThrow } from '../../../helpers/utils';
 import { DeployFunction } from '../common/types';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const mToken = getMTokenOrThrow(hre);
-  await generateContracts(hre, mToken);
+  await generateContracts(hre);
 };
 
 export default func;
