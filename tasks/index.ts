@@ -49,12 +49,14 @@ task('runscript', 'Runs a user-defined script')
 
     if (!customSignerScript) {
       hre.customSigner = {
-        signTransaction: async (transaction) => {
+        sendTransaction: async (transaction) => {
+          const tx = await deployerSigner.sendTransaction({
+            ...transaction,
+          });
+
           return {
             type: 'hardhatSigner',
-            signedTx: await deployerSigner.signTransaction({
-              ...transaction,
-            }),
+            tx,
           };
         },
       };
@@ -63,7 +65,7 @@ task('runscript', 'Runs a user-defined script')
       const { signTransaction } = await import(scriptPathResolved);
 
       hre.customSigner = {
-        signTransaction: async (transaction, txSignMetadata) => {
+        sendTransaction: async (transaction, txSignMetadata) => {
           return {
             type: 'customSigner',
             payload: await signTransaction(transaction, {

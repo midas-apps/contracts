@@ -1,3 +1,4 @@
+import { TransactionResponse } from '@ethersproject/providers';
 import { BigNumberish } from 'ethers';
 
 import { MTokenName, PaymentTokenName } from '../config/types';
@@ -9,7 +10,7 @@ declare module 'hardhat/types/runtime' {
     mtoken?: MTokenName;
     paymentToken?: PaymentTokenName;
     customSigner?: {
-      signTransaction: (
+      sendTransaction: (
         transaction: {
           data: string;
           to: string;
@@ -22,7 +23,7 @@ declare module 'hardhat/types/runtime' {
           mToken?: string;
         },
       ) => Promise<
-        | { type: 'hardhatSigner'; signedTx: string }
+        | { type: 'hardhatSigner'; tx: TransactionResponse }
         | { type: 'customSigner'; payload: unknown }
       >;
     };
