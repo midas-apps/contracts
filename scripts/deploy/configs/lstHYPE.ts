@@ -46,7 +46,6 @@ export const lstHYPEDeploymentConfig: DeploymentConfig = {
       },
       postDeploy: {
         grantRoles: {
-          providerType: 'hardhat',
           tokenManagerAddress: '0xf5D4f036856837adfb91CF863F470D215Cf8A99c',
           vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
           oracleManagerAddress: '0xc42654209f9D82323cF335e3f7Ee7A0b7a88f7BE',

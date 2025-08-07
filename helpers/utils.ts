@@ -39,6 +39,26 @@ export const getPaymentTokenOrThrow = (hre: HardhatRuntimeEnvironment) => {
   return paymentToken;
 };
 
+export const getMTokenOrPaymentTokenOrThrow = (
+  hre: HardhatRuntimeEnvironment,
+) => {
+  const mToken = hre.mtoken;
+  const paymentToken = hre.paymentToken;
+  if (mToken && paymentToken) {
+    throw new Error('Only one of MToken or PaymentToken can be provided');
+  }
+
+  if (mToken) {
+    return { mToken };
+  }
+
+  if (paymentToken) {
+    return { paymentToken };
+  }
+
+  throw new Error('MToken or PaymentToken parameter not found');
+};
+
 export const getImplAddressFromProxy = async (
   hre: HardhatRuntimeEnvironment,
   proxyAddress: string,
@@ -131,3 +151,8 @@ export const verify = async (
 
 export const encodeFnSelector = (selector: string) =>
   ethers.utils.id(selector).substring(0, 10);
+
+export const importWithoutCache = async (pathResolved: string) => {
+  delete require.cache[pathResolved];
+  return await import(pathResolved);
+};

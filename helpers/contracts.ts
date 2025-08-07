@@ -11,6 +11,7 @@ export type TokenContractNames = {
   customAggregator?: string;
   customAggregatorGrowth?: string;
   token: string;
+  roles: string;
 };
 
 type CommonContractNames = Omit<TokenContractNames, 'token'> & {
@@ -46,6 +47,8 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   mevBTC: 'MevBtc',
   lstHYPE: 'LstHype',
   liquidHYPE: 'LiquidHype',
+  hbUSDC: 'HBUsdc',
+  mFARM: 'MFarm',
 };
 
 export const getCommonContractNames = (): CommonContractNames => {
@@ -61,6 +64,7 @@ export const getCommonContractNames = (): CommonContractNames => {
     customAggregator: 'CustomAggregatorV3CompatibleFeed',
     customAggregatorGrowth: 'CustomAggregatorV3CompatibleFeedGrowth',
     customAggregatorDiscounted: 'CustomAggregatorV3CompatibleFeedDiscounted',
+    roles: 'MidasAccessControlRoles',
   };
 };
 
@@ -87,5 +91,6 @@ export const getTokenContractNames = (
       ? undefined
       : `${prefix}CustomAggregatorFeedGrowth`,
     token: `${token}`,
+    roles: `${prefix}${commonContractNames.roles}`,
   };
 };

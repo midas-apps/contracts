@@ -1,5 +1,5 @@
 import { DeployProxyOptions } from '@openzeppelin/hardhat-upgrades/dist/utils';
-import { Signer } from 'ethers';
+import { BigNumberish, PopulatedTransaction, Signer } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { DeploymentConfig } from './types';
@@ -131,4 +131,48 @@ export const getNetworkConfig = <
   }
 
   return config;
+};
+
+export const sendAndWaitForCustomTxSign = async (
+  hre: HardhatRuntimeEnvironment,
+  populatedTx: PopulatedTransaction,
+  txSignMetadata?: {
+    mToken?: MTokenName;
+    comment?: string;
+    action?:
+      | 'update-vault'
+      | 'update-ac'
+      | 'update-feed-mtoken'
+      | 'update-feed-ptoken';
+    subAction?:
+      | 'add-payment-token'
+      | 'grant-token-roles'
+      | 'add-fee-waived'
+      | 'set-round-data';
+  },
+  confirmations = 2,
+) => {
+  const signResult = hre.customSigner!.signTransaction(
+    {
+      data: populatedTx.data!,
+      to: populatedTx.to!,
+      value: populatedTx.value,
+    },
+    txSignMetadata,
+  );
+
+  const res = await signResult;
+
+  if (res.type === 'customSigner') {
+    console.log('Custom tx sign result detected, skipping...');
+    return res.payload;
+  }
+
+  console.log('Sending tx...');
+  const tx = await hre.ethers.provider.sendTransaction(res.signedTx);
+  console.log('Sending tx...', tx.hash);
+
+  await tx.wait(confirmations);
+
+  return tx.hash;
 };

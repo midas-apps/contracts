@@ -1,10 +1,14 @@
-import { BigNumberish } from 'ethers';
+import { Provider } from '@ethersproject/providers';
+import { BigNumberish, Signer } from 'ethers';
+import { formatUnits } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
   deployAndVerify,
   deployAndVerifyProxy,
   getDeploymentGenericConfig,
+  getNetworkConfig,
+  sendAndWaitForCustomTxSign,
 } from './utils';
 
 import { MTokenName, PaymentTokenName } from '../../../config';
@@ -13,6 +17,7 @@ import {
   getCommonContractNames,
   getTokenContractNames,
 } from '../../../helpers/contracts';
+import { CustomAggregatorV3CompatibleFeed } from '../../../typechain-types';
 import { paymentTokenDeploymentConfigs } from '../configs/payment-tokens';
 
 export type DeployDataFeedConfig = {
@@ -48,6 +53,112 @@ export type DeployCustomAggregatorGrowthConfig =
 export type DeployCustomAggregatorConfig =
   | DeployCustomAggregatorRegularConfig
   | DeployCustomAggregatorGrowthConfig;
+
+export type SetRoundDataConfig = {
+  data: BigNumberish;
+};
+
+export const setRoundDataPaymentToken = async (
+  hre: HardhatRuntimeEnvironment,
+  token: PaymentTokenName,
+) => {
+  const networkConfig =
+    paymentTokenDeploymentConfigs.networkConfigs[hre.network.config.chainId!]?.[
+      token
+    ]?.postDeploy?.setRoundData;
+
+  if (!networkConfig) {
+    throw new Error('Network config is not found');
+  }
+
+  const addresses = getCurrentAddresses(hre);
+  const tokenAddresses = addresses?.dataFeeds?.[token];
+
+  if (!tokenAddresses?.aggregator) {
+    throw new Error('Token config is not found or aggregator is not set');
+  }
+
+  await setRoundData(hre, {
+    isMToken: false,
+    token,
+    networkConfig,
+    aggregatorAddress: tokenAddresses.aggregator,
+  });
+};
+
+export const setRoundDataMToken = async (
+  hre: HardhatRuntimeEnvironment,
+  token: MTokenName,
+) => {
+  const { setRoundData: networkConfig } = getNetworkConfig(
+    hre,
+    token,
+    'postDeploy',
+  );
+
+  if (!networkConfig) {
+    throw new Error('Network config is not found');
+  }
+
+  const addresses = getCurrentAddresses(hre);
+  const customFeed = addresses?.[token]?.customFeed;
+
+  if (!customFeed) {
+    throw new Error('Token config is not found or aggregator is not set');
+  }
+
+  await setRoundData(hre, {
+    isMToken: true,
+    token,
+    networkConfig,
+    aggregatorAddress: customFeed,
+  });
+};
+
+const setRoundData = async (
+  hre: HardhatRuntimeEnvironment,
+  {
+    isMToken,
+    token,
+    networkConfig,
+    aggregatorAddress,
+  }: {
+    isMToken: boolean;
+    token: string;
+    networkConfig: SetRoundDataConfig;
+    aggregatorAddress: string;
+  },
+) => {
+  const aggregator = await getAggregatorContract(
+    hre,
+    hre.ethers.provider,
+    aggregatorAddress,
+  );
+
+  const tx = await aggregator.populateTransaction.setRoundData(
+    networkConfig.data,
+  );
+
+  const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
+    action: isMToken ? 'update-feed-mtoken' : 'update-feed-ptoken',
+    comment: `${token} set price to ${formatUnits(networkConfig.data, 8)}`,
+  });
+
+  console.log(
+    `${token} set price to ${formatUnits(networkConfig.data, 8)}`,
+    txRes,
+  );
+};
+
+const getAggregatorContract = async (
+  hre: HardhatRuntimeEnvironment,
+  provider: Provider | Signer,
+  address: string,
+) => {
+  return (
+    await hre.ethers.getContractAt('CustomAggregatorV3CompatibleFeed', address)
+  ).connect(provider) as CustomAggregatorV3CompatibleFeed;
+};
 
 export const deployPaymentTokenDataFeed = async (
   hre: HardhatRuntimeEnvironment,
