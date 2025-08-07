@@ -1,4 +1,5 @@
 import { constants, PopulatedTransaction } from 'ethers';
+import { solidityKeccak256 } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
@@ -8,7 +9,6 @@ import {
 } from './utils';
 
 import { getCurrentAddresses } from '../../../config/constants/addresses';
-import { getCommonContractNames } from '../../../helpers/contracts';
 import { logDeploy } from '../../../helpers/utils';
 import { ProxyAdmin, TimelockController } from '../../../typechain-types';
 import { networkDeploymentConfigs } from '../configs/network-configs';
@@ -116,7 +116,7 @@ export const deployTimelock = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('Timelock config is not found');
   }
 
-  const timelockContractName = getCommonContractNames().timelock;
+  const timelockContractName = 'MidasTimelockController';
 
   const timelockContract = await deployAndVerify(
     hre,
@@ -125,7 +125,6 @@ export const deployTimelock = async (hre: HardhatRuntimeEnvironment) => {
       timelock.minDelay,
       [timelock.proposer],
       [timelock.executor ?? timelock.proposer],
-      constants.AddressZero,
     ],
     deployer,
   );
@@ -133,7 +132,7 @@ export const deployTimelock = async (hre: HardhatRuntimeEnvironment) => {
   logDeploy(timelockContractName, undefined, timelockContract.address);
 };
 
-type GetUpgradeTxParams = {
+export type GetUpgradeTxParams = {
   proxyAddress: string;
   newImplementation: string;
   callData?: string;
@@ -159,22 +158,27 @@ const getUpgradeTx = async (
   return upgradeCallData;
 };
 
-const safeSignerAddress = '0x8003544D32eE074aA8A1fb72129Fa8Ef7fe02E5f';
-
 export const proposeTimeLockUpgradeTx = async (
   hre: HardhatRuntimeEnvironment,
   upgradeParams: GetUpgradeTxParams[],
+  salt: string,
 ) => {
   return await createTimeLockTx(
     hre,
     upgradeParams,
-    async (timelockContract, adminAddress, upgradeTxCallDatas) => {
-      const operationHash = await timelockContract.hashOperationBatch(
+    salt,
+    async (timelockContract, adminAddress, saltHash, upgradeTxCallDatas) => {
+      const type = 'propose';
+      const params = [
         upgradeTxCallDatas.map((_) => adminAddress),
-        upgradeTxCallDatas.map((_) => 0), // TODO
+        upgradeTxCallDatas.map((_) => 0),
         upgradeTxCallDatas,
-        upgradeTxCallDatas.map((_) => 0), // TODO
-        upgradeTxCallDatas.map((_) => 0), // TODO
+        constants.HashZero,
+        saltHash,
+      ] as const;
+
+      const operationHash = await timelockContract.hashOperationBatch(
+        ...params,
       );
 
       const isOperationExists = await timelockContract.isOperation(
@@ -183,19 +187,15 @@ export const proposeTimeLockUpgradeTx = async (
 
       if (isOperationExists) {
         console.log('Operation is found, skipping...');
-        return { tx: undefined, operationHash };
+        return { tx: undefined, operationHash, type };
       }
 
       const tx = await timelockContract.populateTransaction.scheduleBatch(
-        upgradeTxCallDatas.map((_) => adminAddress),
-        upgradeTxCallDatas.map((_) => 0), // TODO
-        upgradeTxCallDatas,
-        upgradeTxCallDatas.map((_) => 0), // TODO
-        upgradeTxCallDatas.map((_) => 0), // TODO
+        ...params,
         await timelockContract.getMinDelay(),
       );
 
-      return { tx, operationHash };
+      return { tx, operationHash, type, verifyParameters: params };
     },
   );
 };
@@ -203,17 +203,24 @@ export const proposeTimeLockUpgradeTx = async (
 export const executeTimeLockUpgradeTx = async (
   hre: HardhatRuntimeEnvironment,
   upgradeParams: GetUpgradeTxParams[],
+  salt: string,
 ) => {
   return await createTimeLockTx(
     hre,
     upgradeParams,
-    async (timelockContract, adminAddress, upgradeTxCallDatas) => {
-      const operationHash = await timelockContract.hashOperationBatch(
+    salt,
+    async (timelockContract, adminAddress, saltHash, upgradeTxCallDatas) => {
+      const type = 'execute';
+      const params = [
         upgradeTxCallDatas.map((_) => adminAddress),
-        upgradeTxCallDatas.map((_) => 0), // TODO
+        upgradeTxCallDatas.map((_) => 0),
         upgradeTxCallDatas,
-        upgradeTxCallDatas.map((_) => 0), // TODO
-        upgradeTxCallDatas.map((_) => 0), // TODO
+        constants.HashZero,
+        saltHash,
+      ] as const;
+
+      const operationHash = await timelockContract.hashOperationBatch(
+        ...params,
       );
 
       const isOperationReady = await timelockContract.isOperationReady(
@@ -222,17 +229,14 @@ export const executeTimeLockUpgradeTx = async (
 
       if (!isOperationReady) {
         console.warn('Operation is not ready or not found');
-        return { tx: undefined, operationHash };
+        return { tx: undefined, operationHash, type };
       }
 
       const tx = await timelockContract.populateTransaction.executeBatch(
-        upgradeTxCallDatas.map((_) => adminAddress),
-        upgradeTxCallDatas.map((_) => 0), // TODO
-        upgradeTxCallDatas,
-        upgradeTxCallDatas.map((_) => 0), // TODO
-        upgradeTxCallDatas.map((_) => 0), // TODO
+        ...params,
       );
-      return { tx, operationHash };
+
+      return { tx, operationHash, type, verifyParameters: params };
     },
   );
 };
@@ -240,21 +244,18 @@ export const executeTimeLockUpgradeTx = async (
 const createTimeLockTx = async (
   hre: HardhatRuntimeEnvironment,
   upgradeParams: GetUpgradeTxParams[],
+  salt: string,
   populateTx: (
     timelockContract: TimelockController,
     adminAddress: string,
+    saltHash: string,
     upgradeTxCallDatas: string[],
-  ) => Promise<
-    | {
-        tx: PopulatedTransaction;
-        operationHash: string;
-        type: 'propose' | 'execute';
-      }
-    | {
-        tx?: PopulatedTransaction;
-        operationHash: string;
-      }
-  >,
+  ) => Promise<{
+    tx?: PopulatedTransaction;
+    operationHash: string;
+    type: 'propose' | 'execute';
+    verifyParameters?: unknown;
+  }>,
 ) => {
   const admin = (await hre.upgrades.admin.getInstance()) as ProxyAdmin;
 
@@ -276,6 +277,12 @@ const createTimeLockTx = async (
 
     upgradeParamsUnUpgraded.push(upgradeParam);
   }
+
+  if (upgradeParamsUnUpgraded.length === 0) {
+    console.log('No upgrades to propose, skipping...');
+    return;
+  }
+
   const networkAddresses = getCurrentAddresses(hre);
 
   const timelockContract = await hre.ethers.getContractAt(
@@ -292,20 +299,17 @@ const createTimeLockTx = async (
       `Admin owner ${currentAdminOwner} is not the timelock contract ${timelockContract.address}`,
     );
   }
-  const [proposer] = await timelockContract.getProposers();
-
-  const proposerCode = await hre.ethers.provider.getCode(proposer);
-  console.log({ proposerCode });
-
-  const isProposerContract = proposerCode !== '0x';
 
   const upgradeTxCallDatas = await Promise.all(
-    upgradeParams.map((params) => getUpgradeTx(hre, params)),
+    upgradeParamsUnUpgraded.map((params) => getUpgradeTx(hre, params)),
   );
 
-  let { tx, operationHash } = await populateTx(
+  const saltHash = solidityKeccak256(['string'], [salt]);
+
+  let { operationHash, type, tx, verifyParameters } = await populateTx(
     timelockContract,
     admin.address,
+    saltHash,
     upgradeTxCallDatas,
   );
 
@@ -314,9 +318,20 @@ const createTimeLockTx = async (
     return;
   }
 
-  if (isProposerContract) {
+  const [caller] =
+    type === 'propose'
+      ? await timelockContract.getProposers()
+      : await timelockContract.getExecutors();
+
+  const callerCode = await hre.ethers.provider.getCode(caller);
+
+  const isCallerContract = callerCode !== '0x';
+
+  if (isCallerContract) {
+    console.log('Caller is a contract, using safe contract to execute tx');
+
     // we assume that the owner contract is a safe contract
-    const safeContract = await hre.ethers.getContractAt(safeAbi, proposer);
+    const safeContract = await hre.ethers.getContractAt(safeAbi, caller);
 
     tx = await safeContract.populateTransaction.execTransaction(
       timelockContract.address,
@@ -328,17 +343,25 @@ const createTimeLockTx = async (
       0,
       constants.AddressZero,
       constants.AddressZero,
-      [safeSignerAddress],
+      [caller],
     );
   }
 
-  console.log(`Tx operation hash: ${operationHash}`);
+  console.log(`Timelock operation id for: ${operationHash}`);
+  console.log('Verify parameters: ', verifyParameters);
 
-  await sendAndWaitForCustomTxSign(hre, tx, {
+  const commentContracts = upgradeParamsUnUpgraded
+    .map((v) => v.proxyAddress)
+    .join(', ');
+
+  const res = await sendAndWaitForCustomTxSign(hre, tx, {
     action: 'update-timelock',
     subAction: 'timelock-call-upgrade',
-    comment: '',
+    comment:
+      type === 'propose'
+        ? `Propose contract upgrade for [${commentContracts}]`
+        : `Execute contract upgrade for [${commentContracts}]`,
   });
 
-  return tx;
+  console.log('Transaction successfully submitted', res);
 };

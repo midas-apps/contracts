@@ -5,7 +5,7 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
   [chainIds.sepolia]: {
     grantDefaultAdminRole: {},
     timelock: {
-      minDelay: 1,
+      minDelay: 100,
       proposer: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
     },
   },

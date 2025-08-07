@@ -154,7 +154,7 @@ export const sendAndWaitForCustomTxSign = async (
   },
   confirmations = 2,
 ) => {
-  const signResult = hre.customSigner!.signTransaction(
+  const sendResult = hre.customSigner!.sendTransaction(
     {
       data: populatedTx.data!,
       to: populatedTx.to!,
@@ -163,18 +163,17 @@ export const sendAndWaitForCustomTxSign = async (
     txSignMetadata,
   );
 
-  const res = await signResult;
+  const res = await sendResult;
 
   if (res.type === 'customSigner') {
     console.log('Custom tx sign result detected, skipping...');
     return res.payload;
   }
 
-  console.log('Sending tx...');
-  const tx = await hre.ethers.provider.sendTransaction(res.signedTx);
-  console.log('Sending tx...', tx.hash);
+  if (res.type === 'hardhatSigner') {
+    await res.tx.wait(confirmations);
+    return res.tx.hash;
+  }
 
-  await tx.wait(confirmations);
-
-  return tx.hash;
+  throw new Error('Unknown tx signer type');
 };
