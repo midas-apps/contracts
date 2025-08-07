@@ -23,6 +23,15 @@ export const isPaymentTokenName = (name: string): name is PaymentTokenName => {
   );
 };
 
+export const getChainIdOrThrow = (hre: HardhatRuntimeEnvironment) => {
+  const { chainId } = hre.network.config;
+  const { name } = hre.network;
+  if (!chainId || name === 'hardhat' || name === 'localhost') {
+    throw new Error('Please provide a valid --network argument');
+  }
+  return chainId;
+};
+
 export const getMTokenOrThrow = (hre: HardhatRuntimeEnvironment) => {
   const mToken = hre.mtoken;
   if (!mToken) {

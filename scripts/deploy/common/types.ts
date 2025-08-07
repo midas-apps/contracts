@@ -1,3 +1,4 @@
+import { ethers } from 'hardhat';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { AddFeeWaivedConfig, AddPaymentTokensConfig } from './common-vault';
@@ -17,8 +18,34 @@ import {
   DeployRvRegularConfig,
   DeployRvSwapperConfig,
 } from './rv';
+import { toFunctionSelector } from './utils';
 
 import { PaymentTokenName } from '../../../config';
+import { VaultType } from '../../../config/constants/addresses';
+
+export const VAULT_FUNCTION_SELECTORS = {
+  // Deposit vault functions
+  depositInstant: toFunctionSelector(
+    'depositInstant(address,uint256,uint256,bytes32)',
+  ),
+  depositInstantWithCustomRecipient: toFunctionSelector(
+    'depositInstant(address,uint256,uint256,bytes32,address)',
+  ),
+
+  // Redemption vault functions
+  redeemInstant: toFunctionSelector(
+    'redeemInstant(address,uint256,uint256,bytes32)',
+  ),
+  redeemInstantWithCustomRecipient: toFunctionSelector(
+    'redeemInstant(address,uint256,uint256,bytes32,address)',
+  ),
+} as const;
+
+export type VaultFunctionName = keyof typeof VAULT_FUNCTION_SELECTORS;
+
+export type PauseFunctionsConfig = {
+  [K in VaultType]?: VaultFunctionName[];
+};
 
 export type DeploymentConfig = {
   genericConfigs: {
@@ -66,6 +93,7 @@ export type NetworkDeploymentConfig = Record<
   number,
   {
     grantDefaultAdminRole?: GrantDefaultAdminRoleToAcAdminConfig;
+    pauseFunctions?: PauseFunctionsConfig;
   }
 >;
 

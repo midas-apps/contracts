@@ -663,6 +663,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x577617613C4FaC5A7561F8f3F2Cb128A560774Bc',
       redemptionVaultSwapper: '0x403a92A980903707FD8A3A1101f48Eb3ebd58166',
     },
+    mRE7: {
+      token: '0x733d504435a49FC8C4e9759e756C2846c92f0160',
+      customFeed: '0x1989329b72C1C81E5460481671298A5a046f3B8E',
+      dataFeed: '0x82d4F923214959C84Cf026f727cA6C9FCa6B4454',
+      depositVault: '0xBEf85e71EcD0517D0C1446751667891b04860753',
+      redemptionVaultSwapper: '0xb24056AE566e24E35De798880E2dC28e2130De90',
+    },
     mSL: {
       token: '0x86fc2Be8eE946AFB4c7D8a9Cc8b95E175D8a74A0',
       customFeed: '0xbECb6eDDC52b5ddC83A1239D4377558BB660473E',
