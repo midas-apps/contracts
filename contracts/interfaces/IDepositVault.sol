@@ -210,6 +210,17 @@ interface IDepositVault is IManageableVault {
 
     /**
      * @notice approving requests from the `requestIds` array
+     * with the mToken rate from the request.
+     * Does same validation as `safeApproveRequest`.
+     * Mints mToken to request users.
+     * Sets request flags to Processed.
+     * @param requestIds request ids array
+     */
+    function safeBulkApproveRequestAtSavedRate(uint256[] calldata requestIds)
+        external;
+
+    /**
+     * @notice approving requests from the `requestIds` array
      * with the current mToken rate.
      * Does same validation as `safeApproveRequest`.
      * Mints mToken to request users.

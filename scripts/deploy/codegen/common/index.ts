@@ -162,7 +162,7 @@ export const updateConfigFiles = (
   }
 };
 
-const requireNotCancelled = <T>(value: T | symbol) => {
+export const requireNotCancelled = <T>(value: T | symbol) => {
   if (isCancel(value)) {
     cancel('Operation cancelled.');
     process.exit(0);

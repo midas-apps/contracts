@@ -296,6 +296,20 @@ contract DepositVault is ManageableVault, IDepositVault {
     /**
      * @inheritdoc IDepositVault
      */
+    function safeBulkApproveRequestAtSavedRate(uint256[] calldata requestIds)
+        external
+        onlyVaultAdmin
+    {
+        for (uint256 i = 0; i < requestIds.length; i++) {
+            uint256 rate = mintRequests[requestIds[i]].tokenOutRate;
+            _approveRequest(requestIds[i], rate, true);
+            emit SafeApproveRequest(requestIds[i], rate);
+        }
+    }
+
+    /**
+     * @inheritdoc IDepositVault
+     */
     function safeBulkApproveRequest(uint256[] calldata requestIds) external {
         uint256 currentMTokenRate = _getMTokenRate();
         safeBulkApproveRequest(requestIds, currentMTokenRate);

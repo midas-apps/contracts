@@ -204,6 +204,18 @@ interface IRedemptionVault is IManageableVault {
         returns (uint256);
 
     /**
+     * @notice approving requests from the `requestIds` array with the mToken rate
+     * from the request. WONT fail even if there is not enough liquidity
+     * to process all requests.
+     * Does same validation as `safeApproveRequest`.
+     * Transfers tokenOut to users
+     * Sets request flags to Processed.
+     * @param requestIds request ids array
+     */
+    function safeBulkApproveRequestAtSavedRate(uint256[] calldata requestIds)
+        external;
+
+    /**
      * @notice approving requests from the `requestIds` array with the
      * current mToken rate. WONT fail even if there is not enough liquidity
      * to process all requests.
