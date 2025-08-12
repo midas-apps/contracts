@@ -610,6 +610,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0xd202CF41a607627cd1A31f650D13599b588eBd1c',
       redemptionVaultSwapper: '0xBb820D0c85C0B5D1B0dC8C6D3541fbb1AB4C7a60',
     },
+    wVLP: {
+      token: '0xD66d69c288d9a6FD735d7bE8b2e389970fC4fD42',
+      customFeed: '0xA9fFe62E785324cb39cB5E2B3Ef713674391d31F',
+      dataFeed: '0x765FA39C3759408C383C18bb50F70efDcedB26A6',
+      depositVault: '0xc800f672EE8693BC0138E513038C84fe2D1B8a78',
+      redemptionVaultSwapper: '0x462B95575cb2D56de9d1aAaAAb452279B058Aa06',
+    },
   },
   katana: {
     accessControl: '0x980f57b62060824799F23f87d6FA321653b6f069',
