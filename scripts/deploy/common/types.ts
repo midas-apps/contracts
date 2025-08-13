@@ -32,11 +32,9 @@ export const VAULT_FUNCTION_SELECTORS = {
   ),
 
   // Redemption vault functions
-  redeemInstant: toFunctionSelector(
-    'redeemInstant(address,uint256,uint256,bytes32)',
-  ),
+  redeemInstant: toFunctionSelector('redeemInstant(address,uint256,uint256)'),
   redeemInstantWithCustomRecipient: toFunctionSelector(
-    'redeemInstant(address,uint256,uint256,bytes32,address)',
+    'redeemInstant(address,uint256,uint256,address)',
   ),
 } as const;
 
