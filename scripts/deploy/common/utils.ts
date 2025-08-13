@@ -1,5 +1,6 @@
 import { DeployProxyOptions } from '@openzeppelin/hardhat-upgrades/dist/utils';
-import { BigNumberish, PopulatedTransaction, Signer } from 'ethers';
+import { PopulatedTransaction, Signer } from 'ethers';
+import { ethers } from 'hardhat';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { DeploymentConfig } from './types';
@@ -148,7 +149,8 @@ export const sendAndWaitForCustomTxSign = async (
       | 'add-payment-token'
       | 'grant-token-roles'
       | 'add-fee-waived'
-      | 'set-round-data';
+      | 'set-round-data'
+      | 'pause-function';
   },
   confirmations = 2,
 ) => {
@@ -175,4 +177,8 @@ export const sendAndWaitForCustomTxSign = async (
   await tx.wait(confirmations);
 
   return tx.hash;
+};
+
+export const toFunctionSelector = (signature: string) => {
+  return ethers.utils.id(signature).slice(0, 10);
 };
