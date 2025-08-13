@@ -10,12 +10,5 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
   },
   [chainIds.etherlink]: {
     grantDefaultAdminRole: {},
-    pauseFunctions: {
-      depositVault: ['depositInstant', 'depositInstantWithCustomRecipient'],
-      redemptionVaultSwapper: [
-        'redeemInstant',
-        'redeemInstantWithCustomRecipient',
-      ],
-    },
   },
 };

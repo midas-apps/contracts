@@ -4,17 +4,20 @@ import {
   getCurrentAddresses,
   VaultType,
 } from '../../../config/constants/addresses';
-import { getChainIdOrThrow, getMTokenOrThrow } from '../../../helpers/utils';
+import { getChainOrThrow, getMTokenOrThrow } from '../../../helpers/utils';
 import { DeployFunction, VAULT_FUNCTION_SELECTORS } from '../common/types';
-import { sendAndWaitForCustomTxSign } from '../common/utils';
-import { networkDeploymentConfigs } from '../configs/network-configs';
+import { sendAndWaitForCustomTxSign, getNetworkConfig } from '../common/utils';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const chainId = getChainIdOrThrow(hre);
-  const networkName = hre.network.name;
+  const { networkName } = getChainOrThrow(hre);
   const mToken = getMTokenOrThrow(hre);
 
-  const pauseFunctions = networkDeploymentConfigs[chainId]?.pauseFunctions;
+  const pauseFunctions = getNetworkConfig(
+    hre,
+    mToken,
+    'postDeploy',
+  )?.pauseFunctions;
+
   if (!pauseFunctions) {
     console.log(`No pause functions config found for ${networkName} network`);
     return;
@@ -44,12 +47,12 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       const tx = await vault.populateTransaction.pauseFn(selector);
       await sendAndWaitForCustomTxSign(hre, tx, {
         mToken,
-        comment: `Pause ${functionName} in ${vaultType}`,
+        comment: `Pause ${functionName} in ${mToken} ${vaultType}`,
         action: 'update-vault',
         subAction: 'pause-function',
       });
 
-      console.log(`Paused ${functionName} in ${vaultType}`);
+      console.log(`Paused ${functionName} in ${mToken} ${vaultType}`);
     }
   }
 };

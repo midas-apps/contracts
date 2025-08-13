@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { AddFeeWaivedConfig, AddPaymentTokensConfig } from './common-vault';
@@ -66,6 +65,7 @@ export type DeploymentConfig = {
         grantRoles?: GrantAllTokenRolesConfig;
         setRoundData?: SetRoundDataConfig;
         addFeeWaived?: AddFeeWaivedConfig;
+        pauseFunctions?: PauseFunctionsConfig;
       };
     }
   >;
@@ -93,7 +93,6 @@ export type NetworkDeploymentConfig = Record<
   number,
   {
     grantDefaultAdminRole?: GrantDefaultAdminRoleToAcAdminConfig;
-    pauseFunctions?: PauseFunctionsConfig;
   }
 >;
 

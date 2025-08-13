@@ -165,6 +165,13 @@ export const mRE7DeploymentConfig: DeploymentConfig = {
         enableSanctionsList: false,
       },
       postDeploy: {
+        pauseFunctions: {
+          depositVault: ['depositInstant', 'depositInstantWithCustomRecipient'],
+          redemptionVaultSwapper: [
+            'redeemInstant',
+            'redeemInstantWithCustomRecipient',
+          ],
+        },
         setRoundData: {
           data: parseUnits('1.03190694', 8),
         },
