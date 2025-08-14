@@ -324,6 +324,25 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
+    function safeBulkApproveRequestAtSavedRate(uint256[] calldata requestIds)
+        external
+        onlyVaultAdmin
+    {
+        for (uint256 i = 0; i < requestIds.length; i++) {
+            uint256 rate = redeemRequests[requestIds[i]].mTokenRate;
+            bool success = _approveRequest(requestIds[i], rate, true, true);
+
+            if (!success) {
+                continue;
+            }
+
+            emit SafeApproveRequest(requestIds[i], rate);
+        }
+    }
+
+    /**
+     * @inheritdoc IRedemptionVault
+     */
     function safeBulkApproveRequest(uint256[] calldata requestIds) external {
         uint256 currentMTokenRate = _getMTokenRate();
         safeBulkApproveRequest(requestIds, currentMTokenRate);

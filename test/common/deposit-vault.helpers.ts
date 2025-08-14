@@ -460,24 +460,29 @@ export const safeApproveRequestTest = async (
 export const safeBulkApproveRequestTest = async (
   { depositVault, owner, mTBILL, mTokenToUsdDataFeed }: CommonParamsDeposit,
   requests: { id: BigNumberish }[],
-  newRate?: BigNumberish,
+  newRate?: BigNumberish | 'request-rate',
   opt?: OptionalCommonParams,
 ) => {
   const sender = opt?.from ?? owner;
 
   const requestIds = requests.map(({ id }) => id);
 
-  const callFn = newRate
-    ? depositVault
-        .connect(sender)
-        ['safeBulkApproveRequest(uint256[],uint256)'].bind(
-          this,
-          requestIds,
-          newRate,
-        )
-    : depositVault
-        .connect(sender)
-        ['safeBulkApproveRequest(uint256[])'].bind(this, requestIds);
+  const callFn =
+    newRate && newRate !== 'request-rate'
+      ? depositVault
+          .connect(sender)
+          ['safeBulkApproveRequest(uint256[],uint256)'].bind(
+            this,
+            requestIds,
+            newRate,
+          )
+      : newRate === 'request-rate'
+      ? depositVault
+          .connect(sender)
+          .safeBulkApproveRequestAtSavedRate.bind(this, requestIds)
+      : depositVault
+          .connect(sender)
+          ['safeBulkApproveRequest(uint256[])'].bind(this, requestIds);
 
   if (opt?.revertMessage) {
     await expect(callFn()).revertedWith(opt?.revertMessage);
@@ -511,13 +516,14 @@ export const safeBulkApproveRequestTest = async (
   await expect(txPromise).to.not.reverted;
 
   const currentRate = await mTokenToUsdDataFeed.getDataInBase18();
-  const newExpectedRate = newRate ?? currentRate;
+  const newExpectedRate =
+    newRate === 'request-rate' ? undefined : newRate ?? currentRate;
 
   const expectedMintAmounts = requestDatasBefore.map((requestData, i) =>
     requestData.depositedUsdAmount
       .sub(requestData.depositedUsdAmount.mul(feePercents[i]).div(10000))
       .mul(constants.WeiPerEther)
-      .div(newExpectedRate),
+      .div(newExpectedRate ?? requestData.tokenOutRate),
   );
 
   const groupedDataBefore = requests.map(({ id }, index) => {
@@ -587,7 +593,9 @@ export const safeBulkApproveRequestTest = async (
       }, BigNumber.from(0));
 
     expect(logs.length).eq(1);
-    expect(requestDataAfter.tokenOutRate).eq(newExpectedRate);
+    expect(requestDataAfter.tokenOutRate).eq(
+      newExpectedRate ?? requestDataBefore.tokenOutRate,
+    );
     expect(requestDataAfter.status).eq(1);
     expect(balanceAfter).eq(balanceBefore.add(expectedMintedAggregatedByUser));
     expect(totalDepositedAfter).eq(
@@ -595,7 +603,9 @@ export const safeBulkApproveRequestTest = async (
     );
     const log = logs[0];
 
-    expect(log.newOutRate).eq(newExpectedRate);
+    expect(log.newOutRate).eq(
+      newExpectedRate ?? requestDataBefore.tokenOutRate,
+    );
     expect(log.requestId).eq(id);
   }
 };
