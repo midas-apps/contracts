@@ -28,6 +28,7 @@ export enum MTokenNameEnum {
   hbUSDC = 'hbUSDC',
   mFARM = 'mFARM',
   wVLP = 'wVLP',
+  dnHYPE = 'dnHYPE',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
