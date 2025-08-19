@@ -78,6 +78,13 @@ contract DepositVault is ManageableVault, IDepositVault {
     uint256 public minMTokenAmountForFirstDeposit;
 
     /**
+     * @notice max supply cap value in mToken
+     * @dev if after the deposit, mToken.totalSupply() > maxSupplyCap,
+     * the tx will be reverted
+     */
+    uint256 public maxSupplyCap;
+
+    /**
      * @notice mapping, requestId => request data
      */
     mapping(uint256 => Request) public mintRequests;
@@ -146,6 +153,7 @@ contract DepositVault is ManageableVault, IDepositVault {
             _minAmount
         );
         minMTokenAmountForFirstDeposit = _minMTokenAmountForFirstDeposit;
+        maxSupplyCap = type(uint256).max;
     }
 
     /**
@@ -308,7 +316,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         external
         onlyVaultAdmin
     {
-        _approveRequest(requestId, newOutRate, true);
+        _approveRequest(requestId, newOutRate, true, false);
 
         emit SafeApproveRequest(requestId, newOutRate);
     }
@@ -320,7 +328,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         external
         onlyVaultAdmin
     {
-        _approveRequest(requestId, newOutRate, false);
+        _approveRequest(requestId, newOutRate, false, false);
 
         emit ApproveRequest(requestId, newOutRate);
     }
@@ -357,12 +365,31 @@ contract DepositVault is ManageableVault, IDepositVault {
     /**
      * @inheritdoc IDepositVault
      */
+    function setMaxSupplyCap(uint256 newValue) external onlyVaultAdmin {
+        maxSupplyCap = newValue;
+
+        emit SetMaxSupplyCap(msg.sender, newValue);
+    }
+
+    /**
+     * @inheritdoc IDepositVault
+     */
     function safeBulkApproveRequest(
         uint256[] calldata requestIds,
         uint256 newOutRate
     ) public onlyVaultAdmin {
         for (uint256 i = 0; i < requestIds.length; i++) {
-            _approveRequest(requestIds[i], newOutRate, true);
+            bool success = _approveRequest(
+                requestIds[i],
+                newOutRate,
+                true,
+                true
+            );
+
+            if (!success) {
+                continue;
+            }
+
             emit SafeApproveRequest(requestIds[i], newOutRate);
         }
     }
@@ -385,26 +412,6 @@ contract DepositVault is ManageableVault, IDepositVault {
         returns (bytes32)
     {
         return vaultRole();
-    }
-
-    /**
-     * @dev validates that inputted USD amount >= minAmountToDepositInUsd()
-     * and amount >= minAmount()
-     * @param user user address
-     * @param amountMTokenWithoutFee amount of mToken without fee (decimals 18)
-     */
-    function _validateMinAmount(address user, uint256 amountMTokenWithoutFee)
-        internal
-        view
-    {
-        require(amountMTokenWithoutFee >= minAmount, "DV: mToken amount < min");
-
-        if (totalMinted[user] != 0) return;
-
-        require(
-            amountMTokenWithoutFee >= minMTokenAmountForFirstDeposit,
-            "DV: mint amount < min"
-        );
     }
 
     /**
@@ -450,6 +457,8 @@ contract DepositVault is ManageableVault, IDepositVault {
             );
 
         mToken.mint(recipient, result.mintAmount);
+
+        _validateMaxSupplyCap(true);
     }
 
     /**
@@ -515,8 +524,14 @@ contract DepositVault is ManageableVault, IDepositVault {
     function _approveRequest(
         uint256 requestId,
         uint256 newOutRate,
-        bool isSafe
-    ) private {
+        bool isSafe,
+        bool safeValidateSupplyCap
+    )
+        private
+        returns (
+            bool /* success */
+        )
+    {
         Request memory request = mintRequests[requestId];
 
         require(request.sender != address(0), "DV: request not exist");
@@ -531,6 +546,10 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 amountMToken = (request.usdAmountWithoutFees * (10**18)) /
             newOutRate;
 
+        if (!_validateMaxSupplyCap(amountMToken, !safeValidateSupplyCap)) {
+            return false;
+        }
+
         mToken.mint(request.sender, amountMToken);
 
         totalMinted[request.sender] += amountMToken;
@@ -538,6 +557,8 @@ contract DepositVault is ManageableVault, IDepositVault {
         request.status = RequestStatus.Processed;
         request.tokenOutRate = newOutRate;
         mintRequests[requestId] = request;
+
+        return true;
     }
 
     /**
@@ -609,6 +630,67 @@ contract DepositVault is ManageableVault, IDepositVault {
             _validateMinAmount(userCopy, result.mintAmount);
         }
         require(result.mintAmount > 0, "DV: invalid mint amount");
+    }
+
+    /**
+     * @dev validates that inputted USD amount >= minAmountToDepositInUsd()
+     * and amount >= minAmount()
+     * @param user user address
+     * @param amountMTokenWithoutFee amount of mToken without fee (decimals 18)
+     */
+    function _validateMinAmount(address user, uint256 amountMTokenWithoutFee)
+        internal
+        view
+    {
+        require(amountMTokenWithoutFee >= minAmount, "DV: mToken amount < min");
+
+        if (totalMinted[user] != 0) return;
+
+        require(
+            amountMTokenWithoutFee >= minMTokenAmountForFirstDeposit,
+            "DV: mint amount < min"
+        );
+    }
+
+    /**
+     * @dev validates that mToken.totalSupply() <= maxSupplyCap
+     *
+     * @param revertOnError if true, will revert if supply is exceeded
+     * if false, will return false if supply is exceeded without reverting
+     *
+     * @return true if supply is valid, false otherwise
+     */
+    function _validateMaxSupplyCap(bool revertOnError)
+        internal
+        view
+        returns (bool)
+    {
+        return _validateMaxSupplyCap(0, revertOnError);
+    }
+
+    /**
+     * @dev validates that mToken.totalSupply() <= maxSupplyCap
+     *
+     * @param mintAmount amount of mToken to mint
+     * @param revertOnError if true, will revert if supply is exceeded
+     * if false, will return false if supply is exceeded without reverting
+     *
+     * @return true if supply is valid, false otherwise
+     */
+    function _validateMaxSupplyCap(uint256 mintAmount, bool revertOnError)
+        internal
+        view
+        returns (bool)
+    {
+        bool isExceeded = mToken.totalSupply() + mintAmount > maxSupplyCap;
+
+        if (!revertOnError) {
+            return !isExceeded;
+        }
+
+        require(!isExceeded, "DV: max supply cap exceeded");
+
+        return true;
     }
 
     /**
