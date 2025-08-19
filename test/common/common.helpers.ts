@@ -139,6 +139,16 @@ export const approveBase18 = async (
   await expect(token.connect(from).approve(to, amount)).not.reverted;
 };
 
+export const approve = async (
+  from: SignerWithAddress,
+  token: ERC20 | IERC20Metadata,
+  to: AccountOrContract,
+  amount: BigNumberish,
+) => {
+  to = getAccount(to);
+  await expect(token.connect(from).approve(to, amount)).not.reverted;
+};
+
 export const amountToBase18 = async (
   decimals: BigNumberish,
   amount: BigNumberish,

@@ -9,6 +9,8 @@ export type RedemptionVaultType =
   | 'redemptionVaultSwapper'
   | 'redemptionVaultUstb';
 
+export type DepositVaultType = 'depositVault' | 'depositVaultUstb';
+
 type TokenAddresses = {
   customFeed?: string;
   dataFeed?: string;
@@ -17,7 +19,7 @@ type TokenAddresses = {
   depositVaultUstb?: string;
 } & Partial<Record<RedemptionVaultType, string>>;
 
-export type VaultType = RedemptionVaultType | 'depositVault';
+export type VaultType = RedemptionVaultType | DepositVaultType;
 
 export type DataFeedAddresses = {
   token?: string;
