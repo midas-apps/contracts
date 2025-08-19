@@ -1,3 +1,4 @@
+import { dnHYPEDeploymentConfig } from './dnHYPE';
 import { hbUSDCDeploymentConfig } from './hbUSDC';
 import { hbUSDTDeploymentConfig } from './hbUSDT';
 import { hbXAUtDeploymentConfig } from './hbXAUt';
@@ -61,4 +62,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   hbUSDC: hbUSDCDeploymentConfig,
   mFARM: mFARMDeploymentConfig,
   wVLP: wVLPDeploymentConfig,
+  dnHYPE: dnHYPEDeploymentConfig,
 };
