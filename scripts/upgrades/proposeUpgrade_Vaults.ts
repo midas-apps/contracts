@@ -1,11 +1,13 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { executeUpgradeAllVaults } from './common';
+import { proposeUpgradeVaults } from './common';
 
+import { getActionOrThrow } from '../../helpers/utils';
 import { DeployFunction } from '../deploy/common/types';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  await executeUpgradeAllVaults(hre);
+  const upgradeId = getActionOrThrow(hre);
+  await proposeUpgradeVaults(hre, upgradeId);
 };
 
 export default func;

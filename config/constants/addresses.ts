@@ -9,7 +9,7 @@ export type RedemptionVaultType =
   | 'redemptionVaultSwapper'
   | 'redemptionVaultUstb';
 
-type TokenAddresses = {
+export type TokenAddresses = {
   customFeed?: string;
   dataFeed?: string;
   token?: string;
@@ -848,7 +848,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x807f2CF75EC43b11De43a529A0Dd9FEF754a9801',
       redemptionVaultSwapper: '0x313C76eCd990B728681f29464978D5637Cb78164',
     },
-    timelock: '0xacfbf69549Bb121f97C14aE74A55F414e69A680E',
+    timelock: '0xA70009c23dbF1222D66b0ca847b4c33aE2e07B41',
     accessControl: '0xbf25b58cB8DfaD688F7BcB2b87D71C23A6600AaC',
   },
   tacTestnet: {

@@ -48,6 +48,14 @@ export const getPaymentTokenOrThrow = (hre: HardhatRuntimeEnvironment) => {
   return paymentToken;
 };
 
+export const getActionOrThrow = (hre: HardhatRuntimeEnvironment) => {
+  const action = hre.action;
+  if (!action) {
+    throw new Error('Action parameter not found');
+  }
+  return action;
+};
+
 export const getMTokenOrPaymentTokenOrThrow = (
   hre: HardhatRuntimeEnvironment,
 ) => {

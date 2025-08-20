@@ -134,6 +134,14 @@ export const getNetworkConfig = <
   return config;
 };
 
+export const getWalletAddressForAction = async (
+  hre: HardhatRuntimeEnvironment,
+  action: string,
+  mtoken?: MTokenName,
+) => {
+  return hre.customSigner!.getWalletAddress(action, mtoken);
+};
+
 export const sendAndWaitForCustomTxSign = async (
   hre: HardhatRuntimeEnvironment,
   populatedTx: PopulatedTransaction,

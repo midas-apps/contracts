@@ -4,6 +4,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { MTokenName } from '../../../config';
 import {
   getCurrentAddresses,
+  TokenAddresses,
   VaultType,
 } from '../../../config/constants/addresses';
 import {
@@ -17,41 +18,99 @@ import {
   logDeploy,
 } from '../../../helpers/utils';
 import {
+  executeTimeLockTransferOwnershipTx,
   executeTimeLockUpgradeTx,
   GetUpgradeTxParams,
+  proposeTimeLockTransferOwnershipTx,
   proposeTimeLockUpgradeTx,
+  TransferOwnershipTxParams,
 } from '../../deploy/common/timelock';
 import { getDeployer } from '../../deploy/common/utils';
 import { upgradeConfig } from '../configs';
 
-export const proposeUpgradeAllVaults = async (
+export const proposeUpgradeVaults = async (
   hre: HardhatRuntimeEnvironment,
+  upgradeId: string,
 ) => {
-  return upgradeAllVaults(hre, async (hre, params, salt) => {
-    return await proposeTimeLockUpgradeTx(hre, [params], salt);
+  return upgradeAllVaults(hre, upgradeId, async (hre, params, salt) => {
+    return await proposeTimeLockUpgradeTx(hre, params, salt);
   });
 };
 
-export const executeUpgradeAllVaults = async (
+export const executeUpgradeVaults = async (
   hre: HardhatRuntimeEnvironment,
+  upgradeId: string,
 ) => {
-  return upgradeAllVaults(hre, async (hre, params, salt) => {
-    return await executeTimeLockUpgradeTx(hre, [params], salt);
+  return upgradeAllVaults(hre, upgradeId, async (hre, params, salt) => {
+    return await executeTimeLockUpgradeTx(hre, params, salt);
   });
+};
+
+export const proposeTransferOwnershipProxyAdmin = async (
+  hre: HardhatRuntimeEnvironment,
+  upgradeId: string,
+) => {
+  return transferOwnershipProxyAdmin(
+    hre,
+    upgradeId,
+    async (hre, params, salt) => {
+      return await proposeTimeLockTransferOwnershipTx(hre, params, salt);
+    },
+  );
+};
+
+export const executeTransferOwnershipProxyAdmin = async (
+  hre: HardhatRuntimeEnvironment,
+  upgradeId: string,
+) => {
+  return transferOwnershipProxyAdmin(
+    hre,
+    upgradeId,
+    async (hre, params, salt) => {
+      return await executeTimeLockTransferOwnershipTx(hre, params, salt);
+    },
+  );
 };
 
 const getImplAddressFromDeployment = async (
   deployment: DeployImplementationResponse,
 ) => {
   if (typeof deployment !== 'string') {
-    return { deployedNew: true, address: (await deployment.wait(5)).to! };
+    return { deployedNew: true, address: (await deployment.wait(5)).to };
   } else {
     return { deployedNew: false, address: deployment };
   }
 };
 
+const transferOwnershipProxyAdmin = async (
+  hre: HardhatRuntimeEnvironment,
+  upgradeId: string,
+  callBack: (
+    hre: HardhatRuntimeEnvironment,
+    params: TransferOwnershipTxParams,
+    salt: string,
+  ) => Promise<unknown>,
+) => {
+  const config =
+    upgradeConfig[hre.network.config.chainId!].transferProxyAdminOwnership;
+
+  if (!config) {
+    throw new Error(
+      `Upgrade config not found for chain ${hre.network.config.chainId}`,
+    );
+  }
+
+  return await callBack(
+    hre,
+    {
+      newOwner: config.newOwner,
+    },
+    upgradeId,
+  );
+};
 const upgradeAllVaults = async (
   hre: HardhatRuntimeEnvironment,
+  upgradeId: string,
   callBack: (
     hre: HardhatRuntimeEnvironment,
     params: GetUpgradeTxParams,
@@ -66,9 +125,13 @@ const upgradeAllVaults = async (
     );
   }
 
-  const {
-    vaults: { toUpgrade, salt },
-  } = config;
+  const { upgrades } = config;
+
+  const toUpgrade = upgrades[upgradeId]?.vaults.toUpgrade;
+
+  if (!toUpgrade) {
+    throw new Error(`Upgrade ${upgradeId} not found`);
+  }
 
   const addresses = getCurrentAddresses(hre);
 
@@ -80,11 +143,68 @@ const upgradeAllVaults = async (
     isMTokenName(v),
   );
 
-  const mTokensToUpgrade: MTokenName[] =
+  const mTokenVaultsToUpgrade: {
+    mToken: MTokenName;
+    addresses: TokenAddresses;
+    vaults: {
+      vaultType: VaultType;
+      vaultTypeTo?: VaultType;
+      overrideImplementation?: string;
+      initializer?: string;
+      initializerArgs?: unknown[];
+    }[];
+  }[] =
     toUpgrade === 'all'
-      ? allDeployedNetworkMTokens
-      : toUpgrade.map((v) => v.mToken);
-  console.log('mTokensToUpgrade', mTokensToUpgrade);
+      ? allDeployedNetworkMTokens.map((mToken) => {
+          const mTokenAddresses = addresses[mToken]!;
+
+          const vaultTypes = Object.keys(mTokenAddresses).filter(
+            (v) => vaultTypeToContractName(v as VaultType) !== undefined,
+          ) as VaultType[];
+
+          return {
+            mToken,
+            vaults: vaultTypes.map((v) => ({
+              vaultType: v,
+              initializer:
+                upgrades[upgradeId]?.vaults?.initializers?.[v]?.initializer,
+            })),
+            addresses: mTokenAddresses,
+          };
+        })
+      : toUpgrade.map((v) => {
+          const mTokenAddresses = addresses[v.mToken]!;
+
+          const vaults =
+            v.vaults === 'all'
+              ? (
+                  Object.keys(mTokenAddresses).filter(
+                    (v) =>
+                      vaultTypeToContractName(v as VaultType) !== undefined,
+                  ) as VaultType[]
+                ).map((v) => ({
+                  vaultType: v,
+                  initializer:
+                    upgrades[upgradeId]?.vaults?.initializers?.[v]?.initializer,
+                }))
+              : v.vaults?.map((v) => ({
+                  vaultType: v.vaultType,
+                  vaultTypeTo: v.vaultTypeTo,
+                  overrideImplementation: v.overrideImplementation,
+                  initializer:
+                    v.initializer ??
+                    upgrades[upgradeId]?.vaults?.initializers?.[v.vaultType]
+                      ?.initializer,
+                  initializerArgs: v.initializerArgs,
+                })) ?? [];
+
+          return {
+            mToken: v.mToken,
+            vaults,
+            addresses: mTokenAddresses,
+          };
+        });
+  console.log('mTokensToUpgrade', mTokenVaultsToUpgrade);
 
   const upgradeContracts: {
     mToken: MTokenName;
@@ -93,23 +213,19 @@ const upgradeAllVaults = async (
     contractName: string;
     proxyAddress: string;
     overrideImplementation?: string;
+    initializer?: string;
+    initializerCalldata?: string;
   }[] = [];
 
-  for (const mToken of mTokensToUpgrade) {
-    const mTokenAddresses = addresses[mToken]!;
-
-    const mTokenOverrideImplementation =
-      toUpgrade === 'all'
-        ? undefined
-        : toUpgrade.find((v) => v.mToken === mToken)?.overrideImplementation;
-    const vaultTypes = Object.keys(mTokenAddresses).filter(
-      (v) => vaultTypeToContractName(v as VaultType) !== undefined,
-    ) as VaultType[];
-
-    console.log('vaultTypes', vaultTypes);
-
-    vaultTypes.forEach((vaultType) => {
-      const contractType = vaultTypeToContractName(vaultType)!;
+  for (const { mToken, vaults, addresses } of mTokenVaultsToUpgrade) {
+    for (const {
+      vaultType,
+      vaultTypeTo,
+      overrideImplementation,
+      initializer,
+      initializerArgs,
+    } of vaults) {
+      const contractType = vaultTypeToContractName(vaultTypeTo ?? vaultType)!;
       const contractName =
         getTokenContractNames(mToken)[contractType as keyof TokenContractNames];
 
@@ -119,15 +235,27 @@ const upgradeAllVaults = async (
         );
       }
 
+      const contract = await hre.ethers.getContractAt(
+        contractName,
+        addresses[vaultType]!,
+      );
+
       upgradeContracts.push({
         mToken,
         vaultType,
-        contractType,
+        contractType: vaultTypeTo ?? vaultType,
         contractName,
-        proxyAddress: mTokenAddresses[vaultType]!,
-        overrideImplementation: mTokenOverrideImplementation,
+        proxyAddress: addresses[vaultType]!,
+        overrideImplementation,
+        initializer,
+        initializerCalldata: initializer
+          ? contract.interface.encodeFunctionData(
+              initializer,
+              (initializerArgs ?? []) as readonly any[],
+            )
+          : undefined,
       });
-    });
+    }
   }
 
   console.log('upgradeContracts', upgradeContracts);
@@ -189,8 +317,10 @@ const upgradeAllVaults = async (
       {
         proxyAddress: deployment.proxyAddress,
         newImplementation: deployment.implementationAddress,
+        initializer: deployment.initializer,
+        initializerCalldata: deployment.initializerCalldata,
       },
-      salt,
+      upgrades[upgradeId]?.vaults.overrideSalt ?? upgradeId,
     );
   }
 };

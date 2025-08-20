@@ -9,7 +9,12 @@ declare module 'hardhat/types/runtime' {
   export interface HardhatRuntimeEnvironment {
     mtoken?: MTokenName;
     paymentToken?: PaymentTokenName;
+    action?: string;
     customSigner?: {
+      getWalletAddress: (
+        action?: string,
+        mtoken?: MTokenName,
+      ) => Promise<string>;
       sendTransaction: (
         transaction: {
           data: string;

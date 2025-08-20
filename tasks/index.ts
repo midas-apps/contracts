@@ -21,16 +21,20 @@ task('runscript', 'Runs a user-defined script')
   .addPositionalParam('path', 'Path to the script')
   .addOptionalParam('mtoken', 'MToken')
   .addOptionalParam('ptoken', 'Payment Token')
+  .addOptionalParam('action', 'Timelock Action')
   .addOptionalParam('customSignerScript', 'Custom Signer Script')
   .setAction(async (taskArgs, hre) => {
     const mtoken = taskArgs.mtoken;
     const ptoken = taskArgs.ptoken;
+    const action = taskArgs.action;
     const customSignerScript =
       taskArgs.customSignerScript ?? ENV.CUSTOM_SIGNER_SCRIPT_PATH;
     const scriptPath = taskArgs.path;
 
     const { deployer } = await hre.getNamedAccounts();
     const deployerSigner = await hre.ethers.getSigner(deployer);
+
+    hre.action = action;
 
     if (mtoken) {
       if (!isMTokenName(mtoken)) {
@@ -49,6 +53,9 @@ task('runscript', 'Runs a user-defined script')
 
     if (!customSignerScript) {
       hre.customSigner = {
+        getWalletAddress: async () => {
+          return deployer;
+        },
         sendTransaction: async (transaction) => {
           const tx = await deployerSigner.sendTransaction({
             ...transaction,
@@ -62,9 +69,18 @@ task('runscript', 'Runs a user-defined script')
       };
     } else {
       const scriptPathResolved = path.resolve(customSignerScript);
-      const { signTransaction } = await import(scriptPathResolved);
+      const { signTransaction, getWalletAddressForAction } = await import(
+        scriptPathResolved
+      );
 
       hre.customSigner = {
+        getWalletAddress: async (action, mtokenOverride) => {
+          return getWalletAddressForAction(
+            hre,
+            action,
+            mtokenOverride ?? hre.mtoken,
+          );
+        },
         sendTransaction: async (transaction, txSignMetadata) => {
           return {
             type: 'customSigner',

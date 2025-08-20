@@ -6,7 +6,7 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
     grantDefaultAdminRole: {},
     timelock: {
       minDelay: 100,
-      proposer: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+      proposer: '0x8bcc2DA99a25aE3582E50Aa0680C96D1610b8D73',
     },
   },
   [chainIds.hyperevm]: {
