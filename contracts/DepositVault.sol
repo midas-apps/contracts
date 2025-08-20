@@ -118,7 +118,8 @@ contract DepositVault is ManageableVault, IDepositVault {
         address _sanctionsList,
         uint256 _variationTolerance,
         uint256 _minAmount,
-        uint256 _minMTokenAmountForFirstDeposit
+        uint256 _minMTokenAmountForFirstDeposit,
+        uint256 _maxSupplyCap
     ) external initializer {
         __DepositVault_init(
             _ac,
@@ -128,7 +129,8 @@ contract DepositVault is ManageableVault, IDepositVault {
             _sanctionsList,
             _variationTolerance,
             _minAmount,
-            _minMTokenAmountForFirstDeposit
+            _minMTokenAmountForFirstDeposit,
+            _maxSupplyCap
         );
     }
 
@@ -141,7 +143,8 @@ contract DepositVault is ManageableVault, IDepositVault {
         address _sanctionsList,
         uint256 _variationTolerance,
         uint256 _minAmount,
-        uint256 _minMTokenAmountForFirstDeposit
+        uint256 _minMTokenAmountForFirstDeposit,
+        uint256 _maxSupplyCap
     ) internal onlyInitializing {
         __ManageableVault_init(
             _ac,
@@ -153,7 +156,7 @@ contract DepositVault is ManageableVault, IDepositVault {
             _minAmount
         );
         minMTokenAmountForFirstDeposit = _minMTokenAmountForFirstDeposit;
-        maxSupplyCap = type(uint256).max;
+        maxSupplyCap = _maxSupplyCap;
     }
 
     /**

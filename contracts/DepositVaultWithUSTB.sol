@@ -58,6 +58,7 @@ contract DepositVaultWithUSTB is DepositVault {
         uint256 _variationTolerance,
         uint256 _minAmount,
         uint256 _minMTokenAmountForFirstDeposit,
+        uint256 _maxSupplyCap,
         address _ustb
     ) external initializer {
         __DepositVault_init(
@@ -68,7 +69,8 @@ contract DepositVaultWithUSTB is DepositVault {
             _sanctionsList,
             _variationTolerance,
             _minAmount,
-            _minMTokenAmountForFirstDeposit
+            _minMTokenAmountForFirstDeposit,
+            _maxSupplyCap
         );
 
         _validateAddress(_ustb, false);

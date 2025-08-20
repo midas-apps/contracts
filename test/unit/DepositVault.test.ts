@@ -77,6 +77,8 @@ describe('DepositVault', function () {
     expect(await depositVault.minMTokenAmountForFirstDeposit()).eq('0');
     expect(await depositVault.minAmount()).eq(parseUnits('100'));
 
+    expect(await depositVault.maxSupplyCap()).eq(constants.MaxUint256);
+
     expect(await depositVault.instantFee()).eq('100');
 
     expect(await depositVault.instantDailyLimit()).eq(parseUnits('100000'));
@@ -124,6 +126,7 @@ describe('DepositVault', function () {
         1,
         parseUnits('100'),
         parseUnits('100'),
+        constants.MaxUint256,
       ),
     ).to.be.reverted;
     await expect(
@@ -145,6 +148,7 @@ describe('DepositVault', function () {
         1,
         parseUnits('100'),
         parseUnits('100'),
+        constants.MaxUint256,
       ),
     ).to.be.reverted;
     await expect(
@@ -166,6 +170,7 @@ describe('DepositVault', function () {
         1,
         parseUnits('100'),
         parseUnits('100'),
+        constants.MaxUint256,
       ),
     ).to.be.reverted;
     await expect(
@@ -187,6 +192,7 @@ describe('DepositVault', function () {
         1,
         parseUnits('100'),
         parseUnits('100'),
+        constants.MaxUint256,
       ),
     ).to.be.reverted;
     await expect(
@@ -208,6 +214,7 @@ describe('DepositVault', function () {
         1,
         parseUnits('100'),
         parseUnits('100'),
+        constants.MaxUint256,
       ),
     ).to.be.reverted;
     await expect(
@@ -229,6 +236,7 @@ describe('DepositVault', function () {
         1,
         parseUnits('100'),
         parseUnits('100'),
+        constants.MaxUint256,
       ),
     ).to.be.reverted;
 
@@ -251,6 +259,7 @@ describe('DepositVault', function () {
         1,
         parseUnits('100'),
         parseUnits('100'),
+        constants.MaxUint256,
       ),
     ).to.be.reverted;
   });
@@ -297,6 +306,7 @@ describe('DepositVault', function () {
             instantDailyLimit: 0,
           },
           constants.AddressZero,
+          0,
           0,
           0,
           0,

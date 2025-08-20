@@ -164,6 +164,7 @@ export const tokenContractsTests = (token: MTokenName) => {
       1,
       parseUnits('100'),
       0,
+      0,
     );
 
     const depositVaultUstb =
@@ -186,6 +187,7 @@ export const tokenContractsTests = (token: MTokenName) => {
         fixture.mockedSanctionsList.address,
         1,
         parseUnits('100'),
+        0,
         0,
         fixture.ustbToken.address,
       );

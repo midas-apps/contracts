@@ -145,9 +145,10 @@ export async function ustbRedemptionVaultFixture() {
         200,
         parseUnits('0'),
         0,
+        ethers.constants.MaxUint256,
         MAINNET_ADDRESSES.SUPERSTATE_TOKEN_PROXY,
       ],
-      'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,address)',
+      'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)',
     );
 
   // Deploy RedemptionVaultWithUSTB

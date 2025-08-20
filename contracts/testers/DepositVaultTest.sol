@@ -17,7 +17,8 @@ contract DepositVaultTest is DepositVault {
         address _sanctionsList,
         uint256 _variationTolerance,
         uint256 _minAmount,
-        uint256 _minMTokenAmountForFirstDeposit
+        uint256 _minMTokenAmountForFirstDeposit,
+        uint256 _maxSupplyCap
     ) external {
         __DepositVault_init(
             _ac,
@@ -27,7 +28,8 @@ contract DepositVaultTest is DepositVault {
             _sanctionsList,
             _variationTolerance,
             _minAmount,
-            _minMTokenAmountForFirstDeposit
+            _minMTokenAmountForFirstDeposit,
+            _maxSupplyCap
         );
     }
 
