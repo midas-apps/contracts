@@ -26,6 +26,7 @@ import { TACmMEVDeploymentConfig } from './tac/TACmMEV';
 import { tBTCDeploymentConfig } from './tBTC';
 import { tETHDeploymentConfig } from './tETH';
 import { tUSDeDeploymentConfig } from './tUSDe';
+import { wVLPDeploymentConfig } from './wVLP';
 
 import { MTokenName } from '../../../config';
 import { DeploymentConfig } from '../common/types';
@@ -59,4 +60,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   liquidHYPE: liquidHYPEDeploymentConfig,
   hbUSDC: hbUSDCDeploymentConfig,
   mFARM: mFARMDeploymentConfig,
+  wVLP: wVLPDeploymentConfig,
 };

@@ -134,6 +134,7 @@ describe('DepositVaultWithUSTB', function () {
         1,
         parseUnits('100'),
         parseUnits('100'),
+        constants.MaxUint256,
       ),
     ).to.be.reverted;
     await expect(
@@ -155,6 +156,7 @@ describe('DepositVaultWithUSTB', function () {
         1,
         parseUnits('100'),
         parseUnits('100'),
+        constants.MaxUint256,
       ),
     ).to.be.reverted;
     await expect(
@@ -176,6 +178,7 @@ describe('DepositVaultWithUSTB', function () {
         1,
         parseUnits('100'),
         parseUnits('100'),
+        constants.MaxUint256,
       ),
     ).to.be.reverted;
     await expect(
@@ -197,6 +200,7 @@ describe('DepositVaultWithUSTB', function () {
         1,
         parseUnits('100'),
         parseUnits('100'),
+        constants.MaxUint256,
       ),
     ).to.be.reverted;
     await expect(
@@ -218,6 +222,7 @@ describe('DepositVaultWithUSTB', function () {
         1,
         parseUnits('100'),
         parseUnits('100'),
+        constants.MaxUint256,
       ),
     ).to.be.reverted;
     await expect(
@@ -239,6 +244,7 @@ describe('DepositVaultWithUSTB', function () {
         1,
         parseUnits('100'),
         parseUnits('100'),
+        constants.MaxUint256,
       ),
     ).to.be.reverted;
   });
@@ -271,7 +277,7 @@ describe('DepositVaultWithUSTB', function () {
 
       await expect(
         depositVaultWithUSTB[
-          'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,address)'
+          'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)'
         ](
           constants.AddressZero,
           {
@@ -287,6 +293,7 @@ describe('DepositVaultWithUSTB', function () {
             instantDailyLimit: 0,
           },
           constants.AddressZero,
+          0,
           0,
           0,
           0,

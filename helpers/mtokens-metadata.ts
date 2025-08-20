@@ -116,4 +116,8 @@ export const mTokensMetadata: Record<
     name: 'Midas Farm Capital',
     symbol: 'mFARM',
   },
+  wVLP: {
+    name: 'Hyperbeat VLP',
+    symbol: 'wVLP',
+  },
 };

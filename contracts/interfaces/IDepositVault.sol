@@ -36,6 +36,12 @@ interface IDepositVault is IManageableVault {
     );
 
     /**
+     * @param caller function caller (msg.sender)
+     * @param newValue new max supply cap value
+     */
+    event SetMaxSupplyCap(address indexed caller, uint256 newValue);
+
+    /**
      * @param user function caller (msg.sender)
      * @param tokenIn address of tokenIn
      * @param amountUsd amount of tokenIn converted to USD
@@ -262,4 +268,11 @@ interface IDepositVault is IManageableVault {
      * @param newValue new min. deposit value
      */
     function setMinMTokenAmountForFirstDeposit(uint256 newValue) external;
+
+    /**
+     * @notice sets new max supply cap value
+     * can be called only from vault`s admin
+     * @param newValue new max supply cap value
+     */
+    function setMaxSupplyCap(uint256 newValue) external;
 }

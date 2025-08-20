@@ -192,6 +192,7 @@ export const defaultDeploy = async () => {
     1,
     parseUnits('100'),
     0,
+    constants.MaxUint256,
   );
 
   await accessControl.grantRole(
@@ -298,7 +299,7 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithUSTB[
-    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,address)'
+    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)'
   ](
     accessControl.address,
     {
@@ -317,6 +318,7 @@ export const defaultDeploy = async () => {
     1,
     parseUnits('100'),
     0,
+    constants.MaxUint256,
     ustbToken.address,
   );
 

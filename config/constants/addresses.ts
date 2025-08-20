@@ -611,6 +611,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0xd202CF41a607627cd1A31f650D13599b588eBd1c',
       redemptionVaultSwapper: '0xBb820D0c85C0B5D1B0dC8C6D3541fbb1AB4C7a60',
     },
+    wVLP: {
+      token: '0xD66d69c288d9a6FD735d7bE8b2e389970fC4fD42',
+      customFeed: '0xA9fFe62E785324cb39cB5E2B3Ef713674391d31F',
+      dataFeed: '0x765FA39C3759408C383C18bb50F70efDcedB26A6',
+      depositVault: '0xc800f672EE8693BC0138E513038C84fe2D1B8a78',
+      redemptionVaultSwapper: '0x462B95575cb2D56de9d1aAaAAb452279B058Aa06',
+    },
   },
   katana: {
     accessControl: '0x980f57b62060824799F23f87d6FA321653b6f069',
@@ -663,6 +670,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xB26f6F2821F85112aD0f452d18265Ce9BdC73aCE',
       depositVault: '0x577617613C4FaC5A7561F8f3F2Cb128A560774Bc',
       redemptionVaultSwapper: '0x403a92A980903707FD8A3A1101f48Eb3ebd58166',
+    },
+    mRE7: {
+      token: '0x733d504435a49FC8C4e9759e756C2846c92f0160',
+      customFeed: '0x1989329b72C1C81E5460481671298A5a046f3B8E',
+      dataFeed: '0x82d4F923214959C84Cf026f727cA6C9FCa6B4454',
+      depositVault: '0xBEf85e71EcD0517D0C1446751667891b04860753',
+      redemptionVaultSwapper: '0xb24056AE566e24E35De798880E2dC28e2130De90',
     },
     mSL: {
       token: '0x86fc2Be8eE946AFB4c7D8a9Cc8b95E175D8a74A0',

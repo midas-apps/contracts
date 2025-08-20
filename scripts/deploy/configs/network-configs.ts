@@ -12,4 +12,7 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
   [chainIds.hyperevm]: {
     grantDefaultAdminRole: {},
   },
+  [chainIds.etherlink]: {
+    grantDefaultAdminRole: {},
+  },
 };
