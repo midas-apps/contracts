@@ -170,7 +170,7 @@ export const tokenContractsTests = (token: MTokenName) => {
     const depositVaultUstb =
       await deployProxyContractIfExists<DepositVaultWithUSTB>(
         'dvUstb',
-        'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,address)',
+        'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)',
         fixture.accessControl.address,
         {
           mToken: tokenContract.address,

@@ -60,8 +60,8 @@ contract DepositVaultWithUSTB is DepositVault {
         uint256 _minMTokenAmountForFirstDeposit,
         uint256 _maxSupplyCap,
         address _ustb
-    ) external initializer {
-        __DepositVault_init(
+    ) external {
+        initialize(
             _ac,
             _mTokenInitParams,
             _receiversInitParams,

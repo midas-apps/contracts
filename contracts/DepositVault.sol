@@ -78,13 +78,6 @@ contract DepositVault is ManageableVault, IDepositVault {
     uint256 public minMTokenAmountForFirstDeposit;
 
     /**
-     * @notice max supply cap value in mToken
-     * @dev if after the deposit, mToken.totalSupply() > maxSupplyCap,
-     * the tx will be reverted
-     */
-    uint256 public maxSupplyCap;
-
-    /**
      * @notice mapping, requestId => request data
      */
     mapping(uint256 => Request) public mintRequests;
@@ -95,12 +88,26 @@ contract DepositVault is ManageableVault, IDepositVault {
     mapping(address => uint256) public totalMinted;
 
     /**
-     * @dev leaving a storage gap for futures updates
+     * @notice max supply cap value in mToken
+     * @dev if after the deposit, mToken.totalSupply() > maxSupplyCap,
+     * the tx will be reverted
      */
-    uint256[50] private __gap;
+    uint256 public maxSupplyCap;
+
+    /**
+     * @dev leaving a storage gap for futures updates
+     *
+     * used slots:
+     * 50 - `maxSupplyCap`
+     */
+    uint256[49] private __gap;
 
     /**
      * @notice upgradeable pattern contract`s initializer
+     * @dev Calls all versioned initializers (V1, V2, ...) in chronological order.
+     * This ensures that every deployment, whether fresh or upgraded, ends up
+     * initialized to the latest contract state without breaking the
+     * initializer/reinitializer versioning rules.
      * @param _ac address of MidasAccessControll contract
      * @param _mTokenInitParams init params for mToken
      * @param _receiversInitParams init params for receivers
@@ -109,6 +116,7 @@ contract DepositVault is ManageableVault, IDepositVault {
      * @param _variationTolerance percent of prices diviation 1% = 100
      * @param _minAmount basic min amount for operations in mToken
      * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
+     * @param _maxSupplyCap max supply cap for mToken
      */
     function initialize(
         address _ac,
@@ -120,7 +128,42 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 _minAmount,
         uint256 _minMTokenAmountForFirstDeposit,
         uint256 _maxSupplyCap
-    ) external initializer {
+    ) public {
+        initializeV1(
+            _ac,
+            _mTokenInitParams,
+            _receiversInitParams,
+            _instantInitParams,
+            _sanctionsList,
+            _variationTolerance,
+            _minAmount,
+            _minMTokenAmountForFirstDeposit
+        );
+
+        initializeV2(_maxSupplyCap);
+    }
+
+    /**
+     * @notice v1 initializer
+     * @param _ac address of MidasAccessControll contract
+     * @param _mTokenInitParams init params for mToken
+     * @param _receiversInitParams init params for receivers
+     * @param _instantInitParams init params for instant operations
+     * @param _sanctionsList address of sanctionsList contract
+     * @param _variationTolerance percent of prices diviation 1% = 100
+     * @param _minAmount basic min amount for operations in mToken
+     * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
+     */
+    function initializeV1(
+        address _ac,
+        MTokenInitParams calldata _mTokenInitParams,
+        ReceiversInitParams calldata _receiversInitParams,
+        InstantInitParams calldata _instantInitParams,
+        address _sanctionsList,
+        uint256 _variationTolerance,
+        uint256 _minAmount,
+        uint256 _minMTokenAmountForFirstDeposit
+    ) public initializer {
         __DepositVault_init(
             _ac,
             _mTokenInitParams,
@@ -129,9 +172,16 @@ contract DepositVault is ManageableVault, IDepositVault {
             _sanctionsList,
             _variationTolerance,
             _minAmount,
-            _minMTokenAmountForFirstDeposit,
-            _maxSupplyCap
+            _minMTokenAmountForFirstDeposit
         );
+    }
+
+    /**
+     * @notice v2 initializer
+     * @param _maxSupplyCap max supply cap for mToken
+     */
+    function initializeV2(uint256 _maxSupplyCap) public reinitializer(2) {
+        maxSupplyCap = _maxSupplyCap;
     }
 
     // solhint-disable func-name-mixedcase
@@ -143,8 +193,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         address _sanctionsList,
         uint256 _variationTolerance,
         uint256 _minAmount,
-        uint256 _minMTokenAmountForFirstDeposit,
-        uint256 _maxSupplyCap
+        uint256 _minMTokenAmountForFirstDeposit
     ) internal onlyInitializing {
         __ManageableVault_init(
             _ac,
@@ -156,7 +205,6 @@ contract DepositVault is ManageableVault, IDepositVault {
             _minAmount
         );
         minMTokenAmountForFirstDeposit = _minMTokenAmountForFirstDeposit;
-        maxSupplyCap = _maxSupplyCap;
     }
 
     /**
@@ -528,7 +576,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 requestId,
         uint256 newOutRate,
         bool isSafe,
-        bool safeValidateSupplyCap
+        bool revertAboveSupplyCap
     )
         private
         returns (
@@ -549,7 +597,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 amountMToken = (request.usdAmountWithoutFees * (10**18)) /
             newOutRate;
 
-        if (!_validateMaxSupplyCap(amountMToken, !safeValidateSupplyCap)) {
+        if (!_validateMaxSupplyCap(amountMToken, !revertAboveSupplyCap)) {
             return false;
         }
 
