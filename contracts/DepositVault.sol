@@ -164,37 +164,6 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 _minAmount,
         uint256 _minMTokenAmountForFirstDeposit
     ) public initializer {
-        __DepositVault_init(
-            _ac,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount,
-            _minMTokenAmountForFirstDeposit
-        );
-    }
-
-    /**
-     * @notice v2 initializer
-     * @param _maxSupplyCap max supply cap for mToken
-     */
-    function initializeV2(uint256 _maxSupplyCap) public reinitializer(2) {
-        maxSupplyCap = _maxSupplyCap;
-    }
-
-    // solhint-disable func-name-mixedcase
-    function __DepositVault_init(
-        address _ac,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount,
-        uint256 _minMTokenAmountForFirstDeposit
-    ) internal onlyInitializing {
         __ManageableVault_init(
             _ac,
             _mTokenInitParams,
@@ -205,6 +174,14 @@ contract DepositVault is ManageableVault, IDepositVault {
             _minAmount
         );
         minMTokenAmountForFirstDeposit = _minMTokenAmountForFirstDeposit;
+    }
+
+    /**
+     * @notice v2 initializer
+     * @param _maxSupplyCap max supply cap for mToken
+     */
+    function initializeV2(uint256 _maxSupplyCap) public reinitializer(2) {
+        maxSupplyCap = _maxSupplyCap;
     }
 
     /**
@@ -367,7 +344,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         external
         onlyVaultAdmin
     {
-        _approveRequest(requestId, newOutRate, true, false);
+        _approveRequest(requestId, newOutRate, true, true);
 
         emit SafeApproveRequest(requestId, newOutRate);
     }
@@ -379,7 +356,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         external
         onlyVaultAdmin
     {
-        _approveRequest(requestId, newOutRate, false, false);
+        _approveRequest(requestId, newOutRate, false, true);
 
         emit ApproveRequest(requestId, newOutRate);
     }
@@ -434,7 +411,7 @@ contract DepositVault is ManageableVault, IDepositVault {
                 requestIds[i],
                 newOutRate,
                 true,
-                true
+                false
             );
 
             if (!success) {
@@ -597,7 +574,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 amountMToken = (request.usdAmountWithoutFees * (10**18)) /
             newOutRate;
 
-        if (!_validateMaxSupplyCap(amountMToken, !revertAboveSupplyCap)) {
+        if (!_validateMaxSupplyCap(amountMToken, revertAboveSupplyCap)) {
             return false;
         }
 

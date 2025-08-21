@@ -239,28 +239,6 @@ describe('DepositVault', function () {
         constants.MaxUint256,
       ),
     ).to.be.reverted;
-
-    await expect(
-      depositVault.initializeWithoutInitializer(
-        accessControl.address,
-        {
-          mToken: mTBILL.address,
-          mTokenDataFeed: mTokenToUsdDataFeed.address,
-        },
-        {
-          feeReceiver: feeReceiver.address,
-          tokensReceiver: tokensReceiver.address,
-        },
-        {
-          instantFee: 99,
-          instantDailyLimit: parseUnits('100000'),
-        },
-        mockedSanctionsList.address,
-        1,
-        parseUnits('100'),
-        parseUnits('100'),
-      ),
-    ).to.be.reverted;
   });
 
   it('MBasisDepositVault', async () => {
