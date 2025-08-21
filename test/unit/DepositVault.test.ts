@@ -259,7 +259,6 @@ describe('DepositVault', function () {
         1,
         parseUnits('100'),
         parseUnits('100'),
-        constants.MaxUint256,
       ),
     ).to.be.reverted;
   });
@@ -311,6 +310,40 @@ describe('DepositVault', function () {
           0,
           0,
         ),
+      ).revertedWith('Initializable: contract is already initialized');
+    });
+
+    it('should fail: cal; initializeV1() when already initialized', async () => {
+      const { depositVault } = await loadFixture(defaultDeploy);
+
+      await expect(
+        depositVault.initializeV1(
+          constants.AddressZero,
+          {
+            mToken: constants.AddressZero,
+            mTokenDataFeed: constants.AddressZero,
+          },
+          {
+            feeReceiver: constants.AddressZero,
+            tokensReceiver: constants.AddressZero,
+          },
+          {
+            instantFee: 0,
+            instantDailyLimit: 0,
+          },
+          constants.AddressZero,
+          0,
+          0,
+          0,
+        ),
+      ).revertedWith('Initializable: contract is already initialized');
+    });
+
+    it('should fail: cal; initializeV2() when already reinitialized', async () => {
+      const { depositVault } = await loadFixture(defaultDeploy);
+
+      await expect(
+        depositVault.initializeV2(constants.MaxUint256),
       ).revertedWith('Initializable: contract is already initialized');
     });
 
