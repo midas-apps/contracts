@@ -78,13 +78,6 @@ contract DepositVault is ManageableVault, IDepositVault {
     uint256 public minMTokenAmountForFirstDeposit;
 
     /**
-     * @notice max supply cap value in mToken
-     * @dev if after the deposit, mToken.totalSupply() > maxSupplyCap,
-     * the tx will be reverted
-     */
-    uint256 public maxSupplyCap;
-
-    /**
      * @notice mapping, requestId => request data
      */
     mapping(uint256 => Request) public mintRequests;
@@ -95,9 +88,19 @@ contract DepositVault is ManageableVault, IDepositVault {
     mapping(address => uint256) public totalMinted;
 
     /**
-     * @dev leaving a storage gap for futures updates
+     * @notice max supply cap value in mToken
+     * @dev if after the deposit, mToken.totalSupply() > maxSupplyCap,
+     * the tx will be reverted
      */
-    uint256[50] private __gap;
+    uint256 public maxSupplyCap;
+
+    /**
+     * @dev leaving a storage gap for futures updates
+     *
+     * used slots:
+     * 50 - `maxSupplyCap`
+     */
+    uint256[49] private __gap;
 
     /**
      * @notice upgradeable pattern contract`s initializer
@@ -528,7 +531,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 requestId,
         uint256 newOutRate,
         bool isSafe,
-        bool safeValidateSupplyCap
+        bool revertAboveSupplyCap
     )
         private
         returns (
@@ -549,7 +552,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 amountMToken = (request.usdAmountWithoutFees * (10**18)) /
             newOutRate;
 
-        if (!_validateMaxSupplyCap(amountMToken, !safeValidateSupplyCap)) {
+        if (!_validateMaxSupplyCap(amountMToken, !revertAboveSupplyCap)) {
             return false;
         }
 
