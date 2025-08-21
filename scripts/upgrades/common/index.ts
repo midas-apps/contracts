@@ -26,7 +26,8 @@ import {
   TransferOwnershipTxParams,
 } from '../../deploy/common/timelock';
 import { getDeployer } from '../../deploy/common/utils';
-import { upgradeConfig } from '../configs';
+import { networkConfigs } from '../configs/network-configs';
+import { upgradeConfigs } from '../configs/upgrade-configs';
 
 export const proposeUpgradeVaults = async (
   hre: HardhatRuntimeEnvironment,
@@ -82,6 +83,18 @@ const getImplAddressFromDeployment = async (
   }
 };
 
+type MTokenVaultsToUpgrade = {
+  mToken: MTokenName;
+  addresses: TokenAddresses;
+  vaults: {
+    vaultType: VaultType;
+    vaultTypeTo?: VaultType;
+    overrideImplementation?: string;
+    initializer?: string;
+    initializerArgs?: unknown[];
+  }[];
+};
+
 const transferOwnershipProxyAdmin = async (
   hre: HardhatRuntimeEnvironment,
   upgradeId: string,
@@ -92,7 +105,7 @@ const transferOwnershipProxyAdmin = async (
   ) => Promise<unknown>,
 ) => {
   const config =
-    upgradeConfig[hre.network.config.chainId!].transferProxyAdminOwnership;
+    networkConfigs[hre.network.config.chainId!].transferProxyAdminOwnership;
 
   if (!config) {
     throw new Error(
@@ -117,20 +130,18 @@ const upgradeAllVaults = async (
     salt: string,
   ) => Promise<unknown>,
 ) => {
-  const config = upgradeConfig[hre.network.config.chainId!];
+  const config = upgradeConfigs.upgrades[upgradeId];
 
   if (!config) {
-    throw new Error(
-      `Upgrade config not found for chain ${hre.network.config.chainId}`,
-    );
+    throw new Error(`Upgrade config not found for upgrade ${upgradeId}`);
   }
 
-  const { upgrades } = config;
-
-  const toUpgrade = upgrades[upgradeId]?.vaults.toUpgrade;
+  const toUpgrade = config.vaults[hre.network.config.chainId!];
 
   if (!toUpgrade) {
-    throw new Error(`Upgrade ${upgradeId} not found`);
+    throw new Error(
+      `Upgrade ${upgradeId} not found for chain ${hre.network.config.chainId}`,
+    );
   }
 
   const addresses = getCurrentAddresses(hre);
@@ -143,67 +154,117 @@ const upgradeAllVaults = async (
     isMTokenName(v),
   );
 
-  const mTokenVaultsToUpgrade: {
-    mToken: MTokenName;
-    addresses: TokenAddresses;
-    vaults: {
-      vaultType: VaultType;
-      vaultTypeTo?: VaultType;
-      overrideImplementation?: string;
-      initializer?: string;
-      initializerArgs?: unknown[];
-    }[];
-  }[] =
-    toUpgrade === 'all'
-      ? allDeployedNetworkMTokens.map((mToken) => {
-          const mTokenAddresses = addresses[mToken]!;
+  let mTokenVaultsToUpgrade: MTokenVaultsToUpgrade[] = [];
 
-          const vaultTypes = Object.keys(mTokenAddresses).filter(
-            (v) => vaultTypeToContractName(v as VaultType) !== undefined,
-          ) as VaultType[];
+  if (toUpgrade.all) {
+    mTokenVaultsToUpgrade = allDeployedNetworkMTokens.map((mToken) => {
+      const mTokenAddresses = addresses[mToken]!;
 
-          return {
-            mToken,
-            vaults: vaultTypes.map((v) => ({
-              vaultType: v,
+      const vaultTypes = Object.keys(mTokenAddresses).filter(
+        (v) => vaultTypeToContractName(v as VaultType) !== undefined,
+      ) as VaultType[];
+
+      return {
+        mToken,
+        vaults: vaultTypes.map((v) => ({
+          vaultType: v,
+          initializer: config.initializers?.[v]?.initializer,
+        })),
+        addresses: mTokenAddresses,
+      };
+    });
+  }
+
+  for (const mTokenKey in toUpgrade.overrides) {
+    const mToken = mTokenKey as MTokenName;
+    const overrides = toUpgrade.overrides[mToken];
+    const mTokenAddresses = addresses[mToken]!;
+
+    let overrideVaults: (MTokenVaultsToUpgrade['vaults'][0] & {
+      remove?: boolean;
+    })[] = [];
+
+    if (overrides?.all) {
+      overrideVaults = (
+        Object.keys(mTokenAddresses).filter(
+          (v) => vaultTypeToContractName(v as VaultType) !== undefined,
+        ) as VaultType[]
+      ).map((v) => ({
+        vaultType: v,
+        initializer: config.initializers?.[v]?.initializer,
+      }));
+    }
+    const vaults = Object.entries(overrides?.overrides ?? {}).map(
+      ([key, val]) => {
+        const valParsed = typeof val === 'boolean' ? {} : val;
+
+        return {
+          vaultType: key as VaultType,
+          remove: val === false ? true : undefined,
+          ...valParsed,
+        };
+      },
+    );
+
+    const overrideVaultsWithConfigs =
+      vaults?.map((v) =>
+        v.remove === true
+          ? {
+              vaultType: v.vaultType,
+              remove: true,
+            }
+          : {
+              vaultType: v.vaultType,
+              vaultTypeTo: v.vaultTypeTo,
+              overrideImplementation: v.overrideImplementation,
               initializer:
-                upgrades[upgradeId]?.vaults?.initializers?.[v]?.initializer,
-            })),
-            addresses: mTokenAddresses,
-          };
-        })
-      : toUpgrade.map((v) => {
-          const mTokenAddresses = addresses[v.mToken]!;
+                v.initializer ??
+                config.initializers?.[v.vaultType]?.initializer,
+              initializerArgs: v.initializerArgs,
+            },
+      ) ?? [];
 
-          const vaults =
-            v.vaults === 'all'
-              ? (
-                  Object.keys(mTokenAddresses).filter(
-                    (v) =>
-                      vaultTypeToContractName(v as VaultType) !== undefined,
-                  ) as VaultType[]
-                ).map((v) => ({
-                  vaultType: v,
-                  initializer:
-                    upgrades[upgradeId]?.vaults?.initializers?.[v]?.initializer,
-                }))
-              : v.vaults?.map((v) => ({
-                  vaultType: v.vaultType,
-                  vaultTypeTo: v.vaultTypeTo,
-                  overrideImplementation: v.overrideImplementation,
-                  initializer:
-                    v.initializer ??
-                    upgrades[upgradeId]?.vaults?.initializers?.[v.vaultType]
-                      ?.initializer,
-                  initializerArgs: v.initializerArgs,
-                })) ?? [];
+    for (const vault of overrideVaultsWithConfigs) {
+      const foundIndex = overrideVaults.findIndex(
+        (v) => v.vaultType === vault.vaultType,
+      );
 
-          return {
-            mToken: v.mToken,
-            vaults,
-            addresses: mTokenAddresses,
-          };
-        });
+      if (foundIndex !== -1) {
+        overrideVaults[foundIndex] = vault;
+      } else {
+        overrideVaults.push(vault);
+      }
+    }
+
+    const found = mTokenVaultsToUpgrade.find((v) => v.mToken === mToken);
+
+    if (found) {
+      for (const vault of overrideVaults) {
+        const foundVaultIndex = found.vaults.findIndex(
+          (v) => v.vaultType === vault.vaultType,
+        );
+
+        if (foundVaultIndex !== -1) {
+          if (vault.remove !== true) {
+            found.vaults[foundVaultIndex] = {
+              ...vault,
+            };
+          } else {
+            found.vaults.splice(foundVaultIndex, 1);
+          }
+        } else if (vault.remove !== true) {
+          found.vaults.push(vault);
+        }
+      }
+    } else {
+      mTokenVaultsToUpgrade.push({
+        mToken,
+        vaults: overrideVaults.filter((v) => v.remove !== true),
+        addresses: mTokenAddresses,
+      });
+    }
+  }
+
   console.log('mTokensToUpgrade', mTokenVaultsToUpgrade);
 
   const upgradeContracts: {
@@ -320,7 +381,7 @@ const upgradeAllVaults = async (
         initializer: deployment.initializer,
         initializerCalldata: deployment.initializerCalldata,
       },
-      upgrades[upgradeId]?.vaults.overrideSalt ?? upgradeId,
+      config.overrideSalt ?? upgradeId,
     );
   }
 };
