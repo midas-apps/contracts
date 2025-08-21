@@ -1,6 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { executeUpgradeVaults } from './common';
+import { executeUpgradeVaults } from './common/upgrade-vaults';
 
 import { getActionOrThrow } from '../../helpers/utils';
 import { DeployFunction } from '../deploy/common/types';

@@ -455,6 +455,21 @@ const createTimeLockTx = async (
 
   const saltHash = solidityKeccak256(['string'], [salt]);
 
+  const { status, err } = await hre.ethers.provider
+    .call({
+      to: admin.address,
+      from: timelockContract.address,
+      data: calldata,
+    })
+    .then((returnData) => {
+      const revertReason = parseRevertReason(returnData);
+      return { status: revertReason === null, err: revertReason };
+    });
+
+  if (!status) {
+    throw new Error(`Simulation failed: ${err}`);
+  }
+
   let { operationHash, type, tx, verifyParameters } = await populateTx(
     timelockContract,
     admin.address,
@@ -531,3 +546,29 @@ const createTimeLockTx = async (
 
   console.log('Transaction successfully submitted', res);
 };
+
+function parseRevertReason(data: string) {
+  try {
+    // 0x08c379a0 = Error(string)
+    if (data.startsWith('0x08c379a0')) {
+      const reason = ethers.utils.defaultAbiCoder.decode(
+        ['string'],
+        '0x' + data.slice(10), // strip function selector
+      );
+      return reason[0];
+    }
+
+    // 0x4e487b71 = Panic(uint256)
+    if (data.startsWith('0x4e487b71')) {
+      const code = ethers.utils.defaultAbiCoder.decode(
+        ['uint256'],
+        '0x' + data.slice(10),
+      );
+      return `Panic code: ${code[0].toString()}`;
+    }
+
+    return null;
+  } catch (err) {
+    return `Failed to decode: ${err}`;
+  }
+}

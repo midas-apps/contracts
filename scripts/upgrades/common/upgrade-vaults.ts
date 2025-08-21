@@ -356,7 +356,6 @@ const upgradeAllVaults = async (
           proxyAddress,
           await hre.ethers.getContractFactory(contractName, deployer),
           {
-            unsafeAllow: ['constructor'],
             redeployImplementation: 'onchange',
           },
         ),

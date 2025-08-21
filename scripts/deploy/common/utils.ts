@@ -37,7 +37,7 @@ export const deployProxy = async (
   contractName: string,
   params: unknown[],
   deployer?: Signer,
-  opts: DeployProxyOptions = { unsafeAllow: ['constructor'] },
+  opts: DeployProxyOptions = {},
 ) => {
   deployer ??= await getDeployer(hre);
 
@@ -54,7 +54,7 @@ export const deployAndVerifyProxy = async (
   contractName: string,
   params: unknown[],
   deployer?: Signer,
-  opts: DeployProxyOptions = { unsafeAllow: ['constructor'] },
+  opts: DeployProxyOptions = {},
 ) => {
   const deployment = await deployProxy(
     hre,
