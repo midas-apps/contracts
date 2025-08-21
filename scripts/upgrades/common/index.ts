@@ -194,6 +194,7 @@ const upgradeAllVaults = async (
         initializer: config.initializers?.[v]?.initializer,
       }));
     }
+
     const vaults = Object.entries(overrides?.overrides ?? {}).map(
       ([key, val]) => {
         const valParsed = typeof val === 'boolean' ? {} : val;
@@ -220,7 +221,9 @@ const upgradeAllVaults = async (
               initializer:
                 v.initializer ??
                 config.initializers?.[v.vaultType]?.initializer,
-              initializerArgs: v.initializerArgs,
+              initializerArgs:
+                v.initializerArgs ??
+                config.initializers?.[v.vaultType]?.defaultInitializerArgs,
             },
       ) ?? [];
 
@@ -318,6 +321,10 @@ const upgradeAllVaults = async (
       });
     }
   }
+
+  upgradeContracts.sort((a, b) => {
+    return a.mToken.localeCompare(b.mToken, 'en', { sensitivity: 'base' });
+  });
 
   console.log('upgradeContracts', upgradeContracts);
 

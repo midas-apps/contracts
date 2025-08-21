@@ -1,3 +1,5 @@
+import { constants } from 'ethers';
+
 import { chainIds } from '../../../config';
 import { UpgradeConfig } from '../common/types';
 
@@ -7,16 +9,15 @@ export const upgradeConfigs: UpgradeConfig = {
       initializers: {
         depositVault: {
           initializer: 'initializeV2',
+          defaultInitializerArgs: [constants.MaxUint256],
         },
       },
       vaults: {
         [chainIds.sepolia]: {
-          all: true,
           overrides: {
             mRE7: {
-              all: false,
               overrides: {
-                depositVault: false,
+                depositVault: true,
               },
             },
           },

@@ -14,17 +14,26 @@ export type UpgradeConfig = {
   upgrades: Record<
     string,
     {
-      initializers?: Partial<Record<VaultType, { initializer: string }>>;
+      initializers?: Partial<
+        Record<
+          VaultType,
+          {
+            initializer: string;
+            defaultInitializerArgs?: unknown[];
+          }
+        >
+      >;
       overrideSalt?: string;
       vaults: Record<
         number,
         {
-          all: boolean;
+          // default - false
+          all?: boolean;
           overrides?: Partial<
             Record<
               MTokenName,
               {
-                // default -  true
+                // default - false
                 all?: boolean;
                 overrides?: Partial<
                   Record<
