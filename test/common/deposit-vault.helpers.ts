@@ -111,6 +111,7 @@ export const depositInstantTest = async (
 
   const totalMintedBefore = await depositVault.totalMinted(sender.address);
   const totalMintedBeforeRecipient = await depositVault.totalMinted(recipient);
+  const maxSupplyCapBefore = await depositVault.maxSupplyCap();
 
   const mTokenRate = await mTokenToUsdDataFeed.getDataInBase18();
 
@@ -160,6 +161,8 @@ export const depositInstantTest = async (
   const balanceAfterUser = await balanceOfBase18(tokenContract, sender.address);
   const balanceMtBillAfterUser = await balanceOfBase18(mTBILL, recipient);
 
+  const maxSupplyCapAfter = await depositVault.maxSupplyCap();
+
   const expectedMinted = expectedMintAmount ?? mintAmount;
 
   expect(balanceMtBillAfterUser.sub(balanceMtBillBeforeUser)).eq(
@@ -185,6 +188,7 @@ export const depositInstantTest = async (
     );
   }
   expect(balanceAfterUser).eq(balanceBeforeUser.sub(amountIn));
+  expect(maxSupplyCapAfter).eq(maxSupplyCapBefore);
 };
 
 export const depositRequestTest = async (
@@ -258,6 +262,8 @@ export const depositRequestTest = async (
   const latestRequestIdBefore = await depositVault.currentRequestId();
   const mTokenRate = await mTokenToUsdDataFeed.getDataInBase18();
 
+  const maxSupplyCapBefore = await depositVault.maxSupplyCap();
+
   const { fee, mintAmount, amountInWithoutFee, actualAmountInUsd } =
     await calcExpectedMintAmount(
       sender,
@@ -302,6 +308,7 @@ export const depositRequestTest = async (
   );
   const balanceAfterUser = await balanceOfBase18(tokenContract, sender.address);
   const request = await depositVault.mintRequests(latestRequestIdBefore);
+  const maxSupplyCapAfter = await depositVault.maxSupplyCap();
 
   expect(request.depositedUsdAmount).eq(actualAmountInUsd);
   expect(request.tokenOutRate).eq(mTokenRate);
@@ -322,6 +329,8 @@ export const depositRequestTest = async (
     );
   }
   expect(balanceAfterUser).eq(balanceBeforeUser.sub(amountIn));
+
+  expect(maxSupplyCapAfter).eq(maxSupplyCapBefore);
 
   return {
     requestId: latestRequestIdBefore,
@@ -459,7 +468,7 @@ export const safeApproveRequestTest = async (
 
 export const safeBulkApproveRequestTest = async (
   { depositVault, owner, mTBILL, mTokenToUsdDataFeed }: CommonParamsDeposit,
-  requests: { id: BigNumberish }[],
+  requests: { id: BigNumberish; expectedToExecute?: boolean }[],
   newRate?: BigNumberish,
   opt?: OptionalCommonParams,
 ) => {
@@ -507,6 +516,9 @@ export const safeBulkApproveRequestTest = async (
     ),
   );
 
+  const totalSupplyBefore = await mTBILL.totalSupply();
+  const supplyCap = await depositVault.maxSupplyCap();
+
   const txPromise = callFn();
   await expect(txPromise).to.not.reverted;
 
@@ -520,9 +532,10 @@ export const safeBulkApproveRequestTest = async (
       .div(newExpectedRate),
   );
 
-  const groupedDataBefore = requests.map(({ id }, index) => {
+  const groupedDataBefore = requests.map(({ id, expectedToExecute }, index) => {
     return {
       id,
+      expectedToExecute: expectedToExecute ?? true,
       request: requestDatasBefore[index],
       feePercent: feePercents[index],
       expectedMintAmount: expectedMintAmounts[index],
@@ -560,7 +573,10 @@ export const safeBulkApproveRequestTest = async (
     };
   });
 
-  for (const [i, { id, ...dataBefore }] of groupedDataBefore.entries()) {
+  for (const [
+    i,
+    { id, expectedToExecute, ...dataBefore },
+  ] of groupedDataBefore.entries()) {
     const dataAfter = groupedDataAfter[i];
 
     const requestDataBefore = dataBefore.request;
@@ -581,22 +597,32 @@ export const safeBulkApproveRequestTest = async (
     const logs = parsedLogs.filter((log) => log.requestId.eq(id));
 
     const expectedMintedAggregatedByUser = groupedDataBefore
-      .filter((v) => v.request.sender === requestDataBefore.sender)
+      .filter(
+        (v) =>
+          v.request.sender === requestDataBefore.sender && v.expectedToExecute,
+      )
       .reduce((prev, curr) => {
         return prev.add(curr.expectedMintAmount);
       }, BigNumber.from(0));
 
-    expect(logs.length).eq(1);
-    expect(requestDataAfter.tokenOutRate).eq(newExpectedRate);
-    expect(requestDataAfter.status).eq(1);
-    expect(balanceAfter).eq(balanceBefore.add(expectedMintedAggregatedByUser));
+    if (!expectedToExecute) {
+      expect(logs.length).eq(0);
+      expect(requestDataAfter.tokenOutRate).eq(requestDataBefore.tokenOutRate);
+      expect(requestDataAfter.status).eq(0);
+    } else {
+      expect(logs.length).eq(1);
+      expect(requestDataAfter.tokenOutRate).eq(newExpectedRate);
+      expect(requestDataAfter.status).eq(1);
+
+      const log = logs[0];
+
+      expect(log.newOutRate).eq(newExpectedRate);
+      expect(log.requestId).eq(id);
+    }
     expect(totalDepositedAfter).eq(
       totalDepositedBefore.add(expectedMintedAggregatedByUser),
     );
-    const log = logs[0];
-
-    expect(log.newOutRate).eq(newExpectedRate);
-    expect(log.requestId).eq(id);
+    expect(balanceAfter).eq(balanceBefore.add(expectedMintedAggregatedByUser));
   }
 };
 
@@ -641,6 +667,37 @@ export const rejectRequestTest = async (
     requestData.depositedUsdAmount,
   );
   expect(requestDataAfter.status).eq(2);
+};
+
+export const setMaxSupplyCapTest = async (
+  {
+    depositVault,
+    owner,
+  }: {
+    depositVault: DepositVault | DepositVaultTest;
+    owner: SignerWithAddress;
+  },
+  valueN: number,
+  opt?: OptionalCommonParams,
+) => {
+  const value = parseUnits(valueN.toString());
+
+  if (opt?.revertMessage) {
+    await expect(
+      depositVault.connect(opt?.from ?? owner).setMaxSupplyCap(value),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  await expect(
+    depositVault.connect(opt?.from ?? owner).setMaxSupplyCap(value),
+  ).to.emit(
+    depositVault,
+    depositVault.interface.events['SetMaxSupplyCap(address,uint256)'].name,
+  ).to.not.reverted;
+
+  const newMax = await depositVault.maxSupplyCap();
+  expect(newMax).eq(value);
 };
 
 export const getFeePercent = async (
