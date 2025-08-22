@@ -4,7 +4,7 @@ import { NetworkConfig } from '../common/types';
 export const networkConfigs: NetworkConfig = {
   [chainIds.sepolia]: {
     transferProxyAdminOwnership: {
-      newOwner: '0xA70009c23dbF1222D66b0ca847b4c33aE2e07B41',
+      newOwner: '0x74e0a55Ea3Db85F6106FFD69Ef7c9829fd130888',
     },
   },
 };
