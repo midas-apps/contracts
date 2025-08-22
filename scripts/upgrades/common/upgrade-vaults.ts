@@ -76,10 +76,22 @@ export const executeTransferOwnershipProxyAdmin = async (
 const getImplAddressFromDeployment = async (
   deployment: DeployImplementationResponse,
 ) => {
-  if (typeof deployment !== 'string') {
-    return { deployedNew: true, address: (await deployment.wait(5)).to };
+  if (typeof deployment === 'string') {
+    throw new Error(
+      'Deployment is a string (getTxResponse should set to true)',
+    );
+  }
+  const tx = await deployment.wait(5);
+  const address =
+    tx.contractAddress ?? tx.to ?? ((tx as any).creates as string);
+
+  if (tx.confirmations < 5) {
+    return {
+      deployedNew: true,
+      address,
+    };
   } else {
-    return { deployedNew: false, address: deployment };
+    return { deployedNew: false, address };
   }
 };
 
@@ -357,6 +369,7 @@ const upgradeAllVaults = async (
           await hre.ethers.getContractFactory(contractName, deployer),
           {
             redeployImplementation: 'onchange',
+            getTxResponse: true,
           },
         ),
       );
@@ -378,16 +391,38 @@ const upgradeAllVaults = async (
     });
   }
 
+  const failedUpgrades: {
+    mToken: MTokenName;
+    vaultType: VaultType;
+    error: string;
+  }[] = [];
+
   for (const deployment of deployments) {
-    await callBack(
-      hre,
-      {
-        proxyAddress: deployment.proxyAddress,
-        newImplementation: deployment.implementationAddress,
-        initializer: deployment.initializer,
-        initializerCalldata: deployment.initializerCalldata,
-      },
-      config.overrideSalt ?? upgradeId,
-    );
+    try {
+      await callBack(
+        hre,
+        {
+          proxyAddress: deployment.proxyAddress,
+          newImplementation: deployment.implementationAddress,
+          initializer: deployment.initializer,
+          initializerCalldata: deployment.initializerCalldata,
+        },
+        config.overrideSalt ?? upgradeId,
+      );
+    } catch (e) {
+      console.error(`Upgrade failed with error ${e}`);
+
+      failedUpgrades.push({
+        mToken: deployment.mToken,
+        vaultType: deployment.vaultType,
+        error: e instanceof Error ? e.message : (e as string),
+      });
+    }
+  }
+
+  if (failedUpgrades.length > 0) {
+    console.log('Failed upgrades', failedUpgrades);
+  } else {
+    console.log('All upgrades successful');
   }
 };

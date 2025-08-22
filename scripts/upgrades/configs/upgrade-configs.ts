@@ -15,7 +15,7 @@ export const upgradeConfigs: UpgradeConfig = {
       vaults: {
         [chainIds.sepolia]: {
           overrides: {
-            mRE7: {
+            mEDGE: {
               overrides: {
                 depositVault: true,
               },
