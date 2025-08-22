@@ -484,8 +484,8 @@ const createTimeLockTx = async (
 
   const [caller] =
     type === 'propose'
-      ? await timelockContract.getProposers()
-      : await timelockContract.getExecutors();
+      ? await timelockContract.getInitialProposers()
+      : await timelockContract.getInitialExecutors();
 
   const callerCode = await hre.ethers.provider.getCode(caller);
 

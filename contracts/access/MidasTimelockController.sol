@@ -9,33 +9,38 @@ import {TimelockController} from "@openzeppelin/contracts/governance/TimelockCon
  * @author RedDuck Software
  */
 contract MidasTimelockController is TimelockController {
-    address[] private _proposers;
-    address[] private _executors;
+    /**
+     * @dev initial proposers array
+     */
+    address[] private _initialProposers;
+
+    /**
+     * @dev initial executors array
+     */
+    address[] private _initialExecutors;
 
     constructor(
         uint256 minDelay,
         address[] memory proposers,
         address[] memory executors
     ) TimelockController(minDelay, proposers, executors, address(0)) {
-        _proposers = proposers;
-        _executors = executors;
-
-        _revokeRole(TIMELOCK_ADMIN_ROLE, address(this));
+        _initialProposers = proposers;
+        _initialExecutors = executors;
     }
 
     /**
-     * @notice Get all the proposers
-     * @return proposers addresses
+     * @notice Get all the initial proposers
+     * @return initial proposers addresses
      */
-    function getProposers() external view returns (address[] memory) {
-        return _proposers;
+    function getInitialProposers() external view returns (address[] memory) {
+        return _initialProposers;
     }
 
     /**
-     * @notice Get all the executors
-     * @return executors addresses
+     * @notice Get all the initial executors
+     * @return initial executors addresses
      */
-    function getExecutors() external view returns (address[] memory) {
-        return _executors;
+    function getInitialExecutors() external view returns (address[] memory) {
+        return _initialExecutors;
     }
 }
