@@ -9,6 +9,11 @@ declare module 'hardhat/types/runtime' {
     mtoken?: MTokenName;
     paymentToken?: PaymentTokenName;
     customSigner?: {
+      createAddressBookContract: (data: {
+        address: string;
+        contractName: string;
+        contractTag?: string;
+      }) => Promise<{ payload: unknown }>;
       signTransaction: (
         transaction: {
           data: string;

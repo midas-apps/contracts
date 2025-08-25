@@ -347,3 +347,14 @@ All the roles for the Midas protocol smart contracts are listed below.
 | ***customFeedAdmin*** | `0x43e95c54572f14f462bbfb5d540f1012e3c0455e0f380fee416c74c6055e1fe8` |
 | ***depositVaultAdmin*** | `0x426022399d5da895ea0c35138ac5caeae38531970babda5dfeb18feff43eba10` |
 | ***redemptionVaultAdmin*** | `0x49d2e07c4a1a5e243e851a5978b261b3369affead7b332779057d6622d7ccbec` |
+
+### kmiUSD Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0xc38e8ddb033afa390ac3a3b058633d80aed66714279f99996c8a761d323eb1ef` |
+| ***burner*** | `0x9eeecc4f712f48c6760b39f3c5a9c452fd4a85afe03a9a10ddb4a719dd37cabb` |
+| ***pauser*** | `0x8729445eba864e075df0322de46e93b53d4ed62ed6cf0c93d0d9958346507805` |
+| ***customFeedAdmin*** | `0xb81d2c6ada30c222c72e59cbb7f9918867981b6be5e0de70a02c28699231f04e` |
+| ***depositVaultAdmin*** | `0x7537f0610d8c5c0e3877e4eaf4bbfa46ce64756a4162f35656eb7046cfa87906` |
+| ***redemptionVaultAdmin*** | `0x399c51febc66485c68c893eec57d25171ec297bcacececed07b76d2455734e21` |

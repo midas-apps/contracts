@@ -49,6 +49,11 @@ task('runscript', 'Runs a user-defined script')
 
     if (!customSignerScript) {
       hre.customSigner = {
+        createAddressBookContract: async (_) => {
+          throw new Error(
+            'createAddressBookContract is not available for hardhat signer',
+          );
+        },
         signTransaction: async (transaction) => {
           return {
             type: 'hardhatSigner',
@@ -60,9 +65,20 @@ task('runscript', 'Runs a user-defined script')
       };
     } else {
       const scriptPathResolved = path.resolve(customSignerScript);
-      const { signTransaction } = await import(scriptPathResolved);
+      const { signTransaction, createAddressBookContract } = await import(
+        scriptPathResolved
+      );
 
       hre.customSigner = {
+        createAddressBookContract: async (data) => {
+          return {
+            payload: await createAddressBookContract({
+              ...data,
+              chainId: hre.network.config.chainId,
+              mToken: mtoken,
+            }),
+          };
+        },
         signTransaction: async (transaction, txSignMetadata) => {
           return {
             type: 'customSigner',
