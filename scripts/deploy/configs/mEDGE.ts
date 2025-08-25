@@ -165,5 +165,14 @@ export const mEDGEDeploymentConfig: DeploymentConfig = {
         },
       },
     },
+    [chainIds.tac]: {
+      postDeploy: {
+        grantRoles: {
+          oracleManagerAddress: '0xC58Da118Db7a0A8d0f79a661179278bedACD4634',
+          tokenManagerAddress: '0xBCAd9b88156653817493ae35531336E225f5295B',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+        },
+      },
+    },
   },
 };

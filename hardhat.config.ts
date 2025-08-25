@@ -50,9 +50,10 @@ const config: HardhatUserConfig = {
       oasis: '0xa690AB0543514D04411Bb1D12b2E277D675D4939',
       plume: '0x1Ded0c1E3dC80634b8d615f84aeAf1fA13B913Cc',
       etherlink: '0xaF940292B68B668A1De0e0729Ce0D60e95018b17',
-      tacTestnet: '0x12dE1B534B879b4e3a2f1D05a299eD448dC45FD3',
       hyperevm: '0x0144936A17ce450a6Eb499C00104890592814F0F',
       katana: '0xf0db11c80894c0b26681e7ba035574721012bb7e',
+      tacTestnet: '0x12dE1B534B879b4e3a2f1D05a299eD448dC45FD3',
+      tac: '0x12dE1B534B879b4e3a2f1D05a299eD448dC45FD3',
     },
   },
   verify: {
@@ -80,6 +81,7 @@ const config: HardhatUserConfig = {
       : getNetworkConfig('localhost', [], FORKING_NETWORK as any),
     hyperevm: getNetworkConfig('hyperevm'),
     katana: getNetworkConfig('katana'),
+    tac: getNetworkConfig('tac'),
   },
   gasReporter: {
     enabled: REPORT_GAS,
@@ -88,7 +90,7 @@ const config: HardhatUserConfig = {
     runOnCompile: OPTIMIZER,
   },
   etherscan: {
-    apiKey: ETHERSCAN_API_KEY,
+    apiKey: ETHERSCAN_API_KEY!,
     enabled: ENV.VERIFY_ETHERSCAN === true,
     customChains: [
       {
@@ -154,6 +156,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: 'https://explorer.katanarpc.com/api',
           browserURL: 'https://explorer.katanarpc.com',
+        },
+      },
+      {
+        chainId: chainIds.tac,
+        network: 'tac',
+        urls: {
+          apiURL: 'https://explorer.tac.build/api',
+          browserURL: 'https://explorer.tac.build',
         },
       },
     ],
