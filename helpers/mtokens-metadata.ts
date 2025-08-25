@@ -124,4 +124,8 @@ export const mTokensMetadata: Record<
     name: 'Delta Neutral HYPE',
     symbol: 'dnHYPE',
   },
+  kmiUSD: {
+    name: 'Katana miUSD',
+    symbol: 'kmiUSD',
+  },
 };

@@ -5,6 +5,7 @@ import { hbXAUtDeploymentConfig } from './hbXAUt';
 import { hypeBTCDeploymentConfig } from './hypeBTC';
 import { hypeETHDeploymentConfig } from './hypeETH';
 import { hypeUSDDeploymentConfig } from './hypeUSD';
+import { kmiUSDDeploymentConfig } from './kmiUSD';
 import { liquidHYPEDeploymentConfig } from './liquidHYPE';
 import { lstHYPEDeploymentConfig } from './lstHYPE';
 import { mAPOLLODeploymentConfig } from './mAPOLLO';
@@ -63,4 +64,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mFARM: mFARMDeploymentConfig,
   wVLP: wVLPDeploymentConfig,
   dnHYPE: dnHYPEDeploymentConfig,
+  kmiUSD: kmiUSDDeploymentConfig,
 };
