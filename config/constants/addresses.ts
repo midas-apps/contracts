@@ -9,7 +9,7 @@ export type RedemptionVaultType =
   | 'redemptionVaultSwapper'
   | 'redemptionVaultUstb';
 
-type TokenAddresses = {
+export type TokenAddresses = {
   customFeed?: string;
   dataFeed?: string;
   token?: string;
