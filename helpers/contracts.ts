@@ -1,4 +1,5 @@
 import { MTokenName } from '../config';
+import { VaultType } from '../config/constants/addresses';
 
 export type TokenContractNames = {
   dv: string;
@@ -18,6 +19,23 @@ type CommonContractNames = Omit<TokenContractNames, 'token'> & {
   ac: string;
   customAggregator: string;
   customAggregatorDiscounted: string;
+};
+
+export const vaultTypeToContractName = (
+  vaultType: VaultType,
+): string | undefined => {
+  switch (vaultType) {
+    case 'redemptionVault':
+      return 'rv';
+    case 'redemptionVaultSwapper':
+      return 'rvSwapper';
+    case 'redemptionVaultUstb':
+      return 'rvUstb';
+    case 'depositVault':
+      return 'dv';
+    default:
+      return undefined;
+  }
 };
 
 export const contractNamesPrefixes: Record<MTokenName, string> = {
@@ -51,6 +69,7 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   mFARM: 'MFarm',
   wVLP: 'WVLP',
   dnHYPE: 'DnHype',
+  kmiUSD: 'KmiUsd',
 };
 
 export const getCommonContractNames = (): CommonContractNames => {

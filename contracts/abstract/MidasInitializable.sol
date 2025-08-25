@@ -11,6 +11,7 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
  * initialization of implementation contract
  */
 abstract contract MidasInitializable is Initializable {
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }

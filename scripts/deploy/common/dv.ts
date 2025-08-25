@@ -22,6 +22,8 @@ export type DeployDvConfigCommon = {
   variationTolerance: BigNumberish;
   minAmount: BigNumberish;
   minMTokenAmountForFirstDeposit: BigNumberish;
+  // default is type(uint256).max
+  maxSupplyCap?: BigNumberish;
 };
 
 export type DeployDvRegularConfig = DeployDvConfigCommon & {
@@ -126,15 +128,15 @@ export const deployDepositVault = async (
     networkConfig.variationTolerance,
     networkConfig.minAmount,
     networkConfig.minMTokenAmountForFirstDeposit,
+    networkConfig.maxSupplyCap ?? constants.MaxUint256,
     ...extraParams,
   ] as
     | Parameters<DepositVault['initialize']>
     | Parameters<
-        DepositVaultWithUSTB['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,address)']
+        DepositVaultWithUSTB['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)']
       >;
 
   await deployAndVerifyProxy(hre, dvContractName, params, undefined, {
-    unsafeAllow: ['constructor'],
     initializer:
       networkConfig.type === 'USTB'
         ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,address)'

@@ -164,12 +164,13 @@ export const tokenContractsTests = (token: MTokenName) => {
       1,
       parseUnits('100'),
       0,
+      0,
     );
 
     const depositVaultUstb =
       await deployProxyContractIfExists<DepositVaultWithUSTB>(
         'dvUstb',
-        'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,address)',
+        'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)',
         fixture.accessControl.address,
         {
           mToken: tokenContract.address,
@@ -186,6 +187,7 @@ export const tokenContractsTests = (token: MTokenName) => {
         fixture.mockedSanctionsList.address,
         1,
         parseUnits('100'),
+        0,
         0,
         fixture.ustbToken.address,
       );

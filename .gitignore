@@ -25,3 +25,5 @@ deployments/hardhat
 
 secrets/*
 !secrets/.gitkeep
+
+logs/

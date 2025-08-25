@@ -9,28 +9,6 @@ contract DepositVaultTest is DepositVault {
 
     function _disableInitializers() internal override {}
 
-    function initializeWithoutInitializer(
-        address _ac,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount,
-        uint256 _minMTokenAmountForFirstDeposit
-    ) external {
-        __DepositVault_init(
-            _ac,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount,
-            _minMTokenAmountForFirstDeposit
-        );
-    }
-
     function tokenTransferFromToTester(
         address token,
         address from,

@@ -9,7 +9,7 @@ export type RedemptionVaultType =
   | 'redemptionVaultSwapper'
   | 'redemptionVaultUstb';
 
-type TokenAddresses = {
+export type TokenAddresses = {
   customFeed?: string;
   dataFeed?: string;
   token?: string;
@@ -29,6 +29,7 @@ export type MidasAddresses = Partial<Record<MTokenName, TokenAddresses>> & {
   // TODO: remove?
   eUSD?: TokenAddresses;
   accessControl?: string;
+  timelock?: string;
   dataFeeds?: Record<string, DataFeedAddresses>;
 };
 
@@ -627,6 +628,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   katana: {
     accessControl: '0x980f57b62060824799F23f87d6FA321653b6f069',
+    timelock: '0x8d0074e92A97b2645F94E4711b08275c15998186',
     dataFeeds: {
       usol: {
         token: '0x9B8Df6E244526ab5F6e6400d331DB28C8fdDdb55',
@@ -638,6 +640,10 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x1C0a310cf42F357087Be122e69ee402D19A265dC',
         dataFeed: '0x2e1Ed451e2d5C0f9EcD095497b59ecA4284559c0',
       },
+      miusd: {
+        aggregator: '0x9Fe23AB494472f18A25f4b731704018bB90e1918',
+        dataFeed: '0x45b826605EAF8A2501Bcf54572c58f82DB7A349f',
+      },
     },
     mRE7SOL: {
       token: '0xC6135d59F8D10c9C035963ce9037B3635170D716',
@@ -645,6 +651,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x001b3731c706fEd93BDA240A5BF848C28ae1cC12',
       depositVault: '0x175A9b122bf22ac2b193a0A775D7370D5A75268E',
       redemptionVault: '0xE93E6Cf151588d63bB669138277D20f28C2E7cdA',
+    },
+    kmiUSD: {
+      token: '0x184cFdA782CE61366010CAB23294fb22fa6189F5',
+      customFeed: '0xD5ee1106e9bebd3D50A52D9B31Aa24B35B5bDaB4',
+      dataFeed: '0xc19b5893Ab2aFc69092c6Dc2b01262f104c816C0',
+      depositVault: '0xcb7d9A25F7b9bdd0Eee77B1cEb2894D39deBca1C',
+      redemptionVaultSwapper: '0x8E3865B9d2d8e562d8bb3b15D9B4941AeE6f67f1',
     },
   },
   etherlink: {
@@ -854,6 +867,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x807f2CF75EC43b11De43a529A0Dd9FEF754a9801',
       redemptionVaultSwapper: '0x313C76eCd990B728681f29464978D5637Cb78164',
     },
+    timelock: '0x74e0a55Ea3Db85F6106FFD69Ef7c9829fd130888',
     accessControl: '0xbf25b58cB8DfaD688F7BcB2b87D71C23A6600AaC',
   },
   tacTestnet: {

@@ -88,12 +88,26 @@ contract DepositVault is ManageableVault, IDepositVault {
     mapping(address => uint256) public totalMinted;
 
     /**
-     * @dev leaving a storage gap for futures updates
+     * @notice max supply cap value in mToken
+     * @dev if after the deposit, mToken.totalSupply() > maxSupplyCap,
+     * the tx will be reverted
      */
-    uint256[50] private __gap;
+    uint256 public maxSupplyCap;
+
+    /**
+     * @dev leaving a storage gap for futures updates
+     *
+     * used slots:
+     * 50 - `maxSupplyCap`
+     */
+    uint256[49] private __gap;
 
     /**
      * @notice upgradeable pattern contract`s initializer
+     * @dev Calls all versioned initializers (V1, V2, ...) in chronological order.
+     * This ensures that every deployment, whether fresh or upgraded, ends up
+     * initialized to the latest contract state without breaking the
+     * initializer/reinitializer versioning rules.
      * @param _ac address of MidasAccessControll contract
      * @param _mTokenInitParams init params for mToken
      * @param _receiversInitParams init params for receivers
@@ -102,6 +116,7 @@ contract DepositVault is ManageableVault, IDepositVault {
      * @param _variationTolerance percent of prices diviation 1% = 100
      * @param _minAmount basic min amount for operations in mToken
      * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
+     * @param _maxSupplyCap max supply cap for mToken
      */
     function initialize(
         address _ac,
@@ -111,9 +126,10 @@ contract DepositVault is ManageableVault, IDepositVault {
         address _sanctionsList,
         uint256 _variationTolerance,
         uint256 _minAmount,
-        uint256 _minMTokenAmountForFirstDeposit
-    ) external initializer {
-        __DepositVault_init(
+        uint256 _minMTokenAmountForFirstDeposit,
+        uint256 _maxSupplyCap
+    ) public {
+        initializeV1(
             _ac,
             _mTokenInitParams,
             _receiversInitParams,
@@ -123,10 +139,22 @@ contract DepositVault is ManageableVault, IDepositVault {
             _minAmount,
             _minMTokenAmountForFirstDeposit
         );
+
+        initializeV2(_maxSupplyCap);
     }
 
-    // solhint-disable func-name-mixedcase
-    function __DepositVault_init(
+    /**
+     * @notice v1 initializer
+     * @param _ac address of MidasAccessControll contract
+     * @param _mTokenInitParams init params for mToken
+     * @param _receiversInitParams init params for receivers
+     * @param _instantInitParams init params for instant operations
+     * @param _sanctionsList address of sanctionsList contract
+     * @param _variationTolerance percent of prices diviation 1% = 100
+     * @param _minAmount basic min amount for operations in mToken
+     * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
+     */
+    function initializeV1(
         address _ac,
         MTokenInitParams calldata _mTokenInitParams,
         ReceiversInitParams calldata _receiversInitParams,
@@ -135,7 +163,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 _variationTolerance,
         uint256 _minAmount,
         uint256 _minMTokenAmountForFirstDeposit
-    ) internal onlyInitializing {
+    ) public initializer {
         __ManageableVault_init(
             _ac,
             _mTokenInitParams,
@@ -146,6 +174,14 @@ contract DepositVault is ManageableVault, IDepositVault {
             _minAmount
         );
         minMTokenAmountForFirstDeposit = _minMTokenAmountForFirstDeposit;
+    }
+
+    /**
+     * @notice v2 initializer
+     * @param _maxSupplyCap max supply cap for mToken
+     */
+    function initializeV2(uint256 _maxSupplyCap) public reinitializer(2) {
+        maxSupplyCap = _maxSupplyCap;
     }
 
     /**
@@ -308,7 +344,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         external
         onlyVaultAdmin
     {
-        _approveRequest(requestId, newOutRate, true);
+        _approveRequest(requestId, newOutRate, true, true);
 
         emit SafeApproveRequest(requestId, newOutRate);
     }
@@ -320,7 +356,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         external
         onlyVaultAdmin
     {
-        _approveRequest(requestId, newOutRate, false);
+        _approveRequest(requestId, newOutRate, false, true);
 
         emit ApproveRequest(requestId, newOutRate);
     }
@@ -357,12 +393,31 @@ contract DepositVault is ManageableVault, IDepositVault {
     /**
      * @inheritdoc IDepositVault
      */
+    function setMaxSupplyCap(uint256 newValue) external onlyVaultAdmin {
+        maxSupplyCap = newValue;
+
+        emit SetMaxSupplyCap(msg.sender, newValue);
+    }
+
+    /**
+     * @inheritdoc IDepositVault
+     */
     function safeBulkApproveRequest(
         uint256[] calldata requestIds,
         uint256 newOutRate
     ) public onlyVaultAdmin {
         for (uint256 i = 0; i < requestIds.length; i++) {
-            _approveRequest(requestIds[i], newOutRate, true);
+            bool success = _approveRequest(
+                requestIds[i],
+                newOutRate,
+                true,
+                false
+            );
+
+            if (!success) {
+                continue;
+            }
+
             emit SafeApproveRequest(requestIds[i], newOutRate);
         }
     }
@@ -385,26 +440,6 @@ contract DepositVault is ManageableVault, IDepositVault {
         returns (bytes32)
     {
         return vaultRole();
-    }
-
-    /**
-     * @dev validates that inputted USD amount >= minAmountToDepositInUsd()
-     * and amount >= minAmount()
-     * @param user user address
-     * @param amountMTokenWithoutFee amount of mToken without fee (decimals 18)
-     */
-    function _validateMinAmount(address user, uint256 amountMTokenWithoutFee)
-        internal
-        view
-    {
-        require(amountMTokenWithoutFee >= minAmount, "DV: mToken amount < min");
-
-        if (totalMinted[user] != 0) return;
-
-        require(
-            amountMTokenWithoutFee >= minMTokenAmountForFirstDeposit,
-            "DV: mint amount < min"
-        );
     }
 
     /**
@@ -450,6 +485,8 @@ contract DepositVault is ManageableVault, IDepositVault {
             );
 
         mToken.mint(recipient, result.mintAmount);
+
+        _validateMaxSupplyCap(true);
     }
 
     /**
@@ -515,8 +552,14 @@ contract DepositVault is ManageableVault, IDepositVault {
     function _approveRequest(
         uint256 requestId,
         uint256 newOutRate,
-        bool isSafe
-    ) private {
+        bool isSafe,
+        bool revertAboveSupplyCap
+    )
+        private
+        returns (
+            bool /* success */
+        )
+    {
         Request memory request = mintRequests[requestId];
 
         require(request.sender != address(0), "DV: request not exist");
@@ -531,6 +574,10 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 amountMToken = (request.usdAmountWithoutFees * (10**18)) /
             newOutRate;
 
+        if (!_validateMaxSupplyCap(amountMToken, revertAboveSupplyCap)) {
+            return false;
+        }
+
         mToken.mint(request.sender, amountMToken);
 
         totalMinted[request.sender] += amountMToken;
@@ -538,6 +585,8 @@ contract DepositVault is ManageableVault, IDepositVault {
         request.status = RequestStatus.Processed;
         request.tokenOutRate = newOutRate;
         mintRequests[requestId] = request;
+
+        return true;
     }
 
     /**
@@ -609,6 +658,67 @@ contract DepositVault is ManageableVault, IDepositVault {
             _validateMinAmount(userCopy, result.mintAmount);
         }
         require(result.mintAmount > 0, "DV: invalid mint amount");
+    }
+
+    /**
+     * @dev validates that inputted USD amount >= minAmountToDepositInUsd()
+     * and amount >= minAmount()
+     * @param user user address
+     * @param amountMTokenWithoutFee amount of mToken without fee (decimals 18)
+     */
+    function _validateMinAmount(address user, uint256 amountMTokenWithoutFee)
+        internal
+        view
+    {
+        require(amountMTokenWithoutFee >= minAmount, "DV: mToken amount < min");
+
+        if (totalMinted[user] != 0) return;
+
+        require(
+            amountMTokenWithoutFee >= minMTokenAmountForFirstDeposit,
+            "DV: mint amount < min"
+        );
+    }
+
+    /**
+     * @dev validates that mToken.totalSupply() <= maxSupplyCap
+     *
+     * @param revertOnError if true, will revert if supply is exceeded
+     * if false, will return false if supply is exceeded without reverting
+     *
+     * @return true if supply is valid, false otherwise
+     */
+    function _validateMaxSupplyCap(bool revertOnError)
+        internal
+        view
+        returns (bool)
+    {
+        return _validateMaxSupplyCap(0, revertOnError);
+    }
+
+    /**
+     * @dev validates that mToken.totalSupply() <= maxSupplyCap
+     *
+     * @param mintAmount amount of mToken to mint
+     * @param revertOnError if true, will revert if supply is exceeded
+     * if false, will return false if supply is exceeded without reverting
+     *
+     * @return true if supply is valid, false otherwise
+     */
+    function _validateMaxSupplyCap(uint256 mintAmount, bool revertOnError)
+        internal
+        view
+        returns (bool)
+    {
+        bool isExceeded = mToken.totalSupply() + mintAmount > maxSupplyCap;
+
+        if (!revertOnError) {
+            return !isExceeded;
+        }
+
+        require(!isExceeded, "DV: max supply cap exceeded");
+
+        return true;
     }
 
     /**

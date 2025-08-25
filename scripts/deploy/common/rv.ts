@@ -171,7 +171,6 @@ export const deployRedemptionVault = async (
       >;
 
   await deployAndVerifyProxy(hre, contractName, params, undefined, {
-    unsafeAllow: ['constructor'],
     initializer:
       networkConfig.type === 'SWAPPER'
         ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)'

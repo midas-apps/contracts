@@ -17,6 +17,7 @@ import {
   DeployRvRegularConfig,
   DeployRvSwapperConfig,
 } from './rv';
+import { DeployTimelockConfig } from './timelock';
 import { toFunctionSelector } from './utils';
 
 import { PaymentTokenName } from '../../../config';
@@ -91,6 +92,7 @@ export type NetworkDeploymentConfig = Record<
   number,
   {
     grantDefaultAdminRole?: GrantDefaultAdminRoleToAcAdminConfig;
+    timelock?: DeployTimelockConfig;
   }
 >;
 
