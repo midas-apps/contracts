@@ -621,6 +621,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   katana: {
     accessControl: '0x980f57b62060824799F23f87d6FA321653b6f069',
+    timelock: '0x8d0074e92A97b2645F94E4711b08275c15998186',
     dataFeeds: {
       usol: {
         token: '0x9B8Df6E244526ab5F6e6400d331DB28C8fdDdb55',
@@ -848,7 +849,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x807f2CF75EC43b11De43a529A0Dd9FEF754a9801',
       redemptionVaultSwapper: '0x313C76eCd990B728681f29464978D5637Cb78164',
     },
-    timelock: '0xA70009c23dbF1222D66b0ca847b4c33aE2e07B41',
+    timelock: '0x74e0a55Ea3Db85F6106FFD69Ef7c9829fd130888',
     accessControl: '0xbf25b58cB8DfaD688F7BcB2b87D71C23A6600AaC',
   },
   tacTestnet: {

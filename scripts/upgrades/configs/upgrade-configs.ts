@@ -15,12 +15,15 @@ export const upgradeConfigs: UpgradeConfig = {
       vaults: {
         [chainIds.sepolia]: {
           overrides: {
-            mEDGE: {
+            mMEV: {
               overrides: {
                 depositVault: true,
               },
             },
           },
+        },
+        [chainIds.katana]: {
+          all: true,
         },
       },
     },

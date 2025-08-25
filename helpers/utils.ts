@@ -9,6 +9,8 @@ import {
   PaymentTokenNameEnum,
 } from '../config';
 
+export const DAY = 86400;
+
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
