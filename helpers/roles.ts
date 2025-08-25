@@ -33,6 +33,8 @@ const prefixes: Record<MTokenName, string> = {
   hbUSDC: 'HB_USDC',
   mFARM: 'M_FARM',
   wVLP: 'W_VLP',
+  dnHYPE: 'DN_HYPE',
+  kmiUSD: 'KMI_USD',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {

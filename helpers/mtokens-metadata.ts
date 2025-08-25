@@ -120,4 +120,12 @@ export const mTokensMetadata: Record<
     name: 'Hyperbeat VLP',
     symbol: 'wVLP',
   },
+  dnHYPE: {
+    name: 'Delta Neutral HYPE',
+    symbol: 'dnHYPE',
+  },
+  kmiUSD: {
+    name: 'Katana miUSD',
+    symbol: 'kmiUSD',
+  },
 };

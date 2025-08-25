@@ -168,7 +168,7 @@ export const addPaymentTokens = async (
         comment: `add ${paymentToken.token} to ${vaultType}`,
       });
 
-      console.log(`${vaultType}:${paymentToken.token} tx initiated: ${txRes}`);
+      console.log(`${vaultType}:${paymentToken.token} tx initiated`, txRes);
     },
   );
 };

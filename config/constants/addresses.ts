@@ -618,6 +618,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0xc800f672EE8693BC0138E513038C84fe2D1B8a78',
       redemptionVaultSwapper: '0x462B95575cb2D56de9d1aAaAAb452279B058Aa06',
     },
+    dnHYPE: {
+      token: '0x949a7250Bb55Eb79BC6bCC97fCd1C473DB3e6F29',
+      customFeed: '0xEB3459316211aB3e2bfee836B989f50fe08AA469',
+      dataFeed: '0x4e250D83C4D5A3C5e78875AE0c2876E2563A11A5',
+      depositVault: '0xa4a6b89354E278666fb908CcdB16276AE151ff00',
+      redemptionVaultSwapper: '0xBe61c1A27689c11b63378e84C9bB70A2cd616Fff',
+    },
   },
   katana: {
     accessControl: '0x980f57b62060824799F23f87d6FA321653b6f069',
@@ -633,6 +640,10 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x1C0a310cf42F357087Be122e69ee402D19A265dC',
         dataFeed: '0x2e1Ed451e2d5C0f9EcD095497b59ecA4284559c0',
       },
+      miusd: {
+        aggregator: '0x9Fe23AB494472f18A25f4b731704018bB90e1918',
+        dataFeed: '0x45b826605EAF8A2501Bcf54572c58f82DB7A349f',
+      },
     },
     mRE7SOL: {
       token: '0xC6135d59F8D10c9C035963ce9037B3635170D716',
@@ -640,6 +651,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x001b3731c706fEd93BDA240A5BF848C28ae1cC12',
       depositVault: '0x175A9b122bf22ac2b193a0A775D7370D5A75268E',
       redemptionVault: '0xE93E6Cf151588d63bB669138277D20f28C2E7cdA',
+    },
+    kmiUSD: {
+      token: '0x184cFdA782CE61366010CAB23294fb22fa6189F5',
+      customFeed: '0xD5ee1106e9bebd3D50A52D9B31Aa24B35B5bDaB4',
+      dataFeed: '0xc19b5893Ab2aFc69092c6Dc2b01262f104c816C0',
+      depositVault: '0xcb7d9A25F7b9bdd0Eee77B1cEb2894D39deBca1C',
+      redemptionVaultSwapper: '0x8E3865B9d2d8e562d8bb3b15D9B4941AeE6f67f1',
     },
   },
   etherlink: {

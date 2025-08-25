@@ -15,7 +15,12 @@ declare module 'hardhat/types/runtime' {
         action?: string,
         mtoken?: MTokenName,
       ) => Promise<string>;
-      sendTransaction: (
+      createAddressBookContract: (data: {
+        address: string;
+        contractName: string;
+        contractTag?: string;
+      }) => Promise<{ payload: unknown }>;
+      signTransaction: (
         transaction: {
           data: string;
           to: string;

@@ -56,11 +56,15 @@ task('runscript', 'Runs a user-defined script')
         getWalletAddress: async () => {
           return deployer;
         },
+        createAddressBookContract: async (_) => {
+          throw new Error(
+            'createAddressBookContract is not available for hardhat signer',
+          );
+        },
         sendTransaction: async (transaction) => {
           const tx = await deployerSigner.sendTransaction({
             ...transaction,
           });
-
           return {
             type: 'hardhatSigner',
             tx,
@@ -69,9 +73,11 @@ task('runscript', 'Runs a user-defined script')
       };
     } else {
       const scriptPathResolved = path.resolve(customSignerScript);
-      const { signTransaction, getWalletAddressForAction } = await import(
-        scriptPathResolved
-      );
+      const {
+        signTransaction,
+        createAddressBookContract,
+        getWalletAddressForAction,
+      } = await import(scriptPathResolved);
 
       hre.customSigner = {
         getWalletAddress: async (action, mtokenOverride) => {
@@ -81,7 +87,17 @@ task('runscript', 'Runs a user-defined script')
             mtokenOverride ?? hre.mtoken,
           );
         },
-        sendTransaction: async (transaction, txSignMetadata) => {
+        createAddressBookContract: async (data) => {
+          return {
+            payload: await createAddressBookContract({
+              ...data,
+              chainId: hre.network.config.chainId,
+              mToken: mtoken,
+            }),
+          };
+        },
+
+        signTransaction: async (transaction, txSignMetadata) => {
           return {
             type: 'customSigner',
             payload: await signTransaction(transaction, {
