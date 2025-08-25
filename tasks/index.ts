@@ -97,7 +97,7 @@ task('runscript', 'Runs a user-defined script')
           };
         },
 
-        signTransaction: async (transaction, txSignMetadata) => {
+        sendTransaction: async (transaction, txSignMetadata) => {
           return {
             type: 'customSigner',
             payload: await signTransaction(transaction, {

@@ -20,7 +20,7 @@ declare module 'hardhat/types/runtime' {
         contractName: string;
         contractTag?: string;
       }) => Promise<{ payload: unknown }>;
-      signTransaction: (
+      sendTransaction: (
         transaction: {
           data: string;
           to: string;
