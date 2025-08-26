@@ -85,7 +85,7 @@ const getImplAddressFromDeployment = async (
   const address =
     tx.contractAddress ?? tx.to ?? ((tx as any).creates as string);
 
-  if (tx.confirmations < 5) {
+  if (tx.confirmations <= 7) {
     return {
       deployedNew: true,
       address,
@@ -181,6 +181,7 @@ const upgradeAllVaults = async (
         vaults: vaultTypes.map((v) => ({
           vaultType: v,
           initializer: config.initializers?.[v]?.initializer,
+          initializerArgs: config.initializers?.[v]?.defaultInitializerArgs,
         })),
         addresses: mTokenAddresses,
       };
@@ -204,6 +205,7 @@ const upgradeAllVaults = async (
       ).map((v) => ({
         vaultType: v,
         initializer: config.initializers?.[v]?.initializer,
+        initializerArgs: config.initializers?.[v]?.defaultInitializerArgs,
       }));
     }
 
