@@ -445,30 +445,32 @@ const createTimeLockTx = async (
 
   const currentAdminOwner = await admin.owner();
 
-  if (
-    currentAdminOwner.toLowerCase() !== timelockContract.address.toLowerCase()
-  ) {
-    throw new Error(
-      `Admin owner ${currentAdminOwner} is not the timelock contract ${timelockContract.address}`,
-    );
+  if (hre.skipValidation !== false) {
+    if (
+      currentAdminOwner.toLowerCase() !== timelockContract.address.toLowerCase()
+    ) {
+      throw new Error(
+        `Admin owner ${currentAdminOwner} is not the timelock contract ${timelockContract.address}`,
+      );
+    }
+
+    const { status, err } = await hre.ethers.provider
+      .call({
+        to: admin.address,
+        from: timelockContract.address,
+        data: calldata,
+      })
+      .then((returnData) => {
+        const revertReason = parseRevertReason(returnData);
+        return { status: revertReason === null, err: revertReason };
+      });
+
+    if (!status) {
+      throw new Error(`Simulation failed: ${err}`);
+    }
   }
 
   const saltHash = solidityKeccak256(['string'], [salt]);
-
-  const { status, err } = await hre.ethers.provider
-    .call({
-      to: admin.address,
-      from: timelockContract.address,
-      data: calldata,
-    })
-    .then((returnData) => {
-      const revertReason = parseRevertReason(returnData);
-      return { status: revertReason === null, err: revertReason };
-    });
-
-  if (!status) {
-    throw new Error(`Simulation failed: ${err}`);
-  }
 
   let { operationHash, type, tx, verifyParameters } = await populateTx(
     timelockContract,

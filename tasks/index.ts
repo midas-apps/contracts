@@ -23,6 +23,7 @@ task('runscript', 'Runs a user-defined script')
   .addOptionalParam('ptoken', 'Payment Token')
   .addOptionalParam('action', 'Timelock Action')
   .addOptionalParam('customSignerScript', 'Custom Signer Script')
+  .addOptionalParam('skipvalidation', 'Skip Validation', 'false')
   .setAction(async (taskArgs, hre) => {
     const mtoken = taskArgs.mtoken;
     const ptoken = taskArgs.ptoken;
@@ -30,6 +31,9 @@ task('runscript', 'Runs a user-defined script')
     const customSignerScript =
       taskArgs.customSignerScript ?? ENV.CUSTOM_SIGNER_SCRIPT_PATH;
     const scriptPath = taskArgs.path;
+    const skipValidation = taskArgs.skipvalidation;
+
+    hre.skipValidation = (skipValidation ?? 'false') === 'true';
 
     const { deployer } = await hre.getNamedAccounts();
     const deployerSigner = await hre.ethers.getSigner(deployer);
@@ -82,7 +86,6 @@ task('runscript', 'Runs a user-defined script')
       hre.customSigner = {
         getWalletAddress: async (action, mtokenOverride) => {
           return getWalletAddressForAction(
-            hre,
             action,
             mtokenOverride ?? hre.mtoken,
           );

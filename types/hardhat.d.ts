@@ -10,6 +10,7 @@ declare module 'hardhat/types/runtime' {
     mtoken?: MTokenName;
     paymentToken?: PaymentTokenName;
     action?: string;
+    skipValidation?: boolean;
     customSigner?: {
       getWalletAddress: (
         action?: string,
