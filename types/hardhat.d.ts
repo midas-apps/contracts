@@ -2,6 +2,7 @@ import { TransactionResponse } from '@ethersproject/providers';
 import { BigNumberish } from 'ethers';
 
 import { MTokenName, PaymentTokenName } from '../config/types';
+import { Logger } from '../helpers/logger';
 
 import 'hardhat/types/runtime';
 
@@ -11,6 +12,13 @@ declare module 'hardhat/types/runtime' {
     paymentToken?: PaymentTokenName;
     action?: string;
     skipValidation?: boolean;
+    logger: Logger & {
+      // default: false
+      logToFile: boolean;
+      // default: logs/
+      logsFolderPath: string;
+      executionLogContext: string;
+    };
     customSigner?: {
       getWalletAddress: (
         action?: string,

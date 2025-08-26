@@ -401,6 +401,11 @@ const upgradeAllVaults = async (
 
   for (const deployment of deployments) {
     try {
+      console.log(
+        `\n\nUpgrading ${deployment.contractName}
+Proxy: ${deployment.proxyAddress}
+Implementation: ${deployment.implementationAddress}`,
+      );
       await callBack(
         hre,
         {

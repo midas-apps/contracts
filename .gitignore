@@ -23,7 +23,5 @@ deployments/hardhat
 
 .DS_Store
 
-secrets/*
-!secrets/.gitkeep
-
-logs/
+logs/*
+!logs/.gitkeep

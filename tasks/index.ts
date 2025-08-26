@@ -4,6 +4,7 @@ import { task } from 'hardhat/config';
 import path from 'path';
 
 import { ENV } from '../config';
+import { initializeLogger } from '../helpers/logger';
 import {
   etherscanVerify,
   etherscanVerifyImplementation,
@@ -24,14 +25,24 @@ task('runscript', 'Runs a user-defined script')
   .addOptionalParam('action', 'Timelock Action')
   .addOptionalParam('customSignerScript', 'Custom Signer Script')
   .addOptionalParam('skipvalidation', 'Skip Validation', 'false')
+  .addOptionalParam('logToFile', 'Log to file')
+  .addOptionalParam('logsFolderPath', 'Logs folder path')
   .setAction(async (taskArgs, hre) => {
     const mtoken = taskArgs.mtoken;
     const ptoken = taskArgs.ptoken;
     const action = taskArgs.action;
     const customSignerScript =
       taskArgs.customSignerScript ?? ENV.CUSTOM_SIGNER_SCRIPT_PATH;
+    const logToFile = taskArgs.logToFile ?? ENV.LOG_TO_FILE;
+    const logsFolderPath =
+      (taskArgs.logsFolderPath as string | undefined) ??
+      ENV.LOGS_FOLDER_PATH ??
+      path.resolve(hre.config.paths.root, 'logs/');
+
     const scriptPath = taskArgs.path;
     const skipValidation = taskArgs.skipvalidation;
+
+    initializeLogger(hre);
 
     hre.skipValidation = (skipValidation ?? 'false') === 'true';
 
@@ -39,6 +50,12 @@ task('runscript', 'Runs a user-defined script')
     const deployerSigner = await hre.ethers.getSigner(deployer);
 
     hre.action = action;
+
+    hre.logger = {
+      logToFile,
+      logsFolderPath,
+      executionLogContext: `${action}-${new Date().toISOString()}`,
+    };
 
     if (mtoken) {
       if (!isMTokenName(mtoken)) {

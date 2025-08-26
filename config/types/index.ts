@@ -38,4 +38,6 @@ export interface Environment {
   readonly VERIFY_ETHERSCAN?: boolean;
   readonly SOURCIFY_API_URL?: string;
   readonly CUSTOM_SIGNER_SCRIPT_PATH?: string;
+  readonly LOG_TO_FILE: boolean;
+  readonly LOGS_FOLDER_PATH?: string;
 }
