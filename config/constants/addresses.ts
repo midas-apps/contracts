@@ -169,6 +169,8 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
       syrupusdc: {
         token: '0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b',
+        aggregator: '0xa869cBc273daAE91d6109EE5bb958aC6B7198B67',
+        dataFeed: '0x449f44f9B5e924E27ba9bC4E49AcD8BC1012287c',
       },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',

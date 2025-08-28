@@ -278,7 +278,7 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           description: 'tBTC/BTC',
         },
       },
-      syrupUSDC: {
+      syrupusdc: {
         dataFeed: {
           healthyDiff: constants.MaxUint256,
           minAnswer: 1120779318388135788n,

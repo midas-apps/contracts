@@ -72,7 +72,7 @@ export enum PaymentTokenNameEnum {
   khype = 'khype',
   whype = 'whype',
   miusd = 'miusd',
-  syrupUSDC = 'syrupUSDC',
+  syrupusdc = 'syrupusdc',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;
