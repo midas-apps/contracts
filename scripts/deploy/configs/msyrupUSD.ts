@@ -72,7 +72,7 @@ export const msyrupUSDDeploymentConfig: DeploymentConfig = {
                   allowance: parseUnits('100000000'),
                 },
                 {
-                  token: 'syrupUSDC',
+                  token: 'syrupusdc',
                   allowance: parseUnits('100000000'),
                   isStable: false,
                 },
@@ -98,7 +98,7 @@ export const msyrupUSDDeploymentConfig: DeploymentConfig = {
                   allowance: parseUnits('100000000'),
                 },
                 {
-                  token: 'syrupUSDC',
+                  token: 'syrupusdc',
                   allowance: parseUnits('100000000'),
                   isStable: false,
                 },
