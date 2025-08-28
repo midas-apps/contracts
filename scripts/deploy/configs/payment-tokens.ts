@@ -278,6 +278,13 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           description: 'tBTC/BTC',
         },
       },
+      syrupUSDC: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: 1120779318388135788n,
+          maxAnswer: parseUnits('1.5', 18),
+        },
+      },
     },
     [chainIds.base]: {
       usdc: {
