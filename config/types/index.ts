@@ -13,6 +13,7 @@ export type Network =
   | 'rootstock'
   | 'arbitrum'
   | 'tacTestnet'
+  | 'tac'
   | 'hyperevm'
   | 'katana';
 export type RpcUrl =

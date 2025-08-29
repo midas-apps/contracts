@@ -710,6 +710,12 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVault: '0xE14Dbe39D750e24729df95e5F7c93b0E37C65004',
     },
   },
+  tac: {
+    accessControl: '0x2365D68d462e9a5660a3208f817519334a706A45',
+    mEDGE: {
+      token: '0x0e07999AFFF029894277C785857b4cA30ec07a5e',
+    },
+  },
   sepolia: {
     dataFeeds: {
       usdc: {
