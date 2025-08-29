@@ -52,6 +52,28 @@ export const kmiUSDDeploymentConfig: DeploymentConfig = {
         setRoundData: {
           data: parseUnits('1', 8),
         },
+        addPaymentTokens: {
+          vaults: [
+            {
+              type: 'depositVault',
+              paymentTokens: [
+                {
+                  token: 'miusd',
+                  allowance: parseUnits('1000000000'),
+                },
+              ],
+            },
+            {
+              type: 'redemptionVaultSwapper',
+              paymentTokens: [
+                {
+                  token: 'miusd',
+                  allowance: parseUnits('1000000000'),
+                },
+              ],
+            },
+          ],
+        },
       },
     },
   },

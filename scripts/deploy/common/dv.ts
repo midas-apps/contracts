@@ -145,7 +145,6 @@ export const deployDepositVault = async (
       >;
 
   await deployAndVerifyProxy(hre, dvContractName, params, undefined, {
-    unsafeAllow: ['constructor'],
     initializer:
       networkConfig.type === 'USTB'
         ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,address)'

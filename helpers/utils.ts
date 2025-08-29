@@ -9,6 +9,8 @@ import {
   PaymentTokenNameEnum,
 } from '../config';
 
+export const DAY = 86400;
+
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -46,6 +48,14 @@ export const getPaymentTokenOrThrow = (hre: HardhatRuntimeEnvironment) => {
     throw new Error('PaymentToken parameter not found');
   }
   return paymentToken;
+};
+
+export const getActionOrThrow = (hre: HardhatRuntimeEnvironment) => {
+  const action = hre.action;
+  if (!action) {
+    throw new Error('Action parameter not found');
+  }
+  return action;
 };
 
 export const getMTokenOrPaymentTokenOrThrow = (

@@ -29,6 +29,7 @@ export type MidasAddresses = Partial<Record<MTokenName, TokenAddresses>> & {
   // TODO: remove?
   eUSD?: TokenAddresses;
   accessControl?: string;
+  timelock?: string;
   dataFeeds?: Record<string, DataFeedAddresses>;
 };
 
@@ -646,6 +647,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   katana: {
     accessControl: '0x980f57b62060824799F23f87d6FA321653b6f069',
+    timelock: '0x8d0074e92A97b2645F94E4711b08275c15998186',
     dataFeeds: {
       usol: {
         token: '0x9B8Df6E244526ab5F6e6400d331DB28C8fdDdb55',
@@ -658,6 +660,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         dataFeed: '0x2e1Ed451e2d5C0f9EcD095497b59ecA4284559c0',
       },
       miusd: {
+        token: '0xC31F7450BE8B7C61f93BeE3108116b0a6f0f0354',
         aggregator: '0x9Fe23AB494472f18A25f4b731704018bB90e1918',
         dataFeed: '0x45b826605EAF8A2501Bcf54572c58f82DB7A349f',
       },
@@ -890,6 +893,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x807f2CF75EC43b11De43a529A0Dd9FEF754a9801',
       redemptionVaultSwapper: '0x313C76eCd990B728681f29464978D5637Cb78164',
     },
+    timelock: '0x74e0a55Ea3Db85F6106FFD69Ef7c9829fd130888',
     accessControl: '0xbf25b58cB8DfaD688F7BcB2b87D71C23A6600AaC',
   },
   tacTestnet: {

@@ -41,7 +41,10 @@ import {
 } from './ui/deployment-contracts';
 
 import { MTokenName } from '../../../../config';
-import { TokenContractNames } from '../../../../helpers/contracts';
+import {
+  contractNameToVaultType,
+  TokenContractNames,
+} from '../../../../helpers/contracts';
 import { PostDeployConfig } from '../../common/types';
 
 export const EXPR = Symbol('expr');
@@ -348,18 +351,13 @@ export const generateDeploymentConfig = async (
       ](
         hre,
         deploymentConfigs.map((config) => {
-          // TODO: replace this with mapper function after merge with main
-          if (config === 'dv') {
-            return 'depositVault';
-          }
-          if (config === 'rv') {
-            return 'redemptionVault';
-          }
-          if (config === 'rvSwapper') {
-            return 'redemptionVaultSwapper';
+          const vaultType = contractNameToVaultType(config);
+
+          if (!vaultType) {
+            throw new Error(`Unknown config key: ${config}`);
           }
 
-          throw new Error(`Unknown config key: ${config}`);
+          return vaultType;
         }),
       );
       deploymentConfig.postDeploy[configKey] = postDeployConfig;

@@ -18,7 +18,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       deployer,
     ),
     {
-      unsafeAllow: ['constructor'],
       redeployImplementation: 'onchange',
     },
   );

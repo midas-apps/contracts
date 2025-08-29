@@ -19,7 +19,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       deployer,
     ),
     {
-      unsafeAllow: ['constructor'],
       call: {
         fn: 'initializeV2',
         args: [
