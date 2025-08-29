@@ -52,8 +52,8 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   wVLP: 'WVLP',
   dnHYPE: 'DnHype',
   kmiUSD: 'KmiUsd',
-  msyrupUSD: 'MSyrupUsd'
-  dnPUMP: 'DnPump'
+  msyrupUSD: 'MSyrupUsd',
+  dnPUMP: 'DnPump',
 };
 
 export const getCommonContractNames = (): CommonContractNames => {

@@ -31,7 +31,7 @@ export enum MTokenNameEnum {
   dnHYPE = 'dnHYPE',
   kmiUSD = 'kmiUSD',
   msyrupUSD = 'msyrupUSD',
-  dnPUMP = 'dnPUMP'
+  dnPUMP = 'dnPUMP',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
