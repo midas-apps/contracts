@@ -1,13 +1,21 @@
 import {
   cancel,
+  confirm,
   group,
   isCancel,
   multiselect,
-  spinner,
+  stream,
+  tasks,
   text,
 } from '@clack/prompts';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { Project, SyntaxKind } from 'ts-morph';
+import {
+  ObjectLiteralExpression,
+  Project,
+  PropertyAssignment,
+  SourceFile,
+  SyntaxKind,
+} from 'ts-morph';
 
 import { execSync } from 'child_process';
 import fs from 'fs/promises';
@@ -23,9 +31,21 @@ import {
   getTokenContractFromTemplate,
   getTokenRolesContractFromTemplate,
 } from './templates';
+import {
+  configsPerNetworkConfig,
+  getDeploymentConfigFromUser,
+} from './ui/deployment-config';
+import {
+  getConfigFromUser,
+  getContractsToGenerateFromUser,
+} from './ui/deployment-contracts';
 
 import { MTokenName } from '../../../../config';
 import { TokenContractNames } from '../../../../helpers/contracts';
+import { PostDeployConfig } from '../../common/types';
+
+export const EXPR = Symbol('expr');
+export type CodeExpr = { [EXPR]: string };
 
 const generatorPerContract: Partial<
   Record<
@@ -162,81 +182,13 @@ export const updateConfigFiles = (
   }
 };
 
-const requireNotCancelled = <T>(value: T | symbol) => {
+export const requireNotCancelled = <T>(value: T | symbol) => {
   if (isCancel(value)) {
     cancel('Operation cancelled.');
     process.exit(0);
   }
 
   return value;
-};
-
-const getConfigFromUser = async () => {
-  const {
-    tokenContractName,
-    tokenName,
-    tokenSymbol,
-    contractNamePrefix,
-    rolesPrefix,
-  } = await group({
-    tokenContractName: () =>
-      text({
-        message: 'What is the token contract name?',
-        placeholder: 'mRe7SOL',
-        initialValue: undefined,
-        validate(value) {
-          if (!value || value.length === 0) return `Value is required!`;
-        },
-      }),
-
-    tokenName: () =>
-      text({
-        message: 'What is the token name?',
-        placeholder: 'Midas Re7SOL',
-        initialValue: undefined,
-        validate(value) {
-          if (!value || value.length === 0) return `Value is required!`;
-        },
-      }),
-
-    tokenSymbol: ({ results: { tokenContractName } }) =>
-      text({
-        message: 'What is the token symbol?',
-        placeholder: 'mRe7SOL',
-        initialValue: tokenContractName!,
-        validate(value) {
-          if (!value || value.length === 0) return `Value is required!`;
-        },
-      }),
-
-    contractNamePrefix: () =>
-      text({
-        message: 'What is the contract name prefix?',
-        placeholder: 'MRe7Sol',
-        initialValue: undefined,
-        validate(value) {
-          if (!value || value.length === 0) return `Value is required!`;
-        },
-      }),
-
-    rolesPrefix: () =>
-      text({
-        message: 'What is the roles prefix?',
-        placeholder: 'M_RE7SOL',
-        initialValue: undefined,
-        validate(value) {
-          if (!value || value.length === 0) return `Value is required!`;
-        },
-      }),
-  });
-
-  return {
-    tokenName,
-    contractNamePrefix,
-    rolesPrefix,
-    tokenSymbol: tokenSymbol as string,
-    tokenContractName,
-  };
 };
 
 const lintAndFormatTs = (path: string) => {
@@ -267,93 +219,355 @@ const lintAndFormatSol = (folder: string) => {
   }
 };
 
-export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
-  const config = await getConfigFromUser();
+export const expr = (code: string): CodeExpr => ({ [EXPR]: code });
 
-  const contractsToGenerate = requireNotCancelled(
-    await multiselect<keyof TokenContractNames>({
-      message:
-        'Select contracts to generate. (Space to select, Enter to confirm)',
-      options: [
-        { value: 'token', label: 'Token', hint: 'Token contract' },
-        { value: 'dv', label: 'Deposit Vault', hint: 'Deposit Vault contract' },
-        {
-          value: 'rv',
-          label: 'Redemption Vault',
-          hint: 'Redemption Vault contract',
-        },
-        {
-          value: 'rvSwapper',
-          label: 'Redemption Vault With Swapper',
-          hint: 'Redemption Vault With Swapper contract',
-        },
-        {
-          value: 'rvUstb',
-          label: 'Redemption Vault With USTB',
-          hint: 'Redemption Vault With USTB contract',
-        },
-        { value: 'dataFeed', label: 'Data Feed', hint: 'Data Feed contract' },
-        {
-          value: 'customAggregator',
-          label: 'Custom Aggregator',
-          hint: 'Custom Aggregator contract',
-        },
-      ],
-      initialValues: [
-        'token',
-        'dv',
-        'rvSwapper',
-        'dataFeed',
-        'customAggregator',
-      ],
-      required: true,
-    }),
+function objectToCode(value: any, indent = 0): string {
+  const pad = ' '.repeat(indent);
+  if (value && typeof value === 'object' && EXPR in value)
+    return (value as CodeExpr)[EXPR]; // ← raw
+
+  if (Array.isArray(value)) {
+    return `[${value.map((v) => objectToCode(v, indent)).join(', ')}]`;
+  }
+
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value).map(
+      ([k, v]) => `${pad}  ${k}: ${objectToCode(v, indent + 2)}`,
+    );
+    return `{\n${entries.join(',\n')}\n${pad}}`;
+  }
+
+  if (typeof value === 'string') return JSON.stringify(value); // quoted only for *real* strings
+  if (value === null) return 'null';
+  return String(value);
+}
+
+const getDeploymentConfigObject = (
+  deploymentConfigFile: SourceFile,
+  deploymentConfigVarName: string,
+) => {
+  const varDecl = deploymentConfigFile.getVariableDeclarationOrThrow(
+    deploymentConfigVarName,
+  );
+  const initializer = varDecl.getInitializerOrThrow();
+  return initializer.asKindOrThrow(SyntaxKind.ObjectLiteralExpression);
+};
+const getNetworkConfigObject = (
+  deploymentConfigObject: ObjectLiteralExpression,
+) => {
+  const networkConfigsProp = deploymentConfigObject
+    .getPropertyOrThrow('networkConfigs')
+    .asKindOrThrow(SyntaxKind.PropertyAssignment);
+
+  // 5. Insert a new property in `networkConfigs`
+  const networkConfigsObj = networkConfigsProp.getInitializerIfKindOrThrow(
+    SyntaxKind.ObjectLiteralExpression,
   );
 
-  const mToken = config.tokenContractName;
+  return networkConfigsObj;
+};
 
-  updateConfigFiles(hre, {
-    contractNamePrefix: config.contractNamePrefix,
-    rolesPrefix: config.rolesPrefix,
-    name: config.tokenName,
-    symbol: config.tokenSymbol,
-    mToken,
-  });
+export const generateDeploymentConfig = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+) => {
+  const project = new Project();
 
-  const folder = path.join(hre.config.paths.root, 'contracts', `${mToken}`);
+  const deploymentConfigVarName = `${mToken}DeploymentConfig`;
 
-  const isFolderExists = await fs
-    .access(folder)
+  const deploymentConfigPath = path.join(
+    hre.config.paths.root,
+    `scripts/deploy/configs/${mToken}.ts`,
+  );
+
+  // Check if deployment config file already exists
+  const deploymentConfigFileExists = await fs
+    .access(deploymentConfigPath)
     .then(() => true)
     .catch(() => false);
 
-  if (isFolderExists) {
-    await fs.rm(folder, { recursive: true });
+  let overrideNetworkConfig = false;
+  let hasNetworkConfig = false;
+
+  const getDeploymentConfigFile = () => {
+    return project.addSourceFileAtPath(deploymentConfigPath);
+  };
+
+  if (deploymentConfigFileExists) {
+    const networkConfigObj = getNetworkConfigObject(
+      getDeploymentConfigObject(
+        getDeploymentConfigFile(),
+        deploymentConfigVarName,
+      ),
+    );
+
+    const property = networkConfigObj.getProperty(
+      `[chainIds.${hre.network.name}]`,
+    );
+    hasNetworkConfig = !!property;
+
+    if (property) {
+      overrideNetworkConfig = await confirm({
+        message: `Deployment config for ${hre.network.name} already exists. Override?`,
+        initialValue: false,
+      }).then(requireNotCancelled);
+
+      if (overrideNetworkConfig) {
+        property.remove();
+      }
+    }
   }
 
-  await fs.mkdir(folder, { recursive: true });
+  const { deploymentConfigs, postDeployConfigs } =
+    await getDeploymentConfigFromUser(overrideNetworkConfig);
 
-  const generators = [
-    getTokenRolesContractFromTemplate,
-    ...contractsToGenerate.map((contract) => generatorPerContract[contract]),
-  ].filter((v) => v !== undefined);
+  const deploymentConfig: Record<string, any> = {
+    networkConfig: {},
+    postDeploy: {},
+    genericConfig: {},
+  };
 
-  const generatedContracts = await Promise.all(
-    generators.map((generator) => generator(mToken as MTokenName)),
-  );
+  if (!deploymentConfigFileExists) {
+    deploymentConfig.genericConfig =
+      await configsPerNetworkConfig.genericConfig(mToken);
+  }
 
-  for (const contract of generatedContracts) {
-    if (!contract) {
-      cancel(`Contract ${contract} is not available for a provided mToken`);
-      process.exit(0);
+  if (!deploymentConfigFileExists || overrideNetworkConfig) {
+    for (const configKey of deploymentConfigs) {
+      const config = await configsPerNetworkConfig[configKey](hre);
+      deploymentConfig.networkConfig[configKey] = config;
     }
+  } else {
+    await stream.warn(`No-override is selected, skipping network config...`);
+  }
 
+  if (postDeployConfigs) {
+    for (const configKey of postDeployConfigs as (keyof PostDeployConfig)[]) {
+      const postDeployConfig = await configsPerNetworkConfig.postDeploy?.[
+        configKey as keyof typeof configsPerNetworkConfig.postDeploy
+      ](
+        hre,
+        deploymentConfigs.map((config) => {
+          // TODO: replace this with mapper function after merge with main
+          if (config === 'dv') {
+            return 'depositVault';
+          }
+          if (config === 'rv') {
+            return 'redemptionVault';
+          }
+          if (config === 'rvSwapper') {
+            return 'redemptionVaultSwapper';
+          }
+
+          throw new Error(`Unknown config key: ${config}`);
+        }),
+      );
+      deploymentConfig.postDeploy[configKey] = postDeployConfig;
+    }
+  } else {
+    await stream.warn(`Skipping post deploy configs...`);
+  }
+
+  if (!deploymentConfigFileExists) {
     await fs.writeFile(
-      path.join(folder, `${contract.name}.sol`),
-      contract.content,
+      deploymentConfigPath,
+      `import { parseUnits } from 'ethers/lib/utils';
+
+import { chainIds } from '../../../config';
+import { DeploymentConfig } from '../common/types';
+import { constants } from 'ethers';
+
+export const ${deploymentConfigVarName}: DeploymentConfig = {
+  networkConfigs: { },
+};`,
       'utf-8',
     );
   }
 
-  lintAndFormatSol(folder);
+  const deploymentConfigFile = getDeploymentConfigFile();
+
+  const deploymentConfigObject = getDeploymentConfigObject(
+    deploymentConfigFile,
+    deploymentConfigVarName,
+  );
+
+  const networkConfigsObj = getNetworkConfigObject(deploymentConfigObject);
+
+  let networkConfigProperty: PropertyAssignment;
+
+  if (!deploymentConfigFileExists) {
+    deploymentConfigObject.insertPropertyAssignment(0, {
+      name: 'genericConfigs',
+      initializer: objectToCode(deploymentConfig.genericConfig),
+    });
+  }
+
+  if (
+    overrideNetworkConfig ||
+    !deploymentConfigFileExists ||
+    !hasNetworkConfig
+  ) {
+    networkConfigProperty = networkConfigsObj.addPropertyAssignment({
+      name: `[chainIds.${hre.network.name}]`,
+      initializer: objectToCode(deploymentConfig.networkConfig),
+    });
+  } else {
+    networkConfigProperty = networkConfigsObj
+      .getPropertyOrThrow(`[chainIds.${hre.network.name}]`)
+      .asKindOrThrow(SyntaxKind.PropertyAssignment);
+  }
+
+  if (postDeployConfigs) {
+    const networkConfigPropertyInit =
+      networkConfigProperty.getInitializerIfKindOrThrow(
+        SyntaxKind.ObjectLiteralExpression,
+      );
+
+    const postDeployProperty =
+      networkConfigPropertyInit.getProperty('postDeploy');
+
+    if (postDeployProperty) {
+      postDeployProperty.remove();
+    }
+
+    networkConfigPropertyInit.addPropertyAssignment({
+      name: 'postDeploy',
+      initializer: objectToCode({
+        ...deploymentConfig.postDeploy,
+        setRoundData: {
+          data: expr('parseUnits("1", 8)'),
+        },
+      }),
+    });
+  }
+
+  // Add import and export to index.ts
+  const indexFilePath = path.join(
+    hre.config.paths.root,
+    'scripts/deploy/configs/index.ts',
+  );
+
+  const indexFile = project.addSourceFileAtPath(indexFilePath);
+
+  // Check if import already exists
+  const existingImports = indexFile.getImportDeclarations();
+  const importExists = existingImports.some((importDecl) =>
+    importDecl
+      .getNamedImports()
+      .some((namedImport) => namedImport.getName() === deploymentConfigVarName),
+  );
+
+  if (!importExists) {
+    // Add import statement
+    indexFile.addImportDeclaration({
+      namedImports: [deploymentConfigVarName],
+      moduleSpecifier: `./${mToken}`,
+    });
+  }
+
+  // Check if export already exists in configsPerToken
+  const configsPerTokenVar =
+    indexFile.getVariableDeclarationOrThrow('configsPerToken');
+  const configsPerTokenInitializer = configsPerTokenVar.getInitializerOrThrow();
+  const configsPerTokenObj = configsPerTokenInitializer.asKindOrThrow(
+    SyntaxKind.ObjectLiteralExpression,
+  );
+
+  const exportExists = configsPerTokenObj.getProperty(mToken);
+
+  if (!exportExists) {
+    // Add export to configsPerToken object
+    configsPerTokenObj.addPropertyAssignment({
+      name: mToken,
+      initializer: deploymentConfigVarName,
+    });
+  }
+
+  await tasks([
+    {
+      title: 'Saving files',
+      task: async () => {
+        deploymentConfigFile.saveSync();
+        indexFile.saveSync();
+      },
+    },
+    {
+      title: 'Linting and formatting',
+      task: async () => {
+        lintAndFormatTs(indexFilePath);
+        lintAndFormatTs(deploymentConfigPath);
+      },
+    },
+  ]);
+};
+
+export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
+  const config = await getConfigFromUser();
+
+  const contractsToGenerate = await getContractsToGenerateFromUser();
+
+  const mToken = config.tokenContractName;
+
+  const folder = path.join(hre.config.paths.root, 'contracts', `${mToken}`);
+
+  await tasks([
+    {
+      title: 'Updating config files',
+      task: async () => {
+        updateConfigFiles(hre, {
+          contractNamePrefix: config.contractNamePrefix,
+          rolesPrefix: config.rolesPrefix,
+          name: config.tokenName,
+          symbol: config.tokenSymbol,
+          mToken,
+        });
+      },
+    },
+    {
+      title: 'Generation files',
+      task: async () => {
+        const isFolderExists = await fs
+          .access(folder)
+          .then(() => true)
+          .catch(() => false);
+        if (isFolderExists) {
+          await fs.rm(folder, { recursive: true });
+        }
+
+        await fs.mkdir(folder, { recursive: true });
+
+        const generators = [
+          getTokenRolesContractFromTemplate,
+          ...contractsToGenerate.map(
+            (contract) => generatorPerContract[contract],
+          ),
+        ].filter((v) => v !== undefined);
+
+        const generatedContracts = await Promise.all(
+          generators.map((generator) => generator(mToken as MTokenName)),
+        );
+
+        for (const contract of generatedContracts) {
+          if (!contract) {
+            cancel(
+              `Contract ${contract} is not available for a provided mToken`,
+            );
+            process.exit(0);
+          }
+
+          await fs.writeFile(
+            path.join(folder, `${contract.name}.sol`),
+            contract.content,
+            'utf-8',
+          );
+        }
+      },
+    },
+    {
+      title: 'Linting and formatting',
+      task: async () => {
+        lintAndFormatSol(folder);
+      },
+    },
+  ]);
 };
