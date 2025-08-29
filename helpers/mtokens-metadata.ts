@@ -135,5 +135,5 @@ export const mTokensMetadata: Record<
   dnPUMP: {
     name: 'Delta Neutral PUMP',
     symbol: 'dnPUMP',
-  },
+  }
 };

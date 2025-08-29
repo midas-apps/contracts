@@ -68,5 +68,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   dnHYPE: dnHYPEDeploymentConfig,
   kmiUSD: kmiUSDDeploymentConfig,
   msyrupUSD: msyrupUSDDeploymentConfig,
-  dnPUMP: dnPUMPDeploymentConfig,
+  dnPUMP: dnPUMPDeploymentConfig
 };
