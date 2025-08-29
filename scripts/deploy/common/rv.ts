@@ -1,4 +1,5 @@
 import { BigNumberish, constants } from 'ethers';
+import { parseUnits } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { deployAndVerifyProxy, getDeployer, getNetworkConfig } from './utils';
@@ -23,11 +24,23 @@ export type DeployRvConfigCommon = {
   instantFee: BigNumberish;
   enableSanctionsList?: boolean;
   variationTolerance: BigNumberish;
-  minAmount: BigNumberish;
-  fiatAdditionalFee: BigNumberish;
-  fiatFlatFee: BigNumberish;
-  minFiatRedeemAmount: BigNumberish;
   requestRedeemer?: string;
+  /**
+   * @default 0
+   */
+  minAmount?: BigNumberish;
+  /**
+   * @default 0.1
+   */
+  fiatAdditionalFee?: BigNumberish;
+  /**
+   * @default 30
+   */
+  fiatFlatFee?: BigNumberish;
+  /**
+   * @default 1000
+   */
+  minFiatRedeemAmount?: BigNumberish;
 };
 
 export type DeployRvRegularConfig = {
@@ -155,9 +168,11 @@ export const deployRedemptionVault = async (
     networkConfig.variationTolerance,
     networkConfig.minAmount,
     {
-      fiatAdditionalFee: networkConfig.fiatAdditionalFee,
-      fiatFlatFee: networkConfig.fiatFlatFee,
-      minFiatRedeemAmount: networkConfig.minFiatRedeemAmount,
+      fiatAdditionalFee:
+        networkConfig.fiatAdditionalFee ?? parseUnits('0.1', 2),
+      fiatFlatFee: networkConfig.fiatFlatFee ?? parseUnits('30', 18),
+      minFiatRedeemAmount:
+        networkConfig.minFiatRedeemAmount ?? parseUnits('1000', 18),
     },
     networkConfig.requestRedeemer ?? deployer.address,
     ...extraParams,

@@ -128,4 +128,8 @@ export const mTokensMetadata: Record<
     name: 'Katana miUSD',
     symbol: 'kmiUSD',
   },
+  msyrupUSD: {
+    name: 'syrupUSDC supercharged',
+    symbol: 'msyrupUSD',
+  },
 };

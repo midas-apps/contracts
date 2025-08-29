@@ -45,6 +45,14 @@ export type PauseFunctionsConfig = {
   [K in VaultType]?: VaultFunctionName[];
 };
 
+export type PostDeployConfig = {
+  addPaymentTokens?: AddPaymentTokensConfig;
+  grantRoles?: GrantAllTokenRolesConfig;
+  setRoundData?: SetRoundDataConfig;
+  addFeeWaived?: AddFeeWaivedConfig;
+  pauseFunctions?: PauseFunctionsConfig;
+};
+
 export type DeploymentConfig = {
   genericConfigs: {
     customAggregator?: DeployCustomAggregatorConfig;
@@ -59,13 +67,7 @@ export type DeploymentConfig = {
       rv?: DeployRvRegularConfig;
       rvBuidl?: DeployRvBuidlConfig;
       rvSwapper?: DeployRvSwapperConfig;
-      postDeploy?: {
-        addPaymentTokens?: AddPaymentTokensConfig;
-        grantRoles?: GrantAllTokenRolesConfig;
-        setRoundData?: SetRoundDataConfig;
-        addFeeWaived?: AddFeeWaivedConfig;
-        pauseFunctions?: PauseFunctionsConfig;
-      };
+      postDeploy?: PostDeployConfig;
     }
   >;
 };

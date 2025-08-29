@@ -30,6 +30,7 @@ export enum MTokenNameEnum {
   wVLP = 'wVLP',
   dnHYPE = 'dnHYPE',
   kmiUSD = 'kmiUSD',
+  msyrupUSD = 'msyrupUSD',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
@@ -71,6 +72,7 @@ export enum PaymentTokenNameEnum {
   khype = 'khype',
   whype = 'whype',
   miusd = 'miusd',
+  syrupusdc = 'syrupusdc',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;

@@ -168,6 +168,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x504C048C36ff22b90D82Fb70fef99b321411Fb5d',
         dataFeed: '0x19569a89fEf7276a7f5967b6F6910c0573616f07',
       },
+      syrupusdc: {
+        token: '0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b',
+        aggregator: '0xa869cBc273daAE91d6109EE5bb958aC6B7198B67',
+        dataFeed: '0x449f44f9B5e924E27ba9bC4E49AcD8BC1012287c',
+      },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     mTBILL: {
@@ -304,6 +309,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x9f49B0980B141b539e2A94Ec0864Faf699fF9524',
       depositVault: '0x695fb34B07a8cEc2411B1bb519fD8F1731850c81',
       redemptionVaultSwapper: '0xf4F042D90f0C0d3ABA4A30Caa6Ac124B14A7e600',
+    },
+    msyrupUSD: {
+      token: '0x20226607b4fa64228ABf3072Ce561d6257683464',
+      customFeed: '0x41c60765fA36109b19B21719F4593F19dDeFa663',
+      dataFeed: '0x81c097e86842051B1ED4299a9E4d213Cb07f6f42',
+      depositVault: '0x5AE23D23B7986a708CBA9bF808aD9A43BF77d1b7',
+      redemptionVaultSwapper: '0x9f7dd5462C183B6577858e16a13A4d864CE2f972',
     },
     TACmBTC: {
       token: '0x307267989A7bec3A57FD7fd96017C49803589Fd0',

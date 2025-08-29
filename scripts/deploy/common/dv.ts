@@ -20,9 +20,17 @@ export type DeployDvConfigCommon = {
   instantFee: BigNumberish;
   enableSanctionsList?: boolean;
   variationTolerance: BigNumberish;
-  minAmount: BigNumberish;
-  minMTokenAmountForFirstDeposit: BigNumberish;
-  // default is type(uint256).max
+  /**
+   * @default 0
+   */
+  minAmount?: BigNumberish;
+  /**
+   * @default 0
+   */
+  minMTokenAmountForFirstDeposit?: BigNumberish;
+  /**
+   * @default constants.MaxUint256
+   */
   maxSupplyCap?: BigNumberish;
 };
 
@@ -126,8 +134,8 @@ export const deployDepositVault = async (
     },
     sanctionsList,
     networkConfig.variationTolerance,
-    networkConfig.minAmount,
-    networkConfig.minMTokenAmountForFirstDeposit,
+    networkConfig.minAmount ?? 0,
+    networkConfig.minMTokenAmountForFirstDeposit ?? 0,
     networkConfig.maxSupplyCap ?? constants.MaxUint256,
     ...extraParams,
   ] as

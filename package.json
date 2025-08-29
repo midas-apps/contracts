@@ -49,6 +49,7 @@
     "deploy:rv:swapper": "yarn hh:run:script scripts/deploy/deploy_RVSwapper.ts",
     "deploy:rv:buidl": "yarn hh:run:script scripts/deploy/deploy_RVSwapper.ts",
     "deploy:generate:contracts": "yarn hh:run:script scripts/deploy/codegen/generate_contracts.ts",
+    "deploy:generate:config": "yarn hh:run:script scripts/deploy/codegen/generate_config.ts",
     "deploy:post:add:ptokens": "yarn hh:run:script scripts/deploy/post-deploy/add_PaymentTokens.ts",
     "deploy:post:grant:roles": "yarn hh:run:script scripts/deploy/post-deploy/grant_AllProductRoles.ts",
     "deploy:post:grant:admin": "yarn hh:run:script scripts/deploy/post-deploy/grant_DefaultAdminRole.ts",

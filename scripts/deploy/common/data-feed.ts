@@ -1,6 +1,6 @@
 import { Provider } from '@ethersproject/providers';
 import { BigNumberish, Signer } from 'ethers';
-import { formatUnits } from 'ethers/lib/utils';
+import { formatUnits, parseUnits } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
@@ -21,14 +21,29 @@ import { CustomAggregatorV3CompatibleFeed } from '../../../typechain-types';
 import { paymentTokenDeploymentConfigs } from '../configs/payment-tokens';
 
 export type DeployDataFeedConfig = {
-  minAnswer: BigNumberish;
-  maxAnswer: BigNumberish;
-  healthyDiff: BigNumberish;
+  /**
+   * Default: 0.1
+   */
+  minAnswer?: BigNumberish;
+  /**
+   * Default: 1000
+   */
+  maxAnswer?: BigNumberish;
+  /**
+   * Default: 2592000
+   */
+  healthyDiff?: BigNumberish;
 };
 
 type DeployCustomAggregatorCommonConfig = {
-  minAnswer: BigNumberish;
-  maxAnswer: BigNumberish;
+  /**
+   * Default: 0.1
+   */
+  minAnswer?: BigNumberish;
+  /**
+   * Default: 1000
+   */
+  maxAnswer?: BigNumberish;
   maxAnswerDeviation: BigNumberish;
   description: string;
 };
@@ -281,9 +296,9 @@ const deployTokenDataFeed = async (
   await deployAndVerifyProxy(hre, dataFeedContractName, [
     addresses?.accessControl,
     aggregator,
-    networkConfig.healthyDiff,
-    networkConfig.minAnswer,
-    networkConfig.maxAnswer,
+    networkConfig.healthyDiff ?? 2592000,
+    networkConfig.minAnswer ?? parseUnits('0.1', 8),
+    networkConfig.maxAnswer ?? parseUnits('1000', 8),
   ]);
 };
 
@@ -302,8 +317,8 @@ const deployCustomAggregator = async (
 
   const params = [
     addresses?.accessControl,
-    networkConfig.minAnswer,
-    networkConfig.maxAnswer,
+    networkConfig.minAnswer ?? parseUnits('0.1', 8),
+    networkConfig.maxAnswer ?? parseUnits('1000', 8),
     networkConfig.maxAnswerDeviation,
     isGrowth ? networkConfig.minGrowthApr : undefined,
     isGrowth ? networkConfig.maxGrowthApr : undefined,

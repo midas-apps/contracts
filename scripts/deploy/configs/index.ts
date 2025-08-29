@@ -21,6 +21,7 @@ import { mMEVDeploymentConfig } from './mMEV';
 import { mRE7DeploymentConfig } from './mRE7';
 import { mRE7SOLDeploymentConfig } from './mRE7SOL';
 import { mSLDeploymentConfig } from './mSL';
+import { msyrupUSDDeploymentConfig } from './msyrupUSD';
 import { mTBILLDeploymentConfig } from './mTBILL';
 import { TACmBTCDeploymentConfig } from './tac/TACmBTC';
 import { TACmEDGEDeploymentConfig } from './tac/TACmEDGE';
@@ -65,4 +66,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   wVLP: wVLPDeploymentConfig,
   dnHYPE: dnHYPEDeploymentConfig,
   kmiUSD: kmiUSDDeploymentConfig,
+  msyrupUSD: msyrupUSDDeploymentConfig,
 };
