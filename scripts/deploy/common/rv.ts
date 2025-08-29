@@ -166,7 +166,7 @@ export const deployRedemptionVault = async (
     },
     sanctionsList,
     networkConfig.variationTolerance,
-    networkConfig.minAmount,
+    networkConfig.minAmount ?? parseUnits('0', 18),
     {
       fiatAdditionalFee:
         networkConfig.fiatAdditionalFee ?? parseUnits('0.1', 2),
