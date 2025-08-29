@@ -21,21 +21,26 @@ type CommonContractNames = Omit<TokenContractNames, 'token'> & {
   customAggregatorDiscounted: string;
 };
 
+const vaultTypeToContractNameMap: Record<VaultType, string> = {
+  redemptionVault: 'rv',
+  redemptionVaultSwapper: 'rvSwapper',
+  redemptionVaultUstb: 'rvUstb',
+  depositVault: 'dv',
+  redemptionVaultBuidl: 'rvBuidl',
+};
+
 export const vaultTypeToContractName = (
   vaultType: VaultType,
 ): string | undefined => {
-  switch (vaultType) {
-    case 'redemptionVault':
-      return 'rv';
-    case 'redemptionVaultSwapper':
-      return 'rvSwapper';
-    case 'redemptionVaultUstb':
-      return 'rvUstb';
-    case 'depositVault':
-      return 'dv';
-    default:
-      return undefined;
-  }
+  return vaultTypeToContractNameMap[vaultType];
+};
+
+export const contractNameToVaultType = (
+  contractName: string,
+): VaultType | undefined => {
+  return Object.entries(vaultTypeToContractNameMap).find(
+    ([_, value]) => value === contractName,
+  )?.[0] as VaultType | undefined;
 };
 
 export const contractNamesPrefixes: Record<MTokenName, string> = {
