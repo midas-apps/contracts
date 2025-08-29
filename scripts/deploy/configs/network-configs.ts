@@ -22,4 +22,7 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
   [chainIds.etherlink]: {
     grantDefaultAdminRole: {},
   },
+  [chainIds.tac]: {
+    grantDefaultAdminRole: {},
+  },
 };

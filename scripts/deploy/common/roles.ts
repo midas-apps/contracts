@@ -113,28 +113,18 @@ export const revokeDefaultRolesFromDeployer = async (
   hre: HardhatRuntimeEnvironment,
 ) => {
   const allRoles = getAllRoles();
-  const mTBILLRoles = allRoles.tokenRoles.mTBILL;
   const deployer = await getDeployer(hre);
 
   const accessControl = await getAcContract(hre, deployer);
 
-  const roles = [
-    allRoles.common.blacklistedOperator,
-    allRoles.common.greenlistedOperator,
-    mTBILLRoles.burner,
-    mTBILLRoles.minter,
-    mTBILLRoles.pauser,
-    mTBILLRoles.depositVaultAdmin,
-    mTBILLRoles.redemptionVaultAdmin,
-    allRoles.common.defaultAdmin,
-  ];
+  const roles = [allRoles.common.defaultAdmin];
 
-  await accessControl.revokeRoleMult(
+  const tx = await accessControl.revokeRoleMult(
     roles,
     roles.map(() => deployer.address),
   );
 
-  console.log('Transaction is initiated successfully');
+  console.log('Transaction is initiated successfully', tx.hash);
 };
 
 export type GrantDefaultAdminRoleToAcAdminConfig = {
@@ -157,12 +147,12 @@ export const grantDefaultAdminRoleToAcAdmin = async (
 
   const accessControl = await getAcContract(hre, deployer);
 
-  await accessControl.grantRole(
+  const tx = await accessControl.grantRole(
     allRoles.common.defaultAdmin,
     networkConfig?.acAdminAddress ?? acAdminAddress,
   );
 
-  console.log('Transaction is initiated successfully');
+  console.log('Transaction is initiated successfully', tx.hash);
 };
 
 const getAcContract = async (
