@@ -1,4 +1,5 @@
 import { dnHYPEDeploymentConfig } from './dnHYPE';
+import { dnPUMPDeploymentConfig } from './dnPUMP';
 import { hbUSDCDeploymentConfig } from './hbUSDC';
 import { hbUSDTDeploymentConfig } from './hbUSDT';
 import { hbXAUtDeploymentConfig } from './hbXAUt';
@@ -67,4 +68,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   dnHYPE: dnHYPEDeploymentConfig,
   kmiUSD: kmiUSDDeploymentConfig,
   msyrupUSD: msyrupUSDDeploymentConfig,
+  dnPUMP: dnPUMPDeploymentConfig,
 };
