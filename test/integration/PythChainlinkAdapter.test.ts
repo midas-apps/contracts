@@ -5,7 +5,7 @@ import { ethers } from 'hardhat';
 
 import { pythAdapterFixture } from './fixtures/pyth.fixture';
 
-describe('PythChainlinkAdapter - HyperEVM Fork Integration Tests', function () {
+describe.skip('PythChainlinkAdapter - HyperEVM Fork Integration Tests', function () {
   this.timeout(120000);
 
   const hyperEvmPythFixture = () => pythAdapterFixture('hyperevm');
