@@ -25,6 +25,12 @@ export const upgradeConfigs: UpgradeConfig = {
         [chainIds.katana]: {
           all: true,
         },
+        [chainIds.hyperevm]: {
+          all: true,
+        },
+        [chainIds.base]: {
+          all: true,
+        },
       },
     },
   },

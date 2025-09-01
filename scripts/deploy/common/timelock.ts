@@ -445,7 +445,7 @@ const createTimeLockTx = async (
 
   const currentAdminOwner = await admin.owner();
 
-  if (hre.skipValidation !== false) {
+  if (!hre.skipValidation) {
     if (
       currentAdminOwner.toLowerCase() !== timelockContract.address.toLowerCase()
     ) {
