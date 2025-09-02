@@ -40,6 +40,7 @@ const prefixes: Record<MTokenName, string> = {
   zeroGUSDV: 'ZEROG_USDV',
   zeroGETHV: 'ZEROG_ETHV',
   zeroGBTCV: 'ZEROG_BTCV',
+  JIV: 'JIV',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {

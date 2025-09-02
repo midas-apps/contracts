@@ -6,6 +6,7 @@ import { hbXAUtDeploymentConfig } from './hbXAUt';
 import { hypeBTCDeploymentConfig } from './hypeBTC';
 import { hypeETHDeploymentConfig } from './hypeETH';
 import { hypeUSDDeploymentConfig } from './hypeUSD';
+import { JIVDeploymentConfig } from './JIV';
 import { kmiUSDDeploymentConfig } from './kmiUSD';
 import { liquidHYPEDeploymentConfig } from './liquidHYPE';
 import { lstHYPEDeploymentConfig } from './lstHYPE';
@@ -75,4 +76,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   zeroGUSDV: zeroGUSDVDeploymentConfig,
   zeroGETHV: zeroGETHVDeploymentConfig,
   zeroGBTCV: zeroGBTCVDeploymentConfig,
+  JIV: JIVDeploymentConfig,
 };

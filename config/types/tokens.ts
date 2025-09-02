@@ -35,6 +35,7 @@ export enum MTokenNameEnum {
   zeroGUSDV = 'zeroGUSDV',
   zeroGETHV = 'zeroGETHV',
   zeroGBTCV = 'zeroGBTCV',
+  JIV = 'JIV',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
