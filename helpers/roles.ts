@@ -38,6 +38,7 @@ const prefixes: Record<MTokenName, string> = {
   msyrupUSD: 'M_SYRUP_USD',
   dnPUMP: 'DN_PUMP',
   zeroGUSDV: 'ZEROG_USDV',
+  zeroGETHV: 'ZEROG_ETHV',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {

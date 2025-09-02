@@ -140,4 +140,8 @@ export const mTokensMetadata: Record<
     name: '0G USD Vault',
     symbol: '0gUSDV',
   },
+  zeroGETHV: {
+    name: '0G ETH Vault',
+    symbol: '0gETHV',
+  },
 };

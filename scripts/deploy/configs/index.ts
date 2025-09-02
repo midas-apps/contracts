@@ -31,6 +31,7 @@ import { tBTCDeploymentConfig } from './tBTC';
 import { tETHDeploymentConfig } from './tETH';
 import { tUSDeDeploymentConfig } from './tUSDe';
 import { wVLPDeploymentConfig } from './wVLP';
+import { zeroGETHVDeploymentConfig } from './zeroGETHV';
 import { zeroGUSDVDeploymentConfig } from './zeroGUSDV';
 
 import { MTokenName } from '../../../config';
@@ -71,4 +72,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   msyrupUSD: msyrupUSDDeploymentConfig,
   dnPUMP: dnPUMPDeploymentConfig,
   zeroGUSDV: zeroGUSDVDeploymentConfig,
+  zeroGETHV: zeroGETHVDeploymentConfig,
 };
