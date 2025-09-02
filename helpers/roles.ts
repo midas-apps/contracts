@@ -39,6 +39,7 @@ const prefixes: Record<MTokenName, string> = {
   dnPUMP: 'DN_PUMP',
   zeroGUSDV: 'ZEROG_USDV',
   zeroGETHV: 'ZEROG_ETHV',
+  zeroGBTCV: 'ZEROG_BTCV',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {

@@ -79,6 +79,7 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   dnPUMP: 'DnPump',
   zeroGUSDV: 'ZeroGUsdv',
   zeroGETHV: 'ZeroGEthv',
+  zeroGBTCV: 'ZeroGBtcv',
 };
 
 export const getCommonContractNames = (): CommonContractNames => {

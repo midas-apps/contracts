@@ -144,4 +144,8 @@ export const mTokensMetadata: Record<
     name: '0G ETH Vault',
     symbol: '0gETHV',
   },
+  zeroGBTCV: {
+    name: '0G BTC Vault',
+    symbol: '0gBTCV',
+  },
 };
