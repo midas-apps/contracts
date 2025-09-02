@@ -148,4 +148,8 @@ export const mTokensMetadata: Record<
     name: '0G BTC Vault',
     symbol: '0gBTCV',
   },
+  JIV: {
+    name: 'Jaine Insurance Vault',
+    symbol: 'JIV',
+  },
 };
