@@ -136,4 +136,16 @@ export const mTokensMetadata: Record<
     name: 'Delta Neutral PUMP',
     symbol: 'dnPUMP',
   },
+  zeroGUSDV: {
+    name: '0G USD Vault',
+    symbol: '0gUSDV',
+  },
+  zeroGETHV: {
+    name: '0G ETH Vault',
+    symbol: '0gETHV',
+  },
+  zeroGBTCV: {
+    name: '0G BTC Vault',
+    symbol: '0gBTCV',
+  },
 };

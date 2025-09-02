@@ -337,6 +337,27 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0xdD2EC1Da19950B6B836D46882897D0D8fe4cF487',
       redemptionVault: '0x672DCEE688aa1685701a4A4138CB20d07272D116',
     },
+    zeroGUSDV: {
+      token: '0x766255b53ae70fa39A18aa296f41fAb17db6a810',
+      customFeed: '0xB5721B11883aEc70696A1082051d36c79cA9B10c',
+      dataFeed: '0x9f819f7741e52C13Bc5207e78B6E3FeC1BdF3990',
+      depositVault: '0x34031E751DA2Ab19009D8f7eb268Face2BdFD0dd',
+      redemptionVaultSwapper: '0x37769aF173Ea65dfc2880179940d5566817aF6AE',
+    },
+    zeroGETHV: {
+      token: '0x513bD45bE7643fE6c30c41Cd4b327E8E341AAF9a',
+      customFeed: '0x03fDA274c303b128EBA9E00Bf555A3f4f4f26ec3',
+      dataFeed: '0xc18091A0E2970945646d28Fad3A0ded684b8947b',
+      depositVault: '0xaA192F810106B6161cbe5FE531289C0e3B196DEB',
+      redemptionVaultSwapper: '0xF0C91Bbae7f67c4e595d723ef5FB38B59F2008cf',
+    },
+    zeroGBTCV: {
+      token: '0x48E284D0729EB1925066307072758d95dbBb49C4',
+      customFeed: '0x8c7400777bD4B05864f21c446f6a3e996BC047d2',
+      dataFeed: '0x39F0507060c12bB88cb68a496544011D2f341455',
+      depositVault: '0x2ddC913e4C7674A7E42c55db48a92c47158E91C6',
+      redemptionVaultSwapper: '0x649f8698068ad143A7e18Ba9cb0Be112D5986AEb',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',

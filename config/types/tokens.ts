@@ -32,6 +32,9 @@ export enum MTokenNameEnum {
   kmiUSD = 'kmiUSD',
   msyrupUSD = 'msyrupUSD',
   dnPUMP = 'dnPUMP',
+  zeroGUSDV = 'zeroGUSDV',
+  zeroGETHV = 'zeroGETHV',
+  zeroGBTCV = 'zeroGBTCV',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
