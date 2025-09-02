@@ -93,7 +93,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: yarn
       - name: Test contracts
-        run: yarn test
+        run: yarn test:unit
         env:
           ALCHEMY_KEY: ${{ secrets.ALCHEMY_KEY }}
           MNEMONIC_DEV: ${{ vars.MNEMONIC_DEV }}
