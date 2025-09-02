@@ -337,6 +337,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0xdD2EC1Da19950B6B836D46882897D0D8fe4cF487',
       redemptionVault: '0x672DCEE688aa1685701a4A4138CB20d07272D116',
     },
+    zeroGUSDV: {
+      token: '0x766255b53ae70fa39A18aa296f41fAb17db6a810',
+      customFeed: '0xB5721B11883aEc70696A1082051d36c79cA9B10c',
+      dataFeed: '0x9f819f7741e52C13Bc5207e78B6E3FeC1BdF3990',
+      depositVault: '0x34031E751DA2Ab19009D8f7eb268Face2BdFD0dd',
+      redemptionVaultSwapper: '0x37769aF173Ea65dfc2880179940d5566817aF6AE',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
