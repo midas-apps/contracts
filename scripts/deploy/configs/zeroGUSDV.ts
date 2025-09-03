@@ -21,6 +21,7 @@ export const zeroGUSDVDeploymentConfig: DeploymentConfig = {
         instantDailyLimit: parseUnits('1000000000', 18),
         instantFee: parseUnits('0', 2),
         variationTolerance: parseUnits('0.7', 2),
+        maxSupplyCap: parseUnits('50000000', 18),
       },
       rvSwapper: {
         type: 'SWAPPER',
@@ -31,8 +32,8 @@ export const zeroGUSDVDeploymentConfig: DeploymentConfig = {
         instantFee: parseUnits('0.5', 2),
         variationTolerance: parseUnits('0.7', 2),
         liquidityProvider: 'dummy',
-        enableSanctionsList: true,
         swapperVault: 'dummy',
+        enableSanctionsList: true,
       },
       postDeploy: {
         addPaymentTokens: {

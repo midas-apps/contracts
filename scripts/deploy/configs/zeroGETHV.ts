@@ -22,6 +22,7 @@ export const zeroGETHVDeploymentConfig: DeploymentConfig = {
         instantDailyLimit: parseUnits('1000000000', 18),
         instantFee: parseUnits('0', 2),
         variationTolerance: parseUnits('0.23', 2),
+        maxSupplyCap: parseUnits('5600', 18),
       },
       rvSwapper: {
         type: 'SWAPPER',
