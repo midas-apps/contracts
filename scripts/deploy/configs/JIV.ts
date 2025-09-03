@@ -68,7 +68,7 @@ export const JIVDeploymentConfig: DeploymentConfig = {
           ],
         },
         grantRoles: {
-          tokenManagerAddress: '0xE4F65a87d6aa51a0d671ECb817020AF46c60aE4B',
+          tokenManagerAddress: '0x96ED1E651A4a61Fb2D1B3215Df5375c86097E84d',
           vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
           oracleManagerAddress: '0xfB16077a8a375d672a4863D8E5026e0A7cB9382B',
         },
