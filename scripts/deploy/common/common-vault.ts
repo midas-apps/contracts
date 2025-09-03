@@ -165,7 +165,7 @@ export const addPaymentTokens = async (
       const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
         action: 'update-vault',
         subAction: 'add-payment-token',
-        comment: `add ${paymentToken.token} to ${vaultType}`,
+        comment: `add ${paymentToken.token} to ${token} ${vaultType}`,
       });
 
       console.log(`${vaultType}:${paymentToken.token} tx initiated`, txRes);
