@@ -28,9 +28,9 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     let contractTag: string | undefined;
 
     if (key.startsWith('redemptionVault')) {
-      contractName = 'RedemptionVault';
+      contractName = 'Redemption Vault';
     } else if (key.startsWith('depositVault')) {
-      contractName = 'DepositVault';
+      contractName = 'Minter Vault';
     } else if (key.startsWith('customFeed')) {
       contractName = 'Oracle';
     } else if (key.startsWith('dataFeed')) {
