@@ -1,7 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { chainIds } from '../networks';
-import { ConfigPerNetwork, MTokenName } from '../types';
+import { ConfigPerNetwork, MTokenName, PaymentTokenName } from '../types';
 
 export type RedemptionVaultType =
   | 'redemptionVault'
@@ -30,7 +30,7 @@ export type MidasAddresses = Partial<Record<MTokenName, TokenAddresses>> & {
   eUSD?: TokenAddresses;
   accessControl?: string;
   timelock?: string;
-  dataFeeds?: Record<string, DataFeedAddresses>;
+  dataFeeds?: Partial<Record<PaymentTokenName, DataFeedAddresses>>;
 };
 
 export const midasAddressesPerNetwork: ConfigPerNetwork<
@@ -620,6 +620,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       usdc: {
         aggregator: '0x4C89968338b75551243C99B452c84a01888282fD',
         dataFeed: '0x0C59a087922f21eb49FFa0fe33E0D17B62Ff4C70',
+      },
+      behype: {
+        token: '0x3Ae58a3C54ee21934Ef95A0bae21Dd8123dDCFF9',
+        aggregator: '0x18bD6Ff6f1d1ab13702a743bbF3742CB512492CA',
+        dataFeed: '0x8dA4C79fb9B4Ae16eA3e46A6341a1e24b555b21E',
       },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
