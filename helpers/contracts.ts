@@ -9,6 +9,7 @@ export type TokenContractNames = {
   rvBuidl: string;
   rvUstb: string;
   dataFeed?: string;
+  dataFeedComposite?: string;
   customAggregator?: string;
   customAggregatorGrowth?: string;
   token: string;
@@ -98,6 +99,7 @@ export const getCommonContractNames = (): CommonContractNames => {
     customAggregatorGrowth: 'CustomAggregatorV3CompatibleFeedGrowth',
     customAggregatorDiscounted: 'CustomAggregatorV3CompatibleFeedDiscounted',
     roles: 'MidasAccessControlRoles',
+    dataFeedComposite: 'CompositeDataFeed',
   };
 };
 

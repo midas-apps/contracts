@@ -12,6 +12,7 @@ declare module 'hardhat/types/runtime' {
     paymentToken?: PaymentTokenName;
     action?: string;
     skipValidation?: boolean;
+    aggregatorType?: 'numerator' | 'denominator';
     logger: Logger & {
       // default: false
       logToFile: boolean;

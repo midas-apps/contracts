@@ -19,11 +19,28 @@ export type TokenAddresses = {
 
 export type VaultType = RedemptionVaultType | 'depositVault';
 
-export type DataFeedAddresses = {
+export type DataFeedAddressesRegular = {
   token?: string;
   dataFeed?: string;
   aggregator?: string;
 };
+
+export type DataFeedAddressesComposite = {
+  token?: string;
+  numerator?: {
+    dataFeed?: string;
+    aggregator?: string;
+  };
+  denominator?: {
+    dataFeed?: string;
+    aggregator?: string;
+  };
+  dataFeed?: string;
+};
+
+export type DataFeedAddresses =
+  | DataFeedAddressesRegular
+  | DataFeedAddressesComposite;
 
 export type MidasAddresses = Partial<Record<MTokenName, TokenAddresses>> & {
   // TODO: remove?
