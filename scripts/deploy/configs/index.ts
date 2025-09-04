@@ -21,6 +21,7 @@ import { mHYPERDeploymentConfig } from './mHYPER';
 import { mLIQUIDITYDeploymentConfig } from './mLIQUIDITY';
 import { mMEVDeploymentConfig } from './mMEV';
 import { mRE7DeploymentConfig } from './mRE7';
+import { mRE7BTCDeploymentConfig } from './mRE7BTC';
 import { mRE7SOLDeploymentConfig } from './mRE7SOL';
 import { mSLDeploymentConfig } from './mSL';
 import { msyrupUSDDeploymentConfig } from './msyrupUSD';
@@ -77,4 +78,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   zeroGETHV: zeroGETHVDeploymentConfig,
   zeroGBTCV: zeroGBTCVDeploymentConfig,
   JIV: JIVDeploymentConfig,
+  mRE7BTC: mRE7BTCDeploymentConfig,
 };

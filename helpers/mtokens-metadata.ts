@@ -152,4 +152,8 @@ export const mTokensMetadata: Record<
     name: 'Jaine Insurance Vault',
     symbol: 'JIV',
   },
+  mRE7BTC: {
+    name: 'Midas Re7 BTC',
+    symbol: 'mRe7BTC',
+  },
 };
