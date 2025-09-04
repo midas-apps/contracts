@@ -147,9 +147,11 @@ export const addPaymentTokens = async (
     token,
     networkConfig,
     async (vaultType, vaultContract, tokenConfig, paymentToken) => {
-      const token = await vaultContract.tokensConfig(tokenConfig.token!);
+      const paymentTokenConfig = await vaultContract.tokensConfig(
+        tokenConfig.token!,
+      );
 
-      if (token.dataFeed !== constants.AddressZero) {
+      if (paymentTokenConfig.dataFeed !== constants.AddressZero) {
         console.log('Token is already added, skipping...', paymentToken.token);
         return;
       }
