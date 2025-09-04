@@ -58,6 +58,8 @@ import {
   USTBMock__factory,
   // eslint-disable-next-line camelcase
   CustomAggregatorV3CompatibleFeedGrowthTester__factory,
+  // eslint-disable-next-line camelcase
+  CompositeDataFeedTest__factory,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -170,6 +172,18 @@ export const defaultDeploy = async () => {
     3 * 24 * 3600,
     parseUnits('0.1', await mockedAggregatorMBasis.decimals()),
     parseUnits('10000', await mockedAggregatorMBasis.decimals()),
+  );
+
+  const compositeDataFeed = await new CompositeDataFeedTest__factory(
+    owner,
+  ).deploy();
+
+  await compositeDataFeed.initialize(
+    accessControl.address,
+    mTokenToUsdDataFeed.address,
+    mBasisToUsdDataFeed.address,
+    parseUnits('0.1'),
+    parseUnits('10000'),
   );
 
   const depositVault = await new DepositVaultTest__factory(owner).deploy();
@@ -599,5 +613,6 @@ export const defaultDeploy = async () => {
     customRecipient,
     depositVaultWithUSTB,
     dataFeedGrowth,
+    compositeDataFeed,
   };
 };
