@@ -272,8 +272,7 @@ const executeTimelockTx: PopulateTxFn = async (
   );
 
   if (!isOperationReady) {
-    console.warn('Operation is not ready or not found');
-    return { tx: undefined, operationHash, type };
+    throw new Error('Operation is not ready or not found');
   }
 
   const tx = await timelockContract.populateTransaction.execute(...params);
@@ -301,8 +300,7 @@ const proposeTimelockTx: PopulateTxFn = async (
   const isOperationExists = await timelockContract.isOperation(operationHash);
 
   if (isOperationExists) {
-    console.log('Operation is found, skipping...');
-    return { tx: undefined, operationHash, type };
+    throw new Error('Operation is already exists');
   }
 
   const tx = await timelockContract.populateTransaction.schedule(
@@ -341,10 +339,9 @@ const createUpgradeTimelockTx = async (
       if (
         currentImpl.toLowerCase() === params.newImplementation.toLowerCase()
       ) {
-        console.log(
-          `Already using new implementation for ${params.proxyAddress}, skipping upgrade...`,
+        throw new Error(
+          `Already using new implementation for ${params.proxyAddress}`,
         );
-        return { isValid: false };
       }
 
       if (params.initializer && params.initializerCalldata) {
@@ -392,10 +389,9 @@ const createTransferOwnershipTimelockTx = async (
       const currentOwner = await admin.owner();
 
       if (currentOwner.toLowerCase() === params.newOwner.toLowerCase()) {
-        console.log(
-          `NewOwner ${params.newOwner} is already the owner of proxy admin, skipping...`,
+        throw new Error(
+          `NewOwner ${params.newOwner} is already the owner of proxy admin`,
         );
-        return { isValid: false };
       }
 
       if (
@@ -424,14 +420,12 @@ const createTimeLockTx = async (
   salt: string,
   validateParams: ValidateTimelockTxParams,
   populateTx: PopulateTxFn,
-) => {
-  const deployer = await getDeployer(hre);
-
+): Promise<boolean> => {
   const { isValid, calldata, txComments } = await validateParams(hre);
 
   if (!isValid || !calldata) {
     console.log('Validation is not passed, skipping...');
-    return;
+    return false;
   }
 
   const admin = (await hre.upgrades.admin.getInstance()) as ProxyAdmin;
@@ -481,7 +475,7 @@ const createTimeLockTx = async (
 
   if (!tx) {
     console.warn('Skipping sending tx, operation hash: ', operationHash);
-    return;
+    return false;
   }
 
   const [caller] =
@@ -547,6 +541,8 @@ const createTimeLockTx = async (
   });
 
   console.log('Transaction successfully submitted', res);
+
+  return true;
 };
 
 function parseRevertReason(data: string) {
