@@ -41,6 +41,7 @@ const prefixes: Record<MTokenName, string> = {
   zeroGETHV: 'ZEROG_ETHV',
   zeroGBTCV: 'ZEROG_BTCV',
   JIV: 'JIV',
+  mRE7BTC: 'M_RE7BTC',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {

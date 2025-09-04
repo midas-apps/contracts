@@ -365,6 +365,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x30aCCEeDFf97A3fe11aB52EE7425Af4589338C06',
       redemptionVaultSwapper: '0x5572Eb7f4fB679Ff6A99203f12B0484dC1062d78',
     },
+    mRE7BTC: {
+      token: '0x9FB442d6B612a6dcD2acC67bb53771eF1D9F661A',
+      customFeed: '0x9de073685AEb382B7c6Dd0FB93fa0AEF80eB8967',
+      dataFeed: '0xB5D6483c556Bc6810b55B983315016Fcb374186D',
+      depositVault: '0x5E154946561AEA4E750AAc6DeaD23D37e00E47f6',
+      redemptionVaultSwapper: '0x4Fd4DD7171D14e5bD93025ec35374d2b9b4321b0',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
