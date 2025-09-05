@@ -430,6 +430,22 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           maxAnswer: parseUnits('1.02', 18),
         },
       },
+      ubtc: {
+        dataFeed: {
+          numerator: {
+            healthyDiff: 6 * 3600,
+            minAnswer: 1,
+            maxAnswer: constants.MaxInt256,
+          },
+          denominator: {
+            healthyDiff: 6 * 3600,
+            minAnswer: 1,
+            maxAnswer: constants.MaxInt256,
+          },
+          minAnswer: parseUnits('0.987'),
+          maxAnswer: parseUnits('1.013'),
+        },
+      },
     },
     [chainIds.katana]: {
       usol: {

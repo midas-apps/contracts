@@ -645,6 +645,15 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
       ubtc: {
         token: '0x9FDBdA0A5e284c32744D2f17Ee5c74B284993463',
+        numerator: {
+          aggregator: '0x7d05cd5159F38694A7D4dBf58957146a63c8Ad5A',
+          dataFeed: '0xE3c79bFA56Ed7ACb89028de4345371Ea93fB3434',
+        },
+        denominator: {
+          aggregator: '0x3587a73AA02519335A8a6053a97657BECe0bC2Cc',
+          dataFeed: '0xd81448A57E88fb704Af0DC43eA2586BC4EF996ef',
+        },
+        dataFeed: '0x610CB88e101d9E7e8163ae7788B873d272499df3',
       },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
