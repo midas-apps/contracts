@@ -24,7 +24,7 @@ import {
 import { CustomAggregatorV3CompatibleFeed } from '../../../typechain-types';
 import { paymentTokenDeploymentConfigs } from '../configs/payment-tokens';
 
-export type DeployDataFeedConfig = {
+export type DeployDataFeedConfigCommon = {
   /**
    * Default: 0.1
    */
@@ -33,11 +33,23 @@ export type DeployDataFeedConfig = {
    * Default: 1000
    */
   maxAnswer?: BigNumberish;
+};
+
+export type DeployDataFeedConfigRegular = {
   /**
    * Default: 2592000
    */
   healthyDiff?: BigNumberish;
-};
+} & DeployDataFeedConfigCommon;
+
+export type DeployDataFeedConfigComposite = {
+  numerator: DeployDataFeedConfigRegular;
+  denominator: DeployDataFeedConfigRegular;
+} & DeployDataFeedConfigCommon;
+
+export type DeployDataFeedConfig =
+  | DeployDataFeedConfigComposite
+  | DeployDataFeedConfigRegular;
 
 type DeployCustomAggregatorCommonConfig = {
   /**
@@ -97,7 +109,7 @@ export const setRoundDataPaymentToken = async (
     throw new Error('Token config is not found');
   }
 
-  if (isCompositeDataFeedConfig(tokenAddresses)) {
+  if (isCompositeDataFeedAddresses(tokenAddresses)) {
     throw new Error('Composite config is not supported');
   }
 
@@ -187,10 +199,16 @@ const getAggregatorContract = async (
   ).connect(provider) as CustomAggregatorV3CompatibleFeed;
 };
 
-const isCompositeDataFeedConfig = (
+const isCompositeDataFeedAddresses = (
   tokenAddresses: DataFeedAddresses,
 ): tokenAddresses is DataFeedAddressesComposite => {
   return 'numerator' in tokenAddresses || 'denominator' in tokenAddresses;
+};
+
+const isCompositeDataFeedConfig = (
+  config: DeployDataFeedConfigRegular,
+): config is DeployDataFeedConfigComposite => {
+  return 'numerator' in config || 'denominator' in config;
 };
 
 export const deployPaymentTokenDataFeed = async (
@@ -214,9 +232,14 @@ export const deployPaymentTokenDataFeed = async (
     throw new Error('Token config is not found');
   }
 
-  const isComposite = isCompositeDataFeedConfig(tokenAddresses);
+  const isComposite = isCompositeDataFeedAddresses(tokenAddresses);
+  const isCompositeConfig = isCompositeDataFeedConfig(networkConfig);
 
-  if (isComposite && aggregatorType === undefined) {
+  if (isComposite !== isCompositeConfig) {
+    throw new Error('Incompatible config');
+  }
+
+  if (isComposite && isCompositeConfig && aggregatorType === undefined) {
     const contractName = getCommonContractNames().dataFeedComposite;
 
     if (!contractName) {
@@ -241,12 +264,15 @@ export const deployPaymentTokenDataFeed = async (
     const contractName = getCommonContractNames().dataFeed;
 
     let aggregator: string | undefined;
+    let config: DeployDataFeedConfigRegular;
 
-    if (isComposite && aggregatorType !== undefined) {
+    if (isComposite && isCompositeConfig && aggregatorType !== undefined) {
       aggregator = tokenAddresses[aggregatorType]?.aggregator;
+      config = networkConfig[aggregatorType];
       console.log(`${aggregatorType} will be used`);
     } else if (!isComposite && aggregatorType === undefined) {
       aggregator = tokenAddresses?.aggregator;
+      config = networkConfig;
       console.log(`regular aggregator will be used`);
     } else {
       throw new Error('Incorrect params');
@@ -260,7 +286,7 @@ export const deployPaymentTokenDataFeed = async (
       throw new Error('Token config is not found or aggregator is not set');
     }
 
-    await deployTokenDataFeed(hre, aggregator, contractName, networkConfig);
+    await deployTokenDataFeed(hre, aggregator, contractName, config);
   }
 };
 
@@ -345,7 +371,7 @@ const deployTokenDataFeed = async (
   hre: HardhatRuntimeEnvironment,
   aggregator: string,
   dataFeedContractName: string,
-  networkConfig?: DeployDataFeedConfig,
+  networkConfig?: DeployDataFeedConfigRegular,
 ) => {
   const addresses = getCurrentAddresses(hre);
 
@@ -367,7 +393,7 @@ const deployTokenDataFeedComposite = async (
   numeratorFeed: string,
   denominatorFeed: string,
   dataFeedContractName: string,
-  networkConfig?: DeployDataFeedConfig,
+  networkConfig?: DeployDataFeedConfigComposite,
 ) => {
   const addresses = getCurrentAddresses(hre);
 
