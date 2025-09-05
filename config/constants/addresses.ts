@@ -622,9 +622,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         dataFeed: '0x0C59a087922f21eb49FFa0fe33E0D17B62Ff4C70',
       },
       behype: {
-        token: '0x3Ae58a3C54ee21934Ef95A0bae21Dd8123dDCFF9',
-        aggregator: '0x18bD6Ff6f1d1ab13702a743bbF3742CB512492CA',
-        dataFeed: '0x8dA4C79fb9B4Ae16eA3e46A6341a1e24b555b21E',
+        token: '0xd8FC8F0b03eBA61F64D08B0bef69d80916E5DdA9',
+        aggregator: '0x8C4Bf0020E9EbBb9ed7C4A2726F2824D29542c01',
+        dataFeed: '0xE66f2727e99c5067463dB46E7e6595A1af1b55f0',
       },
       ubtc: {
         token: '0x9FDBdA0A5e284c32744D2f17Ee5c74B284993463',

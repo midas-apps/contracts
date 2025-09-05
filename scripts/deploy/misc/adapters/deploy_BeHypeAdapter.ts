@@ -12,7 +12,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const tx = await fac.deploy(
     // update based on network
-    '0xEB198B94326B37e3D23E74F5E66857617b271400',
+    '0xCeaD893b162D38e714D82d06a7fe0b0dc3c38E0b',
   );
 
   console.log('Deployed BeHYPE adapter:', tx.address);
