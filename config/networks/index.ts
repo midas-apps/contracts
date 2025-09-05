@@ -13,7 +13,9 @@ const {
 } = ENV;
 
 export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
-  main: `https://eth.drpc.org`,
+  main: ALCHEMY_KEY
+    ? `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
+    : `https://mainnet.infura.io/v3/${INFURA_KEY}`,
   sepolia: ALCHEMY_KEY
     ? `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_KEY}`
     : `https://sepolia.infura.io/v3/${INFURA_KEY}`,
