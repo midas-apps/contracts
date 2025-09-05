@@ -156,4 +156,16 @@ export const mTokensMetadata: Record<
     name: 'Midas Re7 BTC',
     symbol: 'mRe7BTC',
   },
+  kitUSD: {
+    name: 'Kitchen Pre-deposit $kitUSD',
+    symbol: '$kitUSD',
+  },
+  kitHYPE: {
+    name: 'Kitchen Pre-deposit $kitHYPE',
+    symbol: '$kitHYPE',
+  },
+  kitBTC: {
+    name: 'Kitchen Pre-deposit $kitBTC',
+    symbol: '$kitBTC',
+  },
 };
