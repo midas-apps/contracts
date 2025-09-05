@@ -140,7 +140,7 @@ const upgradeAllVaults = async (
     hre: HardhatRuntimeEnvironment,
     params: GetUpgradeTxParams,
     salt: string,
-  ) => Promise<unknown>,
+  ) => Promise<boolean>,
 ) => {
   const config = upgradeConfigs.upgrades[upgradeId];
 
@@ -341,6 +341,7 @@ const upgradeAllVaults = async (
   });
 
   console.log('upgradeContracts', upgradeContracts);
+  console.log('total upgrades', upgradeContracts.length);
 
   const deployer = await getDeployer(hre);
 
@@ -406,7 +407,7 @@ const upgradeAllVaults = async (
 Proxy: ${deployment.proxyAddress}
 Implementation: ${deployment.implementationAddress}`,
       );
-      await callBack(
+      const result = await callBack(
         hre,
         {
           proxyAddress: deployment.proxyAddress,
@@ -416,6 +417,10 @@ Implementation: ${deployment.implementationAddress}`,
         },
         config.overrideSalt ?? upgradeId,
       );
+
+      if (!result) {
+        throw new Error('Upgrade was not finished successfully');
+      }
     } catch (e) {
       console.error(`Upgrade failed with error ${e}`);
 
@@ -429,7 +434,11 @@ Implementation: ${deployment.implementationAddress}`,
 
   if (failedUpgrades.length > 0) {
     console.log('Failed upgrades', failedUpgrades);
-  } else {
-    console.log('All upgrades successful');
   }
+
+  console.log(
+    `Successfully executed ${deployments.length - failedUpgrades.length}/${
+      deployments.length
+    } upgrades`,
+  );
 };

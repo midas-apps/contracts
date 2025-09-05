@@ -16,8 +16,18 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
       proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
     },
   },
+  [chainIds.base]: {
+    timelock: {
+      minDelay: 2 * DAY,
+      proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+    },
+  },
   [chainIds.hyperevm]: {
     grantDefaultAdminRole: {},
+    timelock: {
+      minDelay: 2 * DAY,
+      proposer: '0xF9e3295DBf89CF0Bf1344a3010CE96d026579BBb',
+    },
   },
   [chainIds.etherlink]: {
     grantDefaultAdminRole: {},
