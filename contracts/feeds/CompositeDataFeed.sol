@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-
 import "../access/WithMidasAccessControl.sol";
-import "../libraries/DecimalsCorrectionLibrary.sol";
 import "../interfaces/IDataFeed.sol";
 
 /**
@@ -17,8 +13,6 @@ import "../interfaces/IDataFeed.sol";
  * @author RedDuck Software
  */
 contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
-    using DecimalsCorrectionLibrary for uint256;
-
     /**
      * @notice price feed used as the numerator in the ratio calculation.
      * @dev typically represents the asset of interest (e.g., cbBTC/USD).
@@ -144,6 +138,8 @@ contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
     function getDataInBase18() external view returns (uint256 answer) {
         uint256 numerator = numeratorFeed.getDataInBase18();
         uint256 denominator = denominatorFeed.getDataInBase18();
+
+        require(denominator > 0, "CDF: division by zero");
 
         answer = (numerator * 1e18) / denominator;
 
