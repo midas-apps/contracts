@@ -42,7 +42,12 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
     uint256[50] private __gap;
 
     /**
-     * @inheritdoc IDataFeed
+     * @notice upgradeable pattern contract`s initializer
+     * @param _ac MidasAccessControl contract address
+     * @param _aggregator AggregatorV3Interface contract address
+     * @param _healthyDiff max. staleness time for data feed answers
+     * @param _minExpectedAnswer min.expected answer value from data feed
+     * @param _maxExpectedAnswer max.expected answer value from data feed
      */
     function initialize(
         address _ac,
@@ -69,7 +74,8 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
     }
 
     /**
-     * @inheritdoc IDataFeed
+     * @notice updates `aggregator` address
+     * @param _aggregator new AggregatorV3Interface contract address
      */
     function changeAggregator(address _aggregator)
         external

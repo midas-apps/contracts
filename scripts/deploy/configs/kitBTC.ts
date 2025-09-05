@@ -36,14 +36,23 @@ export const kitBTCDeploymentConfig: DeploymentConfig = {
       },
       postDeploy: {
         addPaymentTokens: {
-          // kitBTC TODO: add uBTC for both vaults
           vaults: [
             {
-              paymentTokens: [],
+              paymentTokens: [
+                {
+                  token: 'ubtc',
+                  allowance: parseUnits('1000'),
+                },
+              ],
               type: 'depositVault',
             },
             {
-              paymentTokens: [],
+              paymentTokens: [
+                {
+                  token: 'ubtc',
+                  allowance: parseUnits('1000'),
+                },
+              ],
               type: 'redemptionVaultSwapper',
             },
           ],

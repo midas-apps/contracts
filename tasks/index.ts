@@ -25,6 +25,7 @@ task('runscript', 'Runs a user-defined script')
   .addOptionalParam('action', 'Timelock Action')
   .addOptionalParam('customSignerScript', 'Custom Signer Script')
   .addOptionalParam('skipvalidation', 'Skip Validation', 'false')
+  .addOptionalParam('aggregatortype', 'Aggregator Type')
   .addOptionalParam('logToFile', 'Log to file')
   .addOptionalParam('logsFolderPath', 'Logs folder path')
   .setAction(async (taskArgs, hre) => {
@@ -45,6 +46,14 @@ task('runscript', 'Runs a user-defined script')
     initializeLogger(hre);
 
     hre.skipValidation = (skipValidation ?? 'false') === 'true';
+    hre.aggregatorType = taskArgs.aggregatortype;
+
+    if (
+      hre.aggregatorType &&
+      !['numerator', 'denominator'].includes(hre.aggregatorType)
+    ) {
+      throw new Error('Invalid aggregator type parameter');
+    }
 
     const { deployer } = await hre.getNamedAccounts();
     const deployerSigner = await hre.ethers.getSigner(deployer);
