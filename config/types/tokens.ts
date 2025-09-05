@@ -37,6 +37,9 @@ export enum MTokenNameEnum {
   zeroGBTCV = 'zeroGBTCV',
   JIV = 'JIV',
   mRE7BTC = 'mRE7BTC',
+  kitUSD = 'kitUSD',
+  kitHYPE = 'kitHYPE',
+  kitBTC = 'kitBTC',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
@@ -79,6 +82,8 @@ export enum PaymentTokenNameEnum {
   whype = 'whype',
   miusd = 'miusd',
   syrupusdc = 'syrupusdc',
+  behype = 'behype',
+  ubtc = 'ubtc',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;

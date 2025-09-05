@@ -423,6 +423,13 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           maxAnswer: parseUnits('1.003', 8),
         },
       },
+      behype: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('1', 18),
+          maxAnswer: parseUnits('1.02', 18),
+        },
+      },
     },
     [chainIds.katana]: {
       usol: {

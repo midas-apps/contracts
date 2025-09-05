@@ -7,6 +7,9 @@ import { hypeBTCDeploymentConfig } from './hypeBTC';
 import { hypeETHDeploymentConfig } from './hypeETH';
 import { hypeUSDDeploymentConfig } from './hypeUSD';
 import { JIVDeploymentConfig } from './JIV';
+import { kitBTCDeploymentConfig } from './kitBTC';
+import { kitHYPEDeploymentConfig } from './kitHYPE';
+import { kitUSDDeploymentConfig } from './kitUSD';
 import { kmiUSDDeploymentConfig } from './kmiUSD';
 import { liquidHYPEDeploymentConfig } from './liquidHYPE';
 import { lstHYPEDeploymentConfig } from './lstHYPE';
@@ -79,4 +82,7 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   zeroGBTCV: zeroGBTCVDeploymentConfig,
   JIV: JIVDeploymentConfig,
   mRE7BTC: mRE7BTCDeploymentConfig,
+  kitUSD: kitUSDDeploymentConfig,
+  kitHYPE: kitHYPEDeploymentConfig,
+  kitBTC: kitBTCDeploymentConfig,
 };

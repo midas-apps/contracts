@@ -1,7 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { chainIds } from '../networks';
-import { ConfigPerNetwork, MTokenName } from '../types';
+import { ConfigPerNetwork, MTokenName, PaymentTokenName } from '../types';
 
 export type RedemptionVaultType =
   | 'redemptionVault'
@@ -47,7 +47,7 @@ export type MidasAddresses = Partial<Record<MTokenName, TokenAddresses>> & {
   eUSD?: TokenAddresses;
   accessControl?: string;
   timelock?: string;
-  dataFeeds?: Record<string, DataFeedAddresses>;
+  dataFeeds?: Partial<Record<PaymentTokenName, DataFeedAddresses>>;
 };
 
 export const midasAddressesPerNetwork: ConfigPerNetwork<
@@ -638,6 +638,14 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x4C89968338b75551243C99B452c84a01888282fD',
         dataFeed: '0x0C59a087922f21eb49FFa0fe33E0D17B62Ff4C70',
       },
+      behype: {
+        token: '0xd8FC8F0b03eBA61F64D08B0bef69d80916E5DdA9',
+        aggregator: '0x8C4Bf0020E9EbBb9ed7C4A2726F2824D29542c01',
+        dataFeed: '0xE66f2727e99c5067463dB46E7e6595A1af1b55f0',
+      },
+      ubtc: {
+        token: '0x9FDBdA0A5e284c32744D2f17Ee5c74B284993463',
+      },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     hbUSDT: {
@@ -695,6 +703,27 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xA7f4553adDce698cB3430A935404c42020caFb02',
       depositVault: '0xaF8FfEDF0e57eE9f6518340b9eb913fFa7dBc66b',
       redemptionVaultSwapper: '0x9c915C94066fF921264071aCB7D59DB6e0cBf0D7',
+    },
+    kitUSD: {
+      token: '0xd385BA55A22aC732cF435c5b5c3A1dfe5939bA4d',
+      customFeed: '0xeBfc1F9B19E2a188Ae0FcFA4b08fC6Cd71b680FF',
+      dataFeed: '0x2dA71aE5f0DD37EC57027DE94c87065c87Aeb7e2',
+      depositVault: '0xfAa6625Afd58f69e09EEdd23Ec192Cd98C82C20E',
+      redemptionVaultSwapper: '0xD197A60de47b3D0187D48DDd1653A009d5e4E5f8',
+    },
+    kitHYPE: {
+      token: '0xaF801B65239B4De90F73e26f9Bd1260943A5E248',
+      customFeed: '0x43E27934819eb31D726d8A5c92c535E13239C6A8',
+      dataFeed: '0xB64eB43808De5CCaABF254356F9079C38B802448',
+      depositVault: '0x89AB3b922e9aec6ae5D2220deBf343d137a098A0',
+      redemptionVaultSwapper: '0x1cDd9b3163c7549a89F436d1Eb5C3476238f271e',
+    },
+    kitBTC: {
+      token: '0x61896940f60A536f1d3Dae9580524542D58d3683',
+      customFeed: '0xd2f570cb45E99F4d2279D05D15D24025d18F76C7',
+      dataFeed: '0xc4AEc7D3D0894b0A693A1F3601cc96bF4765C432',
+      depositVault: '0x210376434c1591f05399e3F1EF3f98C6e63d370E',
+      redemptionVaultSwapper: '0x1605F7C0FF432Ea4cF2b36a2E35076187A1803b0',
     },
   },
   katana: {
