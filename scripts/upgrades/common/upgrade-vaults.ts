@@ -197,6 +197,13 @@ const upgradeAllVaults = async (
       remove?: boolean;
     })[] = [];
 
+    if (overrides === false) {
+      mTokenVaultsToUpgrade = mTokenVaultsToUpgrade.filter(
+        (v) => v.mToken !== mToken,
+      );
+      continue;
+    }
+
     if (overrides?.all) {
       overrideVaults = (
         Object.keys(mTokenAddresses).filter(

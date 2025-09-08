@@ -192,6 +192,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    timelock: '0xE3EEe3e0D2398799C884a47FC40C029C8e241852',
     mTBILL: {
       dataFeed: '0xfCEE9754E8C375e145303b7cE7BEca3201734A2B',
       customFeed: '0x056339C044055819E8Db84E71f5f2E1F536b2E5b',
@@ -504,6 +505,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    timelock: '0x41a218E7Bd7139Cfe4cEDEc4979Afa1858a2B2e2',
     mTBILL: {
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
       customFeed: '0xF76d11D4473EA49a420460B72798fc3B38D4d0CF',
@@ -578,6 +580,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    timelock: '0x7Fc5149f4bb75D5E6778EE9A1b058E6b514352EE',
     mTBILL: {
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
       customFeed: '0x0Ca36aF4915a73DAF06912dd256B8a4737131AE7',

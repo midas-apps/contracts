@@ -29,6 +29,24 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
       proposer: '0xF9e3295DBf89CF0Bf1344a3010CE96d026579BBb',
     },
   },
+  [chainIds.main]: {
+    timelock: {
+      minDelay: 2 * DAY,
+      proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+    },
+  },
+  [chainIds.rootstock]: {
+    timelock: {
+      minDelay: 2 * DAY,
+      proposer: '0x77F186c27277B80660A942839bd38e0A05B5702D',
+    },
+  },
+  [chainIds.oasis]: {
+    timelock: {
+      minDelay: 2 * DAY,
+      proposer: '0x316017e4532A40ec8E67640F3B52115efB6B89A3',
+    },
+  },
   [chainIds.etherlink]: {
     grantDefaultAdminRole: {},
   },
