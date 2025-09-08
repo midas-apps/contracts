@@ -7,7 +7,7 @@ import { getPaymentTokenOrThrow } from '../../helpers/utils';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const paymentToken = getPaymentTokenOrThrow(hre);
-  await deployPaymentTokenDataFeed(hre, paymentToken);
+  await deployPaymentTokenDataFeed(hre, paymentToken, hre.aggregatorType);
 };
 
 export default func;
