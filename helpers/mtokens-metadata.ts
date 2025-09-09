@@ -172,4 +172,8 @@ export const mTokensMetadata: Record<
     name: 'Delta Neutral FART',
     symbol: 'dnFART',
   },
+  mXRP: {
+    name: 'Midas XRP',
+    symbol: 'mXRP',
+  },
 };

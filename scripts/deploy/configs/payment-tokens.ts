@@ -487,6 +487,26 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
         },
       },
     },
+    [chainIds.xrplevm]: {
+      xrp: {
+        customAggregator: {
+          description: 'XRP/XRP',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+    },
     [chainIds.tacTestnet]: {
       usdt: {
         dataFeed: {
