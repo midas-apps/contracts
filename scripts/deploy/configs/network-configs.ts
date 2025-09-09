@@ -49,6 +49,17 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
   },
   [chainIds.etherlink]: {
     grantDefaultAdminRole: {},
+    timelock: {
+      minDelay: 2 * DAY,
+      proposer: '0xdC208d4a8583663575fa548Bf6de224bb5FfC26d',
+    },
+  },
+  [chainIds.plume]: {
+    grantDefaultAdminRole: {},
+    timelock: {
+      minDelay: 2 * DAY,
+      proposer: '0xb28078046efa2F0F6637F67bA5D7f36B30dc8b2b',
+    },
   },
   [chainIds.tac]: {
     grantDefaultAdminRole: {},

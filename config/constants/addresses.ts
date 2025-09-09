@@ -527,7 +527,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       customFeed: '0xb701ABEA3E4b6EAdAc4F56696904c5F551d2617b',
       dataFeed: '0x73a64469E0974371005ca0f60Dfc10405613b411',
       depositVault: '0xb05F6aa8C2ea9aB8537cF09A9B765a21De249224',
-      redemptionVault: '0x3aC6b2Bf09f470e5674C3DA60Be7D2DA2791F897',
+      redemptionVaultSwapper: '0x3aC6b2Bf09f470e5674C3DA60Be7D2DA2791F897',
     },
     mBASIS: {
       token: '0x0c78Ca789e826fE339dE61934896F5D170b66d78',
@@ -565,6 +565,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVault: '0x3Cd58EFe911B1e936c014695CCfaB8c8825E3a63',
     },
     accessControl: '0xefED40D1eb1577d1073e9C4F277463486D39b084',
+    timelock: '0x2538325446dD80fC49830EEa55d9E662B5acc35C',
   },
   rootstock: {
     dataFeeds: {
@@ -777,6 +778,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   etherlink: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    timelock: '0x852C4F1Beb54AcB5360dBdBA7EbbE9940A698F76',
     dataFeeds: {
       usdc: {
         token: '0x796Ea11Fa2dD751eD01b53C372fFDB4AAa8f00F9',
@@ -789,7 +791,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       customFeed: '0x80dA45b66c4CBaB140aE53c9accB01BE4F41B7Dd',
       dataFeed: '0x2bDC9c452a4F52DfFD92B0cad371aCbCaeabf918',
       depositVault: '0xd65BFeB71271A4408ff335E59eCf6c5b21A33a70',
-      redemptionVault: '0x7f938d26b6179A96870afaECfB0578110E53A3b2',
+      redemptionVaultSwapper: '0x7f938d26b6179A96870afaECfB0578110E53A3b2',
     },
     mBASIS: {
       token: '0x2247B5A46BB79421a314aB0f0b67fFd11dd37Ee4',

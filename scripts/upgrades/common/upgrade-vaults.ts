@@ -85,7 +85,7 @@ const getImplAddressFromDeployment = async (
   const address =
     tx.contractAddress ?? tx.to ?? ((tx as any).creates as string);
 
-  if (tx.confirmations <= 7) {
+  if (tx.confirmations <= 20) {
     return {
       deployedNew: true,
       address,

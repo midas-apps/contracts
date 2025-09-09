@@ -37,6 +37,12 @@ export const upgradeConfigs: UpgradeConfig = {
         [chainIds.oasis]: {
           all: true,
         },
+        [chainIds.plume]: {
+          all: true,
+        },
+        [chainIds.etherlink]: {
+          all: true,
+        },
         [chainIds.main]: {
           all: true,
           overrides: {
