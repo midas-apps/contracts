@@ -33,6 +33,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       contractName = 'Minter Vault';
     } else if (key.startsWith('customFeed')) {
       contractName = 'Oracle';
+    } else if (key.startsWith('token')) {
+      contractName = mToken;
     } else if (key.startsWith('dataFeed')) {
       contractName = 'Oracle';
       contractTag = 'datafeed';
