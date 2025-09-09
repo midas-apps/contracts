@@ -168,4 +168,8 @@ export const mTokensMetadata: Record<
     name: 'Kitchen Pre-deposit $kitBTC',
     symbol: '$kitBTC',
   },
+  dnFART: {
+    name: 'Delta Neutral FART',
+    symbol: 'dnFART',
+  },
 };
