@@ -45,6 +45,7 @@ const prefixes: Record<MTokenName, string> = {
   kitUSD: 'KIT_USD',
   kitHYPE: 'KIT_HYPE',
   kitBTC: 'KIT_BTC',
+  dnFART: 'DN_FART',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {
