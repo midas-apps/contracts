@@ -36,6 +36,7 @@ const prefixes: Record<MTokenName, string> = {
   dnHYPE: 'DN_HYPE',
   kmiUSD: 'KMI_USD',
   msyrupUSD: 'M_SYRUP_USD',
+  msyrupUSDT: 'M_SYRUP_USDT',
   dnPUMP: 'DN_PUMP',
   zeroGUSDV: 'ZEROG_USDV',
   zeroGETHV: 'ZEROG_ETHV',

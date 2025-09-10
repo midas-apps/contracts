@@ -132,6 +132,10 @@ export const mTokensMetadata: Record<
     name: 'syrupUSDC supercharged',
     symbol: 'msyrupUSD',
   },
+  msyrupUSDT: {
+    name: 'Plasma syrupUSDT Pre-deposit Vault',
+    symbol: 'msyrupUSDT',
+  },
   dnPUMP: {
     name: 'Delta Neutral PUMP',
     symbol: 'dnPUMP',

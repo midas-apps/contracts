@@ -31,6 +31,7 @@ export enum MTokenNameEnum {
   dnHYPE = 'dnHYPE',
   kmiUSD = 'kmiUSD',
   msyrupUSD = 'msyrupUSD',
+  msyrupUSDT = 'msyrupUSDT',
   dnPUMP = 'dnPUMP',
   zeroGUSDV = 'zeroGUSDV',
   zeroGETHV = 'zeroGETHV',

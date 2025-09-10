@@ -334,6 +334,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x5AE23D23B7986a708CBA9bF808aD9A43BF77d1b7',
       redemptionVaultSwapper: '0x9f7dd5462C183B6577858e16a13A4d864CE2f972',
     },
+    msyrupUSDT: {
+      token: '0x711077ddc66b18e6dCB0a5CB3743F3938A03Ce75',
+      customFeed: '0xa8010A5B7585D72DAc944bEcF79A2a84a4b502D2',
+      dataFeed: '0x9E1366Dc7f2a12f606916E58C5b3Cf976102B0CB',
+      depositVault: '0x7A4c56b1bAaAD0Ff5D248892E137D415da41B3B8',
+      redemptionVaultSwapper: '0xf9AC9071de74378676b336cd4AA24E5fCFd4BD4b',
+    },
     TACmBTC: {
       token: '0x307267989A7bec3A57FD7fd96017C49803589Fd0',
       depositVault: '0xD1c5cBaBb367783FB6b40935c64512EF06cBB4f4',

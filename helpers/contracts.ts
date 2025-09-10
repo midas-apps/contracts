@@ -77,6 +77,7 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   dnHYPE: 'DnHype',
   kmiUSD: 'KmiUsd',
   msyrupUSD: 'MSyrupUsd',
+  msyrupUSDT: 'MSyrupUsdt',
   dnPUMP: 'DnPump',
   zeroGUSDV: 'ZeroGUsdv',
   zeroGETHV: 'ZeroGEthv',
