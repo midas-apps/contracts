@@ -41,6 +41,7 @@ export enum MTokenNameEnum {
   kitHYPE = 'kitHYPE',
   kitBTC = 'kitBTC',
   dnFART = 'dnFART',
+  mXRP = 'mXRP',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
@@ -85,6 +86,7 @@ export enum PaymentTokenNameEnum {
   syrupusdc = 'syrupusdc',
   behype = 'behype',
   ubtc = 'ubtc',
+  xrp = 'xrp',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;

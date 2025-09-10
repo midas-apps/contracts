@@ -30,6 +30,7 @@ import { mRE7SOLDeploymentConfig } from './mRE7SOL';
 import { mSLDeploymentConfig } from './mSL';
 import { msyrupUSDDeploymentConfig } from './msyrupUSD';
 import { mTBILLDeploymentConfig } from './mTBILL';
+import { mXRPDeploymentConfig } from './mXRP';
 import { TACmBTCDeploymentConfig } from './tac/TACmBTC';
 import { TACmEDGEDeploymentConfig } from './tac/TACmEDGE';
 import { TACmMEVDeploymentConfig } from './tac/TACmMEV';
@@ -87,4 +88,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   kitHYPE: kitHYPEDeploymentConfig,
   kitBTC: kitBTCDeploymentConfig,
   dnFART: dnFARTDeploymentConfig,
+  mXRP: mXRPDeploymentConfig,
 };

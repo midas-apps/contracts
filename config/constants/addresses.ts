@@ -777,6 +777,23 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVaultSwapper: '0x8E3865B9d2d8e562d8bb3b15D9B4941AeE6f67f1',
     },
   },
+  xrplevm: {
+    accessControl: '0x831150f2A1283880C3B271f1fBaBFa6aBf3F4cAE',
+    dataFeeds: {
+      xrp: {
+        token: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+        aggregator: '0xd2BD1Ee9535396e010007c1e61c918a11cD74D62',
+        dataFeed: '0x16A05aE0cC2F0329Ad96445D670D4225FE41FFd5',
+      },
+    },
+    mXRP: {
+      token: '0x06e0B0F1A644Bb9881f675Ef266CeC15a63a3d47',
+      customFeed: '0xFF64785Ee22D764F8E79812102d3Fa7f2d3437Af',
+      dataFeed: '0xed4ff96DAF37a0A44356E81A3cc22908B3f06B40',
+      depositVault: '0x30FBc82A72CA674AA250cd6c27BCca1Fe602f1Bb',
+      redemptionVaultSwapper: '0xDaC1b058cE42b67Ba33DbfDBA972d76C83C085D6',
+    },
+  },
   etherlink: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     dataFeeds: {
