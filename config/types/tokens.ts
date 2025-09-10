@@ -40,6 +40,7 @@ export enum MTokenNameEnum {
   kitUSD = 'kitUSD',
   kitHYPE = 'kitHYPE',
   kitBTC = 'kitBTC',
+  dnFART = 'dnFART',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
