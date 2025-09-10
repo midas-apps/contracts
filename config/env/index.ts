@@ -1,10 +1,7 @@
 import 'dotenv/config';
-import { Environment, Network } from '../types';
+import { Environment, Network, RpcUrl } from '../types';
 
 export const ENV: Environment = {
-  ALCHEMY_KEY: process.env.ALCHEMY_KEY ?? '',
-  INFURA_KEY: process.env.INFURA_KEY ?? '',
-  CONDUIT_API_KEY: process.env.CONDUIT_API_KEY ?? '',
   ETHERSCAN_API_KEY: process.env.ETHERSCAN_API_KEY ?? '',
   OPTIMIZER: process.env.OPTIMIZER === 'true',
   COVERAGE: process.env.COVERAGE === 'true',
@@ -20,4 +17,9 @@ export const ENV: Environment = {
   CUSTOM_SIGNER_SCRIPT_PATH: process.env.CUSTOM_SIGNER_SCRIPT_PATH,
   LOG_TO_FILE: process.env.LOG_TO_FILE === 'true',
   LOGS_FOLDER_PATH: process.env.LOGS_FOLDER_PATH,
+  getRpcUrl: (network: Network) => {
+    return process.env['RPC_URL_' + network.toUpperCase()] as
+      | RpcUrl
+      | undefined;
+  },
 };

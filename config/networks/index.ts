@@ -4,33 +4,23 @@ import { GWEI, MOCK_AGGREGATOR_NETWORK_TAG } from '../constants';
 import { ENV } from '../env';
 import { ConfigPerNetwork, Network, RpcUrl } from '../types';
 
-const {
-  ALCHEMY_KEY,
-  INFURA_KEY,
-  CONDUIT_API_KEY,
-  MNEMONIC_DEV,
-  MNEMONIC_PROD,
-} = ENV;
+const { MNEMONIC_DEV, MNEMONIC_PROD, getRpcUrl } = ENV;
 
 export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
-  main: ALCHEMY_KEY
-    ? `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
-    : `https://mainnet.infura.io/v3/${INFURA_KEY}`,
-  sepolia: ALCHEMY_KEY
-    ? `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_KEY}`
-    : `https://sepolia.infura.io/v3/${INFURA_KEY}`,
-  etherlink: 'https://node.mainnet.etherlink.com',
+  main: getRpcUrl('main') ?? 'https://1rpc.io/eth',
+  sepolia: getRpcUrl('sepolia') ?? 'https://1rpc.io/sepolia',
+  etherlink: getRpcUrl('etherlink') ?? 'https://node.mainnet.etherlink.com',
   hardhat: 'http://localhost:8545',
   localhost: 'http://localhost:8545',
-  base: 'https://mainnet.base.org',
-  oasis: 'https://sapphire.oasis.io',
-  plume: 'https://rpc.plume.org',
-  rootstock: 'https://mycrypto.rsk.co',
-  arbitrum: 'https://arbitrum.drpc.org',
-  tacTestnet: 'https://turin.rpc.tac.build',
-  hyperevm: 'https://rpc.hyperliquid.xyz/evm',
-  katana: `https://rpc-katana.t.conduit.xyz/${CONDUIT_API_KEY}`,
-  tac: 'https://rpc.tac.build',
+  base: getRpcUrl('base') ?? 'https://mainnet.base.org',
+  oasis: getRpcUrl('oasis') ?? 'https://sapphire.oasis.io',
+  plume: getRpcUrl('plume') ?? 'https://rpc.plume.org',
+  rootstock: getRpcUrl('rootstock') ?? 'https://mycrypto.rsk.co',
+  arbitrum: getRpcUrl('arbitrum') ?? 'https://arbitrum.drpc.org',
+  tacTestnet: getRpcUrl('tacTestnet') ?? 'https://turin.rpc.tac.build',
+  hyperevm: getRpcUrl('hyperevm') ?? 'https://rpc.hyperliquid.xyz/evm',
+  katana: getRpcUrl('katana') ?? `https://rpc.katana.network`,
+  tac: getRpcUrl('tac') ?? 'https://rpc.tac.build',
 };
 
 export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {

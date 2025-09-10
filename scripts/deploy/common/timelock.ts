@@ -253,7 +253,7 @@ const validateSimulateContractUpgrade = async (
   upgradeParams: GetUpgradeTxParams,
   tx: PopulatedTransaction,
 ) => {
-  await increase(days(10));
+  await increase(days(3));
   await mine();
 
   const proxyAdmin = (await hre.upgrades.admin.getInstance()) as ProxyAdmin;
@@ -695,6 +695,7 @@ const createTimeLockTx = async (
     return false;
   }
 
+  console.log('1');
   const admin = (await hre.upgrades.admin.getInstance()) as ProxyAdmin;
 
   const networkAddresses = getCurrentAddresses(hre);

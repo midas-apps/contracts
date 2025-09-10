@@ -1,3 +1,4 @@
+import { mine } from '@nomicfoundation/hardhat-network-helpers';
 import { PopulatedTransaction } from 'ethers';
 import { task } from 'hardhat/config';
 
@@ -24,11 +25,11 @@ task('runscript', 'Runs a user-defined script')
   .addOptionalParam('ptoken', 'Payment Token')
   .addOptionalParam('action', 'Timelock Action')
   .addOptionalParam('customSignerScript', 'Custom Signer Script')
-  .addOptionalParam('skipvalidation', 'Skip Validation', 'false')
-  .addOptionalParam('aggregatortype', 'Aggregator Type')
+  .addOptionalParam('skipValidation', 'Skip Validation', 'false')
+  .addOptionalParam('aggregatorType', 'Aggregator Type')
   .addOptionalParam('logToFile', 'Log to file')
   .addOptionalParam('logsFolderPath', 'Logs folder path')
-  .addOptionalParam('forkingnetwork', 'Forking Network')
+  .addOptionalParam('forkingNetwork', 'Forking Network')
   .setAction(async (taskArgs, hre) => {
     const mtoken = taskArgs.mtoken;
     const ptoken = taskArgs.ptoken;
@@ -37,7 +38,7 @@ task('runscript', 'Runs a user-defined script')
       taskArgs.customSignerScript ?? ENV.CUSTOM_SIGNER_SCRIPT_PATH;
     const logToFile = taskArgs.logToFile ?? ENV.LOG_TO_FILE;
     const forkingNetwork: Network =
-      taskArgs.forkingnetwork ?? ENV.FORKING_NETWORK;
+      taskArgs.forkingNetwork ?? ENV.FORKING_NETWORK;
 
     if (forkingNetwork) {
       console.log('Forking network', forkingNetwork);
@@ -53,6 +54,8 @@ task('runscript', 'Runs a user-defined script')
         ],
       });
 
+      await mine();
+
       const chainId = chainIds[forkingNetwork];
       hre.network.config.chainId = chainId;
       hre.network.name = forkingNetwork;
@@ -64,12 +67,12 @@ task('runscript', 'Runs a user-defined script')
       path.resolve(hre.config.paths.root, 'logs/');
 
     const scriptPath = taskArgs.path;
-    const skipValidation = taskArgs.skipvalidation;
+    const skipValidation = taskArgs.skipValidation;
 
     initializeLogger(hre);
 
     hre.skipValidation = (skipValidation ?? 'false') === 'true';
-    hre.aggregatorType = taskArgs.aggregatortype;
+    hre.aggregatorType = taskArgs.aggregatorType;
 
     if (
       hre.aggregatorType &&
