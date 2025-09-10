@@ -186,6 +186,7 @@ export const getForkNetworkConfig = (
   tags: Array<string> = [MOCK_AGGREGATOR_NETWORK_TAG],
 ): HardhatNetworkUserConfig => ({
   ...getBaseNetworkConfig(network, tags),
+  chainId: chainIds.hardhat,
   accounts: {
     mnemonic: mnemonics[network],
   },

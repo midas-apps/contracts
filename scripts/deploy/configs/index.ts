@@ -1,3 +1,4 @@
+import { dnFARTDeploymentConfig } from './dnFART';
 import { dnHYPEDeploymentConfig } from './dnHYPE';
 import { dnPUMPDeploymentConfig } from './dnPUMP';
 import { hbUSDCDeploymentConfig } from './hbUSDC';
@@ -85,4 +86,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   kitUSD: kitUSDDeploymentConfig,
   kitHYPE: kitHYPEDeploymentConfig,
   kitBTC: kitBTCDeploymentConfig,
+  dnFART: dnFARTDeploymentConfig,
 };
