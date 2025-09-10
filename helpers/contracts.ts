@@ -9,6 +9,7 @@ export type TokenContractNames = {
   rvBuidl: string;
   rvUstb: string;
   dataFeed?: string;
+  dataFeedComposite?: string;
   customAggregator?: string;
   customAggregatorGrowth?: string;
   token: string;
@@ -77,6 +78,14 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   kmiUSD: 'KmiUsd',
   msyrupUSD: 'MSyrupUsd',
   dnPUMP: 'DnPump',
+  zeroGUSDV: 'ZeroGUsdv',
+  zeroGETHV: 'ZeroGEthv',
+  zeroGBTCV: 'ZeroGBtcv',
+  JIV: 'Jiv',
+  mRE7BTC: 'MRe7Btc',
+  kitUSD: 'KitUsd',
+  kitHYPE: 'KitHype',
+  kitBTC: 'KitBtc',
 };
 
 export const getCommonContractNames = (): CommonContractNames => {
@@ -93,6 +102,7 @@ export const getCommonContractNames = (): CommonContractNames => {
     customAggregatorGrowth: 'CustomAggregatorV3CompatibleFeedGrowth',
     customAggregatorDiscounted: 'CustomAggregatorV3CompatibleFeedDiscounted',
     roles: 'MidasAccessControlRoles',
+    dataFeedComposite: 'CompositeDataFeed',
   };
 };
 

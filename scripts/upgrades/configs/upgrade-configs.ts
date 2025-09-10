@@ -31,6 +31,26 @@ export const upgradeConfigs: UpgradeConfig = {
         [chainIds.base]: {
           all: true,
         },
+        [chainIds.rootstock]: {
+          all: true,
+        },
+        [chainIds.oasis]: {
+          all: true,
+        },
+        [chainIds.plume]: {
+          all: true,
+        },
+        [chainIds.etherlink]: {
+          all: true,
+        },
+        [chainIds.main]: {
+          all: true,
+          overrides: {
+            TACmBTC: false,
+            TACmEDGE: false,
+            TACmMEV: false,
+          },
+        },
       },
     },
   },

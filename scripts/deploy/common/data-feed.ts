@@ -12,7 +12,11 @@ import {
 } from './utils';
 
 import { MTokenName, PaymentTokenName } from '../../../config';
-import { getCurrentAddresses } from '../../../config/constants/addresses';
+import {
+  DataFeedAddresses,
+  DataFeedAddressesComposite,
+  getCurrentAddresses,
+} from '../../../config/constants/addresses';
 import {
   getCommonContractNames,
   getTokenContractNames,
@@ -20,7 +24,7 @@ import {
 import { CustomAggregatorV3CompatibleFeed } from '../../../typechain-types';
 import { paymentTokenDeploymentConfigs } from '../configs/payment-tokens';
 
-export type DeployDataFeedConfig = {
+export type DeployDataFeedConfigCommon = {
   /**
    * Default: 0.1
    */
@@ -29,11 +33,23 @@ export type DeployDataFeedConfig = {
    * Default: 1000
    */
   maxAnswer?: BigNumberish;
+};
+
+export type DeployDataFeedConfigRegular = {
   /**
    * Default: 2592000
    */
   healthyDiff?: BigNumberish;
-};
+} & DeployDataFeedConfigCommon;
+
+export type DeployDataFeedConfigComposite = {
+  numerator: DeployDataFeedConfigRegular;
+  denominator: DeployDataFeedConfigRegular;
+} & DeployDataFeedConfigCommon;
+
+export type DeployDataFeedConfig =
+  | DeployDataFeedConfigComposite
+  | DeployDataFeedConfigRegular;
 
 type DeployCustomAggregatorCommonConfig = {
   /**
@@ -88,6 +104,14 @@ export const setRoundDataPaymentToken = async (
 
   const addresses = getCurrentAddresses(hre);
   const tokenAddresses = addresses?.dataFeeds?.[token];
+
+  if (!tokenAddresses) {
+    throw new Error('Token config is not found');
+  }
+
+  if (isCompositeDataFeedAddresses(tokenAddresses)) {
+    throw new Error('Composite config is not supported');
+  }
 
   if (!tokenAddresses?.aggregator) {
     throw new Error('Token config is not found or aggregator is not set');
@@ -175,9 +199,22 @@ const getAggregatorContract = async (
   ).connect(provider) as CustomAggregatorV3CompatibleFeed;
 };
 
+const isCompositeDataFeedAddresses = (
+  tokenAddresses: DataFeedAddresses,
+): tokenAddresses is DataFeedAddressesComposite => {
+  return 'numerator' in tokenAddresses || 'denominator' in tokenAddresses;
+};
+
+const isCompositeDataFeedConfig = (
+  config: DeployDataFeedConfigRegular,
+): config is DeployDataFeedConfigComposite => {
+  return 'numerator' in config || 'denominator' in config;
+};
+
 export const deployPaymentTokenDataFeed = async (
   hre: HardhatRuntimeEnvironment,
   token: PaymentTokenName,
+  aggregatorType?: 'numerator' | 'denominator',
 ) => {
   const addresses = getCurrentAddresses(hre);
   const tokenAddresses = addresses?.dataFeeds?.[token];
@@ -187,21 +224,70 @@ export const deployPaymentTokenDataFeed = async (
       token
     ]?.dataFeed;
 
-  if (!tokenAddresses?.aggregator) {
-    throw new Error('Token config is not found or aggregator is not set');
-  }
-  const contractName = getCommonContractNames().dataFeed;
-
-  if (!contractName) {
-    throw new Error('Data feed contract name is not set');
+  if (!networkConfig) {
+    throw new Error('Network config is not found');
   }
 
-  await deployTokenDataFeed(
-    hre,
-    tokenAddresses.aggregator,
-    contractName,
-    networkConfig,
-  );
+  if (!tokenAddresses) {
+    throw new Error('Token config is not found');
+  }
+
+  const isComposite = isCompositeDataFeedAddresses(tokenAddresses);
+  const isCompositeConfig = isCompositeDataFeedConfig(networkConfig);
+
+  if (isComposite !== isCompositeConfig) {
+    throw new Error('Incompatible config');
+  }
+
+  if (isComposite && isCompositeConfig && aggregatorType === undefined) {
+    const contractName = getCommonContractNames().dataFeedComposite;
+
+    if (!contractName) {
+      throw new Error('Composite data feed contract name is not set');
+    }
+
+    if (
+      !tokenAddresses?.denominator?.dataFeed ||
+      !tokenAddresses?.numerator?.dataFeed
+    ) {
+      throw new Error('Nominator/denominator data feed is not set');
+    }
+
+    await deployTokenDataFeedComposite(
+      hre,
+      tokenAddresses.numerator.dataFeed,
+      tokenAddresses.denominator.dataFeed,
+      contractName,
+      networkConfig,
+    );
+  } else {
+    const contractName = getCommonContractNames().dataFeed;
+
+    let aggregator: string | undefined;
+    let config: DeployDataFeedConfigRegular;
+
+    if (isComposite && isCompositeConfig && aggregatorType !== undefined) {
+      aggregator = tokenAddresses[aggregatorType]?.aggregator;
+      config = networkConfig[aggregatorType];
+      console.log(`${aggregatorType} will be used`);
+    } else if (!isComposite && aggregatorType === undefined) {
+      aggregator = tokenAddresses?.aggregator;
+      config = networkConfig;
+      console.log(`regular aggregator will be used`);
+    } else {
+      throw new Error('Incorrect params');
+    }
+
+    if (!contractName) {
+      throw new Error('Data feed contract name is not set');
+    }
+
+    if (!aggregator) {
+      throw new Error('Token config is not found or aggregator is not set');
+    }
+
+    await deployTokenDataFeed(hre, aggregator, contractName, config);
+  }
 };
 
 export const deployPaymentTokenCustomAggregator = async (
@@ -285,7 +371,7 @@ const deployTokenDataFeed = async (
   hre: HardhatRuntimeEnvironment,
   aggregator: string,
   dataFeedContractName: string,
-  networkConfig?: DeployDataFeedConfig,
+  networkConfig?: DeployDataFeedConfigRegular,
 ) => {
   const addresses = getCurrentAddresses(hre);
 
@@ -299,6 +385,28 @@ const deployTokenDataFeed = async (
     networkConfig.healthyDiff ?? 2592000,
     networkConfig.minAnswer ?? parseUnits('0.1', 8),
     networkConfig.maxAnswer ?? parseUnits('1000', 8),
+  ]);
+};
+
+const deployTokenDataFeedComposite = async (
+  hre: HardhatRuntimeEnvironment,
+  numeratorFeed: string,
+  denominatorFeed: string,
+  dataFeedContractName: string,
+  networkConfig?: DeployDataFeedConfigComposite,
+) => {
+  const addresses = getCurrentAddresses(hre);
+
+  if (!networkConfig) {
+    throw new Error('Network config is not found');
+  }
+
+  await deployAndVerifyProxy(hre, dataFeedContractName, [
+    addresses?.accessControl,
+    numeratorFeed,
+    denominatorFeed,
+    networkConfig.minAnswer ?? parseUnits('0.1', 18),
+    networkConfig.maxAnswer ?? parseUnits('1000', 18),
   ]);
 };
 

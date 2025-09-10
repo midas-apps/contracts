@@ -25,7 +25,7 @@ const serializeArgs = (args: any[]): string => {
         return serializeArgs(arg);
       }
 
-      return arg.toString();
+      return arg?.toString?.() ?? 'undefined';
     })
     .join(' ');
 };
