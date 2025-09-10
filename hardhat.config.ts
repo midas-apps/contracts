@@ -23,7 +23,6 @@ import {
 
 const { OPTIMIZER, REPORT_GAS, FORKING_NETWORK, ETHERSCAN_API_KEY } = ENV;
 
-console.log({ FORKING_NETWORK });
 const config: HardhatUserConfig = {
   solidity: {
     compilers: [

@@ -41,4 +41,5 @@ export interface Environment {
   readonly CUSTOM_SIGNER_SCRIPT_PATH?: string;
   readonly LOG_TO_FILE: boolean;
   readonly LOGS_FOLDER_PATH?: string;
+  readonly getRpcUrl: (network: Network) => RpcUrl | undefined;
 }
