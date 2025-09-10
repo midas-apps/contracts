@@ -58,6 +58,7 @@
     "deploy:post:set:waived": "yarn hh:run:script scripts/deploy/post-deploy/add_FeeWaived.ts",
     "timelock:upgrade:vaults:propose": "yarn hh:run:script scripts/upgrades/proposeUpgrade_Vaults.ts",
     "timelock:upgrade:vaults:execute": "yarn hh:run:script scripts/upgrades/executeUpgrade_Vaults.ts",
+    "timelock:upgrade:vaults:validate": "yarn hh:run:script scripts/upgrades/validateUpgrade_Vaults.ts",
     "timelock:admin:transfer:propose": "yarn hh:run:script scripts/upgrades/proposeTransferOwnership_ProxyAdmin.ts",
     "timelock:admin:transfer:execute": "yarn hh:run:script scripts/upgrades/executeTransferOwnership_ProxyAdmin.ts",
     "deploy:post:pause:functions": "yarn hh:run:script scripts/deploy/post-deploy/pause_Functions.ts",

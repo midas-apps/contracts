@@ -24,6 +24,7 @@ import {
   proposeTimeLockTransferOwnershipTx,
   proposeTimeLockUpgradeTx,
   TransferOwnershipTxParams,
+  validateSimulateTimeLockUpgradeTx,
 } from '../../deploy/common/timelock';
 import { getDeployer } from '../../deploy/common/utils';
 import { networkConfigs } from '../configs/network-configs';
@@ -44,6 +45,15 @@ export const executeUpgradeVaults = async (
 ) => {
   return upgradeAllVaults(hre, upgradeId, async (hre, params, salt) => {
     return await executeTimeLockUpgradeTx(hre, params, salt);
+  });
+};
+
+export const validateUpgradeVaults = async (
+  hre: HardhatRuntimeEnvironment,
+  upgradeId: string,
+) => {
+  return upgradeAllVaults(hre, upgradeId, async (hre, params, salt) => {
+    return await validateSimulateTimeLockUpgradeTx(hre, params, salt);
   });
 };
 
@@ -85,7 +95,7 @@ const getImplAddressFromDeployment = async (
   const address =
     tx.contractAddress ?? tx.to ?? ((tx as any).creates as string);
 
-  if (tx.confirmations <= 7) {
+  if (tx.confirmations <= 20) {
     return {
       deployedNew: true,
       address,
@@ -196,6 +206,13 @@ const upgradeAllVaults = async (
     let overrideVaults: (MTokenVaultsToUpgrade['vaults'][0] & {
       remove?: boolean;
     })[] = [];
+
+    if (overrides === false) {
+      mTokenVaultsToUpgrade = mTokenVaultsToUpgrade.filter(
+        (v) => v.mToken !== mToken,
+      );
+      continue;
+    }
 
     if (overrides?.all) {
       overrideVaults = (
@@ -414,6 +431,8 @@ Implementation: ${deployment.implementationAddress}`,
           newImplementation: deployment.implementationAddress,
           initializer: deployment.initializer,
           initializerCalldata: deployment.initializerCalldata,
+          vaultType: deployment.vaultType,
+          mToken: deployment.mToken,
         },
         config.overrideSalt ?? upgradeId,
       );

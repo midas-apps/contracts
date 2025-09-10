@@ -1,5 +1,14 @@
-import { constants, PopulatedTransaction } from 'ethers';
-import { solidityKeccak256 } from 'ethers/lib/utils';
+import {
+  impersonateAccount,
+  setBalance,
+} from '@nomicfoundation/hardhat-network-helpers';
+import {
+  BigNumber,
+  BigNumberish,
+  constants,
+  PopulatedTransaction,
+} from 'ethers';
+import { parseUnits, solidityKeccak256 } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
@@ -10,7 +19,12 @@ import {
   sendAndWaitForCustomTxSign,
 } from './utils';
 
-import { getCurrentAddresses } from '../../../config/constants/addresses';
+import { MTokenName } from '../../../config';
+import {
+  getCurrentAddresses,
+  VaultType,
+} from '../../../config/constants/addresses';
+import { getRolesForToken } from '../../../helpers/roles';
 import { logDeploy } from '../../../helpers/utils';
 import { ProxyAdmin, TimelockController } from '../../../typechain-types';
 import { networkDeploymentConfigs } from '../configs/network-configs';
@@ -146,6 +160,8 @@ export type GetUpgradeTxParams = {
   newImplementation: string;
   initializer?: string;
   initializerCalldata?: string;
+  vaultType: VaultType;
+  mToken: MTokenName;
 };
 
 export type TransferOwnershipTxParams = {
@@ -188,6 +204,134 @@ export const executeTimeLockUpgradeTx = async (
     salt,
     executeTimelockTx,
   );
+};
+
+export const validateSimulateTimeLockUpgradeTx = async (
+  hre: HardhatRuntimeEnvironment,
+  upgradeParams: GetUpgradeTxParams,
+  salt: string,
+) => {
+  return await createUpgradeTimelockTx(
+    hre,
+    upgradeParams,
+    salt,
+    executeTimelockTx,
+    async (tx) => {
+      await validateSimulateContractUpgrade(hre, upgradeParams, tx);
+    },
+  );
+};
+
+const bigNumberMin = (bn1: BigNumber, bn2: BigNumber) => {
+  return bn1.lt(bn2) ? bn1 : bn2;
+};
+
+const validateSimulateContractUpgrade = async (
+  hre: HardhatRuntimeEnvironment,
+  upgradeParams: GetUpgradeTxParams,
+  tx: PopulatedTransaction,
+) => {
+  const addresses = getCurrentAddresses(hre);
+
+  const acContract = await hre.ethers.getContractAt(
+    'MidasAccessControl',
+    addresses!.accessControl!,
+  );
+
+  const roles = getRolesForToken(upgradeParams.mToken);
+  const acAdminAddress = '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227';
+
+  for (const address of [tx.from!, acAdminAddress]) {
+    await impersonateAccount(address);
+    await setBalance(address, ethers.utils.parseEther('1000'));
+  }
+
+  const [testUser] = await hre.ethers.getSigners();
+
+  await setBalance(testUser.address, ethers.utils.parseEther('1000'));
+
+  const upgradeSigner = await hre.ethers.getSigner(tx.from!);
+  const acAdminSigner = await hre.ethers.getSigner(acAdminAddress);
+
+  await upgradeSigner.sendTransaction(tx);
+
+  const mToken = await hre.ethers.getContractAt(
+    'IMToken',
+    addresses![upgradeParams.mToken]!.token!,
+  );
+  const manageableVault = await hre.ethers.getContractAt(
+    'ManageableVault',
+    upgradeParams.proxyAddress,
+  );
+  const mTokenDataFeed = await hre.ethers.getContractAt(
+    'IDataFeed',
+    await manageableVault.mTokenDataFeed(),
+  );
+
+  const newPToken = await (
+    await hre.ethers.getContractFactory('ERC20Mock')
+  ).deploy(18);
+
+  await manageableVault.addPaymentToken(
+    newPToken.address,
+    mTokenDataFeed.address,
+    0,
+    constants.MaxUint256,
+    false,
+  );
+
+  await acContract
+    .connect(acAdminSigner)
+    .grantRoleMult(
+      [
+        roles.depositVaultAdmin,
+        roles.redemptionVaultAdmin,
+        roles.minter,
+        roles.burner,
+      ],
+      [testUser.address, testUser.address, testUser.address, testUser.address],
+    );
+
+  const minMTokenAmount = await manageableVault.minAmount();
+
+  if (upgradeParams.vaultType.startsWith('depositVault')) {
+    const depositVault = await hre.ethers.getContractAt(
+      'DepositVault',
+      upgradeParams.proxyAddress,
+    );
+    const minForFirstDeposit =
+      await depositVault.minMTokenAmountForFirstDeposit();
+    const amountToDeposit = bigNumberMin(minMTokenAmount, minForFirstDeposit);
+
+    await newPToken.mint(testUser.address, amountToDeposit);
+    await newPToken.approve(depositVault.address, amountToDeposit);
+
+    await depositVault['depositInstant(address,uint256,uint256,bytes32)'](
+      newPToken.address,
+      amountToDeposit,
+      constants.Zero,
+      constants.HashZero,
+    );
+  } else if (upgradeParams.vaultType.startsWith('redemptionVault')) {
+    const redemptionVault = await hre.ethers.getContractAt(
+      'RedemptionVault',
+      upgradeParams.proxyAddress,
+    );
+
+    await mToken.mint(testUser.address, minMTokenAmount);
+    await mToken.approve(redemptionVault.address, minMTokenAmount);
+    await newPToken.mint(redemptionVault.address, minMTokenAmount.mul(2));
+
+    await redemptionVault['redeemInstant(address,uint256,uint256)'](
+      newPToken.address,
+      minMTokenAmount,
+      constants.Zero,
+    );
+  } else {
+    throw new Error('Contract type not supported');
+  }
+
+  console.log('Contract upgrade validation passed');
 };
 
 export const proposeTimeLockTransferOwnershipTx = async (
@@ -325,6 +469,7 @@ const createUpgradeTimelockTx = async (
   params: GetUpgradeTxParams,
   salt: string,
   populateTx: PopulateTxFn,
+  txSendCallback?: (tx: PopulatedTransaction) => Promise<unknown>,
 ) => {
   return createTimeLockTx(
     hre,
@@ -360,6 +505,7 @@ const createUpgradeTimelockTx = async (
       };
     },
     populateTx,
+    txSendCallback,
   );
 };
 
@@ -420,6 +566,7 @@ const createTimeLockTx = async (
   salt: string,
   validateParams: ValidateTimelockTxParams,
   populateTx: PopulateTxFn,
+  txSendCallback?: (tx: PopulatedTransaction) => Promise<unknown>,
 ): Promise<boolean> => {
   const { isValid, calldata, txComments } = await validateParams(hre);
 
@@ -532,15 +679,18 @@ const createTimeLockTx = async (
   console.log(`Timelock operation id for: ${operationHash}`);
   console.log('Verify parameters: ', verifyParameters);
 
-  const comment = txComments?.[type] ?? '';
+  if (!txSendCallback) {
+    const comment = txComments?.[type] ?? '';
+    const res = await sendAndWaitForCustomTxSign(hre, tx, {
+      action: 'update-timelock',
+      subAction: 'timelock-call-upgrade',
+      comment,
+    });
 
-  const res = await sendAndWaitForCustomTxSign(hre, tx, {
-    action: 'update-timelock',
-    subAction: 'timelock-call-upgrade',
-    comment,
-  });
-
-  console.log('Transaction successfully submitted', res);
+    console.log('Transaction successfully submitted', res);
+  } else {
+    await txSendCallback(tx);
+  }
 
   return true;
 };

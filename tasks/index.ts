@@ -3,7 +3,7 @@ import { task } from 'hardhat/config';
 
 import path from 'path';
 
-import { ENV } from '../config';
+import { chainIds, ENV, Network, rpcUrls } from '../config';
 import { initializeLogger } from '../helpers/logger';
 import {
   etherscanVerify,
@@ -27,6 +27,7 @@ task('runscript', 'Runs a user-defined script')
   .addOptionalParam('skipvalidation', 'Skip Validation', 'false')
   .addOptionalParam('logToFile', 'Log to file')
   .addOptionalParam('logsFolderPath', 'Logs folder path')
+  .addOptionalParam('forkingnetwork', 'Forking Network')
   .setAction(async (taskArgs, hre) => {
     const mtoken = taskArgs.mtoken;
     const ptoken = taskArgs.ptoken;
@@ -34,6 +35,27 @@ task('runscript', 'Runs a user-defined script')
     const customSignerScript =
       taskArgs.customSignerScript ?? ENV.CUSTOM_SIGNER_SCRIPT_PATH;
     const logToFile = taskArgs.logToFile ?? ENV.LOG_TO_FILE;
+    const forkingNetwork: Network =
+      taskArgs.forkingnetwork ?? ENV.FORKING_NETWORK;
+
+    if (forkingNetwork) {
+      console.log('Forking network', forkingNetwork);
+      // Fork the specified network
+      await hre.network.provider.request({
+        method: 'hardhat_reset',
+        params: [
+          {
+            forking: {
+              jsonRpcUrl: rpcUrls[forkingNetwork],
+            },
+          },
+        ],
+      });
+
+      const chainId = chainIds[forkingNetwork];
+      hre.network.config.chainId = chainId;
+    }
+
     const logsFolderPath =
       (taskArgs.logsFolderPath as string | undefined) ??
       ENV.LOGS_FOLDER_PATH ??
