@@ -55,6 +55,7 @@ task('runscript', 'Runs a user-defined script')
 
       const chainId = chainIds[forkingNetwork];
       hre.network.config.chainId = chainId;
+      hre.network.name = forkingNetwork;
     }
 
     const logsFolderPath =

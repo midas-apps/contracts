@@ -1,13 +1,11 @@
 import {
   impersonateAccount,
+  mine,
   setBalance,
 } from '@nomicfoundation/hardhat-network-helpers';
-import {
-  BigNumber,
-  BigNumberish,
-  constants,
-  PopulatedTransaction,
-} from 'ethers';
+import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
+import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
+import { BigNumber, constants, PopulatedTransaction } from 'ethers';
 import { parseUnits, solidityKeccak256 } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
@@ -173,6 +171,7 @@ type PopulateTxFn = (
   adminAddress: string,
   saltHash: string,
   calldata: string,
+  validateSimulation: boolean,
 ) => Promise<{
   tx?: PopulatedTransaction;
   operationHash: string;
@@ -222,8 +221,31 @@ export const validateSimulateTimeLockUpgradeTx = async (
   );
 };
 
+export const validateSimulateTimeLockProposeUpgradeTx = async (
+  hre: HardhatRuntimeEnvironment,
+  upgradeParams: GetUpgradeTxParams,
+  salt: string,
+) => {
+  return await createUpgradeTimelockTx(
+    hre,
+    upgradeParams,
+    salt,
+    proposeTimelockTx,
+    async (tx) => {
+      await impersonateAccount(tx.from!);
+      await setBalance(tx.from!, ethers.utils.parseEther('1000'));
+      const upgradeSigner = await hre.ethers.getSigner(tx.from!);
+      await upgradeSigner.sendTransaction(tx);
+    },
+  );
+};
+
 const bigNumberMin = (bn1: BigNumber, bn2: BigNumber) => {
   return bn1.lt(bn2) ? bn1 : bn2;
+};
+
+const bigNumberMax = (bn1: BigNumber, bn2: BigNumber) => {
+  return bn1.gt(bn2) ? bn1 : bn2;
 };
 
 const validateSimulateContractUpgrade = async (
@@ -231,6 +253,23 @@ const validateSimulateContractUpgrade = async (
   upgradeParams: GetUpgradeTxParams,
   tx: PopulatedTransaction,
 ) => {
+  await increase(days(10));
+  await mine();
+
+  const proxyAdmin = (await hre.upgrades.admin.getInstance()) as ProxyAdmin;
+  const proxyAdminOwner = await proxyAdmin.owner();
+
+  const timelock = await getTimelockContract(hre);
+
+  if (proxyAdminOwner !== timelock.address) {
+    const proxyAdminOwnerSigner = await hre.ethers.getSigner(proxyAdminOwner);
+    await impersonateAccount(proxyAdminOwner);
+    await setBalance(proxyAdminOwner, ethers.utils.parseEther('1000'));
+    await proxyAdmin
+      .connect(proxyAdminOwnerSigner)
+      .transferOwnership(timelock.address);
+  }
+
   const addresses = getCurrentAddresses(hre);
 
   const acContract = await hre.ethers.getContractAt(
@@ -258,19 +297,45 @@ const validateSimulateContractUpgrade = async (
   const mToken = await hre.ethers.getContractAt(
     'IMToken',
     addresses![upgradeParams.mToken]!.token!,
+    testUser,
   );
   const manageableVault = await hre.ethers.getContractAt(
     'ManageableVault',
     upgradeParams.proxyAddress,
+    testUser,
   );
   const mTokenDataFeed = await hre.ethers.getContractAt(
-    'IDataFeed',
+    'DataFeed',
     await manageableVault.mTokenDataFeed(),
+    testUser,
+  );
+
+  const aggregator = await hre.ethers.getContractAt(
+    'CustomAggregatorV3CompatibleFeed',
+    await mTokenDataFeed.aggregator(),
+    testUser,
   );
 
   const newPToken = await (
-    await hre.ethers.getContractFactory('ERC20Mock')
+    await hre.ethers.getContractFactory('ERC20Mock', testUser)
   ).deploy(18);
+
+  const rolesToGrant = [
+    roles.depositVaultAdmin,
+    roles.redemptionVaultAdmin,
+    roles.minter,
+    roles.burner,
+    roles.customFeedAdmin,
+  ].filter((role) => role !== null);
+
+  await acContract.connect(acAdminSigner).grantRoleMult(
+    rolesToGrant,
+    rolesToGrant.map(() => testUser.address),
+  );
+
+  if (roles.customFeedAdmin) {
+    await aggregator.setRoundDataSafe(await aggregator.lastAnswer());
+  }
 
   await manageableVault.addPaymentToken(
     newPToken.address,
@@ -280,17 +345,7 @@ const validateSimulateContractUpgrade = async (
     false,
   );
 
-  await acContract
-    .connect(acAdminSigner)
-    .grantRoleMult(
-      [
-        roles.depositVaultAdmin,
-        roles.redemptionVaultAdmin,
-        roles.minter,
-        roles.burner,
-      ],
-      [testUser.address, testUser.address, testUser.address, testUser.address],
-    );
+  await manageableVault.setInstantDailyLimit(constants.MaxUint256);
 
   const minMTokenAmount = await manageableVault.minAmount();
 
@@ -298,34 +353,98 @@ const validateSimulateContractUpgrade = async (
     const depositVault = await hre.ethers.getContractAt(
       'DepositVault',
       upgradeParams.proxyAddress,
+      testUser,
     );
+    await acContract
+      .connect(acAdminSigner)
+      .grantRole(roles.minter, depositVault.address);
+
     const minForFirstDeposit =
       await depositVault.minMTokenAmountForFirstDeposit();
-    const amountToDeposit = bigNumberMin(minMTokenAmount, minForFirstDeposit);
+    const amountToDeposit = bigNumberMax(
+      bigNumberMin(minMTokenAmount, minForFirstDeposit),
+      parseUnits('10'),
+    );
 
-    await newPToken.mint(testUser.address, amountToDeposit);
-    await newPToken.approve(depositVault.address, amountToDeposit);
+    await newPToken.mint(testUser.address, amountToDeposit.mul(4));
+    await newPToken.approve(depositVault.address, amountToDeposit.mul(4));
 
+    // regular deposit instant
     await depositVault['depositInstant(address,uint256,uint256,bytes32)'](
       newPToken.address,
       amountToDeposit,
       constants.Zero,
       constants.HashZero,
     );
+
+    // deposit instant with custom recipient
+    await depositVault[
+      'depositInstant(address,uint256,uint256,bytes32,address)'
+    ](
+      newPToken.address,
+      amountToDeposit,
+      constants.Zero,
+      constants.HashZero,
+      testUser.address,
+    );
+
+    // regular deposit request
+    await depositVault['depositRequest(address,uint256,bytes32)'](
+      newPToken.address,
+      amountToDeposit,
+      constants.HashZero,
+    );
+
+    // deposit request with custom recipient
+    await depositVault['depositRequest(address,uint256,bytes32,address)'](
+      newPToken.address,
+      amountToDeposit,
+      constants.HashZero,
+      testUser.address,
+    );
   } else if (upgradeParams.vaultType.startsWith('redemptionVault')) {
     const redemptionVault = await hre.ethers.getContractAt(
       'RedemptionVault',
       upgradeParams.proxyAddress,
+      testUser,
     );
 
-    await mToken.mint(testUser.address, minMTokenAmount);
-    await mToken.approve(redemptionVault.address, minMTokenAmount);
-    await newPToken.mint(redemptionVault.address, minMTokenAmount.mul(2));
+    await acContract
+      .connect(acAdminSigner)
+      .grantRole(roles.minter, redemptionVault.address);
 
+    const amountToRedeem = bigNumberMax(minMTokenAmount, parseUnits('10'));
+
+    await mToken.mint(testUser.address, amountToRedeem.mul(4));
+    await mToken.approve(redemptionVault.address, amountToRedeem.mul(4));
+    await newPToken.mint(redemptionVault.address, amountToRedeem.mul(8));
+
+    // regular redeem instant
     await redemptionVault['redeemInstant(address,uint256,uint256)'](
       newPToken.address,
-      minMTokenAmount,
+      amountToRedeem,
       constants.Zero,
+    );
+
+    // redeem instant with custom recipient
+    await redemptionVault['redeemInstant(address,uint256,uint256,address)'](
+      newPToken.address,
+      amountToRedeem,
+      constants.Zero,
+      testUser.address,
+    );
+
+    // regular redeem request
+    await redemptionVault['redeemRequest(address,uint256)'](
+      newPToken.address,
+      amountToRedeem,
+    );
+
+    // redeem request with custom recipient
+    await redemptionVault['redeemRequest(address,uint256,address)'](
+      newPToken.address,
+      amountToRedeem,
+      testUser.address,
     );
   } else {
     throw new Error('Contract type not supported');
@@ -399,6 +518,7 @@ const executeTimelockTx: PopulateTxFn = async (
   toAddress: string,
   saltHash: string,
   calldata: string,
+  validateSimulation: boolean,
 ) => {
   const type = 'execute' as const;
   const params = [
@@ -415,7 +535,7 @@ const executeTimelockTx: PopulateTxFn = async (
     operationHash,
   );
 
-  if (!isOperationReady) {
+  if (validateSimulation && !isOperationReady) {
     throw new Error('Operation is not ready or not found');
   }
 
@@ -618,6 +738,7 @@ const createTimeLockTx = async (
     admin.address,
     saltHash,
     calldata,
+    !hre.skipValidation,
   );
 
   if (!tx) {
@@ -674,6 +795,7 @@ const createTimeLockTx = async (
       ethers.utils.defaultAbiCoder.encode(['address'], [ownerForSignature]) +
         '000000000000000000000000000000000000000000000000000000000000000001',
     );
+    tx.from = ownerForSignature;
   }
 
   console.log(`Timelock operation id for: ${operationHash}`);

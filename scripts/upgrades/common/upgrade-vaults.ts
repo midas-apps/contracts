@@ -24,6 +24,7 @@ import {
   proposeTimeLockTransferOwnershipTx,
   proposeTimeLockUpgradeTx,
   TransferOwnershipTxParams,
+  validateSimulateTimeLockProposeUpgradeTx,
   validateSimulateTimeLockUpgradeTx,
 } from '../../deploy/common/timelock';
 import { getDeployer } from '../../deploy/common/utils';
@@ -54,6 +55,15 @@ export const validateUpgradeVaults = async (
 ) => {
   return upgradeAllVaults(hre, upgradeId, async (hre, params, salt) => {
     return await validateSimulateTimeLockUpgradeTx(hre, params, salt);
+  });
+};
+
+export const validateProposeUpgradeVaults = async (
+  hre: HardhatRuntimeEnvironment,
+  upgradeId: string,
+) => {
+  return upgradeAllVaults(hre, upgradeId, async (hre, params, salt) => {
+    return await validateSimulateTimeLockProposeUpgradeTx(hre, params, salt);
   });
 };
 
