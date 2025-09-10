@@ -337,6 +337,10 @@ const validateSimulateContractUpgrade = async (
     await aggregator.setRoundDataSafe(await aggregator.lastAnswer());
   }
 
+  if (await manageableVault.greenlistEnabled()) {
+    await manageableVault.setGreenlistEnable(false);
+  }
+
   await manageableVault.addPaymentToken(
     newPToken.address,
     mTokenDataFeed.address,
@@ -347,7 +351,7 @@ const validateSimulateContractUpgrade = async (
 
   await manageableVault.setInstantDailyLimit(constants.MaxUint256);
 
-  const minMTokenAmount = await manageableVault.minAmount();
+  const minMTokenAmount = (await manageableVault.minAmount()).mul(2);
 
   if (upgradeParams.vaultType.startsWith('depositVault')) {
     const depositVault = await hre.ethers.getContractAt(
@@ -355,14 +359,17 @@ const validateSimulateContractUpgrade = async (
       upgradeParams.proxyAddress,
       testUser,
     );
+
     await acContract
       .connect(acAdminSigner)
       .grantRole(roles.minter, depositVault.address);
 
-    const minForFirstDeposit =
-      await depositVault.minMTokenAmountForFirstDeposit();
+    const minForFirstDeposit = (
+      await depositVault.minMTokenAmountForFirstDeposit()
+    ).mul(2);
+
     const amountToDeposit = bigNumberMax(
-      bigNumberMin(minMTokenAmount, minForFirstDeposit),
+      bigNumberMax(minMTokenAmount, minForFirstDeposit),
       parseUnits('10'),
     );
 
@@ -695,7 +702,6 @@ const createTimeLockTx = async (
     return false;
   }
 
-  console.log('1');
   const admin = (await hre.upgrades.admin.getInstance()) as ProxyAdmin;
 
   const networkAddresses = getCurrentAddresses(hre);
