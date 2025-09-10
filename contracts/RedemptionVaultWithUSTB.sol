@@ -19,6 +19,16 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
     using SafeERC20 for IERC20;
 
     /**
+     * @custom:oz-upgrades-renamed-from minBuidlToRedeem
+     */
+    uint256 private __deprecatedStorageSlot1;
+
+    /**
+     * @custom:oz-upgrades-renamed-from minBuidlBalance
+     */
+    uint256 private __deprecatedStorageSlot2;
+
+    /**
      * @notice USTB redemption contract address
      * @dev Used to handle USTB redemptions when vault has insufficient USDC
      */

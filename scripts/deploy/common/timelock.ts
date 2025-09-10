@@ -1,5 +1,12 @@
-import { constants, PopulatedTransaction } from 'ethers';
-import { solidityKeccak256 } from 'ethers/lib/utils';
+import {
+  impersonateAccount,
+  mine,
+  setBalance,
+} from '@nomicfoundation/hardhat-network-helpers';
+import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
+import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
+import { BigNumber, constants, PopulatedTransaction } from 'ethers';
+import { parseUnits, solidityKeccak256 } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
@@ -10,7 +17,12 @@ import {
   sendAndWaitForCustomTxSign,
 } from './utils';
 
-import { getCurrentAddresses } from '../../../config/constants/addresses';
+import { MTokenName } from '../../../config';
+import {
+  getCurrentAddresses,
+  VaultType,
+} from '../../../config/constants/addresses';
+import { getRolesForToken } from '../../../helpers/roles';
 import { logDeploy } from '../../../helpers/utils';
 import { ProxyAdmin, TimelockController } from '../../../typechain-types';
 import { networkDeploymentConfigs } from '../configs/network-configs';
@@ -146,6 +158,8 @@ export type GetUpgradeTxParams = {
   newImplementation: string;
   initializer?: string;
   initializerCalldata?: string;
+  vaultType: VaultType;
+  mToken: MTokenName;
 };
 
 export type TransferOwnershipTxParams = {
@@ -157,6 +171,7 @@ type PopulateTxFn = (
   adminAddress: string,
   saltHash: string,
   calldata: string,
+  validateSimulation: boolean,
 ) => Promise<{
   tx?: PopulatedTransaction;
   operationHash: string;
@@ -188,6 +203,254 @@ export const executeTimeLockUpgradeTx = async (
     salt,
     executeTimelockTx,
   );
+};
+
+export const validateSimulateTimeLockUpgradeTx = async (
+  hre: HardhatRuntimeEnvironment,
+  upgradeParams: GetUpgradeTxParams,
+  salt: string,
+) => {
+  return await createUpgradeTimelockTx(
+    hre,
+    upgradeParams,
+    salt,
+    executeTimelockTx,
+    async (tx) => {
+      await validateSimulateContractUpgrade(hre, upgradeParams, tx);
+    },
+  );
+};
+
+export const validateSimulateTimeLockProposeUpgradeTx = async (
+  hre: HardhatRuntimeEnvironment,
+  upgradeParams: GetUpgradeTxParams,
+  salt: string,
+) => {
+  return await createUpgradeTimelockTx(
+    hre,
+    upgradeParams,
+    salt,
+    proposeTimelockTx,
+    async (tx) => {
+      await impersonateAccount(tx.from!);
+      await setBalance(tx.from!, ethers.utils.parseEther('1000'));
+      const upgradeSigner = await hre.ethers.getSigner(tx.from!);
+      await upgradeSigner.sendTransaction(tx);
+    },
+  );
+};
+
+const bigNumberMin = (bn1: BigNumber, bn2: BigNumber) => {
+  return bn1.lt(bn2) ? bn1 : bn2;
+};
+
+const bigNumberMax = (bn1: BigNumber, bn2: BigNumber) => {
+  return bn1.gt(bn2) ? bn1 : bn2;
+};
+
+const validateSimulateContractUpgrade = async (
+  hre: HardhatRuntimeEnvironment,
+  upgradeParams: GetUpgradeTxParams,
+  tx: PopulatedTransaction,
+) => {
+  await increase(days(10));
+  await mine();
+
+  const proxyAdmin = (await hre.upgrades.admin.getInstance()) as ProxyAdmin;
+  const proxyAdminOwner = await proxyAdmin.owner();
+
+  const timelock = await getTimelockContract(hre);
+
+  if (proxyAdminOwner !== timelock.address) {
+    const proxyAdminOwnerSigner = await hre.ethers.getSigner(proxyAdminOwner);
+    await impersonateAccount(proxyAdminOwner);
+    await setBalance(proxyAdminOwner, ethers.utils.parseEther('1000'));
+    await proxyAdmin
+      .connect(proxyAdminOwnerSigner)
+      .transferOwnership(timelock.address);
+  }
+
+  const addresses = getCurrentAddresses(hre);
+
+  const acContract = await hre.ethers.getContractAt(
+    'MidasAccessControl',
+    addresses!.accessControl!,
+  );
+
+  const roles = getRolesForToken(upgradeParams.mToken);
+  const acAdminAddress = '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227';
+
+  for (const address of [tx.from!, acAdminAddress]) {
+    await impersonateAccount(address);
+    await setBalance(address, ethers.utils.parseEther('1000'));
+  }
+
+  const [testUser] = await hre.ethers.getSigners();
+
+  await setBalance(testUser.address, ethers.utils.parseEther('1000'));
+
+  const upgradeSigner = await hre.ethers.getSigner(tx.from!);
+  const acAdminSigner = await hre.ethers.getSigner(acAdminAddress);
+
+  await upgradeSigner.sendTransaction(tx);
+
+  const mToken = await hre.ethers.getContractAt(
+    'IMToken',
+    addresses![upgradeParams.mToken]!.token!,
+    testUser,
+  );
+  const manageableVault = await hre.ethers.getContractAt(
+    'ManageableVault',
+    upgradeParams.proxyAddress,
+    testUser,
+  );
+  const mTokenDataFeed = await hre.ethers.getContractAt(
+    'DataFeed',
+    await manageableVault.mTokenDataFeed(),
+    testUser,
+  );
+
+  const aggregator = await hre.ethers.getContractAt(
+    'CustomAggregatorV3CompatibleFeed',
+    await mTokenDataFeed.aggregator(),
+    testUser,
+  );
+
+  const newPToken = await (
+    await hre.ethers.getContractFactory('ERC20Mock', testUser)
+  ).deploy(18);
+
+  const rolesToGrant = [
+    roles.depositVaultAdmin,
+    roles.redemptionVaultAdmin,
+    roles.minter,
+    roles.burner,
+    roles.customFeedAdmin,
+  ].filter((role) => role !== null);
+
+  await acContract.connect(acAdminSigner).grantRoleMult(
+    rolesToGrant,
+    rolesToGrant.map(() => testUser.address),
+  );
+
+  if (roles.customFeedAdmin) {
+    await aggregator.setRoundDataSafe(await aggregator.lastAnswer());
+  }
+
+  await manageableVault.addPaymentToken(
+    newPToken.address,
+    mTokenDataFeed.address,
+    0,
+    constants.MaxUint256,
+    false,
+  );
+
+  await manageableVault.setInstantDailyLimit(constants.MaxUint256);
+
+  const minMTokenAmount = await manageableVault.minAmount();
+
+  if (upgradeParams.vaultType.startsWith('depositVault')) {
+    const depositVault = await hre.ethers.getContractAt(
+      'DepositVault',
+      upgradeParams.proxyAddress,
+      testUser,
+    );
+    await acContract
+      .connect(acAdminSigner)
+      .grantRole(roles.minter, depositVault.address);
+
+    const minForFirstDeposit =
+      await depositVault.minMTokenAmountForFirstDeposit();
+    const amountToDeposit = bigNumberMax(
+      bigNumberMin(minMTokenAmount, minForFirstDeposit),
+      parseUnits('10'),
+    );
+
+    await newPToken.mint(testUser.address, amountToDeposit.mul(4));
+    await newPToken.approve(depositVault.address, amountToDeposit.mul(4));
+
+    // regular deposit instant
+    await depositVault['depositInstant(address,uint256,uint256,bytes32)'](
+      newPToken.address,
+      amountToDeposit,
+      constants.Zero,
+      constants.HashZero,
+    );
+
+    // deposit instant with custom recipient
+    await depositVault[
+      'depositInstant(address,uint256,uint256,bytes32,address)'
+    ](
+      newPToken.address,
+      amountToDeposit,
+      constants.Zero,
+      constants.HashZero,
+      testUser.address,
+    );
+
+    // regular deposit request
+    await depositVault['depositRequest(address,uint256,bytes32)'](
+      newPToken.address,
+      amountToDeposit,
+      constants.HashZero,
+    );
+
+    // deposit request with custom recipient
+    await depositVault['depositRequest(address,uint256,bytes32,address)'](
+      newPToken.address,
+      amountToDeposit,
+      constants.HashZero,
+      testUser.address,
+    );
+  } else if (upgradeParams.vaultType.startsWith('redemptionVault')) {
+    const redemptionVault = await hre.ethers.getContractAt(
+      'RedemptionVault',
+      upgradeParams.proxyAddress,
+      testUser,
+    );
+
+    await acContract
+      .connect(acAdminSigner)
+      .grantRole(roles.minter, redemptionVault.address);
+
+    const amountToRedeem = bigNumberMax(minMTokenAmount, parseUnits('10'));
+
+    await mToken.mint(testUser.address, amountToRedeem.mul(4));
+    await mToken.approve(redemptionVault.address, amountToRedeem.mul(4));
+    await newPToken.mint(redemptionVault.address, amountToRedeem.mul(8));
+
+    // regular redeem instant
+    await redemptionVault['redeemInstant(address,uint256,uint256)'](
+      newPToken.address,
+      amountToRedeem,
+      constants.Zero,
+    );
+
+    // redeem instant with custom recipient
+    await redemptionVault['redeemInstant(address,uint256,uint256,address)'](
+      newPToken.address,
+      amountToRedeem,
+      constants.Zero,
+      testUser.address,
+    );
+
+    // regular redeem request
+    await redemptionVault['redeemRequest(address,uint256)'](
+      newPToken.address,
+      amountToRedeem,
+    );
+
+    // redeem request with custom recipient
+    await redemptionVault['redeemRequest(address,uint256,address)'](
+      newPToken.address,
+      amountToRedeem,
+      testUser.address,
+    );
+  } else {
+    throw new Error('Contract type not supported');
+  }
+
+  console.log('Contract upgrade validation passed');
 };
 
 export const proposeTimeLockTransferOwnershipTx = async (
@@ -255,6 +518,7 @@ const executeTimelockTx: PopulateTxFn = async (
   toAddress: string,
   saltHash: string,
   calldata: string,
+  validateSimulation: boolean,
 ) => {
   const type = 'execute' as const;
   const params = [
@@ -271,9 +535,8 @@ const executeTimelockTx: PopulateTxFn = async (
     operationHash,
   );
 
-  if (!isOperationReady) {
-    console.warn('Operation is not ready or not found');
-    return { tx: undefined, operationHash, type };
+  if (validateSimulation && !isOperationReady) {
+    throw new Error('Operation is not ready or not found');
   }
 
   const tx = await timelockContract.populateTransaction.execute(...params);
@@ -301,8 +564,7 @@ const proposeTimelockTx: PopulateTxFn = async (
   const isOperationExists = await timelockContract.isOperation(operationHash);
 
   if (isOperationExists) {
-    console.log('Operation is found, skipping...');
-    return { tx: undefined, operationHash, type };
+    throw new Error('Operation is already exists');
   }
 
   const tx = await timelockContract.populateTransaction.schedule(
@@ -327,6 +589,7 @@ const createUpgradeTimelockTx = async (
   params: GetUpgradeTxParams,
   salt: string,
   populateTx: PopulateTxFn,
+  txSendCallback?: (tx: PopulatedTransaction) => Promise<unknown>,
 ) => {
   return createTimeLockTx(
     hre,
@@ -341,10 +604,9 @@ const createUpgradeTimelockTx = async (
       if (
         currentImpl.toLowerCase() === params.newImplementation.toLowerCase()
       ) {
-        console.log(
-          `Already using new implementation for ${params.proxyAddress}, skipping upgrade...`,
+        throw new Error(
+          `Already using new implementation for ${params.proxyAddress}`,
         );
-        return { isValid: false };
       }
 
       if (params.initializer && params.initializerCalldata) {
@@ -363,6 +625,7 @@ const createUpgradeTimelockTx = async (
       };
     },
     populateTx,
+    txSendCallback,
   );
 };
 
@@ -392,10 +655,9 @@ const createTransferOwnershipTimelockTx = async (
       const currentOwner = await admin.owner();
 
       if (currentOwner.toLowerCase() === params.newOwner.toLowerCase()) {
-        console.log(
-          `NewOwner ${params.newOwner} is already the owner of proxy admin, skipping...`,
+        throw new Error(
+          `NewOwner ${params.newOwner} is already the owner of proxy admin`,
         );
-        return { isValid: false };
       }
 
       if (
@@ -424,14 +686,13 @@ const createTimeLockTx = async (
   salt: string,
   validateParams: ValidateTimelockTxParams,
   populateTx: PopulateTxFn,
-) => {
-  const deployer = await getDeployer(hre);
-
+  txSendCallback?: (tx: PopulatedTransaction) => Promise<unknown>,
+): Promise<boolean> => {
   const { isValid, calldata, txComments } = await validateParams(hre);
 
   if (!isValid || !calldata) {
     console.log('Validation is not passed, skipping...');
-    return;
+    return false;
   }
 
   const admin = (await hre.upgrades.admin.getInstance()) as ProxyAdmin;
@@ -445,7 +706,7 @@ const createTimeLockTx = async (
 
   const currentAdminOwner = await admin.owner();
 
-  if (hre.skipValidation !== false) {
+  if (!hre.skipValidation) {
     if (
       currentAdminOwner.toLowerCase() !== timelockContract.address.toLowerCase()
     ) {
@@ -477,11 +738,12 @@ const createTimeLockTx = async (
     admin.address,
     saltHash,
     calldata,
+    !hre.skipValidation,
   );
 
   if (!tx) {
     console.warn('Skipping sending tx, operation hash: ', operationHash);
-    return;
+    return false;
   }
 
   const [caller] =
@@ -533,20 +795,26 @@ const createTimeLockTx = async (
       ethers.utils.defaultAbiCoder.encode(['address'], [ownerForSignature]) +
         '000000000000000000000000000000000000000000000000000000000000000001',
     );
+    tx.from = ownerForSignature;
   }
 
   console.log(`Timelock operation id for: ${operationHash}`);
   console.log('Verify parameters: ', verifyParameters);
 
-  const comment = txComments?.[type] ?? '';
+  if (!txSendCallback) {
+    const comment = txComments?.[type] ?? '';
+    const res = await sendAndWaitForCustomTxSign(hre, tx, {
+      action: 'update-timelock',
+      subAction: 'timelock-call-upgrade',
+      comment,
+    });
 
-  const res = await sendAndWaitForCustomTxSign(hre, tx, {
-    action: 'update-timelock',
-    subAction: 'timelock-call-upgrade',
-    comment,
-  });
+    console.log('Transaction successfully submitted', res);
+  } else {
+    await txSendCallback(tx);
+  }
 
-  console.log('Transaction successfully submitted', res);
+  return true;
 };
 
 function parseRevertReason(data: string) {

@@ -73,9 +73,7 @@ const config: HardhatUserConfig = {
     arbitrum: getNetworkConfig('arbitrum'),
     tacTestnet: getNetworkConfig('tacTestnet'),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    hardhat: FORKING_NETWORK
-      ? getForkNetworkConfig(FORKING_NETWORK)
-      : getHardhatNetworkConfig(),
+    hardhat: getHardhatNetworkConfig(),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     localhost: FORKING_NETWORK
       ? getForkNetworkConfig(FORKING_NETWORK)
