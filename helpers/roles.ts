@@ -36,6 +36,7 @@ const prefixes: Record<MTokenName, string> = {
   dnHYPE: 'DN_HYPE',
   kmiUSD: 'KMI_USD',
   msyrupUSD: 'M_SYRUP_USD',
+  msyrupUSDp: 'M_SYRUP_USDP',
   dnPUMP: 'DN_PUMP',
   zeroGUSDV: 'ZEROG_USDV',
   zeroGETHV: 'ZEROG_ETHV',
@@ -46,6 +47,7 @@ const prefixes: Record<MTokenName, string> = {
   kitHYPE: 'KIT_HYPE',
   kitBTC: 'KIT_BTC',
   dnFART: 'DN_FART',
+  mXRP: 'M_XRP',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {

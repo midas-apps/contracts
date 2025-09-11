@@ -31,11 +31,19 @@ export const VAULT_FUNCTION_SELECTORS = {
   depositInstantWithCustomRecipient: toFunctionSelector(
     'depositInstant(address,uint256,uint256,bytes32,address)',
   ),
+  depositRequest: toFunctionSelector('depositRequest(address,uint256,bytes32)'),
+  depositRequestWithCustomRecipient: toFunctionSelector(
+    'depositRequest(address,uint256,bytes32,address)',
+  ),
 
   // Redemption vault functions
   redeemInstant: toFunctionSelector('redeemInstant(address,uint256,uint256)'),
   redeemInstantWithCustomRecipient: toFunctionSelector(
     'redeemInstant(address,uint256,uint256,address)',
+  ),
+  redeemRequest: toFunctionSelector('redeemRequest(address,uint256)'),
+  redeemRequestWithCustomRecipient: toFunctionSelector(
+    'redeemRequest(address,uint256,address)',
   ),
 } as const;
 

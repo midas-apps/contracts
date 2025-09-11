@@ -64,4 +64,9 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
   [chainIds.tac]: {
     grantDefaultAdminRole: {},
   },
+  [chainIds.xrplevm]: {
+    grantDefaultAdminRole: {
+      acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
+    },
+  },
 };

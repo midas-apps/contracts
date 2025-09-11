@@ -132,6 +132,10 @@ export const mTokensMetadata: Record<
     name: 'syrupUSDC supercharged',
     symbol: 'msyrupUSD',
   },
+  msyrupUSDp: {
+    name: 'Plasma syrupUSD Pre-deposit Midas Vault',
+    symbol: 'msyrupUSDp',
+  },
   dnPUMP: {
     name: 'Delta Neutral PUMP',
     symbol: 'dnPUMP',
@@ -171,5 +175,9 @@ export const mTokensMetadata: Record<
   dnFART: {
     name: 'Delta Neutral FART',
     symbol: 'dnFART',
+  },
+  mXRP: {
+    name: 'Midas XRP',
+    symbol: 'mXRP',
   },
 };

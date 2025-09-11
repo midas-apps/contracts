@@ -1,27 +1,32 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-interface ISyrupUSDC {
-    function convertToAssets(uint256 shares) external view returns (uint256);
+interface ISyrupToken {
+    function decimals() external view returns (uint8);
+
+    function convertToExitAssets(uint256 shares)
+        external
+        view
+        returns (uint256);
 }
 
 /**
- * @title ChainlinkAggregatorV3 compatible adapter for SyrupUSDC
+ * @title ChainlinkAggregatorV3 compatible adapter for SyrupToken
  * @notice example https://etherscan.io/address/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b
  */
-contract SyrupUSDCAdapter {
-    ISyrupUSDC public syrupUSDC;
+contract SyrupAdapter {
+    ISyrupToken public syrupToken;
 
-    constructor(address _syrupUSDC) {
-        syrupUSDC = ISyrupUSDC(_syrupUSDC);
+    constructor(address _syrupToken) {
+        syrupToken = ISyrupToken(_syrupToken);
     }
 
-    function decimals() external pure returns (uint8) {
-        return 18;
+    function decimals() public view returns (uint8) {
+        return syrupToken.decimals();
     }
 
     function description() public pure returns (string memory) {
-        return "A ChainlinkAggregatorV3 compatible adapter for SyrupUSDC";
+        return "A ChainlinkAggregatorV3 compatible adapter for Syrup tokens";
     }
 
     function version() public pure returns (uint256) {
@@ -29,7 +34,7 @@ contract SyrupUSDCAdapter {
     }
 
     function latestAnswer() public view virtual returns (int256) {
-        return int256(syrupUSDC.convertToAssets(1e18));
+        return int256(syrupToken.convertToExitAssets(10**decimals()));
     }
 
     function latestTimestamp() public view returns (uint256) {

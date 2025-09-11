@@ -187,8 +187,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
       syrupusdc: {
         token: '0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b',
-        aggregator: '0xa869cBc273daAE91d6109EE5bb958aC6B7198B67',
+        aggregator: '0xB1e60a45dE12adB09D67bC361ed7A79FfD237850',
         dataFeed: '0x449f44f9B5e924E27ba9bC4E49AcD8BC1012287c',
+      },
+      syrupusdt: {
+        token: '0x356B8d89c1e1239Cbbb9dE4815c39A1474d5BA7D',
+        aggregator: '0xAd298d3eC4Af69Af52701A539d3bD14873Ac8493',
+        dataFeed: '0x1bB6DDf0886c04e23978b755C0574BA92f32F0fA',
       },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
@@ -334,6 +339,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x81c097e86842051B1ED4299a9E4d213Cb07f6f42',
       depositVault: '0x5AE23D23B7986a708CBA9bF808aD9A43BF77d1b7',
       redemptionVaultSwapper: '0x9f7dd5462C183B6577858e16a13A4d864CE2f972',
+    },
+    msyrupUSDp: {
+      token: '0x2fE058CcF29f123f9dd2aEC0418AA66a877d8E50',
+      customFeed: '0x337d914ff6622510FC2C63ac59c1D07983895241',
+      dataFeed: '0x7833397dA276d6B588e76466C14c82b2d733Cfb6',
+      depositVault: '0x8493f1f2B834c2837C87075b0EdAc17f5273789a',
+      redemptionVaultSwapper: '0x71EFa7AF1686C5c04AA34a120a91cb4262679C44',
     },
     TACmBTC: {
       token: '0x307267989A7bec3A57FD7fd96017C49803589Fd0',
@@ -781,6 +793,23 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xc19b5893Ab2aFc69092c6Dc2b01262f104c816C0',
       depositVault: '0xcb7d9A25F7b9bdd0Eee77B1cEb2894D39deBca1C',
       redemptionVaultSwapper: '0x8E3865B9d2d8e562d8bb3b15D9B4941AeE6f67f1',
+    },
+  },
+  xrplevm: {
+    accessControl: '0x831150f2A1283880C3B271f1fBaBFa6aBf3F4cAE',
+    dataFeeds: {
+      xrp: {
+        token: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+        aggregator: '0xd2BD1Ee9535396e010007c1e61c918a11cD74D62',
+        dataFeed: '0x16A05aE0cC2F0329Ad96445D670D4225FE41FFd5',
+      },
+    },
+    mXRP: {
+      token: '0x06e0B0F1A644Bb9881f675Ef266CeC15a63a3d47',
+      customFeed: '0xFF64785Ee22D764F8E79812102d3Fa7f2d3437Af',
+      dataFeed: '0xed4ff96DAF37a0A44356E81A3cc22908B3f06B40',
+      depositVault: '0x30FBc82A72CA674AA250cd6c27BCca1Fe602f1Bb',
+      redemptionVaultSwapper: '0xDaC1b058cE42b67Ba33DbfDBA972d76C83C085D6',
     },
   },
   etherlink: {
