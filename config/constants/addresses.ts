@@ -187,8 +187,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
       syrupusdc: {
         token: '0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b',
-        aggregator: '0xa869cBc273daAE91d6109EE5bb958aC6B7198B67',
+        aggregator: '0xB1e60a45dE12adB09D67bC361ed7A79FfD237850',
         dataFeed: '0x449f44f9B5e924E27ba9bC4E49AcD8BC1012287c',
+      },
+      syrupusdt: {
+        token: '0x356B8d89c1e1239Cbbb9dE4815c39A1474d5BA7D',
+        aggregator: '0xAd298d3eC4Af69Af52701A539d3bD14873Ac8493',
+        dataFeed: '0x1bB6DDf0886c04e23978b755C0574BA92f32F0fA',
       },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
@@ -333,6 +338,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x81c097e86842051B1ED4299a9E4d213Cb07f6f42',
       depositVault: '0x5AE23D23B7986a708CBA9bF808aD9A43BF77d1b7',
       redemptionVaultSwapper: '0x9f7dd5462C183B6577858e16a13A4d864CE2f972',
+    },
+    msyrupUSDp: {
+      token: '0x2fE058CcF29f123f9dd2aEC0418AA66a877d8E50',
+      customFeed: '0x337d914ff6622510FC2C63ac59c1D07983895241',
+      dataFeed: '0x7833397dA276d6B588e76466C14c82b2d733Cfb6',
+      depositVault: '0x8493f1f2B834c2837C87075b0EdAc17f5273789a',
+      redemptionVaultSwapper: '0x71EFa7AF1686C5c04AA34a120a91cb4262679C44',
     },
     TACmBTC: {
       token: '0x307267989A7bec3A57FD7fd96017C49803589Fd0',

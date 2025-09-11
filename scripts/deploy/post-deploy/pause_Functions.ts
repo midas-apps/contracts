@@ -45,14 +45,14 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       }
 
       const tx = await vault.populateTransaction.pauseFn(selector);
-      await sendAndWaitForCustomTxSign(hre, tx, {
+      const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
         mToken,
         comment: `Pause ${functionName} in ${mToken} ${vaultType}`,
         action: 'update-vault',
         subAction: 'pause-function',
       });
 
-      console.log(`Paused ${functionName} in ${mToken} ${vaultType}`);
+      console.log(`Paused ${functionName} in ${mToken} ${vaultType}`, txRes);
     }
   }
 };

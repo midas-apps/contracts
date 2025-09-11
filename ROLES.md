@@ -370,6 +370,17 @@ All the roles for the Midas protocol smart contracts are listed below.
 | ***depositVaultAdmin*** | `0xfe44d23e8f577a6ba0d046ab5f3cac6d2b9f150dc4b50f87d740e53517153f3f` |
 | ***redemptionVaultAdmin*** | `0x19c29ddc0aeab94d66fcbc6d50146a9cabab754f3c97586d4747b127d45e3892` |
 
+### msyrupUSDp Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0xbb7149fe6342f7705c3815d481c64660e8387f469022db26e6b9678947dc5978` |
+| ***burner*** | `0x109f0e6aad19633e25c047c1024be0703561d1586997691d6019c484ff6c2307` |
+| ***pauser*** | `0x0e513a4a7204fbd28e133ac4bdb355b7d8e788f02574231d8fec22fb63f8449b` |
+| ***customFeedAdmin*** | `0x83fc35b9da75679c8242595bd87f935f92e5408e3c5047f4a4655d9788e93ad4` |
+| ***depositVaultAdmin*** | `0x661436c564a32bf31767ee8a3780101ecc23e47d665edede38d1ab5607f33981` |
+| ***redemptionVaultAdmin*** | `0x8dd09df1c86f6fc63f05a3bdcfc83593d52c7175e376ba25ccadbc941eee65ff` |
+
 ### dnPUMP Roles
 
 | Role Name | Role |

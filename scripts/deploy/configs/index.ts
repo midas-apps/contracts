@@ -29,6 +29,7 @@ import { mRE7BTCDeploymentConfig } from './mRE7BTC';
 import { mRE7SOLDeploymentConfig } from './mRE7SOL';
 import { mSLDeploymentConfig } from './mSL';
 import { msyrupUSDDeploymentConfig } from './msyrupUSD';
+import { msyrupUSDpDeploymentConfig } from './msyrupUSDp';
 import { mTBILLDeploymentConfig } from './mTBILL';
 import { mXRPDeploymentConfig } from './mXRP';
 import { TACmBTCDeploymentConfig } from './tac/TACmBTC';
@@ -78,6 +79,7 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   dnHYPE: dnHYPEDeploymentConfig,
   kmiUSD: kmiUSDDeploymentConfig,
   msyrupUSD: msyrupUSDDeploymentConfig,
+  msyrupUSDp: msyrupUSDpDeploymentConfig,
   dnPUMP: dnPUMPDeploymentConfig,
   zeroGUSDV: zeroGUSDVDeploymentConfig,
   zeroGETHV: zeroGETHVDeploymentConfig,
