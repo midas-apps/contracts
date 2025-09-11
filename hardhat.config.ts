@@ -9,9 +9,10 @@ import 'solidity-coverage';
 import '@nomicfoundation/hardhat-verify';
 import '@openzeppelin/hardhat-upgrades';
 import 'hardhat-contract-sizer';
-import 'hardhat-deploy';
 import 'solidity-docgen';
 import './tasks';
+import './extensions/midas-scripts';
+import './extensions/named-accounts';
 
 import {
   chainIds,
@@ -53,11 +54,6 @@ const config: HardhatUserConfig = {
       katana: '0xf0db11c80894c0b26681e7ba035574721012bb7e',
       tacTestnet: '0x12dE1B534B879b4e3a2f1D05a299eD448dC45FD3',
       tac: '0x12dE1B534B879b4e3a2f1D05a299eD448dC45FD3',
-    },
-  },
-  verify: {
-    etherscan: {
-      apiKey: ETHERSCAN_API_KEY,
     },
   },
   networks: {
@@ -169,22 +165,10 @@ const config: HardhatUserConfig = {
     enabled: ENV.VERIFY_SOURCIFY === true,
     apiUrl: ENV.SOURCIFY_API_URL,
   },
-  paths: {
-    deploy: 'deploy/',
-    deployments: 'deployments/',
-  },
   docgen: {
     outputDir: './docgen',
     pages: 'single',
   },
-  external: FORKING_NETWORK
-    ? {
-        deployments: {
-          hardhat: ['deployments/' + FORKING_NETWORK],
-          local: ['deployments/' + FORKING_NETWORK],
-        },
-      }
-    : undefined,
 };
 
 export default config;

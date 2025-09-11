@@ -2,9 +2,9 @@ import { TransactionResponse } from '@ethersproject/providers';
 import { BigNumberish } from 'ethers';
 
 import { MTokenName, PaymentTokenName } from '../config/types';
-import { Logger } from '../helpers/logger';
 
 import 'hardhat/types/runtime';
+import 'hardhat/types/config';
 
 declare module 'hardhat/types/runtime' {
   export interface HardhatRuntimeEnvironment {
@@ -13,7 +13,7 @@ declare module 'hardhat/types/runtime' {
     action?: string;
     skipValidation?: boolean;
     aggregatorType?: 'numerator' | 'denominator';
-    logger: Logger & {
+    logger: {
       // default: false
       logToFile: boolean;
       // default: logs/
@@ -47,5 +47,8 @@ declare module 'hardhat/types/runtime' {
         | { type: 'customSigner'; payload: unknown }
       >;
     };
+    getNamedAccounts: () => Promise<{
+      [name: string]: string;
+    }>;
   }
 }
