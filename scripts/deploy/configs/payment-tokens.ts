@@ -285,6 +285,13 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           maxAnswer: parseUnits('1.5', 18),
         },
       },
+      syrupusdt: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('1.091390', 6),
+          maxAnswer: parseUnits('1.250000', 6),
+        },
+      },
     },
     [chainIds.base]: {
       usdc: {
