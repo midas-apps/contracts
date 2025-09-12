@@ -5,9 +5,10 @@ pragma solidity 0.8.9;
 import "./ChainlinkAdapterBase.sol";
 
 interface IStorkTemporalNumericValueUnsafeGetter {
-    function getTemporalNumericValueUnsafeV1(
-        bytes32 id
-    ) external view returns (StorkStructs.TemporalNumericValue memory value);
+    function getTemporalNumericValueUnsafeV1(bytes32 id)
+        external
+        view
+        returns (StorkStructs.TemporalNumericValue memory value);
 }
 
 contract StorkStructs {

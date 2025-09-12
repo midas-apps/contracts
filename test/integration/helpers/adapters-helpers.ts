@@ -1,4 +1,8 @@
+import { JsonFragment } from '@ethersproject/abi';
+import { Contract, ContractFactory } from 'ethers';
 import hre from 'hardhat';
+
+import { ChainlinkAdapterBase } from '../../../typechain-types';
 
 export type NetworkAdapterConfig = {
   syrupAdapters?: {
@@ -9,26 +13,6 @@ export type NetworkAdapterConfig = {
     ref: string;
     base: string;
     quote: string;
-  }[];
-  beHypeAdapters?: {
-    beHype: string;
-    name: string;
-  }[];
-  mantleLspStakingAdapters?: {
-    lspStaking: string;
-    name: string;
-  }[];
-  rsEthAdapters?: {
-    rsEth: string;
-    name: string;
-  }[];
-  wrappedEEthAdapters?: {
-    wrappedEEth: string;
-    name: string;
-  }[];
-  wstEthAdapters?: {
-    wstEth: string;
-    name: string;
   }[];
   storkAdapters?: {
     stork: string;
@@ -44,6 +28,14 @@ export type NetworkAdapterConfig = {
     vault: string;
     name: string;
   }[];
+  singleAddressAdapters?: {
+    address: string;
+    name: string;
+    factoryAdapter: ContractFactory;
+    contractAbi: ReadonlyArray<JsonFragment>;
+    fnToCall: string;
+    storageVariable: string;
+  }[];
 };
 
 export const getSyrupAdapters = async (
@@ -56,83 +48,6 @@ export const getSyrupAdapters = async (
         adapter: await (
           await hre.ethers.getContractFactory('SyrupChainlinkAdapter')
         ).deploy(adapter.address),
-      };
-    }) ?? [],
-  );
-};
-
-export const getBeHypeAdapters = async (
-  adapters: NetworkAdapterConfig['beHypeAdapters'],
-) => {
-  return await Promise.all(
-    adapters?.map(async (adapter) => {
-      return {
-        ...adapter,
-        adapter: await (
-          await hre.ethers.getContractFactory('BeHypeChainlinkAdapter')
-        ).deploy(adapter.beHype),
-      };
-    }) ?? [],
-  );
-};
-
-export const getMantleLspStakingAdapters = async (
-  adapters: NetworkAdapterConfig['mantleLspStakingAdapters'],
-) => {
-  return await Promise.all(
-    adapters?.map(async (adapter) => {
-      return {
-        ...adapter,
-        adapter: await (
-          await hre.ethers.getContractFactory(
-            'MantleLspStakingChainlinkAdapter',
-          )
-        ).deploy(adapter.lspStaking),
-      };
-    }) ?? [],
-  );
-};
-
-export const getRsEthAdapters = async (
-  adapters: NetworkAdapterConfig['rsEthAdapters'],
-) => {
-  return await Promise.all(
-    adapters?.map(async (adapter) => {
-      return {
-        ...adapter,
-        adapter: await (
-          await hre.ethers.getContractFactory('RsEthChainlinkAdapter')
-        ).deploy(adapter.rsEth),
-      };
-    }) ?? [],
-  );
-};
-
-export const getWrappedEEthAdapters = async (
-  adapters: NetworkAdapterConfig['wrappedEEthAdapters'],
-) => {
-  return await Promise.all(
-    adapters?.map(async (adapter) => {
-      return {
-        ...adapter,
-        adapter: await (
-          await hre.ethers.getContractFactory('WrappedEEthChainlinkAdapter')
-        ).deploy(adapter.wrappedEEth),
-      };
-    }) ?? [],
-  );
-};
-
-export const getWstEthAdapters = async (
-  adapters: NetworkAdapterConfig['wstEthAdapters'],
-) => {
-  return await Promise.all(
-    adapters?.map(async (adapter) => {
-      return {
-        ...adapter,
-        adapter: await (
-          await hre.ethers.getContractFactory('WstEthChainlinkAdapter')
-        ).deploy(adapter.wstEth),
       };
     }) ?? [],
   );
@@ -200,6 +115,26 @@ export const getERC4626Adapters = async (
         adapter: await (
           await hre.ethers.getContractFactory('ERC4626ChainlinkAdapter')
         ).deploy(adapter.vault),
+      };
+    }) ?? [],
+  );
+};
+
+export const getSingleAddressAdapters = async (
+  adapters: NetworkAdapterConfig['singleAddressAdapters'],
+) => {
+  return await Promise.all(
+    adapters?.map(async (adapter) => {
+      return {
+        ...adapter,
+        adapter: (await adapter.factoryAdapter
+          .connect((await hre.ethers.getSigners())[0])
+          .deploy(adapter.address)) as Contract & ChainlinkAdapterBase,
+        contract: new Contract(
+          adapter.address,
+          adapter.contractAbi,
+          hre.ethers.provider,
+        ),
       };
     }) ?? [],
   );

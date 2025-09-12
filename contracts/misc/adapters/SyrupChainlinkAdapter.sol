@@ -4,9 +4,10 @@ pragma solidity 0.8.9;
 import "./ERC4626ChainlinkAdapter.sol";
 
 interface ISyrupToken {
-    function convertToExitAssets(
-        uint256 shares
-    ) external view returns (uint256);
+    function convertToExitAssets(uint256 shares)
+        external
+        view
+        returns (uint256);
 }
 
 /**
@@ -22,8 +23,6 @@ contract SyrupChainlinkAdapter is ERC4626ChainlinkAdapter {
 
     function latestAnswer() public view override returns (int256) {
         return
-            int256(
-                ISyrupToken(vault).convertToExitAssets(10 ** vaultDecimals())
-            );
+            int256(ISyrupToken(vault).convertToExitAssets(10**vaultDecimals()));
     }
 }

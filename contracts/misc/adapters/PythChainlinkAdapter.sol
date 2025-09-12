@@ -2,10 +2,28 @@
 
 pragma solidity 0.8.9;
 
-import "@pythnetwork/pyth-sdk-solidity/PythStructs.sol";
-import "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
-
 import "./ChainlinkAdapterBase.sol";
+
+contract PythStructs {
+    struct Price {
+        int64 price;
+        uint64 conf;
+        int32 expo;
+        uint publishTime;
+    }
+}
+
+interface IPyth {
+    function getPriceUnsafe(
+        bytes32 id
+    ) external view returns (PythStructs.Price memory price);
+
+    function getUpdateFee(
+        bytes[] calldata updateData
+    ) external view returns (uint feeAmount);
+
+    function updatePriceFeeds(bytes[] calldata updateData) external payable;
+}
 
 /**
  * @title A port of the ChainlinkAggregatorV3 interface that supports Pyth price feeds
@@ -24,7 +42,7 @@ contract PythChainlinkAdapter is ChainlinkAdapterBase {
         // Update the prices to the latest available values and pay the required fee for it. The `priceUpdateData` data
         // should be retrieved from our off-chain Price Service API using the `hermes-client` package.
         // See section "How Pyth Works on EVM Chains" below for more information.
-        uint fee = pyth.getUpdateFee(priceUpdateData);
+        uint256 fee = pyth.getUpdateFee(priceUpdateData);
         pyth.updatePriceFeeds{value: fee}(priceUpdateData);
 
         // refund remaining eth

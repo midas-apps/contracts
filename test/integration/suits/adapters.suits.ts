@@ -1,20 +1,16 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { increaseTo } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
 import { expect } from 'chai';
+import { Contract } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import * as hre from 'hardhat';
 
 import { Network } from '../../../config';
 import {
   BandStdChailinkAdapter,
-  BeHypeChainlinkAdapter,
   ChainlinkAdapterBase,
   ERC4626ChainlinkAdapter,
   SyrupChainlinkAdapter,
-  MantleLspStakingChainlinkAdapter,
-  RsEthChainlinkAdapter,
-  WrappedEEthChainlinkAdapter,
-  WstEthChainlinkAdapter,
   StorkChainlinkAdapter,
   PythChainlinkAdapter,
 } from '../../../typechain-types';
@@ -31,36 +27,6 @@ export type BandAdapterSuitsParams = {
   quote: string;
   base: string;
   adapter: BandStdChailinkAdapter;
-};
-
-export type BeHypeAdapterSuitsParams = {
-  name: string;
-  beHype: string;
-  adapter: BeHypeChainlinkAdapter;
-};
-
-export type MantleLspStakingAdapterSuitsParams = {
-  name: string;
-  lspStaking: string;
-  adapter: MantleLspStakingChainlinkAdapter;
-};
-
-export type RsEthAdapterSuitsParams = {
-  name: string;
-  rsEth: string;
-  adapter: RsEthChainlinkAdapter;
-};
-
-export type WrappedEEthAdapterSuitsParams = {
-  name: string;
-  wrappedEEth: string;
-  adapter: WrappedEEthChainlinkAdapter;
-};
-
-export type WstEthAdapterSuitsParams = {
-  name: string;
-  wstEth: string;
-  adapter: WstEthChainlinkAdapter;
 };
 
 export type StorkAdapterSuitsParams = {
@@ -81,6 +47,14 @@ export type ERC4626AdapterSuitsParams = {
   name: string;
   vault: string;
   adapter: ERC4626ChainlinkAdapter;
+};
+
+export type SingleAddressAdapterSuitsParams = {
+  name: string;
+  adapter: Contract & ChainlinkAdapterBase;
+  contract: Contract;
+  fnToCall: string;
+  storageVariable: string;
 };
 
 export const loadERC4626FixtureAdapter = async (
@@ -121,76 +95,6 @@ export const loadBandFixtureAdapter = async (
   };
 };
 
-export const loadBeHypeFixtureAdapter = async (
-  name: string,
-  fixture: () => Promise<{ beHypeAdapters: BeHypeAdapterSuitsParams[] }>,
-) => {
-  const { beHypeAdapters, ...rest } = await loadFixture(fixture);
-  return {
-    beHypeAdapters,
-    ...rest,
-    beHypeAdapter: beHypeAdapters.find((adapter) => adapter.name === name)!,
-  };
-};
-
-export const loadMantleLspStakingFixtureAdapter = async (
-  name: string,
-  fixture: () => Promise<{
-    mantleLspStakingAdapters: MantleLspStakingAdapterSuitsParams[];
-  }>,
-) => {
-  const { mantleLspStakingAdapters, ...rest } = await loadFixture(fixture);
-  return {
-    mantleLspStakingAdapters,
-    ...rest,
-    mantleLspStakingAdapter: mantleLspStakingAdapters.find(
-      (adapter) => adapter.name === name,
-    )!,
-  };
-};
-
-export const loadRsEthFixtureAdapter = async (
-  name: string,
-  fixture: () => Promise<{ rsEthAdapters: RsEthAdapterSuitsParams[] }>,
-) => {
-  const { rsEthAdapters, ...rest } = await loadFixture(fixture);
-  return {
-    rsEthAdapters,
-    ...rest,
-    rsEthAdapter: rsEthAdapters.find((adapter) => adapter.name === name)!,
-  };
-};
-
-export const loadWrappedEEthFixtureAdapter = async (
-  name: string,
-  fixture: () => Promise<{
-    wrappedEEthAdapters: WrappedEEthAdapterSuitsParams[];
-  }>,
-) => {
-  const { wrappedEEthAdapters, ...rest } = await loadFixture(fixture);
-  return {
-    wrappedEEthAdapters,
-    ...rest,
-    wrappedEEthAdapter: wrappedEEthAdapters.find(
-      (adapter) => adapter.name === name,
-    )!,
-  };
-};
-
-export const loadWstEthFixtureAdapter = async (
-  name: string,
-  fixture: () => Promise<{
-    wstEthAdapters: WstEthAdapterSuitsParams[];
-  }>,
-) => {
-  const { wstEthAdapters, ...rest } = await loadFixture(fixture);
-  return {
-    wstEthAdapters,
-    ...rest,
-    wstEthAdapter: wstEthAdapters.find((adapter) => adapter.name === name)!,
-  };
-};
-
 export const loadStorkFixtureAdapter = async (
   name: string,
   fixture: () => Promise<{
@@ -214,6 +118,22 @@ export const loadPythFixtureAdapter = async (
     pythAdapters,
     ...rest,
     pythAdapter: pythAdapters.find((adapter) => adapter.name === name)!,
+  };
+};
+
+export const loadSingleAddressFixtureAdapter = async (
+  name: string,
+  fixture: () => Promise<{
+    singleAddressAdapters: SingleAddressAdapterSuitsParams[];
+  }>,
+) => {
+  const { singleAddressAdapters, ...rest } = await loadFixture(fixture);
+  return {
+    singleAddressAdapters,
+    ...rest,
+    singleAddressAdapter: singleAddressAdapters.find(
+      (adapter) => adapter.name === name,
+    )!,
   };
 };
 
@@ -388,6 +308,65 @@ const erc4626AdapterSuits = (
   };
 };
 
+const simpleAddressAdapterSuits = (
+  adapterFixture: () => Promise<{
+    adapter: Contract & ChainlinkAdapterBase;
+    contract: Contract;
+    fnToCall: string;
+    storageVariable: string;
+    name: string;
+  }>,
+) => {
+  return {
+    ...baseAdapterSuits(adapterFixture),
+    deploy: () =>
+      it('deploy', async function () {
+        const { adapter, contract, storageVariable } = await adapterFixture();
+        expect(await adapter[storageVariable]()).eq(contract.address);
+      }),
+
+    description: () =>
+      describe('description()', () => {
+        it('should return a correct description', async function () {
+          const { adapter, name } = await adapterFixture();
+
+          expect(await adapter.description()).eq(
+            `A ChainlinkAggregatorV3 compatible adapter for ${name}`,
+          );
+        });
+      }),
+    latestAnswer: () =>
+      describe('latestAnswer()', () => {
+        it('should return a correct answer', async function () {
+          const { adapter, contract, fnToCall, storageVariable } =
+            await adapterFixture();
+
+          const fnToCallFragment = Object.entries(
+            contract.interface.functions,
+          ).find((v) => v[0].startsWith(fnToCall))?.[1];
+
+          if (
+            fnToCallFragment &&
+            (fnToCallFragment?.inputs?.length > 1 ||
+              (fnToCallFragment?.inputs?.length === 1 &&
+                !fnToCallFragment?.inputs?.[0]?.type.includes('int')))
+          ) {
+            throw new Error(`Unsupported function inputs`);
+          }
+
+          const fnToCallArgs =
+            fnToCallFragment?.inputs?.length === 1
+              ? [parseUnits('1', await adapter.decimals())]
+              : [];
+
+          expect(await adapter.latestAnswer()).eq(
+            await contract[fnToCall](...fnToCallArgs),
+          );
+        });
+      }),
+  };
+};
+
 const getAdapterSuits = <
   TAdapter,
   TFixture extends () => Promise<{ adapter: TAdapter }>,
@@ -462,331 +441,8 @@ export const syrupAdaptersSuits = (
 
             expect(await syrupAdapter.adapter.latestAnswer()).eq(
               await syrupToken.convertToExitAssets(
-                10 ** (await syrupAdapter.adapter.vaultDecimals()),
+                parseUnits('1', await syrupAdapter.adapter.vaultDecimals()),
               ),
-            );
-          });
-        });
-      });
-    });
-  });
-};
-
-export const beHypeAdaptersSuits = (
-  network: Network,
-  tokenNames: string[],
-  fixture: () => Promise<{ beHypeAdapters: BeHypeAdapterSuitsParams[] }>,
-) => {
-  describe(`BeHYPE Adapters on ${network}`, function () {
-    tokenNames.forEach((tokenName) => {
-      describe(`BeHYPE Adapter for ${tokenName}`, () => {
-        getAdapterSuits(
-          baseAdapterSuits,
-          () =>
-            loadBeHypeFixtureAdapter(tokenName, fixture).then(
-              ({ beHypeAdapter }) => ({
-                adapter: beHypeAdapter.adapter,
-              }),
-            ) as Promise<{ adapter: BeHypeChainlinkAdapter }>,
-          ['description'],
-        );
-
-        it('deploy', async function () {
-          const { beHypeAdapter } = await loadBeHypeFixtureAdapter(
-            tokenName,
-            fixture,
-          );
-          expect(await beHypeAdapter.adapter.beHype()).eq(beHypeAdapter.beHype);
-        });
-
-        describe('description()', () => {
-          it('should return a correct description', async function () {
-            const { beHypeAdapter } = await loadBeHypeFixtureAdapter(
-              tokenName,
-              fixture,
-            );
-
-            expect(await beHypeAdapter.adapter.description()).eq(
-              'A ChainlinkAggregatorV3 compatible adapter for beHYPE',
-            );
-          });
-        });
-
-        describe('latestAnswer()', () => {
-          it('should return a correct answer', async function () {
-            const { beHypeAdapter } = await loadBeHypeFixtureAdapter(
-              tokenName,
-              fixture,
-            );
-
-            const beHypeToken = await hre.ethers.getContractAt(
-              'IBeHype',
-              await beHypeAdapter.adapter.beHype(),
-            );
-
-            expect(await beHypeAdapter.adapter.latestAnswer()).eq(
-              await beHypeToken.BeHYPEToHYPE(
-                10 ** (await beHypeAdapter.adapter.decimals()),
-              ),
-            );
-          });
-        });
-      });
-    });
-  });
-};
-
-export const mantleLspStakingAdaptersSuits = (
-  network: Network,
-  tokenNames: string[],
-  fixture: () => Promise<{
-    mantleLspStakingAdapters: MantleLspStakingAdapterSuitsParams[];
-  }>,
-) => {
-  describe(`Mantle LSP Staking Adapters on ${network}`, function () {
-    tokenNames.forEach((tokenName) => {
-      describe(`Mantle LSP Staking Adapter for ${tokenName}`, () => {
-        getAdapterSuits(
-          baseAdapterSuits,
-          () =>
-            loadMantleLspStakingFixtureAdapter(tokenName, fixture).then(
-              ({ mantleLspStakingAdapter }) => ({
-                adapter: mantleLspStakingAdapter.adapter,
-              }),
-            ) as Promise<{ adapter: MantleLspStakingChainlinkAdapter }>,
-          ['description'],
-        );
-
-        it('deploy', async function () {
-          const { mantleLspStakingAdapter } =
-            await loadMantleLspStakingFixtureAdapter(tokenName, fixture);
-          expect(await mantleLspStakingAdapter.adapter.lspStaking()).eq(
-            mantleLspStakingAdapter.lspStaking,
-          );
-        });
-
-        describe('description()', () => {
-          it('should return a correct description', async function () {
-            const { mantleLspStakingAdapter } =
-              await loadMantleLspStakingFixtureAdapter(tokenName, fixture);
-
-            expect(await mantleLspStakingAdapter.adapter.description()).eq(
-              'A ChainlinkAggregatorV3 compatible adapter for Mantle LSP Staking',
-            );
-          });
-        });
-
-        describe('latestAnswer()', () => {
-          it('should return a correct answer', async function () {
-            const { mantleLspStakingAdapter } =
-              await loadMantleLspStakingFixtureAdapter(tokenName, fixture);
-
-            const mantleLspStaking = await hre.ethers.getContractAt(
-              'IMantleLspStaking',
-              await mantleLspStakingAdapter.adapter.lspStaking(),
-            );
-
-            expect(await mantleLspStakingAdapter.adapter.latestAnswer()).eq(
-              await mantleLspStaking.mETHToETH(
-                parseUnits(
-                  '1',
-                  await mantleLspStakingAdapter.adapter.decimals(),
-                ),
-              ),
-            );
-          });
-        });
-      });
-    });
-  });
-};
-
-export const rsEthAdaptersSuits = (
-  network: Network,
-  tokenNames: string[],
-  fixture: () => Promise<{
-    rsEthAdapters: RsEthAdapterSuitsParams[];
-  }>,
-) => {
-  describe(`rsETH Adapters on ${network}`, function () {
-    tokenNames.forEach((tokenName) => {
-      describe(`rsETH Adapter for ${tokenName}`, () => {
-        getAdapterSuits(
-          baseAdapterSuits,
-          () =>
-            loadRsEthFixtureAdapter(tokenName, fixture).then(
-              ({ rsEthAdapter }) => ({
-                adapter: rsEthAdapter.adapter,
-              }),
-            ) as Promise<{ adapter: RsEthChainlinkAdapter }>,
-          ['description'],
-        );
-
-        it('deploy', async function () {
-          const { rsEthAdapter } = await loadRsEthFixtureAdapter(
-            tokenName,
-            fixture,
-          );
-          expect(await rsEthAdapter.adapter.rsEth()).eq(rsEthAdapter.rsEth);
-        });
-
-        describe('description()', () => {
-          it('should return a correct description', async function () {
-            const { rsEthAdapter } = await loadRsEthFixtureAdapter(
-              tokenName,
-              fixture,
-            );
-
-            expect(await rsEthAdapter.adapter.description()).eq(
-              'A ChainlinkAggregatorV3 compatible adapter for rsETH',
-            );
-          });
-        });
-
-        describe('latestAnswer()', () => {
-          it('should return a correct answer', async function () {
-            const { rsEthAdapter } = await loadRsEthFixtureAdapter(
-              tokenName,
-              fixture,
-            );
-
-            const rsEth = await hre.ethers.getContractAt(
-              'IRsEth',
-              await rsEthAdapter.adapter.rsEth(),
-            );
-
-            expect(await rsEthAdapter.adapter.latestAnswer()).eq(
-              await rsEth.rsETHPrice(),
-            );
-          });
-        });
-      });
-    });
-  });
-};
-
-export const wrappedEEthAdaptersSuits = (
-  network: Network,
-  tokenNames: string[],
-  fixture: () => Promise<{
-    wrappedEEthAdapters: WrappedEEthAdapterSuitsParams[];
-  }>,
-) => {
-  describe(`Wrapped EEth Adapters on ${network}`, function () {
-    tokenNames.forEach((tokenName) => {
-      describe(`Wrapped EEth Adapter for ${tokenName}`, () => {
-        getAdapterSuits(
-          baseAdapterSuits,
-          () =>
-            loadWrappedEEthFixtureAdapter(tokenName, fixture).then(
-              ({ wrappedEEthAdapter }) => ({
-                adapter: wrappedEEthAdapter.adapter,
-              }),
-            ) as Promise<{ adapter: WrappedEEthChainlinkAdapter }>,
-          ['description'],
-        );
-
-        it('deploy', async function () {
-          const { wrappedEEthAdapter } = await loadWrappedEEthFixtureAdapter(
-            tokenName,
-            fixture,
-          );
-          expect(await wrappedEEthAdapter.adapter.wrappedEEth()).eq(
-            wrappedEEthAdapter.wrappedEEth,
-          );
-        });
-
-        describe('description()', () => {
-          it('should return a correct description', async function () {
-            const { wrappedEEthAdapter } = await loadWrappedEEthFixtureAdapter(
-              tokenName,
-              fixture,
-            );
-
-            expect(await wrappedEEthAdapter.adapter.description()).eq(
-              'A ChainlinkAggregatorV3 compatible adapter for Wrapped EEth',
-            );
-          });
-        });
-
-        describe('latestAnswer()', () => {
-          it('should return a correct answer', async function () {
-            const { wrappedEEthAdapter } = await loadWrappedEEthFixtureAdapter(
-              tokenName,
-              fixture,
-            );
-
-            const wrappedEEth = await hre.ethers.getContractAt(
-              'IWrappedEEth',
-              await wrappedEEthAdapter.adapter.wrappedEEth(),
-            );
-
-            expect(await wrappedEEthAdapter.adapter.latestAnswer()).eq(
-              await wrappedEEth.getRate(),
-            );
-          });
-        });
-      });
-    });
-  });
-};
-
-export const wstEthAdaptersSuits = (
-  network: Network,
-  tokenNames: string[],
-  fixture: () => Promise<{
-    wstEthAdapters: WstEthAdapterSuitsParams[];
-  }>,
-) => {
-  describe(`wstETH Adapters on ${network}`, function () {
-    tokenNames.forEach((tokenName) => {
-      describe(`wstETH Adapter for ${tokenName}`, () => {
-        getAdapterSuits(
-          baseAdapterSuits,
-          () =>
-            loadWstEthFixtureAdapter(tokenName, fixture).then(
-              ({ wstEthAdapter }) => ({
-                adapter: wstEthAdapter.adapter,
-              }),
-            ) as Promise<{ adapter: WstEthChainlinkAdapter }>,
-          ['description'],
-        );
-
-        it('deploy', async function () {
-          const { wstEthAdapter } = await loadWstEthFixtureAdapter(
-            tokenName,
-            fixture,
-          );
-          expect(await wstEthAdapter.adapter.wstEth()).eq(wstEthAdapter.wstEth);
-        });
-
-        describe('description()', () => {
-          it('should return a correct description', async function () {
-            const { wstEthAdapter } = await loadWstEthFixtureAdapter(
-              tokenName,
-              fixture,
-            );
-
-            expect(await wstEthAdapter.adapter.description()).eq(
-              'A ChainlinkAggregatorV3 compatible adapter for Wrapped EEth',
-            );
-          });
-        });
-
-        describe('latestAnswer()', () => {
-          it('should return a correct answer', async function () {
-            const { wstEthAdapter } = await loadWstEthFixtureAdapter(
-              tokenName,
-              fixture,
-            );
-
-            const wstEth = await hre.ethers.getContractAt(
-              'IWstEth',
-              await wstEthAdapter.adapter.wstEth(),
-            );
-
-            expect(await wstEthAdapter.adapter.latestAnswer()).eq(
-              await wstEth.stEthPerToken(),
             );
           });
         });
@@ -800,7 +456,7 @@ export const bandAdaptersSuits = (
   ids: string[],
   fixture: () => Promise<{ bandAdapters: BandAdapterSuitsParams[] }>,
 ) => {
-  describe(`Band Adapters on ${network}`, function () {
+  describe.only(`Band Adapters on ${network}`, function () {
     ids.forEach((id) => {
       describe(`Band Adapter for ${id}`, () => {
         getAdapterSuits(
@@ -1041,6 +697,41 @@ export const erc4626AdaptersSuits = (
           );
           expect(await erc4626Adapter.adapter.vault()).eq(erc4626Adapter.vault);
         });
+      });
+    });
+  });
+};
+
+export const singleAddressAdaptersSuits = (
+  network: Network,
+  tokenNames: string[],
+  fixture: () => Promise<{
+    singleAddressAdapters: SingleAddressAdapterSuitsParams[];
+  }>,
+) => {
+  describe(`Single Address Adapters on ${network}`, function () {
+    tokenNames.forEach((tokenName) => {
+      describe(`Single Address Adapter for ${tokenName}`, () => {
+        getAdapterSuits(
+          simpleAddressAdapterSuits,
+          () =>
+            loadSingleAddressFixtureAdapter(tokenName, fixture).then(
+              ({ singleAddressAdapter }) => ({
+                adapter: singleAddressAdapter.adapter,
+                contract: singleAddressAdapter.contract,
+                fnToCall: singleAddressAdapter.fnToCall,
+                storageVariable: singleAddressAdapter.storageVariable,
+                name: singleAddressAdapter.name,
+              }),
+            ) as Promise<{
+              adapter: Contract & ChainlinkAdapterBase;
+              contract: Contract;
+              fnToCall: string;
+              storageVariable: string;
+              name: string;
+            }>,
+          [],
+        );
       });
     });
   });

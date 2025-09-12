@@ -12,10 +12,10 @@ interface IStdReference {
     }
 
     /// Returns the price data for the given base/quote pair. Revert if not available.
-    function getReferenceData(
-        string memory _base,
-        string memory _quote
-    ) external view returns (ReferenceData memory);
+    function getReferenceData(string memory _base, string memory _quote)
+        external
+        view
+        returns (ReferenceData memory);
 
     /// Similar to getReferenceData, but with multiple base/quote pairs at once.
     function getReferenceDataBulk(
@@ -32,7 +32,11 @@ contract BandStdChailinkAdapter is ChainlinkAdapterBase {
     string public base;
     string public quote;
 
-    constructor(address _ref, string memory _base, string memory _quote) {
+    constructor(
+        address _ref,
+        string memory _base,
+        string memory _quote
+    ) {
         ref = IStdReference(_ref);
         base = _base;
         quote = _quote;

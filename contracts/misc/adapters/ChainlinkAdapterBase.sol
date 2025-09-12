@@ -43,9 +43,18 @@ abstract contract ChainlinkAdapterBase is AggregatorV3Interface {
      * @notice There is no way to access historical rate data, so
      * this will always revert
      */
-    function getRoundData(
-        uint80
-    ) external view virtual returns (uint80, int256, uint256, uint256, uint80) {
+    function getRoundData(uint80)
+        external
+        view
+        virtual
+        returns (
+            uint80,
+            int256,
+            uint256,
+            uint256,
+            uint80
+        )
+    {
         revert("CAB: not implemented");
     }
 

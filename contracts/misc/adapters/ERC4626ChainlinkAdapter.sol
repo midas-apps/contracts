@@ -41,6 +41,6 @@ contract ERC4626ChainlinkAdapter is ChainlinkAdapterBase {
     }
 
     function latestAnswer() public view virtual override returns (int256) {
-        return int256(IERC4626(vault).convertToAssets(10 ** vaultDecimals()));
+        return int256(IERC4626(vault).convertToAssets(10**vaultDecimals()));
     }
 }
