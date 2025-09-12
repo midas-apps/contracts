@@ -1,12 +1,16 @@
+import { mine } from '@nomicfoundation/hardhat-network-helpers';
 import { getImplementationAddress } from '@openzeppelin/upgrades-core';
 import { ethers } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
+  chainIds,
   MTokenName,
   MTokenNameEnum,
+  Network,
   PaymentTokenName,
   PaymentTokenNameEnum,
+  rpcUrls,
 } from '../config';
 
 export const DAY = 86400;
@@ -23,6 +27,26 @@ export const isPaymentTokenName = (name: string): name is PaymentTokenName => {
   return Object.values(PaymentTokenNameEnum).includes(
     name as PaymentTokenNameEnum,
   );
+};
+
+export const forkNetwork = async (
+  hre: HardhatRuntimeEnvironment,
+  network: Network,
+  blockNumber?: number,
+) => {
+  if (
+    hre.network.name === network &&
+    hre.network.config.chainId === chainIds[network]
+  )
+    return;
+
+  await hre.network.provider.request({
+    method: 'hardhat_reset',
+    params: [{ forking: { jsonRpcUrl: rpcUrls[network], blockNumber } }],
+  });
+  await mine();
+  hre.network.name = network;
+  hre.network.config.chainId = chainIds[network];
 };
 
 export const getChainOrThrow = (hre: HardhatRuntimeEnvironment) => {
