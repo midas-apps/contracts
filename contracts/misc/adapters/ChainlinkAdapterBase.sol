@@ -32,21 +32,21 @@ abstract contract ChainlinkAdapterBase is AggregatorV3Interface {
     function latestAnswer() public view virtual returns (int256);
 
     function getAnswer(uint256) public pure virtual returns (int256) {
-        revert("Not implemented");
+        revert("CAB: not implemented");
     }
 
     function getTimestamp(uint256) external pure virtual returns (uint256) {
-        revert("Not implemented");
+        revert("CAB: not implemented");
     }
 
     /*
      * @notice There is no way to access historical rate data, so
-     this will always revert
+     * this will always revert
      */
     function getRoundData(
         uint80
     ) external view virtual returns (uint80, int256, uint256, uint256, uint80) {
-        revert("Not implemented");
+        revert("CAB: not implemented");
     }
 
     function latestRoundData()

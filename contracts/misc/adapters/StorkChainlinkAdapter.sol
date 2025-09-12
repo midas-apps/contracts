@@ -62,13 +62,13 @@ contract StorkChainlinkAdapter is ChainlinkAdapterBase {
     {
         StorkStructs.TemporalNumericValue memory value = stork
             .getTemporalNumericValueUnsafeV1(priceId);
-        roundId = uint80(value.timestampNs);
+        uint256 timestamp = value.timestampNs / TIMESTAMP_DIVIDER;
         return (
-            roundId,
+            uint80(timestamp),
             value.quantizedValue,
-            value.timestampNs / TIMESTAMP_DIVIDER,
-            value.timestampNs / TIMESTAMP_DIVIDER,
-            roundId
+            timestamp,
+            timestamp,
+            uint80(timestamp)
         );
     }
 }
