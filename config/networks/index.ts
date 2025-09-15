@@ -32,7 +32,7 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   katana: `https://rpc-katana.t.conduit.xyz/${CONDUIT_API_KEY}`,
   tac: 'https://rpc.tac.build',
   xrplevm: 'https://rpc.xrplevm.org',
-  zerog: 'http://evmrpc.0g.ai',
+  zerog: 'https://evmrpc.0g.ai',
 };
 
 export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {

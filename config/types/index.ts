@@ -23,7 +23,7 @@ export type RpcUrl =
   | `https://${RpcNetwork}.infura.io/v3/${string}`
   | `http://localhost:${number}`
   | `https://${string}.${string}`
-  | `http://evmrpc.${string}.ai`;
+  | `https://evmrpc.${string}.ai`;
 
 export type ConfigPerNetwork<T> = Record<Network, T>;
 
