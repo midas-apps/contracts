@@ -67,6 +67,8 @@ import {
   CustomAggregatorV3CompatibleFeedGrowthTester__factory,
   // eslint-disable-next-line camelcase
   AcreAdapter__factory,
+  // eslint-disable-next-line camelcase
+  CompositeDataFeedTest__factory,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -181,6 +183,18 @@ export const defaultDeploy = async () => {
     parseUnits('10000', await mockedAggregatorMBasis.decimals()),
   );
 
+  const compositeDataFeed = await new CompositeDataFeedTest__factory(
+    owner,
+  ).deploy();
+
+  await compositeDataFeed.initialize(
+    accessControl.address,
+    mTokenToUsdDataFeed.address,
+    mBasisToUsdDataFeed.address,
+    parseUnits('0.1'),
+    parseUnits('10000'),
+  );
+
   const depositVault = await new DepositVaultTest__factory(owner).deploy();
 
   await depositVault.initialize(
@@ -201,6 +215,7 @@ export const defaultDeploy = async () => {
     1,
     parseUnits('100'),
     0,
+    constants.MaxUint256,
   );
 
   await accessControl.grantRole(
@@ -307,7 +322,7 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithUSTB[
-    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,address)'
+    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)'
   ](
     accessControl.address,
     {
@@ -326,6 +341,7 @@ export const defaultDeploy = async () => {
     1,
     parseUnits('100'),
     0,
+    constants.MaxUint256,
     ustbToken.address,
   );
 
@@ -606,6 +622,7 @@ export const defaultDeploy = async () => {
     customRecipient,
     depositVaultWithUSTB,
     dataFeedGrowth,
+    compositeDataFeed,
   };
 };
 

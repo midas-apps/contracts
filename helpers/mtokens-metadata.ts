@@ -116,4 +116,68 @@ export const mTokensMetadata: Record<
     name: 'Midas Farm Capital',
     symbol: 'mFARM',
   },
+  wVLP: {
+    name: 'Hyperbeat VLP',
+    symbol: 'wVLP',
+  },
+  dnHYPE: {
+    name: 'Delta Neutral HYPE',
+    symbol: 'dnHYPE',
+  },
+  kmiUSD: {
+    name: 'Katana miUSD',
+    symbol: 'kmiUSD',
+  },
+  msyrupUSD: {
+    name: 'syrupUSDC supercharged',
+    symbol: 'msyrupUSD',
+  },
+  msyrupUSDp: {
+    name: 'Plasma syrupUSD Pre-deposit Midas Vault',
+    symbol: 'msyrupUSDp',
+  },
+  dnPUMP: {
+    name: 'Delta Neutral PUMP',
+    symbol: 'dnPUMP',
+  },
+  zeroGUSDV: {
+    name: '0G USD Vault',
+    symbol: '0gUSDV',
+  },
+  zeroGETHV: {
+    name: '0G ETH Vault',
+    symbol: '0gETHV',
+  },
+  zeroGBTCV: {
+    name: '0G BTC Vault',
+    symbol: '0gBTCV',
+  },
+  JIV: {
+    name: 'Jaine Insurance Vault',
+    symbol: 'JIV',
+  },
+  mRE7BTC: {
+    name: 'Midas Re7 BTC',
+    symbol: 'mRe7BTC',
+  },
+  kitUSD: {
+    name: 'Kitchen Pre-deposit $kitUSD',
+    symbol: '$kitUSD',
+  },
+  kitHYPE: {
+    name: 'Kitchen Pre-deposit $kitHYPE',
+    symbol: '$kitHYPE',
+  },
+  kitBTC: {
+    name: 'Kitchen Pre-deposit $kitBTC',
+    symbol: '$kitBTC',
+  },
+  dnFART: {
+    name: 'Delta Neutral FART',
+    symbol: 'dnFART',
+  },
+  mXRP: {
+    name: 'Midas XRP',
+    symbol: 'mXRP',
+  },
 };

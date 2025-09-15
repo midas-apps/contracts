@@ -17,8 +17,49 @@ import {
   DeployRvRegularConfig,
   DeployRvSwapperConfig,
 } from './rv';
+import { DeployTimelockConfig } from './timelock';
+import { toFunctionSelector } from './utils';
 
 import { PaymentTokenName } from '../../../config';
+import { VaultType } from '../../../config/constants/addresses';
+
+export const VAULT_FUNCTION_SELECTORS = {
+  // Deposit vault functions
+  depositInstant: toFunctionSelector(
+    'depositInstant(address,uint256,uint256,bytes32)',
+  ),
+  depositInstantWithCustomRecipient: toFunctionSelector(
+    'depositInstant(address,uint256,uint256,bytes32,address)',
+  ),
+  depositRequest: toFunctionSelector('depositRequest(address,uint256,bytes32)'),
+  depositRequestWithCustomRecipient: toFunctionSelector(
+    'depositRequest(address,uint256,bytes32,address)',
+  ),
+
+  // Redemption vault functions
+  redeemInstant: toFunctionSelector('redeemInstant(address,uint256,uint256)'),
+  redeemInstantWithCustomRecipient: toFunctionSelector(
+    'redeemInstant(address,uint256,uint256,address)',
+  ),
+  redeemRequest: toFunctionSelector('redeemRequest(address,uint256)'),
+  redeemRequestWithCustomRecipient: toFunctionSelector(
+    'redeemRequest(address,uint256,address)',
+  ),
+} as const;
+
+export type VaultFunctionName = keyof typeof VAULT_FUNCTION_SELECTORS;
+
+export type PauseFunctionsConfig = {
+  [K in VaultType]?: VaultFunctionName[];
+};
+
+export type PostDeployConfig = {
+  addPaymentTokens?: AddPaymentTokensConfig;
+  grantRoles?: GrantAllTokenRolesConfig;
+  setRoundData?: SetRoundDataConfig;
+  addFeeWaived?: AddFeeWaivedConfig;
+  pauseFunctions?: PauseFunctionsConfig;
+};
 
 export type DeploymentConfig = {
   genericConfigs: {
@@ -34,12 +75,7 @@ export type DeploymentConfig = {
       rv?: DeployRvRegularConfig;
       rvBuidl?: DeployRvBuidlConfig;
       rvSwapper?: DeployRvSwapperConfig;
-      postDeploy?: {
-        addPaymentTokens?: AddPaymentTokensConfig;
-        grantRoles?: GrantAllTokenRolesConfig;
-        setRoundData?: SetRoundDataConfig;
-        addFeeWaived?: AddFeeWaivedConfig;
-      };
+      postDeploy?: PostDeployConfig;
     }
   >;
 };
@@ -66,6 +102,7 @@ export type NetworkDeploymentConfig = Record<
   number,
   {
     grantDefaultAdminRole?: GrantDefaultAdminRoleToAcAdminConfig;
+    timelock?: DeployTimelockConfig;
   }
 >;
 

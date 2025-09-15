@@ -1,4 +1,5 @@
 import { MTokenName } from '../config';
+import { VaultType } from '../config/constants/addresses';
 
 export type TokenContractNames = {
   dv: string;
@@ -8,6 +9,7 @@ export type TokenContractNames = {
   rvBuidl: string;
   rvUstb: string;
   dataFeed?: string;
+  dataFeedComposite?: string;
   customAggregator?: string;
   customAggregatorGrowth?: string;
   token: string;
@@ -18,6 +20,28 @@ type CommonContractNames = Omit<TokenContractNames, 'token'> & {
   ac: string;
   customAggregator: string;
   customAggregatorDiscounted: string;
+};
+
+const vaultTypeToContractNameMap: Record<VaultType, string> = {
+  redemptionVault: 'rv',
+  redemptionVaultSwapper: 'rvSwapper',
+  redemptionVaultUstb: 'rvUstb',
+  depositVault: 'dv',
+  redemptionVaultBuidl: 'rvBuidl',
+};
+
+export const vaultTypeToContractName = (
+  vaultType: VaultType,
+): string | undefined => {
+  return vaultTypeToContractNameMap[vaultType];
+};
+
+export const contractNameToVaultType = (
+  contractName: string,
+): VaultType | undefined => {
+  return Object.entries(vaultTypeToContractNameMap).find(
+    ([_, value]) => value === contractName,
+  )?.[0] as VaultType | undefined;
 };
 
 export const contractNamesPrefixes: Record<MTokenName, string> = {
@@ -49,6 +73,22 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   liquidHYPE: 'LiquidHype',
   hbUSDC: 'HBUsdc',
   mFARM: 'MFarm',
+  wVLP: 'WVLP',
+  dnHYPE: 'DnHype',
+  kmiUSD: 'KmiUsd',
+  msyrupUSD: 'MSyrupUsd',
+  msyrupUSDp: 'MSyrupUsdp',
+  dnPUMP: 'DnPump',
+  zeroGUSDV: 'ZeroGUsdv',
+  zeroGETHV: 'ZeroGEthv',
+  zeroGBTCV: 'ZeroGBtcv',
+  JIV: 'Jiv',
+  mRE7BTC: 'MRe7Btc',
+  kitUSD: 'KitUsd',
+  kitHYPE: 'KitHype',
+  kitBTC: 'KitBtc',
+  dnFART: 'DnFart',
+  mXRP: 'MXrp',
 };
 
 export const getCommonContractNames = (): CommonContractNames => {
@@ -65,6 +105,7 @@ export const getCommonContractNames = (): CommonContractNames => {
     customAggregatorGrowth: 'CustomAggregatorV3CompatibleFeedGrowth',
     customAggregatorDiscounted: 'CustomAggregatorV3CompatibleFeedDiscounted',
     roles: 'MidasAccessControlRoles',
+    dataFeedComposite: 'CompositeDataFeed',
   };
 };
 

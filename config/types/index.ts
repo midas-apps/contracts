@@ -13,8 +13,10 @@ export type Network =
   | 'rootstock'
   | 'arbitrum'
   | 'tacTestnet'
+  | 'tac'
   | 'hyperevm'
-  | 'katana';
+  | 'katana'
+  | 'xrplevm';
 export type RpcUrl =
   | `https://eth-${RpcNetwork}.g.alchemy.com/v2/${string}`
   | `https://${RpcNetwork}.infura.io/v3/${string}`
@@ -38,4 +40,6 @@ export interface Environment {
   readonly VERIFY_ETHERSCAN?: boolean;
   readonly SOURCIFY_API_URL?: string;
   readonly CUSTOM_SIGNER_SCRIPT_PATH?: string;
+  readonly LOG_TO_FILE: boolean;
+  readonly LOGS_FOLDER_PATH?: string;
 }

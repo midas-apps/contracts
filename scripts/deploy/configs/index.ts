@@ -1,9 +1,17 @@
+import { dnFARTDeploymentConfig } from './dnFART';
+import { dnHYPEDeploymentConfig } from './dnHYPE';
+import { dnPUMPDeploymentConfig } from './dnPUMP';
 import { hbUSDCDeploymentConfig } from './hbUSDC';
 import { hbUSDTDeploymentConfig } from './hbUSDT';
 import { hbXAUtDeploymentConfig } from './hbXAUt';
 import { hypeBTCDeploymentConfig } from './hypeBTC';
 import { hypeETHDeploymentConfig } from './hypeETH';
 import { hypeUSDDeploymentConfig } from './hypeUSD';
+import { JIVDeploymentConfig } from './JIV';
+import { kitBTCDeploymentConfig } from './kitBTC';
+import { kitHYPEDeploymentConfig } from './kitHYPE';
+import { kitUSDDeploymentConfig } from './kitUSD';
+import { kmiUSDDeploymentConfig } from './kmiUSD';
 import { liquidHYPEDeploymentConfig } from './liquidHYPE';
 import { lstHYPEDeploymentConfig } from './lstHYPE';
 import { mAPOLLODeploymentConfig } from './mAPOLLO';
@@ -17,15 +25,23 @@ import { mHYPERDeploymentConfig } from './mHYPER';
 import { mLIQUIDITYDeploymentConfig } from './mLIQUIDITY';
 import { mMEVDeploymentConfig } from './mMEV';
 import { mRE7DeploymentConfig } from './mRE7';
+import { mRE7BTCDeploymentConfig } from './mRE7BTC';
 import { mRE7SOLDeploymentConfig } from './mRE7SOL';
 import { mSLDeploymentConfig } from './mSL';
+import { msyrupUSDDeploymentConfig } from './msyrupUSD';
+import { msyrupUSDpDeploymentConfig } from './msyrupUSDp';
 import { mTBILLDeploymentConfig } from './mTBILL';
+import { mXRPDeploymentConfig } from './mXRP';
 import { TACmBTCDeploymentConfig } from './tac/TACmBTC';
 import { TACmEDGEDeploymentConfig } from './tac/TACmEDGE';
 import { TACmMEVDeploymentConfig } from './tac/TACmMEV';
 import { tBTCDeploymentConfig } from './tBTC';
 import { tETHDeploymentConfig } from './tETH';
 import { tUSDeDeploymentConfig } from './tUSDe';
+import { wVLPDeploymentConfig } from './wVLP';
+import { zeroGBTCVDeploymentConfig } from './zeroGBTCV';
+import { zeroGETHVDeploymentConfig } from './zeroGETHV';
+import { zeroGUSDVDeploymentConfig } from './zeroGUSDV';
 
 import { MTokenName } from '../../../config';
 import { DeploymentConfig } from '../common/types';
@@ -59,4 +75,20 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   liquidHYPE: liquidHYPEDeploymentConfig,
   hbUSDC: hbUSDCDeploymentConfig,
   mFARM: mFARMDeploymentConfig,
+  wVLP: wVLPDeploymentConfig,
+  dnHYPE: dnHYPEDeploymentConfig,
+  kmiUSD: kmiUSDDeploymentConfig,
+  msyrupUSD: msyrupUSDDeploymentConfig,
+  msyrupUSDp: msyrupUSDpDeploymentConfig,
+  dnPUMP: dnPUMPDeploymentConfig,
+  zeroGUSDV: zeroGUSDVDeploymentConfig,
+  zeroGETHV: zeroGETHVDeploymentConfig,
+  zeroGBTCV: zeroGBTCVDeploymentConfig,
+  JIV: JIVDeploymentConfig,
+  mRE7BTC: mRE7BTCDeploymentConfig,
+  kitUSD: kitUSDDeploymentConfig,
+  kitHYPE: kitHYPEDeploymentConfig,
+  kitBTC: kitBTCDeploymentConfig,
+  dnFART: dnFARTDeploymentConfig,
+  mXRP: mXRPDeploymentConfig,
 };

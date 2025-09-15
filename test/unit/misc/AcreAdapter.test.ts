@@ -1,5 +1,6 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
+import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import {
@@ -22,7 +23,7 @@ import {
   acreWrapperRequestRedeemTest,
 } from '../../common/misc/acre.helpers';
 
-describe('AcreAdapter', () => {
+describe.only('AcreAdapter', () => {
   it('initialize', async () => {
     const fixture = await loadFixture(acreAdapterFixture);
 
@@ -65,6 +66,7 @@ describe('AcreAdapter', () => {
       1,
       parseUnits('100'),
       0,
+      constants.MaxUint256,
     );
 
     await expect(

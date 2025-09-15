@@ -1,5 +1,6 @@
 import { DeployProxyOptions } from '@openzeppelin/hardhat-upgrades/dist/utils';
-import { BigNumberish, PopulatedTransaction, Signer } from 'ethers';
+import { PopulatedTransaction, Signer } from 'ethers';
+import { ethers } from 'hardhat';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { DeploymentConfig } from './types';
@@ -36,7 +37,7 @@ export const deployProxy = async (
   contractName: string,
   params: unknown[],
   deployer?: Signer,
-  opts: DeployProxyOptions = { unsafeAllow: ['constructor'] },
+  opts: DeployProxyOptions = {},
 ) => {
   deployer ??= await getDeployer(hre);
 
@@ -53,7 +54,7 @@ export const deployAndVerifyProxy = async (
   contractName: string,
   params: unknown[],
   deployer?: Signer,
-  opts: DeployProxyOptions = { unsafeAllow: ['constructor'] },
+  opts: DeployProxyOptions = {},
 ) => {
   const deployment = await deployProxy(
     hre,
@@ -133,6 +134,14 @@ export const getNetworkConfig = <
   return config;
 };
 
+export const getWalletAddressForAction = async (
+  hre: HardhatRuntimeEnvironment,
+  action: string,
+  mtoken?: MTokenName,
+) => {
+  return hre.customSigner!.getWalletAddress(action, mtoken);
+};
+
 export const sendAndWaitForCustomTxSign = async (
   hre: HardhatRuntimeEnvironment,
   populatedTx: PopulatedTransaction,
@@ -143,16 +152,19 @@ export const sendAndWaitForCustomTxSign = async (
       | 'update-vault'
       | 'update-ac'
       | 'update-feed-mtoken'
-      | 'update-feed-ptoken';
+      | 'update-feed-ptoken'
+      | 'update-timelock';
     subAction?:
       | 'add-payment-token'
       | 'grant-token-roles'
       | 'add-fee-waived'
-      | 'set-round-data';
+      | 'set-round-data'
+      | 'timelock-call-upgrade'
+      | 'pause-function';
   },
   confirmations = 2,
 ) => {
-  const signResult = hre.customSigner!.signTransaction(
+  const sendResult = hre.customSigner!.sendTransaction(
     {
       data: populatedTx.data!,
       to: populatedTx.to!,
@@ -161,18 +173,21 @@ export const sendAndWaitForCustomTxSign = async (
     txSignMetadata,
   );
 
-  const res = await signResult;
+  const res = await sendResult;
 
   if (res.type === 'customSigner') {
     console.log('Custom tx sign result detected, skipping...');
     return res.payload;
   }
 
-  console.log('Sending tx...');
-  const tx = await hre.ethers.provider.sendTransaction(res.signedTx);
-  console.log('Sending tx...', tx.hash);
+  if (res.type === 'hardhatSigner') {
+    await res.tx.wait(confirmations);
+    return res.tx.hash;
+  }
 
-  await tx.wait(confirmations);
+  throw new Error('Unknown tx signer type');
+};
 
-  return tx.hash;
+export const toFunctionSelector = (signature: string) => {
+  return ethers.utils.id(signature).slice(0, 10);
 };

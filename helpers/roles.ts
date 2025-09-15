@@ -32,6 +32,22 @@ const prefixes: Record<MTokenName, string> = {
   TACmMEV: 'TAC_M_MEV',
   hbUSDC: 'HB_USDC',
   mFARM: 'M_FARM',
+  wVLP: 'W_VLP',
+  dnHYPE: 'DN_HYPE',
+  kmiUSD: 'KMI_USD',
+  msyrupUSD: 'M_SYRUP_USD',
+  msyrupUSDp: 'M_SYRUP_USDP',
+  dnPUMP: 'DN_PUMP',
+  zeroGUSDV: 'ZEROG_USDV',
+  zeroGETHV: 'ZEROG_ETHV',
+  zeroGBTCV: 'ZEROG_BTCV',
+  JIV: 'JIV',
+  mRE7BTC: 'M_RE7BTC',
+  kitUSD: 'KIT_USD',
+  kitHYPE: 'KIT_HYPE',
+  kitBTC: 'KIT_BTC',
+  dnFART: 'DN_FART',
+  mXRP: 'M_XRP',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {

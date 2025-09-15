@@ -9,6 +9,8 @@ import {
   PaymentTokenNameEnum,
 } from '../config';
 
+export const DAY = 86400;
+
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -21,6 +23,15 @@ export const isPaymentTokenName = (name: string): name is PaymentTokenName => {
   return Object.values(PaymentTokenNameEnum).includes(
     name as PaymentTokenNameEnum,
   );
+};
+
+export const getChainOrThrow = (hre: HardhatRuntimeEnvironment) => {
+  const { chainId } = hre.network.config;
+  const { name } = hre.network;
+  if (!chainId || name === 'hardhat' || name === 'localhost') {
+    throw new Error('Please provide a valid --network argument');
+  }
+  return { chainId, networkName: name };
 };
 
 export const getMTokenOrThrow = (hre: HardhatRuntimeEnvironment) => {
@@ -37,6 +48,14 @@ export const getPaymentTokenOrThrow = (hre: HardhatRuntimeEnvironment) => {
     throw new Error('PaymentToken parameter not found');
   }
   return paymentToken;
+};
+
+export const getActionOrThrow = (hre: HardhatRuntimeEnvironment) => {
+  const action = hre.action;
+  if (!action) {
+    throw new Error('Action parameter not found');
+  }
+  return action;
 };
 
 export const getMTokenOrPaymentTokenOrThrow = (

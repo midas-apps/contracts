@@ -27,6 +27,22 @@ export enum MTokenNameEnum {
   liquidHYPE = 'liquidHYPE',
   hbUSDC = 'hbUSDC',
   mFARM = 'mFARM',
+  wVLP = 'wVLP',
+  dnHYPE = 'dnHYPE',
+  kmiUSD = 'kmiUSD',
+  msyrupUSD = 'msyrupUSD',
+  dnPUMP = 'dnPUMP',
+  zeroGUSDV = 'zeroGUSDV',
+  zeroGETHV = 'zeroGETHV',
+  zeroGBTCV = 'zeroGBTCV',
+  JIV = 'JIV',
+  mRE7BTC = 'mRE7BTC',
+  kitUSD = 'kitUSD',
+  kitHYPE = 'kitHYPE',
+  kitBTC = 'kitBTC',
+  dnFART = 'dnFART',
+  mXRP = 'mXRP',
+  msyrupUSDp = 'msyrupUSDp',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
@@ -67,6 +83,12 @@ export enum PaymentTokenNameEnum {
   wsthype = 'wsthype',
   khype = 'khype',
   whype = 'whype',
+  miusd = 'miusd',
+  syrupusdc = 'syrupusdc',
+  syrupusdt = 'syrupusdt',
+  behype = 'behype',
+  ubtc = 'ubtc',
+  xrp = 'xrp',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;

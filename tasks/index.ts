@@ -4,6 +4,7 @@ import { task } from 'hardhat/config';
 import path from 'path';
 
 import { ENV } from '../config';
+import { initializeLogger } from '../helpers/logger';
 import {
   etherscanVerify,
   etherscanVerifyImplementation,
@@ -21,16 +22,49 @@ task('runscript', 'Runs a user-defined script')
   .addPositionalParam('path', 'Path to the script')
   .addOptionalParam('mtoken', 'MToken')
   .addOptionalParam('ptoken', 'Payment Token')
+  .addOptionalParam('action', 'Timelock Action')
   .addOptionalParam('customSignerScript', 'Custom Signer Script')
+  .addOptionalParam('skipvalidation', 'Skip Validation', 'false')
+  .addOptionalParam('aggregatortype', 'Aggregator Type')
+  .addOptionalParam('logToFile', 'Log to file')
+  .addOptionalParam('logsFolderPath', 'Logs folder path')
   .setAction(async (taskArgs, hre) => {
     const mtoken = taskArgs.mtoken;
     const ptoken = taskArgs.ptoken;
+    const action = taskArgs.action;
     const customSignerScript =
       taskArgs.customSignerScript ?? ENV.CUSTOM_SIGNER_SCRIPT_PATH;
+    const logToFile = taskArgs.logToFile ?? ENV.LOG_TO_FILE;
+    const logsFolderPath =
+      (taskArgs.logsFolderPath as string | undefined) ??
+      ENV.LOGS_FOLDER_PATH ??
+      path.resolve(hre.config.paths.root, 'logs/');
+
     const scriptPath = taskArgs.path;
+    const skipValidation = taskArgs.skipvalidation;
+
+    initializeLogger(hre);
+
+    hre.skipValidation = (skipValidation ?? 'false') === 'true';
+    hre.aggregatorType = taskArgs.aggregatortype;
+
+    if (
+      hre.aggregatorType &&
+      !['numerator', 'denominator'].includes(hre.aggregatorType)
+    ) {
+      throw new Error('Invalid aggregator type parameter');
+    }
 
     const { deployer } = await hre.getNamedAccounts();
     const deployerSigner = await hre.ethers.getSigner(deployer);
+
+    hre.action = action;
+
+    hre.logger = {
+      logToFile,
+      logsFolderPath,
+      executionLogContext: `${action}-${new Date().toISOString()}`,
+    };
 
     if (mtoken) {
       if (!isMTokenName(mtoken)) {
@@ -49,21 +83,50 @@ task('runscript', 'Runs a user-defined script')
 
     if (!customSignerScript) {
       hre.customSigner = {
-        signTransaction: async (transaction) => {
+        getWalletAddress: async () => {
+          return deployer;
+        },
+        createAddressBookContract: async (_) => {
+          throw new Error(
+            'createAddressBookContract is not available for hardhat signer',
+          );
+        },
+        sendTransaction: async (transaction) => {
+          const tx = await deployerSigner.sendTransaction({
+            ...transaction,
+          });
           return {
             type: 'hardhatSigner',
-            signedTx: await deployerSigner.signTransaction({
-              ...transaction,
-            }),
+            tx,
           };
         },
       };
     } else {
       const scriptPathResolved = path.resolve(customSignerScript);
-      const { signTransaction } = await import(scriptPathResolved);
+      const {
+        signTransaction,
+        createAddressBookContract,
+        getWalletAddressForAction,
+      } = await import(scriptPathResolved);
 
       hre.customSigner = {
-        signTransaction: async (transaction, txSignMetadata) => {
+        getWalletAddress: async (action, mtokenOverride) => {
+          return getWalletAddressForAction(
+            action,
+            mtokenOverride ?? hre.mtoken,
+          );
+        },
+        createAddressBookContract: async (data) => {
+          return {
+            payload: await createAddressBookContract({
+              ...data,
+              chainId: hre.network.config.chainId,
+              mToken: mtoken,
+            }),
+          };
+        },
+
+        sendTransaction: async (transaction, txSignMetadata) => {
           return {
             type: 'customSigner',
             payload: await signTransaction(transaction, {

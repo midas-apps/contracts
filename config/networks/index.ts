@@ -30,6 +30,8 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   tacTestnet: 'https://turin.rpc.tac.build',
   hyperevm: 'https://rpc.hyperliquid.xyz/evm',
   katana: `https://rpc-katana.t.conduit.xyz/${CONDUIT_API_KEY}`,
+  tac: 'https://rpc.tac.build',
+  xrplevm: 'https://rpc.xrplevm.org',
 };
 
 export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
@@ -46,6 +48,8 @@ export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
   tacTestnet: undefined,
   hyperevm: undefined,
   katana: undefined,
+  tac: undefined,
+  xrplevm: undefined,
 };
 
 export const chainIds: ConfigPerNetwork<number> = {
@@ -62,6 +66,8 @@ export const chainIds: ConfigPerNetwork<number> = {
   tacTestnet: 2390,
   hyperevm: 999,
   katana: 747474,
+  tac: 239,
+  xrplevm: 1440000,
 };
 
 export const mnemonics: ConfigPerNetwork<string | undefined> = {
@@ -78,6 +84,8 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   tacTestnet: MNEMONIC_DEV,
   hyperevm: MNEMONIC_PROD,
   katana: MNEMONIC_PROD,
+  tac: MNEMONIC_PROD,
+  xrplevm: MNEMONIC_PROD,
 };
 
 export const gases: ConfigPerNetwork<number | undefined> = {
@@ -94,6 +102,8 @@ export const gases: ConfigPerNetwork<number | undefined> = {
   tacTestnet: undefined,
   hyperevm: undefined,
   katana: undefined,
+  tac: undefined,
+  xrplevm: undefined,
 };
 
 export const timeouts: ConfigPerNetwork<number | undefined> = {
@@ -110,6 +120,8 @@ export const timeouts: ConfigPerNetwork<number | undefined> = {
   tacTestnet: undefined,
   hyperevm: undefined,
   katana: undefined,
+  tac: undefined,
+  xrplevm: undefined,
 };
 
 export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
@@ -126,6 +138,8 @@ export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
   tacTestnet: undefined,
   hyperevm: undefined,
   katana: undefined,
+  tac: undefined,
+  xrplevm: undefined,
 };
 
 export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
@@ -142,6 +156,8 @@ export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
   tacTestnet: undefined,
   hyperevm: undefined,
   katana: undefined,
+  tac: undefined,
+  xrplevm: undefined,
 };
 
 export const getBaseNetworkConfig = (

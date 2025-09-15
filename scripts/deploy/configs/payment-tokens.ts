@@ -278,6 +278,20 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           description: 'tBTC/BTC',
         },
       },
+      syrupusdc: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: 1120779318388135788n,
+          maxAnswer: parseUnits('1.5', 18),
+        },
+      },
+      syrupusdt: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('1.091390', 6),
+          maxAnswer: parseUnits('1.250000', 6),
+        },
+      },
     },
     [chainIds.base]: {
       usdc: {
@@ -416,6 +430,29 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           maxAnswer: parseUnits('1.003', 8),
         },
       },
+      behype: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('1', 18),
+          maxAnswer: parseUnits('1.02', 18),
+        },
+      },
+      ubtc: {
+        dataFeed: {
+          numerator: {
+            healthyDiff: 6 * 3600,
+            minAnswer: 1,
+            maxAnswer: constants.MaxInt256,
+          },
+          denominator: {
+            healthyDiff: 6 * 3600,
+            minAnswer: 1,
+            maxAnswer: constants.MaxInt256,
+          },
+          minAnswer: parseUnits('0.987'),
+          maxAnswer: parseUnits('1.013'),
+        },
+      },
     },
     [chainIds.katana]: {
       usol: {
@@ -436,6 +473,44 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           healthyDiff: 24 * 60 * 60,
           minAnswer: parseUnits('1.218324664671500500', 18),
           maxAnswer: parseUnits('1.306653202860184320', 18),
+        },
+      },
+      miusd: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        customAggregator: {
+          description: 'miUSD/miUSD',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+    },
+    [chainIds.xrplevm]: {
+      xrp: {
+        customAggregator: {
+          description: 'XRP/XRP',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
         },
       },
     },
