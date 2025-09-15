@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
+import "./ChainlinkAdapterBase.sol";
+
 interface IStdReference {
     /// A structure returned whenever someone requests for standard reference data.
     struct ReferenceData {
@@ -25,7 +27,7 @@ interface IStdReference {
 /**
  * @title A port of the ChainlinkAggregatorV3 interface that supports Band`s protocol feed
  */
-contract BandStdChailinkAdapter {
+contract BandStdChailinkAdapter is ChainlinkAdapterBase {
     IStdReference public ref;
     string public base;
     string public quote;
@@ -40,68 +42,22 @@ contract BandStdChailinkAdapter {
         quote = _quote;
     }
 
-    function decimals() external pure returns (uint8) {
-        return 18;
+    function description() external pure override returns (string memory) {
+        return "A ChainlinkAggregatorV3 compatible adapter for Band protocol";
     }
 
-    function description() public pure returns (string memory) {
-        return "A Chainlink adapter for Band protocol";
-    }
-
-    function version() public pure returns (uint256) {
-        return 1;
-    }
-
-    function latestAnswer() public view virtual returns (int256) {
+    function latestAnswer() public view override returns (int256) {
         return int256(_getBandReferenceData().rate);
     }
 
-    function latestTimestamp() public view returns (uint256) {
+    function latestTimestamp() public view override returns (uint256) {
         return _getBandReferenceData().lastUpdatedBase;
-    }
-
-    function latestRound() public view returns (uint256) {
-        // use timestamp as the round id
-        return latestTimestamp();
-    }
-
-    function getAnswer(uint256) public view returns (int256) {
-        return latestAnswer();
-    }
-
-    function getTimestamp(uint256) external view returns (uint256) {
-        return latestTimestamp();
-    }
-
-    /*
-     * @notice This is exactly the same as `latestRoundData`, just including for parity with Chainlink
-     * Band doesn't store roundId on chain so there's no way to access old data by round id
-     */
-    function getRoundData(uint80 _roundId)
-        external
-        view
-        returns (
-            uint80 roundId,
-            int256 answer,
-            uint256 startedAt,
-            uint256 updatedAt,
-            uint80 answeredInRound
-        )
-    {
-        IStdReference.ReferenceData memory value = _getBandReferenceData();
-
-        return (
-            _roundId,
-            int256(value.rate),
-            value.lastUpdatedBase,
-            value.lastUpdatedBase,
-            _roundId
-        );
     }
 
     function latestRoundData()
         external
         view
+        override
         returns (
             uint80 roundId,
             int256 answer,
