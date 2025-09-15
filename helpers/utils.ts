@@ -160,8 +160,6 @@ export const verify = async (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ...constructorArguments: any[]
 ) => {
-  console.log('Arguments: ', constructorArguments);
-
   await hre.run('verify:verify', {
     address: contractAddress,
     constructorArguments,
