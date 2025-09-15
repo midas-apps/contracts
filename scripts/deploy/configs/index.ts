@@ -1,3 +1,4 @@
+import { acreBTCDeploymentConfig } from './acreBTC';
 import { dnFARTDeploymentConfig } from './dnFART';
 import { dnHYPEDeploymentConfig } from './dnHYPE';
 import { dnPUMPDeploymentConfig } from './dnPUMP';
@@ -91,4 +92,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   kitBTC: kitBTCDeploymentConfig,
   dnFART: dnFARTDeploymentConfig,
   mXRP: mXRPDeploymentConfig,
+  acreBTC: acreBTCDeploymentConfig,
 };

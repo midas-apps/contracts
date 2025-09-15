@@ -180,4 +180,8 @@ export const mTokensMetadata: Record<
     name: 'Midas XRP',
     symbol: 'mXRP',
   },
+  acreBTC: {
+    name: 'acreBTC',
+    symbol: 'acreBTC',
+  },
 };

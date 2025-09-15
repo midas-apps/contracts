@@ -23,7 +23,7 @@ import {
   acreWrapperRequestRedeemTest,
 } from '../../common/misc/acre.helpers';
 
-describe.only('AcreAdapter', () => {
+describe('AcreAdapter', () => {
   it('initialize', async () => {
     const fixture = await loadFixture(acreAdapterFixture);
 
