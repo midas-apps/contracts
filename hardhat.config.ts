@@ -55,6 +55,7 @@ const config: HardhatUserConfig = {
       tacTestnet: '0x12dE1B534B879b4e3a2f1D05a299eD448dC45FD3',
       tac: '0x12dE1B534B879b4e3a2f1D05a299eD448dC45FD3',
       xrplevm: '0xea4308904131c51f8380c4a21c74cd629d07893c',
+      zerog: '0xf975786717f57e20bf4d69faf88e795a94f7808d',
     },
   },
   verify: {
@@ -84,6 +85,7 @@ const config: HardhatUserConfig = {
     katana: getNetworkConfig('katana'),
     xrplevm: getNetworkConfig('xrplevm'),
     tac: getNetworkConfig('tac'),
+    zerog: getNetworkConfig('zerog'),
   },
   gasReporter: {
     enabled: REPORT_GAS,
@@ -174,6 +176,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: 'https://explorer.tac.build/api',
           browserURL: 'https://explorer.tac.build',
+        },
+      },
+      {
+        chainId: chainIds.zerog,
+        network: 'zerog',
+        urls: {
+          apiURL: 'https://chainscan.0g.ai/open/api',
+          browserURL: 'https://chainscan.0g.ai',
         },
       },
     ],

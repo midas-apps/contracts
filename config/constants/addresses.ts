@@ -867,6 +867,17 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVault: '0xE14Dbe39D750e24729df95e5F7c93b0E37C65004',
     },
   },
+  zerog: {
+    accessControl: '0x4512b664E798376eBC1CCAaC9Abb9bf2a899dCDb',
+    dataFeeds: {},
+    mEDGE: {
+      token: '0xA1027783fC183A150126b094037A5Eb2F5dB30BA',
+      customFeed: '0xC0a696cB0B56f6Eb20Ba7629B54356B0DF245447',
+      dataFeed: '0xcbf46Aa4b5bAe5850038D9dF4661a58e85CEDC7e',
+      depositVault: '0x72a93168AE79F269DeB2b1892F2AFd7eaa800271',
+      redemptionVaultSwapper: '0x9dae503014edc48A4d8FE789f22c70Ae650eb79B',
+    },
+  },
   tac: {
     accessControl: '0x2365D68d462e9a5660a3208f817519334a706A45',
     mEDGE: {
