@@ -16,12 +16,14 @@ export type Network =
   | 'tac'
   | 'hyperevm'
   | 'katana'
-  | 'xrplevm';
+  | 'xrplevm'
+  | 'zerog';
 export type RpcUrl =
   | `https://eth-${RpcNetwork}.g.alchemy.com/v2/${string}`
   | `https://${RpcNetwork}.infura.io/v3/${string}`
   | `http://localhost:${number}`
-  | `https://${string}.${string}`;
+  | `https://${string}.${string}`
+  | `https://evmrpc.${string}.ai`;
 
 export type ConfigPerNetwork<T> = Record<Network, T>;
 

@@ -32,6 +32,7 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   katana: `https://rpc-katana.t.conduit.xyz/${CONDUIT_API_KEY}`,
   tac: 'https://rpc.tac.build',
   xrplevm: 'https://rpc.xrplevm.org',
+  zerog: 'https://evmrpc.0g.ai',
 };
 
 export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
@@ -50,6 +51,7 @@ export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
   katana: undefined,
   tac: undefined,
   xrplevm: undefined,
+  zerog: undefined,
 };
 
 export const chainIds: ConfigPerNetwork<number> = {
@@ -68,6 +70,7 @@ export const chainIds: ConfigPerNetwork<number> = {
   katana: 747474,
   tac: 239,
   xrplevm: 1440000,
+  zerog: 16661,
 };
 
 export const mnemonics: ConfigPerNetwork<string | undefined> = {
@@ -86,6 +89,7 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   katana: MNEMONIC_PROD,
   tac: MNEMONIC_PROD,
   xrplevm: MNEMONIC_PROD,
+  zerog: MNEMONIC_PROD,
 };
 
 export const gases: ConfigPerNetwork<number | undefined> = {
@@ -104,6 +108,7 @@ export const gases: ConfigPerNetwork<number | undefined> = {
   katana: undefined,
   tac: undefined,
   xrplevm: undefined,
+  zerog: undefined,
 };
 
 export const timeouts: ConfigPerNetwork<number | undefined> = {
@@ -122,6 +127,7 @@ export const timeouts: ConfigPerNetwork<number | undefined> = {
   katana: undefined,
   tac: undefined,
   xrplevm: undefined,
+  zerog: undefined,
 };
 
 export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
@@ -140,6 +146,7 @@ export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
   katana: undefined,
   tac: undefined,
   xrplevm: undefined,
+  zerog: undefined,
 };
 
 export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
@@ -158,6 +165,7 @@ export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
   katana: undefined,
   tac: undefined,
   xrplevm: undefined,
+  zerog: undefined,
 };
 
 export const getBaseNetworkConfig = (
