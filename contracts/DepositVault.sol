@@ -338,7 +338,12 @@ contract DepositVault is ManageableVault, IDepositVault {
     {
         for (uint256 i = 0; i < requestIds.length; i++) {
             uint256 rate = mintRequests[requestIds[i]].tokenOutRate;
-            _approveRequest(requestIds[i], rate, true, false);
+            bool success = _approveRequest(requestIds[i], rate, true, false);
+
+            if (!success) {
+                continue;
+            }
+
             emit SafeApproveRequest(requestIds[i], rate);
         }
     }
