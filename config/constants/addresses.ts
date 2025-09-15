@@ -407,7 +407,6 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       token: '0xC344Db27Feba7F0a881A50f0f702a525a44f2368',
       customFeed: '0xD0eEd92DB46B099f8DEA366a7198b5Dd249Af61F',
       dataFeed: '0x7d5B8ab9C948fb11433e0eDdADD718dc5Cb040bb',
-      depositVault: '0xD91B5Bc279F2f3bE6d4C2dB9cfDC73DE4886d32e',
       redemptionVaultSwapper: '0x319a05E260acC2490768A726Ccfd341D4b3D5106',
     },
   },

@@ -4259,6 +4259,51 @@ describe('DepositVault', function () {
       );
     });
 
+    it('approve 2 requests when second one exceeds supply cap', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 100);
+      await approveBase18(owner, stableCoins.dai, depositVault, 100);
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+      await setMinAmountTest({ vault: depositVault, owner }, 0);
+      await setMaxSupplyCapTest({ depositVault, owner }, 50);
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        50,
+      );
+
+      await depositRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        50,
+      );
+
+      await safeBulkApproveRequestTest(
+        { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+        [{ id: 0 }, { id: 1, expectedToExecute: false }],
+        'request-rate',
+      );
+    });
+
     it('approve 1 request from vaut admin account', async () => {
       const {
         owner,
