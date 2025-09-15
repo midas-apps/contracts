@@ -25,7 +25,7 @@ export const getTokenContractFromTemplate = async (mToken: MTokenName) => {
   // SPDX-License-Identifier: MIT
   pragma solidity 0.8.9;
 
-  import "../mToken.sol";
+  import "../../mToken.sol";
 
   /**
    * @title ${contractNames.token}

@@ -506,7 +506,11 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
 
   const mToken = config.tokenContractName;
 
-  const folder = path.join(hre.config.paths.root, 'contracts', `${mToken}`);
+  const folder = path.join(
+    hre.config.paths.root,
+    'contracts/products',
+    `${mToken}`,
+  );
 
   await tasks([
     {

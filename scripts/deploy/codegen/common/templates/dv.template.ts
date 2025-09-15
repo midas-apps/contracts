@@ -18,7 +18,7 @@ export const getDvContractFromTemplate = async (mToken: MTokenName) => {
   // SPDX-License-Identifier: MIT
   pragma solidity 0.8.9;
 
-  import "../DepositVault.sol";
+  import "../../DepositVault.sol";
   import "./${contractNames.roles}.sol";
 
   /**
