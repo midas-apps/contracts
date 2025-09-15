@@ -9,18 +9,20 @@ contract PythStructs {
         int64 price;
         uint64 conf;
         int32 expo;
-        uint publishTime;
+        uint256 publishTime;
     }
 }
 
 interface IPyth {
-    function getPriceUnsafe(
-        bytes32 id
-    ) external view returns (PythStructs.Price memory price);
+    function getPriceUnsafe(bytes32 id)
+        external
+        view
+        returns (PythStructs.Price memory price);
 
-    function getUpdateFee(
-        bytes[] calldata updateData
-    ) external view returns (uint feeAmount);
+    function getUpdateFee(bytes[] calldata updateData)
+        external
+        view
+        returns (uint256 feeAmount);
 
     function updatePriceFeeds(bytes[] calldata updateData) external payable;
 }
