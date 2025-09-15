@@ -103,7 +103,7 @@ export const setRoundDataPaymentToken = async (
   }
 
   const addresses = getCurrentAddresses(hre);
-  const tokenAddresses = addresses?.dataFeeds?.[token];
+  const tokenAddresses = addresses?.paymentTokens?.[token];
 
   if (!tokenAddresses) {
     throw new Error('Token config is not found');
@@ -217,7 +217,7 @@ export const deployPaymentTokenDataFeed = async (
   aggregatorType?: 'numerator' | 'denominator',
 ) => {
   const addresses = getCurrentAddresses(hre);
-  const tokenAddresses = addresses?.dataFeeds?.[token];
+  const tokenAddresses = addresses?.paymentTokens?.[token];
 
   const networkConfig =
     paymentTokenDeploymentConfigs.networkConfigs[hre.network.config.chainId!]?.[

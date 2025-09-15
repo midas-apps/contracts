@@ -244,7 +244,7 @@ const foreachVaultPaymentToken = async (
     );
 
     for (const paymentToken of vault.paymentTokens) {
-      const tokenConfig = addresses?.dataFeeds?.[paymentToken.token];
+      const tokenConfig = addresses?.paymentTokens?.[paymentToken.token];
 
       if (!tokenConfig) {
         throw new Error('Token config is not found');
