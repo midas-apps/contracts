@@ -18,7 +18,7 @@ export const getRvSwapperContractFromTemplate = async (mToken: MTokenName) => {
   // SPDX-License-Identifier: MIT
   pragma solidity 0.8.9;
 
-  import "../RedemptionVaultWithSwapper.sol";
+  import "../../RedemptionVaultWithSwapper.sol";
   import "./${contractNames.roles}.sol";
 
   /**

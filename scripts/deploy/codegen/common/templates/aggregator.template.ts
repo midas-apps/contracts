@@ -24,7 +24,7 @@ export const getCustomAggregatorContractFromTemplate = async (
   // SPDX-License-Identifier: MIT
   pragma solidity 0.8.9;
 
-  import "../feeds/CustomAggregatorV3CompatibleFeed.sol";
+  import "../../feeds/CustomAggregatorV3CompatibleFeed.sol";
   import "./${contractNames.roles}.sol";
 
   /**

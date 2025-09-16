@@ -19,7 +19,7 @@ export const getRvContractFromTemplate = async (mToken: MTokenName) => {
   // SPDX-License-Identifier: MIT
   pragma solidity 0.8.9;
 
-  import "../RedemptionVault.sol";
+  import "../../RedemptionVault.sol";
   import "./${contractNames.roles}.sol";
 
   /**
