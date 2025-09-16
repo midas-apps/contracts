@@ -25,11 +25,11 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const addresses = getCurrentAddresses(hre);
 
-  if (!addresses?.dataFeeds) {
+  if (!addresses?.paymentTokens) {
     throw new Error('Data feeds not found');
   }
 
-  const pTokenAddresses = addresses.dataFeeds[pToken];
+  const pTokenAddresses = addresses.paymentTokens[pToken];
   const mTokenAddresses = addresses[mToken];
 
   if (!pTokenAddresses?.token) {

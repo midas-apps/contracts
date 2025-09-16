@@ -45,18 +45,16 @@ export type DataFeedAddresses =
   | DataFeedAddressesComposite;
 
 export type MidasAddresses = Partial<Record<MTokenName, TokenAddresses>> & {
-  // TODO: remove?
-  eUSD?: TokenAddresses;
   accessControl?: string;
   timelock?: string;
-  dataFeeds?: Partial<Record<PaymentTokenName, DataFeedAddresses>>;
+  paymentTokens?: Partial<Record<PaymentTokenName, DataFeedAddresses>>;
 };
 
 export const midasAddressesPerNetwork: ConfigPerNetwork<
   MidasAddresses | undefined
 > = {
   main: {
-    dataFeeds: {
+    paymentTokens: {
       usdt: {
         aggregator: '0x3E7d1eAB13ad0104d2750B8863b489D65364e32D',
         token: '0xdac17f958d2ee523a2206206994597c13d831ec7',
@@ -413,7 +411,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
-    dataFeeds: {
+    paymentTokens: {
       usdc: {
         aggregator: '0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3',
         dataFeed: '0xf1fE2d3Ea52773BBA5FB13816B46C2A8dbce59ED',
@@ -457,7 +455,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
   },
   base: {
-    dataFeeds: {
+    paymentTokens: {
       usdc: {
         token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
         aggregator: '0x7e860098F58bBFC8648a4311b374B1D669a2bc6B',
@@ -516,7 +514,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
   },
   oasis: {
-    dataFeeds: {
+    paymentTokens: {
       usdc: {
         token: '0x97eec1c29f745dC7c267F90292AA663d997a601D',
         aggregator: '0xa97522073dDfe39e31e606338a5Df433291DE238',
@@ -533,7 +531,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
   },
   plume: {
-    dataFeeds: {
+    paymentTokens: {
       pusd: {
         token: '0xdddD73F5Df1F0DC31373357beAC77545dC5A6f3F',
         aggregator: '0x6022a020Ca5c611304B9E97F37AEE0C38455081A',
@@ -585,7 +583,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     accessControl: '0xefED40D1eb1577d1073e9C4F277463486D39b084',
   },
   rootstock: {
-    dataFeeds: {
+    paymentTokens: {
       usdc: {
         aggregator: '0x83c6f7F61A55Fc7A1337AbD45733AD9c1c68076D',
         token: '0x74C9F2B00581F1b11Aa7Ff05aa9f608B7389de67',
@@ -614,7 +612,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
   },
   hyperevm: {
-    dataFeeds: {
+    paymentTokens: {
       usdt: {
         token: '0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb',
         aggregator: '0x5e21f6530f656A38caE4F55500944753F662D184',
@@ -766,7 +764,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   katana: {
     accessControl: '0x980f57b62060824799F23f87d6FA321653b6f069',
     timelock: '0x8d0074e92A97b2645F94E4711b08275c15998186',
-    dataFeeds: {
+    paymentTokens: {
       usol: {
         token: '0x9B8Df6E244526ab5F6e6400d331DB28C8fdDdb55',
         aggregator: '0xA9cBAa1ae3525d1F4164780903A7c771B13468ee',
@@ -800,7 +798,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   xrplevm: {
     accessControl: '0x831150f2A1283880C3B271f1fBaBFa6aBf3F4cAE',
-    dataFeeds: {
+    paymentTokens: {
       xrp: {
         token: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
         aggregator: '0xd2BD1Ee9535396e010007c1e61c918a11cD74D62',
@@ -817,7 +815,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   etherlink: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
-    dataFeeds: {
+    paymentTokens: {
       usdc: {
         token: '0x796Ea11Fa2dD751eD01b53C372fFDB4AAa8f00F9',
         aggregator: '0x4F9A119FbE04F89A0491F7c983B9363ED42b187b',
@@ -885,7 +883,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
   },
   sepolia: {
-    dataFeeds: {
+    paymentTokens: {
       usdc: {
         dataFeed: '0x0e0eb6cdad90174f1Db606EC186ddD0B5eD80847',
         aggregator: '0x7811C1Bf5db28630F303267Cc613797EB9A81188',
@@ -1044,7 +1042,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   tacTestnet: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
-    dataFeeds: {
+    paymentTokens: {
       usdt: {
         token: '0x35e1BAF9Edb192536E68d0B5c1214a7DA21e0F32',
         aggregator: '0x8A880Cd417E6782B2d764e54D2e929dbD6f92373',
