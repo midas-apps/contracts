@@ -66,6 +66,23 @@ export const acreBTCDeploymentConfig: DeploymentConfig = {
         setRoundData: {
           data: parseUnits('1', 8),
         },
+        pauseFunctions: {
+          redemptionVaultSwapper: [
+            'redeemInstant',
+            'redeemInstantWithCustomRecipient',
+          ],
+          depositVault: ['depositRequest', 'depositRequestWithCustomRecipient'],
+        },
+        addFeeWaived: [
+          {
+            fromVault: { mToken: 'acreBTC', type: 'depositVault' },
+            toWaive: ['0x6A6092d9c47A7E4C085f2ED9FD4a376124587Ae0'],
+          },
+          {
+            fromVault: { mToken: 'acreBTC', type: 'redemptionVaultSwapper' },
+            toWaive: ['0x6A6092d9c47A7E4C085f2ED9FD4a376124587Ae0'],
+          },
+        ],
       },
     },
   },
