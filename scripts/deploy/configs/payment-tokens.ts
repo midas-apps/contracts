@@ -1,3 +1,4 @@
+import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
@@ -491,6 +492,55 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           setRoundData: {
             data: parseUnits('1', 8),
           },
+        },
+      },
+      vbusdc: {
+        customAggregator: {
+          description: 'USD/USD',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          numerator: {
+            minAnswer: parseUnits('0.99999', 8),
+            maxAnswer: parseUnits('1', 8),
+            healthyDiff: constants.MaxUint256,
+          },
+          denominator: {
+            minAnswer: parseUnits('0.999', 8),
+            maxAnswer: parseUnits('1.42857142', 8),
+            healthyDiff: days(1),
+          },
+          minAnswer: parseUnits('0.7', 18),
+          maxAnswer: parseUnits('1.001', 18),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+      vbusdt: {
+        customAggregator: {
+          description: 'USD/USD',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          numerator: {
+            minAnswer: parseUnits('0.99999', 8),
+            maxAnswer: parseUnits('1', 8),
+            healthyDiff: constants.MaxUint256,
+          },
+          denominator: {
+            minAnswer: parseUnits('0.999', 8),
+            maxAnswer: parseUnits('1.42857142', 8),
+            healthyDiff: days(1),
+          },
+          minAnswer: parseUnits('0.7', 18),
+          maxAnswer: parseUnits('1.001', 18),
         },
       },
     },
