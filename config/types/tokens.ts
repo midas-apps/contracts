@@ -90,6 +90,8 @@ export enum PaymentTokenNameEnum {
   behype = 'behype',
   ubtc = 'ubtc',
   xrp = 'xrp',
+  vbusdc = 'vbusdc',
+  vbusdt = 'vbusdt',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;

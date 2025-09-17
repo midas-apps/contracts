@@ -780,6 +780,30 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x9Fe23AB494472f18A25f4b731704018bB90e1918',
         dataFeed: '0x45b826605EAF8A2501Bcf54572c58f82DB7A349f',
       },
+      vbusdc: {
+        token: '0x203A662b0BD271A6ed5a60EdFbd04bFce608FD36',
+        numerator: {
+          aggregator: '0xe93083e814E1aC642F9191a0F3eCd6295F861064',
+          dataFeed: '0xB06A034DB4305eC3Ce3553d84E28a670E90222c8',
+        },
+        denominator: {
+          aggregator: '0xC1c112D0AEC13a5A7D1D2FE7caE842c498F9Bff9',
+          dataFeed: '0x3DA895C21b10AbEc2A7Df828E0dFc64c046d887c',
+        },
+        dataFeed: '0x8e73B6994cC079e37A4d90a7B585d53Df334D40B',
+      },
+      vbusdt: {
+        token: '0x2DCa96907fde857dd3D816880A0df407eeB2D2F2',
+        numerator: {
+          aggregator: '0xe93083e814E1aC642F9191a0F3eCd6295F861064',
+          dataFeed: '0xB06A034DB4305eC3Ce3553d84E28a670E90222c8',
+        },
+        denominator: {
+          aggregator: '0xC1c112D0AEC13a5A7D1D2FE7caE842c498F9Bff9',
+          dataFeed: '0x3DA895C21b10AbEc2A7Df828E0dFc64c046d887c',
+        },
+        dataFeed: '0x8e73B6994cC079e37A4d90a7B585d53Df334D40B',
+      },
     },
     mRE7SOL: {
       token: '0xC6135d59F8D10c9C035963ce9037B3635170D716',
