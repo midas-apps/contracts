@@ -204,5 +204,14 @@ export const mRE7DeploymentConfig: DeploymentConfig = {
         },
       },
     },
+    [chainIds.zerog]: {
+      postDeploy: {
+        grantRoles: {
+          tokenManagerAddress: '0xb755FF07FD80B38265Ae35639568CfCdc874f21D',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0x07BA5A7814FC2C6696EbeD0238Bb74B5b77eb7Eb',
+        },
+      },
+    },
   },
 };
