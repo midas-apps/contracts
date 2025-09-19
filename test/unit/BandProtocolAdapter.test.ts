@@ -45,14 +45,6 @@ describe('BandProtocolAdapter', function () {
       expect(await bandProtocolAdapter.quoteSymbol()).eq(quoteSymbol);
     });
 
-    it('should set aggregator from DataFeed', async () => {
-      const { bandProtocolAdapter, mockedAggregator } = fixture;
-
-      expect(await bandProtocolAdapter.aggregator()).eq(
-        mockedAggregator.address,
-      );
-    });
-
     it('should fail: zero address for dataFeed', async () => {
       const { owner } = fixture;
 
@@ -290,105 +282,6 @@ describe('BandProtocolAdapter', function () {
     });
   });
 
-  describe('getReferenceDataWithMetadata()', () => {
-    it('should return reference data with aggregator metadata', async () => {
-      const { bandProtocolAdapter, mockedAggregator } = fixture;
-
-      const price = '5.25';
-      await setRoundData({ mockedAggregator }, +price);
-
-      const { data, decimals, description } =
-        await bandProtocolAdapter.getReferenceDataWithMetadata();
-
-      expect(data.rate).eq(parseUnits(price));
-      expect(data.lastUpdatedBase).to.be.gt(0);
-      expect(data.lastUpdatedQuote).eq(data.lastUpdatedBase);
-      expect(decimals).eq(await mockedAggregator.decimals());
-      expect(description).to.be.a('string');
-    });
-
-    it('should match regular getReferenceData output', async () => {
-      const { bandProtocolAdapter, mockedAggregator } = fixture;
-
-      await setRoundData({ mockedAggregator }, 6.5);
-
-      const regularData = await bandProtocolAdapter.getReferenceData(
-        baseSymbol,
-        quoteSymbol,
-      );
-      const { data: metadataData } =
-        await bandProtocolAdapter.getReferenceDataWithMetadata();
-
-      expect(metadataData.rate).eq(regularData.rate);
-      expect(metadataData.lastUpdatedBase).eq(regularData.lastUpdatedBase);
-      expect(metadataData.lastUpdatedQuote).eq(regularData.lastUpdatedQuote);
-    });
-
-    it('should return correct aggregator metadata', async () => {
-      const { bandProtocolAdapter, mockedAggregator } = fixture;
-
-      const { decimals, description } =
-        await bandProtocolAdapter.getReferenceDataWithMetadata();
-
-      expect(decimals).eq(await mockedAggregator.decimals());
-      expect(description).eq(await mockedAggregator.description());
-    });
-  });
-
-  describe('getLatestAggregatorRoundData()', () => {
-    it('should return raw aggregator round data', async () => {
-      const { bandProtocolAdapter, mockedAggregator } = fixture;
-
-      const price = 7.5;
-      await setRoundData({ mockedAggregator }, price);
-
-      const [roundId, answer, startedAt, updatedAt, answeredInRound] =
-        await bandProtocolAdapter.getLatestAggregatorRoundData();
-
-      const expectedAnswer = parseUnits(
-        price.toString(),
-        await mockedAggregator.decimals(),
-      );
-
-      expect(answer).eq(expectedAnswer);
-      expect(roundId).to.be.gt(0);
-      expect(updatedAt).to.be.gt(0);
-      expect(answeredInRound).to.be.gte(0);
-      expect(startedAt).to.be.gte(0);
-    });
-
-    it('should match underlying aggregator data', async () => {
-      const { bandProtocolAdapter, mockedAggregator } = fixture;
-
-      await setRoundData({ mockedAggregator }, 8.25);
-
-      const adapterData =
-        await bandProtocolAdapter.getLatestAggregatorRoundData();
-      const aggregatorData = await mockedAggregator.latestRoundData();
-
-      expect(adapterData[0]).eq(aggregatorData[0]); // roundId
-      expect(adapterData[1]).eq(aggregatorData[1]); // answer
-      expect(adapterData[2]).eq(aggregatorData[2]); // startedAt
-      expect(adapterData[3]).eq(aggregatorData[3]); // updatedAt
-      expect(adapterData[4]).eq(aggregatorData[4]); // answeredInRound
-    });
-
-    it('should handle different round data scenarios', async () => {
-      const { bandProtocolAdapter, mockedAggregator } = fixture;
-
-      // Test with different prices to ensure round data updates
-      await setRoundData({ mockedAggregator }, 1.0);
-      const [roundId1] =
-        await bandProtocolAdapter.getLatestAggregatorRoundData();
-
-      await setRoundData({ mockedAggregator }, 2.0);
-      const [roundId2] =
-        await bandProtocolAdapter.getLatestAggregatorRoundData();
-
-      expect(roundId2).to.be.gt(roundId1);
-    });
-  });
-
   describe('Case sensitivity', () => {
     it('should be case-sensitive for symbols', async () => {
       const { bandProtocolAdapter } = fixture;
@@ -508,38 +401,6 @@ describe('BandProtocolAdapter', function () {
   });
 
   describe('Data consistency', () => {
-    it('should maintain data consistency across all methods', async () => {
-      const { bandProtocolAdapter, mockedAggregator } = fixture;
-
-      const price = '9.99';
-      await setRoundData({ mockedAggregator }, +price);
-
-      const singleData = await bandProtocolAdapter.getReferenceData(
-        baseSymbol,
-        quoteSymbol,
-      );
-      const bulkData = await bandProtocolAdapter.getReferenceDataBulk(
-        [baseSymbol],
-        [quoteSymbol],
-      );
-      const { data: metadataData } =
-        await bandProtocolAdapter.getReferenceDataWithMetadata();
-
-      // All methods should return the same rate
-      expect(singleData.rate).eq(bulkData[0].rate);
-      expect(singleData.rate).eq(metadataData.rate);
-      expect(bulkData[0].rate).eq(metadataData.rate);
-
-      // All methods should return the same timestamps
-      expect(singleData.lastUpdatedBase).eq(bulkData[0].lastUpdatedBase);
-      expect(singleData.lastUpdatedBase).eq(metadataData.lastUpdatedBase);
-      expect(bulkData[0].lastUpdatedBase).eq(metadataData.lastUpdatedBase);
-
-      expect(singleData.lastUpdatedQuote).eq(bulkData[0].lastUpdatedQuote);
-      expect(singleData.lastUpdatedQuote).eq(metadataData.lastUpdatedQuote);
-      expect(bulkData[0].lastUpdatedQuote).eq(metadataData.lastUpdatedQuote);
-    });
-
     it('should handle timestamp consistency', async () => {
       const { bandProtocolAdapter, mockedAggregator } = fixture;
 

@@ -38,11 +38,6 @@ contract BandProtocolAdapter is IStdReference {
     IDataFeed public immutable dataFeed;
 
     /**
-     * @notice Chainlink aggregator for raw price data and timestamps
-     */
-    AggregatorV3Interface public immutable aggregator;
-
-    /**
      * @notice Base token symbol (e.g., "mXRP", "mBTC", "mTBILL")
      */
     string public baseSymbol;
@@ -78,7 +73,6 @@ contract BandProtocolAdapter is IStdReference {
         require(bytes(_quoteSymbol).length > 0, "BPA: empty quote");
 
         dataFeed = IDataFeed(_dataFeed);
-        aggregator = AggregatorV3Interface(DataFeed(_dataFeed).aggregator());
 
         baseSymbol = _baseSymbol;
         quoteSymbol = _quoteSymbol;
@@ -117,8 +111,10 @@ contract BandProtocolAdapter is IStdReference {
         string[] memory _bases,
         string[] memory _quotes
     ) external view override returns (ReferenceData[] memory) {
-        require(_bases.length == 1, "BPA: only single pair supported");
-        require(_quotes.length == 1, "BPA: only single pair supported");
+        require(
+            _bases.length == 1 && _quotes.length == 1,
+            "BPA: only single pair supported"
+        );
 
         _validatePair(_bases[0], _quotes[0]);
 
@@ -126,50 +122,6 @@ contract BandProtocolAdapter is IStdReference {
         results[0] = _fetchReferenceData();
 
         return results;
-    }
-
-    /**
-     * @notice Get the current reference data with additional metadata
-     * @dev Convenience function that returns the standard reference data plus aggregator metadata
-     * @return data The current reference data
-     * @return decimals The decimals of the aggregator
-     * @return description The description from the aggregator
-     */
-    function getReferenceDataWithMetadata()
-        external
-        view
-        returns (
-            ReferenceData memory data,
-            uint8 decimals,
-            string memory description
-        )
-    {
-        data = _fetchReferenceData();
-        decimals = aggregator.decimals();
-        description = aggregator.description();
-    }
-
-    /**
-     * @notice Get the latest round data directly from the aggregator
-     * @dev Useful for debugging and accessing raw aggregator data
-     * @return roundId The round ID
-     * @return answer The price answer
-     * @return startedAt Timestamp when the round started
-     * @return updatedAt Timestamp when the round was updated
-     * @return answeredInRound The round ID in which the answer was computed
-     */
-    function getLatestAggregatorRoundData()
-        external
-        view
-        returns (
-            uint80 roundId,
-            int256 answer,
-            uint256 startedAt,
-            uint256 updatedAt,
-            uint80 answeredInRound
-        )
-    {
-        return aggregator.latestRoundData();
     }
 
     /**
@@ -182,6 +134,9 @@ contract BandProtocolAdapter is IStdReference {
         uint256 rate = dataFeed.getDataInBase18();
 
         // Get timestamp from the underlying aggregator
+        AggregatorV3Interface aggregator = AggregatorV3Interface(
+            DataFeed(address(dataFeed)).aggregator()
+        );
         (, , , uint256 updatedAt, ) = aggregator.latestRoundData();
 
         // Use the same timestamp for both base and quote
