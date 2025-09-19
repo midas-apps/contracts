@@ -899,6 +899,12 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x72a93168AE79F269DeB2b1892F2AFd7eaa800271',
       redemptionVaultSwapper: '0x9dae503014edc48A4d8FE789f22c70Ae650eb79B',
     },
+    mMEV: {
+      token: '0xF465D564C03153AFBa6b973a6f0a6732a0b8015c',
+    },
+    mRE7: {
+      token: '0xb1C5aF66208f0ed11bD794561d3e9C6E19984C1e',
+    },
   },
   tac: {
     accessControl: '0x2365D68d462e9a5660a3208f817519334a706A45',

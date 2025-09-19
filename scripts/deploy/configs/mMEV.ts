@@ -195,5 +195,14 @@ export const mMEVDeploymentConfig: DeploymentConfig = {
         },
       },
     },
+    [chainIds.zerog]: {
+      postDeploy: {
+        grantRoles: {
+          tokenManagerAddress: '0x2fACac0cdA0225D7aCcA792821164b398C26bBd2',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0x1C9B567398875969e6C9A69D36244c6d0393E349',
+        },
+      },
+    },
   },
 };
