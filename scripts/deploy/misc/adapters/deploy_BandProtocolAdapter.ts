@@ -26,7 +26,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const adapter = await factory.deploy(
     addresses.mXRP.dataFeed, // dataFeed address
     'mXRP', // base symbol
-    'USD', // quote symbol
+    'XRP', // quote symbol
   );
 
   await adapter.deployed();
@@ -35,7 +35,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     address: adapter.address,
     dataFeed: addresses.mXRP.dataFeed,
     baseSymbol: 'mXRP',
-    quoteSymbol: 'USD',
+    quoteSymbol: 'XRP',
   });
 };
 
