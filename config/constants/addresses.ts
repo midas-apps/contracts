@@ -818,6 +818,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   xrplevm: {
     accessControl: '0x831150f2A1283880C3B271f1fBaBFa6aBf3F4cAE',
+    timelock: '0x737FD344751590aD7fC89B75b4144AFFb1D46DB0',
     paymentTokens: {
       xrp: {
         token: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
