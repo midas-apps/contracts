@@ -891,7 +891,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   zerog: {
     accessControl: '0x4512b664E798376eBC1CCAaC9Abb9bf2a899dCDb',
-    dataFeeds: {},
+    paymentTokens: {
+      usdc: {
+        token: '0x1f3AA82227281cA364bFb3d253B0f1af1Da6473E',
+        aggregator: '0x6f57Ff507735BcD3d86af83aF77ABD10395b2904',
+        dataFeed: '0x7a65EeEe73823F6E5D75b0B0245c8909D7bD8ae0',
+      },
+    },
     mEDGE: {
       token: '0xA1027783fC183A150126b094037A5Eb2F5dB30BA',
       customFeed: '0xC0a696cB0B56f6Eb20Ba7629B54356B0DF245447',
