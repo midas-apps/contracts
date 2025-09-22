@@ -27,23 +27,24 @@ interface IStdReference {
 }
 
 /**
- * @title BandProtocolAdapter
+ * @title DataFeedToBandStdAdapter
  * @author RedDuck Software
- * @notice Wraps DataFeed to provide Band Protocol's IStdReference interface
+ * @notice Converts DataFeed to Band Protocol's IStdReference interface
+ * @dev Base adapter that wraps a DataFeed to provide Band Protocol standard reference data
  */
-contract BandProtocolAdapter is IStdReference {
+contract DataFeedToBandStdAdapter is IStdReference {
     /**
      * @notice DataFeed contract providing validated price data
      */
     IDataFeed public immutable dataFeed;
 
     /**
-     * @notice Base token symbol (e.g., "mXRP", "mBTC", "mTBILL")
+     * @notice Base token symbol
      */
     string public baseSymbol;
 
     /**
-     * @notice Quote currency symbol (e.g., "USD", "XRP", "BTC")
+     * @notice Quote currency symbol
      */
     string public quoteSymbol;
 
@@ -60,17 +61,17 @@ contract BandProtocolAdapter is IStdReference {
     /**
      * @notice Constructor initializes the adapter with a DataFeed contract
      * @param _dataFeed Address of the DataFeed contract providing price data
-     * @param _baseSymbol Symbol of the base token (e.g., "mXRP", "mBTC")
-     * @param _quoteSymbol Symbol of the quote currency (e.g., "USD", "EUR")
+     * @param _baseSymbol Symbol of the base token
+     * @param _quoteSymbol Symbol of the quote currency
      */
     constructor(
         address _dataFeed,
         string memory _baseSymbol,
         string memory _quoteSymbol
     ) {
-        require(_dataFeed != address(0), "BPA: invalid datafeed");
-        require(bytes(_baseSymbol).length > 0, "BPA: empty base");
-        require(bytes(_quoteSymbol).length > 0, "BPA: empty quote");
+        require(_dataFeed != address(0), "DFBSA: invalid datafeed");
+        require(bytes(_baseSymbol).length > 0, "DFBSA: empty base");
+        require(bytes(_quoteSymbol).length > 0, "DFBSA: empty quote");
 
         dataFeed = IDataFeed(_dataFeed);
 
@@ -113,7 +114,7 @@ contract BandProtocolAdapter is IStdReference {
     ) external view override returns (ReferenceData[] memory) {
         require(
             _bases.length == 1 && _quotes.length == 1,
-            "BPA: only single pair supported"
+            "DFBSA: only single pair supported"
         );
 
         _validatePair(_bases[0], _quotes[0]);
@@ -126,27 +127,44 @@ contract BandProtocolAdapter is IStdReference {
 
     /**
      * @notice Internal function to fetch and format reference data
-     * @dev Fetches validated price from DataFeed and timestamp from aggregator
+     * @dev Fetches validated price from DataFeed and timestamp using virtual function
      * @return ReferenceData with current price and timestamps
      */
     function _fetchReferenceData() private view returns (ReferenceData memory) {
-        // Get price in base 18 from DataFeed (includes all validations)
         uint256 rate = dataFeed.getDataInBase18();
+        uint256 timestamp = _getTimestamp();
 
-        // Get timestamp from the underlying aggregator
-        AggregatorV3Interface aggregator = AggregatorV3Interface(
-            DataFeed(address(dataFeed)).aggregator()
-        );
-        (, , , uint256 updatedAt, ) = aggregator.latestRoundData();
-
-        // Use the same timestamp for both base and quote
-        // This represents when the price was last updated
         return
             ReferenceData({
                 rate: rate,
-                lastUpdatedBase: updatedAt,
-                lastUpdatedQuote: updatedAt
+                lastUpdatedBase: timestamp,
+                lastUpdatedQuote: timestamp
             });
+    }
+
+    /**
+     * @notice Gets the timestamp for the price data
+     * @dev Virtual function that can be overridden by child contracts
+     * @return timestamp The timestamp of the last price update
+     */
+    function _getTimestamp() internal view virtual returns (uint256 timestamp) {
+        timestamp = _getAggregatorTimestamp(dataFeed);
+    }
+
+    /**
+     * @notice Gets timestamp from a DataFeed via its aggregator
+     * @dev Assumes the feed is a DataFeed. Reverts if not.
+     * @param feed The data feed to get timestamp from
+     * @return timestamp The timestamp from the aggregator
+     */
+    function _getAggregatorTimestamp(IDataFeed feed)
+        internal
+        view
+        returns (uint256)
+    {
+        AggregatorV3Interface aggregator = DataFeed(address(feed)).aggregator();
+        (, , , uint256 updatedAt, ) = aggregator.latestRoundData();
+        return updatedAt;
     }
 
     /**
@@ -162,7 +180,7 @@ contract BandProtocolAdapter is IStdReference {
         require(
             keccak256(abi.encodePacked(_base)) == _baseSymbolHash &&
                 keccak256(abi.encodePacked(_quote)) == _quoteSymbolHash,
-            "BPA: unsupported pair"
+            "DFBSA: unsupported pair"
         );
     }
 }

@@ -17,7 +17,6 @@ export type TokenAddresses = {
   token?: string;
   depositVault?: string;
   depositVaultUstb?: string;
-  bandProtocolAdapter?: string;
 } & Partial<Record<RedemptionVaultType, string>>;
 
 export type VaultType = RedemptionVaultType | DepositVaultType;
@@ -836,7 +835,6 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xed4ff96DAF37a0A44356E81A3cc22908B3f06B40',
       depositVault: '0x30FBc82A72CA674AA250cd6c27BCca1Fe602f1Bb',
       redemptionVaultSwapper: '0xDaC1b058cE42b67Ba33DbfDBA972d76C83C085D6',
-      bandProtocolAdapter: '0x0648745DED98754E1B40eFBBb66D327FFa220Dd4',
     },
   },
   etherlink: {
