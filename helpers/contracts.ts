@@ -10,6 +10,7 @@ export type TokenContractNames = {
   rvUstb: string;
   dataFeed?: string;
   dataFeedComposite?: string;
+  dataFeedMultiply?: string;
   customAggregator?: string;
   customAggregatorGrowth?: string;
   token: string;
@@ -27,6 +28,7 @@ const vaultTypeToContractNameMap: Record<VaultType, string> = {
   redemptionVaultSwapper: 'rvSwapper',
   redemptionVaultUstb: 'rvUstb',
   depositVault: 'dv',
+  depositVaultUstb: 'dvUstb',
   redemptionVaultBuidl: 'rvBuidl',
 };
 
@@ -40,7 +42,7 @@ export const contractNameToVaultType = (
   contractName: string,
 ): VaultType | undefined => {
   return Object.entries(vaultTypeToContractNameMap).find(
-    ([_, value]) => value === contractName,
+    ([, value]) => value === contractName,
   )?.[0] as VaultType | undefined;
 };
 
@@ -107,6 +109,7 @@ export const getCommonContractNames = (): CommonContractNames => {
     customAggregatorDiscounted: 'CustomAggregatorV3CompatibleFeedDiscounted',
     roles: 'MidasAccessControlRoles',
     dataFeedComposite: 'CompositeDataFeed',
+    dataFeedMultiply: 'CompositeDataFeedMultiply',
   };
 };
 
