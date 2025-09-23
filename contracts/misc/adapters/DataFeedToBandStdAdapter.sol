@@ -114,7 +114,7 @@ contract DataFeedToBandStdAdapter is IStdReference {
     ) external view override returns (ReferenceData[] memory) {
         require(
             _bases.length == 1 && _quotes.length == 1,
-            "DFBSA: only single pair supported"
+            "DFBSA: single pair only"
         );
 
         _validatePair(_bases[0], _quotes[0]);
