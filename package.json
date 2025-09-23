@@ -107,7 +107,7 @@
     "hardhat-gas-reporter": "1.0.9",
     "husky": "8.0.1",
     "npm-run-all2": "6.2.0",
-    "prettier": "2.7.1",
+    "prettier": "2.8.8",
     "prettier-plugin-solidity": "1.0.0-beta.24",
     "solhint": "3.3.7",
     "solidity-coverage": "0.8.16",
