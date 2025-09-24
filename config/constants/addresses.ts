@@ -403,6 +403,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x52e808bD3496c69c705028a258aEe0a6E1a5b35D',
       redemptionVaultSwapper: '0x319a05E260acC2490768A726Ccfd341D4b3D5106',
     },
+    mWildUSD: {
+      token: '0x605A84861EE603e385b01B9048BEa6A86118DB0a',
+      customFeed: '0xb70eCe4F1a87c419E1082691Bb9a49eb7CaAe6a6',
+      dataFeed: '0xe604a420388Fbf2693F2250db0DC84488EE99aA1',
+      depositVault: '0xd252EB9d448dB3A46d9c1476A7eb45E5c0CED7C2',
+      redemptionVaultSwapper: '0x2f98A13635F6CEc0cc45bC1e43969C71d68091d6',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',

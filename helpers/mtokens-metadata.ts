@@ -184,4 +184,8 @@ export const mTokensMetadata: Record<
     name: 'acreBTC',
     symbol: 'acreBTC',
   },
+  mWildUSD: {
+    name: 'mWildUSD',
+    symbol: 'mWildUSD',
+  },
 };
