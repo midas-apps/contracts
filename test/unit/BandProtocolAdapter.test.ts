@@ -245,7 +245,7 @@ describe('DataFeedToBandStdAdapter', function () {
           [baseSymbol, alternativeBase],
           [quoteSymbol, alternativeQuote],
         ),
-      ).revertedWith('DFBSA: only single pair supported');
+      ).revertedWith('DFBSA: single pair only');
     });
 
     it('should fail: mismatched array lengths', async () => {
@@ -256,7 +256,7 @@ describe('DataFeedToBandStdAdapter', function () {
           [baseSymbol, alternativeBase],
           [quoteSymbol],
         ),
-      ).revertedWith('DFBSA: only single pair supported');
+      ).revertedWith('DFBSA: single pair only');
     });
 
     it('should fail: empty arrays', async () => {
@@ -396,14 +396,14 @@ describe('DataFeedToBandStdAdapter', function () {
           [baseSymbol, baseSymbol],
           [quoteSymbol, quoteSymbol],
         ),
-      ).revertedWith('DFBSA: only single pair supported');
+      ).revertedWith('DFBSA: single pair only');
 
       await expect(
         dataFeedToBandStdAdapter.getReferenceDataBulk(
           [baseSymbol],
           [quoteSymbol, quoteSymbol],
         ),
-      ).revertedWith('DFBSA: only single pair supported');
+      ).revertedWith('DFBSA: single pair only');
     });
   });
 
@@ -717,7 +717,7 @@ describe('CompositeDataFeedToBandStdAdapter', function () {
           [baseSymbol, alternativeBase],
           [quoteSymbol, alternativeQuote],
         ),
-      ).revertedWith('DFBSA: only single pair supported');
+      ).revertedWith('DFBSA: single pair only');
     });
 
     it('should fail: mismatched array lengths', async () => {
@@ -728,7 +728,7 @@ describe('CompositeDataFeedToBandStdAdapter', function () {
           [baseSymbol, alternativeBase],
           [quoteSymbol],
         ),
-      ).revertedWith('DFBSA: only single pair supported');
+      ).revertedWith('DFBSA: single pair only');
     });
 
     it('should fail: empty arrays', async () => {
@@ -1040,14 +1040,14 @@ describe('CompositeDataFeedToBandStdAdapter', function () {
           [baseSymbol, baseSymbol],
           [quoteSymbol, quoteSymbol],
         ),
-      ).revertedWith('DFBSA: only single pair supported');
+      ).revertedWith('DFBSA: single pair only');
 
       await expect(
         compositeDataFeedToBandStdAdapter.getReferenceDataBulk(
           [baseSymbol],
           [quoteSymbol, quoteSymbol],
         ),
-      ).revertedWith('DFBSA: only single pair supported');
+      ).revertedWith('DFBSA: single pair only');
     });
   });
 
