@@ -204,6 +204,28 @@ export const mEDGEDeploymentConfig: DeploymentConfig = {
         setRoundData: {
           data: parseUnits('1', 8),
         },
+        addPaymentTokens: {
+          vaults: [
+            {
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  allowance: parseUnits('1000000000', 18),
+                },
+              ],
+              type: 'depositVault',
+            },
+            {
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  allowance: parseUnits('1000000000', 18),
+                },
+              ],
+              type: 'redemptionVaultSwapper',
+            },
+          ],
+        },
       },
     },
   },

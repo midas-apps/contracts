@@ -49,6 +49,7 @@ const prefixes: Record<MTokenName, string> = {
   dnFART: 'DN_FART',
   mXRP: 'M_XRP',
   acreBTC: 'ACRE_BTC',
+  mWildUSD: 'M_WILD_USD',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {
