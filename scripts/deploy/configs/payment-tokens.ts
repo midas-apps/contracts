@@ -450,6 +450,7 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
             minAnswer: 1,
             maxAnswer: constants.MaxInt256,
           },
+          feedType: 'composite',
           minAnswer: parseUnits('0.987'),
           maxAnswer: parseUnits('1.013'),
         },
@@ -512,6 +513,7 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
             maxAnswer: parseUnits('1.42857142', 8),
             healthyDiff: days(1),
           },
+          feedType: 'composite',
           minAnswer: parseUnits('0.7', 18),
           maxAnswer: parseUnits('1.001', 18),
         },
@@ -539,6 +541,7 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
             maxAnswer: parseUnits('1.42857142', 8),
             healthyDiff: days(1),
           },
+          feedType: 'composite',
           minAnswer: parseUnits('0.7', 18),
           maxAnswer: parseUnits('1.001', 18),
         },
@@ -554,8 +557,8 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
         },
         dataFeed: {
           healthyDiff: constants.MaxUint256,
-          minAnswer: parseUnits('0.99999', 8),
-          maxAnswer: parseUnits('1', 8),
+          minAnswer: parseUnits('0.1', 18),
+          maxAnswer: parseUnits('1000', 18),
         },
         postDeploy: {
           setRoundData: {

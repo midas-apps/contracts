@@ -45,6 +45,7 @@ export type DeployDataFeedConfigRegular = {
 export type DeployDataFeedConfigComposite = {
   numerator: DeployDataFeedConfigRegular;
   denominator: DeployDataFeedConfigRegular;
+  feedType: 'composite' | 'multiply';
 } & DeployDataFeedConfigCommon;
 
 export type DeployDataFeedConfig =
@@ -206,7 +207,7 @@ const isCompositeDataFeedAddresses = (
 };
 
 const isCompositeDataFeedConfig = (
-  config: DeployDataFeedConfigRegular,
+  config: DeployDataFeedConfig,
 ): config is DeployDataFeedConfigComposite => {
   return 'numerator' in config || 'denominator' in config;
 };
@@ -225,25 +226,37 @@ export const deployPaymentTokenDataFeed = async (
     ]?.dataFeed;
 
   if (!networkConfig) {
-    throw new Error('Network config is not found');
+    throw new Error(
+      `Network config not found for token ${token} on chain ${hre.network.config.chainId}`,
+    );
   }
 
   if (!tokenAddresses) {
-    throw new Error('Token config is not found');
+    throw new Error(`Token addresses not found for ${token}`);
   }
 
   const isComposite = isCompositeDataFeedAddresses(tokenAddresses);
   const isCompositeConfig = isCompositeDataFeedConfig(networkConfig);
 
   if (isComposite !== isCompositeConfig) {
-    throw new Error('Incompatible config');
+    throw new Error(
+      `Configuration mismatch: addresses ${
+        isComposite ? 'are' : 'are not'
+      } composite, but config ${isCompositeConfig ? 'is' : 'is not'} composite`,
+    );
   }
 
   if (isComposite && isCompositeConfig && aggregatorType === undefined) {
-    const contractName = getCommonContractNames().dataFeedComposite;
+    const compositeConfig = networkConfig as DeployDataFeedConfigComposite;
+    const feedType = compositeConfig.feedType;
+
+    const contractName =
+      feedType === 'multiply'
+        ? getCommonContractNames().dataFeedMultiply
+        : getCommonContractNames().dataFeedComposite;
 
     if (!contractName) {
-      throw new Error('Composite data feed contract name is not set');
+      throw new Error(`${feedType} data feed contract name is not set`);
     }
 
     if (
@@ -253,13 +266,23 @@ export const deployPaymentTokenDataFeed = async (
       throw new Error('Nominator/denominator data feed is not set');
     }
 
-    await deployTokenDataFeedComposite(
-      hre,
-      tokenAddresses.numerator.dataFeed,
-      tokenAddresses.denominator.dataFeed,
-      contractName,
-      networkConfig,
-    );
+    if (feedType === 'multiply') {
+      await deployTokenDataFeedMultiply(
+        hre,
+        tokenAddresses.numerator.dataFeed,
+        tokenAddresses.denominator.dataFeed,
+        contractName,
+        compositeConfig,
+      );
+    } else {
+      await deployTokenDataFeedComposite(
+        hre,
+        tokenAddresses.numerator.dataFeed,
+        tokenAddresses.denominator.dataFeed,
+        contractName,
+        compositeConfig,
+      );
+    }
   } else {
     const contractName = getCommonContractNames().dataFeed;
 
@@ -389,6 +412,28 @@ const deployTokenDataFeed = async (
 };
 
 const deployTokenDataFeedComposite = async (
+  hre: HardhatRuntimeEnvironment,
+  numeratorFeed: string,
+  denominatorFeed: string,
+  dataFeedContractName: string,
+  networkConfig?: DeployDataFeedConfigComposite,
+) => {
+  const addresses = getCurrentAddresses(hre);
+
+  if (!networkConfig) {
+    throw new Error('Network config is not found');
+  }
+
+  await deployAndVerifyProxy(hre, dataFeedContractName, [
+    addresses?.accessControl,
+    numeratorFeed,
+    denominatorFeed,
+    networkConfig.minAnswer ?? parseUnits('0.1', 18),
+    networkConfig.maxAnswer ?? parseUnits('1000', 18),
+  ]);
+};
+
+export const deployTokenDataFeedMultiply = async (
   hre: HardhatRuntimeEnvironment,
   numeratorFeed: string,
   denominatorFeed: string,

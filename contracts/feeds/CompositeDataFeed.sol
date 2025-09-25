@@ -139,14 +139,28 @@ contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
         uint256 numerator = numeratorFeed.getDataInBase18();
         uint256 denominator = denominatorFeed.getDataInBase18();
 
-        require(denominator > 0, "CDF: division by zero");
-
-        answer = (numerator * 1e18) / denominator;
+        answer = _computeCompositePrice(numerator, denominator);
 
         require(
             answer >= minExpectedAnswer && answer <= maxExpectedAnswer,
             "CDF: feed is unhealthy"
         );
+    }
+
+    /**
+     * @dev computes the composite price by dividing numerator by denominator
+     * @param numerator numerator value from the first feed
+     * @param denominator denominator value from the second feed
+     * @return answer computed composite price in base18
+     */
+    function _computeCompositePrice(uint256 numerator, uint256 denominator)
+        internal
+        pure
+        virtual
+        returns (uint256 answer)
+    {
+        require(denominator > 0, "CDF: division by zero");
+        answer = (numerator * 1e18) / denominator;
     }
 
     /**
