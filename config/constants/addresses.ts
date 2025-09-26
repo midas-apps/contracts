@@ -918,8 +918,22 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   tac: {
     accessControl: '0x2365D68d462e9a5660a3208f817519334a706A45',
+    paymentTokens: {
+      ton: {
+        token: '0xb76d91340F5CE3577f0a056D29f6e3Eb4E88B140',
+        aggregator: '0x4d0D144b59156bE791Ab6F0FbBF809D4F1A18466',
+        dataFeed: '0xD9aC2C0b1d864aED9EF8D43b0CE130A65beC25Bb',
+      },
+    },
     mEDGE: {
       token: '0x0e07999AFFF029894277C785857b4cA30ec07a5e',
+    },
+    tacTON: {
+      token: '0x06A317991F2F479a6213278b32D17a126FcaB501',
+      customFeed: '0x9E7528d5c16c1a86Eb36BF3e0f97841FD6e761CF',
+      dataFeed: '0x7Afed408C766cD90d263d332F6Be70f46BbB4DAe',
+      depositVault: '0x44c782Ba3c71348fdda14ae6AF244f76f7d65549',
+      redemptionVaultSwapper: '0x1E2F7f6a8620C2b672b29AD45B61686cEFC8831e',
     },
   },
   sepolia: {
