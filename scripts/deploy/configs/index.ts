@@ -37,6 +37,7 @@ import { mXRPDeploymentConfig } from './mXRP';
 import { TACmBTCDeploymentConfig } from './tac/TACmBTC';
 import { TACmEDGEDeploymentConfig } from './tac/TACmEDGE';
 import { TACmMEVDeploymentConfig } from './tac/TACmMEV';
+import { tacTONDeploymentConfig } from './tacTON';
 import { tBTCDeploymentConfig } from './tBTC';
 import { tETHDeploymentConfig } from './tETH';
 import { tUSDeDeploymentConfig } from './tUSDe';
@@ -95,4 +96,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mXRP: mXRPDeploymentConfig,
   acreBTC: acreBTCDeploymentConfig,
   mWildUSD: mWildUSDDeploymentConfig,
+  tacTON: tacTONDeploymentConfig,
 };
