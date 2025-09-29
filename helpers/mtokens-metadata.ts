@@ -188,6 +188,14 @@ export const mTokensMetadata: Record<
     name: 'mWildUSD',
     symbol: 'mWildUSD',
   },
+  plUSD: {
+    name: 'Plasma USD',
+    symbol: 'plUSD',
+  },
+  splUSD: {
+    name: 'Staked Plasma USD',
+    symbol: 'splUSD',
+  },
   tacTON: {
     name: 'tacTON',
     symbol: 'tacTON',

@@ -34,6 +34,8 @@ import { msyrupUSDpDeploymentConfig } from './msyrupUSDp';
 import { mTBILLDeploymentConfig } from './mTBILL';
 import { mWildUSDDeploymentConfig } from './mWildUSD';
 import { mXRPDeploymentConfig } from './mXRP';
+import { plUSDDeploymentConfig } from './plUSD';
+import { splUSDDeploymentConfig } from './splUSD';
 import { TACmBTCDeploymentConfig } from './tac/TACmBTC';
 import { TACmEDGEDeploymentConfig } from './tac/TACmEDGE';
 import { TACmMEVDeploymentConfig } from './tac/TACmMEV';
@@ -96,5 +98,7 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mXRP: mXRPDeploymentConfig,
   acreBTC: acreBTCDeploymentConfig,
   mWildUSD: mWildUSDDeploymentConfig,
+  plUSD: plUSDDeploymentConfig,
+  splUSD: splUSDDeploymentConfig,
   tacTON: tacTONDeploymentConfig,
 };

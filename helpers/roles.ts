@@ -50,6 +50,8 @@ const prefixes: Record<MTokenName, string> = {
   mXRP: 'M_XRP',
   acreBTC: 'ACRE_BTC',
   mWildUSD: 'M_WILD_USD',
+  plUSD: 'PL_USD',
+  splUSD: 'SPL_USD',
   tacTON: 'TAC_TON',
 };
 

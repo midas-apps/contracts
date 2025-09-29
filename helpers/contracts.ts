@@ -93,6 +93,8 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   mXRP: 'MXrp',
   acreBTC: 'AcreBtc',
   mWildUSD: 'MWildUsd',
+  plUSD: 'PlUsd',
+  splUSD: 'SplUsd',
   tacTON: 'TacTon',
 };
 

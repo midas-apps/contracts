@@ -45,6 +45,8 @@ export enum MTokenNameEnum {
   msyrupUSDp = 'msyrupUSDp',
   acreBTC = 'acreBTC',
   mWildUSD = 'mWildUSD',
+  plUSD = 'plUSD',
+  splUSD = 'splUSD',
   tacTON = 'tacTON',
 }
 
@@ -94,6 +96,8 @@ export enum PaymentTokenNameEnum {
   xrp = 'xrp',
   vbusdc = 'vbusdc',
   vbusdt = 'vbusdt',
+  usdt0 = 'usdt0',
+  plusd = 'plusd',
   ton = 'ton',
 }
 

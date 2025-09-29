@@ -56,6 +56,7 @@ const config: HardhatUserConfig = {
       tac: '0x12dE1B534B879b4e3a2f1D05a299eD448dC45FD3',
       xrplevm: '0xea4308904131c51f8380c4a21c74cd629d07893c',
       zerog: '0xf975786717f57e20bf4d69faf88e795a94f7808d',
+      plasma: '0x1CA462EBB85e14014a8b5c2c46dD018a716B371b',
     },
   },
   verify: {
@@ -86,6 +87,7 @@ const config: HardhatUserConfig = {
     xrplevm: getNetworkConfig('xrplevm'),
     tac: getNetworkConfig('tac'),
     zerog: getNetworkConfig('zerog'),
+    plasma: getNetworkConfig('plasma'),
   },
   gasReporter: {
     enabled: REPORT_GAS,
@@ -94,7 +96,10 @@ const config: HardhatUserConfig = {
     runOnCompile: OPTIMIZER,
   },
   etherscan: {
-    apiKey: ETHERSCAN_API_KEY!,
+    apiKey: {
+      //  ETHERSCAN_API_KEY,
+      plasma: 'ASDAS',
+    },
     enabled: ENV.VERIFY_ETHERSCAN === true,
     customChains: [
       {
@@ -184,6 +189,15 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: 'https://chainscan.0g.ai/open/api',
           browserURL: 'https://chainscan.0g.ai',
+        },
+      },
+      {
+        chainId: chainIds.plasma,
+        network: 'plasma',
+        urls: {
+          apiURL:
+            'https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api',
+          browserURL: 'https://plasmascan.to',
         },
       },
     ],
