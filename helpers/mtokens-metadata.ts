@@ -192,4 +192,8 @@ export const mTokensMetadata: Record<
     name: 'Plasma USD',
     symbol: 'plUSD',
   },
+  splUSD: {
+    name: 'Staked Plasma USD',
+    symbol: 'splUSD',
+  },
 };

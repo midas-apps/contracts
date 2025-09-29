@@ -929,6 +929,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x70b77FcdbE2293423e41AdD2FB599808396807BC',
         dataFeed: '0xDA56C2dafAf034B7Bb490FAb19162E2dD2e62404',
       },
+      plusd: {
+        token: '0xf91c31299E998C5127Bc5F11e4a657FC0cF358CD',
+        aggregator: '0x4718e64C12cAE76552696934f0b346cfc1e9a7d3',
+        dataFeed: '0x2b3F3514867cbCcfadC80121297BB8088c683432',
+      },
     },
     accessControl: '0x3eA351249daA640f4ABABc06B3118F35324Fab72',
     plUSD: {
@@ -937,6 +942,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x2b3F3514867cbCcfadC80121297BB8088c683432',
       depositVault: '0x2b690Cab819A815732544aEb422474EfDc1B0615',
       redemptionVaultSwapper: '0x24e49D2Ad8f0bcD0cF7F2A5Ab560Ca4319f6bd75',
+    },
+    splUSD: {
+      token: '0x616185600989Bf8339b58aC9e539d49536598343',
+      customFeed: '0xfE5AE64f5Ba6a45B9267A5BA274620539Fa59566',
+      dataFeed: '0xAA24bABA4DA60b2Aeaf80B1Db07B0A4A7fd84455',
+      depositVault: '0x4Ef9fF56162bD3Cb5073FB20DbD355C59084093f',
+      redemptionVaultSwapper: '0x69EcaB6aA7bDFDdD99deF0891c0317076430ae50',
     },
   },
   sepolia: {

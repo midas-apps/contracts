@@ -46,6 +46,7 @@ export enum MTokenNameEnum {
   acreBTC = 'acreBTC',
   mWildUSD = 'mWildUSD',
   plUSD = 'plUSD',
+  splUSD = 'splUSD',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
@@ -95,6 +96,7 @@ export enum PaymentTokenNameEnum {
   vbusdc = 'vbusdc',
   vbusdt = 'vbusdt',
   usdt0 = 'usdt0',
+  plusd = 'plusd',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;
