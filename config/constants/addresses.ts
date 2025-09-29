@@ -932,8 +932,8 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       token: '0x06A317991F2F479a6213278b32D17a126FcaB501',
       customFeed: '0x9E7528d5c16c1a86Eb36BF3e0f97841FD6e761CF',
       dataFeed: '0x7Afed408C766cD90d263d332F6Be70f46BbB4DAe',
-      depositVault: '0x44c782Ba3c71348fdda14ae6AF244f76f7d65549',
-      redemptionVaultSwapper: '0x1E2F7f6a8620C2b672b29AD45B61686cEFC8831e',
+      depositVault: '0x762B366fD2c460f3b08D7CB279140fe39dF2e5Ca',
+      redemptionVaultSwapper: '0x5E65feDa93CDf3286d4B70BA6d3e2a0e86594CDd',
     },
   },
   sepolia: {
