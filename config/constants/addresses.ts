@@ -922,6 +922,23 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       token: '0x0e07999AFFF029894277C785857b4cA30ec07a5e',
     },
   },
+  plasma: {
+    paymentTokens: {
+      usdt0: {
+        token: '0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb',
+        aggregator: '0x70b77FcdbE2293423e41AdD2FB599808396807BC',
+        dataFeed: '0xDA56C2dafAf034B7Bb490FAb19162E2dD2e62404',
+      },
+    },
+    accessControl: '0x3eA351249daA640f4ABABc06B3118F35324Fab72',
+    plUSD: {
+      token: '0xf91c31299E998C5127Bc5F11e4a657FC0cF358CD',
+      customFeed: '0x4718e64C12cAE76552696934f0b346cfc1e9a7d3',
+      dataFeed: '0x2b3F3514867cbCcfadC80121297BB8088c683432',
+      depositVault: '0x2b690Cab819A815732544aEb422474EfDc1B0615',
+      redemptionVaultSwapper: '0x24e49D2Ad8f0bcD0cF7F2A5Ab560Ca4319f6bd75',
+    },
+  },
   sepolia: {
     paymentTokens: {
       usdc: {

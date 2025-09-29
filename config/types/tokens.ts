@@ -45,6 +45,7 @@ export enum MTokenNameEnum {
   msyrupUSDp = 'msyrupUSDp',
   acreBTC = 'acreBTC',
   mWildUSD = 'mWildUSD',
+  plUSD = 'plUSD',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
@@ -93,6 +94,7 @@ export enum PaymentTokenNameEnum {
   xrp = 'xrp',
   vbusdc = 'vbusdc',
   vbusdt = 'vbusdt',
+  usdt0 = 'usdt0',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;

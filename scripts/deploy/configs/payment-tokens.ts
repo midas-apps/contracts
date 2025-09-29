@@ -585,5 +585,14 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
         },
       },
     },
+    [chainIds.plasma]: {
+      usdt0: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60, // FIXME: update when get a value
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+    },
   },
 };

@@ -188,4 +188,8 @@ export const mTokensMetadata: Record<
     name: 'mWildUSD',
     symbol: 'mWildUSD',
   },
+  plUSD: {
+    name: 'Plasma USD',
+    symbol: 'plUSD',
+  },
 };

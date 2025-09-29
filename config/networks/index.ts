@@ -33,6 +33,7 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   tac: 'https://rpc.tac.build',
   xrplevm: 'https://rpc.xrplevm.org',
   zerog: 'https://evmrpc.0g.ai',
+  plasma: 'https://rpc.plasma.to',
 };
 
 export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
@@ -52,6 +53,7 @@ export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
   tac: undefined,
   xrplevm: undefined,
   zerog: undefined,
+  plasma: undefined,
 };
 
 export const chainIds: ConfigPerNetwork<number> = {
@@ -71,6 +73,7 @@ export const chainIds: ConfigPerNetwork<number> = {
   tac: 239,
   xrplevm: 1440000,
   zerog: 16661,
+  plasma: 9745,
 };
 
 export const mnemonics: ConfigPerNetwork<string | undefined> = {
@@ -90,6 +93,7 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   tac: MNEMONIC_PROD,
   xrplevm: MNEMONIC_PROD,
   zerog: MNEMONIC_PROD,
+  plasma: MNEMONIC_PROD,
 };
 
 export const gases: ConfigPerNetwork<number | undefined> = {
@@ -109,6 +113,7 @@ export const gases: ConfigPerNetwork<number | undefined> = {
   tac: undefined,
   xrplevm: undefined,
   zerog: undefined,
+  plasma: undefined,
 };
 
 export const timeouts: ConfigPerNetwork<number | undefined> = {
@@ -128,6 +133,7 @@ export const timeouts: ConfigPerNetwork<number | undefined> = {
   tac: undefined,
   xrplevm: undefined,
   zerog: undefined,
+  plasma: undefined,
 };
 
 export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
@@ -147,6 +153,7 @@ export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
   tac: undefined,
   xrplevm: undefined,
   zerog: undefined,
+  plasma: undefined,
 };
 
 export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
@@ -166,6 +173,7 @@ export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
   tac: undefined,
   xrplevm: undefined,
   zerog: undefined,
+  plasma: undefined,
 };
 
 export const getBaseNetworkConfig = (

@@ -17,7 +17,8 @@ export type Network =
   | 'hyperevm'
   | 'katana'
   | 'xrplevm'
-  | 'zerog';
+  | 'zerog'
+  | 'plasma';
 export type RpcUrl =
   | `https://eth-${RpcNetwork}.g.alchemy.com/v2/${string}`
   | `https://${RpcNetwork}.infura.io/v3/${string}`
