@@ -50,6 +50,7 @@ const prefixes: Record<MTokenName, string> = {
   mXRP: 'M_XRP',
   acreBTC: 'ACRE_BTC',
   mWildUSD: 'M_WILD_USD',
+  tacTON: 'TAC_TON',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {
