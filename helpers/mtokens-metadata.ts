@@ -196,4 +196,8 @@ export const mTokensMetadata: Record<
     name: 'Staked Plasma USD',
     symbol: 'splUSD',
   },
+  tacTON: {
+    name: 'tacTON',
+    symbol: 'tacTON',
+  },
 };

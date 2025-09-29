@@ -39,6 +39,7 @@ import { splUSDDeploymentConfig } from './splUSD';
 import { TACmBTCDeploymentConfig } from './tac/TACmBTC';
 import { TACmEDGEDeploymentConfig } from './tac/TACmEDGE';
 import { TACmMEVDeploymentConfig } from './tac/TACmMEV';
+import { tacTONDeploymentConfig } from './tacTON';
 import { tBTCDeploymentConfig } from './tBTC';
 import { tETHDeploymentConfig } from './tETH';
 import { tUSDeDeploymentConfig } from './tUSDe';
@@ -99,4 +100,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mWildUSD: mWildUSDDeploymentConfig,
   plUSD: plUSDDeploymentConfig,
   splUSD: splUSDDeploymentConfig,
+  tacTON: tacTONDeploymentConfig,
 };

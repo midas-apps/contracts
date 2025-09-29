@@ -47,6 +47,7 @@ export enum MTokenNameEnum {
   mWildUSD = 'mWildUSD',
   plUSD = 'plUSD',
   splUSD = 'splUSD',
+  tacTON = 'tacTON',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
@@ -97,6 +98,7 @@ export enum PaymentTokenNameEnum {
   vbusdt = 'vbusdt',
   usdt0 = 'usdt0',
   plusd = 'plusd',
+  ton = 'ton',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;
