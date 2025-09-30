@@ -23,6 +23,7 @@ import path from 'path';
 
 import {
   getCustomAggregatorContractFromTemplate,
+  getCustomAggregatorGrowthContractFromTemplate,
   getDataFeedContractFromTemplate,
   getDvContractFromTemplate,
   getRvContractFromTemplate,
@@ -75,6 +76,7 @@ const generatorPerContract: Partial<
   rvUstb: getRvUstbContractFromTemplate,
   dataFeed: getDataFeedContractFromTemplate,
   customAggregator: getCustomAggregatorContractFromTemplate,
+  customAggregatorGrowth: getCustomAggregatorGrowthContractFromTemplate,
 };
 
 export const updateConfigFiles = (

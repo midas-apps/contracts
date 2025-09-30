@@ -19,6 +19,7 @@ import {
 } from '../../helpers/roles';
 import {
   CustomAggregatorV3CompatibleFeed,
+  CustomAggregatorV3CompatibleFeedGrowth,
   DataFeed,
   DepositVault,
   DepositVaultWithUSTB,
@@ -122,7 +123,7 @@ export const tokenContractsTests = (token: MTokenName) => {
   const deployMTokenVaultsWithFixture = async () => {
     const { tokenContract, ...fixture } = await deployMTokenWithFixture();
     const customAggregatorFeed =
-      await deployProxyContract<CustomAggregatorV3CompatibleFeed>(
+      await deployProxyContractIfExists<CustomAggregatorV3CompatibleFeed>(
         'customAggregator',
         undefined,
         fixture.accessControl.address,
@@ -132,13 +133,32 @@ export const tokenContractsTests = (token: MTokenName) => {
         'Custom Data Feed',
       );
 
-    await customAggregatorFeed.setRoundData(parseUnits('1.01', 8));
+    const customAggregatorFeedGrowth =
+      await deployProxyContractIfExists<CustomAggregatorV3CompatibleFeedGrowth>(
+        'customAggregatorGrowth',
+        undefined,
+        fixture.accessControl.address,
+        2,
+        parseUnits('10000', 8),
+        parseUnits('1', 8),
+        parseUnits('0', 8),
+        parseUnits('100', 8),
+        false,
+        'Custom Data Feed',
+      );
+
+    await customAggregatorFeed?.setRoundData?.(parseUnits('1.01', 8));
+    await customAggregatorFeedGrowth?.setRoundData?.(
+      parseUnits('1.01', 8),
+      await ethers.provider.getBlock('latest').then((block) => block.timestamp),
+      0,
+    );
 
     const dataFeed = await deployProxyContract<DataFeed>(
       'dataFeed',
       undefined,
       fixture.accessControl.address,
-      customAggregatorFeed.address,
+      customAggregatorFeed?.address ?? customAggregatorFeedGrowth?.address,
       3 * 24 * 3600,
       parseUnits('0.1', 8),
       parseUnits('10000', 8),
@@ -294,6 +314,7 @@ export const tokenContractsTests = (token: MTokenName) => {
       tokenRedemptionVault: redemptionVault,
       tokenRedemptionVaultWithSwapper: redemptionVaultWithSwapper,
       tokenRedemptionVaultWithBuidl: redemptionVaultWithBuidl,
+      tokenCustomAggregatorFeedGrowth: customAggregatorFeedGrowth,
     };
   };
 
@@ -670,7 +691,8 @@ export const tokenContractsTests = (token: MTokenName) => {
 
     it('CustomAggregator', async function () {
       const fixture = await deployMTokenVaultsWithFixture();
-      const customAggregator = fixture.tokenCustomAggregatorFeed as Contract;
+      const customAggregator = (fixture.tokenCustomAggregatorFeed ??
+        fixture.tokenCustomAggregatorFeedGrowth) as Contract;
 
       if (!customAggregator || !tokenRoleNames.customFeedAdmin || isTac) {
         (this as any).skip();

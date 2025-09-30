@@ -48,6 +48,9 @@ export enum MTokenNameEnum {
   plUSD = 'plUSD',
   splUSD = 'splUSD',
   tacTON = 'tacTON',
+  wNLP = 'wNLP',
+  dnETH = 'dnETH',
+  dnTEST = 'dnTEST',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;

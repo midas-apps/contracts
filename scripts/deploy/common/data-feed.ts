@@ -1,5 +1,5 @@
 import { Provider } from '@ethersproject/providers';
-import { BigNumberish, Signer } from 'ethers';
+import { BigNumberish, PopulatedTransaction, Signer } from 'ethers';
 import { formatUnits, parseUnits } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
@@ -21,7 +21,10 @@ import {
   getCommonContractNames,
   getTokenContractNames,
 } from '../../../helpers/contracts';
-import { CustomAggregatorV3CompatibleFeed } from '../../../typechain-types';
+import {
+  CustomAggregatorV3CompatibleFeed,
+  CustomAggregatorV3CompatibleFeedGrowth,
+} from '../../../typechain-types';
 import { paymentTokenDeploymentConfigs } from '../configs/payment-tokens';
 
 export type DeployDataFeedConfigCommon = {
@@ -86,9 +89,23 @@ export type DeployCustomAggregatorConfig =
   | DeployCustomAggregatorRegularConfig
   | DeployCustomAggregatorGrowthConfig;
 
-export type SetRoundDataConfig = {
+type SetRoundDataConfigCommon = {
   data: BigNumberish;
 };
+
+type SetRoundDataConfigGrowth = SetRoundDataConfigCommon & {
+  type: 'GROWTH';
+  apr: BigNumberish;
+  dataTimestamp?: BigNumberish;
+};
+
+type SetRoundDataConfigRegular = SetRoundDataConfigCommon & {
+  type?: 'REGULAR';
+};
+
+export type SetRoundDataConfig =
+  | SetRoundDataConfigGrowth
+  | SetRoundDataConfigRegular;
 
 export const setRoundDataPaymentToken = async (
   hre: HardhatRuntimeEnvironment,
@@ -169,25 +186,44 @@ const setRoundData = async (
     aggregatorAddress: string;
   },
 ) => {
-  const aggregator = await getAggregatorContract(
-    hre,
-    hre.ethers.provider,
-    aggregatorAddress,
-  );
+  let tx: PopulatedTransaction;
+  let log: string;
+  if (networkConfig.type === 'GROWTH') {
+    const aggregator = await getAggregatorGrowthContract(
+      hre,
+      hre.ethers.provider,
+      aggregatorAddress,
+    );
 
-  const tx = await aggregator.populateTransaction.setRoundData(
-    networkConfig.data,
-  );
+    const currentTimestamp = (await hre.ethers.provider.getBlock('latest'))
+      .timestamp;
+
+    tx = await aggregator.populateTransaction.setRoundData(
+      networkConfig.data,
+      networkConfig.dataTimestamp ?? currentTimestamp,
+      networkConfig.apr,
+    );
+    log = `${token} set price to ${formatUnits(
+      networkConfig.data,
+      8,
+    )}/${formatUnits(networkConfig.apr, 8)}% at ${currentTimestamp}`;
+  } else {
+    const aggregator = await getAggregatorContract(
+      hre,
+      hre.ethers.provider,
+      aggregatorAddress,
+    );
+
+    tx = await aggregator.populateTransaction.setRoundData(networkConfig.data);
+    log = `${token} set price to ${formatUnits(networkConfig.data, 8)}`;
+  }
 
   const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
     action: isMToken ? 'update-feed-mtoken' : 'update-feed-ptoken',
-    comment: `${token} set price to ${formatUnits(networkConfig.data, 8)}`,
+    comment: log,
   });
 
-  console.log(
-    `${token} set price to ${formatUnits(networkConfig.data, 8)}`,
-    txRes,
-  );
+  console.log(log, txRes);
 };
 
 const getAggregatorContract = async (
@@ -198,6 +234,19 @@ const getAggregatorContract = async (
   return (
     await hre.ethers.getContractAt('CustomAggregatorV3CompatibleFeed', address)
   ).connect(provider) as CustomAggregatorV3CompatibleFeed;
+};
+
+const getAggregatorGrowthContract = async (
+  hre: HardhatRuntimeEnvironment,
+  provider: Provider | Signer,
+  address: string,
+) => {
+  return (
+    await hre.ethers.getContractAt(
+      'CustomAggregatorV3CompatibleFeedGrowth',
+      address,
+    )
+  ).connect(provider) as CustomAggregatorV3CompatibleFeedGrowth;
 };
 
 const isCompositeDataFeedAddresses = (

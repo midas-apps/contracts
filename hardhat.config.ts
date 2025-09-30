@@ -96,10 +96,7 @@ const config: HardhatUserConfig = {
     runOnCompile: OPTIMIZER,
   },
   etherscan: {
-    apiKey: {
-      //  ETHERSCAN_API_KEY,
-      plasma: 'ASDAS',
-    },
+    apiKey: ETHERSCAN_API_KEY,
     enabled: ENV.VERIFY_ETHERSCAN === true,
     customChains: [
       {

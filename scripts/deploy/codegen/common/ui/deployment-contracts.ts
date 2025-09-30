@@ -99,6 +99,11 @@ export const getContractsToGenerateFromUser = async () => {
         label: 'Custom Aggregator',
         hint: 'Custom Aggregator contract',
       },
+      {
+        value: 'customAggregatorGrowth',
+        label: 'Custom Aggregator Growth',
+        hint: 'Custom Aggregator Growth contract',
+      },
     ],
     initialValues: ['token', 'dv', 'rvSwapper', 'dataFeed', 'customAggregator'],
     required: true,

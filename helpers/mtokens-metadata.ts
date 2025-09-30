@@ -200,4 +200,16 @@ export const mTokensMetadata: Record<
     name: 'tacTON',
     symbol: 'tacTON',
   },
+  wNLP: {
+    name: 'Nunch wNLP',
+    symbol: 'wNLP',
+  },
+  dnETH: {
+    name: 'Delta Neutral ETH',
+    symbol: 'dnETH',
+  },
+  dnTEST: {
+    name: 'Delta Neutral TEST',
+    symbol: 'dnTEST',
+  },
 };

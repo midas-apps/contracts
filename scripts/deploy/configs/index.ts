@@ -1,7 +1,9 @@
 import { acreBTCDeploymentConfig } from './acreBTC';
+import { dnETHDeploymentConfig } from './dnETH';
 import { dnFARTDeploymentConfig } from './dnFART';
 import { dnHYPEDeploymentConfig } from './dnHYPE';
 import { dnPUMPDeploymentConfig } from './dnPUMP';
+import { dnTESTDeploymentConfig } from './dnTEST';
 import { hbUSDCDeploymentConfig } from './hbUSDC';
 import { hbUSDTDeploymentConfig } from './hbUSDT';
 import { hbXAUtDeploymentConfig } from './hbXAUt';
@@ -43,6 +45,7 @@ import { tacTONDeploymentConfig } from './tacTON';
 import { tBTCDeploymentConfig } from './tBTC';
 import { tETHDeploymentConfig } from './tETH';
 import { tUSDeDeploymentConfig } from './tUSDe';
+import { wNLPDeploymentConfig } from './wNLP';
 import { wVLPDeploymentConfig } from './wVLP';
 import { zeroGBTCVDeploymentConfig } from './zeroGBTCV';
 import { zeroGETHVDeploymentConfig } from './zeroGETHV';
@@ -101,4 +104,7 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   plUSD: plUSDDeploymentConfig,
   splUSD: splUSDDeploymentConfig,
   tacTON: tacTONDeploymentConfig,
+  wNLP: wNLPDeploymentConfig,
+  dnETH: dnETHDeploymentConfig,
+  dnTEST: dnTESTDeploymentConfig,
 };
