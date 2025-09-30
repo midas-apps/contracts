@@ -208,4 +208,8 @@ export const mTokensMetadata: Record<
     name: 'Delta Neutral ETH',
     symbol: 'dnETH',
   },
+  dnTEST: {
+    name: 'Delta Neutral TEST',
+    symbol: 'dnTEST',
+  },
 };

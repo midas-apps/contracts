@@ -3,6 +3,7 @@ import { dnETHDeploymentConfig } from './dnETH';
 import { dnFARTDeploymentConfig } from './dnFART';
 import { dnHYPEDeploymentConfig } from './dnHYPE';
 import { dnPUMPDeploymentConfig } from './dnPUMP';
+import { dnTESTDeploymentConfig } from './dnTEST';
 import { hbUSDCDeploymentConfig } from './hbUSDC';
 import { hbUSDTDeploymentConfig } from './hbUSDT';
 import { hbXAUtDeploymentConfig } from './hbXAUt';
@@ -105,4 +106,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   tacTON: tacTONDeploymentConfig,
   wNLP: wNLPDeploymentConfig,
   dnETH: dnETHDeploymentConfig,
+  dnTEST: dnTESTDeploymentConfig,
 };

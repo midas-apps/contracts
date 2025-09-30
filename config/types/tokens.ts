@@ -50,6 +50,7 @@ export enum MTokenNameEnum {
   tacTON = 'tacTON',
   wNLP = 'wNLP',
   dnETH = 'dnETH',
+  dnTEST = 'dnTEST',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
