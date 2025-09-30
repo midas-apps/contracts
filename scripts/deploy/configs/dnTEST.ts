@@ -7,8 +7,12 @@ import { DeploymentConfig } from '../common/types';
 export const dnTESTDeploymentConfig: DeploymentConfig = {
   genericConfigs: {
     customAggregator: {
+      type: 'GROWTH',
       maxAnswerDeviation: parseUnits('0.35', 8),
       description: 'dnTEST/USD',
+      onlyUp: true,
+      minGrowthApr: parseUnits('0', 8),
+      maxGrowthApr: parseUnits('50', 8),
     },
     dataFeed: {},
   },
@@ -68,7 +72,12 @@ export const dnTESTDeploymentConfig: DeploymentConfig = {
           oracleManagerAddress: '0x30B2a6A15c8bCA072BA685A6FCAC427b8142c913',
         },
         setRoundData: {
+          type: 'GROWTH',
           data: parseUnits('1', 8),
+          apr: parseUnits('0', 8),
+        },
+        pauseFunctions: {
+          depositVault: ['depositRequest', 'depositRequestWithCustomRecipient'],
         },
       },
     },

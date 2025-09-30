@@ -763,6 +763,27 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x210376434c1591f05399e3F1EF3f98C6e63d370E',
       redemptionVaultSwapper: '0x1605F7C0FF432Ea4cF2b36a2E35076187A1803b0',
     },
+    wNLP: {
+      token: '0x27Bfb8d29af693865E3926e752B2f56C7A33A2A8',
+      customFeed: '0x7B593fc72637c454749E4118259EaA14a4389553',
+      dataFeed: '0x9109A754707987Db09c6FBd5069b3E1Bf0Ff6CF9',
+      depositVault: '0x13Dea856EdA9ae6d29317ef5644297639837E1b2',
+      redemptionVaultSwapper: '0x814E39FeBD0265D39e37bA469d0B40bd9c77Eef2',
+    },
+    dnETH: {
+      token: '0x2540bdDC5E854419496192688e8257C5dEd7ad78',
+      customFeed: '0x72a173DcBed0Ac69421fef0E44cf763670E463a5',
+      dataFeed: '0x43Daa49a0dF14Fb3d0066C5Ec91aabd872E1b1AD',
+      depositVault: '0x6431A3588e76aF88cc6f12926fFCAc7209197382',
+      redemptionVaultSwapper: '0x94A9e619779e65e7B79fEA6f7eF623118ac1c2F2',
+    },
+    dnTEST: {
+      token: '0x80cAE1bb1B90980148C5bC9c5701b69fAfE7d6B2',
+      customFeed: '0x0c459A098EB325fD7ea602Cd7664EE43f1D4Bd08',
+      dataFeed: '0xA7A8F3414e02AEcb50E206aF31001CC4990b4D0a',
+      depositVault: '0xed51fEb552d596F3014B127D21ECcE5a7D8e8b19',
+      redemptionVaultSwapper: '0x35D44B87D6c786e9434DA337eb59D373e8b84941',
+    },
   },
   katana: {
     accessControl: '0x980f57b62060824799F23f87d6FA321653b6f069',
