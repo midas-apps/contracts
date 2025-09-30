@@ -43,6 +43,7 @@ import { tacTONDeploymentConfig } from './tacTON';
 import { tBTCDeploymentConfig } from './tBTC';
 import { tETHDeploymentConfig } from './tETH';
 import { tUSDeDeploymentConfig } from './tUSDe';
+import { wNLPDeploymentConfig } from './wNLP';
 import { wVLPDeploymentConfig } from './wVLP';
 import { zeroGBTCVDeploymentConfig } from './zeroGBTCV';
 import { zeroGETHVDeploymentConfig } from './zeroGETHV';
@@ -101,4 +102,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   plUSD: plUSDDeploymentConfig,
   splUSD: splUSDDeploymentConfig,
   tacTON: tacTONDeploymentConfig,
+  wNLP: wNLPDeploymentConfig,
 };

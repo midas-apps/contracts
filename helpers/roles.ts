@@ -53,6 +53,7 @@ const prefixes: Record<MTokenName, string> = {
   plUSD: 'PL_USD',
   splUSD: 'SPL_USD',
   tacTON: 'TAC_TON',
+  wNLP: 'W_NLP',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {

@@ -200,4 +200,8 @@ export const mTokensMetadata: Record<
     name: 'tacTON',
     symbol: 'tacTON',
   },
+  wNLP: {
+    name: 'Nunch wNLP',
+    symbol: 'wNLP',
+  },
 };
