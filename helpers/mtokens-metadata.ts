@@ -204,4 +204,8 @@ export const mTokensMetadata: Record<
     name: 'Nunch wNLP',
     symbol: 'wNLP',
   },
+  dnETH: {
+    name: 'Delta Neutral ETH',
+    symbol: 'dnETH',
+  },
 };
