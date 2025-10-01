@@ -197,6 +197,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    timelock: '0xE3EEe3e0D2398799C884a47FC40C029C8e241852',
     mTBILL: {
       dataFeed: '0xfCEE9754E8C375e145303b7cE7BEca3201734A2B',
       customFeed: '0x056339C044055819E8Db84E71f5f2E1F536b2E5b',
@@ -465,6 +466,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
     },
     accessControl: '0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b',
+    timelock: '0x9230F9cBAca32bad2B19CAB331d3e6509B8EB0cB',
     mTBILL: {
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
       customFeed: '0x70E58b7A1c884fFFE7dbce5249337603a28b8422',
@@ -864,6 +866,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   etherlink: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    timelock: '0x852C4F1Beb54AcB5360dBdBA7EbbE9940A698F76',
     paymentTokens: {
       usdc: {
         token: '0x796Ea11Fa2dD751eD01b53C372fFDB4AAa8f00F9',
