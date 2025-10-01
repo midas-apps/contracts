@@ -45,11 +45,12 @@ contract MRe7CustomAggregatorFeed is
      * @dev increases contract version to 2
      * @param _newMaxAnswerDeviation new max answer deviation
      */
-    function initializeV2(
-        uint256 _newMaxAnswerDeviation
-    ) public reinitializer(2) {
+    function initializeV2(uint256 _newMaxAnswerDeviation)
+        public
+        reinitializer(2)
+    {
         require(
-            _newMaxAnswerDeviation <= 100 * (10 ** decimals()),
+            _newMaxAnswerDeviation <= 100 * (10**decimals()),
             "CA: !max deviation"
         );
 
