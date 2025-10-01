@@ -1,7 +1,7 @@
 import { parseUnits } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { executeUpgradeAggregators } from './common/upgrade-aggregators';
+import { executeUpgradeContracts } from './common/upgrade-contracts';
 
 import { getCurrentAddresses } from '../../config/constants/addresses';
 import { getMTokenOrThrow } from '../../helpers/utils';
@@ -17,13 +17,13 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('Token addresses not found');
   }
 
-  await executeUpgradeAggregators(hre, upgradeId, [
+  await executeUpgradeContracts(hre, upgradeId, 'customFeed', [
     {
       mToken,
       addresses: tokenAddresses,
-      aggregators: [
+      contracts: [
         {
-          aggregatorType: 'customAggregator',
+          contractType: 'customAggregator',
           initializer: 'initializeV2',
           initializerArgs: [parseUnits('0.36', 8)],
         },

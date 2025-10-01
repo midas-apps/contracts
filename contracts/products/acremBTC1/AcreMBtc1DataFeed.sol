@@ -2,14 +2,14 @@
 pragma solidity 0.8.9;
 
 import "../../feeds/DataFeed.sol";
-import "./AcreBtcMidasAccessControlRoles.sol";
+import "./AcreMBtc1MidasAccessControlRoles.sol";
 
 /**
- * @title AcreBtcDataFeed
- * @notice DataFeed for acreBTC product
+ * @title AcreMBtc1DataFeed
+ * @notice DataFeed for acremBTC1 product
  * @author RedDuck Software
  */
-contract AcreBtcDataFeed is DataFeed, AcreBtcMidasAccessControlRoles {
+contract AcreMBtc1DataFeed is DataFeed, AcreMBtc1MidasAccessControlRoles {
     /**
      * @dev leaving a storage gap for futures updates
      */

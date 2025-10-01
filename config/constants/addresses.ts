@@ -397,7 +397,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x5E154946561AEA4E750AAc6DeaD23D37e00E47f6',
       redemptionVaultSwapper: '0x4Fd4DD7171D14e5bD93025ec35374d2b9b4321b0',
     },
-    acreBTC: {
+    acremBTC1: {
       token: '0xC344Db27Feba7F0a881A50f0f702a525a44f2368',
       customFeed: '0xD0eEd92DB46B099f8DEA366a7198b5Dd249Af61F',
       dataFeed: '0x7d5B8ab9C948fb11433e0eDdADD718dc5Cb040bb',

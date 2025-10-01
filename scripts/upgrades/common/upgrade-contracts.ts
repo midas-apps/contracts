@@ -17,47 +17,53 @@ import {
   proposeTimeLockUpgradeTx,
 } from '../../deploy/common/timelock';
 import { getDeployer } from '../../deploy/common/utils';
-import { upgradeConfigs } from '../configs/upgrade-configs';
 
 // TODO: refactor this whole file and make upgrades more generic
-type AggregatorType = 'customAggregator' | 'customAggregatorGrowth';
+type ContractType = 'customAggregator' | 'customAggregatorGrowth' | 'token';
 
-type MTokenAggregatorsToUpgrade = {
+type ContractTypeToUpgrade = 'customFeed' | 'token';
+
+type MTokenContractsToUpgrade = {
   mToken: MTokenName;
   addresses: TokenAddresses;
-  aggregators: {
-    aggregatorType: AggregatorType;
-    aggregatorTypeTo?: AggregatorType;
+  contracts: {
+    contractType: ContractType;
+    contractTypeTo?: ContractType;
     overrideImplementation?: string;
     initializer?: string;
     initializerArgs?: unknown[];
   }[];
 };
 
-export const proposeUpgradeAggregators = async (
+export const proposeUpgradeContracts = async (
   hre: HardhatRuntimeEnvironment,
   upgradeId: string,
-  mTokenAggregatorsToUpgrade: MTokenAggregatorsToUpgrade[],
+  contractType: ContractTypeToUpgrade,
+  mTokenContractsToUpgrade: MTokenContractsToUpgrade[],
 ) => {
-  return upgradeAllAggregators(
+  return upgradeAllContracts(
     hre,
     upgradeId,
-    mTokenAggregatorsToUpgrade,
+    contractType,
+    mTokenContractsToUpgrade,
     async (hre, params, salt) => {
       return await proposeTimeLockUpgradeTx(hre, params, salt);
     },
   );
 };
 
-export const executeUpgradeAggregators = async (
+export const executeUpgradeContracts = async (
   hre: HardhatRuntimeEnvironment,
   upgradeId: string,
-  mTokenAggregatorsToUpgrade: MTokenAggregatorsToUpgrade[],
+  contractType: ContractTypeToUpgrade,
+
+  mTokenContractsToUpgrade: MTokenContractsToUpgrade[],
 ) => {
-  return upgradeAllAggregators(
+  return upgradeAllContracts(
     hre,
     upgradeId,
-    mTokenAggregatorsToUpgrade,
+    contractType,
+    mTokenContractsToUpgrade,
     async (hre, params, salt) => {
       return await executeTimeLockUpgradeTx(hre, params, salt);
     },
@@ -86,10 +92,11 @@ const getImplAddressFromDeployment = async (
   }
 };
 
-const upgradeAllAggregators = async (
+const upgradeAllContracts = async (
   hre: HardhatRuntimeEnvironment,
   upgradeId: string,
-  mTokenAggregatorsToUpgrade: MTokenAggregatorsToUpgrade[],
+  contractTypeToUpgrade: ContractTypeToUpgrade,
+  mTokenContractsToUpgrade: MTokenContractsToUpgrade[],
   callBack: (
     hre: HardhatRuntimeEnvironment,
     params: GetUpgradeTxParams,
@@ -102,12 +109,12 @@ const upgradeAllAggregators = async (
     throw new Error('Addresses not found');
   }
 
-  console.log('mTokensToUpgrade', mTokenAggregatorsToUpgrade);
+  console.log('mTokensToUpgrade', mTokenContractsToUpgrade);
 
   const upgradeContracts: {
     mToken: MTokenName;
-    aggregatorType: AggregatorType;
-    contractType: string;
+    contractType: ContractType;
+    contractTypeTo?: ContractType;
     contractName: string;
     proxyAddress: string;
     overrideImplementation?: string;
@@ -115,35 +122,33 @@ const upgradeAllAggregators = async (
     initializerCalldata?: string;
   }[] = [];
 
-  for (const { mToken, aggregators, addresses } of mTokenAggregatorsToUpgrade) {
+  for (const { mToken, contracts, addresses } of mTokenContractsToUpgrade) {
     for (const {
-      aggregatorType,
-      aggregatorTypeTo,
+      contractType,
+      contractTypeTo,
       overrideImplementation,
       initializer,
       initializerArgs,
-    } of aggregators) {
-      const contractType = aggregatorTypeTo ?? aggregatorType;
+    } of contracts) {
+      const type = contractTypeTo ?? contractType;
       const contractName =
-        getTokenContractNames(mToken)[contractType as keyof TokenContractNames];
+        getTokenContractNames(mToken)[type as keyof TokenContractNames];
 
       if (!contractName) {
-        throw new Error(
-          `Contract name not found for ${mToken} ${contractType}`,
-        );
+        throw new Error(`Contract name not found for ${mToken} ${type}`);
       }
 
       const contract = await hre.ethers.getContractAt(
         contractName,
-        addresses.customFeed!,
+        addresses[contractTypeToUpgrade]!,
       );
 
       upgradeContracts.push({
         mToken,
-        aggregatorType,
-        contractType: aggregatorTypeTo ?? aggregatorType,
+        contractType: type,
+        contractTypeTo,
         contractName,
-        proxyAddress: addresses.customFeed!,
+        proxyAddress: addresses[contractTypeToUpgrade]!,
         overrideImplementation,
         initializer,
         initializerCalldata: initializer
@@ -215,7 +220,7 @@ const upgradeAllAggregators = async (
 
   const failedUpgrades: {
     mToken: MTokenName;
-    aggregatorType: AggregatorType;
+    contractType: ContractType;
     error: string;
   }[] = [];
 
@@ -241,7 +246,7 @@ Implementation: ${deployment.implementationAddress}`,
 
       failedUpgrades.push({
         mToken: deployment.mToken,
-        aggregatorType: deployment.aggregatorType,
+        contractType: deployment.contractType,
         error: e instanceof Error ? e.message : (e as string),
       });
     }

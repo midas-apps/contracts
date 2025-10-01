@@ -2,16 +2,16 @@
 pragma solidity 0.8.9;
 
 import "../../RedemptionVaultWithSwapper.sol";
-import "./AcreBtcMidasAccessControlRoles.sol";
+import "./AcreMBtc1MidasAccessControlRoles.sol";
 
 /**
- * @title AcreBtcRedemptionVaultWithSwapper
- * @notice Smart contract that handles acreBTC redemptions
+ * @title AcreMBtc1RedemptionVaultWithSwapper
+ * @notice Smart contract that handles acremBTC1 redemptions
  * @author RedDuck Software
  */
-contract AcreBtcRedemptionVaultWithSwapper is
+contract AcreMBtc1RedemptionVaultWithSwapper is
     RedemptionVaultWithSwapper,
-    AcreBtcMidasAccessControlRoles
+    AcreMBtc1MidasAccessControlRoles
 {
     /**
      * @dev leaving a storage gap for futures updates
