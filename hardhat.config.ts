@@ -12,6 +12,7 @@ import 'hardhat-contract-sizer';
 import 'hardhat-deploy';
 import 'solidity-docgen';
 import './tasks';
+import 'hardhat-dependency-compiler';
 
 import {
   chainIds,
@@ -36,6 +37,20 @@ const config: HardhatUserConfig = {
           },
         },
       },
+      {
+        version: '0.8.24',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 1000000,
+          },
+        },
+      },
+    ],
+  },
+  dependencyCompiler: {
+    paths: [
+      '@pendle/v2-sy/contracts/core/StandardizedYield/implementations/Midas/PendleMidasSY.sol',
     ],
   },
   namedAccounts: {
