@@ -784,6 +784,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0xed51fEb552d596F3014B127D21ECcE5a7D8e8b19',
       redemptionVaultSwapper: '0x35D44B87D6c786e9434DA337eb59D373e8b84941',
     },
+    obeatUSD: {
+      token: '0x94bf32Bd7DE56E80778530919292BeFf503eC9e6',
+      customFeed: '0x8407e1C601eE1FEedFc61a607279E7Be68c515C3',
+      dataFeed: '0x3Cdf50753D78a5fB386105f7799110783f81f28E',
+      depositVault: '0x65D0a14dd083C38244542BAC0e0cd16d51c37458',
+      redemptionVaultSwapper: '0x36094ABE5E589691B8f60505823A72F5fdEdC953',
+    },
   },
   katana: {
     accessControl: '0x980f57b62060824799F23f87d6FA321653b6f069',

@@ -212,4 +212,8 @@ export const mTokensMetadata: Record<
     name: 'Delta Neutral TEST',
     symbol: 'dnTEST',
   },
+  obeatUSD: {
+    name: 'OmniBeat USD',
+    symbol: 'obeatUSD',
+  },
 };
