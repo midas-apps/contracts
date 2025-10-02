@@ -512,3 +512,91 @@ All the roles for the Midas protocol smart contracts are listed below.
 | ***customFeedAdmin*** | `0x86066fb137b3d96927953e29c7bd5859470f3df040a44ba5bc22b1045d7b8e9e` |
 | ***depositVaultAdmin*** | `0x87355dd738f6623c15ab03e7dbf6a8c7065c52f47e97d349569591316ca1db67` |
 | ***redemptionVaultAdmin*** | `0x78b212079219087ec51f016511547fe54c7b05faa00bcd3783a5d6d79a293a0c` |
+
+### mWildUSD Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0x1ea4f669113e094679a1429bda0a1cffb9283e4bd03bd4e6b177a79d0d345407` |
+| ***burner*** | `0xee4e3f81815c8f4fe12a79d6638c1ac949f51e6efeff066811fc9c2b8f5bc46a` |
+| ***pauser*** | `0x27f14f0b522de0c4f6b23454afbcfcb941226a84f7aac6827042fd50a5484a21` |
+| ***customFeedAdmin*** | `0xd325a43b044e6e8435ed548b3c3d79803f32e4092eeb8998c2d7e1355129359d` |
+| ***depositVaultAdmin*** | `0x27f46edf3790dcce9aa8381c77450360eb1b2a813b4aaa0f441b1c8930b9cca8` |
+| ***redemptionVaultAdmin*** | `0xd74f0ab688f992253a8d29d9beda11ebf2b2553f61db63a38aa18592737a7203` |
+
+### plUSD Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0x522471e215c48694b2caebfae2734dbcd25601efcf32e38df3e66c36db082210` |
+| ***burner*** | `0x00485aaa906421fdbc0af214c52f866f6460c03f13b3347109246964e2155c03` |
+| ***pauser*** | `0xc4a31b5c206c5b00b30e6d56c06137b1589f8728041c2c16c151102b4f22676a` |
+| ***customFeedAdmin*** | `0xe54e0c34ec9e21e5d494cc31362a1a01738b9c8201b1492e0a8c41f29bab8657` |
+| ***depositVaultAdmin*** | `0x22151d250e2118f0a16b6920179063985868b7c375109bcf40a854feb8556c6a` |
+| ***redemptionVaultAdmin*** | `0xcf2928af735fbee9eead9fd436593c5b39360362708871dbbbb7fa0574134d67` |
+
+### splUSD Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0x59516c7db331c8829482d610ff8f642f950873a86dd09db9a191bd48a155ae79` |
+| ***burner*** | `0x96ee3b8e7e5b9ceeb2ed7cee26dcefbec4d9e00f95800848600e908390187478` |
+| ***pauser*** | `0x3ca8bdff9ebc8fd034872e602885e653423a16396105b46b83dc3944babdf6e9` |
+| ***customFeedAdmin*** | `0xd2d07f97d51691d9cc3dc68de62c3bd3be35ee2426aece71654736de3858c66a` |
+| ***depositVaultAdmin*** | `0x6c6c511df5580240e086f99f7decdb2b9767bb4083e4506c24d14e991d89e7d7` |
+| ***redemptionVaultAdmin*** | `0xa7995f0865402fb3417af3099ecedbe1b8298a8bce795be2537994ba24c86757` |
+
+### tacTON Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0xfbe4d68198ed57e8fa7da0dbbbb65ebf186737650d0476baf1aef63421f1c53b` |
+| ***burner*** | `0x5668280c115d8d61aef2c15ff6b3798b9efed842f31ae59ed83eb9df70332216` |
+| ***pauser*** | `0x2f9767642bea8e1c80c90a5e0fe159be53e96770055864d5037c9ccadfb4decd` |
+| ***customFeedAdmin*** | `0x81a79a630fac70055a885e3cc4f43299de225f21a4dd0f3c12cd0cdb02f63673` |
+| ***depositVaultAdmin*** | `0x9ae16f76236cd21a9c3a22874243757b3a01d98698efcd43e3807fcda6edacf9` |
+| ***redemptionVaultAdmin*** | `0x07eb88e81bee4cfc727fa562de5aa8d6e39f4f1c9d51247523d940ba14302fd3` |
+
+### wNLP Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0xa793fa1e0b196a46e7464d7919f096b2207d9ed8bee837df68115747fa3c8045` |
+| ***burner*** | `0xb6be3235a7b14eaaf14256143a78fcdee6d3431d42884b3014b11e9dd05dc793` |
+| ***pauser*** | `0xdb8d27e30d910efb6daecf7643cae8411a57571a1bd6497efa9717c259d58f34` |
+| ***customFeedAdmin*** | `0x63f2d27d9b0a2ece8b9dcf87a2d9be85fe42e30303b34a075adaeab1f183aea0` |
+| ***depositVaultAdmin*** | `0xb4d28d7037796e169153e99eee9da3930adcd94170546fb14dbb844820ec2f66` |
+| ***redemptionVaultAdmin*** | `0x44e3d235985b514b1c86d9212eec487c89a9619644ab647779a38808eac4c57f` |
+
+### dnETH Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0x549e0aabb6355353ee8b3f7e34ed476544bb8ffd6c4686ce7b7e9c65fdfcf6a1` |
+| ***burner*** | `0x54346d87e93b501b0f03a8cd9cab599502a4b476e1c79e6413297f94bbc590d2` |
+| ***pauser*** | `0x0f691549b13a85a12506c1e157bdaadf4de02846e657d2ebe28905669b876e18` |
+| ***customFeedAdmin*** | `0x28f650fd7c41a419241dd95cbb2d5569eec89f8f2c2780453d11c294723a3656` |
+| ***depositVaultAdmin*** | `0x03da0adfdd81109cfba2909555ec8543a7fe511ada31ea34686e0f3bca09eed9` |
+| ***redemptionVaultAdmin*** | `0x48fef00ff7593576dfca68bb4580740b15927bc02d2b7147db715316519d40c6` |
+
+### dnTEST Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0x9e30db439fb9aaeec34ec235a1f547aca845efb955eea94ddf2073341a61d15c` |
+| ***burner*** | `0x732ae9781a7bc004d0737724bf213561ace28762cca647c435e5fb8df840e030` |
+| ***pauser*** | `0x819da4ff8c039c308d44835795acf998dfea9034cc8ad160ed951f240eb91be1` |
+| ***customFeedAdmin*** | `0x5c6640f5ca5fab75a7a647f5e9894eefe85a48c3eb36e32f7b66dd7c9b56fb25` |
+| ***depositVaultAdmin*** | `0xd53d90af3ccc60519f093fe7911711a2d74a86f334c078566ce9393227caaf20` |
+| ***redemptionVaultAdmin*** | `0x1c906f2abe99d47697b6f1a165f077c1939561421368d5884f652c07ac1987ef` |
+
+### obeatUSD Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0x88970a29c9e997a13140a071953a835715b13da35026d091f2576dfab66f0025` |
+| ***burner*** | `0x6f1aea55735af0b7d03ce2b5e1d51f4a705e9010c581969fc0fa2ca0421b2e18` |
+| ***pauser*** | `0x8d0fba24227dad6a4ce63fd48ed1644e12b2fa6a03d08a51725d038377a7d2cf` |
+| ***customFeedAdmin*** | `0x5d281460b909f8793b674674da4ebbd26006cb7e2fcf552c512d7310f825ee57` |
+| ***depositVaultAdmin*** | `0x22b2aa4957159ba4a9bc7980518f0c14f6012665862887276e86346c30a85a81` |
+| ***redemptionVaultAdmin*** | `0x8a33b6a8b6efdcf608e113af7bd38450ff80983ed62e5fb79511e63748622392` |
