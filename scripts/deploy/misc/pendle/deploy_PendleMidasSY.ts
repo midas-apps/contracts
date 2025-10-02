@@ -9,6 +9,9 @@ import {
 } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
 
+const pendleProxyAdmin = '0xA28c08f165116587D4F3E708743B4dEe155c5E64';
+const pendleAdmin = '0x2aD631F72fB16d91c4953A7f4260A97C2fE2f31e';
+
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const mToken = getMTokenOrThrow(hre);
   const pToken = getPaymentTokenOrThrow(hre);
@@ -42,7 +45,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const proxyArgs = [
     impl.address,
-    '0xA28c08f165116587D4F3E708743B4dEe155c5E64', // Pendle`s ProxyAdmin
+    pendleProxyAdmin,
     syFactory.interface.encodeFunctionData('initialize', [
       `SY Midas ${mToken}`,
       `SY-${mToken}`,
@@ -65,11 +68,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const contract = syFactory.attach(proxy.address);
 
-  const tx = await contract.transferOwnership(
-    '0x2aD631F72fB16d91c4953A7f4260A97C2fE2f31e',
-    true,
-    false,
-  );
+  const tx = await contract.transferOwnership(pendleAdmin, true, false);
 
   logDeploy('PendleMidasSY', 'TransferOwnership tx', tx.hash);
   await tx.wait(2);
