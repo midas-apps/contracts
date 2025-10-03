@@ -36,6 +36,7 @@ import { msyrupUSDpDeploymentConfig } from './msyrupUSDp';
 import { mTBILLDeploymentConfig } from './mTBILL';
 import { mWildUSDDeploymentConfig } from './mWildUSD';
 import { mXRPDeploymentConfig } from './mXRP';
+import { obeatUSDDeploymentConfig } from './obeatUSD';
 import { plUSDDeploymentConfig } from './plUSD';
 import { splUSDDeploymentConfig } from './splUSD';
 import { TACmBTCDeploymentConfig } from './tac/TACmBTC';
@@ -107,4 +108,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   wNLP: wNLPDeploymentConfig,
   dnETH: dnETHDeploymentConfig,
   dnTEST: dnTESTDeploymentConfig,
+  obeatUSD: obeatUSDDeploymentConfig,
 };

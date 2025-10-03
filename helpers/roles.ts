@@ -56,6 +56,7 @@ const prefixes: Record<MTokenName, string> = {
   wNLP: 'W_NLP',
   dnETH: 'DN_ETH',
   dnTEST: 'DN_TEST',
+  obeatUSD: 'OBEAT_USD',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {

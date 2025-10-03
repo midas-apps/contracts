@@ -41,6 +41,7 @@ export const VAULT_FUNCTION_SELECTORS = {
   redeemInstantWithCustomRecipient: toFunctionSelector(
     'redeemInstant(address,uint256,uint256,address)',
   ),
+  redeemFiatRequest: toFunctionSelector('redeemFiatRequest(uint256)'),
   redeemRequest: toFunctionSelector('redeemRequest(address,uint256)'),
   redeemRequestWithCustomRecipient: toFunctionSelector(
     'redeemRequest(address,uint256,address)',
