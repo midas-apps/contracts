@@ -547,7 +547,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       customFeed: '0xb701ABEA3E4b6EAdAc4F56696904c5F551d2617b',
       dataFeed: '0x73a64469E0974371005ca0f60Dfc10405613b411',
       depositVault: '0xb05F6aa8C2ea9aB8537cF09A9B765a21De249224',
-      redemptionVault: '0x3aC6b2Bf09f470e5674C3DA60Be7D2DA2791F897',
+      redemptionVaultSwapper: '0x3aC6b2Bf09f470e5674C3DA60Be7D2DA2791F897',
     },
     mBASIS: {
       token: '0x0c78Ca789e826fE339dE61934896F5D170b66d78',
