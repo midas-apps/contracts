@@ -43,7 +43,6 @@ export enum MTokenNameEnum {
   dnFART = 'dnFART',
   mXRP = 'mXRP',
   msyrupUSDp = 'msyrupUSDp',
-  acreBTC = 'acreBTC',
   mWildUSD = 'mWildUSD',
   plUSD = 'plUSD',
   splUSD = 'splUSD',
@@ -51,6 +50,7 @@ export enum MTokenNameEnum {
   wNLP = 'wNLP',
   dnETH = 'dnETH',
   dnTEST = 'dnTEST',
+  acremBTC1 = 'acremBTC1',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;

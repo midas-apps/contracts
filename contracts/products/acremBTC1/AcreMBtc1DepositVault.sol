@@ -2,14 +2,17 @@
 pragma solidity 0.8.9;
 
 import "../../DepositVault.sol";
-import "./AcreBtcMidasAccessControlRoles.sol";
+import "./AcreMBtc1MidasAccessControlRoles.sol";
 
 /**
- * @title AcreBtcDepositVault
- * @notice Smart contract that handles acreBTC minting
+ * @title AcreMBtc1DepositVault
+ * @notice Smart contract that handles acremBTC1 minting
  * @author RedDuck Software
  */
-contract AcreBtcDepositVault is DepositVault, AcreBtcMidasAccessControlRoles {
+contract AcreMBtc1DepositVault is
+    DepositVault,
+    AcreMBtc1MidasAccessControlRoles
+{
     /**
      * @dev leaving a storage gap for futures updates
      */

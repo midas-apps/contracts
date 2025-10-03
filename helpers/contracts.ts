@@ -91,7 +91,6 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   kitBTC: 'KitBtc',
   dnFART: 'DnFart',
   mXRP: 'MXrp',
-  acreBTC: 'AcreBtc',
   mWildUSD: 'MWildUsd',
   plUSD: 'PlUsd',
   splUSD: 'SplUsd',
@@ -99,6 +98,7 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   wNLP: 'WNlp',
   dnETH: 'DnEth',
   dnTEST: 'DnTest',
+  acremBTC1: 'AcreMBtc1',
 };
 
 export const getCommonContractNames = (): CommonContractNames => {

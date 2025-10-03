@@ -4,11 +4,11 @@ import { parseUnits } from 'ethers/lib/utils';
 import { chainIds } from '../../../config';
 import { DeploymentConfig } from '../common/types';
 
-export const acreBTCDeploymentConfig: DeploymentConfig = {
+export const acremBTC1DeploymentConfig: DeploymentConfig = {
   genericConfigs: {
     customAggregator: {
       maxAnswerDeviation: parseUnits('0.23', 8),
-      description: 'acreBTC/BTC',
+      description: 'acremBTC1/BTC',
     },
     dataFeed: {},
   },
@@ -75,11 +75,11 @@ export const acreBTCDeploymentConfig: DeploymentConfig = {
         },
         addFeeWaived: [
           {
-            fromVault: { mToken: 'acreBTC', type: 'depositVault' },
+            fromVault: { mToken: 'acremBTC1', type: 'depositVault' },
             toWaive: ['0x6A6092d9c47A7E4C085f2ED9FD4a376124587Ae0'],
           },
           {
-            fromVault: { mToken: 'acreBTC', type: 'redemptionVaultSwapper' },
+            fromVault: { mToken: 'acremBTC1', type: 'redemptionVaultSwapper' },
             toWaive: ['0x6A6092d9c47A7E4C085f2ED9FD4a376124587Ae0'],
           },
         ],
