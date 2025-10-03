@@ -1,6 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
+import { mTokensMetadata } from '../../../../helpers/mtokens-metadata';
 import {
   etherscanVerify,
   getMTokenOrThrow,
@@ -8,14 +9,19 @@ import {
   logDeploy,
 } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
+import { getDeployer } from '../../common/utils';
 
 const pendleProxyAdmin = '0xA28c08f165116587D4F3E708743B4dEe155c5E64';
 const pendleAdmin = '0x2aD631F72fB16d91c4953A7f4260A97C2fE2f31e';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+  const deployer = await getDeployer(hre);
   const mToken = getMTokenOrThrow(hre);
   const pToken = getPaymentTokenOrThrow(hre);
-  const syFactory = await hre.ethers.getContractFactory('PendleMidasSY');
+  const syFactory = await hre.ethers.getContractFactory(
+    'PendleMidasSY',
+    deployer,
+  );
 
   const addresses = getCurrentAddresses(hre);
   const tokenAddresses = addresses?.[mToken];
@@ -43,16 +49,18 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   await impl.deployTransaction.wait(2);
 
+  const tokenMetadata = mTokensMetadata[mToken];
+
   const proxyArgs = [
     impl.address,
     pendleProxyAdmin,
     syFactory.interface.encodeFunctionData('initialize', [
-      `SY Midas ${mToken}`,
+      `SY ${tokenMetadata.name}`,
       `SY-${mToken}`,
     ]),
   ] as const;
   const proxy = await (
-    await hre.ethers.getContractFactory('TransparentUpgradeableProxy')
+    await hre.ethers.getContractFactory('TransparentUpgradeableProxy', deployer)
   ).deploy(...proxyArgs);
   logDeploy('PendleMidasSY', 'Proxy', proxy.address);
 
