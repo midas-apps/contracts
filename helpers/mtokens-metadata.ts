@@ -216,4 +216,8 @@ export const mTokensMetadata: Record<
     name: 'OmniBeat USD',
     symbol: 'obeatUSD',
   },
+  mEVUSD: {
+    name: 'Midas Everstake USD',
+    symbol: 'mEVUSD',
+  },
 };

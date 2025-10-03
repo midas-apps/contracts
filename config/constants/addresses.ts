@@ -410,6 +410,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0xd252EB9d448dB3A46d9c1476A7eb45E5c0CED7C2',
       redemptionVaultSwapper: '0x2f98A13635F6CEc0cc45bC1e43969C71d68091d6',
     },
+    mEVUSD: {
+      token: '0x548857309BEfb6Fb6F20a9C5A56c9023D892785B',
+      customFeed: '0x6f51d8aF5bE2cF3517B8d6Cd07361bE382E83be6',
+      dataFeed: '0x508Fe9556C7919E64406bB4042760d7Bb1F40fC9',
+      depositVault: '0x5455222CCDd32F85C1998f57DC6CF613B4498C2a',
+      redemptionVaultSwapper: '0x9C3743582e8b2d7cCb5e08caF3c9C33780ac446f',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
