@@ -50288,7 +50288,7 @@
             "label": "accessControl",
             "offset": 0,
             "slot": "201",
-            "type": "t_contract(MidasAccessControl)15037",
+            "type": "t_contract(MidasAccessControl)9092",
             "contract": "WithMidasAccessControl",
             "src": "contracts/access/WithMidasAccessControl.sol:24"
           },
@@ -50362,7 +50362,7 @@
             "label": "bytes",
             "numberOfBytes": "32"
           },
-          "t_contract(MidasAccessControl)15037": {
+          "t_contract(MidasAccessControl)9092": {
             "label": "contract MidasAccessControl",
             "numberOfBytes": "20"
           },
