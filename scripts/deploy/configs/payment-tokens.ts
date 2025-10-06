@@ -50,6 +50,26 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
         },
       },
     },
+    [chainIds.bsc]: {
+      xrp: {
+        customAggregator: {
+          description: 'XRP/XRP',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.1', 18),
+          maxAnswer: parseUnits('1000', 18),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+    },
     [chainIds.main]: {
       dai: {
         dataFeed: {

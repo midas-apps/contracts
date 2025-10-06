@@ -56,4 +56,9 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
       proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
     },
   },
+  [chainIds.bsc]: {
+    grantDefaultAdminRole: {
+      acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
+    },
+  },
 };

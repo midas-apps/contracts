@@ -34,6 +34,9 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   xrplevm: 'https://rpc.xrplevm.org',
   zerog: 'https://evmrpc.0g.ai',
   plasma: 'https://rpc.plasma.to',
+  bsc: ALCHEMY_KEY
+    ? `https://bnb-mainnet.g.alchemy.com/${ALCHEMY_KEY}`
+    : 'https://bsc-dataseed.bnbchain.org',
 };
 
 export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
@@ -54,6 +57,7 @@ export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
   xrplevm: undefined,
   zerog: undefined,
   plasma: undefined,
+  bsc: undefined,
 };
 
 export const chainIds: ConfigPerNetwork<number> = {
@@ -74,6 +78,7 @@ export const chainIds: ConfigPerNetwork<number> = {
   xrplevm: 1440000,
   zerog: 16661,
   plasma: 9745,
+  bsc: 56,
 };
 
 export const mnemonics: ConfigPerNetwork<string | undefined> = {
@@ -94,6 +99,7 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   xrplevm: MNEMONIC_PROD,
   zerog: MNEMONIC_PROD,
   plasma: MNEMONIC_PROD,
+  bsc: MNEMONIC_PROD,
 };
 
 export const gases: ConfigPerNetwork<number | undefined> = {
@@ -114,6 +120,7 @@ export const gases: ConfigPerNetwork<number | undefined> = {
   xrplevm: undefined,
   zerog: undefined,
   plasma: undefined,
+  bsc: undefined,
 };
 
 export const timeouts: ConfigPerNetwork<number | undefined> = {
@@ -134,6 +141,7 @@ export const timeouts: ConfigPerNetwork<number | undefined> = {
   xrplevm: undefined,
   zerog: undefined,
   plasma: undefined,
+  bsc: undefined,
 };
 
 export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
@@ -154,6 +162,7 @@ export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
   xrplevm: undefined,
   zerog: undefined,
   plasma: undefined,
+  bsc: undefined,
 };
 
 export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
@@ -174,6 +183,7 @@ export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
   xrplevm: undefined,
   zerog: undefined,
   plasma: undefined,
+  bsc: undefined,
 };
 
 export const getBaseNetworkConfig = (
