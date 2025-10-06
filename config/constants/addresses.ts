@@ -930,6 +930,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   zerog: {
     accessControl: '0x4512b664E798376eBC1CCAaC9Abb9bf2a899dCDb',
+    timelock: '0x4C0169702577688F50546Da0Ff861a0678ac7bE0',
     paymentTokens: {
       usdc: {
         token: '0x1f3AA82227281cA364bFb3d253B0f1af1Da6473E',
@@ -953,6 +954,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   tac: {
     accessControl: '0x2365D68d462e9a5660a3208f817519334a706A45',
+    timelock: '0x1A0dd44132317f244A138Ba6e05026756644c097',
     paymentTokens: {
       ton: {
         token: '0xb76d91340F5CE3577f0a056D29f6e3Eb4E88B140',
@@ -985,6 +987,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
     },
     accessControl: '0x3eA351249daA640f4ABABc06B3118F35324Fab72',
+    timelock: '0xe4ccB596112D35C9862D58A113342d122CfD3C2E',
     plUSD: {
       token: '0xf91c31299E998C5127Bc5F11e4a657FC0cF358CD',
       customFeed: '0x4718e64C12cAE76552696934f0b346cfc1e9a7d3',
