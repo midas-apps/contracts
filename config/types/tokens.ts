@@ -52,6 +52,7 @@ export enum MTokenNameEnum {
   dnETH = 'dnETH',
   dnTEST = 'dnTEST',
   obeatUSD = 'obeatUSD',
+  mEVUSD = 'mEVUSD',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;

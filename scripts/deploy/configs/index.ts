@@ -22,6 +22,7 @@ import { mBASISDeploymentConfig } from './mBASIS';
 import { mBTCDeploymentConfig } from './mBTC';
 import { mEDGEDeploymentConfig } from './mEDGE';
 import { mevBTCDeploymentConfig } from './mevBTC';
+import { mEVUSDDeploymentConfig } from './mEVUSD';
 import { mFARMDeploymentConfig } from './mFARM';
 import { mFONEDeploymentConfig } from './mFONE';
 import { mHYPERDeploymentConfig } from './mHYPER';
@@ -109,4 +110,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   dnETH: dnETHDeploymentConfig,
   dnTEST: dnTESTDeploymentConfig,
   obeatUSD: obeatUSDDeploymentConfig,
+  mEVUSD: mEVUSDDeploymentConfig,
 };
