@@ -1002,6 +1002,30 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x4Ef9fF56162bD3Cb5073FB20DbD355C59084093f',
       redemptionVaultSwapper: '0x69EcaB6aA7bDFDdD99deF0891c0317076430ae50',
     },
+    mHYPER: {
+      token: '0xb31BeA5c2a43f942a3800558B1aa25978da75F8a',
+      customFeed: '0xfC3E47c4Da8F3a01ac76c3C5ecfBfC302e1A08F0',
+      dataFeed: '0x2EB410e4cb94E2E9E3cdE3F7b405BE4fCC076Bc9',
+      depositVault: '0xa603cf264aDEB8E7f0f063C116929ADAC2D4286E',
+      redemptionVaultSwapper: '0x880661F9b412065D616890cA458dcCd0146cb77C',
+    },
+  },
+  bsc: {
+    accessControl: '0x7dD3e89fa418577f4BE6C4C47B242c6a9181a2DD',
+    paymentTokens: {
+      xrp: {
+        token: '0x1D2F0da169ceB9fC7B3144628dB156f3F6c60dBE',
+        aggregator: '0x6BfE3850F8B01624Dd4Abc7A7104B7ccC9705cf8',
+        dataFeed: '0xF5C090327C0395c47d6C11a6f02d61e9BA93993c',
+      },
+    },
+    mXRP: {
+      token: '0xc8739fbBd54C587a2ad43b50CbcC30ae34FE9e34',
+      customFeed: '0x3BdE0b7B59769Ec00c44C77090D88feB4516E731',
+      dataFeed: '0x583970971EFcEBfcebD3b530E436B8fEEb3D43C7',
+      depositVault: '0x30B59844eC16ABA3ec4ca0BD97557CcB670D924E',
+      redemptionVaultSwapper: '0x73685BD72dF34B92Bc81D43ef35CFf4300DE8625',
+    },
   },
   sepolia: {
     paymentTokens: {
