@@ -11,12 +11,18 @@ export type RedemptionVaultType =
 
 export type DepositVaultType = 'depositVault' | 'depositVaultUstb';
 
+type LayerZeroTokenAddresses = {
+  minterBurner?: string;
+  mintBurnAdapter?: string;
+};
+
 export type TokenAddresses = {
   customFeed?: string;
   dataFeed?: string;
   token?: string;
   depositVault?: string;
   depositVaultUstb?: string;
+  layerZero?: LayerZeroTokenAddresses;
 } & Partial<Record<RedemptionVaultType, string>>;
 
 export type VaultType = RedemptionVaultType | DepositVaultType;
@@ -1038,6 +1044,10 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVault: '0x2fD18B0878967E19292E9a8BF38Bb1415F6ad653',
       redemptionVaultBuidl: '0x6B35F2E4C9D4c1da0eDaf7fd7Dc90D9bCa4b0873',
       token: '0xefED40D1eb1577d1073e9C4F277463486D39b084',
+      layerZero: {
+        minterBurner: '0xD42EF78b9f479213daCfc2Baf5f51D6F72319e0a',
+        mintBurnAdapter: '0x5eFF78782E823de725974A9Db02D440c1A2E7887',
+      },
     },
     mBASIS: {
       customFeed: '0x263A7AcE5E77986b77DcA125859248fEED52383c',
@@ -1155,6 +1165,16 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
     timelock: '0x74e0a55Ea3Db85F6106FFD69Ef7c9829fd130888',
     accessControl: '0xbf25b58cB8DfaD688F7BcB2b87D71C23A6600AaC',
+  },
+  arbitrumSepolia: {
+    accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    mTBILL: {
+      token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
+      layerZero: {
+        minterBurner: '0x0aC07510A254ED6CDE1B2C72F9965206022B98FA',
+        mintBurnAdapter: '0xE85f2B707Ec5Ae8e07238F99562264f304E30109',
+      },
+    },
   },
   tacTestnet: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',

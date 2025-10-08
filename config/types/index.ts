@@ -3,6 +3,7 @@ type NetworkBase = 'sepolia';
 type RpcNetwork = NetworkBase | 'mainnet';
 export type Network =
   | NetworkBase
+  | 'arbitrumSepolia'
   | 'main'
   | 'hardhat'
   | 'localhost'
@@ -27,6 +28,7 @@ export type RpcUrl =
   | `https://evmrpc.${string}.ai`;
 
 export type ConfigPerNetwork<T> = Record<Network, T>;
+export type PartialConfigPerNetwork<T> = Partial<ConfigPerNetwork<T>>;
 
 export interface Environment {
   readonly ALCHEMY_KEY?: string;

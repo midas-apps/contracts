@@ -66,6 +66,11 @@ export const getMTokenOrThrow = (hre: HardhatRuntimeEnvironment) => {
   return mToken;
 };
 
+export const getOriginalNetwork = (hre: HardhatRuntimeEnvironment) => {
+  const originalNetwork = hre.layerZero?.originalNetwork;
+  return originalNetwork;
+};
+
 export const getPaymentTokenOrThrow = (hre: HardhatRuntimeEnvironment) => {
   const paymentToken = hre.paymentToken;
   if (!paymentToken) {

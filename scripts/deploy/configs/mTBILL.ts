@@ -1,3 +1,4 @@
+import { hours } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
@@ -60,6 +61,33 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
       },
       postDeploy: {
         grantRoles: {},
+        layerZero: {
+          delegate: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('1000000'),
+              window: hours(1),
+            },
+          },
+        },
+      },
+    },
+    [chainIds.arbitrumSepolia]: {
+      postDeploy: {
+        grantRoles: {
+          oracleManagerAddress: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          tokenManagerAddress: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          vaultsManagerAddress: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+        },
+        layerZero: {
+          delegate: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('1000000'),
+              window: hours(1),
+            },
+          },
+        },
       },
     },
     [chainIds.main]: {

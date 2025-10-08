@@ -71,6 +71,9 @@ type TokenRoles = {
   depositVaultAdmin: string;
   redemptionVaultAdmin: string;
   customFeedAdmin: string | null;
+  layerZero: {
+    adapter: string;
+  };
 };
 
 type CommonRoles = {
@@ -106,6 +109,9 @@ export const getRolesNamesForToken = (token: MTokenName): TokenRoles => {
       : `${tokenPrefix}_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE`,
     depositVaultAdmin: `${restPrefix}DEPOSIT_VAULT_ADMIN_ROLE`,
     redemptionVaultAdmin: `${restPrefix}REDEMPTION_VAULT_ADMIN_ROLE`,
+    layerZero: {
+      adapter: `${tokenPrefix}_LZ_ADAPTER_ROLE`,
+    },
   };
 };
 export const getRolesNamesCommon = (): CommonRoles => {
@@ -118,13 +124,28 @@ export const getRolesNamesCommon = (): CommonRoles => {
   };
 };
 
+const getRoleHashOrEmpty = (role: string | undefined | null) => {
+  return role ? keccak256(role) : '-';
+};
+
+const getRolesHashes = (
+  roles: Record<string, string | Record<string, string> | null>,
+): Record<string, string | Record<string, string>> => {
+  return Object.fromEntries(
+    Object.entries(roles).map(([key, value]) => {
+      return [
+        key,
+        typeof value === 'string' || value === null
+          ? getRoleHashOrEmpty(value)
+          : (getRolesHashes(value) as Record<string, string>),
+      ];
+    }),
+  );
+};
+
 export const getRolesForToken = (token: MTokenName): TokenRoles => {
   const rolesNames = getRolesNamesForToken(token);
-  return Object.fromEntries(
-    Object.entries(rolesNames).map(([key, value]) => {
-      return [key, value ? keccak256(value) : '-'];
-    }),
-  ) as TokenRoles;
+  return getRolesHashes(rolesNames) as TokenRoles;
 };
 
 export const getAllRoles = (): AllRoles => {

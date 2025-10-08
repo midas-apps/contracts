@@ -20,8 +20,9 @@ import {
 import { DeployTimelockConfig } from './timelock';
 import { toFunctionSelector } from './utils';
 
-import { PaymentTokenName } from '../../../config';
+import { PartialConfigPerNetwork, PaymentTokenName } from '../../../config';
 import { VaultType } from '../../../config/constants/addresses';
+import { RateLimiter } from '../../../typechain-types';
 
 export const VAULT_FUNCTION_SELECTORS = {
   // Deposit vault functions
@@ -54,12 +55,23 @@ export type PauseFunctionsConfig = {
   [K in VaultType]?: VaultFunctionName[];
 };
 
+export type LayerZeroConfig = {
+  delegate: string;
+  rateLimitConfig?: {
+    default: Omit<RateLimiter.RateLimitConfigStruct, 'dstEid'>;
+    overrides?: PartialConfigPerNetwork<
+      Omit<RateLimiter.RateLimitConfigStruct, 'dstEid'>
+    >;
+  };
+};
+
 export type PostDeployConfig = {
   addPaymentTokens?: AddPaymentTokensConfig;
   grantRoles?: GrantAllTokenRolesConfig;
   setRoundData?: SetRoundDataConfig;
   addFeeWaived?: AddFeeWaivedConfig;
   pauseFunctions?: PauseFunctionsConfig;
+  layerZero?: LayerZeroConfig;
 };
 
 export type DeploymentConfig = {

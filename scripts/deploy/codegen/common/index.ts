@@ -32,6 +32,7 @@ import {
   getTokenContractFromTemplate,
   getTokenRolesContractFromTemplate,
 } from './templates';
+import { getMinterBurnerContractFromTemplate } from './templates/layerzero.template';
 import {
   configsPerNetworkConfig,
   getDeploymentConfigFromUser,
@@ -53,7 +54,7 @@ export type CodeExpr = { [EXPR]: string };
 
 const generatorPerContract: Partial<
   Record<
-    keyof TokenContractNames,
+    keyof TokenContractNames | 'layerZeroMinterBurner',
     (mToken: MTokenName) =>
       | Promise<
           | {
@@ -77,6 +78,7 @@ const generatorPerContract: Partial<
   dataFeed: getDataFeedContractFromTemplate,
   customAggregator: getCustomAggregatorContractFromTemplate,
   customAggregatorGrowth: getCustomAggregatorGrowthContractFromTemplate,
+  layerZeroMinterBurner: getMinterBurnerContractFromTemplate,
 };
 
 export const updateConfigFiles = (

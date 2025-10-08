@@ -1,7 +1,11 @@
 import { TransactionResponse } from '@ethersproject/providers';
 import { BigNumberish } from 'ethers';
 
-import { MTokenName, PaymentTokenName } from '../config/types';
+import {
+  MTokenName,
+  PaymentTokenName,
+  Network as MidasNetwork,
+} from '../config/types';
 import { Logger } from '../helpers/logger';
 
 import 'hardhat/types/runtime';
@@ -9,6 +13,9 @@ import 'hardhat/types/runtime';
 declare module 'hardhat/types/runtime' {
   export interface HardhatRuntimeEnvironment {
     mtoken?: MTokenName;
+    layerZero?: {
+      originalNetwork?: MidasNetwork;
+    };
     paymentToken?: PaymentTokenName;
     action?: string;
     skipValidation?: boolean;

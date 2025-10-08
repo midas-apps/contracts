@@ -72,7 +72,7 @@ export const getConfigFromUser = async () => {
 };
 
 export const getContractsToGenerateFromUser = async () => {
-  return await multiselect<keyof TokenContractNames>({
+  return await multiselect<keyof TokenContractNames | 'layerZeroMinterBurner'>({
     message:
       'Select contracts to generate. (Space to select, Enter to confirm)',
     options: [
@@ -103,6 +103,11 @@ export const getContractsToGenerateFromUser = async () => {
         value: 'customAggregatorGrowth',
         label: 'Custom Aggregator Growth',
         hint: 'Custom Aggregator Growth contract',
+      },
+      {
+        value: 'layerZeroMinterBurner',
+        label: 'LayerZero Minter Burner',
+        hint: 'LayerZero Minter Burner contract',
       },
     ],
     initialValues: ['token', 'dv', 'rvSwapper', 'dataFeed', 'customAggregator'],

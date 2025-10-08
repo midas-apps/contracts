@@ -15,6 +15,9 @@ export type TokenContractNames = {
   customAggregatorGrowth?: string;
   token: string;
   roles: string;
+  layerZero: {
+    minterBurner: string;
+  };
 };
 
 type CommonContractNames = Omit<TokenContractNames, 'token'> & {
@@ -119,6 +122,9 @@ export const getCommonContractNames = (): CommonContractNames => {
     roles: 'MidasAccessControlRoles',
     dataFeedComposite: 'CompositeDataFeed',
     dataFeedMultiply: 'CompositeDataFeedMultiply',
+    layerZero: {
+      minterBurner: 'LzElevatedMinterBurner',
+    },
   };
 };
 
@@ -146,5 +152,8 @@ export const getTokenContractNames = (
       : `${prefix}CustomAggregatorFeedGrowth`,
     token: `${token}`,
     roles: `${prefix}${commonContractNames.roles}`,
+    layerZero: {
+      minterBurner: `${prefix}${commonContractNames.layerZero.minterBurner}`,
+    },
   };
 };
