@@ -118,7 +118,9 @@ export const defaultDeploy = async () => {
 
   const rolesFlat = [
     Object.values(allRoles.common),
-    Object.values(allRoles.tokenRoles).map((v) => Object.values(v)),
+    Object.values(allRoles.tokenRoles).map(({ layerZero, ...v }) =>
+      [...Object.values(v), ...Object.values(layerZero)].flat(2),
+    ),
   ]
     .flat(2)
     .filter((v) => v !== '-' && !!v && !excludedRoles.includes(v)) as string[];

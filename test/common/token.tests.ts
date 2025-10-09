@@ -47,7 +47,7 @@ export const tokenContractsTests = (token: MTokenName) => {
   };
 
   const deployProxyContract = async <TContract extends Contract = Contract>(
-    contractKey: keyof typeof contractNames,
+    contractKey: keyof Omit<typeof contractNames, 'layerZero'>,
     initializer = 'initialize',
     ...initParams: unknown[]
   ) => {
@@ -76,7 +76,7 @@ export const tokenContractsTests = (token: MTokenName) => {
   const deployProxyContractIfExists = async <
     TContract extends Contract = Contract,
   >(
-    contractKey: keyof typeof contractNames,
+    contractKey: keyof Omit<typeof contractNames, 'layerZero'>,
     initializer = 'initialize',
     ...initParams: unknown[]
   ) => {

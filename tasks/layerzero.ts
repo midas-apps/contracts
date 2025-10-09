@@ -293,7 +293,6 @@ export async function sendEvm(
   try {
     tx = await oft.send(sendParam, msgFee, signer.address, {
       value: msgFee.nativeFee,
-      gasLimit: 1_000_000,
     });
   } catch (error) {
     DebugLogger.printErrorAndFixSuggestion(

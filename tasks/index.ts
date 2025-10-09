@@ -274,7 +274,7 @@ task('lz:oft:send:midas', 'Runs a user-defined script')
 // this workaround overrides the getDeploymentsFromAddress function
 // to return the correct abi for the layerzero contracts
 // without needing to create any deployment files
-extendEnvironment((hre) => {
+extendEnvironment(async (hre) => {
   const lzAddresses = Object.values(midasAddressesPerNetwork)
     .map((v) =>
       (Object.values(v ?? {}) as TokenAddresses[]).map((a) => [

@@ -38,12 +38,11 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('mToken addresses not found or missing required fields');
   }
 
-  const factory = await hre.ethers.getContractFactory(
+  const contract = await hre.ethers.getContractAt(
     'MidasLzMintBurnOFTAdapter',
+    mTokenAddresses.layerZero.minterBurner,
     deployer,
   );
-
-  const endpointV2Deployment = await hre.deployments.get('EndpointV2');
 
   let rateLimitConfigDefault = config.layerZero.rateLimitConfig?.default;
   const rateLimitConfigOverrides = config.layerZero.rateLimitConfig?.overrides;
@@ -76,22 +75,13 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   console.log('rateLimitConfigs', rateLimitConfigs);
 
-  const args = [
-    mTokenAddresses.token,
-    mTokenAddresses.layerZero.minterBurner,
-    endpointV2Deployment.address,
-    config.layerZero.delegate,
-    rateLimitConfigs,
-  ] as const;
+  // TODO: send it trough safe
+  const tx = await contract.setRateLimits(rateLimitConfigs);
 
-  const contract = await factory.deploy(...args);
+  logDeploy('MidasLzMintBurnOFTAdapter tx', undefined, tx.hash);
 
-  logDeploy('MidasLzMintBurnOFTAdapter', undefined, contract.address);
-
-  console.log('Waiting for deployment to be confirmed...');
-  await contract.deployTransaction.wait(3);
-  console.log('Verifying contract...');
-  await etherscanVerify(hre, contract.address, ...args);
+  console.log('Waiting for tx to be confirmed...');
+  await tx.wait(3);
 };
 
 export default func;

@@ -1046,7 +1046,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       token: '0xefED40D1eb1577d1073e9C4F277463486D39b084',
       layerZero: {
         minterBurner: '0xD42EF78b9f479213daCfc2Baf5f51D6F72319e0a',
-        mintBurnAdapter: '0x5eFF78782E823de725974A9Db02D440c1A2E7887',
+        mintBurnAdapter: '0x5e27D20Deee87DF842bf4350Aee72Ecea2f34d71',
       },
     },
     mBASIS: {
