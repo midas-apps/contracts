@@ -8582,7 +8582,7 @@
             "label": "accessControl",
             "offset": 2,
             "slot": "0",
-            "type": "t_contract(MidasAccessControl)15037",
+            "type": "t_contract(MidasAccessControl)10756",
             "contract": "WithMidasAccessControl",
             "src": "contracts/access/WithMidasAccessControl.sol:24"
           },
@@ -8638,7 +8638,7 @@
             "label": "_roundData",
             "offset": 0,
             "slot": "56",
-            "type": "t_mapping(t_uint80,t_struct(RoundData)15732_storage)",
+            "type": "t_mapping(t_uint80,t_struct(RoundData)11386_storage)",
             "contract": "CustomAggregatorV3CompatibleFeed",
             "src": "contracts/feeds/CustomAggregatorV3CompatibleFeed.sol:57"
           }
@@ -8652,7 +8652,7 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_contract(MidasAccessControl)15037": {
+          "t_contract(MidasAccessControl)10756": {
             "label": "contract MidasAccessControl",
             "numberOfBytes": "20"
           },
@@ -8664,7 +8664,7 @@
             "label": "int256",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint80,t_struct(RoundData)15732_storage)": {
+          "t_mapping(t_uint80,t_struct(RoundData)11386_storage)": {
             "label": "mapping(uint80 => struct CustomAggregatorV3CompatibleFeed.RoundData)",
             "numberOfBytes": "32"
           },
@@ -8672,7 +8672,7 @@
             "label": "string",
             "numberOfBytes": "32"
           },
-          "t_struct(RoundData)15732_storage": {
+          "t_struct(RoundData)11386_storage": {
             "label": "struct CustomAggregatorV3CompatibleFeed.RoundData",
             "members": [
               {
