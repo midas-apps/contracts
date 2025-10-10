@@ -59,6 +59,7 @@ const prefixes: Record<MTokenName, string> = {
   obeatUSD: 'OBEAT_USD',
   mEVUSD: 'M_EV_USD',
   cUSDO: 'C_USDO',
+  mHyperETH: 'M_HYPER_ETH',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {

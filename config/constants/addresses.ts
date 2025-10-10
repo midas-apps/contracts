@@ -417,6 +417,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x5455222CCDd32F85C1998f57DC6CF613B4498C2a',
       redemptionVaultSwapper: '0x9C3743582e8b2d7cCb5e08caF3c9C33780ac446f',
     },
+    mHyperETH: {
+      token: '0x5a42864b14C0C8241EF5ab62Dae975b163a2E0C1',
+      customFeed: '0x5C81ee2C3Ee8AaAC2eEF68Ecb512472D9E08A0fd',
+      dataFeed: '0xbD560c1E87752717C34912D128168BfE26021EA2',
+      depositVault: '0x57B3Be350C777892611CEdC93BCf8c099A9Ecdab',
+      redemptionVaultSwapper: '0x15f724b35A75F0c28F352b952eA9D1b24e348c57',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',

@@ -224,4 +224,8 @@ export const mTokensMetadata: Record<
     name: 'cUSDO BNB Midas Vault',
     symbol: 'cUSDO',
   },
+  mHyperETH: {
+    name: 'Midas Hyperithm ETH',
+    symbol: 'mHyperETH',
+  },
 };
