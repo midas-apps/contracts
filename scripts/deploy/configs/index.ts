@@ -27,6 +27,7 @@ import { mEVUSDDeploymentConfig } from './mEVUSD';
 import { mFARMDeploymentConfig } from './mFARM';
 import { mFONEDeploymentConfig } from './mFONE';
 import { mHYPERDeploymentConfig } from './mHYPER';
+import { mHyperETHDeploymentConfig } from './mHyperETH';
 import { mLIQUIDITYDeploymentConfig } from './mLIQUIDITY';
 import { mMEVDeploymentConfig } from './mMEV';
 import { mRE7DeploymentConfig } from './mRE7';
@@ -113,4 +114,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   obeatUSD: obeatUSDDeploymentConfig,
   mEVUSD: mEVUSDDeploymentConfig,
   cUSDO: cUSDODeploymentConfig,
+  mHyperETH: mHyperETHDeploymentConfig,
 };
