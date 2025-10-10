@@ -1018,6 +1018,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x6BfE3850F8B01624Dd4Abc7A7104B7ccC9705cf8',
         dataFeed: '0xF5C090327C0395c47d6C11a6f02d61e9BA93993c',
       },
+      usdt: {
+        token: '0x55d398326f99059fF775485246999027B3197955',
+        aggregator: '0xB97Ad0E74fa7d920791E90258A6E2085088b4320',
+        dataFeed: '0xf3e018b0a53f935127298B18b3d1D174f81aE9Ca',
+      },
     },
     mXRP: {
       token: '0xc8739fbBd54C587a2ad43b50CbcC30ae34FE9e34',
@@ -1025,6 +1030,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x583970971EFcEBfcebD3b530E436B8fEEb3D43C7',
       depositVault: '0x30B59844eC16ABA3ec4ca0BD97557CcB670D924E',
       redemptionVaultSwapper: '0x73685BD72dF34B92Bc81D43ef35CFf4300DE8625',
+    },
+    cUSDO: {
+      token: '0x762FD99ee22742DEEcb8eeCB12165752D9A18164',
+      customFeed: '0xF6F0f2f3d13894270d04205d00967175884B4ea8',
+      dataFeed: '0x667F93B8c3704c98340277314B68c0AaF56e02FF',
+      depositVault: '0x7AeE9020Df0ac01Bc6f3cEeF6B1B7Cbf3D0937e4',
+      redemptionVaultSwapper: '0xF76e650F8a9526fe5E4B40F1B567C5C1b427EE43',
     },
   },
   sepolia: {
@@ -1205,6 +1217,7 @@ export const sanctionListContracts: Partial<Record<number, string>> = {
   [chainIds.main]: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
   [chainIds.arbitrum]: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
   [chainIds.base]: '0x3A91A31cB3dC49b4db9Ce721F50a9D076c8D739B',
+  [chainIds.bsc]: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
 };
 
 export const ustbContracts: Partial<Record<number, string>> = {

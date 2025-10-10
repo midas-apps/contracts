@@ -35,7 +35,7 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   zerog: 'https://evmrpc.0g.ai',
   plasma: 'https://rpc.plasma.to',
   bsc: ALCHEMY_KEY
-    ? `https://bnb-mainnet.g.alchemy.com/${ALCHEMY_KEY}`
+    ? `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
     : 'https://bsc-dataseed.bnbchain.org',
 };
 
