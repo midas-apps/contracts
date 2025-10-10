@@ -4,7 +4,7 @@ import { getCurrentAddresses } from '../../../../config/constants/addresses';
 import { getRolesForToken } from '../../../../helpers/roles';
 import { getMTokenOrThrow, logDeploy } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
-import { getDeployer } from '../../common/utils';
+import { getDeployer, sendAndWaitForCustomTxSign } from '../../common/utils';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const deployer = await getDeployer(hre);
@@ -32,17 +32,21 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const rolesToGrant = [roles.minter, roles.burner, roles.layerZero.adapter];
 
-  // TODO: send it trough safe
-  const tx = await contract.grantRoleMult(rolesToGrant, [
-    mTokenAddresses.layerZero.minterBurner,
-    mTokenAddresses.layerZero.minterBurner,
-    mTokenAddresses.layerZero.mintBurnAdapter!,
-  ]);
+  const tx = await sendAndWaitForCustomTxSign(
+    hre,
+    await contract.populateTransaction.grantRoleMult(rolesToGrant, [
+      mTokenAddresses.layerZero.minterBurner,
+      mTokenAddresses.layerZero.minterBurner,
+      mTokenAddresses.layerZero.mintBurnAdapter!,
+    ]),
+    {
+      action: 'update-ac',
+      subAction: 'grant-token-roles',
+      comment: `grant required ${mToken} layerzero roles`,
+    },
+  );
 
-  logDeploy('Grant roles tx', undefined, tx.hash);
-
-  console.log('Waiting for tx to be confirmed...');
-  await tx.wait(3);
+  console.log('Tx is submitted', tx);
 };
 
 export default func;

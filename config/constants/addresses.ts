@@ -423,6 +423,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x5455222CCDd32F85C1998f57DC6CF613B4498C2a',
       redemptionVaultSwapper: '0x9C3743582e8b2d7cCb5e08caF3c9C33780ac446f',
     },
+    obeatUSD: {
+      token: '0x2ce15146958Bf305dAdeBbbF31F2d5a4F2574B43',
+      layerZero: {
+        minterBurner: '0x42D2b03f966CC251F1b2Fd249c52819978653f3b',
+        mintBurnAdapter: '0xa0df4E2D295A450E4704c3603B54B33Eb7d086c0',
+      },
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
@@ -803,6 +810,10 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x3Cdf50753D78a5fB386105f7799110783f81f28E',
       depositVault: '0x65D0a14dd083C38244542BAC0e0cd16d51c37458',
       redemptionVaultSwapper: '0x36094ABE5E589691B8f60505823A72F5fdEdC953',
+      layerZero: {
+        minterBurner: '0xE1cF4c1B6aa1A8F133C14AEF05D772c1b7602F4b',
+        mintBurnAdapter: '0xd7d4B67052FEaC3C9D1782Cb0869EF4f29a31921',
+      },
     },
   },
   katana: {

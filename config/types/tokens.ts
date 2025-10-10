@@ -56,6 +56,8 @@ export enum MTokenNameEnum {
   mTBILL = 'mTBILL',
   mTBILL = 'mTBILL',
   mTBILL = 'mTBILL',
+  obeatUSD = 'obeatUSD',
+  obeatUSD = 'obeatUSD',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;

@@ -194,6 +194,13 @@ export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
   arbitrumSepolia: undefined,
 };
 
+export const blockFinality: PartialConfigPerNetwork<number> = {
+  main: 12,
+  hyperevm: 32,
+  sepolia: 2,
+  arbitrumSepolia: 1,
+};
+
 export const layerZeroEids: PartialConfigPerNetwork<EndpointId> = {
   main: EndpointId.ETHEREUM_V2_MAINNET,
   sepolia: EndpointId.SEPOLIA_V2_TESTNET,

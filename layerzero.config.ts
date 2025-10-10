@@ -8,6 +8,7 @@ import type { OmniPointHardhat } from '@layerzerolabs/toolbox-hardhat';
 import hre from 'hardhat';
 
 import {
+  blockFinality,
   isTestnetNetwork,
   layerZeroEids,
   MTokenName,
@@ -31,14 +32,13 @@ export const lzConfigsPerToken: PartialConfigPerNetwork<ConfigPerNetwork> = {
       receiverNetworks: ['arbitrumSepolia'],
     },
   },
+  hyperevm: {
+    obeatUSD: {
+      receiverNetworks: ['main'],
+    },
+  },
 };
 
-// To connect all the above chains to each other, we need the following pathways:
-// Base <-> Arbitrum
-
-// For this example's simplicity, we will use the same enforced options values for sending to all chains
-// For production, you should ensure `gas` is set to the correct value through profiling the gas usage of calling OFT._lzReceive(...) on the destination chain
-// To learn more, read https://docs.layerzero.network/v2/concepts/applications/oapp-standard#execution-options-and-enforced-settings
 const EVM_ENFORCED_OPTIONS: OAppEnforcedOption[] = [
   {
     msgType: 1,
@@ -117,7 +117,7 @@ export default async function () {
               : ['LayerZero Labs', 'Deutsche Telekom', 'Canary'],
             [],
           ], // [ requiredDVN[], [ optionalDVN[], threshold ] ]
-          [2, 2], // [A to B confirmations, B to A confirmations] FIXME:
+          [blockFinality[networkA] ?? 12, blockFinality[networkB] ?? 12], // [A to B confirmations, B to A confirmations] FIXME:
           [EVM_ENFORCED_OPTIONS, EVM_ENFORCED_OPTIONS], // Chain B enforcedOptions, Chain A enforcedOptions
         ]);
       }

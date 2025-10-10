@@ -1,17 +1,19 @@
-import { constants } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { layerZeroEids, Network } from '../../../../config';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
 import {
-  etherscanVerify,
   getOriginalNetwork,
   getMTokenOrThrow,
   logDeploy,
 } from '../../../../helpers/utils';
 import { lzConfigsPerToken } from '../../../../layerzero.config';
 import { DeployFunction } from '../../common/types';
-import { getDeployer, getNetworkConfig } from '../../common/utils';
+import {
+  getDeployer,
+  getNetworkConfig,
+  sendAndWaitForCustomTxSign,
+} from '../../common/utils';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const deployer = await getDeployer(hre);
@@ -44,17 +46,11 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     deployer,
   );
 
-  let rateLimitConfigDefault = config.layerZero.rateLimitConfig?.default;
+  const rateLimitConfigDefault = config.layerZero.rateLimitConfig?.default;
   const rateLimitConfigOverrides = config.layerZero.rateLimitConfig?.overrides;
 
   if (!rateLimitConfigDefault) {
-    console.log(
-      'Infinite rate limit config will be used as no default config was provided',
-    );
-    rateLimitConfigDefault = {
-      limit: constants.MaxUint256,
-      window: 0,
-    };
+    throw new Error('Rate limit config default not found');
   }
 
   const allReceiverNetworks =
@@ -75,13 +71,17 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   console.log('rateLimitConfigs', rateLimitConfigs);
 
-  // TODO: send it trough safe
-  const tx = await contract.setRateLimits(rateLimitConfigs);
+  const tx = await sendAndWaitForCustomTxSign(
+    hre,
+    await contract.populateTransaction.setRateLimits(rateLimitConfigs),
+    {
+      action: 'update-lz',
+      subAction: 'set-lz-rate-limit-configs',
+    },
+    await contract.owner(),
+  );
 
-  logDeploy('MidasLzMintBurnOFTAdapter tx', undefined, tx.hash);
-
-  console.log('Waiting for tx to be confirmed...');
-  await tx.wait(3);
+  console.log('Tx is submitted', tx);
 };
 
 export default func;

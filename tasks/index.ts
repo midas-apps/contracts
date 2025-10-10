@@ -1,5 +1,4 @@
 import { PopulatedTransaction } from 'ethers';
-import { parseUnits } from 'ethers/lib/utils';
 import { extendEnvironment, task, types } from 'hardhat/config';
 
 import path from 'path';
@@ -17,13 +16,7 @@ import {
   isMTokenName,
   isPaymentTokenName,
 } from '../helpers/utils';
-import { getDeployer } from '../scripts/deploy/common/utils';
-import {
-  // eslint-disable-next-line camelcase
-  LzElevatedMinterBurner__factory,
-  // eslint-disable-next-line camelcase
-  MidasLzMintBurnOFTAdapter__factory,
-} from '../typechain-types';
+
 import './layerzero';
 
 export const logPopulatedTx = (tx: PopulatedTransaction) => {
@@ -233,8 +226,6 @@ task('lz:oft:send:midas', 'Runs a user-defined script')
     const receiverNetwork = taskArgs.receiverNetwork;
     const receiver = taskArgs.receiver ?? deployerSigner.address;
 
-    const parsedAmount = parseUnits(amount.toString(), 18);
-
     if (mtoken) {
       if (!isMTokenName(mtoken)) {
         throw new Error('Invalid mtoken parameter');
@@ -279,13 +270,11 @@ extendEnvironment(async (hre) => {
     .map((v) =>
       (Object.values(v ?? {}) as TokenAddresses[]).map((a) => [
         {
-          // eslint-disable-next-line camelcase
-          abi: MidasLzMintBurnOFTAdapter__factory.abi,
+          abi: hre.artifacts.readArtifactSync('MidasLzMintBurnOFTAdapter').abi,
           address: a?.layerZero?.mintBurnAdapter,
         },
         {
-          // eslint-disable-next-line camelcase
-          abi: LzElevatedMinterBurner__factory.abi,
+          abi: hre.artifacts.readArtifactSync('LzElevatedMinterBurner').abi,
           address: a?.layerZero?.minterBurner,
         },
       ]),
@@ -297,7 +286,7 @@ extendEnvironment(async (hre) => {
   hre.deployments.getDeploymentsFromAddress = async (address: string) => {
     const found = lzAddresses.find((v) => v.address === address);
     if (found) {
-      return [{ address, abi: found?.abi }];
+      return [{ address, abi: found.abi }];
     }
     return original(address);
   };

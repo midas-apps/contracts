@@ -31,7 +31,8 @@ export const getMinterBurnerContractFromTemplate = async (
    * for minting and burning of ${contractNames.token} in LayerZero flows
    * @author RedDuck Software
    */
-  contract ${contractNames.layerZero.minterBurner} is ${commonContractNames.layerZero.minterBurner} {      /**
+  contract ${contractNames.layerZero.minterBurner} is ${commonContractNames.layerZero.minterBurner} {
+      /**
        * @notice adapter role that can call mint and burn functions
        */
       bytes32 public constant ${roles.layerZero.adapter} =

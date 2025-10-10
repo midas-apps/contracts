@@ -45,21 +45,19 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const endpointV2Deployment = await hre.deployments.get('EndpointV2');
 
-  let rateLimitConfigDefault = config.layerZero.rateLimitConfig?.default;
+  const rateLimitConfigDefault = config.layerZero.rateLimitConfig?.default;
   const rateLimitConfigOverrides = config.layerZero.rateLimitConfig?.overrides;
 
   if (!rateLimitConfigDefault) {
-    console.log(
-      'Infinite rate limit config will be used as no default config was provided',
-    );
-    rateLimitConfigDefault = {
-      limit: constants.MaxUint256,
-      window: 0,
-    };
+    throw new Error('Rate limit config default not found');
   }
 
   const allReceiverNetworks =
-    lzConfigsPerToken?.[originalNetwork]?.[mToken]?.receiverNetworks ?? [];
+    lzConfigsPerToken?.[originalNetwork]?.[mToken]?.receiverNetworks;
+
+  if (!allReceiverNetworks || allReceiverNetworks.length === 0) {
+    throw new Error('Receiver networks not found');
+  }
 
   const networksToRateLimit = [...allReceiverNetworks, originalNetwork].filter(
     (network) => network !== hre.network.name,
