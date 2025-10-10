@@ -1,4 +1,5 @@
 import { acreBTCDeploymentConfig } from './acreBTC';
+import { cUSDODeploymentConfig } from './cUSDO';
 import { dnETHDeploymentConfig } from './dnETH';
 import { dnFARTDeploymentConfig } from './dnFART';
 import { dnHYPEDeploymentConfig } from './dnHYPE';
@@ -111,4 +112,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   dnTEST: dnTESTDeploymentConfig,
   obeatUSD: obeatUSDDeploymentConfig,
   mEVUSD: mEVUSDDeploymentConfig,
+  cUSDO: cUSDODeploymentConfig,
 };
