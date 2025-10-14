@@ -24,6 +24,11 @@ type CommonContractNames = Omit<TokenContractNames, 'token'> & {
   ac: string;
   customAggregator: string;
   customAggregatorDiscounted: string;
+  layerZero: {
+    minterBurner: string;
+    mintBurnAdapter: string;
+    vaultComposer: string;
+  };
 };
 
 const vaultTypeToContractNameMap: Record<VaultType, string> = {
@@ -124,6 +129,8 @@ export const getCommonContractNames = (): CommonContractNames => {
     dataFeedMultiply: 'CompositeDataFeedMultiply',
     layerZero: {
       minterBurner: 'LzElevatedMinterBurner',
+      mintBurnAdapter: 'MidasLzMintBurnOFTAdapter',
+      vaultComposer: 'MidasVaultComposerSync',
     },
   };
 };

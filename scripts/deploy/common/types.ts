@@ -105,6 +105,7 @@ export type PaymentTokenDeploymentConfig = {
           postDeploy?: {
             setRoundData?: SetRoundDataConfig;
           };
+          layerZero?: Omit<LayerZeroConfig, 'rateLimitConfig'>;
         }
       >
     >

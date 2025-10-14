@@ -14,6 +14,7 @@ export type DepositVaultType = 'depositVault' | 'depositVaultUstb';
 type LayerZeroTokenAddresses = {
   minterBurner?: string;
   mintBurnAdapter?: string;
+  composers?: Partial<Record<PaymentTokenName, string>>;
 };
 
 export type TokenAddresses = {
@@ -27,14 +28,18 @@ export type TokenAddresses = {
 
 export type VaultType = RedemptionVaultType | DepositVaultType;
 
-export type DataFeedAddressesRegular = {
+type DataFeedAddressesCommon = {
   token?: string;
   dataFeed?: string;
+  layerZero?: {
+    oft?: string;
+  };
+};
+export type DataFeedAddressesRegular = DataFeedAddressesCommon & {
   aggregator?: string;
 };
 
-export type DataFeedAddressesComposite = {
-  token?: string;
+export type DataFeedAddressesComposite = DataFeedAddressesCommon & {
   numerator?: {
     dataFeed?: string;
     aggregator?: string;
@@ -43,7 +48,6 @@ export type DataFeedAddressesComposite = {
     dataFeed?: string;
     aggregator?: string;
   };
-  dataFeed?: string;
 };
 
 export type DataFeedAddresses =
@@ -65,6 +69,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x3E7d1eAB13ad0104d2750B8863b489D65364e32D',
         token: '0xdac17f958d2ee523a2206206994597c13d831ec7',
         dataFeed: '0x7811C1Bf5db28630F303267Cc613797EB9A81188',
+        layerZero: {
+          oft: '0x6c96de32cea08842dcc4058c14d3aaad7fa41dee',
+        },
       },
       usdc: {
         aggregator: '0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6',
@@ -639,6 +646,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         token: '0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb',
         aggregator: '0x5e21f6530f656A38caE4F55500944753F662D184',
         dataFeed: '0xCB01C192F223e3c55Ae1E1885A9464131aA985C2',
+        layerZero: {
+          oft: '0x904861a24f30ec96ea7cfc3be9ea4b476d237e98',
+        },
       },
       usde: {
         token: '0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34',
@@ -1031,6 +1041,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         dataFeed: '0x0e0eb6cdad90174f1Db606EC186ddD0B5eD80847',
         aggregator: '0x7811C1Bf5db28630F303267Cc613797EB9A81188',
         token: '0xEa22F8C1624c17C1B58727235292684831A08d56',
+        layerZero: {
+          oft: '0x90cCe755d57cB09EDE287d31e88EF31F406B1E98',
+        },
       },
       usds: {
         aggregator: '0x0e0eb6cdad90174f1Db606EC186ddD0B5eD80847',
@@ -1058,6 +1071,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       layerZero: {
         minterBurner: '0xD42EF78b9f479213daCfc2Baf5f51D6F72319e0a',
         mintBurnAdapter: '0x5e27D20Deee87DF842bf4350Aee72Ecea2f34d71',
+        composers: {
+          usdt: '0xf129dDbBd755d9Eb0F09130086ce20869E49186d',
+        },
       },
     },
     mBASIS: {
@@ -1178,6 +1194,16 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     accessControl: '0xbf25b58cB8DfaD688F7BcB2b87D71C23A6600AaC',
   },
   arbitrumSepolia: {
+    paymentTokens: {
+      usdt: {
+        token: '0x73cB9a00cEB8FC9134a46eEE20D1fd00BEEe9D84',
+        aggregator: '0xe786DA4812Fb91e8d69bC8047c5dB489c70cEa30',
+        dataFeed: '0x39592BdBf6f3b96dD4547063945aB9ece769AE4D',
+        layerZero: {
+          oft: '0x8459f6e174deE33FC72BDAE74a3080751eC92c27',
+        },
+      },
+    },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     mTBILL: {
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',

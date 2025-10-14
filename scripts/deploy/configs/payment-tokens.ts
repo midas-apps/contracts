@@ -8,6 +8,11 @@ import { PaymentTokenDeploymentConfig } from '../common/types';
 export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
   networkConfigs: {
     [chainIds.sepolia]: {
+      usdt: {
+        layerZero: {
+          delegate: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+        },
+      },
       usdc: {
         dataFeed: {
           healthyDiff: 24 * 60 * 60,
@@ -47,6 +52,29 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           minAnswer: parseUnits('0.99999', 8),
           maxAnswer: parseUnits('1', 8),
           maxAnswerDeviation: parseUnits('0', 8),
+        },
+      },
+    },
+    [chainIds.arbitrumSepolia]: {
+      usdt: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99', 8),
+          maxAnswer: parseUnits('1.01', 8),
+        },
+        customAggregator: {
+          description: 'USDT/USD',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        layerZero: {
+          delegate: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
         },
       },
     },

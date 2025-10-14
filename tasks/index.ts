@@ -1,10 +1,12 @@
 import { PopulatedTransaction } from 'ethers';
 import { extendEnvironment, task, types } from 'hardhat/config';
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import path from 'path';
 
 import { ENV, layerZeroEids, MTokenName, Network } from '../config';
 import {
+  DataFeedAddresses,
   getCurrentAddresses,
   midasAddressesPerNetwork,
   TokenAddresses,
@@ -189,9 +191,11 @@ task('lz:oapp:wire:midas', 'Runs a user-defined script')
     types.string,
   )
   .addOptionalParam('mtoken', 'MToken')
+  .addOptionalParam('ptoken', 'Payment Token')
   .addOptionalParam('originalNetwork', 'Original Network')
   .setAction(async (taskArgs, hre) => {
     const mtoken = taskArgs.mtoken;
+    const ptoken = taskArgs.ptoken;
     const originalNetwork = taskArgs.originalNetwork;
 
     if (mtoken) {
@@ -200,6 +204,13 @@ task('lz:oapp:wire:midas', 'Runs a user-defined script')
       }
 
       hre.mtoken = mtoken;
+    }
+
+    if (ptoken) {
+      if (!isPaymentTokenName(ptoken)) {
+        throw new Error('Invalid ptoken parameter');
+      }
+      hre.paymentToken = ptoken;
     }
 
     if (originalNetwork) {
@@ -258,16 +269,17 @@ task('lz:oft:send:midas', 'Runs a user-defined script')
     });
   });
 
-// TODO: move it to a separate file
-// layerzero uses hardhat-deploy to get the contract abi from the address
-// as we dont use it for deployments, we dont have any deployment files
-// that are produced by hardhat-deploy
-// this workaround overrides the getDeploymentsFromAddress function
-// to return the correct abi for the layerzero contracts
-// without needing to create any deployment files
-extendEnvironment(async (hre) => {
+const extendEnvironmentDeployment = async (hre: HardhatRuntimeEnvironment) => {
   const lzAddresses = Object.values(midasAddressesPerNetwork)
-    .map((v) =>
+    .map((v) => [
+      (Object.values(v?.paymentTokens ?? {}) as DataFeedAddresses[]).map(
+        (a) => [
+          {
+            abi: hre.artifacts.readArtifactSync('MidasLzOFTAdapter').abi,
+            address: a?.layerZero?.oft,
+          },
+        ],
+      ),
       (Object.values(v ?? {}) as TokenAddresses[]).map((a) => [
         {
           abi: hre.artifacts.readArtifactSync('MidasLzMintBurnOFTAdapter').abi,
@@ -278,8 +290,8 @@ extendEnvironment(async (hre) => {
           address: a?.layerZero?.minterBurner,
         },
       ]),
-    )
-    .flat(2)
+    ])
+    .flat(3)
     .filter((v) => !!v.address);
   const original = hre.deployments.getDeploymentsFromAddress;
 
@@ -290,4 +302,16 @@ extendEnvironment(async (hre) => {
     }
     return original(address);
   };
+};
+
+// TODO: move it to a separate file
+// layerzero uses hardhat-deploy to get the contract abi from the address
+// as we dont use it for deployments, we dont have any deployment files
+// that are produced by hardhat-deploy
+// this workaround overrides the getDeploymentsFromAddress function
+// to return the correct abi for the layerzero contracts
+// without needing to create any deployment files
+extendEnvironment(async (hre) => {
+  // errors will appear during build step, so skip all
+  await extendEnvironmentDeployment(hre).catch();
 });

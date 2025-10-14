@@ -1,4 +1,3 @@
-import { constants } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { layerZeroEids, Network } from '../../../../config';
@@ -9,7 +8,7 @@ import {
   getMTokenOrThrow,
   logDeploy,
 } from '../../../../helpers/utils';
-import { lzConfigsPerToken } from '../../../../layerzero.config';
+import { lzConfigsPerMToken } from '../../../../layerzero.config';
 import { DeployFunction } from '../../common/types';
 import { getDeployer, getNetworkConfig } from '../../common/utils';
 
@@ -53,7 +52,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   }
 
   const allReceiverNetworks =
-    lzConfigsPerToken?.[originalNetwork]?.[mToken]?.receiverNetworks;
+    lzConfigsPerMToken?.[originalNetwork]?.[mToken]?.receiverNetworks;
 
   if (!allReceiverNetworks || allReceiverNetworks.length === 0) {
     throw new Error('Receiver networks not found');

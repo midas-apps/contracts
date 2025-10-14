@@ -5,7 +5,7 @@ import {
 } from '@layerzerolabs/metadata-tools';
 import { OAppEnforcedOption } from '@layerzerolabs/toolbox-hardhat';
 import type { OmniPointHardhat } from '@layerzerolabs/toolbox-hardhat';
-import hre from 'hardhat';
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
   blockFinality,
@@ -14,19 +14,23 @@ import {
   MTokenName,
   Network,
   PartialConfigPerNetwork,
+  PaymentTokenName,
 } from './config';
 import { midasAddressesPerNetwork } from './config/constants/addresses';
+import { getMTokenOrPaymentTokenOrThrow } from './helpers/utils';
 
-type ConfigPerNetwork = Partial<
+type ConfigPerNetwork<TKey extends string> = Partial<
   Record<
-    MTokenName,
+    TKey,
     {
       receiverNetworks: Network[];
     }
   >
 >;
 
-export const lzConfigsPerToken: PartialConfigPerNetwork<ConfigPerNetwork> = {
+export const lzConfigsPerMToken: PartialConfigPerNetwork<
+  ConfigPerNetwork<MTokenName>
+> = {
   sepolia: {
     mTBILL: {
       receiverNetworks: ['arbitrumSepolia'],
@@ -39,88 +43,126 @@ export const lzConfigsPerToken: PartialConfigPerNetwork<ConfigPerNetwork> = {
   },
 };
 
+export const lzConfigsPerPaymentToken: PartialConfigPerNetwork<
+  ConfigPerNetwork<PaymentTokenName>
+> = {
+  sepolia: {
+    usdt: {
+      receiverNetworks: ['arbitrumSepolia'],
+    },
+  },
+};
+
 const EVM_ENFORCED_OPTIONS: OAppEnforcedOption[] = [
   {
     msgType: 1,
     optionType: ExecutorOptionType.LZ_RECEIVE,
-    gas: 160000,
+    gas: 160_000,
+    value: 0,
+  },
+  {
+    msgType: 2,
+    optionType: ExecutorOptionType.LZ_RECEIVE,
+    gas: 160_000,
+    value: 0,
+  },
+  {
+    msgType: 2,
+    optionType: ExecutorOptionType.COMPOSE,
+    index: 0,
+    gas: 600_000,
     value: 0,
   },
 ];
 
+const getLzConfigPerNetwork = (hre: HardhatRuntimeEnvironment) => {
+  const { mToken, paymentToken } = getMTokenOrPaymentTokenOrThrow(hre);
+
+  return mToken
+    ? lzConfigsPerMToken?.[hre.network.name as Network]?.[mToken]
+    : lzConfigsPerPaymentToken?.[hre.network.name as Network]?.[paymentToken];
+};
+
+const getAdapterAddress = (
+  hre: HardhatRuntimeEnvironment,
+  network: Network,
+) => {
+  const { mToken, paymentToken } = getMTokenOrPaymentTokenOrThrow(hre);
+
+  const networkAddresses = midasAddressesPerNetwork[network];
+
+  if (!networkAddresses) {
+    throw new Error(`Network addresses not found for network: ${network}`);
+  }
+
+  return mToken
+    ? networkAddresses[mToken]?.layerZero?.mintBurnAdapter
+    : networkAddresses?.paymentTokens?.[paymentToken!]?.layerZero?.oft;
+};
+
 export default async function () {
   const pathways: TwoWayConfig[] = [];
 
+  // const hre = await import('hardhat');
+
   const network = hre.network.name as Network;
-
-  const networkConfig = lzConfigsPerToken[network];
-
-  if (!networkConfig) {
-    throw new Error(`Network config not found for network: ${network}`);
-  }
 
   const uniqueContracts: OmniPointHardhat[] = [];
 
-  for (const mTokenKey in networkConfig) {
-    const mToken = mTokenKey as MTokenName;
-    const mTokenConfig = networkConfig[mToken]!;
-    const allNetworks = [...mTokenConfig.receiverNetworks, network];
+  const tokenConfig = getLzConfigPerNetwork(hre);
 
-    allNetworks.forEach((network) => {
-      const adapter =
-        midasAddressesPerNetwork[network]![mToken]?.layerZero?.mintBurnAdapter;
+  if (!tokenConfig) {
+    throw new Error(`Token config not found`);
+  }
 
-      if (!adapter) {
+  const allNetworks = [...tokenConfig.receiverNetworks, network];
+
+  allNetworks.forEach((network) => {
+    const adapter = getAdapterAddress(hre, network);
+
+    if (!adapter) {
+      throw new Error(`Mint burn adapter not found for token on ${network}`);
+    }
+    uniqueContracts.push({
+      eid: layerZeroEids[network]!,
+      address: adapter,
+    });
+  });
+
+  for (const networkA of allNetworks) {
+    for (const networkB of allNetworks) {
+      if (networkA === networkB) {
+        continue;
+      }
+
+      const mTokenAdapterNetworkA = getAdapterAddress(hre, networkA);
+
+      const mTokenAdapterNetworkB = getAdapterAddress(hre, networkB);
+
+      if (!mTokenAdapterNetworkA || !mTokenAdapterNetworkB) {
         throw new Error(
-          `Mint burn adapter not found for mToken: ${mToken} on ${network}`,
+          `Mint burn adapter not found for token on ${networkA} or ${networkB}`,
         );
       }
-      uniqueContracts.push({
-        eid: layerZeroEids[network]!,
-        address: adapter,
-      });
-    });
 
-    for (const networkA of allNetworks) {
-      for (const networkB of allNetworks) {
-        if (networkA === networkB) {
-          continue;
-        }
-
-        const networkAAddresses = midasAddressesPerNetwork[networkA]!;
-        const networkBAddresses = midasAddressesPerNetwork[networkB]!;
-
-        const mTokenAdapterNetworkA =
-          networkAAddresses[mToken]?.layerZero?.mintBurnAdapter;
-
-        const mTokenAdapterNetworkB =
-          networkBAddresses[mToken]?.layerZero?.mintBurnAdapter;
-
-        if (!mTokenAdapterNetworkA || !mTokenAdapterNetworkB) {
-          throw new Error(
-            `Mint burn adapter not found for mToken: ${mToken} on ${networkA} or ${networkB}`,
-          );
-        }
-
-        pathways.push([
-          {
-            eid: layerZeroEids[networkA]!,
-            address: mTokenAdapterNetworkA,
-          }, // Chain A contract
-          {
-            eid: layerZeroEids[networkB]!,
-            address: mTokenAdapterNetworkB,
-          }, // Chain B contract
-          [
-            isTestnetNetwork(networkA) || isTestnetNetwork(networkB)
-              ? ['LayerZero Labs']
-              : ['LayerZero Labs', 'Deutsche Telekom', 'Canary'],
-            [],
-          ], // [ requiredDVN[], [ optionalDVN[], threshold ] ]
-          [blockFinality[networkA] ?? 12, blockFinality[networkB] ?? 12], // [A to B confirmations, B to A confirmations] FIXME:
-          [EVM_ENFORCED_OPTIONS, EVM_ENFORCED_OPTIONS], // Chain B enforcedOptions, Chain A enforcedOptions
-        ]);
-      }
+      pathways.push([
+        {
+          eid: layerZeroEids[networkA]!,
+          address: mTokenAdapterNetworkA,
+        }, // Chain A contract
+        {
+          eid: layerZeroEids[networkB]!,
+          address: mTokenAdapterNetworkB,
+        }, // Chain B contract
+        [
+          isTestnetNetwork(networkA) || isTestnetNetwork(networkB)
+            ? ['LayerZero Labs']
+            : ['LayerZero Labs', 'Deutsche Telekom', 'Canary'],
+          [],
+        ], // [ requiredDVN[], [ optionalDVN[], threshold ] ]
+        [blockFinality[networkA] ?? 12, blockFinality[networkB] ?? 12], // [A to B confirmations, B to A confirmations] FIXME:
+        [EVM_ENFORCED_OPTIONS, EVM_ENFORCED_OPTIONS], // Chain B enforcedOptions, Chain A enforcedOptions
+      ]);
     }
   }
 
@@ -141,7 +183,6 @@ export default async function () {
   // Generate the connections config based on the pathways
   const connections = await generateConnectionsConfig(uniquePathways);
 
-  console.log('connections', connections, uniqueContracts);
   return {
     contracts: uniqueContracts.map((v) => ({ contract: v })),
     connections,

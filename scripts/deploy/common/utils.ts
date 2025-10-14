@@ -1,6 +1,5 @@
 import { DeployProxyOptions } from '@openzeppelin/hardhat-upgrades/dist/utils';
-import { constants, PopulatedTransaction, Signer } from 'ethers';
-import { ethers } from 'hardhat';
+import ethers, { constants, PopulatedTransaction, Signer } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { DeploymentConfig } from './types';

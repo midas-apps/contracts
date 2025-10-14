@@ -7,7 +7,7 @@ import {
   getMTokenOrThrow,
   logDeploy,
 } from '../../../../helpers/utils';
-import { lzConfigsPerToken } from '../../../../layerzero.config';
+import { lzConfigsPerMToken } from '../../../../layerzero.config';
 import { DeployFunction } from '../../common/types';
 import {
   getDeployer,
@@ -54,7 +54,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   }
 
   const allReceiverNetworks =
-    lzConfigsPerToken?.[originalNetwork]?.[mToken]?.receiverNetworks ?? [];
+    lzConfigsPerMToken?.[originalNetwork]?.[mToken]?.receiverNetworks ?? [];
 
   const networksToRateLimit = [...allReceiverNetworks, originalNetwork].filter(
     (network) => network !== hre.network.name,
