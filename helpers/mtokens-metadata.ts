@@ -228,4 +228,8 @@ export const mTokensMetadata: Record<
     name: 'Midas Hyperithm ETH',
     symbol: 'mHyperETH',
   },
+  mHyperBTC: {
+    name: 'Midas Hyperithm BTC',
+    symbol: 'mHyperBTC',
+  },
 };
