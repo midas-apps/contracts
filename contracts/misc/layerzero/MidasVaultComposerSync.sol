@@ -17,15 +17,17 @@ import {IDataFeed} from "../../interfaces/IDataFeed.sol";
 import {TokenConfig, IManageableVault} from "../../interfaces/IManageableVault.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {DecimalsCorrectionLibrary} from "../../libraries/DecimalsCorrectionLibrary.sol";
+import {IMidasVaultComposerSync} from "./interfaces/IMidasVaultComposerSync.sol";
 
 /**
  * @dev extended IManageableVault interface to include methods from
  * default ManageableVault implementation
  */
 interface IManageableVaultWithConfigs is IManageableVault {
-    function tokensConfig(
-        address token
-    ) external view returns (TokenConfig memory);
+    function tokensConfig(address token)
+        external
+        view
+        returns (TokenConfig memory);
 
     function waivedFeeRestriction(address account) external view returns (bool);
 
@@ -36,13 +38,13 @@ interface IManageableVaultWithConfigs is IManageableVault {
  * @title MidasVaultComposerSync - Synchronous Vault Composer for Midas vaults
  * @notice This contract is a composer that allows deposits and redemptions operations against a
  *         synchronous vault across different chains using LayerZero's OFT protocol.
- * @dev The contract is designed to handle deposits and redemptions of vault shares and assets,
- *      ensuring that the share and asset tokens are correctly managed and transferred across chains.
+ * @dev The contract is designed to handle deposits and redemptions of vault mTokens and paymentTokens,
+ *      ensuring that the mToken and paymentToken are correctly managed and transferred across chains.
  *      It also includes slippage protection and refund mechanisms for failed transactions.
  * @dev Default refunds are enabled to EOA addresses only on the source.
         Custom refunds to contracts can be implemented by overriding the _refund function.
  */
-contract MidasVaultComposerSync is IVaultComposerSync, ReentrancyGuard {
+contract MidasVaultComposerSync is IMidasVaultComposerSync, ReentrancyGuard {
     using OFTComposeMsgCodec for bytes;
     using OFTComposeMsgCodec for bytes32;
     using SafeERC20 for IERC20;
@@ -54,22 +56,21 @@ contract MidasVaultComposerSync is IVaultComposerSync, ReentrancyGuard {
         address dvValue,
         address rvValue
     );
-    error NotImplemented();
     error InvalidTokenRate(address feed);
 
-    IDepositVault public immutable DEPOSIT_VAULT;
-    IRedemptionVault public immutable REDEMPTION_VAULT;
-    IDataFeed public immutable M_TOKEN_DATA_FEED;
+    IDepositVault public immutable depositVault;
+    IRedemptionVault public immutable redemptionVault;
+    IDataFeed public immutable mTokenDataFeed;
 
-    address public immutable ASSET_OFT;
-    address public immutable ASSET_ERC20;
-    address public immutable SHARE_OFT;
-    address public immutable SHARE_ERC20;
+    address public immutable paymentTokenOft;
+    address public immutable paymentTokenErc20;
+    address public immutable mTokenOft;
+    address public immutable mTokenErc20;
 
-    uint8 public immutable ASSET_ERC20_DECIMALS;
+    uint8 public immutable paymentTokenDecimals;
 
-    address public immutable ENDPOINT;
-    uint32 public immutable VAULT_EID;
+    address public immutable lzEndpoint;
+    uint32 public immutable vaultsEid;
 
     uint256 private constant _ONE = 1e18;
     uint256 private constant _STABLECOIN_RATE = _ONE;
@@ -79,62 +80,65 @@ contract MidasVaultComposerSync is IVaultComposerSync, ReentrancyGuard {
      * @notice Initializes the VaultComposerSync contract with vault and OFT token addresses
      * @param _depositVault The address of the deposit vault contract
      * @param _redemptionVault The address of the redemption vault contract
-     * @param _assetOFT The address of the asset OFT contract
-     * @param _shareOFT The address of the share OFT contract
+     * @param _paymentTokenOft The address of the paymentToken OFT contract
+     * @param _mTokenOft The address of the mToken OFT contract
      *
      * Requirements:
-     * - Share token must be the vault itself
-     * - Asset token must match the vault's underlying asset
-     * - Share OFT must be an adapter (approvalRequired() returns true)
+     * - mToken must be the vault itself
+     * - paymentToken must match the vault's underlying paymentToken
+     * - mToken OFT must be an adapter (approvalRequired() returns true)
      */
     constructor(
         address _depositVault,
         address _redemptionVault,
-        address _assetOFT,
-        address _shareOFT
+        address _paymentTokenOft,
+        address _mTokenOft
     ) {
-        DEPOSIT_VAULT = IDepositVault(_depositVault);
-        REDEMPTION_VAULT = IRedemptionVault(_redemptionVault);
+        depositVault = IDepositVault(_depositVault);
+        redemptionVault = IRedemptionVault(_redemptionVault);
 
-        M_TOKEN_DATA_FEED = DEPOSIT_VAULT.mTokenDataFeed();
+        mTokenDataFeed = depositVault.mTokenDataFeed();
 
         {
-            IDataFeed mTokenDataFeedRv = REDEMPTION_VAULT.mTokenDataFeed();
+            IDataFeed mTokenDataFeedRv = redemptionVault.mTokenDataFeed();
 
-            if (mTokenDataFeedRv != M_TOKEN_DATA_FEED) {
+            if (mTokenDataFeedRv != mTokenDataFeed) {
                 revert VaultsConfigAddressMismatch(
                     address(mTokenDataFeedRv),
-                    address(M_TOKEN_DATA_FEED)
+                    address(mTokenDataFeed)
                 );
             }
         }
 
-        ASSET_OFT = _assetOFT;
-        ASSET_ERC20 = IOFT(ASSET_OFT).token();
-        ASSET_ERC20_DECIMALS = IERC20Metadata(ASSET_ERC20).decimals();
+        paymentTokenOft = _paymentTokenOft;
+        paymentTokenErc20 = IOFT(paymentTokenOft).token();
+        paymentTokenDecimals = IERC20Metadata(paymentTokenErc20).decimals();
 
-        SHARE_OFT = _shareOFT;
-        SHARE_ERC20 = IOFT(SHARE_OFT).token();
+        mTokenOft = _mTokenOft;
+        mTokenErc20 = IOFT(mTokenOft).token();
 
         {
-            address mTokenDv = address(DEPOSIT_VAULT.mToken());
-            address mTokenRv = address(REDEMPTION_VAULT.mToken());
-            if (SHARE_ERC20 != mTokenDv || SHARE_ERC20 != mTokenRv) {
-                revert TokenAddressMismatch(SHARE_ERC20, mTokenDv, mTokenRv);
+            address mTokenDv = address(depositVault.mToken());
+            address mTokenRv = address(redemptionVault.mToken());
+            if (mTokenErc20 != mTokenDv || mTokenErc20 != mTokenRv) {
+                revert TokenAddressMismatch(mTokenErc20, mTokenDv, mTokenRv);
             }
         }
 
-        ENDPOINT = address(IOAppCore(ASSET_OFT).endpoint());
-        VAULT_EID = ILayerZeroEndpointV2(ENDPOINT).eid();
+        lzEndpoint = address(IOAppCore(paymentTokenOft).endpoint());
+        vaultsEid = ILayerZeroEndpointV2(lzEndpoint).eid();
 
-        /// @dev Approve the vault to spend the asset tokens held by this contract
-        IERC20(ASSET_ERC20).approve(_depositVault, type(uint256).max);
-        IERC20(SHARE_ERC20).approve(_redemptionVault, type(uint256).max);
-        IERC20(SHARE_ERC20).approve(SHARE_OFT, type(uint256).max);
+        /// @dev Approve the vault to spend the paymentToken held by this contract
+        IERC20(paymentTokenErc20).approve(_depositVault, type(uint256).max);
+        IERC20(mTokenErc20).approve(_redemptionVault, type(uint256).max);
+        IERC20(mTokenErc20).approve(mTokenOft, type(uint256).max);
 
-        /// @dev If the asset OFT is an adapter, approve it as well
-        if (IOFT(_assetOFT).approvalRequired()) {
-            IERC20(ASSET_ERC20).approve(_assetOFT, type(uint256).max);
+        /// @dev If the paymentToken OFT is an adapter, approve it as well
+        if (IOFT(_paymentTokenOft).approvalRequired()) {
+            IERC20(paymentTokenErc20).approve(
+                _paymentTokenOft,
+                type(uint256).max
+            );
         }
     }
 
@@ -142,7 +146,7 @@ contract MidasVaultComposerSync is IVaultComposerSync, ReentrancyGuard {
      * @notice Handles LayerZero compose operations for vault transactions with automatic refund functionality
      * @dev This composer is designed to handle refunds to an EOA address and not a contract
      * @dev Any revert in handleCompose() causes a refund back to the src EXCEPT for InsufficientMsgValue
-     * @param _composeSender The OFT contract address used for refunds, must be either ASSET_OFT or SHARE_OFT
+     * @param _composeSender The OFT contract address used for refunds, must be either paymentTokenOft or mTokenOft
      * @param _guid LayerZero's unique tx id (created on the source tx)
      * @param _message Decomposable bytes object into [composeHeader][composeMessage]
      */
@@ -150,13 +154,13 @@ contract MidasVaultComposerSync is IVaultComposerSync, ReentrancyGuard {
         address _composeSender, // The OFT used on refund, also the vaultIn token.
         bytes32 _guid,
         bytes calldata _message, // expected to contain a composeMessage = abi.encode(SendParam hopSendParam,uint256 minMsgValue)
-        address /*_executor*/,
+        address, /*_executor*/
         bytes calldata /*_extraData*/
     ) external payable virtual override {
-        if (msg.sender != ENDPOINT) {
+        if (msg.sender != lzEndpoint) {
             revert OnlyEndpoint(msg.sender);
         }
-        if (_composeSender != ASSET_OFT && _composeSender != SHARE_OFT) {
+        if (_composeSender != paymentTokenOft && _composeSender != mTokenOft) {
             revert OnlyValidComposeCaller(_composeSender);
         }
 
@@ -219,7 +223,7 @@ contract MidasVaultComposerSync is IVaultComposerSync, ReentrancyGuard {
             revert InsufficientMsgValue(minMsgValue, msg.value);
         }
 
-        if (_oftIn == ASSET_OFT) {
+        if (_oftIn == paymentTokenOft) {
             _depositAndSend(_composeFrom, _amount, sendParam, tx.origin);
         } else {
             _redeemAndSend(_composeFrom, _amount, sendParam, tx.origin);
@@ -227,166 +231,166 @@ contract MidasVaultComposerSync is IVaultComposerSync, ReentrancyGuard {
     }
 
     /**
-     * @notice Deposits ERC20 assets from the caller into the vault and sends them to the recipient
-     * @param _assetAmount The number of ERC20 tokens to deposit and send
-     * @param _sendParam Parameters on how to send the shares to the recipient
+     * @notice Deposits ERC20 paymentTokens from the caller into the vault and sends them to the recipient
+     * @param _paymentTokenAmount The number of ERC20 tokens to deposit and send
+     * @param _sendParam Parameters on how to send the mTokens to the recipient
      * @param _refundAddress Address to receive excess `msg.value`
      */
     function depositAndSend(
-        uint256 _assetAmount,
+        uint256 _paymentTokenAmount,
         SendParam memory _sendParam,
         address _refundAddress
     ) external payable virtual nonReentrant {
-        IERC20(ASSET_ERC20).safeTransferFrom(
+        IERC20(paymentTokenErc20).safeTransferFrom(
             msg.sender,
             address(this),
-            _assetAmount
+            _paymentTokenAmount
         );
         _depositAndSend(
             OFTComposeMsgCodec.addressToBytes32(msg.sender),
-            _assetAmount,
+            _paymentTokenAmount,
             _sendParam,
             _refundAddress
         );
     }
 
     /**
-     * @dev Internal function that deposits assets and sends shares to another chain
+     * @dev Internal function that deposits paymentTokens and sends mTokens to another chain
      * @param _depositor The depositor (bytes32 format to account for non-evm addresses)
-     * @param _assetAmount The number of assets to deposit
-     * @param _sendParam Parameter that defines how to send the shares
+     * @param _paymentTokenAmount The number of paymentTokens to deposit
+     * @param _sendParam Parameter that defines how to send the mTokens
      * @param _refundAddress Address to receive excess payment of the LZ fees
-     * @notice This function first deposits the assets to mint shares, validates the shares meet minimum slippage requirements,
-     *         then sends the minted shares cross-chain using the OFT (Omnichain Fungible Token) protocol
-     * @notice The _sendParam.amountLD is updated to the actual share amount minted, and minAmountLD is reset to 0 for the send operation
+     * @notice This function first deposits the paymentTokens to mint mTokens, validates the mTokens meet minimum slippage requirements,
+     *         then sends the minted mTokens cross-chain using the OFT (Omnichain Fungible Token) protocol
+     * @notice The _sendParam.amountLD is updated to the actual mToken amount minted, and minAmountLD is reset to 0 for the send operation
      */
     function _depositAndSend(
         bytes32 _depositor,
-        uint256 _assetAmount,
+        uint256 _paymentTokenAmount,
         SendParam memory _sendParam,
         address _refundAddress
     ) internal virtual {
-        uint256 shareAmount = _deposit(
+        uint256 mTokenAmount = _deposit(
             _depositor,
-            _assetAmount,
+            _paymentTokenAmount,
             _sendParam.minAmountLD
         );
 
-        _sendParam.amountLD = shareAmount;
+        _sendParam.amountLD = mTokenAmount;
         _sendParam.minAmountLD = 0;
 
-        _send(SHARE_OFT, _sendParam, _refundAddress);
+        _send(mTokenOft, _sendParam, _refundAddress);
         emit Deposited(
             _depositor,
             _sendParam.to,
             _sendParam.dstEid,
-            _assetAmount,
-            shareAmount
+            _paymentTokenAmount,
+            mTokenAmount
         );
     }
 
     /**
-     * @dev Internal function to deposit assets into the vault
-     * @param _assetAmount The number of assets to deposit into the vault
-     * @return shareAmount The number of shares received from the vault deposit
+     * @dev Internal function to deposit paymentTokens into the vault
+     * @param _paymentTokenAmount The number of paymentTokens to deposit into the vault
+     * @return mTokenAmount The number of mTokens received from the vault deposit
      * @notice This function is expected to be overridden by the inheriting contract to implement custom/nonERC4626 deposit logic
      */
     function _deposit(
-        bytes32 /*_depositor*/,
-        uint256 _assetAmount,
+        bytes32, /*_depositor*/
+        uint256 _paymentTokenAmount,
         uint256 _minReceiveAmount
-    ) internal virtual returns (uint256 shareAmount) {
-        uint256 balanceBefore = _balanceOfThis(SHARE_ERC20);
-        DEPOSIT_VAULT.depositInstant(
-            ASSET_ERC20,
-            tokenAmountToBase18(_assetAmount),
+    ) internal virtual returns (uint256 mTokenAmount) {
+        uint256 balanceBefore = _balanceOfThis(mTokenErc20);
+        depositVault.depositInstant(
+            paymentTokenErc20,
+            _tokenAmountToBase18(_paymentTokenAmount),
             _minReceiveAmount,
             bytes32(0) // referrerId
         );
 
-        shareAmount = _balanceOfThis(SHARE_ERC20) - balanceBefore;
+        mTokenAmount = _balanceOfThis(mTokenErc20) - balanceBefore;
     }
 
     /**
-     * @notice Redeems vault shares and sends the resulting assets to the user
-     * @param _shareAmount The number of vault shares to redeem
-     * @param _sendParam Parameter that defines how to send the assets
+     * @notice Redeems vault mTokens and sends the resulting paymentTokens to the user
+     * @param _mTokenAmount The number of vault mTokens to redeem
+     * @param _sendParam Parameter that defines how to send the paymentTokens
      * @param _refundAddress Address to receive excess payment of the LZ fees
      */
     function redeemAndSend(
-        uint256 _shareAmount,
+        uint256 _mTokenAmount,
         SendParam memory _sendParam,
         address _refundAddress
     ) external payable virtual nonReentrant {
-        IERC20(SHARE_ERC20).safeTransferFrom(
+        IERC20(mTokenErc20).safeTransferFrom(
             msg.sender,
             address(this),
-            _shareAmount
+            _mTokenAmount
         );
         _redeemAndSend(
             OFTComposeMsgCodec.addressToBytes32(msg.sender),
-            _shareAmount,
+            _mTokenAmount,
             _sendParam,
             _refundAddress
         );
     }
 
     /**
-     * @dev Internal function that redeems shares for assets and sends them cross-chain
+     * @dev Internal function that redeems mTokens for paymentTokens and sends them cross-chain
      * @param _redeemer The address of the redeemer in bytes32 format
-     * @param _shareAmount The number of shares to redeem
-     * @param _sendParam Parameter that defines how to send the assets
+     * @param _mTokenAmount The number of mTokens to redeem
+     * @param _sendParam Parameter that defines how to send the paymentTokens
      * @param _refundAddress Address to receive excess payment of the LZ fees
-     * @notice This function first redeems the specified share amount for the underlying asset,
+     * @notice This function first redeems the specified mToken amount for the underlying paymentToken,
      *         validates the received amount against slippage protection, then initiates a cross-chain
-     *         transfer of the redeemed assets using the OFT (Omnichain Fungible Token) protocol
+     *         transfer of the redeemed paymentTokens using the OFT (Omnichain Fungible Token) protocol
      * @notice The minAmountLD in _sendParam is reset to 0 after slippage validation since the
      *         actual amount has already been verified
      */
     function _redeemAndSend(
         bytes32 _redeemer,
-        uint256 _shareAmount,
+        uint256 _mTokenAmount,
         SendParam memory _sendParam,
         address _refundAddress
     ) internal virtual {
-        uint256 assetAmount = _redeem(
+        uint256 paymentTokenAmount = _redeem(
             _redeemer,
-            _shareAmount,
+            _mTokenAmount,
             _sendParam.minAmountLD
         );
 
-        _sendParam.amountLD = assetAmount;
+        _sendParam.amountLD = paymentTokenAmount;
         _sendParam.minAmountLD = 0;
 
-        _send(ASSET_OFT, _sendParam, _refundAddress);
+        _send(paymentTokenOft, _sendParam, _refundAddress);
         emit Redeemed(
             _redeemer,
             _sendParam.to,
             _sendParam.dstEid,
-            _shareAmount,
-            assetAmount
+            _mTokenAmount,
+            paymentTokenAmount
         );
     }
 
     /**
-     * @dev Internal function to redeem shares from the vault
-     * @param _shareAmount The number of shares to redeem from the vault
-     * @return assetAmount The number of assets received from the vault redemption
+     * @dev Internal function to redeem mTokens from the vault
+     * @param _mTokenAmount The number of mTokens to redeem from the vault
+     * @return paymentTokenAmount The number of paymentTokens received from the vault redemption
      * @notice This function is expected to be overridden by the inheriting contract to implement custom/nonERC4626 redemption logic
      */
     function _redeem(
-        bytes32 /*_redeemer*/,
-        uint256 _shareAmount,
+        bytes32, /*_redeemer*/
+        uint256 _mTokenAmount,
         uint256 _minReceiveAmount
-    ) internal virtual returns (uint256 assetAmount) {
-        uint256 balanceBefore = _balanceOfThis(ASSET_ERC20);
-        REDEMPTION_VAULT.redeemInstant(
-            ASSET_ERC20,
-            _shareAmount,
+    ) internal virtual returns (uint256 paymentTokenAmount) {
+        uint256 balanceBefore = _balanceOfThis(paymentTokenErc20);
+        redemptionVault.redeemInstant(
+            paymentTokenErc20,
+            _mTokenAmount,
             _minReceiveAmount
         );
 
-        assetAmount = _balanceOfThis(ASSET_ERC20) - balanceBefore; // TODO: move balance calc to function
+        paymentTokenAmount = _balanceOfThis(paymentTokenErc20) - balanceBefore; // TODO: move balance calc to function
     }
 
     /**
@@ -406,27 +410,19 @@ contract MidasVaultComposerSync is IVaultComposerSync, ReentrancyGuard {
      * @return MessagingFee The estimated fee for the send operation
      */
     function quoteSend(
-        address /* _from */,
+        address, /* _from */
         address _targetOFT,
         uint256 _vaultInAmount,
         SendParam memory _sendParam
     ) external view virtual returns (MessagingFee memory) {
-        /// @dev When quoting the asset OFT, the function input is shares and the SendParam.amountLD into quoteSend() should be assets (and vice versa)
+        /// @dev When quoting the paymentToken OFT, the function input is mTokens and the SendParam.amountLD into quoteSend() should be paymentTokens (and vice versa)
 
-        if (_targetOFT == ASSET_OFT) {
+        if (_targetOFT == paymentTokenOft) {
             _sendParam.amountLD = _previewRedeem(_vaultInAmount);
         } else {
             _sendParam.amountLD = _previewDeposit(_vaultInAmount);
         }
         return IOFT(_targetOFT).quoteSend(_sendParam, false);
-    }
-
-    /**
-     * @dev for Midas vaults this function is not implemented
-     * as mint and redeem flows are split between 2 different contracts
-     */
-    function VAULT() external pure returns (IERC4626) {
-        revert NotImplemented();
     }
 
     /**
@@ -442,9 +438,11 @@ contract MidasVaultComposerSync is IVaultComposerSync, ReentrancyGuard {
         SendParam memory _sendParam,
         address _refundAddress
     ) internal {
-        if (_sendParam.dstEid == VAULT_EID) {
+        if (_sendParam.dstEid == vaultsEid) {
             /// @dev Can do this because _oft is validated before this function is called
-            address erc20 = _oft == ASSET_OFT ? ASSET_ERC20 : SHARE_ERC20;
+            address erc20 = _oft == paymentTokenOft
+                ? paymentTokenErc20
+                : mTokenErc20;
 
             if (msg.value > 0) {
                 revert NoMsgValueExpected();
@@ -489,16 +487,18 @@ contract MidasVaultComposerSync is IVaultComposerSync, ReentrancyGuard {
         );
     }
 
-    function _previewDeposit(
-        uint256 amountTokenIn
-    ) internal view returns (uint256) {
-        uint256 amountTokenInBase18 = tokenAmountToBase18(amountTokenIn);
+    function _previewDeposit(uint256 amountTokenIn)
+        internal
+        view
+        returns (uint256)
+    {
+        uint256 amountTokenInBase18 = _tokenAmountToBase18(amountTokenIn);
 
         TokenConfig memory tokenConfig = IManageableVaultWithConfigs(
-            address(DEPOSIT_VAULT)
-        ).tokensConfig(ASSET_ERC20);
+            address(depositVault)
+        ).tokensConfig(paymentTokenErc20);
 
-        uint256 tokenInRate = getTokenRate(
+        uint256 tokenInRate = _getTokenRate(
             IDataFeed(tokenConfig.dataFeed),
             tokenConfig.stable
         );
@@ -506,20 +506,20 @@ contract MidasVaultComposerSync is IVaultComposerSync, ReentrancyGuard {
             revert InvalidTokenRate(tokenConfig.dataFeed);
         }
 
-        uint256 mTokenRate = getTokenRate(M_TOKEN_DATA_FEED, false);
+        uint256 mTokenRate = _getTokenRate(mTokenDataFeed, false);
         if (mTokenRate == 0) {
-            revert InvalidTokenRate(address(M_TOKEN_DATA_FEED));
+            revert InvalidTokenRate(address(mTokenDataFeed));
         }
 
         uint256 amountInUsd = (amountTokenInBase18 * tokenInRate) / _ONE;
 
         uint256 feeTokenAmount = _truncate(
             _getFeeAmount(
-                address(DEPOSIT_VAULT),
+                address(depositVault),
                 tokenConfig,
                 amountTokenInBase18
             ),
-            ASSET_ERC20_DECIMALS
+            paymentTokenDecimals
         );
 
         uint256 feeInUsd = (feeTokenAmount * tokenInRate) / _ONE;
@@ -530,20 +530,22 @@ contract MidasVaultComposerSync is IVaultComposerSync, ReentrancyGuard {
         return amountMToken;
     }
 
-    function _previewRedeem(
-        uint256 amountMTokenIn
-    ) internal view returns (uint256 amountTokenOut) {
+    function _previewRedeem(uint256 amountMTokenIn)
+        internal
+        view
+        returns (uint256 amountTokenOut)
+    {
         TokenConfig memory tokenConfig = IManageableVaultWithConfigs(
-            address(REDEMPTION_VAULT)
-        ).tokensConfig(ASSET_ERC20);
+            address(redemptionVault)
+        ).tokensConfig(paymentTokenErc20);
 
-        uint256 mTokenRate = getTokenRate(M_TOKEN_DATA_FEED, false);
+        uint256 mTokenRate = _getTokenRate(mTokenDataFeed, false);
 
         if (mTokenRate == 0) {
-            revert InvalidTokenRate(address(M_TOKEN_DATA_FEED));
+            revert InvalidTokenRate(address(mTokenDataFeed));
         }
 
-        uint256 tokenOutRate = getTokenRate(
+        uint256 tokenOutRate = _getTokenRate(
             IDataFeed(tokenConfig.dataFeed),
             tokenConfig.stable
         );
@@ -553,7 +555,7 @@ contract MidasVaultComposerSync is IVaultComposerSync, ReentrancyGuard {
         }
 
         uint256 feeAmount = _getFeeAmount(
-            address(REDEMPTION_VAULT),
+            address(redemptionVault),
             tokenConfig,
             amountMTokenIn
         );
@@ -561,13 +563,14 @@ contract MidasVaultComposerSync is IVaultComposerSync, ReentrancyGuard {
         uint256 amountMTokenWithoutFee = amountMTokenIn - feeAmount;
 
         amountTokenOut = ((amountMTokenWithoutFee * mTokenRate) / tokenOutRate)
-            .convertFromBase18(ASSET_ERC20_DECIMALS);
+            .convertFromBase18(paymentTokenDecimals);
     }
 
-    function getTokenRate(
-        IDataFeed dataFeed,
-        bool stable
-    ) internal view returns (uint256) {
+    function _getTokenRate(IDataFeed dataFeed, bool stable)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 rate = dataFeed.getDataInBase18();
         if (stable) {
             return _STABLECOIN_RATE;
@@ -575,16 +578,19 @@ contract MidasVaultComposerSync is IVaultComposerSync, ReentrancyGuard {
         return rate;
     }
 
-    function tokenAmountToBase18(
-        uint256 amount
-    ) internal view returns (uint256) {
-        return amount.convertToBase18(ASSET_ERC20_DECIMALS);
+    function _tokenAmountToBase18(uint256 amount)
+        internal
+        view
+        returns (uint256)
+    {
+        return amount.convertToBase18(paymentTokenDecimals);
     }
 
-    function _truncate(
-        uint256 value,
-        uint8 decimals
-    ) private pure returns (uint256) {
+    function _truncate(uint256 value, uint8 decimals)
+        private
+        pure
+        returns (uint256)
+    {
         return value.convertFromBase18(decimals).convertToBase18(decimals);
     }
 

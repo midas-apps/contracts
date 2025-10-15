@@ -1072,7 +1072,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         minterBurner: '0xD42EF78b9f479213daCfc2Baf5f51D6F72319e0a',
         mintBurnAdapter: '0x5e27D20Deee87DF842bf4350Aee72Ecea2f34d71',
         composers: {
-          usdt: '0xb02cc77ee137436D71b9dE46958A3bB5d7346CcA',
+          usdt: '0x9e3fD82a18d72A74308c65193269f1af2F076F4E',
         },
       },
     },
