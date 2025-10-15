@@ -155,7 +155,7 @@ export async function sendEvm(
     for (let i = 0; i < extraLzComposeOptions.length; i += 3) {
       const index = Number(extraLzComposeOptions[i]);
       const gas = Number(extraLzComposeOptions[i + 1]);
-      const value = Number(extraLzComposeOptions[i + 2]) || 0;
+      const value = extraLzComposeOptions[i + 2] || 0;
       options = options.addExecutorComposeOption(index, gas, value);
       logger.info(
         `Added lzCompose option: index ${index}, ${gas} gas, ${value} value`,
@@ -211,6 +211,7 @@ export async function sendEvm(
 
   const extraOptions = options.toHex();
 
+  console.log('extraOptions', extraOptions);
   // 9️⃣ build sendParam and dispatch
   const sendParam = {
     dstEid,
@@ -229,13 +230,7 @@ export async function sendEvm(
   let msgFee: { nativeFee: BigNumber; lzTokenFee: BigNumber };
   try {
     console.log('sendParam', sendParam);
-    msgFee = await oft.quoteSend(sendParam, false).catch((err) => {
-      console.error('Error quoting send', err);
-      return {
-        nativeFee: parseUnits('0.01', 18),
-        lzTokenFee: BigNumber.from(0),
-      };
-    });
+    msgFee = await oft.quoteSend(sendParam, false);
   } catch (error) {
     DebugLogger.printErrorAndFixSuggestion(
       KnownErrors.ERROR_QUOTING_NATIVE_GAS_COST,
@@ -248,7 +243,6 @@ export async function sendEvm(
   try {
     tx = await oft.send(sendParam, msgFee, signer.address, {
       value: msgFee.nativeFee,
-      gasLimit: 1_000_000,
     });
   } catch (error) {
     DebugLogger.printErrorAndFixSuggestion(

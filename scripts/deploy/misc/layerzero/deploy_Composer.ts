@@ -45,8 +45,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     mTokenAddresses.depositVault!,
     mTokenAddresses.redemptionVaultSwapper ??
       mTokenAddresses.redemptionVaultUstb ??
-      mTokenAddresses.redemptionVaultBuidl ??
-      mTokenAddresses.redemptionVault!,
+      mTokenAddresses.redemptionVault ??
+      mTokenAddresses.redemptionVaultBuidl!,
     pTokenOft,
     mTokenAddresses.layerZero.mintBurnAdapter,
   ] as const;

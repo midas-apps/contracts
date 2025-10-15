@@ -127,11 +127,7 @@ export async function sendOVaultComposer(
 
   // Set gas limits based on whether destination is hub chain
   // If destination is hub, only local transfer is needed (no cross-chain messaging)
-  const lzComposeGas =
-    args.lzComposeGas ||
-    (args.dstEid === hubEid
-      ? 500000 // Lower gas for local transfer only TODO: revise
-      : 700000); // Higher gas for cross-chain messaging TODO: revise
+  const lzComposeGas = 150_000;
 
   if (!args.lzComposeGas) {
     logger.info(
@@ -167,11 +163,9 @@ export async function sendOVaultComposer(
   const secondHopSendParam = {
     dstEid: args.dstEid,
     to: addressToBytes32(to),
-    amountLD: '1', // Expected output from vault preview
+    amountLD: '1', // this ammount will be overrided in the composer call
     minAmountLD: minAmountOut,
-    extraOptions: Options.newOptions()
-      .addExecutorLzReceiveOption(150000, 0)
-      .toHex(),
+    extraOptions: Options.newOptions().toHex(),
     composeMsg: '0x',
     oftCmd: '0x',
   };
@@ -204,7 +198,13 @@ export async function sendOVaultComposer(
 
     try {
       // Quote using hub chain RPC with the expected output amount
-      const quoteFee = await outputOFT.quoteSend(secondHopSendParam, false);
+      const quoteFee = await outputOFT.quoteSend(
+        // if the destination is the hub, we need to quote the send param for the source chain
+        secondHopSendParam.dstEid === hubEid
+          ? { ...secondHopSendParam, dstEid: args.srcEid }
+          : secondHopSendParam,
+        false,
+      );
       lzComposeValue = quoteFee.nativeFee.toString();
       logger.info(
         `Hub chain quoted hop fee: ${lzComposeValue} wei (${(
@@ -212,8 +212,8 @@ export async function sendOVaultComposer(
         ).toFixed(6)} ETH)`,
       );
     } catch (error) {
-      logger.warn(`Quote failed, using default: 0.025 ETH`);
-      lzComposeValue = '25000000000000000'; // 0.025 ETH default
+      logger.warn(`Quote failed, using default: 0.0025 ETH`, error);
+      lzComposeValue = '2500000000000000'; // 0.0025 ETH default
     }
   }
 
@@ -264,6 +264,7 @@ export async function sendOVaultComposer(
     oftAddress,
   };
 
+  console.log('evmArgs', evmArgs);
   const result: SendResult = await sendEvm(evmArgs, hre);
 
   const operationText =

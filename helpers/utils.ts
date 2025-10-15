@@ -71,6 +71,14 @@ export const getOriginalNetwork = (hre: HardhatRuntimeEnvironment) => {
   return originalNetwork;
 };
 
+export const getOriginalNetworkOrThrow = (hre: HardhatRuntimeEnvironment) => {
+  const originalNetwork = hre.layerZero?.originalNetwork;
+  if (!originalNetwork) {
+    throw new Error('OriginalNetwork parameter not found');
+  }
+  return originalNetwork;
+};
+
 export const getPaymentTokenOrThrow = (hre: HardhatRuntimeEnvironment) => {
   const paymentToken = hre.paymentToken;
   if (!paymentToken) {

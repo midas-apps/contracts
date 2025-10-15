@@ -1072,7 +1072,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         minterBurner: '0xD42EF78b9f479213daCfc2Baf5f51D6F72319e0a',
         mintBurnAdapter: '0x5e27D20Deee87DF842bf4350Aee72Ecea2f34d71',
         composers: {
-          usdt: '0xf129dDbBd755d9Eb0F09130086ce20869E49186d',
+          usdt: '0xb02cc77ee137436D71b9dE46958A3bB5d7346CcA',
         },
       },
     },
@@ -1200,7 +1200,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0xe786DA4812Fb91e8d69bC8047c5dB489c70cEa30',
         dataFeed: '0x39592BdBf6f3b96dD4547063945aB9ece769AE4D',
         layerZero: {
-          oft: '0x8459f6e174deE33FC72BDAE74a3080751eC92c27',
+          oft: '0xb93B94C99C6DF85cC9faA338e68C27c72484251E',
         },
       },
     },

@@ -313,5 +313,7 @@ const extendEnvironmentDeployment = async (hre: HardhatRuntimeEnvironment) => {
 // without needing to create any deployment files
 extendEnvironment(async (hre) => {
   // errors will appear during build step, so skip all
-  await extendEnvironmentDeployment(hre).catch();
+  await extendEnvironmentDeployment(hre).catch((err) => {
+    console.error('Error extending environment', err);
+  });
 });
