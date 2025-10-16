@@ -44,7 +44,7 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   xrplevm: 'https://rpc.xrplevm.org',
   zerog: 'https://evmrpc.0g.ai',
   plasma: 'https://rpc.plasma.to',
-  arbitrumSepolia: 'https://arbitrum-sepolia-rpc.publicnode.com',
+  arbitrumSepolia: 'https://sepolia-rollup.arbitrum.io/rpc',
 };
 
 export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {

@@ -47,6 +47,16 @@ contract MidasLzMintBurnOFTAdapter is MintBurnOFTAdapter, RateLimiter {
         return rateLimits[_dstEid];
     }
 
+    /**
+     * @notice Returns the shared decimals for the adapter
+     * @dev Overridden to 9 because default is not enough for
+     * some of the mTokens
+     * @return The shared decimals
+     */
+    function sharedDecimals() public pure override returns (uint8) {
+        return 9;
+    }
+
     // Override _debit to enforce rate limits on token transfers
     function _debit(
         address _from,
