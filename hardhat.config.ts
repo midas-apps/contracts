@@ -16,10 +16,13 @@ import '@layerzerolabs/toolbox-hardhat';
 import {
   chainIds,
   ENV,
+  extend,
   getForkNetworkConfig,
   getHardhatNetworkConfig,
   getNetworkConfig,
 } from './config';
+
+extend();
 
 const { OPTIMIZER, REPORT_GAS, FORKING_NETWORK, ETHERSCAN_API_KEY } = ENV;
 

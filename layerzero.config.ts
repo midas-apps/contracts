@@ -103,7 +103,7 @@ const getAdapterAddress = (
 export default async function () {
   const pathways: TwoWayConfig[] = [];
 
-  // const hre = await import('hardhat');
+  const hre = await import('hardhat');
 
   const network = hre.network.name as Network;
 

@@ -1,5 +1,6 @@
 import { TransactionResponse } from '@ethersproject/providers';
 import { BigNumberish } from 'ethers';
+import { EIP1193Provider } from 'hardhat/types';
 
 import {
   MTokenName,
@@ -28,6 +29,11 @@ declare module 'hardhat/types/runtime' {
       executionLogContext: string;
     };
     customSigner?: {
+      getWeb3Provider: (params: {
+        chainId: number;
+        rpcUrl?: string;
+        action: string;
+      }) => Promise<EIP1193Provider>;
       getWalletAddress: (
         action?: string,
         mtoken?: MTokenName,
@@ -48,6 +54,7 @@ declare module 'hardhat/types/runtime' {
           action?: string;
           from?: string;
           mToken?: string;
+          chainId?: number;
         },
       ) => Promise<
         | { type: 'hardhatSigner'; tx: TransactionResponse }

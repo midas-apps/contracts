@@ -216,6 +216,20 @@ export const layerZeroEids: PartialConfigPerNetwork<EndpointId> = {
   arbitrumSepolia: EndpointId.ARBSEP_V2_TESTNET,
 };
 
+export const layerZeroEidToNetwork = Object.fromEntries(
+  Object.entries(layerZeroEids).map(([network, eid]) => [
+    eid,
+    network as Network,
+  ]),
+) as Partial<Record<EndpointId, Network>>;
+
+export const chainIdToNetwork = Object.fromEntries(
+  Object.entries(chainIds).map(([network, chainId]) => [
+    chainId,
+    network as Network,
+  ]),
+) as Partial<Record<number, Network>>;
+
 export const getBaseNetworkConfig = (
   network: Network,
   tags: Array<string> = [MOCK_AGGREGATOR_NETWORK_TAG],

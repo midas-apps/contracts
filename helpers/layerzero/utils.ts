@@ -1,5 +1,81 @@
-import { endpointIdToNetwork } from '@layerzerolabs/lz-definitions';
+import { JsonRpcProvider } from '@ethersproject/providers';
+import {
+  type OmniSignerFactory,
+  type OmniTransaction,
+} from '@layerzerolabs/devtools';
+import { createLogger, Logger, printJson } from '@layerzerolabs/io-devtools';
+import { EndpointId, endpointIdToNetwork } from '@layerzerolabs/lz-definitions';
 import { Options } from '@layerzerolabs/lz-v2-utilities';
+import { BigNumber } from 'ethers';
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
+
+import { layerZeroEidToNetwork, Network, rpcUrls } from '../../config';
+import { sendAndWaitForCustomTxSign } from '../../scripts/deploy/common/utils';
+export interface SignAndSendTaskArgs {
+  ci?: boolean;
+  logger?: Logger;
+  transactions: OmniTransaction[];
+  createSigner: OmniSignerFactory;
+}
+
+export const createSigner =
+  (
+    hre: HardhatRuntimeEnvironment,
+    externalLogger?: Logger,
+  ): OmniSignerFactory =>
+  (eid: EndpointId) => {
+    const logger = externalLogger ?? createLogger();
+
+    return {
+      sign: async () => {
+        throw new Error('Not implemented');
+      },
+      signAndSend: async (transaction) => {
+        const res = await sendAndWaitForCustomTxSign(
+          hre,
+          {
+            data: transaction.data,
+            to: transaction.point.address,
+            value: transaction.value
+              ? BigNumber.from(transaction.value)
+              : undefined,
+          },
+          {
+            action: 'update-lz-oapp-config',
+            network: layerZeroEidToNetwork[transaction.point.eid],
+          },
+        );
+
+        const result = {
+          wait: async (confirmations?: number) => {
+            if (typeof res === 'string') {
+              logger.debug('confirming with default provider');
+              const provider = new JsonRpcProvider(
+                rpcUrls[
+                  layerZeroEidToNetwork[transaction.point.eid] as Network
+                ],
+              );
+
+              await provider.waitForTransaction(res, confirmations);
+            } else {
+              logger.warn('wait is unavailable for custom signer');
+            }
+            return {
+              transactionHash: res as string,
+            };
+          },
+          transactionHash: res as string,
+        };
+
+        logger.info('Transaction sent successfully', printJson(result));
+        return result;
+      },
+      eid,
+      getPoint: () => {
+        throw new Error('Not implemented');
+      },
+    };
+  };
 
 export const deploymentMetadataUrl =
   'https://metadata.layerzero-api.com/v1/metadata/deployments';

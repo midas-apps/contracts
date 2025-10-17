@@ -1,16 +1,9 @@
 import { PopulatedTransaction } from 'ethers';
-import { extendEnvironment, task, types } from 'hardhat/config';
-import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { task } from 'hardhat/config';
 
 import path from 'path';
 
-import { ENV, layerZeroEids, MTokenName, Network } from '../config';
-import {
-  DataFeedAddresses,
-  getCurrentAddresses,
-  midasAddressesPerNetwork,
-  TokenAddresses,
-} from '../config/constants/addresses';
+import { ENV } from '../config';
 import { initializeLogger } from '../helpers/logger';
 import {
   etherscanVerify,
@@ -33,7 +26,6 @@ task('runscript', 'Runs a user-defined script')
   .addOptionalParam('mtoken', 'MToken')
   .addOptionalParam('ptoken', 'Payment Token')
   .addOptionalParam('action', 'Timelock Action')
-  .addOptionalParam('customSignerScript', 'Custom Signer Script')
   .addOptionalParam('skipvalidation', 'Skip Validation', 'false')
   .addOptionalParam('aggregatorType', 'Aggregator Type')
   .addOptionalParam('logToFile', 'Log to file')
@@ -45,8 +37,6 @@ task('runscript', 'Runs a user-defined script')
     const action = taskArgs.action;
     const originalNetwork = taskArgs.originalNetwork;
 
-    const customSignerScript =
-      taskArgs.customSignerScript ?? ENV.CUSTOM_SIGNER_SCRIPT_PATH;
     const logToFile = taskArgs.logToFile ?? ENV.LOG_TO_FILE;
     const logsFolderPath =
       (taskArgs.logsFolderPath as string | undefined) ??
@@ -67,9 +57,6 @@ task('runscript', 'Runs a user-defined script')
     ) {
       throw new Error('Invalid aggregator type parameter');
     }
-
-    const { deployer } = await hre.getNamedAccounts();
-    const deployerSigner = await hre.ethers.getSigner(deployer);
 
     hre.action = action;
 
@@ -100,67 +87,6 @@ task('runscript', 'Runs a user-defined script')
       };
     }
 
-    if (!customSignerScript) {
-      hre.customSigner = {
-        getWalletAddress: async () => {
-          return deployer;
-        },
-        createAddressBookContract: async (_) => {
-          throw new Error(
-            'createAddressBookContract is not available for hardhat signer',
-          );
-        },
-        sendTransaction: async (transaction) => {
-          const tx = await deployerSigner.sendTransaction({
-            ...transaction,
-          });
-          return {
-            type: 'hardhatSigner',
-            tx,
-          };
-        },
-      };
-    } else {
-      const scriptPathResolved = path.resolve(customSignerScript);
-      const {
-        signTransaction,
-        createAddressBookContract,
-        getWalletAddressForAction,
-      } = await import(scriptPathResolved);
-
-      hre.customSigner = {
-        getWalletAddress: async (action, mtokenOverride) => {
-          return getWalletAddressForAction(
-            action,
-            mtokenOverride ?? hre.mtoken,
-          );
-        },
-        createAddressBookContract: async (data) => {
-          return {
-            payload: await createAddressBookContract({
-              ...data,
-              chainId: hre.network.config.chainId,
-              mToken: mtoken,
-            }),
-          };
-        },
-
-        sendTransaction: async (transaction, txSignMetadata) => {
-          return {
-            type: 'customSigner',
-            payload: await signTransaction(transaction, {
-              chain: {
-                name: hre.network.name,
-                id: hre.network.config.chainId,
-              },
-              mToken: hre.mtoken,
-              ...txSignMetadata,
-            }),
-          };
-        },
-      };
-    }
-
     const scriptPathResolved = path.resolve(scriptPath);
     const { default: run } = await import(scriptPathResolved);
 
@@ -182,138 +108,3 @@ task('verifyRegular')
   .setAction(async ({ address }, hre) => {
     await etherscanVerify(hre, address);
   });
-
-task('lz:oapp:wire:midas', 'Runs a user-defined script')
-  .addOptionalParam(
-    'oappConfig',
-    'Path to your LayerZero OApp config',
-    undefined,
-    types.string,
-  )
-  .addOptionalParam('mtoken', 'MToken')
-  .addOptionalParam('ptoken', 'Payment Token')
-  .addOptionalParam('originalNetwork', 'Original Network')
-  .setAction(async (taskArgs, hre) => {
-    const mtoken = taskArgs.mtoken;
-    const ptoken = taskArgs.ptoken;
-    const originalNetwork = taskArgs.originalNetwork;
-
-    if (mtoken) {
-      if (!isMTokenName(mtoken)) {
-        throw new Error('Invalid mtoken parameter');
-      }
-
-      hre.mtoken = mtoken;
-    }
-
-    if (ptoken) {
-      if (!isPaymentTokenName(ptoken)) {
-        throw new Error('Invalid ptoken parameter');
-      }
-      hre.paymentToken = ptoken;
-    }
-
-    if (originalNetwork) {
-      hre.layerZero = {
-        originalNetwork,
-      };
-    }
-
-    await hre.run('lz:oapp:wire', {
-      oappConfig: './layerzero.config.ts',
-    });
-  });
-
-task('lz:oft:send:midas', 'Runs a user-defined script')
-  .addParam('mtoken', 'MToken')
-  .addParam('amount', 'Amount', undefined, types.string)
-  .addParam('receiverNetwork', 'Receiver Network')
-  .addOptionalParam('receiver', 'Receiver address')
-  .setAction(async (taskArgs, hre) => {
-    const { deployer } = await hre.getNamedAccounts();
-    const deployerSigner = await hre.ethers.getSigner(deployer);
-    const mtoken = taskArgs.mtoken;
-    const amount = taskArgs.amount;
-    const receiverNetwork = taskArgs.receiverNetwork;
-    const receiver = taskArgs.receiver ?? deployerSigner.address;
-
-    if (mtoken) {
-      if (!isMTokenName(mtoken)) {
-        throw new Error('Invalid mtoken parameter');
-      }
-    }
-
-    const srcEid = layerZeroEids[hre.network.name as Network];
-    const dstEid = layerZeroEids[receiverNetwork as Network];
-
-    if (!srcEid || !dstEid) {
-      throw new Error('EIDs not found for networks');
-    }
-
-    const addresses = getCurrentAddresses(hre);
-
-    const oftAdapter =
-      addresses?.[mtoken as MTokenName]?.layerZero?.mintBurnAdapter;
-
-    if (!oftAdapter) {
-      throw new Error('OFT adapter not found');
-    }
-
-    await hre.run('lz:oft:send', {
-      srcEid,
-      dstEid,
-      to: receiver,
-      oappConfig: './layerzero.config.ts',
-      amount,
-      oftAddress: oftAdapter,
-    });
-  });
-
-const extendEnvironmentDeployment = async (hre: HardhatRuntimeEnvironment) => {
-  const lzAddresses = Object.values(midasAddressesPerNetwork)
-    .map((v) => [
-      (Object.values(v?.paymentTokens ?? {}) as DataFeedAddresses[]).map(
-        (a) => [
-          {
-            abi: hre.artifacts.readArtifactSync('MidasLzOFTAdapter').abi,
-            address: a?.layerZero?.oft,
-          },
-        ],
-      ),
-      (Object.values(v ?? {}) as TokenAddresses[]).map((a) => [
-        {
-          abi: hre.artifacts.readArtifactSync('MidasLzMintBurnOFTAdapter').abi,
-          address: a?.layerZero?.mintBurnAdapter,
-        },
-        {
-          abi: hre.artifacts.readArtifactSync('LzElevatedMinterBurner').abi,
-          address: a?.layerZero?.minterBurner,
-        },
-      ]),
-    ])
-    .flat(3)
-    .filter((v) => !!v.address);
-  const original = hre.deployments.getDeploymentsFromAddress;
-
-  hre.deployments.getDeploymentsFromAddress = async (address: string) => {
-    const found = lzAddresses.find((v) => v.address === address);
-    if (found) {
-      return [{ address, abi: found.abi }];
-    }
-    return original(address);
-  };
-};
-
-// TODO: move it to a separate file
-// layerzero uses hardhat-deploy to get the contract abi from the address
-// as we dont use it for deployments, we dont have any deployment files
-// that are produced by hardhat-deploy
-// this workaround overrides the getDeploymentsFromAddress function
-// to return the correct abi for the layerzero contracts
-// without needing to create any deployment files
-extendEnvironment(async (hre) => {
-  // errors will appear during build step, so skip all
-  await extendEnvironmentDeployment(hre).catch((err) => {
-    console.error('Error extending environment', err);
-  });
-});

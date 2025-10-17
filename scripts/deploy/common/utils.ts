@@ -1,10 +1,12 @@
+import { JsonRpcProvider } from '@ethersproject/providers';
 import { DeployProxyOptions } from '@openzeppelin/hardhat-upgrades/dist/utils';
 import ethers, { constants, PopulatedTransaction, Signer } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { DeploymentConfig } from './types';
 
-import { MTokenName } from '../../../config';
+import { chainIds, MTokenName, Network, rpcUrls } from '../../../config';
+import { getHreByNetworkName } from '../../../helpers/hardhat';
 import {
   etherscanVerify,
   logDeploy,
@@ -236,13 +238,15 @@ export const sendAndWaitForCustomTxSign = async (
   txSignMetadata?: {
     mToken?: MTokenName;
     comment?: string;
+    network?: Network;
     action?:
       | 'update-vault'
       | 'update-ac'
       | 'update-feed-mtoken'
       | 'update-feed-ptoken'
       | 'update-timelock'
-      | 'update-lz';
+      | 'update-lz'
+      | 'update-lz-oapp-config';
     subAction?:
       | 'add-payment-token'
       | 'grant-token-roles'
@@ -256,8 +260,12 @@ export const sendAndWaitForCustomTxSign = async (
   safeMiddlewareWallet?: string,
   confirmations = 2,
 ) => {
+  const provider = txSignMetadata?.network
+    ? new JsonRpcProvider(rpcUrls[txSignMetadata.network])
+    : hre.ethers.provider;
+
   if (safeMiddlewareWallet) {
-    const callerCode = await hre.ethers.provider.getCode(safeMiddlewareWallet);
+    const callerCode = await provider.getCode(safeMiddlewareWallet);
 
     const isCallerContract = callerCode !== '0x';
 
@@ -267,10 +275,9 @@ export const sendAndWaitForCustomTxSign = async (
       );
 
       // we assume that the owner contract is a safe contract
-      const safeContract = await hre.ethers.getContractAt(
-        safeAbi,
-        safeMiddlewareWallet,
-      );
+      const safeContract = await hre.ethers
+        .getContractAt(safeAbi, safeMiddlewareWallet)
+        .then((v) => v.connect(provider));
 
       const owners: string[] = await safeContract.getOwners();
 
@@ -309,13 +316,24 @@ export const sendAndWaitForCustomTxSign = async (
     }
   }
 
-  const sendResult = hre.customSigner!.sendTransaction(
+  let hreNetwork: HardhatRuntimeEnvironment = hre;
+
+  if (txSignMetadata?.network && txSignMetadata.network !== hre.network.name) {
+    hreNetwork = await getHreByNetworkName(txSignMetadata.network);
+  }
+
+  const sendResult = hreNetwork.customSigner!.sendTransaction(
     {
       data: populatedTx.data!,
       to: populatedTx.to!,
       value: populatedTx.value,
     },
-    txSignMetadata,
+    {
+      ...(txSignMetadata ?? {}),
+      chainId: txSignMetadata?.network
+        ? chainIds[txSignMetadata.network as Network]
+        : undefined,
+    },
   );
 
   const res = await sendResult;
