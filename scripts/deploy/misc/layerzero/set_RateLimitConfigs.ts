@@ -54,7 +54,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   }
 
   const allReceiverNetworks =
-    lzConfigsPerMToken?.[originalNetwork]?.[mToken]?.receiverNetworks ?? [];
+    lzConfigsPerMToken?.[originalNetwork]?.[mToken]?.linkedNetworks ?? [];
 
   const networksToRateLimit = [...allReceiverNetworks, originalNetwork].filter(
     (network) => network !== hre.network.name,

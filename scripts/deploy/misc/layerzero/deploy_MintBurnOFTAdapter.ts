@@ -52,7 +52,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   }
 
   const allReceiverNetworks =
-    lzConfigsPerMToken?.[originalNetwork]?.[mToken]?.receiverNetworks;
+    lzConfigsPerMToken?.[originalNetwork]?.[mToken]?.linkedNetworks;
 
   if (!allReceiverNetworks || allReceiverNetworks.length === 0) {
     throw new Error('Receiver networks not found');

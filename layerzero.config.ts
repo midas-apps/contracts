@@ -23,7 +23,7 @@ type ConfigPerNetwork<TKey extends string> = Partial<
   Record<
     TKey,
     {
-      receiverNetworks: Network[];
+      linkedNetworks: Network[];
     }
   >
 >;
@@ -33,12 +33,12 @@ export const lzConfigsPerMToken: PartialConfigPerNetwork<
 > = {
   sepolia: {
     mTBILL: {
-      receiverNetworks: ['arbitrumSepolia'],
+      linkedNetworks: ['arbitrumSepolia'],
     },
   },
   hyperevm: {
     obeatUSD: {
-      receiverNetworks: ['main'],
+      linkedNetworks: ['main'],
     },
   },
 };
@@ -48,7 +48,7 @@ export const lzConfigsPerPaymentToken: PartialConfigPerNetwork<
 > = {
   sepolia: {
     usdt: {
-      receiverNetworks: ['arbitrumSepolia'],
+      linkedNetworks: ['arbitrumSepolia'],
     },
   },
 };
@@ -115,7 +115,7 @@ export default async function () {
     throw new Error(`Token config not found`);
   }
 
-  const allNetworks = [...tokenConfig.receiverNetworks, network];
+  const allNetworks = [...tokenConfig.linkedNetworks, network];
 
   allNetworks.forEach((network) => {
     const adapter = getAdapterAddress(hre, network);
