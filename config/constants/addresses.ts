@@ -13,7 +13,7 @@ export type DepositVaultType = 'depositVault' | 'depositVaultUstb';
 
 type LayerZeroTokenAddresses = {
   minterBurner?: string;
-  mintBurnAdapter?: string;
+  oftAdapter?: string;
   composers?: Partial<Record<PaymentTokenName, string>>;
 };
 
@@ -434,7 +434,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       token: '0x2ce15146958Bf305dAdeBbbF31F2d5a4F2574B43',
       layerZero: {
         minterBurner: '0x42D2b03f966CC251F1b2Fd249c52819978653f3b',
-        mintBurnAdapter: '0xa0df4E2D295A450E4704c3603B54B33Eb7d086c0',
+        oftAdapter: '0xa0df4E2D295A450E4704c3603B54B33Eb7d086c0',
       },
     },
   },
@@ -822,7 +822,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVaultSwapper: '0x36094ABE5E589691B8f60505823A72F5fdEdC953',
       layerZero: {
         minterBurner: '0xE1cF4c1B6aa1A8F133C14AEF05D772c1b7602F4b',
-        mintBurnAdapter: '0xd7d4B67052FEaC3C9D1782Cb0869EF4f29a31921',
+        oftAdapter: '0xd7d4B67052FEaC3C9D1782Cb0869EF4f29a31921',
       },
     },
   },
@@ -1070,7 +1070,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       token: '0xefED40D1eb1577d1073e9C4F277463486D39b084',
       layerZero: {
         minterBurner: '0xD42EF78b9f479213daCfc2Baf5f51D6F72319e0a',
-        mintBurnAdapter: '0xA58465a27b878A5EbB8a184545a3fc90Cc855381',
+        oftAdapter: '0xA58465a27b878A5EbB8a184545a3fc90Cc855381',
         composers: {
           usdt: '0x9e3fD82a18d72A74308c65193269f1af2F076F4E',
         },
@@ -1209,7 +1209,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
       layerZero: {
         minterBurner: '0x0aC07510A254ED6CDE1B2C72F9965206022B98FA',
-        mintBurnAdapter: '0x3897445701132efb82362324D59D0f35c23B0170',
+        oftAdapter: '0x3897445701132efb82362324D59D0f35c23B0170',
       },
     },
   },

@@ -1,5 +1,6 @@
+import { setBlockGasLimit } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
-import { constants } from 'ethers';
+import { constants, ContractFactory } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import * as hre from 'hardhat';
@@ -13,7 +14,11 @@ import {
 } from './manageable-vault.helpers';
 import { postDeploymentTest } from './post-deploy.helpers';
 
-import { getAllRoles } from '../../helpers/roles';
+import {
+  getAllRoles,
+  getRolesForToken,
+  getRolesNamesForToken,
+} from '../../helpers/roles';
 import {
   // eslint-disable-next-line camelcase
   AggregatorV3Mock__factory,
@@ -69,6 +74,14 @@ import {
   AcreAdapter__factory,
   // eslint-disable-next-line camelcase
   CompositeDataFeedTest__factory,
+  // eslint-disable-next-line camelcase
+  MidasLzMintBurnOFTAdapter__factory,
+  // eslint-disable-next-line camelcase
+  MidasLzOFT__factory,
+  // eslint-disable-next-line camelcase
+  MidasLzOFTAdapter__factory,
+  // eslint-disable-next-line camelcase
+  MidasVaultComposerSync__factory,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -709,4 +722,132 @@ export const acreAdapterFixture = async () => {
   await mintToken(defaultFixture.mTBILL, defaultFixture.regularAccounts[0], 20);
 
   return { acreUsdcMTbillAdapter, ...defaultFixture };
+};
+
+export const layerZeroFixture = async () => {
+  const defaultFixture = await defaultDeploy();
+
+  const {
+    owner,
+    accessControl,
+    mTBILL,
+    depositVault,
+    redemptionVault,
+    dataFeed,
+    stableCoins,
+  } = defaultFixture;
+  const eidA = 1;
+  const eidB = 2;
+
+  const endpointV2MockArtifact = await hre.deployments.getArtifact(
+    'EndpointV2Mock',
+  );
+
+  const endpointV2MockFactory = new ContractFactory(
+    endpointV2MockArtifact.abi,
+    endpointV2MockArtifact.bytecode,
+    defaultFixture.owner,
+  );
+
+  // await setBlockGasLimit(100000000000);
+
+  const mockEndpointA = await endpointV2MockFactory.deploy(eidA);
+  const mockEndpointB = await endpointV2MockFactory.deploy(eidB);
+
+  const roles = getRolesForToken('mTBILL');
+
+  const oftAdapterA = await new MidasLzMintBurnOFTAdapter__factory(
+    owner,
+  ).deploy(mTBILL.address, mockEndpointA.address, owner.address, [
+    {
+      dstEid: eidB,
+      limit: parseUnits('1000000000', 18),
+      window: 60,
+    },
+  ]);
+
+  const oftAdapterB = await new MidasLzMintBurnOFTAdapter__factory(
+    owner,
+  ).deploy(mTBILL.address, mockEndpointB.address, owner.address, [
+    {
+      dstEid: eidA,
+      limit: parseUnits('1000000000', 18),
+      window: 60,
+    },
+  ]);
+
+  await accessControl.grantRoleMult(
+    [roles.minter, roles.burner, roles.minter, roles.burner],
+    [
+      oftAdapterA.address,
+      oftAdapterA.address,
+      oftAdapterB.address,
+      oftAdapterB.address,
+    ],
+  );
+
+  await mockEndpointA.setDestLzEndpoint(
+    oftAdapterB.address,
+    mockEndpointB.address,
+  );
+  await mockEndpointB.setDestLzEndpoint(
+    oftAdapterA.address,
+    mockEndpointA.address,
+  );
+
+  await oftAdapterA
+    .connect(owner)
+    .setPeer(eidB, ethers.utils.zeroPad(oftAdapterB.address, 32));
+  await oftAdapterB
+    .connect(owner)
+    .setPeer(eidA, ethers.utils.zeroPad(oftAdapterA.address, 32));
+
+  const pTokenLzOft = await new MidasLzOFT__factory(owner).deploy(
+    'LZ Payment Token OFT',
+    'PTOFT',
+    mockEndpointB.address,
+    owner.address,
+  );
+
+  const pTokenLzOftAdapter = await new MidasLzOFTAdapter__factory(owner).deploy(
+    stableCoins.usdt.address,
+    mockEndpointA.address,
+    owner.address,
+  );
+
+  await mockEndpointA.setDestLzEndpoint(
+    pTokenLzOft.address,
+    mockEndpointB.address,
+  );
+  await mockEndpointB.setDestLzEndpoint(
+    pTokenLzOftAdapter.address,
+    mockEndpointA.address,
+  );
+
+  await pTokenLzOftAdapter
+    .connect(owner)
+    .setPeer(eidB, ethers.utils.zeroPad(pTokenLzOft.address, 32));
+  await pTokenLzOft
+    .connect(owner)
+    .setPeer(eidA, ethers.utils.zeroPad(pTokenLzOftAdapter.address, 32));
+
+  const composer = await new MidasVaultComposerSync__factory(owner).deploy(
+    depositVault.address,
+    redemptionVault.address,
+    pTokenLzOftAdapter.address,
+    oftAdapterA.address,
+  );
+
+  return {
+    mockEndpointA,
+    mockEndpointB,
+    oftAdapterA,
+    oftAdapterB,
+    eidA,
+    eidB,
+    pTokenLzOft,
+    pTokenLzOftAdapter,
+    composer,
+    ...defaultFixture,
+  };
 };

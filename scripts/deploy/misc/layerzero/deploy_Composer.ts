@@ -24,7 +24,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('mToken addresses not found');
   }
 
-  if (!mTokenAddresses.layerZero?.mintBurnAdapter) {
+  if (!mTokenAddresses.layerZero?.oftAdapter) {
     throw new Error('mToken layerzero adapter not found');
   }
 
@@ -48,7 +48,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       mTokenAddresses.redemptionVault ??
       mTokenAddresses.redemptionVaultBuidl!,
     pTokenOft,
-    mTokenAddresses.layerZero.mintBurnAdapter,
+    mTokenAddresses.layerZero.oftAdapter,
   ] as const;
 
   const contract = await factory.deploy(...args);

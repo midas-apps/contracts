@@ -58,7 +58,7 @@ export async function sendOVaultComposer(
   const oftAddress =
     args.tokenType === 'asset'
       ? currentNetworkAddresses?.paymentTokens?.[args.pToken]?.layerZero?.oft
-      : currentNetworkAddresses?.[args.mToken]?.layerZero?.mintBurnAdapter;
+      : currentNetworkAddresses?.[args.mToken]?.layerZero?.oftAdapter;
 
   if (!oftAddress) {
     throw new Error('OFT address not found');
@@ -178,7 +178,7 @@ export async function sendOVaultComposer(
     // Determine which OFT to quote (opposite of what we're sending)
     const outputOFTAddress =
       args.tokenType === 'asset'
-        ? hubTokenAddresses?.layerZero?.mintBurnAdapter // Asset input → Share output
+        ? hubTokenAddresses?.layerZero?.oftAdapter // Asset input → Share output
         : hubPTokenAddresses?.layerZero?.oft; // Share input → Asset output
 
     if (!outputOFTAddress) {

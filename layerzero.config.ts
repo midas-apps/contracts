@@ -96,7 +96,7 @@ const getAdapterAddress = (
   }
 
   return mToken
-    ? networkAddresses[mToken]?.layerZero?.mintBurnAdapter
+    ? networkAddresses[mToken]?.layerZero?.oftAdapter
     : networkAddresses?.paymentTokens?.[paymentToken!]?.layerZero?.oft;
 };
 

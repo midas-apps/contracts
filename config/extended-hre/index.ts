@@ -25,11 +25,7 @@ const extendDeployment = async (hre: HardhatRuntimeEnvironment) => {
       (Object.values(v ?? {}) as TokenAddresses[]).map((a) => [
         {
           abi: hre.artifacts.readArtifactSync('MidasLzMintBurnOFTAdapter').abi,
-          address: a?.layerZero?.mintBurnAdapter,
-        },
-        {
-          abi: hre.artifacts.readArtifactSync('LzElevatedMinterBurner').abi,
-          address: a?.layerZero?.minterBurner,
+          address: a?.layerZero?.oftAdapter,
         },
       ]),
     ])
@@ -123,7 +119,9 @@ const extendWithCustomSigner = async (hre: HardhatRuntimeEnvironment) => {
 };
 
 export const extender = async (hre: HardhatRuntimeEnvironment) => {
-  await extendDeployment(hre);
+  await extendDeployment(hre).catch((error) => {
+    console.error('Error extending deployment:', error);
+  });
   await extendWithCustomSigner(hre);
 };
 

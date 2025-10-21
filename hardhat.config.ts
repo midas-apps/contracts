@@ -13,6 +13,7 @@ import 'hardhat-deploy';
 import 'solidity-docgen';
 import './tasks';
 import '@layerzerolabs/toolbox-hardhat';
+import 'hardhat-tracer';
 import {
   chainIds,
   ENV,

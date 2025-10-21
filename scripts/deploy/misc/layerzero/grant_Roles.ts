@@ -17,7 +17,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     !mTokenAddresses ||
     !mTokenAddresses.token ||
     !mTokenAddresses.layerZero?.minterBurner ||
-    !mTokenAddresses.layerZero?.mintBurnAdapter
+    !mTokenAddresses.layerZero?.oftAdapter
   ) {
     throw new Error('mToken addresses not found or missing required fields');
   }
@@ -37,7 +37,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     await contract.populateTransaction.grantRoleMult(rolesToGrant, [
       mTokenAddresses.layerZero.minterBurner,
       mTokenAddresses.layerZero.minterBurner,
-      mTokenAddresses.layerZero.mintBurnAdapter!,
+      mTokenAddresses.layerZero.oftAdapter!,
     ]),
     {
       action: 'update-ac',

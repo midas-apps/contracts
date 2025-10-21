@@ -292,6 +292,7 @@ export const getHardhatNetworkConfig = (): HardhatNetworkUserConfig => ({
   accounts: mnemonics.hardhat ? { mnemonic: mnemonics.hardhat } : undefined,
   saveDeployments: true,
   live: false,
+  allowUnlimitedContractSize: true,
 });
 
 export const isTestnetNetwork = (network: Network) => {

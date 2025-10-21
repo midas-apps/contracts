@@ -10,12 +10,10 @@ import {IOAppCore} from "@layerzerolabs/oapp-evm/contracts/oapp/interfaces/IOApp
 import {ILayerZeroEndpointV2} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 import {OFTComposeMsgCodec} from "@layerzerolabs/oft-evm/contracts/libs/OFTComposeMsgCodec.sol";
 
-import {IVaultComposerSync} from "@layerzerolabs/ovault-evm/contracts/interfaces/IVaultComposerSync.sol";
 import {IDepositVault} from "../../interfaces/IDepositVault.sol";
 import {IRedemptionVault} from "../../interfaces/IRedemptionVault.sol";
 import {IDataFeed} from "../../interfaces/IDataFeed.sol";
 import {TokenConfig, IManageableVault} from "../../interfaces/IManageableVault.sol";
-import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {DecimalsCorrectionLibrary} from "../../libraries/DecimalsCorrectionLibrary.sol";
 import {IMidasVaultComposerSync} from "./interfaces/IMidasVaultComposerSync.sol";
 
@@ -24,10 +22,9 @@ import {IMidasVaultComposerSync} from "./interfaces/IMidasVaultComposerSync.sol"
  * default ManageableVault implementation
  */
 interface IManageableVaultWithConfigs is IManageableVault {
-    function tokensConfig(address token)
-        external
-        view
-        returns (TokenConfig memory);
+    function tokensConfig(
+        address token
+    ) external view returns (TokenConfig memory);
 
     function waivedFeeRestriction(address account) external view returns (bool);
 
@@ -50,30 +47,81 @@ contract MidasVaultComposerSync is IMidasVaultComposerSync, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using DecimalsCorrectionLibrary for uint256;
 
+    /**
+     * @notice error for vaults config address mismatch
+     * @param dvValue address of deposit vault
+     * @param rvValue address of redemption vault
+     */
     error VaultsConfigAddressMismatch(address dvValue, address rvValue);
+    /**
+     * @notice error for token address mismatch
+     * @param oftTokenValue address of OFT token
+     * @param dvValue address of mToken of deposit vault
+     * @param rvValue address of mToken of redemption vault
+     */
     error TokenAddressMismatch(
         address oftTokenValue,
         address dvValue,
         address rvValue
     );
+
+    /**
+     * @notice error for invalid token rate
+     * @param feed address of failed data feed contract
+     */
     error InvalidTokenRate(address feed);
 
+    /**
+     * @inheritdoc IMidasVaultComposerSync
+     */
     IDepositVault public immutable depositVault;
+    /**
+     * @inheritdoc IMidasVaultComposerSync
+     */
     IRedemptionVault public immutable redemptionVault;
+    /**
+     * @inheritdoc IMidasVaultComposerSync
+     */
     IDataFeed public immutable mTokenDataFeed;
 
+    /**
+     * @inheritdoc IMidasVaultComposerSync
+     */
     address public immutable paymentTokenOft;
+    /**
+     * @inheritdoc IMidasVaultComposerSync
+     */
     address public immutable paymentTokenErc20;
+    /**
+     * @inheritdoc IMidasVaultComposerSync
+     */
     address public immutable mTokenOft;
+    /**
+     * @inheritdoc IMidasVaultComposerSync
+     */
     address public immutable mTokenErc20;
 
+    /**
+     * @notice decimals of `paymentTokenErc20`
+     */
     uint8 public immutable paymentTokenDecimals;
 
+    /**
+     * @inheritdoc IMidasVaultComposerSync
+     */
     address public immutable lzEndpoint;
+    /**
+     * @inheritdoc IMidasVaultComposerSync
+     */
     uint32 public immutable vaultsEid;
 
+    /**
+     * @notice constant for 1e18
+     */
     uint256 private constant _ONE = 1e18;
-    uint256 private constant _STABLECOIN_RATE = _ONE;
+    /**
+     * @notice constant for 100%
+     */
     uint256 private constant _ONE_HUNDRED_PERCENT = 100 * 100;
 
     /**
@@ -154,7 +202,7 @@ contract MidasVaultComposerSync is IMidasVaultComposerSync, ReentrancyGuard {
         address _composeSender, // The OFT used on refund, also the vaultIn token.
         bytes32 _guid,
         bytes calldata _message, // expected to contain a composeMessage = abi.encode(SendParam hopSendParam,uint256 minMsgValue)
-        address, /*_executor*/
+        address /*_executor*/,
         bytes calldata /*_extraData*/
     ) external payable virtual override {
         if (msg.sender != lzEndpoint) {
@@ -293,10 +341,9 @@ contract MidasVaultComposerSync is IMidasVaultComposerSync, ReentrancyGuard {
      * @dev Internal function to deposit paymentTokens into the vault
      * @param _paymentTokenAmount The number of paymentTokens to deposit into the vault
      * @return mTokenAmount The number of mTokens received from the vault deposit
-     * @notice This function is expected to be overridden by the inheriting contract to implement custom/nonERC4626 deposit logic
      */
     function _deposit(
-        bytes32, /*_depositor*/
+        bytes32 /*_depositor*/,
         uint256 _paymentTokenAmount,
         uint256 _minReceiveAmount
     ) internal virtual returns (uint256 mTokenAmount) {
@@ -376,10 +423,9 @@ contract MidasVaultComposerSync is IMidasVaultComposerSync, ReentrancyGuard {
      * @dev Internal function to redeem mTokens from the vault
      * @param _mTokenAmount The number of mTokens to redeem from the vault
      * @return paymentTokenAmount The number of paymentTokens received from the vault redemption
-     * @notice This function is expected to be overridden by the inheriting contract to implement custom/nonERC4626 redemption logic
      */
     function _redeem(
-        bytes32, /*_redeemer*/
+        bytes32 /*_redeemer*/,
         uint256 _mTokenAmount,
         uint256 _minReceiveAmount
     ) internal virtual returns (uint256 paymentTokenAmount) {
@@ -410,7 +456,7 @@ contract MidasVaultComposerSync is IMidasVaultComposerSync, ReentrancyGuard {
      * @return MessagingFee The estimated fee for the send operation
      */
     function quoteSend(
-        address, /* _from */
+        address /* _from */,
         address _targetOFT,
         uint256 _vaultInAmount,
         SendParam memory _sendParam
@@ -487,11 +533,9 @@ contract MidasVaultComposerSync is IMidasVaultComposerSync, ReentrancyGuard {
         );
     }
 
-    function _previewDeposit(uint256 amountTokenIn)
-        internal
-        view
-        returns (uint256)
-    {
+    function _previewDeposit(
+        uint256 amountTokenIn
+    ) internal view returns (uint256) {
         uint256 amountTokenInBase18 = _tokenAmountToBase18(amountTokenIn);
 
         TokenConfig memory tokenConfig = IManageableVaultWithConfigs(
@@ -530,11 +574,9 @@ contract MidasVaultComposerSync is IMidasVaultComposerSync, ReentrancyGuard {
         return amountMToken;
     }
 
-    function _previewRedeem(uint256 amountMTokenIn)
-        internal
-        view
-        returns (uint256 amountTokenOut)
-    {
+    function _previewRedeem(
+        uint256 amountMTokenIn
+    ) internal view returns (uint256 amountTokenOut) {
         TokenConfig memory tokenConfig = IManageableVaultWithConfigs(
             address(redemptionVault)
         ).tokensConfig(paymentTokenErc20);
@@ -566,31 +608,27 @@ contract MidasVaultComposerSync is IMidasVaultComposerSync, ReentrancyGuard {
             .convertFromBase18(paymentTokenDecimals);
     }
 
-    function _getTokenRate(IDataFeed dataFeed, bool stable)
-        internal
-        view
-        returns (uint256)
-    {
+    function _getTokenRate(
+        IDataFeed dataFeed,
+        bool stable
+    ) internal view returns (uint256) {
         uint256 rate = dataFeed.getDataInBase18();
         if (stable) {
-            return _STABLECOIN_RATE;
+            return _ONE;
         }
         return rate;
     }
 
-    function _tokenAmountToBase18(uint256 amount)
-        internal
-        view
-        returns (uint256)
-    {
+    function _tokenAmountToBase18(
+        uint256 amount
+    ) internal view returns (uint256) {
         return amount.convertToBase18(paymentTokenDecimals);
     }
 
-    function _truncate(uint256 value, uint8 decimals)
-        private
-        pure
-        returns (uint256)
-    {
+    function _truncate(
+        uint256 value,
+        uint8 decimals
+    ) private pure returns (uint256) {
         return value.convertFromBase18(decimals).convertToBase18(decimals);
     }
 

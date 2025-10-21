@@ -26,7 +26,7 @@ type CommonContractNames = Omit<TokenContractNames, 'token'> & {
   customAggregatorDiscounted: string;
   layerZero: {
     minterBurner: string;
-    mintBurnAdapter: string;
+    oftAdapter: string;
     vaultComposer: string;
   };
 };
@@ -129,7 +129,7 @@ export const getCommonContractNames = (): CommonContractNames => {
     dataFeedMultiply: 'CompositeDataFeedMultiply',
     layerZero: {
       minterBurner: 'LzElevatedMinterBurner',
-      mintBurnAdapter: 'MidasLzMintBurnOFTAdapter',
+      oftAdapter: 'MidasLzMintBurnOFTAdapter',
       vaultComposer: 'MidasVaultComposerSync',
     },
   };

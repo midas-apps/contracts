@@ -4809,7 +4809,7 @@ ethers@^4.0.40:
     uuid "2.0.1"
     xmlhttprequest "1.8.0"
 
-ethers@^5.7.2, ethers@^5.8.0:
+ethers@^5.6.1, ethers@^5.7.2, ethers@^5.8.0:
   version "5.8.0"
   resolved "https://registry.yarnpkg.com/ethers/-/ethers-5.8.0.tgz#97858dc4d4c74afce83ea7562fe9493cedb4d377"
   integrity sha512-DUq+7fHrCg1aPDFCHx6UIPb3nmt2XMpM7Y/g2gLhsl3lIBqeAfOJIl1qEvRf2uq3BiKxmh6Fh5pfp2ieyek7Kg==
@@ -5741,6 +5741,16 @@ hardhat-gas-reporter@1.0.9:
     array-uniq "1.0.3"
     eth-gas-reporter "^0.2.25"
     sha1 "^1.1.1"
+
+hardhat-tracer@3.4.0:
+  version "3.4.0"
+  resolved "https://registry.yarnpkg.com/hardhat-tracer/-/hardhat-tracer-3.4.0.tgz#d731f4ac076f546f35c80b701ebfa90b73071a0e"
+  integrity sha512-Szro71artobfytPVvv6SMLlboXoe/Z3opjuij3A0fEOCgQs1YKZhlvkKK+KAY7kLRgqQse0jO/dF2Sq3xIAJwg==
+  dependencies:
+    chalk "^4.1.2"
+    debug "^4.3.4"
+    ethers "^5.6.1"
+    semver "^7.6.2"
 
 hardhat@2.24.0:
   version "2.24.0"
