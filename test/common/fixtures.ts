@@ -6,6 +6,7 @@ import { ethers } from 'hardhat';
 import * as hre from 'hardhat';
 
 import { approve, approveBase18, mintToken } from './common.helpers';
+import { deployProxyContract } from './deploy.helpers';
 import {
   addPaymentTokenTest,
   addWaivedFeeAccountTest,
@@ -81,7 +82,7 @@ import {
   // eslint-disable-next-line camelcase
   MidasLzOFTAdapter__factory,
   // eslint-disable-next-line camelcase
-  MidasVaultComposerSync__factory,
+  MidasVaultComposerSync,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -831,11 +832,16 @@ export const layerZeroFixture = async () => {
     .connect(owner)
     .setPeer(eidA, ethers.utils.zeroPad(pTokenLzOftAdapter.address, 32));
 
-  const composer = await new MidasVaultComposerSync__factory(owner).deploy(
-    depositVault.address,
-    redemptionVault.address,
-    pTokenLzOftAdapter.address,
-    oftAdapterA.address,
+  const composer = await deployProxyContract<MidasVaultComposerSync>(
+    'MidasVaultComposerSync',
+    undefined,
+    undefined,
+    [
+      depositVault.address,
+      redemptionVault.address,
+      pTokenLzOftAdapter.address,
+      oftAdapterA.address,
+    ],
   );
 
   return {

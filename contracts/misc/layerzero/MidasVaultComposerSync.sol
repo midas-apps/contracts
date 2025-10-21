@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {SafeERC20Upgradeable as SafeERC20, IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import {IOFT, SendParam, MessagingFee} from "@layerzerolabs/oft-evm/contracts/interfaces/IOFT.sol";
 import {IOAppCore} from "@layerzerolabs/oapp-evm/contracts/oapp/interfaces/IOAppCore.sol";
@@ -16,6 +16,7 @@ import {IDataFeed} from "../../interfaces/IDataFeed.sol";
 import {TokenConfig, IManageableVault} from "../../interfaces/IManageableVault.sol";
 import {DecimalsCorrectionLibrary} from "../../libraries/DecimalsCorrectionLibrary.sol";
 import {IMidasVaultComposerSync} from "./interfaces/IMidasVaultComposerSync.sol";
+import {MidasInitializable} from "../../abstract/MidasInitializable.sol";
 
 /**
  * @dev extended IManageableVault interface to include methods from
@@ -41,7 +42,11 @@ interface IManageableVaultWithConfigs is IManageableVault {
  * @dev Default refunds are enabled to EOA addresses only on the source.
         Custom refunds to contracts can be implemented by overriding the _refund function.
  */
-contract MidasVaultComposerSync is IMidasVaultComposerSync, ReentrancyGuard {
+contract MidasVaultComposerSync is
+    IMidasVaultComposerSync,
+    MidasInitializable,
+    ReentrancyGuardUpgradeable
+{
     using OFTComposeMsgCodec for bytes;
     using OFTComposeMsgCodec for bytes32;
     using SafeERC20 for IERC20;
@@ -136,12 +141,13 @@ contract MidasVaultComposerSync is IMidasVaultComposerSync, ReentrancyGuard {
      * - paymentToken must match the vault's underlying paymentToken
      * - mToken OFT must be an adapter (approvalRequired() returns true)
      */
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(
         address _depositVault,
         address _redemptionVault,
         address _paymentTokenOft,
         address _mTokenOft
-    ) {
+    ) MidasInitializable() {
         depositVault = IDepositVault(_depositVault);
         redemptionVault = IRedemptionVault(_redemptionVault);
 
@@ -175,16 +181,26 @@ contract MidasVaultComposerSync is IMidasVaultComposerSync, ReentrancyGuard {
 
         lzEndpoint = address(IOAppCore(paymentTokenOft).endpoint());
         vaultsEid = ILayerZeroEndpointV2(lzEndpoint).eid();
+    }
 
+    /**
+     * @notice Initializes the contract
+     */
+    function initialize() external initializer {
         /// @dev Approve the vault to spend the paymentToken held by this contract
-        IERC20(paymentTokenErc20).approve(_depositVault, type(uint256).max);
-        IERC20(mTokenErc20).approve(_redemptionVault, type(uint256).max);
-        IERC20(mTokenErc20).approve(mTokenOft, type(uint256).max);
+        IERC20(paymentTokenErc20).approve(
+            address(depositVault),
+            type(uint256).max
+        );
+        IERC20(mTokenErc20).approve(
+            address(redemptionVault),
+            type(uint256).max
+        );
 
         /// @dev If the paymentToken OFT is an adapter, approve it as well
-        if (IOFT(_paymentTokenOft).approvalRequired()) {
+        if (IOFT(paymentTokenOft).approvalRequired()) {
             IERC20(paymentTokenErc20).approve(
-                _paymentTokenOft,
+                paymentTokenOft,
                 type(uint256).max
             );
         }

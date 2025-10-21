@@ -307,6 +307,8 @@ describe.only('LayerZero', function () {
         pTokenLzOftAdapter,
         oftAdapterA,
         mTokenToUsdDataFeed,
+        stableCoins,
+        mTBILL,
       } = fixture;
 
       expect(await composer.mTokenDataFeed()).to.equal(
@@ -320,6 +322,29 @@ describe.only('LayerZero', function () {
         pTokenLzOftAdapter.address,
       );
       expect(await composer.mTokenOft()).to.equal(oftAdapterA.address);
+      expect(await composer.mTokenErc20()).to.equal(mTBILL.address);
+      expect(await composer.paymentTokenErc20()).to.equal(
+        stableCoins.usdt.address,
+      );
+
+      expect(await composer.paymentTokenDecimals()).to.equal(
+        await stableCoins.usdt.decimals(),
+      );
+      expect(
+        await stableCoins.usdt.allowance(
+          composer.address,
+          pTokenLzOftAdapter.address,
+        ),
+      ).to.equal(constants.MaxUint256);
+      expect(
+        await stableCoins.usdt.allowance(
+          composer.address,
+          depositVault.address,
+        ),
+      ).to.equal(constants.MaxUint256);
+      expect(
+        await mTBILL.allowance(composer.address, redemptionVault.address),
+      ).to.equal(constants.MaxUint256);
     });
 
     describe('depositAndSend', () => {
@@ -543,6 +568,7 @@ describe.only('LayerZero', function () {
         const endpointSigner = await hre.ethers.getImpersonatedSigner(
           mockEndpointA.address,
         );
+        await setBalance(endpointSigner.address, parseUnits('100', 18));
 
         await expect(
           composer
