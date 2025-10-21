@@ -11,6 +11,7 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
       usdt: {
         layerZero: {
           delegate: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          sharedDecimals: 9,
         },
       },
       usdc: {
@@ -70,6 +71,7 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
         },
         layerZero: {
           delegate: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          sharedDecimals: 9,
         },
         postDeploy: {
           setRoundData: {

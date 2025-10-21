@@ -40,6 +40,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const args = [
     tokenAddresses.token,
+    config.layerZero.sharedDecimals,
     endpointV2Deployment.address,
     config.layerZero.delegate,
   ] as const;

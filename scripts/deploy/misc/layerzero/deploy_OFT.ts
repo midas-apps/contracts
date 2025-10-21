@@ -59,6 +59,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const args = [
     name + ' OFT',
     symbol,
+    config.layerZero.sharedDecimals,
     endpointV2Deployment.address,
     config.layerZero.delegate,
   ] as const;

@@ -266,9 +266,9 @@ describe.only('LayerZero', function () {
       const { pTokenLzOft, owner, mockEndpointB } = fixture;
 
       expect(await pTokenLzOft.decimals()).to.equal(18);
-      expect(await pTokenLzOft.sharedDecimals()).to.equal(6);
+      expect(await pTokenLzOft.sharedDecimals()).to.equal(9);
       expect(await pTokenLzOft.decimalConversionRate()).to.equal(
-        parseUnits('1', 12),
+        parseUnits('1', 9),
       );
       expect(await pTokenLzOft.name()).to.equal('LZ Payment Token OFT');
       expect(await pTokenLzOft.symbol()).to.equal('PTOFT');
@@ -283,9 +283,9 @@ describe.only('LayerZero', function () {
       const fixture = await layerZeroFixture();
       const { pTokenLzOftAdapter, owner, mockEndpointA, stableCoins } = fixture;
 
-      expect(await pTokenLzOftAdapter.sharedDecimals()).to.equal(6);
+      expect(await pTokenLzOftAdapter.sharedDecimals()).to.equal(9);
       expect(await pTokenLzOftAdapter.decimalConversionRate()).to.equal(
-        parseUnits('1', 12),
+        parseUnits('1', 9),
       );
       expect(await pTokenLzOftAdapter.owner()).to.equal(owner.address);
       expect(await pTokenLzOftAdapter.endpoint()).to.equal(

@@ -1196,7 +1196,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   arbitrumSepolia: {
     paymentTokens: {
       usdt: {
-        token: '0x73cB9a00cEB8FC9134a46eEE20D1fd00BEEe9D84',
+        token: '0xb93B94C99C6DF85cC9faA338e68C27c72484251E',
         aggregator: '0xe786DA4812Fb91e8d69bC8047c5dB489c70cEa30',
         dataFeed: '0x39592BdBf6f3b96dD4547063945aB9ece769AE4D',
         layerZero: {

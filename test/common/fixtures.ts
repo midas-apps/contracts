@@ -806,12 +806,14 @@ export const layerZeroFixture = async () => {
   const pTokenLzOft = await new MidasLzOFT__factory(owner).deploy(
     'LZ Payment Token OFT',
     'PTOFT',
+    9,
     mockEndpointB.address,
     owner.address,
   );
 
   const pTokenLzOftAdapter = await new MidasLzOFTAdapter__factory(owner).deploy(
     stableCoins.usdt.address,
+    9,
     mockEndpointA.address,
     owner.address,
   );
