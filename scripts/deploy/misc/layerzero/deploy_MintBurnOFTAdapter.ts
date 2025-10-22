@@ -29,11 +29,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const mTokenAddresses = addresses?.[mToken];
 
-  if (
-    !mTokenAddresses ||
-    !mTokenAddresses.token ||
-    !mTokenAddresses.layerZero?.minterBurner
-  ) {
+  if (!mTokenAddresses || !mTokenAddresses.token) {
     throw new Error('mToken addresses not found or missing required fields');
   }
 
@@ -75,7 +71,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const args = [
     mTokenAddresses.token,
-    mTokenAddresses.layerZero.minterBurner,
     endpointV2Deployment.address,
     config.layerZero.delegate,
     rateLimitConfigs,

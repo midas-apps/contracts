@@ -1,4 +1,4 @@
-import { setBlockGasLimit } from '@nomicfoundation/hardhat-network-helpers';
+import { Options } from '@layerzerolabs/lz-v2-utilities';
 import { expect } from 'chai';
 import { constants, ContractFactory } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
@@ -82,7 +82,7 @@ import {
   // eslint-disable-next-line camelcase
   MidasLzOFTAdapter__factory,
   // eslint-disable-next-line camelcase
-  MidasVaultComposerSync,
+  MidasVaultComposerSyncTester,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -132,9 +132,7 @@ export const defaultDeploy = async () => {
 
   const rolesFlat = [
     Object.values(allRoles.common),
-    Object.values(allRoles.tokenRoles).map(({ layerZero, ...v }) =>
-      [...Object.values(v), ...Object.values(layerZero)].flat(2),
-    ),
+    Object.values(allRoles.tokenRoles).map((v) => Object.values(v)),
   ]
     .flat(2)
     .filter((v) => v !== '-' && !!v && !excludedRoles.includes(v)) as string[];
@@ -796,6 +794,41 @@ export const layerZeroFixture = async () => {
     mockEndpointA.address,
   );
 
+  await oftAdapterA.setEnforcedOptions([
+    {
+      eid: eidB,
+      options: Options.newOptions()
+        .addExecutorLzReceiveOption(200_000, 0)
+        .toHex(),
+      msgType: 1,
+    },
+    {
+      eid: eidB,
+      options: Options.newOptions()
+        .addExecutorLzReceiveOption(200_000, 0)
+        .addExecutorComposeOption(0, 600_000, 0)
+        .toHex(),
+      msgType: 2,
+    },
+  ]);
+  await oftAdapterB.setEnforcedOptions([
+    {
+      eid: eidA,
+      options: Options.newOptions()
+        .addExecutorLzReceiveOption(200_000, 0)
+        .toHex(),
+      msgType: 1,
+    },
+    {
+      eid: eidA,
+      options: Options.newOptions()
+        .addExecutorLzReceiveOption(200_000, 0)
+        .addExecutorComposeOption(0, 600_000, 0)
+        .toHex(),
+      msgType: 2,
+    },
+  ]);
+
   await oftAdapterA
     .connect(owner)
     .setPeer(eidB, ethers.utils.zeroPad(oftAdapterB.address, 32));
@@ -834,8 +867,8 @@ export const layerZeroFixture = async () => {
     .connect(owner)
     .setPeer(eidA, ethers.utils.zeroPad(pTokenLzOftAdapter.address, 32));
 
-  const composer = await deployProxyContract<MidasVaultComposerSync>(
-    'MidasVaultComposerSync',
+  const composer = await deployProxyContract<MidasVaultComposerSyncTester>(
+    'MidasVaultComposerSyncTester',
     undefined,
     undefined,
     [

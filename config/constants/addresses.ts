@@ -433,8 +433,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     obeatUSD: {
       token: '0x2ce15146958Bf305dAdeBbbF31F2d5a4F2574B43',
       layerZero: {
-        minterBurner: '0x42D2b03f966CC251F1b2Fd249c52819978653f3b',
-        oftAdapter: '0xa0df4E2D295A450E4704c3603B54B33Eb7d086c0',
+        oftAdapter: '0x55B40C5ebC53C4b03a7cbA602C6CEed3fC2349c6',
       },
     },
   },
@@ -821,8 +820,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x65D0a14dd083C38244542BAC0e0cd16d51c37458',
       redemptionVaultSwapper: '0x36094ABE5E589691B8f60505823A72F5fdEdC953',
       layerZero: {
-        minterBurner: '0xE1cF4c1B6aa1A8F133C14AEF05D772c1b7602F4b',
-        oftAdapter: '0xd7d4B67052FEaC3C9D1782Cb0869EF4f29a31921',
+        oftAdapter: '0x5D6FFd092776AC02BBBCBf8EAE8E62a75Adb3e10',
       },
     },
   },
@@ -1042,7 +1040,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x7811C1Bf5db28630F303267Cc613797EB9A81188',
         token: '0xEa22F8C1624c17C1B58727235292684831A08d56',
         layerZero: {
-          oft: '0x90cCe755d57cB09EDE287d31e88EF31F406B1E98',
+          oft: '0x0bc1e4144696AF487cEdbBF1C26216D7940764E8',
         },
       },
       usds: {
@@ -1069,8 +1067,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVaultBuidl: '0x6B35F2E4C9D4c1da0eDaf7fd7Dc90D9bCa4b0873',
       token: '0xefED40D1eb1577d1073e9C4F277463486D39b084',
       layerZero: {
-        minterBurner: '0xD42EF78b9f479213daCfc2Baf5f51D6F72319e0a',
-        oftAdapter: '0xA58465a27b878A5EbB8a184545a3fc90Cc855381',
+        oftAdapter: '0x0Ca81704F5df52E06205fe427653e661a4b6043c',
         composers: {
           usdt: '0x9e3fD82a18d72A74308c65193269f1af2F076F4E',
         },
@@ -1196,11 +1193,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   arbitrumSepolia: {
     paymentTokens: {
       usdt: {
-        token: '0xb93B94C99C6DF85cC9faA338e68C27c72484251E',
+        token: '0xFecc6FDFF76fB2A2De42B787dC3D02B634a8b6D9',
         aggregator: '0xe786DA4812Fb91e8d69bC8047c5dB489c70cEa30',
         dataFeed: '0x39592BdBf6f3b96dD4547063945aB9ece769AE4D',
         layerZero: {
-          oft: '0xb93B94C99C6DF85cC9faA338e68C27c72484251E',
+          oft: '0xFecc6FDFF76fB2A2De42B787dC3D02B634a8b6D9',
         },
       },
     },
@@ -1208,8 +1205,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     mTBILL: {
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
       layerZero: {
-        minterBurner: '0x0aC07510A254ED6CDE1B2C72F9965206022B98FA',
-        oftAdapter: '0x3897445701132efb82362324D59D0f35c23B0170',
+        oftAdapter: '0xBc672b2dB097C6a926AF63554E4EbcaA4dC94FF0',
       },
     },
   },

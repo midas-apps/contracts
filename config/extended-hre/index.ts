@@ -4,6 +4,7 @@ import { EIP1193Provider, HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import path from 'path';
 
+import { initializeLogger } from '../../helpers/logger';
 import {
   DataFeedAddresses,
   midasAddressesPerNetwork,
@@ -59,8 +60,6 @@ const extendWithCustomSigner = async (hre: HardhatRuntimeEnvironment) => {
         );
       },
       sendTransaction: async (transaction, metadata) => {
-        console.log('hre', hre.network.name);
-        console.log('hre', await hre.ethers.provider.getNetwork());
         const tx = await deployerSigner.sendTransaction({
           ...transaction,
         });
@@ -118,11 +117,26 @@ const extendWithCustomSigner = async (hre: HardhatRuntimeEnvironment) => {
   }
 };
 
+export const extendWithLogger = (hre: HardhatRuntimeEnvironment) => {
+  const logToFile = ENV.LOG_TO_FILE;
+  const logsFolderPath =
+    ENV.LOGS_FOLDER_PATH ?? path.resolve(hre.config.paths.root, 'logs/');
+
+  initializeLogger(hre);
+
+  hre.logger = {
+    logToFile,
+    logsFolderPath,
+    executionLogContext: `${new Date().toISOString()}`,
+  };
+};
+
 export const extender = async (hre: HardhatRuntimeEnvironment) => {
   await extendDeployment(hre).catch((error) => {
     console.error('Error extending deployment:', error);
   });
   await extendWithCustomSigner(hre);
+  extendWithLogger(hre);
 };
 
 export const extend = async () => {

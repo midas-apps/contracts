@@ -31,6 +31,17 @@ export const createSigner =
         throw new Error('Not implemented');
       },
       signAndSend: async (transaction) => {
+        const provider = new JsonRpcProvider(
+          rpcUrls[layerZeroEidToNetwork[transaction.point.eid] as Network],
+        );
+
+        const contract = await hre.ethers.getContractAt(
+          'Ownable',
+          transaction.point.address,
+        );
+
+        console.log(transaction.point.address);
+
         const res = await sendAndWaitForCustomTxSign(
           hre,
           {
@@ -44,6 +55,7 @@ export const createSigner =
             action: 'update-lz-oapp-config',
             network: layerZeroEidToNetwork[transaction.point.eid],
           },
+          await contract.connect(provider).owner(),
         );
 
         const result = {

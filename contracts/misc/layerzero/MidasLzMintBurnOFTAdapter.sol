@@ -78,12 +78,21 @@ contract MidasLzMintBurnOFTAdapter is
         return true;
     }
 
+    /**
+     * @notice Sets the rate limits for the adapter
+     * @param _rateLimitConfigs the rate limit configs to set
+     */
     function setRateLimits(
         RateLimitConfig[] calldata _rateLimitConfigs
     ) external onlyOwner {
         _setRateLimits(_rateLimitConfigs);
     }
 
+    /**
+     * @notice Returns the rate limit for a given destination EID
+     * @param _dstEid the destination EID
+     * @return the rate limit struct
+     */
     function getRateLimit(
         uint32 _dstEid
     ) external view returns (RateLimit memory) {

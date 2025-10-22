@@ -71,9 +71,6 @@ type TokenRoles = {
   depositVaultAdmin: string;
   redemptionVaultAdmin: string;
   customFeedAdmin: string | null;
-  layerZero: {
-    adapter: string;
-  };
 };
 
 type CommonRoles = {
@@ -109,9 +106,6 @@ export const getRolesNamesForToken = (token: MTokenName): TokenRoles => {
       : `${tokenPrefix}_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE`,
     depositVaultAdmin: `${restPrefix}DEPOSIT_VAULT_ADMIN_ROLE`,
     redemptionVaultAdmin: `${restPrefix}REDEMPTION_VAULT_ADMIN_ROLE`,
-    layerZero: {
-      adapter: `${tokenPrefix}_LZ_ADAPTER_ROLE`,
-    },
   };
 };
 export const getRolesNamesCommon = (): CommonRoles => {

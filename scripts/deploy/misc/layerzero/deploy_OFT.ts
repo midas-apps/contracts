@@ -57,7 +57,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const endpointV2Deployment = await hre.deployments.get('EndpointV2');
 
   const args = [
-    name + ' OFT',
+    name,
     symbol,
     config.layerZero.sharedDecimals,
     endpointV2Deployment.address,

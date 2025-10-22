@@ -256,32 +256,12 @@ export const depositAndSend = async (
           )
           .then((v) => v.nativeFee);
 
-  // const lzComposeValue = quoteFee.nativeFee.toString();
-
-  // const composeMsg = ethers.utils.defaultAbiCoder.encode(
-  //   ['tuple(uint32,bytes32,uint256,uint256,bytes,bytes,bytes)', 'uint256'],
-  //   [
-  //     [
-  //       secondHopSendParam.dstEid,
-  //       secondHopSendParam.to,
-  //       secondHopSendParam.amountLD,
-  //       secondHopSendParam.minAmountLD,
-  //       secondHopSendParam.extraOptions,
-  //       secondHopSendParam.composeMsg,
-  //       secondHopSendParam.oftCmd,
-  //     ],
-  //     lzComposeValue,
-  //   ],
-  // );
-
   const params = [
     amountParsed,
     {
       amountLD: mintAmount.toString(),
       minAmountLD: mintAmountWoDust.toString(),
-      extraOptions: Options.newOptions()
-        .addExecutorLzReceiveOption(300_000, 0)
-        .toHex(),
+      extraOptions: Options.newOptions().toHex(),
       composeMsg: '0x' as `0x${string}`,
       oftCmd: '0x' as `0x${string}`,
       dstEid: direction === 'A_TO_A' ? 1 : 2,

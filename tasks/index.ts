@@ -37,16 +37,8 @@ task('runscript', 'Runs a user-defined script')
     const action = taskArgs.action;
     const originalNetwork = taskArgs.originalNetwork;
 
-    const logToFile = taskArgs.logToFile ?? ENV.LOG_TO_FILE;
-    const logsFolderPath =
-      (taskArgs.logsFolderPath as string | undefined) ??
-      ENV.LOGS_FOLDER_PATH ??
-      path.resolve(hre.config.paths.root, 'logs/');
-
     const scriptPath = taskArgs.path;
     const skipValidation = taskArgs.skipvalidation;
-
-    initializeLogger(hre);
 
     hre.skipValidation = (skipValidation ?? 'false') === 'true';
     hre.aggregatorType = taskArgs.aggregatorType;
@@ -60,11 +52,9 @@ task('runscript', 'Runs a user-defined script')
 
     hre.action = action;
 
-    hre.logger = {
-      logToFile,
-      logsFolderPath,
-      executionLogContext: `${action}-${new Date().toISOString()}`,
-    };
+    if (hre.logger) {
+      hre.logger.executionLogContext = `${action}-${new Date().toISOString()}`;
+    }
 
     if (mtoken) {
       if (!isMTokenName(mtoken)) {

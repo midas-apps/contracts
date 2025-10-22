@@ -5,7 +5,6 @@ import { getCurrentAddresses } from '../../../../config/constants/addresses';
 import {
   getOriginalNetwork,
   getMTokenOrThrow,
-  logDeploy,
 } from '../../../../helpers/utils';
 import { lzConfigsPerMToken } from '../../../../layerzero.config';
 import { DeployFunction } from '../../common/types';

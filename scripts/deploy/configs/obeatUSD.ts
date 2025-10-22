@@ -79,7 +79,7 @@ export const obeatUSDDeploymentConfig: DeploymentConfig = {
           redemptionVaultSwapper: ['redeemFiatRequest'],
         },
         layerZero: {
-          delegate: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          delegate: '0xF9e3295DBf89CF0Bf1344a3010CE96d026579BBb',
           rateLimitConfig: {
             default: {
               limit: parseUnits('1000000'),
@@ -97,7 +97,7 @@ export const obeatUSDDeploymentConfig: DeploymentConfig = {
           oracleManagerAddress: '0x94F0c5beb7906d78105241fBc2073E181F88F50A',
         },
         layerZero: {
-          delegate: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
           rateLimitConfig: {
             default: {
               limit: parseUnits('1000000'),

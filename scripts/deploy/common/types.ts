@@ -57,6 +57,7 @@ export type PauseFunctionsConfig = {
 
 export type LayerZeroConfig = {
   delegate: string;
+  owner?: string;
   rateLimitConfig?: {
     default: Omit<RateLimiter.RateLimitConfigStruct, 'dstEid'>;
     overrides?: PartialConfigPerNetwork<

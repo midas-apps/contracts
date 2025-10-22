@@ -271,14 +271,15 @@ contract MidasVaultComposerSync is
         bytes32 _composeFrom,
         bytes memory _composeMsg,
         uint256 _amount
-    ) external payable {
+    ) public payable virtual {
         /// @dev Can only be called by self
         if (msg.sender != address(this)) {
             revert OnlySelf(msg.sender);
         }
 
-        /// @dev SendParam defines how the composer will handle the user's funds
-        /// @dev The minMsgValue is the minimum amount of msg.value that must be sent, failing to do so will revert and the transaction will be retained in the endpoint for future retries
+        /// SendParam defines how the composer will handle the user's funds
+        /// The minMsgValue is the minimum amount of msg.value that must be sent,
+        /// failing to do so will revert and the transaction will be retained in the endpoint for future retries
         (SendParam memory sendParam, uint256 minMsgValue) = abi.decode(
             _composeMsg,
             (SendParam, uint256)

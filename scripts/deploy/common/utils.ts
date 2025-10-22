@@ -308,7 +308,10 @@ export const sendAndWaitForCustomTxSign = async (
         constants.AddressZero,
         // FIXME: for some reason, encode of 1 is required to be padded, so abi coder does not produce
         // the required result with encode(['address', 'uint256'], [ownerForSignature, 1])
-        ethers.utils.defaultAbiCoder.encode(['address'], [ownerForSignature]) +
+        hre.ethers.utils.defaultAbiCoder.encode(
+          ['address'],
+          [ownerForSignature],
+        ) +
           '000000000000000000000000000000000000000000000000000000000000000001',
       );
     } else {
@@ -319,7 +322,12 @@ export const sendAndWaitForCustomTxSign = async (
   let hreNetwork: HardhatRuntimeEnvironment = hre;
 
   if (txSignMetadata?.network && txSignMetadata.network !== hre.network.name) {
+    console.log('getHreByNetworkName', txSignMetadata.network);
     hreNetwork = await getHreByNetworkName(txSignMetadata.network);
+  }
+
+  if (!hreNetwork.customSigner) {
+    throw new Error('Custom signer expected but not found');
   }
 
   const sendResult = hreNetwork.customSigner!.sendTransaction(
