@@ -12,7 +12,7 @@ export type RedemptionVaultType =
 export type DepositVaultType = 'depositVault' | 'depositVaultUstb';
 
 type LayerZeroTokenAddresses = {
-  oftAdapter?: string;
+  oft?: string;
   composers?: Partial<Record<PaymentTokenName, string>>;
 };
 
@@ -432,7 +432,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     obeatUSD: {
       token: '0x2ce15146958Bf305dAdeBbbF31F2d5a4F2574B43',
       layerZero: {
-        oftAdapter: '0x55B40C5ebC53C4b03a7cbA602C6CEed3fC2349c6',
+        oft: '0x55B40C5ebC53C4b03a7cbA602C6CEed3fC2349c6',
       },
     },
   },
@@ -819,7 +819,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x65D0a14dd083C38244542BAC0e0cd16d51c37458',
       redemptionVaultSwapper: '0x36094ABE5E589691B8f60505823A72F5fdEdC953',
       layerZero: {
-        oftAdapter: '0x5D6FFd092776AC02BBBCBf8EAE8E62a75Adb3e10',
+        oft: '0x5D6FFd092776AC02BBBCBf8EAE8E62a75Adb3e10',
         composers: {
           usdt: '0x718c52340eAa4a945b9F71bc349aeEB788312457',
         },
@@ -1069,7 +1069,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVaultBuidl: '0x6B35F2E4C9D4c1da0eDaf7fd7Dc90D9bCa4b0873',
       token: '0xefED40D1eb1577d1073e9C4F277463486D39b084',
       layerZero: {
-        oftAdapter: '0x0Ca81704F5df52E06205fe427653e661a4b6043c',
+        oft: '0x0Ca81704F5df52E06205fe427653e661a4b6043c',
         composers: {
           usdt: '0xff0F08c35786717A266d55DF32Db478e9545E4a5',
         },
@@ -1207,7 +1207,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     mTBILL: {
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
       layerZero: {
-        oftAdapter: '0xBc672b2dB097C6a926AF63554E4EbcaA4dC94FF0',
+        oft: '0xBc672b2dB097C6a926AF63554E4EbcaA4dC94FF0',
       },
     },
   },

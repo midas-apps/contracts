@@ -22,7 +22,7 @@ import {
   redeemAndSend,
   sendOft,
   setRateLimitConfig,
-} from '../common/layer-zero.helpers';
+} from '../common/layerzero.helpers';
 import {
   addPaymentTokenTest,
   addWaivedFeeAccountTest,

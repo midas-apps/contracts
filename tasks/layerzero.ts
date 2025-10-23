@@ -330,7 +330,7 @@ task('lz:oft:send:midas', 'Runs a user-defined script')
 
     const addresses = getCurrentAddresses(hre);
 
-    const oftAdapter = addresses?.[mtoken as MTokenName]?.layerZero?.oftAdapter;
+    const oftAdapter = addresses?.[mtoken as MTokenName]?.layerZero?.oft;
 
     if (!oftAdapter) {
       throw new Error('OFT adapter not found');

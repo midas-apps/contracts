@@ -19,7 +19,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('mToken addresses not found');
   }
 
-  if (!mTokenAddresses.layerZero?.oftAdapter) {
+  if (!mTokenAddresses.layerZero?.oft) {
     throw new Error('mToken layerzero adapter not found');
   }
 
@@ -38,7 +38,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
         mTokenAddresses.redemptionVault ??
         mTokenAddresses.redemptionVaultBuidl!,
       pTokenOft,
-      mTokenAddresses.layerZero.oftAdapter,
+      mTokenAddresses.layerZero.oft,
     ],
   });
 };

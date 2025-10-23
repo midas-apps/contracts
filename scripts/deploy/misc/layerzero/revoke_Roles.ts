@@ -16,7 +16,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   if (
     !mTokenAddresses ||
     !mTokenAddresses.token ||
-    !mTokenAddresses.layerZero?.oftAdapter
+    !mTokenAddresses.layerZero?.oft
   ) {
     throw new Error('mToken addresses not found or missing required fields');
   }
@@ -34,8 +34,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const tx = await sendAndWaitForCustomTxSign(
     hre,
     await contract.populateTransaction.revokeRoleMult(rolesToRevoke, [
-      mTokenAddresses.layerZero.oftAdapter!,
-      mTokenAddresses.layerZero.oftAdapter!,
+      mTokenAddresses.layerZero.oft!,
+      mTokenAddresses.layerZero.oft!,
     ]),
     {
       action: 'update-ac',

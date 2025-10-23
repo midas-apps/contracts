@@ -33,7 +33,7 @@ const extendDeployment = async (hre: HardhatRuntimeEnvironment) => {
       (Object.values(v ?? {}) as TokenAddresses[]).map((a) => [
         {
           abi: hre.artifacts.readArtifactSync('MidasLzMintBurnOFTAdapter').abi,
-          address: a?.layerZero?.oftAdapter,
+          address: a?.layerZero?.oft,
         },
       ]),
     ])

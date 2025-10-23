@@ -16,7 +16,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   let newOwner: string | undefined;
 
   if (mToken) {
-    address = addresses?.[mToken]?.layerZero?.oftAdapter;
+    address = addresses?.[mToken]?.layerZero?.oft;
     const config = getNetworkConfig(hre, mToken, 'postDeploy');
     newOwner = config?.layerZero?.owner ?? config?.layerZero?.delegate;
   } else {
