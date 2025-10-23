@@ -12,6 +12,13 @@ import {
 } from '../constants/addresses';
 import { ENV } from '../env';
 
+export const extendWithContext = (
+  hre: HardhatRuntimeEnvironment,
+  overrideContext?: string,
+) => {
+  hre.contextId = overrideContext ?? `${new Date().toISOString()}`;
+};
+
 const extendDeployment = async (hre: HardhatRuntimeEnvironment) => {
   const lzAddresses = Object.values(midasAddressesPerNetwork)
     .map((v) => [
@@ -106,6 +113,7 @@ const extendWithCustomSigner = async (hre: HardhatRuntimeEnvironment) => {
               id: hre.network.config.chainId,
             },
             mToken: hre.mtoken,
+            idempotenceId: txSignMetadata?.idempotenceId,
             ...txSignMetadata,
           }),
         };
@@ -127,11 +135,16 @@ export const extendWithLogger = (hre: HardhatRuntimeEnvironment) => {
   hre.logger = {
     logToFile,
     logsFolderPath,
-    executionLogContext: `${new Date().toISOString()}`,
   };
 };
 
-export const extender = async (hre: HardhatRuntimeEnvironment) => {
+export const extender = async (
+  hre: HardhatRuntimeEnvironment,
+  overrides?: {
+    contextId?: string;
+  },
+) => {
+  extendWithContext(hre, overrides?.contextId);
   await extendDeployment(hre).catch((error) => {
     console.error('Error extending deployment:', error);
   });

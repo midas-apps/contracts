@@ -6,11 +6,13 @@ import {
 import { createLogger, Logger, printJson } from '@layerzerolabs/io-devtools';
 import { EndpointId, endpointIdToNetwork } from '@layerzerolabs/lz-definitions';
 import { Options } from '@layerzerolabs/lz-v2-utilities';
-import { BigNumber } from 'ethers';
+import { BigNumber, constants } from 'ethers';
+import { getAddress } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { layerZeroEidToNetwork, Network, rpcUrls } from '../../config';
 import { sendAndWaitForCustomTxSign } from '../../scripts/deploy/common/utils';
+import { getHreByNetworkName } from '../hardhat';
 export interface SignAndSendTaskArgs {
   ci?: boolean;
   logger?: Logger;
@@ -31,16 +33,44 @@ export const createSigner =
         throw new Error('Not implemented');
       },
       signAndSend: async (transaction) => {
-        const provider = new JsonRpcProvider(
-          rpcUrls[layerZeroEidToNetwork[transaction.point.eid] as Network],
+        const hreNetwork = await getHreByNetworkName(
+          layerZeroEidToNetwork[transaction.point.eid] as Network,
         );
 
-        const contract = await hre.ethers.getContractAt(
-          'Ownable',
-          transaction.point.address,
-        );
+        const endpointArtifact = await hreNetwork.deployments.get('EndpointV2');
 
-        console.log(transaction.point.address);
+        let executeFrom: string;
+
+        if (
+          transaction.point.address.toLowerCase() ===
+          endpointArtifact.address.toLowerCase()
+        ) {
+          const endpointContract = await hreNetwork.ethers.getContractAt(
+            endpointArtifact.abi,
+            endpointArtifact.address,
+          );
+
+          const oappAddress = getAddress(
+            hreNetwork.ethers.utils.hexStripZeros(
+              '0x' + transaction.data.slice(10, 74),
+            ),
+          );
+
+          const delegate = await endpointContract.delegates(oappAddress);
+
+          if (delegate === constants.AddressZero) {
+            throw new Error('Delegate is not set');
+          }
+
+          executeFrom = delegate;
+        } else {
+          const contract = await hreNetwork.ethers.getContractAt(
+            'Ownable',
+            transaction.point.address,
+          );
+
+          executeFrom = await contract.owner();
+        }
 
         const res = await sendAndWaitForCustomTxSign(
           hre,
@@ -55,7 +85,7 @@ export const createSigner =
             action: 'update-lz-oapp-config',
             network: layerZeroEidToNetwork[transaction.point.eid],
           },
-          await contract.connect(provider).owner(),
+          executeFrom,
         );
 
         const result = {
@@ -79,7 +109,7 @@ export const createSigner =
           transactionHash: res as string,
         };
 
-        logger.info('Transaction sent successfully', printJson(result));
+        console.log('Transaction sent successfully', printJson(result));
         return result;
       },
       eid,

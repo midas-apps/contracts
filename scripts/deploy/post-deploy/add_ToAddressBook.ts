@@ -20,7 +20,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   }
 
   for (const [key, value] of Object.entries(tokenAddresses)) {
-    if (!value) {
+    if (!value || typeof value !== 'string') {
       continue;
     }
 

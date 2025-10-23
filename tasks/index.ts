@@ -1,10 +1,8 @@
-import { PopulatedTransaction } from 'ethers';
 import { task } from 'hardhat/config';
 
 import path from 'path';
 
-import { ENV } from '../config';
-import { initializeLogger } from '../helpers/logger';
+import { extendWithContext } from '../config';
 import {
   etherscanVerify,
   etherscanVerifyImplementation,
@@ -13,13 +11,6 @@ import {
 } from '../helpers/utils';
 
 import './layerzero';
-
-export const logPopulatedTx = (tx: PopulatedTransaction) => {
-  console.log({
-    data: tx.data,
-    to: tx.to,
-  });
-};
 
 task('runscript', 'Runs a user-defined script')
   .addPositionalParam('path', 'Path to the script')
@@ -52,9 +43,7 @@ task('runscript', 'Runs a user-defined script')
 
     hre.action = action;
 
-    if (hre.logger) {
-      hre.logger.executionLogContext = `${action}-${new Date().toISOString()}`;
-    }
+    extendWithContext(hre, `${action}-${new Date().toISOString()}`);
 
     if (mtoken) {
       if (!isMTokenName(mtoken)) {

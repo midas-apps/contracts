@@ -341,6 +341,7 @@ export const sendAndWaitForCustomTxSign = async (
       chainId: txSignMetadata?.network
         ? chainIds[txSignMetadata.network as Network]
         : undefined,
+      idempotenceId: hreNetwork.contextId,
     },
   );
 

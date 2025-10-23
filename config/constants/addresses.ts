@@ -12,7 +12,6 @@ export type RedemptionVaultType =
 export type DepositVaultType = 'depositVault' | 'depositVaultUstb';
 
 type LayerZeroTokenAddresses = {
-  minterBurner?: string;
   oftAdapter?: string;
   composers?: Partial<Record<PaymentTokenName, string>>;
 };

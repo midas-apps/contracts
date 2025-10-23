@@ -26,8 +26,8 @@ declare module 'hardhat/types/runtime' {
       logToFile: boolean;
       // default: logs/
       logsFolderPath: string;
-      executionLogContext: string;
     };
+    contextId: string;
     customSigner?: {
       getWeb3Provider: (params: {
         chainId: number;
@@ -55,6 +55,7 @@ declare module 'hardhat/types/runtime' {
           from?: string;
           mToken?: string;
           chainId?: number;
+          idempotenceId?: string;
         },
       ) => Promise<
         | { type: 'hardhatSigner'; tx: TransactionResponse }

@@ -34,14 +34,14 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   if (
     !mTokenAddresses ||
     !mTokenAddresses.token ||
-    !mTokenAddresses.layerZero?.minterBurner
+    !mTokenAddresses.layerZero?.oftAdapter
   ) {
     throw new Error('mToken addresses not found or missing required fields');
   }
 
   const contract = await hre.ethers.getContractAt(
     'MidasLzMintBurnOFTAdapter',
-    mTokenAddresses.layerZero.minterBurner,
+    mTokenAddresses.layerZero.oftAdapter,
     deployer,
   );
 
