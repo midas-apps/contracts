@@ -709,6 +709,97 @@ describe('LayerZero', function () {
       });
     });
 
+    describe('quoteSend', () => {
+      it('quote when target oft is mToken OFT', async () => {
+        const fixture = await loadFixture(layerZeroFixture);
+        const {
+          stableCoins,
+          redemptionVault,
+          dataFeed,
+          mockedAggregatorMToken,
+          owner,
+          composer,
+          pTokenLzOftAdapter,
+        } = fixture;
+
+        await addPaymentTokenTest(
+          { owner, vault: redemptionVault },
+          stableCoins.usdt,
+          dataFeed.address,
+          0,
+          true,
+        );
+
+        await setInstantFeeTest({ owner, vault: redemptionVault }, 0);
+        await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 2);
+
+        console.log({
+          a: pTokenLzOftAdapter.address,
+          b: await composer.paymentTokenOft(),
+        });
+
+        await composer.quoteSend(
+          owner.address,
+          pTokenLzOftAdapter.address,
+          parseUnits('100'),
+          {
+            amountLD: 1,
+            composeMsg: '0x',
+            dstEid: 2,
+            extraOptions: Options.newOptions()
+              .addExecutorLzReceiveOption(200_000, 0)
+              .toHex(),
+            minAmountLD: 0,
+            oftCmd: '0x',
+            to: addressToBytes32(owner.address),
+          },
+        );
+      });
+
+      it('quote when target oft is paymentToken OFT', async () => {
+        const fixture = await loadFixture(layerZeroFixture);
+        const {
+          stableCoins,
+          depositVault,
+          dataFeed,
+          owner,
+          composer,
+          oftAdapterA,
+          mockedAggregatorMToken,
+        } = fixture;
+
+        await addPaymentTokenTest(
+          { owner, vault: depositVault },
+          stableCoins.usdt,
+          dataFeed.address,
+          0,
+          true,
+        );
+
+        await setInstantFeeTest({ owner, vault: depositVault }, 0);
+        await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 2);
+
+        await expect(
+          composer.quoteSend(
+            owner.address,
+            oftAdapterA.address,
+            parseUnits('100'),
+            {
+              amountLD: 1,
+              composeMsg: '0x',
+              dstEid: 2,
+              extraOptions: Options.newOptions()
+                .addExecutorLzReceiveOption(200_000, 0)
+                .toHex(),
+              minAmountLD: 0,
+              oftCmd: '0x',
+              to: addressToBytes32(owner.address),
+            },
+          ),
+        ).not.rejected;
+      });
+    });
+
     describe('_balanceOfThis', () => {
       it('balance of this when mToken address passed', async () => {
         const fixture = await loadFixture(layerZeroFixture);
