@@ -73,13 +73,19 @@ async function getDvConfigFromUser(hre: HardhatRuntimeEnvironment) {
         .then(requireNotCancelled)
         .then(requireAddress),
     instantDailyLimit: () =>
-      text({ message: 'Instant Daily Limit', validate: validateBase18 })
+      text({
+        message: 'Instant Daily Limit',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
         .then(requireNotCancelled)
-        .then(requireBase18),
+        .then(requireBase18OrInfinite),
     instantFee: () =>
       text({
         message: 'Instant Fee',
         defaultValue: '0',
+        placeholder: '0',
         validate: validateFloat,
       })
         .then(requireNotCancelled)
@@ -91,6 +97,24 @@ async function getDvConfigFromUser(hre: HardhatRuntimeEnvironment) {
       })
         .then(requireNotCancelled)
         .then(requirePercentageToBigNumberish),
+    minMTokenAmountForFirstDeposit: () =>
+      text({
+        message: 'Min mToken Amount For First Deposit',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
+    maxSupplyCap: () =>
+      text({
+        message: 'Max Supply Cap',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18OrInfinite),
     outro: () => Promise.resolve(outro('Done...')).then(() => undefined),
   }).then(clearIntroOutro);
 
@@ -124,9 +148,14 @@ async function getRvConfigFromUser<T>(
         .then(requireNotCancelled)
         .then(requireAddress),
     instantDailyLimit: () =>
-      text({ message: 'Instant Daily Limit', validate: validateBase18 })
+      text({
+        message: 'Instant Daily Limit',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
         .then(requireNotCancelled)
-        .then(requireBase18),
+        .then(requireBase18OrInfinite),
     instantFee: () =>
       text({
         message: 'Instant Fee',
@@ -454,6 +483,13 @@ const requireBase18OrNull = (value: string) => {
   return value === '0' ? null : expr(`parseUnits("${value}", 18)`);
 };
 
+const requireBase18OrInfinite = (value: string) => {
+  if (isInfinite(value)) {
+    return expr('constants.MaxUint256');
+  }
+  return requireBase18(value);
+};
+
 const requireFloatToBigNumberish = (value: string, maxDecimals = 2) => {
   const error = validateFloat(value, maxDecimals);
   if (error) {
@@ -486,6 +522,11 @@ const validateBase18 = (value: string) => {
   }
 };
 
+const validateBase18OrInfinite = (value: string) => {
+  if (isInfinite(value)) return undefined;
+  return validateBase18(value);
+};
+
 const validateFloat = (value: string, maxDecimals = 2) => {
   try {
     parseUnits(value, maxDecimals);
@@ -497,4 +538,8 @@ const validateFloat = (value: string, maxDecimals = 2) => {
 
 const requirePercentageToBigNumberish = (value: string) => {
   return requireFloatToBigNumberish(value, 2);
+};
+
+const isInfinite = (value: string) => {
+  return value.trim().toLowerCase() === 'infinite';
 };

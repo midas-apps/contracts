@@ -71,6 +71,7 @@ const config: HardhatUserConfig = {
       xrplevm: '0xea4308904131c51f8380c4a21c74cd629d07893c',
       zerog: '0xf975786717f57e20bf4d69faf88e795a94f7808d',
       plasma: '0x1CA462EBB85e14014a8b5c2c46dD018a716B371b',
+      bsc: '0xb6df4ab81e0f9f03c5c73f11a1b22a6b5f422005',
     },
   },
   verify: {
@@ -103,6 +104,7 @@ const config: HardhatUserConfig = {
     tac: getNetworkConfig('tac'),
     zerog: getNetworkConfig('zerog'),
     plasma: getNetworkConfig('plasma'),
+    bsc: getNetworkConfig('bsc'),
   },
   gasReporter: {
     enabled: REPORT_GAS,
@@ -210,6 +212,14 @@ const config: HardhatUserConfig = {
           apiURL:
             'https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api',
           browserURL: 'https://plasmascan.to',
+        },
+      },
+      {
+        chainId: chainIds.bsc,
+        network: 'bsc',
+        urls: {
+          apiURL: 'https://api.bscscan.com/api',
+          browserURL: 'https://bscscan.com',
         },
       },
     ],

@@ -53,11 +53,9 @@ export enum MTokenNameEnum {
   dnTEST = 'dnTEST',
   obeatUSD = 'obeatUSD',
   mEVUSD = 'mEVUSD',
-  mTBILL = 'mTBILL',
-  mTBILL = 'mTBILL',
-  mTBILL = 'mTBILL',
-  obeatUSD = 'obeatUSD',
-  obeatUSD = 'obeatUSD',
+  cUSDO = 'cUSDO',
+  mHyperETH = 'mHyperETH',
+  mHyperBTC = 'mHyperBTC',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;

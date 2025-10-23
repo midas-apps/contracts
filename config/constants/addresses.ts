@@ -435,6 +435,20 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         oft: '0x55B40C5ebC53C4b03a7cbA602C6CEed3fC2349c6',
       },
     },
+    mHyperETH: {
+      token: '0x5a42864b14C0C8241EF5ab62Dae975b163a2E0C1',
+      customFeed: '0x5C81ee2C3Ee8AaAC2eEF68Ecb512472D9E08A0fd',
+      dataFeed: '0xbD560c1E87752717C34912D128168BfE26021EA2',
+      depositVault: '0x57B3Be350C777892611CEdC93BCf8c099A9Ecdab',
+      redemptionVaultSwapper: '0x15f724b35A75F0c28F352b952eA9D1b24e348c57',
+    },
+    mHyperBTC: {
+      token: '0xC8495EAFf71D3A563b906295fCF2f685b1783085',
+      customFeed: '0x3359921992C33ef23169193a6C91F2944A82517C',
+      dataFeed: '0xb75B82b2012138815d1A2c4aB5B8b987da043157',
+      depositVault: '0xeD22A9861C6eDd4f1292aeAb1E44661D5f3FE65e',
+      redemptionVaultSwapper: '0x16d4f955B0aA1b1570Fe3e9bB2f8c19C407cdb67',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
@@ -1029,6 +1043,42 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x4Ef9fF56162bD3Cb5073FB20DbD355C59084093f',
       redemptionVaultSwapper: '0x69EcaB6aA7bDFDdD99deF0891c0317076430ae50',
     },
+    mHYPER: {
+      token: '0xb31BeA5c2a43f942a3800558B1aa25978da75F8a',
+      customFeed: '0xfC3E47c4Da8F3a01ac76c3C5ecfBfC302e1A08F0',
+      dataFeed: '0x2EB410e4cb94E2E9E3cdE3F7b405BE4fCC076Bc9',
+      depositVault: '0xa603cf264aDEB8E7f0f063C116929ADAC2D4286E',
+      redemptionVaultSwapper: '0x880661F9b412065D616890cA458dcCd0146cb77C',
+    },
+  },
+  bsc: {
+    accessControl: '0x7dD3e89fa418577f4BE6C4C47B242c6a9181a2DD',
+    paymentTokens: {
+      xrp: {
+        token: '0x1D2F0da169ceB9fC7B3144628dB156f3F6c60dBE',
+        aggregator: '0x6BfE3850F8B01624Dd4Abc7A7104B7ccC9705cf8',
+        dataFeed: '0xF5C090327C0395c47d6C11a6f02d61e9BA93993c',
+      },
+      usdt: {
+        token: '0x55d398326f99059fF775485246999027B3197955',
+        aggregator: '0xB97Ad0E74fa7d920791E90258A6E2085088b4320',
+        dataFeed: '0xf3e018b0a53f935127298B18b3d1D174f81aE9Ca',
+      },
+    },
+    mXRP: {
+      token: '0xc8739fbBd54C587a2ad43b50CbcC30ae34FE9e34',
+      customFeed: '0x3BdE0b7B59769Ec00c44C77090D88feB4516E731',
+      dataFeed: '0x583970971EFcEBfcebD3b530E436B8fEEb3D43C7',
+      depositVault: '0x30B59844eC16ABA3ec4ca0BD97557CcB670D924E',
+      redemptionVaultSwapper: '0x73685BD72dF34B92Bc81D43ef35CFf4300DE8625',
+    },
+    cUSDO: {
+      token: '0x762FD99ee22742DEEcb8eeCB12165752D9A18164',
+      customFeed: '0xF6F0f2f3d13894270d04205d00967175884B4ea8',
+      dataFeed: '0x667F93B8c3704c98340277314B68c0AaF56e02FF',
+      depositVault: '0x7AeE9020Df0ac01Bc6f3cEeF6B1B7Cbf3D0937e4',
+      redemptionVaultSwapper: '0xF76e650F8a9526fe5E4B40F1B567C5C1b427EE43',
+    },
   },
   sepolia: {
     paymentTokens: {
@@ -1236,6 +1286,7 @@ export const sanctionListContracts: Partial<Record<number, string>> = {
   [chainIds.main]: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
   [chainIds.arbitrum]: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
   [chainIds.base]: '0x3A91A31cB3dC49b4db9Ce721F50a9D076c8D739B',
+  [chainIds.bsc]: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
 };
 
 export const ustbContracts: Partial<Record<number, string>> = {

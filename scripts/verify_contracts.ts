@@ -19,6 +19,7 @@ const fileNameOverrides = {
   [chainIds.sepolia]: 'sepolia',
   [chainIds.main]: 'mainnet',
   [chainIds.arbitrum]: 'arbitrum-one',
+  [chainIds.bsc]: 'bsc',
 };
 const getFileName = (chainId: number) => {
   const name = fileNameOverrides[chainId] ?? `unknown-${chainId}`;

@@ -220,4 +220,16 @@ export const mTokensMetadata: Record<
     name: 'Midas Everstake USD',
     symbol: 'mEVUSD',
   },
+  cUSDO: {
+    name: 'cUSDO BNB Midas Vault',
+    symbol: 'cUSDO',
+  },
+  mHyperETH: {
+    name: 'Midas Hyperithm ETH',
+    symbol: 'mHyperETH',
+  },
+  mHyperBTC: {
+    name: 'Midas Hyperithm BTC',
+    symbol: 'mHyperBTC',
+  },
 };

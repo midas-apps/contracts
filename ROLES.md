@@ -611,3 +611,36 @@ All the roles for the Midas protocol smart contracts are listed below.
 | ***customFeedAdmin*** | `0x6bfcc6405d34628bdfe92a284ba48ea6a6fb58edbd9ed0871bf54243870486f5` |
 | ***depositVaultAdmin*** | `0x59579aaa79d3138f941932d6d507884c7129dd3a28943a0e84380d0edde2e059` |
 | ***redemptionVaultAdmin*** | `0xbae9f1280706d56bad5bdea387c13ea5f0aa60d029a3863a304dc06fcf424a98` |
+
+### cUSDO Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0x1a11e6fee6a4f7fa95dd2559cd1ed5ec6670c91714bd172ce68025d24404bca3` |
+| ***burner*** | `0x81e4a5d5f4efd28e72e65be0b2556fa8ea08b4533c5d410613afc16add6646b7` |
+| ***pauser*** | `0xce5b800630985d6805c47e70a5f61e4ebc118bc3fe42956be0c55657959d1c37` |
+| ***customFeedAdmin*** | `0x249e992c5120f989604ccbd4424e0d8b50bd6a2608c6b822eb3cc288976d2f05` |
+| ***depositVaultAdmin*** | `0xaf2aad6a073c559869b34232f3b4c8e869c209dbce9b2fe68a618237614c2933` |
+| ***redemptionVaultAdmin*** | `0x895f69c8681a32c46f20c256cd5269c07897422cd9f6e9b619d95e128504daa0` |
+
+### mHyperETH Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0x16733d7f743545efe45c5e81f1c602d0eb7dda3ccf8e8503afb37091e5f2bb6a` |
+| ***burner*** | `0xdf43c2d762de185919f6f59b8f726d92845080f1f4baa63e02d318eaf0fee201` |
+| ***pauser*** | `0xc3a5d63bdd74f48cf80a79213bd591ba62fbb27d520411b37911f65c527d42df` |
+| ***customFeedAdmin*** | `0xc8244e0d4922fa470db2e7022511229db7ae826724f73a29c8f8bea4d1aca3a6` |
+| ***depositVaultAdmin*** | `0x21d95919121161d4afe59d1bf781b18d09c9220f3ed493202e84bb8b791f4c53` |
+| ***redemptionVaultAdmin*** | `0xa4e6989faa7272b44195e76aab9bbf72ec6494ed664db64dc4fd077a2d4de6eb` |
+
+### mHyperBTC Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0xf66d853a6cc3eb207ccd5d44494829dd92483812ab830fa09bb58b2971728e02` |
+| ***burner*** | `0x5d574deedbf2e9da5416f3b5dceafc430097927201c763cbc2f10851aaaa832d` |
+| ***pauser*** | `0xd9f964186f74a0c3bab0e0f6ad0af930fdd8718680193f6b1b8f53e85b33ab5c` |
+| ***customFeedAdmin*** | `0xa8a5d84b506c7f678f2cc98f457f4eac3c3d6663b76db30e8cbb4b7665a4de35` |
+| ***depositVaultAdmin*** | `0x2e55e4462941cb91f5ff782032797a0cbda0aa6618f1558ba5b912d781b45be1` |
+| ***redemptionVaultAdmin*** | `0xaed1dfcb561f850481cdb3d35a3076d203b3bf6785bb0e8b8a52f608d0f82984` |

@@ -1,9 +1,5 @@
 import { EndpointId } from '@layerzerolabs/lz-definitions';
-import {
-  HardhatNetworkUserConfig,
-  HttpNetworkUserConfig,
-  NetworkUserConfig,
-} from 'hardhat/types';
+import { HardhatNetworkUserConfig, HttpNetworkUserConfig } from 'hardhat/types';
 
 import { GWEI, MOCK_AGGREGATOR_NETWORK_TAG } from '../constants';
 import { ENV } from '../env';
@@ -45,6 +41,9 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   zerog: 'https://evmrpc.0g.ai',
   plasma: 'https://rpc.plasma.to',
   arbitrumSepolia: 'https://sepolia-rollup.arbitrum.io/rpc',
+  bsc: ALCHEMY_KEY
+    ? `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
+    : 'https://bsc-dataseed.bnbchain.org',
 };
 
 export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
@@ -66,6 +65,7 @@ export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
   zerog: undefined,
   plasma: undefined,
   arbitrumSepolia: undefined,
+  bsc: undefined,
 };
 
 export const chainIds: ConfigPerNetwork<number> = {
@@ -87,6 +87,7 @@ export const chainIds: ConfigPerNetwork<number> = {
   zerog: 16661,
   plasma: 9745,
   arbitrumSepolia: 421614,
+  bsc: 56,
 };
 
 export const mnemonics: ConfigPerNetwork<string | undefined> = {
@@ -108,6 +109,7 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   zerog: MNEMONIC_PROD,
   plasma: MNEMONIC_PROD,
   arbitrumSepolia: MNEMONIC_DEV,
+  bsc: MNEMONIC_PROD,
 };
 
 export const gases: ConfigPerNetwork<number | undefined> = {
@@ -129,6 +131,7 @@ export const gases: ConfigPerNetwork<number | undefined> = {
   zerog: undefined,
   plasma: undefined,
   arbitrumSepolia: undefined,
+  bsc: undefined,
 };
 
 export const timeouts: ConfigPerNetwork<number | undefined> = {
@@ -150,6 +153,7 @@ export const timeouts: ConfigPerNetwork<number | undefined> = {
   zerog: undefined,
   plasma: undefined,
   arbitrumSepolia: undefined,
+  bsc: undefined,
 };
 
 export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
@@ -171,6 +175,7 @@ export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
   zerog: undefined,
   plasma: undefined,
   arbitrumSepolia: undefined,
+  bsc: undefined,
 };
 
 export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
@@ -192,6 +197,7 @@ export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
   zerog: undefined,
   plasma: undefined,
   arbitrumSepolia: undefined,
+  bsc: undefined,
 };
 
 export const blockFinality: PartialConfigPerNetwork<number> = {
