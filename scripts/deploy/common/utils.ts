@@ -233,7 +233,8 @@ export const getWalletAddressForAction = async (
   action: string,
   mtoken?: MTokenName,
 ) => {
-  return hre.customSigner!.getWalletAddress(action, mtoken);
+  const customSigner = await hre.getCustomSigner();
+  return await customSigner.getWalletAddress(action, mtoken);
 };
 
 export const sendAndWaitForCustomTxSign = async (
@@ -330,11 +331,9 @@ export const sendAndWaitForCustomTxSign = async (
     hreNetwork = await getHreByNetworkName(txSignMetadata.network);
   }
 
-  if (!hreNetwork.customSigner) {
-    throw new Error('Custom signer expected but not found');
-  }
+  const networkCustomSigner = await hreNetwork.getCustomSigner();
 
-  const sendResult = hreNetwork.customSigner!.sendTransaction(
+  const sendResult = networkCustomSigner.sendTransaction(
     {
       data: populatedTx.data!,
       to: populatedTx.to!,

@@ -44,7 +44,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       continue;
     }
 
-    const result = await hre.customSigner?.createAddressBookContract?.({
+    const customSigner = await hre.getCustomSigner();
+    const result = await customSigner.createAddressBookContract({
       address: value,
       contractName,
       contractTag,

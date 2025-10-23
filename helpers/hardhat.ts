@@ -55,7 +55,7 @@ export const getHreByNetworkName = async (network: Network) => {
       // are not present on HardhatRuntimeEnvironmentImplementation
     ) as unknown as HardhatRuntimeEnvironment;
 
-    await extender(newHre, {
+    extender(newHre, {
       contextId: environment.contextId,
     });
 

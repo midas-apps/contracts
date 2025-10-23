@@ -28,7 +28,7 @@ declare module 'hardhat/types/runtime' {
       logsFolderPath: string;
     };
     contextId: string;
-    customSigner?: {
+    getCustomSigner: () => Promise<{
       getWeb3Provider: (params: {
         chainId: number;
         rpcUrl?: string;
@@ -61,6 +61,6 @@ declare module 'hardhat/types/runtime' {
         | { type: 'hardhatSigner'; tx: TransactionResponse }
         | { type: 'customSigner'; payload: unknown }
       >;
-    };
+    }>;
   }
 }
