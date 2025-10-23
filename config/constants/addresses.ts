@@ -820,6 +820,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVaultSwapper: '0x36094ABE5E589691B8f60505823A72F5fdEdC953',
       layerZero: {
         oftAdapter: '0x5D6FFd092776AC02BBBCBf8EAE8E62a75Adb3e10',
+        composers: {
+          usdt: '0x718c52340eAa4a945b9F71bc349aeEB788312457',
+        },
       },
     },
   },
@@ -1068,7 +1071,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       layerZero: {
         oftAdapter: '0x0Ca81704F5df52E06205fe427653e661a4b6043c',
         composers: {
-          usdt: '0x9e3fD82a18d72A74308c65193269f1af2F076F4E',
+          usdt: '0xff0F08c35786717A266d55DF32Db478e9545E4a5',
         },
       },
     },

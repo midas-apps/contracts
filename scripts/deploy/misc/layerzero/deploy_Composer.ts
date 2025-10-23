@@ -30,6 +30,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   }
 
   await deployAndVerifyProxy(hre, 'MidasVaultComposerSync', [], undefined, {
+    unsafeAllow: ['state-variable-immutable'],
     constructorArgs: [
       mTokenAddresses.depositVault!,
       mTokenAddresses.redemptionVaultSwapper ??
