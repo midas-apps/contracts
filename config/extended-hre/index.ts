@@ -156,7 +156,7 @@ export const extender = (
   try {
     extendDeployment(hre);
   } catch (error) {
-    console.error('Error extending deployment:', error);
+    // silently catching errors as readArtifactSync will throw during build step
   }
   extendWithCustomSigner(hre);
   extendWithLogger(hre);
