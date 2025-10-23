@@ -33,7 +33,7 @@ contract MidasLzOFTAdapter is OFTAdapter {
         uint8 tokenDecimals = IERC20Metadata(_token).decimals();
 
         if (tokenDecimals < sharedDecimals()) revert InvalidLocalDecimals();
-        decimalConversionRate = 10 ** (tokenDecimals - sharedDecimals());
+        decimalConversionRate = 10**(tokenDecimals - sharedDecimals());
     }
 
     /**

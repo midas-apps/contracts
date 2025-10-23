@@ -33,7 +33,7 @@ contract MidasLzOFT is OFT {
         _sharedDecimals = __sharedDecimals;
 
         if (decimals() < sharedDecimals()) revert InvalidLocalDecimals();
-        decimalConversionRate = 10 ** (decimals() - sharedDecimals());
+        decimalConversionRate = 10**(decimals() - sharedDecimals());
     }
 
     /**

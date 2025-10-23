@@ -59,10 +59,12 @@ contract MidasLzMintBurnOFTAdapter is
     /**
      * @inheritdoc IMintableBurnable
      */
-    function burn(
-        address _from,
-        uint256 _amount
-    ) external override onlyThis returns (bool) {
+    function burn(address _from, uint256 _amount)
+        external
+        override
+        onlyThis
+        returns (bool)
+    {
         IMToken(token()).burn(_from, _amount);
         return true;
     }
@@ -70,10 +72,12 @@ contract MidasLzMintBurnOFTAdapter is
     /**
      * @inheritdoc IMintableBurnable
      */
-    function mint(
-        address _to,
-        uint256 _amount
-    ) external override onlyThis returns (bool) {
+    function mint(address _to, uint256 _amount)
+        external
+        override
+        onlyThis
+        returns (bool)
+    {
         IMToken(token()).mint(_to, _amount);
         return true;
     }
@@ -82,9 +86,10 @@ contract MidasLzMintBurnOFTAdapter is
      * @notice Sets the rate limits for the adapter
      * @param _rateLimitConfigs the rate limit configs to set
      */
-    function setRateLimits(
-        RateLimitConfig[] calldata _rateLimitConfigs
-    ) external onlyOwner {
+    function setRateLimits(RateLimitConfig[] calldata _rateLimitConfigs)
+        external
+        onlyOwner
+    {
         _setRateLimits(_rateLimitConfigs);
     }
 
@@ -93,9 +98,11 @@ contract MidasLzMintBurnOFTAdapter is
      * @param _dstEid the destination EID
      * @return the rate limit struct
      */
-    function getRateLimit(
-        uint32 _dstEid
-    ) external view returns (RateLimit memory) {
+    function getRateLimit(uint32 _dstEid)
+        external
+        view
+        returns (RateLimit memory)
+    {
         return rateLimits[_dstEid];
     }
 

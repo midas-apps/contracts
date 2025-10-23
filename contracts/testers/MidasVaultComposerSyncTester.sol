@@ -26,9 +26,9 @@ contract MidasVaultComposerSyncTester is MidasVaultComposerSync {
         )
     {}
 
-    function setHandleComposeType(
-        HandleComposeType _handleComposeType
-    ) external {
+    function setHandleComposeType(HandleComposeType _handleComposeType)
+        external
+    {
         handleComposeType = _handleComposeType;
     }
 
@@ -89,21 +89,27 @@ contract MidasVaultComposerSyncTester is MidasVaultComposerSync {
         return _redeem(_redeemer, _mTokenAmount, _minReceiveAmount);
     }
 
-    function balanceOfThisPublic(
-        address token
-    ) external view returns (uint256) {
+    function balanceOfThisPublic(address token)
+        external
+        view
+        returns (uint256)
+    {
         return _balanceOfThis(token);
     }
 
-    function previewDepositPublic(
-        uint256 amountTokenIn
-    ) external view returns (uint256) {
+    function previewDepositPublic(uint256 amountTokenIn)
+        external
+        view
+        returns (uint256)
+    {
         return _previewDeposit(amountTokenIn);
     }
 
-    function previewRedeemPublic(
-        uint256 amountMTokenIn
-    ) external view returns (uint256 amountTokenOut) {
+    function previewRedeemPublic(uint256 amountMTokenIn)
+        external
+        view
+        returns (uint256 amountTokenOut)
+    {
         return _previewRedeem(amountMTokenIn);
     }
 

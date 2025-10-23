@@ -23,9 +23,10 @@ import {MidasInitializable} from "../../abstract/MidasInitializable.sol";
  * default ManageableVault implementation
  */
 interface IManageableVaultWithConfigs is IManageableVault {
-    function tokensConfig(
-        address token
-    ) external view returns (TokenConfig memory);
+    function tokensConfig(address token)
+        external
+        view
+        returns (TokenConfig memory);
 
     function waivedFeeRestriction(address account) external view returns (bool);
 
@@ -218,7 +219,7 @@ contract MidasVaultComposerSync is
         address _composeSender, // The OFT used on refund, also the vaultIn token.
         bytes32 _guid,
         bytes calldata _message, // expected to contain a composeMessage = abi.encode(SendParam hopSendParam,uint256 minMsgValue)
-        address /*_executor*/,
+        address, /*_executor*/
         bytes calldata /*_extraData*/
     ) external payable virtual override {
         if (msg.sender != lzEndpoint) {
@@ -360,7 +361,7 @@ contract MidasVaultComposerSync is
      * @return mTokenAmount The number of mTokens received from the vault deposit
      */
     function _deposit(
-        bytes32 /*_depositor*/,
+        bytes32, /*_depositor*/
         uint256 _paymentTokenAmount,
         uint256 _minReceiveAmount
     ) internal virtual returns (uint256 mTokenAmount) {
@@ -442,7 +443,7 @@ contract MidasVaultComposerSync is
      * @return paymentTokenAmount The number of paymentTokens received from the vault redemption
      */
     function _redeem(
-        bytes32 /*_redeemer*/,
+        bytes32, /*_redeemer*/
         uint256 _mTokenAmount,
         uint256 _minReceiveAmount
     ) internal virtual returns (uint256 paymentTokenAmount) {
@@ -473,7 +474,7 @@ contract MidasVaultComposerSync is
      * @return MessagingFee The estimated fee for the send operation
      */
     function quoteSend(
-        address /* _from */,
+        address, /* _from */
         address _targetOFT,
         uint256 _vaultInAmount,
         SendParam memory _sendParam
@@ -550,9 +551,11 @@ contract MidasVaultComposerSync is
         );
     }
 
-    function _previewDeposit(
-        uint256 amountTokenIn
-    ) internal view returns (uint256) {
+    function _previewDeposit(uint256 amountTokenIn)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 amountTokenInBase18 = _tokenAmountToBase18(amountTokenIn);
 
         TokenConfig memory tokenConfig = IManageableVaultWithConfigs(
@@ -591,9 +594,11 @@ contract MidasVaultComposerSync is
         return amountMToken;
     }
 
-    function _previewRedeem(
-        uint256 amountMTokenIn
-    ) internal view returns (uint256 amountTokenOut) {
+    function _previewRedeem(uint256 amountMTokenIn)
+        internal
+        view
+        returns (uint256 amountTokenOut)
+    {
         TokenConfig memory tokenConfig = IManageableVaultWithConfigs(
             address(redemptionVault)
         ).tokensConfig(paymentTokenErc20);
@@ -625,10 +630,11 @@ contract MidasVaultComposerSync is
             .convertFromBase18(paymentTokenDecimals);
     }
 
-    function _getTokenRate(
-        IDataFeed dataFeed,
-        bool stable
-    ) internal view returns (uint256) {
+    function _getTokenRate(IDataFeed dataFeed, bool stable)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 rate = dataFeed.getDataInBase18();
         if (stable) {
             return _ONE;
@@ -636,16 +642,19 @@ contract MidasVaultComposerSync is
         return rate;
     }
 
-    function _tokenAmountToBase18(
-        uint256 amount
-    ) internal view returns (uint256) {
+    function _tokenAmountToBase18(uint256 amount)
+        internal
+        view
+        returns (uint256)
+    {
         return amount.convertToBase18(paymentTokenDecimals);
     }
 
-    function _truncate(
-        uint256 value,
-        uint8 decimals
-    ) private pure returns (uint256) {
+    function _truncate(uint256 value, uint8 decimals)
+        private
+        pure
+        returns (uint256)
+    {
         return value.convertFromBase18(decimals).convertToBase18(decimals);
     }
 
