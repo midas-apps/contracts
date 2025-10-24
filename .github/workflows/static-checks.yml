@@ -21,8 +21,8 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: "24"
-          cache: "yarn"
+          node-version: '24'
+          cache: 'yarn'
 
       - name: Setup safe-chain
         run: |
