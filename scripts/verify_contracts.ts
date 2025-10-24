@@ -1,4 +1,3 @@
-import * as hre from 'hardhat';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { execSync } from 'child_process';

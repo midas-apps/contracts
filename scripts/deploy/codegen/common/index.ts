@@ -53,7 +53,7 @@ export type CodeExpr = { [EXPR]: string };
 
 const generatorPerContract: Partial<
   Record<
-    keyof TokenContractNames,
+    keyof TokenContractNames | 'layerZeroMinterBurner',
     (mToken: MTokenName) =>
       | Promise<
           | {

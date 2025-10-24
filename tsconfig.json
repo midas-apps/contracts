@@ -15,5 +15,5 @@
     "./helpers",
     "./types"
   ],
-  "files": ["./hardhat.config.ts"]
+  "files": ["./hardhat.config.ts", "./layerzero.config.ts"]
 }

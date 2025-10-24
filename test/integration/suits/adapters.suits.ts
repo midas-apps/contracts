@@ -456,7 +456,7 @@ export const bandAdaptersSuits = (
   ids: string[],
   fixture: () => Promise<{ bandAdapters: BandAdapterSuitsParams[] }>,
 ) => {
-  describe.only(`Band Adapters on ${network}`, function () {
+  describe(`Band Adapters on ${network}`, function () {
     ids.forEach((id) => {
       describe(`Band Adapter for ${id}`, () => {
         getAdapterSuits(

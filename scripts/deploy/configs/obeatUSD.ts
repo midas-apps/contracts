@@ -1,3 +1,4 @@
+import { hours } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
@@ -76,6 +77,33 @@ export const obeatUSDDeploymentConfig: DeploymentConfig = {
         },
         pauseFunctions: {
           redemptionVaultSwapper: ['redeemFiatRequest'],
+        },
+        layerZero: {
+          delegate: '0xF9e3295DBf89CF0Bf1344a3010CE96d026579BBb',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('1000000'),
+              window: hours(1),
+            },
+          },
+        },
+      },
+    },
+    [chainIds.main]: {
+      postDeploy: {
+        grantRoles: {
+          tokenManagerAddress: '0x081bb8aD7F452f916991C17fDFa64D4A25153169',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0x94F0c5beb7906d78105241fBc2073E181F88F50A',
+        },
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('1000000'),
+              window: hours(1),
+            },
+          },
         },
       },
     },

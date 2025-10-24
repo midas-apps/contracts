@@ -21,6 +21,10 @@ type CommonContractNames = Omit<TokenContractNames, 'token'> & {
   ac: string;
   customAggregator: string;
   customAggregatorDiscounted: string;
+  layerZero: {
+    oftAdapter: string;
+    vaultComposer: string;
+  };
 };
 
 const vaultTypeToContractNameMap: Record<VaultType, string> = {
@@ -122,6 +126,10 @@ export const getCommonContractNames = (): CommonContractNames => {
     roles: 'MidasAccessControlRoles',
     dataFeedComposite: 'CompositeDataFeed',
     dataFeedMultiply: 'CompositeDataFeedMultiply',
+    layerZero: {
+      oftAdapter: 'MidasLzMintBurnOFTAdapter',
+      vaultComposer: 'MidasVaultComposerSync',
+    },
   };
 };
 

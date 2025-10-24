@@ -1,8 +1,14 @@
-import { HardhatNetworkUserConfig, NetworkUserConfig } from 'hardhat/types';
+import { EndpointId } from '@layerzerolabs/lz-definitions';
+import { HardhatNetworkUserConfig, HttpNetworkUserConfig } from 'hardhat/types';
 
 import { GWEI, MOCK_AGGREGATOR_NETWORK_TAG } from '../constants';
 import { ENV } from '../env';
-import { ConfigPerNetwork, Network, RpcUrl } from '../types';
+import {
+  ConfigPerNetwork,
+  Network,
+  PartialConfigPerNetwork,
+  RpcUrl,
+} from '../types';
 
 const {
   ALCHEMY_KEY,
@@ -34,6 +40,7 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   xrplevm: 'https://rpc.xrplevm.org',
   zerog: 'https://evmrpc.0g.ai',
   plasma: 'https://rpc.plasma.to',
+  arbitrumSepolia: 'https://sepolia-rollup.arbitrum.io/rpc',
   bsc: ALCHEMY_KEY
     ? `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
     : 'https://bsc-dataseed.bnbchain.org',
@@ -57,6 +64,7 @@ export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
   xrplevm: undefined,
   zerog: undefined,
   plasma: undefined,
+  arbitrumSepolia: undefined,
   bsc: undefined,
 };
 
@@ -78,6 +86,7 @@ export const chainIds: ConfigPerNetwork<number> = {
   xrplevm: 1440000,
   zerog: 16661,
   plasma: 9745,
+  arbitrumSepolia: 421614,
   bsc: 56,
 };
 
@@ -99,6 +108,7 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   xrplevm: MNEMONIC_PROD,
   zerog: MNEMONIC_PROD,
   plasma: MNEMONIC_PROD,
+  arbitrumSepolia: MNEMONIC_DEV,
   bsc: MNEMONIC_PROD,
 };
 
@@ -120,6 +130,7 @@ export const gases: ConfigPerNetwork<number | undefined> = {
   xrplevm: undefined,
   zerog: undefined,
   plasma: undefined,
+  arbitrumSepolia: undefined,
   bsc: undefined,
 };
 
@@ -141,6 +152,7 @@ export const timeouts: ConfigPerNetwork<number | undefined> = {
   xrplevm: undefined,
   zerog: undefined,
   plasma: undefined,
+  arbitrumSepolia: undefined,
   bsc: undefined,
 };
 
@@ -162,6 +174,7 @@ export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
   xrplevm: undefined,
   zerog: undefined,
   plasma: undefined,
+  arbitrumSepolia: undefined,
   bsc: undefined,
 };
 
@@ -183,13 +196,50 @@ export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
   xrplevm: undefined,
   zerog: undefined,
   plasma: undefined,
+  arbitrumSepolia: undefined,
   bsc: undefined,
 };
+
+export const blockFinality: PartialConfigPerNetwork<number> = {
+  main: 12,
+  hyperevm: 32,
+  sepolia: 2,
+  arbitrumSepolia: 1,
+};
+
+export const layerZeroEids: PartialConfigPerNetwork<EndpointId> = {
+  main: EndpointId.ETHEREUM_V2_MAINNET,
+  sepolia: EndpointId.SEPOLIA_V2_TESTNET,
+  base: EndpointId.BASE_V2_MAINNET,
+  etherlink: EndpointId.ETHERLINK_V2_MAINNET,
+  plume: EndpointId.PLUME_V2_MAINNET,
+  rootstock: EndpointId.ROOTSTOCK_V2_MAINNET,
+  hyperevm: EndpointId.HYPERLIQUID_V2_MAINNET,
+  katana: EndpointId.KATANA_V2_MAINNET,
+  tac: EndpointId.TAC_V2_MAINNET,
+  zerog: EndpointId.OG_V2_MAINNET,
+  plasma: EndpointId.PLASMA_V2_MAINNET,
+  arbitrumSepolia: EndpointId.ARBSEP_V2_TESTNET,
+};
+
+export const layerZeroEidToNetwork = Object.fromEntries(
+  Object.entries(layerZeroEids).map(([network, eid]) => [
+    eid,
+    network as Network,
+  ]),
+) as Partial<Record<EndpointId, Network>>;
+
+export const chainIdToNetwork = Object.fromEntries(
+  Object.entries(chainIds).map(([network, chainId]) => [
+    chainId,
+    network as Network,
+  ]),
+) as Partial<Record<number, Network>>;
 
 export const getBaseNetworkConfig = (
   network: Network,
   tags: Array<string> = [MOCK_AGGREGATOR_NETWORK_TAG],
-): NetworkUserConfig => ({
+): HttpNetworkUserConfig => ({
   accounts: mnemonics[network]
     ? {
         mnemonic: mnemonics[network],
@@ -198,28 +248,36 @@ export const getBaseNetworkConfig = (
   chainId: chainIds[network],
   gas: gases[network],
   gasPrice: gasPrices[network],
-  blockGasLimit: blockGasLimits[network],
   timeout: timeouts[network],
-  initialBaseFeePerGas: initialBasesFeePerGas[network],
   tags,
+});
+
+export const getLocalNetworkConfig = (
+  network: Network,
+): Omit<HardhatNetworkUserConfig, 'accounts'> => ({
+  ...getBaseNetworkConfig(network, []),
+  blockGasLimit: blockGasLimits[network],
+  initialBaseFeePerGas: initialBasesFeePerGas[network],
+  eid: undefined as never,
+  safeConfig: undefined as never,
 });
 
 export const getNetworkConfig = (
   network: Network,
   tags: Array<string> = [MOCK_AGGREGATOR_NETWORK_TAG],
   forkingNetwork?: Network,
-): NetworkUserConfig => ({
+): HttpNetworkUserConfig => ({
   ...getBaseNetworkConfig(forkingNetwork ?? network, tags),
   url: rpcUrls[network],
   chainId: chainIds[network],
   saveDeployments: true,
+  eid: layerZeroEids[network],
 });
 
 export const getForkNetworkConfig = (
   network: Network,
-  tags: Array<string> = [MOCK_AGGREGATOR_NETWORK_TAG],
 ): HardhatNetworkUserConfig => ({
-  ...getBaseNetworkConfig(network, tags),
+  ...getLocalNetworkConfig(network),
   accounts: {
     mnemonic: mnemonics[network],
   },
@@ -236,8 +294,17 @@ export const getForkNetworkConfig = (
 });
 
 export const getHardhatNetworkConfig = (): HardhatNetworkUserConfig => ({
-  ...getBaseNetworkConfig('hardhat'),
+  ...getLocalNetworkConfig('hardhat'),
   accounts: mnemonics.hardhat ? { mnemonic: mnemonics.hardhat } : undefined,
   saveDeployments: true,
   live: false,
+  allowUnlimitedContractSize: true,
 });
+
+export const isTestnetNetwork = (network: Network) => {
+  return (
+    network === 'sepolia' ||
+    network === 'arbitrumSepolia' ||
+    network === 'tacTestnet'
+  );
+};

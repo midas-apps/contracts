@@ -3,7 +3,7 @@ pragma solidity 0.8.9;
 
 /**
  * @title MTBillMidasAccessControlRoles
- * @notice Base contract that stores all roles descriptors for mBASIS contracts
+ * @notice Base contract that stores all roles descriptors for mTBILL contracts
  * @author RedDuck Software
  */
 abstract contract MTBillMidasAccessControlRoles {

@@ -6,10 +6,7 @@ import path from 'path';
 const logToFile = (hre: HardhatRuntimeEnvironment, message: string) => {
   const logsFolderPath = hre.logger.logsFolderPath;
 
-  const logFilePath = path.resolve(
-    logsFolderPath,
-    `log-${hre.logger.executionLogContext}.log`,
-  );
+  const logFilePath = path.resolve(logsFolderPath, `log-${hre.contextId}.log`);
 
   fs.appendFileSync(logFilePath, message + '\n');
 };

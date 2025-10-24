@@ -1,3 +1,4 @@
+import { hours } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
@@ -60,6 +61,74 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
       },
       postDeploy: {
         grantRoles: {},
+        layerZero: {
+          delegate: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('1000000'),
+              window: hours(1),
+            },
+          },
+        },
+      },
+    },
+    [chainIds.arbitrumSepolia]: {
+      dv: {
+        feeReceiver: undefined,
+        tokensReceiver: undefined,
+        instantDailyLimit: constants.MaxUint256,
+        instantFee: parseUnits('1', 2),
+        minMTokenAmountForFirstDeposit: parseUnits('0'),
+        minAmount: parseUnits('0.01'),
+        variationTolerance: parseUnits('0.1', 2),
+      },
+      rv: {
+        type: 'REGULAR',
+        feeReceiver: undefined,
+        tokensReceiver: undefined,
+        instantDailyLimit: constants.MaxUint256,
+        instantFee: parseUnits('1', 2),
+        minAmount: parseUnits('0.01'),
+        variationTolerance: parseUnits('0.1', 2),
+        fiatAdditionalFee: parseUnits('0.1', 2),
+        fiatFlatFee: parseUnits('0.1', 18),
+        minFiatRedeemAmount: parseUnits('1', 18),
+        requestRedeemer: undefined,
+      },
+      postDeploy: {
+        grantRoles: {
+          oracleManagerAddress: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          tokenManagerAddress: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          vaultsManagerAddress: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+        },
+        setRoundData: {
+          data: parseUnits('1', 8),
+        },
+        addPaymentTokens: {
+          vaults: [
+            {
+              paymentTokens: [
+                { token: 'usdt', allowance: constants.MaxUint256 },
+              ],
+              type: 'depositVault',
+            },
+            {
+              paymentTokens: [
+                { token: 'usdt', allowance: constants.MaxUint256 },
+              ],
+              type: 'redemptionVault',
+            },
+          ],
+        },
+        layerZero: {
+          delegate: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('1000000'),
+              window: hours(1),
+            },
+          },
+        },
       },
     },
     [chainIds.main]: {

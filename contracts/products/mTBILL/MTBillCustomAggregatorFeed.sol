@@ -15,6 +15,11 @@ contract MTBillCustomAggregatorFeed is
     MTBillMidasAccessControlRoles
 {
     /**
+     * @dev leaving a storage gap for futures updates
+     */
+    uint256[50] private __gap;
+
+    /**
      * @inheritdoc CustomAggregatorV3CompatibleFeed
      */
     function feedAdminRole() public pure override returns (bytes32) {

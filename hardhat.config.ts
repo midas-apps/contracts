@@ -12,14 +12,18 @@ import 'hardhat-contract-sizer';
 import 'hardhat-deploy';
 import 'solidity-docgen';
 import './tasks';
-
+import '@layerzerolabs/toolbox-hardhat';
+import 'hardhat-tracer';
 import {
   chainIds,
   ENV,
+  extend,
   getForkNetworkConfig,
   getHardhatNetworkConfig,
   getNetworkConfig,
 } from './config';
+
+extend();
 
 const { OPTIMIZER, REPORT_GAS, FORKING_NETWORK, ETHERSCAN_API_KEY } = ENV;
 
@@ -36,6 +40,15 @@ const config: HardhatUserConfig = {
           },
         },
       },
+      {
+        version: '0.8.22',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
     ],
   },
   namedAccounts: {
@@ -44,6 +57,7 @@ const config: HardhatUserConfig = {
       hardhat: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       localhost: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       sepolia: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+      arbitrumSepolia: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       base: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
       rootstock: '0x548F80f9f4af495aF5eaEf97bbC5c61223e96A01',
       arbitrum: '0x165894140c591Ea3E57fA337E90Ce0bdB475e814',
@@ -69,6 +83,7 @@ const config: HardhatUserConfig = {
     main: getNetworkConfig('main', []),
     etherlink: getNetworkConfig('etherlink', []),
     sepolia: getNetworkConfig('sepolia'),
+    arbitrumSepolia: getNetworkConfig('arbitrumSepolia'),
     base: getNetworkConfig('base'),
     oasis: getNetworkConfig('oasis'),
     plume: getNetworkConfig('plume'),
