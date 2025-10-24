@@ -732,7 +732,6 @@ export const layerZeroFixture = async () => {
     mTBILL,
     depositVault,
     redemptionVault,
-    dataFeed,
     stableCoins,
   } = defaultFixture;
   const eidA = 1;
