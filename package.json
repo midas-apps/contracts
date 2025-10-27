@@ -8,7 +8,7 @@
     "node": "20 || >=22"
   },
   "scripts": {
-    "prepare": "husky install",
+    "postinstall": "husky install",
     "hardhat": "hardhat",
     "clean": "hardhat clean",
     "docgen": "hardhat docgen",
@@ -136,5 +136,5 @@
   "resolutions": {
     "@layerzerolabs/oft-evm/@openzeppelin/contracts": "4.8.3"
   },
-  "packageManager": "yarn@1.22.22"
+  "packageManager": "yarn@4.10.3"
 }

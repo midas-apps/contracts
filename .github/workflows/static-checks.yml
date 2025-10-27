@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - dev
   pull_request: {}
   workflow_dispatch: {}
 
@@ -12,87 +11,46 @@ permissions:
   contents: read
 
 jobs:
-  lint:
+  static-checks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v5
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@v6
         with:
-          node-version: '22'
-      - uses: actions/cache@v3
-        id: cache
-        with:
-          path: '**/node_modules'
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: ${{ runner.os }}-yarn-
-      - name: Install project dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
+          node-version: '24'
+          cache: 'yarn'
+
+      - name: Setup safe-chain
+        run: |
+          npm i -g @aikidosec/safe-chain
+          safe-chain setup-ci
+
+      - name: Install dependencies
         run: yarn
-      - name: ESLint Solidity
+
+      - name: Lint Solidity
         run: yarn lint:sol
-      - name: ESLint TypeScript
+
+      - name: Lint TypeScript
         run: yarn lint:ts
 
-  format:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '22'
-      - uses: actions/cache@v3
-        id: cache
-        with:
-          path: '**/node_modules'
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: ${{ runner.os }}-yarn-
-      - name: Install project dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: yarn
-      - name: Prettier Solidity
+      - name: Format Check Solidity
         run: yarn format:sol
-      - name: Prettier TypeScript
+
+      - name: Format Check TypeScript
         run: yarn format:ts
-      - name: Prettier YAML
+
+      - name: Format Check YAML
         run: yarn format:yml
 
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '22'
-      - uses: actions/cache@v3
-        id: cache
-        with:
-          path: '**/node_modules'
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: ${{ runner.os }}-yarn-
-      - name: Install project dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: yarn
-      - name: Build contracts
+      - name: Build Contracts
         run: yarn build
 
-  test:
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '22'
-      - uses: actions/cache@v3
-        id: cache
-        with:
-          path: '**/node_modules'
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: ${{ runner.os }}-yarn-
-      - name: Install project dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: yarn
-      - name: Test contracts
+      - name: Test Contracts
         run: yarn test:unit
         env:
           ALCHEMY_KEY: ${{ secrets.ALCHEMY_KEY }}
