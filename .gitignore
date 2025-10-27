@@ -25,3 +25,11 @@ deployments/hardhat
 
 logs/*
 !logs/.gitkeep
+
+# Yarn files
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
