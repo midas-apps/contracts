@@ -31,6 +31,7 @@ import { mHyperBTCDeploymentConfig } from './mHyperBTC';
 import { mHyperETHDeploymentConfig } from './mHyperETH';
 import { mLIQUIDITYDeploymentConfig } from './mLIQUIDITY';
 import { mMEVDeploymentConfig } from './mMEV';
+import { mPortofinoDeploymentConfig } from './mPortofino';
 import { mRE7DeploymentConfig } from './mRE7';
 import { mRE7BTCDeploymentConfig } from './mRE7BTC';
 import { mRE7SOLDeploymentConfig } from './mRE7SOL';
@@ -117,4 +118,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   cUSDO: cUSDODeploymentConfig,
   mHyperETH: mHyperETHDeploymentConfig,
   mHyperBTC: mHyperBTCDeploymentConfig,
+  mPortofino: mPortofinoDeploymentConfig,
 };

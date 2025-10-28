@@ -33,7 +33,7 @@
     "format:yml": "prettier \"**/*.{yml,yaml}\" --check",
     "format:yml:fix": "prettier \"**/*.{yml,yaml}\" --write",
     "codestyle": "run-s lint:* format:*",
-    "codestyle:fix": "run-s lint:*:* format:*:*",
+    "codestyle:fix": "run-s \"lint:*:*\" \"format:*:*\"",
     "hh:run": "yarn hardhat run",
     "hh:run:script": "yarn hardhat runscript",
     "deploy:ac": "yarn hh:run:script scripts/deploy/deploy_AccessControl.ts",

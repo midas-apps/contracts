@@ -232,4 +232,8 @@ export const mTokensMetadata: Record<
     name: 'Midas Hyperithm BTC',
     symbol: 'mHyperBTC',
   },
+  mPortofino: {
+    name: 'Midas Portofino',
+    symbol: 'mPortofino',
+  },
 };

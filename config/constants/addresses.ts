@@ -449,6 +449,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0xeD22A9861C6eDd4f1292aeAb1E44661D5f3FE65e',
       redemptionVaultSwapper: '0x16d4f955B0aA1b1570Fe3e9bB2f8c19C407cdb67',
     },
+    mPortofino: {
+      token: '0x9004B9890D6B901A17F734efe028b1Be5bd6CD22',
+      customFeed: '0x88956C00A5Fa046c823eAED747F21A95D2264403',
+      dataFeed: '0x21f3BCfa912F674c2af3bED5BF8E47A3f40EA749',
+      depositVault: '0x9a5cf6c0a1CEe5226E31e3D0a81F2ca2462d8387',
+      redemptionVaultSwapper: '0xb02cc77ee137436D71b9dE46958A3bB5d7346CcA',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
