@@ -74,7 +74,7 @@ export const mPortofinoDeploymentConfig: DeploymentConfig = {
         grantRoles: {
           tokenManagerAddress: '0x8781bC62573e524306bBB05ef94c7A7E141ce00D',
           vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
-          oracleManagerAddress: '0x8F2e0d2aF1102033C363331f213c62BE2e6DF043',
+          oracleManagerAddress: '0xB33fac82B9191139C91b0f2540Cf14f5D38e5032',
         },
         setRoundData: {
           data: parseUnits('1', 8),
