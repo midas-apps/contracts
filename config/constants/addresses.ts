@@ -16,6 +16,11 @@ type LayerZeroTokenAddresses = {
   composers?: Partial<Record<PaymentTokenName, string>>;
 };
 
+type AxelarTokenAddresses = {
+  manager?: string;
+  tokenId?: string;
+};
+
 export type TokenAddresses = {
   customFeed?: string;
   dataFeed?: string;
@@ -23,6 +28,7 @@ export type TokenAddresses = {
   depositVault?: string;
   depositVaultUstb?: string;
   layerZero?: LayerZeroTokenAddresses;
+  axelar?: AxelarTokenAddresses;
 } & Partial<Record<RedemptionVaultType, string>>;
 
 export type VaultType = RedemptionVaultType | DepositVaultType;
@@ -1124,6 +1130,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
           usdt: '0xff0F08c35786717A266d55DF32Db478e9545E4a5',
         },
       },
+      axelar: {
+        manager: '0xa5ff89Dd34ef8B2875a54858af486931fAAB7eAA',
+        tokenId:
+          '0x46929f12e9fc2e41757d789d461b77f9dcfbf328d3797a4446f8335fbe27d985',
+      },
     },
     mBASIS: {
       customFeed: '0x263A7AcE5E77986b77DcA125859248fEED52383c',
@@ -1258,6 +1269,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
       layerZero: {
         oft: '0xBc672b2dB097C6a926AF63554E4EbcaA4dC94FF0',
+      },
+      axelar: {
+        manager: '0xa5ff89Dd34ef8B2875a54858af486931fAAB7eAA',
+        tokenId:
+          '0x46929f12e9fc2e41757d789d461b77f9dcfbf328d3797a4446f8335fbe27d985',
       },
     },
   },

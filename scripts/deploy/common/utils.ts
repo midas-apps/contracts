@@ -251,7 +251,8 @@ export const sendAndWaitForCustomTxSign = async (
       | 'update-feed-ptoken'
       | 'update-timelock'
       | 'update-lz'
-      | 'update-lz-oapp-config';
+      | 'update-lz-oapp-config'
+      | 'axelar-wire-tokens';
     subAction?:
       | 'add-payment-token'
       | 'grant-token-roles'
@@ -303,7 +304,7 @@ export const sendAndWaitForCustomTxSign = async (
 
       populatedTx = await safeContract.populateTransaction.execTransaction(
         populatedTx.to,
-        0,
+        populatedTx.value ?? 0,
         populatedTx.data,
         0,
         0,
@@ -327,7 +328,6 @@ export const sendAndWaitForCustomTxSign = async (
   let hreNetwork: HardhatRuntimeEnvironment = hre;
 
   if (txSignMetadata?.network && txSignMetadata.network !== hre.network.name) {
-    console.log('getHreByNetworkName', txSignMetadata.network);
     hreNetwork = await getHreByNetworkName(txSignMetadata.network);
   }
 
@@ -350,17 +350,26 @@ export const sendAndWaitForCustomTxSign = async (
 
   const res = await sendResult;
 
+  let resToReturn: unknown;
+
   if (res.type === 'customSigner') {
     console.log('Custom tx sign result detected, skipping...');
-    return res.payload;
-  }
-
-  if (res.type === 'hardhatSigner') {
+    resToReturn = res.payload;
+  } else if (res.type === 'hardhatSigner') {
+    logDeploy('Tx Submitted', hreNetwork.network.name, res.tx.hash);
     await res.tx.wait(confirmations);
-    return res.tx.hash;
+    resToReturn = res.tx.hash;
+  } else {
+    throw new Error('Unknown tx signer type');
   }
 
-  throw new Error('Unknown tx signer type');
+  logDeploy(
+    'Tx' + res.type === 'customSigner' ? '' : ' Submitted',
+    hreNetwork.network.name,
+    typeof resToReturn === 'object'
+      ? JSON.stringify(resToReturn)
+      : (resToReturn as string),
+  );
 };
 
 export const toFunctionSelector = (signature: string) => {

@@ -61,6 +61,9 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
       },
       postDeploy: {
         grantRoles: {},
+        axelarIts: {
+          operator: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+        },
         layerZero: {
           delegate: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
           rateLimitConfig: {
@@ -119,6 +122,9 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
               type: 'redemptionVault',
             },
           ],
+        },
+        axelarIts: {
+          operator: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
         },
         layerZero: {
           delegate: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',

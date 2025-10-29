@@ -2,13 +2,13 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { layerZeroEids, Network } from '../../../../config';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
+import { lzConfigsPerMToken } from '../../../../config/misc';
 import {
   etherscanVerify,
   getOriginalNetwork,
   getMTokenOrThrow,
   logDeploy,
 } from '../../../../helpers/utils';
-import { lzConfigsPerMToken } from '../../../../layerzero.config';
 import { DeployFunction } from '../../common/types';
 import { getDeployer, getNetworkConfig } from '../../common/utils';
 

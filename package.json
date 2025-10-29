@@ -78,6 +78,9 @@
     "verify:all:impl": "yarn hh:run:script scripts/verify_contracts.ts"
   },
   "devDependencies": {
+    "@axelar-network/axelar-local-dev": "2.3.3",
+    "@axelar-network/axelarjs-sdk": "0.17.9",
+    "@axelar-network/interchain-token-service": "2.2.0",
     "@chainlink/contracts": "0.6.1",
     "@clack/prompts": "0.11.0",
     "@commitlint/cli": "17.1.2",

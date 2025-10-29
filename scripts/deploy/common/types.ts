@@ -66,6 +66,10 @@ export type LayerZeroConfig = {
   };
 };
 
+export type AxelarItsConfig = {
+  operator: string;
+};
+
 export type PostDeployConfig = {
   addPaymentTokens?: AddPaymentTokensConfig;
   grantRoles?: GrantAllTokenRolesConfig;
@@ -73,6 +77,7 @@ export type PostDeployConfig = {
   addFeeWaived?: AddFeeWaivedConfig;
   pauseFunctions?: PauseFunctionsConfig;
   layerZero?: LayerZeroConfig;
+  axelarIts?: AxelarItsConfig;
 };
 
 export type DeploymentConfig = {
