@@ -82,7 +82,7 @@ import {
   // eslint-disable-next-line camelcase
   MidasLzOFTAdapter__factory,
   // eslint-disable-next-line camelcase
-  MidasVaultComposerSyncTester,
+  MidasLzVaultComposerSyncTester,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -866,8 +866,8 @@ export const layerZeroFixture = async () => {
     .connect(owner)
     .setPeer(eidA, ethers.utils.zeroPad(pTokenLzOftAdapter.address, 32));
 
-  const composer = await deployProxyContract<MidasVaultComposerSyncTester>(
-    'MidasVaultComposerSyncTester',
+  const composer = await deployProxyContract<MidasLzVaultComposerSyncTester>(
+    'MidasLzVaultComposerSyncTester',
     undefined,
     undefined,
     [

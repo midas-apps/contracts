@@ -11,7 +11,7 @@ import hre from 'hardhat';
 import {
   // eslint-disable-next-line camelcase
   MidasLzOFTAdapter__factory,
-  MidasVaultComposerSyncTester,
+  MidasLzVaultComposerSyncTester,
 } from '../../typechain-types';
 import { approveBase18, mintToken } from '../common/common.helpers';
 import { setRoundData } from '../common/data-feed.helpers';
@@ -31,7 +31,7 @@ import {
 } from '../common/manageable-vault.helpers';
 import { mint } from '../common/mTBILL.helpers';
 
-describe('LayerZero', function () {
+describe.only('LayerZero', function () {
   describe('MidasLzMintBurnOFTAdapter', () => {
     it('deployment', async () => {
       const fixture = await loadFixture(layerZeroFixture);
@@ -308,7 +308,7 @@ describe('LayerZero', function () {
     });
   });
 
-  describe('MidasVaultComposerSync', () => {
+  describe('MidasLzVaultComposerSync', () => {
     it('deployment', async () => {
       const fixture = await loadFixture(layerZeroFixture);
       const {
@@ -1242,8 +1242,8 @@ describe('LayerZero', function () {
         );
 
         const composer =
-          await deployProxyContract<MidasVaultComposerSyncTester>(
-            'MidasVaultComposerSyncTester',
+          await deployProxyContract<MidasLzVaultComposerSyncTester>(
+            'MidasLzVaultComposerSyncTester',
             undefined,
             undefined,
             [
@@ -1308,8 +1308,8 @@ describe('LayerZero', function () {
         );
 
         const composer =
-          await deployProxyContract<MidasVaultComposerSyncTester>(
-            'MidasVaultComposerSyncTester',
+          await deployProxyContract<MidasLzVaultComposerSyncTester>(
+            'MidasLzVaultComposerSyncTester',
             undefined,
             undefined,
             [
@@ -1431,8 +1431,8 @@ describe('LayerZero', function () {
         );
 
         const composer =
-          await deployProxyContract<MidasVaultComposerSyncTester>(
-            'MidasVaultComposerSyncTester',
+          await deployProxyContract<MidasLzVaultComposerSyncTester>(
+            'MidasLzVaultComposerSyncTester',
             undefined,
             undefined,
             [
@@ -1497,8 +1497,8 @@ describe('LayerZero', function () {
         );
 
         const composer =
-          await deployProxyContract<MidasVaultComposerSyncTester>(
-            'MidasVaultComposerSyncTester',
+          await deployProxyContract<MidasLzVaultComposerSyncTester>(
+            'MidasLzVaultComposerSyncTester',
             undefined,
             undefined,
             [

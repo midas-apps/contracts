@@ -9,11 +9,11 @@ import {IRedemptionVault} from "../../../interfaces/IRedemptionVault.sol";
 import {IDataFeed} from "../../../interfaces/IDataFeed.sol";
 
 /**
- * @title IMidasVaultComposerSync
- * @notice Interface for the MidasVaultComposerSync contract
+ * @title IMidasLzVaultComposerSync
+ * @notice Interface for the MidasLzVaultComposerSync contract
  * @author RedDuck Software
  */
-interface IMidasVaultComposerSync is IOAppComposer {
+interface IMidasLzVaultComposerSync is IOAppComposer {
     /**
      * @notice event emitted when a send operation is successful
      * @param guid the guid of the send operation

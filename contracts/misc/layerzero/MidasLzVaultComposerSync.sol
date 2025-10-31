@@ -15,7 +15,7 @@ import {IRedemptionVault} from "../../interfaces/IRedemptionVault.sol";
 import {IDataFeed} from "../../interfaces/IDataFeed.sol";
 import {TokenConfig, IManageableVault} from "../../interfaces/IManageableVault.sol";
 import {DecimalsCorrectionLibrary} from "../../libraries/DecimalsCorrectionLibrary.sol";
-import {IMidasVaultComposerSync} from "./interfaces/IMidasVaultComposerSync.sol";
+import {IMidasLzVaultComposerSync} from "./interfaces/IMidasLzVaultComposerSync.sol";
 import {MidasInitializable} from "../../abstract/MidasInitializable.sol";
 
 /**
@@ -23,10 +23,9 @@ import {MidasInitializable} from "../../abstract/MidasInitializable.sol";
  * default ManageableVault implementation
  */
 interface IManageableVaultWithConfigs is IManageableVault {
-    function tokensConfig(address token)
-        external
-        view
-        returns (TokenConfig memory);
+    function tokensConfig(
+        address token
+    ) external view returns (TokenConfig memory);
 
     function waivedFeeRestriction(address account) external view returns (bool);
 
@@ -34,17 +33,16 @@ interface IManageableVaultWithConfigs is IManageableVault {
 }
 
 /**
- * @title MidasVaultComposerSync - Synchronous Vault Composer for Midas vaults
+ * @title MidasLzVaultComposerSync - Synchronous Vault Composer for Midas vaults
  * @notice This contract is a composer that allows deposits and redemptions operations against a
  *         synchronous vault across different chains using LayerZero's OFT protocol.
  * @dev The contract is designed to handle deposits and redemptions of vault mTokens and paymentTokens,
  *      ensuring that the mToken and paymentToken are correctly managed and transferred across chains.
  *      It also includes slippage protection and refund mechanisms for failed transactions.
  * @dev Default refunds are enabled to EOA addresses only on the source.
-        Custom refunds to contracts can be implemented by overriding the _refund function.
  */
-contract MidasVaultComposerSync is
-    IMidasVaultComposerSync,
+contract MidasLzVaultComposerSync is
+    IMidasLzVaultComposerSync,
     MidasInitializable,
     ReentrancyGuardUpgradeable
 {
@@ -78,32 +76,32 @@ contract MidasVaultComposerSync is
     error InvalidTokenRate(address feed);
 
     /**
-     * @inheritdoc IMidasVaultComposerSync
+     * @inheritdoc IMidasLzVaultComposerSync
      */
     IDepositVault public immutable depositVault;
     /**
-     * @inheritdoc IMidasVaultComposerSync
+     * @inheritdoc IMidasLzVaultComposerSync
      */
     IRedemptionVault public immutable redemptionVault;
     /**
-     * @inheritdoc IMidasVaultComposerSync
+     * @inheritdoc IMidasLzVaultComposerSync
      */
     IDataFeed public immutable mTokenDataFeed;
 
     /**
-     * @inheritdoc IMidasVaultComposerSync
+     * @inheritdoc IMidasLzVaultComposerSync
      */
     address public immutable paymentTokenOft;
     /**
-     * @inheritdoc IMidasVaultComposerSync
+     * @inheritdoc IMidasLzVaultComposerSync
      */
     address public immutable paymentTokenErc20;
     /**
-     * @inheritdoc IMidasVaultComposerSync
+     * @inheritdoc IMidasLzVaultComposerSync
      */
     address public immutable mTokenOft;
     /**
-     * @inheritdoc IMidasVaultComposerSync
+     * @inheritdoc IMidasLzVaultComposerSync
      */
     address public immutable mTokenErc20;
 
@@ -113,11 +111,11 @@ contract MidasVaultComposerSync is
     uint8 public immutable paymentTokenDecimals;
 
     /**
-     * @inheritdoc IMidasVaultComposerSync
+     * @inheritdoc IMidasLzVaultComposerSync
      */
     address public immutable lzEndpoint;
     /**
-     * @inheritdoc IMidasVaultComposerSync
+     * @inheritdoc IMidasLzVaultComposerSync
      */
     uint32 public immutable vaultsEid;
 
@@ -136,11 +134,6 @@ contract MidasVaultComposerSync is
      * @param _redemptionVault The address of the redemption vault contract
      * @param _paymentTokenOft The address of the paymentToken OFT contract
      * @param _mTokenOft The address of the mToken OFT contract
-     *
-     * Requirements:
-     * - mToken must be the vault itself
-     * - paymentToken must match the vault's underlying paymentToken
-     * - mToken OFT must be an adapter (approvalRequired() returns true)
      */
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(
@@ -219,7 +212,7 @@ contract MidasVaultComposerSync is
         address _composeSender, // The OFT used on refund, also the vaultIn token.
         bytes32 _guid,
         bytes calldata _message, // expected to contain a composeMessage = abi.encode(SendParam hopSendParam,uint256 minMsgValue)
-        address, /*_executor*/
+        address /*_executor*/,
         bytes calldata /*_extraData*/
     ) external payable virtual override {
         if (msg.sender != lzEndpoint) {
@@ -361,7 +354,7 @@ contract MidasVaultComposerSync is
      * @return mTokenAmount The number of mTokens received from the vault deposit
      */
     function _deposit(
-        bytes32, /*_depositor*/
+        bytes32 /*_depositor*/,
         uint256 _paymentTokenAmount,
         uint256 _minReceiveAmount
     ) internal virtual returns (uint256 mTokenAmount) {
@@ -443,7 +436,7 @@ contract MidasVaultComposerSync is
      * @return paymentTokenAmount The number of paymentTokens received from the vault redemption
      */
     function _redeem(
-        bytes32, /*_redeemer*/
+        bytes32 /*_redeemer*/,
         uint256 _mTokenAmount,
         uint256 _minReceiveAmount
     ) internal virtual returns (uint256 paymentTokenAmount) {
@@ -474,7 +467,7 @@ contract MidasVaultComposerSync is
      * @return MessagingFee The estimated fee for the send operation
      */
     function quoteSend(
-        address, /* _from */
+        address /* _from */,
         address _targetOFT,
         uint256 _vaultInAmount,
         SendParam memory _sendParam
@@ -551,11 +544,9 @@ contract MidasVaultComposerSync is
         );
     }
 
-    function _previewDeposit(uint256 amountTokenIn)
-        internal
-        view
-        returns (uint256)
-    {
+    function _previewDeposit(
+        uint256 amountTokenIn
+    ) internal view returns (uint256) {
         uint256 amountTokenInBase18 = _tokenAmountToBase18(amountTokenIn);
 
         TokenConfig memory tokenConfig = IManageableVaultWithConfigs(
@@ -594,11 +585,9 @@ contract MidasVaultComposerSync is
         return amountMToken;
     }
 
-    function _previewRedeem(uint256 amountMTokenIn)
-        internal
-        view
-        returns (uint256 amountTokenOut)
-    {
+    function _previewRedeem(
+        uint256 amountMTokenIn
+    ) internal view returns (uint256 amountTokenOut) {
         TokenConfig memory tokenConfig = IManageableVaultWithConfigs(
             address(redemptionVault)
         ).tokensConfig(paymentTokenErc20);
@@ -630,11 +619,10 @@ contract MidasVaultComposerSync is
             .convertFromBase18(paymentTokenDecimals);
     }
 
-    function _getTokenRate(IDataFeed dataFeed, bool stable)
-        internal
-        view
-        returns (uint256)
-    {
+    function _getTokenRate(
+        IDataFeed dataFeed,
+        bool stable
+    ) internal view returns (uint256) {
         uint256 rate = dataFeed.getDataInBase18();
         if (stable) {
             return _ONE;
@@ -642,19 +630,16 @@ contract MidasVaultComposerSync is
         return rate;
     }
 
-    function _tokenAmountToBase18(uint256 amount)
-        internal
-        view
-        returns (uint256)
-    {
+    function _tokenAmountToBase18(
+        uint256 amount
+    ) internal view returns (uint256) {
         return amount.convertToBase18(paymentTokenDecimals);
     }
 
-    function _truncate(uint256 value, uint8 decimals)
-        private
-        pure
-        returns (uint256)
-    {
+    function _truncate(
+        uint256 value,
+        uint8 decimals
+    ) private pure returns (uint256) {
         return value.convertFromBase18(decimals).convertToBase18(decimals);
     }
 

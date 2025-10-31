@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.21;
 
-import "../misc/layerzero/MidasVaultComposerSync.sol";
+import "../misc/layerzero/MidasLzVaultComposerSync.sol";
 
-contract MidasVaultComposerSyncTester is MidasVaultComposerSync {
+contract MidasLzVaultComposerSyncTester is MidasLzVaultComposerSync {
     enum HandleComposeType {
         NoOverride,
         ThrowsInsufficientBalanceError,
@@ -18,7 +18,7 @@ contract MidasVaultComposerSyncTester is MidasVaultComposerSync {
         address _paymentTokenOft,
         address _mTokenOft
     )
-        MidasVaultComposerSync(
+        MidasLzVaultComposerSync(
             _depositVault,
             _redemptionVault,
             _paymentTokenOft,

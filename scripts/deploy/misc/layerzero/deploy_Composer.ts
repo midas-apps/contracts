@@ -29,7 +29,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('pToken OFT not found');
   }
 
-  await deployAndVerifyProxy(hre, 'MidasVaultComposerSync', [], undefined, {
+  await deployAndVerifyProxy(hre, 'MidasLzVaultComposerSync', [], undefined, {
     unsafeAllow: ['state-variable-immutable'],
     constructorArgs: [
       mTokenAddresses.depositVault!,
