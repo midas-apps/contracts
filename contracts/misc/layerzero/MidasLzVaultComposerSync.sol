@@ -23,9 +23,10 @@ import {MidasInitializable} from "../../abstract/MidasInitializable.sol";
  * default ManageableVault implementation
  */
 interface IManageableVaultWithConfigs is IManageableVault {
-    function tokensConfig(
-        address token
-    ) external view returns (TokenConfig memory);
+    function tokensConfig(address token)
+        external
+        view
+        returns (TokenConfig memory);
 
     function waivedFeeRestriction(address account) external view returns (bool);
 
@@ -212,7 +213,7 @@ contract MidasLzVaultComposerSync is
         address _composeSender, // The OFT used on refund, also the vaultIn token.
         bytes32 _guid,
         bytes calldata _message, // expected to contain a composeMessage = abi.encode(SendParam hopSendParam,uint256 minMsgValue)
-        address /*_executor*/,
+        address, /*_executor*/
         bytes calldata /*_extraData*/
     ) external payable virtual override {
         if (msg.sender != lzEndpoint) {
@@ -274,18 +275,32 @@ contract MidasLzVaultComposerSync is
         /// SendParam defines how the composer will handle the user's funds
         /// The minMsgValue is the minimum amount of msg.value that must be sent,
         /// failing to do so will revert and the transaction will be retained in the endpoint for future retries
-        (SendParam memory sendParam, uint256 minMsgValue) = abi.decode(
-            _composeMsg,
-            (SendParam, uint256)
-        );
+        (
+            SendParam memory sendParam,
+            uint256 minMsgValue,
+            bytes memory extraOptions
+        ) = abi.decode(_composeMsg, (SendParam, uint256, bytes));
+
         if (msg.value < minMsgValue) {
             revert InsufficientMsgValue(minMsgValue, msg.value);
         }
 
         if (_oftIn == paymentTokenOft) {
-            _depositAndSend(_composeFrom, _amount, sendParam, tx.origin);
+            _depositAndSend(
+                _composeFrom,
+                _amount,
+                extraOptions,
+                sendParam,
+                tx.origin
+            );
         } else {
-            _redeemAndSend(_composeFrom, _amount, sendParam, tx.origin);
+            _redeemAndSend(
+                _composeFrom,
+                _amount,
+                extraOptions,
+                sendParam,
+                tx.origin
+            );
         }
     }
 
@@ -297,6 +312,7 @@ contract MidasLzVaultComposerSync is
      */
     function depositAndSend(
         uint256 _paymentTokenAmount,
+        bytes memory _extraOptions,
         SendParam memory _sendParam,
         address _refundAddress
     ) external payable virtual nonReentrant {
@@ -308,65 +324,10 @@ contract MidasLzVaultComposerSync is
         _depositAndSend(
             OFTComposeMsgCodec.addressToBytes32(msg.sender),
             _paymentTokenAmount,
+            _extraOptions,
             _sendParam,
             _refundAddress
         );
-    }
-
-    /**
-     * @dev Internal function that deposits paymentTokens and sends mTokens to another chain
-     * @param _depositor The depositor (bytes32 format to account for non-evm addresses)
-     * @param _paymentTokenAmount The number of paymentTokens to deposit
-     * @param _sendParam Parameter that defines how to send the mTokens
-     * @param _refundAddress Address to receive excess payment of the LZ fees
-     * @notice This function first deposits the paymentTokens to mint mTokens, validates the mTokens meet minimum slippage requirements,
-     *         then sends the minted mTokens cross-chain using the OFT (Omnichain Fungible Token) protocol
-     * @notice The _sendParam.amountLD is updated to the actual mToken amount minted, and minAmountLD is reset to 0 for the send operation
-     */
-    function _depositAndSend(
-        bytes32 _depositor,
-        uint256 _paymentTokenAmount,
-        SendParam memory _sendParam,
-        address _refundAddress
-    ) internal virtual {
-        uint256 mTokenAmount = _deposit(
-            _depositor,
-            _paymentTokenAmount,
-            _sendParam.minAmountLD
-        );
-
-        _sendParam.amountLD = mTokenAmount;
-        _sendParam.minAmountLD = 0;
-
-        _send(mTokenOft, _sendParam, _refundAddress);
-        emit Deposited(
-            _depositor,
-            _sendParam.to,
-            _sendParam.dstEid,
-            _paymentTokenAmount,
-            mTokenAmount
-        );
-    }
-
-    /**
-     * @dev Internal function to deposit paymentTokens into the vault
-     * @param _paymentTokenAmount The number of paymentTokens to deposit into the vault
-     * @return mTokenAmount The number of mTokens received from the vault deposit
-     */
-    function _deposit(
-        bytes32 /*_depositor*/,
-        uint256 _paymentTokenAmount,
-        uint256 _minReceiveAmount
-    ) internal virtual returns (uint256 mTokenAmount) {
-        uint256 balanceBefore = _balanceOfThis(mTokenErc20);
-        depositVault.depositInstant(
-            paymentTokenErc20,
-            _tokenAmountToBase18(_paymentTokenAmount),
-            _minReceiveAmount,
-            bytes32(0) // referrerId
-        );
-
-        mTokenAmount = _balanceOfThis(mTokenErc20) - balanceBefore;
     }
 
     /**
@@ -377,6 +338,7 @@ contract MidasLzVaultComposerSync is
      */
     function redeemAndSend(
         uint256 _mTokenAmount,
+        bytes memory _extraOptions,
         SendParam memory _sendParam,
         address _refundAddress
     ) external payable virtual nonReentrant {
@@ -388,8 +350,58 @@ contract MidasLzVaultComposerSync is
         _redeemAndSend(
             OFTComposeMsgCodec.addressToBytes32(msg.sender),
             _mTokenAmount,
+            _extraOptions,
             _sendParam,
             _refundAddress
+        );
+    }
+
+    /**
+     * @dev Internal function that deposits paymentTokens and sends mTokens to another chain
+     * @param _depositor The depositor (bytes32 format to account for non-evm addresses)
+     * @param _paymentTokenAmount The number of paymentTokens to deposit
+     * @param _extraOptions Extra options for the deposit operation
+     * @param _sendParam Parameter that defines how to send the mTokens
+     * @param _refundAddress Address to receive excess payment of the LZ fees
+     * @notice This function first deposits the paymentTokens to mint mTokens, validates the mTokens meet minimum slippage requirements,
+     *         then sends the minted mTokens cross-chain using the OFT (Omnichain Fungible Token) protocol
+     * @notice The _sendParam.amountLD is updated to the actual mToken amount minted, and minAmountLD is reset to 0 for the send operation
+     */
+    function _depositAndSend(
+        bytes32 _depositor,
+        uint256 _paymentTokenAmount,
+        bytes memory _extraOptions,
+        SendParam memory _sendParam,
+        address _refundAddress
+    ) internal virtual {
+        bool receiveToSameNetwork = _sendParam.dstEid == vaultsEid;
+
+        bytes32 referrerId = _parseDepositExtraOptions(_extraOptions);
+
+        uint256 mTokenAmount = _deposit(
+            receiveToSameNetwork
+                ? _sendParam.to.bytes32ToAddress()
+                : address(this),
+            _paymentTokenAmount,
+            _sendParam.minAmountLD,
+            referrerId
+        );
+
+        if (!receiveToSameNetwork) {
+            _sendParam.amountLD = mTokenAmount;
+            _sendParam.minAmountLD = 0;
+
+            _sendOft(mTokenOft, _sendParam, _refundAddress);
+        } else {
+            _requireNoValue();
+        }
+
+        emit Deposited(
+            _depositor,
+            _sendParam.to,
+            _sendParam.dstEid,
+            _paymentTokenAmount,
+            mTokenAmount
         );
     }
 
@@ -408,19 +420,29 @@ contract MidasLzVaultComposerSync is
     function _redeemAndSend(
         bytes32 _redeemer,
         uint256 _mTokenAmount,
+        bytes memory, /* _extraOptions */
         SendParam memory _sendParam,
         address _refundAddress
     ) internal virtual {
+        bool receiveToSameNetwork = _sendParam.dstEid == vaultsEid;
+
         uint256 paymentTokenAmount = _redeem(
-            _redeemer,
+            receiveToSameNetwork
+                ? _sendParam.to.bytes32ToAddress()
+                : address(this),
             _mTokenAmount,
             _sendParam.minAmountLD
         );
 
-        _sendParam.amountLD = paymentTokenAmount;
-        _sendParam.minAmountLD = 0;
+        if (!receiveToSameNetwork) {
+            _sendParam.amountLD = paymentTokenAmount;
+            _sendParam.minAmountLD = 0;
 
-        _send(paymentTokenOft, _sendParam, _refundAddress);
+            _sendOft(paymentTokenOft, _sendParam, _refundAddress);
+        } else {
+            _requireNoValue();
+        }
+
         emit Redeemed(
             _redeemer,
             _sendParam.to,
@@ -431,55 +453,54 @@ contract MidasLzVaultComposerSync is
     }
 
     /**
+     * @dev Internal function to deposit paymentTokens into the vault
+     * @param _paymentTokenAmount The number of paymentTokens to deposit into the vault
+     * @param _minReceiveAmount The minimum amount of mTokens to receive
+     * @param _receiver The address to receive the mTokens
+     * @param _referrerId The referrer id
+     * @return mTokenAmount The number of mTokens received from the vault deposit
+     */
+    function _deposit(
+        address _receiver,
+        uint256 _paymentTokenAmount,
+        uint256 _minReceiveAmount,
+        bytes32 _referrerId
+    ) internal virtual returns (uint256 mTokenAmount) {
+        uint256 balanceBefore = _balanceOf(mTokenErc20, _receiver);
+        depositVault.depositInstant(
+            paymentTokenErc20,
+            _tokenAmountToBase18(_paymentTokenAmount),
+            _minReceiveAmount,
+            _referrerId,
+            _receiver
+        );
+
+        mTokenAmount = _balanceOf(mTokenErc20, _receiver) - balanceBefore;
+    }
+
+    /**
      * @dev Internal function to redeem mTokens from the vault
+     * @param _receiver The address to receive the paymentTokens
      * @param _mTokenAmount The number of mTokens to redeem from the vault
+     * @param _minReceiveAmount The minimum amount of paymentTokens to receive
      * @return paymentTokenAmount The number of paymentTokens received from the vault redemption
      */
     function _redeem(
-        bytes32 /*_redeemer*/,
+        address _receiver,
         uint256 _mTokenAmount,
         uint256 _minReceiveAmount
     ) internal virtual returns (uint256 paymentTokenAmount) {
-        uint256 balanceBefore = _balanceOfThis(paymentTokenErc20);
+        uint256 balanceBefore = _balanceOf(paymentTokenErc20, _receiver);
         redemptionVault.redeemInstant(
             paymentTokenErc20,
             _mTokenAmount,
-            _minReceiveAmount
+            _minReceiveAmount,
+            _receiver
         );
 
-        paymentTokenAmount = _balanceOfThis(paymentTokenErc20) - balanceBefore; // TODO: move balance calc to function
-    }
-
-    /**
-     * @dev Internal function to get the balance of the token of the contract
-     * @param token the address of the token
-     * @return balance The balance of the token of the contract
-     */
-    function _balanceOfThis(address token) internal view returns (uint256) {
-        return IERC20(token).balanceOf(address(this));
-    }
-
-    /**
-     * @notice Quotes the send operation for the given OFT and SendParam
-     * @param _targetOFT The OFT contract address to quote
-     * @param _vaultInAmount The amount of tokens to send to the vault
-     * @param _sendParam The parameters for the send operation
-     * @return MessagingFee The estimated fee for the send operation
-     */
-    function quoteSend(
-        address /* _from */,
-        address _targetOFT,
-        uint256 _vaultInAmount,
-        SendParam memory _sendParam
-    ) external view virtual returns (MessagingFee memory) {
-        /// @dev When quoting the paymentToken OFT, the function input is mTokens and the SendParam.amountLD into quoteSend() should be paymentTokens (and vice versa)
-
-        if (_targetOFT == paymentTokenOft) {
-            _sendParam.amountLD = _previewRedeem(_vaultInAmount);
-        } else {
-            _sendParam.amountLD = _previewDeposit(_vaultInAmount);
-        }
-        return IOFT(_targetOFT).quoteSend(_sendParam, false);
+        paymentTokenAmount =
+            _balanceOf(paymentTokenErc20, _receiver) -
+            balanceBefore;
     }
 
     /**
@@ -490,32 +511,16 @@ contract MidasLzVaultComposerSync is
      * @param _sendParam The parameters for the send operation
      * @param _refundAddress Address to receive excess payment of the LZ fees
      */
-    function _send(
+    function _sendOft(
         address _oft,
         SendParam memory _sendParam,
         address _refundAddress
     ) internal {
-        if (_sendParam.dstEid == vaultsEid) {
-            /// @dev Can do this because _oft is validated before this function is called
-            address erc20 = _oft == paymentTokenOft
-                ? paymentTokenErc20
-                : mTokenErc20;
-
-            if (msg.value > 0) {
-                revert NoMsgValueExpected();
-            }
-            IERC20(erc20).safeTransfer(
-                _sendParam.to.bytes32ToAddress(),
-                _sendParam.amountLD
-            );
-        } else {
-            // crosschain send
-            IOFT(_oft).send{value: msg.value}(
-                _sendParam,
-                MessagingFee(msg.value, 0),
-                _refundAddress
-            );
-        }
+        IOFT(_oft).send{value: msg.value}(
+            _sendParam,
+            MessagingFee(msg.value, 0),
+            _refundAddress
+        );
     }
 
     /**
@@ -537,136 +542,60 @@ contract MidasLzVaultComposerSync is
         refundSendParam.to = OFTComposeMsgCodec.composeFrom(_message);
         refundSendParam.amountLD = _amount;
 
-        IOFT(_oft).send{value: msg.value}(
-            refundSendParam,
-            MessagingFee(msg.value, 0),
-            _refundAddress
-        );
+        _sendOft(_oft, refundSendParam, _refundAddress);
     }
 
-    function _previewDeposit(
-        uint256 amountTokenIn
-    ) internal view returns (uint256) {
-        uint256 amountTokenInBase18 = _tokenAmountToBase18(amountTokenIn);
-
-        TokenConfig memory tokenConfig = IManageableVaultWithConfigs(
-            address(depositVault)
-        ).tokensConfig(paymentTokenErc20);
-
-        uint256 tokenInRate = _getTokenRate(
-            IDataFeed(tokenConfig.dataFeed),
-            tokenConfig.stable
-        );
-        if (tokenInRate == 0) {
-            revert InvalidTokenRate(tokenConfig.dataFeed);
+    /**
+     * @dev Internal function to revert if msg.value is not 0
+     */
+    function _requireNoValue() internal view {
+        if (msg.value > 0) {
+            revert NoMsgValueExpected();
         }
-
-        uint256 mTokenRate = _getTokenRate(mTokenDataFeed, false);
-        if (mTokenRate == 0) {
-            revert InvalidTokenRate(address(mTokenDataFeed));
-        }
-
-        uint256 amountInUsd = (amountTokenInBase18 * tokenInRate) / _ONE;
-
-        uint256 feeTokenAmount = _truncate(
-            _getFeeAmount(
-                address(depositVault),
-                tokenConfig,
-                amountTokenInBase18
-            ),
-            paymentTokenDecimals
-        );
-
-        uint256 feeInUsd = (feeTokenAmount * tokenInRate) / _ONE;
-        uint256 amountInUsdWithoutFee = amountInUsd - feeInUsd;
-
-        uint256 amountMToken = (amountInUsdWithoutFee * (_ONE)) / mTokenRate;
-
-        return amountMToken;
     }
 
-    function _previewRedeem(
-        uint256 amountMTokenIn
-    ) internal view returns (uint256 amountTokenOut) {
-        TokenConfig memory tokenConfig = IManageableVaultWithConfigs(
-            address(redemptionVault)
-        ).tokensConfig(paymentTokenErc20);
-
-        uint256 mTokenRate = _getTokenRate(mTokenDataFeed, false);
-
-        if (mTokenRate == 0) {
-            revert InvalidTokenRate(address(mTokenDataFeed));
+    /**
+     * @dev Internal function to parse the extra options
+     * @param _extraOptions The extra options for the deposit operation
+     * @return referrerId The referrer id
+     */
+    function _parseDepositExtraOptions(bytes memory _extraOptions)
+        internal
+        pure
+        returns (bytes32 referrerId)
+    {
+        if (_extraOptions.length > 0) {
+            assembly {
+                referrerId := mload(add(_extraOptions, 32))
+            }
         }
-
-        uint256 tokenOutRate = _getTokenRate(
-            IDataFeed(tokenConfig.dataFeed),
-            tokenConfig.stable
-        );
-
-        if (tokenOutRate == 0) {
-            revert InvalidTokenRate(tokenConfig.dataFeed);
-        }
-
-        uint256 feeAmount = _getFeeAmount(
-            address(redemptionVault),
-            tokenConfig,
-            amountMTokenIn
-        );
-
-        uint256 amountMTokenWithoutFee = amountMTokenIn - feeAmount;
-
-        amountTokenOut = ((amountMTokenWithoutFee * mTokenRate) / tokenOutRate)
-            .convertFromBase18(paymentTokenDecimals);
     }
 
-    function _getTokenRate(
-        IDataFeed dataFeed,
-        bool stable
-    ) internal view returns (uint256) {
-        uint256 rate = dataFeed.getDataInBase18();
-        if (stable) {
-            return _ONE;
-        }
-        return rate;
+    /**
+     * @dev Internal function to get the balance of the token of the contract
+     * @param _token the address of the token
+     * @param _of the address of the account
+     * @return balance The balance of the token of the contract
+     */
+    function _balanceOf(address _token, address _of)
+        internal
+        view
+        returns (uint256)
+    {
+        return IERC20(_token).balanceOf(_of);
     }
 
-    function _tokenAmountToBase18(
-        uint256 amount
-    ) internal view returns (uint256) {
+    /**
+     * @dev Internal function to convert a token amount to base18
+     * @param amount The amount of the token
+     * @return The amount in base18
+     */
+    function _tokenAmountToBase18(uint256 amount)
+        internal
+        view
+        returns (uint256)
+    {
         return amount.convertToBase18(paymentTokenDecimals);
-    }
-
-    function _truncate(
-        uint256 value,
-        uint8 decimals
-    ) private pure returns (uint256) {
-        return value.convertFromBase18(decimals).convertToBase18(decimals);
-    }
-
-    function _getFeeAmount(
-        address vault,
-        TokenConfig memory tokenConfig,
-        uint256 amount
-    ) private view returns (uint256) {
-        if (
-            IManageableVaultWithConfigs(vault).waivedFeeRestriction(
-                address(this)
-            )
-        ) {
-            return 0;
-        }
-
-        uint256 feePercent;
-
-        feePercent = tokenConfig.fee;
-
-        feePercent += IManageableVaultWithConfigs(vault).instantFee();
-
-        if (feePercent > _ONE_HUNDRED_PERCENT) {
-            feePercent = _ONE_HUNDRED_PERCENT;
-        }
-
-        return (amount * feePercent) / _ONE_HUNDRED_PERCENT;
     }
 
     receive() external payable {}

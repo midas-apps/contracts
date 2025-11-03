@@ -21,9 +21,10 @@ import {IMidasAxelarVaultExecutable} from "./interfaces/IMidasAxelarVaultExecuta
  * default ManageableVault implementation
  */
 interface IManageableVaultWithConfigs is IManageableVault {
-    function tokensConfig(
-        address token
-    ) external view returns (TokenConfig memory);
+    function tokensConfig(address token)
+        external
+        view
+        returns (TokenConfig memory);
 
     function waivedFeeRestriction(address account) external view returns (bool);
 
@@ -202,7 +203,7 @@ contract MidasAxelarVaultExecutable is
         bytes calldata sourceAddress,
         bytes calldata data,
         bytes32 tokenId,
-        address /*token*/,
+        address, /*token*/
         uint256 amount
     ) internal override {
         if (tokenId != paymentTokenId && tokenId != mTokenId) {
@@ -254,10 +255,12 @@ contract MidasAxelarVaultExecutable is
     /**
      * @inheritdoc IMidasAxelarVaultExecutable
      */
-    function depositAndSend(
-        uint256 _paymentTokenAmount,
-        bytes calldata _data
-    ) external payable virtual nonReentrant {
+    function depositAndSend(uint256 _paymentTokenAmount, bytes calldata _data)
+        external
+        payable
+        virtual
+        nonReentrant
+    {
         IERC20(paymentTokenErc20).safeTransferFrom(
             msg.sender,
             address(this),
@@ -315,9 +318,11 @@ contract MidasAxelarVaultExecutable is
      * @param _chainName the chain name
      * @return the chain name hash
      */
-    function _getChainNameHash(
-        string memory _chainName
-    ) private pure returns (bytes32) {
+    function _getChainNameHash(string memory _chainName)
+        private
+        pure
+        returns (bytes32)
+    {
         return keccak256(bytes(_chainName));
     }
 
@@ -350,10 +355,12 @@ contract MidasAxelarVaultExecutable is
     /**
      * @inheritdoc IMidasAxelarVaultExecutable
      */
-    function redeemAndSend(
-        uint256 _mTokenAmount,
-        bytes calldata _data
-    ) external payable virtual nonReentrant {
+    function redeemAndSend(uint256 _mTokenAmount, bytes calldata _data)
+        external
+        payable
+        virtual
+        nonReentrant
+    {
         IERC20(mTokenErc20).safeTransferFrom(
             msg.sender,
             address(this),
@@ -437,10 +444,11 @@ contract MidasAxelarVaultExecutable is
      * @param _of the address of the account
      * @return the balance of the token
      */
-    function _balanceOf(
-        address _token,
-        address _of
-    ) internal view returns (uint256) {
+    function _balanceOf(address _token, address _of)
+        internal
+        view
+        returns (uint256)
+    {
         return IERC20(_token).balanceOf(_of);
     }
 
@@ -471,9 +479,11 @@ contract MidasAxelarVaultExecutable is
      * @param b bytes value encode using `abi.encodePacked(address)`
      * @return addr the address
      */
-    function _bytesToAddress(
-        bytes memory b
-    ) internal pure returns (address addr) {
+    function _bytesToAddress(bytes memory b)
+        internal
+        pure
+        returns (address addr)
+    {
         assembly {
             addr := mload(add(b, 20))
         }
@@ -484,9 +494,11 @@ contract MidasAxelarVaultExecutable is
      * @param amount the amount of the token
      * @return the amount in base18
      */
-    function _tokenAmountToBase18(
-        uint256 amount
-    ) internal view returns (uint256) {
+    function _tokenAmountToBase18(uint256 amount)
+        internal
+        view
+        returns (uint256)
+    {
         return amount.convertToBase18(paymentTokenDecimals);
     }
 

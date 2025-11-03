@@ -19,7 +19,7 @@ import {
   setMinAmountTest,
 } from '../common/manageable-vault.helpers';
 
-describe.only('Axelar', function () {
+describe('Axelar', function () {
   describe('MidasAxelarVaultExecutable', () => {
     it('deployment', async () => {
       const fixture = await loadFixture(axelarFixture);

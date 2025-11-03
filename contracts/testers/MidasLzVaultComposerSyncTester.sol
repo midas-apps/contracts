@@ -53,71 +53,79 @@ contract MidasLzVaultComposerSyncTester is MidasLzVaultComposerSync {
     function depositAndSendPublic(
         bytes32 _depositor,
         uint256 _paymentTokenAmount,
+        bytes memory _extraOptions,
         SendParam memory _sendParam,
         address _refundAddress
     ) external {
         _depositAndSend(
             _depositor,
             _paymentTokenAmount,
+            _extraOptions,
             _sendParam,
             _refundAddress
         );
     }
 
     function depositPublic(
-        bytes32 _depositor,
+        address _receiver,
         uint256 _paymentTokenAmount,
-        uint256 _minReceiveAmount
+        uint256 _minReceiveAmount,
+        bytes32 _referrerId
     ) external returns (uint256 mTokenAmount) {
-        return _deposit(_depositor, _paymentTokenAmount, _minReceiveAmount);
+        return
+            _deposit(
+                _receiver,
+                _paymentTokenAmount,
+                _minReceiveAmount,
+                _referrerId
+            );
     }
 
     function redeemAndSendPublic(
         bytes32 _redeemer,
         uint256 _mTokenAmount,
+        bytes memory _extraOptions,
         SendParam memory _sendParam,
         address _refundAddress
     ) external {
-        _redeemAndSend(_redeemer, _mTokenAmount, _sendParam, _refundAddress);
+        _redeemAndSend(
+            _redeemer,
+            _mTokenAmount,
+            _extraOptions,
+            _sendParam,
+            _refundAddress
+        );
     }
 
     function redeemPublic(
-        bytes32 _redeemer,
+        address _receiver,
         uint256 _mTokenAmount,
         uint256 _minReceiveAmount
     ) external virtual returns (uint256 paymentTokenAmount) {
-        return _redeem(_redeemer, _mTokenAmount, _minReceiveAmount);
+        return _redeem(_receiver, _mTokenAmount, _minReceiveAmount);
     }
 
-    function balanceOfThisPublic(address token)
+    function parseExtraOptionsPublic(bytes memory _extraOptions)
+        external
+        pure
+        returns (bytes32 referrerId)
+    {
+        return _parseDepositExtraOptions(_extraOptions);
+    }
+
+    function balanceOfPublic(address _token, address _of)
         external
         view
         returns (uint256)
     {
-        return _balanceOfThis(token);
+        return _balanceOf(_token, _of);
     }
 
-    function previewDepositPublic(uint256 amountTokenIn)
-        external
-        view
-        returns (uint256)
-    {
-        return _previewDeposit(amountTokenIn);
-    }
-
-    function previewRedeemPublic(uint256 amountMTokenIn)
-        external
-        view
-        returns (uint256 amountTokenOut)
-    {
-        return _previewRedeem(amountMTokenIn);
-    }
-
-    function sendPublic(
+    function sendOftPublic(
         address _oft,
         SendParam memory _sendParam,
         address _refundAddress
     ) external payable {
-        _send(_oft, _sendParam, _refundAddress);
+        _sendOft(_oft, _sendParam, _refundAddress);
     }
 }

@@ -25,7 +25,6 @@ import {
 } from '../common/layerzero.helpers';
 import {
   addPaymentTokenTest,
-  addWaivedFeeAccountTest,
   setInstantFeeTest,
   setMinAmountTest,
 } from '../common/manageable-vault.helpers';
@@ -406,6 +405,40 @@ describe('LayerZero', function () {
         });
       });
 
+      it('should fail: deposit and send mTBILL from A to A when msg.value is not 0', async () => {
+        const fixture = await loadFixture(layerZeroFixture);
+        const { composer, depositVault, stableCoins, owner, dataFeed } =
+          fixture;
+
+        await addPaymentTokenTest(
+          { vault: depositVault, owner },
+          stableCoins.usdt,
+          dataFeed.address,
+          0,
+          true,
+        );
+
+        await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+        await mintToken(stableCoins.usdt, fixture.owner, 100);
+        await approveBase18(fixture.owner, stableCoins.usdt, composer, 100);
+
+        await depositAndSend(
+          fixture,
+          {
+            amount: 100,
+            direction: 'A_TO_A',
+          },
+          {
+            overrideValue: '1',
+            revertWithCustomError: {
+              contract: composer,
+              error: 'NoMsgValueExpected',
+            },
+          },
+        );
+      });
+
       it('should fail: deposit and send mTBILL from A to B when B does not have minter role', async () => {
         const fixture = await loadFixture(layerZeroFixture);
         const {
@@ -481,7 +514,7 @@ describe('LayerZero', function () {
         });
       });
 
-      it('should deposit and send mTBILL from A to B', async () => {
+      it('should redeem and send USDT from A to B', async () => {
         const fixture = await loadFixture(layerZeroFixture);
         const {
           composer,
@@ -511,6 +544,48 @@ describe('LayerZero', function () {
           amount: 100,
           direction: 'A_TO_B',
         });
+      });
+
+      it('should fail: redeem and send USDT from A to A when msg.value is not 0', async () => {
+        const fixture = await loadFixture(layerZeroFixture);
+        const {
+          composer,
+          redemptionVault,
+          mTBILL,
+          stableCoins,
+          owner,
+          dataFeed,
+        } = fixture;
+
+        await addPaymentTokenTest(
+          { vault: redemptionVault, owner },
+          stableCoins.usdt,
+          dataFeed.address,
+          0,
+          true,
+        );
+
+        await setMinAmountTest({ vault: redemptionVault, owner }, 0);
+        await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+
+        await mintToken(mTBILL, fixture.owner, 100);
+        await mintToken(stableCoins.usdt, redemptionVault, 10000);
+        await approveBase18(fixture.owner, mTBILL, composer, 100);
+
+        await redeemAndSend(
+          fixture,
+          {
+            amount: 100,
+            direction: 'A_TO_A',
+          },
+          {
+            overrideValue: '1',
+            revertWithCustomError: {
+              contract: composer,
+              error: 'NoMsgValueExpected',
+            },
+          },
+        );
       });
     });
 
@@ -709,107 +784,16 @@ describe('LayerZero', function () {
       });
     });
 
-    describe('quoteSend', () => {
-      it('quote when target oft is mToken OFT', async () => {
-        const fixture = await loadFixture(layerZeroFixture);
-        const {
-          stableCoins,
-          redemptionVault,
-          dataFeed,
-          mockedAggregatorMToken,
-          owner,
-          composer,
-          pTokenLzOftAdapter,
-        } = fixture;
-
-        await addPaymentTokenTest(
-          { owner, vault: redemptionVault },
-          stableCoins.usdt,
-          dataFeed.address,
-          0,
-          true,
-        );
-
-        await setInstantFeeTest({ owner, vault: redemptionVault }, 0);
-        await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 2);
-
-        console.log({
-          a: pTokenLzOftAdapter.address,
-          b: await composer.paymentTokenOft(),
-        });
-
-        await composer.quoteSend(
-          owner.address,
-          pTokenLzOftAdapter.address,
-          parseUnits('100'),
-          {
-            amountLD: 1,
-            composeMsg: '0x',
-            dstEid: 2,
-            extraOptions: Options.newOptions()
-              .addExecutorLzReceiveOption(200_000, 0)
-              .toHex(),
-            minAmountLD: 0,
-            oftCmd: '0x',
-            to: addressToBytes32(owner.address),
-          },
-        );
-      });
-
-      it('quote when target oft is paymentToken OFT', async () => {
-        const fixture = await loadFixture(layerZeroFixture);
-        const {
-          stableCoins,
-          depositVault,
-          dataFeed,
-          owner,
-          composer,
-          oftAdapterA,
-          mockedAggregatorMToken,
-        } = fixture;
-
-        await addPaymentTokenTest(
-          { owner, vault: depositVault },
-          stableCoins.usdt,
-          dataFeed.address,
-          0,
-          true,
-        );
-
-        await setInstantFeeTest({ owner, vault: depositVault }, 0);
-        await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 2);
-
-        await expect(
-          composer.quoteSend(
-            owner.address,
-            oftAdapterA.address,
-            parseUnits('100'),
-            {
-              amountLD: 1,
-              composeMsg: '0x',
-              dstEid: 2,
-              extraOptions: Options.newOptions()
-                .addExecutorLzReceiveOption(200_000, 0)
-                .toHex(),
-              minAmountLD: 0,
-              oftCmd: '0x',
-              to: addressToBytes32(owner.address),
-            },
-          ),
-        ).not.rejected;
-      });
-    });
-
-    describe('_balanceOfThis', () => {
+    describe('_balanceOf', () => {
       it('balance of this when mToken address passed', async () => {
         const fixture = await loadFixture(layerZeroFixture);
         const { mTBILL, composer } = fixture;
 
         await mintToken(mTBILL, composer, 100);
 
-        expect(await composer.balanceOfThisPublic(mTBILL.address)).eq(
-          parseUnits('100'),
-        );
+        expect(
+          await composer.balanceOfPublic(mTBILL.address, composer.address),
+        ).eq(parseUnits('100'));
       });
 
       it('balance of this when stable address passed', async () => {
@@ -818,322 +802,55 @@ describe('LayerZero', function () {
 
         await mintToken(stableCoins.usdt, composer, 100);
 
-        expect(await composer.balanceOfThisPublic(stableCoins.usdt.address)).eq(
-          parseUnits('100'),
-        );
-      });
-    });
-
-    describe('_previewDeposit', () => {
-      it('when all fees are 0, mToken price is 2 and stable price is 1.02 and isStable = true', async () => {
-        const fixture = await loadFixture(layerZeroFixture);
-        const {
-          stableCoins,
-          depositVault,
-          dataFeed,
-          mockedAggregatorMToken,
-          owner,
-          composer,
-        } = fixture;
-
-        await addPaymentTokenTest(
-          { owner, vault: depositVault },
-          stableCoins.usdt,
-          dataFeed.address,
-          0,
-          true,
-        );
-
-        await setInstantFeeTest({ owner, vault: depositVault }, 0);
-        await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 2);
-
-        expect(await composer.previewDepositPublic(parseUnits('100', 18))).eq(
-          parseUnits('50', 18),
-        );
+        expect(
+          await composer.balanceOfPublic(
+            stableCoins.usdt.address,
+            composer.address,
+          ),
+        ).eq(parseUnits('100'));
       });
 
-      it('when all fees are 0, mToken price is 2 and stable price is 1.02 and isStable = false', async () => {
+      it('balance of another address when stable address passed', async () => {
         const fixture = await loadFixture(layerZeroFixture);
-        const {
-          stableCoins,
-          depositVault,
-          dataFeed,
-          mockedAggregatorMToken,
-          owner,
-          composer,
-        } = fixture;
+        const { stableCoins, composer, owner } = fixture;
 
-        await addPaymentTokenTest(
-          { owner, vault: depositVault },
-          stableCoins.usdt,
-          dataFeed.address,
-          0,
-          false,
-        );
+        await mintToken(stableCoins.usdt, owner, 100);
 
-        await setInstantFeeTest({ owner, vault: depositVault }, 0);
-        await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 2);
-
-        expect(await composer.previewDepositPublic(parseUnits('100', 18))).eq(
-          parseUnits('51', 18),
-        );
-      });
-
-      it('when instant fee is 1%, mToken price is 2 and stable price is 1.02 and isStable = true', async () => {
-        const fixture = await loadFixture(layerZeroFixture);
-        const {
-          stableCoins,
-          depositVault,
-          dataFeed,
-          mockedAggregatorMToken,
-          owner,
-          composer,
-        } = fixture;
-
-        await addPaymentTokenTest(
-          { owner, vault: depositVault },
-          stableCoins.usdt,
-          dataFeed.address,
-          0,
-          true,
-        );
-
-        await setInstantFeeTest({ owner, vault: depositVault }, 100);
-        await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 2);
-
-        expect(await composer.previewDepositPublic(parseUnits('100', 18))).eq(
-          parseUnits('49.5', 18),
-        );
-      });
-
-      it('when instant fee is 1%, token fee is 1%, mToken price is 2 and stable price is 1.02 and isStable = true', async () => {
-        const fixture = await loadFixture(layerZeroFixture);
-        const {
-          stableCoins,
-          depositVault,
-          dataFeed,
-          mockedAggregatorMToken,
-          owner,
-          composer,
-        } = fixture;
-
-        await addPaymentTokenTest(
-          { owner, vault: depositVault },
-          stableCoins.usdt,
-          dataFeed.address,
-          100,
-          true,
-        );
-
-        await setInstantFeeTest({ owner, vault: depositVault }, 100);
-        await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 2);
-
-        expect(await composer.previewDepositPublic(parseUnits('100', 18))).eq(
-          parseUnits('49', 18),
-        );
-      });
-
-      it('when composer is fee waived, instant fee is 1%, token fee is 1%, mToken price is 2 and stable price is 1.02 and isStable = true', async () => {
-        const fixture = await loadFixture(layerZeroFixture);
-        const {
-          stableCoins,
-          depositVault,
-          dataFeed,
-          mockedAggregatorMToken,
-          owner,
-          composer,
-        } = fixture;
-
-        await addPaymentTokenTest(
-          { owner, vault: depositVault },
-          stableCoins.usdt,
-          dataFeed.address,
-          100,
-          true,
-        );
-
-        await setInstantFeeTest({ owner, vault: depositVault }, 100);
-        await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 2);
-        await addWaivedFeeAccountTest(
-          { vault: depositVault, owner },
-          composer.address,
-        );
-
-        expect(await composer.previewDepositPublic(parseUnits('100', 18))).eq(
-          parseUnits('50', 18),
-        );
-      });
-    });
-
-    describe('_previewRedeem', () => {
-      it('when all fees are 0, mToken price is 2 and stable price is 1.02 and isStable = true', async () => {
-        const fixture = await loadFixture(layerZeroFixture);
-        const {
-          stableCoins,
-          redemptionVault,
-          dataFeed,
-          mockedAggregatorMToken,
-          owner,
-          composer,
-        } = fixture;
-
-        await addPaymentTokenTest(
-          { owner, vault: redemptionVault },
-          stableCoins.usdt,
-          dataFeed.address,
-          0,
-          true,
-        );
-
-        await setInstantFeeTest({ owner, vault: redemptionVault }, 0);
-        await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 2);
-
-        expect(await composer.previewRedeemPublic(parseUnits('50', 18))).eq(
-          parseUnits('100', 18),
-        );
-      });
-
-      it('when all fees are 0, mToken price is 2 and stable price is 1.02 and isStable = false', async () => {
-        const fixture = await loadFixture(layerZeroFixture);
-        const {
-          stableCoins,
-          redemptionVault,
-          dataFeed,
-          mockedAggregatorMToken,
-          owner,
-          composer,
-        } = fixture;
-
-        await addPaymentTokenTest(
-          { owner, vault: redemptionVault },
-          stableCoins.usdt,
-          dataFeed.address,
-          0,
-          false,
-        );
-
-        await setInstantFeeTest({ owner, vault: redemptionVault }, 0);
-        await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 2);
-
-        expect(await composer.previewRedeemPublic(parseUnits('51', 18))).eq(
-          parseUnits('100', 18),
-        );
-      });
-
-      it('when instant fee is 1%, mToken price is 2 and stable price is 1.02 and isStable = true', async () => {
-        const fixture = await loadFixture(layerZeroFixture);
-        const {
-          stableCoins,
-          redemptionVault,
-          dataFeed,
-          mockedAggregatorMToken,
-          owner,
-          composer,
-        } = fixture;
-
-        await addPaymentTokenTest(
-          { owner, vault: redemptionVault },
-          stableCoins.usdt,
-          dataFeed.address,
-          0,
-          true,
-        );
-
-        await setInstantFeeTest({ owner, vault: redemptionVault }, 100);
-        await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 2);
-
-        expect(await composer.previewRedeemPublic(parseUnits('50', 18))).eq(
-          parseUnits('99', 18),
-        );
-      });
-
-      it('when instant fee is 1%, token fee is 1%, mToken price is 2 and stable price is 1.02 and isStable = true', async () => {
-        const fixture = await loadFixture(layerZeroFixture);
-        const {
-          stableCoins,
-          redemptionVault,
-          dataFeed,
-          mockedAggregatorMToken,
-          owner,
-          composer,
-        } = fixture;
-
-        await addPaymentTokenTest(
-          { owner, vault: redemptionVault },
-          stableCoins.usdt,
-          dataFeed.address,
-          100,
-          true,
-        );
-
-        await setInstantFeeTest({ owner, vault: redemptionVault }, 100);
-        await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 2);
-
-        expect(await composer.previewRedeemPublic(parseUnits('50', 18))).eq(
-          parseUnits('98', 18),
-        );
-      });
-
-      it('when composer is fee waived, instant fee is 1%, token fee is 1%, mToken price is 2 and stable price is 1.02 and isStable = true', async () => {
-        const fixture = await loadFixture(layerZeroFixture);
-        const {
-          stableCoins,
-          redemptionVault,
-          dataFeed,
-          mockedAggregatorMToken,
-          owner,
-          composer,
-        } = fixture;
-
-        await addPaymentTokenTest(
-          { owner, vault: redemptionVault },
-          stableCoins.usdt,
-          dataFeed.address,
-          100,
-          true,
-        );
-
-        await setInstantFeeTest({ owner, vault: redemptionVault }, 100);
-        await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 2);
-        await addWaivedFeeAccountTest(
-          { vault: redemptionVault, owner },
-          composer.address,
-        );
-
-        expect(await composer.previewRedeemPublic(parseUnits('50', 18))).eq(
-          parseUnits('100', 18),
-        );
-      });
-    });
-
-    describe('_send', () => {
-      it('when send to the same eid', async () => {
-        const fixture = await loadFixture(layerZeroFixture);
-        const { owner, composer, mTBILL, oftAdapterA } = fixture;
-
-        await mintToken(mTBILL, composer.address, 100);
-
-        // Fetching the native fee for the token send operation
-        await expect(
-          composer.sendPublic(
-            oftAdapterA.address,
-            {
-              amountLD: parseUnits('100'),
-              composeMsg: '0x',
-              dstEid: 1,
-              extraOptions: Options.newOptions().toHex(),
-              minAmountLD: 0,
-              oftCmd: '0x',
-              to: addressToBytes32(owner.address),
-            },
+        expect(
+          await composer.balanceOfPublic(
+            stableCoins.usdt.address,
             owner.address,
           ),
-        ).not.reverted;
+        ).eq(parseUnits('100'));
+      });
+    });
 
-        const balanceAfter = await mTBILL.balanceOf(owner.address);
-        expect(balanceAfter).to.equal(parseUnits('100'));
+    describe('_parseDepositExtraOptions', () => {
+      it('when referrer id is provided', async () => {
+        const fixture = await loadFixture(layerZeroFixture);
+        const { composer } = fixture;
+
+        const referrerId = ethers.utils.solidityKeccak256(
+          ['string'],
+          ['TEST_REFERRER_ID'],
+        );
+
+        expect(await composer.parseExtraOptionsPublic(referrerId)).eq(
+          referrerId,
+        );
       });
 
+      it('when 0x is provided', async () => {
+        const fixture = await loadFixture(layerZeroFixture);
+        const { composer } = fixture;
+
+        expect(await composer.parseExtraOptionsPublic('0x')).eq(
+          constants.HashZero,
+        );
+      });
+    });
+
+    describe('_sendOft', () => {
       it('when send to the different eid', async () => {
         const fixture = await loadFixture(layerZeroFixture);
         const { owner, composer, mTBILL, oftAdapterA, oftAdapterB } = fixture;
@@ -1160,7 +877,7 @@ describe('LayerZero', function () {
 
         // Fetching the native fee for the token send operation
         await expect(
-          composer.sendPublic(oftAdapterA.address, lzParams, owner.address, {
+          composer.sendOftPublic(oftAdapterA.address, lzParams, owner.address, {
             value: nativeFee,
           }),
         ).emit(
@@ -1203,19 +920,14 @@ describe('LayerZero', function () {
 
         expect(
           await composer.callStatic.redeemPublic(
-            addressToBytes32(composer.address),
+            owner.address,
             parseUnits('50'),
             0,
           ),
         ).eq(parseUnits('100'));
 
-        await expect(
-          composer.redeemPublic(
-            addressToBytes32(composer.address),
-            parseUnits('50'),
-            0,
-          ),
-        ).not.reverted;
+        await expect(composer.redeemPublic(owner.address, parseUnits('50'), 0))
+          .not.reverted;
       });
 
       it('redeem and check that received amount is correct when ptoken decimals is not 18', async () => {
@@ -1269,19 +981,14 @@ describe('LayerZero', function () {
 
         expect(
           await composer.callStatic.redeemPublic(
-            addressToBytes32(composer.address),
+            owner.address,
             parseUnits('50'),
             0,
           ),
         ).eq(parseUnits('100', 8));
 
-        await expect(
-          composer.redeemPublic(
-            addressToBytes32(composer.address),
-            parseUnits('50'),
-            0,
-          ),
-        ).not.reverted;
+        await expect(composer.redeemPublic(owner.address, parseUnits('50'), 0))
+          .not.reverted;
       });
 
       it('redeem and check that passed params to underlying redeemInstant are correct', async () => {
@@ -1335,28 +1042,23 @@ describe('LayerZero', function () {
 
         expect(
           await composer.callStatic.redeemPublic(
-            addressToBytes32(composer.address),
+            owner.address,
             parseUnits('50'),
             0,
           ),
         ).eq(parseUnits('100', 8));
 
-        await expect(
-          composer.redeemPublic(
-            addressToBytes32(composer.address),
-            parseUnits('50'),
-            0,
-          ),
-        )
+        await expect(composer.redeemPublic(owner.address, parseUnits('50'), 0))
           .emit(
             redemptionVault,
             redemptionVault.interface.events[
-              'RedeemInstant(address,address,uint256,uint256,uint256)'
+              'RedeemInstantWithCustomRecipient(address,address,address,uint256,uint256,uint256)'
             ].name,
           )
           .withArgs(
             composer.address,
             stableCoins.usdc.address,
+            owner.address,
             parseUnits('50'),
             0,
             parseUnits('100'),
@@ -1392,17 +1094,19 @@ describe('LayerZero', function () {
 
         expect(
           await composer.callStatic.depositPublic(
-            addressToBytes32(composer.address),
+            owner.address,
             parseUnits('100'),
             0,
+            constants.HashZero,
           ),
         ).eq(parseUnits('50'));
 
         await expect(
           composer.depositPublic(
-            addressToBytes32(composer.address),
+            owner.address,
             parseUnits('100'),
             0,
+            constants.HashZero,
           ),
         ).not.reverted;
       });
@@ -1458,17 +1162,19 @@ describe('LayerZero', function () {
 
         expect(
           await composer.callStatic.depositPublic(
-            addressToBytes32(composer.address),
+            owner.address,
             parseUnits('100', 8),
             0,
+            constants.HashZero,
           ),
         ).eq(parseUnits('50'));
 
         await expect(
           composer.depositPublic(
-            addressToBytes32(composer.address),
+            owner.address,
             parseUnits('100', 8),
             0,
+            constants.HashZero,
           ),
         ).not.reverted;
       });
@@ -1522,35 +1228,42 @@ describe('LayerZero', function () {
         await mintToken(stableCoins.usdc, composer, 200);
         await setMinAmountTest({ vault: depositVault, owner }, 0);
 
+        const referrerId = ethers.utils.solidityKeccak256(
+          ['string'],
+          ['TEST_REFERRER_ID'],
+        );
         expect(
           await composer.callStatic.depositPublic(
-            addressToBytes32(composer.address),
+            owner.address,
             parseUnits('100', 8),
             0,
+            referrerId,
           ),
         ).eq(parseUnits('50'));
 
         await expect(
           composer.depositPublic(
-            addressToBytes32(composer.address),
+            owner.address,
             parseUnits('100', 8),
             0,
+            referrerId,
           ),
         )
           .emit(
             depositVault,
             depositVault.interface.events[
-              'DepositInstant(address,address,uint256,uint256,uint256,uint256,bytes32)'
+              'DepositInstantWithCustomRecipient(address,address,address,uint256,uint256,uint256,uint256,bytes32)'
             ].name,
           )
           .withArgs(
             composer.address,
             stableCoins.usdc.address,
+            owner.address,
             parseUnits('100'),
             parseUnits('100'),
             0,
             parseUnits('50'),
-            constants.HashZero,
+            referrerId,
           );
       });
     });

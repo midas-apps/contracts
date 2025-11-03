@@ -59,10 +59,11 @@ contract MidasAxelarVaultExecutableTester is MidasAxelarVaultExecutable {
         return _redeem(_receiver, _mTokenAmount, _minReceiveAmount);
     }
 
-    function balanceOfPublic(
-        address token,
-        address _of
-    ) external view returns (uint256) {
+    function balanceOfPublic(address token, address _of)
+        external
+        view
+        returns (uint256)
+    {
         return _balanceOf(token, _of);
     }
 
@@ -75,9 +76,11 @@ contract MidasAxelarVaultExecutableTester is MidasAxelarVaultExecutable {
         _itsTransfer(_destinationChain, _destinationAddress, _tokenId, _amount);
     }
 
-    function bytesToAddressPublic(
-        bytes memory _b
-    ) external pure returns (address) {
+    function bytesToAddressPublic(bytes memory _b)
+        external
+        pure
+        returns (address)
+    {
         return _bytesToAddress(_b);
     }
 }

@@ -115,10 +115,9 @@ interface IMidasAxelarVaultExecutable {
      * @param _data encoded data for the deposit.
      * Expected data: abi.encode(bytes receiver,uint256 minReceiveAmount,bytes32 referrerId,string receiverChainName);
      */
-    function depositAndSend(
-        uint256 _paymentTokenAmount,
-        bytes calldata _data
-    ) external payable;
+    function depositAndSend(uint256 _paymentTokenAmount, bytes calldata _data)
+        external
+        payable;
 
     /**
      * @notice redeems and sends the mToken to the destination chain
@@ -126,10 +125,9 @@ interface IMidasAxelarVaultExecutable {
      * @param _data encoded data for the redemption
      * Expected data: abi.encode(bytes receiver,uint256 minReceiveAmount,string receiverChainName);
      */
-    function redeemAndSend(
-        uint256 _mTokenAmount,
-        bytes calldata _data
-    ) external payable;
+    function redeemAndSend(uint256 _mTokenAmount, bytes calldata _data)
+        external
+        payable;
 
     /// ========================== Receive =====================================
     receive() external payable;

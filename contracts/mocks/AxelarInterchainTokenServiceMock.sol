@@ -36,7 +36,7 @@ contract AxelarInterchainTokenServiceMock {
 
     function interchainTransfer(
         bytes32 tokenId,
-        string calldata /* destinationChain */,
+        string calldata, /* destinationChain */
         bytes calldata destinationAddressBytes,
         uint256 amount
     ) external payable {
@@ -70,9 +70,11 @@ contract AxelarInterchainTokenServiceMock {
         bytes calldata data
     ) external payable {}
 
-    function registeredTokenAddress(
-        bytes32 tokenId
-    ) external view returns (address tokenAddress) {
+    function registeredTokenAddress(bytes32 tokenId)
+        external
+        view
+        returns (address tokenAddress)
+    {
         tokenAddress = registeredTokenAddresses[tokenId];
         require(tokenAddress != address(0), "token not registered");
     }
