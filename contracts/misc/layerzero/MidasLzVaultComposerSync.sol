@@ -13,25 +13,10 @@ import {OFTComposeMsgCodec} from "@layerzerolabs/oft-evm/contracts/libs/OFTCompo
 import {IDepositVault} from "../../interfaces/IDepositVault.sol";
 import {IRedemptionVault} from "../../interfaces/IRedemptionVault.sol";
 import {IDataFeed} from "../../interfaces/IDataFeed.sol";
-import {TokenConfig, IManageableVault} from "../../interfaces/IManageableVault.sol";
 import {DecimalsCorrectionLibrary} from "../../libraries/DecimalsCorrectionLibrary.sol";
 import {IMidasLzVaultComposerSync} from "./interfaces/IMidasLzVaultComposerSync.sol";
 import {MidasInitializable} from "../../abstract/MidasInitializable.sol";
-
-/**
- * @dev extended IManageableVault interface to include methods from
- * default ManageableVault implementation
- */
-interface IManageableVaultWithConfigs is IManageableVault {
-    function tokensConfig(address token)
-        external
-        view
-        returns (TokenConfig memory);
-
-    function waivedFeeRestriction(address account) external view returns (bool);
-
-    function instantFee() external view returns (uint256);
-}
+import {IManageableVaultExtended} from "../../interfaces/IManageableVaultExtended.sol";
 
 /**
  * @title MidasLzVaultComposerSync - Synchronous Vault Composer for Midas vaults
