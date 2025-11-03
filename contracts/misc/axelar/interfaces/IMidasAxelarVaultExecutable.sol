@@ -62,10 +62,10 @@ interface IMidasAxelarVaultExecutable {
     error OnlySelf(address caller);
 
     /**
-     * @notice error emitted when the caller is not a valid executable caller
-     * @param tokenId the tokenId of ITS token
+     * @notice error emitted when the tokenId is not a valid executable tokenId
+     * @param tokenId the tokenId of the ITS token
      */
-    error OnlyValidExecutableCaller(bytes32 tokenId);
+    error OnlyValidExecutableTokenId(bytes32 tokenId);
 
     /**
      * @notice getter for the deposit vault

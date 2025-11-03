@@ -206,12 +206,12 @@ contract MidasAxelarVaultExecutable is
         uint256 amount
     ) internal override {
         if (tokenId != paymentTokenId && tokenId != mTokenId) {
-            revert OnlyValidExecutableCaller(tokenId);
+            revert OnlyValidExecutableTokenId(tokenId);
         }
 
         /// @dev if it fails we refund the user
         try
-            this.executeWithInterchainToken(
+            this.handleExecuteWithInterchainToken(
                 sourceAddress,
                 data,
                 tokenId,
@@ -233,7 +233,7 @@ contract MidasAxelarVaultExecutable is
      * @param _tokenId the ITS tokenId of the operation
      * @param _amount the amount of the operation
      */
-    function executeWithInterchainToken(
+    function handleExecuteWithInterchainToken(
         bytes calldata _sourceAddress,
         bytes calldata _data,
         bytes32 _tokenId,
@@ -469,10 +469,14 @@ contract MidasAxelarVaultExecutable is
     /**
      * @notice internal function to convert a bytes to an address
      * @param b bytes value encode using `abi.encodePacked(address)`
-     * @return the address
+     * @return addr the address
      */
-    function _bytesToAddress(bytes memory b) private pure returns (address) {
-        return address(uint160(bytes20(b)));
+    function _bytesToAddress(
+        bytes memory b
+    ) internal pure returns (address addr) {
+        assembly {
+            addr := mload(add(b, 20))
+        }
     }
 
     /**

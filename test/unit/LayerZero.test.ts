@@ -31,7 +31,7 @@ import {
 } from '../common/manageable-vault.helpers';
 import { mint } from '../common/mTBILL.helpers';
 
-describe.only('LayerZero', function () {
+describe('LayerZero', function () {
   describe('MidasLzMintBurnOFTAdapter', () => {
     it('deployment', async () => {
       const fixture = await loadFixture(layerZeroFixture);
