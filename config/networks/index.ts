@@ -44,6 +44,7 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   bsc: ALCHEMY_KEY
     ? `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
     : 'https://bsc-dataseed.bnbchain.org',
+  scroll: 'https://rpc.scroll.io',
 };
 
 export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
@@ -66,6 +67,7 @@ export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
   plasma: undefined,
   arbitrumSepolia: undefined,
   bsc: undefined,
+  scroll: undefined,
 };
 
 export const chainIds: ConfigPerNetwork<number> = {
@@ -88,6 +90,7 @@ export const chainIds: ConfigPerNetwork<number> = {
   plasma: 9745,
   arbitrumSepolia: 421614,
   bsc: 56,
+  scroll: 534352,
 };
 
 export const mnemonics: ConfigPerNetwork<string | undefined> = {
@@ -110,6 +113,7 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   plasma: MNEMONIC_PROD,
   arbitrumSepolia: MNEMONIC_DEV,
   bsc: MNEMONIC_PROD,
+  scroll: MNEMONIC_PROD,
 };
 
 export const gases: ConfigPerNetwork<number | undefined> = {
@@ -132,6 +136,7 @@ export const gases: ConfigPerNetwork<number | undefined> = {
   plasma: undefined,
   arbitrumSepolia: undefined,
   bsc: undefined,
+  scroll: undefined,
 };
 
 export const timeouts: ConfigPerNetwork<number | undefined> = {
@@ -154,6 +159,7 @@ export const timeouts: ConfigPerNetwork<number | undefined> = {
   plasma: undefined,
   arbitrumSepolia: undefined,
   bsc: undefined,
+  scroll: undefined,
 };
 
 export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
@@ -176,6 +182,7 @@ export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
   plasma: undefined,
   arbitrumSepolia: undefined,
   bsc: undefined,
+  scroll: undefined,
 };
 
 export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
@@ -198,6 +205,7 @@ export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
   plasma: undefined,
   arbitrumSepolia: undefined,
   bsc: undefined,
+  scroll: undefined,
 };
 
 export const blockFinality: PartialConfigPerNetwork<number> = {
@@ -220,6 +228,7 @@ export const layerZeroEids: PartialConfigPerNetwork<EndpointId> = {
   zerog: EndpointId.OG_V2_MAINNET,
   plasma: EndpointId.PLASMA_V2_MAINNET,
   arbitrumSepolia: EndpointId.ARBSEP_V2_TESTNET,
+  scroll: EndpointId.SCROLL_V2_MAINNET,
 };
 
 export const layerZeroEidToNetwork = Object.fromEntries(

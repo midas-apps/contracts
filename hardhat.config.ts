@@ -72,6 +72,7 @@ const config: HardhatUserConfig = {
       zerog: '0xf975786717f57e20bf4d69faf88e795a94f7808d',
       plasma: '0x1CA462EBB85e14014a8b5c2c46dD018a716B371b',
       bsc: '0xb6df4ab81e0f9f03c5c73f11a1b22a6b5f422005',
+      scroll: '0x6a78c23420b407a7e52668565b0cab87f95c61f2',
     },
   },
   verify: {
@@ -105,6 +106,7 @@ const config: HardhatUserConfig = {
     zerog: getNetworkConfig('zerog'),
     plasma: getNetworkConfig('plasma'),
     bsc: getNetworkConfig('bsc'),
+    scroll: getNetworkConfig('scroll'),
   },
   gasReporter: {
     enabled: REPORT_GAS,
@@ -220,6 +222,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: 'https://api.bscscan.com/api',
           browserURL: 'https://bscscan.com',
+        },
+      },
+      {
+        chainId: chainIds.scroll,
+        network: 'scroll',
+        urls: {
+          apiURL: 'https://api.etherscan.io/v2/api?chainid=534352',
+          browserURL: 'https://scrollscan.com',
         },
       },
     ],
