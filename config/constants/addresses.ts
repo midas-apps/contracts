@@ -1060,6 +1060,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   bsc: {
     accessControl: '0x7dD3e89fa418577f4BE6C4C47B242c6a9181a2DD',
+    timelock: '0xdcf9c7A65133a268b110307CA8157538D2D906a3',
     paymentTokens: {
       xrp: {
         token: '0x1D2F0da169ceB9fC7B3144628dB156f3F6c60dBE',
@@ -1085,6 +1086,27 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x667F93B8c3704c98340277314B68c0AaF56e02FF',
       depositVault: '0x7AeE9020Df0ac01Bc6f3cEeF6B1B7Cbf3D0937e4',
       redemptionVaultSwapper: '0xF76e650F8a9526fe5E4B40F1B567C5C1b427EE43',
+    },
+  },
+  scroll: {
+    accessControl: '0x63A9c8716E0bb3817aD542529397e48B5Fa28c27',
+    timelock: '0x43e0a000DD6A2c5aB5c73BE8C039A648890aad4D',
+    paymentTokens: {
+      whype: {
+        token: '0xd83E3d560bA6F05094d9D8B3EB8aaEA571D1864E',
+        aggregator: '0x4B2DC12838B609D5b875A88e99e9d9Cca9F49111',
+        dataFeed: '0x16878d6fA98E07a1F737a3541ea3a259959Ea4C7',
+      },
+      behype: {
+        token: '0xA519AfBc91986c0e7501d7e34968FEE51CD901aC',
+      },
+    },
+    liquidHYPE: {
+      token: '0xDD6c3E7BD0d6F017FcBa3b724dC8889013f9e232',
+      customFeed: '0x100c7758c54bba7D6049941604D6c104CeaA3216',
+      dataFeed: '0x2282B30F001634Ce9820a4286B981198acBC2945',
+      depositVault: '0x7fa2570D62bE28a964eD66cdb5ee487f506B0b55',
+      redemptionVaultSwapper: '0x30b174F86B93672434c313edd80f16E57C476A69',
     },
   },
   sepolia: {
