@@ -110,11 +110,12 @@ export type PaymentTokenDeploymentConfig = {
           customAggregator?: DeployCustomAggregatorConfig;
           postDeploy?: {
             setRoundData?: SetRoundDataConfig;
+            layerZero?: { sharedDecimals: number } & Omit<
+              LayerZeroConfig,
+              'rateLimitConfig'
+            >;
+            axelar?: Omit<AxelarItsConfig, 'operator'>;
           };
-          layerZero?: { sharedDecimals: number } & Omit<
-            LayerZeroConfig,
-            'rateLimitConfig'
-          >;
         }
       >
     >
