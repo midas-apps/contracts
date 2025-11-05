@@ -224,7 +224,7 @@ contract MidasAxelarVaultExecutable is
         bytes calldata _data,
         bytes32 _tokenId,
         uint256 _amount
-    ) public virtual {
+    ) external {
         /// @dev Can only be called by self
         if (msg.sender != address(this)) {
             revert OnlySelf(msg.sender);
@@ -243,7 +243,6 @@ contract MidasAxelarVaultExecutable is
     function depositAndSend(uint256 _paymentTokenAmount, bytes calldata _data)
         external
         payable
-        virtual
         nonReentrant
     {
         IERC20(paymentTokenErc20).safeTransferFrom(
@@ -268,7 +267,7 @@ contract MidasAxelarVaultExecutable is
         bytes memory _depositor,
         uint256 _paymentTokenAmount,
         bytes calldata _data
-    ) internal virtual {
+    ) internal {
         (
             bytes memory receiver,
             uint256 minReceiveAmount,
@@ -324,7 +323,7 @@ contract MidasAxelarVaultExecutable is
         uint256 _paymentTokenAmount,
         uint256 _minReceiveAmount,
         bytes32 _referrerId
-    ) internal virtual returns (uint256 mTokenAmount) {
+    ) internal returns (uint256 mTokenAmount) {
         uint256 balanceBefore = _balanceOf(mTokenErc20, _receiver);
         depositVault.depositInstant(
             paymentTokenErc20,
@@ -343,7 +342,6 @@ contract MidasAxelarVaultExecutable is
     function redeemAndSend(uint256 _mTokenAmount, bytes calldata _data)
         external
         payable
-        virtual
         nonReentrant
     {
         IERC20(mTokenErc20).safeTransferFrom(
@@ -364,7 +362,7 @@ contract MidasAxelarVaultExecutable is
         bytes memory _redeemer,
         uint256 _mTokenAmount,
         bytes calldata _data
-    ) internal virtual {
+    ) internal {
         (
             bytes memory receiver,
             uint256 minReceiveAmount,
@@ -409,7 +407,7 @@ contract MidasAxelarVaultExecutable is
         address _receiver,
         uint256 _mTokenAmount,
         uint256 _minReceiveAmount
-    ) internal virtual returns (uint256 paymentTokenAmount) {
+    ) internal returns (uint256 paymentTokenAmount) {
         uint256 balanceBefore = _balanceOf(paymentTokenErc20, _receiver);
         redemptionVault.redeemInstant(
             paymentTokenErc20,
@@ -455,7 +453,9 @@ contract MidasAxelarVaultExecutable is
                 tokenId,
                 destinationChain,
                 destinationAddress,
-                amount
+                amount,
+                bytes(""),
+                0
             );
     }
 

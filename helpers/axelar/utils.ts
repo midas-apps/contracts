@@ -257,11 +257,18 @@ export const axelarInterchainTransferExecutable = async (
   },
 ) => {
   const hubExecutable = Object.entries(midasAddressesPerNetwork)
-    .map(([k, v]) => [k, v?.[mToken]?.axelar?.executable?.[pToken]])
+    .map(([k, v]) => [k, v?.[mToken]?.axelar?.executables?.[pToken]])
     .find(([k, v]) => v !== undefined);
 
   if (!hubExecutable) {
     throw new Error('Hub executable is not found');
+  }
+
+  const desitnationNetworkAxelarNetworkName =
+    axelarChainNames[destinationNetwork];
+
+  if (!desitnationNetworkAxelarNetworkName) {
+    throw new Error('Unsupported destination network');
   }
 
   const gasLimit = 1_000_000;
@@ -273,7 +280,7 @@ export const axelarInterchainTransferExecutable = async (
         receiverAddress,
         0,
         referrerId ?? constants.HashZero,
-        destinationNetwork,
+        desitnationNetworkAxelarNetworkName,
       ],
     );
 
@@ -287,7 +294,7 @@ export const axelarInterchainTransferExecutable = async (
   } else {
     const encodedData = ethers.utils.defaultAbiCoder.encode(
       ['bytes', 'uint256', 'string'],
-      [receiverAddress, 0, destinationNetwork],
+      [receiverAddress, 0, desitnationNetworkAxelarNetworkName],
     );
     return axelarInterchainTransferMToken(hre, amount, {
       destinationNetwork: hubExecutable[0] as Network,

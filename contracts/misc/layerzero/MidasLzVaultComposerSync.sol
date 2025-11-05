@@ -200,7 +200,7 @@ contract MidasLzVaultComposerSync is
         bytes calldata _message, // expected to contain a composeMessage = abi.encode(SendParam hopSendParam,uint256 minMsgValue)
         address, /*_executor*/
         bytes calldata /*_extraData*/
-    ) external payable virtual override {
+    ) external payable override {
         if (msg.sender != lzEndpoint) {
             revert OnlyEndpoint(msg.sender);
         }
@@ -300,7 +300,7 @@ contract MidasLzVaultComposerSync is
         bytes memory _extraOptions,
         SendParam memory _sendParam,
         address _refundAddress
-    ) external payable virtual nonReentrant {
+    ) external payable nonReentrant {
         IERC20(paymentTokenErc20).safeTransferFrom(
             msg.sender,
             address(this),
@@ -326,7 +326,7 @@ contract MidasLzVaultComposerSync is
         bytes memory _extraOptions,
         SendParam memory _sendParam,
         address _refundAddress
-    ) external payable virtual nonReentrant {
+    ) external payable nonReentrant {
         IERC20(mTokenErc20).safeTransferFrom(
             msg.sender,
             address(this),
@@ -358,7 +358,7 @@ contract MidasLzVaultComposerSync is
         bytes memory _extraOptions,
         SendParam memory _sendParam,
         address _refundAddress
-    ) internal virtual {
+    ) internal {
         bool receiveToSameNetwork = _sendParam.dstEid == vaultsEid;
 
         bytes32 referrerId = _parseDepositExtraOptions(_extraOptions);
@@ -408,7 +408,7 @@ contract MidasLzVaultComposerSync is
         bytes memory, /* _extraOptions */
         SendParam memory _sendParam,
         address _refundAddress
-    ) internal virtual {
+    ) internal {
         bool receiveToSameNetwork = _sendParam.dstEid == vaultsEid;
 
         uint256 paymentTokenAmount = _redeem(
@@ -450,7 +450,7 @@ contract MidasLzVaultComposerSync is
         uint256 _paymentTokenAmount,
         uint256 _minReceiveAmount,
         bytes32 _referrerId
-    ) internal virtual returns (uint256 mTokenAmount) {
+    ) internal returns (uint256 mTokenAmount) {
         uint256 balanceBefore = _balanceOf(mTokenErc20, _receiver);
         depositVault.depositInstant(
             paymentTokenErc20,
@@ -474,7 +474,7 @@ contract MidasLzVaultComposerSync is
         address _receiver,
         uint256 _mTokenAmount,
         uint256 _minReceiveAmount
-    ) internal virtual returns (uint256 paymentTokenAmount) {
+    ) internal returns (uint256 paymentTokenAmount) {
         uint256 balanceBefore = _balanceOf(paymentTokenErc20, _receiver);
         redemptionVault.redeemInstant(
             paymentTokenErc20,
@@ -520,7 +520,7 @@ contract MidasLzVaultComposerSync is
         bytes calldata _message,
         uint256 _amount,
         address _refundAddress
-    ) internal virtual {
+    ) internal {
         /// @dev Extracted from the _message header. Will always be part of the _message since it is created by lzReceive
         SendParam memory refundSendParam;
         refundSendParam.dstEid = OFTComposeMsgCodec.srcEid(_message);

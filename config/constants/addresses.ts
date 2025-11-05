@@ -19,7 +19,7 @@ type LayerZeroTokenAddresses = {
 type AxelarTokenAddresses = {
   manager?: string;
   tokenId?: string;
-  executable?: Partial<Record<PaymentTokenName, string>>;
+  executables?: Partial<Record<PaymentTokenName, string>>;
 };
 
 export type TokenAddresses = {
@@ -41,6 +41,7 @@ type DataFeedAddressesCommon = {
     oft?: string;
   };
   axelar?: {
+    mappedToken?: PaymentTokenName;
     tokenId?: string;
   };
 };
@@ -1142,8 +1143,8 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         manager: '0xa5ff89Dd34ef8B2875a54858af486931fAAB7eAA',
         tokenId:
           '0x46929f12e9fc2e41757d789d461b77f9dcfbf328d3797a4446f8335fbe27d985',
-        executable: {
-          usdt: '0x2615e996Cf51De915410B8AD899fA6a9452579c5',
+        executables: {
+          usdt: '0x75726da161ef6aE712e941E00705879715b260f6',
         },
       },
     },
@@ -1271,11 +1272,17 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0xe786DA4812Fb91e8d69bC8047c5dB489c70cEa30',
         dataFeed: '0x39592BdBf6f3b96dD4547063945aB9ece769AE4D',
         axelar: {
-          tokenId:
-            '0x4c21465f8c20206fdf584fc58aca2b79b305aeed78a3bb250388a0058ef5ca6d',
+          mappedToken: 'axlusdt',
         },
         layerZero: {
           oft: '0xFecc6FDFF76fB2A2De42B787dC3D02B634a8b6D9',
+        },
+      },
+      axlusdt: {
+        token: '0xb15deC5e287775ACeBa6F088aDd66198384A1a55',
+        axelar: {
+          tokenId:
+            '0x4c21465f8c20206fdf584fc58aca2b79b305aeed78a3bb250388a0058ef5ca6d',
         },
       },
     },

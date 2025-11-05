@@ -38,7 +38,9 @@ contract AxelarInterchainTokenServiceMock {
         bytes32 tokenId,
         string calldata, /* destinationChain */
         bytes calldata destinationAddressBytes,
-        uint256 amount
+        uint256 amount,
+        bytes calldata, /*metadata*/
+        uint256 /*gasValue*/
     ) external payable {
         if (shouldRevert) {
             revert("interchainTransfer reverted");
