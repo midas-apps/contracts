@@ -43,27 +43,10 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const hubNetwork = hre.network.name as Network;
   const config = itsConfigPerMToken[hubNetwork]?.[mToken];
 
-  const hubAddresses = getCurrentAddresses(hre);
-  const hubMTokenAddress = hubAddresses?.[mToken]?.token;
-
   const hubAxelarChainName = axelarChainNames[hubNetwork];
 
   if (!hubAxelarChainName) {
     throw new Error(`Chain ${hubNetwork} is not supported by axelar`);
-  }
-
-  if (!hubMTokenAddress) {
-    throw new Error('Hub mToken address not found');
-  }
-
-  const deployemntConfigHub = getNetworkConfig(
-    hre,
-    mToken,
-    'postDeploy',
-  ).axelarIts;
-
-  if (!deployemntConfigHub) {
-    throw new Error('Hub ITS config not found');
   }
 
   if (!config) {
@@ -97,7 +80,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     deployerHub,
   );
 
-  const defaultGas = 500_000;
+  const defaultGas = 300_000;
 
   const salt = calculateSalt(mToken, hre.action);
 
@@ -235,7 +218,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
             salt,
             mTokenAddress,
             TOKEN_MANAGER_MINT_BURN,
-            deployemntConfigHub.operator,
+            deployemntConfig.operator,
           ),
           {
             action: 'axelar-wire-tokens',

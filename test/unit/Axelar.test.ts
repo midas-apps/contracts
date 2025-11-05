@@ -41,9 +41,6 @@ describe('Axelar', function () {
       );
       expect(await executor.chainNameHash()).to.equal(chainNameHashA);
 
-      expect(await executor.mTokenDataFeed()).to.equal(
-        mTokenToUsdDataFeed.address,
-      );
       expect(await executor.depositVault()).to.equal(depositVault.address);
       expect(await executor.redemptionVault()).to.equal(
         redemptionVault.address,

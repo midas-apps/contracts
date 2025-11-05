@@ -6,7 +6,6 @@ import {SendParam, MessagingFee} from "@layerzerolabs/oft-evm/contracts/interfac
 
 import {IDepositVault} from "../../../interfaces/IDepositVault.sol";
 import {IRedemptionVault} from "../../../interfaces/IRedemptionVault.sol";
-import {IDataFeed} from "../../../interfaces/IDataFeed.sol";
 
 /**
  * @title IMidasLzVaultComposerSync
@@ -102,12 +101,6 @@ interface IMidasLzVaultComposerSync is IOAppComposer {
      * @return the redemption vault
      */
     function redemptionVault() external view returns (IRedemptionVault);
-
-    /**
-     * @notice getter for the mToken data feed
-     * @return the mToken data feed
-     */
-    function mTokenDataFeed() external view returns (IDataFeed);
 
     /**
      * @notice getter for the paymentToken OFT

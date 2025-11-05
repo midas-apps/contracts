@@ -3,7 +3,6 @@ pragma solidity ^0.8.22;
 
 import {IDepositVault} from "../../../interfaces/IDepositVault.sol";
 import {IRedemptionVault} from "../../../interfaces/IRedemptionVault.sol";
-import {IDataFeed} from "../../../interfaces/IDataFeed.sol";
 
 /**
  * @title IMidasAxelarVaultExecutable
@@ -78,12 +77,6 @@ interface IMidasAxelarVaultExecutable {
      * @return the redemption vault
      */
     function redemptionVault() external view returns (IRedemptionVault);
-
-    /**
-     * @notice getter for the mToken data feed
-     * @return the mToken data feed
-     */
-    function mTokenDataFeed() external view returns (IDataFeed);
 
     /**
      * @notice getter for the paymentToken ITS id

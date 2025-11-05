@@ -1090,6 +1090,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x7AeE9020Df0ac01Bc6f3cEeF6B1B7Cbf3D0937e4',
       redemptionVaultSwapper: '0xF76e650F8a9526fe5E4B40F1B567C5C1b427EE43',
     },
+    dnTEST: {
+      token: '0xAAf2161A72789cFADCD808fB414C06FB631F9294',
+    },
   },
   sepolia: {
     paymentTokens: {

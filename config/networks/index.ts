@@ -214,7 +214,8 @@ export const axelarChainNames: PartialConfigPerNetwork<string> = {
   bsc: 'binance',
   sepolia: 'ethereum-sepolia',
   arbitrumSepolia: 'arbitrum-sepolia',
-  xrplevm: 'xrpl-evm ',
+  xrplevm: 'xrpl-evm',
+  hyperevm: 'hyperliquid',
 };
 
 export const layerZeroEids: PartialConfigPerNetwork<EndpointId> = {

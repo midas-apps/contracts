@@ -42,7 +42,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     hre,
     await contract.populateTransaction.setFlowLimit(configFlowLimit),
     {
-      action: 'axelar-wire-tokens', // TODO: change to correct action
+      action: 'axelar-update-config',
       comment: `set axelar flow limits for ${mToken}`,
     },
   );

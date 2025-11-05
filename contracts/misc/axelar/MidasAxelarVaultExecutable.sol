@@ -4,14 +4,12 @@ pragma solidity ^0.8.22;
 import {InterchainTokenExecutable} from "@axelar-network/interchain-token-service/contracts/executable/InterchainTokenExecutable.sol";
 import {IInterchainTokenService} from "@axelar-network/interchain-token-service/contracts/interfaces/IInterchainTokenService.sol";
 
-import {SafeERC20Upgradeable as SafeERC20, IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {IERC20MetadataUpgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import {IDepositVault} from "../../interfaces/IDepositVault.sol";
 import {IRedemptionVault} from "../../interfaces/IRedemptionVault.sol";
-import {IDataFeed} from "../../interfaces/IDataFeed.sol";
-import {IManageableVaultExtended} from "../../interfaces/IManageableVaultExtended.sol";
 import {DecimalsCorrectionLibrary} from "../../libraries/DecimalsCorrectionLibrary.sol";
 import {MidasInitializable} from "../../abstract/MidasInitializable.sol";
 import {IMidasAxelarVaultExecutable} from "./interfaces/IMidasAxelarVaultExecutable.sol";
@@ -34,12 +32,6 @@ contract MidasAxelarVaultExecutable is
     using DecimalsCorrectionLibrary for uint256;
 
     /**
-     * @notice error for vaults config address mismatch
-     * @param dvValue address of deposit vault
-     * @param rvValue address of redemption vault
-     */
-    error VaultsConfigAddressMismatch(address dvValue, address rvValue);
-    /**
      * @notice error for token address mismatch
      * @param itsTokenValue address of ITS token
      * @param dvValue address of mToken of deposit vault
@@ -59,11 +51,6 @@ contract MidasAxelarVaultExecutable is
      * @inheritdoc IMidasAxelarVaultExecutable
      */
     IRedemptionVault public immutable redemptionVault;
-    /**
-     * @inheritdoc IMidasAxelarVaultExecutable
-     */
-    IDataFeed public immutable mTokenDataFeed;
-
     /**
      * @inheritdoc IMidasAxelarVaultExecutable
      */
@@ -119,26 +106,13 @@ contract MidasAxelarVaultExecutable is
         depositVault = IDepositVault(_depositVault);
         redemptionVault = IRedemptionVault(_redemptionVault);
 
-        mTokenDataFeed = depositVault.mTokenDataFeed();
-
-        {
-            IDataFeed mTokenDataFeedRv = redemptionVault.mTokenDataFeed();
-
-            if (mTokenDataFeedRv != mTokenDataFeed) {
-                revert VaultsConfigAddressMismatch(
-                    address(mTokenDataFeedRv),
-                    address(mTokenDataFeed)
-                );
-            }
-        }
-
         chainNameHash = IInterchainTokenService(_interchainTokenService)
             .chainNameHash();
 
         paymentTokenId = _paymentTokenId;
         paymentTokenErc20 = IInterchainTokenService(_interchainTokenService)
             .registeredTokenAddress(_paymentTokenId);
-        paymentTokenDecimals = IERC20Metadata(paymentTokenErc20).decimals();
+        paymentTokenDecimals = IERC20(paymentTokenErc20).decimals();
 
         mTokenId = _mTokenId;
         mTokenErc20 = IInterchainTokenService(_interchainTokenService)
@@ -258,6 +232,22 @@ contract MidasAxelarVaultExecutable is
     }
 
     /**
+     * @inheritdoc IMidasAxelarVaultExecutable
+     */
+    function redeemAndSend(uint256 _mTokenAmount, bytes calldata _data)
+        external
+        payable
+        nonReentrant
+    {
+        IERC20(mTokenErc20).safeTransferFrom(
+            msg.sender,
+            address(this),
+            _mTokenAmount
+        );
+        _redeemAndSend(abi.encodePacked(msg.sender), _mTokenAmount, _data);
+    }
+
+    /**
      * @notice internal function to deposit and send the paymentToken to the destination chain
      * @param _depositor the depositor of the operation
      * @param _paymentTokenAmount the amount of payment tokens to deposit
@@ -295,61 +285,6 @@ contract MidasAxelarVaultExecutable is
             _paymentTokenAmount,
             mTokenAmount
         );
-    }
-
-    /**
-     * @notice internal function to get the chain name hash
-     * @param _chainName the chain name
-     * @return the chain name hash
-     */
-    function _getChainNameHash(string memory _chainName)
-        private
-        pure
-        returns (bytes32)
-    {
-        return keccak256(bytes(_chainName));
-    }
-
-    /**
-     * @notice function to deposit into Midas vault
-     * @param _receiver the address to receive the mTokens
-     * @param _paymentTokenAmount the amount of paymentToken to deposit
-     * @param _minReceiveAmount the minimum amount of mTokens to receive
-     * @param _referrerId the referrer id for the user
-     * @return mTokenAmount the amount of mTokens received
-     */
-    function _deposit(
-        address _receiver,
-        uint256 _paymentTokenAmount,
-        uint256 _minReceiveAmount,
-        bytes32 _referrerId
-    ) internal returns (uint256 mTokenAmount) {
-        uint256 balanceBefore = _balanceOf(mTokenErc20, _receiver);
-        depositVault.depositInstant(
-            paymentTokenErc20,
-            _tokenAmountToBase18(_paymentTokenAmount),
-            _minReceiveAmount,
-            _referrerId,
-            _receiver
-        );
-
-        mTokenAmount = _balanceOf(mTokenErc20, _receiver) - balanceBefore;
-    }
-
-    /**
-     * @inheritdoc IMidasAxelarVaultExecutable
-     */
-    function redeemAndSend(uint256 _mTokenAmount, bytes calldata _data)
-        external
-        payable
-        nonReentrant
-    {
-        IERC20(mTokenErc20).safeTransferFrom(
-            msg.sender,
-            address(this),
-            _mTokenAmount
-        );
-        _redeemAndSend(abi.encodePacked(msg.sender), _mTokenAmount, _data);
     }
 
     /**
@@ -397,6 +332,32 @@ contract MidasAxelarVaultExecutable is
     }
 
     /**
+     * @notice function to deposit into Midas vault
+     * @param _receiver the address to receive the mTokens
+     * @param _paymentTokenAmount the amount of paymentToken to deposit
+     * @param _minReceiveAmount the minimum amount of mTokens to receive
+     * @param _referrerId the referrer id for the user
+     * @return mTokenAmount the amount of mTokens received
+     */
+    function _deposit(
+        address _receiver,
+        uint256 _paymentTokenAmount,
+        uint256 _minReceiveAmount,
+        bytes32 _referrerId
+    ) internal returns (uint256 mTokenAmount) {
+        uint256 balanceBefore = _balanceOf(mTokenErc20, _receiver);
+        depositVault.depositInstant(
+            paymentTokenErc20,
+            _tokenAmountToBase18(_paymentTokenAmount),
+            _minReceiveAmount,
+            _referrerId,
+            _receiver
+        );
+
+        mTokenAmount = _balanceOf(mTokenErc20, _receiver) - balanceBefore;
+    }
+
+    /**
      * @notice function to redeem from Midas vault
      * @param _receiver the address to receive the paymentToken
      * @param _mTokenAmount the amount of mTokens to redeem
@@ -419,6 +380,19 @@ contract MidasAxelarVaultExecutable is
         paymentTokenAmount =
             _balanceOf(paymentTokenErc20, _receiver) -
             balanceBefore;
+    }
+
+    /**
+     * @notice internal function to get the chain name hash
+     * @param _chainName the chain name
+     * @return the chain name hash
+     */
+    function _getChainNameHash(string memory _chainName)
+        private
+        pure
+        returns (bytes32)
+    {
+        return keccak256(bytes(_chainName));
     }
 
     /**

@@ -252,7 +252,8 @@ export const sendAndWaitForCustomTxSign = async (
       | 'update-timelock'
       | 'update-lz'
       | 'update-lz-oapp-config'
-      | 'axelar-wire-tokens';
+      | 'axelar-wire-tokens'
+      | 'axelar-update-config';
     subAction?:
       | 'add-payment-token'
       | 'grant-token-roles'

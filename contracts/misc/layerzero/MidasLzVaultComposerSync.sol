@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {SafeERC20Upgradeable as SafeERC20, IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {IERC20MetadataUpgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import {IOFT, SendParam, MessagingFee} from "@layerzerolabs/oft-evm/contracts/interfaces/IOFT.sol";
@@ -12,11 +12,9 @@ import {OFTComposeMsgCodec} from "@layerzerolabs/oft-evm/contracts/libs/OFTCompo
 
 import {IDepositVault} from "../../interfaces/IDepositVault.sol";
 import {IRedemptionVault} from "../../interfaces/IRedemptionVault.sol";
-import {IDataFeed} from "../../interfaces/IDataFeed.sol";
 import {DecimalsCorrectionLibrary} from "../../libraries/DecimalsCorrectionLibrary.sol";
 import {IMidasLzVaultComposerSync} from "./interfaces/IMidasLzVaultComposerSync.sol";
 import {MidasInitializable} from "../../abstract/MidasInitializable.sol";
-import {IManageableVaultExtended} from "../../interfaces/IManageableVaultExtended.sol";
 
 /**
  * @title MidasLzVaultComposerSync - Synchronous Vault Composer for Midas vaults
@@ -37,12 +35,6 @@ contract MidasLzVaultComposerSync is
     using SafeERC20 for IERC20;
     using DecimalsCorrectionLibrary for uint256;
 
-    /**
-     * @notice error for vaults config address mismatch
-     * @param dvValue address of deposit vault
-     * @param rvValue address of redemption vault
-     */
-    error VaultsConfigAddressMismatch(address dvValue, address rvValue);
     /**
      * @notice error for token address mismatch
      * @param oftTokenValue address of OFT token
@@ -69,11 +61,6 @@ contract MidasLzVaultComposerSync is
      * @inheritdoc IMidasLzVaultComposerSync
      */
     IRedemptionVault public immutable redemptionVault;
-    /**
-     * @inheritdoc IMidasLzVaultComposerSync
-     */
-    IDataFeed public immutable mTokenDataFeed;
-
     /**
      * @inheritdoc IMidasLzVaultComposerSync
      */
@@ -131,22 +118,9 @@ contract MidasLzVaultComposerSync is
         depositVault = IDepositVault(_depositVault);
         redemptionVault = IRedemptionVault(_redemptionVault);
 
-        mTokenDataFeed = depositVault.mTokenDataFeed();
-
-        {
-            IDataFeed mTokenDataFeedRv = redemptionVault.mTokenDataFeed();
-
-            if (mTokenDataFeedRv != mTokenDataFeed) {
-                revert VaultsConfigAddressMismatch(
-                    address(mTokenDataFeedRv),
-                    address(mTokenDataFeed)
-                );
-            }
-        }
-
         paymentTokenOft = _paymentTokenOft;
         paymentTokenErc20 = IOFT(paymentTokenOft).token();
-        paymentTokenDecimals = IERC20Metadata(paymentTokenErc20).decimals();
+        paymentTokenDecimals = IERC20(paymentTokenErc20).decimals();
 
         mTokenOft = _mTokenOft;
         mTokenErc20 = IOFT(mTokenOft).token();
@@ -239,13 +213,13 @@ contract MidasLzVaultComposerSync is
     }
 
     /**
-     * @notice Handles the compose operation for OFT (Omnichain Fungible Token) transactions
+     * @notice Handles the compose operation for OFT transactions
      * @dev This function can only be called by the contract itself (self-call restriction)
      *      Decodes the compose message to extract SendParam and minimum message value
      *      Routes to either deposit or redeem flow based on the input OFT token type
      * @param _oftIn The OFT token whose funds have been received in the lzReceive associated with this lzTx
      * @param _composeFrom The bytes32 identifier of the compose sender
-     * @param _composeMsg The encoded message containing SendParam and minMsgValue
+     * @param _composeMsg The encoded message containing SendParam, minMsgValue and extraOptions
      * @param _amount The amount of tokens received in the lzReceive associated with this lzTx
      */
     function handleCompose(
@@ -294,10 +268,7 @@ contract MidasLzVaultComposerSync is
     }
 
     /**
-     * @notice Deposits ERC20 paymentTokens from the caller into the vault and sends them to the recipient
-     * @param _paymentTokenAmount The number of ERC20 tokens to deposit and send
-     * @param _sendParam Parameters on how to send the mTokens to the recipient
-     * @param _refundAddress Address to receive excess `msg.value`
+     * @inheritdoc IMidasLzVaultComposerSync
      */
     function depositAndSend(
         uint256 _paymentTokenAmount,
@@ -320,10 +291,7 @@ contract MidasLzVaultComposerSync is
     }
 
     /**
-     * @notice Redeems vault mTokens and sends the resulting paymentTokens to the user
-     * @param _mTokenAmount The number of vault mTokens to redeem
-     * @param _sendParam Parameter that defines how to send the paymentTokens
-     * @param _refundAddress Address to receive excess payment of the LZ fees
+     * @inheritdoc IMidasLzVaultComposerSync
      */
     function redeemAndSend(
         uint256 _mTokenAmount,
@@ -353,7 +321,7 @@ contract MidasLzVaultComposerSync is
      * @param _sendParam Parameter that defines how to send the mTokens
      * @param _refundAddress Address to receive excess payment of the LZ fees
      * @notice This function first deposits the paymentTokens to mint mTokens, validates the mTokens meet minimum slippage requirements,
-     *         then sends the minted mTokens cross-chain using the OFT (Omnichain Fungible Token) protocol
+     *         then sends the minted mTokens cross-chain using the OFT protocol
      * @notice The _sendParam.amountLD is updated to the actual mToken amount minted, and minAmountLD is reset to 0 for the send operation
      */
     function _depositAndSend(
@@ -402,7 +370,7 @@ contract MidasLzVaultComposerSync is
      * @param _refundAddress Address to receive excess payment of the LZ fees
      * @notice This function first redeems the specified mToken amount for the underlying paymentToken,
      *         validates the received amount against slippage protection, then initiates a cross-chain
-     *         transfer of the redeemed paymentTokens using the OFT (Omnichain Fungible Token) protocol
+     *         transfer of the redeemed paymentTokens using the OFT protocol
      * @notice The minAmountLD in _sendParam is reset to 0 after slippage validation since the
      *         actual amount has already been verified
      */
