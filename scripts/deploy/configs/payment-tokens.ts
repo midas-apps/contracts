@@ -692,9 +692,19 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
       },
       behype: {
         dataFeed: {
-          healthyDiff: constants.MaxUint256,
-          minAnswer: parseUnits('1', 18),
-          maxAnswer: parseUnits('1.02', 18),
+          numerator: {
+            healthyDiff: 3600,
+            minAnswer: parseUnits('10', 8),
+            maxAnswer: parseUnits('200', 8),
+          },
+          denominator: {
+            healthyDiff: 3600,
+            minAnswer: parseUnits('10', 8),
+            maxAnswer: parseUnits('200', 8),
+          },
+          feedType: 'composite',
+          minAnswer: parseUnits('1'),
+          maxAnswer: parseUnits('1.2'),
         },
       },
     },

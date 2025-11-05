@@ -44,6 +44,21 @@
       "address": "0x16878d6fA98E07a1F737a3541ea3a259959Ea4C7",
       "txHash": "0xdde516cba7346d9eb970ed6a30040e88a1fda3bef5daaf0fbbb0db2a54d2638b",
       "kind": "transparent"
+    },
+    {
+      "address": "0x8a975f4D202230c1B85d35659Ef1954356f1F894",
+      "txHash": "0x27eea411d1e337d788316b7cc04ed1ec5eb5098c63360cba8578bb2ab07f7e52",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x47F3Adb059B13A74c73Bc9f6d70FC034c2afb696",
+      "txHash": "0xee01d5ce3cd0fb8eba909cd2219b7234b6b4759594fdad95163fb9c81525d636",
+      "kind": "transparent"
+    },
+    {
+      "address": "0xAada4457d4e65a33475106c4340ce965d69785D8",
+      "txHash": "0x3ecff1b692d38fd33730dc79acb630a74713ee6d309549c266ca18f405f98025",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -1951,6 +1966,114 @@
           "t_int256": {
             "label": "int256",
             "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "20ef74ef348cd04515894e02664350c2512b5a2a546ab7ba2520753130b859b0": {
+      "address": "0x7B0d23EE4E6576697f07762FcDe25Eb1F93f111b",
+      "txHash": "0x5285ee29a1044207d94c5370972a7e5688c6ef8257a57724e1aff29c039181c5",
+      "layout": {
+        "solcVersion": "0.8.9",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "accessControl",
+            "offset": 2,
+            "slot": "0",
+            "type": "t_contract(MidasAccessControl)15037",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:24"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:29"
+          },
+          {
+            "label": "numeratorFeed",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_contract(IDataFeed)17509",
+            "contract": "CompositeDataFeed",
+            "src": "contracts/feeds/CompositeDataFeed.sol:20"
+          },
+          {
+            "label": "denominatorFeed",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_contract(IDataFeed)17509",
+            "contract": "CompositeDataFeed",
+            "src": "contracts/feeds/CompositeDataFeed.sol:26"
+          },
+          {
+            "label": "minExpectedAnswer",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_uint256",
+            "contract": "CompositeDataFeed",
+            "src": "contracts/feeds/CompositeDataFeed.sol:31"
+          },
+          {
+            "label": "maxExpectedAnswer",
+            "offset": 0,
+            "slot": "54",
+            "type": "t_uint256",
+            "contract": "CompositeDataFeed",
+            "src": "contracts/feeds/CompositeDataFeed.sol:36"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "55",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "CompositeDataFeed",
+            "src": "contracts/feeds/CompositeDataFeed.sol:41"
+          }
+        ],
+        "types": {
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IDataFeed)17509": {
+            "label": "contract IDataFeed",
+            "numberOfBytes": "20"
+          },
+          "t_contract(MidasAccessControl)15037": {
+            "label": "contract MidasAccessControl",
+            "numberOfBytes": "20"
           },
           "t_uint256": {
             "label": "uint256",

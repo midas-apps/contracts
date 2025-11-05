@@ -130,7 +130,7 @@ const config: HardhatUserConfig = {
         chainId: chainIds.base,
         network: 'base',
         urls: {
-          apiURL: 'https://api.basescan.org/api',
+          apiURL: 'https://api.etherscan.io/v2/api?chainid=8453',
           browserURL: 'https://basescan.org',
         },
       },

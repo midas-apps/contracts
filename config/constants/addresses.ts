@@ -560,6 +560,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0xEa22F8C1624c17C1B58727235292684831A08d56',
       redemptionVault: '0x86811aD3430DbA37e1641538729bF346c20A5412',
     },
+    mEVUSD: {
+      token: '0xccbad2823328BCcAEa6476Df3Aa529316aB7474A',
+      customFeed: '0x4Fe7f62B2F4eF077aEd8f458c8B4652f5dE8080f',
+      dataFeed: '0x030b69280892c888670EDCDCD8B69Fd8026A0BF3',
+      depositVault: '0x5f09Aff8B9b1f488B7d1bbaD4D89648579e55d61',
+      redemptionVaultSwapper: '0x9BF00b7CFC00D6A7a2e2C994DB8c8dCa467ee359',
+    },
   },
   oasis: {
     paymentTokens: {
@@ -1099,6 +1106,15 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
       behype: {
         token: '0xA519AfBc91986c0e7501d7e34968FEE51CD901aC',
+        numerator: {
+          aggregator: '0xB7d02965989FC2E5Af605Ca4EAEe92328589772F', // beHYPE/USD
+          dataFeed: '0x8a975f4D202230c1B85d35659Ef1954356f1F894',
+        },
+        denominator: {
+          aggregator: '0x1ef9592F449761C6EdA75c1fCFC45D625F3d5C76', // HYPE/USD
+          dataFeed: '0x47F3Adb059B13A74c73Bc9f6d70FC034c2afb696',
+        },
+        dataFeed: '0xAada4457d4e65a33475106c4340ce965d69785D8',
       },
     },
     liquidHYPE: {
