@@ -21,7 +21,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       paymentToken
     ];
 
-  if (!config?.layerZero?.delegate) {
+  if (!config?.postDeploy?.layerZero?.delegate) {
     throw new Error('Delegate not found');
   }
 
@@ -40,9 +40,9 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const args = [
     tokenAddresses.token,
-    config.layerZero.sharedDecimals,
+    config.postDeploy?.layerZero?.sharedDecimals,
     endpointV2Deployment.address,
-    config.layerZero.delegate,
+    config.postDeploy?.layerZero?.delegate,
   ] as const;
 
   const contract = await factory.deploy(...args);

@@ -11,6 +11,8 @@ import {
   TokenAddresses,
 } from '../constants/addresses';
 import { ENV } from '../env';
+import { isTestnetNetwork } from '../networks';
+import { Network } from '../types';
 
 export const extendWithContext = (
   hre: HardhatRuntimeEnvironment,
@@ -53,7 +55,13 @@ const extendDeployment = (hre: HardhatRuntimeEnvironment) => {
 const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
   const customSignerScript = ENV.CUSTOM_SIGNER_SCRIPT_PATH;
 
-  if (!customSignerScript) {
+  const isTestnet = isTestnetNetwork(hre.network.name as Network);
+
+  if (!customSignerScript || isTestnet) {
+    if (isTestnet) {
+      console.warn('Testnet network detected, falling back to hardhat signer');
+    }
+
     hre.getCustomSigner = async () => {
       const { deployer } = await hre.getNamedAccounts();
       const deployerSigner = await hre.ethers.getSigner(deployer);
@@ -83,7 +91,7 @@ const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
         },
       };
     };
-  } else {
+  } else if (customSignerScript) {
     const scriptPathResolved = path.resolve(customSignerScript);
 
     hre.getCustomSigner = async () => {

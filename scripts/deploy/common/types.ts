@@ -1,3 +1,4 @@
+import { BigNumberish } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { AddFeeWaivedConfig, AddPaymentTokensConfig } from './common-vault';
@@ -68,6 +69,7 @@ export type LayerZeroConfig = {
 
 export type AxelarItsConfig = {
   operator: string;
+  flowLimit?: BigNumberish;
 };
 
 export type PostDeployConfig = {

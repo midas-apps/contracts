@@ -1,12 +1,14 @@
-import { parseUnits } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
 import { axelarTokenManagerAbi } from '../../../../helpers/axelar';
-import { getRolesForToken } from '../../../../helpers/roles';
 import { getMTokenOrThrow } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
-import { getDeployer, sendAndWaitForCustomTxSign } from '../../common/utils';
+import {
+  getDeployer,
+  getNetworkConfig,
+  sendAndWaitForCustomTxSign,
+} from '../../common/utils';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const deployer = await getDeployer(hre);
@@ -23,7 +25,12 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('mToken addresses not found or missing required fields');
   }
 
-  const roles = getRolesForToken(mToken);
+  const configFlowLimit = getNetworkConfig(hre, mToken, 'postDeploy').axelarIts
+    ?.flowLimit;
+
+  if (!configFlowLimit) {
+    throw new Error('Deployment config not found');
+  }
 
   const contract = await hre.ethers.getContractAt(
     axelarTokenManagerAbi,
@@ -31,11 +38,9 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     deployer,
   );
 
-  console.log(await contract.flowLimit());
-
   await sendAndWaitForCustomTxSign(
     hre,
-    await contract.populateTransaction.setFlowLimit(parseUnits('1000000')),
+    await contract.populateTransaction.setFlowLimit(configFlowLimit),
     {
       action: 'axelar-wire-tokens', // TODO: change to correct action
       comment: `set axelar flow limits for ${mToken}`,
