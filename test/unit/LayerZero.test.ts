@@ -316,14 +316,10 @@ describe('LayerZero', function () {
         redemptionVault,
         pTokenLzOftAdapter,
         oftAdapterA,
-        mTokenToUsdDataFeed,
         stableCoins,
         mTBILL,
       } = fixture;
 
-      expect(await composer.mTokenDataFeed()).to.equal(
-        mTokenToUsdDataFeed.address,
-      );
       expect(await composer.depositVault()).to.equal(depositVault.address);
       expect(await composer.redemptionVault()).to.equal(
         redemptionVault.address,
