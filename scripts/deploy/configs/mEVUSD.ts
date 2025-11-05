@@ -74,5 +74,66 @@ export const mEVUSDDeploymentConfig: DeploymentConfig = {
         },
       },
     },
+    [chainIds.base]: {
+      dv: {
+        type: 'REGULAR',
+        enableSanctionsList: true,
+        feeReceiver: '0x1e7da1309018c91dF9D35593a442D975A5bbA981',
+        tokensReceiver: '0x0a7deA060D8b11dF71E1863E64a11929B2787Cf0',
+        instantDailyLimit: constants.MaxUint256,
+        instantFee: parseUnits('0', 2),
+        variationTolerance: parseUnits('0.5', 2),
+        minMTokenAmountForFirstDeposit: parseUnits('0', 18),
+        maxSupplyCap: parseUnits('50000000', 18),
+      },
+      rvSwapper: {
+        type: 'SWAPPER',
+        feeReceiver: '0xd0EecAd4b46ecDe3C72e15e06e969CaC9601f817',
+        tokensReceiver: '0x0a7deA060D8b11dF71E1863E64a11929B2787Cf0',
+        requestRedeemer: '0x8AEBC046D45eaEDb3198D9A7489C8E7ece8F73b6',
+        instantDailyLimit: constants.MaxUint256,
+        instantFee: parseUnits('0.5', 2),
+        variationTolerance: parseUnits('0.5', 2),
+        liquidityProvider: 'dummy',
+        enableSanctionsList: true,
+        swapperVault: 'dummy',
+      },
+      postDeploy: {
+        addPaymentTokens: {
+          vaults: [
+            {
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  allowance: parseUnits('1000000000', 18),
+                },
+              ],
+              type: 'depositVault',
+            },
+            {
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  allowance: parseUnits('1000000000', 18),
+                },
+              ],
+              type: 'redemptionVaultSwapper',
+            },
+          ],
+        },
+        grantRoles: {
+          tokenManagerAddress: '0x37144C5762F39024aA4D6fEa92F82685D93ae708',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0x8F2e0d2aF1102033C363331f213c62BE2e6DF043',
+        },
+        setRoundData: {
+          data: parseUnits('1', 8),
+        },
+        pauseFunctions: {
+          depositVault: ['depositRequest', 'depositRequestWithCustomRecipient'],
+          redemptionVaultSwapper: ['redeemFiatRequest'],
+        },
+      },
+    },
   },
 };
