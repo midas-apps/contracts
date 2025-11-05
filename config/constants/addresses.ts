@@ -846,7 +846,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       layerZero: {
         oft: '0x5D6FFd092776AC02BBBCBf8EAE8E62a75Adb3e10',
         composers: {
-          usdt: '0x718c52340eAa4a945b9F71bc349aeEB788312457',
+          usdt: '0x4BECF840937d114E9c7119d7F24621f1B8B0A7a7',
         },
       },
     },

@@ -226,11 +226,13 @@ contract MidasLzVaultComposerSync is
             /// @dev A revert where the msg.value passed is lower than the min expected msg.value is handled separately
             /// This is because it is possible to re-trigger from the endpoint the compose operation with the right msg.value
             if (bytes4(_err) == InsufficientMsgValue.selector) {
+                // solhint-disable-next-line no-inline-assembly
                 assembly {
                     revert(add(32, _err), mload(_err))
                 }
             }
 
+            // solhint-disable-next-line avoid-tx-origin
             _refund(_composeSender, _message, amount, tx.origin);
             emit Refunded(_guid);
         }
@@ -276,6 +278,7 @@ contract MidasLzVaultComposerSync is
                 _amount,
                 extraOptions,
                 sendParam,
+                // solhint-disable-next-line avoid-tx-origin
                 tx.origin
             );
         } else {
@@ -284,6 +287,7 @@ contract MidasLzVaultComposerSync is
                 _amount,
                 extraOptions,
                 sendParam,
+                // solhint-disable-next-line avoid-tx-origin
                 tx.origin
             );
         }
@@ -501,6 +505,7 @@ contract MidasLzVaultComposerSync is
         SendParam memory _sendParam,
         address _refundAddress
     ) internal {
+        // solhint-disable-next-line check-send-result
         IOFT(_oft).send{value: msg.value}(
             _sendParam,
             MessagingFee(msg.value, 0),
@@ -550,6 +555,7 @@ contract MidasLzVaultComposerSync is
         returns (bytes32 referrerId)
     {
         if (_extraOptions.length > 0) {
+            // solhint-disable-next-line no-inline-assembly
             assembly {
                 referrerId := mload(add(_extraOptions, 32))
             }

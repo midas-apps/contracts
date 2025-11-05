@@ -3,7 +3,7 @@ import {
   CHAINS,
   Environment,
 } from '@axelar-network/axelarjs-sdk';
-import { constants, Contract, ethers } from 'ethers';
+import { Contract } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
@@ -25,13 +25,9 @@ import {
   getTokenId,
 } from '../../../../helpers/axelar/utils';
 import { getHreByNetworkName } from '../../../../helpers/hardhat';
-import {
-  getMTokenOrThrow,
-  getPaymentTokenOrThrow,
-} from '../../../../helpers/utils';
+import { getMTokenOrThrow, logDeploy } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
 import {
-  deployAndVerifyProxy,
   getDeployer,
   getNetworkConfig,
   getWalletAddressForAction,
@@ -115,8 +111,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const managerAddress = await itsHub.tokenManagerAddress(tokenId);
 
-  console.log('Manager address for all networks: ', managerAddress);
-  console.log('Token id for all networks: ', tokenId);
+  logDeploy('Manager address for all networks: ', undefined, managerAddress);
+  logDeploy('Token id for all networks: ', undefined, tokenId);
 
   const isHubTestnet = isTestnetNetwork(hubNetwork);
 
@@ -124,13 +120,14 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     environment: isHubTestnet ? Environment.TESTNET : Environment.MAINNET,
   });
 
-  for (const network of [hubNetwork, ...linkedNetworks]) {
+  const getAllNetworkConfigs = async (network: Network) => {
+    const networkHre = await getHreByNetworkName(network);
+
     if (isTestnetNetwork(network) !== isHubTestnet) {
       throw new Error(
         'All networks should be in the same category (testnet or mainnet)',
       );
     }
-    // TODO: first do all the verification before sending any tx
 
     const axelarChainName = axelarChainNames[network];
 
@@ -138,9 +135,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       throw new Error(`Chain ${network} is not supported by axelar`);
     }
 
-    const networkHre = await getHreByNetworkName(network);
-    const networkDeployer = await getDeployer(networkHre);
-    const networkAddresses = getCurrentAddresses(networkHre);
     const deployemntConfig = getNetworkConfig(
       networkHre,
       mToken,
@@ -164,11 +158,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       );
     }
 
-    const itsNetwork = new Contract(
-      axelarItsAddress,
-      axelarItsAbi,
-      networkDeployer,
-    );
+    const networkAddresses = getCurrentAddresses(networkHre);
 
     const mTokenAddress = networkAddresses?.[mToken]?.token;
 
@@ -176,37 +166,67 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       throw new Error(`MToken address not found for network: ${network}`);
     }
 
+    const networkDeployer = await getDeployer(networkHre);
+
+    return {
+      networkHre,
+      deployemntConfig,
+      walletForActionNetwork,
+      mTokenAddress,
+      networkAddresses,
+      axelarChainName,
+      networkDeployer,
+    };
+  };
+
+  const networks = [hubNetwork, ...linkedNetworks];
+
+  // verification step
+  for (const network of networks) {
+    await getAllNetworkConfigs(network);
+  }
+
+  for (const network of networks) {
+    const {
+      networkHre,
+      deployemntConfig,
+      mTokenAddress,
+      axelarChainName,
+      networkDeployer,
+    } = await getAllNetworkConfigs(network);
+
+    const itsNetwork = new Contract(
+      axelarItsAddress,
+      axelarItsAbi,
+      networkDeployer,
+    );
+
     const managerDeployed =
       (await networkHre.ethers.provider.getCode(managerAddress)) !== '0x';
 
     if (!managerDeployed) {
-      const shouldRegisterMedatada = true;
+      const estimatedValue = (await axelarSdk.estimateGasFee(
+        axelarChainName,
+        isHubTestnet ? CHAINS.TESTNET.AXELAR : CHAINS.MAINNET.AXELAR,
+        defaultGas,
+        'auto',
+      )) as string;
 
-      if (shouldRegisterMedatada) {
-        const estimatedValue = (await axelarSdk.estimateGasFee(
-          axelarChainName,
-          isHubTestnet ? CHAINS.TESTNET.AXELAR : CHAINS.MAINNET.AXELAR,
-          defaultGas,
-          'auto',
-        )) as string;
-
-        // TODO: check if already registered
-        await sendAndWaitForCustomTxSign(
-          hre,
-          await itsNetwork.populateTransaction.registerTokenMetadata(
-            mTokenAddress,
-            estimatedValue,
-            {
-              value: estimatedValue,
-            },
-          ),
+      await sendAndWaitForCustomTxSign(
+        hre,
+        await itsNetwork.populateTransaction.registerTokenMetadata(
+          mTokenAddress,
+          estimatedValue,
           {
-            action: 'axelar-wire-tokens',
-            comment: `register axelar metadata for ${mToken}`,
-            network,
+            value: estimatedValue,
           },
-        );
-      }
+        ),
+        {
+          action: 'axelar-wire-tokens',
+          comment: `register axelar metadata for ${mToken}`,
+          network,
+        },
+      );
 
       if (network === hubNetwork) {
         await sendAndWaitForCustomTxSign(

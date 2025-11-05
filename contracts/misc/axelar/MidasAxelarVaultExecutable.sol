@@ -469,6 +469,7 @@ contract MidasAxelarVaultExecutable is
         pure
         returns (address addr)
     {
+        // solhint-disable-next-line no-inline-assembly
         assembly {
             addr := mload(add(b, 20))
         }
