@@ -1099,6 +1099,15 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
       behype: {
         token: '0xA519AfBc91986c0e7501d7e34968FEE51CD901aC',
+        numerator: {
+          aggregator: '0xB7d02965989FC2E5Af605Ca4EAEe92328589772F', // beHYPE/USD
+          dataFeed: '0x8a975f4D202230c1B85d35659Ef1954356f1F894',
+        },
+        denominator: {
+          aggregator: '0x1ef9592F449761C6EdA75c1fCFC45D625F3d5C76', // HYPE/USD
+          dataFeed: '0x47F3Adb059B13A74c73Bc9f6d70FC034c2afb696',
+        },
+        dataFeed: '0xAada4457d4e65a33475106c4340ce965d69785D8',
       },
     },
     liquidHYPE: {
