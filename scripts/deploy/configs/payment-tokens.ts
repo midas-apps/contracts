@@ -8,6 +8,15 @@ import { PaymentTokenDeploymentConfig } from '../common/types';
 export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
   networkConfigs: {
     [chainIds.sepolia]: {
+      usdt: {
+        postDeploy: {
+          layerZero: {
+            delegate: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+            sharedDecimals: 9,
+          },
+          axelar: {},
+        },
+      },
       usdc: {
         dataFeed: {
           healthyDiff: 24 * 60 * 60,
@@ -47,6 +56,58 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           minAnswer: parseUnits('0.99999', 8),
           maxAnswer: parseUnits('1', 8),
           maxAnswerDeviation: parseUnits('0', 8),
+        },
+      },
+    },
+    [chainIds.bsc]: {
+      xrp: {
+        customAggregator: {
+          description: 'XRP/XRP',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.1', 18),
+          maxAnswer: parseUnits('1000', 18),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+      usdt: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+    },
+    [chainIds.arbitrumSepolia]: {
+      usdt: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99', 8),
+          maxAnswer: parseUnits('1.01', 8),
+        },
+        customAggregator: {
+          description: 'USDT/USD',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        postDeploy: {
+          layerZero: {
+            delegate: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+            sharedDecimals: 9,
+          },
+          axelar: {},
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
         },
       },
     },
@@ -611,6 +672,43 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           healthyDiff: 24 * 60 * 60, // FIXME: update when get a value
           minAnswer: parseUnits('0.997', 8),
           maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+    },
+    [chainIds.scroll]: {
+      whype: {
+        customAggregator: {
+          description: 'wHYPE/HYPE',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+      behype: {
+        dataFeed: {
+          numerator: {
+            healthyDiff: 3600,
+            minAnswer: parseUnits('10', 8),
+            maxAnswer: parseUnits('200', 8),
+          },
+          denominator: {
+            healthyDiff: 3600,
+            minAnswer: parseUnits('10', 8),
+            maxAnswer: parseUnits('200', 8),
+          },
+          feedType: 'composite',
+          minAnswer: parseUnits('1'),
+          maxAnswer: parseUnits('1.2'),
         },
       },
     },

@@ -6,10 +6,7 @@ import path from 'path';
 const logToFile = (hre: HardhatRuntimeEnvironment, message: string) => {
   const logsFolderPath = hre.logger.logsFolderPath;
 
-  const logFilePath = path.resolve(
-    logsFolderPath,
-    `log-${hre.logger.executionLogContext}.log`,
-  );
+  const logFilePath = path.resolve(logsFolderPath, `log-${hre.contextId}.log`);
 
   fs.appendFileSync(logFilePath, message + '\n');
 };
@@ -33,6 +30,10 @@ const serializeArgs = (args: any[]): string => {
 export const initializeLogger = (hre: HardhatRuntimeEnvironment) => {
   const originalLog = console.log;
 
+  if ((originalLog as any).customLogger) {
+    return;
+  }
+
   console.log = (...args: any[]) => {
     originalLog(...args);
 
@@ -41,6 +42,8 @@ export const initializeLogger = (hre: HardhatRuntimeEnvironment) => {
       logToFile(hre, argsString);
     }
   };
+
+  (console.log as any).customLogger = true;
 
   console.warn = console.log;
   console.error = console.log;

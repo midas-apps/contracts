@@ -1,3 +1,4 @@
+import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import { chainIds } from '../../../config';
@@ -47,6 +48,63 @@ export const mHYPERDeploymentConfig: DeploymentConfig = {
           redemptionVaultType: 'redemptionVaultBuidl',
         },
         enableSanctionsList: true,
+      },
+    },
+    [chainIds.plasma]: {
+      dv: {
+        type: 'REGULAR',
+        enableSanctionsList: false,
+        feeReceiver: '0xee67Ec0e51dDd154C0cd904A326822e3F31586F3',
+        tokensReceiver: '0xF356c5e9F69DaDB332Bb098C7Ed960Db1d3376DD',
+        instantDailyLimit: constants.MaxUint256,
+        instantFee: parseUnits('0', 2),
+        variationTolerance: parseUnits('0.65', 2),
+        minMTokenAmountForFirstDeposit: parseUnits('0', 18),
+        maxSupplyCap: constants.MaxUint256,
+      },
+      rvSwapper: {
+        type: 'SWAPPER',
+        feeReceiver: '0x68e7E72938db36a5CBbCa7b52c71DBBaaDfB8264',
+        tokensReceiver: '0xF356c5e9F69DaDB332Bb098C7Ed960Db1d3376DD',
+        requestRedeemer: '0xA4fC2c65643b67fFDbf5cb0b528A10E771F1F159',
+        instantDailyLimit: constants.MaxUint256,
+        instantFee: parseUnits('0.5', 2),
+        variationTolerance: parseUnits('0.65', 2),
+        liquidityProvider: 'dummy',
+        enableSanctionsList: false,
+        swapperVault: 'dummy',
+      },
+      postDeploy: {
+        addPaymentTokens: {
+          vaults: [
+            {
+              paymentTokens: [
+                {
+                  token: 'usdt0',
+                  allowance: parseUnits('1000000000', 18),
+                },
+              ],
+              type: 'depositVault',
+            },
+            {
+              paymentTokens: [
+                {
+                  token: 'usdt0',
+                  allowance: parseUnits('1000000000', 18),
+                },
+              ],
+              type: 'redemptionVaultSwapper',
+            },
+          ],
+        },
+        grantRoles: {
+          tokenManagerAddress: '0x5683de280d0C3967fBa2f04D707FA1eF5A044e25',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0xd1E01471F3e1002d4eEC1b39b7DBD7aff952A99F',
+        },
+        setRoundData: {
+          data: parseUnits('1', 8),
+        },
       },
     },
   },

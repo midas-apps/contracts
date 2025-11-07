@@ -1,4 +1,3 @@
-import * as hre from 'hardhat';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { etherscanVerify } from '../../../../helpers/utils';
@@ -15,9 +14,9 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   console.log('Deploying ERC20MockWithName...');
 
   const deployment = await new ERC20MockWithName__factory(deployer).deploy(
-    6,
-    'USDS',
-    'USDS',
+    9,
+    'USDT0',
+    'USDT0',
   );
 
   console.log('Deployed ERC20MockWithName:', deployment.address);

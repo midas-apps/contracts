@@ -20,7 +20,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   }
 
   for (const [key, value] of Object.entries(tokenAddresses)) {
-    if (!value) {
+    if (!value || typeof value !== 'string') {
       continue;
     }
 
@@ -44,7 +44,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       continue;
     }
 
-    const result = await hre.customSigner?.createAddressBookContract?.({
+    const customSigner = await hre.getCustomSigner();
+    const result = await customSigner.createAddressBookContract({
       address: value,
       contractName,
       contractTag,

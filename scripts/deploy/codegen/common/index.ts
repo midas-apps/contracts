@@ -53,7 +53,7 @@ export type CodeExpr = { [EXPR]: string };
 
 const generatorPerContract: Partial<
   Record<
-    keyof TokenContractNames,
+    keyof TokenContractNames | 'layerZeroMinterBurner',
     (mToken: MTokenName) =>
       | Promise<
           | {
@@ -337,13 +337,19 @@ export const generateDeploymentConfig = async (
       await configsPerNetworkConfig.genericConfig(mToken);
   }
 
-  if (!deploymentConfigFileExists || overrideNetworkConfig) {
+  if (
+    !deploymentConfigFileExists ||
+    overrideNetworkConfig ||
+    !hasNetworkConfig
+  ) {
     for (const configKey of deploymentConfigs) {
       const config = await configsPerNetworkConfig[configKey](hre);
       deploymentConfig.networkConfig[configKey] = config;
     }
   } else {
-    await stream.warn(`No-override is selected, skipping network config...`);
+    await stream.warn(
+      `No-override is selected and network config exists, skipping network config...`,
+    );
   }
 
   if (postDeployConfigs) {

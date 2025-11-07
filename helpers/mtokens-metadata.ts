@@ -212,4 +212,28 @@ export const mTokensMetadata: Record<
     name: 'acremBTC1',
     symbol: 'acremBTC1',
   },
+  obeatUSD: {
+    name: 'OmniBeat USD',
+    symbol: 'obeatUSD',
+  },
+  mEVUSD: {
+    name: 'Midas Everstake USD',
+    symbol: 'mEVUSD',
+  },
+  cUSDO: {
+    name: 'cUSDO BNB Midas Vault',
+    symbol: 'cUSDO',
+  },
+  mHyperETH: {
+    name: 'Midas Hyperithm ETH',
+    symbol: 'mHyperETH',
+  },
+  mHyperBTC: {
+    name: 'Midas Hyperithm BTC',
+    symbol: 'mHyperBTC',
+  },
+  mPortofino: {
+    name: 'Midas Portofino',
+    symbol: 'mPortofino',
+  },
 };

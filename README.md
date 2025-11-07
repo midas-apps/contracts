@@ -1,6 +1,6 @@
 # Midas smart contracts repository
 
-This repository contains all smart contracts related to the [midas.app](https://midas.app) project.
+This repository contains all smart contracts related to the [midas.app](https://midas.app) project including chain like Ethereum, Base, HyperEVM, BSC [...]
 
 ## The structure of the repository
 

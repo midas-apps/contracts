@@ -47,21 +47,21 @@ contract mTBILL is mToken {
     /**
      * @dev AC role, owner of which can mint mTBILL token
      */
-    function _minterRole() internal pure virtual override returns (bytes32) {
+    function _minterRole() internal pure override returns (bytes32) {
         return M_TBILL_MINT_OPERATOR_ROLE;
     }
 
     /**
      * @dev AC role, owner of which can burn mTBILL token
      */
-    function _burnerRole() internal pure virtual override returns (bytes32) {
+    function _burnerRole() internal pure override returns (bytes32) {
         return M_TBILL_BURN_OPERATOR_ROLE;
     }
 
     /**
      * @dev AC role, owner of which can pause mTBILL token
      */
-    function _pauserRole() internal pure virtual override returns (bytes32) {
+    function _pauserRole() internal pure override returns (bytes32) {
         return M_TBILL_PAUSE_OPERATOR_ROLE;
     }
 }

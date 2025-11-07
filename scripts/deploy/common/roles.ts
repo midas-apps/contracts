@@ -71,7 +71,7 @@ export const grantAllProductRoles = async (
 
   const defaultManager = provider.address;
 
-  const tx = await sendAndWaitForCustomTxSign(
+  await sendAndWaitForCustomTxSign(
     hre,
     await accessControl.populateTransaction.grantRoleMult(
       [
@@ -105,8 +105,6 @@ export const grantAllProductRoles = async (
       comment: `grant all ${token} roles`,
     },
   );
-
-  console.log('Transaction is initiated successfully', tx);
 };
 
 export const revokeDefaultRolesFromDeployer = async (
@@ -123,8 +121,6 @@ export const revokeDefaultRolesFromDeployer = async (
     roles,
     roles.map(() => deployer.address),
   );
-
-  console.log('Transaction is initiated successfully', tx.hash);
 };
 
 export type GrantDefaultAdminRoleToAcAdminConfig = {
@@ -151,8 +147,6 @@ export const grantDefaultAdminRoleToAcAdmin = async (
     allRoles.common.defaultAdmin,
     networkConfig?.acAdminAddress ?? acAdminAddress,
   );
-
-  console.log('Transaction is initiated successfully', tx.hash);
 };
 
 const getAcContract = async (

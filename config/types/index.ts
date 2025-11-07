@@ -3,22 +3,25 @@ type NetworkBase = 'sepolia';
 type RpcNetwork = NetworkBase | 'mainnet';
 export type Network =
   | NetworkBase
-  | 'main'
-  | 'hardhat'
-  | 'localhost'
-  | 'etherlink'
-  | 'base'
-  | 'oasis'
-  | 'plume'
-  | 'rootstock'
   | 'arbitrum'
-  | 'tacTestnet'
-  | 'tac'
+  | 'arbitrumSepolia'
+  | 'base'
+  | 'bsc'
+  | 'etherlink'
+  | 'hardhat'
   | 'hyperevm'
   | 'katana'
+  | 'localhost'
+  | 'main'
+  | 'oasis'
+  | 'plasma'
+  | 'plume'
+  | 'rootstock'
+  | 'scroll'
+  | 'tac'
+  | 'tacTestnet'
   | 'xrplevm'
-  | 'zerog'
-  | 'plasma';
+  | 'zerog';
 export type RpcUrl =
   | `https://eth-${RpcNetwork}.g.alchemy.com/v2/${string}`
   | `https://${RpcNetwork}.infura.io/v3/${string}`
@@ -27,6 +30,7 @@ export type RpcUrl =
   | `https://evmrpc.${string}.ai`;
 
 export type ConfigPerNetwork<T> = Record<Network, T>;
+export type PartialConfigPerNetwork<T> = Partial<ConfigPerNetwork<T>>;
 
 export interface Environment {
   readonly ALCHEMY_KEY?: string;

@@ -6,10 +6,15 @@ import "./MTBillMidasAccessControlRoles.sol";
 
 /**
  * @title MTBillDataFeed
- * @notice DataFeed for mBASIS product
+ * @notice DataFeed for mTBILL product
  * @author RedDuck Software
  */
 contract MTBillDataFeed is DataFeed, MTBillMidasAccessControlRoles {
+    /**
+     * @dev leaving a storage gap for futures updates
+     */
+    uint256[50] private __gap;
+
     /**
      * @inheritdoc DataFeed
      */

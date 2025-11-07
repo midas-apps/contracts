@@ -57,6 +57,12 @@ const prefixes: Record<MTokenName, string> = {
   dnTEST: 'DN_TEST',
   // keeping an old naming as the name of token changed
   acremBTC1: 'ACRE_BTC',
+  obeatUSD: 'OBEAT_USD',
+  mEVUSD: 'M_EV_USD',
+  cUSDO: 'C_USDO',
+  mHyperETH: 'M_HYPER_ETH',
+  mHyperBTC: 'M_HYPER_BTC',
+  mPortofino: 'M_PORTOFINO',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {
@@ -117,13 +123,28 @@ export const getRolesNamesCommon = (): CommonRoles => {
   };
 };
 
+const getRoleHashOrEmpty = (role: string | undefined | null) => {
+  return role ? keccak256(role) : '-';
+};
+
+const getRolesHashes = (
+  roles: Record<string, string | Record<string, string> | null>,
+): Record<string, string | Record<string, string>> => {
+  return Object.fromEntries(
+    Object.entries(roles).map(([key, value]) => {
+      return [
+        key,
+        typeof value === 'string' || value === null
+          ? getRoleHashOrEmpty(value)
+          : (getRolesHashes(value) as Record<string, string>),
+      ];
+    }),
+  );
+};
+
 export const getRolesForToken = (token: MTokenName): TokenRoles => {
   const rolesNames = getRolesNamesForToken(token);
-  return Object.fromEntries(
-    Object.entries(rolesNames).map(([key, value]) => {
-      return [key, value ? keccak256(value) : '-'];
-    }),
-  ) as TokenRoles;
+  return getRolesHashes(rolesNames) as TokenRoles;
 };
 
 export const getAllRoles = (): AllRoles => {

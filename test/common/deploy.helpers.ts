@@ -13,15 +13,16 @@ export const deployProxyContract = async <
   contractName: string,
   initParams?: unknown[],
   initializer = 'initialize',
+  constructorParams?: unknown[],
 ): Promise<TContract> => {
   const factory = await ethers.getContractFactory(contractName);
-  const impl = await factory.deploy();
+  const impl = await factory.deploy(...(constructorParams ?? []));
   await impl.deployed();
 
   const proxyFactory = await ethers.getContractFactory('ERC1967Proxy');
   const proxy = await proxyFactory.deploy(
     impl.address,
-    factory.interface.encodeFunctionData(initializer, initParams),
+    factory.interface.encodeFunctionData(initializer, initParams ?? []),
   );
   await proxy.deployed();
 

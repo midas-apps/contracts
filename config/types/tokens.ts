@@ -51,6 +51,12 @@ export enum MTokenNameEnum {
   dnETH = 'dnETH',
   dnTEST = 'dnTEST',
   acremBTC1 = 'acremBTC1',
+  obeatUSD = 'obeatUSD',
+  mEVUSD = 'mEVUSD',
+  cUSDO = 'cUSDO',
+  mHyperETH = 'mHyperETH',
+  mHyperBTC = 'mHyperBTC',
+  mPortofino = 'mPortofino',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
@@ -102,6 +108,7 @@ export enum PaymentTokenNameEnum {
   usdt0 = 'usdt0',
   plusd = 'plusd',
   ton = 'ton',
+  axlusdt = 'axlusdt',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;

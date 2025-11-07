@@ -24,6 +24,10 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
   },
   [chainIds.tac]: {
     grantDefaultAdminRole: {},
+    timelock: {
+      minDelay: 2 * DAY,
+      proposer: '0x88B577E8eB8a0BEFF49eb4fAB2a21210Af35264B',
+    },
   },
   [chainIds.xrplevm]: {
     grantDefaultAdminRole: {
@@ -38,10 +42,36 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
     grantDefaultAdminRole: {
       acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
     },
+    timelock: {
+      minDelay: 2 * DAY,
+      proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+    },
   },
   [chainIds.plasma]: {
     grantDefaultAdminRole: {
       acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
+    },
+    timelock: {
+      minDelay: 2 * DAY,
+      proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+    },
+  },
+  [chainIds.bsc]: {
+    grantDefaultAdminRole: {
+      acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
+    },
+    timelock: {
+      minDelay: 2 * DAY,
+      proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+    },
+  },
+  [chainIds.scroll]: {
+    grantDefaultAdminRole: {
+      acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
+    },
+    timelock: {
+      minDelay: 2 * DAY,
+      proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
     },
   },
 };
