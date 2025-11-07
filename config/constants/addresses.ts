@@ -460,6 +460,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0xeD22A9861C6eDd4f1292aeAb1E44661D5f3FE65e',
       redemptionVaultSwapper: '0x16d4f955B0aA1b1570Fe3e9bB2f8c19C407cdb67',
     },
+    mPortofino: {
+      token: '0x9004B9890D6B901A17F734efe028b1Be5bd6CD22',
+      customFeed: '0x88956C00A5Fa046c823eAED747F21A95D2264403',
+      dataFeed: '0x21f3BCfa912F674c2af3bED5BF8E47A3f40EA749',
+      depositVault: '0x9a5cf6c0a1CEe5226E31e3D0a81F2ca2462d8387',
+      redemptionVaultSwapper: '0xb02cc77ee137436D71b9dE46958A3bB5d7346CcA',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
@@ -563,6 +570,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x544af5fd877974F99623cC56A8d98f983072a0E3',
       depositVault: '0xEa22F8C1624c17C1B58727235292684831A08d56',
       redemptionVault: '0x86811aD3430DbA37e1641538729bF346c20A5412',
+    },
+    mEVUSD: {
+      token: '0xccbad2823328BCcAEa6476Df3Aa529316aB7474A',
+      customFeed: '0x4Fe7f62B2F4eF077aEd8f458c8B4652f5dE8080f',
+      dataFeed: '0x030b69280892c888670EDCDCD8B69Fd8026A0BF3',
+      depositVault: '0x5f09Aff8B9b1f488B7d1bbaD4D89648579e55d61',
+      redemptionVaultSwapper: '0x9BF00b7CFC00D6A7a2e2C994DB8c8dCa467ee359',
     },
   },
   oasis: {
@@ -1077,6 +1091,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   bsc: {
     accessControl: '0x7dD3e89fa418577f4BE6C4C47B242c6a9181a2DD',
+    timelock: '0xdcf9c7A65133a268b110307CA8157538D2D906a3',
     paymentTokens: {
       xrp: {
         token: '0x1D2F0da169ceB9fC7B3144628dB156f3F6c60dBE',
@@ -1110,6 +1125,36 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         tokenId:
           '0x1747144d1af233f8d1005aa7a93fd3b77abb1b8dac182dc8ebad26f4c588b0cf',
       },
+    },
+  },
+  scroll: {
+    accessControl: '0x63A9c8716E0bb3817aD542529397e48B5Fa28c27',
+    timelock: '0x43e0a000DD6A2c5aB5c73BE8C039A648890aad4D',
+    paymentTokens: {
+      whype: {
+        token: '0xd83E3d560bA6F05094d9D8B3EB8aaEA571D1864E',
+        aggregator: '0x4B2DC12838B609D5b875A88e99e9d9Cca9F49111',
+        dataFeed: '0x16878d6fA98E07a1F737a3541ea3a259959Ea4C7',
+      },
+      behype: {
+        token: '0xA519AfBc91986c0e7501d7e34968FEE51CD901aC',
+        numerator: {
+          aggregator: '0xB7d02965989FC2E5Af605Ca4EAEe92328589772F', // beHYPE/USD
+          dataFeed: '0x8a975f4D202230c1B85d35659Ef1954356f1F894',
+        },
+        denominator: {
+          aggregator: '0x1ef9592F449761C6EdA75c1fCFC45D625F3d5C76', // HYPE/USD
+          dataFeed: '0x47F3Adb059B13A74c73Bc9f6d70FC034c2afb696',
+        },
+        dataFeed: '0xAada4457d4e65a33475106c4340ce965d69785D8',
+      },
+    },
+    liquidHYPE: {
+      token: '0xDD6c3E7BD0d6F017FcBa3b724dC8889013f9e232',
+      customFeed: '0x100c7758c54bba7D6049941604D6c104CeaA3216',
+      dataFeed: '0x2282B30F001634Ce9820a4286B981198acBC2945',
+      depositVault: '0x7fa2570D62bE28a964eD66cdb5ee487f506B0b55',
+      redemptionVaultSwapper: '0x30b174F86B93672434c313edd80f16E57C476A69',
     },
   },
   sepolia: {

@@ -1,6 +1,6 @@
 import { JsonRpcProvider } from '@ethersproject/providers';
 import { DeployProxyOptions } from '@openzeppelin/hardhat-upgrades/dist/utils';
-import ethers, { constants, PopulatedTransaction, Signer } from 'ethers';
+import { ethers, constants, PopulatedTransaction, Signer } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { DeploymentConfig } from './types';

@@ -675,5 +675,42 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
         },
       },
     },
+    [chainIds.scroll]: {
+      whype: {
+        customAggregator: {
+          description: 'wHYPE/HYPE',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+      behype: {
+        dataFeed: {
+          numerator: {
+            healthyDiff: 3600,
+            minAnswer: parseUnits('10', 8),
+            maxAnswer: parseUnits('200', 8),
+          },
+          denominator: {
+            healthyDiff: 3600,
+            minAnswer: parseUnits('10', 8),
+            maxAnswer: parseUnits('200', 8),
+          },
+          feedType: 'composite',
+          minAnswer: parseUnits('1'),
+          maxAnswer: parseUnits('1.2'),
+        },
+      },
+    },
   },
 };

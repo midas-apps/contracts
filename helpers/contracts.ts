@@ -108,6 +108,7 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   cUSDO: 'CUsdo',
   mHyperETH: 'MHyperEth',
   mHyperBTC: 'MHyperBtc',
+  mPortofino: 'MPortofino',
 };
 
 export const getCommonContractNames = (): CommonContractNames => {
