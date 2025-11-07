@@ -180,10 +180,6 @@ export const mTokensMetadata: Record<
     name: 'Midas XRP',
     symbol: 'mXRP',
   },
-  acreBTC: {
-    name: 'acreBTC',
-    symbol: 'acreBTC',
-  },
   mWildUSD: {
     name: 'mWildUSD',
     symbol: 'mWildUSD',
@@ -211,6 +207,10 @@ export const mTokensMetadata: Record<
   dnTEST: {
     name: 'Delta Neutral TEST',
     symbol: 'dnTEST',
+  },
+  acremBTC1: {
+    name: 'acremBTC1',
+    symbol: 'acremBTC1',
   },
   obeatUSD: {
     name: 'OmniBeat USD',

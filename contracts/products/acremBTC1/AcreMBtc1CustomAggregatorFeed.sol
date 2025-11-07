@@ -2,17 +2,17 @@
 pragma solidity 0.8.9;
 
 import "../../feeds/CustomAggregatorV3CompatibleFeed.sol";
-import "./AcreBtcMidasAccessControlRoles.sol";
+import "./AcreMBtc1MidasAccessControlRoles.sol";
 
 /**
- * @title AcreBtcCustomAggregatorFeed
- * @notice AggregatorV3 compatible feed for acreBTC,
+ * @title AcreMBtc1CustomAggregatorFeed
+ * @notice AggregatorV3 compatible feed for acremBTC1,
  * where price is submitted manually by feed admins
  * @author RedDuck Software
  */
-contract AcreBtcCustomAggregatorFeed is
+contract AcreMBtc1CustomAggregatorFeed is
     CustomAggregatorV3CompatibleFeed,
-    AcreBtcMidasAccessControlRoles
+    AcreMBtc1MidasAccessControlRoles
 {
     /**
      * @dev leaving a storage gap for futures updates
