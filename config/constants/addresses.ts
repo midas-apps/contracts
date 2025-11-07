@@ -220,6 +220,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    timelock: '0xE3EEe3e0D2398799C884a47FC40C029C8e241852',
     mTBILL: {
       dataFeed: '0xfCEE9754E8C375e145303b7cE7BEca3201734A2B',
       customFeed: '0x056339C044055819E8Db84E71f5f2E1F536b2E5b',
@@ -419,7 +420,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x5E154946561AEA4E750AAc6DeaD23D37e00E47f6',
       redemptionVaultSwapper: '0x4Fd4DD7171D14e5bD93025ec35374d2b9b4321b0',
     },
-    acreBTC: {
+    acremBTC1: {
       token: '0xC344Db27Feba7F0a881A50f0f702a525a44f2368',
       customFeed: '0xD0eEd92DB46B099f8DEA366a7198b5Dd249Af61F',
       dataFeed: '0x7d5B8ab9C948fb11433e0eDdADD718dc5Cb040bb',
@@ -522,6 +523,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
     },
     accessControl: '0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b',
+    timelock: '0x9230F9cBAca32bad2B19CAB331d3e6509B8EB0cB',
     mTBILL: {
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
       customFeed: '0x70E58b7A1c884fFFE7dbce5249337603a28b8422',
@@ -609,7 +611,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       customFeed: '0xb701ABEA3E4b6EAdAc4F56696904c5F551d2617b',
       dataFeed: '0x73a64469E0974371005ca0f60Dfc10405613b411',
       depositVault: '0xb05F6aa8C2ea9aB8537cF09A9B765a21De249224',
-      redemptionVault: '0x3aC6b2Bf09f470e5674C3DA60Be7D2DA2791F897',
+      redemptionVaultSwapper: '0x3aC6b2Bf09f470e5674C3DA60Be7D2DA2791F897',
     },
     mBASIS: {
       token: '0x0c78Ca789e826fE339dE61934896F5D170b66d78',
@@ -957,6 +959,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   etherlink: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    timelock: '0x852C4F1Beb54AcB5360dBdBA7EbbE9940A698F76',
     paymentTokens: {
       usdc: {
         token: '0x796Ea11Fa2dD751eD01b53C372fFDB4AAa8f00F9',

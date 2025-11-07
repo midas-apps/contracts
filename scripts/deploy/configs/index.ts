@@ -1,4 +1,4 @@
-import { acreBTCDeploymentConfig } from './acreBTC';
+import { acremBTC1DeploymentConfig } from './acremBTC1';
 import { cUSDODeploymentConfig } from './cUSDO';
 import { dnETHDeploymentConfig } from './dnETH';
 import { dnFARTDeploymentConfig } from './dnFART';
@@ -105,7 +105,7 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   kitBTC: kitBTCDeploymentConfig,
   dnFART: dnFARTDeploymentConfig,
   mXRP: mXRPDeploymentConfig,
-  acreBTC: acreBTCDeploymentConfig,
+  acremBTC1: acremBTC1DeploymentConfig,
   mWildUSD: mWildUSDDeploymentConfig,
   plUSD: plUSDDeploymentConfig,
   splUSD: splUSDDeploymentConfig,
