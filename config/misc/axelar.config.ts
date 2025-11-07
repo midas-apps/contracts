@@ -22,9 +22,9 @@ export const itsConfigPerMToken: PartialConfigPerNetwork<
       linkedNetworks: ['arbitrumSepolia'],
     },
   },
-  hyperevm: {
+  xrplevm: {
     dnTEST: {
-      linkedNetworks: ['bsc', 'xrplevm'],
+      linkedNetworks: ['bsc', 'hyperevm'],
     },
   },
 };

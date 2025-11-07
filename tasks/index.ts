@@ -44,7 +44,9 @@ task('runscript', 'Runs a user-defined script')
 
     hre.action = action;
 
-    extendWithContext(hre, `${action}-${new Date().toISOString()}`);
+    if (action) {
+      extendWithContext(hre, `${action}-${new Date().toISOString()}`);
+    }
 
     if (mtoken) {
       if (!isMTokenName(mtoken)) {

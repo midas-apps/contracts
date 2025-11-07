@@ -169,6 +169,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     await getAllNetworkConfigs(network);
   }
 
+  console.log('verification passed for all networks', networks);
+
   for (const network of networks) {
     const {
       networkHre,
@@ -196,7 +198,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       )) as string;
 
       await sendAndWaitForCustomTxSign(
-        hre,
+        networkHre,
         await itsNetwork.populateTransaction.registerTokenMetadata(
           mTokenAddress,
           estimatedValue,
@@ -207,14 +209,13 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
         {
           action: 'axelar-wire-tokens',
           comment: `register axelar metadata for ${mToken}`,
-          network,
         },
       );
 
       if (network === hubNetwork) {
         await sendAndWaitForCustomTxSign(
-          hre,
-          await itsFactoryHub.registerCustomToken(
+          networkHre,
+          await itsFactoryHub.populateTransaction.registerCustomToken(
             salt,
             mTokenAddress,
             TOKEN_MANAGER_MINT_BURN,
@@ -223,7 +224,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
           {
             action: 'axelar-wire-tokens',
             comment: `register axelar custom token for ${mToken}`,
-            network: hubNetwork,
           },
         );
       } else {
@@ -236,7 +236,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
         await sendAndWaitForCustomTxSign(
           hre,
-          await itsFactoryHub.linkToken(
+          await itsFactoryHub.populateTransaction.linkToken(
             salt,
             axelarChainName,
             mTokenAddress,
@@ -250,7 +250,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
           {
             action: 'axelar-wire-tokens',
             comment: `link ${mToken} on axelar with ${network}`,
-            network: hubNetwork,
           },
         );
       }

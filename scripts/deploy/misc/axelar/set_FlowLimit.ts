@@ -25,11 +25,16 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('mToken addresses not found or missing required fields');
   }
 
-  const configFlowLimit = getNetworkConfig(hre, mToken, 'postDeploy').axelarIts
-    ?.flowLimit;
+  const config = getNetworkConfig(hre, mToken, 'postDeploy').axelarIts;
 
-  if (!configFlowLimit) {
+  if (!config) {
     throw new Error('Deployment config not found');
+  }
+
+  const flowLimit = config.flowLimit;
+
+  if (!flowLimit) {
+    throw new Error('Flow limit not found');
   }
 
   const contract = await hre.ethers.getContractAt(
@@ -40,11 +45,12 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   await sendAndWaitForCustomTxSign(
     hre,
-    await contract.populateTransaction.setFlowLimit(configFlowLimit),
+    await contract.populateTransaction.setFlowLimit(flowLimit),
     {
       action: 'axelar-update-config',
       comment: `set axelar flow limits for ${mToken}`,
     },
+    config.operator,
   );
 };
 

@@ -836,6 +836,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xA7A8F3414e02AEcb50E206aF31001CC4990b4D0a',
       depositVault: '0xed51fEb552d596F3014B127D21ECcE5a7D8e8b19',
       redemptionVaultSwapper: '0x35D44B87D6c786e9434DA337eb59D373e8b84941',
+      axelar: {
+        manager: '0xf43632503CEa1718238b21c60bDF0A9300EC94Fa',
+        tokenId:
+          '0x1747144d1af233f8d1005aa7a93fd3b77abb1b8dac182dc8ebad26f4c588b0cf',
+      },
     },
     obeatUSD: {
       token: '0x94bf32Bd7DE56E80778530919292BeFf503eC9e6',
@@ -926,6 +931,14 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xed4ff96DAF37a0A44356E81A3cc22908B3f06B40',
       depositVault: '0x30FBc82A72CA674AA250cd6c27BCca1Fe602f1Bb',
       redemptionVaultSwapper: '0xDaC1b058cE42b67Ba33DbfDBA972d76C83C085D6',
+    },
+    dnTEST: {
+      token: '0x0DCb00ED5A6b8E5924f195E78126ee68d4eb0ca0',
+      axelar: {
+        manager: '0xf43632503CEa1718238b21c60bDF0A9300EC94Fa',
+        tokenId:
+          '0x1747144d1af233f8d1005aa7a93fd3b77abb1b8dac182dc8ebad26f4c588b0cf',
+      },
     },
   },
   etherlink: {
@@ -1091,7 +1104,12 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVaultSwapper: '0xF76e650F8a9526fe5E4B40F1B567C5C1b427EE43',
     },
     dnTEST: {
-      token: '0xAAf2161A72789cFADCD808fB414C06FB631F9294',
+      token: '0xf30c231eb3Ac003Be2D33100759d06ac6505Cb03',
+      axelar: {
+        manager: '0xf43632503CEa1718238b21c60bDF0A9300EC94Fa',
+        tokenId:
+          '0x1747144d1af233f8d1005aa7a93fd3b77abb1b8dac182dc8ebad26f4c588b0cf',
+      },
     },
   },
   sepolia: {

@@ -243,7 +243,6 @@ export const sendAndWaitForCustomTxSign = async (
   txSignMetadata?: {
     mToken?: MTokenName;
     comment?: string;
-    network?: Network;
     action?:
       | 'update-vault'
       | 'update-ac'
@@ -267,12 +266,8 @@ export const sendAndWaitForCustomTxSign = async (
   safeMiddlewareWallet?: string,
   confirmations = 2,
 ) => {
-  const provider = txSignMetadata?.network
-    ? new JsonRpcProvider(rpcUrls[txSignMetadata.network])
-    : hre.ethers.provider;
-
   if (safeMiddlewareWallet) {
-    const callerCode = await provider.getCode(safeMiddlewareWallet);
+    const callerCode = await hre.ethers.provider.getCode(safeMiddlewareWallet);
 
     const isCallerContract = callerCode !== '0x';
 
@@ -284,7 +279,7 @@ export const sendAndWaitForCustomTxSign = async (
       // we assume that the owner contract is a safe contract
       const safeContract = await hre.ethers
         .getContractAt(safeAbi, safeMiddlewareWallet)
-        .then((v) => v.connect(provider));
+        .then((v) => v.connect(hre.ethers.provider));
 
       const owners: string[] = await safeContract.getOwners();
 
@@ -326,11 +321,7 @@ export const sendAndWaitForCustomTxSign = async (
     }
   }
 
-  let hreNetwork: HardhatRuntimeEnvironment = hre;
-
-  if (txSignMetadata?.network && txSignMetadata.network !== hre.network.name) {
-    hreNetwork = await getHreByNetworkName(txSignMetadata.network);
-  }
+  const hreNetwork: HardhatRuntimeEnvironment = hre;
 
   const networkCustomSigner = await hreNetwork.getCustomSigner();
 
@@ -342,9 +333,7 @@ export const sendAndWaitForCustomTxSign = async (
     },
     {
       ...(txSignMetadata ?? {}),
-      chainId: txSignMetadata?.network
-        ? chainIds[txSignMetadata.network as Network]
-        : undefined,
+      chainId: hreNetwork.network.config.chainId,
       idempotenceId: hreNetwork.contextId,
     },
   );
@@ -371,6 +360,8 @@ export const sendAndWaitForCustomTxSign = async (
       ? JSON.stringify(resToReturn)
       : (resToReturn as string),
   );
+
+  return resToReturn;
 };
 
 export const toFunctionSelector = (signature: string) => {

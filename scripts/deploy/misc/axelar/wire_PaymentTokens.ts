@@ -140,14 +140,13 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     if (!managerDeployed) {
       if (network === hubNetwork) {
         await sendAndWaitForCustomTxSign(
-          hre,
+          networkHre,
           await itsFactoryHub['registerCanonicalInterchainToken(address)'](
             hubPTokenAddress,
           ),
           {
             action: 'axelar-wire-tokens',
             comment: `register canonical interchain token for ${pToken}`,
-            network: hubNetwork,
           },
         );
       } else {
@@ -168,7 +167,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
           {
             action: 'axelar-wire-tokens',
             comment: `deploy remote canonical interchain token for ${pToken} on axelar for ${network}`,
-            network: hubNetwork,
           },
         );
       }
