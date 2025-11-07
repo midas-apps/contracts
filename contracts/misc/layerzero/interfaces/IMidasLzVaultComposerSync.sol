@@ -6,14 +6,13 @@ import {SendParam, MessagingFee} from "@layerzerolabs/oft-evm/contracts/interfac
 
 import {IDepositVault} from "../../../interfaces/IDepositVault.sol";
 import {IRedemptionVault} from "../../../interfaces/IRedemptionVault.sol";
-import {IDataFeed} from "../../../interfaces/IDataFeed.sol";
 
 /**
- * @title IMidasVaultComposerSync
- * @notice Interface for the MidasVaultComposerSync contract
+ * @title IMidasLzVaultComposerSync
+ * @notice Interface for the MidasLzVaultComposerSync contract
  * @author RedDuck Software
  */
-interface IMidasVaultComposerSync is IOAppComposer {
+interface IMidasLzVaultComposerSync is IOAppComposer {
     /**
      * @notice event emitted when a send operation is successful
      * @param guid the guid of the send operation
@@ -104,12 +103,6 @@ interface IMidasVaultComposerSync is IOAppComposer {
     function redemptionVault() external view returns (IRedemptionVault);
 
     /**
-     * @notice getter for the mToken data feed
-     * @return the mToken data feed
-     */
-    function mTokenDataFeed() external view returns (IDataFeed);
-
-    /**
      * @notice getter for the paymentToken OFT
      * @return the paymentToken OFT
      */
@@ -148,11 +141,14 @@ interface IMidasVaultComposerSync is IOAppComposer {
     /**
      * @notice Deposits payment token from the caller into the vault and sends them to the recipient
      * @param paymentTokenAmount The number of ERC20 tokens to deposit and send
+     * @param extraOptions Extra options for the deposit operation.
+     * Expected extraOptions: abi.encode(bytes32 referrerId) or 0x
      * @param sendParam Parameters on how to send the mTokens to the recipient
      * @param refundAddress Address to receive excess `msg.value`
      */
     function depositAndSend(
         uint256 paymentTokenAmount,
+        bytes memory extraOptions,
         SendParam memory sendParam,
         address refundAddress
     ) external payable;
@@ -160,30 +156,17 @@ interface IMidasVaultComposerSync is IOAppComposer {
     /**
      * @notice Redeems vault mTokens and sends the resulting payment tokens to the user
      * @param mTokenAmount The number of vault mTokens to redeem
+     * @param extraOptions Extra options for the redeem operation.
+     * Expected extraOptions: 0x
      * @param sendParam Parameter that defines how to send the payment tokens to the recipient
      * @param refundAddress Address to receive excess payment of the LZ fees
      */
     function redeemAndSend(
         uint256 mTokenAmount,
+        bytes memory extraOptions,
         SendParam memory sendParam,
         address refundAddress
     ) external payable;
-
-    /**
-     * @notice Quotes the send operation for the given OFT and SendParam
-     * @param from The "sender address" used for the quote
-     * @param targetOft The OFT contract address to quote
-     * @param paymentTokenAmount The amount of payment tokens to send to the vault
-     * @param sendParam The parameters for the send operation
-     * @return MessagingFee The estimated fee for the send operation
-     * @dev This function can be overridden to implement custom quoting logic
-     */
-    function quoteSend(
-        address from,
-        address targetOft,
-        uint256 paymentTokenAmount,
-        SendParam memory sendParam
-    ) external view returns (MessagingFee memory);
 
     /// ========================== Receive =====================================
     receive() external payable;

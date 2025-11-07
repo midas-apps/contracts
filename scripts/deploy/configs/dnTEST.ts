@@ -17,6 +17,32 @@ export const dnTESTDeploymentConfig: DeploymentConfig = {
     dataFeed: {},
   },
   networkConfigs: {
+    [chainIds.bsc]: {
+      postDeploy: {
+        axelarIts: {
+          operator: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          flowLimit: parseUnits('1000000', 18),
+        },
+        grantRoles: {
+          tokenManagerAddress: '0x04851F31A71FcCF106302BABfAB533e599a06419',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0x30B2a6A15c8bCA072BA685A6FCAC427b8142c913',
+        },
+      },
+    },
+    [chainIds.xrplevm]: {
+      postDeploy: {
+        axelarIts: {
+          operator: '0x5aacC1A5aE6085d222ec356FBae032B5081dAde7',
+          flowLimit: parseUnits('1000000', 18),
+        },
+        grantRoles: {
+          tokenManagerAddress: '0x04851F31A71FcCF106302BABfAB533e599a06419',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0x30B2a6A15c8bCA072BA685A6FCAC427b8142c913',
+        },
+      },
+    },
     [chainIds.hyperevm]: {
       dv: {
         type: 'REGULAR',
@@ -78,6 +104,10 @@ export const dnTESTDeploymentConfig: DeploymentConfig = {
         },
         pauseFunctions: {
           depositVault: ['depositRequest', 'depositRequestWithCustomRecipient'],
+        },
+        axelarIts: {
+          operator: '0xF9e3295DBf89CF0Bf1344a3010CE96d026579BBb',
+          flowLimit: parseUnits('1000000', 18),
         },
       },
     },

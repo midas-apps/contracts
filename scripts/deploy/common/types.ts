@@ -1,3 +1,4 @@
+import { BigNumberish } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { AddFeeWaivedConfig, AddPaymentTokensConfig } from './common-vault';
@@ -66,6 +67,11 @@ export type LayerZeroConfig = {
   };
 };
 
+export type AxelarItsConfig = {
+  operator: string;
+  flowLimit?: BigNumberish;
+};
+
 export type PostDeployConfig = {
   addPaymentTokens?: AddPaymentTokensConfig;
   grantRoles?: GrantAllTokenRolesConfig;
@@ -73,6 +79,7 @@ export type PostDeployConfig = {
   addFeeWaived?: AddFeeWaivedConfig;
   pauseFunctions?: PauseFunctionsConfig;
   layerZero?: LayerZeroConfig;
+  axelarIts?: AxelarItsConfig;
 };
 
 export type DeploymentConfig = {
@@ -105,11 +112,12 @@ export type PaymentTokenDeploymentConfig = {
           customAggregator?: DeployCustomAggregatorConfig;
           postDeploy?: {
             setRoundData?: SetRoundDataConfig;
+            layerZero?: { sharedDecimals: number } & Omit<
+              LayerZeroConfig,
+              'rateLimitConfig'
+            >;
+            axelar?: Omit<AxelarItsConfig, 'operator'>;
           };
-          layerZero?: { sharedDecimals: number } & Omit<
-            LayerZeroConfig,
-            'rateLimitConfig'
-          >;
         }
       >
     >

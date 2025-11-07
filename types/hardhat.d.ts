@@ -48,6 +48,7 @@ declare module 'hardhat/types/runtime' {
           data: string;
           to: string;
           value?: BigNumberish;
+          gasLimit?: number;
         },
         txSignMetadata?: {
           comment?: string;

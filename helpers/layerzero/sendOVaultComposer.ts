@@ -226,7 +226,11 @@ export async function sendOVaultComposer(
   // Create the final composeMsg with SendParam and minMsgValue
   // This must match exactly: struct SendParam { uint32 dstEid; bytes32 to; uint256 amountLD; uint256 minAmountLD; bytes extraOptions; bytes composeMsg; bytes oftCmd; }
   const composeMsg = hubHre.ethers.utils.defaultAbiCoder.encode(
-    ['tuple(uint32,bytes32,uint256,uint256,bytes,bytes,bytes)', 'uint256'],
+    [
+      'tuple(uint32,bytes32,uint256,uint256,bytes,bytes,bytes)',
+      'uint256',
+      'bytes',
+    ],
     [
       [
         secondHopSendParam.dstEid,
@@ -238,6 +242,7 @@ export async function sendOVaultComposer(
         secondHopSendParam.oftCmd,
       ],
       lzComposeValue,
+      '0x',
     ],
   );
 

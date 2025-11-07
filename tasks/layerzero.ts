@@ -19,6 +19,7 @@ import {
   PaymentTokenName,
 } from '../config';
 import { getCurrentAddresses } from '../config/constants/addresses';
+import { lzConfigsPerMToken } from '../config/misc';
 import {
   getBlockExplorerLink,
   sendEvm,
@@ -29,7 +30,6 @@ import {
   sendOVaultComposer,
 } from '../helpers/layerzero';
 import { isMTokenName, isPaymentTokenName } from '../helpers/utils';
-import { lzConfigsPerMToken } from '../layerzero.config';
 
 interface OVaultComposerArgs {
   dstNetwork: Network; // the destination chain we're receiving asset or share on
@@ -170,7 +170,7 @@ task('lz:oapp:wire:midas', 'Runs a user-defined script')
     }
 
     await hre.run('lz:oapp:wire', {
-      oappConfig: './layerzero.config.ts',
+      oappConfig: './config/misc/layerzero.config.ts',
       signAndSendSubtask: '::lz:sign-and-send:midas',
     });
   });

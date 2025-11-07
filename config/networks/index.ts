@@ -215,6 +215,17 @@ export const blockFinality: PartialConfigPerNetwork<number> = {
   arbitrumSepolia: 1,
 };
 
+export const axelarChainNames: PartialConfigPerNetwork<string> = {
+  main: 'Ethereum',
+  arbitrum: 'arbitrum',
+  base: 'base',
+  bsc: 'binance',
+  sepolia: 'ethereum-sepolia',
+  arbitrumSepolia: 'arbitrum-sepolia',
+  xrplevm: 'xrpl-evm',
+  hyperevm: 'hyperliquid',
+};
+
 export const layerZeroEids: PartialConfigPerNetwork<EndpointId> = {
   main: EndpointId.ETHEREUM_V2_MAINNET,
   sepolia: EndpointId.SEPOLIA_V2_TESTNET,

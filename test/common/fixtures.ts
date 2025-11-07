@@ -82,7 +82,11 @@ import {
   // eslint-disable-next-line camelcase
   MidasLzOFTAdapter__factory,
   // eslint-disable-next-line camelcase
-  MidasVaultComposerSyncTester,
+  MidasLzVaultComposerSyncTester,
+  // eslint-disable-next-line camelcase
+  AxelarInterchainTokenServiceMock__factory,
+  // eslint-disable-next-line camelcase
+  MidasAxelarVaultExecutableTester,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -866,8 +870,8 @@ export const layerZeroFixture = async () => {
     .connect(owner)
     .setPeer(eidA, ethers.utils.zeroPad(pTokenLzOftAdapter.address, 32));
 
-  const composer = await deployProxyContract<MidasVaultComposerSyncTester>(
-    'MidasVaultComposerSyncTester',
+  const composer = await deployProxyContract<MidasLzVaultComposerSyncTester>(
+    'MidasLzVaultComposerSyncTester',
     undefined,
     undefined,
     [
@@ -888,6 +892,97 @@ export const layerZeroFixture = async () => {
     pTokenLzOft,
     pTokenLzOftAdapter,
     composer,
+    ...defaultFixture,
+  };
+};
+
+export const axelarFixture = async () => {
+  const defaultFixture = await defaultDeploy();
+
+  const {
+    owner,
+    accessControl,
+    mTBILL,
+    depositVault,
+    redemptionVault,
+    stableCoins,
+  } = defaultFixture;
+  const chainNameA = 'ChainA';
+  const chainNameB = 'ChainB';
+
+  const chainNameHashA = ethers.utils.solidityKeccak256(
+    ['string'],
+    [chainNameA],
+  );
+
+  const chainNameHashB = ethers.utils.solidityKeccak256(
+    ['string'],
+    [chainNameB],
+  );
+
+  const axelarItsA = await new AxelarInterchainTokenServiceMock__factory(
+    owner,
+  ).deploy();
+
+  const axelarItsB = await new AxelarInterchainTokenServiceMock__factory(
+    owner,
+  ).deploy();
+
+  await axelarItsA.setChainNameHash(chainNameHashA);
+  await axelarItsB.setChainNameHash(chainNameHashB);
+
+  const mTokenId = ethers.utils.solidityKeccak256(['string'], ['mTOKEN']);
+  const paymentTokenId = ethers.utils.solidityKeccak256(['string'], ['pTOKEN']);
+
+  await axelarItsA.registerToken(mTokenId, mTBILL.address, true);
+  await axelarItsB.registerToken(mTokenId, mTBILL.address, true);
+
+  await axelarItsA.registerToken(
+    paymentTokenId,
+    stableCoins.usdt.address,
+    false,
+  );
+  await axelarItsB.registerToken(
+    paymentTokenId,
+    stableCoins.usdt.address,
+    false,
+  );
+
+  const roles = getRolesForToken('mTBILL');
+
+  await accessControl.grantRoleMult(
+    [roles.minter, roles.burner, roles.minter, roles.burner],
+    [
+      axelarItsA.address,
+      axelarItsA.address,
+      axelarItsB.address,
+      axelarItsB.address,
+    ],
+  );
+
+  const executor = await deployProxyContract<MidasAxelarVaultExecutableTester>(
+    'MidasAxelarVaultExecutableTester',
+    undefined,
+    undefined,
+    [
+      depositVault.address,
+      redemptionVault.address,
+      paymentTokenId,
+      mTokenId,
+      axelarItsA.address,
+    ],
+  );
+
+  return {
+    axelarItsA,
+    axelarItsB,
+    executor,
+    chainNameHashA,
+    chainNameHashB,
+    mTokenId,
+    paymentTokenId,
+    chainNameA,
+    chainNameB,
     ...defaultFixture,
   };
 };

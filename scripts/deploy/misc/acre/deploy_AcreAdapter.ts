@@ -4,19 +4,19 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
   getCurrentAddresses,
   VaultType,
-} from '../../../config/constants/addresses';
+} from '../../../../config/constants/addresses';
 import {
   etherscanVerify,
   getMTokenOrThrow,
   getPaymentTokenOrThrow,
   logDeploy,
-} from '../../../helpers/utils';
+} from '../../../../helpers/utils';
 import {
   // eslint-disable-next-line camelcase
   AcreAdapter__factory,
-} from '../../../typechain-types';
-import { DeployFunction } from '../common/types';
-import { getDeployer } from '../common/utils';
+} from '../../../../typechain-types';
+import { DeployFunction } from '../../common/types';
+import { getDeployer } from '../../common/utils';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const mToken = getMTokenOrThrow(hre);

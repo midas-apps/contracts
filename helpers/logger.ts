@@ -30,6 +30,10 @@ const serializeArgs = (args: any[]): string => {
 export const initializeLogger = (hre: HardhatRuntimeEnvironment) => {
   const originalLog = console.log;
 
+  if ((originalLog as any).customLogger) {
+    return;
+  }
+
   console.log = (...args: any[]) => {
     originalLog(...args);
 
@@ -38,6 +42,8 @@ export const initializeLogger = (hre: HardhatRuntimeEnvironment) => {
       logToFile(hre, argsString);
     }
   };
+
+  (console.log as any).customLogger = true;
 
   console.warn = console.log;
   console.error = console.log;

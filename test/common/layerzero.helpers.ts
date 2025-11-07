@@ -1,6 +1,12 @@
 import { addressToBytes32, Options } from '@layerzerolabs/lz-v2-utilities';
 import { expect } from 'chai';
-import { BigNumber, BigNumberish, Contract, ContractTransaction } from 'ethers';
+import {
+  BigNumber,
+  BigNumberish,
+  constants,
+  Contract,
+  ContractTransaction,
+} from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
@@ -31,6 +37,8 @@ type CommonParams = Pick<
   | 'pTokenLzOftAdapter'
   | 'pTokenLzOft'
   | 'mTokenToUsdDataFeed'
+  | 'depositVault'
+  | 'redemptionVault'
 >;
 
 export const setRateLimitConfig = async (
@@ -177,15 +185,18 @@ export const depositAndSend = async (
     mTBILL,
     owner,
     mTokenToUsdDataFeed,
+    depositVault,
   }: CommonParams,
   {
     amount,
     recipient,
     direction,
+    referrerId,
   }: {
     amount: number;
     recipient?: string;
     direction?: 'A_TO_A' | 'A_TO_B';
+    referrerId?: string;
   },
   opt?: {
     revertOnDst?: boolean;
@@ -193,6 +204,7 @@ export const depositAndSend = async (
       contract: Contract;
       error: string;
     };
+    overrideValue?: BigNumberish;
   } & OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
@@ -202,6 +214,7 @@ export const depositAndSend = async (
   amount ??= 100;
   const decimals = await composer.paymentTokenDecimals();
 
+  referrerId ??= constants.HashZero;
   // eslint-disable-next-line camelcase
   const pToken = ERC20__factory.connect(
     await composer.paymentTokenErc20(),
@@ -256,8 +269,13 @@ export const depositAndSend = async (
           )
           .then((v) => v.nativeFee);
 
+  const extraOptions = referrerId
+    ? ethers.utils.defaultAbiCoder.encode(['bytes32'], [referrerId])
+    : '0x';
+
   const params = [
     amountParsed,
+    extraOptions,
     {
       amountLD: mintAmount.toString(),
       minAmountLD: mintAmountWoDust.toString(),
@@ -268,7 +286,7 @@ export const depositAndSend = async (
       to: addressToBytes32(recipient),
     },
     from.address,
-    { value: nativeFee, gasLimit: 1_000_000 },
+    { value: opt?.overrideValue ?? nativeFee, gasLimit: 1_000_000 },
   ] as const;
 
   if (opt?.revertMessage && !opt?.revertOnDst) {
@@ -292,12 +310,29 @@ export const depositAndSend = async (
   const balanceFromBefore = await pToken.balanceOf(from.address);
   const balanceToBefore = await mTBILL.balanceOf(recipient);
 
-  await expect(composer.connect(from).depositAndSend(...params)).to.emit(
-    composer,
-    composer.interface.events[
-      'Deposited(bytes32,bytes32,uint32,uint256,uint256)'
-    ].name,
-  ).not.reverted;
+  await expect(composer.connect(from).depositAndSend(...params))
+    .to.emit(
+      composer,
+      composer.interface.events[
+        'Deposited(bytes32,bytes32,uint32,uint256,uint256)'
+      ].name,
+    )
+    .to.emit(
+      depositVault,
+      depositVault.interface.events[
+        'DepositInstantWithCustomRecipient(address,address,address,uint256,uint256,uint256,uint256,bytes32)'
+      ].name,
+    )
+    .withArgs(
+      composer.address,
+      await composer.paymentTokenErc20(),
+      direction === 'A_TO_A' ? recipient : composer.address,
+      actualAmountInUsd,
+      amountParsed,
+      fee,
+      mintAmount,
+      referrerId,
+    );
 
   const totalSupplyAfter = await mTBILL.totalSupply();
   const balanceFromAfter = await pToken.balanceOf(from.address);
@@ -324,8 +359,8 @@ export const redeemAndSend = async (
     owner,
     mTokenToUsdDataFeed,
     pTokenLzOft,
-    oftAdapterA,
     oftAdapterB,
+    redemptionVault,
   }: CommonParams,
   {
     amount,
@@ -342,6 +377,7 @@ export const redeemAndSend = async (
       contract: Contract;
       error: string;
     };
+    overrideValue?: BigNumberish;
   } & OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
@@ -362,7 +398,7 @@ export const redeemAndSend = async (
 
   // eslint-disable-next-line camelcase
   const mTokenRate = await mTokenToUsdDataFeed.getDataInBase18();
-  const { amountOut } = await calcExpectedTokenOutAmount(
+  const { amountOut, fee } = await calcExpectedTokenOutAmount(
     from,
     pToken,
     // eslint-disable-next-line camelcase
@@ -435,6 +471,7 @@ export const redeemAndSend = async (
 
   const params = [
     amountParsed,
+    '0x',
     {
       amountLD: amountParsed.toString(),
       minAmountLD: amountParsed.toString(),
@@ -445,25 +482,25 @@ export const redeemAndSend = async (
       to: addressToBytes32(recipient),
     },
     from.address,
-    { value: nativeFee, gasLimit: 1_000_000 },
+    { value: opt?.overrideValue ?? nativeFee, gasLimit: 1_000_000 },
   ] as const;
 
   let txFn: () => Promise<ContractTransaction>;
 
   if (direction === 'B_TO_A' || direction === 'B_TO_B') {
     const msgFee = await oftAdapterB
-      .quoteSend(params[1], false)
+      .quoteSend(params[2], false)
       .then((v) => v.nativeFee);
 
     txFn = oftAdapterB
       .connect(from)
       .send.bind(
         this,
-        params[1],
+        params[2],
         { nativeFee: msgFee, lzTokenFee: 0 },
         from.address,
         {
-          value: msgFee,
+          value: opt?.overrideValue ?? msgFee,
         },
       );
   } else {
@@ -490,7 +527,34 @@ export const redeemAndSend = async (
       ? await pToken.balanceOf(recipient)
       : await pTokenLzOft.balanceOf(recipient);
 
-  await expect(txFn()).to.not.reverted;
+  await expect(txFn())
+    .to.emit(
+      composer,
+      composer.interface.events[
+        'Redeemed(bytes32,bytes32,uint32,uint256,uint256)'
+      ].name,
+    )
+    .withArgs(
+      addressToBytes32(from.address),
+      addressToBytes32(recipient),
+      direction === 'A_TO_A' ? 1 : 2,
+      amountParsed,
+      amountOut,
+    )
+    .to.emit(
+      redemptionVault,
+      redemptionVault.interface.events[
+        'RedeemInstantWithCustomRecipient(address,address,address,uint256,uint256,uint256)'
+      ].name,
+    )
+    .withArgs(
+      composer.address,
+      await composer.paymentTokenErc20(),
+      direction === 'A_TO_A' ? recipient : composer.address,
+      amountParsed,
+      fee,
+      amountOut,
+    );
 
   const totalSupplyAfter = await mTBILL.totalSupply();
   const balanceFromAfter = await mTBILL.balanceOf(from.address);

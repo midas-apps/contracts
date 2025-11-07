@@ -73,7 +73,7 @@ export const createSigner =
         }
 
         const res = await sendAndWaitForCustomTxSign(
-          hre,
+          hreNetwork,
           {
             data: transaction.data,
             to: transaction.point.address,
@@ -83,7 +83,6 @@ export const createSigner =
           },
           {
             action: 'update-lz-oapp-config',
-            network: layerZeroEidToNetwork[transaction.point.eid],
           },
           executeFrom,
         );

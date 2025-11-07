@@ -24,7 +24,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const config =
       paymentTokenDeploymentConfigs.networkConfigs[
         hre.network.config.chainId!
-      ]?.[paymentToken]?.layerZero;
+      ]?.[paymentToken]?.postDeploy?.layerZero;
 
     newOwner = config?.owner ?? config?.delegate;
   }

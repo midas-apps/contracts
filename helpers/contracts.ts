@@ -129,7 +129,7 @@ export const getCommonContractNames = (): CommonContractNames => {
     dataFeedMultiply: 'CompositeDataFeedMultiply',
     layerZero: {
       oftAdapter: 'MidasLzMintBurnOFTAdapter',
-      vaultComposer: 'MidasVaultComposerSync',
+      vaultComposer: 'MidasLzVaultComposerSync',
     },
   };
 };

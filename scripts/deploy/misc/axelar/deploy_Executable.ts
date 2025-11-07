@@ -1,6 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
+import { axelarItsAddress } from '../../../../helpers/axelar';
 import {
   getMTokenOrThrow,
   getPaymentTokenOrThrow,
@@ -19,26 +20,27 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('mToken addresses not found');
   }
 
-  if (!mTokenAddresses.layerZero?.oft) {
-    throw new Error('mToken layerzero adapter not found');
+  if (!mTokenAddresses.axelar?.tokenId) {
+    throw new Error('mToken axelar tokenId is not found');
   }
 
-  const pTokenOft = addresses?.paymentTokens?.[pToken]?.layerZero?.oft;
+  const pTokenId = addresses?.paymentTokens?.[pToken]?.axelar?.tokenId;
 
-  if (!pTokenOft) {
-    throw new Error('pToken OFT not found');
+  if (!pTokenId) {
+    throw new Error('pToken tokenId not found');
   }
 
-  await deployAndVerifyProxy(hre, 'MidasLzVaultComposerSync', [], undefined, {
-    unsafeAllow: ['state-variable-immutable'],
+  await deployAndVerifyProxy(hre, 'MidasAxelarVaultExecutable', [], undefined, {
+    unsafeAllow: ['state-variable-immutable', 'constructor'],
     constructorArgs: [
       mTokenAddresses.depositVault!,
       mTokenAddresses.redemptionVaultSwapper ??
         mTokenAddresses.redemptionVaultUstb ??
         mTokenAddresses.redemptionVault ??
         mTokenAddresses.redemptionVaultBuidl!,
-      pTokenOft,
-      mTokenAddresses.layerZero.oft,
+      pTokenId,
+      mTokenAddresses.axelar?.tokenId,
+      axelarItsAddress,
     ],
   });
 };

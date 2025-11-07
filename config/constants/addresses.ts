@@ -16,6 +16,12 @@ type LayerZeroTokenAddresses = {
   composers?: Partial<Record<PaymentTokenName, string>>;
 };
 
+type AxelarTokenAddresses = {
+  manager?: string;
+  tokenId?: string;
+  executables?: Partial<Record<PaymentTokenName, string>>;
+};
+
 export type TokenAddresses = {
   customFeed?: string;
   dataFeed?: string;
@@ -23,6 +29,7 @@ export type TokenAddresses = {
   depositVault?: string;
   depositVaultUstb?: string;
   layerZero?: LayerZeroTokenAddresses;
+  axelar?: AxelarTokenAddresses;
 } & Partial<Record<RedemptionVaultType, string>>;
 
 export type VaultType = RedemptionVaultType | DepositVaultType;
@@ -32,6 +39,10 @@ type DataFeedAddressesCommon = {
   dataFeed?: string;
   layerZero?: {
     oft?: string;
+  };
+  axelar?: {
+    mappedToken?: PaymentTokenName;
+    tokenId?: string;
   };
 };
 export type DataFeedAddressesRegular = DataFeedAddressesCommon & {
@@ -839,6 +850,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xA7A8F3414e02AEcb50E206aF31001CC4990b4D0a',
       depositVault: '0xed51fEb552d596F3014B127D21ECcE5a7D8e8b19',
       redemptionVaultSwapper: '0x35D44B87D6c786e9434DA337eb59D373e8b84941',
+      axelar: {
+        manager: '0xf43632503CEa1718238b21c60bDF0A9300EC94Fa',
+        tokenId:
+          '0x1747144d1af233f8d1005aa7a93fd3b77abb1b8dac182dc8ebad26f4c588b0cf',
+      },
     },
     obeatUSD: {
       token: '0x94bf32Bd7DE56E80778530919292BeFf503eC9e6',
@@ -849,7 +865,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       layerZero: {
         oft: '0x5D6FFd092776AC02BBBCBf8EAE8E62a75Adb3e10',
         composers: {
-          usdt: '0x718c52340eAa4a945b9F71bc349aeEB788312457',
+          usdt: '0x4BECF840937d114E9c7119d7F24621f1B8B0A7a7',
         },
       },
     },
@@ -929,6 +945,14 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xed4ff96DAF37a0A44356E81A3cc22908B3f06B40',
       depositVault: '0x30FBc82A72CA674AA250cd6c27BCca1Fe602f1Bb',
       redemptionVaultSwapper: '0xDaC1b058cE42b67Ba33DbfDBA972d76C83C085D6',
+    },
+    dnTEST: {
+      token: '0x0DCb00ED5A6b8E5924f195E78126ee68d4eb0ca0',
+      axelar: {
+        manager: '0xf43632503CEa1718238b21c60bDF0A9300EC94Fa',
+        tokenId:
+          '0x1747144d1af233f8d1005aa7a93fd3b77abb1b8dac182dc8ebad26f4c588b0cf',
+      },
     },
   },
   etherlink: {
@@ -1094,6 +1118,14 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x7AeE9020Df0ac01Bc6f3cEeF6B1B7Cbf3D0937e4',
       redemptionVaultSwapper: '0xF76e650F8a9526fe5E4B40F1B567C5C1b427EE43',
     },
+    dnTEST: {
+      token: '0xf30c231eb3Ac003Be2D33100759d06ac6505Cb03',
+      axelar: {
+        manager: '0xf43632503CEa1718238b21c60bDF0A9300EC94Fa',
+        tokenId:
+          '0x1747144d1af233f8d1005aa7a93fd3b77abb1b8dac182dc8ebad26f4c588b0cf',
+      },
+    },
   },
   scroll: {
     accessControl: '0x63A9c8716E0bb3817aD542529397e48B5Fa28c27',
@@ -1136,6 +1168,10 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         dataFeed: '0x0e0eb6cdad90174f1Db606EC186ddD0B5eD80847',
         aggregator: '0x7811C1Bf5db28630F303267Cc613797EB9A81188',
         token: '0xEa22F8C1624c17C1B58727235292684831A08d56',
+        axelar: {
+          tokenId:
+            '0x4c21465f8c20206fdf584fc58aca2b79b305aeed78a3bb250388a0058ef5ca6d',
+        },
         layerZero: {
           oft: '0x0bc1e4144696AF487cEdbBF1C26216D7940764E8',
         },
@@ -1167,6 +1203,14 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         oft: '0x0Ca81704F5df52E06205fe427653e661a4b6043c',
         composers: {
           usdt: '0xff0F08c35786717A266d55DF32Db478e9545E4a5',
+        },
+      },
+      axelar: {
+        manager: '0xa5ff89Dd34ef8B2875a54858af486931fAAB7eAA',
+        tokenId:
+          '0x46929f12e9fc2e41757d789d461b77f9dcfbf328d3797a4446f8335fbe27d985',
+        executables: {
+          usdt: '0x75726da161ef6aE712e941E00705879715b260f6',
         },
       },
     },
@@ -1293,8 +1337,18 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         token: '0xFecc6FDFF76fB2A2De42B787dC3D02B634a8b6D9',
         aggregator: '0xe786DA4812Fb91e8d69bC8047c5dB489c70cEa30',
         dataFeed: '0x39592BdBf6f3b96dD4547063945aB9ece769AE4D',
+        axelar: {
+          mappedToken: 'axlusdt',
+        },
         layerZero: {
           oft: '0xFecc6FDFF76fB2A2De42B787dC3D02B634a8b6D9',
+        },
+      },
+      axlusdt: {
+        token: '0xb15deC5e287775ACeBa6F088aDd66198384A1a55',
+        axelar: {
+          tokenId:
+            '0x4c21465f8c20206fdf584fc58aca2b79b305aeed78a3bb250388a0058ef5ca6d',
         },
       },
     },
@@ -1303,6 +1357,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
       layerZero: {
         oft: '0xBc672b2dB097C6a926AF63554E4EbcaA4dC94FF0',
+      },
+      axelar: {
+        manager: '0xa5ff89Dd34ef8B2875a54858af486931fAAB7eAA',
+        tokenId:
+          '0x46929f12e9fc2e41757d789d461b77f9dcfbf328d3797a4446f8335fbe27d985',
       },
     },
   },

@@ -15,9 +15,9 @@ import {
   Network,
   PartialConfigPerNetwork,
   PaymentTokenName,
-} from './config';
-import { midasAddressesPerNetwork } from './config/constants/addresses';
-import { getMTokenOrPaymentTokenOrThrow } from './helpers/utils';
+} from '..';
+import { getMTokenOrPaymentTokenOrThrow } from '../../helpers/utils';
+import { midasAddressesPerNetwork } from '../constants/addresses';
 
 type ConfigPerNetwork<TKey extends string> = Partial<
   Record<
