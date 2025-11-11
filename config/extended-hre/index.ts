@@ -59,10 +59,6 @@ const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
   const isTestnet = isTestnetNetwork(hre.network.name as Network);
 
   if (!customSignerScript || isTestnet) {
-    if (isTestnet) {
-      console.warn('Testnet network detected, falling back to hardhat signer');
-    }
-
     hre.getCustomSigner = async () => {
       const { deployer } = await hre.getNamedAccounts();
       const deployerSigner = await hre.ethers.getSigner(deployer);
