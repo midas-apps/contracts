@@ -6,7 +6,6 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
   deployAndVerify,
   getDeployer,
-  getWalletAddressForAction,
   sendAndWaitForCustomTxSign,
 } from './utils';
 

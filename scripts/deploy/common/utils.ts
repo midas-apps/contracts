@@ -1,12 +1,11 @@
-import { JsonRpcProvider } from '@ethersproject/providers';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { DeployProxyOptions } from '@openzeppelin/hardhat-upgrades/dist/utils';
 import { ethers, constants, PopulatedTransaction, Signer } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { DeploymentConfig } from './types';
 
-import { chainIds, MTokenName, Network, rpcUrls } from '../../../config';
-import { getHreByNetworkName } from '../../../helpers/hardhat';
+import { MTokenName } from '../../../config';
 import {
   etherscanVerify,
   logDeploy,
@@ -118,8 +117,20 @@ export const executeFuncAsync = async <T>(
 };
 
 export const getDeployer = async (hre: HardhatRuntimeEnvironment) => {
-  const { deployer } = await hre.getNamedAccounts();
-  return await hre.ethers.getSigner(deployer);
+  const customSigner = await hre.getCustomSigner();
+
+  if (customSigner.type === 'customSigner') {
+    const customProvider = await customSigner.getWeb3Provider({
+      action: 'deployer',
+    });
+
+    const provider = new hre.ethers.providers.Web3Provider(customProvider);
+    const signer = provider.getSigner();
+    return await SignerWithAddress.create(signer);
+  } else {
+    const { deployer } = await hre.getNamedAccounts();
+    return await hre.ethers.getSigner(deployer);
+  }
 };
 
 export const deployProxy = async (
@@ -232,9 +243,10 @@ export const getWalletAddressForAction = async (
   hre: HardhatRuntimeEnvironment,
   action: string,
   mtoken?: MTokenName,
+  chainId?: number,
 ) => {
   const customSigner = await hre.getCustomSigner();
-  return await customSigner.getWalletAddress(action, mtoken);
+  return await customSigner.getWalletAddress(action, mtoken, chainId);
 };
 
 export const sendAndWaitForCustomTxSign = async (
@@ -342,10 +354,10 @@ export const sendAndWaitForCustomTxSign = async (
 
   let resToReturn: unknown;
 
-  if (res.type === 'customSigner') {
+  if ('payload' in res) {
     console.log('Custom tx sign result detected, skipping...');
     resToReturn = res.payload;
-  } else if (res.type === 'hardhatSigner') {
+  } else if ('tx' in res) {
     logDeploy('Tx Submitted', hreNetwork.network.name, res.tx.hash);
     await res.tx.wait(confirmations);
     resToReturn = res.tx.hash;
@@ -354,7 +366,7 @@ export const sendAndWaitForCustomTxSign = async (
   }
 
   logDeploy(
-    'Tx' + res.type === 'customSigner' ? '' : ' Submitted',
+    'Tx' + networkCustomSigner.type === 'customSigner' ? '' : ' Submitted',
     hreNetwork.network.name,
     typeof resToReturn === 'object'
       ? JSON.stringify(resToReturn)
