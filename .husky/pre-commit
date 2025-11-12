@@ -1,5 +1,4 @@
 #!/usr/bin/env sh
-# yarn format:fix
-# yarn lint:fix
-# git add .
-yarn precommit
+. "$(dirname -- "$0")/_/husky.sh"
+
+yarn lint-staged
