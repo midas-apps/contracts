@@ -618,8 +618,9 @@ describe('DepositVaultWithUSTB', function () {
     });
 
     it('should fail: when token dataFeed address zero', async () => {
-      const { depositVaultWithUSTB, stableCoins, owner } =
-        await loadFixture(defaultDeploy);
+      const { depositVaultWithUSTB, stableCoins, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await addPaymentTokenTest(
         { vault: depositVaultWithUSTB, owner },
         stableCoins.dai,
@@ -827,8 +828,9 @@ describe('DepositVaultWithUSTB', function () {
     });
 
     it('should fail: when token is not exists', async () => {
-      const { owner, depositVaultWithUSTB, stableCoins } =
-        await loadFixture(defaultDeploy);
+      const { owner, depositVaultWithUSTB, stableCoins } = await loadFixture(
+        defaultDeploy,
+      );
       await removePaymentTokenTest(
         { vault: depositVaultWithUSTB, owner },
         stableCoins.dai.address,
@@ -939,8 +941,9 @@ describe('DepositVaultWithUSTB', function () {
 
   describe('freeFromMinAmount()', async () => {
     it('should fail: call from address without vault admin role', async () => {
-      const { depositVaultWithUSTB, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { depositVaultWithUSTB, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
       await expect(
         depositVaultWithUSTB
           .connect(regularAccounts[0])
@@ -948,8 +951,9 @@ describe('DepositVaultWithUSTB', function () {
       ).to.be.revertedWith('WMAC: hasnt role');
     });
     it('should not fail', async () => {
-      const { depositVaultWithUSTB, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { depositVaultWithUSTB, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
       await expect(
         depositVaultWithUSTB.freeFromMinAmount(
           regularAccounts[0].address,
@@ -964,8 +968,9 @@ describe('DepositVaultWithUSTB', function () {
       ).to.eq(true);
     });
     it('should fail: already in list', async () => {
-      const { depositVaultWithUSTB, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { depositVaultWithUSTB, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
       await expect(
         depositVaultWithUSTB.freeFromMinAmount(
           regularAccounts[0].address,
@@ -1000,8 +1005,9 @@ describe('DepositVaultWithUSTB', function () {
       );
     });
     it('should fail: token not exist', async () => {
-      const { depositVaultWithUSTB, owner, stableCoins } =
-        await loadFixture(defaultDeploy);
+      const { depositVaultWithUSTB, owner, stableCoins } = await loadFixture(
+        defaultDeploy,
+      );
       await changeTokenAllowanceTest(
         { vault: depositVaultWithUSTB, owner },
         stableCoins.dai.address,
@@ -1200,8 +1206,9 @@ describe('DepositVaultWithUSTB', function () {
       );
     });
     it('should fail: token not exist', async () => {
-      const { depositVaultWithUSTB, owner, stableCoins } =
-        await loadFixture(defaultDeploy);
+      const { depositVaultWithUSTB, owner, stableCoins } = await loadFixture(
+        defaultDeploy,
+      );
       await changeTokenFeeTest(
         { vault: depositVaultWithUSTB, owner },
         stableCoins.dai.address,
@@ -6051,8 +6058,9 @@ describe('DepositVaultWithUSTB', function () {
 
   describe('ManageableVault internal functions', () => {
     it('should fail: invalid rounding tokenTransferFromToTester()', async () => {
-      const { depositVaultWithUSTB, stableCoins, owner } =
-        await loadFixture(defaultDeploy);
+      const { depositVaultWithUSTB, stableCoins, owner } = await loadFixture(
+        defaultDeploy,
+      );
 
       await mintToken(stableCoins.usdc, owner, 1000);
 
@@ -6070,8 +6078,9 @@ describe('DepositVaultWithUSTB', function () {
     });
 
     it('should fail: invalid rounding tokenTransferToUserTester()', async () => {
-      const { depositVaultWithUSTB, stableCoins, owner } =
-        await loadFixture(defaultDeploy);
+      const { depositVaultWithUSTB, stableCoins, owner } = await loadFixture(
+        defaultDeploy,
+      );
 
       await mintToken(stableCoins.usdc, depositVaultWithUSTB, 1000);
 

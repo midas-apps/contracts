@@ -32,8 +32,9 @@ describe('Pausable', () => {
 
   describe('onlyPauseAdmin modifier', async () => {
     it('should fail: can`t pause if doesn`t have role', async () => {
-      const { pausableTester, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { pausableTester, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
 
       await pauseVault(pausableTester, {
         from: regularAccounts[0],
@@ -50,8 +51,9 @@ describe('Pausable', () => {
 
   describe('pause()', async () => {
     it('fail: can`t pause if caller doesnt have admin role', async () => {
-      const { pausableTester, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { pausableTester, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
 
       await pauseVault(pausableTester, {
         from: regularAccounts[0],
@@ -77,8 +79,9 @@ describe('Pausable', () => {
 
   describe('pauseFn()', async () => {
     it('fail: can`t pause if caller doesnt have admin role', async () => {
-      const { pausableTester, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { pausableTester, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
 
       const selector = encodeFnSelector(
         'depositRequest(address,uint256,bytes32)',
@@ -116,8 +119,9 @@ describe('Pausable', () => {
 
   describe('unpauseFn()', async () => {
     it('fail: can`t pause if caller doesnt have admin role', async () => {
-      const { pausableTester, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { pausableTester, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
 
       const selector = encodeFnSelector(
         'depositRequest(address,uint256,bytes32)',
@@ -155,8 +159,9 @@ describe('Pausable', () => {
 
   describe('unpause()', async () => {
     it('fail: can`t unpause if caller doesnt have admin role', async () => {
-      const { pausableTester, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { pausableTester, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
 
       await unpauseVault(pausableTester, {
         from: regularAccounts[0],

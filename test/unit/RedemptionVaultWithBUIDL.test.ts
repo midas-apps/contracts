@@ -430,8 +430,9 @@ describe('RedemptionVaultWithBUIDL', function () {
     });
 
     it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, redemptionVaultWithBUIDL } =
-        await loadFixture(defaultDeploy);
+      const { owner, redemptionVaultWithBUIDL } = await loadFixture(
+        defaultDeploy,
+      );
       await setMinBuidlToRedeem(
         { vault: redemptionVaultWithBUIDL, owner },
         parseUnits('100000', 6),
@@ -451,8 +452,9 @@ describe('RedemptionVaultWithBUIDL', function () {
     });
 
     it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, redemptionVaultWithBUIDL } =
-        await loadFixture(defaultDeploy);
+      const { owner, redemptionVaultWithBUIDL } = await loadFixture(
+        defaultDeploy,
+      );
       await setMinAmountTest({ vault: redemptionVaultWithBUIDL, owner }, 1.1);
     });
   });
@@ -473,8 +475,9 @@ describe('RedemptionVaultWithBUIDL', function () {
     });
 
     it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, redemptionVaultWithBUIDL } =
-        await loadFixture(defaultDeploy);
+      const { owner, redemptionVaultWithBUIDL } = await loadFixture(
+        defaultDeploy,
+      );
       await setMinFiatRedeemAmountTest(
         { redemptionVault: redemptionVaultWithBUIDL, owner },
         1.1,
@@ -498,8 +501,9 @@ describe('RedemptionVaultWithBUIDL', function () {
     });
 
     it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, redemptionVaultWithBUIDL } =
-        await loadFixture(defaultDeploy);
+      const { owner, redemptionVaultWithBUIDL } = await loadFixture(
+        defaultDeploy,
+      );
       await setFiatAdditionalFeeTest(
         { redemptionVault: redemptionVaultWithBUIDL, owner },
         100,
@@ -523,8 +527,9 @@ describe('RedemptionVaultWithBUIDL', function () {
     });
 
     it('should fail: try to set 0 limit', async () => {
-      const { owner, redemptionVaultWithBUIDL } =
-        await loadFixture(defaultDeploy);
+      const { owner, redemptionVaultWithBUIDL } = await loadFixture(
+        defaultDeploy,
+      );
 
       await setInstantDailyLimitTest(
         { vault: redemptionVaultWithBUIDL, owner },
@@ -536,8 +541,9 @@ describe('RedemptionVaultWithBUIDL', function () {
     });
 
     it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, redemptionVaultWithBUIDL } =
-        await loadFixture(defaultDeploy);
+      const { owner, redemptionVaultWithBUIDL } = await loadFixture(
+        defaultDeploy,
+      );
       await setInstantDailyLimitTest(
         { vault: redemptionVaultWithBUIDL, owner },
         parseUnits('1000'),
@@ -676,8 +682,9 @@ describe('RedemptionVaultWithBUIDL', function () {
       );
     });
     it('should fail: if account fee already waived', async () => {
-      const { redemptionVaultWithBUIDL, owner } =
-        await loadFixture(defaultDeploy);
+      const { redemptionVaultWithBUIDL, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await addWaivedFeeAccountTest(
         { vault: redemptionVaultWithBUIDL, owner },
         owner.address,
@@ -690,8 +697,9 @@ describe('RedemptionVaultWithBUIDL', function () {
     });
 
     it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { redemptionVaultWithBUIDL, owner } =
-        await loadFixture(defaultDeploy);
+      const { redemptionVaultWithBUIDL, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await addWaivedFeeAccountTest(
         { vault: redemptionVaultWithBUIDL, owner },
         owner.address,
@@ -710,8 +718,9 @@ describe('RedemptionVaultWithBUIDL', function () {
       );
     });
     it('should fail: if account not found in restriction', async () => {
-      const { redemptionVaultWithBUIDL, owner } =
-        await loadFixture(defaultDeploy);
+      const { redemptionVaultWithBUIDL, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await removeWaivedFeeAccountTest(
         { vault: redemptionVaultWithBUIDL, owner },
         owner.address,
@@ -720,8 +729,9 @@ describe('RedemptionVaultWithBUIDL', function () {
     });
 
     it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { redemptionVaultWithBUIDL, owner } =
-        await loadFixture(defaultDeploy);
+      const { redemptionVaultWithBUIDL, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await addWaivedFeeAccountTest(
         { vault: redemptionVaultWithBUIDL, owner },
         owner.address,
@@ -745,8 +755,9 @@ describe('RedemptionVaultWithBUIDL', function () {
     });
 
     it('should fail: if new value greater then 100%', async () => {
-      const { redemptionVaultWithBUIDL, owner } =
-        await loadFixture(defaultDeploy);
+      const { redemptionVaultWithBUIDL, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await setInstantFeeTest(
         { vault: redemptionVaultWithBUIDL, owner },
         10001,
@@ -757,8 +768,9 @@ describe('RedemptionVaultWithBUIDL', function () {
     });
 
     it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { redemptionVaultWithBUIDL, owner } =
-        await loadFixture(defaultDeploy);
+      const { redemptionVaultWithBUIDL, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await setInstantFeeTest({ vault: redemptionVaultWithBUIDL, owner }, 100);
     });
   });
@@ -774,8 +786,9 @@ describe('RedemptionVaultWithBUIDL', function () {
       );
     });
     it('should fail: if new value zero', async () => {
-      const { redemptionVaultWithBUIDL, owner } =
-        await loadFixture(defaultDeploy);
+      const { redemptionVaultWithBUIDL, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await setVariabilityToleranceTest(
         { vault: redemptionVaultWithBUIDL, owner },
         ethers.constants.Zero,
@@ -784,8 +797,9 @@ describe('RedemptionVaultWithBUIDL', function () {
     });
 
     it('should fail: if new value greater then 100%', async () => {
-      const { redemptionVaultWithBUIDL, owner } =
-        await loadFixture(defaultDeploy);
+      const { redemptionVaultWithBUIDL, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await setVariabilityToleranceTest(
         { vault: redemptionVaultWithBUIDL, owner },
         10001,
@@ -794,8 +808,9 @@ describe('RedemptionVaultWithBUIDL', function () {
     });
 
     it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { redemptionVaultWithBUIDL, owner } =
-        await loadFixture(defaultDeploy);
+      const { redemptionVaultWithBUIDL, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await setVariabilityToleranceTest(
         { vault: redemptionVaultWithBUIDL, owner },
         100,
@@ -927,8 +942,9 @@ describe('RedemptionVaultWithBUIDL', function () {
 
   describe('freeFromMinAmount()', async () => {
     it('should fail: call from address without vault admin role', async () => {
-      const { redemptionVaultWithBUIDL, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { redemptionVaultWithBUIDL, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
       await expect(
         redemptionVaultWithBUIDL
           .connect(regularAccounts[0])
@@ -936,8 +952,9 @@ describe('RedemptionVaultWithBUIDL', function () {
       ).to.be.revertedWith('WMAC: hasnt role');
     });
     it('should not fail', async () => {
-      const { redemptionVaultWithBUIDL, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { redemptionVaultWithBUIDL, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
       await expect(
         redemptionVaultWithBUIDL.freeFromMinAmount(
           regularAccounts[0].address,
@@ -952,8 +969,9 @@ describe('RedemptionVaultWithBUIDL', function () {
       ).to.eq(true);
     });
     it('should fail: already in list', async () => {
-      const { redemptionVaultWithBUIDL, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { redemptionVaultWithBUIDL, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
       await expect(
         redemptionVaultWithBUIDL.freeFromMinAmount(
           regularAccounts[0].address,

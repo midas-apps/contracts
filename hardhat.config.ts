@@ -90,11 +90,9 @@ const config: HardhatUserConfig = {
     rootstock: getNetworkConfig('rootstock'),
     arbitrum: getNetworkConfig('arbitrum'),
     tacTestnet: getNetworkConfig('tacTestnet'),
-
     hardhat: FORKING_NETWORK
       ? getForkNetworkConfig(FORKING_NETWORK)
       : getHardhatNetworkConfig(),
-
     localhost: FORKING_NETWORK
       ? getForkNetworkConfig(FORKING_NETWORK)
       : getNetworkConfig('localhost', [], FORKING_NETWORK),

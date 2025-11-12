@@ -702,8 +702,9 @@ export const layerZeroFixture = async () => {
   const eidA = 1;
   const eidB = 2;
 
-  const endpointV2MockArtifact =
-    await hre.deployments.getArtifact('EndpointV2Mock');
+  const endpointV2MockArtifact = await hre.deployments.getArtifact(
+    'EndpointV2Mock',
+  );
 
   const endpointV2MockFactory = new ContractFactory(
     endpointV2MockArtifact.abi,

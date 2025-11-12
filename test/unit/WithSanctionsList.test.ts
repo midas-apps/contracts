@@ -12,8 +12,9 @@ import {
 
 describe('WithSanctionsList', function () {
   it('deployment', async () => {
-    const { accessControl, withSanctionsListTester } =
-      await loadFixture(defaultDeploy);
+    const { accessControl, withSanctionsListTester } = await loadFixture(
+      defaultDeploy,
+    );
 
     expect(await withSanctionsListTester.accessControl()).eq(
       accessControl.address,
@@ -59,8 +60,9 @@ describe('WithSanctionsList', function () {
     });
 
     it('call from not sanctioned user', async () => {
-      const { withSanctionsListTester, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { withSanctionsListTester, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
 
       await expect(
         withSanctionsListTester.onlyNotSanctionedTester(

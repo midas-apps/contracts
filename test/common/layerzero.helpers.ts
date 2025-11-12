@@ -420,10 +420,9 @@ export const redeemAndSend = async (
   const nativeFee =
     direction === 'A_TO_A'
       ? BigNumber.from(0)
-      : await (
-          direction === 'B_TO_A' || direction === 'B_TO_B'
-            ? pTokenLzOft
-            : pTokenLzOftAdapter
+      : await (direction === 'B_TO_A' || direction === 'B_TO_B'
+          ? pTokenLzOft
+          : pTokenLzOftAdapter
         )
           .quoteSend(
             // if the destination is the hub, we need to quote the send param for the source chain

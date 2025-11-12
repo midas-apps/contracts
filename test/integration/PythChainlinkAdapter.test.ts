@@ -109,8 +109,9 @@ describe.skip('PythChainlinkAdapter - HyperEVM Fork Integration Tests', function
 
   describe('Configuration Verification', function () {
     it('should be configured with correct Pyth contract and price feed', async function () {
-      const { usdhlAdapter, pythContract, usdhlUsdPriceId } =
-        await loadFixture(hyperEvmPythFixture);
+      const { usdhlAdapter, pythContract, usdhlUsdPriceId } = await loadFixture(
+        hyperEvmPythFixture,
+      );
 
       // Verify the adapter was configured with correct addresses
       expect(await usdhlAdapter.pyth()).to.equal(pythContract);
@@ -208,8 +209,9 @@ describe.skip('PythChainlinkAdapter - HyperEVM Fork Integration Tests', function
         'IPyth',
         pythContract,
       );
-      const rawPythPrice =
-        await pythContractInstance.getPriceUnsafe(usdhlUsdPriceId);
+      const rawPythPrice = await pythContractInstance.getPriceUnsafe(
+        usdhlUsdPriceId,
+      );
 
       // Step 2: Adapter processed data (8 decimals)
       const adapterPrice = await usdhlAdapter.latestAnswer();

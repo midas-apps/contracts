@@ -85,14 +85,21 @@ export const redeemInstantTest = async (
   const callFn = withRecipient
     ? redemptionVault
         .connect(sender)
-        [
-          'redeemInstant(address,uint256,uint256,address)'
-        ].bind(this, tokenOut, amountIn, minAmount ?? constants.Zero, recipient)
+        ['redeemInstant(address,uint256,uint256,address)'].bind(
+          this,
+          tokenOut,
+          amountIn,
+          minAmount ?? constants.Zero,
+          recipient,
+        )
     : redemptionVault
         .connect(sender)
-        [
-          'redeemInstant(address,uint256,uint256)'
-        ].bind(this, tokenOut, amountIn, minAmount ?? constants.Zero);
+        ['redeemInstant(address,uint256,uint256)'].bind(
+          this,
+          tokenOut,
+          amountIn,
+          minAmount ?? constants.Zero,
+        );
 
   if (opt?.revertMessage) {
     await expect(callFn()).revertedWith(opt?.revertMessage);
@@ -103,8 +110,9 @@ export const redeemInstantTest = async (
   const balanceBeforeReceiver = await mTBILL.balanceOf(tokensReceiver);
   const balanceBeforeFeeReceiver = await mTBILL.balanceOf(feeReceiver);
 
-  const balanceBeforeTokenOutRecipient =
-    await tokenContract.balanceOf(recipient);
+  const balanceBeforeTokenOutRecipient = await tokenContract.balanceOf(
+    recipient,
+  );
   const balanceBeforeTokenOut = await tokenContract.balanceOf(sender.address);
 
   const supplyBefore = await mTBILL.totalSupply();
@@ -145,8 +153,9 @@ export const redeemInstantTest = async (
   const balanceAfterReceiver = await mTBILL.balanceOf(tokensReceiver);
   const balanceAfterFeeReceiver = await mTBILL.balanceOf(feeReceiver);
 
-  const balanceAfterTokenOutRecipient =
-    await tokenContract.balanceOf(recipient);
+  const balanceAfterTokenOutRecipient = await tokenContract.balanceOf(
+    recipient,
+  );
   const balanceAfterTokenOut = await tokenContract.balanceOf(sender.address);
 
   const supplyAfter = await mTBILL.totalSupply();
@@ -210,9 +219,12 @@ export const redeemRequestTest = async (
   const callFn = withRecipient
     ? redemptionVault
         .connect(sender)
-        [
-          'redeemRequest(address,uint256,address)'
-        ].bind(this, tokenOut, amountIn, recipient)
+        ['redeemRequest(address,uint256,address)'].bind(
+          this,
+          tokenOut,
+          amountIn,
+          recipient,
+        )
     : redemptionVault
         .connect(sender)
         ['redeemRequest(address,uint256)'].bind(this, tokenOut, amountIn);
@@ -596,16 +608,18 @@ export const safeBulkApproveRequestTest = async (
     newRate && newRate !== 'request-rate'
       ? redemptionVault
           .connect(sender)
-          [
-            'safeBulkApproveRequest(uint256[],uint256)'
-          ].bind(this, requestIds, newRate)
+          ['safeBulkApproveRequest(uint256[],uint256)'].bind(
+            this,
+            requestIds,
+            newRate,
+          )
       : newRate === 'request-rate'
-        ? redemptionVault
-            .connect(sender)
-            .safeBulkApproveRequestAtSavedRate.bind(this, requestIds)
-        : redemptionVault
-            .connect(sender)
-            ['safeBulkApproveRequest(uint256[])'].bind(this, requestIds);
+      ? redemptionVault
+          .connect(sender)
+          .safeBulkApproveRequestAtSavedRate.bind(this, requestIds)
+      : redemptionVault
+          .connect(sender)
+          ['safeBulkApproveRequest(uint256[])'].bind(this, requestIds);
 
   if (opt?.revertMessage) {
     await expect(callFn()).revertedWith(opt?.revertMessage);
@@ -643,7 +657,7 @@ export const safeBulkApproveRequestTest = async (
 
   const currentRate = await mTokenToUsdDataFeed.getDataInBase18();
   const newExpectedRate =
-    newRate === 'request-rate' ? undefined : (newRate ?? currentRate);
+    newRate === 'request-rate' ? undefined : newRate ?? currentRate;
 
   const expectedReceivedAmounts = requestDatasBefore.map((requestData, i) =>
     requestData.amountMToken

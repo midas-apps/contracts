@@ -103,7 +103,9 @@ export async function hyperEvmUpgradeFixture() {
 
   const xaut0DataFeed = await ethers.getContractAt(
     'DataFeed',
-    (await depositVault.tokensConfig(xaut0.address)).dataFeed,
+    (
+      await depositVault.tokensConfig(xaut0.address)
+    ).dataFeed,
   );
 
   await xaut0

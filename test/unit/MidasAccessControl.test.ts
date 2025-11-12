@@ -62,8 +62,9 @@ describe('MidasAccessControl', function () {
     });
 
     it('should fail: arrays length mismatch', async () => {
-      const { accessControl, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { accessControl, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
 
       const arr = [
         {
@@ -101,8 +102,9 @@ describe('MidasAccessControl', function () {
     });
 
     it('should fail: arrays length mismatch', async () => {
-      const { accessControl, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { accessControl, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
 
       const arr = [
         {
@@ -139,8 +141,9 @@ describe('MidasAccessControl', function () {
 
 describe('WithMidasAccessControl', function () {
   it('deployment', async () => {
-    const { accessControl, wAccessControlTester } =
-      await loadFixture(defaultDeploy);
+    const { accessControl, wAccessControlTester } = await loadFixture(
+      defaultDeploy,
+    );
     expect(await wAccessControlTester.accessControl()).eq(
       accessControl.address,
     );
@@ -168,8 +171,9 @@ describe('WithMidasAccessControl', function () {
     });
 
     it('call from DEFAULT_ADMIN_ROLE address', async () => {
-      const { wAccessControlTester, owner, roles } =
-        await loadFixture(defaultDeploy);
+      const { wAccessControlTester, owner, roles } = await loadFixture(
+        defaultDeploy,
+      );
       await expect(
         wAccessControlTester.withOnlyRole(
           roles.common.blacklistedOperator,
@@ -181,8 +185,9 @@ describe('WithMidasAccessControl', function () {
 
   describe('modifier onlyNotRole', () => {
     it('should fail when call from DEFAULT_ADMIN_ROLE address', async () => {
-      const { wAccessControlTester, owner, roles } =
-        await loadFixture(defaultDeploy);
+      const { wAccessControlTester, owner, roles } = await loadFixture(
+        defaultDeploy,
+      );
       await expect(
         wAccessControlTester.withOnlyNotRole(
           roles.common.blacklistedOperator,

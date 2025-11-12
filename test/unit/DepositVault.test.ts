@@ -527,8 +527,9 @@ describe('DepositVault', function () {
 
   describe('setMinMTokenAmountForFirstDeposit()', () => {
     it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, depositVault, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { owner, depositVault, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
 
       await setMinAmountToDepositTest({ depositVault, owner }, 1.1, {
         from: regularAccounts[0],
@@ -544,8 +545,9 @@ describe('DepositVault', function () {
 
   describe('setMaxSupplyCap()', () => {
     it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, depositVault, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { owner, depositVault, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
 
       await setMaxSupplyCapTest({ depositVault, owner }, 1.1, {
         from: regularAccounts[0],
@@ -561,8 +563,9 @@ describe('DepositVault', function () {
 
   describe('setMinAmount()', () => {
     it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, depositVault, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { owner, depositVault, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
 
       await setMinAmountTest({ vault: depositVault, owner }, 1.1, {
         from: regularAccounts[0],
@@ -578,8 +581,9 @@ describe('DepositVault', function () {
 
   describe('setInstantDailyLimit()', () => {
     it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, depositVault, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { owner, depositVault, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
 
       await setInstantDailyLimitTest(
         { vault: depositVault, owner },
@@ -614,8 +618,9 @@ describe('DepositVault', function () {
 
   describe('addPaymentToken()', () => {
     it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { depositVault, regularAccounts, owner } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, regularAccounts, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await addPaymentTokenTest(
         { vault: depositVault, owner },
         ethers.constants.AddressZero,
@@ -628,8 +633,9 @@ describe('DepositVault', function () {
     });
 
     it('should fail: when token is already added', async () => {
-      const { depositVault, stableCoins, owner, dataFeed } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, stableCoins, owner, dataFeed } = await loadFixture(
+        defaultDeploy,
+      );
       await addPaymentTokenTest(
         { vault: depositVault, owner },
         stableCoins.dai,
@@ -651,8 +657,9 @@ describe('DepositVault', function () {
     });
 
     it('should fail: when token dataFeed address zero', async () => {
-      const { depositVault, stableCoins, owner } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, stableCoins, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await addPaymentTokenTest(
         { vault: depositVault, owner },
         stableCoins.dai,
@@ -667,8 +674,9 @@ describe('DepositVault', function () {
     });
 
     it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { depositVault, stableCoins, owner, dataFeed } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, stableCoins, owner, dataFeed } = await loadFixture(
+        defaultDeploy,
+      );
       await addPaymentTokenTest(
         { vault: depositVault, owner },
         stableCoins.dai,
@@ -679,8 +687,9 @@ describe('DepositVault', function () {
     });
 
     it('call when allowance is zero', async () => {
-      const { depositVault, stableCoins, owner, dataFeed } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, stableCoins, owner, dataFeed } = await loadFixture(
+        defaultDeploy,
+      );
       await addPaymentTokenTest(
         { vault: depositVault, owner },
         stableCoins.dai,
@@ -692,8 +701,9 @@ describe('DepositVault', function () {
     });
 
     it('call when allowance is not uint256 max', async () => {
-      const { depositVault, stableCoins, owner, dataFeed } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, stableCoins, owner, dataFeed } = await loadFixture(
+        defaultDeploy,
+      );
       await addPaymentTokenTest(
         { vault: depositVault, owner },
         stableCoins.dai,
@@ -705,8 +715,9 @@ describe('DepositVault', function () {
     });
 
     it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role and add 3 options on a row', async () => {
-      const { depositVault, stableCoins, owner, dataFeed } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, stableCoins, owner, dataFeed } = await loadFixture(
+        defaultDeploy,
+      );
 
       await addPaymentTokenTest(
         { vault: depositVault, owner },
@@ -734,8 +745,9 @@ describe('DepositVault', function () {
 
   describe('addWaivedFeeAccount()', () => {
     it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { depositVault, regularAccounts, owner } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, regularAccounts, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await addWaivedFeeAccountTest(
         { vault: depositVault, owner },
         ethers.constants.AddressZero,
@@ -766,8 +778,9 @@ describe('DepositVault', function () {
 
   describe('removeWaivedFeeAccount()', () => {
     it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { depositVault, regularAccounts, owner } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, regularAccounts, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await removeWaivedFeeAccountTest(
         { vault: depositVault, owner },
         ethers.constants.AddressZero,
@@ -798,8 +811,9 @@ describe('DepositVault', function () {
 
   describe('setFee()', () => {
     it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { depositVault, regularAccounts, owner } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, regularAccounts, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await setInstantFeeTest(
         { vault: depositVault, owner },
         ethers.constants.Zero,
@@ -822,8 +836,9 @@ describe('DepositVault', function () {
 
   describe('setVariabilityTolerance()', () => {
     it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { depositVault, regularAccounts, owner } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, regularAccounts, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await setVariabilityToleranceTest(
         { vault: depositVault, owner },
         ethers.constants.Zero,
@@ -847,8 +862,9 @@ describe('DepositVault', function () {
 
   describe('removePaymentToken()', () => {
     it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { depositVault, regularAccounts, owner } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, regularAccounts, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await removePaymentTokenTest(
         { vault: depositVault, owner },
         ethers.constants.AddressZero,
@@ -857,8 +873,9 @@ describe('DepositVault', function () {
     });
 
     it('should fail: when token is not exists', async () => {
-      const { owner, depositVault, stableCoins } =
-        await loadFixture(defaultDeploy);
+      const { owner, depositVault, stableCoins } = await loadFixture(
+        defaultDeploy,
+      );
       await removePaymentTokenTest(
         { vault: depositVault, owner },
         stableCoins.dai.address,
@@ -867,8 +884,9 @@ describe('DepositVault', function () {
     });
 
     it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { depositVault, stableCoins, owner, dataFeed } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, stableCoins, owner, dataFeed } = await loadFixture(
+        defaultDeploy,
+      );
       await addPaymentTokenTest(
         { vault: depositVault, owner },
         stableCoins.dai,
@@ -883,8 +901,9 @@ describe('DepositVault', function () {
     });
 
     it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role and add 3 options on a row', async () => {
-      const { depositVault, owner, stableCoins, dataFeed } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, owner, stableCoins, dataFeed } = await loadFixture(
+        defaultDeploy,
+      );
 
       await addPaymentTokenTest(
         { vault: depositVault, owner },
@@ -931,8 +950,9 @@ describe('DepositVault', function () {
 
   describe('withdrawToken()', () => {
     it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { depositVault, regularAccounts, owner } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, regularAccounts, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await withdrawTest(
         { vault: depositVault, owner },
         ethers.constants.AddressZero,
@@ -969,8 +989,9 @@ describe('DepositVault', function () {
 
   describe('freeFromMinAmount()', async () => {
     it('should fail: call from address without vault admin role', async () => {
-      const { depositVault, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
       await expect(
         depositVault
           .connect(regularAccounts[0])
@@ -978,8 +999,9 @@ describe('DepositVault', function () {
       ).to.be.revertedWith('WMAC: hasnt role');
     });
     it('should not fail', async () => {
-      const { depositVault, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
       await expect(
         depositVault.freeFromMinAmount(regularAccounts[0].address, true),
       ).to.not.reverted;
@@ -989,8 +1011,9 @@ describe('DepositVault', function () {
       ).to.eq(true);
     });
     it('should fail: already in list', async () => {
-      const { depositVault, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
       await expect(
         depositVault.freeFromMinAmount(regularAccounts[0].address, true),
       ).to.not.reverted;
@@ -1007,8 +1030,9 @@ describe('DepositVault', function () {
 
   describe('changeTokenAllowance()', () => {
     it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { depositVault, regularAccounts, owner } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, regularAccounts, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await changeTokenAllowanceTest(
         { vault: depositVault, owner },
         ethers.constants.AddressZero,
@@ -1017,8 +1041,9 @@ describe('DepositVault', function () {
       );
     });
     it('should fail: token not exist', async () => {
-      const { depositVault, owner, stableCoins } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, owner, stableCoins } = await loadFixture(
+        defaultDeploy,
+      );
       await changeTokenAllowanceTest(
         { vault: depositVault, owner },
         stableCoins.dai.address,
@@ -1027,8 +1052,9 @@ describe('DepositVault', function () {
       );
     });
     it('should fail: allowance zero', async () => {
-      const { depositVault, owner, stableCoins, dataFeed } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, owner, stableCoins, dataFeed } = await loadFixture(
+        defaultDeploy,
+      );
       await addPaymentTokenTest(
         { vault: depositVault, owner },
         stableCoins.dai,
@@ -1086,8 +1112,9 @@ describe('DepositVault', function () {
       );
     });
     it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { depositVault, owner, stableCoins, dataFeed } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, owner, stableCoins, dataFeed } = await loadFixture(
+        defaultDeploy,
+      );
       await addPaymentTokenTest(
         { vault: depositVault, owner },
         stableCoins.dai,
@@ -1187,8 +1214,9 @@ describe('DepositVault', function () {
 
   describe('changeTokenFee()', () => {
     it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { depositVault, regularAccounts, owner } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, regularAccounts, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await changeTokenFeeTest(
         { vault: depositVault, owner },
         ethers.constants.AddressZero,
@@ -1197,8 +1225,9 @@ describe('DepositVault', function () {
       );
     });
     it('should fail: token not exist', async () => {
-      const { depositVault, owner, stableCoins } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, owner, stableCoins } = await loadFixture(
+        defaultDeploy,
+      );
       await changeTokenFeeTest(
         { vault: depositVault, owner },
         stableCoins.dai.address,
@@ -1207,8 +1236,9 @@ describe('DepositVault', function () {
       );
     });
     it('should fail: fee > 100%', async () => {
-      const { depositVault, owner, stableCoins, dataFeed } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, owner, stableCoins, dataFeed } = await loadFixture(
+        defaultDeploy,
+      );
       await addPaymentTokenTest(
         { vault: depositVault, owner },
         stableCoins.dai,
@@ -1224,8 +1254,9 @@ describe('DepositVault', function () {
       );
     });
     it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { depositVault, owner, stableCoins, dataFeed } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, owner, stableCoins, dataFeed } = await loadFixture(
+        defaultDeploy,
+      );
       await addPaymentTokenTest(
         { vault: depositVault, owner },
         stableCoins.dai,
@@ -6059,8 +6090,9 @@ describe('DepositVault', function () {
 
   describe('ManageableVault internal functions', () => {
     it('should fail: invalid rounding tokenTransferFromToTester()', async () => {
-      const { depositVault, stableCoins, owner } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, stableCoins, owner } = await loadFixture(
+        defaultDeploy,
+      );
 
       await mintToken(stableCoins.usdc, owner, 1000);
 
@@ -6078,8 +6110,9 @@ describe('DepositVault', function () {
     });
 
     it('should fail: invalid rounding tokenTransferToUserTester()', async () => {
-      const { depositVault, stableCoins, owner } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, stableCoins, owner } = await loadFixture(
+        defaultDeploy,
+      );
 
       await mintToken(stableCoins.usdc, depositVault, 1000);
 
@@ -6130,8 +6163,9 @@ describe('DepositVault', function () {
 
   describe('_calcAndValidateDeposit', () => {
     it('should fail: when tokenOut is not MANUAL_FULLFILMENT_TOKEN but isFiat = true', async () => {
-      const { depositVault, stableCoins, owner, dataFeed } =
-        await loadFixture(defaultDeploy);
+      const { depositVault, stableCoins, owner, dataFeed } = await loadFixture(
+        defaultDeploy,
+      );
 
       await addPaymentTokenTest(
         { vault: depositVault, owner },

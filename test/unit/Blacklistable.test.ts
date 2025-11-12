@@ -7,8 +7,9 @@ import { defaultDeploy } from '../common/fixtures';
 
 describe('Blacklistable', function () {
   it('deployment', async () => {
-    const { accessControl, blackListableTester, roles } =
-      await loadFixture(defaultDeploy);
+    const { accessControl, blackListableTester, roles } = await loadFixture(
+      defaultDeploy,
+    );
 
     expect(
       await accessControl.hasRole(
@@ -59,8 +60,9 @@ describe('Blacklistable', function () {
     });
 
     it('call from not blacklisted user', async () => {
-      const { blackListableTester, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const { blackListableTester, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
       await expect(
         blackListableTester.onlyNotBlacklistedTester(
           regularAccounts[0].address,

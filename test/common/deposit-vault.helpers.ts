@@ -70,14 +70,23 @@ export const depositInstantTest = async (
   const callFn = withRecipient
     ? depositVault
         .connect(sender)
-        [
-          'depositInstant(address,uint256,uint256,bytes32,address)'
-        ].bind(this, tokenIn, amountIn, minAmount ?? constants.Zero, constants.HashZero, recipient)
+        ['depositInstant(address,uint256,uint256,bytes32,address)'].bind(
+          this,
+          tokenIn,
+          amountIn,
+          minAmount ?? constants.Zero,
+          constants.HashZero,
+          recipient,
+        )
     : depositVault
         .connect(sender)
-        [
-          'depositInstant(address,uint256,uint256,bytes32)'
-        ].bind(this, tokenIn, amountIn, minAmount ?? constants.Zero, constants.HashZero);
+        ['depositInstant(address,uint256,uint256,bytes32)'].bind(
+          this,
+          tokenIn,
+          amountIn,
+          minAmount ?? constants.Zero,
+          constants.HashZero,
+        );
 
   if (opt?.revertMessage) {
     await expect(callFn()).revertedWith(opt?.revertMessage);
@@ -214,14 +223,21 @@ export const depositRequestTest = async (
   const callFn = withRecipient
     ? depositVault
         .connect(sender)
-        [
-          'depositRequest(address,uint256,bytes32,address)'
-        ].bind(this, tokenIn, amountIn, constants.HashZero, recipient)
+        ['depositRequest(address,uint256,bytes32,address)'].bind(
+          this,
+          tokenIn,
+          amountIn,
+          constants.HashZero,
+          recipient,
+        )
     : depositVault
         .connect(sender)
-        [
-          'depositRequest(address,uint256,bytes32)'
-        ].bind(this, tokenIn, amountIn, constants.HashZero);
+        ['depositRequest(address,uint256,bytes32)'].bind(
+          this,
+          tokenIn,
+          amountIn,
+          constants.HashZero,
+        );
 
   if (opt?.revertMessage) {
     await expect(callFn()).revertedWith(opt?.revertMessage);
@@ -462,16 +478,18 @@ export const safeBulkApproveRequestTest = async (
     newRate && newRate !== 'request-rate'
       ? depositVault
           .connect(sender)
-          [
-            'safeBulkApproveRequest(uint256[],uint256)'
-          ].bind(this, requestIds, newRate)
+          ['safeBulkApproveRequest(uint256[],uint256)'].bind(
+            this,
+            requestIds,
+            newRate,
+          )
       : newRate === 'request-rate'
-        ? depositVault
-            .connect(sender)
-            .safeBulkApproveRequestAtSavedRate.bind(this, requestIds)
-        : depositVault
-            .connect(sender)
-            ['safeBulkApproveRequest(uint256[])'].bind(this, requestIds);
+      ? depositVault
+          .connect(sender)
+          .safeBulkApproveRequestAtSavedRate.bind(this, requestIds)
+      : depositVault
+          .connect(sender)
+          ['safeBulkApproveRequest(uint256[])'].bind(this, requestIds);
 
   if (opt?.revertMessage) {
     await expect(callFn()).revertedWith(opt?.revertMessage);
@@ -509,7 +527,7 @@ export const safeBulkApproveRequestTest = async (
 
   const currentRate = await mTokenToUsdDataFeed.getDataInBase18();
   const newExpectedRate =
-    newRate === 'request-rate' ? undefined : (newRate ?? currentRate);
+    newRate === 'request-rate' ? undefined : newRate ?? currentRate;
 
   const expectedMintAmounts = requestDatasBefore.map((requestData, i) =>
     requestData.depositedUsdAmount

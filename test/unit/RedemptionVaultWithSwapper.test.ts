@@ -158,8 +158,9 @@ describe('MBasisRedemptionVaultWithSwapper', () => {
     });
 
     it('should fail: if provider address zero', async () => {
-      const { redemptionVaultWithSwapper, owner } =
-        await loadFixture(defaultDeploy);
+      const { redemptionVaultWithSwapper, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await setLiquidityProviderTest(
         { vault: redemptionVaultWithSwapper, owner },
         constants.AddressZero,
@@ -199,8 +200,9 @@ describe('MBasisRedemptionVaultWithSwapper', () => {
     });
 
     it('should fail: if provider address zero', async () => {
-      const { redemptionVaultWithSwapper, owner } =
-        await loadFixture(defaultDeploy);
+      const { redemptionVaultWithSwapper, owner } = await loadFixture(
+        defaultDeploy,
+      );
       await setSwapperVaultTest(
         { vault: redemptionVaultWithSwapper, owner },
         constants.AddressZero,
