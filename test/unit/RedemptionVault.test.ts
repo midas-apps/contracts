@@ -6,11 +6,8 @@ import { ethers } from 'hardhat';
 
 import { encodeFnSelector } from '../../helpers/utils';
 import {
-  // eslint-disable-next-line camelcase
   ManageableVaultTester__factory,
-  // eslint-disable-next-line camelcase
   MBasisRedemptionVault__factory,
-  // eslint-disable-next-line camelcase
   RedemptionVaultTest__factory,
 } from '../../typechain-types';
 import { acErrors, blackList, greenList } from '../common/ac.helpers';
@@ -580,9 +577,8 @@ describe('RedemptionVault', function () {
 
   describe('setTokensReceiver()', () => {
     it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, redemptionVault, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { owner, redemptionVault, regularAccounts } =
+        await loadFixture(defaultDeploy);
 
       await setTokensReceiverTest(
         { vault: redemptionVault, owner },
@@ -619,9 +615,8 @@ describe('RedemptionVault', function () {
     });
 
     it('call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, redemptionVault, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { owner, redemptionVault, regularAccounts } =
+        await loadFixture(defaultDeploy);
 
       await setTokensReceiverTest(
         { vault: redemptionVault, owner },
@@ -632,9 +627,8 @@ describe('RedemptionVault', function () {
 
   describe('setMinAmount()', () => {
     it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, redemptionVault, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { owner, redemptionVault, regularAccounts } =
+        await loadFixture(defaultDeploy);
 
       await setMinAmountTest({ vault: redemptionVault, owner }, 1.1, {
         from: regularAccounts[0],
@@ -650,9 +644,8 @@ describe('RedemptionVault', function () {
 
   describe('setMinFiatRedeemAmount()', () => {
     it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, redemptionVault, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { owner, redemptionVault, regularAccounts } =
+        await loadFixture(defaultDeploy);
 
       await setMinFiatRedeemAmountTest({ redemptionVault, owner }, 1.1, {
         from: regularAccounts[0],
@@ -668,9 +661,8 @@ describe('RedemptionVault', function () {
 
   describe('setFeeReceiver()', () => {
     it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, redemptionVault, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { owner, redemptionVault, regularAccounts } =
+        await loadFixture(defaultDeploy);
 
       await setFeeReceiverTest(
         { vault: redemptionVault, owner },
@@ -683,9 +675,8 @@ describe('RedemptionVault', function () {
     });
 
     it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, redemptionVault, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { owner, redemptionVault, regularAccounts } =
+        await loadFixture(defaultDeploy);
       await setFeeReceiverTest(
         { vault: redemptionVault, owner },
         regularAccounts[0].address,
@@ -706,9 +697,8 @@ describe('RedemptionVault', function () {
 
   describe('setFiatFlatFee()', () => {
     it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, redemptionVault, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { owner, redemptionVault, regularAccounts } =
+        await loadFixture(defaultDeploy);
 
       await setFiatFlatFeeTest({ redemptionVault, owner }, 100, {
         from: regularAccounts[0],
@@ -724,9 +714,8 @@ describe('RedemptionVault', function () {
 
   describe('setFiatAdditionalFee()', () => {
     it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, redemptionVault, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { owner, redemptionVault, regularAccounts } =
+        await loadFixture(defaultDeploy);
 
       await setFiatAdditionalFeeTest({ redemptionVault, owner }, 100, {
         from: regularAccounts[0],
@@ -742,9 +731,8 @@ describe('RedemptionVault', function () {
 
   describe('setInstantDailyLimit()', () => {
     it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, redemptionVault, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { owner, redemptionVault, regularAccounts } =
+        await loadFixture(defaultDeploy);
 
       await setInstantDailyLimitTest(
         { vault: redemptionVault, owner },
@@ -779,9 +767,8 @@ describe('RedemptionVault', function () {
 
   describe('addPaymentToken()', () => {
     it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { redemptionVault, regularAccounts, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVault, regularAccounts, owner } =
+        await loadFixture(defaultDeploy);
       await addPaymentTokenTest(
         { vault: redemptionVault, owner },
         ethers.constants.AddressZero,
@@ -817,9 +804,8 @@ describe('RedemptionVault', function () {
     });
 
     it('should fail: when token dataFeed address zero', async () => {
-      const { redemptionVault, stableCoins, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVault, stableCoins, owner } =
+        await loadFixture(defaultDeploy);
       await addPaymentTokenTest(
         { vault: redemptionVault, owner },
         stableCoins.dai,
@@ -901,9 +887,8 @@ describe('RedemptionVault', function () {
 
   describe('addWaivedFeeAccount()', () => {
     it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { redemptionVault, regularAccounts, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVault, regularAccounts, owner } =
+        await loadFixture(defaultDeploy);
       await addWaivedFeeAccountTest(
         { vault: redemptionVault, owner },
         ethers.constants.AddressZero,
@@ -934,9 +919,8 @@ describe('RedemptionVault', function () {
 
   describe('removeWaivedFeeAccount()', () => {
     it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { redemptionVault, regularAccounts, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVault, regularAccounts, owner } =
+        await loadFixture(defaultDeploy);
       await removeWaivedFeeAccountTest(
         { vault: redemptionVault, owner },
         ethers.constants.AddressZero,
@@ -967,9 +951,8 @@ describe('RedemptionVault', function () {
 
   describe('setFee()', () => {
     it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { redemptionVault, regularAccounts, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVault, regularAccounts, owner } =
+        await loadFixture(defaultDeploy);
       await setInstantFeeTest(
         { vault: redemptionVault, owner },
         ethers.constants.Zero,
@@ -992,9 +975,8 @@ describe('RedemptionVault', function () {
 
   describe('setVariabilityTolerance()', () => {
     it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { redemptionVault, regularAccounts, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVault, regularAccounts, owner } =
+        await loadFixture(defaultDeploy);
       await setVariabilityToleranceTest(
         { vault: redemptionVault, owner },
         ethers.constants.Zero,
@@ -1027,9 +1009,8 @@ describe('RedemptionVault', function () {
 
   describe('setRequestRedeemer()', () => {
     it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { redemptionVault, regularAccounts, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVault, regularAccounts, owner } =
+        await loadFixture(defaultDeploy);
       await setRequestRedeemerTest(
         { redemptionVault, owner },
         ethers.constants.AddressZero,
@@ -1053,9 +1034,8 @@ describe('RedemptionVault', function () {
 
   describe('removePaymentToken()', () => {
     it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { redemptionVault, regularAccounts, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVault, regularAccounts, owner } =
+        await loadFixture(defaultDeploy);
       await removePaymentTokenTest(
         { vault: redemptionVault, owner },
         ethers.constants.AddressZero,
@@ -1064,9 +1044,8 @@ describe('RedemptionVault', function () {
     });
 
     it('should fail: when token is not exists', async () => {
-      const { owner, redemptionVault, stableCoins } = await loadFixture(
-        defaultDeploy,
-      );
+      const { owner, redemptionVault, stableCoins } =
+        await loadFixture(defaultDeploy);
       await removePaymentTokenTest(
         { vault: redemptionVault, owner },
         stableCoins.dai.address,
@@ -1139,9 +1118,8 @@ describe('RedemptionVault', function () {
 
   describe('withdrawToken()', () => {
     it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { redemptionVault, regularAccounts, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVault, regularAccounts, owner } =
+        await loadFixture(defaultDeploy);
       await withdrawTest(
         { vault: redemptionVault, owner },
         ethers.constants.AddressZero,
@@ -1178,9 +1156,8 @@ describe('RedemptionVault', function () {
 
   describe('freeFromMinAmount()', async () => {
     it('should fail: call from address without vault admin role', async () => {
-      const { redemptionVault, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVault, regularAccounts } =
+        await loadFixture(defaultDeploy);
       await expect(
         redemptionVault
           .connect(regularAccounts[0])
@@ -1188,9 +1165,8 @@ describe('RedemptionVault', function () {
       ).to.be.revertedWith('WMAC: hasnt role');
     });
     it('should not fail', async () => {
-      const { redemptionVault, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVault, regularAccounts } =
+        await loadFixture(defaultDeploy);
       await expect(
         redemptionVault.freeFromMinAmount(regularAccounts[0].address, true),
       ).to.not.reverted;
@@ -1200,9 +1176,8 @@ describe('RedemptionVault', function () {
       ).to.eq(true);
     });
     it('should fail: already in list', async () => {
-      const { redemptionVault, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVault, regularAccounts } =
+        await loadFixture(defaultDeploy);
       await expect(
         redemptionVault.freeFromMinAmount(regularAccounts[0].address, true),
       ).to.not.reverted;
@@ -1219,9 +1194,8 @@ describe('RedemptionVault', function () {
 
   describe('changeTokenAllowance()', () => {
     it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { redemptionVault, regularAccounts, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVault, regularAccounts, owner } =
+        await loadFixture(defaultDeploy);
       await changeTokenAllowanceTest(
         { vault: redemptionVault, owner },
         ethers.constants.AddressZero,
@@ -1230,9 +1204,8 @@ describe('RedemptionVault', function () {
       );
     });
     it('should fail: token not exist', async () => {
-      const { redemptionVault, owner, stableCoins } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVault, owner, stableCoins } =
+        await loadFixture(defaultDeploy);
       await changeTokenAllowanceTest(
         { vault: redemptionVault, owner },
         stableCoins.dai.address,
@@ -1414,9 +1387,8 @@ describe('RedemptionVault', function () {
 
   describe('changeTokenFee()', () => {
     it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { redemptionVault, regularAccounts, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVault, regularAccounts, owner } =
+        await loadFixture(defaultDeploy);
       await changeTokenFeeTest(
         { vault: redemptionVault, owner },
         ethers.constants.AddressZero,
@@ -1425,9 +1397,8 @@ describe('RedemptionVault', function () {
       );
     });
     it('should fail: token not exist', async () => {
-      const { redemptionVault, owner, stableCoins } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVault, owner, stableCoins } =
+        await loadFixture(defaultDeploy);
       await changeTokenFeeTest(
         { vault: redemptionVault, owner },
         stableCoins.dai.address,

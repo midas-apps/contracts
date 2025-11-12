@@ -4,10 +4,7 @@ import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import { encodeFnSelector } from '../../helpers/utils';
-import {
-  // eslint-disable-next-line camelcase
-  RedemptionVaultWithSwapperTest__factory,
-} from '../../typechain-types';
+import { RedemptionVaultWithSwapperTest__factory } from '../../typechain-types';
 import { acErrors, blackList, greenList } from '../common/ac.helpers';
 import {
   approveBase18,
@@ -161,9 +158,8 @@ describe('MBasisRedemptionVaultWithSwapper', () => {
     });
 
     it('should fail: if provider address zero', async () => {
-      const { redemptionVaultWithSwapper, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVaultWithSwapper, owner } =
+        await loadFixture(defaultDeploy);
       await setLiquidityProviderTest(
         { vault: redemptionVaultWithSwapper, owner },
         constants.AddressZero,
@@ -203,9 +199,8 @@ describe('MBasisRedemptionVaultWithSwapper', () => {
     });
 
     it('should fail: if provider address zero', async () => {
-      const { redemptionVaultWithSwapper, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVaultWithSwapper, owner } =
+        await loadFixture(defaultDeploy);
       await setSwapperVaultTest(
         { vault: redemptionVaultWithSwapper, owner },
         constants.AddressZero,

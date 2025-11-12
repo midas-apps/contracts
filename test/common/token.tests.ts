@@ -2,7 +2,7 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { Contract } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
-import hre, { ethers } from 'hardhat';
+import { ethers } from 'hardhat';
 
 import { acErrors, blackList, unBlackList } from './ac.helpers';
 import { defaultDeploy } from './fixtures';
@@ -679,6 +679,7 @@ export const tokenContractsTests = (token: MTokenName) => {
       const dataFeed = fixture.tokenDataFeed as Contract;
 
       if (!dataFeed || !tokenRoleNames.customFeedAdmin || isTac) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (this as any).skip();
         return;
       }
@@ -695,6 +696,7 @@ export const tokenContractsTests = (token: MTokenName) => {
         fixture.tokenCustomAggregatorFeedGrowth) as Contract;
 
       if (!customAggregator || !tokenRoleNames.customFeedAdmin || isTac) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (this as any).skip();
         return;
       }
@@ -712,6 +714,7 @@ export const tokenContractsTests = (token: MTokenName) => {
       const depositVault = fixture.tokenDepositVault as Contract;
 
       if (!depositVault) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (this as any).skip();
         return;
       }
@@ -729,6 +732,7 @@ export const tokenContractsTests = (token: MTokenName) => {
       const depositVaultUstb = fixture.tokenDepositVaultUstb as Contract;
 
       if (!depositVaultUstb) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (this as any).skip();
         return;
       }
@@ -748,6 +752,7 @@ export const tokenContractsTests = (token: MTokenName) => {
       const redemptionVault = fixture.tokenRedemptionVault as Contract;
 
       if (!redemptionVault) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (this as any).skip();
         return;
       }
@@ -768,6 +773,7 @@ export const tokenContractsTests = (token: MTokenName) => {
         fixture.tokenRedemptionVaultWithSwapper as Contract;
 
       if (!redemptionVaultWithSwapper) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (this as any).skip();
         return;
       }
@@ -790,6 +796,7 @@ export const tokenContractsTests = (token: MTokenName) => {
         fixture.tokenRedemptionVaultWithBuidl as Contract;
 
       if (!redemptionVaultWithBuidl) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (this as any).skip();
         return;
       }

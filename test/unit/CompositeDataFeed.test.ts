@@ -3,10 +3,7 @@ import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import {
-  // eslint-disable-next-line camelcase
-  CompositeDataFeedTest__factory,
-} from '../../typechain-types';
+import { CompositeDataFeedTest__factory } from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
 import { setRoundData } from '../common/data-feed.helpers';
 import { defaultDeploy } from '../common/fixtures';
@@ -85,9 +82,8 @@ describe('CompositeDataFeed', function () {
 
   describe('changeNumeratorFeed()', () => {
     it('should fail: call from address without DEFAULT_ADMIN_ROLE', async () => {
-      const { compositeDataFeed, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { compositeDataFeed, regularAccounts } =
+        await loadFixture(defaultDeploy);
 
       await expect(
         compositeDataFeed
@@ -105,9 +101,8 @@ describe('CompositeDataFeed', function () {
     });
 
     it('pass new aggregator address', async () => {
-      const { compositeDataFeed, mTokenToUsdDataFeed } = await loadFixture(
-        defaultDeploy,
-      );
+      const { compositeDataFeed, mTokenToUsdDataFeed } =
+        await loadFixture(defaultDeploy);
 
       await expect(
         compositeDataFeed.changeNumeratorFeed(mTokenToUsdDataFeed.address),
@@ -117,9 +112,8 @@ describe('CompositeDataFeed', function () {
 
   describe('changeDenominatorFeed()', () => {
     it('should fail: call from address without DEFAULT_ADMIN_ROLE', async () => {
-      const { compositeDataFeed, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { compositeDataFeed, regularAccounts } =
+        await loadFixture(defaultDeploy);
 
       await expect(
         compositeDataFeed
@@ -137,9 +131,8 @@ describe('CompositeDataFeed', function () {
     });
 
     it('pass new aggregator address', async () => {
-      const { compositeDataFeed, mTokenToUsdDataFeed } = await loadFixture(
-        defaultDeploy,
-      );
+      const { compositeDataFeed, mTokenToUsdDataFeed } =
+        await loadFixture(defaultDeploy);
 
       await expect(
         compositeDataFeed.changeDenominatorFeed(mTokenToUsdDataFeed.address),
@@ -149,9 +142,8 @@ describe('CompositeDataFeed', function () {
 
   describe('setMinExpectedAnswer', () => {
     it('should fail: call from address without DEFAULT_ADMIN_ROLE', async () => {
-      const { compositeDataFeed, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { compositeDataFeed, regularAccounts } =
+        await loadFixture(defaultDeploy);
 
       await expect(
         compositeDataFeed
@@ -190,9 +182,8 @@ describe('CompositeDataFeed', function () {
 
   describe('setMaxExpectedAnswer', () => {
     it('should fail: call from address without DEFAULT_ADMIN_ROLE', async () => {
-      const { compositeDataFeed, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { compositeDataFeed, regularAccounts } =
+        await loadFixture(defaultDeploy);
 
       await expect(
         compositeDataFeed
@@ -315,9 +306,8 @@ describe('CompositeDataFeed', function () {
     });
 
     it('should fail when: num. feed is unhealthy ', async () => {
-      const { compositeDataFeed, mockedAggregatorMToken } = await loadFixture(
-        defaultDeploy,
-      );
+      const { compositeDataFeed, mockedAggregatorMToken } =
+        await loadFixture(defaultDeploy);
       await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 0.01);
       await expect(compositeDataFeed.getDataInBase18()).to.be.revertedWith(
         'DF: feed is unhealthy',
@@ -325,9 +315,8 @@ describe('CompositeDataFeed', function () {
     });
 
     it('should fail when: denom. feed is unhealthy', async () => {
-      const { compositeDataFeed, mockedAggregatorMBasis } = await loadFixture(
-        defaultDeploy,
-      );
+      const { compositeDataFeed, mockedAggregatorMBasis } =
+        await loadFixture(defaultDeploy);
       await setRoundData({ mockedAggregator: mockedAggregatorMBasis }, 0.01);
       await expect(compositeDataFeed.getDataInBase18()).to.be.revertedWith(
         'DF: feed is unhealthy',

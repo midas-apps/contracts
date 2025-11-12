@@ -2,10 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
 import { etherscanVerify } from '../../../../helpers/utils';
-import {
-  // eslint-disable-next-line camelcase
-  RedemptionTest__factory,
-} from '../../../../typechain-types';
+import { RedemptionTest__factory } from '../../../../typechain-types';
 import { DeployFunction } from '../../common/types';
 import { getDeployer } from '../../common/utils';
 

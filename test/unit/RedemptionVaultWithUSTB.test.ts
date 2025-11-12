@@ -6,9 +6,7 @@ import { ethers } from 'hardhat';
 
 import { encodeFnSelector } from '../../helpers/utils';
 import {
-  // eslint-disable-next-line camelcase
   ManageableVaultTester__factory,
-  // eslint-disable-next-line camelcase
   RedemptionVaultWithUSTBTest__factory,
 } from '../../typechain-types';
 import { acErrors, blackList, greenList } from '../common/ac.helpers';
@@ -440,9 +438,8 @@ describe('RedemptionVaultWithUSTB', function () {
     });
 
     it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, redemptionVaultWithUSTB } = await loadFixture(
-        defaultDeploy,
-      );
+      const { owner, redemptionVaultWithUSTB } =
+        await loadFixture(defaultDeploy);
       await setMinAmountTest({ vault: redemptionVaultWithUSTB, owner }, 1.1);
     });
   });
@@ -463,9 +460,8 @@ describe('RedemptionVaultWithUSTB', function () {
     });
 
     it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, redemptionVaultWithUSTB } = await loadFixture(
-        defaultDeploy,
-      );
+      const { owner, redemptionVaultWithUSTB } =
+        await loadFixture(defaultDeploy);
       await setMinFiatRedeemAmountTest(
         { redemptionVault: redemptionVaultWithUSTB, owner },
         1.1,
@@ -489,9 +485,8 @@ describe('RedemptionVaultWithUSTB', function () {
     });
 
     it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, redemptionVaultWithUSTB } = await loadFixture(
-        defaultDeploy,
-      );
+      const { owner, redemptionVaultWithUSTB } =
+        await loadFixture(defaultDeploy);
       await setFiatAdditionalFeeTest(
         { redemptionVault: redemptionVaultWithUSTB, owner },
         100,
@@ -515,9 +510,8 @@ describe('RedemptionVaultWithUSTB', function () {
     });
 
     it('should fail: try to set 0 limit', async () => {
-      const { owner, redemptionVaultWithUSTB } = await loadFixture(
-        defaultDeploy,
-      );
+      const { owner, redemptionVaultWithUSTB } =
+        await loadFixture(defaultDeploy);
 
       await setInstantDailyLimitTest(
         { vault: redemptionVaultWithUSTB, owner },
@@ -529,9 +523,8 @@ describe('RedemptionVaultWithUSTB', function () {
     });
 
     it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { owner, redemptionVaultWithUSTB } = await loadFixture(
-        defaultDeploy,
-      );
+      const { owner, redemptionVaultWithUSTB } =
+        await loadFixture(defaultDeploy);
       await setInstantDailyLimitTest(
         { vault: redemptionVaultWithUSTB, owner },
         parseUnits('1000'),
@@ -578,9 +571,8 @@ describe('RedemptionVaultWithUSTB', function () {
     });
 
     it('should fail: when token dataFeed address zero', async () => {
-      const { redemptionVaultWithUSTB, stableCoins, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVaultWithUSTB, stableCoins, owner } =
+        await loadFixture(defaultDeploy);
       await addPaymentTokenTest(
         { vault: redemptionVaultWithUSTB, owner },
         stableCoins.dai,
@@ -671,9 +663,8 @@ describe('RedemptionVaultWithUSTB', function () {
       );
     });
     it('should fail: if account fee already waived', async () => {
-      const { redemptionVaultWithUSTB, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVaultWithUSTB, owner } =
+        await loadFixture(defaultDeploy);
       await addWaivedFeeAccountTest(
         { vault: redemptionVaultWithUSTB, owner },
         owner.address,
@@ -686,9 +677,8 @@ describe('RedemptionVaultWithUSTB', function () {
     });
 
     it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { redemptionVaultWithUSTB, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVaultWithUSTB, owner } =
+        await loadFixture(defaultDeploy);
       await addWaivedFeeAccountTest(
         { vault: redemptionVaultWithUSTB, owner },
         owner.address,
@@ -707,9 +697,8 @@ describe('RedemptionVaultWithUSTB', function () {
       );
     });
     it('should fail: if account not found in restriction', async () => {
-      const { redemptionVaultWithUSTB, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVaultWithUSTB, owner } =
+        await loadFixture(defaultDeploy);
       await removeWaivedFeeAccountTest(
         { vault: redemptionVaultWithUSTB, owner },
         owner.address,
@@ -718,9 +707,8 @@ describe('RedemptionVaultWithUSTB', function () {
     });
 
     it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { redemptionVaultWithUSTB, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVaultWithUSTB, owner } =
+        await loadFixture(defaultDeploy);
       await addWaivedFeeAccountTest(
         { vault: redemptionVaultWithUSTB, owner },
         owner.address,
@@ -744,9 +732,8 @@ describe('RedemptionVaultWithUSTB', function () {
     });
 
     it('should fail: if new value greater then 100%', async () => {
-      const { redemptionVaultWithUSTB, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVaultWithUSTB, owner } =
+        await loadFixture(defaultDeploy);
       await setInstantFeeTest(
         { vault: redemptionVaultWithUSTB, owner },
         10001,
@@ -757,9 +744,8 @@ describe('RedemptionVaultWithUSTB', function () {
     });
 
     it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { redemptionVaultWithUSTB, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVaultWithUSTB, owner } =
+        await loadFixture(defaultDeploy);
       await setInstantFeeTest({ vault: redemptionVaultWithUSTB, owner }, 100);
     });
   });
@@ -775,9 +761,8 @@ describe('RedemptionVaultWithUSTB', function () {
       );
     });
     it('should fail: if new value zero', async () => {
-      const { redemptionVaultWithUSTB, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVaultWithUSTB, owner } =
+        await loadFixture(defaultDeploy);
       await setVariabilityToleranceTest(
         { vault: redemptionVaultWithUSTB, owner },
         ethers.constants.Zero,
@@ -786,9 +771,8 @@ describe('RedemptionVaultWithUSTB', function () {
     });
 
     it('should fail: if new value greater then 100%', async () => {
-      const { redemptionVaultWithUSTB, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVaultWithUSTB, owner } =
+        await loadFixture(defaultDeploy);
       await setVariabilityToleranceTest(
         { vault: redemptionVaultWithUSTB, owner },
         10001,
@@ -797,9 +781,8 @@ describe('RedemptionVaultWithUSTB', function () {
     });
 
     it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-      const { redemptionVaultWithUSTB, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVaultWithUSTB, owner } =
+        await loadFixture(defaultDeploy);
       await setVariabilityToleranceTest(
         { vault: redemptionVaultWithUSTB, owner },
         100,
@@ -819,9 +802,8 @@ describe('RedemptionVaultWithUSTB', function () {
     });
 
     it('should fail: when token is not exists', async () => {
-      const { owner, redemptionVaultWithUSTB, stableCoins } = await loadFixture(
-        defaultDeploy,
-      );
+      const { owner, redemptionVaultWithUSTB, stableCoins } =
+        await loadFixture(defaultDeploy);
       await removePaymentTokenTest(
         { vault: redemptionVaultWithUSTB, owner },
         stableCoins.dai.address,
@@ -932,9 +914,8 @@ describe('RedemptionVaultWithUSTB', function () {
 
   describe('checkAndRedeemUSTB', () => {
     it('should not redeem USTB when contract has enough balance', async () => {
-      const { redemptionVaultWithUSTB, stableCoins } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVaultWithUSTB, stableCoins } =
+        await loadFixture(defaultDeploy);
 
       const usdcAmount = parseUnits('1000', 8);
       await stableCoins.usdc.mint(redemptionVaultWithUSTB.address, usdcAmount);
@@ -955,9 +936,8 @@ describe('RedemptionVaultWithUSTB', function () {
     });
 
     it('should revert when contract has insufficient USTB balance', async () => {
-      const { redemptionVaultWithUSTB, stableCoins } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVaultWithUSTB, stableCoins } =
+        await loadFixture(defaultDeploy);
 
       // Contract has less USDC than needed
       const usdcAmount = parseUnits('500', 8);
@@ -975,9 +955,8 @@ describe('RedemptionVaultWithUSTB', function () {
 
   describe('freeFromMinAmount()', async () => {
     it('should fail: call from address without vault admin role', async () => {
-      const { redemptionVaultWithUSTB, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVaultWithUSTB, regularAccounts } =
+        await loadFixture(defaultDeploy);
       await expect(
         redemptionVaultWithUSTB
           .connect(regularAccounts[0])
@@ -985,9 +964,8 @@ describe('RedemptionVaultWithUSTB', function () {
       ).to.be.revertedWith('WMAC: hasnt role');
     });
     it('should not fail', async () => {
-      const { redemptionVaultWithUSTB, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVaultWithUSTB, regularAccounts } =
+        await loadFixture(defaultDeploy);
       await expect(
         redemptionVaultWithUSTB.freeFromMinAmount(
           regularAccounts[0].address,
@@ -1002,9 +980,8 @@ describe('RedemptionVaultWithUSTB', function () {
       ).to.eq(true);
     });
     it('should fail: already in list', async () => {
-      const { redemptionVaultWithUSTB, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVaultWithUSTB, regularAccounts } =
+        await loadFixture(defaultDeploy);
       await expect(
         redemptionVaultWithUSTB.freeFromMinAmount(
           regularAccounts[0].address,
@@ -1039,9 +1016,8 @@ describe('RedemptionVaultWithUSTB', function () {
       );
     });
     it('should fail: token not exist', async () => {
-      const { redemptionVaultWithUSTB, owner, stableCoins } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVaultWithUSTB, owner, stableCoins } =
+        await loadFixture(defaultDeploy);
       await changeTokenAllowanceTest(
         { vault: redemptionVaultWithUSTB, owner },
         stableCoins.dai.address,
@@ -1240,9 +1216,8 @@ describe('RedemptionVaultWithUSTB', function () {
       );
     });
     it('should fail: token not exist', async () => {
-      const { redemptionVaultWithUSTB, owner, stableCoins } = await loadFixture(
-        defaultDeploy,
-      );
+      const { redemptionVaultWithUSTB, owner, stableCoins } =
+        await loadFixture(defaultDeploy);
       await changeTokenFeeTest(
         { vault: redemptionVaultWithUSTB, owner },
         stableCoins.dai.address,

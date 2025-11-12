@@ -15,77 +15,40 @@ import {
 } from './manageable-vault.helpers';
 import { postDeploymentTest } from './post-deploy.helpers';
 
+import { getAllRoles, getRolesForToken } from '../../helpers/roles';
 import {
-  getAllRoles,
-  getRolesForToken,
-  getRolesNamesForToken,
-} from '../../helpers/roles';
-import {
-  // eslint-disable-next-line camelcase
   AggregatorV3Mock__factory,
-  // eslint-disable-next-line camelcase
   BlacklistableTester__factory,
-  // eslint-disable-next-line camelcase
   DepositVaultTest__factory,
-  // eslint-disable-next-line camelcase
   ERC20Mock__factory,
-  // eslint-disable-next-line camelcase
   GreenlistableTester__factory,
-  // eslint-disable-next-line camelcase
   MidasAccessControlTest__factory,
-  // eslint-disable-next-line camelcase
   PausableTester__factory,
-  // eslint-disable-next-line camelcase
   RedemptionVaultTest__factory,
-  // eslint-disable-next-line camelcase
   MTBILLTest__factory,
-  // eslint-disable-next-line camelcase
   WithMidasAccessControlTester__factory,
-  // eslint-disable-next-line camelcase
   DataFeedTest__factory,
-  // eslint-disable-next-line camelcase
   AggregatorV3DeprecatedMock__factory,
-  // eslint-disable-next-line camelcase
   AggregatorV3UnhealthyMock__factory,
-  // eslint-disable-next-line camelcase
   CustomAggregatorV3CompatibleFeedTester__factory,
-  // eslint-disable-next-line camelcase
   SanctionsListMock__factory,
-  // eslint-disable-next-line camelcase
   WithSanctionsListTester__factory,
-  // eslint-disable-next-line camelcase
   RedemptionTest__factory,
-  // eslint-disable-next-line camelcase
   USTBRedemptionMock__factory,
-  // eslint-disable-next-line camelcase
   RedemptionVaultWithBUIDLTest__factory,
-  // eslint-disable-next-line camelcase
   RedemptionVaultWithUSTBTest__factory,
-  // eslint-disable-next-line camelcase
   RedemptionVaultWithSwapperTest__factory,
-  // eslint-disable-next-line camelcase
   CustomAggregatorV3CompatibleFeedDiscountedTester__factory,
-  // eslint-disable-next-line camelcase
   DepositVaultWithUSTBTest__factory,
-  // eslint-disable-next-line camelcase
   USTBMock__factory,
-  // eslint-disable-next-line camelcase
   CustomAggregatorV3CompatibleFeedGrowthTester__factory,
-  // eslint-disable-next-line camelcase
   AcreAdapter__factory,
-  // eslint-disable-next-line camelcase
   CompositeDataFeedTest__factory,
-  // eslint-disable-next-line camelcase
   MidasLzMintBurnOFTAdapter__factory,
-  // eslint-disable-next-line camelcase
   MidasLzOFT__factory,
-  // eslint-disable-next-line camelcase
   MidasLzOFTAdapter__factory,
-  // eslint-disable-next-line camelcase
   MidasLzVaultComposerSyncTester,
-  // eslint-disable-next-line camelcase
   AxelarInterchainTokenServiceMock__factory,
-  // eslint-disable-next-line camelcase
   MidasAxelarVaultExecutableTester,
 } from '../../typechain-types';
 
@@ -451,7 +414,6 @@ export const defaultDeploy = async () => {
     redemptionVaultWithSwapper.address,
   );
 
-  // eslint-disable-next-line camelcase
   const customFeed = await new CustomAggregatorV3CompatibleFeedTester__factory(
     owner,
   ).deploy();
@@ -464,7 +426,6 @@ export const defaultDeploy = async () => {
     'Custom Data Feed',
   );
 
-  // eslint-disable-next-line camelcase
   const customFeedGrowth =
     await new CustomAggregatorV3CompatibleFeedGrowthTester__factory(
       owner,
@@ -741,9 +702,8 @@ export const layerZeroFixture = async () => {
   const eidA = 1;
   const eidB = 2;
 
-  const endpointV2MockArtifact = await hre.deployments.getArtifact(
-    'EndpointV2Mock',
-  );
+  const endpointV2MockArtifact =
+    await hre.deployments.getArtifact('EndpointV2Mock');
 
   const endpointV2MockFactory = new ContractFactory(
     endpointV2MockArtifact.abi,

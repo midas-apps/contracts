@@ -1,4 +1,4 @@
-import { group, select, spinner } from '@clack/prompts';
+import { group, select } from '@clack/prompts';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
@@ -11,10 +11,7 @@ import {
   getPaymentTokenOrThrow,
   logDeploy,
 } from '../../../../helpers/utils';
-import {
-  // eslint-disable-next-line camelcase
-  AcreAdapter__factory,
-} from '../../../../typechain-types';
+import { AcreAdapter__factory } from '../../../../typechain-types';
 import { DeployFunction } from '../../common/types';
 import { getDeployer } from '../../common/utils';
 

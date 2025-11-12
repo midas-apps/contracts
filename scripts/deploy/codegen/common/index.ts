@@ -1,13 +1,4 @@
-import {
-  cancel,
-  confirm,
-  group,
-  isCancel,
-  multiselect,
-  stream,
-  tasks,
-  text,
-} from '@clack/prompts';
+import { cancel, confirm, isCancel, stream, tasks } from '@clack/prompts';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
   ObjectLiteralExpression,
@@ -226,6 +217,7 @@ const lintAndFormatSol = (folder: string) => {
 
 export const expr = (code: string): CodeExpr => ({ [EXPR]: code });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function objectToCode(value: any, indent = 0): string {
   const pad = ' '.repeat(indent);
   if (value && typeof value === 'object' && EXPR in value)
@@ -326,6 +318,7 @@ export const generateDeploymentConfig = async (
   const { deploymentConfigs, postDeployConfigs } =
     await getDeploymentConfigFromUser(overrideNetworkConfig);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const deploymentConfig: Record<string, any> = {
     networkConfig: {},
     postDeploy: {},

@@ -16,12 +16,9 @@ import { layerZeroFixture } from './fixtures';
 import { calcExpectedTokenOutAmount } from './redemption-vault.helpers';
 
 import {
-  // eslint-disable-next-line camelcase
   DepositVault__factory,
-  // eslint-disable-next-line camelcase
   ERC20__factory,
   MidasLzMintBurnOFTAdapter,
-  // eslint-disable-next-line camelcase
   RedemptionVault__factory,
 } from '../../typechain-types';
 
@@ -215,7 +212,7 @@ export const depositAndSend = async (
   const decimals = await composer.paymentTokenDecimals();
 
   referrerId ??= constants.HashZero;
-  // eslint-disable-next-line camelcase
+
   const pToken = ERC20__factory.connect(
     await composer.paymentTokenErc20(),
     from,
@@ -230,13 +227,12 @@ export const depositAndSend = async (
 
   const oneSD = parseUnits('1', 9);
 
-  // eslint-disable-next-line camelcase
   const mTokenRate = await mTokenToUsdDataFeed.getDataInBase18();
   const { fee, mintAmount, amountInWithoutFee, actualAmountInUsd } =
     await calcExpectedMintAmount(
       from,
       await composer.paymentTokenErc20(),
-      // eslint-disable-next-line camelcase
+
       DepositVault__factory.connect(await composer.depositVault(), from),
       mTokenRate,
       amountParsedBase18,
@@ -386,7 +382,6 @@ export const redeemAndSend = async (
 
   amount ??= 100;
 
-  // eslint-disable-next-line camelcase
   const pToken = ERC20__factory.connect(
     await composer.paymentTokenErc20(),
     from,
@@ -396,12 +391,11 @@ export const redeemAndSend = async (
 
   const oneSD = parseUnits('1', 6);
 
-  // eslint-disable-next-line camelcase
   const mTokenRate = await mTokenToUsdDataFeed.getDataInBase18();
   const { amountOut, fee } = await calcExpectedTokenOutAmount(
     from,
     pToken,
-    // eslint-disable-next-line camelcase
+
     RedemptionVault__factory.connect(await composer.redemptionVault(), from),
     mTokenRate,
     amountParsed,
@@ -426,9 +420,10 @@ export const redeemAndSend = async (
   const nativeFee =
     direction === 'A_TO_A'
       ? BigNumber.from(0)
-      : await (direction === 'B_TO_A' || direction === 'B_TO_B'
-          ? pTokenLzOft
-          : pTokenLzOftAdapter
+      : await (
+          direction === 'B_TO_A' || direction === 'B_TO_B'
+            ? pTokenLzOft
+            : pTokenLzOftAdapter
         )
           .quoteSend(
             // if the destination is the hub, we need to quote the send param for the source chain

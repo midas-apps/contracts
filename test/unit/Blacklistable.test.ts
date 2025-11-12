@@ -1,18 +1,14 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 
-import {
-  // eslint-disable-next-line camelcase
-  BlacklistableTester__factory,
-} from '../../typechain-types';
+import { BlacklistableTester__factory } from '../../typechain-types';
 import { acErrors, blackList, unBlackList } from '../common/ac.helpers';
 import { defaultDeploy } from '../common/fixtures';
 
 describe('Blacklistable', function () {
   it('deployment', async () => {
-    const { accessControl, blackListableTester, roles } = await loadFixture(
-      defaultDeploy,
-    );
+    const { accessControl, blackListableTester, roles } =
+      await loadFixture(defaultDeploy);
 
     expect(
       await accessControl.hasRole(
@@ -63,9 +59,8 @@ describe('Blacklistable', function () {
     });
 
     it('call from not blacklisted user', async () => {
-      const { blackListableTester, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { blackListableTester, regularAccounts } =
+        await loadFixture(defaultDeploy);
       await expect(
         blackListableTester.onlyNotBlacklistedTester(
           regularAccounts[0].address,

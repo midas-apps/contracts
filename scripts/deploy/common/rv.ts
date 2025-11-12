@@ -124,7 +124,7 @@ export const deployRedemptionVault = async (
     const liquidityProvider =
       networkConfig.liquidityProvider === 'dummy'
         ? DUMMY_ADDRESS
-        : networkConfig.liquidityProvider ?? deployer.address;
+        : (networkConfig.liquidityProvider ?? deployer.address);
 
     extraParams.push(swapperVaultAddress);
     extraParams.push(liquidityProvider);
@@ -190,7 +190,7 @@ export const deployRedemptionVault = async (
       networkConfig.type === 'SWAPPER'
         ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)'
         : networkConfig.type === 'BUIDL'
-        ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,uint256,uint256)'
-        : 'initialize',
+          ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,uint256,uint256)'
+          : 'initialize',
   });
 };

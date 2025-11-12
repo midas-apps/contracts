@@ -2,10 +2,7 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { constants } from 'ethers';
 
-import {
-  // eslint-disable-next-line camelcase
-  WithSanctionsListTester__factory,
-} from '../../typechain-types';
+import { WithSanctionsListTester__factory } from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
 import { defaultDeploy } from '../common/fixtures';
 import {
@@ -15,9 +12,8 @@ import {
 
 describe('WithSanctionsList', function () {
   it('deployment', async () => {
-    const { accessControl, withSanctionsListTester } = await loadFixture(
-      defaultDeploy,
-    );
+    const { accessControl, withSanctionsListTester } =
+      await loadFixture(defaultDeploy);
 
     expect(await withSanctionsListTester.accessControl()).eq(
       accessControl.address,
@@ -63,9 +59,8 @@ describe('WithSanctionsList', function () {
     });
 
     it('call from not sanctioned user', async () => {
-      const { withSanctionsListTester, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { withSanctionsListTester, regularAccounts } =
+        await loadFixture(defaultDeploy);
 
       await expect(
         withSanctionsListTester.onlyNotSanctionedTester(

@@ -177,9 +177,8 @@ const executeTimelockTx: PopulateTxFn = async (
 
   const operationHash = await timelockContract.hashOperation(...params);
 
-  const isOperationReady = await timelockContract.isOperationReady(
-    operationHash,
-  );
+  const isOperationReady =
+    await timelockContract.isOperationReady(operationHash);
 
   if (!isOperationReady) {
     console.warn('Operation is not ready or not found');

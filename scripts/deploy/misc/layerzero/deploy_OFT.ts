@@ -1,10 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { rpcUrls } from '../../../../config';
-import {
-  getCurrentAddresses,
-  midasAddressesPerNetwork,
-} from '../../../../config/constants/addresses';
+import { midasAddressesPerNetwork } from '../../../../config/constants/addresses';
 import {
   etherscanVerify,
   getOriginalNetworkOrThrow,

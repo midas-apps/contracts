@@ -1,10 +1,7 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 
-import {
-  // eslint-disable-next-line camelcase
-  GreenlistableTester__factory,
-} from '../../typechain-types';
+import { GreenlistableTester__factory } from '../../typechain-types';
 import {
   acErrors,
   greenList,
@@ -16,9 +13,8 @@ import { greenListEnable } from '../common/greenlist.helpers';
 
 describe('Greenlistable', function () {
   it('deployment', async () => {
-    const { accessControl, greenListableTester, roles } = await loadFixture(
-      defaultDeploy,
-    );
+    const { accessControl, greenListableTester, roles } =
+      await loadFixture(defaultDeploy);
 
     expect(
       await accessControl.hasRole(
@@ -54,9 +50,8 @@ describe('Greenlistable', function () {
 
   describe('modifier onlyGreenlisted', () => {
     it('should fail: call from greenlisted user', async () => {
-      const { greenListableTester, regularAccounts, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { greenListableTester, regularAccounts, owner } =
+        await loadFixture(defaultDeploy);
 
       await greenListEnable(
         { greenlistable: greenListableTester, owner },
@@ -84,9 +79,8 @@ describe('Greenlistable', function () {
 
   describe('modifier onlyGreenlistToggler', () => {
     it('should fail: call from not greenlistToggler user', async () => {
-      const { greenListableTester, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { greenListableTester, regularAccounts } =
+        await loadFixture(defaultDeploy);
 
       await expect(
         greenListableTester.onlyGreenlistTogglerTester(
@@ -113,9 +107,8 @@ describe('Greenlistable', function () {
 
   describe('setGreenlistEnable()', () => {
     it('should fail: call from user without GREENLIST_TOGGLER_ROLE role', async () => {
-      const { greenListableTester, owner, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { greenListableTester, owner, regularAccounts } =
+        await loadFixture(defaultDeploy);
 
       await greenListEnable(
         { greenlistable: greenListableTester, owner },

@@ -2,7 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
 import { getRolesForToken } from '../../../../helpers/roles';
-import { getMTokenOrThrow, logDeploy } from '../../../../helpers/utils';
+import { getMTokenOrThrow } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
 import { getDeployer, sendAndWaitForCustomTxSign } from '../../common/utils';
 

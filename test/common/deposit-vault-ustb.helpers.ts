@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { BigNumber, BigNumberish, constants } from 'ethers';
+import { BigNumber, BigNumberish } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import {
@@ -12,9 +12,7 @@ import { depositInstantTest, getFeePercent } from './deposit-vault.helpers';
 import { defaultDeploy } from './fixtures';
 
 import {
-  // eslint-disable-next-line camelcase
   ERC20,
-  // eslint-disable-next-line camelcase
   ERC20__factory,
   IERC20Metadata,
   ISuperstateToken,
@@ -146,7 +144,6 @@ export const depositInstantWithUstbTest = async (
   const fee = amountIn.mul(feePercent).div(hundredPercent);
 
   const amountInWithoutFee = await tokenAmountFromBase18(
-    // eslint-disable-next-line camelcase
     ERC20__factory.connect(tokenIn, owner),
     amountIn.sub(fee),
   );

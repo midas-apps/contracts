@@ -4,25 +4,15 @@ import hre from 'hardhat';
 import { ConfigPerNetwork, Network } from '../../../config';
 import { forkNetwork } from '../../../helpers/utils';
 import {
-  // eslint-disable-next-line camelcase
   BeHypeChainlinkAdapter__factory,
-  // eslint-disable-next-line camelcase
   IBeHype__factory,
-  // eslint-disable-next-line camelcase
   IWrappedEEth__factory,
-  // eslint-disable-next-line camelcase
   MantleLspStakingChainlinkAdapter__factory,
-  // eslint-disable-next-line camelcase
   WstEthChainlinkAdapter__factory,
-  // eslint-disable-next-line camelcase
   IRsEth__factory,
-  // eslint-disable-next-line camelcase
   IWstEth__factory,
-  // eslint-disable-next-line camelcase
   WrappedEEthChainlinkAdapter__factory,
-  // eslint-disable-next-line camelcase
   RsEthChainlinkAdapter__factory,
-  // eslint-disable-next-line camelcase
   IMantleLspStaking__factory,
 } from '../../../typechain-types';
 import {
@@ -59,7 +49,7 @@ export const ethereumAdaptersConfig: NetworkAdapterConfig = {
       address: getAddress('0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0'),
       name: 'wstETH',
       factoryAdapter: new WstEthChainlinkAdapter__factory(),
-      // eslint-disable-next-line camelcase
+
       contractAbi: IWstEth__factory.abi,
       fnToCall: 'stEthPerToken',
       storageVariable: 'wstEth',
@@ -68,7 +58,7 @@ export const ethereumAdaptersConfig: NetworkAdapterConfig = {
       address: getAddress('0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee'),
       name: 'Wrapped EEth',
       factoryAdapter: new WrappedEEthChainlinkAdapter__factory(),
-      // eslint-disable-next-line camelcase
+
       contractAbi: IWrappedEEth__factory.abi,
       fnToCall: 'getRate',
       storageVariable: 'wrappedEEth',
@@ -77,7 +67,7 @@ export const ethereumAdaptersConfig: NetworkAdapterConfig = {
       address: getAddress('0x349A73444b1a310BAe67ef67973022020d70020d'),
       name: 'rsETH',
       factoryAdapter: new RsEthChainlinkAdapter__factory(),
-      // eslint-disable-next-line camelcase
+
       contractAbi: IRsEth__factory.abi,
       fnToCall: 'rsETHPrice',
       storageVariable: 'rsEth',
@@ -86,7 +76,7 @@ export const ethereumAdaptersConfig: NetworkAdapterConfig = {
       address: getAddress('0xe3cBd06D7dadB3F4e6557bAb7EdD924CD1489E8f'),
       name: 'Mantle LSP Staking',
       factoryAdapter: new MantleLspStakingChainlinkAdapter__factory(),
-      // eslint-disable-next-line camelcase
+
       contractAbi: IMantleLspStaking__factory.abi,
       fnToCall: 'mETHToETH',
       storageVariable: 'lspStaking',
@@ -109,7 +99,7 @@ export const hyperevmAdaptersConfig: NetworkAdapterConfig = {
     {
       address: getAddress('0xCeaD893b162D38e714D82d06a7fe0b0dc3c38E0b'),
       factoryAdapter: new BeHypeChainlinkAdapter__factory(),
-      // eslint-disable-next-line camelcase
+
       contractAbi: IBeHype__factory.abi,
       fnToCall: 'BeHYPEToHYPE',
       storageVariable: 'beHype',

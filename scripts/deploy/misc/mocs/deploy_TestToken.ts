@@ -1,10 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { etherscanVerify } from '../../../../helpers/utils';
-import {
-  // eslint-disable-next-line camelcase
-  ERC20MockWithName__factory,
-} from '../../../../typechain-types';
+import { ERC20MockWithName__factory } from '../../../../typechain-types';
 import { DeployFunction } from '../../common/types';
 import { getDeployer } from '../../common/utils';
 

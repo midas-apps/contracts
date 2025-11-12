@@ -3,21 +3,14 @@ import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import { getAllRoles } from '../../helpers/roles';
-import {
-  // eslint-disable-next-line camelcase
-  CustomAggregatorV3CompatibleFeedDiscounted__factory,
-  // eslint-disable-next-line camelcase
-  CustomAggregatorV3CompatibleFeedDiscountedTester__factory,
-} from '../../typechain-types';
+import { CustomAggregatorV3CompatibleFeedDiscountedTester__factory } from '../../typechain-types';
 import { setRoundData } from '../common/custom-feed.helpers';
 import { defaultDeploy } from '../common/fixtures';
 
 describe('CustomAggregatorV3CompatibleFeedDiscounted', function () {
   it('deployment', async () => {
-    const { customFeedDiscounted, customFeed } = await loadFixture(
-      defaultDeploy,
-    );
+    const { customFeedDiscounted, customFeed } =
+      await loadFixture(defaultDeploy);
 
     expect(await customFeedDiscounted.underlyingFeed()).eq(customFeed.address);
     expect(await customFeedDiscounted.discountPercentage()).eq(
@@ -51,9 +44,8 @@ describe('CustomAggregatorV3CompatibleFeedDiscounted', function () {
 
   describe('latestRoundData', () => {
     it('when answer is 100 should return 90', async () => {
-      const { customFeed, customFeedDiscounted, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { customFeed, customFeedDiscounted, owner } =
+        await loadFixture(defaultDeploy);
 
       await setRoundData({ customFeed, owner }, 100);
 
@@ -72,9 +64,8 @@ describe('CustomAggregatorV3CompatibleFeedDiscounted', function () {
     });
 
     it('when answer is 1, discount is 100%, should return 0', async () => {
-      let { customFeed, customFeedDiscounted, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      let { customFeed, customFeedDiscounted, owner } =
+        await loadFixture(defaultDeploy);
 
       await setRoundData({ customFeed, owner }, 1);
 
@@ -117,17 +108,15 @@ describe('CustomAggregatorV3CompatibleFeedDiscounted', function () {
 
   describe('getRoundData', () => {
     it('when answer is 100, discount is 10%, should return 90', async () => {
-      const { customFeed, customFeedDiscounted, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      const { customFeed, customFeedDiscounted, owner } =
+        await loadFixture(defaultDeploy);
 
       await setRoundData({ customFeed, owner }, 100);
       const roundId = await customFeed.latestRound();
       await setRoundData({ customFeed, owner }, 200);
 
-      const latestRoundDataDiscounted = await customFeedDiscounted.getRoundData(
-        roundId,
-      );
+      const latestRoundDataDiscounted =
+        await customFeedDiscounted.getRoundData(roundId);
 
       const latestRoundData = await customFeed.getRoundData(roundId);
 
@@ -141,9 +130,8 @@ describe('CustomAggregatorV3CompatibleFeedDiscounted', function () {
     });
 
     it('when answer is 1, discount is 100%, should return 0', async () => {
-      let { customFeed, customFeedDiscounted, owner } = await loadFixture(
-        defaultDeploy,
-      );
+      let { customFeed, customFeedDiscounted, owner } =
+        await loadFixture(defaultDeploy);
 
       await setRoundData({ customFeed, owner }, 1);
       const roundId = await customFeed.latestRound();
@@ -153,9 +141,8 @@ describe('CustomAggregatorV3CompatibleFeedDiscounted', function () {
         await new CustomAggregatorV3CompatibleFeedDiscountedTester__factory(
           owner,
         ).deploy(customFeed.address, parseUnits('100', 8));
-      const latestRoundDataDiscounted = await customFeedDiscounted.getRoundData(
-        roundId,
-      );
+      const latestRoundDataDiscounted =
+        await customFeedDiscounted.getRoundData(roundId);
 
       const latestRoundData = await customFeed.getRoundData(roundId);
 

@@ -12,13 +12,11 @@ import {
 import { defaultDeploy } from './fixtures';
 
 import {
-  // eslint-disable-next-line camelcase
   DataFeedTest__factory,
   DepositVault,
   DepositVaultTest,
   DepositVaultWithUSTBTest,
   ERC20,
-  // eslint-disable-next-line camelcase
   ERC20__factory,
   MToken,
 } from '../../typechain-types';
@@ -56,7 +54,7 @@ export const depositInstantTest = async (
   tokenIn = getAccount(tokenIn);
 
   const sender = opt?.from ?? owner;
-  // eslint-disable-next-line camelcase
+
   const tokenContract = ERC20__factory.connect(tokenIn, owner);
 
   const tokensReceiver = await depositVault.tokensReceiver();
@@ -72,23 +70,14 @@ export const depositInstantTest = async (
   const callFn = withRecipient
     ? depositVault
         .connect(sender)
-        ['depositInstant(address,uint256,uint256,bytes32,address)'].bind(
-          this,
-          tokenIn,
-          amountIn,
-          minAmount ?? constants.Zero,
-          constants.HashZero,
-          recipient,
-        )
+        [
+          'depositInstant(address,uint256,uint256,bytes32,address)'
+        ].bind(this, tokenIn, amountIn, minAmount ?? constants.Zero, constants.HashZero, recipient)
     : depositVault
         .connect(sender)
-        ['depositInstant(address,uint256,uint256,bytes32)'].bind(
-          this,
-          tokenIn,
-          amountIn,
-          minAmount ?? constants.Zero,
-          constants.HashZero,
-        );
+        [
+          'depositInstant(address,uint256,uint256,bytes32)'
+        ].bind(this, tokenIn, amountIn, minAmount ?? constants.Zero, constants.HashZero);
 
   if (opt?.revertMessage) {
     await expect(callFn()).revertedWith(opt?.revertMessage);
@@ -209,7 +198,7 @@ export const depositRequestTest = async (
   tokenIn = getAccount(tokenIn);
 
   const sender = opt?.from ?? owner;
-  // eslint-disable-next-line camelcase
+
   const tokenContract = ERC20__factory.connect(tokenIn, owner);
 
   const tokensReceiver = await depositVault.tokensReceiver();
@@ -225,21 +214,14 @@ export const depositRequestTest = async (
   const callFn = withRecipient
     ? depositVault
         .connect(sender)
-        ['depositRequest(address,uint256,bytes32,address)'].bind(
-          this,
-          tokenIn,
-          amountIn,
-          constants.HashZero,
-          recipient,
-        )
+        [
+          'depositRequest(address,uint256,bytes32,address)'
+        ].bind(this, tokenIn, amountIn, constants.HashZero, recipient)
     : depositVault
         .connect(sender)
-        ['depositRequest(address,uint256,bytes32)'].bind(
-          this,
-          tokenIn,
-          amountIn,
-          constants.HashZero,
-        );
+        [
+          'depositRequest(address,uint256,bytes32)'
+        ].bind(this, tokenIn, amountIn, constants.HashZero);
 
   if (opt?.revertMessage) {
     await expect(callFn()).revertedWith(opt?.revertMessage);
@@ -480,18 +462,16 @@ export const safeBulkApproveRequestTest = async (
     newRate && newRate !== 'request-rate'
       ? depositVault
           .connect(sender)
-          ['safeBulkApproveRequest(uint256[],uint256)'].bind(
-            this,
-            requestIds,
-            newRate,
-          )
+          [
+            'safeBulkApproveRequest(uint256[],uint256)'
+          ].bind(this, requestIds, newRate)
       : newRate === 'request-rate'
-      ? depositVault
-          .connect(sender)
-          .safeBulkApproveRequestAtSavedRate.bind(this, requestIds)
-      : depositVault
-          .connect(sender)
-          ['safeBulkApproveRequest(uint256[])'].bind(this, requestIds);
+        ? depositVault
+            .connect(sender)
+            .safeBulkApproveRequestAtSavedRate.bind(this, requestIds)
+        : depositVault
+            .connect(sender)
+            ['safeBulkApproveRequest(uint256[])'].bind(this, requestIds);
 
   if (opt?.revertMessage) {
     await expect(callFn()).revertedWith(opt?.revertMessage);
@@ -529,7 +509,7 @@ export const safeBulkApproveRequestTest = async (
 
   const currentRate = await mTokenToUsdDataFeed.getDataInBase18();
   const newExpectedRate =
-    newRate === 'request-rate' ? undefined : newRate ?? currentRate;
+    newRate === 'request-rate' ? undefined : (newRate ?? currentRate);
 
   const expectedMintAmounts = requestDatasBefore.map((requestData, i) =>
     requestData.depositedUsdAmount
@@ -741,7 +721,7 @@ export const calcExpectedMintAmount = async (
   isInstant: boolean,
 ) => {
   const tokenConfig = await depositVault.tokensConfig(token);
-  // eslint-disable-next-line camelcase
+
   const dataFeedContract = DataFeedTest__factory.connect(
     tokenConfig.dataFeed,
     sender,
