@@ -59,6 +59,11 @@
       "address": "0xAada4457d4e65a33475106c4340ce965d69785D8",
       "txHash": "0x3ecff1b692d38fd33730dc79acb630a74713ee6d309549c266ca18f405f98025",
       "kind": "transparent"
+    },
+    {
+      "address": "0x8CAa67f4499De06c574ee1A9b23D32376c513Cdb",
+      "txHash": "0x19cd742f4a4f46709a2ffd6f7cc3efc0d632836151661fc0da79627db917acbc",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -1015,7 +1020,11 @@
           },
           "t_enum(RequestStatus)17811": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {
@@ -1546,7 +1555,11 @@
           },
           "t_enum(RequestStatus)17811": {
             "label": "enum RequestStatus",
-            "members": ["Pending", "Processed", "Canceled"],
+            "members": [
+              "Pending",
+              "Processed",
+              "Canceled"
+            ],
             "numberOfBytes": "1"
           },
           "t_mapping(t_address,t_bool)": {

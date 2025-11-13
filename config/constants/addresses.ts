@@ -1141,15 +1141,20 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
       behype: {
         token: '0xA519AfBc91986c0e7501d7e34968FEE51CD901aC',
-        numerator: {
-          aggregator: '0xB7d02965989FC2E5Af605Ca4EAEe92328589772F', // beHYPE/USD
-          dataFeed: '0x8a975f4D202230c1B85d35659Ef1954356f1F894',
-        },
-        denominator: {
-          aggregator: '0x1ef9592F449761C6EdA75c1fCFC45D625F3d5C76', // HYPE/USD
-          dataFeed: '0x47F3Adb059B13A74c73Bc9f6d70FC034c2afb696',
-        },
-        dataFeed: '0xAada4457d4e65a33475106c4340ce965d69785D8',
+        aggregator: '0x66a2EdAa2b12A23957B1E0537d1fC1d85762597D',
+        dataFeed: '0x8CAa67f4499De06c574ee1A9b23D32376c513Cdb',
+        // DO NOT USE: These feeds should NOT be used. Blending two USD-denominated feeds
+        // (beHYPE/USD and HYPE/USD) can lead to precision issues that allow users to
+        // under/over-mint/redeem. A real aggregator is used instead.
+        // numerator: {
+        //   aggregator: '0xB7d02965989FC2E5Af605Ca4EAEe92328589772F', // beHYPE/USD
+        //   dataFeed: '0x8a975f4D202230c1B85d35659Ef1954356f1F894',
+        // },
+        // denominator: {
+        //   aggregator: '0x1ef9592F449761C6EdA75c1fCFC45D625F3d5C76', // HYPE/USD
+        //   dataFeed: '0x47F3Adb059B13A74c73Bc9f6d70FC034c2afb696',
+        // },
+        // dataFeed: '0xAada4457d4e65a33475106c4340ce965d69785D8',
       },
     },
     liquidHYPE: {
