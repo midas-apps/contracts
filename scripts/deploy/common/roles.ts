@@ -117,9 +117,16 @@ export const revokeDefaultRolesFromDeployer = async (
 
   const roles = [allRoles.common.defaultAdmin];
 
-  const tx = await accessControl.revokeRoleMult(
-    roles,
-    roles.map(() => deployer.address),
+  await sendAndWaitForCustomTxSign(
+    hre,
+    await accessControl.populateTransaction.revokeRoleMult(
+      roles,
+      roles.map(() => deployer.address),
+    ),
+    {
+      action: 'deployer',
+      comment: 'revoke default roles from deployer',
+    },
   );
 };
 
@@ -143,9 +150,16 @@ export const grantDefaultAdminRoleToAcAdmin = async (
 
   const accessControl = await getAcContract(hre, deployer);
 
-  const tx = await accessControl.grantRole(
-    allRoles.common.defaultAdmin,
-    networkConfig?.acAdminAddress ?? acAdminAddress,
+  await sendAndWaitForCustomTxSign(
+    hre,
+    await accessControl.populateTransaction.grantRole(
+      allRoles.common.defaultAdmin,
+      networkConfig?.acAdminAddress ?? acAdminAddress,
+    ),
+    {
+      action: 'deployer',
+      comment: 'grant default admin role to ac admin',
+    },
   );
 };
 

@@ -157,13 +157,15 @@
   "packageManager": "yarn@4.10.3",
   "lint-staged": {
     "*.{js,ts}": [
-      "run-s lint:ts:fix format:ts:fix"
+      "yarn lint:ts:fix ",
+      "yarn format:ts:fix"
     ],
     "*.{json,yml,yaml}": [
       "yarn format:yml:fix"
     ],
     "*.sol": [
-      "run-s lint:sol:fix format:sol:fix"
+      "yarn lint:sol:fix",
+      "yarn format:sol:fix"
     ]
   }
 }
