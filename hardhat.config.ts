@@ -51,13 +51,10 @@ const config: HardhatUserConfig = {
     ],
   },
   namedAccounts: {
-    deployer: Object.keys(chainIds).reduce(
-      (acc, network) => {
-        acc[network] = 0;
-        return acc;
-      },
-      {} as Record<string, number>,
-    ),
+    deployer: Object.keys(chainIds).reduce((acc, network) => {
+      acc[network] = 0;
+      return acc;
+    }, {} as Record<string, number>),
   },
   verify: {
     etherscan: {
