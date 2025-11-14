@@ -4,11 +4,8 @@ import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
 import {
-  // eslint-disable-next-line camelcase
   DataFeedToBandStdAdapter__factory,
-  // eslint-disable-next-line camelcase
   CompositeDataFeedToBandStdAdapter__factory,
-  // eslint-disable-next-line camelcase
   CompositeDataFeedTest__factory,
 } from '../../typechain-types';
 import { setRoundData } from '../common/data-feed.helpers';

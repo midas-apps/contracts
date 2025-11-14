@@ -1,5 +1,5 @@
 import { AxelarQueryAPI, Environment } from '@axelar-network/axelarjs-sdk';
-import { BigNumberish, constants, Contract, ethers } from 'ethers';
+import { BigNumberish, constants, ethers } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 

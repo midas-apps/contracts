@@ -138,7 +138,6 @@ describe.skip('PythChainlinkAdapter - HyperEVM Fork Integration Tests', function
       expect(await dataFeed.minExpectedAnswer()).to.equal(minExpectedAnswer);
       expect(await dataFeed.maxExpectedAnswer()).to.equal(maxExpectedAnswer);
 
-      // eslint-disable-next-line no-unused-expressions
       expect(
         await midasAccessControl.hasRole(
           roles.common.defaultAdmin,

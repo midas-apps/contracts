@@ -1,6 +1,6 @@
 import * as hre from 'hardhat';
-import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { DeployFunction } from 'hardhat-deploy/types';
 
 import { getCurrentAddresses } from '../../config/constants/addresses';
 import { getTokenContractNames } from '../../helpers/contracts';

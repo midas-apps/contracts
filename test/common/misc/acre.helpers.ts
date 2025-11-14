@@ -2,10 +2,7 @@ import { expect } from 'chai';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
-import {
-  // eslint-disable-next-line camelcase
-  DataFeedTest__factory,
-} from '../../../typechain-types';
+import { DataFeedTest__factory } from '../../../typechain-types';
 import {
   AccountOrContract,
   balanceOfBase18,
@@ -53,7 +50,7 @@ export const acreWrapperDepositTest = async (
   const tokenConfig = await fixture.depositVault.tokensConfig(
     fixture.stableCoins.usdc.address,
   );
-  // eslint-disable-next-line camelcase
+
   const dataFeedContract = DataFeedTest__factory.connect(
     tokenConfig.dataFeed,
     from,

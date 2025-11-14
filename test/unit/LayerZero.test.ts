@@ -9,7 +9,6 @@ import { parseUnits } from 'ethers/lib/utils';
 import hre from 'hardhat';
 
 import {
-  // eslint-disable-next-line camelcase
   MidasLzOFTAdapter__factory,
   MidasLzVaultComposerSyncTester,
 } from '../../typechain-types';

@@ -1,10 +1,7 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 
-import {
-  // eslint-disable-next-line camelcase
-  BlacklistableTester__factory,
-} from '../../typechain-types';
+import { BlacklistableTester__factory } from '../../typechain-types';
 import { acErrors, blackList, unBlackList } from '../common/ac.helpers';
 import { defaultDeploy } from '../common/fixtures';
 

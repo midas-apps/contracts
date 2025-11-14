@@ -105,7 +105,6 @@ export const postDeploymentTest = async (
 
   /** Owners roles tests start */
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { blacklisted: _, greenlisted: __, ...rolesToCheck } = roles.common;
 
   for (const role of Object.values(rolesToCheck)) {

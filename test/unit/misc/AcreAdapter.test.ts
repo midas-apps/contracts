@@ -4,9 +4,7 @@ import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import {
-  // eslint-disable-next-line camelcase
   AcreAdapter__factory,
-  // eslint-disable-next-line camelcase
   DepositVaultTest__factory,
 } from '../../../typechain-types';
 import { acreAdapterFixture } from '../../common/fixtures';

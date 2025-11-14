@@ -1,7 +1,4 @@
-import {
-  OmniPointHardhat,
-  createGetHreByEid,
-} from '@layerzerolabs/devtools-evm-hardhat';
+import { createGetHreByEid } from '@layerzerolabs/devtools-evm-hardhat';
 import {
   createLogger,
   DebugLogger,

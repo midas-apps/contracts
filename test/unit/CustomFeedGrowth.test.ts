@@ -5,9 +5,7 @@ import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
 import {
-  // eslint-disable-next-line camelcase
   CustomAggregatorV3CompatibleFeedGrowth__factory,
-  // eslint-disable-next-line camelcase
   CustomAggregatorV3CompatibleFeedGrowthTester__factory,
 } from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';

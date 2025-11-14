@@ -4,13 +4,9 @@ import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
 import {
-  // eslint-disable-next-line camelcase
   CustomAggregatorV3CompatibleFeed__factory,
-  // eslint-disable-next-line camelcase
   CustomAggregatorV3CompatibleFeedTester__factory,
-  // eslint-disable-next-line camelcase
   MBasisCustomAggregatorFeed__factory,
-  // eslint-disable-next-line camelcase
   MTBillCustomAggregatorFeed__factory,
 } from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';

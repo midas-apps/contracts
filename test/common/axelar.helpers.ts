@@ -1,27 +1,16 @@
-import { addressToBytes32, Options } from '@layerzerolabs/lz-v2-utilities';
 import { expect } from 'chai';
-import {
-  BigNumber,
-  BigNumberish,
-  constants,
-  Contract,
-  ContractTransaction,
-} from 'ethers';
+import { BigNumberish, constants, Contract } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
 import { OptionalCommonParams, tokenAmountToBase18 } from './common.helpers';
 import { calcExpectedMintAmount } from './deposit-vault.helpers';
-import { axelarFixture, layerZeroFixture } from './fixtures';
+import { axelarFixture } from './fixtures';
 import { calcExpectedTokenOutAmount } from './redemption-vault.helpers';
 
 import {
-  // eslint-disable-next-line camelcase
   DepositVault__factory,
-  // eslint-disable-next-line camelcase
   ERC20__factory,
-  MidasLzMintBurnOFTAdapter,
-  // eslint-disable-next-line camelcase
   RedemptionVault__factory,
 } from '../../typechain-types';
 
@@ -176,7 +165,6 @@ export const depositAndSend = async (
 
   amount ??= 100;
 
-  // eslint-disable-next-line camelcase
   const pToken = ERC20__factory.connect(
     await executor.paymentTokenErc20(),
     from,
@@ -189,12 +177,12 @@ export const depositAndSend = async (
     amount.toFixed(18).replace(/\.?0+$/, ''),
   );
   referrerId ??= constants.HashZero;
-  // eslint-disable-next-line camelcase
+
   const mTokenRate = await mTokenToUsdDataFeed.getDataInBase18();
   const { mintAmount } = await calcExpectedMintAmount(
     from,
     await executor.paymentTokenErc20(),
-    // eslint-disable-next-line camelcase
+
     DepositVault__factory.connect(await executor.depositVault(), from),
     mTokenRate,
     amountParsedBase18,
@@ -290,7 +278,6 @@ export const redeemAndSend = async (
 
   amount ??= 100;
 
-  // eslint-disable-next-line camelcase
   const pToken = ERC20__factory.connect(
     await executor.paymentTokenErc20(),
     from,
@@ -298,12 +285,11 @@ export const redeemAndSend = async (
 
   const amountParsed = parseUnits(amount.toFixed(18).replace(/\.?0+$/, ''));
 
-  // eslint-disable-next-line camelcase
   const mTokenRate = await mTokenToUsdDataFeed.getDataInBase18();
   const { amountOut } = await calcExpectedTokenOutAmount(
     from,
     pToken,
-    // eslint-disable-next-line camelcase
+
     RedemptionVault__factory.connect(await executor.redemptionVault(), from),
     mTokenRate,
     amountParsed,

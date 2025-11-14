@@ -3,10 +3,7 @@ import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import {
-  // eslint-disable-next-line camelcase
-  CompositeDataFeedTest__factory,
-} from '../../typechain-types';
+import { CompositeDataFeedTest__factory } from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
 import { setRoundData } from '../common/data-feed.helpers';
 import { defaultDeploy } from '../common/fixtures';

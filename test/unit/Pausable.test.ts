@@ -2,10 +2,7 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 
 import { encodeFnSelector } from '../../helpers/utils';
-import {
-  // eslint-disable-next-line camelcase
-  PausableTester__factory,
-} from '../../typechain-types';
+import { PausableTester__factory } from '../../typechain-types';
 import {
   pauseVault,
   pauseVaultFn,

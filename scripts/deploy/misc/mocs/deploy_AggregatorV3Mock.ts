@@ -1,10 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { etherscanVerify } from '../../../../helpers/utils';
-import {
-  // eslint-disable-next-line camelcase
-  AggregatorV3Mock__factory,
-} from '../../../../typechain-types';
+import { AggregatorV3Mock__factory } from '../../../../typechain-types';
 import { DeployFunction } from '../../common/types';
 import { getDeployer } from '../../common/utils';
 

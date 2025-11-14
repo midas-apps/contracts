@@ -1,5 +1,3 @@
-import { JsonRpcProvider } from '@ethersproject/providers';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { extendEnvironment } from 'hardhat/config';
 import { EIP1193Provider, HardhatRuntimeEnvironment } from 'hardhat/types';
 

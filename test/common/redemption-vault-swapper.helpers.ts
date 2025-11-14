@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { BigNumberish, constants } from 'ethers';
+import { BigNumberish } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import {
@@ -16,7 +16,6 @@ import {
 
 import {
   ERC20,
-  // eslint-disable-next-line camelcase
   ERC20__factory,
   RedemptionVaultWithSwapper,
 } from '../../typechain-types';
@@ -59,7 +58,6 @@ export const redeemInstantWithSwapperTest = async (
 ) => {
   tokenOut = getAccount(tokenOut);
 
-  // eslint-disable-next-line camelcase
   const tokenContract = ERC20__factory.connect(tokenOut, owner);
 
   const sender = opt?.from ?? owner;

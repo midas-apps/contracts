@@ -1,10 +1,7 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 
-import {
-  // eslint-disable-next-line camelcase
-  GreenlistableTester__factory,
-} from '../../typechain-types';
+import { GreenlistableTester__factory } from '../../typechain-types';
 import {
   acErrors,
   greenList,
