@@ -696,17 +696,21 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
       },
       behype: {
         dataFeed: {
-          numerator: {
-            healthyDiff: 3600,
-            minAnswer: parseUnits('10', 8),
-            maxAnswer: parseUnits('200', 8),
-          },
-          denominator: {
-            healthyDiff: 3600,
-            minAnswer: parseUnits('10', 8),
-            maxAnswer: parseUnits('200', 8),
-          },
-          feedType: 'composite',
+          // DO NOT USE: These numerator/denominator feeds should NOT be used. Blending two
+          // USD-denominated feeds (beHYPE/USD and HYPE/USD) can lead to precision issues that
+          // allow users to under/over-mint/redeem. A real aggregator is used instead.
+          // numerator: {
+          //   healthyDiff: 3600,
+          //   minAnswer: parseUnits('10', 8),
+          //   maxAnswer: parseUnits('200', 8),
+          // },
+          // denominator: {
+          //   healthyDiff: 3600,
+          //   minAnswer: parseUnits('10', 8),
+          //   maxAnswer: parseUnits('200', 8),
+          // },
+          // feedType: 'composite',
+          healthyDiff: 3600,
           minAnswer: parseUnits('1'),
           maxAnswer: parseUnits('1.2'),
         },
