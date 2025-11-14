@@ -29,14 +29,12 @@ declare module 'hardhat/types/runtime' {
     };
     contextId: string;
     getCustomSigner: () => Promise<{
-      getWeb3Provider: (params: {
-        chainId: number;
-        rpcUrl?: string;
-        action: string;
-      }) => Promise<EIP1193Provider>;
+      type: 'hardhatSigner' | 'customSigner';
+      getWeb3Provider: (params: { action: string }) => Promise<EIP1193Provider>;
       getWalletAddress: (
         action?: string,
         mtoken?: MTokenName,
+        chainId?: number,
       ) => Promise<string>;
       createAddressBookContract: (data: {
         address: string;
@@ -58,10 +56,7 @@ declare module 'hardhat/types/runtime' {
           chainId?: number;
           idempotenceId?: string;
         },
-      ) => Promise<
-        | { type: 'hardhatSigner'; tx: TransactionResponse }
-        | { type: 'customSigner'; payload: unknown }
-      >;
+      ) => Promise<{ tx: TransactionResponse } | { payload: unknown }>;
     }>;
   }
 }

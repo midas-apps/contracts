@@ -322,7 +322,9 @@ export const getHardhatNetworkConfig = (): HardhatNetworkUserConfig => ({
 });
 
 export const isTestnetNetwork = (network: Network) => {
+  const isLocalNetwork = network === 'localhost' || network === 'hardhat';
   return (
+    isLocalNetwork ||
     network === 'sepolia' ||
     network === 'arbitrumSepolia' ||
     network === 'tacTestnet'
