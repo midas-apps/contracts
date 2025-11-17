@@ -11,6 +11,7 @@ const logToFile = (hre: HardhatRuntimeEnvironment, message: string) => {
   fs.appendFileSync(logFilePath, message + '\n');
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const serializeArgs = (args: any[]): string => {
   return args
     .map((arg) => {
@@ -30,10 +31,12 @@ const serializeArgs = (args: any[]): string => {
 export const initializeLogger = (hre: HardhatRuntimeEnvironment) => {
   const originalLog = console.log;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if ((originalLog as any).customLogger) {
     return;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   console.log = (...args: any[]) => {
     originalLog(...args);
 
@@ -43,6 +46,7 @@ export const initializeLogger = (hre: HardhatRuntimeEnvironment) => {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (console.log as any).customLogger = true;
 
   console.warn = console.log;

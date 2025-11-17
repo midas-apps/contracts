@@ -3,13 +3,7 @@ import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import { getAllRoles } from '../../helpers/roles';
-import {
-  // eslint-disable-next-line camelcase
-  CustomAggregatorV3CompatibleFeedDiscounted__factory,
-  // eslint-disable-next-line camelcase
-  CustomAggregatorV3CompatibleFeedDiscountedTester__factory,
-} from '../../typechain-types';
+import { CustomAggregatorV3CompatibleFeedDiscountedTester__factory } from '../../typechain-types';
 import { setRoundData } from '../common/custom-feed.helpers';
 import { defaultDeploy } from '../common/fixtures';
 

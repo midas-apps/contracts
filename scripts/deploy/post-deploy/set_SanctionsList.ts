@@ -29,23 +29,23 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     { type: 'depositVault', address: tokenAddresses.depositVault },
     {
       type: 'depositVaultUstb',
-      address: (tokenAddresses as any).depositVaultUstb,
+      address: tokenAddresses.depositVaultUstb,
     },
     {
       type: 'redemptionVault',
-      address: (tokenAddresses as any).redemptionVault,
+      address: tokenAddresses.redemptionVault,
     },
     {
       type: 'redemptionVaultBuidl',
-      address: (tokenAddresses as any).redemptionVaultBuidl,
+      address: tokenAddresses.redemptionVaultBuidl,
     },
     {
       type: 'redemptionVaultSwapper',
-      address: (tokenAddresses as any).redemptionVaultSwapper,
+      address: tokenAddresses.redemptionVaultSwapper,
     },
     {
       type: 'redemptionVaultUstb',
-      address: (tokenAddresses as any).redemptionVaultUstb,
+      address: tokenAddresses.redemptionVaultUstb,
     },
   ];
 

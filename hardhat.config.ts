@@ -72,14 +72,12 @@ const config: HardhatUserConfig = {
     rootstock: getNetworkConfig('rootstock'),
     arbitrum: getNetworkConfig('arbitrum'),
     tacTestnet: getNetworkConfig('tacTestnet'),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     hardhat: FORKING_NETWORK
       ? getForkNetworkConfig(FORKING_NETWORK)
       : getHardhatNetworkConfig(),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     localhost: FORKING_NETWORK
       ? getForkNetworkConfig(FORKING_NETWORK)
-      : getNetworkConfig('localhost', [], FORKING_NETWORK as any),
+      : getNetworkConfig('localhost', [], FORKING_NETWORK),
     hyperevm: getNetworkConfig('hyperevm'),
     katana: getNetworkConfig('katana'),
     xrplevm: getNetworkConfig('xrplevm'),

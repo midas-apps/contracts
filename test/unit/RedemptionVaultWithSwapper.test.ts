@@ -4,10 +4,7 @@ import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import { encodeFnSelector } from '../../helpers/utils';
-import {
-  // eslint-disable-next-line camelcase
-  RedemptionVaultWithSwapperTest__factory,
-} from '../../typechain-types';
+import { RedemptionVaultWithSwapperTest__factory } from '../../typechain-types';
 import { acErrors, blackList, greenList } from '../common/ac.helpers';
 import {
   approveBase18,
