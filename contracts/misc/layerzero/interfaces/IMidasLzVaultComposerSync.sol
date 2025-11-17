@@ -133,10 +133,10 @@ interface IMidasLzVaultComposerSync is IOAppComposer {
     function lzEndpoint() external view returns (address);
 
     /**
-     * @notice getter for the vaults EID
-     * @return the vaults EID
+     * @notice getter for the current chain EID
+     * @return the current chain EID
      */
-    function vaultsEid() external view returns (uint32);
+    function thisChaindEid() external view returns (uint32);
 
     /**
      * @notice Deposits payment token from the caller into the vault and sends them to the recipient
