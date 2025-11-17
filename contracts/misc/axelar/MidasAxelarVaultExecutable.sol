@@ -79,15 +79,6 @@ contract MidasAxelarVaultExecutable is
     bytes32 public immutable chainNameHash;
 
     /**
-     * @notice constant for 1e18
-     */
-    uint256 private constant _ONE = 1e18;
-    /**
-     * @notice constant for 100%
-     */
-    uint256 private constant _ONE_HUNDRED_PERCENT = 100 * 100;
-
-    /**
      * @notice constructor
      * @param _depositVault address of the deposit vault
      * @param _redemptionVault address of the redemption vault

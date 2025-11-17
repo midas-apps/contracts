@@ -90,16 +90,7 @@ contract MidasLzVaultComposerSync is
     /**
      * @inheritdoc IMidasLzVaultComposerSync
      */
-    uint32 public immutable vaultsEid;
-
-    /**
-     * @notice constant for 1e18
-     */
-    uint256 private constant _ONE = 1e18;
-    /**
-     * @notice constant for 100%
-     */
-    uint256 private constant _ONE_HUNDRED_PERCENT = 100 * 100;
+    uint32 public immutable thisChaindEid;
 
     /**
      * @notice Initializes the VaultComposerSync contract with vault and OFT token addresses
@@ -134,7 +125,7 @@ contract MidasLzVaultComposerSync is
         }
 
         lzEndpoint = address(IOAppCore(paymentTokenOft).endpoint());
-        vaultsEid = ILayerZeroEndpointV2(lzEndpoint).eid();
+        thisChaindEid = ILayerZeroEndpointV2(lzEndpoint).eid();
     }
 
     /**
@@ -171,7 +162,7 @@ contract MidasLzVaultComposerSync is
     function lzCompose(
         address _composeSender, // The OFT used on refund, also the vaultIn token.
         bytes32 _guid,
-        bytes calldata _message, // expected to contain a composeMessage = abi.encode(SendParam hopSendParam,uint256 minMsgValue)
+        bytes calldata _message, // expected to contain a composeMessage = abi.encode(SendParam hopSendParam,uint256 minMsgValue,bytes extraOptions)
         address, /*_executor*/
         bytes calldata /*_extraData*/
     ) external payable override {
@@ -331,7 +322,7 @@ contract MidasLzVaultComposerSync is
         SendParam memory _sendParam,
         address _refundAddress
     ) internal {
-        bool receiveToSameNetwork = _sendParam.dstEid == vaultsEid;
+        bool receiveToSameNetwork = _sendParam.dstEid == thisChaindEid;
 
         bytes32 referrerId = _parseDepositExtraOptions(_extraOptions);
 
@@ -346,7 +337,6 @@ contract MidasLzVaultComposerSync is
 
         if (!receiveToSameNetwork) {
             _sendParam.amountLD = mTokenAmount;
-            _sendParam.minAmountLD = 0;
 
             _sendOft(mTokenOft, _sendParam, _refundAddress);
         } else {
@@ -381,7 +371,7 @@ contract MidasLzVaultComposerSync is
         SendParam memory _sendParam,
         address _refundAddress
     ) internal {
-        bool receiveToSameNetwork = _sendParam.dstEid == vaultsEid;
+        bool receiveToSameNetwork = _sendParam.dstEid == thisChaindEid;
 
         uint256 paymentTokenAmount = _redeem(
             receiveToSameNetwork
@@ -393,7 +383,6 @@ contract MidasLzVaultComposerSync is
 
         if (!receiveToSameNetwork) {
             _sendParam.amountLD = paymentTokenAmount;
-            _sendParam.minAmountLD = 0;
 
             _sendOft(paymentTokenOft, _sendParam, _refundAddress);
         } else {
