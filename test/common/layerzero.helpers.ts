@@ -17,8 +17,10 @@ import { calcExpectedTokenOutAmount } from './redemption-vault.helpers';
 
 import {
   DepositVault__factory,
+  ERC20,
   ERC20__factory,
   MidasLzMintBurnOFTAdapter,
+  MidasLzOFTAdapter,
   RedemptionVault__factory,
 } from '../../typechain-types';
 
@@ -175,6 +177,128 @@ export const sendOft = async (
   }
 };
 
+export const sendOftLockBox = async (
+  {
+    owner,
+    pTokenLzOft,
+    pTokenLzOftAdapter,
+    pToken,
+  }: CommonParams & {
+    pToken: ERC20;
+    oftAdapterA: MidasLzOFTAdapter;
+    oftAdapterB: MidasLzOFTAdapter;
+  },
+  {
+    direction,
+    amount,
+    recipient,
+  }: {
+    direction?: 'A_TO_B' | 'B_TO_A';
+    amount?: number;
+    recipient?: string;
+  },
+  opt?: {
+    revertOnDst?: boolean;
+    revertWithCustomError?: {
+      contract: Contract;
+      error: string;
+    };
+  } & OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+
+  direction ??= 'A_TO_B';
+  recipient ??= from.address;
+
+  amount ??= 100;
+
+  const amountParsed = parseUnits(amount.toFixed(18).replace(/\.?0+$/, ''));
+
+  const oneSD = parseUnits('1', 9);
+
+  const dust = amountParsed.sub(amountParsed.div(oneSD).mul(oneSD));
+  const amountWoDust = amountParsed.sub(dust);
+
+  const oftFrom = direction === 'A_TO_B' ? pTokenLzOftAdapter : pTokenLzOft;
+  const oftTo = direction === 'A_TO_B' ? pTokenLzOft : pTokenLzOftAdapter;
+
+  const lzParams = {
+    amountLD: amountParsed.toString(),
+    composeMsg: '0x',
+    dstEid: direction === 'A_TO_B' ? 2 : 1,
+    extraOptions: Options.newOptions()
+      .addExecutorLzReceiveOption(200_000, 0)
+      .toHex(),
+    minAmountLD: amountWoDust.toString(),
+    oftCmd: '0x',
+    to: addressToBytes32(recipient),
+  };
+  // Fetching the native fee for the token send operation
+  const { nativeFee } = await oftFrom.quoteSend(lzParams, false).catch((_) => {
+    return { nativeFee: parseUnits('0.1', 18), lzTokenFee: 0 };
+  });
+
+  const params = [
+    lzParams,
+    { lzTokenFee: 0, nativeFee },
+    from.address,
+    { value: nativeFee },
+  ] as const;
+
+  if (opt?.revertMessage && !opt?.revertOnDst) {
+    await expect(
+      oftFrom.connect(opt?.from ?? owner).send(...params),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  if (opt?.revertWithCustomError && !opt?.revertOnDst) {
+    await expect(
+      oftFrom.connect(opt?.from ?? owner).send(...params),
+    ).revertedWithCustomError(
+      opt?.revertWithCustomError.contract,
+      opt?.revertWithCustomError.error,
+    );
+    return;
+  }
+
+  const totalSupplyBefore = await pToken.totalSupply();
+  const totalSupplyOftBefore = await pTokenLzOft.totalSupply();
+  const balanceFromBefore = await pToken.balanceOf(from.address);
+  const balanceFromOftBefore = await pTokenLzOft.balanceOf(from.address);
+  const balanceToBefore = await pToken.balanceOf(recipient);
+  const balanceToOftBefore = await pTokenLzOft.balanceOf(recipient);
+
+  await expect(oftFrom.connect(from).send(...params)).to.emit(
+    oftFrom,
+    oftFrom.interface.events['OFTSent(bytes32,uint32,address,uint256,uint256)']
+      .name,
+  ).not.reverted;
+
+  const totalSupplyAfter = await pToken.totalSupply();
+  const totalSupplyOftAfter = await pTokenLzOft.totalSupply();
+  const balanceFromAfter = await pToken.balanceOf(from.address);
+  const balanceFromOftAfter = await pTokenLzOft.balanceOf(from.address);
+  const balanceToAfter = await pToken.balanceOf(recipient);
+  const balanceToOftAfter = await pTokenLzOft.balanceOf(recipient);
+
+  expect(totalSupplyAfter).eq(totalSupplyBefore);
+
+  expect(totalSupplyOftAfter).eq(
+    direction === 'A_TO_B'
+      ? totalSupplyOftBefore.add(amountWoDust)
+      : totalSupplyOftBefore.sub(amountWoDust),
+  );
+
+  if (direction === 'B_TO_A') {
+    expect(balanceFromOftAfter).eq(balanceFromOftBefore.sub(amountWoDust));
+    expect(balanceToAfter).eq(balanceToBefore.add(amountWoDust));
+  } else {
+    expect(balanceToOftAfter).eq(balanceToOftBefore.add(amountWoDust));
+    expect(balanceFromAfter).eq(balanceFromBefore.sub(amountWoDust));
+  }
+};
+
 export const depositAndSend = async (
   {
     composer,
@@ -189,11 +313,13 @@ export const depositAndSend = async (
     recipient,
     direction,
     referrerId,
+    minAmountLD,
   }: {
     amount: number;
     recipient?: string;
     direction?: 'A_TO_A' | 'A_TO_B';
     referrerId?: string;
+    minAmountLD?: BigNumberish;
   },
   opt?: {
     revertOnDst?: boolean;
@@ -202,6 +328,7 @@ export const depositAndSend = async (
       error: string;
     };
     overrideValue?: BigNumberish;
+    expectedMintAmountWoDust?: BigNumberish;
   } & OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
@@ -242,11 +369,15 @@ export const depositAndSend = async (
   const dust = mintAmount.sub(mintAmount.div(oneSD).mul(oneSD));
   const mintAmountWoDust = mintAmount.sub(dust);
 
+  if (opt?.expectedMintAmountWoDust !== undefined) {
+    expect(mintAmountWoDust).eq(opt?.expectedMintAmountWoDust);
+  }
+
   const secondHopSendParam = {
     dstEid: direction === 'A_TO_A' ? 1 : 2,
     to: addressToBytes32(recipient),
-    amountLD: mintAmountWoDust, // this ammount will be overrided in the composer call
-    minAmountLD: mintAmountWoDust,
+    amountLD: parseUnits('1', 9).toString(),
+    minAmountLD: 0,
     extraOptions: Options.newOptions()
       .addExecutorLzReceiveOption(300_000, 0)
       .toHex(),
@@ -274,7 +405,7 @@ export const depositAndSend = async (
     extraOptions,
     {
       amountLD: mintAmount.toString(),
-      minAmountLD: mintAmountWoDust.toString(),
+      minAmountLD: (minAmountLD ?? mintAmountWoDust).toString(),
       extraOptions: Options.newOptions().toHex(),
       composeMsg: '0x' as `0x${string}`,
       oftCmd: '0x' as `0x${string}`,
@@ -357,6 +488,9 @@ export const redeemAndSend = async (
     pTokenLzOft,
     oftAdapterB,
     redemptionVault,
+    mockEndpointB,
+    mockEndpointA,
+    oftAdapterA,
   }: CommonParams,
   {
     amount,
@@ -406,7 +540,7 @@ export const redeemAndSend = async (
   const redeemedAmountWoDust = amountOut.sub(dust);
 
   const secondHopSendParam = {
-    dstEid: direction === 'A_TO_A' || direction === 'B_TO_A' ? 1 : 2,
+    dstEid: direction === 'A_TO_A' || direction === 'B_TO_A' ? 30001 : 30002,
     to: addressToBytes32(recipient),
     amountLD: redeemedAmountWoDust, // this ammount will be overrided in the composer call
     minAmountLD: redeemedAmountWoDust,
@@ -418,16 +552,13 @@ export const redeemAndSend = async (
   };
 
   const nativeFee =
-    direction === 'A_TO_A'
+    direction === 'A_TO_A' || direction === 'B_TO_A'
       ? BigNumber.from(0)
-      : await (direction === 'B_TO_A' || direction === 'B_TO_B'
-          ? pTokenLzOft
-          : pTokenLzOftAdapter
-        )
+      : await pTokenLzOftAdapter
           .quoteSend(
             // if the destination is the hub, we need to quote the send param for the source chain
-            direction === 'B_TO_A' || direction === 'B_TO_B'
-              ? { ...secondHopSendParam, dstEid: 2 }
+            direction === 'B_TO_B'
+              ? { ...secondHopSendParam, dstEid: 30002 }
               : secondHopSendParam,
             false,
           )
@@ -441,6 +572,7 @@ export const redeemAndSend = async (
           [
             'tuple(uint32,bytes32,uint256,uint256,bytes,bytes,bytes)',
             'uint256',
+            'bytes',
           ],
           [
             [
@@ -453,11 +585,12 @@ export const redeemAndSend = async (
               secondHopSendParam.oftCmd,
             ],
             lzComposeValue,
+            '0x',
           ],
         )
       : '0x';
 
-  const options = Options.newOptions().addExecutorLzReceiveOption(300_000, 0);
+  const options = Options.newOptions().addExecutorLzReceiveOption(1_000_000, 0);
 
   if (composeMsg !== '0x') {
     options.addExecutorComposeOption(0, 600_000, 0);
@@ -468,11 +601,11 @@ export const redeemAndSend = async (
     '0x',
     {
       amountLD: amountParsed.toString(),
-      minAmountLD: amountParsed.toString(),
+      minAmountLD: 0,
       extraOptions: options.toHex(),
       composeMsg,
       oftCmd: '0x' as `0x${string}`,
-      dstEid: direction === 'A_TO_A' || direction === 'B_TO_A' ? 1 : 2,
+      dstEid: direction === 'A_TO_A' || direction === 'B_TO_A' ? 30001 : 30002,
       to: addressToBytes32(recipient),
     },
     from.address,
@@ -486,15 +619,19 @@ export const redeemAndSend = async (
       .quoteSend(params[2], false)
       .then((v) => v.nativeFee);
 
+    const value = opt?.overrideValue ?? msgFee;
+    await mockEndpointB.setNextComposerMsgValue({ value: lzComposeValue });
+    await mockEndpointA.setNextComposerMsgValue({ value: lzComposeValue });
     txFn = oftAdapterB
       .connect(from)
       .send.bind(
         this,
-        params[2],
+        { ...params[2], to: addressToBytes32(composer.address) },
         { nativeFee: msgFee, lzTokenFee: 0 },
         from.address,
         {
-          value: opt?.overrideValue ?? msgFee,
+          value,
+          gasLimit: 2_000_000,
         },
       );
   } else {
@@ -529,9 +666,17 @@ export const redeemAndSend = async (
       ].name,
     )
     .withArgs(
-      addressToBytes32(from.address),
-      addressToBytes32(recipient),
-      direction === 'A_TO_A' ? 1 : 2,
+      addressToBytes32(
+        direction === 'B_TO_A' || direction === 'B_TO_B'
+          ? oftAdapterA.address
+          : from.address,
+      ),
+      addressToBytes32(
+        direction === 'B_TO_A' || direction === 'B_TO_B'
+          ? composer.address
+          : recipient,
+      ),
+      direction === 'A_TO_A' || direction === 'B_TO_A' ? 30001 : 30002,
       amountParsed,
       amountOut,
     )

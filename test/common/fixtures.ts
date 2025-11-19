@@ -1,6 +1,6 @@
 import { Options } from '@layerzerolabs/lz-v2-utilities';
 import { expect } from 'chai';
-import { constants, ContractFactory } from 'ethers';
+import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import * as hre from 'hardhat';
@@ -50,6 +50,7 @@ import {
   MidasLzVaultComposerSyncTester,
   AxelarInterchainTokenServiceMock__factory,
   MidasAxelarVaultExecutableTester,
+  LzEndpointV2Mock__factory,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -699,23 +700,13 @@ export const layerZeroFixture = async () => {
     redemptionVault,
     stableCoins,
   } = defaultFixture;
-  const eidA = 1;
-  const eidB = 2;
-
-  const endpointV2MockArtifact = await hre.deployments.getArtifact(
-    'EndpointV2Mock',
-  );
-
-  const endpointV2MockFactory = new ContractFactory(
-    endpointV2MockArtifact.abi,
-    endpointV2MockArtifact.bytecode,
-    defaultFixture.owner,
-  );
+  const eidA = 30001;
+  const eidB = 30002;
 
   // await setBlockGasLimit(100000000000);
 
-  const mockEndpointA = await endpointV2MockFactory.deploy(eidA);
-  const mockEndpointB = await endpointV2MockFactory.deploy(eidB);
+  const mockEndpointA = await new LzEndpointV2Mock__factory(owner).deploy(eidA);
+  const mockEndpointB = await new LzEndpointV2Mock__factory(owner).deploy(eidB);
 
   const roles = getRolesForToken('mTBILL');
 
@@ -842,7 +833,6 @@ export const layerZeroFixture = async () => {
       oftAdapterA.address,
     ],
   );
-
   return {
     mockEndpointA,
     mockEndpointB,

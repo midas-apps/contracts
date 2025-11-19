@@ -1955,6 +1955,27 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@layerzerolabs/lz-evm-messagelib-v2@npm:3.0.146":
+  version: 3.0.146
+  resolution: "@layerzerolabs/lz-evm-messagelib-v2@npm:3.0.146"
+  peerDependencies:
+    "@arbitrum/nitro-contracts": ^1.1.0
+    "@axelar-network/axelar-gmp-sdk-solidity": ^5.6.4
+    "@chainlink/contracts-ccip": ^0.7.6
+    "@eth-optimism/contracts": ^0.6.0
+    "@layerzerolabs/lz-evm-protocol-v2": ^3.0.146
+    "@layerzerolabs/lz-evm-v1-0.7": ^3.0.146
+    "@openzeppelin/contracts": ^4.8.1 || ^5.0.0
+    "@openzeppelin/contracts-upgradeable": ^4.8.1 || ^5.0.0
+    hardhat-deploy: ^0.12.4
+    solidity-bytes-utils: ^0.8.0
+  peerDependenciesMeta:
+    "@arbitrum/nitro-contracts":
+      optional: true
+  checksum: 10c0/45bc5772e9df61512835be08058cfb57336fded6851597c7cb83c7bf544d250168d65ca0f8dae7d6267cf919e59acb84593735990543674464ae5905ad80ba45
+  languageName: node
+  linkType: hard
+
 "@layerzerolabs/lz-evm-protocol-v2@npm:3.0.139":
   version: 3.0.139
   resolution: "@layerzerolabs/lz-evm-protocol-v2@npm:3.0.139"
@@ -11741,6 +11762,7 @@ __metadata:
     "@eslint/js": "npm:9.39.1"
     "@ethersproject/abi": "npm:5.7.0"
     "@ethersproject/providers": "npm:5.7.2"
+    "@layerzerolabs/lz-evm-messagelib-v2": "npm:3.0.146"
     "@layerzerolabs/lz-evm-protocol-v2": "npm:3.0.139"
     "@layerzerolabs/metadata-tools": "npm:3.0.2"
     "@layerzerolabs/oapp-evm": "npm:0.3.2"
@@ -11786,6 +11808,7 @@ __metadata:
     prettier: "npm:2.8.8"
     prettier-plugin-solidity: "npm:1.0.0-beta.24"
     solhint: "npm:3.3.7"
+    solidity-bytes-utils: "npm:0.8.4"
     solidity-coverage: "npm:0.8.16"
     solidity-docgen: "npm:0.6.0-beta.35"
     ts-morph: "npm:26.0.0"
@@ -15233,6 +15256,13 @@ __metadata:
   version: 0.4.49
   resolution: "solidity-ast@npm:0.4.49"
   checksum: 10c0/785047b14917969de6549f3f2c503243cc7a4b5f99de86be38fb0831d9e73737da7601a25f642d143bd1004f3d8fe6635cd168654b1a6b97b12a9e9e481ee887
+  languageName: node
+  linkType: hard
+
+"solidity-bytes-utils@npm:0.8.4":
+  version: 0.8.4
+  resolution: "solidity-bytes-utils@npm:0.8.4"
+  checksum: 10c0/a9cc2b96143a54dffce884162d5222dfed6ebb76a2e55a6b407facc2b73d59c83598691ba0f0fd452e90eb4519003cebe180bd94a7dcf0d3e0ce6b84046f2778
   languageName: node
   linkType: hard
 
