@@ -41,6 +41,8 @@ describe('LayerZero', function () {
         mockEndpointA,
         mockEndpointB,
         owner,
+        eidA,
+        eidB,
       } = fixture;
 
       expect(await oftAdapterA.decimalConversionRate()).to.equal(
@@ -57,10 +59,10 @@ describe('LayerZero', function () {
       expect(await oftAdapterB.endpoint()).to.equal(mockEndpointB.address);
       expect(await oftAdapterA.owner()).to.equal(owner.address);
       expect(await oftAdapterB.owner()).to.equal(owner.address);
-      const rateLimitA = await oftAdapterA.getRateLimit(2);
+      const rateLimitA = await oftAdapterA.getRateLimit(eidB);
       expect(rateLimitA.limit).to.equal(parseUnits('1000000000', 18));
       expect(rateLimitA.window).to.equal(60);
-      const rateLimitB = await oftAdapterB.getRateLimit(1);
+      const rateLimitB = await oftAdapterB.getRateLimit(eidA);
       expect(rateLimitB.limit).to.equal(parseUnits('1000000000', 18));
       expect(rateLimitB.window).to.equal(60);
     });
@@ -260,10 +262,10 @@ describe('LayerZero', function () {
 
       it('when call with empty rate limit configs without changing anything', async () => {
         const fixture = await loadFixture(layerZeroFixture);
-        const { oftAdapterB, regularAccounts } = fixture;
+        const { oftAdapterB, regularAccounts, eidA } = fixture;
 
         await expect(oftAdapterB.setRateLimits([])).not.reverted;
-        const rateLimit = await oftAdapterB.getRateLimit(1);
+        const rateLimit = await oftAdapterB.getRateLimit(eidA);
         expect(rateLimit.limit).to.equal(parseUnits('1000000000', 18));
         expect(rateLimit.window).to.equal(60);
       });
@@ -445,6 +447,173 @@ describe('LayerZero', function () {
         });
       });
 
+      it('should deposit and send mTBILL from B to A', async () => {
+        const fixture = await loadFixture(layerZeroFixture);
+        const {
+          depositVault,
+          stableCoins,
+          owner,
+          dataFeed,
+          pTokenLzOftAdapter,
+        } = fixture;
+
+        await addPaymentTokenTest(
+          { vault: depositVault, owner },
+          stableCoins.usdt,
+          dataFeed.address,
+          0,
+          true,
+        );
+
+        await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+        await mintToken(stableCoins.usdt, fixture.owner, 100);
+        await approveBase18(
+          fixture.owner,
+          stableCoins.usdt,
+          pTokenLzOftAdapter,
+          100,
+        );
+
+        await sendOftLockBox(
+          { ...fixture, pToken: stableCoins.usdt },
+          { direction: 'A_TO_B' },
+        );
+
+        await depositAndSend(fixture, {
+          amount: 100,
+          direction: 'B_TO_A',
+        });
+      });
+
+      it('should deposit and send mTBILL from B to B', async () => {
+        const fixture = await loadFixture(layerZeroFixture);
+        const {
+          depositVault,
+          stableCoins,
+          owner,
+          dataFeed,
+          pTokenLzOftAdapter,
+        } = fixture;
+
+        await addPaymentTokenTest(
+          { vault: depositVault, owner },
+          stableCoins.usdt,
+          dataFeed.address,
+          0,
+          true,
+        );
+
+        await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+        await mintToken(stableCoins.usdt, fixture.owner, 100);
+        await approveBase18(
+          fixture.owner,
+          stableCoins.usdt,
+          pTokenLzOftAdapter,
+          100,
+        );
+
+        await sendOftLockBox(
+          { ...fixture, pToken: stableCoins.usdt },
+          { direction: 'A_TO_B' },
+        );
+
+        await depositAndSend(fixture, {
+          amount: 100,
+          direction: 'B_TO_B',
+        });
+      });
+
+      it('should deposit and send mTBILL from B to B when referrerId is provided', async () => {
+        const fixture = await loadFixture(layerZeroFixture);
+        const {
+          depositVault,
+          stableCoins,
+          owner,
+          dataFeed,
+          pTokenLzOftAdapter,
+        } = fixture;
+
+        await addPaymentTokenTest(
+          { vault: depositVault, owner },
+          stableCoins.usdt,
+          dataFeed.address,
+          0,
+          true,
+        );
+
+        await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+        await mintToken(stableCoins.usdt, fixture.owner, 100);
+        await approveBase18(
+          fixture.owner,
+          stableCoins.usdt,
+          pTokenLzOftAdapter,
+          100,
+        );
+
+        await sendOftLockBox(
+          { ...fixture, pToken: stableCoins.usdt },
+          { direction: 'A_TO_B' },
+        );
+
+        await depositAndSend(fixture, {
+          amount: 100,
+          direction: 'B_TO_B',
+          referrerId: ethers.utils.solidityKeccak256(
+            ['string'],
+            ['TEST_REFERRER_ID'],
+          ),
+        });
+      });
+
+      it('should refund when calling B to B and minAmountLD is lower then amountWoDust', async () => {
+        const fixture = await loadFixture(layerZeroFixture);
+        const {
+          depositVault,
+          stableCoins,
+          owner,
+          dataFeed,
+          pTokenLzOftAdapter,
+        } = fixture;
+
+        await addPaymentTokenTest(
+          { vault: depositVault, owner },
+          stableCoins.usdt,
+          dataFeed.address,
+          0,
+          true,
+        );
+
+        await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+        await mintToken(stableCoins.usdt, fixture.owner, 100);
+        await approveBase18(
+          fixture.owner,
+          stableCoins.usdt,
+          pTokenLzOftAdapter,
+          100,
+        );
+
+        await sendOftLockBox(
+          { ...fixture, pToken: stableCoins.usdt },
+          { direction: 'A_TO_B' },
+        );
+
+        await depositAndSend(
+          fixture,
+          {
+            amount: 99.1234567891234,
+            direction: 'B_TO_B',
+            minAmountLD: parseUnits('19.626444444222', 18),
+          },
+          {
+            refundOnDst: true,
+          },
+        );
+      });
+
       it('when OFT amount is less then SD limit that leads to 0 value oft transfer', async () => {
         const fixture = await loadFixture(layerZeroFixture);
         const { composer, depositVault, stableCoins, owner, dataFeed } =
@@ -475,6 +644,103 @@ describe('LayerZero', function () {
           },
         );
       });
+
+      it('should refund when calling B to B', async () => {
+        const fixture = await loadFixture(layerZeroFixture);
+        const {
+          depositVault,
+          stableCoins,
+          owner,
+          dataFeed,
+          pTokenLzOftAdapter,
+          composer,
+        } = fixture;
+
+        await addPaymentTokenTest(
+          { vault: depositVault, owner },
+          stableCoins.usdt,
+          dataFeed.address,
+          0,
+          true,
+        );
+
+        await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+        await mintToken(stableCoins.usdt, fixture.owner, 100);
+        await approveBase18(
+          fixture.owner,
+          stableCoins.usdt,
+          pTokenLzOftAdapter,
+          100,
+        );
+
+        await sendOftLockBox(
+          { ...fixture, pToken: stableCoins.usdt },
+          { direction: 'A_TO_B' },
+        );
+
+        await composer.setHandleComposeType(2);
+
+        await depositAndSend(
+          fixture,
+          {
+            amount: 100,
+            direction: 'B_TO_B',
+          },
+          {
+            refundOnDst: true,
+          },
+        );
+      });
+
+      it('should refund when calling B to A', async () => {
+        const fixture = await loadFixture(layerZeroFixture);
+        const {
+          depositVault,
+          stableCoins,
+          owner,
+          dataFeed,
+          pTokenLzOftAdapter,
+          composer,
+        } = fixture;
+
+        await addPaymentTokenTest(
+          { vault: depositVault, owner },
+          stableCoins.usdt,
+          dataFeed.address,
+          0,
+          true,
+        );
+
+        await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+        await mintToken(stableCoins.usdt, fixture.owner, 100);
+        await approveBase18(
+          fixture.owner,
+          stableCoins.usdt,
+          pTokenLzOftAdapter,
+          100,
+        );
+
+        await sendOftLockBox(
+          { ...fixture, pToken: stableCoins.usdt },
+          { direction: 'A_TO_B' },
+        );
+
+        await composer.setHandleComposeType(2);
+
+        await depositAndSend(
+          fixture,
+          {
+            amount: 100,
+            direction: 'B_TO_A',
+          },
+          {
+            refundOnDst: true,
+          },
+        );
+      });
+
       it('should fail: deposit and send mTBILL from A to A when msg.value is not 0', async () => {
         const fixture = await loadFixture(layerZeroFixture);
         const { composer, depositVault, stableCoins, owner, dataFeed } =
@@ -684,6 +950,146 @@ describe('LayerZero', function () {
         });
       });
 
+      it('should redeem and send USDT from B to A', async () => {
+        const fixture = await loadFixture(layerZeroFixture);
+        const {
+          composer,
+          redemptionVault,
+          mTBILL,
+          stableCoins,
+          owner,
+          dataFeed,
+        } = fixture;
+
+        await addPaymentTokenTest(
+          { vault: redemptionVault, owner },
+          stableCoins.usdt,
+          dataFeed.address,
+          0,
+          true,
+        );
+
+        await setMinAmountTest({ vault: redemptionVault, owner }, 0);
+        await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+
+        await mintToken(mTBILL, fixture.owner, 100);
+        await mintToken(stableCoins.usdt, redemptionVault, 10000);
+
+        await redeemAndSend(fixture, {
+          amount: 100,
+          direction: 'B_TO_A',
+        });
+      });
+
+      it('should redeem and send USDT from B to B', async () => {
+        const fixture = await loadFixture(layerZeroFixture);
+        const {
+          composer,
+          redemptionVault,
+          mTBILL,
+          stableCoins,
+          owner,
+          dataFeed,
+        } = fixture;
+
+        await addPaymentTokenTest(
+          { vault: redemptionVault, owner },
+          stableCoins.usdt,
+          dataFeed.address,
+          0,
+          true,
+        );
+
+        await setMinAmountTest({ vault: redemptionVault, owner }, 0);
+        await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+
+        await mintToken(mTBILL, fixture.owner, 100);
+        await mintToken(stableCoins.usdt, redemptionVault, 10000);
+
+        await redeemAndSend(fixture, {
+          amount: 100,
+          direction: 'B_TO_B',
+        });
+      });
+
+      it('should refund when calling B to B', async () => {
+        const fixture = await loadFixture(layerZeroFixture);
+        const {
+          composer,
+          redemptionVault,
+          mTBILL,
+          stableCoins,
+          owner,
+          dataFeed,
+        } = fixture;
+
+        await addPaymentTokenTest(
+          { vault: redemptionVault, owner },
+          stableCoins.usdt,
+          dataFeed.address,
+          0,
+          true,
+        );
+
+        await setMinAmountTest({ vault: redemptionVault, owner }, 0);
+        await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+
+        await mintToken(mTBILL, fixture.owner, 100);
+        await mintToken(stableCoins.usdt, redemptionVault, 10000);
+
+        await composer.setHandleComposeType(2);
+
+        await redeemAndSend(
+          fixture,
+          {
+            amount: 100,
+            direction: 'B_TO_B',
+          },
+          {
+            refundOnDst: true,
+          },
+        );
+      });
+
+      it('should refund when calling B to A', async () => {
+        const fixture = await loadFixture(layerZeroFixture);
+        const {
+          composer,
+          redemptionVault,
+          mTBILL,
+          stableCoins,
+          owner,
+          dataFeed,
+        } = fixture;
+
+        await addPaymentTokenTest(
+          { vault: redemptionVault, owner },
+          stableCoins.usdt,
+          dataFeed.address,
+          0,
+          true,
+        );
+
+        await setMinAmountTest({ vault: redemptionVault, owner }, 0);
+        await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+
+        await mintToken(mTBILL, fixture.owner, 100);
+        await mintToken(stableCoins.usdt, redemptionVault, 10000);
+
+        await composer.setHandleComposeType(2);
+
+        await redeemAndSend(
+          fixture,
+          {
+            amount: 100,
+            direction: 'B_TO_A',
+          },
+          {
+            refundOnDst: true,
+          },
+        );
+      });
+
       it('should fail: redeem and send USDT from A to A when msg.value is not 0', async () => {
         const fixture = await loadFixture(layerZeroFixture);
         const {
@@ -739,37 +1145,6 @@ describe('LayerZero', function () {
     });
 
     describe('lzCompose()', () => {
-      it.only('when OFT transfer triggers redeem from B to A', async () => {
-        const fixture = await loadFixture(layerZeroFixture);
-        const {
-          composer,
-          redemptionVault,
-          mTBILL,
-          stableCoins,
-          owner,
-          dataFeed,
-        } = fixture;
-
-        await addPaymentTokenTest(
-          { vault: redemptionVault, owner },
-          stableCoins.usdt,
-          dataFeed.address,
-          0,
-          true,
-        );
-
-        await setMinAmountTest({ vault: redemptionVault, owner }, 0);
-        await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
-
-        await mintToken(mTBILL, fixture.owner, 100);
-        await mintToken(stableCoins.usdt, redemptionVault, 10000);
-
-        await redeemAndSend(fixture, {
-          amount: 100,
-          direction: 'B_TO_A',
-        });
-      });
-
       it('should fail: when caller is not the endpoint', async () => {
         const fixture = await loadFixture(layerZeroFixture);
         const { composer, owner } = fixture;
@@ -809,7 +1184,7 @@ describe('LayerZero', function () {
 
       it('should fail: when insufficient native error is throwns', async () => {
         const fixture = await loadFixture(layerZeroFixture);
-        const { composer, owner, mockEndpointA, oftAdapterA } = fixture;
+        const { composer, owner, mockEndpointA, oftAdapterA, eidA } = fixture;
 
         const endpointSigner = await hre.ethers.getImpersonatedSigner(
           mockEndpointA.address,
@@ -823,7 +1198,7 @@ describe('LayerZero', function () {
           ],
           [
             [
-              1,
+              eidA,
               addressToBytes32(owner.address),
               parseUnits('100'),
               0,
@@ -851,7 +1226,15 @@ describe('LayerZero', function () {
 
       it('when error is thrown, should perform the refund for redeem operation', async () => {
         const fixture = await loadFixture(layerZeroFixture);
-        const { composer, owner, mockEndpointA, oftAdapterA, mTBILL } = fixture;
+        const {
+          composer,
+          owner,
+          mockEndpointA,
+          oftAdapterA,
+          mTBILL,
+          eidA,
+          eidB,
+        } = fixture;
 
         const endpointSigner = await hre.ethers.getImpersonatedSigner(
           mockEndpointA.address,
@@ -867,7 +1250,7 @@ describe('LayerZero', function () {
           ],
           [
             [
-              1,
+              eidB,
               addressToBytes32(owner.address),
               parseUnits('100'),
               0,
@@ -882,7 +1265,7 @@ describe('LayerZero', function () {
 
         const composeMsgHeader = ethers.utils.solidityPack(
           ['uint64', 'uint32', 'uint256', 'bytes32'],
-          [1, 2, parseUnits('100'), addressToBytes32(owner.address)],
+          [1, eidB, parseUnits('100'), addressToBytes32(owner.address)],
         );
 
         const composeMsgWithHeader = composeMsgHeader.concat(
@@ -894,7 +1277,7 @@ describe('LayerZero', function () {
         const lzParams = {
           amountLD: parseUnits('100'),
           composeMsg: '0x',
-          dstEid: 2,
+          dstEid: eidB,
           extraOptions: Options.newOptions().toHex(),
           minAmountLD: 0,
           oftCmd: '0x',
@@ -930,8 +1313,10 @@ describe('LayerZero', function () {
           owner,
           mockEndpointA,
           pTokenLzOftAdapter,
-          mTBILL,
           stableCoins,
+          eidA,
+          eidB,
+          pTokenLzOft,
         } = fixture;
 
         const endpointSigner = await hre.ethers.getImpersonatedSigner(
@@ -948,7 +1333,7 @@ describe('LayerZero', function () {
           ],
           [
             [
-              1,
+              eidA,
               addressToBytes32(owner.address),
               parseUnits('100'),
               0,
@@ -963,7 +1348,7 @@ describe('LayerZero', function () {
 
         const composeMsgHeader = ethers.utils.solidityPack(
           ['uint64', 'uint32', 'uint256', 'bytes32'],
-          [1, 2, parseUnits('100'), addressToBytes32(owner.address)],
+          [1, eidB, parseUnits('100'), addressToBytes32(owner.address)],
         );
 
         const composeMsgWithHeader = composeMsgHeader.concat(
@@ -975,7 +1360,7 @@ describe('LayerZero', function () {
         const lzParams = {
           amountLD: parseUnits('100'),
           composeMsg: '0x',
-          dstEid: 2,
+          dstEid: eidB,
           extraOptions: Options.newOptions()
             .addExecutorLzReceiveOption(600_000, 0)
             .toHex(),
@@ -991,21 +1376,24 @@ describe('LayerZero', function () {
             console.log('error', _);
             return { nativeFee: parseUnits('0.1', 18), lzTokenFee: 0 };
           });
+        console.log('aboba', nativeFee);
 
-        await composer
-          .connect(endpointSigner)
-          .lzCompose(
-            pTokenLzOftAdapter.address,
-            constants.HashZero,
-            composeMsgWithHeader,
-            owner.address,
-            '0x',
-            {
-              value: nativeFee,
-            },
-          );
-        expect(await stableCoins.usdt.balanceOf(owner.address)).eq(
-          parseUnits('100', 9),
+        await expect(
+          composer
+            .connect(endpointSigner)
+            .lzCompose(
+              pTokenLzOftAdapter.address,
+              constants.HashZero,
+              composeMsgWithHeader,
+              owner.address,
+              '0x',
+              {
+                value: nativeFee,
+              },
+            ),
+        ).not.reverted;
+        expect(await pTokenLzOft.balanceOf(owner.address)).eq(
+          parseUnits('100', 18),
         );
       });
     });
@@ -1079,14 +1467,22 @@ describe('LayerZero', function () {
     describe('_sendOft', () => {
       it('when send to the different eid', async () => {
         const fixture = await loadFixture(layerZeroFixture);
-        const { owner, composer, mTBILL, oftAdapterA, oftAdapterB } = fixture;
+        const {
+          owner,
+          composer,
+          mTBILL,
+          oftAdapterA,
+          oftAdapterB,
+          eidA,
+          eidB,
+        } = fixture;
 
         await mintToken(mTBILL, composer.address, 100);
 
         const lzParams = {
           amountLD: parseUnits('100'),
           composeMsg: '0x',
-          dstEid: 2,
+          dstEid: eidB,
           extraOptions: Options.newOptions()
             .addExecutorLzReceiveOption(200_000, 0)
             .toHex(),

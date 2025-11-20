@@ -390,8 +390,9 @@ contract LzEndpointV2Mock is ILayerZeroEndpointV2, MessagingContext {
         returns (bytes memory executorOptions, bytes memory dvnOptions)
     {
         // at least 2 bytes for the option type, but can have no options
-        if (_options.length < 2)
+        if (_options.length < 2) {
             revert UlnOptions.LZ_ULN_InvalidWorkerOptions(0);
+        }
 
         uint16 optionsType = uint16(bytes2(_options[0:2]));
         uint256 cursor = 2;
@@ -433,14 +434,16 @@ contract LzEndpointV2Mock is ILayerZeroEndpointV2, MessagingContext {
                     ++cursor; // for workerId
 
                     uint16 size = uint16(bytes2(_options[cursor:cursor + 2]));
-                    if (size == 0)
+                    if (size == 0) {
                         revert UlnOptions.LZ_ULN_InvalidWorkerOptions(cursor);
+                    }
                     cursor += size + 2;
                 }
 
                 // the options length must be the same as the cursor at the end
-                if (cursor != _options.length)
+                if (cursor != _options.length) {
                     revert UlnOptions.LZ_ULN_InvalidWorkerOptions(cursor);
+                }
 
                 // if we have reached the end of the options and the options are not empty
                 // we need to process the last worker's options

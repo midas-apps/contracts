@@ -815,6 +815,39 @@ export const layerZeroFixture = async () => {
     mockEndpointA.address,
   );
 
+  await pTokenLzOftAdapter.setEnforcedOptions([
+    {
+      eid: eidB,
+      options: Options.newOptions()
+        .addExecutorLzReceiveOption(200_000, 0)
+        .toHex(),
+      msgType: 1,
+    },
+    {
+      eid: eidB,
+      options: Options.newOptions()
+        .addExecutorLzReceiveOption(200_000, 0)
+        .toHex(),
+      msgType: 2,
+    },
+  ]);
+  await pTokenLzOft.setEnforcedOptions([
+    {
+      eid: eidA,
+      options: Options.newOptions()
+        .addExecutorLzReceiveOption(200_000, 0)
+        .toHex(),
+      msgType: 1,
+    },
+    {
+      eid: eidA,
+      options: Options.newOptions()
+        .addExecutorLzReceiveOption(200_000, 0)
+        .toHex(),
+      msgType: 2,
+    },
+  ]);
+
   await pTokenLzOftAdapter
     .connect(owner)
     .setPeer(eidB, ethers.utils.zeroPad(pTokenLzOft.address, 32));

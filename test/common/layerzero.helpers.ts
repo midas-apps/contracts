@@ -38,6 +38,8 @@ type CommonParams = Pick<
   | 'mTokenToUsdDataFeed'
   | 'depositVault'
   | 'redemptionVault'
+  | 'eidA'
+  | 'eidB'
 >;
 
 export const setRateLimitConfig = async (
@@ -70,7 +72,7 @@ export const setRateLimitConfig = async (
 };
 
 export const sendOft = async (
-  { mTBILL, oftAdapterA, oftAdapterB, owner }: CommonParams,
+  { mTBILL, oftAdapterA, oftAdapterB, owner, eidA, eidB }: CommonParams,
   {
     direction,
     amount,
@@ -108,7 +110,7 @@ export const sendOft = async (
   const lzParams = {
     amountLD: amountParsed.toString(),
     composeMsg: '0x',
-    dstEid: direction === 'A_TO_B' ? 2 : 1,
+    dstEid: direction === 'A_TO_B' ? eidB : eidA,
     extraOptions: Options.newOptions()
       .addExecutorLzReceiveOption(200_000, 0)
       .toHex(),
@@ -183,6 +185,8 @@ export const sendOftLockBox = async (
     pTokenLzOft,
     pTokenLzOftAdapter,
     pToken,
+    eidA,
+    eidB,
   }: CommonParams & {
     pToken: ERC20;
     oftAdapterA: MidasLzOFTAdapter;
@@ -225,7 +229,7 @@ export const sendOftLockBox = async (
   const lzParams = {
     amountLD: amountParsed.toString(),
     composeMsg: '0x',
-    dstEid: direction === 'A_TO_B' ? 2 : 1,
+    dstEid: direction === 'A_TO_B' ? eidB : eidA,
     extraOptions: Options.newOptions()
       .addExecutorLzReceiveOption(200_000, 0)
       .toHex(),
@@ -302,11 +306,16 @@ export const sendOftLockBox = async (
 export const depositAndSend = async (
   {
     composer,
-    pTokenLzOftAdapter,
     mTBILL,
     owner,
     mTokenToUsdDataFeed,
+    oftAdapterA,
     depositVault,
+    eidA,
+    eidB,
+    pTokenLzOft,
+    mockEndpointA,
+    mockEndpointB,
   }: CommonParams,
   {
     amount,
@@ -317,12 +326,13 @@ export const depositAndSend = async (
   }: {
     amount: number;
     recipient?: string;
-    direction?: 'A_TO_A' | 'A_TO_B';
+    direction?: 'A_TO_A' | 'A_TO_B' | 'B_TO_A' | 'B_TO_B';
     referrerId?: string;
     minAmountLD?: BigNumberish;
   },
   opt?: {
     revertOnDst?: boolean;
+    refundOnDst?: boolean;
     revertWithCustomError?: {
       contract: Contract;
       error: string;
@@ -374,59 +384,120 @@ export const depositAndSend = async (
   }
 
   const secondHopSendParam = {
-    dstEid: direction === 'A_TO_A' ? 1 : 2,
+    dstEid: direction === 'A_TO_A' || direction === 'B_TO_A' ? eidA : eidB,
     to: addressToBytes32(recipient),
-    amountLD: parseUnits('1', 9).toString(),
+    amountLD: mintAmountWoDust.toString(),
     minAmountLD: 0,
     extraOptions: Options.newOptions()
-      .addExecutorLzReceiveOption(300_000, 0)
+      .addExecutorLzReceiveOption(1_000_000, 0)
       .toHex(),
     composeMsg: '0x',
     oftCmd: '0x',
   };
 
   const nativeFee =
-    direction === 'A_TO_A'
-      ? BigNumber.from(0)
-      : await pTokenLzOftAdapter
-          .quoteSend(
-            // if the destination is the hub, we need to quote the send param for the source chain
-            secondHopSendParam,
-            false,
-          )
+    direction === 'A_TO_A' || direction === 'B_TO_A'
+      ? opt?.refundOnDst
+        ? await oftAdapterA
+            .quoteSend({ ...secondHopSendParam, dstEid: eidB }, false)
+            .then((v) => v.nativeFee)
+        : BigNumber.from(0)
+      : await oftAdapterA
+          .quoteSend(secondHopSendParam, false)
           .then((v) => v.nativeFee);
 
   const extraOptions = referrerId
     ? ethers.utils.defaultAbiCoder.encode(['bytes32'], [referrerId])
     : '0x';
 
+  const lzComposeValue = nativeFee;
+
+  const composeMsg =
+    direction === 'B_TO_A' || direction === 'B_TO_B'
+      ? ethers.utils.defaultAbiCoder.encode(
+          [
+            'tuple(uint32,bytes32,uint256,uint256,bytes,bytes,bytes)',
+            'uint256',
+            'bytes',
+          ],
+          [
+            [
+              secondHopSendParam.dstEid,
+              secondHopSendParam.to,
+              secondHopSendParam.amountLD,
+              (minAmountLD ?? mintAmountWoDust).toString(),
+              secondHopSendParam.extraOptions,
+              secondHopSendParam.composeMsg,
+              secondHopSendParam.oftCmd,
+            ],
+            lzComposeValue,
+            extraOptions,
+          ],
+        )
+      : '0x';
+
+  const options = Options.newOptions().addExecutorLzReceiveOption(1_000_000, 0);
+
+  if (composeMsg !== '0x') {
+    options.addExecutorComposeOption(0, 600_000, 0);
+  }
+
   const params = [
     amountParsed,
     extraOptions,
     {
-      amountLD: mintAmount.toString(),
+      amountLD: amountParsed.toString(),
       minAmountLD: (minAmountLD ?? mintAmountWoDust).toString(),
-      extraOptions: Options.newOptions().toHex(),
-      composeMsg: '0x' as `0x${string}`,
+      extraOptions: options.toHex(),
+      composeMsg,
       oftCmd: '0x' as `0x${string}`,
-      dstEid: direction === 'A_TO_A' ? 1 : 2,
+      dstEid: direction === 'A_TO_A' || direction === 'B_TO_A' ? eidA : eidB,
       to: addressToBytes32(recipient),
     },
     from.address,
     { value: opt?.overrideValue ?? nativeFee, gasLimit: 1_000_000 },
   ] as const;
 
+  let txFn: () => Promise<ContractTransaction>;
+
+  if (direction === 'B_TO_A' || direction === 'B_TO_B') {
+    const paramsOft = {
+      ...params[2],
+      to: addressToBytes32(composer.address),
+      minAmountLD: 0,
+      dstEid: eidA,
+    };
+
+    const msgFee = await pTokenLzOft
+      .quoteSend(paramsOft, false)
+      .then((v) => v.nativeFee);
+
+    const value = opt?.overrideValue ?? msgFee;
+    await mockEndpointB.setNextComposerMsgValue({ value: lzComposeValue });
+    await mockEndpointA.setNextComposerMsgValue({ value: lzComposeValue });
+    txFn = pTokenLzOft.connect(from).send.bind(
+      this,
+      {
+        ...paramsOft,
+      },
+      { nativeFee: msgFee, lzTokenFee: 0 },
+      from.address,
+      {
+        value,
+        gasLimit: 2_000_000,
+      },
+    );
+  } else {
+    txFn = composer.connect(from).depositAndSend.bind(this, ...params);
+  }
+
   if (opt?.revertMessage && !opt?.revertOnDst) {
-    await expect(
-      composer.connect(opt?.from ?? owner).depositAndSend(...params),
-    ).revertedWith(opt?.revertMessage);
+    await expect(txFn()).revertedWith(opt?.revertMessage);
     return;
   }
 
   if (opt?.revertWithCustomError && !opt?.revertOnDst) {
-    await expect(
-      composer.connect(opt?.from ?? owner).depositAndSend(...params),
-    ).revertedWithCustomError(
+    await expect(txFn()).revertedWithCustomError(
       opt?.revertWithCustomError.contract,
       opt?.revertWithCustomError.error,
     );
@@ -435,46 +506,72 @@ export const depositAndSend = async (
 
   const totalSupplyBefore = await mTBILL.totalSupply();
   const balanceFromBefore = await pToken.balanceOf(from.address);
+  const balanceFromOftBefore = await pTokenLzOft.balanceOf(from.address);
   const balanceToBefore = await mTBILL.balanceOf(recipient);
 
-  await expect(composer.connect(from).depositAndSend(...params))
-    .to.emit(
+  if (opt?.refundOnDst) {
+    await expect(txFn()).to.emit(
       composer,
-      composer.interface.events[
-        'Deposited(bytes32,bytes32,uint32,uint256,uint256)'
-      ].name,
-    )
-    .to.emit(
-      depositVault,
-      depositVault.interface.events[
-        'DepositInstantWithCustomRecipient(address,address,address,uint256,uint256,uint256,uint256,bytes32)'
-      ].name,
-    )
-    .withArgs(
-      composer.address,
-      await composer.paymentTokenErc20(),
-      direction === 'A_TO_A' ? recipient : composer.address,
-      actualAmountInUsd,
-      amountParsed,
-      fee,
-      mintAmount,
-      referrerId,
+      composer.interface.events['Refunded(bytes32)'].name,
     );
+  } else {
+    await expect(txFn())
+      .to.emit(
+        composer,
+        composer.interface.events[
+          'Deposited(bytes32,bytes32,uint32,uint256,uint256)'
+        ].name,
+      )
+      .to.emit(
+        depositVault,
+        depositVault.interface.events[
+          'DepositInstantWithCustomRecipient(address,address,address,uint256,uint256,uint256,uint256,bytes32)'
+        ].name,
+      )
+      .withArgs(
+        composer.address,
+        await composer.paymentTokenErc20(),
+        direction === 'A_TO_A' || direction === 'B_TO_A'
+          ? recipient
+          : composer.address,
+        actualAmountInUsd,
+        amountParsed,
+        fee,
+        mintAmount,
+        referrerId,
+      );
+  }
 
   const totalSupplyAfter = await mTBILL.totalSupply();
   const balanceFromAfter = await pToken.balanceOf(from.address);
+  const balanceFromOftAfter = await pTokenLzOft.balanceOf(from.address);
   const balanceToAfter = await mTBILL.balanceOf(recipient);
 
   // try/catch of mocked lz endpoint catches all the errors, so that is the only way
   // to check if the revert happened on the dst
-  if (opt?.revertOnDst) {
+  if (opt?.refundOnDst) {
+    expect(totalSupplyAfter).eq(totalSupplyBefore);
+    expect(balanceToAfter).eq(balanceToBefore);
+    expect(balanceFromAfter).eq(balanceFromBefore);
+    expect(balanceFromOftAfter).eq(balanceFromOftBefore);
+    return;
+  } else if (opt?.revertOnDst) {
     expect(totalSupplyAfter).eq(totalSupplyBefore);
     return;
   }
 
   expect(totalSupplyAfter).eq(totalSupplyBefore.add(mintAmount));
 
-  expect(balanceFromAfter).eq(balanceFromBefore.sub(amountParsed));
+  if (direction === 'B_TO_A' || direction === 'B_TO_B') {
+    expect(balanceFromAfter).eq(balanceFromBefore);
+    expect(balanceFromOftAfter).eq(
+      balanceFromOftBefore.sub(amountParsedBase18),
+    );
+  } else {
+    expect(balanceFromAfter).eq(balanceFromBefore.sub(amountParsed));
+    expect(balanceFromOftAfter).eq(balanceFromOftBefore);
+  }
+
   expect(balanceToAfter).eq(balanceToBefore.add(mintAmountWoDust));
 };
 
@@ -490,18 +587,23 @@ export const redeemAndSend = async (
     redemptionVault,
     mockEndpointB,
     mockEndpointA,
-    oftAdapterA,
+    eidA,
+    eidB,
   }: CommonParams,
   {
     amount,
     recipient,
     direction,
+    minAmountLD,
   }: {
     amount: number;
     recipient?: string;
+    minAmountLD?: BigNumberish;
     direction?: 'A_TO_A' | 'B_TO_B' | 'B_TO_A' | 'A_TO_B';
   },
   opt?: {
+    refundOnDst?: boolean;
+    expectedReceiveAmountWoDust?: BigNumberish;
     revertOnDst?: boolean;
     revertWithCustomError?: {
       contract: Contract;
@@ -539,13 +641,17 @@ export const redeemAndSend = async (
   const dust = amountOut.sub(amountOut.div(oneSD).mul(oneSD));
   const redeemedAmountWoDust = amountOut.sub(dust);
 
+  if (opt?.expectedReceiveAmountWoDust !== undefined) {
+    expect(amountOut).eq(opt?.expectedReceiveAmountWoDust);
+  }
+
   const secondHopSendParam = {
-    dstEid: direction === 'A_TO_A' || direction === 'B_TO_A' ? 30001 : 30002,
+    dstEid: direction === 'A_TO_A' || direction === 'B_TO_A' ? eidA : eidB,
     to: addressToBytes32(recipient),
-    amountLD: redeemedAmountWoDust, // this ammount will be overrided in the composer call
-    minAmountLD: redeemedAmountWoDust,
+    amountLD: redeemedAmountWoDust.toString(),
+    minAmountLD: 0,
     extraOptions: Options.newOptions()
-      .addExecutorLzReceiveOption(300_000, 0)
+      .addExecutorLzReceiveOption(1_000_000, 0)
       .toHex(),
     composeMsg: '0x',
     oftCmd: '0x',
@@ -553,15 +659,13 @@ export const redeemAndSend = async (
 
   const nativeFee =
     direction === 'A_TO_A' || direction === 'B_TO_A'
-      ? BigNumber.from(0)
+      ? opt?.refundOnDst
+        ? await pTokenLzOftAdapter
+            .quoteSend({ ...secondHopSendParam, dstEid: eidB }, false)
+            .then((v) => v.nativeFee)
+        : BigNumber.from(0)
       : await pTokenLzOftAdapter
-          .quoteSend(
-            // if the destination is the hub, we need to quote the send param for the source chain
-            direction === 'B_TO_B'
-              ? { ...secondHopSendParam, dstEid: 30002 }
-              : secondHopSendParam,
-            false,
-          )
+          .quoteSend(secondHopSendParam, false)
           .then((v) => v.nativeFee);
 
   const lzComposeValue = nativeFee;
@@ -579,7 +683,7 @@ export const redeemAndSend = async (
               secondHopSendParam.dstEid,
               secondHopSendParam.to,
               secondHopSendParam.amountLD,
-              secondHopSendParam.minAmountLD,
+              (minAmountLD ?? redeemedAmountWoDust).toString(),
               secondHopSendParam.extraOptions,
               secondHopSendParam.composeMsg,
               secondHopSendParam.oftCmd,
@@ -601,11 +705,11 @@ export const redeemAndSend = async (
     '0x',
     {
       amountLD: amountParsed.toString(),
-      minAmountLD: 0,
+      minAmountLD: (minAmountLD ?? redeemedAmountWoDust).toString(),
       extraOptions: options.toHex(),
       composeMsg,
       oftCmd: '0x' as `0x${string}`,
-      dstEid: direction === 'A_TO_A' || direction === 'B_TO_A' ? 30001 : 30002,
+      dstEid: direction === 'A_TO_A' || direction === 'B_TO_A' ? eidA : eidB,
       to: addressToBytes32(recipient),
     },
     from.address,
@@ -615,25 +719,32 @@ export const redeemAndSend = async (
   let txFn: () => Promise<ContractTransaction>;
 
   if (direction === 'B_TO_A' || direction === 'B_TO_B') {
+    const paramsOft = {
+      ...params[2],
+      to: addressToBytes32(composer.address),
+      minAmountLD: 0,
+      dstEid: eidA,
+    };
+
     const msgFee = await oftAdapterB
-      .quoteSend(params[2], false)
+      .quoteSend(paramsOft, false)
       .then((v) => v.nativeFee);
 
     const value = opt?.overrideValue ?? msgFee;
     await mockEndpointB.setNextComposerMsgValue({ value: lzComposeValue });
     await mockEndpointA.setNextComposerMsgValue({ value: lzComposeValue });
-    txFn = oftAdapterB
-      .connect(from)
-      .send.bind(
-        this,
-        { ...params[2], to: addressToBytes32(composer.address) },
-        { nativeFee: msgFee, lzTokenFee: 0 },
-        from.address,
-        {
-          value,
-          gasLimit: 2_000_000,
-        },
-      );
+    txFn = oftAdapterB.connect(from).send.bind(
+      this,
+      {
+        ...paramsOft,
+      },
+      { nativeFee: msgFee, lzTokenFee: 0 },
+      from.address,
+      {
+        value,
+        gasLimit: 2_000_000,
+      },
+    );
   } else {
     txFn = composer.connect(from).redeemAndSend.bind(this, ...params);
   }
@@ -658,42 +769,43 @@ export const redeemAndSend = async (
       ? await pToken.balanceOf(recipient)
       : await pTokenLzOft.balanceOf(recipient);
 
-  await expect(txFn())
-    .to.emit(
+  if (opt?.refundOnDst) {
+    await expect(txFn()).to.emit(
       composer,
-      composer.interface.events[
-        'Redeemed(bytes32,bytes32,uint32,uint256,uint256)'
-      ].name,
-    )
-    .withArgs(
-      addressToBytes32(
-        direction === 'B_TO_A' || direction === 'B_TO_B'
-          ? oftAdapterA.address
-          : from.address,
-      ),
-      addressToBytes32(
-        direction === 'B_TO_A' || direction === 'B_TO_B'
-          ? composer.address
-          : recipient,
-      ),
-      direction === 'A_TO_A' || direction === 'B_TO_A' ? 30001 : 30002,
-      amountParsed,
-      amountOut,
-    )
-    .to.emit(
-      redemptionVault,
-      redemptionVault.interface.events[
-        'RedeemInstantWithCustomRecipient(address,address,address,uint256,uint256,uint256)'
-      ].name,
-    )
-    .withArgs(
-      composer.address,
-      await composer.paymentTokenErc20(),
-      direction === 'A_TO_A' ? recipient : composer.address,
-      amountParsed,
-      fee,
-      amountOut,
+      composer.interface.events['Refunded(bytes32)'].name,
     );
+  } else {
+    await expect(txFn())
+      .to.emit(
+        composer,
+        composer.interface.events[
+          'Redeemed(bytes32,bytes32,uint32,uint256,uint256)'
+        ].name,
+      )
+      .withArgs(
+        addressToBytes32(from.address),
+        addressToBytes32(recipient),
+        direction === 'A_TO_A' || direction === 'B_TO_A' ? eidA : eidB,
+        amountParsed,
+        amountOut,
+      )
+      .to.emit(
+        redemptionVault,
+        redemptionVault.interface.events[
+          'RedeemInstantWithCustomRecipient(address,address,address,uint256,uint256,uint256)'
+        ].name,
+      )
+      .withArgs(
+        composer.address,
+        await composer.paymentTokenErc20(),
+        direction === 'A_TO_A' || direction === 'B_TO_A'
+          ? recipient
+          : composer.address,
+        amountParsed,
+        fee,
+        amountOut,
+      );
+  }
 
   const totalSupplyAfter = await mTBILL.totalSupply();
   const balanceFromAfter = await mTBILL.balanceOf(from.address);
@@ -707,9 +819,12 @@ export const redeemAndSend = async (
       ? redeemedAmountWoDust
       : await tokenAmountToBase18(pToken, amountOut);
 
-  // try/catch of mocked lz endpoint catches all the errors, so that is the only way
-  // to check if the revert happened on the dst
-  if (opt?.revertOnDst) {
+  if (opt?.refundOnDst) {
+    expect(totalSupplyAfter).eq(totalSupplyBefore);
+    expect(balanceToAfter).eq(balanceToBefore);
+    expect(balanceFromAfter).eq(balanceFromBefore);
+    return;
+  } else if (opt?.revertOnDst) {
     expect(totalSupplyAfter).eq(totalSupplyBefore);
     return;
   }
