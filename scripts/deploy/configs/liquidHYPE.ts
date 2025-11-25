@@ -1,3 +1,4 @@
+import { hours } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
@@ -44,6 +45,17 @@ export const liquidHYPEDeploymentConfig: DeploymentConfig = {
         liquidityProvider: 'dummy',
         swapperVault: 'dummy',
       },
+      postDeploy: {
+        layerZero: {
+          delegate: '0xF9e3295DBf89CF0Bf1344a3010CE96d026579BBb',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('10000'),
+              window: hours(24),
+            },
+          },
+        },
+      },
     },
     [chainIds.scroll]: {
       dv: {
@@ -70,6 +82,15 @@ export const liquidHYPEDeploymentConfig: DeploymentConfig = {
         swapperVault: 'dummy',
       },
       postDeploy: {
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('10000'),
+              window: hours(24),
+            },
+          },
+        },
         addPaymentTokens: {
           vaults: [
             {
