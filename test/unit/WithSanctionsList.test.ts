@@ -2,10 +2,7 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { constants } from 'ethers';
 
-import {
-  // eslint-disable-next-line camelcase
-  WithSanctionsListTester__factory,
-} from '../../typechain-types';
+import { WithSanctionsListTester__factory } from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
 import { defaultDeploy } from '../common/fixtures';
 import {

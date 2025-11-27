@@ -40,6 +40,9 @@ export const lzConfigsPerMToken: PartialConfigPerNetwork<
     obeatUSD: {
       linkedNetworks: ['main'],
     },
+    liquidHYPE: {
+      linkedNetworks: ['scroll'],
+    },
   },
 };
 
@@ -160,7 +163,7 @@ export default async function () {
             : ['LayerZero Labs', 'Deutsche Telekom', 'Canary'],
           [],
         ], // [ requiredDVN[], [ optionalDVN[], threshold ] ]
-        [blockFinality[networkA] ?? 12, blockFinality[networkB] ?? 12], // [A to B confirmations, B to A confirmations]
+        [blockFinality[networkA] ?? 32, blockFinality[networkB] ?? 32], // [A to B confirmations, B to A confirmations]
         [EVM_ENFORCED_OPTIONS, EVM_ENFORCED_OPTIONS], // Chain B enforcedOptions, Chain A enforcedOptions
       ]);
     }

@@ -1,4 +1,3 @@
-import { parseUnits } from 'ethers/lib/utils';
 import { task, types } from 'hardhat/config';
 
 import { Network } from '../config';

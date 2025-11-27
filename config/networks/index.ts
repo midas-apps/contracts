@@ -211,6 +211,7 @@ export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
 export const blockFinality: PartialConfigPerNetwork<number> = {
   main: 12,
   hyperevm: 32,
+  scroll: 64,
   sepolia: 2,
   arbitrumSepolia: 1,
 };
@@ -322,7 +323,9 @@ export const getHardhatNetworkConfig = (): HardhatNetworkUserConfig => ({
 });
 
 export const isTestnetNetwork = (network: Network) => {
+  const isLocalNetwork = network === 'localhost' || network === 'hardhat';
   return (
+    isLocalNetwork ||
     network === 'sepolia' ||
     network === 'arbitrumSepolia' ||
     network === 'tacTestnet'

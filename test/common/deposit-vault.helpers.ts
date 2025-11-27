@@ -12,13 +12,11 @@ import {
 import { defaultDeploy } from './fixtures';
 
 import {
-  // eslint-disable-next-line camelcase
   DataFeedTest__factory,
   DepositVault,
   DepositVaultTest,
   DepositVaultWithUSTBTest,
   ERC20,
-  // eslint-disable-next-line camelcase
   ERC20__factory,
   MToken,
 } from '../../typechain-types';
@@ -56,7 +54,7 @@ export const depositInstantTest = async (
   tokenIn = getAccount(tokenIn);
 
   const sender = opt?.from ?? owner;
-  // eslint-disable-next-line camelcase
+
   const tokenContract = ERC20__factory.connect(tokenIn, owner);
 
   const tokensReceiver = await depositVault.tokensReceiver();
@@ -209,7 +207,7 @@ export const depositRequestTest = async (
   tokenIn = getAccount(tokenIn);
 
   const sender = opt?.from ?? owner;
-  // eslint-disable-next-line camelcase
+
   const tokenContract = ERC20__factory.connect(tokenIn, owner);
 
   const tokensReceiver = await depositVault.tokensReceiver();
@@ -741,7 +739,7 @@ export const calcExpectedMintAmount = async (
   isInstant: boolean,
 ) => {
   const tokenConfig = await depositVault.tokensConfig(token);
-  // eslint-disable-next-line camelcase
+
   const dataFeedContract = DataFeedTest__factory.connect(
     tokenConfig.dataFeed,
     sender,

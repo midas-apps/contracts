@@ -1,4 +1,3 @@
-import { JsonRpcProvider } from '@ethersproject/providers';
 import { extendEnvironment } from 'hardhat/config';
 import { EIP1193Provider, HardhatRuntimeEnvironment } from 'hardhat/types';
 
@@ -11,7 +10,7 @@ import {
   TokenAddresses,
 } from '../constants/addresses';
 import { ENV } from '../env';
-import { isTestnetNetwork } from '../networks';
+import { isTestnetNetwork, rpcUrls } from '../networks';
 import { Network } from '../types';
 
 export const extendWithContext = (
@@ -58,15 +57,12 @@ const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
   const isTestnet = isTestnetNetwork(hre.network.name as Network);
 
   if (!customSignerScript || isTestnet) {
-    if (isTestnet) {
-      console.warn('Testnet network detected, falling back to hardhat signer');
-    }
-
     hre.getCustomSigner = async () => {
       const { deployer } = await hre.getNamedAccounts();
       const deployerSigner = await hre.ethers.getSigner(deployer);
 
       return {
+        type: 'hardhatSigner',
         getWalletAddress: async () => {
           return deployer;
         },
@@ -75,19 +71,16 @@ const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
             'createAddressBookContract is not available for hardhat signer',
           );
         },
-        sendTransaction: async (transaction, metadata) => {
+        sendTransaction: async (transaction) => {
           const tx = await deployerSigner.sendTransaction({
             ...transaction,
           });
           return {
-            type: 'hardhatSigner',
             tx,
           };
         },
-        getWeb3Provider: async ({ rpcUrl }) => {
-          return deployerSigner.connect(
-            new JsonRpcProvider(rpcUrl),
-          ) as unknown as EIP1193Provider;
+        getWeb3Provider: async () => {
+          return deployerSigner as unknown as EIP1193Provider;
         },
       };
     };
@@ -103,10 +96,12 @@ const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
       } = await import(scriptPathResolved);
 
       return {
-        getWalletAddress: async (action, mtokenOverride) => {
+        type: 'customSigner',
+        getWalletAddress: async (action, mtokenOverride, chainId) => {
           return getWalletAddressForAction(
             action,
             mtokenOverride ?? hre.mtoken,
+            chainId,
           );
         },
         createAddressBookContract: async (data) => {
@@ -118,10 +113,8 @@ const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
             }),
           };
         },
-
         sendTransaction: async (transaction, txSignMetadata) => {
           return {
-            type: 'customSigner',
             payload: await signTransaction(transaction, {
               chain: {
                 name: hre.network.name,
@@ -133,8 +126,14 @@ const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
             }),
           };
         },
-        getWeb3Provider: async ({ chainId, rpcUrl, action }) => {
-          return getWeb3Provider({ chainId, rpcUrl, action });
+        getWeb3Provider: async ({ action }) => {
+          const chainId = hre.network.config.chainId!;
+          const rpcUrl = rpcUrls[hre.network.name as Network];
+          return getWeb3Provider({
+            chainId,
+            rpcUrl,
+            action,
+          });
         },
       };
     };

@@ -3,7 +3,11 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
 import { getMTokenOrPaymentTokenOrThrow } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
-import { getDeployer, getNetworkConfig } from '../../common/utils';
+import {
+  getDeployer,
+  getNetworkConfig,
+  sendAndWaitForCustomTxSign,
+} from '../../common/utils';
 import { paymentTokenDeploymentConfigs } from '../../configs/payment-tokens';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
@@ -39,11 +43,14 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const contract = await hre.ethers.getContractAt('Ownable', address, deployer);
 
-  const tx = await contract.transferOwnership(newOwner);
-
-  console.log(`Tx is submitted, new owner will be ${newOwner}`);
-  await tx.wait(5);
-  console.log(`Tx is confirmed, new owner is ${newOwner}`);
+  await sendAndWaitForCustomTxSign(
+    hre,
+    await contract.populateTransaction.transferOwnership(newOwner),
+    {
+      action: 'deployer',
+    },
+    await contract.owner(),
+  );
 };
 
 export default func;

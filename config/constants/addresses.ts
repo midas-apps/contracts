@@ -775,6 +775,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x70519793f50c95f435972637E1190f41cfc907Bd',
       depositVault: '0xF538675D292d8b372712f44eaf306Cc66cF6d8DC',
       redemptionVaultSwapper: '0x558806a80b42cAB4ED75c74bfB178EDc9087AA32',
+      layerZero: {
+        oft: '0x0Aeeea81C9Da681B14bA492b775966b9185a5e37',
+      },
     },
     hbUSDC: {
       token: '0x057ced81348D57Aad579A672d521d7b4396E8a61',
@@ -1163,6 +1166,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x2282B30F001634Ce9820a4286B981198acBC2945',
       depositVault: '0x7fa2570D62bE28a964eD66cdb5ee487f506B0b55',
       redemptionVaultSwapper: '0x30b174F86B93672434c313edd80f16E57C476A69',
+      layerZero: {
+        oft: '0x76d1Ad82c3Ddc8db2A1aC02f99BC49c2bd93cb37',
+      },
     },
   },
   sepolia: {

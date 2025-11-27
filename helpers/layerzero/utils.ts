@@ -7,7 +7,7 @@ import { createLogger, Logger, printJson } from '@layerzerolabs/io-devtools';
 import { EndpointId, endpointIdToNetwork } from '@layerzerolabs/lz-definitions';
 import { Options } from '@layerzerolabs/lz-v2-utilities';
 import { BigNumber, constants } from 'ethers';
-import { getAddress } from 'ethers/lib/utils';
+import { getAddress, hexDataSlice } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { layerZeroEidToNetwork, Network, rpcUrls } from '../../config';
@@ -51,9 +51,7 @@ export const createSigner =
           );
 
           const oappAddress = getAddress(
-            hreNetwork.ethers.utils.hexStripZeros(
-              '0x' + transaction.data.slice(10, 74),
-            ),
+            hexDataSlice('0x' + transaction.data.slice(10, 74), 12),
           );
 
           const delegate = await endpointContract.delegates(oappAddress);
