@@ -1,7 +1,10 @@
 import { Options } from '@layerzerolabs/lz-v2-utilities';
+import { setBalance } from '@nomicfoundation/hardhat-network-helpers';
+import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { constants } from 'ethers';
-import { parseUnits } from 'ethers/lib/utils';
+import { constants, ContractTransaction, PopulatedTransaction } from 'ethers';
+import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import * as hre from 'hardhat';
 
@@ -51,6 +54,14 @@ import {
   AxelarInterchainTokenServiceMock__factory,
   MidasAxelarVaultExecutableTester,
   LzEndpointV2Mock__factory,
+  GnosisSafe,
+  TokensWithdrawModule__factory,
+  Integrity__factory,
+  Packer__factory,
+  Delay__factory,
+  Delay,
+  EnforceDelayModifierGuard__factory,
+  ERC721Mock__factory,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -970,3 +981,236 @@ export const axelarFixture = async () => {
     ...defaultFixture,
   };
 };
+
+type PopulatedTxWithGas = PopulatedTransaction & { gas?: number };
+
+export const safeFixture = async () => {
+  const [
+    deployer,
+    signer1,
+    signer2,
+    signer3,
+    tokensReceiver,
+    tokensWithdrawer,
+    ...regularAccounts
+  ] = await ethers.getSigners();
+
+  const testERC20 = await new ERC20Mock__factory(deployer).deploy(18);
+  const test2ERC20 = await new ERC20Mock__factory(deployer).deploy(18);
+
+  const testERC721 = await new ERC721Mock__factory(deployer).deploy();
+  const test2ERC721 = await new ERC721Mock__factory(deployer).deploy();
+
+  const safeSingleSigner = await deployProxyContract<GnosisSafe>(
+    'GnosisSafe',
+    [
+      [signer1.address],
+      1,
+      constants.AddressZero,
+      '0x',
+      constants.AddressZero,
+      constants.AddressZero,
+      0,
+      constants.AddressZero,
+    ],
+    'setup',
+  );
+
+  const safeMultiSigner = await deployProxyContract<GnosisSafe>(
+    'GnosisSafe',
+    [
+      [signer1.address, signer2.address, signer3.address],
+      2,
+      constants.AddressZero,
+      '0x',
+      constants.AddressZero,
+      constants.AddressZero,
+      0,
+      constants.AddressZero,
+    ],
+    'setup',
+  );
+
+  const sendSafeTx = async (
+    safe: GnosisSafe,
+    delayModule: Delay,
+    signers: SignerWithAddress[],
+    populatedTx: PopulatedTxWithGas,
+    waitAndSend = false,
+  ) => {
+    let tx: Promise<ContractTransaction>;
+    if (signers.length === 1) {
+      tx = safe
+        .connect(signers[0])
+        .execTransaction(
+          populatedTx.to ?? '0x',
+          populatedTx.value ?? 0,
+          populatedTx.data ?? '0x',
+          0,
+          populatedTx.gas ?? 0,
+          0,
+          0,
+          constants.AddressZero,
+          constants.AddressZero,
+          hre.ethers.utils.defaultAbiCoder.encode(
+            ['address'],
+            [signers[0].address],
+          ) +
+            '000000000000000000000000000000000000000000000000000000000000000001',
+        );
+    } else {
+      throw new Error('Not implemented');
+    }
+
+    if (waitAndSend) {
+      await expect(tx).not.reverted;
+
+      await increase(3600);
+
+      const decodedData = delayModule.interface.decodeFunctionData(
+        'execTransactionFromModule',
+        populatedTx.data ?? '0x',
+      );
+
+      return delayModule.executeNextTx(
+        decodedData[0],
+        decodedData[1],
+        decodedData[2],
+        0,
+      );
+    } else {
+      return tx;
+    }
+  };
+
+  const sendSafeTxSingleSigner = async (
+    populateTx: (
+      safe: GnosisSafe,
+    ) => PopulatedTxWithGas | Promise<PopulatedTxWithGas>,
+    waitAndSend = false,
+  ) => {
+    return sendSafeTx(
+      safeSingleSigner,
+      delayModuleSafeSingle,
+      [signer1],
+      await populateTx(safeSingleSigner),
+      waitAndSend,
+    );
+  };
+
+  const sendSafeTxMultiSigner = async (
+    populateTx: (
+      safe: GnosisSafe,
+    ) => PopulatedTxWithGas | Promise<PopulatedTxWithGas>,
+    waitAndSend = false,
+  ) => {
+    return sendSafeTx(
+      safeMultiSigner,
+      delayModuleSafeMulti,
+      [signer1, signer2, signer3],
+      await populateTx(safeMultiSigner),
+      waitAndSend,
+    );
+  };
+
+  const lib = {
+    '@gnosis-guild/zodiac-modules/contracts/roles/packers/Packer.sol:Packer': (
+      await new Packer__factory(deployer).deploy()
+    ).address,
+    '@gnosis-guild/zodiac-modules/contracts/roles/Integrity.sol:Integrity': (
+      await new Integrity__factory(deployer).deploy()
+    ).address,
+  };
+
+  const withdrawTokensModuleSafeSingle =
+    await new TokensWithdrawModule__factory(deployer).deploy(
+      tokensReceiver.address,
+      tokensWithdrawer.address,
+      safeSingleSigner.address,
+      safeSingleSigner.address,
+    );
+
+  const withdrawTokensModuleSafeMulti = await new TokensWithdrawModule__factory(
+    deployer,
+  ).deploy(
+    tokensReceiver.address,
+    tokensWithdrawer.address,
+    safeMultiSigner.address,
+    safeMultiSigner.address,
+  );
+
+  const delayModuleSafeSingle = await new Delay__factory(deployer).deploy(
+    safeSingleSigner.address,
+    safeSingleSigner.address,
+    safeSingleSigner.address,
+    3600,
+    3600,
+  );
+
+  const delayModuleSafeMulti = await new Delay__factory(deployer).deploy(
+    safeMultiSigner.address,
+    safeMultiSigner.address,
+    safeMultiSigner.address,
+    3600,
+    3600,
+  );
+
+  const guardSafeSingle = await new EnforceDelayModifierGuard__factory(
+    deployer,
+  ).deploy(delayModuleSafeSingle.address);
+
+  const guardSafeMulti = await new EnforceDelayModifierGuard__factory(
+    deployer,
+  ).deploy(delayModuleSafeMulti.address);
+
+  // enable delay modules
+  await sendSafeTxSingleSigner((safe) =>
+    safe.populateTransaction.enableModule(delayModuleSafeSingle.address),
+  );
+
+  await sendSafeTxSingleSigner((safe) =>
+    safe.populateTransaction.enableModule(
+      withdrawTokensModuleSafeSingle.address,
+    ),
+  );
+
+  await sendSafeTxSingleSigner(() =>
+    delayModuleSafeSingle.populateTransaction.enableModule(
+      safeSingleSigner.address,
+    ),
+  );
+
+  // set safe guard
+  await sendSafeTxSingleSigner((safe) =>
+    safe.populateTransaction.setGuard(guardSafeSingle.address),
+  );
+
+  await setBalance(safeSingleSigner.address, parseEther('1'));
+  await setBalance(safeMultiSigner.address, parseEther('1'));
+
+  return {
+    safeSingleSigner,
+    safeMultiSigner,
+    signer1,
+    signer2,
+    signer3,
+    tokensReceiver,
+    tokensWithdrawer,
+    regularAccounts,
+    deployer,
+    sendSafeTxMultiSigner,
+    sendSafeTxSingleSigner,
+    withdrawTokensModuleSafeSingle,
+    withdrawTokensModuleSafeMulti,
+    delayModuleSafeSingle,
+    delayModuleSafeMulti,
+    guardSafeSingle,
+    guardSafeMulti,
+    testERC20,
+    testERC721,
+    test2ERC20,
+    test2ERC721,
+  };
+};
+
+export type SafeFixture = Awaited<ReturnType<typeof safeFixture>>;

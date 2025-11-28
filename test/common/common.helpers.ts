@@ -7,6 +7,7 @@ import { ethers } from 'hardhat';
 import {
   ERC20,
   ERC20Mock,
+  ERC721Mock,
   IERC20Metadata,
   MTBILL,
   Pausable,
@@ -123,6 +124,15 @@ export const mintToken = async (
     parseUnits(amountN.toString()),
   );
   await token.mint(to, amount);
+};
+
+export const mintToken721 = async (
+  token: ERC721Mock,
+  to: AccountOrContract,
+  tokenId: number,
+) => {
+  to = getAccount(to);
+  await token.mint(to, tokenId);
 };
 
 export const approveBase18 = async (
