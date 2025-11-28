@@ -42,7 +42,7 @@ const testSuite = (
 
   describe('Safe Setup', () => {
     describe('Safe', () => {
-      describe('execTransaction', () => {
+      describe('execTransaction()', () => {
         describeVariation((fixture) => {
           it('should fail: destination is not the delay module', async () => {
             const { deployer, sendSafeTx, guard } = await loadFixture(fixture);
@@ -179,7 +179,7 @@ const testSuite = (
           expect(await delayModule.queueNonce()).eq(0);
         });
 
-        describe('setUp', () => {
+        describe('setUp()', () => {
           it('should fail: when already initialized', async () => {
             const { delayModule } = await loadFixture(fixture);
 
@@ -189,7 +189,7 @@ const testSuite = (
           });
         });
 
-        describe('setTxExpiration', () => {
+        describe('setTxExpiration()', () => {
           it('should fail: call function directly without using execTransactionFromModule', async () => {
             const { sendSafeTx, delayModule, guard } = await loadFixture(
               fixture,
@@ -270,7 +270,7 @@ const testSuite = (
           });
         });
 
-        describe('setTxCooldown', () => {
+        describe('setTxCooldown()', () => {
           it('should fail: call function directly without using execTransactionFromModule', async () => {
             const { sendSafeTx, delayModule, guard } = await loadFixture(
               fixture,
@@ -308,7 +308,7 @@ const testSuite = (
           });
         });
 
-        describe('setTxNonce', () => {
+        describe('setTxNonce()', () => {
           it('should fail: when new nonce is lower than current nonce', async () => {
             const { sendSafeTx, delayModule, safe } = await loadFixture(
               fixture,
@@ -450,7 +450,7 @@ const testSuite = (
           });
         });
 
-        describe('transferOwnership', () => {
+        describe('transferOwnership()', () => {
           it('should transfer ownership to the new owner', async () => {
             const { sendSafeTx, delayModule, regularAccounts } =
               await loadFixture(fixture);
@@ -501,7 +501,7 @@ const testSuite = (
           });
         });
 
-        describe('renounceOwnership', () => {
+        describe('renounceOwnership()', () => {
           it('should renounce ownership', async () => {
             const { sendSafeTx, delayModule } = await loadFixture(fixture);
 
@@ -548,7 +548,7 @@ const testSuite = (
           });
         });
 
-        describe('skipExpired', () => {
+        describe('skipExpired()', () => {
           it('should skip expired transactions', async () => {
             const { sendSafeTx, regularAccounts, delayModule } =
               await loadFixture(fixture);
@@ -601,7 +601,7 @@ const testSuite = (
           expect(await withdrawTokensModule.avatar()).eq(safe.address);
         });
 
-        describe('withdrawTokens', () => {
+        describe('withdrawTokens()', () => {
           describe('ERC20', () => {
             it('should fail: when caller is not the tokensWithdrawer', async () => {
               const { withdrawTokensModule, testERC20 } = await loadFixture(
@@ -934,6 +934,293 @@ const testSuite = (
             expect(await testERC721.balanceOf(safe.address)).eq(0);
             expect(await testERC721.balanceOf(tokensReceiver.address)).eq(1);
             expect(await testERC721.ownerOf(1)).eq(tokensReceiver.address);
+          });
+        });
+
+        describe('setTokensWithdrawer()', () => {
+          it('should fail: when caller is not the owner', async () => {
+            const { withdrawTokensModule, tokensWithdrawer } =
+              await loadFixture(fixture);
+
+            await expect(
+              withdrawTokensModule
+                .connect(tokensWithdrawer)
+                .setTokensWithdrawer(tokensWithdrawer.address),
+            ).to.be.rejectedWith('Ownable: caller is not the owner');
+          });
+
+          it('when caller is the owner', async () => {
+            const {
+              withdrawTokensModule,
+              sendSafeTx,
+              regularAccounts,
+              delayModule,
+            } = await loadFixture(fixture);
+
+            await expect(
+              sendSafeTx(
+                async () =>
+                  delayModule.populateTransaction.execTransactionFromModule(
+                    withdrawTokensModule.address,
+                    0,
+                    withdrawTokensModule.interface.encodeFunctionData(
+                      'setTokensWithdrawer',
+                      [regularAccounts[0].address],
+                    ),
+                    0,
+                  ),
+                true,
+              ),
+            ).to.not.reverted;
+
+            expect(await withdrawTokensModule.tokensWithdrawer()).eq(
+              regularAccounts[0].address,
+            );
+          });
+        });
+
+        describe('setTokensReceiver()', () => {
+          it('should fail: when caller is not the owner', async () => {
+            const { withdrawTokensModule, tokensWithdrawer } =
+              await loadFixture(fixture);
+
+            await expect(
+              withdrawTokensModule
+                .connect(tokensWithdrawer)
+                .setTokensReceiver(tokensWithdrawer.address),
+            ).to.be.rejectedWith('Ownable: caller is not the owner');
+          });
+
+          it('when caller is the owner', async () => {
+            const {
+              withdrawTokensModule,
+              sendSafeTx,
+              regularAccounts,
+              delayModule,
+            } = await loadFixture(fixture);
+
+            await expect(
+              sendSafeTx(
+                async () =>
+                  delayModule.populateTransaction.execTransactionFromModule(
+                    withdrawTokensModule.address,
+                    0,
+                    withdrawTokensModule.interface.encodeFunctionData(
+                      'setTokensReceiver',
+                      [regularAccounts[0].address],
+                    ),
+                    0,
+                  ),
+                true,
+              ),
+            ).to.not.reverted;
+
+            expect(await withdrawTokensModule.tokensReceiver()).eq(
+              regularAccounts[0].address,
+            );
+          });
+        });
+
+        describe('setTarget()', () => {
+          it('should fail: when caller is not the owner', async () => {
+            const { withdrawTokensModule, tokensWithdrawer } =
+              await loadFixture(fixture);
+
+            await expect(
+              withdrawTokensModule
+                .connect(tokensWithdrawer)
+                .setTarget(tokensWithdrawer.address),
+            ).to.be.rejectedWith('Ownable: caller is not the owner');
+          });
+
+          it('when caller is the owner', async () => {
+            const {
+              withdrawTokensModule,
+              sendSafeTx,
+              regularAccounts,
+              delayModule,
+            } = await loadFixture(fixture);
+
+            await expect(
+              sendSafeTx(
+                async () =>
+                  delayModule.populateTransaction.execTransactionFromModule(
+                    withdrawTokensModule.address,
+                    0,
+                    withdrawTokensModule.interface.encodeFunctionData(
+                      'setTarget',
+                      [regularAccounts[0].address],
+                    ),
+                    0,
+                  ),
+                true,
+              ),
+            ).to.not.reverted;
+
+            expect(await withdrawTokensModule.target()).eq(
+              regularAccounts[0].address,
+            );
+          });
+        });
+
+        describe('setAvatar()', () => {
+          it('should fail: when caller is not the owner', async () => {
+            const { withdrawTokensModule, tokensWithdrawer } =
+              await loadFixture(fixture);
+
+            await expect(
+              withdrawTokensModule
+                .connect(tokensWithdrawer)
+                .setAvatar(tokensWithdrawer.address),
+            ).to.be.rejectedWith('Ownable: caller is not the owner');
+          });
+
+          it('when caller is the owner', async () => {
+            const {
+              withdrawTokensModule,
+              sendSafeTx,
+              regularAccounts,
+              delayModule,
+            } = await loadFixture(fixture);
+
+            await expect(
+              sendSafeTx(
+                async () =>
+                  delayModule.populateTransaction.execTransactionFromModule(
+                    withdrawTokensModule.address,
+                    0,
+                    withdrawTokensModule.interface.encodeFunctionData(
+                      'setAvatar',
+                      [regularAccounts[0].address],
+                    ),
+                    0,
+                  ),
+                true,
+              ),
+            ).to.not.reverted;
+
+            expect(await withdrawTokensModule.avatar()).eq(
+              regularAccounts[0].address,
+            );
+          });
+        });
+
+        describe('setUp()', () => {
+          it('should fail: when already initialized', async () => {
+            const { withdrawTokensModule } = await loadFixture(fixture);
+
+            await expect(withdrawTokensModule.setUp('0x')).to.be.revertedWith(
+              'Initializable: contract is already initialized',
+            );
+          });
+        });
+
+        describe('transferOwnership()', () => {
+          it('should transfer ownership to the new owner', async () => {
+            const {
+              sendSafeTx,
+              delayModule,
+              withdrawTokensModule,
+              regularAccounts,
+            } = await loadFixture(fixture);
+
+            await expect(
+              sendSafeTx(
+                async () =>
+                  await delayModule.populateTransaction.execTransactionFromModule(
+                    withdrawTokensModule.address,
+                    0,
+                    withdrawTokensModule.interface.encodeFunctionData(
+                      'transferOwnership',
+                      [regularAccounts[0].address],
+                    ),
+                    0,
+                  ),
+                true,
+              ),
+            ).to.not.reverted;
+
+            expect(await withdrawTokensModule.owner()).eq(
+              regularAccounts[0].address,
+            );
+          });
+
+          it('should fail: when caller is not the owner', async () => {
+            const { withdrawTokensModule, regularAccounts } = await loadFixture(
+              fixture,
+            );
+
+            await expect(
+              withdrawTokensModule
+                .connect(regularAccounts[0])
+                .transferOwnership(regularAccounts[1].address),
+            ).to.revertedWith('Ownable: caller is not the owner');
+          });
+
+          it('should fail: when calling directly without using execTransactionFromModule', async () => {
+            const { sendSafeTx, withdrawTokensModule, regularAccounts, guard } =
+              await loadFixture(fixture);
+
+            await expect(
+              sendSafeTx(async () => ({
+                to: withdrawTokensModule.address,
+                data: withdrawTokensModule.interface.encodeFunctionData(
+                  'transferOwnership',
+                  [regularAccounts[0].address],
+                ),
+              })),
+            ).to.be.revertedWithCustomError(guard, 'TargetNotDelayModifier');
+          });
+        });
+
+        describe('renounceOwnership()', () => {
+          it('should renounce ownership', async () => {
+            const { sendSafeTx, delayModule, withdrawTokensModule } =
+              await loadFixture(fixture);
+
+            await expect(
+              sendSafeTx(
+                async () =>
+                  await delayModule.populateTransaction.execTransactionFromModule(
+                    withdrawTokensModule.address,
+                    0,
+                    withdrawTokensModule.interface.encodeFunctionData(
+                      'renounceOwnership',
+                    ),
+                    0,
+                  ),
+                true,
+              ),
+            ).to.not.reverted;
+
+            expect(await withdrawTokensModule.owner()).eq(
+              constants.AddressZero,
+            );
+          });
+
+          it('should fail: when caller is not the owner', async () => {
+            const { sendSafeTx, withdrawTokensModule, regularAccounts } =
+              await loadFixture(fixture);
+
+            await expect(
+              withdrawTokensModule
+                .connect(regularAccounts[0])
+                .renounceOwnership(),
+            ).to.revertedWith('Ownable: caller is not the owner');
+          });
+
+          it('should fail: when calling directly without using execTransactionFromModule', async () => {
+            const { sendSafeTx, withdrawTokensModule, guard } =
+              await loadFixture(fixture);
+
+            await expect(
+              sendSafeTx(async () => ({
+                to: withdrawTokensModule.address,
+                data: withdrawTokensModule.interface.encodeFunctionData(
+                  'renounceOwnership',
+                ),
+              })),
+            ).to.be.revertedWithCustomError(guard, 'TargetNotDelayModifier');
           });
         });
       });
