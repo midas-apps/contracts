@@ -1037,28 +1037,87 @@ export const safeFixture = async () => {
     waitAndSend = false,
   ) => {
     let tx: Promise<ContractTransaction>;
+    let signatures: string = '0x';
     if (signers.length === 1) {
-      tx = safe
-        .connect(signers[0])
-        .execTransaction(
-          populatedTx.to ?? '0x',
-          populatedTx.value ?? 0,
-          populatedTx.data ?? '0x',
-          0,
-          populatedTx.gas ?? 0,
-          0,
-          0,
-          constants.AddressZero,
-          constants.AddressZero,
-          hre.ethers.utils.defaultAbiCoder.encode(
-            ['address'],
-            [signers[0].address],
-          ) +
-            '000000000000000000000000000000000000000000000000000000000000000001',
-        );
+      signatures =
+        hre.ethers.utils.defaultAbiCoder.encode(
+          ['address'],
+          [signers[0].address],
+        ) +
+        '000000000000000000000000000000000000000000000000000000000000000001';
     } else {
-      throw new Error('Not implemented');
+      const signaturesArray: { signer: string; signature: string }[] = [];
+      const domain = {
+        chainId: (await ethers.provider.getNetwork()).chainId,
+        verifyingContract: safe.address,
+      };
+
+      const types = {
+        SafeTx: [
+          { name: 'to', type: 'address' },
+          { name: 'value', type: 'uint256' },
+          { name: 'data', type: 'bytes' },
+          { name: 'operation', type: 'uint8' },
+          { name: 'safeTxGas', type: 'uint256' },
+          { name: 'baseGas', type: 'uint256' },
+          { name: 'gasPrice', type: 'uint256' },
+          { name: 'gasToken', type: 'address' },
+          { name: 'refundReceiver', type: 'address' },
+          { name: 'nonce', type: 'uint256' },
+        ],
+      };
+
+      const safeTx = {
+        to: populatedTx.to ?? ethers.constants.AddressZero,
+        value: populatedTx.value ?? 0,
+        data: populatedTx.data ?? '0x',
+        operation: 0,
+        safeTxGas: 0,
+        baseGas: 0,
+        gasPrice: 0,
+        gasToken: ethers.constants.AddressZero,
+        refundReceiver: ethers.constants.AddressZero,
+        nonce: await safe.nonce(),
+      };
+
+      for (const signer of signers) {
+        const sig = await signer._signTypedData(domain, types, safeTx);
+
+        const sigBytes = ethers.utils.arrayify(sig);
+
+        if (sigBytes[64] < 27) {
+          sigBytes[64] += 27;
+        }
+
+        const finalSig = '0x' + Buffer.from(sigBytes).toString('hex');
+
+        signaturesArray.push({
+          signer: signer.address.toLowerCase(),
+          signature: finalSig,
+        });
+      }
+
+      signatures = ethers.utils.hexConcat(
+        signaturesArray
+          .sort((a, b) => a.signer.localeCompare(b.signer))
+          .map((s) => s.signature),
+      );
     }
+
+    tx = safe
+      .connect(signers[0])
+      .execTransaction(
+        populatedTx.to ?? '0x',
+        populatedTx.value ?? 0,
+        populatedTx.data ?? '0x',
+        0,
+        populatedTx.gas ?? 0,
+        0,
+        0,
+        constants.AddressZero,
+        constants.AddressZero,
+        signatures,
+      );
 
     if (waitAndSend) {
       await expect(tx).not.reverted;
@@ -1152,7 +1211,7 @@ export const safeFixture = async () => {
     deployer,
   ).deploy(delayModuleSafeMulti.address);
 
-  // enable delay modules
+  // configure safe single
   await sendSafeTxSingleSigner((safe) =>
     safe.populateTransaction.enableModule(delayModuleSafeSingle.address),
   );
@@ -1169,9 +1228,29 @@ export const safeFixture = async () => {
     ),
   );
 
-  // set safe guard
   await sendSafeTxSingleSigner((safe) =>
     safe.populateTransaction.setGuard(guardSafeSingle.address),
+  );
+
+  // configure safe multi
+  await sendSafeTxMultiSigner((safe) =>
+    safe.populateTransaction.enableModule(delayModuleSafeMulti.address),
+  );
+
+  await sendSafeTxMultiSigner((safe) =>
+    safe.populateTransaction.enableModule(
+      withdrawTokensModuleSafeMulti.address,
+    ),
+  );
+
+  await sendSafeTxMultiSigner(() =>
+    delayModuleSafeMulti.populateTransaction.enableModule(
+      safeMultiSigner.address,
+    ),
+  );
+
+  await sendSafeTxMultiSigner((safe) =>
+    safe.populateTransaction.setGuard(guardSafeMulti.address),
   );
 
   await setBalance(safeSingleSigner.address, parseEther('1'));

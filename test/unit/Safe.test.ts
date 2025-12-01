@@ -41,9 +41,9 @@ const testSuite = (
   };
 
   describe('Safe Setup', () => {
-    describe('Safe', () => {
-      describe('execTransaction()', () => {
-        describeVariation((fixture) => {
+    describeVariation((fixture) => {
+      describe('Safe', () => {
+        describe('execTransaction()', () => {
           it('should fail: destination is not the delay module', async () => {
             const { deployer, sendSafeTx, guard } = await loadFixture(fixture);
 
@@ -163,10 +163,8 @@ const testSuite = (
           });
         });
       });
-    });
 
-    describe('Delay Module', () => {
-      describeVariation((fixture) => {
+      describe('Delay Module', () => {
         it('deployment', async () => {
           const { safe, delayModule } = await loadFixture(fixture);
 
@@ -579,10 +577,8 @@ const testSuite = (
           });
         });
       });
-    });
 
-    describe('EnforceDelayModifier Guard', () => {
-      describeVariation((fixture) => {
+      describe('EnforceDelayModifier Guard', () => {
         it('deployment', async () => {
           const { guard, delayModule } = await loadFixture(fixture);
           expect(await guard.delayModifier()).eq(delayModule.address);
@@ -626,7 +622,7 @@ const testSuite = (
                 '0x',
                 constants.AddressZero,
               ),
-            ).revertedWithCustomError(guard, 'TargetNotDelayModifier');
+            ).revertedWithCustomError(guard, 'TargetFunctionNotAllowed');
           });
 
           it('should fail: when to is delay module but function selector is not allowed', async () => {
@@ -716,10 +712,8 @@ const testSuite = (
           });
         });
       });
-    });
 
-    describe('WithdrawTokens Module', () => {
-      describeVariation((fixture) => {
+      describe('WithdrawTokens Module', () => {
         it('deployment', async () => {
           const {
             withdrawTokensModule,
@@ -1376,6 +1370,18 @@ testSuite([
         guard: v.guardSafeSingle,
         withdrawTokensModule: v.withdrawTokensModuleSafeSingle,
         sendSafeTx: v.sendSafeTxSingleSigner,
+      })),
+  },
+  {
+    title: 'multiple signers',
+    fixture: async () =>
+      safeFixture().then((v) => ({
+        ...v,
+        safe: v.safeMultiSigner,
+        delayModule: v.delayModuleSafeMulti,
+        guard: v.guardSafeMulti,
+        withdrawTokensModule: v.withdrawTokensModuleSafeMulti,
+        sendSafeTx: v.sendSafeTxMultiSigner,
       })),
   },
 ]);
