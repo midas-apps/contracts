@@ -197,7 +197,7 @@ export const deployAndVerify = async (
     console.log('Waited.');
   }
 
-  logDeploy(contractName, 'Proxy', deployment.address);
+  logDeploy(contractName, undefined, deployment.address);
   await etherscanVerify(hre, deployment.address, ...params);
 
   return deployment;

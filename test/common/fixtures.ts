@@ -56,8 +56,6 @@ import {
   LzEndpointV2Mock__factory,
   GnosisSafe,
   TokensWithdrawModule__factory,
-  Integrity__factory,
-  Packer__factory,
   Delay__factory,
   Delay,
   EnforceDelayModifierGuard__factory,
@@ -1111,15 +1109,6 @@ export const safeFixture = async () => {
       await populateTx(safeMultiSigner),
       waitAndSend,
     );
-  };
-
-  const lib = {
-    '@gnosis-guild/zodiac-modules/contracts/roles/packers/Packer.sol:Packer': (
-      await new Packer__factory(deployer).deploy()
-    ).address,
-    '@gnosis-guild/zodiac-modules/contracts/roles/Integrity.sol:Integrity': (
-      await new Integrity__factory(deployer).deploy()
-    ).address,
   };
 
   const withdrawTokensModuleSafeSingle =
