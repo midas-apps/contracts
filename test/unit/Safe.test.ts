@@ -581,6 +581,143 @@ const testSuite = (
       });
     });
 
+    describe('EnforceDelayModifier Guard', () => {
+      describeVariation((fixture) => {
+        it('deployment', async () => {
+          const { guard, delayModule } = await loadFixture(fixture);
+          expect(await guard.delayModifier()).eq(delayModule.address);
+        });
+
+        describe('checkTransaction()', () => {
+          it('should fail: when to is not the delay module', async () => {
+            const { guard } = await loadFixture(fixture);
+
+            await expect(
+              guard.checkTransaction(
+                guard.address,
+                0,
+                '0x',
+                0,
+                0,
+                0,
+                0,
+                constants.AddressZero,
+                constants.AddressZero,
+                '0x',
+                constants.AddressZero,
+              ),
+            ).revertedWithCustomError(guard, 'TargetNotDelayModifier');
+          });
+
+          it('should fail: when data is 0x', async () => {
+            const { delayModule, guard } = await loadFixture(fixture);
+
+            await expect(
+              guard.checkTransaction(
+                delayModule.address,
+                0,
+                '0x',
+                0,
+                0,
+                0,
+                0,
+                constants.AddressZero,
+                constants.AddressZero,
+                '0x',
+                constants.AddressZero,
+              ),
+            ).revertedWithCustomError(guard, 'TargetNotDelayModifier');
+          });
+
+          it('should fail: when to is delay module but function selector is not allowed', async () => {
+            const { delayModule, guard } = await loadFixture(fixture);
+
+            await expect(
+              guard.checkTransaction(
+                delayModule.address,
+                0,
+                '0x12345678',
+                0,
+                0,
+                0,
+                0,
+                constants.AddressZero,
+                constants.AddressZero,
+                '0x',
+                constants.AddressZero,
+              ),
+            ).revertedWithCustomError(guard, 'TargetFunctionNotAllowed');
+          });
+
+          it('when selector is setTxNonce', async () => {
+            const { delayModule, guard } = await loadFixture(fixture);
+
+            await expect(
+              guard.checkTransaction(
+                delayModule.address,
+                0,
+                delayModule.interface.encodeFunctionData('setTxNonce', [1]),
+                0,
+                0,
+                0,
+                0,
+                constants.AddressZero,
+                constants.AddressZero,
+                '0x',
+                constants.AddressZero,
+              ),
+            ).not.reverted;
+          });
+
+          it('when selector is execTransactionFromModule', async () => {
+            const { delayModule, guard } = await loadFixture(fixture);
+
+            await expect(
+              guard.checkTransaction(
+                delayModule.address,
+                0,
+                delayModule.interface.encodeFunctionData(
+                  'execTransactionFromModule',
+                  [delayModule.address, 0, '0x', 0],
+                ),
+                0,
+                0,
+                0,
+                0,
+                constants.AddressZero,
+                constants.AddressZero,
+                '0x',
+                constants.AddressZero,
+              ),
+            ).not.reverted;
+          });
+
+          it('when selector is execTransactionFromModuleReturnData', async () => {
+            const { delayModule, guard } = await loadFixture(fixture);
+
+            await expect(
+              guard.checkTransaction(
+                delayModule.address,
+                0,
+                delayModule.interface.encodeFunctionData(
+                  'execTransactionFromModuleReturnData',
+                  [delayModule.address, 0, '0x', 0],
+                ),
+                0,
+                0,
+                0,
+                0,
+                constants.AddressZero,
+                constants.AddressZero,
+                '0x',
+                constants.AddressZero,
+              ),
+            ).not.reverted;
+          });
+        });
+      });
+    });
+
     describe('WithdrawTokens Module', () => {
       describeVariation((fixture) => {
         it('deployment', async () => {
