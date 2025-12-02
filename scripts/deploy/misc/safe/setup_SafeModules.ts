@@ -62,7 +62,11 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const deployer = await getDeployer(hre);
 
-  const safe = await hre.ethers.getContractAt('GnosisSafe', safeAddress);
+  const safe = await hre.ethers.getContractAt(
+    'GnosisSafe',
+    safeAddress,
+    deployer,
+  );
 
   const multiSend = await hre.ethers.getContractAt(
     multisendAbi,
@@ -73,6 +77,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const delayModuleContract = await hre.ethers.getContractAt(
     'Delay',
     delayModule,
+    deployer,
   );
 
   const txs = [
