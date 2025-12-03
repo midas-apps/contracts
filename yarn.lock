@@ -2036,9 +2036,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@layerzerolabs/oapp-evm@npm:0.3.2":
-  version: 0.3.2
-  resolution: "@layerzerolabs/oapp-evm@npm:0.3.2"
+"@layerzerolabs/oapp-evm@npm:0.4.0":
+  version: 0.4.0
+  resolution: "@layerzerolabs/oapp-evm@npm:0.4.0"
   dependencies:
     ethers: "npm:^5.7.2"
   peerDependencies:
@@ -2047,7 +2047,7 @@ __metadata:
     "@layerzerolabs/lz-evm-v1-0.7": ^3.0.75
     "@openzeppelin/contracts": ^4.8.1 || ^5.0.0
     "@openzeppelin/contracts-upgradeable": ^4.8.1 || ^5.0.0
-  checksum: 10c0/0fe9fd58863566099785ee7cf0402d6119b8ef93d49624b38befb281565e4d9bdc80c6ead275b7726b5ee0b49ca7f4202db2ee31c86e612fedffc16b936b1c18
+  checksum: 10c0/500d2670baaf0c3c3f961bd7f4b25b9ac5066ad2d4aedb137372975c60c957b6690deb9356fb5a0b28d06cd47840090dd903b12b1a7e32eb1b21b7bbdec21729
   languageName: node
   linkType: hard
 
@@ -11765,7 +11765,7 @@ __metadata:
     "@layerzerolabs/lz-evm-messagelib-v2": "npm:3.0.146"
     "@layerzerolabs/lz-evm-protocol-v2": "npm:3.0.139"
     "@layerzerolabs/metadata-tools": "npm:3.0.2"
-    "@layerzerolabs/oapp-evm": "npm:0.3.2"
+    "@layerzerolabs/oapp-evm": "npm:0.4.0"
     "@layerzerolabs/oft-evm": "npm:3.2.1"
     "@layerzerolabs/toolbox-hardhat": "npm:0.6.12"
     "@nomicfoundation/hardhat-chai-matchers": "npm:1.0.4"
