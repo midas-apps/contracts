@@ -105,7 +105,7 @@
     "@layerzerolabs/oft-evm": "3.2.1",
     "@layerzerolabs/toolbox-hardhat": "0.6.12",
     "@nomicfoundation/hardhat-chai-matchers": "1.0.4",
-    "@nomicfoundation/hardhat-network-helpers": "1.0.6",
+    "@nomicfoundation/hardhat-network-helpers": "3.0.3",
     "@nomicfoundation/hardhat-toolbox": "1.0.2",
     "@nomicfoundation/hardhat-verify": "2.0.14",
     "@nomiclabs/hardhat-ethers": "2.2.3",
