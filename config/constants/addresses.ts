@@ -950,6 +950,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xed4ff96DAF37a0A44356E81A3cc22908B3f06B40',
       depositVault: '0x30FBc82A72CA674AA250cd6c27BCca1Fe602f1Bb',
       redemptionVaultSwapper: '0xDaC1b058cE42b67Ba33DbfDBA972d76C83C085D6',
+      axelar: {
+        manager: '0xA16024Ebc6FC450f57C63fCe1E4CE446Bf1CfE6d',
+        tokenId:
+          '0x18094f558f8d711e1386b0fdbce61ee57373cf5b31ec69223b87147518eb73d4',
+      },
     },
     dnTEST: {
       token: '0x0DCb00ED5A6b8E5924f195E78126ee68d4eb0ca0',
@@ -1116,6 +1121,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x583970971EFcEBfcebD3b530E436B8fEEb3D43C7',
       depositVault: '0x30B59844eC16ABA3ec4ca0BD97557CcB670D924E',
       redemptionVaultSwapper: '0x73685BD72dF34B92Bc81D43ef35CFf4300DE8625',
+      axelar: {
+        manager: '0xA16024Ebc6FC450f57C63fCe1E4CE446Bf1CfE6d',
+        tokenId:
+          '0x18094f558f8d711e1386b0fdbce61ee57373cf5b31ec69223b87147518eb73d4',
+      },
     },
     cUSDO: {
       token: '0x762FD99ee22742DEEcb8eeCB12165752D9A18164',

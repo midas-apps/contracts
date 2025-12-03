@@ -26,6 +26,9 @@ export const itsConfigPerMToken: PartialConfigPerNetwork<
     dnTEST: {
       linkedNetworks: ['bsc', 'hyperevm'],
     },
+    mXRP: {
+      linkedNetworks: ['bsc'],
+    },
   },
 };
 

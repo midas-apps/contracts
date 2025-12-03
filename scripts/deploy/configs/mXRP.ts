@@ -36,6 +36,10 @@ export const mXRPDeploymentConfig: DeploymentConfig = {
         swapperVault: 'dummy',
       },
       postDeploy: {
+        axelarIts: {
+          operator: '0x5aacC1A5aE6085d222ec356FBae032B5081dAde7',
+          flowLimit: parseUnits('1250', 18),
+        },
         addPaymentTokens: {
           vaults: [
             {
@@ -93,6 +97,10 @@ export const mXRPDeploymentConfig: DeploymentConfig = {
         swapperVault: 'dummy',
       },
       postDeploy: {
+        axelarIts: {
+          operator: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          flowLimit: parseUnits('1250', 18),
+        },
         addPaymentTokens: {
           vaults: [
             {
