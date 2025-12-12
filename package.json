@@ -57,6 +57,7 @@
     "deploy:post:grant:roles": "yarn hh:run:script scripts/deploy/post-deploy/grant_AllProductRoles.ts",
     "deploy:post:grant:admin": "yarn hh:run:script scripts/deploy/post-deploy/grant_DefaultAdminRole.ts",
     "deploy:post:revoke:roles": "yarn hh:run:script scripts/deploy/post-deploy/revoke_DeployerRoles.ts",
+    "deploy:post:transfer:proxyadmin": "yarn hh:run:script scripts/deploy/post-deploy/transfer_ProxyAdminToTimelock.ts",
     "deploy:post:set:price": "yarn hh:run:script scripts/deploy/post-deploy/set_RoundData.ts",
     "deploy:post:set:waived": "yarn hh:run:script scripts/deploy/post-deploy/add_FeeWaived.ts",
     "timelock:upgrade:vaults:propose": "yarn hh:run:script scripts/upgrades/proposeUpgrade_Vaults.ts",
