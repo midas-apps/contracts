@@ -6,7 +6,6 @@ import {IInterchainTokenService} from "@axelar-network/interchain-token-service/
 
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import {IERC20MetadataUpgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import {IDepositVault} from "../../interfaces/IDepositVault.sol";
 import {IRedemptionVault} from "../../interfaces/IRedemptionVault.sol";
@@ -25,8 +24,7 @@ import {IMidasAxelarVaultExecutable} from "./interfaces/IMidasAxelarVaultExecuta
 contract MidasAxelarVaultExecutable is
     InterchainTokenExecutable,
     IMidasAxelarVaultExecutable,
-    MidasInitializable,
-    ReentrancyGuardUpgradeable
+    MidasInitializable
 {
     using SafeERC20 for IERC20;
     using DecimalsCorrectionLibrary for uint256;
@@ -171,7 +169,7 @@ contract MidasAxelarVaultExecutable is
         {
             emit Sent(commandId);
         } catch (bytes memory _err) {
-            _itsTransfer(sourceChain, sourceAddress, tokenId, amount);
+            _itsTransfer(sourceChain, sourceAddress, tokenId, amount, 0);
 
             emit Refunded(commandId, _err);
         }
@@ -208,7 +206,6 @@ contract MidasAxelarVaultExecutable is
     function depositAndSend(uint256 _paymentTokenAmount, bytes calldata _data)
         external
         payable
-        nonReentrant
     {
         IERC20(paymentTokenErc20).safeTransferFrom(
             msg.sender,
@@ -228,7 +225,6 @@ contract MidasAxelarVaultExecutable is
     function redeemAndSend(uint256 _mTokenAmount, bytes calldata _data)
         external
         payable
-        nonReentrant
     {
         IERC20(mTokenErc20).safeTransferFrom(
             msg.sender,
@@ -267,7 +263,13 @@ contract MidasAxelarVaultExecutable is
         );
 
         if (!receiveToSameNetwork) {
-            _itsTransfer(receiverChainName, receiver, mTokenId, mTokenAmount);
+            _itsTransfer(
+                receiverChainName,
+                receiver,
+                mTokenId,
+                mTokenAmount,
+                msg.value
+            );
         }
         emit Deposited(
             _depositor,
@@ -309,7 +311,8 @@ contract MidasAxelarVaultExecutable is
                 receiverChainName,
                 receiver,
                 paymentTokenId,
-                paymentTokenAmount
+                paymentTokenAmount,
+                msg.value
             );
         }
 
@@ -406,21 +409,25 @@ contract MidasAxelarVaultExecutable is
      * @param destinationAddress the destination address
      * @param tokenId the ITS tokenId
      * @param amount the amount of the token
+     * @param gasValue the gas value to be paid for the transfer
      */
     function _itsTransfer(
         string memory destinationChain,
         bytes memory destinationAddress,
         bytes32 tokenId,
-        uint256 amount
+        uint256 amount,
+        uint256 gasValue
     ) internal {
         return
-            IInterchainTokenService(interchainTokenService).interchainTransfer(
+            IInterchainTokenService(interchainTokenService).interchainTransfer{
+                value: gasValue
+            }(
                 tokenId,
                 destinationChain,
                 destinationAddress,
                 amount,
                 bytes(""),
-                0
+                gasValue
             );
     }
 
@@ -452,6 +459,4 @@ contract MidasAxelarVaultExecutable is
     {
         return amount.convertToBase18(paymentTokenDecimals);
     }
-
-    receive() external payable {}
 }
