@@ -459,6 +459,4 @@ contract MidasAxelarVaultExecutable is
     {
         return amount.convertToBase18(paymentTokenDecimals);
     }
-
-    receive() external payable {}
 }
