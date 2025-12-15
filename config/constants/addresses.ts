@@ -1181,6 +1181,24 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
     },
   },
+  monad: {
+    accessControl: '0x9379DbB132131c0a9e719A4D74e54b8Dd0a4a75F',
+    timelock: '0xfc8aC00c85CCeD29304c37727f525860039B852c',
+    paymentTokens: {
+      usdc: {
+        token: '0x754704Bc059F8C67012fEd69BC8A327a5aafb603',
+        aggregator: '0xf5F15f188AbCB0d165D1Edb7f37F7d6fA2fCebec',
+        dataFeed: '0x7F627B2622c556680326eE060ecF551410EFe22B',
+      },
+    },
+    mEDGE: {
+      token: '0x1c8eE940B654bFCeD403f2A44C1603d5be0F50Fa',
+      customFeed: '0x33F3cd52C55416ca2eAc184b62FA7481af88271d',
+      dataFeed: '0xf0202EFbaF185B451b4be3b36988b258d42f8E24',
+      depositVault: '0xdF7dEb47635AF76Da5e455C6b0F4E26222326FD9',
+      redemptionVaultSwapper: '0x2Ce347dECFc8dAB433c4EB6CA171747E5a82c332',
+    },
+  },
   sepolia: {
     paymentTokens: {
       usdc: {
