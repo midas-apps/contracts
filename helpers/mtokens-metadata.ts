@@ -236,4 +236,8 @@ export const mTokensMetadata: Record<
     name: 'Midas Portofino',
     symbol: 'mPortofino',
   },
+  liquidRESERVE: {
+    name: 'Ether.Fi Liquid Reserve',
+    symbol: 'liquidRESERVE',
+  },
 };
