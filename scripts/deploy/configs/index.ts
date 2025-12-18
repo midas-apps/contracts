@@ -17,6 +17,7 @@ import { kitHYPEDeploymentConfig } from './kitHYPE';
 import { kitUSDDeploymentConfig } from './kitUSD';
 import { kmiUSDDeploymentConfig } from './kmiUSD';
 import { liquidHYPEDeploymentConfig } from './liquidHYPE';
+import { liquidRESERVEDeploymentConfig } from './liquidRESERVE';
 import { lstHYPEDeploymentConfig } from './lstHYPE';
 import { mAPOLLODeploymentConfig } from './mAPOLLO';
 import { mBASISDeploymentConfig } from './mBASIS';
@@ -119,4 +120,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mHyperETH: mHyperETHDeploymentConfig,
   mHyperBTC: mHyperBTCDeploymentConfig,
   mPortofino: mPortofinoDeploymentConfig,
+  liquidRESERVE: liquidRESERVEDeploymentConfig,
 };

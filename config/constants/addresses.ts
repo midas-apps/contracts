@@ -1169,6 +1169,16 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         // },
         // dataFeed: '0xAada4457d4e65a33475106c4340ce965d69785D8',
       },
+      usdc: {
+        token: '0x06eFdBFf2a14a7c8E15944D1F4A48F9F95F663A4',
+        aggregator: '0x43d12Fb3AfCAd5347fA764EeAB105478337b7200',
+        dataFeed: '0x769DA3Dc7cF1d9d507D6fF3579182C0927674742',
+      },
+      usdt: {
+        token: '0xf55BEC9cafDbE8730f096Aa55dad6D22d44099Df',
+        aggregator: '0xf376A91Ae078927eb3686D6010a6f1482424954E',
+        dataFeed: '0x09dbF92503E42246Cb90Cb916A0f30Ef290F2e1D',
+      },
     },
     liquidHYPE: {
       token: '0xDD6c3E7BD0d6F017FcBa3b724dC8889013f9e232',
@@ -1179,6 +1189,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       layerZero: {
         oft: '0x76d1Ad82c3Ddc8db2A1aC02f99BC49c2bd93cb37',
       },
+    },
+    liquidRESERVE: {
+      token: '0xb7Fb3768CAAC98354EaDF514b48f28F2fE822bF0',
+      customFeed: '0xB2a4eC4C9b95D7a87bA3989d0FD38dFfDd944A24',
+      dataFeed: '0xb40F2690BC59BFfbc88396CEc97a8b1c1B7df206',
+      depositVault: '0xcA1C871f8ae2571Cb126A46861fc06cB9E645152',
+      redemptionVaultSwapper: '0x904EA8d7FcaB7351758fAC82bDbc738E2010BC25',
     },
   },
   monad: {
