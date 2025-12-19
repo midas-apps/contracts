@@ -20,7 +20,7 @@ contract CustomAggregatorV3CompatibleFeed is
     struct RoundData {
         uint80 roundId;
         int256 answer;
-        uint256 startedAt;b
+        uint256 startedAt;
         uint256 updatedAt;
         uint80 answeredInRound;
     }
