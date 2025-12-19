@@ -9,7 +9,7 @@ import {
   logDeploy,
 } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
-import { getDeployer } from '../../common/utils';
+import { getDeployer, sendAndWaitForCustomTxSign } from '../../common/utils';
 
 const pendleProxyAdmin = '0xA28c08f165116587D4F3E708743B4dEe155c5E64';
 const pendleAdmin = '0x2aD631F72fB16d91c4953A7f4260A97C2fE2f31e';
@@ -76,11 +76,17 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const contract = syFactory.attach(proxy.address);
 
-  const tx = await contract.transferOwnership(pendleAdmin, true, false);
-
-  logDeploy('PendleMidasSY', 'TransferOwnership tx', tx.hash);
-  await tx.wait(2);
-  console.log('Done');
+  await sendAndWaitForCustomTxSign(
+    hre,
+    await contract.populateTransaction.transferOwnership(
+      pendleAdmin,
+      true,
+      false,
+    ),
+    {
+      action: 'deployer',
+    },
+  );
 };
 
 export default func;

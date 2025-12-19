@@ -20,7 +20,7 @@ contract CustomAggregatorV3CompatibleFeed is
     struct RoundData {
         uint80 roundId;
         int256 answer;
-        uint256 startedAt;
+        uint256 startedAt;b
         uint256 updatedAt;
         uint80 answeredInRound;
     }
@@ -84,7 +84,7 @@ contract CustomAggregatorV3CompatibleFeed is
         int192 _maxAnswer,
         uint256 _maxAnswerDeviation,
         string calldata _description
-    ) external initializer {
+    ) public virtual initializer {
         __WithMidasAccessControl_init(_accessControl);
 
         require(_minAnswer < _maxAnswer, "CA: !min/max");

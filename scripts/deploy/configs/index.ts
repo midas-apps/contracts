@@ -1,4 +1,5 @@
-import { acreBTCDeploymentConfig } from './acreBTC';
+import { acremBTC1DeploymentConfig } from './acremBTC1';
+import { cUSDODeploymentConfig } from './cUSDO';
 import { dnETHDeploymentConfig } from './dnETH';
 import { dnFARTDeploymentConfig } from './dnFART';
 import { dnHYPEDeploymentConfig } from './dnHYPE';
@@ -16,17 +17,22 @@ import { kitHYPEDeploymentConfig } from './kitHYPE';
 import { kitUSDDeploymentConfig } from './kitUSD';
 import { kmiUSDDeploymentConfig } from './kmiUSD';
 import { liquidHYPEDeploymentConfig } from './liquidHYPE';
+import { liquidRESERVEDeploymentConfig } from './liquidRESERVE';
 import { lstHYPEDeploymentConfig } from './lstHYPE';
 import { mAPOLLODeploymentConfig } from './mAPOLLO';
 import { mBASISDeploymentConfig } from './mBASIS';
 import { mBTCDeploymentConfig } from './mBTC';
 import { mEDGEDeploymentConfig } from './mEDGE';
 import { mevBTCDeploymentConfig } from './mevBTC';
+import { mEVUSDDeploymentConfig } from './mEVUSD';
 import { mFARMDeploymentConfig } from './mFARM';
 import { mFONEDeploymentConfig } from './mFONE';
 import { mHYPERDeploymentConfig } from './mHYPER';
+import { mHyperBTCDeploymentConfig } from './mHyperBTC';
+import { mHyperETHDeploymentConfig } from './mHyperETH';
 import { mLIQUIDITYDeploymentConfig } from './mLIQUIDITY';
 import { mMEVDeploymentConfig } from './mMEV';
+import { mPortofinoDeploymentConfig } from './mPortofino';
 import { mRE7DeploymentConfig } from './mRE7';
 import { mRE7BTCDeploymentConfig } from './mRE7BTC';
 import { mRE7SOLDeploymentConfig } from './mRE7SOL';
@@ -36,6 +42,7 @@ import { msyrupUSDpDeploymentConfig } from './msyrupUSDp';
 import { mTBILLDeploymentConfig } from './mTBILL';
 import { mWildUSDDeploymentConfig } from './mWildUSD';
 import { mXRPDeploymentConfig } from './mXRP';
+import { obeatUSDDeploymentConfig } from './obeatUSD';
 import { plUSDDeploymentConfig } from './plUSD';
 import { splUSDDeploymentConfig } from './splUSD';
 import { TACmBTCDeploymentConfig } from './tac/TACmBTC';
@@ -99,7 +106,7 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   kitBTC: kitBTCDeploymentConfig,
   dnFART: dnFARTDeploymentConfig,
   mXRP: mXRPDeploymentConfig,
-  acreBTC: acreBTCDeploymentConfig,
+  acremBTC1: acremBTC1DeploymentConfig,
   mWildUSD: mWildUSDDeploymentConfig,
   plUSD: plUSDDeploymentConfig,
   splUSD: splUSDDeploymentConfig,
@@ -107,4 +114,11 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   wNLP: wNLPDeploymentConfig,
   dnETH: dnETHDeploymentConfig,
   dnTEST: dnTESTDeploymentConfig,
+  obeatUSD: obeatUSDDeploymentConfig,
+  mEVUSD: mEVUSDDeploymentConfig,
+  cUSDO: cUSDODeploymentConfig,
+  mHyperETH: mHyperETHDeploymentConfig,
+  mHyperBTC: mHyperBTCDeploymentConfig,
+  mPortofino: mPortofinoDeploymentConfig,
+  liquidRESERVE: liquidRESERVEDeploymentConfig,
 };

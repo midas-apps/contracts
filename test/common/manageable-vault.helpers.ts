@@ -10,7 +10,6 @@ import {
   DepositVault,
   DepositVaultWithUSTB,
   ERC20,
-  // eslint-disable-next-line camelcase
   ERC20__factory,
   IERC20,
   RedemptionVault,
@@ -399,7 +398,6 @@ export const withdrawTest = async (
   withdrawTo = getAccount(withdrawTo);
   token = getAccount(token);
 
-  // eslint-disable-next-line camelcase
   const tokenContract = ERC20__factory.connect(token, owner);
 
   if (opt?.revertMessage) {

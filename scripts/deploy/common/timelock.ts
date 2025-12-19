@@ -6,7 +6,6 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
   deployAndVerify,
   getDeployer,
-  getWalletAddressForAction,
   sendAndWaitForCustomTxSign,
 } from './utils';
 
@@ -14,95 +13,6 @@ import { getCurrentAddresses } from '../../../config/constants/addresses';
 import { logDeploy } from '../../../helpers/utils';
 import { ProxyAdmin, TimelockController } from '../../../typechain-types';
 import { networkDeploymentConfigs } from '../configs/network-configs';
-
-const safeAbi = [
-  {
-    inputs: [],
-    name: 'domainSeparator',
-    outputs: [{ internalType: 'bytes32', name: '', type: 'bytes32' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { internalType: 'address', name: 'to', type: 'address' },
-      { internalType: 'uint256', name: 'value', type: 'uint256' },
-      { internalType: 'bytes', name: 'data', type: 'bytes' },
-      { internalType: 'enum Enum.Operation', name: 'operation', type: 'uint8' },
-      { internalType: 'uint256', name: 'safeTxGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'baseGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'gasPrice', type: 'uint256' },
-      { internalType: 'address', name: 'gasToken', type: 'address' },
-      { internalType: 'address', name: 'refundReceiver', type: 'address' },
-      { internalType: 'uint256', name: '_nonce', type: 'uint256' },
-    ],
-    name: 'encodeTransactionData',
-    outputs: [{ internalType: 'bytes', name: '', type: 'bytes' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { internalType: 'address', name: 'to', type: 'address' },
-      { internalType: 'uint256', name: 'value', type: 'uint256' },
-      { internalType: 'bytes', name: 'data', type: 'bytes' },
-      { internalType: 'enum Enum.Operation', name: 'operation', type: 'uint8' },
-      { internalType: 'uint256', name: 'safeTxGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'baseGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'gasPrice', type: 'uint256' },
-      { internalType: 'address', name: 'gasToken', type: 'address' },
-      {
-        internalType: 'address payable',
-        name: 'refundReceiver',
-        type: 'address',
-      },
-      { internalType: 'bytes', name: 'signatures', type: 'bytes' },
-    ],
-    name: 'execTransaction',
-    outputs: [{ internalType: 'bool', name: 'success', type: 'bool' }],
-    stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { internalType: 'address', name: 'to', type: 'address' },
-      { internalType: 'uint256', name: 'value', type: 'uint256' },
-      { internalType: 'bytes', name: 'data', type: 'bytes' },
-      { internalType: 'enum Enum.Operation', name: 'operation', type: 'uint8' },
-      { internalType: 'uint256', name: 'safeTxGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'baseGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'gasPrice', type: 'uint256' },
-      { internalType: 'address', name: 'gasToken', type: 'address' },
-      { internalType: 'address', name: 'refundReceiver', type: 'address' },
-      { internalType: 'uint256', name: '_nonce', type: 'uint256' },
-    ],
-    name: 'getTransactionHash',
-    outputs: [{ internalType: 'bytes32', name: '', type: 'bytes32' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [{ internalType: 'address', name: 'owner', type: 'address' }],
-    name: 'isOwner',
-    outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'nonce',
-    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'getOwners',
-    outputs: [{ internalType: 'address[]', name: '', type: 'address[]' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-];
 
 export type DeployTimelockConfig = {
   minDelay: number;
@@ -472,7 +382,7 @@ const createTimeLockTx = async (
 
   const saltHash = solidityKeccak256(['string'], [salt]);
 
-  let { operationHash, type, tx, verifyParameters } = await populateTx(
+  const { operationHash, type, tx, verifyParameters } = await populateTx(
     timelockContract,
     admin.address,
     saltHash,
@@ -489,62 +399,21 @@ const createTimeLockTx = async (
       ? await timelockContract.getInitialProposers()
       : await timelockContract.getInitialExecutors();
 
-  const callerCode = await hre.ethers.provider.getCode(caller);
-
-  const isCallerContract = callerCode !== '0x';
-
-  if (isCallerContract) {
-    console.log(
-      'Caller is a contract, assuming it is a safe contract to execute tx',
-    );
-
-    // we assume that the owner contract is a safe contract
-    const safeContract = await hre.ethers.getContractAt(safeAbi, caller);
-
-    const owners: string[] = await safeContract.getOwners();
-
-    const ownerForSignature = await getWalletAddressForAction(
-      hre,
-      'update-timelock',
-    );
-
-    if (
-      !owners.find((v) => v.toLowerCase() === ownerForSignature.toLowerCase())
-    ) {
-      throw new Error(
-        `Owner ${ownerForSignature} is not found in the safe contract, allowed callers: [${owners.join(
-          ', ',
-        )}]`,
-      );
-    }
-
-    tx = await safeContract.populateTransaction.execTransaction(
-      timelockContract.address,
-      0,
-      tx.data,
-      0,
-      0,
-      0,
-      0,
-      constants.AddressZero,
-      constants.AddressZero,
-      // FIXME: for some reason, encode of 1 is required to be padded, so abi coder does not produce
-      // the required result with encode(['address', 'uint256'], [ownerForSignature, 1])
-      ethers.utils.defaultAbiCoder.encode(['address'], [ownerForSignature]) +
-        '000000000000000000000000000000000000000000000000000000000000000001',
-    );
-  }
-
   console.log(`Timelock operation id for: ${operationHash}`);
   console.log('Verify parameters: ', verifyParameters);
 
   const comment = txComments?.[type] ?? '';
 
-  const res = await sendAndWaitForCustomTxSign(hre, tx, {
-    action: 'update-timelock',
-    subAction: 'timelock-call-upgrade',
-    comment,
-  });
+  const res = await sendAndWaitForCustomTxSign(
+    hre,
+    tx,
+    {
+      action: 'update-timelock',
+      subAction: 'timelock-call-upgrade',
+      comment,
+    },
+    caller,
+  );
 
   console.log('Transaction successfully submitted', res);
 };

@@ -13,18 +13,22 @@ import 'hardhat-deploy';
 import 'solidity-docgen';
 import './tasks';
 import 'hardhat-dependency-compiler';
+import '@layerzerolabs/toolbox-hardhat';
+import 'hardhat-tracer';
 
 import {
   chainIds,
   ENV,
+  extend,
   getForkNetworkConfig,
   getHardhatNetworkConfig,
   getNetworkConfig,
 } from './config';
 
+extend();
+
 const { OPTIMIZER, REPORT_GAS, FORKING_NETWORK, ETHERSCAN_API_KEY } = ENV;
 
-console.log({ FORKING_NETWORK });
 const config: HardhatUserConfig = {
   solidity: {
     compilers: [
@@ -46,6 +50,15 @@ const config: HardhatUserConfig = {
           },
         },
       },
+      {
+        version: '0.8.22',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
     ],
   },
   dependencyCompiler: {
@@ -54,25 +67,10 @@ const config: HardhatUserConfig = {
     ],
   },
   namedAccounts: {
-    deployer: {
-      main: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
-      hardhat: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
-      localhost: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
-      sepolia: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
-      base: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
-      rootstock: '0x548F80f9f4af495aF5eaEf97bbC5c61223e96A01',
-      arbitrum: '0x165894140c591Ea3E57fA337E90Ce0bdB475e814',
-      oasis: '0xa690AB0543514D04411Bb1D12b2E277D675D4939',
-      plume: '0x1Ded0c1E3dC80634b8d615f84aeAf1fA13B913Cc',
-      etherlink: '0xaF940292B68B668A1De0e0729Ce0D60e95018b17',
-      hyperevm: '0x0144936A17ce450a6Eb499C00104890592814F0F',
-      katana: '0xf0db11c80894c0b26681e7ba035574721012bb7e',
-      tacTestnet: '0x12dE1B534B879b4e3a2f1D05a299eD448dC45FD3',
-      tac: '0x12dE1B534B879b4e3a2f1D05a299eD448dC45FD3',
-      xrplevm: '0xea4308904131c51f8380c4a21c74cd629d07893c',
-      zerog: '0xf975786717f57e20bf4d69faf88e795a94f7808d',
-      plasma: '0x1CA462EBB85e14014a8b5c2c46dD018a716B371b',
-    },
+    deployer: Object.keys(chainIds).reduce((acc, network) => {
+      acc[network] = 0;
+      return acc;
+    }, {} as Record<string, number>),
   },
   verify: {
     etherscan: {
@@ -83,26 +81,28 @@ const config: HardhatUserConfig = {
     main: getNetworkConfig('main', []),
     etherlink: getNetworkConfig('etherlink', []),
     sepolia: getNetworkConfig('sepolia'),
+    arbitrumSepolia: getNetworkConfig('arbitrumSepolia'),
     base: getNetworkConfig('base'),
     oasis: getNetworkConfig('oasis'),
     plume: getNetworkConfig('plume'),
     rootstock: getNetworkConfig('rootstock'),
     arbitrum: getNetworkConfig('arbitrum'),
     tacTestnet: getNetworkConfig('tacTestnet'),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     hardhat: FORKING_NETWORK
       ? getForkNetworkConfig(FORKING_NETWORK)
       : getHardhatNetworkConfig(),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     localhost: FORKING_NETWORK
       ? getForkNetworkConfig(FORKING_NETWORK)
-      : getNetworkConfig('localhost', [], FORKING_NETWORK as any),
+      : getNetworkConfig('localhost', [], FORKING_NETWORK),
     hyperevm: getNetworkConfig('hyperevm'),
     katana: getNetworkConfig('katana'),
     xrplevm: getNetworkConfig('xrplevm'),
     tac: getNetworkConfig('tac'),
     zerog: getNetworkConfig('zerog'),
     plasma: getNetworkConfig('plasma'),
+    bsc: getNetworkConfig('bsc'),
+    scroll: getNetworkConfig('scroll'),
+    monad: getNetworkConfig('monad'),
   },
   gasReporter: {
     enabled: REPORT_GAS,
@@ -126,7 +126,7 @@ const config: HardhatUserConfig = {
         chainId: chainIds.base,
         network: 'base',
         urls: {
-          apiURL: 'https://api.basescan.org/api',
+          apiURL: 'https://api.etherscan.io/v2/api?chainid=8453',
           browserURL: 'https://basescan.org',
         },
       },
@@ -210,6 +210,30 @@ const config: HardhatUserConfig = {
           apiURL:
             'https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api',
           browserURL: 'https://plasmascan.to',
+        },
+      },
+      {
+        chainId: chainIds.bsc,
+        network: 'bsc',
+        urls: {
+          apiURL: 'https://api.bscscan.com/api',
+          browserURL: 'https://bscscan.com',
+        },
+      },
+      {
+        chainId: chainIds.scroll,
+        network: 'scroll',
+        urls: {
+          apiURL: 'https://api.etherscan.io/v2/api?chainid=534352',
+          browserURL: 'https://scrollscan.com',
+        },
+      },
+      {
+        chainId: chainIds.monad,
+        network: 'monad',
+        urls: {
+          apiURL: 'https://api.etherscan.io/v2/api?chainid=143',
+          browserURL: 'https://monadvision.com',
         },
       },
     ],

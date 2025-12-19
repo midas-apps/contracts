@@ -1,17 +1,13 @@
 import { ethers } from 'hardhat';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { execSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 import { DeployFunction } from './deploy/common/types';
 
 import { chainIds, Network, rpcUrls } from '../config';
-import {
-  logDeployProxy,
-  tryEtherscanVerifyImplementation,
-} from '../helpers/utils';
+
 interface OpenZeppelinArtifact {
   admin: { address: string };
 }

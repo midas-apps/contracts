@@ -6,9 +6,7 @@ import { ethers } from 'hardhat';
 
 import { encodeFnSelector } from '../../helpers/utils';
 import {
-  // eslint-disable-next-line camelcase
   ManageableVaultTester__factory,
-  // eslint-disable-next-line camelcase
   RedemptionVaultWithUSTBTest__factory,
 } from '../../typechain-types';
 import { acErrors, blackList, greenList } from '../common/ac.helpers';

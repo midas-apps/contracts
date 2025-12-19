@@ -4,10 +4,7 @@ import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import {
-  // eslint-disable-next-line camelcase
-  DataFeedTest__factory,
-} from '../../typechain-types';
+import { DataFeedTest__factory } from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
 import {
   setMinGrowthApr,

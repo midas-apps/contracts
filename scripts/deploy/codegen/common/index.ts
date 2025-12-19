@@ -1,13 +1,4 @@
-import {
-  cancel,
-  confirm,
-  group,
-  isCancel,
-  multiselect,
-  stream,
-  tasks,
-  text,
-} from '@clack/prompts';
+import { cancel, confirm, isCancel, stream, tasks } from '@clack/prompts';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
   ObjectLiteralExpression,
@@ -53,7 +44,7 @@ export type CodeExpr = { [EXPR]: string };
 
 const generatorPerContract: Partial<
   Record<
-    keyof TokenContractNames,
+    keyof TokenContractNames | 'layerZeroMinterBurner',
     (mToken: MTokenName) =>
       | Promise<
           | {
@@ -226,6 +217,7 @@ const lintAndFormatSol = (folder: string) => {
 
 export const expr = (code: string): CodeExpr => ({ [EXPR]: code });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function objectToCode(value: any, indent = 0): string {
   const pad = ' '.repeat(indent);
   if (value && typeof value === 'object' && EXPR in value)
@@ -326,6 +318,7 @@ export const generateDeploymentConfig = async (
   const { deploymentConfigs, postDeployConfigs } =
     await getDeploymentConfigFromUser(overrideNetworkConfig);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const deploymentConfig: Record<string, any> = {
     networkConfig: {},
     postDeploy: {},
@@ -337,13 +330,19 @@ export const generateDeploymentConfig = async (
       await configsPerNetworkConfig.genericConfig(mToken);
   }
 
-  if (!deploymentConfigFileExists || overrideNetworkConfig) {
+  if (
+    !deploymentConfigFileExists ||
+    overrideNetworkConfig ||
+    !hasNetworkConfig
+  ) {
     for (const configKey of deploymentConfigs) {
       const config = await configsPerNetworkConfig[configKey](hre);
       deploymentConfig.networkConfig[configKey] = config;
     }
   } else {
-    await stream.warn(`No-override is selected, skipping network config...`);
+    await stream.warn(
+      `No-override is selected and network config exists, skipping network config...`,
+    );
   }
 
   if (postDeployConfigs) {

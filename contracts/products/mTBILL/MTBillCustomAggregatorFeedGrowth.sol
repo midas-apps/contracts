@@ -7,7 +7,8 @@ import "./MTBillMidasAccessControlRoles.sol";
 /**
  * @title MTBillCustomAggregatorFeedGrowth
  * @notice AggregatorV3 compatible feed for mTBILL,
- * where price is submitted manually by feed admins
+ * where price is submitted manually by feed admins,
+ * and growth apr applies to the answer.
  * @author RedDuck Software
  */
 contract MTBillCustomAggregatorFeedGrowth is

@@ -1,3 +1,4 @@
+import { BigNumberish } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { AddFeeWaivedConfig, AddPaymentTokensConfig } from './common-vault';
@@ -20,8 +21,9 @@ import {
 import { DeployTimelockConfig } from './timelock';
 import { toFunctionSelector } from './utils';
 
-import { PaymentTokenName } from '../../../config';
+import { PartialConfigPerNetwork, PaymentTokenName } from '../../../config';
 import { VaultType } from '../../../config/constants/addresses';
+import { RateLimiter } from '../../../typechain-types';
 
 export const VAULT_FUNCTION_SELECTORS = {
   // Deposit vault functions
@@ -41,6 +43,7 @@ export const VAULT_FUNCTION_SELECTORS = {
   redeemInstantWithCustomRecipient: toFunctionSelector(
     'redeemInstant(address,uint256,uint256,address)',
   ),
+  redeemFiatRequest: toFunctionSelector('redeemFiatRequest(uint256)'),
   redeemRequest: toFunctionSelector('redeemRequest(address,uint256)'),
   redeemRequestWithCustomRecipient: toFunctionSelector(
     'redeemRequest(address,uint256,address)',
@@ -53,12 +56,30 @@ export type PauseFunctionsConfig = {
   [K in VaultType]?: VaultFunctionName[];
 };
 
+export type LayerZeroConfig = {
+  delegate: string;
+  owner?: string;
+  rateLimitConfig?: {
+    default: Omit<RateLimiter.RateLimitConfigStruct, 'dstEid'>;
+    overrides?: PartialConfigPerNetwork<
+      Omit<RateLimiter.RateLimitConfigStruct, 'dstEid'>
+    >;
+  };
+};
+
+export type AxelarItsConfig = {
+  operator: string;
+  flowLimit?: BigNumberish;
+};
+
 export type PostDeployConfig = {
   addPaymentTokens?: AddPaymentTokensConfig;
   grantRoles?: GrantAllTokenRolesConfig;
   setRoundData?: SetRoundDataConfig;
   addFeeWaived?: AddFeeWaivedConfig;
   pauseFunctions?: PauseFunctionsConfig;
+  layerZero?: LayerZeroConfig;
+  axelarIts?: AxelarItsConfig;
 };
 
 export type DeploymentConfig = {
@@ -91,6 +112,11 @@ export type PaymentTokenDeploymentConfig = {
           customAggregator?: DeployCustomAggregatorConfig;
           postDeploy?: {
             setRoundData?: SetRoundDataConfig;
+            layerZero?: { sharedDecimals: number } & Omit<
+              LayerZeroConfig,
+              'rateLimitConfig'
+            >;
+            axelar?: Omit<AxelarItsConfig, 'operator'>;
           };
         }
       >

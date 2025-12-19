@@ -21,6 +21,10 @@ type CommonContractNames = Omit<TokenContractNames, 'token'> & {
   ac: string;
   customAggregator: string;
   customAggregatorDiscounted: string;
+  layerZero: {
+    oftAdapter: string;
+    vaultComposer: string;
+  };
 };
 
 const vaultTypeToContractNameMap: Record<VaultType, string> = {
@@ -91,7 +95,6 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   kitBTC: 'KitBtc',
   dnFART: 'DnFart',
   mXRP: 'MXrp',
-  acreBTC: 'AcreBtc',
   mWildUSD: 'MWildUsd',
   plUSD: 'PlUsd',
   splUSD: 'SplUsd',
@@ -99,6 +102,14 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   wNLP: 'WNlp',
   dnETH: 'DnEth',
   dnTEST: 'DnTest',
+  acremBTC1: 'AcreMBtc1',
+  obeatUSD: 'ObeatUsd',
+  mEVUSD: 'MEvUsd',
+  cUSDO: 'CUsdo',
+  mHyperETH: 'MHyperEth',
+  mHyperBTC: 'MHyperBtc',
+  mPortofino: 'MPortofino',
+  liquidRESERVE: 'LiquidReserve',
 };
 
 export const getCommonContractNames = (): CommonContractNames => {
@@ -117,6 +128,10 @@ export const getCommonContractNames = (): CommonContractNames => {
     roles: 'MidasAccessControlRoles',
     dataFeedComposite: 'CompositeDataFeed',
     dataFeedMultiply: 'CompositeDataFeedMultiply',
+    layerZero: {
+      oftAdapter: 'MidasLzMintBurnOFTAdapter',
+      vaultComposer: 'MidasLzVaultComposerSync',
+    },
   };
 };
 

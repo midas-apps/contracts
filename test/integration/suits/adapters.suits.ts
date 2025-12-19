@@ -269,7 +269,6 @@ const erc4626AdapterSuits = (
         it('should return vault.decimals()', async function () {
           const { adapter } = await erc4626AdapterFixture();
           expect(await adapter.vaultDecimals()).eq(
-            // eslint-disable-next-line camelcase
             await (
               await hre.ethers.getContractAt(
                 'IERC20Metadata',
@@ -456,7 +455,7 @@ export const bandAdaptersSuits = (
   ids: string[],
   fixture: () => Promise<{ bandAdapters: BandAdapterSuitsParams[] }>,
 ) => {
-  describe.only(`Band Adapters on ${network}`, function () {
+  describe(`Band Adapters on ${network}`, function () {
     ids.forEach((id) => {
       describe(`Band Adapter for ${id}`, () => {
         getAdapterSuits(
