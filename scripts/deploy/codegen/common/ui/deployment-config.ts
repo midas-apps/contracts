@@ -8,10 +8,10 @@ import {
   stream,
   text,
 } from '@clack/prompts';
-import { isAddress, parseUnits } from 'ethers/lib/utils';
+import { parseUnits } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { expr, requireNotCancelled } from '..';
+import { expr, requireAddress, requireNotCancelled, validateAddress } from '..';
 import { MTokenName } from '../../../../../config';
 import {
   getCurrentAddresses,
@@ -459,14 +459,6 @@ const shouldEnableSanctionsList = (hre: HardhatRuntimeEnvironment) => {
   return !!sanctionListContracts[hre.network.config.chainId!];
 };
 
-const requireAddress = (value: string) => {
-  const error = validateAddress(value);
-  if (error) {
-    throw error;
-  }
-  return value;
-};
-
 const requireBase18 = (value: string) => {
   const error = validateBase18(value);
   if (error) {
@@ -504,13 +496,6 @@ const requireFloatToBigNumberishOrNull = (value: string, maxDecimals = 2) => {
     throw error;
   }
   return value === '0' ? null : expr(`parseUnits("${value}", ${maxDecimals})`);
-};
-
-const validateAddress = (value: string) => {
-  if (!isAddress(value)) {
-    return new Error('Invalid address');
-  }
-  return undefined;
 };
 
 const validateBase18 = (value: string) => {

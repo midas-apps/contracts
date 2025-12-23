@@ -1,4 +1,5 @@
 import { cancel, confirm, isCancel, stream, tasks } from '@clack/prompts';
+import { isAddress } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
   ObjectLiteralExpression,
@@ -178,6 +179,14 @@ export const updateConfigFiles = (
   }
 };
 
+export const requireNumber = (value: string) => {
+  const error = validateNumber(value);
+  if (error) {
+    throw error;
+  }
+  return Number(value);
+};
+
 export const requireNotCancelled = <T>(value: T | symbol) => {
   if (isCancel(value)) {
     cancel('Operation cancelled.');
@@ -185,6 +194,41 @@ export const requireNotCancelled = <T>(value: T | symbol) => {
   }
 
   return value;
+};
+
+export const requireAddress = (value: string) => {
+  const error = validateAddress(value);
+  if (error) {
+    throw error;
+  }
+  return value;
+};
+
+export const validateNumber = (
+  value: string,
+  minValue?: number,
+  maxValue?: number,
+) => {
+  if (!Number.isInteger(Number(value))) {
+    return new Error('Invalid number');
+  }
+
+  if (minValue && Number(value) < minValue) {
+    return new Error(`Number must be greater than ${minValue}`);
+  }
+
+  if (maxValue && Number(value) > maxValue) {
+    return new Error(`Number must be less than ${maxValue}`);
+  }
+
+  return undefined;
+};
+
+export const validateAddress = (value: string) => {
+  if (!isAddress(value)) {
+    return new Error('Invalid address');
+  }
+  return undefined;
 };
 
 const lintAndFormatTs = (path: string) => {
