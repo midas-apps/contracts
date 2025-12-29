@@ -240,4 +240,8 @@ export const mTokensMetadata: Record<
     name: 'Ether.Fi Liquid Reserve',
     symbol: 'liquidRESERVE',
   },
+  mKRalpha: {
+    name: 'Midas Keyrock Alpha',
+    symbol: 'mKRalpha',
+  },
 };

@@ -30,6 +30,7 @@ import { mFONEDeploymentConfig } from './mFONE';
 import { mHYPERDeploymentConfig } from './mHYPER';
 import { mHyperBTCDeploymentConfig } from './mHyperBTC';
 import { mHyperETHDeploymentConfig } from './mHyperETH';
+import { mKRalphaDeploymentConfig } from './mKRalpha';
 import { mLIQUIDITYDeploymentConfig } from './mLIQUIDITY';
 import { mMEVDeploymentConfig } from './mMEV';
 import { mPortofinoDeploymentConfig } from './mPortofino';
@@ -121,4 +122,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mHyperBTC: mHyperBTCDeploymentConfig,
   mPortofino: mPortofinoDeploymentConfig,
   liquidRESERVE: liquidRESERVEDeploymentConfig,
+  mKRalpha: mKRalphaDeploymentConfig,
 };
