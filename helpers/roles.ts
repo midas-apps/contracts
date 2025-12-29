@@ -64,6 +64,7 @@ const prefixes: Record<MTokenName, string> = {
   mHyperBTC: 'M_HYPER_BTC',
   mPortofino: 'M_PORTOFINO',
   liquidRESERVE: 'LIQUID_RESERVE',
+  mKRalpha: 'M_KRALPHA',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {
