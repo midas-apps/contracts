@@ -58,6 +58,7 @@ export enum MTokenNameEnum {
   mHyperBTC = 'mHyperBTC',
   mPortofino = 'mPortofino',
   liquidRESERVE = 'liquidRESERVE',
+  mKRalpha = 'mKRalpha',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
