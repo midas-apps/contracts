@@ -685,6 +685,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x79A15707E2766d486681569Bd1041821f5e32998',
       redemptionVault: '0xe7a1A676D0CCA2e20A69adD500985C7271a40205',
     },
+    mHyperBTC: {
+      token: '0x7F71f02aE0945364F658860d67dbc10c86Ca3a3C',
+      customFeed: '0xf940A175794fe571fD6e45d8C4f57c642C978827',
+      dataFeed: '0xE1d9eF8784F0feDcf4e30105Aa17448AcBE7F367',
+      depositVault: '0x82Dd60B6e3f1f3Db025a715952B0e9f96B7D7a53',
+      redemptionVaultSwapper: '0x4F4da20f45Ce2c94e84B93e4D73f3F3F33b8B570',
+    },
   },
   hyperevm: {
     paymentTokens: {
