@@ -468,6 +468,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x9a5cf6c0a1CEe5226E31e3D0a81F2ca2462d8387',
       redemptionVaultSwapper: '0xb02cc77ee137436D71b9dE46958A3bB5d7346CcA',
     },
+    mKRalpha: {
+      token: '0xE70B5Eb021Dc3AF653D61fd792D8f0B60F36c493',
+      customFeed: '0x38092073c5483bA9D844cC6733976957011e8AEe',
+      dataFeed: '0x72e4549f3647426794149554625Bc0827C77D3Aa',
+      depositVault: '0x54602a8e47BF82073d75E0AC2aeF67F84fbCb8e4',
+      redemptionVaultSwapper: '0xc37eDf7d955020D547B45F762027b49947D02550',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
@@ -677,6 +684,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xa3A252Babc8A576660c6B8B9e3bD096D2f5017cE',
       depositVault: '0x79A15707E2766d486681569Bd1041821f5e32998',
       redemptionVault: '0xe7a1A676D0CCA2e20A69adD500985C7271a40205',
+    },
+    mHyperBTC: {
+      token: '0x7F71f02aE0945364F658860d67dbc10c86Ca3a3C',
+      customFeed: '0xf940A175794fe571fD6e45d8C4f57c642C978827',
+      dataFeed: '0xE1d9eF8784F0feDcf4e30105Aa17448AcBE7F367',
+      depositVault: '0x82Dd60B6e3f1f3Db025a715952B0e9f96B7D7a53',
+      redemptionVaultSwapper: '0x4F4da20f45Ce2c94e84B93e4D73f3F3F33b8B570',
     },
   },
   hyperevm: {
