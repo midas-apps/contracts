@@ -1065,6 +1065,18 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x4d0D144b59156bE791Ab6F0FbBF809D4F1A18466',
         dataFeed: '0xD9aC2C0b1d864aED9EF8D43b0CE130A65beC25Bb',
       },
+      usdt: {
+        token: '0xAF988C3f7CB2AceAbB15f96b19388a259b6C438f',
+        aggregator: '0x1B4D2eD5Cc36480c9ed2d86cdd26818c01A494F8',
+        dataFeed: '0x222e284b867559cbf3A5EBfba3b09f4115972753',
+      },
+    },
+    mRE7: {
+      token: '0x0a72ED3C34352Ab2dd912b30f2252638C873D6f0',
+      customFeed: '0xBbA185027F6c62dac2d7f95CD582785e22d61738',
+      dataFeed: '0x2cBaa3F25Aae8b03aE2b62f9630d0BA63dF1Cf09',
+      depositVault: '0xbD2CE9D5F2c682FCA3ce587Bf1C041ad8DDd2a69',
+      redemptionVaultSwapper: '0x911f9aF9138284A49b29F9894571Fb86e29D1d79',
     },
     mEDGE: {
       token: '0x0e07999AFFF029894277C785857b4cA30ec07a5e',
