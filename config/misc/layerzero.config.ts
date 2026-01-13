@@ -23,6 +23,10 @@ type ConfigPerNetwork<TKey extends string> = Partial<
   Record<
     TKey,
     {
+      /**
+       * @default 'all'
+       */
+      pathways?: 'direct-only' | 'all';
       linkedNetworks: Network[];
     }
   >
@@ -42,6 +46,12 @@ export const lzConfigsPerMToken: PartialConfigPerNetwork<
     },
     liquidHYPE: {
       linkedNetworks: ['scroll'],
+    },
+  },
+  main: {
+    mHYPER: {
+      pathways: 'direct-only',
+      linkedNetworks: ['monad', 'plasma'],
     },
   },
 };
@@ -135,6 +145,16 @@ export default async function () {
   for (const networkA of allNetworks) {
     for (const networkB of allNetworks) {
       if (networkA === networkB) {
+        continue;
+      }
+
+      // for 'direct-only' pathways we only create pathways between main network and linked networks
+      // for 'all' pathways we also create pathways between linked networks as well
+      if (
+        tokenConfig.pathways === 'direct-only' &&
+        networkA !== network &&
+        networkB !== network
+      ) {
         continue;
       }
 
