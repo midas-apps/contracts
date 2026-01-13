@@ -222,6 +222,7 @@ export const blockFinality: PartialConfigPerNetwork<number> = {
   scroll: 64,
   sepolia: 2,
   arbitrumSepolia: 1,
+  monad: 64,
 };
 
 export const axelarChainNames: PartialConfigPerNetwork<string> = {
