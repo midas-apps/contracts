@@ -656,6 +656,13 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           },
         },
       },
+      usdt: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
     },
     [chainIds.zerog]: {
       usdc: {
@@ -713,6 +720,29 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           healthyDiff: 3600,
           minAnswer: parseUnits('1'),
           maxAnswer: parseUnits('1.2'),
+        },
+      },
+      usdc: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+      usdt: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+    },
+    [chainIds.monad]: {
+      usdc: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
         },
       },
     },

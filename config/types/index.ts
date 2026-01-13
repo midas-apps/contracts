@@ -18,6 +18,7 @@ export type Network =
   | 'plume'
   | 'rootstock'
   | 'scroll'
+  | 'monad'
   | 'tac'
   | 'tacTestnet'
   | 'xrplevm'
