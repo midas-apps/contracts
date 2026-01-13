@@ -15,6 +15,7 @@ All the roles for the Midas protocol smart contracts are listed below.
 | ***blacklisted*** | `0x548c7f0307ab2a7ea894e5c7e8c5353cc750bb9385ee2e945f189a9a83daa8ed` |
 | ***blacklistedOperator*** | `0x2fdc6683bc8d03effec5b41d3834f28bd219e06ca0a6a26fc737e44b1c7889ff` |
 
+
 ## Token Roles
 
 ### mTBILL Roles
@@ -501,17 +502,6 @@ All the roles for the Midas protocol smart contracts are listed below.
 | ***depositVaultAdmin*** | `0x362885d5fdff43d17e2a02dd9fdc0991e345ad2809b4420b164cf45b79b7135e` |
 | ***redemptionVaultAdmin*** | `0xf35bad42d7bf4455cd28ba806419ba6983ae1bb82763acbe23000a54c73ba852` |
 
-### acreBTC Roles
-
-| Role Name | Role |
-| --- | --- |
-| ***minter*** | `0x9e20956ca4f957f929e9de1d5d54087ef0facc26f285f1b361f554ce8a288710` |
-| ***burner*** | `0xed9de8a2af1b8e7b9ae0d486ad0e1f0ede6fbd49fcf9ac07cf3a9c9b5c47e5bf` |
-| ***pauser*** | `0x51b112576340774b587e43908fee3d7f5f9e6aac17fcd202ca5492744804a993` |
-| ***customFeedAdmin*** | `0x86066fb137b3d96927953e29c7bd5859470f3df040a44ba5bc22b1045d7b8e9e` |
-| ***depositVaultAdmin*** | `0x87355dd738f6623c15ab03e7dbf6a8c7065c52f47e97d349569591316ca1db67` |
-| ***redemptionVaultAdmin*** | `0x78b212079219087ec51f016511547fe54c7b05faa00bcd3783a5d6d79a293a0c` |
-
 ### mWildUSD Roles
 
 | Role Name | Role |
@@ -589,6 +579,17 @@ All the roles for the Midas protocol smart contracts are listed below.
 | ***depositVaultAdmin*** | `0xd53d90af3ccc60519f093fe7911711a2d74a86f334c078566ce9393227caaf20` |
 | ***redemptionVaultAdmin*** | `0x1c906f2abe99d47697b6f1a165f077c1939561421368d5884f652c07ac1987ef` |
 
+### acremBTC1 Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0x9e20956ca4f957f929e9de1d5d54087ef0facc26f285f1b361f554ce8a288710` |
+| ***burner*** | `0xed9de8a2af1b8e7b9ae0d486ad0e1f0ede6fbd49fcf9ac07cf3a9c9b5c47e5bf` |
+| ***pauser*** | `0x51b112576340774b587e43908fee3d7f5f9e6aac17fcd202ca5492744804a993` |
+| ***customFeedAdmin*** | `0x86066fb137b3d96927953e29c7bd5859470f3df040a44ba5bc22b1045d7b8e9e` |
+| ***depositVaultAdmin*** | `0x87355dd738f6623c15ab03e7dbf6a8c7065c52f47e97d349569591316ca1db67` |
+| ***redemptionVaultAdmin*** | `0x78b212079219087ec51f016511547fe54c7b05faa00bcd3783a5d6d79a293a0c` |
+
 ### obeatUSD Roles
 
 | Role Name | Role |
@@ -654,3 +655,14 @@ All the roles for the Midas protocol smart contracts are listed below.
 | ***customFeedAdmin*** | `0xbe67daee6b1b2282b6f74b3c92463b0fefc9c8eb37782a1758bc46200602e323` |
 | ***depositVaultAdmin*** | `0x3275e112edcda83fa1a983c6b503dda520825e0e93d86d92cdd9eaada8062115` |
 | ***redemptionVaultAdmin*** | `0xdc5a9c620266100042e71ec8a53cdcb4c0e3088ef200160c6cebac9aa2f625cb` |
+
+### liquidRESERVE Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0x283702d6765f138ccb78fe50dc0e73ab5e1fb9f41eb94befac64f3cced7c41b5` |
+| ***burner*** | `0xe8b3ca67830e1cbab05de7daca13156c1ac4e23ad64c76443bbc66431b159eba` |
+| ***pauser*** | `0x6897abecf20084d3808307fe71608241b0ce7408c8c8cd67d955d6533fd7a2a0` |
+| ***customFeedAdmin*** | `0x0c4804cfdaa6fb0fb66b000b7efc6e10bbbec2295d7aa3119853b58d07cd56c4` |
+| ***depositVaultAdmin*** | `0x95e4444f4da9c63e0c10754468d5902bc394407e8f5cbeaf8302a1d93d6bafa4` |
+| ***redemptionVaultAdmin*** | `0x78a4d3a8242cca19aaec7f83d35b555e265608ffc8ca6b31f41ab6cc3576e2d6` |

@@ -86,6 +86,7 @@ const config: HardhatUserConfig = {
     plasma: getNetworkConfig('plasma'),
     bsc: getNetworkConfig('bsc'),
     scroll: getNetworkConfig('scroll'),
+    monad: getNetworkConfig('monad'),
   },
   gasReporter: {
     enabled: REPORT_GAS,
@@ -209,6 +210,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: 'https://api.etherscan.io/v2/api?chainid=534352',
           browserURL: 'https://scrollscan.com',
+        },
+      },
+      {
+        chainId: chainIds.monad,
+        network: 'monad',
+        urls: {
+          apiURL: 'https://api.etherscan.io/v2/api?chainid=143',
+          browserURL: 'https://monadvision.com',
         },
       },
     ],

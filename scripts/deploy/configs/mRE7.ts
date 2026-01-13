@@ -213,5 +213,66 @@ export const mRE7DeploymentConfig: DeploymentConfig = {
         },
       },
     },
+    [chainIds.tac]: {
+      dv: {
+        type: 'REGULAR',
+        enableSanctionsList: false,
+        feeReceiver: '0x13B01b88A8b8EF1627B754361D155646a548DB53',
+        tokensReceiver: '0x748C6D9E78FEF3858BCae488400509E952d44c9f',
+        instantDailyLimit: constants.MaxUint256,
+        instantFee: parseUnits('0', 2),
+        variationTolerance: parseUnits('5', 2),
+        minMTokenAmountForFirstDeposit: parseUnits('0', 18),
+        maxSupplyCap: constants.MaxUint256,
+      },
+      rvSwapper: {
+        type: 'SWAPPER',
+        feeReceiver: '0xfa8E54aD80D5A0C25d225c04e44fb993Ad88e487',
+        tokensReceiver: '0x748C6D9E78FEF3858BCae488400509E952d44c9f',
+        requestRedeemer: '0x4331397Cc899947a6CD94d0F766CBCE7e3705b56',
+        instantDailyLimit: 1,
+        instantFee: parseUnits('0', 2),
+        variationTolerance: parseUnits('5', 2),
+        liquidityProvider: 'dummy',
+        enableSanctionsList: false,
+        swapperVault: 'dummy',
+      },
+      postDeploy: {
+        addPaymentTokens: {
+          vaults: [
+            {
+              paymentTokens: [
+                {
+                  token: 'usdt',
+                  allowance: parseUnits('10000000', 18),
+                },
+              ],
+              type: 'depositVault',
+            },
+            {
+              paymentTokens: [
+                {
+                  token: 'usdt',
+                  allowance: parseUnits('10000000', 18),
+                },
+              ],
+              type: 'redemptionVaultSwapper',
+            },
+          ],
+        },
+        grantRoles: {
+          tokenManagerAddress: '0xb755FF07FD80B38265Ae35639568CfCdc874f21D',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0x07BA5A7814FC2C6696EbeD0238Bb74B5b77eb7Eb',
+        },
+        setRoundData: {
+          data: parseUnits('1.08578420', 8),
+        },
+        pauseFunctions: {
+          depositVault: ['depositRequest', 'depositRequestWithCustomRecipient'],
+          redemptionVaultSwapper: ['redeemFiatRequest'],
+        },
+      },
+    },
   },
 };
