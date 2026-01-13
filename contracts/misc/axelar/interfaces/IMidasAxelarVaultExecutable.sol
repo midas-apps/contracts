@@ -121,7 +121,4 @@ interface IMidasAxelarVaultExecutable {
     function redeemAndSend(uint256 _mTokenAmount, bytes calldata _data)
         external
         payable;
-
-    /// ========================== Receive =====================================
-    receive() external payable;
 }
