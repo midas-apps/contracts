@@ -71,9 +71,16 @@ contract MidasAxelarVaultExecutableTester is MidasAxelarVaultExecutable {
         string memory _destinationChain,
         bytes memory _destinationAddress,
         bytes32 _tokenId,
-        uint256 _amount
+        uint256 _amount,
+        uint256 _gasValue
     ) external payable {
-        _itsTransfer(_destinationChain, _destinationAddress, _tokenId, _amount);
+        _itsTransfer(
+            _destinationChain,
+            _destinationAddress,
+            _tokenId,
+            _amount,
+            _gasValue
+        );
     }
 
     function bytesToAddressPublic(bytes memory _b)
