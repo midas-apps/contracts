@@ -11,7 +11,7 @@ export type RedemptionVaultType =
 
 export type DepositVaultType = 'depositVault' | 'depositVaultUstb';
 
-type LayerZeroTokenAddresses = {
+export type LayerZeroTokenAddresses = {
   oft?: string;
   composers?: Partial<Record<PaymentTokenName, string>>;
 };

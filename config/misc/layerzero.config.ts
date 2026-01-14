@@ -51,7 +51,7 @@ export const lzConfigsPerMToken: PartialConfigPerNetwork<
   main: {
     mHYPER: {
       pathways: 'direct-only',
-      linkedNetworks: ['monad', 'plasma'],
+      linkedNetworks: ['monad'],
     },
   },
 };
