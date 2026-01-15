@@ -88,6 +88,10 @@ const EVM_ENFORCED_OPTIONS: OAppEnforcedOption[] = [
   },
 ];
 
+const enforceOptionsAdditionalGas: PartialConfigPerNetwork<number> = {
+  monad: 100_000,
+};
+
 const getLzConfigPerNetwork = (hre: HardhatRuntimeEnvironment) => {
   const { mToken, paymentToken } = getMTokenOrPaymentTokenOrThrow(hre);
 
@@ -111,6 +115,19 @@ const getAdapterAddress = (
   return mToken
     ? networkAddresses[mToken]?.layerZero?.oft
     : networkAddresses?.paymentTokens?.[paymentToken!]?.layerZero?.oft;
+};
+
+const getEnforcedOptionsForNetwork = (network: Network) => {
+  const additionalGas = enforceOptionsAdditionalGas[network] ?? 0;
+  return EVM_ENFORCED_OPTIONS.map((v) => {
+    if ('gas' in v) {
+      return {
+        ...v,
+        gas: BigInt(v.gas) + BigInt(additionalGas),
+      };
+    }
+    return v;
+  });
 };
 
 export default async function () {
@@ -184,7 +201,10 @@ export default async function () {
           [],
         ], // [ requiredDVN[], [ optionalDVN[], threshold ] ]
         [blockFinality[networkA] ?? 32, blockFinality[networkB] ?? 32], // [A to B confirmations, B to A confirmations]
-        [EVM_ENFORCED_OPTIONS, EVM_ENFORCED_OPTIONS], // Chain B enforcedOptions, Chain A enforcedOptions
+        [
+          getEnforcedOptionsForNetwork(networkA),
+          getEnforcedOptionsForNetwork(networkB),
+        ],
       ]);
     }
   }
