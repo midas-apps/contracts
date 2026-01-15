@@ -16,6 +16,8 @@ const {
   CONDUIT_API_KEY,
   MNEMONIC_DEV,
   MNEMONIC_PROD,
+  QUICK_NODE_PROJECT,
+  QUICK_NODE_KEY,
 } = ENV;
 
 export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
@@ -46,6 +48,7 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
     : 'https://bsc-dataseed.bnbchain.org',
   scroll: 'https://rpc.scroll.io',
   monad: 'https://rpc.monad.xyz',
+  injective: `https://${QUICK_NODE_PROJECT}.injective-mainnet.quiknode.pro/${QUICK_NODE_KEY}/`,
 };
 
 export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
@@ -70,6 +73,7 @@ export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
   bsc: undefined,
   scroll: undefined,
   monad: undefined,
+  injective: undefined,
 };
 
 export const chainIds: ConfigPerNetwork<number> = {
@@ -94,6 +98,7 @@ export const chainIds: ConfigPerNetwork<number> = {
   bsc: 56,
   scroll: 534352,
   monad: 143,
+  injective: 1776,
 };
 
 export const mnemonics: ConfigPerNetwork<string | undefined> = {
@@ -118,6 +123,7 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   bsc: MNEMONIC_PROD,
   scroll: MNEMONIC_PROD,
   monad: MNEMONIC_PROD,
+  injective: MNEMONIC_PROD,
 };
 
 export const gases: ConfigPerNetwork<number | undefined> = {
@@ -142,6 +148,7 @@ export const gases: ConfigPerNetwork<number | undefined> = {
   bsc: undefined,
   scroll: undefined,
   monad: undefined,
+  injective: undefined,
 };
 
 export const timeouts: ConfigPerNetwork<number | undefined> = {
@@ -166,6 +173,7 @@ export const timeouts: ConfigPerNetwork<number | undefined> = {
   bsc: undefined,
   scroll: undefined,
   monad: undefined,
+  injective: undefined,
 };
 
 export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
@@ -190,6 +198,7 @@ export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
   bsc: undefined,
   scroll: undefined,
   monad: undefined,
+  injective: undefined,
 };
 
 export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
@@ -214,6 +223,7 @@ export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
   bsc: undefined,
   scroll: undefined,
   monad: undefined,
+  injective: undefined,
 };
 
 export const blockFinality: PartialConfigPerNetwork<number> = {
