@@ -244,4 +244,8 @@ export const mTokensMetadata: Record<
     name: 'Midas Keyrock Alpha',
     symbol: 'mKRalpha',
   },
+  sLINJ: {
+    name: 'INJ Loop Stake Vault',
+    symbol: 'sLINJ',
+  },
 };
