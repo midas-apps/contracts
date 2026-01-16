@@ -217,7 +217,7 @@ const config: HardhatUserConfig = {
         network: 'monad',
         urls: {
           apiURL: 'https://api.etherscan.io/v2/api?chainid=143',
-          browserURL: 'https://monadvision.com',
+          browserURL: 'https://monadscan.com',
         },
       },
     ],

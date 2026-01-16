@@ -11,7 +11,7 @@ export type RedemptionVaultType =
 
 export type DepositVaultType = 'depositVault' | 'depositVaultUstb';
 
-type LayerZeroTokenAddresses = {
+export type LayerZeroTokenAddresses = {
   oft?: string;
   composers?: Partial<Record<PaymentTokenName, string>>;
 };
@@ -1250,6 +1250,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     mHYPER: {
       token: '0xd90F6bFEd23fFDE40106FC4498DD2e9EDB95E4e7',
       customFeed: '0xf3BBD544F8453eE82211709422d8d7906f816584',
+      dataFeed: '0x8Faab939BF96308846d9B273fE50DED16ae33fF2',
       layerZero: {
         oft: '0x08BC5Ef2E2Afe697614bf3A9eaA71dcBb577f2Df',
       },
