@@ -202,8 +202,8 @@ export default async function () {
         ], // [ requiredDVN[], [ optionalDVN[], threshold ] ]
         [blockFinality[networkA] ?? 32, blockFinality[networkB] ?? 32], // [A to B confirmations, B to A confirmations]
         [
-          getEnforcedOptionsForNetwork(networkA),
           getEnforcedOptionsForNetwork(networkB),
+          getEnforcedOptionsForNetwork(networkA),
         ],
       ]);
     }
