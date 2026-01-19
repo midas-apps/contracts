@@ -37,7 +37,7 @@ In the root of the repo, create a `.env` file from [.env.example](./.env.example
 ## Repository Structure
 
 ```
-tokenized-treasury/
+midas-contracts/
 ├── contracts/          # Smart contract source code
 │   ├── abstract/       # Abstract base contracts
 │   ├── access/         # Access control contracts
@@ -190,17 +190,34 @@ Abstract base contract for all mToken implementations
 
 ### **Vaults**
 
-Thera 2 type of vaults - Deposit vaults and Redemption vaults. Also each type of vault have different variations (like USTB, Swapper, BUIDL etc.)
+There are 2 types of vaults - Deposit vaults and Redemption vaults. Also each type of vault have different variations (like USTB, Swapper, BUIDL etc.)
 
 **Common Key Features:**
 
 - Fee calculation and collection
 - Multiple payment tokens support
 - Greenlist/Blacklist
-- Chainalysis sacntion list integration
+- Chainalysis sanction list integration
 - Minimal mToken amount for instant/request operations
 - Daily limits for instant operations
-- Vault Allowance - how many mTokens can be minted/redeemed in general (until allowance is increased by vault manager)
+- Vault Allowance - limits the total amount of mTokens that a vault can mint or redeem. It is a risk-control mechanism managed by the vault admin and is independent from token supply caps.
+
+#### Instant vs Request-Based Operations
+
+Both vaults support two execution modes:
+
+**Instant (Synchronous):**
+
+- Fully on-chain
+- Atomic mint/burn + transfer
+- Subject to daily limits, liquidity, and minimum amounts
+
+**Request-Based (Asynchronous):**
+
+- Two-step process
+- User submits request on-chain
+- Admin approves or rejects after off-chain processing
+- Used when instant liquidity is insufficient or instant operations are disabled. Also for fiat operations
 
 ### **DepositVault** (`contracts/DepositVault.sol`)
 
@@ -215,7 +232,7 @@ Manages the minting process for mTokens. Users deposit payment tokens to receive
 
 **Key Functions:**
 
-- `depositInstant()` - Instant deposit with atomical minting
+- `depositInstant()` - Instant deposit with atomic minting
 - `depositRequest()` - Create deposit request for admin approval
 - `approveRequest()` - Admin approves deposit request
 - `rejectRequest()` - Admin rejects deposit request
@@ -251,7 +268,7 @@ Manages the redemption process for mTokens. Burns mTokens from a user and transf
 
 ### **DataFeed** (`contracts/feeds/DataFeed.sol`)
 
-Wraps Chainlink AggregatorV3 price feeds, validates the price (max/min/stailness) and converts answers to 18 decimals format
+Wraps Chainlink AggregatorV3 price feeds, validates the price (max/min/staleness) and converts answers to 18 decimals format
 
 **Key Functions:**
 
