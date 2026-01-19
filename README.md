@@ -329,7 +329,7 @@ main: {
 
 ## Deployment
 
-Please read [this deployment README](./scripts/deploy/README.md)
+Please fefer to [this deployment README](./scripts/deploy/README.md)
 
 ## Upgradability
 
