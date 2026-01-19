@@ -8,8 +8,8 @@ Check the repository [prerequisites](../../README.md#prerequisites)
 
 If deploying to a brand new network, make sure the network is added to the repo network configuration and explorer verification configuration. Files:
 
-- `./hardhat.config.ts`
-- `./configs/networks.ts`
+- [`hardhat.config.ts`](../../hardhat.config.ts)
+- [`config/networks/index.ts`](../../config/networks/index.ts)
 
 ---
 
@@ -26,7 +26,7 @@ The flow is:
 
 ## Deployment notes
 
-- After runing the deployment command, add the deployed proxy address to the addresses file (`configs/constants/addresses.ts`)
+- After runing the deployment command, add the deployed proxy address to the addresses file ([`config/constants/addresses.ts`](../../config/constants/addresses.ts))
 - Always check if contract was properly verified, if not - verify it in a separate command (check [Troubleshooting](#troubleshooting))
 
 ## Configuring the repository

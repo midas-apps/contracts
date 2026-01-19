@@ -138,7 +138,7 @@ yarn slither:summary
 
 ## Core Contracts
 
-### **MidasAccessControl** (`contracts/access/MidasAccessControl.sol`)
+### **MidasAccessControl** ([`contracts/access/MidasAccessControl.sol`](contracts/access/MidasAccessControl.sol))
 
 Centralized access control contract managing all roles across the protocol
 
@@ -172,7 +172,7 @@ All roles in the system are documented in [`ROLES.md`](./ROLES.md). This file is
   - `depositVaultAdmin` - Can manage deposit vault operations
   - `redemptionVaultAdmin` - Can manage redemption vault operations
 
-### **mToken** (`contracts/mToken.sol`)
+### **mToken** ([`contracts/mToken.sol`](contracts/mToken.sol))
 
 Abstract base contract for all mToken implementations
 
@@ -219,7 +219,7 @@ Both vaults support two execution modes:
 - Admin approves or rejects after off-chain processing
 - Used when instant liquidity is insufficient or instant operations are disabled. Also for fiat operations
 
-### **DepositVault** (`contracts/DepositVault.sol`)
+### **DepositVault** ([`contracts/DepositVault.sol`](contracts/DepositVault.sol))
 
 Manages the minting process for mTokens. Users deposit payment tokens to receive mTokens.
 
@@ -239,9 +239,9 @@ Manages the minting process for mTokens. Users deposit payment tokens to receive
 
 **Vault Variations:**
 
-- USTB (`contracts/DepositVaultWithUSTB.sol`) - Automatically invests USDC into USTB tokens before transferring proceeds to the recipient.
+- USTB ([`contracts/DepositVaultWithUSTB.sol`](contracts/DepositVaultWithUSTB.sol)) - Automatically invests USDC into USTB tokens before transferring proceeds to the recipient.
 
-### **RedemptionVault** (`contracts/RedemptionVault.sol`)
+### **RedemptionVault** ([`contracts/RedemptionVault.sol`](contracts/RedemptionVault.sol))
 
 Manages the redemption process for mTokens. Burns mTokens from a user and transfers payment tokens in exchange
 
@@ -262,11 +262,11 @@ Manages the redemption process for mTokens. Burns mTokens from a user and transf
 
 **Vault Variations:**
 
-- Swapper (`contracts/RedemptionVaultWithSwapper.sol`) - Uses an external liquidity source to exchange one mToken for another and redeems the obtained mTokens through a different Midas redemption vault. This flow is activated only when there is insufficient liquidity in the current Redemption Vault.
-- BUIDL (`contracts/RedemptionVaultWithBUIDL.sol`) (*deprecated*) - Stores pending liquidity as BUIDL tokens. When the vault has insufficient USDC liquidity to fulfill an instant redemption, BUIDL tokens are redeemed for USDC and used to complete the redemption.
-- USTB (`contracts/RedemptionVaultWithUSTB.sol`) - Stores pending liquidity as USTB tokens. When the vault has insufficient USDC liquidity to fulfill an instant redemption, USTB tokens are redeemed for USDC and used to complete the redemption.
+- Swapper ([`contracts/RedemptionVaultWithSwapper.sol`](contracts/RedemptionVaultWithSwapper.sol)) - Uses an external liquidity source to exchange one mToken for another and redeems the obtained mTokens through a different Midas redemption vault. This flow is activated only when there is insufficient liquidity in the current Redemption Vault.
+- BUIDL ([`contracts/RedemptionVaultWithBUIDL.sol`](contracts/RedemptionVaultWithBUIDL.sol)) (*deprecated*) - Stores pending liquidity as BUIDL tokens. When the vault has insufficient USDC liquidity to fulfill an instant redemption, BUIDL tokens are redeemed for USDC and used to complete the redemption.
+- USTB ([`contracts/RedemptionVaultWithUSTB.sol`](contracts/RedemptionVaultWithUSTB.sol)) - Stores pending liquidity as USTB tokens. When the vault has insufficient USDC liquidity to fulfill an instant redemption, USTB tokens are redeemed for USDC and used to complete the redemption.
 
-### **DataFeed** (`contracts/feeds/DataFeed.sol`)
+### **DataFeed** ([`contracts/feeds/DataFeed.sol`](contracts/feeds/DataFeed.sol))
 
 Wraps Chainlink AggregatorV3 price feeds, validates the price (max/min/staleness) and converts answers to 18 decimals format
 
@@ -276,9 +276,9 @@ Wraps Chainlink AggregatorV3 price feeds, validates the price (max/min/staleness
 
 **DataFeed Variations:**
 
-- CompositeDataFeed (`contracts/feeds/CompositeDataFeed.sol`) -  computing the ratio of two underlying data feeds (numerator ÷ denominator)
+- CompositeDataFeed ([`contracts/feeds/CompositeDataFeed.sol`](contracts/feeds/CompositeDataFeed.sol)) -  computing the ratio of two underlying data feeds (numerator ÷ denominator)
 
-### **CustomAggregatorV3CompatibleFeed** (`contracts/feeds/CustomAggregatorV3CompatibleFeed.sol`)
+### **CustomAggregatorV3CompatibleFeed** ([`contracts/feeds/CustomAggregatorV3CompatibleFeed.sol`](contracts/feeds/CustomAggregatorV3CompatibleFeed.sol))
 
 Custom price aggregator compatible with Chainlink's AggregatorV3 interface. Used to publish mToken prices on-chain
 
@@ -290,7 +290,7 @@ Custom price aggregator compatible with Chainlink's AggregatorV3 interface. Used
 
 **CustomAggregatorV3CompatibleFeed Variations:**
 
-- CustomAggregatorV3CompatibleFeedGrowth (`contracts/feeds/CustomAggregatorV3CompatibleFeedGrowth.sol`) - includes a growth parameter that automatically increases the feed price over time
+- CustomAggregatorV3CompatibleFeedGrowth ([`contracts/feeds/CustomAggregatorV3CompatibleFeedGrowth.sol`](contracts/feeds/CustomAggregatorV3CompatibleFeedGrowth.sol)) - includes a growth parameter that automatically increases the feed price over time
 
 ## Crosschain Contracts (Axelar, LayerZero)
 
