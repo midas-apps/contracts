@@ -96,6 +96,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   logDeploy('Manager address for all networks: ', undefined, managerAddress);
   logDeploy('Token id for all networks: ', undefined, tokenId);
+  logDeploy('Salt for all networks: ', undefined, salt);
 
   const isHubTestnet = isTestnetNetwork(hubNetwork);
 
