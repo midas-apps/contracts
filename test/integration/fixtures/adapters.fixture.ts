@@ -14,6 +14,8 @@ import {
   WrappedEEthChainlinkAdapter__factory,
   RsEthChainlinkAdapter__factory,
   IMantleLspStaking__factory,
+  YInjChainlinkAdapter__factory,
+  IYInjOracle__factory,
 } from '../../../typechain-types';
 import {
   getBandAdapters,
@@ -127,6 +129,20 @@ export const plumeAdaptersConfig: NetworkAdapterConfig = {
   ],
 };
 
+export const injectiveAdaptersConfig: NetworkAdapterConfig = {
+  singleAddressAdapters: [
+    {
+      address: getAddress('0x072fB925014B45dec604A6c44f85DAf837653056'),
+      factoryAdapter: new YInjChainlinkAdapter__factory(),
+
+      contractAbi: IYInjOracle__factory.abi,
+      fnToCall: 'getExchangeRate',
+      storageVariable: 'yInj',
+      name: 'yINJ',
+    },
+  ],
+};
+
 export type AdaptersNetworkFixture = () => Promise<{
   syrupAdapters: Awaited<ReturnType<typeof getSyrupAdapters>>;
   bandAdapters: Awaited<ReturnType<typeof getBandAdapters>>;
@@ -178,4 +194,5 @@ export const configsPerNetwork: Partial<
   oasis: oasisAdaptersConfig,
   hyperevm: hyperevmAdaptersConfig,
   plume: plumeAdaptersConfig,
+  injective: injectiveAdaptersConfig,
 };

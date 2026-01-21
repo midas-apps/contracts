@@ -51,6 +51,7 @@ export const sLINJDeploymentConfig: DeploymentConfig = {
                 {
                   token: 'yinj',
                   allowance: parseUnits('50000000', 18),
+                  isStable: false,
                 },
               ],
               type: 'depositVault',
@@ -64,6 +65,7 @@ export const sLINJDeploymentConfig: DeploymentConfig = {
                 {
                   token: 'yinj',
                   allowance: parseUnits('50000000', 18),
+                  isStable: false,
                 },
               ],
               type: 'redemptionVaultSwapper',

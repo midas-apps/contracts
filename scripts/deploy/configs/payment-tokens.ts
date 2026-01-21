@@ -759,6 +759,11 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           description: 'WINJ/INJ',
           maxAnswerDeviation: parseUnits('0', 8),
         },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
       },
       yinj: {
         dataFeed: {
