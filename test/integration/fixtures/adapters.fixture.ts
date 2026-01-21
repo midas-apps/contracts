@@ -139,6 +139,10 @@ export const injectiveAdaptersConfig: NetworkAdapterConfig = {
       fnToCall: 'getExchangeRate',
       storageVariable: 'yInj',
       name: 'yINJ',
+      mock: {
+        contractName: 'YInjOracleMock',
+        deployArgs: ['1234500000000000000'], // 1.2345e18
+      },
     },
   ],
 };
