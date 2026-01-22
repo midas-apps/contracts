@@ -1267,7 +1267,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
       yinj: {
         token: '0x2d6E0e0c209D79b43f5d3D62e93D6A9f1e9317BD',
-        aggregator: '0x072fB925014B45dec604A6c44f85DAf837653056',
+        aggregator: '0x5EEe85c877a58bDb511Fb70365DA6Bc55c3394EC',
         dataFeed: '0x16E1e4b7656024c30538fc2AA6E5d4af5aBfBFF6',
       },
     },
