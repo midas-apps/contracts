@@ -1,130 +1,393 @@
-# Midas smart contracts repository
+# Midas Protocol - EVM Smart Contracts
 
-This repository contains all smart contracts related to the [midas.app](https://midas.app) project including chain like Ethereum, Base, HyperEVM, BSC [...]
+This repository contains EVM smart contracts for the Midas protocol.
 
-## The structure of the repository
+## Table of Contents
 
-- [.openzeppelin/](./.openzeppelin/) - contains files related to openzeppelin proxy deployment (such as deployment addresses, storage layout, etc. ).
-- [config/](./config/) - contains application static configuration (like network configs, TS types etc.).
-- [contracts/](./contracts/) - root folder for smart contracts source code.
-- [deployments/](./deployments/) - *deprecated*. hardhat-deploy deployment folder.
-- [docgen/](./docgen/) - contains auto generated smart-contracts documentation.
-- [helpers/](./helpers/) - shared helpers utilities.
-- [scripts/](./scripts/) - hardhat scripts. Currently contains deploy/upgrade scripts for smart contracts.
-- [tasks/](./tasks/) - hardhat tasks. Currently contains calldata generator scripts.
-- [test/](./test/) - smart contracts tests.
+- [Prerequisites](#prerequisites)
+- [Repository Structure](#repository-structure)
+- [Building and Testing](#building-and-testing)
+- [Architecture Overview](#architecture-overview)
+- [Core Contracts](#core-contracts)
+- [Crosschain Contracts](#crosschain-contracts-axelar-layerzero)
+- [Deployed Contract Addresses](#deployed-contract-addresses)
+- [Deployment](#deployment)
+- [Upgradeability](#upgradability)
+- [Documentation](#documentation)
+- [Development](#development)
 
-## How to run?
+## Prerequisites
 
-First, install the dependencies using `yarn`
+### Required Software
 
-```
+- **Node.js**: >=22
+- **Yarn**: Berry (check the [installation guide](https://yarnpkg.com/getting-started/install))
+
+### Installation
+
+```bash
+# Install dependencies
 yarn install
 ```
 
-To build smart contracts, execute
+### Environment Setup
+
+In the root of the repo, create a `.env` file from [.env.example](./.env.example)
+
+## Repository Structure
 
 ```
+midas-contracts/
+├── contracts/          # Smart contract source code
+│   ├── abstract/       # Abstract base contracts
+│   ├── access/         # Access control contracts
+│   ├── feeds/          # Price feed contracts
+│   ├── interfaces/     # Contract interfaces
+│   ├── libraries/      # Contract libraries
+│   ├── misc/           # Miscellaneous contracts (LayerZero, Axelar, Custom price feed adapters)
+│   ├── products/       # Individual mToken implementations
+│   ├── testers/        # Non-production contracts that are used in tests
+│   ├── mocks/          # Mocked contracts used in tests and some testnet deployments
+│   ├── *.sol           # Core smart contracts
+│   └── ...
+├── config/             # Configuration files
+│   ├── constants/      # Addresses and constants
+│   ├── networks/       # Network configurations
+│   └── types/          # TypeScript type definitions
+├── scripts/            # Deployment and upgrade scripts
+│   ├── deploy/         # Deployment scripts
+│   └── upgrades/       # Upgrade scripts
+├── test/               # Test files
+│   ├── unit/           # Unit tests
+│   └── integration/    # Integration tests
+├── helpers/            # Helper utilities
+├── tasks/              # Hardhat tasks
+└── docgen/             # Auto-generated documentation
+```
+
+## Building and Testing
+
+### Build Contracts
+
+```bash
+# Clean and compile contracts
 yarn build
 ```
 
-To run tests, execute
+### Run Tests
 
-```
+```bash
+# Run all tests (unit + integration)
 yarn test
+
+# Run only unit tests
+yarn test:unit
+
+# Run only integration tests
+yarn test:integration
 ```
 
-To run test`s coverage, execute
+### Code Coverage
 
-```
+```bash
+# Generate coverage report
 yarn coverage
 ```
 
-To use Slither analyzer, first install it. [Link](https://github.com/crytic/slither)
+Coverage reports are generated in the `coverage/` directory.
 
-To run the analyzer, execute
+### Security Analysis
 
-```
+```bash
+# Run Slither static analysis
 yarn slither
+
+# Get summary report
+yarn slither:summary
 ```
 
+**Note**: Install Slither separately. See [Slither installation guide](https://github.com/crytic/slither).
 
-To generate smart contract`s documentation, execute
+## Architecture Overview
 
-```
-yarn docgen
-```
+### Core Components
 
-## Smart contracts API documentation
+1. **mTokens**: ERC20 tokens (e.g., mTBILL, mBASIS, mBTC)
+2. **Vaults**: Smart contracts managing minting (deposits) and redemption processes
+3. **Access Control**: Role-based permission system for managing protocol operations
+4. **Price Feeds**: Oracle integrations for conversion rates
+5. **Cross-Chain**: LayerZero and Axelar integrations for multi-chain operations
 
-All smart contracts are documented using NatSpec format. To review the latest generated documentation, please check the [docgen/index.md](./docgen/index.md) file.
+### System Flow
 
+#### Deposit Flow (Minting)
 
-## High level contracts overview
+1. User initiates the deposit
+2. Vault calculates exchange rate and fees. For exchange rates vault calls data feeds for both payment token and mToken
+3. Vault transfers payment tokens from user and redirect those funds to fees/proceeds wallets
+4. For instant deposits (sync): mTokens are minted in the same transaction
+5. For request deposits (async): Admin approves/rejects the request after off-chain processing
 
-### **mTBILL**
-mTBILL is a regulatory compliant natively-yield bearing ERC20 stablecoin.
+#### Redemption Flow (Burning)
 
-mTBILL is backed 100% by U.S. T-Bills, which represent the 'risk-free' investment in traditional finance equivalent to staking Ether on the Ethereum Mainnet and that is the reason why the token is named as ‘staked’ USD.
+1. User initiates the redemption
+2. Vault calculates exchange rate and fees. For exchange rates vault calls data feeds for both payment token and mToken
+3. Vault transfers fees from user to the fee recipient and burns the remaining of mTokens
+4. For instant redemptions (sync): Payment tokens are transferred to user immediately
+5. For request redemptions (async): Admin fulfills the request after off-chain processing
 
-Token can be minted/burned by the addresses that have roles `M_TBILL_MINT_OPERATOR_ROLE` and `M_TBILL_BURN_OPERATOR_ROLE` on [MidasAccessControl](./contracts/access/MidasAccessControl.sol) respectively. Currently, only project owner(s) will have those roles. 
+## Core Contracts
 
-The purpose of having a burning role is to be able to make mTBILLs redemptions manually (without user`s interaction with contracts).
+### **MidasAccessControl** ([`contracts/access/MidasAccessControl.sol`](contracts/access/MidasAccessControl.sol))
 
-mTBILL is an ERC20 token with a few extensions:
-1. ERC20Pausable - token`s transfers can be paused/unpaused by the project owner(s).
-2. Blacklistable - users that are marked as blacklisted cannot receive or transfer tokens to anyone else. Only blacklist operators can add/remove users from the blacklist.
+Centralized access control contract managing all roles across the protocol
 
-The token also supports recording its own on-chain metadata, that can be modified by project owner(s) by calling mTBILL.setMetadata(...) function.
+**Key Features:**
 
+- Role-based access control
+- Greenlist/blacklist management
 
-### **DataFeed**
+**Key Functions:**
 
-DataFeed its a contract, the main purpose of which is to wrap ChainLinks AggregatorV3 data feed and to convert answer to base18 number. Currently, there are 2 aggregators that were used and wrapped using DataFeed
-- [EUR/USD](https://data.chain.link/ethereum/mainnet/fiat/eur-usd) - used to denominate the minimal deposit amount in EUR. 
-- [IBO1/USD](https://data.chain.link/ethereum/mainnet/indexes/ib01-usd) - used to calculate the USD/mTBILL exchange price. Currently, we do not utilize it in our smart contracts, but we plan to do it in future
+- `grantRole()` - grants role to a specific address. Can be invoked only by role admin
+- `revokeRole()` - revokes role from a specific address. Can be invoked only by role admin
+
+The default role admin for all roles is `defaultAdmin`. Only exceptions are:
+
+- `greenlisted` - role admin is `greenlistedOperator`
+- `blacklisted` - role admin is `blacklistedOperator`
+
+All roles in the system are documented in [`ROLES.md`](./ROLES.md). This file is auto-generated and contains:
+
+- **Common Roles**: Roles shared across all contracts:
+  - `defaultAdmin`: `0x0000000000000000000000000000000000000000000000000000000000000000`
+  - `greenlisted`: Allows access to vault operations (if greenlist is enforced)
+  - `blacklisted`: Prevents token transfers and vaults access
+
+- **Token-Specific Roles**: Roles for each mToken including:
+  - `minter` - Can mint tokens
+  - `burner` - Can burn tokens
+  - `pauser` - Can pause/unpause token transfers
+  - `customFeedAdmin` - Can manage custom price feeds and data feeds
+  - `depositVaultAdmin` - Can manage deposit vault operations
+  - `redemptionVaultAdmin` - Can manage redemption vault operations
+
+### **mToken** ([`contracts/mToken.sol`](contracts/mToken.sol))
+
+Abstract base contract for all mToken implementations
+
+**Key Features:**
+
+- Minting and burning functionality (role-protected)
+- Pausable transfers (inherited from `ERC20PausableUpgradeable`)
+- Blacklist functionality - blacklisted users cannot send or receive any tokens
+
+**Key Functions:**
+
+- `mint(address to, uint256 amount)` - Mint tokens to any address (requires minter role)
+- `burn(address from, uint256 amount)` - Burn tokens from any address (requires burner role)
+- `pause()` / `unpause()` - Pause/unpause transfers (requires pauser role)
 
 ### **Vaults**
 
-Its a set of smart contracts, that are supposed to make mTBILL minting and burning more transparent for the end-user. Vaults also operates with tokens that we called USD tokens. USD token - it`s a stable coin that is supported by the vault and threated as a token that is 1:1 equivalent to USD. All vaults do have it own lists of supported USD tokens.
+There are 2 types of vaults - Deposit vaults and Redemption vaults. Also each type of vault have different variations (like USTB, Swapper, BUIDL etc.)
 
-Vaults can be used only by addresses, that have GreenListed Role on the [MidasAccessControl](./contracts/access/MidasAccessControl.sol) contract
+**Common Key Features:**
 
-There are 2 types of vaults presented in the project - Deposit and Redemption vaults.
+- Fee calculation and collection
+- Multiple payment tokens support
+- Greenlist/Blacklist
+- Chainalysis sanction list integration
+- Minimal mToken amount for instant/request operations
+- Daily limits for instant operations
+- Vault Allowance - limits the total amount of mTokens that a vault can mint or redeem. It is a risk-control mechanism managed by the vault admin and is independent from token supply caps.
 
-#### ***Deposit Vault***
-Deposit is the process of minting mTBILL tokens by transferring USD tokens from user. The exchange ratio is determined by the vault administrator individually for each deposit. USD tokens are stored on the admin`s wallet
+#### Instant vs Request-Based Operations
 
-The process consists of 2 steps:
-1. Deposit request initiation.
-2. Deposit request fulfillment.
+Both vaults support two execution modes:
 
-The initiation is done by the user that wants to transfer his USD tokens and receive mTBILL token instead. After the initiation of transaction, his USD tokens are immediately transferred from him, and now he needs to wait for deposit request fulfillment from the vault administrator.
+**Instant (Synchronous):**
 
-The fulfillment is done by the vault administrator. Administrator should deposit the funds to the bank, calculate the output mTBILL amount and mint corresponding amount of mTBILL to the user. The exchange ratio and the fees are calculated by the project owner off-chain
+- Fully on-chain
+- Atomic mint/burn + transfer
+- Subject to daily limits, liquidity, and minimum amounts
 
-Administrator may also decide to cancel the deposit request. In this case, admin will transfer USD tokens back to the user
+**Request-Based (Asynchronous):**
 
-#### ***Redemption Vault***
+- Two-step process
+- User submits request on-chain
+- Admin approves or rejects after off-chain processing
+- Used when instant liquidity is insufficient or instant operations are disabled. Also for fiat operations
 
-Redemption is the process of redeeming USD tokens by burning mTBILL. The exchange ratio is determined by the vault administrator individually for each redemption. The process is consist of 2 steps: 
+### **DepositVault** ([`contracts/DepositVault.sol`](contracts/DepositVault.sol))
 
-1. Redemption request initiation.
-2. Redemption request fulfillment.
+Manages the minting process for mTokens. Users deposit payment tokens to receive mTokens.
 
-The initiation is done by the user, that want to burn his mTBILL tokens and receive USD token instead. After the initiation transaction, his mTBILL tokens transfers to the owner`s wallet and now he need to wait for redemption request fulfillment from the vault administrator. 
+**Key Features:**
 
-The fulfillment is done by the vault administrator. Administrator should withdraw the funds from the bank, convert them into the USD token (that was selected by user during the initiation step) and send tokens to the user. The exchange ratio and the fees are calculated by the project owner off-chain
+- Instant deposits - minting happens atomically
+- Request-based deposits - user pays in one transaction and tokens are minted in a second tx initiated by vault admin
+- Supply cap management
+- Minimal mTokens amount for first mint transaction
 
-Administrator may also decide to cancel the redemption request. In this case, mTBILL tokens will be transferred back to the user
+**Key Functions:**
 
-## Smart contract addresses
+- `depositInstant()` - Instant deposit with atomic minting
+- `depositRequest()` - Create deposit request for admin approval
+- `approveRequest()` - Admin approves deposit request
+- `rejectRequest()` - Admin rejects deposit request
 
-|Contract Name|Sepolia|Mainnet| 
-|-|-|-|
-|**mTBILL**|`0xDd82C21F721746Bd77D84E8B05EdDED0f8e50980`|`0xDD629E5241CbC5919847783e6C96B2De4754e438`|
-|**MidasAccessControl**|`0x44af5F38a9b4bf70696fa1bE922e70c2Af679FD7`|`0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B`|
-|**DataFeed IB01/USD**|`0x4E677F7FE252DE44682a913f609EA3eb6F29DC3E`|`0xc747FdDFC46CDC915bEA866D519dFc5Eae5c947f`|
-|**DataFeed EUR/USD**|`0xE23c07Ecad6D822500CbE8306d72A90578CA9F11`|`0x6022a020Ca5c611304B9E97F37AEE0C38455081A`|
-|**DepositVault**|`0xc2c78dcb340935509634B343840fAa5052367f29`|`0xcbCf1e67F1988e2572a2A620321Aef2ff73369f0`|
-|**RedemptionVault**|`0xbCe90740A9C6B59FC1D45fdc0e1F3b6C795c85dC`|`0x8978e327FE7C72Fa4eaF4649C23147E279ae1470`|
+**Vault Variations:**
+
+- USTB ([`contracts/DepositVaultWithUSTB.sol`](contracts/DepositVaultWithUSTB.sol)) - Automatically invests USDC into USTB tokens before transferring proceeds to the recipient.
+
+### **RedemptionVault** ([`contracts/RedemptionVault.sol`](contracts/RedemptionVault.sol))
+
+Manages the redemption process for mTokens. Burns mTokens from a user and transfers payment tokens in exchange
+
+**Key Features:**
+
+- Instant redemptions - user receive payment tokens atomically
+- Request-based redemptions - tokens are burned from user in one transaction and payment tokens are transferred in a second tx initiated by vault admin
+- Fiat redemption support
+- Separate liquidity source for request-based operations
+
+**Key Functions:**
+
+- `redeemInstant()` - Instant redemption with immediate token transfer
+- `redeemRequest()` - Create redemption request
+- `redeemFiatRequest()` - Create fiat redemption request
+- `approveRequest()` - Admin fulfills redemption request
+- `rejectRequest()` - Admin rejects redemption request
+
+**Vault Variations:**
+
+- Swapper ([`contracts/RedemptionVaultWithSwapper.sol`](contracts/RedemptionVaultWithSwapper.sol)) - Uses an external liquidity source to exchange one mToken for another and redeems the obtained mTokens through a different Midas redemption vault. This flow is activated only when there is insufficient liquidity in the current Redemption Vault.
+- BUIDL ([`contracts/RedemptionVaultWithBUIDL.sol`](contracts/RedemptionVaultWithBUIDL.sol)) (*deprecated*) - Stores pending liquidity as BUIDL tokens. When the vault has insufficient USDC liquidity to fulfill an instant redemption, BUIDL tokens are redeemed for USDC and used to complete the redemption.
+- USTB ([`contracts/RedemptionVaultWithUSTB.sol`](contracts/RedemptionVaultWithUSTB.sol)) - Stores pending liquidity as USTB tokens. When the vault has insufficient USDC liquidity to fulfill an instant redemption, USTB tokens are redeemed for USDC and used to complete the redemption.
+
+### **DataFeed** ([`contracts/feeds/DataFeed.sol`](contracts/feeds/DataFeed.sol))
+
+Wraps Chainlink AggregatorV3 price feeds, validates the price (max/min/staleness) and converts answers to 18 decimals format
+
+**Key Functions:**
+
+- `getDataInBase18()`- View function, returns the validated and converted price with 18 decimals. Checks price for min/max allowed values, checks that its not stale
+
+**DataFeed Variations:**
+
+- CompositeDataFeed ([`contracts/feeds/CompositeDataFeed.sol`](contracts/feeds/CompositeDataFeed.sol)) -  computing the ratio of two underlying data feeds (numerator ÷ denominator)
+
+### **CustomAggregatorV3CompatibleFeed** ([`contracts/feeds/CustomAggregatorV3CompatibleFeed.sol`](contracts/feeds/CustomAggregatorV3CompatibleFeed.sol))
+
+Custom price aggregator compatible with Chainlink's AggregatorV3 interface. Used to publish mToken prices on-chain
+
+**Key Functions:**
+
+- `setRoundData()`- function to push the price on-chain
+- `setRoundDataSafe()`- same as `setRoundData()` but also performs a deviation check by comparing current and new prices
+- `latestRoundData()` - View function, returns latest submitted price with submission details (check [AggregatorV3Interface.sol](@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol))
+
+**CustomAggregatorV3CompatibleFeed Variations:**
+
+- CustomAggregatorV3CompatibleFeedGrowth ([`contracts/feeds/CustomAggregatorV3CompatibleFeedGrowth.sol`](contracts/feeds/CustomAggregatorV3CompatibleFeedGrowth.sol)) - includes a growth parameter that automatically increases the feed price over time
+
+## Crosschain Contracts (Axelar, LayerZero)
+
+### **LayerZero Integration** (`contracts/misc/layerzero/`)
+
+Contracts for LayerZero cross-chain messaging:
+
+- `MidasLzMintBurnOFTAdapter.sol` - OFT adapter that uses native mint/burn on mTokens
+- `MidasLzVaultComposerSync.sol` - Vault composer for instant-only operations
+
+### **Axelar Integration** (`contracts/misc/axelar/`)
+
+Contracts for Axelar cross-chain functionality:
+
+- `MidasAxelarVaultExecutable.sol` - Executable contract for cross-chain operations
+
+## Deployed Contract Addresses
+
+All deployed contract addresses are stored in [`config/constants/addresses.ts`](./config/constants/addresses.ts).
+
+The addresses are organized by network and token. For example:
+
+```typescript
+main: {
+  accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+  timelock: '0xE3EEe3e0D2398799C884a47FC40C029C8e241852',
+  mTBILL: {
+    token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
+    depositVault: '0x99361435420711723aF805F08187c9E6bF796683',
+    redemptionVault: '0xF6e51d24F4793Ac5e71e0502213a9BBE3A6d4517',
+    // ...
+  },
+  // ...
+}
+```
+
+## Deployment
+
+Please fefer to [this deployment README](./scripts/deploy/README.md)
+
+## Upgradability
+
+Most contracts in this repository are designed to be upgradeable. We are using OpenZeppelin's `TransparentUpgradeableProxy` for proxy deployments
+
+**Safety measures:**
+
+- We use `@openzeppelin/hardhat-upgrades` package which automatically checks for storage layout compatibility
+- Upgrades are typically executed through a timelock to allow for review before execution
+
+**Non-upgradeable contracts:**
+
+Some miscellaneous contracts (like adapters and test contracts) are not upgradeable as they don't hold state or manage user funds.
+
+## Documentation
+
+All contracts are documented using NatSpec format. Generated documentation is available in [`docgen/index.md`](./docgen/index.md).
+
+To regenerate documentation:
+
+```bash
+yarn docgen
+```
+
+## Development
+
+### Code Style
+
+```bash
+# Check code style
+yarn codestyle
+
+# Fix code style issues
+yarn codestyle:fix
+```
+
+### Linting
+
+```bash
+# Lint TypeScript files
+yarn lint:ts
+
+# Lint Solidity files
+yarn lint:sol
+
+# Fix linting issues
+yarn lint:ts:fix
+yarn lint:sol:fix
+```
+
+### Formatting
+
+```bash
+# Check formatting
+yarn format:ts
+yarn format:sol
+
+# Fix formatting
+yarn format:ts:fix
+yarn format:sol:fix
+```
