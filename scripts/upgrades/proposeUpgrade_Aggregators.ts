@@ -9,6 +9,7 @@ import { DeployFunction } from '../deploy/common/types';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const upgradeId = 'mre7-custom-aggregator-upgrade-v3';
+
   const networkAddresses = getCurrentAddresses(hre);
   const mToken = getMTokenOrThrow(hre);
   const tokenAddresses = networkAddresses?.[mToken];
@@ -24,8 +25,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       contracts: [
         {
           contractType: 'customAggregator',
-          initializer: 'initializeV3',
-          initializerArgs: [parseUnits('0.36', 8)],
+          initializer: 'initializeV2',
+          initializerArgs: [parseUnits('0.66', 8)],
         },
       ],
     },
