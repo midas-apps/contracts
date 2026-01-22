@@ -1,6 +1,9 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { getCurrentAddresses } from '../../../config/constants/addresses';
+import {
+  getCurrentAddresses,
+  LayerZeroTokenAddresses,
+} from '../../../config/constants/addresses';
 import { getMTokenOrThrow } from '../../../helpers/utils';
 import { DeployFunction } from '../common/types';
 
@@ -20,10 +23,11 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   }
 
   for (const [key, value] of Object.entries(tokenAddresses)) {
-    if (!value || typeof value !== 'string') {
+    if (!value) {
       continue;
     }
 
+    let address = typeof value === 'string' ? value : undefined;
     let contractName = '';
     let contractTag: string | undefined;
 
@@ -38,15 +42,18 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     } else if (key.startsWith('dataFeed')) {
       contractName = 'Oracle';
       contractTag = 'datafeed';
+    } else if (key.startsWith('layerZero')) {
+      contractName = 'OFT Adapter';
+      address = (value as LayerZeroTokenAddresses).oft;
     }
 
-    if (!contractName) {
+    if (!contractName || !address) {
       continue;
     }
 
     const customSigner = await hre.getCustomSigner();
     const result = await customSigner.createAddressBookContract({
-      address: value,
+      address,
       contractName,
       contractTag,
     });
