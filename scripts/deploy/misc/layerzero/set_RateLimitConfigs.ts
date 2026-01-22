@@ -52,6 +52,12 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('Rate limit config default not found');
   }
 
+  if (!lzConfigsPerMToken[originalNetwork]) {
+    throw new Error(
+      'LayerZero config not found or `--originalNetwork` is not correct',
+    );
+  }
+
   const allReceiverNetworks =
     lzConfigsPerMToken?.[originalNetwork]?.[mToken]?.linkedNetworks ?? [];
 
