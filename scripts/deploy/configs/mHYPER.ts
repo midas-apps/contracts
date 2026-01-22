@@ -55,7 +55,7 @@ export const mHYPERDeploymentConfig: DeploymentConfig = {
           delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
           rateLimitConfig: {
             default: {
-              limit: parseUnits('10000'),
+              limit: parseUnits('500000'),
               window: hours(24),
             },
           },
@@ -142,7 +142,7 @@ export const mHYPERDeploymentConfig: DeploymentConfig = {
           delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
           rateLimitConfig: {
             default: {
-              limit: parseUnits('300000'),
+              limit: parseUnits('500000'),
               window: hours(24),
             },
           },
