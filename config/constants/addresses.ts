@@ -950,6 +950,14 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0xcb7d9A25F7b9bdd0Eee77B1cEb2894D39deBca1C',
       redemptionVaultSwapper: '0x8E3865B9d2d8e562d8bb3b15D9B4941AeE6f67f1',
     },
+    mHYPER: {
+      token: '0x926a8a63Fa1e1FDBBEb811a0319933B1A0F1EDbb',
+      customFeed: '0x2cd29cEB7354651Dc5417c5b4D201a1B7DBE4a8C',
+      dataFeed: '0xb670C738Fb751eef7400F088D17391D54b83023d',
+      layerZero: {
+        oft: '0x0516DeD0209874FA9381Ee721E8f1BCbe6eC2832',
+      },
+    },
   },
   xrplevm: {
     accessControl: '0x831150f2A1283880C3B271f1fBaBFa6aBf3F4cAE',

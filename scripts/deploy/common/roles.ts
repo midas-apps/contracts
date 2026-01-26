@@ -67,9 +67,33 @@ export const grantAllProductRoles = async (
   ];
 
   const oracleManagerRoles = [tokenRoles.customFeedAdmin!];
-  const contractsRoles = [tokenRoles.minter, tokenRoles.burner];
 
   const defaultManager = provider.address;
+
+  // Build vault contract roles and addresses conditionally
+  const contractsRoles: string[] = [];
+  const contractsAddresses: string[] = [];
+
+  const depositVault = tokenAddresses.depositVault;
+  const redemptionVault =
+    tokenAddresses.redemptionVaultSwapper ??
+    tokenAddresses.redemptionVaultBuidl ??
+    tokenAddresses.redemptionVaultUstb ??
+    tokenAddresses.redemptionVault;
+
+  if (depositVault) {
+    contractsRoles.push(tokenRoles.minter);
+    contractsAddresses.push(depositVault);
+  } else {
+    console.log(`⚠️  Skipping minter role for depositVault (not deployed)`);
+  }
+
+  if (redemptionVault) {
+    contractsRoles.push(tokenRoles.burner);
+    contractsAddresses.push(redemptionVault);
+  } else {
+    console.log(`⚠️  Skipping burner role for redemptionVault (not deployed)`);
+  }
 
   await sendAndWaitForCustomTxSign(
     hre,
@@ -90,13 +114,7 @@ export const grantAllProductRoles = async (
         ...oracleManagerRoles.map(
           () => networkConfig.oracleManagerAddress ?? defaultManager,
         ),
-        ...[
-          tokenAddresses.depositVault!,
-          tokenAddresses.redemptionVaultSwapper ??
-            tokenAddresses.redemptionVaultBuidl ??
-            tokenAddresses.redemptionVaultUstb ??
-            tokenAddresses.redemptionVault!,
-        ],
+        ...contractsAddresses,
       ],
     ),
     {
