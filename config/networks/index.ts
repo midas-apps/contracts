@@ -231,6 +231,7 @@ export const blockFinality: PartialConfigPerNetwork<number> = {
   sepolia: 2,
   arbitrumSepolia: 1,
   monad: 10,
+  katana: 20,
 };
 
 export const axelarChainNames: PartialConfigPerNetwork<string> = {
