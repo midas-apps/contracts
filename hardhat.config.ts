@@ -96,7 +96,7 @@ const config: HardhatUserConfig = {
     runOnCompile: OPTIMIZER,
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: ETHERSCAN_API_KEY,
     enabled: ENV.VERIFY_ETHERSCAN === true,
     customChains: [
       {
