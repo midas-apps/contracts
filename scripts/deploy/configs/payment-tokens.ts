@@ -746,5 +746,32 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
         },
       },
     },
+    [chainIds.injective]: {
+      winj: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        customAggregator: {
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          description: 'WINJ/INJ',
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+      yinj: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('1', 8),
+          maxAnswer: parseUnits('1.02', 8),
+        },
+      },
+    },
   },
 };

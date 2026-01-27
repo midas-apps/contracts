@@ -59,6 +59,7 @@ export enum MTokenNameEnum {
   mPortofino = 'mPortofino',
   liquidRESERVE = 'liquidRESERVE',
   mKRalpha = 'mKRalpha',
+  sLINJ = 'sLINJ',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
@@ -111,6 +112,8 @@ export enum PaymentTokenNameEnum {
   plusd = 'plusd',
   ton = 'ton',
   axlusdt = 'axlusdt',
+  winj = 'winj',
+  yinj = 'yinj',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;
