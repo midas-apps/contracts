@@ -5,6 +5,8 @@ export const ENV: Environment = {
   ALCHEMY_KEY: process.env.ALCHEMY_KEY ?? '',
   INFURA_KEY: process.env.INFURA_KEY ?? '',
   CONDUIT_API_KEY: process.env.CONDUIT_API_KEY ?? '',
+  QUICK_NODE_KEY: process.env.QUICK_NODE_KEY ?? '',
+  QUICK_NODE_PROJECT: process.env.QUICK_NODE_PROJECT ?? '',
   ETHERSCAN_API_KEY: process.env.ETHERSCAN_API_KEY ?? '',
   OPTIMIZER: process.env.OPTIMIZER === 'true',
   COVERAGE: process.env.COVERAGE === 'true',
