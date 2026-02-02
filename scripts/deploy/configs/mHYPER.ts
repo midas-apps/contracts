@@ -60,7 +60,11 @@ export const mHYPERDeploymentConfig: DeploymentConfig = {
             },
             overrides: {
               katana: {
-                limit: parseUnits('10000'),
+                limit: parseUnits('2000000'),
+                window: hours(24),
+              },
+              monad: {
+                limit: parseUnits('2000000'),
                 window: hours(24),
               },
             },
