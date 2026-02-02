@@ -45,6 +45,7 @@ import { mWildUSDDeploymentConfig } from './mWildUSD';
 import { mXRPDeploymentConfig } from './mXRP';
 import { obeatUSDDeploymentConfig } from './obeatUSD';
 import { plUSDDeploymentConfig } from './plUSD';
+import { sLINJDeploymentConfig } from './sLINJ';
 import { splUSDDeploymentConfig } from './splUSD';
 import { TACmBTCDeploymentConfig } from './tac/TACmBTC';
 import { TACmEDGEDeploymentConfig } from './tac/TACmEDGE';
@@ -123,4 +124,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mPortofino: mPortofinoDeploymentConfig,
   liquidRESERVE: liquidRESERVEDeploymentConfig,
   mKRalpha: mKRalphaDeploymentConfig,
+  sLINJ: sLINJDeploymentConfig,
 };

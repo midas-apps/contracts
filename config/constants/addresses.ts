@@ -1264,6 +1264,29 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
     },
   },
+  injective: {
+    accessControl: '0x76f5c631CD6D65B1a5702E382Be5a37859eE326C',
+    timelock: '0xDAd927832ed8Da3B4232036C852ACec730e328bF',
+    paymentTokens: {
+      winj: {
+        token: '0x0000000088827d2d103ee2d9A6b781773AE03FfB',
+        aggregator: '0x26FAed5128c415A312f43EF39ECDe71aF0aE48B5',
+        dataFeed: '0x91E20f71F595b44b7e28C18DDC2e6307B956383D',
+      },
+      yinj: {
+        token: '0x2d6E0e0c209D79b43f5d3D62e93D6A9f1e9317BD',
+        aggregator: '0x5EEe85c877a58bDb511Fb70365DA6Bc55c3394EC',
+        dataFeed: '0x16E1e4b7656024c30538fc2AA6E5d4af5aBfBFF6',
+      },
+    },
+    sLINJ: {
+      token: '0x9acC3cAD428AC9443bBF142531b17d38DE69758b',
+      customFeed: '0x4B7C618b8Bb6ee62bB81425437Cba4B8A0eCdf2a',
+      dataFeed: '0x4594367963DE803F0C1311584F7b7A18a25e8b00',
+      depositVault: '0x8F42Ef868CaC8BBeD00a1343Cf06373fea1c40C0',
+      redemptionVaultSwapper: '0xc5a2ADeacc1cf8424630c0C6B09E1DF6e871c65A',
+    },
+  },
   sepolia: {
     paymentTokens: {
       usdc: {

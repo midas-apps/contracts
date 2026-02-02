@@ -87,6 +87,7 @@ const config: HardhatUserConfig = {
     bsc: getNetworkConfig('bsc'),
     scroll: getNetworkConfig('scroll'),
     monad: getNetworkConfig('monad'),
+    injective: getNetworkConfig('injective'),
   },
   gasReporter: {
     enabled: REPORT_GAS,
@@ -218,6 +219,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: 'https://api.etherscan.io/v2/api?chainid=143',
           browserURL: 'https://monadscan.com',
+        },
+      },
+      {
+        chainId: chainIds.injective,
+        network: 'injective',
+        urls: {
+          apiURL: 'https://blockscout-api.injective.network/api',
+          browserURL: 'https://blockscout.injective.network',
         },
       },
     ],
