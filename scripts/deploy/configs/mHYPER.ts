@@ -58,6 +58,16 @@ export const mHYPERDeploymentConfig: DeploymentConfig = {
               limit: parseUnits('500000'),
               window: hours(24),
             },
+            overrides: {
+              katana: {
+                limit: parseUnits('2000000'),
+                window: hours(24),
+              },
+              monad: {
+                limit: parseUnits('2000000'),
+                window: hours(24),
+              },
+            },
           },
         },
       },
@@ -143,6 +153,27 @@ export const mHYPERDeploymentConfig: DeploymentConfig = {
           rateLimitConfig: {
             default: {
               limit: parseUnits('500000'),
+              window: hours(24),
+            },
+          },
+        },
+      },
+    },
+    [chainIds.katana]: {
+      postDeploy: {
+        grantRoles: {
+          tokenManagerAddress: '0x5683de280d0C3967fBa2f04D707FA1eF5A044e25',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0xd1E01471F3e1002d4eEC1b39b7DBD7aff952A99F',
+        },
+        setRoundData: {
+          data: parseUnits('1.07311680', 8), // price from 2026-01-26
+        },
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('10000'),
               window: hours(24),
             },
           },
