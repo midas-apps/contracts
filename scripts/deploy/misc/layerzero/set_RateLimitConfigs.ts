@@ -52,18 +52,33 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('Rate limit config default not found');
   }
 
-  if (!lzConfigsPerMToken[originalNetwork]) {
+  const lzConfig = lzConfigsPerMToken?.[originalNetwork]?.[mToken];
+
+  if (!lzConfig) {
     throw new Error(
-      'LayerZero config not found or `--originalNetwork` is not correct',
+      'LayerZero config not found or `--original-network` is not correct',
     );
   }
 
-  const allReceiverNetworks =
-    lzConfigsPerMToken?.[originalNetwork]?.[mToken]?.linkedNetworks ?? [];
+  const currentNetwork = hre.network.name as Network;
+  const isDirectOnly = lzConfig.pathways === 'direct-only';
+  const linkedNetworks = lzConfig.linkedNetworks ?? [];
 
-  const networksToRateLimit = [...allReceiverNetworks, originalNetwork].filter(
-    (network) => network !== hre.network.name,
-  );
+  let networksToRateLimit: Network[];
+  if (isDirectOnly) {
+    if (currentNetwork === originalNetwork) {
+      // on original network: can send to all linked networks
+      networksToRateLimit = linkedNetworks;
+    } else {
+      // on linked network: can only send back to the original network
+      networksToRateLimit = [originalNetwork];
+    }
+  } else {
+    // For 'all' pathways (default): can send to all linked networks + original network
+    networksToRateLimit = [...linkedNetworks, originalNetwork].filter(
+      (network) => network !== currentNetwork,
+    );
+  }
 
   const rateLimitConfigs = networksToRateLimit.map((network) => {
     const configBase =
