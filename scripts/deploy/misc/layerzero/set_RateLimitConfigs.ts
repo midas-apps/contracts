@@ -64,17 +64,21 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const isDirectOnly = lzConfig.pathways === 'direct-only';
   const linkedNetworks = lzConfig.linkedNetworks ?? [];
 
-  // For 'direct-only' pathways:
-  // - If on original network: can send to all linked networks
-  // - If on linked network: can only send to original network (not other linked networks)
-  // For 'all' pathways (default): can send to all linked networks + original network
-  const networksToRateLimit = isDirectOnly
-    ? currentNetwork === originalNetwork
-      ? linkedNetworks // on main: can send to monad, katana
-      : [originalNetwork] // on katana/monad: can only send to main
-    : [...linkedNetworks, originalNetwork].filter(
-        (network) => network !== currentNetwork,
-      );
+  let networksToRateLimit: Network[];
+  if (isDirectOnly) {
+    if (currentNetwork === originalNetwork) {
+      // on original network: can send to all linked networks
+      networksToRateLimit = linkedNetworks;
+    } else {
+      // on linked network: can only send back to the original network
+      networksToRateLimit = [originalNetwork];
+    }
+  } else {
+    // For 'all' pathways (default): can send to all linked networks + original network
+    networksToRateLimit = [...linkedNetworks, originalNetwork].filter(
+      (network) => network !== currentNetwork,
+    );
+  }
 
   const rateLimitConfigs = networksToRateLimit.map((network) => {
     const configBase =
