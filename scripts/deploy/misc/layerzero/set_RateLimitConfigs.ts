@@ -52,18 +52,29 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('Rate limit config default not found');
   }
 
-  if (!lzConfigsPerMToken[originalNetwork]) {
+  const lzConfig = lzConfigsPerMToken?.[originalNetwork]?.[mToken];
+
+  if (!lzConfig) {
     throw new Error(
-      'LayerZero config not found or `--originalNetwork` is not correct',
+      'LayerZero config not found or `--original-network` is not correct',
     );
   }
 
-  const allReceiverNetworks =
-    lzConfigsPerMToken?.[originalNetwork]?.[mToken]?.linkedNetworks ?? [];
+  const currentNetwork = hre.network.name as Network;
+  const isDirectOnly = lzConfig.pathways === 'direct-only';
+  const linkedNetworks = lzConfig.linkedNetworks ?? [];
 
-  const networksToRateLimit = [...allReceiverNetworks, originalNetwork].filter(
-    (network) => network !== hre.network.name,
-  );
+  // For 'direct-only' pathways:
+  // - If on original network: can send to all linked networks
+  // - If on linked network: can only send to original network (not other linked networks)
+  // For 'all' pathways (default): can send to all linked networks + original network
+  const networksToRateLimit = isDirectOnly
+    ? currentNetwork === originalNetwork
+      ? linkedNetworks // on main: can send to monad, katana
+      : [originalNetwork] // on katana/monad: can only send to main
+    : [...linkedNetworks, originalNetwork].filter(
+        (network) => network !== currentNetwork,
+      );
 
   const rateLimitConfigs = networksToRateLimit.map((network) => {
     const configBase =
