@@ -37,6 +37,7 @@ import { mPortofinoDeploymentConfig } from './mPortofino';
 import { mRE7DeploymentConfig } from './mRE7';
 import { mRE7BTCDeploymentConfig } from './mRE7BTC';
 import { mRE7SOLDeploymentConfig } from './mRE7SOL';
+import { mROXDeploymentConfig } from './mROX';
 import { mSLDeploymentConfig } from './mSL';
 import { msyrupUSDDeploymentConfig } from './msyrupUSD';
 import { msyrupUSDpDeploymentConfig } from './msyrupUSDp';
@@ -125,4 +126,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   liquidRESERVE: liquidRESERVEDeploymentConfig,
   mKRalpha: mKRalphaDeploymentConfig,
   sLINJ: sLINJDeploymentConfig,
+  mROX: mROXDeploymentConfig,
 };

@@ -66,6 +66,7 @@ const prefixes: Record<MTokenName, string> = {
   liquidRESERVE: 'LIQUID_RESERVE',
   mKRalpha: 'M_KRALPHA',
   sLINJ: 'SL_INJ',
+  mROX: 'M_ROX',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {

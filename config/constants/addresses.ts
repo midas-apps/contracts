@@ -478,6 +478,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x54602a8e47BF82073d75E0AC2aeF67F84fbCb8e4',
       redemptionVaultSwapper: '0xc37eDf7d955020D547B45F762027b49947D02550',
     },
+    mROX: {
+      token: '0x67E1F506B148d0Fc95a4E3fFb49068ceB6855c05',
+      customFeed: '0x7fF56C3a31476c231e74E4F64e9d9718572B54Aa',
+      dataFeed: '0x2c7d47c56015be6aa8442Da78796a965928E7c4e',
+      depositVault: '0x511d88E64d843Ee11Bf039a3EB837393001aEDE7',
+      redemptionVaultSwapper: '0xc33dAdA688f224c514682Ec6Ba940888d43C4b29',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
