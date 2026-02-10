@@ -60,6 +60,7 @@ export enum MTokenNameEnum {
   liquidRESERVE = 'liquidRESERVE',
   mKRalpha = 'mKRalpha',
   sLINJ = 'sLINJ',
+  mROX = 'mROX',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;

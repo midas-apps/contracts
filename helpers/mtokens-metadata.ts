@@ -248,4 +248,8 @@ export const mTokensMetadata: Record<
     name: 'INJ Loop Stake Vault',
     symbol: 'sLINJ',
   },
+  mROX: {
+    name: 'Midas Rockaway Market Neutral',
+    symbol: 'mROX',
+  },
 };
