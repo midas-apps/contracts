@@ -89,16 +89,16 @@ const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
 
     hre.getCustomSigner = async () => {
       const {
-        signTransaction,
-        createAddressBookContract,
-        getWalletAddressForAction,
-        getWeb3Provider,
+        signEVMTransaction,
+        createEVMAddressBookContract,
+        getEVMWalletAddressForAction,
+        getEVMProvider,
       } = await import(scriptPathResolved);
 
       return {
         type: 'customSigner',
         getWalletAddress: async (action, mtokenOverride, chainId) => {
-          return getWalletAddressForAction(
+          return getEVMWalletAddressForAction(
             action,
             mtokenOverride ?? hre.mtoken,
             chainId,
@@ -106,7 +106,7 @@ const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
         },
         createAddressBookContract: async (data) => {
           return {
-            payload: await createAddressBookContract({
+            payload: await createEVMAddressBookContract({
               ...data,
               chainId: hre.network.config.chainId,
               mToken: hre.mtoken,
@@ -115,7 +115,7 @@ const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
         },
         sendTransaction: async (transaction, txSignMetadata) => {
           return {
-            payload: await signTransaction(transaction, {
+            payload: await signEVMTransaction(transaction, {
               chain: {
                 name: hre.network.name,
                 id: hre.network.config.chainId,
@@ -129,7 +129,7 @@ const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
         getWeb3Provider: async ({ action }) => {
           const chainId = hre.network.config.chainId!;
           const rpcUrl = rpcUrls[hre.network.name as Network];
-          return getWeb3Provider({
+          return getEVMProvider({
             chainId,
             rpcUrl,
             action,

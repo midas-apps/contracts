@@ -252,4 +252,8 @@ export const mTokensMetadata: Record<
     name: 'Midas Rockaway Market Neutral',
     symbol: 'mROX',
   },
+  weEUR: {
+    name: 'Liquid Euro',
+    symbol: 'weEUR',
+  },
 };

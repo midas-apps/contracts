@@ -55,6 +55,7 @@ import { tacTONDeploymentConfig } from './tacTON';
 import { tBTCDeploymentConfig } from './tBTC';
 import { tETHDeploymentConfig } from './tETH';
 import { tUSDeDeploymentConfig } from './tUSDe';
+import { weEURDeploymentConfig } from './weEUR';
 import { wNLPDeploymentConfig } from './wNLP';
 import { wVLPDeploymentConfig } from './wVLP';
 import { zeroGBTCVDeploymentConfig } from './zeroGBTCV';
@@ -127,4 +128,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mKRalpha: mKRalphaDeploymentConfig,
   sLINJ: sLINJDeploymentConfig,
   mROX: mROXDeploymentConfig,
+  weEUR: weEURDeploymentConfig,
 };
