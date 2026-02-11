@@ -61,6 +61,7 @@ export enum MTokenNameEnum {
   mKRalpha = 'mKRalpha',
   sLINJ = 'sLINJ',
   mROX = 'mROX',
+  weEUR = 'weEUR',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
@@ -115,6 +116,7 @@ export enum PaymentTokenNameEnum {
   axlusdt = 'axlusdt',
   winj = 'winj',
   yinj = 'yinj',
+  eurc = 'eurc',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;

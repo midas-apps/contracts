@@ -67,6 +67,7 @@ const prefixes: Record<MTokenName, string> = {
   mKRalpha: 'M_KRALPHA',
   sLINJ: 'SL_INJ',
   mROX: 'M_ROX',
+  weEUR: 'WE_EUR',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {

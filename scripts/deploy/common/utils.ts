@@ -358,6 +358,9 @@ export const sendAndWaitForCustomTxSign = async (
   if ('payload' in res) {
     console.log('Custom tx sign result detected, skipping...');
     resToReturn = res.payload;
+    const txId = (res.payload as { txId?: string })?.txId ?? 'unknown';
+    const comment = txSignMetadata?.comment ?? '';
+    console.log(`${txId} - ${comment}`);
   } else if ('tx' in res) {
     logDeploy('Tx Submitted', hreNetwork.network.name, res.tx.hash);
     await res.tx.wait(confirmations);
