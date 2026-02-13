@@ -93,6 +93,11 @@ export const getContractsToGenerateFromUser = async () => {
         label: 'Redemption Vault With USTB',
         hint: 'Redemption Vault With USTB contract',
       },
+      {
+        value: 'rvAave',
+        label: 'Redemption Vault With Aave',
+        hint: 'Redemption Vault With Aave V3 contract',
+      },
       { value: 'dataFeed', label: 'Data Feed', hint: 'Data Feed contract' },
       {
         value: 'customAggregator',

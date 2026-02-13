@@ -25,6 +25,7 @@ export const configsPerNetworkConfig = {
   dv: getDvConfigFromUser,
   rv: getRvConfigFromUser,
   rvSwapper: getRvSwapperConfigFromUser,
+  rvAave: getRvAaveConfigFromUser,
   genericConfig: getGenericConfigFromUser,
   postDeploy: {
     grantRoles: getPostDeployGrantRolesConfigFromUser,
@@ -183,6 +184,27 @@ async function getRvConfigFromUser<T>(
   };
 }
 
+async function getRvAaveConfigFromUser(hre: HardhatRuntimeEnvironment) {
+  const config = await getRvConfigFromUser(
+    hre,
+    {
+      aavePool: () =>
+        text({
+          message: 'Aave V3 Pool Address',
+          validate: validateAddress,
+        })
+          .then(requireNotCancelled)
+          .then(requireAddress),
+    },
+    'Redemption Vault With Aave',
+  );
+
+  return {
+    ...config,
+    type: 'AAVE' as const,
+  };
+}
+
 const getVaultForSwapper = (
   hre: HardhatRuntimeEnvironment,
   mToken: MTokenName,
@@ -194,6 +216,8 @@ const getVaultForSwapper = (
     return 'redemptionVaultUstb';
   } else if (addresses?.[mToken]?.redemptionVaultBuidl) {
     return 'redemptionVaultBuidl';
+  } else if (addresses?.[mToken]?.redemptionVaultAave) {
+    return 'redemptionVaultAave';
   } else if (addresses?.[mToken]?.redemptionVault) {
     return 'redemptionVault';
   }
@@ -390,7 +414,7 @@ export async function getDeploymentConfigFromUser(
       multiselect<
         keyof Pick<
           DeploymentConfig['networkConfigs'][number],
-          'rv' | 'rvSwapper' | 'dv'
+          'rv' | 'rvSwapper' | 'rvAave' | 'dv'
         >
       >({
         message:
@@ -410,6 +434,11 @@ export async function getDeploymentConfigFromUser(
             value: 'rvSwapper',
             label: 'Redemption Vault With Swapper',
             hint: 'Redemption Vault With Swapper contract',
+          },
+          {
+            value: 'rvAave',
+            label: 'Redemption Vault With Aave',
+            hint: 'Redemption Vault With Aave V3 contract',
           },
         ],
         initialValues: ['dv', 'rvSwapper'],

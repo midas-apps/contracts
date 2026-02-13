@@ -38,6 +38,8 @@ import {
   RedemptionVaultWithBUIDLTest__factory,
   RedemptionVaultWithUSTBTest__factory,
   RedemptionVaultWithSwapperTest__factory,
+  RedemptionVaultWithAaveTest__factory,
+  AaveV3PoolMock__factory,
   CustomAggregatorV3CompatibleFeedDiscountedTester__factory,
   DepositVaultWithUSTBTest__factory,
   USTBMock__factory,
@@ -375,6 +377,48 @@ export const defaultDeploy = async () => {
     redemptionVaultWithUSTB.address,
   );
 
+  /* Redemption Vault With Aave */
+
+  const aUSDC = await new ERC20Mock__factory(owner).deploy(8); // aToken mock, same decimals as USDC
+  const aavePoolMock = await new AaveV3PoolMock__factory(owner).deploy();
+  await aavePoolMock.setReserveAToken(stableCoins.usdc.address, aUSDC.address);
+  await stableCoins.usdc.mint(aavePoolMock.address, parseUnits('1000000'));
+
+  const redemptionVaultWithAave =
+    await new RedemptionVaultWithAaveTest__factory(owner).deploy();
+
+  await redemptionVaultWithAave[
+    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
+  ](
+    accessControl.address,
+    {
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    1000,
+    {
+      fiatAdditionalFee: 100,
+      fiatFlatFee: parseUnits('1'),
+      minFiatRedeemAmount: 1000,
+    },
+    requestRedeemer.address,
+    aavePoolMock.address,
+  );
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
+    redemptionVaultWithAave.address,
+  );
+
   /* Redemption Vault With Swapper */
 
   const redemptionVaultWithSwapper =
@@ -595,6 +639,9 @@ export const defaultDeploy = async () => {
     buidlRedemption,
     redemptionVaultWithBUIDL,
     redemptionVaultWithUSTB,
+    redemptionVaultWithAave,
+    aavePoolMock,
+    aUSDC,
     liquidityProvider,
     otherCoins,
     ustbToken,

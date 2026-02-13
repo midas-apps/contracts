@@ -14,6 +14,7 @@ import {
   IERC20,
   RedemptionVault,
   RedemptionVaultWIthBUIDL,
+  RedemptionVaultWithAave,
   RedemptionVaultWithSwapper,
   RedemptionVaultWithUSTB,
 } from '../../typechain-types';
@@ -24,6 +25,7 @@ type CommonParamsChangePaymentToken = {
     | DepositVaultWithUSTB
     | RedemptionVault
     | RedemptionVaultWIthBUIDL
+    | RedemptionVaultWithAave
     | RedemptionVaultWithSwapper
     | RedemptionVaultWithUSTB;
   owner: SignerWithAddress;

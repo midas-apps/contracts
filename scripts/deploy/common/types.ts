@@ -14,6 +14,7 @@ import {
   GrantDefaultAdminRoleToAcAdminConfig,
 } from './roles';
 import {
+  DeployRvAaveConfig,
   DeployRvBuidlConfig,
   DeployRvRegularConfig,
   DeployRvSwapperConfig,
@@ -96,6 +97,7 @@ export type DeploymentConfig = {
       rv?: DeployRvRegularConfig;
       rvBuidl?: DeployRvBuidlConfig;
       rvSwapper?: DeployRvSwapperConfig;
+      rvAave?: DeployRvAaveConfig;
       postDeploy?: PostDeployConfig;
     }
   >;

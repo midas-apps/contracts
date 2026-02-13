@@ -8,6 +8,7 @@ export type TokenContractNames = {
   rvSwapper: string;
   rvBuidl: string;
   rvUstb: string;
+  rvAave: string;
   dataFeed?: string;
   dataFeedComposite?: string;
   dataFeedMultiply?: string;
@@ -34,6 +35,7 @@ const vaultTypeToContractNameMap: Record<VaultType, string> = {
   depositVault: 'dv',
   depositVaultUstb: 'dvUstb',
   redemptionVaultBuidl: 'rvBuidl',
+  redemptionVaultAave: 'rvAave',
 };
 
 export const vaultTypeToContractName = (
@@ -125,6 +127,7 @@ export const getCommonContractNames = (): CommonContractNames => {
     rvSwapper: 'RedemptionVaultWithSwapper',
     rvBuidl: 'RedemptionVaultWIthBUIDL',
     rvUstb: 'RedemptionVaultWithUSTB',
+    rvAave: 'RedemptionVaultWithAave',
     dataFeed: 'DataFeed',
     customAggregator: 'CustomAggregatorV3CompatibleFeed',
     customAggregatorGrowth: 'CustomAggregatorV3CompatibleFeedGrowth',
@@ -156,6 +159,7 @@ export const getTokenContractNames = (
     rvSwapper: `${tokenPrefix}${commonContractNames.rvSwapper}`,
     rvBuidl: `${tokenPrefix}${commonContractNames.rvBuidl}`,
     rvUstb: `${tokenPrefix}${commonContractNames.rvUstb}`,
+    rvAave: `${tokenPrefix}${commonContractNames.rvAave}`,
     dataFeed: isTac ? undefined : `${prefix}${commonContractNames.dataFeed}`,
     customAggregator: isTac ? undefined : `${prefix}CustomAggregatorFeed`,
     customAggregatorGrowth: isTac
