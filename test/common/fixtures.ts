@@ -39,7 +39,9 @@ import {
   RedemptionVaultWithUSTBTest__factory,
   RedemptionVaultWithSwapperTest__factory,
   RedemptionVaultWithAaveTest__factory,
+  RedemptionVaultWithMorphoTest__factory,
   AaveV3PoolMock__factory,
+  MorphoVaultMock__factory,
   CustomAggregatorV3CompatibleFeedDiscountedTester__factory,
   DepositVaultWithUSTBTest__factory,
   USTBMock__factory,
@@ -419,6 +421,48 @@ export const defaultDeploy = async () => {
     redemptionVaultWithAave.address,
   );
 
+  /* Redemption Vault With Morpho */
+
+  const morphoVaultMock = await new MorphoVaultMock__factory(owner).deploy(
+    stableCoins.usdc.address,
+  );
+  await stableCoins.usdc.mint(morphoVaultMock.address, parseUnits('1000000'));
+
+  const redemptionVaultWithMorpho =
+    await new RedemptionVaultWithMorphoTest__factory(owner).deploy();
+
+  await redemptionVaultWithMorpho[
+    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
+  ](
+    accessControl.address,
+    {
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    1000,
+    {
+      fiatAdditionalFee: 100,
+      fiatFlatFee: parseUnits('1'),
+      minFiatRedeemAmount: 1000,
+    },
+    requestRedeemer.address,
+    morphoVaultMock.address,
+  );
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
+    redemptionVaultWithMorpho.address,
+  );
+
   /* Redemption Vault With Swapper */
 
   const redemptionVaultWithSwapper =
@@ -642,6 +686,8 @@ export const defaultDeploy = async () => {
     redemptionVaultWithAave,
     aavePoolMock,
     aUSDC,
+    redemptionVaultWithMorpho,
+    morphoVaultMock,
     liquidityProvider,
     otherCoins,
     ustbToken,

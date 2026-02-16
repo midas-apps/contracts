@@ -8,7 +8,7 @@ import { getAllRoles } from '../../../helpers/roles';
 import {
   MidasAccessControlTest,
   MTBILLTest,
-  RedemptionVaultWithAaveTest,
+  RedemptionVaultWithMorphoTest,
   DataFeedTest,
   AggregatorV3Mock,
 } from '../../../typechain-types';
@@ -26,9 +26,10 @@ async function impersonateAndFundAccount(
   return ethers.getSigner(address);
 }
 
+// Block where Steakhouse USDC Morpho vault is active and has liquidity
 export const FORK_BLOCK_NUMBER = 24441000;
 
-export async function aaveRedemptionVaultFixture() {
+export async function morphoRedemptionVaultFixture() {
   await network.provider.request({
     method: 'hardhat_reset',
     params: [
@@ -114,10 +115,10 @@ export async function aaveRedemptionVaultFixture() {
     ],
   );
 
-  // Deploy RedemptionVaultWithAave
-  const redemptionVaultWithAave =
-    await deployProxyContract<RedemptionVaultWithAaveTest>(
-      'RedemptionVaultWithAaveTest',
+  // Deploy RedemptionVaultWithMorpho
+  const redemptionVaultWithMorpho =
+    await deployProxyContract<RedemptionVaultWithMorphoTest>(
+      'RedemptionVaultWithMorphoTest',
       [
         accessControl.address,
         {
@@ -141,7 +142,7 @@ export async function aaveRedemptionVaultFixture() {
           fiatFlatFee: parseUnits('10', 18),
         },
         requestRedeemer.address,
-        MAINNET_ADDRESSES.AAVE_V3_POOL,
+        MAINNET_ADDRESSES.MORPHO_STEAKHOUSE_USDC_VAULT,
       ],
       'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)',
     );
@@ -149,7 +150,7 @@ export async function aaveRedemptionVaultFixture() {
   // Grant BURN_ROLE to vault
   await accessControl.grantRole(
     allRoles.tokenRoles.mTBILL.burner,
-    redemptionVaultWithAave.address,
+    redemptionVaultWithMorpho.address,
   );
 
   // Get mainnet contracts
@@ -157,22 +158,21 @@ export async function aaveRedemptionVaultFixture() {
     'IERC20Metadata',
     MAINNET_ADDRESSES.USDC,
   );
-  const aUsdc = await ethers.getContractAt('IERC20', MAINNET_ADDRESSES.AUSDC);
-  const aavePool = await ethers.getContractAt(
-    'IAaveV3Pool',
-    MAINNET_ADDRESSES.AAVE_V3_POOL,
+  const morphoVault = await ethers.getContractAt(
+    'IERC20',
+    MAINNET_ADDRESSES.MORPHO_STEAKHOUSE_USDC_VAULT,
   );
 
   // Impersonate whales
   const usdcWhale = await impersonateAndFundAccount(
     MAINNET_ADDRESSES.USDC_WHALE_BINANCE,
   );
-  const aUsdcWhale = await impersonateAndFundAccount(
-    MAINNET_ADDRESSES.AUSDC_WHALE,
+  const morphoShareWhale = await impersonateAndFundAccount(
+    MAINNET_ADDRESSES.MORPHO_STEAKHOUSE_USDC_WHALE,
   );
 
   // Setup payment token
-  await redemptionVaultWithAave.connect(owner).addPaymentToken(
+  await redemptionVaultWithMorpho.connect(owner).addPaymentToken(
     usdc.address,
     usdcDataFeed.address,
     0, // no fee
@@ -187,10 +187,9 @@ export async function aaveRedemptionVaultFixture() {
     mTokenToUsdDataFeed: mtbillDataFeed,
     mockedAggregator: usdcAggregator,
     mockedAggregatorMToken: mtbillAggregator,
-    redemptionVaultWithAave,
+    redemptionVaultWithMorpho,
     usdc,
-    aUsdc,
-    aavePool,
+    morphoVault,
     owner,
     tokensReceiver,
     feeReceiver,
@@ -198,11 +197,11 @@ export async function aaveRedemptionVaultFixture() {
     vaultAdmin,
     testUser,
     usdcWhale,
-    aUsdcWhale,
+    morphoShareWhale,
     roles: allRoles,
   };
 }
 
-export type AaveDeployedContracts = Awaited<
-  ReturnType<typeof aaveRedemptionVaultFixture>
+export type MorphoDeployedContracts = Awaited<
+  ReturnType<typeof morphoRedemptionVaultFixture>
 >;

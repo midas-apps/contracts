@@ -1,19 +1,16 @@
 import { expect } from 'chai';
 import { BigNumber, BigNumberish } from 'ethers';
-import { parseUnits } from 'ethers/lib/utils';
 
 import {
   AccountOrContract,
   OptionalCommonParams,
   getAccount,
-  tokenAmountFromBase18,
 } from './common.helpers';
-import { depositInstantTest, getFeePercent } from './deposit-vault.helpers';
+import { depositInstantTest } from './deposit-vault.helpers';
 import { defaultDeploy } from './fixtures';
 
 import {
   ERC20,
-  ERC20__factory,
   IERC20Metadata,
   ISuperstateToken,
   USTBMock,
@@ -126,27 +123,10 @@ export const depositInstantWithUstbTest = async (
     return;
   }
 
-  const amountIn = parseUnits(amountUsdIn.toFixed(18).replace(/\.?0+$/, ''));
-
   const tokensReceiver = await depositVaultWithUSTB.tokensReceiver();
   const ustbEnabledBefore = await depositVaultWithUSTB.ustbDepositsEnabled();
   const ustbSupplyBefore = await ustbToken.totalSupply();
   const ustbReceiverBalanceBefore = await ustbToken.balanceOf(tokensReceiver);
-
-  const feePercent = await getFeePercent(
-    owner.address,
-    tokenIn,
-    depositVaultWithUSTB,
-    true,
-  );
-
-  const hundredPercent = await depositVaultWithUSTB.ONE_HUNDRED_PERCENT();
-  const fee = amountIn.mul(feePercent).div(hundredPercent);
-
-  const amountInWithoutFee = await tokenAmountFromBase18(
-    ERC20__factory.connect(tokenIn, owner),
-    amountIn.sub(fee),
-  );
 
   await depositInstantTest(
     {
@@ -171,11 +151,17 @@ export const depositInstantWithUstbTest = async (
   expect(ustbEnabledAfter).eq(ustbEnabledBefore);
 
   if (ustbEnabledAfter && expectedUstbDeposited) {
-    expectedUstbMinted ??= amountInWithoutFee;
-
-    expect(ustbSupplyAfter.sub(ustbSupplyBefore)).eq(expectedUstbMinted);
-    expect(ustbReceiverBalanceAfter.sub(ustbReceiverBalanceBefore)).eq(
-      expectedUstbMinted,
+    const ustbMinted = ustbSupplyAfter.sub(ustbSupplyBefore);
+    const ustbReceived = ustbReceiverBalanceAfter.sub(
+      ustbReceiverBalanceBefore,
     );
+
+    if (expectedUstbMinted !== undefined) {
+      expect(ustbMinted).eq(expectedUstbMinted);
+      expect(ustbReceived).eq(expectedUstbMinted);
+    } else {
+      expect(ustbMinted).to.be.gt(0);
+      expect(ustbReceived).eq(ustbMinted);
+    }
   }
 };

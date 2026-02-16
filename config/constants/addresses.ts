@@ -8,7 +8,8 @@ export type RedemptionVaultType =
   | 'redemptionVaultBuidl'
   | 'redemptionVaultSwapper'
   | 'redemptionVaultUstb'
-  | 'redemptionVaultAave';
+  | 'redemptionVaultAave'
+  | 'redemptionVaultMorpho';
 
 export type DepositVaultType = 'depositVault' | 'depositVaultUstb';
 

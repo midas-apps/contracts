@@ -15,6 +15,7 @@ import {
   MBasisRedemptionVaultWithSwapper,
   RedemptionVault,
   RedemptionVaultWithAave,
+  RedemptionVaultWithMorpho,
   RedemptionVaultWIthBUIDL,
 } from '../../../typechain-types';
 
@@ -73,18 +74,24 @@ export type DeployRvAaveConfig = {
   aavePool: string;
 } & DeployRvConfigCommon;
 
+export type DeployRvMorphoConfig = {
+  type: 'MORPHO';
+  morphoVault: string;
+} & DeployRvConfigCommon;
+
 export type DeployRvConfig =
   | DeployRvRegularConfig
   | DeployRvBuidlConfig
   | DeployRvSwapperConfig
-  | DeployRvAaveConfig;
+  | DeployRvAaveConfig
+  | DeployRvMorphoConfig;
 
 const DUMMY_ADDRESS = '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF';
 
 export const deployRedemptionVault = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
-  type: 'rv' | 'rvBuidl' | 'rvSwapper' | 'rvAave',
+  type: 'rv' | 'rvBuidl' | 'rvSwapper' | 'rvAave' | 'rvMorpho',
 ) => {
   const addresses = getCurrentAddresses(hre);
   const deployer = await getDeployer(hre);
@@ -106,6 +113,8 @@ export const deployRedemptionVault = async (
 
   if (networkConfig.type === 'AAVE') {
     extraParams.push(networkConfig.aavePool);
+  } else if (networkConfig.type === 'MORPHO') {
+    extraParams.push(networkConfig.morphoVault);
   } else if (networkConfig.type === 'BUIDL') {
     extraParams.push(networkConfig.buidlRedemption);
     extraParams.push(networkConfig.minBuidlToRedeem);
@@ -195,6 +204,9 @@ export const deployRedemptionVault = async (
       >
     | Parameters<
         RedemptionVaultWithAave['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)']
+      >
+    | Parameters<
+        RedemptionVaultWithMorpho['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)']
       >;
 
   await deployAndVerifyProxy(hre, contractName, params, undefined, {
@@ -203,7 +215,7 @@ export const deployRedemptionVault = async (
         ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)'
         : networkConfig.type === 'BUIDL'
         ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,uint256,uint256)'
-        : networkConfig.type === 'AAVE'
+        : networkConfig.type === 'AAVE' || networkConfig.type === 'MORPHO'
         ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
         : 'initialize',
   });

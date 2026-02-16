@@ -98,6 +98,11 @@ export const getContractsToGenerateFromUser = async () => {
         label: 'Redemption Vault With Aave',
         hint: 'Redemption Vault With Aave V3 contract',
       },
+      {
+        value: 'rvMorpho',
+        label: 'Redemption Vault With Morpho',
+        hint: 'Redemption Vault With Morpho Vault (ERC-4626) contract',
+      },
       { value: 'dataFeed', label: 'Data Feed', hint: 'Data Feed contract' },
       {
         value: 'customAggregator',

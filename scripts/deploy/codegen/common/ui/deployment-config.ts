@@ -26,6 +26,7 @@ export const configsPerNetworkConfig = {
   rv: getRvConfigFromUser,
   rvSwapper: getRvSwapperConfigFromUser,
   rvAave: getRvAaveConfigFromUser,
+  rvMorpho: getRvMorphoConfigFromUser,
   genericConfig: getGenericConfigFromUser,
   postDeploy: {
     grantRoles: getPostDeployGrantRolesConfigFromUser,
@@ -205,6 +206,27 @@ async function getRvAaveConfigFromUser(hre: HardhatRuntimeEnvironment) {
   };
 }
 
+async function getRvMorphoConfigFromUser(hre: HardhatRuntimeEnvironment) {
+  const config = await getRvConfigFromUser(
+    hre,
+    {
+      morphoVault: () =>
+        text({
+          message: 'Morpho Vault Address (ERC-4626)',
+          validate: validateAddress,
+        })
+          .then(requireNotCancelled)
+          .then(requireAddress),
+    },
+    'Redemption Vault With Morpho',
+  );
+
+  return {
+    ...config,
+    type: 'MORPHO' as const,
+  };
+}
+
 const getVaultForSwapper = (
   hre: HardhatRuntimeEnvironment,
   mToken: MTokenName,
@@ -218,6 +240,8 @@ const getVaultForSwapper = (
     return 'redemptionVaultBuidl';
   } else if (addresses?.[mToken]?.redemptionVaultAave) {
     return 'redemptionVaultAave';
+  } else if (addresses?.[mToken]?.redemptionVaultMorpho) {
+    return 'redemptionVaultMorpho';
   } else if (addresses?.[mToken]?.redemptionVault) {
     return 'redemptionVault';
   }
@@ -414,7 +438,7 @@ export async function getDeploymentConfigFromUser(
       multiselect<
         keyof Pick<
           DeploymentConfig['networkConfigs'][number],
-          'rv' | 'rvSwapper' | 'rvAave' | 'dv'
+          'rv' | 'rvSwapper' | 'rvAave' | 'rvMorpho' | 'dv'
         >
       >({
         message:
@@ -439,6 +463,11 @@ export async function getDeploymentConfigFromUser(
             value: 'rvAave',
             label: 'Redemption Vault With Aave',
             hint: 'Redemption Vault With Aave V3 contract',
+          },
+          {
+            value: 'rvMorpho',
+            label: 'Redemption Vault With Morpho',
+            hint: 'Redemption Vault With Morpho Vault (ERC-4626) contract',
           },
         ],
         initialValues: ['dv', 'rvSwapper'],

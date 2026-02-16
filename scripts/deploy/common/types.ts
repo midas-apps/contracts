@@ -16,6 +16,7 @@ import {
 import {
   DeployRvAaveConfig,
   DeployRvBuidlConfig,
+  DeployRvMorphoConfig,
   DeployRvRegularConfig,
   DeployRvSwapperConfig,
 } from './rv';
@@ -98,6 +99,7 @@ export type DeploymentConfig = {
       rvBuidl?: DeployRvBuidlConfig;
       rvSwapper?: DeployRvSwapperConfig;
       rvAave?: DeployRvAaveConfig;
+      rvMorpho?: DeployRvMorphoConfig;
       postDeploy?: PostDeployConfig;
     }
   >;

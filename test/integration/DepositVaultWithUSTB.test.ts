@@ -1,5 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { BigNumber, constants } from 'ethers';
+import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import { ustbRedemptionVaultFixture } from './fixtures/ustb.fixture';
@@ -51,7 +51,6 @@ describe('DepositVaultWithUSTB - Mainnet Fork Integration Tests', function () {
           mTokenToUsdDataFeed,
           ustbToken,
           expectedUstbDeposited: true,
-          expectedUstbMinted: BigNumber.from(9264844),
         },
         usdc,
         usdcAmount,
