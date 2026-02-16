@@ -197,6 +197,14 @@ contract RedemptionVaultWithAave is RedemptionVault {
             "RVA: insufficient aToken balance"
         );
 
-        aavePool.withdraw(tokenOut, missingAmount, address(this));
+        uint256 withdrawnAmount = aavePool.withdraw(
+            tokenOut,
+            missingAmount,
+            address(this)
+        );
+        require(
+            withdrawnAmount >= missingAmount,
+            "RVA: insufficient withdrawal amount"
+        );
     }
 }
