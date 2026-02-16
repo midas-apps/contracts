@@ -297,7 +297,7 @@ describe('RedemptionVaultWithAave - Mainnet Fork Integration Tests', function ()
 
       // Should revert because fakeToken is not in Aave pool
       // The vault has no fakeToken balance, so it tries Aave withdrawal
-      // Aave's getReserveData returns address(0) for aTokenAddress
+      // Aave's getReserveAToken returns address(0)
       await redeemInstantWithAaveTest(
         {
           redemptionVault: redemptionVaultWithAave,

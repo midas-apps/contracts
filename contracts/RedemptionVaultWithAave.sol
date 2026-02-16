@@ -188,7 +188,7 @@ contract RedemptionVaultWithAave is RedemptionVault {
 
         uint256 missingAmount = amountTokenOut - contractBalanceTokenOut;
 
-        address aToken = aavePool.getReserveData(tokenOut).aTokenAddress;
+        address aToken = aavePool.getReserveAToken(tokenOut);
         require(aToken != address(0), "RVA: token not in Aave pool");
 
         uint256 aTokenBalance = IERC20(aToken).balanceOf(address(this));

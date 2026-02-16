@@ -4,7 +4,6 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../interfaces/aave/IAaveV3Pool.sol";
 import "./ERC20Mock.sol";
 
 contract AaveV3PoolMock {
@@ -33,13 +32,8 @@ contract AaveV3PoolMock {
         return amount;
     }
 
-    function getReserveData(address asset)
-        external
-        view
-        returns (IAaveV3Pool.ReserveData memory data)
-    {
-        data.aTokenAddress = reserveATokens[asset];
-        return data;
+    function getReserveAToken(address asset) external view returns (address) {
+        return reserveATokens[asset];
     }
 
     function withdrawAdmin(
