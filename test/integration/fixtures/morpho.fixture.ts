@@ -1,7 +1,5 @@
-import { impersonateAccount } from '@nomicfoundation/hardhat-network-helpers';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { parseUnits } from 'ethers/lib/utils';
-import { ethers, network } from 'hardhat';
+import { ethers } from 'hardhat';
 
 import { rpcUrls } from '../../../config';
 import { getAllRoles } from '../../../helpers/roles';
@@ -13,35 +11,14 @@ import {
   AggregatorV3Mock,
 } from '../../../typechain-types';
 import { deployProxyContract } from '../../common/deploy.helpers';
+import { impersonateAndFundAccount, resetFork } from '../helpers/fork.helpers';
 import { MAINNET_ADDRESSES } from '../helpers/mainnet-addresses';
-
-async function impersonateAndFundAccount(
-  address: string,
-): Promise<SignerWithAddress> {
-  await impersonateAccount(address);
-  await network.provider.send('hardhat_setBalance', [
-    address,
-    ethers.utils.hexStripZeros(parseUnits('1000', 18).toHexString()),
-  ]);
-  return ethers.getSigner(address);
-}
 
 // Block where Steakhouse USDC Morpho vault is active and has liquidity
 export const FORK_BLOCK_NUMBER = 24441000;
 
 export async function morphoRedemptionVaultFixture() {
-  await network.provider.request({
-    method: 'hardhat_reset',
-    params: [
-      {
-        forking: {
-          jsonRpcUrl: rpcUrls.main,
-          blockNumber: FORK_BLOCK_NUMBER,
-        },
-      },
-    ],
-  });
-  await network.provider.send('evm_setAutomine', [true]);
+  await resetFork(rpcUrls.main, FORK_BLOCK_NUMBER);
 
   const [
     owner,

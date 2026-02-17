@@ -5,7 +5,7 @@ import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/t
 
 import "./RedemptionVault.sol";
 
-import "./interfaces/morpho/IERC4626Vault.sol";
+import {IMorphoVault} from "./interfaces/morpho/IMorphoVault.sol";
 import "./libraries/DecimalsCorrectionLibrary.sol";
 
 /**
@@ -22,7 +22,7 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
     /**
      * @notice Morpho Vault contract used for withdrawals
      */
-    IERC4626Vault public morphoVault;
+    IMorphoVault public morphoVault;
 
     /**
      * @dev leaving a storage gap for futures updates
@@ -73,7 +73,7 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
             _requestRedeemer
         );
         _validateAddress(_morphoVault, false);
-        morphoVault = IERC4626Vault(_morphoVault);
+        morphoVault = IMorphoVault(_morphoVault);
     }
 
     /**
@@ -82,7 +82,7 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
      */
     function setMorphoVault(address _morphoVault) external onlyVaultAdmin {
         _validateAddress(_morphoVault, false);
-        morphoVault = IERC4626Vault(_morphoVault);
+        morphoVault = IMorphoVault(_morphoVault);
         emit SetMorphoVault(msg.sender, _morphoVault);
     }
 
@@ -187,9 +187,9 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
         );
         if (contractBalanceTokenOut >= amountTokenOut) return;
 
-        uint256 missingAmount = amountTokenOut - contractBalanceTokenOut;
-
         require(morphoVault.asset() == tokenOut, "RVM: token not vault asset");
+
+        uint256 missingAmount = amountTokenOut - contractBalanceTokenOut;
 
         uint256 sharesNeeded = morphoVault.previewWithdraw(missingAmount);
         require(

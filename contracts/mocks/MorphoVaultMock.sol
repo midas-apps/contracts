@@ -5,9 +5,8 @@ pragma solidity 0.8.9;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../interfaces/morpho/IERC4626Vault.sol";
 
-contract MorphoVaultMock is ERC20, IERC4626Vault {
+contract MorphoVaultMock is ERC20 {
     using SafeERC20 for IERC20;
 
     address public immutable underlyingAsset;
@@ -36,16 +35,7 @@ contract MorphoVaultMock is ERC20, IERC4626Vault {
         IERC20(token).safeTransfer(to, amount);
     }
 
-    function balanceOf(address account)
-        public
-        view
-        override(ERC20, IERC4626Vault)
-        returns (uint256)
-    {
-        return super.balanceOf(account);
-    }
-
-    function asset() external view override returns (address) {
+    function asset() external view returns (address) {
         return underlyingAsset;
     }
 
@@ -53,7 +43,7 @@ contract MorphoVaultMock is ERC20, IERC4626Vault {
         uint256 assets,
         address receiver,
         address owner
-    ) external override returns (uint256 shares) {
+    ) external returns (uint256 shares) {
         shares = previewWithdraw(assets);
 
         require(
@@ -76,7 +66,6 @@ contract MorphoVaultMock is ERC20, IERC4626Vault {
     function previewWithdraw(uint256 assets)
         public
         view
-        override
         returns (uint256 shares)
     {
         // round up
@@ -88,7 +77,6 @@ contract MorphoVaultMock is ERC20, IERC4626Vault {
     function convertToAssets(uint256 shares)
         external
         view
-        override
         returns (uint256 assets)
     {
         assets = (shares * exchangeRateNumerator) / RATE_PRECISION;
