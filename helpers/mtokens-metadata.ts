@@ -256,4 +256,8 @@ export const mTokensMetadata: Record<
     name: 'Liquid Euro',
     symbol: 'weEUR',
   },
+  mTU: {
+    name: 'X',
+    symbol: 'mTU',
+  },
 };

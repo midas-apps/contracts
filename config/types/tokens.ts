@@ -62,6 +62,7 @@ export enum MTokenNameEnum {
   sLINJ = 'sLINJ',
   mROX = 'mROX',
   weEUR = 'weEUR',
+  mTU = 'mTU',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
