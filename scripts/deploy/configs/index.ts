@@ -42,6 +42,7 @@ import { mSLDeploymentConfig } from './mSL';
 import { msyrupUSDDeploymentConfig } from './msyrupUSD';
 import { msyrupUSDpDeploymentConfig } from './msyrupUSDp';
 import { mTBILLDeploymentConfig } from './mTBILL';
+import { mTUDeploymentConfig } from './mTU';
 import { mWildUSDDeploymentConfig } from './mWildUSD';
 import { mXRPDeploymentConfig } from './mXRP';
 import { obeatUSDDeploymentConfig } from './obeatUSD';
@@ -129,4 +130,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   sLINJ: sLINJDeploymentConfig,
   mROX: mROXDeploymentConfig,
   weEUR: weEURDeploymentConfig,
+  mTU: mTUDeploymentConfig,
 };
