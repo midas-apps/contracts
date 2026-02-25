@@ -260,4 +260,8 @@ export const mTokensMetadata: Record<
     name: 'X',
     symbol: 'mTU',
   },
+  mM1USD: {
+    name: 'Midas M1 USD Market Neutral',
+    symbol: 'mM1-USD',
+  },
 };
