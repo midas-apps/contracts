@@ -485,6 +485,17 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x511d88E64d843Ee11Bf039a3EB837393001aEDE7',
       redemptionVaultSwapper: '0xc33dAdA688f224c514682Ec6Ba940888d43C4b29',
     },
+    mTU: {
+      token: '0xCdE7dD466a1121235924383A6A65948311c5b4aC',
+      customFeed: '0x464cF50c350B09a3201403F3bB89feee08D0b6F8',
+    },
+    mM1USD: {
+      token: '0xCc5C22C7A6BCC25e66726AeF011dDE74289ED203',
+      customFeed: '0xad316aA927c0970C2e8f0B903211D0bd19A10702',
+      dataFeed: '0xF1aBD1a4Fc5fa2848Cf3763FBE7B0DF366da9279',
+      depositVault: '0x0f7e323103b29E1B18d521DE957Ed0c4c0A8189E',
+      redemptionVaultSwapper: '0x70Ba3211f2584Bf1C8a2aCdF0a00dba559CE1Ffa',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',

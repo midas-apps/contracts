@@ -710,3 +710,14 @@ All the roles for the Midas protocol smart contracts are listed below.
 | ***customFeedAdmin*** | `0xfb95d927c73e0fca84cd32a7fe715d7e15bed2ff5dbcd74ab37ed0f18b7e6130` |
 | ***depositVaultAdmin*** | `0x660a740f704a1913dfd48c91a23d6f3fd814dd274cbd3a97cd219662c2d517a6` |
 | ***redemptionVaultAdmin*** | `0x7df3e9c64a8f407ac6d41b8a7c9933921870dcf2e1dc26634db612ecbd2a6c2b` |
+
+### mTU Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0xdf7ef6312b3aaa6c675df5478686190a64c9626a902a55c7ac771a861d700ef8` |
+| ***burner*** | `0xc3eac9bcd16279c493f6220084b39f65c12d70b32c3c8b5ef239f4fb2b712cf2` |
+| ***pauser*** | `0x0a6b3b2d02977687791c3431f43c5dd4cbbf41505773382d62c5dc449221fac5` |
+| ***customFeedAdmin*** | `0x0d63a9c5269957d3e39208ee3afab89b411adf237866b2fa8c16f7566aa0f005` |
+| ***depositVaultAdmin*** | `0xc06d898b9385a8a78d84ae8938bea31e5e51d27cd8e8f2c4062cb377edf5b2ae` |
+| ***redemptionVaultAdmin*** | `0x5cabee3b96eb2fc64b9ccd892aa6825cc25584278d1b948a5cdb01d5d31bb19f` |
