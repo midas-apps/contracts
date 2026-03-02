@@ -25,6 +25,7 @@ export const configsPerNetworkConfig = {
   dv: getDvConfigFromUser,
   rv: getRvConfigFromUser,
   rvSwapper: getRvSwapperConfigFromUser,
+  rvMToken: getRvMTokenConfigFromUser,
   rvAave: getRvAaveConfigFromUser,
   rvMorpho: getRvMorphoConfigFromUser,
   genericConfig: getGenericConfigFromUser,
@@ -227,12 +228,35 @@ async function getRvMorphoConfigFromUser(hre: HardhatRuntimeEnvironment) {
   };
 }
 
+async function getRvMTokenConfigFromUser(hre: HardhatRuntimeEnvironment) {
+  const config = await getRvConfigFromUser(
+    hre,
+    {
+      redemptionVault: () =>
+        text({
+          message: 'mTokenA Redemption Vault Address',
+          validate: validateAddress,
+        })
+          .then(requireNotCancelled)
+          .then(requireAddress),
+    },
+    'Redemption Vault With MToken',
+  );
+
+  return {
+    ...config,
+    type: 'MTOKEN' as const,
+  };
+}
+
 const getVaultForSwapper = (
   hre: HardhatRuntimeEnvironment,
   mToken: MTokenName,
 ) => {
   const addresses = getCurrentAddresses(hre);
-  if (addresses?.[mToken]?.redemptionVaultSwapper) {
+  if (addresses?.[mToken]?.redemptionVaultMToken) {
+    return 'redemptionVaultMToken';
+  } else if (addresses?.[mToken]?.redemptionVaultSwapper) {
     return 'redemptionVaultSwapper';
   } else if (addresses?.[mToken]?.redemptionVaultUstb) {
     return 'redemptionVaultUstb';
@@ -438,7 +462,7 @@ export async function getDeploymentConfigFromUser(
       multiselect<
         keyof Pick<
           DeploymentConfig['networkConfigs'][number],
-          'rv' | 'rvSwapper' | 'rvAave' | 'rvMorpho' | 'dv'
+          'rv' | 'rvSwapper' | 'rvMToken' | 'rvAave' | 'rvMorpho' | 'dv'
         >
       >({
         message:
@@ -458,6 +482,11 @@ export async function getDeploymentConfigFromUser(
             value: 'rvSwapper',
             label: 'Redemption Vault With Swapper',
             hint: 'Redemption Vault With Swapper contract',
+          },
+          {
+            value: 'rvMToken',
+            label: 'Redemption Vault With MToken',
+            hint: 'Redemption Vault With MToken liquid strategy contract',
           },
           {
             value: 'rvAave',

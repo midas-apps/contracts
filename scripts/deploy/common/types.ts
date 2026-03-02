@@ -17,6 +17,7 @@ import {
   DeployRvAaveConfig,
   DeployRvBuidlConfig,
   DeployRvMorphoConfig,
+  DeployRvMTokenConfig,
   DeployRvRegularConfig,
   DeployRvSwapperConfig,
 } from './rv';
@@ -100,6 +101,7 @@ export type DeploymentConfig = {
       rvSwapper?: DeployRvSwapperConfig;
       rvAave?: DeployRvAaveConfig;
       rvMorpho?: DeployRvMorphoConfig;
+      rvMToken?: DeployRvMTokenConfig;
       postDeploy?: PostDeployConfig;
     }
   >;
@@ -139,6 +141,7 @@ export type NetworkDeploymentConfig = Record<
 export type RvType =
   | 'redemptionVault'
   | 'redemptionVaultBuidl'
-  | 'redemptionVaultSwapper';
+  | 'redemptionVaultSwapper'
+  | 'redemptionVaultMToken';
 
 export type DeployFunction = (hre: HardhatRuntimeEnvironment) => Promise<void>;

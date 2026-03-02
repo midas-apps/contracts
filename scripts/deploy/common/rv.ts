@@ -16,6 +16,7 @@ import {
   RedemptionVault,
   RedemptionVaultWithAave,
   RedemptionVaultWithMorpho,
+  RedemptionVaultWithMToken,
   RedemptionVaultWIthBUIDL,
 } from '../../../typechain-types';
 
@@ -79,19 +80,25 @@ export type DeployRvMorphoConfig = {
   morphoVault: string;
 } & DeployRvConfigCommon;
 
+export type DeployRvMTokenConfig = {
+  type: 'MTOKEN';
+  redemptionVault: string;
+} & DeployRvConfigCommon;
+
 export type DeployRvConfig =
   | DeployRvRegularConfig
   | DeployRvBuidlConfig
   | DeployRvSwapperConfig
   | DeployRvAaveConfig
-  | DeployRvMorphoConfig;
+  | DeployRvMorphoConfig
+  | DeployRvMTokenConfig;
 
 const DUMMY_ADDRESS = '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF';
 
 export const deployRedemptionVault = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
-  type: 'rv' | 'rvBuidl' | 'rvSwapper' | 'rvAave' | 'rvMorpho',
+  type: 'rv' | 'rvBuidl' | 'rvSwapper' | 'rvAave' | 'rvMorpho' | 'rvMToken',
 ) => {
   const addresses = getCurrentAddresses(hre);
   const deployer = await getDeployer(hre);
@@ -115,6 +122,8 @@ export const deployRedemptionVault = async (
     extraParams.push(networkConfig.aavePool);
   } else if (networkConfig.type === 'MORPHO') {
     extraParams.push(networkConfig.morphoVault);
+  } else if (networkConfig.type === 'MTOKEN') {
+    extraParams.push(networkConfig.redemptionVault);
   } else if (networkConfig.type === 'BUIDL') {
     extraParams.push(networkConfig.buidlRedemption);
     extraParams.push(networkConfig.minBuidlToRedeem);
@@ -207,6 +216,9 @@ export const deployRedemptionVault = async (
       >
     | Parameters<
         RedemptionVaultWithMorpho['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)']
+      >
+    | Parameters<
+        RedemptionVaultWithMToken['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)']
       >;
 
   await deployAndVerifyProxy(hre, contractName, params, undefined, {
@@ -215,7 +227,9 @@ export const deployRedemptionVault = async (
         ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)'
         : networkConfig.type === 'BUIDL'
         ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,uint256,uint256)'
-        : networkConfig.type === 'AAVE' || networkConfig.type === 'MORPHO'
+        : networkConfig.type === 'AAVE' ||
+          networkConfig.type === 'MORPHO' ||
+          networkConfig.type === 'MTOKEN'
         ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
         : 'initialize',
   });

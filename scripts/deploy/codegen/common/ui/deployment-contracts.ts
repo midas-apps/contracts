@@ -89,6 +89,11 @@ export const getContractsToGenerateFromUser = async () => {
         hint: 'Redemption Vault With Swapper contract',
       },
       {
+        value: 'rvMToken',
+        label: 'Redemption Vault With MToken',
+        hint: 'Redemption Vault With MToken liquid strategy contract',
+      },
+      {
         value: 'rvUstb',
         label: 'Redemption Vault With USTB',
         hint: 'Redemption Vault With USTB contract',

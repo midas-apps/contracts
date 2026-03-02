@@ -7,6 +7,7 @@ export type RedemptionVaultType =
   | 'redemptionVault'
   | 'redemptionVaultBuidl'
   | 'redemptionVaultSwapper'
+  | 'redemptionVaultMToken'
   | 'redemptionVaultUstb'
   | 'redemptionVaultAave'
   | 'redemptionVaultMorpho';

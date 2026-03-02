@@ -40,6 +40,7 @@ import {
   RedemptionVaultWithSwapperTest__factory,
   RedemptionVaultWithAaveTest__factory,
   RedemptionVaultWithMorphoTest__factory,
+  RedemptionVaultWithMTokenTest__factory,
   AaveV3PoolMock__factory,
   MorphoVaultMock__factory,
   CustomAggregatorV3CompatibleFeedDiscountedTester__factory,
@@ -503,6 +504,67 @@ export const defaultDeploy = async () => {
     redemptionVaultWithSwapper.address,
   );
 
+  /* Redemption Vault With MToken (mFONE -> mTBILL) */
+
+  const mFONE = await new MTBILLTest__factory(owner).deploy();
+  await mFONE.initialize(accessControl.address);
+
+  const mockedAggregatorMFone = await new AggregatorV3Mock__factory(
+    owner,
+  ).deploy();
+  await mockedAggregatorMFone.setRoundData(
+    parseUnits('2', mockedAggregatorDecimals),
+  );
+  const mFoneToUsdDataFeed = await new DataFeedTest__factory(owner).deploy();
+  await mFoneToUsdDataFeed.initialize(
+    accessControl.address,
+    mockedAggregatorMFone.address,
+    3 * 24 * 3600,
+    parseUnits('0.1', mockedAggregatorDecimals),
+    parseUnits('10000', mockedAggregatorDecimals),
+  );
+
+  const redemptionVaultWithMToken =
+    await new RedemptionVaultWithMTokenTest__factory(owner).deploy();
+
+  await redemptionVaultWithMToken[
+    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
+  ](
+    accessControl.address,
+    {
+      mToken: mFONE.address,
+      mTokenDataFeed: mFoneToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    1000,
+    {
+      fiatAdditionalFee: 100,
+      fiatFlatFee: parseUnits('1'),
+      minFiatRedeemAmount: 1000,
+    },
+    requestRedeemer.address,
+    redemptionVault.address,
+  );
+
+  await accessControl.grantRole(
+    mFONE.M_TBILL_BURN_OPERATOR_ROLE(),
+    redemptionVaultWithMToken.address,
+  );
+  await redemptionVault.addWaivedFeeAccount(redemptionVaultWithMToken.address);
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
+    redemptionVaultWithMToken.address,
+  );
+
   const customFeed = await new CustomAggregatorV3CompatibleFeedTester__factory(
     owner,
   ).deploy();
@@ -689,6 +751,10 @@ export const defaultDeploy = async () => {
     redemptionVaultWithMorpho,
     morphoVaultMock,
     liquidityProvider,
+    mFONE,
+    mockedAggregatorMFone,
+    mFoneToUsdDataFeed,
+    redemptionVaultWithMToken,
     otherCoins,
     ustbToken,
     ustbRedemption,
