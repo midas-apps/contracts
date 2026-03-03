@@ -1,21 +1,25 @@
 import { BigNumberish, constants } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { RvType } from './types';
 import { deployAndVerifyProxy, getDeployer, getNetworkConfig } from './utils';
 
 import { MTokenName } from '../../../config';
 import {
   getCurrentAddresses,
+  RedemptionVaultType,
   sanctionListContracts,
   ustbContracts,
 } from '../../../config/constants/addresses';
 import { getTokenContractNames } from '../../../helpers/contracts';
-import { DepositVault, DepositVaultWithUSTB } from '../../../typechain-types';
+import {
+  DepositVault,
+  DepositVaultWithAave,
+  DepositVaultWithUSTB,
+} from '../../../typechain-types';
 
 export type DeployDvConfigCommon = {
   feeReceiver?: string;
-  tokensReceiver?: `0x${string}` | RvType;
+  tokensReceiver?: `0x${string}` | RedemptionVaultType;
   instantDailyLimit: BigNumberish;
   instantFee: BigNumberish;
   enableSanctionsList?: boolean;
@@ -42,7 +46,20 @@ export type DeployDvUstbConfig = DeployDvConfigCommon & {
   type: 'USTB';
 };
 
-export type DeployDvConfig = DeployDvRegularConfig | DeployDvUstbConfig;
+export type DeployDvAaveConfig = DeployDvConfigCommon & {
+  type: 'AAVE';
+  aavePool: string;
+};
+
+export type DeployDvMorphoConfig = DeployDvConfigCommon & {
+  type: 'MORPHO';
+};
+
+export type DeployDvConfig =
+  | DeployDvRegularConfig
+  | DeployDvUstbConfig
+  | DeployDvAaveConfig
+  | DeployDvMorphoConfig;
 
 const isAddress = (value: string): value is `0x${string}` => {
   return value.startsWith('0x');
@@ -51,7 +68,7 @@ const isAddress = (value: string): value is `0x${string}` => {
 export const deployDepositVault = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
-  type: 'dv' | 'dvUstb',
+  type: 'dv' | 'dvUstb' | 'dvAave' | 'dvMorpho',
 ) => {
   const addresses = getCurrentAddresses(hre);
   const deployer = await getDeployer(hre);
@@ -116,6 +133,8 @@ export const deployDepositVault = async (
     }
 
     extraParams.push(ustbContract);
+  } else if (networkConfig.type === 'AAVE') {
+    extraParams.push(networkConfig.aavePool);
   }
 
   const params = [
@@ -142,12 +161,15 @@ export const deployDepositVault = async (
     | Parameters<DepositVault['initialize']>
     | Parameters<
         DepositVaultWithUSTB['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)']
+      >
+    | Parameters<
+        DepositVaultWithAave['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)']
       >;
 
   await deployAndVerifyProxy(hre, dvContractName, params, undefined, {
     initializer:
-      networkConfig.type === 'USTB'
-        ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,address)'
+      networkConfig.type === 'USTB' || networkConfig.type === 'AAVE'
+        ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)'
         : 'initialize',
   });
 };

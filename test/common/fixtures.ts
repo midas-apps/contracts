@@ -44,6 +44,8 @@ import {
   AaveV3PoolMock__factory,
   MorphoVaultMock__factory,
   CustomAggregatorV3CompatibleFeedDiscountedTester__factory,
+  DepositVaultWithAaveTest__factory,
+  DepositVaultWithMorphoTest__factory,
   DepositVaultWithUSTBTest__factory,
   USTBMock__factory,
   CustomAggregatorV3CompatibleFeedGrowthTester__factory,
@@ -464,6 +466,73 @@ export const defaultDeploy = async () => {
     redemptionVaultWithMorpho.address,
   );
 
+  /* Deposit Vault With Aave */
+
+  const depositVaultWithAave = await new DepositVaultWithAaveTest__factory(
+    owner,
+  ).deploy();
+
+  await depositVaultWithAave[
+    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)'
+  ](
+    accessControl.address,
+    {
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    parseUnits('100'),
+    0,
+    constants.MaxUint256,
+    aavePoolMock.address,
+  );
+
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_MINT_OPERATOR_ROLE(),
+    depositVaultWithAave.address,
+  );
+
+  /* Deposit Vault With Morpho */
+
+  const depositVaultWithMorpho = await new DepositVaultWithMorphoTest__factory(
+    owner,
+  ).deploy();
+
+  await depositVaultWithMorpho.initialize(
+    accessControl.address,
+    {
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    parseUnits('100'),
+    0,
+    constants.MaxUint256,
+  );
+
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_MINT_OPERATOR_ROLE(),
+    depositVaultWithMorpho.address,
+  );
+
   /* Redemption Vault With Swapper */
 
   const redemptionVaultWithSwapper =
@@ -760,6 +829,8 @@ export const defaultDeploy = async () => {
     ustbRedemption,
     customRecipient,
     depositVaultWithUSTB,
+    depositVaultWithAave,
+    depositVaultWithMorpho,
     dataFeedGrowth,
     compositeDataFeed,
   };

@@ -4,6 +4,8 @@ import { VaultType } from '../config/constants/addresses';
 export type TokenContractNames = {
   dv: string;
   dvUstb: string;
+  dvAave: string;
+  dvMorpho: string;
   rv: string;
   rvSwapper: string;
   rvMToken: string;
@@ -37,6 +39,8 @@ const vaultTypeToContractNameMap: Record<VaultType, string> = {
   redemptionVaultUstb: 'rvUstb',
   depositVault: 'dv',
   depositVaultUstb: 'dvUstb',
+  depositVaultAave: 'dvAave',
+  depositVaultMorpho: 'dvMorpho',
   redemptionVaultBuidl: 'rvBuidl',
   redemptionVaultAave: 'rvAave',
   redemptionVaultMorpho: 'rvMorpho',
@@ -127,6 +131,8 @@ export const getCommonContractNames = (): CommonContractNames => {
     ac: 'MidasAccessControl',
     dv: 'DepositVault',
     dvUstb: 'DepositVaultWithUSTB',
+    dvAave: 'DepositVaultWithAave',
+    dvMorpho: 'DepositVaultWithMorpho',
     rv: 'RedemptionVault',
     rvSwapper: 'RedemptionVaultWithSwapper',
     rvMToken: 'RedemptionVaultWithMToken',
@@ -161,6 +167,8 @@ export const getTokenContractNames = (
   return {
     dv: `${tokenPrefix}${commonContractNames.dv}`,
     dvUstb: `${tokenPrefix}${commonContractNames.dvUstb}`,
+    dvAave: `${tokenPrefix}${commonContractNames.dvAave}`,
+    dvMorpho: `${tokenPrefix}${commonContractNames.dvMorpho}`,
     rv: `${tokenPrefix}${commonContractNames.rv}`,
     rvSwapper: `${tokenPrefix}${commonContractNames.rvSwapper}`,
     rvMToken: `${tokenPrefix}${commonContractNames.rvMToken}`,

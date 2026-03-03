@@ -6,6 +6,7 @@ import { getAllRoles } from '../../../helpers/roles';
 import {
   MidasAccessControlTest,
   MTBILLTest,
+  DepositVaultWithMorphoTest,
   RedemptionVaultWithMorphoTest,
   DataFeedTest,
   AggregatorV3Mock,
@@ -15,9 +16,9 @@ import { impersonateAndFundAccount, resetFork } from '../helpers/fork.helpers';
 import { MAINNET_ADDRESSES } from '../helpers/mainnet-addresses';
 
 // Block where Steakhouse USDC Morpho vault is active and has liquidity
-export const FORK_BLOCK_NUMBER = 24441000;
+const FORK_BLOCK_NUMBER = 24441000;
 
-export async function morphoRedemptionVaultFixture() {
+async function setupMorphoBase() {
   await resetFork(rpcUrls.main, FORK_BLOCK_NUMBER);
 
   const [
@@ -44,6 +45,7 @@ export async function morphoRedemptionVaultFixture() {
     allRoles.tokenRoles.mTBILL.minter,
     allRoles.tokenRoles.mTBILL.burner,
     allRoles.tokenRoles.mTBILL.pauser,
+    allRoles.tokenRoles.mTBILL.depositVaultAdmin,
     allRoles.tokenRoles.mTBILL.redemptionVaultAdmin,
     allRoles.common.greenlistedOperator,
   ];
@@ -51,6 +53,11 @@ export async function morphoRedemptionVaultFixture() {
   for (const role of rolesArray) {
     await accessControl.grantRole(role, owner.address);
   }
+
+  await accessControl.grantRole(
+    allRoles.tokenRoles.mTBILL.depositVaultAdmin,
+    vaultAdmin.address,
+  );
 
   await accessControl.grantRole(
     allRoles.tokenRoles.mTBILL.redemptionVaultAdmin,
@@ -92,44 +99,6 @@ export async function morphoRedemptionVaultFixture() {
     ],
   );
 
-  // Deploy RedemptionVaultWithMorpho
-  const redemptionVaultWithMorpho =
-    await deployProxyContract<RedemptionVaultWithMorphoTest>(
-      'RedemptionVaultWithMorphoTest',
-      [
-        accessControl.address,
-        {
-          mToken: mTBILL.address,
-          mTokenDataFeed: mtbillDataFeed.address,
-        },
-        {
-          feeReceiver: feeReceiver.address,
-          tokensReceiver: tokensReceiver.address,
-        },
-        {
-          instantFee: 100, // 1%
-          instantDailyLimit: ethers.constants.MaxUint256,
-        },
-        ethers.constants.AddressZero, // sanctions list
-        200, // variation tolerance 2%
-        parseUnits('100', 18), // min amount
-        {
-          minFiatRedeemAmount: parseUnits('1000', 18),
-          fiatAdditionalFee: 100,
-          fiatFlatFee: parseUnits('10', 18),
-        },
-        requestRedeemer.address,
-        MAINNET_ADDRESSES.MORPHO_STEAKHOUSE_USDC_VAULT,
-      ],
-      'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)',
-    );
-
-  // Grant BURN_ROLE to vault
-  await accessControl.grantRole(
-    allRoles.tokenRoles.mTBILL.burner,
-    redemptionVaultWithMorpho.address,
-  );
-
   // Get mainnet contracts
   const usdc = await ethers.getContractAt(
     'IERC20Metadata',
@@ -148,15 +117,6 @@ export async function morphoRedemptionVaultFixture() {
     MAINNET_ADDRESSES.MORPHO_STEAKHOUSE_USDC_WHALE,
   );
 
-  // Setup payment token
-  await redemptionVaultWithMorpho.connect(owner).addPaymentToken(
-    usdc.address,
-    usdcDataFeed.address,
-    0, // no fee
-    ethers.constants.MaxUint256,
-    true, // is stable
-  );
-
   return {
     accessControl,
     mTBILL,
@@ -164,7 +124,6 @@ export async function morphoRedemptionVaultFixture() {
     mTokenToUsdDataFeed: mtbillDataFeed,
     mockedAggregator: usdcAggregator,
     mockedAggregatorMToken: mtbillAggregator,
-    redemptionVaultWithMorpho,
     usdc,
     morphoVault,
     owner,
@@ -179,6 +138,126 @@ export async function morphoRedemptionVaultFixture() {
   };
 }
 
-export type MorphoDeployedContracts = Awaited<
-  ReturnType<typeof morphoRedemptionVaultFixture>
+export async function morphoDepositFixture() {
+  const base = await setupMorphoBase();
+  const { accessControl, mTBILL, owner, roles, usdc } = base;
+
+  // Deploy DepositVaultWithMorpho
+  const depositVaultWithMorpho =
+    await deployProxyContract<DepositVaultWithMorphoTest>(
+      'DepositVaultWithMorphoTest',
+      [
+        accessControl.address,
+        {
+          mToken: mTBILL.address,
+          mTokenDataFeed: base.mTokenToUsdDataFeed.address,
+        },
+        {
+          feeReceiver: base.feeReceiver.address,
+          tokensReceiver: base.tokensReceiver.address,
+        },
+        {
+          instantFee: 100,
+          instantDailyLimit: ethers.constants.MaxUint256,
+        },
+        ethers.constants.AddressZero, // sanctions list
+        200,
+        parseUnits('0'),
+        0,
+        ethers.constants.MaxUint256,
+      ],
+    );
+
+  // Grant MINTER_ROLE to deposit vault
+  await accessControl.grantRole(
+    roles.tokenRoles.mTBILL.minter,
+    depositVaultWithMorpho.address,
+  );
+
+  // Setup payment token
+  await depositVaultWithMorpho.connect(owner).addPaymentToken(
+    usdc.address,
+    base.dataFeed.address,
+    0, // no fee
+    ethers.constants.MaxUint256,
+    true, // is stable
+  );
+
+  // Configure Morpho vault mapping for USDC
+  await depositVaultWithMorpho
+    .connect(owner)
+    .setMorphoVault(
+      usdc.address,
+      MAINNET_ADDRESSES.MORPHO_STEAKHOUSE_USDC_VAULT,
+    );
+
+  return {
+    ...base,
+    depositVaultWithMorpho,
+  };
+}
+
+export async function morphoRedemptionFixture() {
+  const base = await setupMorphoBase();
+  const { accessControl, mTBILL, owner, roles, usdc } = base;
+
+  // Deploy RedemptionVaultWithMorpho
+  const redemptionVaultWithMorpho =
+    await deployProxyContract<RedemptionVaultWithMorphoTest>(
+      'RedemptionVaultWithMorphoTest',
+      [
+        accessControl.address,
+        {
+          mToken: mTBILL.address,
+          mTokenDataFeed: base.mTokenToUsdDataFeed.address,
+        },
+        {
+          feeReceiver: base.feeReceiver.address,
+          tokensReceiver: base.tokensReceiver.address,
+        },
+        {
+          instantFee: 100, // 1%
+          instantDailyLimit: ethers.constants.MaxUint256,
+        },
+        ethers.constants.AddressZero, // sanctions list
+        200, // variation tolerance 2%
+        parseUnits('100', 18), // min amount
+        {
+          minFiatRedeemAmount: parseUnits('1000', 18),
+          fiatAdditionalFee: 100,
+          fiatFlatFee: parseUnits('10', 18),
+        },
+        base.requestRedeemer.address,
+        MAINNET_ADDRESSES.MORPHO_STEAKHOUSE_USDC_VAULT,
+      ],
+      'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)',
+    );
+
+  // Grant BURN_ROLE to redemption vault
+  await accessControl.grantRole(
+    roles.tokenRoles.mTBILL.burner,
+    redemptionVaultWithMorpho.address,
+  );
+
+  // Setup payment token
+  await redemptionVaultWithMorpho.connect(owner).addPaymentToken(
+    usdc.address,
+    base.dataFeed.address,
+    0, // no fee
+    ethers.constants.MaxUint256,
+    true, // is stable
+  );
+
+  return {
+    ...base,
+    redemptionVaultWithMorpho,
+  };
+}
+
+export type MorphoDepositContracts = Awaited<
+  ReturnType<typeof morphoDepositFixture>
+>;
+
+export type MorphoRedemptionContracts = Awaited<
+  ReturnType<typeof morphoRedemptionFixture>
 >;

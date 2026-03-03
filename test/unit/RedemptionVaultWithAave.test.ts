@@ -829,6 +829,30 @@ describe('RedemptionVaultWithAave', function () {
         ),
       ).to.be.revertedWith('AaveV3PoolMock: InsufficientLiquidity');
     });
+
+    it('should revert when Aave withdraws less than missing amount', async () => {
+      const { redemptionVaultWithAave, stableCoins, aUSDC, aavePoolMock } =
+        await loadFixture(defaultDeploy);
+
+      // Vault has 200 USDC, needs 1000
+      await stableCoins.usdc.mint(
+        redemptionVaultWithAave.address,
+        parseUnits('200', 8),
+      );
+
+      // Vault has enough aTokens to cover the gap
+      await aUSDC.mint(redemptionVaultWithAave.address, parseUnits('1000', 8));
+
+      // Simulate partial Aave withdrawal
+      await aavePoolMock.setWithdrawReturnBps(5000);
+
+      await expect(
+        redemptionVaultWithAave.checkAndRedeemAave(
+          stableCoins.usdc.address,
+          parseUnits('1000', 8),
+        ),
+      ).to.be.revertedWith('RVA: insufficient withdrawal amount');
+    });
   });
 
   describe('redeemInstant()', () => {
@@ -1609,6 +1633,43 @@ describe('RedemptionVaultWithAave', function () {
           0,
         ),
       ).to.be.revertedWith('AaveV3PoolMock: InsufficientLiquidity');
+    });
+
+    it('should fail: short Aave withdrawal during redeemInstant', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        redemptionVaultWithAave,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        aUSDC,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
+
+      await aUSDC.mint(redemptionVaultWithAave.address, parseUnits('10000', 8));
+      await mintToken(mTBILL, owner, 100000);
+      await approveBase18(owner, mTBILL, redemptionVaultWithAave, 100000);
+      await addPaymentTokenTest(
+        { vault: redemptionVaultWithAave, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setInstantFeeTest({ vault: redemptionVaultWithAave, owner }, 0);
+      await setRoundData({ mockedAggregator }, 1);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+      await aavePoolMock.setWithdrawReturnBps(5000);
+
+      await expect(
+        redemptionVaultWithAave['redeemInstant(address,uint256,uint256)'](
+          stableCoins.usdc.address,
+          parseUnits('1000'),
+          0,
+        ),
+      ).to.be.revertedWith('RVA: insufficient withdrawal amount');
     });
 
     // ── Custom recipient tests ───────────────────────────────────────────

@@ -12,7 +12,11 @@ export type RedemptionVaultType =
   | 'redemptionVaultAave'
   | 'redemptionVaultMorpho';
 
-export type DepositVaultType = 'depositVault' | 'depositVaultUstb';
+export type DepositVaultType =
+  | 'depositVault'
+  | 'depositVaultUstb'
+  | 'depositVaultAave'
+  | 'depositVaultMorpho';
 
 export type LayerZeroTokenAddresses = {
   oft?: string;
@@ -29,11 +33,9 @@ export type TokenAddresses = {
   customFeed?: string;
   dataFeed?: string;
   token?: string;
-  depositVault?: string;
-  depositVaultUstb?: string;
   layerZero?: LayerZeroTokenAddresses;
   axelar?: AxelarTokenAddresses;
-} & Partial<Record<RedemptionVaultType, string>>;
+} & Partial<Record<DepositVaultType | RedemptionVaultType, string>>;
 
 export type VaultType = RedemptionVaultType | DepositVaultType;
 

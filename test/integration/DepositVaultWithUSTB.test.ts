@@ -2,7 +2,7 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
-import { ustbRedemptionVaultFixture } from './fixtures/ustb.fixture';
+import { ustbDepositFixture } from './fixtures/ustb.fixture';
 
 import { approveBase18 } from '../common/common.helpers';
 import {
@@ -12,7 +12,7 @@ import {
 } from '../common/deposit-vault-ustb.helpers';
 
 describe('DepositVaultWithUSTB - Mainnet Fork Integration Tests', function () {
-  this.timeout(120000);
+  this.timeout(300000);
 
   describe('Scenario 1: USTB deposits are enabled and stablecoin config exists', function () {
     it('should invest USDC into USTB', async function () {
@@ -26,7 +26,7 @@ describe('DepositVaultWithUSTB - Mainnet Fork Integration Tests', function () {
         ustbToken,
         usdcWhale,
         mTokenToUsdDataFeed,
-      } = await loadFixture(ustbRedemptionVaultFixture);
+      } = await loadFixture(ustbDepositFixture);
 
       const usdcAmount = 100;
 
@@ -72,7 +72,7 @@ describe('DepositVaultWithUSTB - Mainnet Fork Integration Tests', function () {
         ustbTokenOwner,
         usdcWhale,
         mTokenToUsdDataFeed,
-      } = await loadFixture(ustbRedemptionVaultFixture);
+      } = await loadFixture(ustbDepositFixture);
 
       const usdcAmount = 100;
 
@@ -128,7 +128,7 @@ describe('DepositVaultWithUSTB - Mainnet Fork Integration Tests', function () {
         ustbTokenOwner,
         usdcWhale,
         mTokenToUsdDataFeed,
-      } = await loadFixture(ustbRedemptionVaultFixture);
+      } = await loadFixture(ustbDepositFixture);
 
       const usdcAmount = 100;
 

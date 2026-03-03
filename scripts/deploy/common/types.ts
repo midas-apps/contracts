@@ -8,7 +8,12 @@ import {
   DeployDataFeedConfig,
   SetRoundDataConfig,
 } from './data-feed';
-import { DeployDvRegularConfig, DeployDvUstbConfig } from './dv';
+import {
+  DeployDvAaveConfig,
+  DeployDvMorphoConfig,
+  DeployDvRegularConfig,
+  DeployDvUstbConfig,
+} from './dv';
 import {
   GrantAllTokenRolesConfig,
   GrantDefaultAdminRoleToAcAdminConfig,
@@ -96,6 +101,8 @@ export type DeploymentConfig = {
     {
       dv?: DeployDvRegularConfig;
       dvUstb?: DeployDvUstbConfig;
+      dvAave?: DeployDvAaveConfig;
+      dvMorpho?: DeployDvMorphoConfig;
       rv?: DeployRvRegularConfig;
       rvBuidl?: DeployRvBuidlConfig;
       rvSwapper?: DeployRvSwapperConfig;
@@ -137,11 +144,5 @@ export type NetworkDeploymentConfig = Record<
     timelock?: DeployTimelockConfig;
   }
 >;
-
-export type RvType =
-  | 'redemptionVault'
-  | 'redemptionVaultBuidl'
-  | 'redemptionVaultSwapper'
-  | 'redemptionVaultMToken';
 
 export type DeployFunction = (hre: HardhatRuntimeEnvironment) => Promise<void>;

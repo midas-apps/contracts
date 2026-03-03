@@ -2,8 +2,9 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
+import { ethers } from 'hardhat';
 
-import { morphoRedemptionVaultFixture } from './fixtures/morpho.fixture';
+import { morphoRedemptionFixture } from './fixtures/morpho.fixture';
 
 import { mintToken, approveBase18 } from '../common/common.helpers';
 import { redeemInstantWithMorphoTest } from '../common/redemption-vault-morpho.helpers';
@@ -22,7 +23,7 @@ describe('RedemptionVaultWithMorpho - Mainnet Fork Integration Tests', function 
         morphoVault,
         usdcWhale,
         mTokenToUsdDataFeed,
-      } = await loadFixture(morphoRedemptionVaultFixture);
+      } = await loadFixture(morphoRedemptionFixture);
 
       const mTBILLAmount = 1000;
 
@@ -87,7 +88,7 @@ describe('RedemptionVaultWithMorpho - Mainnet Fork Integration Tests', function 
         morphoVault,
         morphoShareWhale,
         mTokenToUsdDataFeed,
-      } = await loadFixture(morphoRedemptionVaultFixture);
+      } = await loadFixture(morphoRedemptionFixture);
 
       const mTBILLAmount = 1000;
 
@@ -155,7 +156,7 @@ describe('RedemptionVaultWithMorpho - Mainnet Fork Integration Tests', function 
         usdcWhale,
         morphoShareWhale,
         mTokenToUsdDataFeed,
-      } = await loadFixture(morphoRedemptionVaultFixture);
+      } = await loadFixture(morphoRedemptionFixture);
 
       const mTBILLAmount = 1000;
       const partialUSDC = parseUnits('500', 6); // 500 USDC in vault
@@ -221,7 +222,7 @@ describe('RedemptionVaultWithMorpho - Mainnet Fork Integration Tests', function 
         usdc,
         morphoVault,
         mTokenToUsdDataFeed,
-      } = await loadFixture(morphoRedemptionVaultFixture);
+      } = await loadFixture(morphoRedemptionFixture);
 
       const mTBILLAmount = 100000; // 100k mTBILL - vault has no USDC and no shares
 
@@ -262,12 +263,10 @@ describe('RedemptionVaultWithMorpho - Mainnet Fork Integration Tests', function 
         redemptionVaultWithMorpho,
         morphoVault,
         mTokenToUsdDataFeed,
-      } = await loadFixture(morphoRedemptionVaultFixture);
+      } = await loadFixture(morphoRedemptionFixture);
 
       // Deploy a fake token that isn't the Morpho vault's underlying asset
-      const fakeTokenFactory = await (
-        await import('hardhat')
-      ).ethers.getContractFactory('ERC20Mock');
+      const fakeTokenFactory = await ethers.getContractFactory('ERC20Mock');
       const fakeToken = await fakeTokenFactory.deploy(6);
       await fakeToken.deployed();
 

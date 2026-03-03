@@ -48,6 +48,12 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
           {
             value: 'depositVaultUstb',
           },
+          {
+            value: 'depositVaultAave',
+          },
+          {
+            value: 'depositVaultMorpho',
+          },
         ],
         initialValue: 'depositVault',
       }),
@@ -63,6 +69,18 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
           },
           {
             value: 'redemptionVaultBuidl',
+          },
+          {
+            value: 'redemptionVaultUstb',
+          },
+          {
+            value: 'redemptionVaultAave',
+          },
+          {
+            value: 'redemptionVaultMorpho',
+          },
+          {
+            value: 'redemptionVaultMToken',
           },
         ],
         initialValue: 'redemptionVaultSwapper',

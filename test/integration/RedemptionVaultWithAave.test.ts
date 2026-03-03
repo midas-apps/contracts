@@ -2,8 +2,9 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
+import { ethers } from 'hardhat';
 
-import { aaveRedemptionVaultFixture } from './fixtures/aave.fixture';
+import { aaveRedemptionFixture } from './fixtures/aave.fixture';
 
 import { mintToken, approveBase18 } from '../common/common.helpers';
 import { redeemInstantWithAaveTest } from '../common/redemption-vault-aave.helpers';
@@ -22,7 +23,7 @@ describe('RedemptionVaultWithAave - Mainnet Fork Integration Tests', function ()
         aUsdc,
         usdcWhale,
         mTokenToUsdDataFeed,
-      } = await loadFixture(aaveRedemptionVaultFixture);
+      } = await loadFixture(aaveRedemptionFixture);
 
       const mTBILLAmount = 1000;
 
@@ -87,7 +88,7 @@ describe('RedemptionVaultWithAave - Mainnet Fork Integration Tests', function ()
         aUsdc,
         aUsdcWhale,
         mTokenToUsdDataFeed,
-      } = await loadFixture(aaveRedemptionVaultFixture);
+      } = await loadFixture(aaveRedemptionFixture);
 
       const mTBILLAmount = 1000;
 
@@ -152,7 +153,7 @@ describe('RedemptionVaultWithAave - Mainnet Fork Integration Tests', function ()
         usdcWhale,
         aUsdcWhale,
         mTokenToUsdDataFeed,
-      } = await loadFixture(aaveRedemptionVaultFixture);
+      } = await loadFixture(aaveRedemptionFixture);
 
       const mTBILLAmount = 1000;
       const partialUSDC = parseUnits('500', 6); // 500 USDC in vault
@@ -221,7 +222,7 @@ describe('RedemptionVaultWithAave - Mainnet Fork Integration Tests', function ()
         usdc,
         aUsdc,
         mTokenToUsdDataFeed,
-      } = await loadFixture(aaveRedemptionVaultFixture);
+      } = await loadFixture(aaveRedemptionFixture);
 
       const mTBILLAmount = 100000; // 100k mTBILL - vault has no USDC and no aTokens
 
@@ -262,12 +263,10 @@ describe('RedemptionVaultWithAave - Mainnet Fork Integration Tests', function ()
         redemptionVaultWithAave,
         aUsdc,
         mTokenToUsdDataFeed,
-      } = await loadFixture(aaveRedemptionVaultFixture);
+      } = await loadFixture(aaveRedemptionFixture);
 
       // Deploy a fake token that isn't registered in Aave
-      const fakeTokenFactory = await (
-        await import('hardhat')
-      ).ethers.getContractFactory('ERC20Mock');
+      const fakeTokenFactory = await ethers.getContractFactory('ERC20Mock');
       const fakeToken = await fakeTokenFactory.deploy(6);
       await fakeToken.deployed();
 

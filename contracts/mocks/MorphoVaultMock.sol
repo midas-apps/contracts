@@ -39,6 +39,30 @@ contract MorphoVaultMock is ERC20 {
         return underlyingAsset;
     }
 
+    function deposit(uint256 assets, address receiver)
+        external
+        returns (uint256 shares)
+    {
+        shares = previewDeposit(assets);
+
+        IERC20(underlyingAsset).safeTransferFrom(
+            msg.sender,
+            address(this),
+            assets
+        );
+        _mint(receiver, shares);
+
+        return shares;
+    }
+
+    function previewDeposit(uint256 assets)
+        public
+        view
+        returns (uint256 shares)
+    {
+        shares = (assets * RATE_PRECISION) / exchangeRateNumerator;
+    }
+
     function withdraw(
         uint256 assets,
         address receiver,

@@ -8,6 +8,8 @@ import { defaultDeploy } from './fixtures';
 
 import {
   DepositVault,
+  DepositVaultWithAave,
+  DepositVaultWithMorpho,
   DepositVaultWithUSTB,
   ERC20,
   ERC20__factory,
@@ -24,6 +26,8 @@ import {
 type CommonParamsChangePaymentToken = {
   vault:
     | DepositVault
+    | DepositVaultWithAave
+    | DepositVaultWithMorpho
     | DepositVaultWithUSTB
     | RedemptionVault
     | RedemptionVaultWIthBUIDL
@@ -35,7 +39,11 @@ type CommonParamsChangePaymentToken = {
   owner: SignerWithAddress;
 };
 type CommonParams = {
-  depositVault: DepositVault | DepositVaultWithUSTB;
+  depositVault:
+    | DepositVault
+    | DepositVaultWithAave
+    | DepositVaultWithMorpho
+    | DepositVaultWithUSTB;
 } & Pick<Awaited<ReturnType<typeof defaultDeploy>>, 'owner'>;
 
 export const setInstantFeeTest = async (

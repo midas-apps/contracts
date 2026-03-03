@@ -16,7 +16,9 @@ import {
   getCustomAggregatorContractFromTemplate,
   getCustomAggregatorGrowthContractFromTemplate,
   getDataFeedContractFromTemplate,
+  getDvAaveContractFromTemplate,
   getDvContractFromTemplate,
+  getDvMorphoContractFromTemplate,
   getRvAaveContractFromTemplate,
   getRvContractFromTemplate,
   getRvMorphoContractFromTemplate,
@@ -65,6 +67,8 @@ const generatorPerContract: Partial<
 > = {
   token: getTokenContractFromTemplate,
   dv: getDvContractFromTemplate,
+  dvAave: getDvAaveContractFromTemplate,
+  dvMorpho: getDvMorphoContractFromTemplate,
   rv: getRvContractFromTemplate,
   rvSwapper: getRvSwapperContractFromTemplate,
   rvMToken: getRvMTokenContractFromTemplate,
