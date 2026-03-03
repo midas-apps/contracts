@@ -118,6 +118,11 @@ export const getContractsToGenerateFromUser = async () => {
         label: 'Deposit Vault With Morpho',
         hint: 'Deposit Vault with Morpho auto-invest contract',
       },
+      {
+        value: 'dvMToken',
+        label: 'Deposit Vault With MToken',
+        hint: 'Deposit Vault with mToken auto-invest contract',
+      },
       { value: 'dataFeed', label: 'Data Feed', hint: 'Data Feed contract' },
       {
         value: 'customAggregator',

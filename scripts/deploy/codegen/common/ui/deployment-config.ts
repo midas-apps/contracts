@@ -25,6 +25,7 @@ export const configsPerNetworkConfig = {
   dv: getDvConfigFromUser,
   dvAave: getDvAaveConfigFromUser,
   dvMorpho: getDvMorphoConfigFromUser,
+  dvMToken: getDvMTokenConfigFromUser,
   rv: getRvConfigFromUser,
   rvSwapper: getRvSwapperConfigFromUser,
   rvMToken: getRvMTokenConfigFromUser,
@@ -277,6 +278,87 @@ async function getDvMorphoConfigFromUser(hre: HardhatRuntimeEnvironment) {
 
   return {
     type: 'MORPHO' as const,
+    enableSanctionsList: shouldEnableSanctionsList(hre),
+    ...config,
+  };
+}
+
+async function getDvMTokenConfigFromUser(hre: HardhatRuntimeEnvironment) {
+  const config = await group({
+    intro: () =>
+      Promise.resolve(intro('Deposit Vault With MToken')).then(() => undefined),
+    feeReceiver: () =>
+      text({ message: 'Fee Receiver', validate: validateAddress })
+        .then(requireNotCancelled)
+        .then(requireAddress),
+    tokensReceiver: () =>
+      text({ message: 'Tokens Receiver', validate: validateAddress })
+        .then(requireNotCancelled)
+        .then(requireAddress),
+    mTokenDepositVault: () =>
+      text({
+        message: 'Target mToken DepositVault Address',
+        validate: validateAddress,
+      })
+        .then(requireNotCancelled)
+        .then(requireAddress),
+    instantDailyLimit: () =>
+      text({
+        message: 'Instant Daily Limit',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18OrInfinite),
+    instantFee: () =>
+      text({
+        message: 'Instant Fee',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateFloat,
+      })
+        .then(requireNotCancelled)
+        .then(requireFloatToBigNumberish),
+    variationTolerance: () =>
+      text({
+        message: 'Variation Tolerance',
+        validate: validateFloat,
+      })
+        .then(requireNotCancelled)
+        .then(requirePercentageToBigNumberish),
+    minAmount: () =>
+      text({
+        message: 'Min Amount',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
+    minMTokenAmountForFirstDeposit: () =>
+      text({
+        message: 'Min mToken Amount For First Deposit',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
+    maxSupplyCap: () =>
+      text({
+        message: 'Max Supply Cap',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18OrInfinite),
+    outro: () => Promise.resolve(outro('Done...')).then(() => undefined),
+  }).then(clearIntroOutro);
+
+  return {
+    type: 'MTOKEN' as const,
     enableSanctionsList: shouldEnableSanctionsList(hre),
     ...config,
   };
@@ -624,6 +706,7 @@ export async function getDeploymentConfigFromUser(
           | 'dv'
           | 'dvAave'
           | 'dvMorpho'
+          | 'dvMToken'
         >
       >({
         message:
@@ -643,6 +726,11 @@ export async function getDeploymentConfigFromUser(
             value: 'dvMorpho',
             label: 'Deposit Vault With Morpho',
             hint: 'Deposit Vault with Morpho auto-invest',
+          },
+          {
+            value: 'dvMToken',
+            label: 'Deposit Vault With MToken',
+            hint: 'Deposit Vault with mToken auto-invest',
           },
           {
             value: 'rv',

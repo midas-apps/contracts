@@ -10,6 +10,7 @@ import {
   DepositVault,
   DepositVaultWithAave,
   DepositVaultWithMorpho,
+  DepositVaultWithMToken,
   DepositVaultWithUSTB,
   ERC20,
   ERC20__factory,
@@ -28,6 +29,7 @@ type CommonParamsChangePaymentToken = {
     | DepositVault
     | DepositVaultWithAave
     | DepositVaultWithMorpho
+    | DepositVaultWithMToken
     | DepositVaultWithUSTB
     | RedemptionVault
     | RedemptionVaultWIthBUIDL
@@ -43,6 +45,7 @@ type CommonParams = {
     | DepositVault
     | DepositVaultWithAave
     | DepositVaultWithMorpho
+    | DepositVaultWithMToken
     | DepositVaultWithUSTB;
 } & Pick<Awaited<ReturnType<typeof defaultDeploy>>, 'owner'>;
 

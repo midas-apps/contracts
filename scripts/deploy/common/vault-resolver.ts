@@ -9,6 +9,7 @@ export const defaultDepositVaultPriority: DepositVaultType[] = [
   'depositVaultUstb',
   'depositVaultAave',
   'depositVaultMorpho',
+  'depositVaultMToken',
 ];
 
 export const routingRedemptionVaultPriority: RedemptionVaultType[] = [

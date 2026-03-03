@@ -46,6 +46,7 @@ import {
   CustomAggregatorV3CompatibleFeedDiscountedTester__factory,
   DepositVaultWithAaveTest__factory,
   DepositVaultWithMorphoTest__factory,
+  DepositVaultWithMTokenTest__factory,
   DepositVaultWithUSTBTest__factory,
   USTBMock__factory,
   CustomAggregatorV3CompatibleFeedGrowthTester__factory,
@@ -533,6 +534,43 @@ export const defaultDeploy = async () => {
     depositVaultWithMorpho.address,
   );
 
+  /* Deposit Vault With MToken (deposits into mTBILL DV) */
+
+  const depositVaultWithMToken = await new DepositVaultWithMTokenTest__factory(
+    owner,
+  ).deploy();
+
+  await depositVaultWithMToken[
+    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)'
+  ](
+    accessControl.address,
+    {
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    parseUnits('100'),
+    0,
+    constants.MaxUint256,
+    depositVault.address,
+  );
+
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_MINT_OPERATOR_ROLE(),
+    depositVaultWithMToken.address,
+  );
+
+  await depositVault.addWaivedFeeAccount(depositVaultWithMToken.address);
+
   /* Redemption Vault With Swapper */
 
   const redemptionVaultWithSwapper =
@@ -831,6 +869,7 @@ export const defaultDeploy = async () => {
     depositVaultWithUSTB,
     depositVaultWithAave,
     depositVaultWithMorpho,
+    depositVaultWithMToken,
     dataFeedGrowth,
     compositeDataFeed,
   };

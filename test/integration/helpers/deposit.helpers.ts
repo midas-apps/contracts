@@ -6,6 +6,7 @@ import { parseUnits } from 'ethers/lib/utils';
 import {
   DepositVaultWithAaveTest,
   DepositVaultWithMorphoTest,
+  DepositVaultWithMTokenTest,
   IERC20,
   IERC20Metadata,
   IMToken,
@@ -118,6 +119,60 @@ export async function depositInstantMorpho({
   return {
     userMTokenReceived: userMTokenAfter.sub(userMTokenBefore),
     receiverReceiptTokenReceived: receiverSharesAfter.sub(receiverSharesBefore),
+    receiverUsdcReceived: receiverUsdcAfter.sub(receiverUsdcBefore),
+  };
+}
+
+type DepositInstantMTokenParams = {
+  depositVault: DepositVaultWithMTokenTest;
+  user: SignerWithAddress;
+  usdc: IERC20Metadata;
+  targetMToken: IERC20;
+  mToken: IMToken;
+  tokensReceiverAddress: string;
+  usdcWhale: SignerWithAddress;
+  amountUsd: number;
+};
+
+export async function depositInstantMToken({
+  depositVault,
+  user,
+  usdc,
+  targetMToken,
+  mToken,
+  tokensReceiverAddress,
+  usdcWhale,
+  amountUsd,
+}: DepositInstantMTokenParams): Promise<DepositResult> {
+  await usdc
+    .connect(usdcWhale)
+    .transfer(user.address, parseUnits(String(amountUsd), 6));
+  await approveBase18(user, usdc, depositVault, amountUsd);
+
+  const receiverUsdcBefore = await usdc.balanceOf(tokensReceiverAddress);
+  const receiverMTokenBefore = await targetMToken.balanceOf(
+    tokensReceiverAddress,
+  );
+  const userMTokenBefore = await mToken.balanceOf(user.address);
+
+  await depositVault
+    .connect(user)
+    ['depositInstant(address,uint256,uint256,bytes32)'](
+      usdc.address,
+      parseUnits(String(amountUsd)),
+      constants.Zero,
+      constants.HashZero,
+    );
+
+  const receiverUsdcAfter = await usdc.balanceOf(tokensReceiverAddress);
+  const receiverMTokenAfter = await targetMToken.balanceOf(
+    tokensReceiverAddress,
+  );
+  const userMTokenAfter = await mToken.balanceOf(user.address);
+
+  return {
+    userMTokenReceived: userMTokenAfter.sub(userMTokenBefore),
+    receiverReceiptTokenReceived: receiverMTokenAfter.sub(receiverMTokenBefore),
     receiverUsdcReceived: receiverUsdcAfter.sub(receiverUsdcBefore),
   };
 }

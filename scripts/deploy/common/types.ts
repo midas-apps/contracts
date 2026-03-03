@@ -11,6 +11,7 @@ import {
 import {
   DeployDvAaveConfig,
   DeployDvMorphoConfig,
+  DeployDvMTokenConfig,
   DeployDvRegularConfig,
   DeployDvUstbConfig,
 } from './dv';
@@ -103,6 +104,7 @@ export type DeploymentConfig = {
       dvUstb?: DeployDvUstbConfig;
       dvAave?: DeployDvAaveConfig;
       dvMorpho?: DeployDvMorphoConfig;
+      dvMToken?: DeployDvMTokenConfig;
       rv?: DeployRvRegularConfig;
       rvBuidl?: DeployRvBuidlConfig;
       rvSwapper?: DeployRvSwapperConfig;

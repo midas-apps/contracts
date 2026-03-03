@@ -17,6 +17,7 @@ import {
   DepositVaultTest,
   DepositVaultWithAaveTest,
   DepositVaultWithMorphoTest,
+  DepositVaultWithMTokenTest,
   DepositVaultWithUSTBTest,
   ERC20,
   ERC20__factory,
@@ -29,6 +30,7 @@ type CommonParamsDeposit = {
     | DepositVaultTest
     | DepositVaultWithAaveTest
     | DepositVaultWithMorphoTest
+    | DepositVaultWithMTokenTest
     | DepositVaultWithUSTBTest;
   mTBILL: MToken;
 } & Pick<

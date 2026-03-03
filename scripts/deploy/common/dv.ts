@@ -14,6 +14,7 @@ import { getTokenContractNames } from '../../../helpers/contracts';
 import {
   DepositVault,
   DepositVaultWithAave,
+  DepositVaultWithMToken,
   DepositVaultWithUSTB,
 } from '../../../typechain-types';
 
@@ -55,11 +56,17 @@ export type DeployDvMorphoConfig = DeployDvConfigCommon & {
   type: 'MORPHO';
 };
 
+export type DeployDvMTokenConfig = DeployDvConfigCommon & {
+  type: 'MTOKEN';
+  mTokenDepositVault: string;
+};
+
 export type DeployDvConfig =
   | DeployDvRegularConfig
   | DeployDvUstbConfig
   | DeployDvAaveConfig
-  | DeployDvMorphoConfig;
+  | DeployDvMorphoConfig
+  | DeployDvMTokenConfig;
 
 const isAddress = (value: string): value is `0x${string}` => {
   return value.startsWith('0x');
@@ -68,7 +75,7 @@ const isAddress = (value: string): value is `0x${string}` => {
 export const deployDepositVault = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
-  type: 'dv' | 'dvUstb' | 'dvAave' | 'dvMorpho',
+  type: 'dv' | 'dvUstb' | 'dvAave' | 'dvMorpho' | 'dvMToken',
 ) => {
   const addresses = getCurrentAddresses(hre);
   const deployer = await getDeployer(hre);
@@ -135,6 +142,8 @@ export const deployDepositVault = async (
     extraParams.push(ustbContract);
   } else if (networkConfig.type === 'AAVE') {
     extraParams.push(networkConfig.aavePool);
+  } else if (networkConfig.type === 'MTOKEN') {
+    extraParams.push(networkConfig.mTokenDepositVault);
   }
 
   const params = [
@@ -164,11 +173,16 @@ export const deployDepositVault = async (
       >
     | Parameters<
         DepositVaultWithAave['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)']
+      >
+    | Parameters<
+        DepositVaultWithMToken['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)']
       >;
 
   await deployAndVerifyProxy(hre, dvContractName, params, undefined, {
     initializer:
-      networkConfig.type === 'USTB' || networkConfig.type === 'AAVE'
+      networkConfig.type === 'USTB' ||
+      networkConfig.type === 'AAVE' ||
+      networkConfig.type === 'MTOKEN'
         ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)'
         : 'initialize',
   });

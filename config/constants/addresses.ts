@@ -16,7 +16,8 @@ export type DepositVaultType =
   | 'depositVault'
   | 'depositVaultUstb'
   | 'depositVaultAave'
-  | 'depositVaultMorpho';
+  | 'depositVaultMorpho'
+  | 'depositVaultMToken';
 
 export type LayerZeroTokenAddresses = {
   oft?: string;

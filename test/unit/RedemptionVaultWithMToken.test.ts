@@ -574,6 +574,37 @@ describe('RedemptionVaultWithMToken', function () {
     });
   });
 
+  describe('freeFromMinAmount()', async () => {
+    it('should fail: call from address without vault admin role', async () => {
+      const { redemptionVaultWithMToken, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+      await expect(
+        redemptionVaultWithMToken
+          .connect(regularAccounts[0])
+          .freeFromMinAmount(regularAccounts[1].address, true),
+      ).to.be.revertedWith('WMAC: hasnt role');
+    });
+
+    it('should not fail', async () => {
+      const { redemptionVaultWithMToken, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+      await expect(
+        redemptionVaultWithMToken.freeFromMinAmount(
+          regularAccounts[0].address,
+          true,
+        ),
+      ).to.not.reverted;
+
+      expect(
+        await redemptionVaultWithMToken.isFreeFromMinAmount(
+          regularAccounts[0].address,
+        ),
+      ).to.eq(true);
+    });
+  });
+
   describe('changeTokenFee()', () => {
     it('should fail: call from address without vault admin role', async () => {
       const {
@@ -1070,8 +1101,6 @@ describe('RedemptionVaultWithMToken', function () {
         mFONE,
         mTokenToUsdDataFeed,
         mFoneToUsdDataFeed,
-        greenListableTester,
-        accessControl,
       } = await loadFixture(defaultDeploy);
 
       await redemptionVaultWithMToken.setGreenlistEnable(true);
@@ -1474,108 +1503,158 @@ describe('RedemptionVaultWithMToken', function () {
         100,
       );
     });
-  });
-
-  it('redeem 100 mFONE (custom recipient overload)', async () => {
-    const {
-      owner,
-      redemptionVaultWithMToken,
-      stableCoins,
-      mTokenToUsdDataFeed,
-      regularAccounts,
-      dataFeed,
-      customRecipient,
-      mFoneToUsdDataFeed,
-      mFONE,
-      mTBILL,
-    } = await loadFixture(defaultDeploy);
-
-    await mintToken(stableCoins.dai, redemptionVaultWithMToken, 100000);
-    await mintToken(mTBILL, redemptionVaultWithMToken, 100000);
-    await mintToken(mFONE, regularAccounts[0], 100);
-    await approveBase18(
-      regularAccounts[0],
-      mFONE,
-      redemptionVaultWithMToken,
-      100,
-    );
-    await addPaymentTokenTest(
-      { vault: redemptionVaultWithMToken, owner },
-      stableCoins.dai,
-      dataFeed.address,
-      0,
-      true,
-    );
-
-    await redeemInstantWithMTokenTest(
-      {
-        redemptionVaultWithMToken,
+    it('redeem 100 mFONE (custom recipient overload)', async () => {
+      const {
         owner,
-        mTBILL,
+        redemptionVaultWithMToken,
+        stableCoins,
         mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
         customRecipient,
         mFoneToUsdDataFeed,
         mFONE,
-      },
-      stableCoins.dai,
-      100,
-      {
-        from: regularAccounts[0],
-      },
-    );
-  });
+        mTBILL,
+      } = await loadFixture(defaultDeploy);
 
-  it('redeem 100 mFONE when other fn overload is paused (custom recipient overload)', async () => {
-    const {
-      owner,
-      redemptionVaultWithMToken,
-      stableCoins,
-      mTBILL,
-      mTokenToUsdDataFeed,
-      regularAccounts,
-      dataFeed,
-      customRecipient,
-      mFoneToUsdDataFeed,
-      mFONE,
-    } = await loadFixture(defaultDeploy);
-
-    await pauseVaultFn(
-      redemptionVaultWithMToken,
-      encodeFnSelector('redeemInstant(address,uint256,uint256)'),
-    );
-    await mintToken(stableCoins.dai, redemptionVaultWithMToken, 100000);
-    await mintToken(mTBILL, redemptionVaultWithMToken, 100000);
-    await mintToken(mFONE, regularAccounts[0], 100);
-    await approveBase18(
-      regularAccounts[0],
-      mFONE,
-      redemptionVaultWithMToken,
-      100,
-    );
-    await addPaymentTokenTest(
-      { vault: redemptionVaultWithMToken, owner },
-      stableCoins.dai,
-      dataFeed.address,
-      0,
-      true,
-    );
-
-    await redeemInstantWithMTokenTest(
-      {
+      await mintToken(stableCoins.dai, redemptionVaultWithMToken, 100000);
+      await mintToken(mTBILL, redemptionVaultWithMToken, 100000);
+      await mintToken(mFONE, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        mFONE,
         redemptionVaultWithMToken,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: redemptionVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await redeemInstantWithMTokenTest(
+        {
+          redemptionVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          customRecipient,
+          mFoneToUsdDataFeed,
+          mFONE,
+        },
+        stableCoins.dai,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('redeem 100 mFONE when other fn overload is paused (custom recipient overload)', async () => {
+      const {
         owner,
+        redemptionVaultWithMToken,
+        stableCoins,
         mTBILL,
         mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
         customRecipient,
         mFoneToUsdDataFeed,
         mFONE,
-      },
-      stableCoins.dai,
-      100,
-      {
-        from: regularAccounts[0],
-      },
-    );
+      } = await loadFixture(defaultDeploy);
+
+      await pauseVaultFn(
+        redemptionVaultWithMToken,
+        encodeFnSelector('redeemInstant(address,uint256,uint256)'),
+      );
+      await mintToken(stableCoins.dai, redemptionVaultWithMToken, 100000);
+      await mintToken(mTBILL, redemptionVaultWithMToken, 100000);
+      await mintToken(mFONE, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        mFONE,
+        redemptionVaultWithMToken,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: redemptionVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await redeemInstantWithMTokenTest(
+        {
+          redemptionVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          customRecipient,
+          mFoneToUsdDataFeed,
+          mFONE,
+        },
+        stableCoins.dai,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('redeem 100 mFONE when other fn overload is paused', async () => {
+      const {
+        owner,
+        redemptionVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
+        mFoneToUsdDataFeed,
+        mFONE,
+      } = await loadFixture(defaultDeploy);
+
+      await pauseVaultFn(
+        redemptionVaultWithMToken,
+        encodeFnSelector('redeemInstant(address,uint256,uint256,address)'),
+      );
+      await mintToken(stableCoins.dai, redemptionVaultWithMToken, 100000);
+      await mintToken(mTBILL, redemptionVaultWithMToken, 100000);
+      await mintToken(mFONE, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        mFONE,
+        redemptionVaultWithMToken,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: redemptionVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await redeemInstantWithMTokenTest(
+        {
+          redemptionVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          mFoneToUsdDataFeed,
+          mFONE,
+        },
+        stableCoins.dai,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
   });
 
   describe('redeemRequest()', () => {

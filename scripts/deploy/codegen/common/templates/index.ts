@@ -3,6 +3,7 @@ export * from './data-feed.template';
 export * from './dv.template';
 export * from './dv-aave.template';
 export * from './dv-morpho.template';
+export * from './dv-mtoken.template';
 export * from './mtoken.template';
 export * from './rv-swapper.template';
 export * from './rv-mtoken.template';
