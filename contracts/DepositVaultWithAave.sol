@@ -19,9 +19,9 @@ contract DepositVaultWithAave is DepositVault {
     using SafeERC20 for IERC20;
 
     /**
-     * @notice Aave V3 Pool contract address
+     * @notice mapping payment token to Aave V3 Pool
      */
-    IAaveV3Pool public aavePool;
+    mapping(address => IAaveV3Pool) public aavePools;
 
     /**
      * @notice Whether Aave auto-invest deposits are enabled
@@ -35,11 +35,23 @@ contract DepositVaultWithAave is DepositVault {
     uint256[50] private __gap;
 
     /**
-     * @notice Emitted when the Aave Pool address is updated
+     * @notice Emitted when an Aave V3 Pool is configured for a payment token
      * @param caller address of the caller
-     * @param newPool new Aave Pool address
+     * @param token payment token address
+     * @param pool Aave V3 Pool address
      */
-    event SetAavePool(address indexed caller, address indexed newPool);
+    event SetAavePool(
+        address indexed caller,
+        address indexed token,
+        address indexed pool
+    );
+
+    /**
+     * @notice Emitted when an Aave V3 Pool is removed for a payment token
+     * @param caller address of the caller
+     * @param token payment token address
+     */
+    event RemoveAavePool(address indexed caller, address indexed token);
 
     /**
      * @notice Emitted when `aaveDepositsEnabled` flag is updated
@@ -48,54 +60,32 @@ contract DepositVaultWithAave is DepositVault {
     event SetAaveDepositsEnabled(bool indexed enabled);
 
     /**
-     * @notice upgradeable pattern contract`s initializer
-     * @param _ac address of MidasAccessControll contract
-     * @param _mTokenInitParams init params for mToken
-     * @param _receiversInitParams init params for receivers
-     * @param _instantInitParams init params for instant operations
-     * @param _sanctionsList address of sanctionsList contract
-     * @param _variationTolerance percent of prices diviation 1% = 100
-     * @param _minAmount basic min amount for operations in mToken
-     * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
-     * @param _maxSupplyCap max supply cap for mToken
-     * @param _aavePool Aave V3 Pool contract address
+     * @notice Sets the Aave V3 Pool for a specific payment token
+     * @param _token payment token address
+     * @param _aavePool Aave V3 Pool address for this token
      */
-    function initialize(
-        address _ac,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount,
-        uint256 _minMTokenAmountForFirstDeposit,
-        uint256 _maxSupplyCap,
-        address _aavePool
-    ) external {
-        initialize(
-            _ac,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount,
-            _minMTokenAmountForFirstDeposit,
-            _maxSupplyCap
-        );
-
+    function setAavePool(address _token, address _aavePool)
+        external
+        onlyVaultAdmin
+    {
+        _validateAddress(_token, false);
         _validateAddress(_aavePool, false);
-        aavePool = IAaveV3Pool(_aavePool);
+        require(
+            IAaveV3Pool(_aavePool).getReserveAToken(_token) != address(0),
+            "DVA: token not in pool"
+        );
+        aavePools[_token] = IAaveV3Pool(_aavePool);
+        emit SetAavePool(msg.sender, _token, _aavePool);
     }
 
     /**
-     * @notice Sets the Aave V3 Pool address
-     * @param _aavePool new Aave V3 Pool address
+     * @notice Removes the Aave V3 Pool for a specific payment token
+     * @param _token payment token address
      */
-    function setAavePool(address _aavePool) external onlyVaultAdmin {
-        _validateAddress(_aavePool, false);
-        aavePool = IAaveV3Pool(_aavePool);
-        emit SetAavePool(msg.sender, _aavePool);
+    function removeAavePool(address _token) external onlyVaultAdmin {
+        require(address(aavePools[_token]) != address(0), "DVA: pool not set");
+        delete aavePools[_token];
+        emit RemoveAavePool(msg.sender, _token);
     }
 
     /**
@@ -130,6 +120,9 @@ contract DepositVaultWithAave is DepositVault {
                 );
         }
 
+        IAaveV3Pool pool = aavePools[tokenIn];
+        require(address(pool) != address(0), "DVA: no pool for token");
+
         uint256 transferredAmount = _tokenTransferFromUser(
             tokenIn,
             address(this),
@@ -137,10 +130,7 @@ contract DepositVaultWithAave is DepositVault {
             tokensDecimals
         );
 
-        IERC20(tokenIn).safeIncreaseAllowance(
-            address(aavePool),
-            transferredAmount
-        );
-        aavePool.supply(tokenIn, transferredAmount, tokensReceiver, 0);
+        IERC20(tokenIn).safeIncreaseAllowance(address(pool), transferredAmount);
+        pool.supply(tokenIn, transferredAmount, tokensReceiver, 0);
     }
 }

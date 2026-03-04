@@ -14,8 +14,6 @@ import { getTokenContractNames } from '../../../helpers/contracts';
 import {
   MBasisRedemptionVaultWithSwapper,
   RedemptionVault,
-  RedemptionVaultWithAave,
-  RedemptionVaultWithMorpho,
   RedemptionVaultWithMToken,
   RedemptionVaultWIthBUIDL,
 } from '../../../typechain-types';
@@ -72,12 +70,10 @@ export type DeployRvSwapperConfig = {
 
 export type DeployRvAaveConfig = {
   type: 'AAVE';
-  aavePool: string;
 } & DeployRvConfigCommon;
 
 export type DeployRvMorphoConfig = {
   type: 'MORPHO';
-  morphoVault: string;
 } & DeployRvConfigCommon;
 
 export type DeployRvMTokenConfig = {
@@ -118,11 +114,7 @@ export const deployRedemptionVault = async (
 
   const extraParams: unknown[] = [];
 
-  if (networkConfig.type === 'AAVE') {
-    extraParams.push(networkConfig.aavePool);
-  } else if (networkConfig.type === 'MORPHO') {
-    extraParams.push(networkConfig.morphoVault);
-  } else if (networkConfig.type === 'MTOKEN') {
+  if (networkConfig.type === 'MTOKEN') {
     extraParams.push(networkConfig.redemptionVault);
   } else if (networkConfig.type === 'BUIDL') {
     extraParams.push(networkConfig.buidlRedemption);
@@ -212,12 +204,6 @@ export const deployRedemptionVault = async (
         MBasisRedemptionVaultWithSwapper['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)']
       >
     | Parameters<
-        RedemptionVaultWithAave['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)']
-      >
-    | Parameters<
-        RedemptionVaultWithMorpho['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)']
-      >
-    | Parameters<
         RedemptionVaultWithMToken['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)']
       >;
 
@@ -227,9 +213,7 @@ export const deployRedemptionVault = async (
         ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)'
         : networkConfig.type === 'BUIDL'
         ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,uint256,uint256)'
-        : networkConfig.type === 'AAVE' ||
-          networkConfig.type === 'MORPHO' ||
-          networkConfig.type === 'MTOKEN'
+        : networkConfig.type === 'MTOKEN'
         ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
         : 'initialize',
   });

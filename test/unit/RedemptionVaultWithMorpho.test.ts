@@ -31,6 +31,10 @@ import {
   changeTokenAllowanceTest,
 } from '../common/manageable-vault.helpers';
 import {
+  setMorphoVaultTest,
+  removeMorphoVaultTest,
+} from '../common/redemption-vault-morpho.helpers';
+import {
   approveRedeemRequestTest,
   redeemFiatRequestTest,
   redeemInstantTest,
@@ -46,6 +50,7 @@ describe('RedemptionVaultWithMorpho', function () {
     const {
       redemptionVaultWithMorpho,
       morphoVaultMock,
+      stableCoins,
       mTBILL,
       tokensReceiver,
       feeReceiver,
@@ -88,9 +93,9 @@ describe('RedemptionVaultWithMorpho', function () {
       ethers.constants.AddressZero,
     );
 
-    expect(await redemptionVaultWithMorpho.morphoVault()).eq(
-      morphoVaultMock.address,
-    );
+    expect(
+      await redemptionVaultWithMorpho.morphoVaults(stableCoins.usdc.address),
+    ).eq(morphoVaultMock.address);
   });
 
   it('failing deployment', async () => {
@@ -108,9 +113,7 @@ describe('RedemptionVaultWithMorpho', function () {
       await new RedemptionVaultWithMorphoTest__factory(owner).deploy();
 
     await expect(
-      redemptionVaultWithMorpho[
-        'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address)'
-      ](
+      redemptionVaultWithMorpho.initialize(
         accessControl.address,
         {
           mToken: mTBILL.address,
@@ -142,9 +145,7 @@ describe('RedemptionVaultWithMorpho', function () {
       const { redemptionVaultWithMorpho } = await loadFixture(defaultDeploy);
 
       await expect(
-        redemptionVaultWithMorpho[
-          'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
-        ](
+        redemptionVaultWithMorpho.initialize(
           constants.AddressZero,
           {
             mToken: constants.AddressZero,
@@ -166,7 +167,6 @@ describe('RedemptionVaultWithMorpho', function () {
             fiatFlatFee: 0,
             minFiatRedeemAmount: 0,
           },
-          constants.AddressZero,
           constants.AddressZero,
         ),
       ).revertedWith('Initializable: contract is already initialized');
@@ -206,87 +206,119 @@ describe('RedemptionVaultWithMorpho', function () {
         ),
       ).revertedWith('Initializable: contract is not initializing');
     });
-
-    it('should fail: when morphoVault address zero', async () => {
-      const {
-        owner,
-        accessControl,
-        mTBILL,
-        tokensReceiver,
-        feeReceiver,
-        mTokenToUsdDataFeed,
-        mockedSanctionsList,
-        requestRedeemer,
-      } = await loadFixture(defaultDeploy);
-
-      const redemptionVaultWithMorpho =
-        await new RedemptionVaultWithMorphoTest__factory(owner).deploy();
-
-      await expect(
-        redemptionVaultWithMorpho[
-          'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
-        ](
-          accessControl.address,
-          {
-            mToken: mTBILL.address,
-            mTokenDataFeed: mTokenToUsdDataFeed.address,
-          },
-          {
-            feeReceiver: feeReceiver.address,
-            tokensReceiver: tokensReceiver.address,
-          },
-          {
-            instantFee: 100,
-            instantDailyLimit: parseUnits('100000'),
-          },
-          mockedSanctionsList.address,
-          1,
-          1000,
-          {
-            fiatAdditionalFee: 100,
-            fiatFlatFee: parseUnits('1'),
-            minFiatRedeemAmount: 1000,
-          },
-          requestRedeemer.address,
-          constants.AddressZero,
-        ),
-      ).revertedWith('zero address');
-    });
   });
 
   describe('setMorphoVault()', () => {
     it('should fail: call from address without vault admin role', async () => {
-      const { redemptionVaultWithMorpho, regularAccounts } = await loadFixture(
-        defaultDeploy,
+      const {
+        redemptionVaultWithMorpho,
+        owner,
+        regularAccounts,
+        stableCoins,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+
+      await setMorphoVaultTest(
+        { redemptionVault: redemptionVaultWithMorpho, owner },
+        stableCoins.usdc.address,
+        morphoVaultMock.address,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'WMAC: hasnt role',
+        },
       );
-      await expect(
-        redemptionVaultWithMorpho
-          .connect(regularAccounts[0])
-          .setMorphoVault(regularAccounts[1].address),
-      ).revertedWith('WMAC: hasnt role');
     });
 
-    it('should fail: zero address', async () => {
-      const { redemptionVaultWithMorpho } = await loadFixture(defaultDeploy);
-      await expect(
-        redemptionVaultWithMorpho.setMorphoVault(constants.AddressZero),
-      ).revertedWith('zero address');
+    it('should fail: zero token address', async () => {
+      const { redemptionVaultWithMorpho, owner, morphoVaultMock } =
+        await loadFixture(defaultDeploy);
+
+      await setMorphoVaultTest(
+        { redemptionVault: redemptionVaultWithMorpho, owner },
+        constants.AddressZero,
+        morphoVaultMock.address,
+        {
+          revertMessage: 'zero address',
+        },
+      );
     });
 
-    it('should succeed and emit SetMorphoVault event', async () => {
-      const { redemptionVaultWithMorpho, regularAccounts } = await loadFixture(
-        defaultDeploy,
+    it('should fail: zero vault address', async () => {
+      const { redemptionVaultWithMorpho, owner, stableCoins } =
+        await loadFixture(defaultDeploy);
+
+      await setMorphoVaultTest(
+        { redemptionVault: redemptionVaultWithMorpho, owner },
+        stableCoins.usdc.address,
+        constants.AddressZero,
+        {
+          revertMessage: 'zero address',
+        },
       );
-      await expect(
-        redemptionVaultWithMorpho.setMorphoVault(regularAccounts[1].address),
-      )
-        .to.emit(redemptionVaultWithMorpho, 'SetMorphoVault')
-        .withArgs(
-          (
-            await ethers.getSigners()
-          )[0].address,
-          regularAccounts[1].address,
-        );
+    });
+
+    it('should fail: asset mismatch', async () => {
+      const { redemptionVaultWithMorpho, owner, stableCoins, morphoVaultMock } =
+        await loadFixture(defaultDeploy);
+
+      await setMorphoVaultTest(
+        { redemptionVault: redemptionVaultWithMorpho, owner },
+        stableCoins.dai.address,
+        morphoVaultMock.address,
+        {
+          revertMessage: 'RVM: asset mismatch',
+        },
+      );
+    });
+
+    it('call from address with vault admin role', async () => {
+      const { redemptionVaultWithMorpho, owner, stableCoins, morphoVaultMock } =
+        await loadFixture(defaultDeploy);
+
+      await setMorphoVaultTest(
+        { redemptionVault: redemptionVaultWithMorpho, owner },
+        stableCoins.usdc.address,
+        morphoVaultMock.address,
+      );
+    });
+  });
+
+  describe('removeMorphoVault()', () => {
+    it('should fail: call from address without vault admin role', async () => {
+      const { redemptionVaultWithMorpho, owner, regularAccounts, stableCoins } =
+        await loadFixture(defaultDeploy);
+
+      await removeMorphoVaultTest(
+        { redemptionVault: redemptionVaultWithMorpho, owner },
+        stableCoins.usdc.address,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'WMAC: hasnt role',
+        },
+      );
+    });
+
+    it('should fail: vault not set', async () => {
+      const { redemptionVaultWithMorpho, owner, stableCoins } =
+        await loadFixture(defaultDeploy);
+
+      await removeMorphoVaultTest(
+        { redemptionVault: redemptionVaultWithMorpho, owner },
+        stableCoins.dai.address,
+        {
+          revertMessage: 'RVM: vault not set',
+        },
+      );
+    });
+
+    it('call from address with vault admin role', async () => {
+      const { redemptionVaultWithMorpho, owner, stableCoins } =
+        await loadFixture(defaultDeploy);
+
+      await removeMorphoVaultTest(
+        { redemptionVault: redemptionVaultWithMorpho, owner },
+        stableCoins.usdc.address,
+      );
     });
   });
 
@@ -779,7 +811,7 @@ describe('RedemptionVaultWithMorpho', function () {
           stableCoins.dai.address,
           parseUnits('1000', 9),
         ),
-      ).to.be.revertedWith('RVM: token not vault asset');
+      ).to.be.revertedWith('RVM: no vault for token');
     });
 
     it('should revert when contract has insufficient shares', async () => {

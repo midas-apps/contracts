@@ -88,6 +88,21 @@ async function setupMorphoBase() {
     parseUnits('10000', await usdcAggregator.decimals()),
   ]);
 
+  const usdtAggregator = (await (
+    await ethers.getContractFactory('AggregatorV3Mock')
+  ).deploy()) as AggregatorV3Mock;
+  await usdtAggregator.setRoundData(
+    parseUnits('1', await usdtAggregator.decimals()),
+  );
+
+  const usdtDataFeed = await deployProxyContract<DataFeedTest>('DataFeedTest', [
+    accessControl.address,
+    usdtAggregator.address,
+    3 * 24 * 3600,
+    parseUnits('0.1', await usdtAggregator.decimals()),
+    parseUnits('10000', await usdtAggregator.decimals()),
+  ]);
+
   const mtbillDataFeed = await deployProxyContract<DataFeedTest>(
     'DataFeedTest',
     [
@@ -108,6 +123,14 @@ async function setupMorphoBase() {
     'IERC20',
     MAINNET_ADDRESSES.MORPHO_STEAKHOUSE_USDC_VAULT,
   );
+  const usdt = await ethers.getContractAt(
+    'IERC20Metadata',
+    MAINNET_ADDRESSES.USDT,
+  );
+  const morphoUsdtVault = await ethers.getContractAt(
+    'IERC20',
+    MAINNET_ADDRESSES.MORPHO_SMOKEHOUSE_USDT_VAULT,
+  );
 
   // Impersonate whales
   const usdcWhale = await impersonateAndFundAccount(
@@ -115,6 +138,12 @@ async function setupMorphoBase() {
   );
   const morphoShareWhale = await impersonateAndFundAccount(
     MAINNET_ADDRESSES.MORPHO_STEAKHOUSE_USDC_WHALE,
+  );
+  const usdtWhale = await impersonateAndFundAccount(
+    MAINNET_ADDRESSES.USDT_WHALE_BINANCE,
+  );
+  const morphoUsdtShareWhale = await impersonateAndFundAccount(
+    MAINNET_ADDRESSES.MORPHO_SMOKEHOUSE_USDT_WHALE,
   );
 
   return {
@@ -126,6 +155,9 @@ async function setupMorphoBase() {
     mockedAggregatorMToken: mtbillAggregator,
     usdc,
     morphoVault,
+    usdt,
+    morphoUsdtVault,
+    usdtDataFeed,
     owner,
     tokensReceiver,
     feeReceiver,
@@ -134,6 +166,8 @@ async function setupMorphoBase() {
     testUser,
     usdcWhale,
     morphoShareWhale,
+    usdtWhale,
+    morphoUsdtShareWhale,
     roles: allRoles,
   };
 }
@@ -191,6 +225,22 @@ export async function morphoDepositFixture() {
       MAINNET_ADDRESSES.MORPHO_STEAKHOUSE_USDC_VAULT,
     );
 
+  await depositVaultWithMorpho
+    .connect(owner)
+    .addPaymentToken(
+      base.usdt.address,
+      base.usdtDataFeed.address,
+      0,
+      ethers.constants.MaxUint256,
+      true,
+    );
+  await depositVaultWithMorpho
+    .connect(owner)
+    .setMorphoVault(
+      base.usdt.address,
+      MAINNET_ADDRESSES.MORPHO_SMOKEHOUSE_USDT_VAULT,
+    );
+
   return {
     ...base,
     depositVaultWithMorpho,
@@ -228,9 +278,8 @@ export async function morphoRedemptionFixture() {
           fiatFlatFee: parseUnits('10', 18),
         },
         base.requestRedeemer.address,
-        MAINNET_ADDRESSES.MORPHO_STEAKHOUSE_USDC_VAULT,
       ],
-      'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)',
+      'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address)',
     );
 
   // Grant BURN_ROLE to redemption vault
@@ -247,6 +296,30 @@ export async function morphoRedemptionFixture() {
     ethers.constants.MaxUint256,
     true, // is stable
   );
+
+  // Configure Morpho vault mapping for USDC
+  await redemptionVaultWithMorpho
+    .connect(owner)
+    .setMorphoVault(
+      usdc.address,
+      MAINNET_ADDRESSES.MORPHO_STEAKHOUSE_USDC_VAULT,
+    );
+
+  await redemptionVaultWithMorpho
+    .connect(owner)
+    .addPaymentToken(
+      base.usdt.address,
+      base.usdtDataFeed.address,
+      0,
+      ethers.constants.MaxUint256,
+      true,
+    );
+  await redemptionVaultWithMorpho
+    .connect(owner)
+    .setMorphoVault(
+      base.usdt.address,
+      MAINNET_ADDRESSES.MORPHO_SMOKEHOUSE_USDT_VAULT,
+    );
 
   return {
     ...base,

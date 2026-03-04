@@ -35,11 +35,11 @@ describe('DepositVaultWithMorpho - Mainnet Fork Integration Tests', function () 
       const result = await depositInstantMorpho({
         depositVault: depositVaultWithMorpho,
         user: testUser,
-        usdc,
-        morphoVault,
+        tokenIn: usdc,
+        receiptToken: morphoVault,
         mToken: mTBILL,
         tokensReceiverAddress: tokensReceiver.address,
-        usdcWhale,
+        tokenWhale: usdcWhale,
         amountUsd: 100,
       });
 
@@ -62,11 +62,11 @@ describe('DepositVaultWithMorpho - Mainnet Fork Integration Tests', function () 
       const result = await depositInstantMorpho({
         depositVault: depositVaultWithMorpho,
         user: testUser,
-        usdc,
-        morphoVault,
+        tokenIn: usdc,
+        receiptToken: morphoVault,
         mToken: mTBILL,
         tokensReceiverAddress: tokensReceiver.address,
-        usdcWhale,
+        tokenWhale: usdcWhale,
         amountUsd: 100,
       });
 
@@ -94,11 +94,11 @@ describe('DepositVaultWithMorpho - Mainnet Fork Integration Tests', function () 
       const result1 = await depositInstantMorpho({
         depositVault: depositVaultWithMorpho,
         user: testUser,
-        usdc,
-        morphoVault,
+        tokenIn: usdc,
+        receiptToken: morphoVault,
         mToken: mTBILL,
         tokensReceiverAddress: tokensReceiver.address,
-        usdcWhale,
+        tokenWhale: usdcWhale,
         amountUsd: 100,
       });
 
@@ -111,15 +111,93 @@ describe('DepositVaultWithMorpho - Mainnet Fork Integration Tests', function () 
       const result2 = await depositInstantMorpho({
         depositVault: depositVaultWithMorpho,
         user: testUser,
-        usdc,
-        morphoVault,
+        tokenIn: usdc,
+        receiptToken: morphoVault,
         mToken: mTBILL,
         tokensReceiverAddress: tokensReceiver.address,
-        usdcWhale,
+        tokenWhale: usdcWhale,
         amountUsd: 100,
       });
 
       assertAutoInvestDisabled(result2);
+    });
+  });
+
+  describe('Multi-token: USDT with different Morpho vault', function () {
+    it('should deposit USDT into Smokehouse USDT vault and send shares to tokensReceiver', async function () {
+      const {
+        vaultAdmin,
+        testUser,
+        tokensReceiver,
+        mTBILL,
+        depositVaultWithMorpho,
+        usdt,
+        morphoUsdtVault,
+        usdtWhale,
+      } = await loadFixture(morphoDepositFixture);
+
+      await depositVaultWithMorpho
+        .connect(vaultAdmin)
+        .setMorphoDepositsEnabled(true);
+
+      const result = await depositInstantMorpho({
+        depositVault: depositVaultWithMorpho,
+        user: testUser,
+        tokenIn: usdt,
+        receiptToken: morphoUsdtVault,
+        mToken: mTBILL,
+        tokensReceiverAddress: tokensReceiver.address,
+        tokenWhale: usdtWhale,
+        amountUsd: 100,
+      });
+
+      assertAutoInvestEnabled(result);
+    });
+
+    it('should route USDC to Steakhouse and USDT to Smokehouse', async function () {
+      const {
+        vaultAdmin,
+        testUser,
+        tokensReceiver,
+        mTBILL,
+        depositVaultWithMorpho,
+        usdc,
+        morphoVault,
+        usdcWhale,
+        usdt,
+        morphoUsdtVault,
+        usdtWhale,
+      } = await loadFixture(morphoDepositFixture);
+
+      await depositVaultWithMorpho
+        .connect(vaultAdmin)
+        .setMorphoDepositsEnabled(true);
+
+      const resultUsdc = await depositInstantMorpho({
+        depositVault: depositVaultWithMorpho,
+        user: testUser,
+        tokenIn: usdc,
+        receiptToken: morphoVault,
+        mToken: mTBILL,
+        tokensReceiverAddress: tokensReceiver.address,
+        tokenWhale: usdcWhale,
+        amountUsd: 100,
+      });
+
+      assertAutoInvestEnabled(resultUsdc);
+
+      const resultUsdt = await depositInstantMorpho({
+        depositVault: depositVaultWithMorpho,
+        user: testUser,
+        tokenIn: usdt,
+        receiptToken: morphoUsdtVault,
+        mToken: mTBILL,
+        tokensReceiverAddress: tokensReceiver.address,
+        tokenWhale: usdtWhale,
+        amountUsd: 100,
+      });
+
+      assertAutoInvestEnabled(resultUsdt);
     });
   });
 

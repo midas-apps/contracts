@@ -12,6 +12,11 @@ import {
   DataFeedTest,
 } from '../../typechain-types';
 
+type CommonParamsSetMorphoVault = {
+  redemptionVault: RedemptionVaultWithMorpho;
+  owner: SignerWithAddress;
+};
+
 type RedemptionWithMorphoParams = {
   redemptionVault: RedemptionVaultWithMorpho;
   owner: SignerWithAddress;
@@ -24,6 +29,54 @@ type RedemptionWithMorphoParams = {
   expectedSharesUsed?: BigNumber;
   expectedUsdcUsed?: BigNumber;
   customRecipient?: AccountOrContract;
+};
+
+export const setMorphoVaultTest = async (
+  { redemptionVault, owner }: CommonParamsSetMorphoVault,
+  token: string,
+  vault: string,
+  opt?: OptionalCommonParams,
+) => {
+  if (opt?.revertMessage) {
+    await expect(
+      redemptionVault.connect(opt?.from ?? owner).setMorphoVault(token, vault),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  await expect(
+    redemptionVault.connect(opt?.from ?? owner).setMorphoVault(token, vault),
+  ).to.emit(
+    redemptionVault,
+    redemptionVault.interface.events['SetMorphoVault(address,address,address)']
+      .name,
+  ).to.not.reverted;
+
+  const vaultAfter = await redemptionVault.morphoVaults(token);
+  expect(vaultAfter).eq(vault);
+};
+
+export const removeMorphoVaultTest = async (
+  { redemptionVault, owner }: CommonParamsSetMorphoVault,
+  token: string,
+  opt?: OptionalCommonParams,
+) => {
+  if (opt?.revertMessage) {
+    await expect(
+      redemptionVault.connect(opt?.from ?? owner).removeMorphoVault(token),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  await expect(
+    redemptionVault.connect(opt?.from ?? owner).removeMorphoVault(token),
+  ).to.emit(
+    redemptionVault,
+    redemptionVault.interface.events['RemoveMorphoVault(address,address)'].name,
+  ).to.not.reverted;
+
+  const vaultAfter = await redemptionVault.morphoVaults(token);
+  expect(vaultAfter).eq('0x0000000000000000000000000000000000000000');
 };
 
 export const redeemInstantWithMorphoTest = async (

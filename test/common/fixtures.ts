@@ -393,9 +393,7 @@ export const defaultDeploy = async () => {
   const redemptionVaultWithAave =
     await new RedemptionVaultWithAaveTest__factory(owner).deploy();
 
-  await redemptionVaultWithAave[
-    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
-  ](
+  await redemptionVaultWithAave.initialize(
     accessControl.address,
     {
       mToken: mTBILL.address,
@@ -418,6 +416,9 @@ export const defaultDeploy = async () => {
       minFiatRedeemAmount: 1000,
     },
     requestRedeemer.address,
+  );
+  await redemptionVaultWithAave.setAavePool(
+    stableCoins.usdc.address,
     aavePoolMock.address,
   );
   await accessControl.grantRole(
@@ -435,9 +436,7 @@ export const defaultDeploy = async () => {
   const redemptionVaultWithMorpho =
     await new RedemptionVaultWithMorphoTest__factory(owner).deploy();
 
-  await redemptionVaultWithMorpho[
-    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
-  ](
+  await redemptionVaultWithMorpho.initialize(
     accessControl.address,
     {
       mToken: mTBILL.address,
@@ -460,6 +459,9 @@ export const defaultDeploy = async () => {
       minFiatRedeemAmount: 1000,
     },
     requestRedeemer.address,
+  );
+  await redemptionVaultWithMorpho.setMorphoVault(
+    stableCoins.usdc.address,
     morphoVaultMock.address,
   );
   await accessControl.grantRole(
@@ -473,9 +475,7 @@ export const defaultDeploy = async () => {
     owner,
   ).deploy();
 
-  await depositVaultWithAave[
-    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)'
-  ](
+  await depositVaultWithAave.initialize(
     accessControl.address,
     {
       mToken: mTBILL.address,
@@ -494,6 +494,9 @@ export const defaultDeploy = async () => {
     parseUnits('100'),
     0,
     constants.MaxUint256,
+  );
+  await depositVaultWithAave.setAavePool(
+    stableCoins.usdc.address,
     aavePoolMock.address,
   );
 

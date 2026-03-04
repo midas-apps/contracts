@@ -20,9 +20,9 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
     using DecimalsCorrectionLibrary for uint256;
 
     /**
-     * @notice Morpho Vault contract used for withdrawals
+     * @notice mapping payment token to Morpho Vault
      */
-    IMorphoVault public morphoVault;
+    mapping(address => IMorphoVault) public morphoVaults;
 
     /**
      * @dev leaving a storage gap for futures updates
@@ -30,60 +30,54 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
     uint256[50] private __gap;
 
     /**
-     * @notice Emitted when the Morpho Vault address is updated
+     * @notice Emitted when a Morpho Vault is configured for a payment token
      * @param caller address of the caller
-     * @param newVault new Morpho Vault address
+     * @param token payment token address
+     * @param vault Morpho Vault address
      */
-    event SetMorphoVault(address indexed caller, address indexed newVault);
+    event SetMorphoVault(
+        address indexed caller,
+        address indexed token,
+        address indexed vault
+    );
 
     /**
-     * @notice upgradeable pattern contract`s initializer
-     * @param _ac address of MidasAccessControll contract
-     * @param _mTokenInitParams init params for mToken
-     * @param _receiversInitParams init params for receivers
-     * @param _instantInitParams init params for instant operations
-     * @param _sanctionsList address of sanctionsList contract
-     * @param _variationTolerance percent of prices diviation 1% = 100
-     * @param _minAmount basic min amount for operations
-     * @param _fiatRedemptionInitParams params fiatAdditionalFee, fiatFlatFee, minFiatRedeemAmount
-     * @param _requestRedeemer address is designated for standard redemptions, allowing tokens to be pulled from this address
-     * @param _morphoVault Morpho Vault (ERC-4626) contract address
+     * @notice Emitted when a Morpho Vault is removed for a payment token
+     * @param caller address of the caller
+     * @param token payment token address
      */
-    function initialize(
-        address _ac,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount,
-        FiatRedeptionInitParams calldata _fiatRedemptionInitParams,
-        address _requestRedeemer,
-        address _morphoVault
-    ) external initializer {
-        __RedemptionVault_init(
-            _ac,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount,
-            _fiatRedemptionInitParams,
-            _requestRedeemer
-        );
+    event RemoveMorphoVault(address indexed caller, address indexed token);
+
+    /**
+     * @notice Sets the Morpho Vault for a specific payment token
+     * @param _token payment token address
+     * @param _morphoVault Morpho Vault (ERC-4626) address for this token
+     */
+    function setMorphoVault(address _token, address _morphoVault)
+        external
+        onlyVaultAdmin
+    {
+        _validateAddress(_token, false);
         _validateAddress(_morphoVault, false);
-        morphoVault = IMorphoVault(_morphoVault);
+        require(
+            IMorphoVault(_morphoVault).asset() == _token,
+            "RVM: asset mismatch"
+        );
+        morphoVaults[_token] = IMorphoVault(_morphoVault);
+        emit SetMorphoVault(msg.sender, _token, _morphoVault);
     }
 
     /**
-     * @notice Sets the Morpho Vault address
-     * @param _morphoVault new Morpho Vault address
+     * @notice Removes the Morpho Vault for a specific payment token
+     * @param _token payment token address
      */
-    function setMorphoVault(address _morphoVault) external onlyVaultAdmin {
-        _validateAddress(_morphoVault, false);
-        morphoVault = IMorphoVault(_morphoVault);
-        emit SetMorphoVault(msg.sender, _morphoVault);
+    function removeMorphoVault(address _token) external onlyVaultAdmin {
+        require(
+            address(morphoVaults[_token]) != address(0),
+            "RVM: vault not set"
+        );
+        delete morphoVaults[_token];
+        emit RemoveMorphoVault(msg.sender, _token);
     }
 
     /**
@@ -187,16 +181,17 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
         );
         if (contractBalanceTokenOut >= amountTokenOut) return;
 
-        require(morphoVault.asset() == tokenOut, "RVM: token not vault asset");
+        IMorphoVault vault = morphoVaults[tokenOut];
+        require(address(vault) != address(0), "RVM: no vault for token");
 
         uint256 missingAmount = amountTokenOut - contractBalanceTokenOut;
 
-        uint256 sharesNeeded = morphoVault.previewWithdraw(missingAmount);
+        uint256 sharesNeeded = vault.previewWithdraw(missingAmount);
         require(
-            morphoVault.balanceOf(address(this)) >= sharesNeeded,
+            vault.balanceOf(address(this)) >= sharesNeeded,
             "RVM: insufficient shares"
         );
 
-        morphoVault.withdraw(missingAmount, address(this), address(this));
+        vault.withdraw(missingAmount, address(this), address(this));
     }
 }

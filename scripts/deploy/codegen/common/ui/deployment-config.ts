@@ -143,10 +143,6 @@ async function getDvAaveConfigFromUser(hre: HardhatRuntimeEnvironment) {
       text({ message: 'Tokens Receiver', validate: validateAddress })
         .then(requireNotCancelled)
         .then(requireAddress),
-    aavePool: () =>
-      text({ message: 'Aave V3 Pool Address', validate: validateAddress })
-        .then(requireNotCancelled)
-        .then(requireAddress),
     instantDailyLimit: () =>
       text({
         message: 'Instant Daily Limit',
@@ -425,15 +421,7 @@ async function getRvConfigFromUser<T>(
 async function getRvAaveConfigFromUser(hre: HardhatRuntimeEnvironment) {
   const config = await getRvConfigFromUser(
     hre,
-    {
-      aavePool: () =>
-        text({
-          message: 'Aave V3 Pool Address',
-          validate: validateAddress,
-        })
-          .then(requireNotCancelled)
-          .then(requireAddress),
-    },
+    {},
     'Redemption Vault With Aave',
   );
 
@@ -446,15 +434,7 @@ async function getRvAaveConfigFromUser(hre: HardhatRuntimeEnvironment) {
 async function getRvMorphoConfigFromUser(hre: HardhatRuntimeEnvironment) {
   const config = await getRvConfigFromUser(
     hre,
-    {
-      morphoVault: () =>
-        text({
-          message: 'Morpho Vault Address (ERC-4626)',
-          validate: validateAddress,
-        })
-          .then(requireNotCancelled)
-          .then(requireAddress),
-    },
+    {},
     'Redemption Vault With Morpho',
   );
 

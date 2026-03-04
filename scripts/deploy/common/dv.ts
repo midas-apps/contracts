@@ -13,7 +13,6 @@ import {
 import { getTokenContractNames } from '../../../helpers/contracts';
 import {
   DepositVault,
-  DepositVaultWithAave,
   DepositVaultWithMToken,
   DepositVaultWithUSTB,
 } from '../../../typechain-types';
@@ -49,7 +48,6 @@ export type DeployDvUstbConfig = DeployDvConfigCommon & {
 
 export type DeployDvAaveConfig = DeployDvConfigCommon & {
   type: 'AAVE';
-  aavePool: string;
 };
 
 export type DeployDvMorphoConfig = DeployDvConfigCommon & {
@@ -140,8 +138,6 @@ export const deployDepositVault = async (
     }
 
     extraParams.push(ustbContract);
-  } else if (networkConfig.type === 'AAVE') {
-    extraParams.push(networkConfig.aavePool);
   } else if (networkConfig.type === 'MTOKEN') {
     extraParams.push(networkConfig.mTokenDepositVault);
   }
@@ -172,17 +168,12 @@ export const deployDepositVault = async (
         DepositVaultWithUSTB['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)']
       >
     | Parameters<
-        DepositVaultWithAave['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)']
-      >
-    | Parameters<
         DepositVaultWithMToken['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)']
       >;
 
   await deployAndVerifyProxy(hre, dvContractName, params, undefined, {
     initializer:
-      networkConfig.type === 'USTB' ||
-      networkConfig.type === 'AAVE' ||
-      networkConfig.type === 'MTOKEN'
+      networkConfig.type === 'USTB' || networkConfig.type === 'MTOKEN'
         ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)'
         : 'initialize',
   });

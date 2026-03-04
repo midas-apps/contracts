@@ -16,87 +16,99 @@ import { approveBase18 } from '../../common/common.helpers';
 type DepositInstantAaveParams = {
   depositVault: DepositVaultWithAaveTest;
   user: SignerWithAddress;
-  usdc: IERC20Metadata;
-  aUsdc: IERC20;
+  tokenIn: IERC20Metadata;
+  receiptToken: IERC20;
   mToken: IMToken;
   tokensReceiverAddress: string;
-  usdcWhale: SignerWithAddress;
+  tokenWhale: SignerWithAddress;
   amountUsd: number;
+  tokenDecimals?: number;
 };
 
 type DepositInstantMorphoParams = {
   depositVault: DepositVaultWithMorphoTest;
   user: SignerWithAddress;
-  usdc: IERC20Metadata;
-  morphoVault: IERC20;
+  tokenIn: IERC20Metadata;
+  receiptToken: IERC20;
   mToken: IMToken;
   tokensReceiverAddress: string;
-  usdcWhale: SignerWithAddress;
+  tokenWhale: SignerWithAddress;
   amountUsd: number;
+  tokenDecimals?: number;
 };
 
 type DepositResult = {
   userMTokenReceived: BigNumber;
   receiverReceiptTokenReceived: BigNumber;
-  receiverUsdcReceived: BigNumber;
+  receiverTokenReceived: BigNumber;
 };
 
 export async function depositInstantAave({
   depositVault,
   user,
-  usdc,
-  aUsdc,
+  tokenIn,
+  receiptToken,
   mToken,
   tokensReceiverAddress,
-  usdcWhale,
+  tokenWhale,
   amountUsd,
+  tokenDecimals,
 }: DepositInstantAaveParams): Promise<DepositResult> {
-  await usdc
-    .connect(usdcWhale)
-    .transfer(user.address, parseUnits(String(amountUsd), 6));
-  await approveBase18(user, usdc, depositVault, amountUsd);
+  const decimals = tokenDecimals ?? 6;
+  await tokenIn
+    .connect(tokenWhale)
+    .transfer(user.address, parseUnits(String(amountUsd), decimals));
+  await approveBase18(user, tokenIn, depositVault, amountUsd);
 
-  const receiverUsdcBefore = await usdc.balanceOf(tokensReceiverAddress);
-  const receiverAUsdcBefore = await aUsdc.balanceOf(tokensReceiverAddress);
+  const receiverTokenBefore = await tokenIn.balanceOf(tokensReceiverAddress);
+  const receiverReceiptBefore = await receiptToken.balanceOf(
+    tokensReceiverAddress,
+  );
   const userMTokenBefore = await mToken.balanceOf(user.address);
 
   await depositVault
     .connect(user)
     ['depositInstant(address,uint256,uint256,bytes32)'](
-      usdc.address,
+      tokenIn.address,
       parseUnits(String(amountUsd)),
       constants.Zero,
       constants.HashZero,
     );
 
-  const receiverUsdcAfter = await usdc.balanceOf(tokensReceiverAddress);
-  const receiverAUsdcAfter = await aUsdc.balanceOf(tokensReceiverAddress);
+  const receiverTokenAfter = await tokenIn.balanceOf(tokensReceiverAddress);
+  const receiverReceiptAfter = await receiptToken.balanceOf(
+    tokensReceiverAddress,
+  );
   const userMTokenAfter = await mToken.balanceOf(user.address);
 
   return {
     userMTokenReceived: userMTokenAfter.sub(userMTokenBefore),
-    receiverReceiptTokenReceived: receiverAUsdcAfter.sub(receiverAUsdcBefore),
-    receiverUsdcReceived: receiverUsdcAfter.sub(receiverUsdcBefore),
+    receiverReceiptTokenReceived: receiverReceiptAfter.sub(
+      receiverReceiptBefore,
+    ),
+    receiverTokenReceived: receiverTokenAfter.sub(receiverTokenBefore),
   };
 }
 
 export async function depositInstantMorpho({
   depositVault,
   user,
-  usdc,
-  morphoVault,
+  tokenIn,
+  receiptToken,
   mToken,
   tokensReceiverAddress,
-  usdcWhale,
+  tokenWhale,
   amountUsd,
+  tokenDecimals,
 }: DepositInstantMorphoParams): Promise<DepositResult> {
-  await usdc
-    .connect(usdcWhale)
-    .transfer(user.address, parseUnits(String(amountUsd), 6));
-  await approveBase18(user, usdc, depositVault, amountUsd);
+  const decimals = tokenDecimals ?? 6;
+  await tokenIn
+    .connect(tokenWhale)
+    .transfer(user.address, parseUnits(String(amountUsd), decimals));
+  await approveBase18(user, tokenIn, depositVault, amountUsd);
 
-  const receiverUsdcBefore = await usdc.balanceOf(tokensReceiverAddress);
-  const receiverSharesBefore = await morphoVault.balanceOf(
+  const receiverTokenBefore = await tokenIn.balanceOf(tokensReceiverAddress);
+  const receiverReceiptBefore = await receiptToken.balanceOf(
     tokensReceiverAddress,
   );
   const userMTokenBefore = await mToken.balanceOf(user.address);
@@ -104,22 +116,24 @@ export async function depositInstantMorpho({
   await depositVault
     .connect(user)
     ['depositInstant(address,uint256,uint256,bytes32)'](
-      usdc.address,
+      tokenIn.address,
       parseUnits(String(amountUsd)),
       constants.Zero,
       constants.HashZero,
     );
 
-  const receiverUsdcAfter = await usdc.balanceOf(tokensReceiverAddress);
-  const receiverSharesAfter = await morphoVault.balanceOf(
+  const receiverTokenAfter = await tokenIn.balanceOf(tokensReceiverAddress);
+  const receiverReceiptAfter = await receiptToken.balanceOf(
     tokensReceiverAddress,
   );
   const userMTokenAfter = await mToken.balanceOf(user.address);
 
   return {
     userMTokenReceived: userMTokenAfter.sub(userMTokenBefore),
-    receiverReceiptTokenReceived: receiverSharesAfter.sub(receiverSharesBefore),
-    receiverUsdcReceived: receiverUsdcAfter.sub(receiverUsdcBefore),
+    receiverReceiptTokenReceived: receiverReceiptAfter.sub(
+      receiverReceiptBefore,
+    ),
+    receiverTokenReceived: receiverTokenAfter.sub(receiverTokenBefore),
   };
 }
 
@@ -173,7 +187,7 @@ export async function depositInstantMToken({
   return {
     userMTokenReceived: userMTokenAfter.sub(userMTokenBefore),
     receiverReceiptTokenReceived: receiverMTokenAfter.sub(receiverMTokenBefore),
-    receiverUsdcReceived: receiverUsdcAfter.sub(receiverUsdcBefore),
+    receiverTokenReceived: receiverUsdcAfter.sub(receiverUsdcBefore),
   };
 }
 
@@ -182,9 +196,9 @@ export function assertAutoInvestEnabled(result: DepositResult) {
     0,
     'tokensReceiver should have received receipt tokens',
   );
-  expect(result.receiverUsdcReceived).to.equal(
+  expect(result.receiverTokenReceived).to.equal(
     0,
-    'tokensReceiver raw USDC should not change when auto-invest is on',
+    'tokensReceiver raw token should not change when auto-invest is on',
   );
   expect(result.userMTokenReceived).to.be.gt(
     0,
@@ -193,9 +207,9 @@ export function assertAutoInvestEnabled(result: DepositResult) {
 }
 
 export function assertAutoInvestDisabled(result: DepositResult) {
-  expect(result.receiverUsdcReceived).to.be.gt(
+  expect(result.receiverTokenReceived).to.be.gt(
     0,
-    'tokensReceiver should have received USDC',
+    'tokensReceiver should have received token',
   );
   expect(result.receiverReceiptTokenReceived).to.be.lte(
     1,

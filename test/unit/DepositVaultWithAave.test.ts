@@ -8,6 +8,7 @@ import { acErrors, blackList, greenList } from '../common/ac.helpers';
 import { approveBase18, mintToken, pauseVault } from '../common/common.helpers';
 import {
   depositInstantWithAaveTest,
+  removeAavePoolTest,
   setAaveDepositsEnabledTest,
   setAavePoolTest,
 } from '../common/deposit-vault-aave.helpers';
@@ -45,6 +46,7 @@ describe('DepositVaultWithAave', function () {
       mTokenToUsdDataFeed,
       roles,
       aavePoolMock,
+      stableCoins,
     } = await loadFixture(defaultDeploy);
 
     expect(await depositVaultWithAave.mToken()).eq(mTBILL.address);
@@ -70,17 +72,25 @@ describe('DepositVaultWithAave', function () {
     expect(await depositVaultWithAave.MANUAL_FULLFILMENT_TOKEN()).eq(
       ethers.constants.AddressZero,
     );
-    expect(await depositVaultWithAave.aavePool()).eq(aavePoolMock.address);
+    expect(await depositVaultWithAave.aavePools(stableCoins.usdc.address)).eq(
+      aavePoolMock.address,
+    );
     expect(await depositVaultWithAave.aaveDepositsEnabled()).eq(false);
   });
 
   describe('setAavePool()', () => {
     it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { depositVaultWithAave, owner, regularAccounts, aavePoolMock } =
-        await loadFixture(defaultDeploy);
+      const {
+        depositVaultWithAave,
+        owner,
+        regularAccounts,
+        stableCoins,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
 
       await setAavePoolTest(
         { depositVaultWithAave, owner },
+        stableCoins.usdc.address,
         aavePoolMock.address,
         {
           from: regularAccounts[0],
@@ -90,10 +100,13 @@ describe('DepositVaultWithAave', function () {
     });
 
     it('should fail: zero address', async () => {
-      const { depositVaultWithAave, owner } = await loadFixture(defaultDeploy);
+      const { depositVaultWithAave, owner, stableCoins } = await loadFixture(
+        defaultDeploy,
+      );
 
       await setAavePoolTest(
         { depositVaultWithAave, owner },
+        stableCoins.usdc.address,
         ethers.constants.AddressZero,
         {
           revertMessage: 'zero address',
@@ -101,13 +114,74 @@ describe('DepositVaultWithAave', function () {
       );
     });
 
-    it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-      const { depositVaultWithAave, owner, regularAccounts } =
+    it('should fail: token not in pool', async () => {
+      const { depositVaultWithAave, owner, stableCoins, aavePoolMock } =
         await loadFixture(defaultDeploy);
 
       await setAavePoolTest(
         { depositVaultWithAave, owner },
-        regularAccounts[1].address,
+        stableCoins.dai.address,
+        aavePoolMock.address,
+        {
+          revertMessage: 'DVA: token not in pool',
+        },
+      );
+    });
+
+    it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
+      const { depositVaultWithAave, owner, stableCoins, aavePoolMock } =
+        await loadFixture(defaultDeploy);
+
+      await setAavePoolTest(
+        { depositVaultWithAave, owner },
+        stableCoins.usdc.address,
+        aavePoolMock.address,
+      );
+    });
+  });
+
+  describe('removeAavePool()', () => {
+    it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
+      const { depositVaultWithAave, owner, regularAccounts, stableCoins } =
+        await loadFixture(defaultDeploy);
+
+      await removeAavePoolTest(
+        { depositVaultWithAave, owner },
+        stableCoins.usdc.address,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'WMAC: hasnt role',
+        },
+      );
+    });
+
+    it('should fail: pool not set', async () => {
+      const { depositVaultWithAave, owner, stableCoins } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await removeAavePoolTest(
+        { depositVaultWithAave, owner },
+        stableCoins.dai.address,
+        {
+          revertMessage: 'DVA: pool not set',
+        },
+      );
+    });
+
+    it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
+      const { depositVaultWithAave, owner, stableCoins, aavePoolMock } =
+        await loadFixture(defaultDeploy);
+
+      await setAavePoolTest(
+        { depositVaultWithAave, owner },
+        stableCoins.usdc.address,
+        aavePoolMock.address,
+      );
+
+      await removeAavePoolTest(
+        { depositVaultWithAave, owner },
+        stableCoins.usdc.address,
       );
     });
   });
@@ -784,6 +858,12 @@ describe('DepositVaultWithAave', function () {
         aDAI.address,
       );
 
+      await setAavePoolTest(
+        { depositVaultWithAave, owner },
+        stableCoins.dai.address,
+        aavePoolMock.address,
+      );
+
       await setAaveDepositsEnabledTest({ depositVaultWithAave, owner }, true);
 
       await mintToken(stableCoins.dai, regularAccounts[0], 100);
@@ -1057,7 +1137,7 @@ describe('DepositVaultWithAave', function () {
       );
     });
 
-    it('should fail: Aave deposit enabled with unconfigured reserve token', async () => {
+    it('should fail: aaveDepositsEnabled but no pool for token', async () => {
       const {
         owner,
         depositVaultWithAave,
@@ -1066,13 +1146,19 @@ describe('DepositVaultWithAave', function () {
         mTokenToUsdDataFeed,
         dataFeed,
         aavePoolMock,
+        regularAccounts,
       } = await loadFixture(defaultDeploy);
 
       await setAaveDepositsEnabledTest({ depositVaultWithAave, owner }, true);
       await setMinAmountTest({ vault: depositVaultWithAave, owner }, 10);
 
-      await mintToken(stableCoins.dai, owner, 100);
-      await approveBase18(owner, stableCoins.dai, depositVaultWithAave, 100);
+      await mintToken(stableCoins.dai, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.dai,
+        depositVaultWithAave,
+        100,
+      );
       await addPaymentTokenTest(
         { vault: depositVaultWithAave, owner },
         stableCoins.dai,
@@ -1088,11 +1174,13 @@ describe('DepositVaultWithAave', function () {
           mTBILL,
           mTokenToUsdDataFeed,
           aavePoolMock,
+          expectedAaveDeposited: false,
         },
         stableCoins.dai,
         100,
         {
-          revertMessage: 'AaveV3PoolMock: NoReserve',
+          from: regularAccounts[0],
+          revertMessage: 'DVA: no pool for token',
         },
       );
     });

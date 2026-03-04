@@ -50,6 +50,7 @@ describe('RedemptionVaultWithAave', function () {
       tokensReceiver,
       feeReceiver,
       mTokenToUsdDataFeed,
+      stableCoins,
       roles,
     } = await loadFixture(defaultDeploy);
 
@@ -86,7 +87,9 @@ describe('RedemptionVaultWithAave', function () {
       ethers.constants.AddressZero,
     );
 
-    expect(await redemptionVaultWithAave.aavePool()).eq(aavePoolMock.address);
+    expect(
+      await redemptionVaultWithAave.aavePools(stableCoins.usdc.address),
+    ).eq(aavePoolMock.address);
   });
 
   it('failing deployment', async () => {
@@ -104,9 +107,7 @@ describe('RedemptionVaultWithAave', function () {
       await new RedemptionVaultWithAaveTest__factory(owner).deploy();
 
     await expect(
-      redemptionVaultWithAave[
-        'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address)'
-      ](
+      redemptionVaultWithAave.initialize(
         accessControl.address,
         {
           mToken: mTBILL.address,
@@ -138,9 +139,7 @@ describe('RedemptionVaultWithAave', function () {
       const { redemptionVaultWithAave } = await loadFixture(defaultDeploy);
 
       await expect(
-        redemptionVaultWithAave[
-          'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
-        ](
+        redemptionVaultWithAave.initialize(
           constants.AddressZero,
           {
             mToken: constants.AddressZero,
@@ -162,7 +161,6 @@ describe('RedemptionVaultWithAave', function () {
             fiatFlatFee: 0,
             minFiatRedeemAmount: 0,
           },
-          constants.AddressZero,
           constants.AddressZero,
         ),
       ).revertedWith('Initializable: contract is already initialized');
@@ -202,84 +200,92 @@ describe('RedemptionVaultWithAave', function () {
         ),
       ).revertedWith('Initializable: contract is not initializing');
     });
-
-    it('should fail: when aavePool address zero', async () => {
-      const {
-        owner,
-        accessControl,
-        mTBILL,
-        tokensReceiver,
-        feeReceiver,
-        mTokenToUsdDataFeed,
-        mockedSanctionsList,
-        requestRedeemer,
-      } = await loadFixture(defaultDeploy);
-
-      const redemptionVaultWithAave =
-        await new RedemptionVaultWithAaveTest__factory(owner).deploy();
-
-      await expect(
-        redemptionVaultWithAave[
-          'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
-        ](
-          accessControl.address,
-          {
-            mToken: mTBILL.address,
-            mTokenDataFeed: mTokenToUsdDataFeed.address,
-          },
-          {
-            feeReceiver: feeReceiver.address,
-            tokensReceiver: tokensReceiver.address,
-          },
-          {
-            instantFee: 100,
-            instantDailyLimit: parseUnits('100000'),
-          },
-          mockedSanctionsList.address,
-          1,
-          1000,
-          {
-            fiatAdditionalFee: 100,
-            fiatFlatFee: parseUnits('1'),
-            minFiatRedeemAmount: 1000,
-          },
-          requestRedeemer.address,
-          constants.AddressZero,
-        ),
-      ).revertedWith('zero address');
-    });
   });
 
   describe('setAavePool()', () => {
     it('should fail: call from address without vault admin role', async () => {
-      const { redemptionVaultWithAave, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const {
+        redemptionVaultWithAave,
+        regularAccounts,
+        stableCoins,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
       await expect(
         redemptionVaultWithAave
           .connect(regularAccounts[0])
-          .setAavePool(regularAccounts[1].address),
+          .setAavePool(stableCoins.usdc.address, aavePoolMock.address),
       ).to.be.revertedWith('WMAC: hasnt role');
     });
 
     it('should fail: zero address', async () => {
-      const { redemptionVaultWithAave } = await loadFixture(defaultDeploy);
+      const { redemptionVaultWithAave, stableCoins } = await loadFixture(
+        defaultDeploy,
+      );
       await expect(
-        redemptionVaultWithAave.setAavePool(constants.AddressZero),
+        redemptionVaultWithAave.setAavePool(
+          stableCoins.usdc.address,
+          constants.AddressZero,
+        ),
       ).to.be.revertedWith('zero address');
     });
 
     it('should succeed and emit SetAavePool event', async () => {
-      const { redemptionVaultWithAave, owner, regularAccounts } =
+      const { redemptionVaultWithAave, owner, stableCoins, aavePoolMock } =
         await loadFixture(defaultDeploy);
 
-      const newPool = regularAccounts[0].address;
-
-      await expect(redemptionVaultWithAave.setAavePool(newPool))
+      await expect(
+        redemptionVaultWithAave.setAavePool(
+          stableCoins.usdc.address,
+          aavePoolMock.address,
+        ),
+      )
         .to.emit(redemptionVaultWithAave, 'SetAavePool')
-        .withArgs(owner.address, newPool);
+        .withArgs(
+          owner.address,
+          stableCoins.usdc.address,
+          aavePoolMock.address,
+        );
 
-      expect(await redemptionVaultWithAave.aavePool()).eq(newPool);
+      expect(
+        await redemptionVaultWithAave.aavePools(stableCoins.usdc.address),
+      ).eq(aavePoolMock.address);
+    });
+  });
+
+  describe('removeAavePool()', () => {
+    it('should fail: call from address without vault admin role', async () => {
+      const { redemptionVaultWithAave, regularAccounts, stableCoins } =
+        await loadFixture(defaultDeploy);
+      await expect(
+        redemptionVaultWithAave
+          .connect(regularAccounts[0])
+          .removeAavePool(stableCoins.usdc.address),
+      ).to.be.revertedWith('WMAC: hasnt role');
+    });
+
+    it('should fail: pool not set', async () => {
+      const { redemptionVaultWithAave, stableCoins } = await loadFixture(
+        defaultDeploy,
+      );
+      await expect(
+        redemptionVaultWithAave.removeAavePool(stableCoins.dai.address),
+      ).to.be.revertedWith('RVA: pool not set');
+    });
+
+    it('should succeed and emit RemoveAavePool event', async () => {
+      const { redemptionVaultWithAave, owner, stableCoins } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await expect(
+        redemptionVaultWithAave.removeAavePool(stableCoins.usdc.address),
+      )
+        .to.emit(redemptionVaultWithAave, 'RemoveAavePool')
+        .withArgs(owner.address, stableCoins.usdc.address);
+
+      expect(
+        await redemptionVaultWithAave.aavePools(stableCoins.usdc.address),
+      ).eq(constants.AddressZero);
     });
   });
 
@@ -761,18 +767,17 @@ describe('RedemptionVaultWithAave', function () {
       expect(aTokenAfter).to.equal(parseUnits('100', 8));
     });
 
-    it('should revert when token not in Aave pool', async () => {
+    it('should revert when no pool set for token', async () => {
       const { redemptionVaultWithAave, stableCoins } = await loadFixture(
         defaultDeploy,
       );
 
-      // DAI is not registered in Aave pool mock
       await expect(
         redemptionVaultWithAave.checkAndRedeemAave(
           stableCoins.dai.address,
           parseUnits('1000', 9),
         ),
-      ).to.be.revertedWith('RVA: token not in Aave pool');
+      ).to.be.revertedWith('RVA: no pool for token');
     });
 
     it('should revert when contract has insufficient aToken balance', async () => {

@@ -5,6 +5,7 @@ import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
 import { morphoRedemptionFixture } from './fixtures/morpho.fixture';
+import { MAINNET_ADDRESSES } from './helpers/mainnet-addresses';
 
 import { mintToken, approveBase18 } from '../common/common.helpers';
 import { redeemInstantWithMorphoTest } from '../common/redemption-vault-morpho.helpers';
@@ -296,7 +297,7 @@ describe('RedemptionVaultWithMorpho - Mainnet Fork Integration Tests', function 
 
       // Should revert because fakeToken is not the Morpho vault's asset
       // The vault has no fakeToken balance, so it tries Morpho withdrawal
-      // which fails with "RVM: token not vault asset"
+      // which fails because no vault is configured for the fake token
       await redeemInstantWithMorphoTest(
         {
           redemptionVault: redemptionVaultWithMorpho,
@@ -309,8 +310,81 @@ describe('RedemptionVaultWithMorpho - Mainnet Fork Integration Tests', function 
         mTBILLAmount,
         {
           from: testUser,
-          revertMessage: 'RVM: token not vault asset',
+          revertMessage: 'RVM: no vault for token',
         },
+      );
+    });
+  });
+
+  describe('Multi-token: USDT redemption via different Morpho vault', function () {
+    it('should withdraw USDT from Smokehouse vault when vault has shares but no direct USDT', async function () {
+      const {
+        owner,
+        testUser,
+        mTBILL,
+        redemptionVaultWithMorpho,
+        usdt,
+        morphoUsdtVault,
+        morphoUsdtShareWhale,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(morphoRedemptionFixture);
+
+      const mTBILLAmount = 1000;
+      const shareAmount = parseUnits('10000', 18);
+      await morphoUsdtVault
+        .connect(morphoUsdtShareWhale)
+        .transfer(redemptionVaultWithMorpho.address, shareAmount);
+
+      expect(await usdt.balanceOf(redemptionVaultWithMorpho.address)).to.equal(
+        0,
+      );
+      expect(
+        await morphoUsdtVault.balanceOf(redemptionVaultWithMorpho.address),
+      ).to.be.gte(shareAmount);
+
+      await mintToken(mTBILL, testUser, mTBILLAmount);
+      await approveBase18(
+        testUser,
+        mTBILL,
+        redemptionVaultWithMorpho,
+        mTBILLAmount,
+      );
+
+      const result = await redeemInstantWithMorphoTest(
+        {
+          redemptionVault: redemptionVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          usdc: usdt,
+          morphoVault: morphoUsdtVault,
+        },
+        mTBILLAmount,
+        { from: testUser },
+      );
+
+      expect(result?.sharesUsed).to.be.gt(0);
+      expect(result?.userUSDCReceived).to.equal(parseUnits('990', 6));
+      expect(await mTBILL.balanceOf(testUser.address)).to.equal(0);
+    });
+
+    it('should verify per-token vault mapping is configured for both tokens', async function () {
+      const { redemptionVaultWithMorpho, usdc, usdt } = await loadFixture(
+        morphoRedemptionFixture,
+      );
+
+      const steakhouseUsdcVault = await redemptionVaultWithMorpho.morphoVaults(
+        usdc.address,
+      );
+      const smokehouseUsdtVault = await redemptionVaultWithMorpho.morphoVaults(
+        usdt.address,
+      );
+
+      expect(steakhouseUsdcVault.toLowerCase()).to.equal(
+        MAINNET_ADDRESSES.MORPHO_STEAKHOUSE_USDC_VAULT.toLowerCase(),
+      );
+      expect(smokehouseUsdtVault.toLowerCase()).to.equal(
+        MAINNET_ADDRESSES.MORPHO_SMOKEHOUSE_USDT_VAULT.toLowerCase(),
       );
     });
   });

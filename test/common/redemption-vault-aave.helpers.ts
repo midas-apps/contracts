@@ -12,6 +12,11 @@ import {
   DataFeedTest,
 } from '../../typechain-types';
 
+type CommonParamsSetAavePool = {
+  redemptionVault: RedemptionVaultWithAave;
+  owner: SignerWithAddress;
+};
+
 type RedemptionWithAaveParams = {
   redemptionVault: RedemptionVaultWithAave;
   owner: SignerWithAddress;
@@ -24,6 +29,54 @@ type RedemptionWithAaveParams = {
   expectedATokenUsed?: BigNumber;
   expectedUsdcUsed?: BigNumber;
   customRecipient?: AccountOrContract;
+};
+
+export const setAavePoolTest = async (
+  { redemptionVault, owner }: CommonParamsSetAavePool,
+  token: string,
+  pool: string,
+  opt?: OptionalCommonParams,
+) => {
+  if (opt?.revertMessage) {
+    await expect(
+      redemptionVault.connect(opt?.from ?? owner).setAavePool(token, pool),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  await expect(
+    redemptionVault.connect(opt?.from ?? owner).setAavePool(token, pool),
+  ).to.emit(
+    redemptionVault,
+    redemptionVault.interface.events['SetAavePool(address,address,address)']
+      .name,
+  ).to.not.reverted;
+
+  const poolAfter = await redemptionVault.aavePools(token);
+  expect(poolAfter).eq(pool);
+};
+
+export const removeAavePoolTest = async (
+  { redemptionVault, owner }: CommonParamsSetAavePool,
+  token: string,
+  opt?: OptionalCommonParams,
+) => {
+  if (opt?.revertMessage) {
+    await expect(
+      redemptionVault.connect(opt?.from ?? owner).removeAavePool(token),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  await expect(
+    redemptionVault.connect(opt?.from ?? owner).removeAavePool(token),
+  ).to.emit(
+    redemptionVault,
+    redemptionVault.interface.events['RemoveAavePool(address,address)'].name,
+  ).to.not.reverted;
+
+  const poolAfter = await redemptionVault.aavePools(token);
+  expect(poolAfter).eq('0x0000000000000000000000000000000000000000');
 };
 
 export const redeemInstantWithAaveTest = async (

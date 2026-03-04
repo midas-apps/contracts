@@ -30,11 +30,11 @@ describe('DepositVaultWithAave - Mainnet Fork Integration Tests', function () {
       const result = await depositInstantAave({
         depositVault: depositVaultWithAave,
         user: testUser,
-        usdc,
-        aUsdc,
+        tokenIn: usdc,
+        receiptToken: aUsdc,
         mToken: mTBILL,
         tokensReceiverAddress: tokensReceiver.address,
-        usdcWhale,
+        tokenWhale: usdcWhale,
         amountUsd: 100,
       });
 
@@ -57,11 +57,11 @@ describe('DepositVaultWithAave - Mainnet Fork Integration Tests', function () {
       const result = await depositInstantAave({
         depositVault: depositVaultWithAave,
         user: testUser,
-        usdc,
-        aUsdc,
+        tokenIn: usdc,
+        receiptToken: aUsdc,
         mToken: mTBILL,
         tokensReceiverAddress: tokensReceiver.address,
-        usdcWhale,
+        tokenWhale: usdcWhale,
         amountUsd: 100,
       });
 
@@ -89,11 +89,11 @@ describe('DepositVaultWithAave - Mainnet Fork Integration Tests', function () {
       const result1 = await depositInstantAave({
         depositVault: depositVaultWithAave,
         user: testUser,
-        usdc,
-        aUsdc,
+        tokenIn: usdc,
+        receiptToken: aUsdc,
         mToken: mTBILL,
         tokensReceiverAddress: tokensReceiver.address,
-        usdcWhale,
+        tokenWhale: usdcWhale,
         amountUsd: 100,
       });
 
@@ -106,15 +106,93 @@ describe('DepositVaultWithAave - Mainnet Fork Integration Tests', function () {
       const result2 = await depositInstantAave({
         depositVault: depositVaultWithAave,
         user: testUser,
-        usdc,
-        aUsdc,
+        tokenIn: usdc,
+        receiptToken: aUsdc,
         mToken: mTBILL,
         tokensReceiverAddress: tokensReceiver.address,
-        usdcWhale,
+        tokenWhale: usdcWhale,
         amountUsd: 100,
       });
 
       assertAutoInvestDisabled(result2);
+    });
+  });
+
+  describe('Multi-token: USDT with auto-invest', function () {
+    it('should supply USDT into Aave and send aUSDT to tokensReceiver', async function () {
+      const {
+        vaultAdmin,
+        testUser,
+        tokensReceiver,
+        mTBILL,
+        depositVaultWithAave,
+        usdt,
+        aUsdt,
+        usdtWhale,
+      } = await loadFixture(aaveDepositFixture);
+
+      await depositVaultWithAave
+        .connect(vaultAdmin)
+        .setAaveDepositsEnabled(true);
+
+      const result = await depositInstantAave({
+        depositVault: depositVaultWithAave,
+        user: testUser,
+        tokenIn: usdt,
+        receiptToken: aUsdt,
+        mToken: mTBILL,
+        tokensReceiverAddress: tokensReceiver.address,
+        tokenWhale: usdtWhale,
+        amountUsd: 100,
+      });
+
+      assertAutoInvestEnabled(result);
+    });
+
+    it('should handle USDC and USDT deposits sequentially', async function () {
+      const {
+        vaultAdmin,
+        testUser,
+        tokensReceiver,
+        mTBILL,
+        depositVaultWithAave,
+        usdc,
+        aUsdc,
+        usdcWhale,
+        usdt,
+        aUsdt,
+        usdtWhale,
+      } = await loadFixture(aaveDepositFixture);
+
+      await depositVaultWithAave
+        .connect(vaultAdmin)
+        .setAaveDepositsEnabled(true);
+
+      const result1 = await depositInstantAave({
+        depositVault: depositVaultWithAave,
+        user: testUser,
+        tokenIn: usdc,
+        receiptToken: aUsdc,
+        mToken: mTBILL,
+        tokensReceiverAddress: tokensReceiver.address,
+        tokenWhale: usdcWhale,
+        amountUsd: 100,
+      });
+
+      assertAutoInvestEnabled(result1);
+
+      const result2 = await depositInstantAave({
+        depositVault: depositVaultWithAave,
+        user: testUser,
+        tokenIn: usdt,
+        receiptToken: aUsdt,
+        mToken: mTBILL,
+        tokensReceiverAddress: tokensReceiver.address,
+        tokenWhale: usdtWhale,
+        amountUsd: 100,
+      });
+
+      assertAutoInvestEnabled(result2);
     });
   });
 });

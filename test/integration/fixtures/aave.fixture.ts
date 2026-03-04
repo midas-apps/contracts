@@ -87,6 +87,21 @@ async function setupAaveBase() {
     parseUnits('10000', await usdcAggregator.decimals()),
   ]);
 
+  const usdtAggregator = (await (
+    await ethers.getContractFactory('AggregatorV3Mock')
+  ).deploy()) as AggregatorV3Mock;
+  await usdtAggregator.setRoundData(
+    parseUnits('1', await usdtAggregator.decimals()),
+  );
+
+  const usdtDataFeed = await deployProxyContract<DataFeedTest>('DataFeedTest', [
+    accessControl.address,
+    usdtAggregator.address,
+    3 * 24 * 3600,
+    parseUnits('0.1', await usdtAggregator.decimals()),
+    parseUnits('10000', await usdtAggregator.decimals()),
+  ]);
+
   const mtbillDataFeed = await deployProxyContract<DataFeedTest>(
     'DataFeedTest',
     [
@@ -104,6 +119,11 @@ async function setupAaveBase() {
     MAINNET_ADDRESSES.USDC,
   );
   const aUsdc = await ethers.getContractAt('IERC20', MAINNET_ADDRESSES.AUSDC);
+  const usdt = await ethers.getContractAt(
+    'IERC20Metadata',
+    MAINNET_ADDRESSES.USDT,
+  );
+  const aUsdt = await ethers.getContractAt('IERC20', MAINNET_ADDRESSES.AUSDT);
   const aavePool = await ethers.getContractAt(
     'IAaveV3Pool',
     MAINNET_ADDRESSES.AAVE_V3_POOL,
@@ -116,6 +136,12 @@ async function setupAaveBase() {
   const aUsdcWhale = await impersonateAndFundAccount(
     MAINNET_ADDRESSES.AUSDC_WHALE,
   );
+  const usdtWhale = await impersonateAndFundAccount(
+    MAINNET_ADDRESSES.USDT_WHALE_BINANCE,
+  );
+  const aUsdtWhale = await impersonateAndFundAccount(
+    MAINNET_ADDRESSES.AUSDT_WHALE,
+  );
 
   return {
     accessControl,
@@ -126,6 +152,9 @@ async function setupAaveBase() {
     mockedAggregatorMToken: mtbillAggregator,
     usdc,
     aUsdc,
+    usdt,
+    aUsdt,
+    usdtDataFeed,
     aavePool,
     owner,
     tokensReceiver,
@@ -135,6 +164,8 @@ async function setupAaveBase() {
     testUser,
     usdcWhale,
     aUsdcWhale,
+    usdtWhale,
+    aUsdtWhale,
     roles: allRoles,
   };
 }
@@ -166,9 +197,7 @@ export async function aaveDepositFixture() {
         parseUnits('0'),
         0,
         ethers.constants.MaxUint256,
-        MAINNET_ADDRESSES.AAVE_V3_POOL,
       ],
-      'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)',
     );
 
   // Grant MINTER_ROLE to deposit vault
@@ -185,6 +214,24 @@ export async function aaveDepositFixture() {
     ethers.constants.MaxUint256,
     true, // is stable
   );
+
+  // Configure Aave pool mapping for USDC
+  await depositVaultWithAave
+    .connect(owner)
+    .setAavePool(usdc.address, MAINNET_ADDRESSES.AAVE_V3_POOL);
+
+  await depositVaultWithAave
+    .connect(owner)
+    .addPaymentToken(
+      base.usdt.address,
+      base.usdtDataFeed.address,
+      0,
+      ethers.constants.MaxUint256,
+      true,
+    );
+  await depositVaultWithAave
+    .connect(owner)
+    .setAavePool(base.usdt.address, MAINNET_ADDRESSES.AAVE_V3_POOL);
 
   return {
     ...base,
@@ -223,9 +270,8 @@ export async function aaveRedemptionFixture() {
           fiatFlatFee: parseUnits('10', 18),
         },
         base.requestRedeemer.address,
-        MAINNET_ADDRESSES.AAVE_V3_POOL,
       ],
-      'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)',
+      'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address)',
     );
 
   // Grant BURN_ROLE to redemption vault
@@ -242,6 +288,24 @@ export async function aaveRedemptionFixture() {
     ethers.constants.MaxUint256,
     true, // is stable
   );
+
+  // Configure Aave pool mapping for USDC
+  await redemptionVaultWithAave
+    .connect(owner)
+    .setAavePool(usdc.address, MAINNET_ADDRESSES.AAVE_V3_POOL);
+
+  await redemptionVaultWithAave
+    .connect(owner)
+    .addPaymentToken(
+      base.usdt.address,
+      base.usdtDataFeed.address,
+      0,
+      ethers.constants.MaxUint256,
+      true,
+    );
+  await redemptionVaultWithAave
+    .connect(owner)
+    .setAavePool(base.usdt.address, MAINNET_ADDRESSES.AAVE_V3_POOL);
 
   return {
     ...base,

@@ -309,9 +309,128 @@ describe('RedemptionVaultWithAave - Mainnet Fork Integration Tests', function ()
         mTBILLAmount,
         {
           from: testUser,
-          revertMessage: 'RVA: token not in Aave pool',
+          revertMessage: 'RVA: no pool for token',
         },
       );
+    });
+  });
+
+  describe('Multi-token: USDT redemption via Aave', function () {
+    it('should withdraw USDT from Aave when vault has aUSDT but no direct USDT', async function () {
+      const {
+        owner,
+        testUser,
+        mTBILL,
+        redemptionVaultWithAave,
+        usdt,
+        aUsdt,
+        aUsdtWhale,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(aaveRedemptionFixture);
+
+      const mTBILLAmount = 1000;
+
+      // Fund vault with aUSDT (from aUsdtWhale)
+      await aUsdt
+        .connect(aUsdtWhale)
+        .transfer(redemptionVaultWithAave.address, parseUnits('10000', 6));
+
+      // Verify vault has no direct USDT
+      expect(await usdt.balanceOf(redemptionVaultWithAave.address)).to.equal(0);
+
+      // Verify vault has aTokens
+      expect(await aUsdt.balanceOf(redemptionVaultWithAave.address)).to.be.gte(
+        parseUnits('10000', 6),
+      );
+
+      // Mint mTBILL to user
+      await mintToken(mTBILL, testUser, mTBILLAmount);
+
+      // Approve vault
+      await approveBase18(
+        testUser,
+        mTBILL,
+        redemptionVaultWithAave,
+        mTBILLAmount,
+      );
+
+      // redeemInstantWithAaveTest with usdc: usdt, aToken: aUsdt
+      const result = await redeemInstantWithAaveTest(
+        {
+          redemptionVault: redemptionVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          usdc: usdt,
+          aToken: aUsdt,
+        },
+        mTBILLAmount,
+        { from: testUser },
+      );
+
+      // Verify aTokens used, user received USDT
+      expect(result?.aTokenUsed).to.be.gt(0);
+      expect(result?.userUSDCReceived).to.equal(parseUnits('990', 6));
+
+      // Verify mTBILL was burned from user
+      expect(await mTBILL.balanceOf(testUser.address)).to.equal(0);
+    });
+
+    it('should handle USDC and USDT independently via per-token pool mapping', async function () {
+      const {
+        owner,
+        testUser,
+        mTBILL,
+        redemptionVaultWithAave,
+        usdc,
+        aUsdc,
+        usdt,
+        aUsdt,
+        aUsdcWhale,
+        aUsdtWhale,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(aaveRedemptionFixture);
+
+      // Fund vault with aUSDC for USDC redemptions
+      await aUsdc
+        .connect(aUsdcWhale)
+        .transfer(redemptionVaultWithAave.address, parseUnits('10000', 6));
+
+      // Fund vault with aUSDT for USDT redemptions
+      await aUsdt
+        .connect(aUsdtWhale)
+        .transfer(redemptionVaultWithAave.address, parseUnits('10000', 6));
+
+      // Do a USDC redemption → verify works
+      const mTBILLAmount = 1000;
+      await mintToken(mTBILL, testUser, mTBILLAmount);
+      await approveBase18(
+        testUser,
+        mTBILL,
+        redemptionVaultWithAave,
+        mTBILLAmount,
+      );
+
+      const result = await redeemInstantWithAaveTest(
+        {
+          redemptionVault: redemptionVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          usdc,
+          aToken: aUsdc,
+        },
+        mTBILLAmount,
+        { from: testUser },
+      );
+
+      expect(result?.userUSDCReceived).to.equal(parseUnits('990', 6));
+
+      // Verify both payment tokens have their pools configured
+      const aavePool = await redemptionVaultWithAave.aavePools(usdc.address);
+      const usdtPool = await redemptionVaultWithAave.aavePools(usdt.address);
+      expect(aavePool).to.not.equal(constants.AddressZero);
+      expect(usdtPool).to.not.equal(constants.AddressZero);
     });
   });
 });
