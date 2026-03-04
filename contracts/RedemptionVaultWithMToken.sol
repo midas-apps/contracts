@@ -224,9 +224,11 @@ contract RedemptionVaultWithMToken is RedemptionVault {
             .mTokenDataFeed()
             .getDataInBase18();
 
-        uint256 mTokenAAmount = (missingAmountBase18 * tokenOutRate) /
-            mTokenARate +
-            1;
+        uint256 mTokenAAmountNumerator = missingAmountBase18 * tokenOutRate;
+        uint256 mTokenAAmount = mTokenAAmountNumerator / mTokenARate;
+        if (mTokenAAmountNumerator % mTokenARate != 0) {
+            mTokenAAmount += 1;
+        }
 
         address mTokenA = address(redemptionVault.mToken());
 

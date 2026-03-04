@@ -819,7 +819,7 @@ describe('RedemptionVaultWithMToken', function () {
       ).to.be.revertedWith('RVMT: insufficient mToken balance');
     });
 
-    it('should succeed with truncation-prone rates (+ 1 rounding)', async () => {
+    it('should succeed with truncation-prone rates (ceil rounding)', async () => {
       const {
         redemptionVaultWithMToken,
         stableCoins,
@@ -854,12 +854,58 @@ describe('RedemptionVaultWithMToken', function () {
       // Use STABLECOIN_RATE (1e18) — matches what _redeemInstant passes
       // for stable tokens via _convertUsdToToken, NOT the data feed rate
       // (which is 1.02e18). The inner vault also uses STABLECOIN_RATE for
-      // stable tokens, so both sides see the same rate and the + 1 matters.
+      // stable tokens, so both sides see the same rate and ceil rounding matters.
       const tokenOutRate = parseUnits('1', 18);
 
-      // Without the + 1, the inner vault reverts because:
+      // Without ceil rounding, the inner vault reverts because:
       // mTokenAAmount = (1000e18 * 1e18) / 3e18 = 333...333 (truncated)
       // Inner vault: _truncate((333...333 * 3e18) / 1e18, 9) = 999.999999999e18 < 1000e18
+      await redemptionVaultWithMToken.checkAndRedeemMToken(
+        stableCoins.dai.address,
+        parseUnits('1000', 9),
+        tokenOutRate,
+      );
+
+      const daiAfter = await stableCoins.dai.balanceOf(
+        redemptionVaultWithMToken.address,
+      );
+      expect(daiAfter).to.be.gte(parseUnits('1000', 9));
+    });
+
+    it('should not over-redeem when division is exact', async () => {
+      const {
+        redemptionVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        owner,
+        dataFeed,
+        redemptionVault,
+        mockedAggregatorMToken,
+      } = await loadFixture(defaultDeploy);
+
+      await addPaymentTokenTest(
+        { vault: redemptionVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      // 1000 * 1e18 / 2e18 = 500 exactly, so no +1 should be applied.
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 2);
+
+      // If rounding is exact ceil, 500 mTBILL is enough. With unconditional +1, this reverts.
+      await mintToken(mTBILL, redemptionVaultWithMToken, 500);
+      await mintToken(stableCoins.dai, redemptionVault, 1_000_000);
+
+      const tokenOutRate = parseUnits('1', 18);
       await redemptionVaultWithMToken.checkAndRedeemMToken(
         stableCoins.dai.address,
         parseUnits('1000', 9),
