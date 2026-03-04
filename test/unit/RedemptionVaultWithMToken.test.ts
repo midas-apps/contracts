@@ -687,6 +687,192 @@ describe('RedemptionVaultWithMToken', function () {
     });
   });
 
+  describe('checkAndRedeemMToken()', () => {
+    it('should not redeem mTBILL when vault has sufficient tokenOut balance', async () => {
+      const {
+        redemptionVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        owner,
+        dataFeed,
+        redemptionVault,
+      } = await loadFixture(defaultDeploy);
+
+      await addPaymentTokenTest(
+        { vault: redemptionVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await mintToken(stableCoins.dai, redemptionVaultWithMToken, 1000);
+      await mintToken(mTBILL, redemptionVaultWithMToken, 1000);
+
+      const mTbillBefore = await mTBILL.balanceOf(
+        redemptionVaultWithMToken.address,
+      );
+      const tokenOutRate = await dataFeed.getDataInBase18();
+
+      await redemptionVaultWithMToken.checkAndRedeemMToken(
+        stableCoins.dai.address,
+        parseUnits('500', 9),
+        tokenOutRate,
+      );
+
+      const mTbillAfter = await mTBILL.balanceOf(
+        redemptionVaultWithMToken.address,
+      );
+      expect(mTbillAfter).to.equal(mTbillBefore);
+    });
+
+    it('should redeem missing amount via mToken RV', async () => {
+      const {
+        redemptionVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        owner,
+        dataFeed,
+        redemptionVault,
+      } = await loadFixture(defaultDeploy);
+
+      await addPaymentTokenTest(
+        { vault: redemptionVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await mintToken(stableCoins.dai, redemptionVaultWithMToken, 500);
+      await mintToken(mTBILL, redemptionVaultWithMToken, 10000);
+      await mintToken(stableCoins.dai, redemptionVault, 1_000_000);
+
+      const mTbillBefore = await mTBILL.balanceOf(
+        redemptionVaultWithMToken.address,
+      );
+      const tokenOutRate = await dataFeed.getDataInBase18();
+
+      await redemptionVaultWithMToken.checkAndRedeemMToken(
+        stableCoins.dai.address,
+        parseUnits('1000', 9),
+        tokenOutRate,
+      );
+
+      const mTbillAfter = await mTBILL.balanceOf(
+        redemptionVaultWithMToken.address,
+      );
+      expect(mTbillAfter).to.be.lt(mTbillBefore);
+
+      const daiAfter = await stableCoins.dai.balanceOf(
+        redemptionVaultWithMToken.address,
+      );
+      expect(daiAfter).to.be.gte(parseUnits('1000', 9));
+    });
+
+    it('should revert when insufficient mTBILL balance', async () => {
+      const {
+        redemptionVaultWithMToken,
+        stableCoins,
+        owner,
+        dataFeed,
+        redemptionVault,
+      } = await loadFixture(defaultDeploy);
+
+      await addPaymentTokenTest(
+        { vault: redemptionVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      const tokenOutRate = await dataFeed.getDataInBase18();
+
+      await expect(
+        redemptionVaultWithMToken.checkAndRedeemMToken(
+          stableCoins.dai.address,
+          parseUnits('1000', 9),
+          tokenOutRate,
+        ),
+      ).to.be.revertedWith('RVMT: insufficient mToken balance');
+    });
+
+    it('should succeed with truncation-prone rates (+ 1 rounding)', async () => {
+      const {
+        redemptionVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        owner,
+        dataFeed,
+        redemptionVault,
+        mockedAggregatorMToken,
+      } = await loadFixture(defaultDeploy);
+
+      await addPaymentTokenTest(
+        { vault: redemptionVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      // Set mTBILL rate to 3 — causes (amount * 1e18) / 3e18 to have remainder
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 3);
+
+      await mintToken(mTBILL, redemptionVaultWithMToken, 100_000);
+      await mintToken(stableCoins.dai, redemptionVault, 1_000_000);
+
+      // Use STABLECOIN_RATE (1e18) — matches what _redeemInstant passes
+      // for stable tokens via _convertUsdToToken, NOT the data feed rate
+      // (which is 1.02e18). The inner vault also uses STABLECOIN_RATE for
+      // stable tokens, so both sides see the same rate and the + 1 matters.
+      const tokenOutRate = parseUnits('1', 18);
+
+      // Without the + 1, the inner vault reverts because:
+      // mTokenAAmount = (1000e18 * 1e18) / 3e18 = 333...333 (truncated)
+      // Inner vault: _truncate((333...333 * 3e18) / 1e18, 9) = 999.999999999e18 < 1000e18
+      await redemptionVaultWithMToken.checkAndRedeemMToken(
+        stableCoins.dai.address,
+        parseUnits('1000', 9),
+        tokenOutRate,
+      );
+
+      const daiAfter = await stableCoins.dai.balanceOf(
+        redemptionVaultWithMToken.address,
+      );
+      expect(daiAfter).to.be.gte(parseUnits('1000', 9));
+    });
+  });
+
   describe('redeemInstant()', () => {
     it('should fail: when there is no token in vault', async () => {
       const {
@@ -1222,6 +1408,62 @@ describe('RedemptionVaultWithMToken', function () {
         99_999,
         {
           revertMessage: 'MV: token not exists',
+        },
+      );
+    });
+
+    it('should fail: when inner vault fee is not waived', async () => {
+      const {
+        owner,
+        redemptionVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        mFONE,
+        mTokenToUsdDataFeed,
+        mFoneToUsdDataFeed,
+        dataFeed,
+        redemptionVault,
+      } = await loadFixture(defaultDeploy);
+
+      await addPaymentTokenTest(
+        { vault: redemptionVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      // Remove the waived fee — inner vault will charge fee on this contract
+      await redemptionVault.removeWaivedFeeAccount(
+        redemptionVaultWithMToken.address,
+      );
+
+      await mintToken(mFONE, owner, 100_000);
+      await mintToken(mTBILL, redemptionVaultWithMToken, 100_000);
+      await mintToken(stableCoins.dai, redemptionVault, 1_000_000);
+      await approveBase18(owner, mFONE, redemptionVaultWithMToken, 100_000);
+
+      // No DAI on vault — forces mTBILL redemption path where inner vault fee causes revert
+      await redeemInstantWithMTokenTest(
+        {
+          redemptionVaultWithMToken,
+          owner,
+          mTBILL,
+          mFONE,
+          mFoneToUsdDataFeed,
+          mTokenToUsdDataFeed,
+        },
+        stableCoins.dai,
+        100,
+        {
+          revertMessage: 'RV: minReceiveAmount > actual',
         },
       );
     });

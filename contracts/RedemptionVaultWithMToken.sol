@@ -26,13 +26,15 @@ contract RedemptionVaultWithMToken is RedemptionVault {
     /**
      * @notice mToken RedemptionVault used for fallback redemptions
      */
+    /// @custom:oz-renamed-from mTbillRedemptionVault
     IRedemptionVault public redemptionVault;
 
     /**
      * @dev DEPRECATED storage slot kept for layout compatibility
      */
+    /// @custom:oz-renamed-from liquidityProvider
     // solhint-disable-next-line var-name-mixedcase
-    address public liquidityProvider_DEPRECATED;
+    address public liquidityProvider_deprecated;
 
     /**
      * @dev leaving a storage gap for futures updates
