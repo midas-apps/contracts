@@ -251,6 +251,7 @@ export const defaultDeploy = async () => {
     usdc: await new ERC20Mock__factory(owner).deploy(8),
     usdt: await new ERC20Mock__factory(owner).deploy(18),
     dai: await new ERC20Mock__factory(owner).deploy(9),
+    usdc6: await new ERC20Mock__factory(owner).deploy(6),
   };
 
   const otherCoins = {

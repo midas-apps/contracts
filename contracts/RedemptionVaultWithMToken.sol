@@ -4,6 +4,8 @@ pragma solidity 0.8.9;
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+
 import "./RedemptionVault.sol";
 import "./interfaces/IRedemptionVault.sol";
 import "./libraries/DecimalsCorrectionLibrary.sol";
@@ -224,11 +226,14 @@ contract RedemptionVaultWithMToken is RedemptionVault {
             .mTokenDataFeed()
             .getDataInBase18();
 
-        uint256 mTokenAAmountNumerator = missingAmountBase18 * tokenOutRate;
-        uint256 mTokenAAmount = mTokenAAmountNumerator / mTokenARate;
-        if (mTokenAAmountNumerator % mTokenARate != 0) {
-            mTokenAAmount += 1;
-        }
+        // Ceil so the inner vault's floored output is still >= missingAmountBase18.
+        // Requires address(this) to have waivedFeeRestriction on the inner vault
+        uint256 mTokenAAmount = Math.mulDiv(
+            missingAmountBase18,
+            tokenOutRate,
+            mTokenARate,
+            Math.Rounding.Up
+        );
 
         address mTokenA = address(redemptionVault.mToken());
 
