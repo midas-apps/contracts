@@ -7,6 +7,11 @@ import {
   getNetworkConfig,
   sendAndWaitForCustomTxSign,
 } from './utils';
+import {
+  defaultDepositVaultPriority,
+  resolveVaultAddress,
+  roleGrantRedemptionVaultPriority,
+} from './vault-resolver';
 
 import { MTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
@@ -74,12 +79,14 @@ export const grantAllProductRoles = async (
   const contractsRoles: string[] = [];
   const contractsAddresses: string[] = [];
 
-  const depositVault = tokenAddresses.depositVault;
-  const redemptionVault =
-    tokenAddresses.redemptionVaultSwapper ??
-    tokenAddresses.redemptionVaultBuidl ??
-    tokenAddresses.redemptionVaultUstb ??
-    tokenAddresses.redemptionVault;
+  const depositVault = resolveVaultAddress(
+    tokenAddresses,
+    defaultDepositVaultPriority,
+  );
+  const redemptionVault = resolveVaultAddress(
+    tokenAddresses,
+    roleGrantRedemptionVaultPriority,
+  );
 
   if (depositVault) {
     contractsRoles.push(tokenRoles.minter);

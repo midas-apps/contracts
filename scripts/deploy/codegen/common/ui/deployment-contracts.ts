@@ -89,9 +89,39 @@ export const getContractsToGenerateFromUser = async () => {
         hint: 'Redemption Vault With Swapper contract',
       },
       {
+        value: 'rvMToken',
+        label: 'Redemption Vault With MToken',
+        hint: 'Redemption Vault With MToken liquid strategy contract',
+      },
+      {
         value: 'rvUstb',
         label: 'Redemption Vault With USTB',
         hint: 'Redemption Vault With USTB contract',
+      },
+      {
+        value: 'rvAave',
+        label: 'Redemption Vault With Aave',
+        hint: 'Redemption Vault With Aave V3 contract',
+      },
+      {
+        value: 'rvMorpho',
+        label: 'Redemption Vault With Morpho',
+        hint: 'Redemption Vault With Morpho Vault (ERC-4626) contract',
+      },
+      {
+        value: 'dvAave',
+        label: 'Deposit Vault With Aave',
+        hint: 'Deposit Vault with Aave V3 auto-invest contract',
+      },
+      {
+        value: 'dvMorpho',
+        label: 'Deposit Vault With Morpho',
+        hint: 'Deposit Vault with Morpho auto-invest contract',
+      },
+      {
+        value: 'dvMToken',
+        label: 'Deposit Vault With MToken',
+        hint: 'Deposit Vault with mToken auto-invest contract',
       },
       { value: 'dataFeed', label: 'Data Feed', hint: 'Data Feed contract' },
       {
