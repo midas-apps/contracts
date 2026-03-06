@@ -1096,7 +1096,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
       usdt: {
         token: '0xAF988C3f7CB2AceAbB15f96b19388a259b6C438f',
-        aggregator: '0x1B4D2eD5Cc36480c9ed2d86cdd26818c01A494F8',
+        aggregator: '0xb67047eDF6204F4C81333248dA71F8387050790C',
         dataFeed: '0x222e284b867559cbf3A5EBfba3b09f4115972753',
       },
     },
