@@ -4,8 +4,16 @@ import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
+import { encodeFnSelector } from '../../helpers/utils';
+import { ManageableVaultTester__factory } from '../../typechain-types';
 import { acErrors, blackList, greenList } from '../common/ac.helpers';
-import { approveBase18, mintToken, pauseVault } from '../common/common.helpers';
+import {
+  approveBase18,
+  mintToken,
+  pauseVault,
+  pauseVaultFn,
+} from '../common/common.helpers';
+import { setRoundData } from '../common/data-feed.helpers';
 import {
   depositInstantWithMTokenTest,
   setMTokenDepositsEnabledTest,
@@ -76,6 +84,73 @@ describe('DepositVaultWithMToken', function () {
       depositVault.address,
     );
     expect(await depositVaultWithMToken.mTokenDepositsEnabled()).eq(false);
+  });
+
+  describe('initialization', () => {
+    it('should fail: call initialize() when already initialized', async () => {
+      const { depositVaultWithMToken } = await loadFixture(defaultDeploy);
+
+      await expect(
+        depositVaultWithMToken[
+          'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)'
+        ](
+          constants.AddressZero,
+          {
+            mToken: constants.AddressZero,
+            mTokenDataFeed: constants.AddressZero,
+          },
+          {
+            feeReceiver: constants.AddressZero,
+            tokensReceiver: constants.AddressZero,
+          },
+          {
+            instantFee: 0,
+            instantDailyLimit: 0,
+          },
+          constants.AddressZero,
+          0,
+          0,
+          0,
+          0,
+          constants.AddressZero,
+        ),
+      ).revertedWith('Initializable: contract is already initialized');
+    });
+
+    it('should fail: call with initializing == false', async () => {
+      const {
+        owner,
+        accessControl,
+        mTBILL,
+        tokensReceiver,
+        feeReceiver,
+        mTokenToUsdDataFeed,
+        mockedSanctionsList,
+      } = await loadFixture(defaultDeploy);
+
+      const vault = await new ManageableVaultTester__factory(owner).deploy();
+
+      await expect(
+        vault.initializeWithoutInitializer(
+          accessControl.address,
+          {
+            mToken: mTBILL.address,
+            mTokenDataFeed: mTokenToUsdDataFeed.address,
+          },
+          {
+            feeReceiver: feeReceiver.address,
+            tokensReceiver: tokensReceiver.address,
+          },
+          {
+            instantFee: 100,
+            instantDailyLimit: parseUnits('100000'),
+          },
+          mockedSanctionsList.address,
+          1,
+          parseUnits('100'),
+        ),
+      ).revertedWith('Initializable: contract is not initializing');
+    });
   });
 
   describe('setMTokenDepositVault()', () => {
@@ -481,6 +556,60 @@ describe('DepositVaultWithMToken', function () {
     });
   });
 
+  describe('freeFromMinAmount()', async () => {
+    it('should fail: call from address without vault admin role', async () => {
+      const { depositVaultWithMToken, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+      await expect(
+        depositVaultWithMToken
+          .connect(regularAccounts[0])
+          .freeFromMinAmount(regularAccounts[1].address, true),
+      ).to.be.revertedWith('WMAC: hasnt role');
+    });
+    it('should not fail', async () => {
+      const { depositVaultWithMToken, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+      await expect(
+        depositVaultWithMToken.freeFromMinAmount(
+          regularAccounts[0].address,
+          true,
+        ),
+      ).to.not.reverted;
+
+      expect(
+        await depositVaultWithMToken.isFreeFromMinAmount(
+          regularAccounts[0].address,
+        ),
+      ).to.eq(true);
+    });
+    it('should fail: already in list', async () => {
+      const { depositVaultWithMToken, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+      await expect(
+        depositVaultWithMToken.freeFromMinAmount(
+          regularAccounts[0].address,
+          true,
+        ),
+      ).to.not.reverted;
+
+      expect(
+        await depositVaultWithMToken.isFreeFromMinAmount(
+          regularAccounts[0].address,
+        ),
+      ).to.eq(true);
+
+      await expect(
+        depositVaultWithMToken.freeFromMinAmount(
+          regularAccounts[0].address,
+          true,
+        ),
+      ).to.revertedWith('DV: already free');
+    });
+  });
+
   describe('depositInstant()', async () => {
     it('should fail: when there is no token in vault', async () => {
       const {
@@ -658,6 +787,472 @@ describe('DepositVaultWithMToken', function () {
           from: regularAccounts[0],
           revertMessage: 'WSL: sanctioned',
         },
+      );
+    });
+
+    it('should fail: when trying to deposit 0 amount', async () => {
+      const {
+        owner,
+        depositVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await depositInstantWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        stableCoins.dai,
+        0,
+        {
+          revertMessage: 'DV: invalid amount',
+        },
+      );
+    });
+
+    it('should fail: when rounding is invalid', async () => {
+      const {
+        owner,
+        depositVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVaultWithMToken, owner }, 10);
+      await depositInstantWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        stableCoins.dai,
+        100.0000000001,
+        {
+          revertMessage: 'MV: invalid rounding',
+        },
+      );
+    });
+
+    it('should fail: call with insufficient allowance', async () => {
+      const {
+        owner,
+        depositVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 100);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVaultWithMToken, owner }, 10);
+      await depositInstantWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        stableCoins.dai,
+        100,
+        {
+          revertMessage: 'ERC20: insufficient allowance',
+        },
+      );
+    });
+
+    it('should fail: call with insufficient balance', async () => {
+      const {
+        owner,
+        depositVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await approveBase18(owner, stableCoins.dai, depositVaultWithMToken, 100);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVaultWithMToken, owner }, 10);
+      await depositInstantWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        stableCoins.dai,
+        100,
+        {
+          revertMessage: 'ERC20: transfer amount exceeds balance',
+        },
+      );
+    });
+
+    it('should fail: dataFeed rate 0', async () => {
+      const {
+        owner,
+        depositVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mockedAggregator,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await approveBase18(owner, stableCoins.dai, depositVaultWithMToken, 10);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await mintToken(stableCoins.dai, owner, 100_000);
+      await setRoundData({ mockedAggregator }, 0);
+      await depositInstantWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        stableCoins.dai,
+        1,
+        {
+          revertMessage: 'DF: feed is deprecated',
+        },
+      );
+    });
+
+    it('should fail: call for amount < minAmountToDepositTest', async () => {
+      const {
+        depositVaultWithMToken,
+        mockedAggregator,
+        owner,
+        mTBILL,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1);
+
+      await mintToken(stableCoins.dai, owner, 100_000);
+      await approveBase18(
+        owner,
+        stableCoins.dai,
+        depositVaultWithMToken,
+        100_000,
+      );
+
+      await setMinAmountToDepositTest(
+        { depositVault: depositVaultWithMToken, owner },
+        100_000,
+      );
+      await setInstantDailyLimitTest(
+        { vault: depositVaultWithMToken, owner },
+        150_000,
+      );
+
+      await depositInstantWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        stableCoins.dai,
+        99_999,
+        {
+          revertMessage: 'DV: mint amount < min',
+        },
+      );
+    });
+
+    it('should fail: call for amount < minAmount', async () => {
+      const {
+        depositVaultWithMToken,
+        mockedAggregator,
+        owner,
+        mTBILL,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1);
+
+      await mintToken(stableCoins.dai, owner, 100_000);
+      await approveBase18(
+        owner,
+        stableCoins.dai,
+        depositVaultWithMToken,
+        100_000,
+      );
+
+      await setMinAmountToDepositTest(
+        { depositVault: depositVaultWithMToken, owner },
+        100_000,
+      );
+      await setInstantDailyLimitTest(
+        { vault: depositVaultWithMToken, owner },
+        150_000,
+      );
+
+      await depositInstantWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        stableCoins.dai,
+        99,
+        {
+          revertMessage: 'DV: mToken amount < min',
+        },
+      );
+    });
+
+    it('should fail: if exceed allowance of deposit for token', async () => {
+      const {
+        depositVaultWithMToken,
+        mockedAggregator,
+        owner,
+        mTBILL,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 4);
+
+      await mintToken(stableCoins.dai, owner, 100_000);
+      await changeTokenAllowanceTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.dai.address,
+        100,
+      );
+      await approveBase18(
+        owner,
+        stableCoins.dai,
+        depositVaultWithMToken,
+        100_000,
+      );
+
+      await depositInstantWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        stableCoins.dai,
+        99_999,
+        {
+          revertMessage: 'MV: exceed allowance',
+        },
+      );
+    });
+
+    it('should fail: if mint limit exceeded', async () => {
+      const {
+        depositVaultWithMToken,
+        mockedAggregator,
+        owner,
+        mTBILL,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 4);
+
+      await mintToken(stableCoins.dai, owner, 100_000);
+      await setInstantDailyLimitTest(
+        { vault: depositVaultWithMToken, owner },
+        1000,
+      );
+
+      await approveBase18(
+        owner,
+        stableCoins.dai,
+        depositVaultWithMToken,
+        100_000,
+      );
+
+      await depositInstantWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        stableCoins.dai,
+        99_999,
+        {
+          revertMessage: 'MV: exceed limit',
+        },
+      );
+    });
+
+    it('should fail: if min receive amount greater then actual', async () => {
+      const {
+        depositVaultWithMToken,
+        mockedAggregator,
+        owner,
+        mTBILL,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 4);
+
+      await mintToken(stableCoins.dai, owner, 100_000);
+
+      await approveBase18(
+        owner,
+        stableCoins.dai,
+        depositVaultWithMToken,
+        100_000,
+      );
+
+      await depositInstantWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          minAmount: parseUnits('100000'),
+        },
+        stableCoins.dai,
+        99_999,
+        {
+          revertMessage: 'DV: minReceiveAmount > actual',
+        },
+      );
+    });
+
+    it('should fail: if some fee = 100%', async () => {
+      const {
+        owner,
+        depositVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 100);
+      await approveBase18(owner, stableCoins.dai, depositVaultWithMToken, 100);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        10000,
+        true,
+      );
+      await depositInstantWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        stableCoins.dai,
+        100,
+        {
+          revertMessage: 'DV: mToken amount < min',
+        },
+      );
+
+      await removePaymentTokenTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.dai,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setInstantFeeTest({ vault: depositVaultWithMToken, owner }, 10000);
+      await depositInstantWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        stableCoins.dai,
+        100,
+        { revertMessage: 'DV: mToken amount < min' },
       );
     });
 
@@ -1171,6 +1766,156 @@ describe('DepositVaultWithMToken', function () {
         100,
         {
           revertMessage: 'MV: token not exists',
+        },
+      );
+    });
+
+    it('should fail: greenlist enabled and recipient not in greenlist (custom recipient overload)', async () => {
+      const {
+        owner,
+        depositVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        greenListableTester,
+        accessControl,
+        customRecipient,
+      } = await loadFixture(defaultDeploy);
+
+      await greenList(
+        { greenlistable: greenListableTester, accessControl, owner },
+        owner,
+      );
+
+      await depositVaultWithMToken.setGreenlistEnable(true);
+
+      await depositInstantWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          customRecipient,
+        },
+        stableCoins.dai,
+        1,
+        {
+          revertMessage: 'WMAC: hasnt role',
+        },
+      );
+    });
+
+    it('should fail: recipient in blacklist (custom recipient overload)', async () => {
+      const {
+        owner,
+        depositVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        blackListableTester,
+        accessControl,
+        regularAccounts,
+        customRecipient,
+      } = await loadFixture(defaultDeploy);
+
+      await blackList(
+        { blacklistable: blackListableTester, accessControl, owner },
+        customRecipient,
+      );
+
+      await depositInstantWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          customRecipient,
+        },
+        stableCoins.dai,
+        1,
+        {
+          from: regularAccounts[0],
+          revertMessage: acErrors.WMAC_HAS_ROLE,
+        },
+      );
+    });
+
+    it('should fail: recipient in sanctions list (custom recipient overload)', async () => {
+      const {
+        owner,
+        depositVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        mockedSanctionsList,
+        customRecipient,
+      } = await loadFixture(defaultDeploy);
+
+      await sanctionUser(
+        { sanctionsList: mockedSanctionsList },
+        customRecipient,
+      );
+
+      await depositInstantWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          customRecipient,
+        },
+        stableCoins.dai,
+        1,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'WSL: sanctioned',
+        },
+      );
+    });
+
+    it('should fail: when function paused (custom recipient overload)', async () => {
+      const {
+        owner,
+        depositVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        customRecipient,
+      } = await loadFixture(defaultDeploy);
+      await mintToken(stableCoins.dai, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.dai,
+        depositVaultWithMToken,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      const selector = encodeFnSelector(
+        'depositInstant(address,uint256,uint256,bytes32,address)',
+      );
+      await pauseVaultFn(depositVaultWithMToken, selector);
+      await depositInstantWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          customRecipient,
+        },
+        stableCoins.dai,
+        100,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'Pausable: fn paused',
         },
       );
     });

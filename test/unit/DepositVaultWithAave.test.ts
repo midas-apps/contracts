@@ -4,8 +4,16 @@ import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
+import { encodeFnSelector } from '../../helpers/utils';
+import { ManageableVaultTester__factory } from '../../typechain-types';
 import { acErrors, blackList, greenList } from '../common/ac.helpers';
-import { approveBase18, mintToken, pauseVault } from '../common/common.helpers';
+import {
+  approveBase18,
+  mintToken,
+  pauseVault,
+  pauseVaultFn,
+} from '../common/common.helpers';
+import { setRoundData } from '../common/data-feed.helpers';
 import {
   depositInstantWithAaveTest,
   removeAavePoolTest,
@@ -76,6 +84,70 @@ describe('DepositVaultWithAave', function () {
       aavePoolMock.address,
     );
     expect(await depositVaultWithAave.aaveDepositsEnabled()).eq(false);
+  });
+
+  describe('initialization', () => {
+    it('should fail: call initialize() when already initialized', async () => {
+      const { depositVaultWithAave } = await loadFixture(defaultDeploy);
+
+      await expect(
+        depositVaultWithAave.initialize(
+          constants.AddressZero,
+          {
+            mToken: constants.AddressZero,
+            mTokenDataFeed: constants.AddressZero,
+          },
+          {
+            feeReceiver: constants.AddressZero,
+            tokensReceiver: constants.AddressZero,
+          },
+          {
+            instantFee: 0,
+            instantDailyLimit: 0,
+          },
+          constants.AddressZero,
+          0,
+          0,
+          0,
+          0,
+        ),
+      ).revertedWith('Initializable: contract is already initialized');
+    });
+
+    it('should fail: call with initializing == false', async () => {
+      const {
+        owner,
+        accessControl,
+        mTBILL,
+        tokensReceiver,
+        feeReceiver,
+        mTokenToUsdDataFeed,
+        mockedSanctionsList,
+      } = await loadFixture(defaultDeploy);
+
+      const vault = await new ManageableVaultTester__factory(owner).deploy();
+
+      await expect(
+        vault.initializeWithoutInitializer(
+          accessControl.address,
+          {
+            mToken: mTBILL.address,
+            mTokenDataFeed: mTokenToUsdDataFeed.address,
+          },
+          {
+            feeReceiver: feeReceiver.address,
+            tokensReceiver: tokensReceiver.address,
+          },
+          {
+            instantFee: 100,
+            instantDailyLimit: parseUnits('100000'),
+          },
+          mockedSanctionsList.address,
+          1,
+          parseUnits('100'),
+        ),
+      ).revertedWith('Initializable: contract is not initializing');
+    });
   });
 
   describe('setAavePool()', () => {
@@ -508,6 +580,60 @@ describe('DepositVaultWithAave', function () {
     });
   });
 
+  describe('freeFromMinAmount()', async () => {
+    it('should fail: call from address without vault admin role', async () => {
+      const { depositVaultWithAave, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+      await expect(
+        depositVaultWithAave
+          .connect(regularAccounts[0])
+          .freeFromMinAmount(regularAccounts[1].address, true),
+      ).to.be.revertedWith('WMAC: hasnt role');
+    });
+    it('should not fail', async () => {
+      const { depositVaultWithAave, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+      await expect(
+        depositVaultWithAave.freeFromMinAmount(
+          regularAccounts[0].address,
+          true,
+        ),
+      ).to.not.reverted;
+
+      expect(
+        await depositVaultWithAave.isFreeFromMinAmount(
+          regularAccounts[0].address,
+        ),
+      ).to.eq(true);
+    });
+    it('should fail: already in list', async () => {
+      const { depositVaultWithAave, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+      await expect(
+        depositVaultWithAave.freeFromMinAmount(
+          regularAccounts[0].address,
+          true,
+        ),
+      ).to.not.reverted;
+
+      expect(
+        await depositVaultWithAave.isFreeFromMinAmount(
+          regularAccounts[0].address,
+        ),
+      ).to.eq(true);
+
+      await expect(
+        depositVaultWithAave.freeFromMinAmount(
+          regularAccounts[0].address,
+          true,
+        ),
+      ).to.revertedWith('DV: already free');
+    });
+  });
+
   describe('depositInstant()', async () => {
     it('should fail: when there is no token in vault', async () => {
       const {
@@ -693,6 +819,495 @@ describe('DepositVaultWithAave', function () {
           from: regularAccounts[0],
           revertMessage: 'WSL: sanctioned',
         },
+      );
+    });
+
+    it('should fail: when trying to deposit 0 amount', async () => {
+      const {
+        owner,
+        depositVaultWithAave,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await depositInstantWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+        },
+        stableCoins.dai,
+        0,
+        {
+          revertMessage: 'DV: invalid amount',
+        },
+      );
+    });
+
+    it('should fail: when rounding is invalid', async () => {
+      const {
+        owner,
+        depositVaultWithAave,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
+
+      await addPaymentTokenTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVaultWithAave, owner }, 10);
+      await depositInstantWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+        },
+        stableCoins.dai,
+        100.0000000001,
+        {
+          revertMessage: 'MV: invalid rounding',
+        },
+      );
+    });
+
+    it('should fail: call with insufficient allowance', async () => {
+      const {
+        owner,
+        depositVaultWithAave,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 100);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVaultWithAave, owner }, 10);
+      await depositInstantWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+        },
+        stableCoins.dai,
+        100,
+        {
+          revertMessage: 'ERC20: insufficient allowance',
+        },
+      );
+    });
+
+    it('should fail: call with insufficient balance', async () => {
+      const {
+        owner,
+        depositVaultWithAave,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
+
+      await approveBase18(owner, stableCoins.dai, depositVaultWithAave, 100);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVaultWithAave, owner }, 10);
+      await depositInstantWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+        },
+        stableCoins.dai,
+        100,
+        {
+          revertMessage: 'ERC20: transfer amount exceeds balance',
+        },
+      );
+    });
+
+    it('should fail: dataFeed rate 0 ', async () => {
+      const {
+        owner,
+        depositVaultWithAave,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mockedAggregator,
+        mTokenToUsdDataFeed,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
+
+      await approveBase18(owner, stableCoins.dai, depositVaultWithAave, 10);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await mintToken(stableCoins.dai, owner, 100_000);
+      await setRoundData({ mockedAggregator }, 0);
+      await depositInstantWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+        },
+        stableCoins.dai,
+        1,
+        {
+          revertMessage: 'DF: feed is deprecated',
+        },
+      );
+    });
+
+    it('should fail: call for amount < minAmountToDepositTest', async () => {
+      const {
+        depositVaultWithAave,
+        mockedAggregator,
+        owner,
+        mTBILL,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1);
+
+      await mintToken(stableCoins.dai, owner, 100_000);
+      await approveBase18(
+        owner,
+        stableCoins.dai,
+        depositVaultWithAave,
+        100_000,
+      );
+
+      await setMinAmountToDepositTest(
+        { depositVault: depositVaultWithAave, owner },
+        100_000,
+      );
+      await setInstantDailyLimitTest(
+        { vault: depositVaultWithAave, owner },
+        150_000,
+      );
+
+      await depositInstantWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+        },
+        stableCoins.dai,
+        99_999,
+        {
+          revertMessage: 'DV: mint amount < min',
+        },
+      );
+    });
+
+    it('should fail: call for amount < minAmount', async () => {
+      const {
+        depositVaultWithAave,
+        mockedAggregator,
+        owner,
+        mTBILL,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1);
+
+      await mintToken(stableCoins.dai, owner, 100_000);
+      await approveBase18(
+        owner,
+        stableCoins.dai,
+        depositVaultWithAave,
+        100_000,
+      );
+
+      await setMinAmountToDepositTest(
+        { depositVault: depositVaultWithAave, owner },
+        100_000,
+      );
+      await setInstantDailyLimitTest(
+        { vault: depositVaultWithAave, owner },
+        150_000,
+      );
+
+      await depositInstantWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+        },
+        stableCoins.dai,
+        99,
+        {
+          revertMessage: 'DV: mToken amount < min',
+        },
+      );
+    });
+
+    it('should fail: if exceed allowance of deposit for token', async () => {
+      const {
+        depositVaultWithAave,
+        mockedAggregator,
+        owner,
+        mTBILL,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 4);
+
+      await mintToken(stableCoins.dai, owner, 100_000);
+      await changeTokenAllowanceTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.dai.address,
+        100,
+      );
+      await approveBase18(
+        owner,
+        stableCoins.dai,
+        depositVaultWithAave,
+        100_000,
+      );
+
+      await depositInstantWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+        },
+        stableCoins.dai,
+        99_999,
+        {
+          revertMessage: 'MV: exceed allowance',
+        },
+      );
+    });
+
+    it('should fail: if mint limit exceeded', async () => {
+      const {
+        depositVaultWithAave,
+        mockedAggregator,
+        owner,
+        mTBILL,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 4);
+
+      await mintToken(stableCoins.dai, owner, 100_000);
+      await setInstantDailyLimitTest(
+        { vault: depositVaultWithAave, owner },
+        1000,
+      );
+
+      await approveBase18(
+        owner,
+        stableCoins.dai,
+        depositVaultWithAave,
+        100_000,
+      );
+
+      await depositInstantWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+        },
+        stableCoins.dai,
+        99_999,
+        {
+          revertMessage: 'MV: exceed limit',
+        },
+      );
+    });
+
+    it('should fail: if min receive amount greater then actual', async () => {
+      const {
+        depositVaultWithAave,
+        mockedAggregator,
+        owner,
+        mTBILL,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 4);
+
+      await mintToken(stableCoins.dai, owner, 100_000);
+
+      await approveBase18(
+        owner,
+        stableCoins.dai,
+        depositVaultWithAave,
+        100_000,
+      );
+
+      await depositInstantWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+          minAmount: parseUnits('100000'),
+        },
+        stableCoins.dai,
+        99_999,
+        {
+          revertMessage: 'DV: minReceiveAmount > actual',
+        },
+      );
+    });
+
+    it('should fail: if some fee = 100%', async () => {
+      const {
+        owner,
+        depositVaultWithAave,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, owner, 100);
+      await approveBase18(owner, stableCoins.dai, depositVaultWithAave, 100);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        10000,
+        true,
+      );
+      await depositInstantWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+        },
+        stableCoins.dai,
+        100,
+        {
+          revertMessage: 'DV: mToken amount < min',
+        },
+      );
+
+      await removePaymentTokenTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.dai,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setInstantFeeTest({ vault: depositVaultWithAave, owner }, 10000);
+      await depositInstantWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+        },
+        stableCoins.dai,
+        100,
+        { revertMessage: 'DV: mToken amount < min' },
       );
     });
 
@@ -1181,6 +1796,164 @@ describe('DepositVaultWithAave', function () {
         {
           from: regularAccounts[0],
           revertMessage: 'DVA: no pool for token',
+        },
+      );
+    });
+
+    it('should fail: greenlist enabled and recipient not in greenlist (custom recipient overload)', async () => {
+      const {
+        owner,
+        depositVaultWithAave,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        greenListableTester,
+        accessControl,
+        customRecipient,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
+
+      await greenList(
+        { greenlistable: greenListableTester, accessControl, owner },
+        owner,
+      );
+
+      await depositVaultWithAave.setGreenlistEnable(true);
+
+      await depositInstantWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+          customRecipient,
+        },
+        stableCoins.dai,
+        1,
+        {
+          revertMessage: 'WMAC: hasnt role',
+        },
+      );
+    });
+
+    it('should fail: recipient in blacklist (custom recipient overload)', async () => {
+      const {
+        owner,
+        depositVaultWithAave,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        blackListableTester,
+        accessControl,
+        regularAccounts,
+        customRecipient,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
+
+      await blackList(
+        { blacklistable: blackListableTester, accessControl, owner },
+        customRecipient,
+      );
+
+      await depositInstantWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+          customRecipient,
+        },
+        stableCoins.dai,
+        1,
+        {
+          from: regularAccounts[0],
+          revertMessage: acErrors.WMAC_HAS_ROLE,
+        },
+      );
+    });
+
+    it('should fail: recipient in sanctions list (custom recipient overload)', async () => {
+      const {
+        owner,
+        depositVaultWithAave,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        mockedSanctionsList,
+        customRecipient,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
+
+      await sanctionUser(
+        { sanctionsList: mockedSanctionsList },
+        customRecipient,
+      );
+
+      await depositInstantWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+          customRecipient,
+        },
+        stableCoins.dai,
+        1,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'WSL: sanctioned',
+        },
+      );
+    });
+
+    it('should fail: when function paused (custom recipient overload)', async () => {
+      const {
+        owner,
+        depositVaultWithAave,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        customRecipient,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
+      await mintToken(stableCoins.dai, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.dai,
+        depositVaultWithAave,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      const selector = encodeFnSelector(
+        'depositInstant(address,uint256,uint256,bytes32,address)',
+      );
+      await pauseVaultFn(depositVaultWithAave, selector);
+      await depositInstantWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+          customRecipient,
+        },
+        stableCoins.dai,
+        100,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'Pausable: fn paused',
         },
       );
     });

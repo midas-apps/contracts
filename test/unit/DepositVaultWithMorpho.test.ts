@@ -4,9 +4,19 @@ import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import { MorphoVaultMock__factory } from '../../typechain-types';
+import { encodeFnSelector } from '../../helpers/utils';
+import {
+  ManageableVaultTester__factory,
+  MorphoVaultMock__factory,
+} from '../../typechain-types';
 import { acErrors, blackList, greenList } from '../common/ac.helpers';
-import { approveBase18, mintToken, pauseVault } from '../common/common.helpers';
+import {
+  approveBase18,
+  mintToken,
+  pauseVault,
+  pauseVaultFn,
+} from '../common/common.helpers';
+import { setRoundData } from '../common/data-feed.helpers';
 import {
   depositInstantWithMorphoTest,
   removeMorphoVaultTest,
@@ -30,10 +40,12 @@ import {
   removeWaivedFeeAccountTest,
   setInstantDailyLimitTest,
   setMinAmountToDepositTest,
+  setInstantFeeTest,
   setMinAmountTest,
   setVariabilityToleranceTest,
   withdrawTest,
 } from '../common/manageable-vault.helpers';
+import { sanctionUser } from '../common/with-sanctions-list.helpers';
 
 describe('DepositVaultWithMorpho', function () {
   it('deployment', async () => {
@@ -72,6 +84,70 @@ describe('DepositVaultWithMorpho', function () {
       ethers.constants.AddressZero,
     );
     expect(await depositVaultWithMorpho.morphoDepositsEnabled()).eq(false);
+  });
+
+  describe('initialization', () => {
+    it('should fail: call initialize() when already initialized', async () => {
+      const { depositVaultWithMorpho } = await loadFixture(defaultDeploy);
+
+      await expect(
+        depositVaultWithMorpho.initialize(
+          constants.AddressZero,
+          {
+            mToken: constants.AddressZero,
+            mTokenDataFeed: constants.AddressZero,
+          },
+          {
+            feeReceiver: constants.AddressZero,
+            tokensReceiver: constants.AddressZero,
+          },
+          {
+            instantFee: 0,
+            instantDailyLimit: 0,
+          },
+          constants.AddressZero,
+          0,
+          0,
+          0,
+          0,
+        ),
+      ).revertedWith('Initializable: contract is already initialized');
+    });
+
+    it('should fail: call with initializing == false', async () => {
+      const {
+        owner,
+        accessControl,
+        mTBILL,
+        tokensReceiver,
+        feeReceiver,
+        mTokenToUsdDataFeed,
+        mockedSanctionsList,
+      } = await loadFixture(defaultDeploy);
+
+      const vault = await new ManageableVaultTester__factory(owner).deploy();
+
+      await expect(
+        vault.initializeWithoutInitializer(
+          accessControl.address,
+          {
+            mToken: mTBILL.address,
+            mTokenDataFeed: mTokenToUsdDataFeed.address,
+          },
+          {
+            feeReceiver: feeReceiver.address,
+            tokensReceiver: tokensReceiver.address,
+          },
+          {
+            instantFee: 100,
+            instantDailyLimit: parseUnits('100000'),
+          },
+          mockedSanctionsList.address,
+          1,
+          parseUnits('100'),
+        ),
+      ).revertedWith('Initializable: contract is not initializing');
+    });
   });
 
   describe('setMorphoVault()', () => {
@@ -561,6 +637,60 @@ describe('DepositVaultWithMorpho', function () {
     });
   });
 
+  describe('freeFromMinAmount()', async () => {
+    it('should fail: call from address without vault admin role', async () => {
+      const { depositVaultWithMorpho, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+      await expect(
+        depositVaultWithMorpho
+          .connect(regularAccounts[0])
+          .freeFromMinAmount(regularAccounts[1].address, true),
+      ).to.be.revertedWith('WMAC: hasnt role');
+    });
+    it('should not fail', async () => {
+      const { depositVaultWithMorpho, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+      await expect(
+        depositVaultWithMorpho.freeFromMinAmount(
+          regularAccounts[0].address,
+          true,
+        ),
+      ).to.not.reverted;
+
+      expect(
+        await depositVaultWithMorpho.isFreeFromMinAmount(
+          regularAccounts[0].address,
+        ),
+      ).to.eq(true);
+    });
+    it('should fail: already in list', async () => {
+      const { depositVaultWithMorpho, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+      await expect(
+        depositVaultWithMorpho.freeFromMinAmount(
+          regularAccounts[0].address,
+          true,
+        ),
+      ).to.not.reverted;
+
+      expect(
+        await depositVaultWithMorpho.isFreeFromMinAmount(
+          regularAccounts[0].address,
+        ),
+      ).to.eq(true);
+
+      await expect(
+        depositVaultWithMorpho.freeFromMinAmount(
+          regularAccounts[0].address,
+          true,
+        ),
+      ).to.revertedWith('DV: already free');
+    });
+  });
+
   describe('depositInstant()', async () => {
     it('should fail: when there is no token in vault', async () => {
       const {
@@ -694,6 +824,557 @@ describe('DepositVaultWithMorpho', function () {
         {
           from: regularAccounts[0],
           revertMessage: acErrors.WMAC_HAS_ROLE,
+        },
+      );
+    });
+
+    it('should fail: when trying to deposit 0 amount', async () => {
+      const {
+        owner,
+        depositVaultWithMorpho,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+        },
+        stableCoins.usdc,
+        0,
+        {
+          revertMessage: 'DV: invalid amount',
+        },
+      );
+    });
+
+    it('should fail: when rounding is invalid', async () => {
+      const {
+        owner,
+        depositVaultWithMorpho,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVaultWithMorpho, owner }, 10);
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+        },
+        stableCoins.usdc,
+        100.0000000001,
+        {
+          revertMessage: 'MV: invalid rounding',
+        },
+      );
+    });
+
+    it('should fail: call with insufficient allowance', async () => {
+      const {
+        owner,
+        depositVaultWithMorpho,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.usdc, owner, 100);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVaultWithMorpho, owner }, 10);
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          revertMessage: 'ERC20: insufficient allowance',
+        },
+      );
+    });
+
+    it('should fail: call with insufficient balance', async () => {
+      const {
+        owner,
+        depositVaultWithMorpho,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+
+      await approveBase18(owner, stableCoins.usdc, depositVaultWithMorpho, 100);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVaultWithMorpho, owner }, 10);
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          revertMessage: 'ERC20: transfer amount exceeds balance',
+        },
+      );
+    });
+
+    it('should fail: dataFeed rate 0', async () => {
+      const {
+        owner,
+        depositVaultWithMorpho,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mockedAggregator,
+        mTokenToUsdDataFeed,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+
+      await approveBase18(owner, stableCoins.usdc, depositVaultWithMorpho, 10);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await mintToken(stableCoins.usdc, owner, 100_000);
+      await setRoundData({ mockedAggregator }, 0);
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+        },
+        stableCoins.usdc,
+        1,
+        {
+          revertMessage: 'DF: feed is deprecated',
+        },
+      );
+    });
+
+    it('should fail: call for amount < minAmountToDepositTest', async () => {
+      const {
+        depositVaultWithMorpho,
+        mockedAggregator,
+        owner,
+        mTBILL,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1);
+
+      await mintToken(stableCoins.usdc, owner, 100_000);
+      await approveBase18(
+        owner,
+        stableCoins.usdc,
+        depositVaultWithMorpho,
+        100_000,
+      );
+
+      await setMinAmountToDepositTest(
+        { depositVault: depositVaultWithMorpho, owner },
+        100_000,
+      );
+      await setInstantDailyLimitTest(
+        { vault: depositVaultWithMorpho, owner },
+        150_000,
+      );
+
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+        },
+        stableCoins.usdc,
+        99_999,
+        {
+          revertMessage: 'DV: mint amount < min',
+        },
+      );
+    });
+
+    it('should fail: call for amount < minAmount', async () => {
+      const {
+        depositVaultWithMorpho,
+        mockedAggregator,
+        owner,
+        mTBILL,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1);
+
+      await mintToken(stableCoins.usdc, owner, 100_000);
+      await approveBase18(
+        owner,
+        stableCoins.usdc,
+        depositVaultWithMorpho,
+        100_000,
+      );
+
+      await setMinAmountToDepositTest(
+        { depositVault: depositVaultWithMorpho, owner },
+        100_000,
+      );
+      await setInstantDailyLimitTest(
+        { vault: depositVaultWithMorpho, owner },
+        150_000,
+      );
+
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+        },
+        stableCoins.usdc,
+        99,
+        {
+          revertMessage: 'DV: mToken amount < min',
+        },
+      );
+    });
+
+    it('should fail: if exceed allowance of deposit for token', async () => {
+      const {
+        depositVaultWithMorpho,
+        mockedAggregator,
+        owner,
+        mTBILL,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 4);
+
+      await mintToken(stableCoins.usdc, owner, 100_000);
+      await changeTokenAllowanceTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc.address,
+        100,
+      );
+      await approveBase18(
+        owner,
+        stableCoins.usdc,
+        depositVaultWithMorpho,
+        100_000,
+      );
+
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+        },
+        stableCoins.usdc,
+        99_999,
+        {
+          revertMessage: 'MV: exceed allowance',
+        },
+      );
+    });
+
+    it('should fail: if mint limit exceeded', async () => {
+      const {
+        depositVaultWithMorpho,
+        mockedAggregator,
+        owner,
+        mTBILL,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 4);
+
+      await mintToken(stableCoins.usdc, owner, 100_000);
+      await setInstantDailyLimitTest(
+        { vault: depositVaultWithMorpho, owner },
+        1000,
+      );
+
+      await approveBase18(
+        owner,
+        stableCoins.usdc,
+        depositVaultWithMorpho,
+        100_000,
+      );
+
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+        },
+        stableCoins.usdc,
+        99_999,
+        {
+          revertMessage: 'MV: exceed limit',
+        },
+      );
+    });
+
+    it('should fail: if min receive amount greater then actual', async () => {
+      const {
+        depositVaultWithMorpho,
+        mockedAggregator,
+        owner,
+        mTBILL,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 4);
+
+      await mintToken(stableCoins.usdc, owner, 100_000);
+
+      await approveBase18(
+        owner,
+        stableCoins.usdc,
+        depositVaultWithMorpho,
+        100_000,
+      );
+
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+          minAmount: parseUnits('100000'),
+        },
+        stableCoins.usdc,
+        99_999,
+        {
+          revertMessage: 'DV: minReceiveAmount > actual',
+        },
+      );
+    });
+
+    it('should fail: if some fee = 100%', async () => {
+      const {
+        owner,
+        depositVaultWithMorpho,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.usdc, owner, 100);
+      await approveBase18(owner, stableCoins.usdc, depositVaultWithMorpho, 100);
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        10000,
+        true,
+      );
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          revertMessage: 'DV: mToken amount < min',
+        },
+      );
+
+      await removePaymentTokenTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setInstantFeeTest({ vault: depositVaultWithMorpho, owner }, 10000);
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+        },
+        stableCoins.usdc,
+        100,
+        { revertMessage: 'DV: mToken amount < min' },
+      );
+    });
+
+    it('should fail: greenlist enabled and user not in greenlist', async () => {
+      const {
+        owner,
+        depositVaultWithMorpho,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+
+      await depositVaultWithMorpho.setGreenlistEnable(true);
+
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+        },
+        stableCoins.usdc,
+        1,
+        {
+          revertMessage: 'WMAC: hasnt role',
+        },
+      );
+    });
+
+    it('should fail: user in sanctions list', async () => {
+      const {
+        owner,
+        depositVaultWithMorpho,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        mockedSanctionsList,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+
+      await sanctionUser(
+        { sanctionsList: mockedSanctionsList },
+        regularAccounts[0],
+      );
+
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+        },
+        stableCoins.usdc,
+        1,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'WSL: sanctioned',
         },
       );
     });
@@ -1214,6 +1895,163 @@ describe('DepositVaultWithMorpho', function () {
         100,
         {
           from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('should fail: greenlist enabled and recipient not in greenlist (custom recipient overload)', async () => {
+      const {
+        owner,
+        depositVaultWithMorpho,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        greenListableTester,
+        accessControl,
+        customRecipient,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+
+      await greenList(
+        { greenlistable: greenListableTester, accessControl, owner },
+        owner,
+      );
+
+      await depositVaultWithMorpho.setGreenlistEnable(true);
+
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+          customRecipient,
+        },
+        stableCoins.usdc,
+        1,
+        {
+          revertMessage: 'WMAC: hasnt role',
+        },
+      );
+    });
+
+    it('should fail: recipient in blacklist (custom recipient overload)', async () => {
+      const {
+        owner,
+        depositVaultWithMorpho,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        accessControl,
+        regularAccounts,
+        customRecipient,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+
+      await blackList(
+        { blacklistable: depositVaultWithMorpho, accessControl, owner },
+        customRecipient,
+      );
+
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+          customRecipient,
+        },
+        stableCoins.usdc,
+        1,
+        {
+          from: regularAccounts[0],
+          revertMessage: acErrors.WMAC_HAS_ROLE,
+        },
+      );
+    });
+
+    it('should fail: recipient in sanctions list (custom recipient overload)', async () => {
+      const {
+        owner,
+        depositVaultWithMorpho,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        mockedSanctionsList,
+        customRecipient,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+
+      await sanctionUser(
+        { sanctionsList: mockedSanctionsList },
+        customRecipient,
+      );
+
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+          customRecipient,
+        },
+        stableCoins.usdc,
+        1,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'WSL: sanctioned',
+        },
+      );
+    });
+
+    it('should fail: when function paused (custom recipient overload)', async () => {
+      const {
+        owner,
+        depositVaultWithMorpho,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        customRecipient,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+      await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.usdc,
+        depositVaultWithMorpho,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      const selector = encodeFnSelector(
+        'depositInstant(address,uint256,uint256,bytes32,address)',
+      );
+      await pauseVaultFn(depositVaultWithMorpho, selector);
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+          customRecipient,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'Pausable: fn paused',
         },
       );
     });

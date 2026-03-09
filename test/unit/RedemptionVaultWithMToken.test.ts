@@ -9,7 +9,7 @@ import {
   ManageableVaultTester__factory,
   RedemptionVaultWithMTokenTest__factory,
 } from '../../typechain-types';
-import { acErrors, blackList } from '../common/ac.helpers';
+import { acErrors, blackList, greenList } from '../common/ac.helpers';
 import {
   approveBase18,
   mintToken,
@@ -36,6 +36,7 @@ import {
   redeemFiatRequestTest,
   redeemRequestTest,
   rejectRedeemRequestTest,
+  safeApproveRedeemRequestTest,
   setFiatAdditionalFeeTest,
   setMinFiatRedeemAmountTest,
 } from '../common/redemption-vault.helpers';
@@ -1891,6 +1892,172 @@ describe('RedemptionVaultWithMToken', function () {
         },
       );
     });
+
+    it('should fail: when function with custom recipient is paused', async () => {
+      const {
+        owner,
+        redemptionVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        customRecipient,
+        mFoneToUsdDataFeed,
+        mFONE,
+      } = await loadFixture(defaultDeploy);
+      await mintToken(mFONE, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.dai,
+        redemptionVaultWithMToken,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: redemptionVaultWithMToken, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      const selector = encodeFnSelector(
+        'redeemInstant(address,uint256,uint256,address)',
+      );
+      await pauseVaultFn(redemptionVaultWithMToken, selector);
+      await redeemInstantWithMTokenTest(
+        {
+          redemptionVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          customRecipient,
+          mFoneToUsdDataFeed,
+          mFONE,
+        },
+        stableCoins.dai,
+        100,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'Pausable: fn paused',
+        },
+      );
+    });
+
+    it('should fail: greenlist enabled and recipient not in greenlist (custom recipient overload)', async () => {
+      const {
+        owner,
+        redemptionVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        greenListableTester,
+        accessControl,
+        customRecipient,
+        mFoneToUsdDataFeed,
+        mFONE,
+      } = await loadFixture(defaultDeploy);
+
+      await redemptionVaultWithMToken.setGreenlistEnable(true);
+
+      await greenList(
+        { greenlistable: greenListableTester, accessControl, owner },
+        owner,
+      );
+
+      await redeemInstantWithMTokenTest(
+        {
+          redemptionVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          customRecipient,
+          mFoneToUsdDataFeed,
+          mFONE,
+        },
+        stableCoins.dai,
+        1,
+        {
+          revertMessage: 'WMAC: hasnt role',
+        },
+      );
+    });
+
+    it('should fail: recipient in blacklist (custom recipient overload)', async () => {
+      const {
+        owner,
+        redemptionVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        blackListableTester,
+        accessControl,
+        regularAccounts,
+        customRecipient,
+        mFoneToUsdDataFeed,
+        mFONE,
+      } = await loadFixture(defaultDeploy);
+
+      await blackList(
+        { blacklistable: blackListableTester, accessControl, owner },
+        customRecipient,
+      );
+
+      await redeemInstantWithMTokenTest(
+        {
+          redemptionVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          customRecipient,
+          mFoneToUsdDataFeed,
+          mFONE,
+        },
+        stableCoins.dai,
+        1,
+        {
+          from: regularAccounts[0],
+          revertMessage: acErrors.WMAC_HAS_ROLE,
+        },
+      );
+    });
+
+    it('should fail: recipient in sanctions list (custom recipient overload)', async () => {
+      const {
+        owner,
+        redemptionVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        mockedSanctionsList,
+        customRecipient,
+        mFoneToUsdDataFeed,
+        mFONE,
+      } = await loadFixture(defaultDeploy);
+
+      await sanctionUser(
+        { sanctionsList: mockedSanctionsList },
+        customRecipient,
+      );
+
+      await redeemInstantWithMTokenTest(
+        {
+          redemptionVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          customRecipient,
+          mFoneToUsdDataFeed,
+          mFONE,
+        },
+        stableCoins.dai,
+        1,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'WSL: sanctioned',
+        },
+      );
+    });
   });
 
   describe('redeemRequest()', () => {
@@ -2098,32 +2265,85 @@ describe('RedemptionVaultWithMToken', function () {
     });
   });
 
-  describe('approveRequest()', () => {
-    it('approve request', async () => {
+  describe('approveRequest()', async () => {
+    it('should fail: call from address without vault admin role', async () => {
+      const {
+        redemptionVaultWithMToken: redemptionVault,
+        regularAccounts,
+        mFoneToUsdDataFeed,
+        mFONE,
+      } = await loadFixture(defaultDeploy);
+      await approveRedeemRequestTest(
+        {
+          redemptionVault,
+          owner: regularAccounts[1],
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        1,
+        parseUnits('1'),
+        {
+          revertMessage: 'WMAC: hasnt role',
+        },
+      );
+    });
+
+    it('should fail: request by id not exist', async () => {
       const {
         owner,
-        redemptionVaultWithMToken,
+        redemptionVaultWithMToken: redemptionVault,
+        stableCoins,
+        mFONE,
+        mFoneToUsdDataFeed,
+        dataFeed,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await approveRedeemRequestTest(
+        {
+          redemptionVault,
+          owner,
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        1,
+        parseUnits('1'),
+        {
+          revertMessage: 'RV: request not exist',
+        },
+      );
+    });
+
+    it('should fail: request already processed', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMFone,
+        redemptionVaultWithMToken: redemptionVault,
         stableCoins,
         mFONE,
         mFoneToUsdDataFeed,
         dataFeed,
         requestRedeemer,
-        mockedAggregator,
-        mockedAggregatorMFone,
       } = await loadFixture(defaultDeploy);
 
       await mintToken(stableCoins.dai, requestRedeemer, 100000);
       await approveBase18(
         requestRedeemer,
         stableCoins.dai,
-        redemptionVaultWithMToken,
+        redemptionVault,
         100000,
       );
 
       await mintToken(mFONE, owner, 100);
-      await approveBase18(owner, mFONE, redemptionVaultWithMToken, 100);
+      await approveBase18(owner, mFONE, redemptionVault, 100);
       await addPaymentTokenTest(
-        { vault: redemptionVaultWithMToken, owner },
+        { vault: redemptionVault, owner },
         stableCoins.dai,
         dataFeed.address,
         0,
@@ -2134,7 +2354,7 @@ describe('RedemptionVaultWithMToken', function () {
 
       await redeemRequestTest(
         {
-          redemptionVault: redemptionVaultWithMToken,
+          redemptionVault,
           owner,
           mTBILL: mFONE,
           mTokenToUsdDataFeed: mFoneToUsdDataFeed,
@@ -2142,12 +2362,79 @@ describe('RedemptionVaultWithMToken', function () {
         stableCoins.dai,
         100,
       );
-
       const requestId = 0;
 
       await approveRedeemRequestTest(
         {
-          redemptionVault: redemptionVaultWithMToken,
+          redemptionVault,
+          owner,
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        +requestId,
+        parseUnits('1'),
+      );
+      await approveRedeemRequestTest(
+        {
+          redemptionVault,
+          owner,
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        +requestId,
+        parseUnits('1'),
+        { revertMessage: 'RV: request not pending' },
+      );
+    });
+
+    it('approve request from vaut admin account', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMFone,
+        redemptionVaultWithMToken: redemptionVault,
+        stableCoins,
+        mFONE,
+        mFoneToUsdDataFeed,
+        dataFeed,
+        requestRedeemer,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, requestRedeemer, 100000);
+      await approveBase18(
+        requestRedeemer,
+        stableCoins.dai,
+        redemptionVault,
+        100000,
+      );
+
+      await mintToken(mFONE, owner, 100);
+      await approveBase18(owner, mFONE, redemptionVault, 100);
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMFone }, 5);
+
+      await redeemRequestTest(
+        {
+          redemptionVault,
+          owner,
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        stableCoins.dai,
+        100,
+      );
+      const requestId = 0;
+
+      await approveRedeemRequestTest(
+        {
+          redemptionVault,
           owner,
           mTBILL: mFONE,
           mTokenToUsdDataFeed: mFoneToUsdDataFeed,
@@ -2158,34 +2445,147 @@ describe('RedemptionVaultWithMToken', function () {
     });
   });
 
-  describe('rejectRequest()', () => {
-    it('reject request', async () => {
+  describe('approveRequest() with fiat', async () => {
+    it('approve request from vaut admin account', async () => {
       const {
         owner,
-        redemptionVaultWithMToken,
+        mockedAggregator,
+        mockedAggregatorMFone,
+        redemptionVaultWithMToken: redemptionVault,
+        mFONE,
+        mFoneToUsdDataFeed,
+        greenListableTester,
+        accessControl,
+      } = await loadFixture(defaultDeploy);
+
+      await greenList(
+        { greenlistable: greenListableTester, accessControl, owner },
+        owner,
+      );
+
+      await mintToken(mFONE, owner, 100);
+      await approveBase18(owner, mFONE, redemptionVault, 100);
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMFone }, 5);
+
+      await redeemFiatRequestTest(
+        {
+          redemptionVault,
+          owner,
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        100,
+      );
+      const requestId = 0;
+      await changeTokenAllowanceTest(
+        { vault: redemptionVault, owner },
+        constants.AddressZero,
+        parseUnits('100'),
+      );
+
+      await approveRedeemRequestTest(
+        {
+          redemptionVault,
+          owner,
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        +requestId,
+        parseUnits('1'),
+      );
+    });
+  });
+
+  describe('safeApproveRequest()', async () => {
+    it('should fail: call from address without vault admin role', async () => {
+      const {
+        redemptionVaultWithMToken: redemptionVault,
+        regularAccounts,
+        mFoneToUsdDataFeed,
+        mFONE,
+      } = await loadFixture(defaultDeploy);
+      await safeApproveRedeemRequestTest(
+        {
+          redemptionVault,
+          owner: regularAccounts[1],
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        1,
+        parseUnits('1'),
+        {
+          revertMessage: 'WMAC: hasnt role',
+        },
+      );
+    });
+
+    it('should fail: request by id not exist', async () => {
+      const {
+        owner,
+        redemptionVaultWithMToken: redemptionVault,
         stableCoins,
         mFONE,
         mFoneToUsdDataFeed,
         dataFeed,
-        mockedAggregator,
-        mockedAggregatorMFone,
       } = await loadFixture(defaultDeploy);
-
-      await mintToken(mFONE, owner, 100);
-      await approveBase18(owner, mFONE, redemptionVaultWithMToken, 100);
       await addPaymentTokenTest(
-        { vault: redemptionVaultWithMToken, owner },
+        { vault: redemptionVault, owner },
         stableCoins.dai,
         dataFeed.address,
         0,
         true,
       );
-      await setRoundData({ mockedAggregator }, 1.03);
+      await safeApproveRedeemRequestTest(
+        {
+          redemptionVault,
+          owner,
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        1,
+        parseUnits('1'),
+        {
+          revertMessage: 'RV: request not exist',
+        },
+      );
+    });
+
+    it('should fail: if new rate greater then variabilityTolerance', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMFone,
+        redemptionVaultWithMToken: redemptionVault,
+        stableCoins,
+        mFONE,
+        mFoneToUsdDataFeed,
+        dataFeed,
+        requestRedeemer,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, requestRedeemer, 100000);
+      await approveBase18(
+        requestRedeemer,
+        stableCoins.dai,
+        redemptionVault,
+        100000,
+      );
+      await mintToken(mFONE, owner, 100);
+      await approveBase18(owner, mFONE, redemptionVault, 100);
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.001);
       await setRoundData({ mockedAggregator: mockedAggregatorMFone }, 5);
 
       await redeemRequestTest(
         {
-          redemptionVault: redemptionVaultWithMToken,
+          redemptionVault,
           owner,
           mTBILL: mFONE,
           mTokenToUsdDataFeed: mFoneToUsdDataFeed,
@@ -2193,12 +2593,297 @@ describe('RedemptionVaultWithMToken', function () {
         stableCoins.dai,
         100,
       );
+      const requestId = 0;
 
+      await safeApproveRedeemRequestTest(
+        {
+          redemptionVault,
+          owner,
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        +requestId,
+        parseUnits('6'),
+        { revertMessage: 'MV: exceed price diviation' },
+      );
+    });
+
+    it('should fail: request already processed', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMFone,
+        redemptionVaultWithMToken: redemptionVault,
+        stableCoins,
+        mFONE,
+        mFoneToUsdDataFeed,
+        dataFeed,
+        requestRedeemer,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, requestRedeemer, 100000);
+      await approveBase18(
+        requestRedeemer,
+        stableCoins.dai,
+        redemptionVault,
+        100000,
+      );
+      await mintToken(mFONE, owner, 100);
+      await approveBase18(owner, mFONE, redemptionVault, 100);
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.001);
+      await setRoundData({ mockedAggregator: mockedAggregatorMFone }, 5);
+
+      await redeemRequestTest(
+        {
+          redemptionVault,
+          owner,
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        stableCoins.dai,
+        100,
+      );
+      const requestId = 0;
+
+      await safeApproveRedeemRequestTest(
+        {
+          redemptionVault,
+          owner,
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        +requestId,
+        parseUnits('5.000001'),
+      );
+      await safeApproveRedeemRequestTest(
+        {
+          redemptionVault,
+          owner,
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        +requestId,
+        parseUnits('5.00001'),
+        { revertMessage: 'RV: request not pending' },
+      );
+    });
+
+    it('safe approve request from vaut admin account', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMFone,
+        redemptionVaultWithMToken: redemptionVault,
+        stableCoins,
+        mFONE,
+        mFoneToUsdDataFeed,
+        dataFeed,
+        requestRedeemer,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, requestRedeemer, 100000);
+      await approveBase18(
+        requestRedeemer,
+        stableCoins.dai,
+        redemptionVault,
+        100000,
+      );
+      await mintToken(mFONE, owner, 100);
+      await approveBase18(owner, mFONE, redemptionVault, 100);
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMFone }, 5);
+
+      await redeemRequestTest(
+        {
+          redemptionVault,
+          owner,
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        stableCoins.dai,
+        100,
+      );
+      const requestId = 0;
+
+      await safeApproveRedeemRequestTest(
+        {
+          redemptionVault,
+          owner,
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        +requestId,
+        parseUnits('5.000001'),
+      );
+    });
+  });
+
+  describe('rejectRequest()', async () => {
+    it('should fail: call from address without vault admin role', async () => {
+      const {
+        redemptionVaultWithMToken: redemptionVault,
+        regularAccounts,
+        mFoneToUsdDataFeed,
+        mFONE,
+      } = await loadFixture(defaultDeploy);
+      await rejectRedeemRequestTest(
+        {
+          redemptionVault,
+          owner: regularAccounts[1],
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        1,
+        {
+          revertMessage: 'WMAC: hasnt role',
+        },
+      );
+    });
+
+    it('should fail: request by id not exist', async () => {
+      const {
+        owner,
+        redemptionVaultWithMToken: redemptionVault,
+        stableCoins,
+        mFONE,
+        mFoneToUsdDataFeed,
+        dataFeed,
+      } = await loadFixture(defaultDeploy);
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await rejectRedeemRequestTest(
+        {
+          redemptionVault,
+          owner,
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        1,
+        {
+          revertMessage: 'RV: request not exist',
+        },
+      );
+    });
+
+    it('should fail: request already processed', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMFone,
+        redemptionVaultWithMToken: redemptionVault,
+        stableCoins,
+        mFONE,
+        mFoneToUsdDataFeed,
+        dataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, redemptionVault, 100000);
+      await mintToken(mFONE, owner, 100);
+      await approveBase18(owner, mFONE, redemptionVault, 100);
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1.001);
+      await setRoundData({ mockedAggregator: mockedAggregatorMFone }, 5);
+
+      await redeemRequestTest(
+        {
+          redemptionVault,
+          owner,
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        stableCoins.dai,
+        100,
+      );
       const requestId = 0;
 
       await rejectRedeemRequestTest(
         {
-          redemptionVault: redemptionVaultWithMToken,
+          redemptionVault,
+          owner,
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        +requestId,
+      );
+      await rejectRedeemRequestTest(
+        {
+          redemptionVault,
+          owner,
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        +requestId,
+        { revertMessage: 'RV: request not pending' },
+      );
+    });
+
+    it('reject request from vaut admin account', async () => {
+      const {
+        owner,
+        mockedAggregator,
+        mockedAggregatorMFone,
+        redemptionVaultWithMToken: redemptionVault,
+        stableCoins,
+        mFONE,
+        mFoneToUsdDataFeed,
+        dataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(stableCoins.dai, redemptionVault, 100000);
+      await mintToken(mFONE, owner, 100);
+      await approveBase18(owner, mFONE, redemptionVault, 100);
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await setRoundData({ mockedAggregator }, 1.03);
+      await setRoundData({ mockedAggregator: mockedAggregatorMFone }, 5);
+
+      await redeemRequestTest(
+        {
+          redemptionVault,
+          owner,
+          mTBILL: mFONE,
+          mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        },
+        stableCoins.dai,
+        100,
+      );
+      const requestId = 0;
+
+      await rejectRedeemRequestTest(
+        {
+          redemptionVault,
           owner,
           mTBILL: mFONE,
           mTokenToUsdDataFeed: mFoneToUsdDataFeed,
