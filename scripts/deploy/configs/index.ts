@@ -32,6 +32,7 @@ import { mHyperBTCDeploymentConfig } from './mHyperBTC';
 import { mHyperETHDeploymentConfig } from './mHyperETH';
 import { mKRalphaDeploymentConfig } from './mKRalpha';
 import { mLIQUIDITYDeploymentConfig } from './mLIQUIDITY';
+import { mM1USDDeploymentConfig } from './mM1USD';
 import { mMEVDeploymentConfig } from './mMEV';
 import { mPortofinoDeploymentConfig } from './mPortofino';
 import { mRE7DeploymentConfig } from './mRE7';
@@ -42,6 +43,7 @@ import { mSLDeploymentConfig } from './mSL';
 import { msyrupUSDDeploymentConfig } from './msyrupUSD';
 import { msyrupUSDpDeploymentConfig } from './msyrupUSDp';
 import { mTBILLDeploymentConfig } from './mTBILL';
+import { mTUDeploymentConfig } from './mTU';
 import { mWildUSDDeploymentConfig } from './mWildUSD';
 import { mXRPDeploymentConfig } from './mXRP';
 import { obeatUSDDeploymentConfig } from './obeatUSD';
@@ -129,4 +131,6 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   sLINJ: sLINJDeploymentConfig,
   mROX: mROXDeploymentConfig,
   weEUR: weEURDeploymentConfig,
+  mTU: mTUDeploymentConfig,
+  mM1USD: mM1USDDeploymentConfig,
 };
