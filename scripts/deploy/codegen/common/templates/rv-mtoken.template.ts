@@ -1,7 +1,12 @@
 import { MTokenName } from '../../../../../config';
 import { importWithoutCache } from '../../../../../helpers/utils';
 
-export const getRvMTokenContractFromTemplate = async (mToken: MTokenName) => {
+export const getRvMTokenContractFromTemplate = async (
+  mToken: MTokenName,
+  optionalParams?: Record<string, unknown>,
+) => {
+  const { vaultUseTokenLevelGreenList = false } = optionalParams || {};
+
   const { getTokenContractNames } = await importWithoutCache(
     require.resolve('../../../../../helpers/contracts'),
   );
@@ -23,7 +28,9 @@ export const getRvMTokenContractFromTemplate = async (mToken: MTokenName) => {
 
     /**
      * @title ${contractNames.rvMToken}
-     * @notice Smart contract that handles ${contractNames.token} redemptions using mToken
+     * @notice Smart contract that handles ${
+       contractNames.token
+     } redemptions using mToken
      * liquid strategy. Upgrade-compatible replacement for
      * ${contractNames.rvSwapper}.
      * @author RedDuck Software
@@ -42,6 +49,19 @@ export const getRvMTokenContractFromTemplate = async (mToken: MTokenName) => {
          */
         function vaultRole() public pure override returns (bytes32) {
             return ${roles.redemptionVaultAdmin};
+        }
+
+        ${
+          vaultUseTokenLevelGreenList
+            ? `
+          /**
+           * @inheritdoc Greenlistable
+           */
+          function greenlistedRole() public pure override returns (bytes32) {
+              return ${roles.greenlisted};
+          }
+          `
+            : ''
         }
     }`,
   };

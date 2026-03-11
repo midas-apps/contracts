@@ -1,7 +1,12 @@
 import { MTokenName } from '../../../../../config';
 import { importWithoutCache } from '../../../../../helpers/utils';
 
-export const getDvAaveContractFromTemplate = async (mToken: MTokenName) => {
+export const getDvAaveContractFromTemplate = async (
+  mToken: MTokenName,
+  optionalParams?: Record<string, unknown>,
+) => {
+  const { vaultUseTokenLevelGreenList = false } = optionalParams || {};
+
   const { getTokenContractNames } = await importWithoutCache(
     require.resolve('../../../../../helpers/contracts'),
   );
@@ -23,7 +28,9 @@ export const getDvAaveContractFromTemplate = async (mToken: MTokenName) => {
 
     /**
      * @title ${contractNames.dvAave}
-     * @notice Smart contract that handles ${contractNames.token} minting with Aave V3 auto-invest
+     * @notice Smart contract that handles ${
+       contractNames.token
+     } minting with Aave V3 auto-invest
      * @author RedDuck Software
      */
     contract ${contractNames.dvAave} is
@@ -40,6 +47,19 @@ export const getDvAaveContractFromTemplate = async (mToken: MTokenName) => {
          */
         function vaultRole() public pure override returns (bytes32) {
             return ${roles.depositVaultAdmin};
+        }
+
+        ${
+          vaultUseTokenLevelGreenList
+            ? `
+        /**
+         * @inheritdoc Greenlistable
+         */
+        function greenlistedRole() public pure override returns (bytes32) {
+            return ${roles.greenlisted};
+        }
+        `
+            : ''
         }
     }`,
   };
