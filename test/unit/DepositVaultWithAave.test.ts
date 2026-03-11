@@ -16,9 +16,11 @@ import {
 import { setRoundData } from '../common/data-feed.helpers';
 import {
   depositInstantWithAaveTest,
+  depositRequestWithAaveTest,
   removeAavePoolTest,
   setAaveDepositsEnabledTest,
   setAavePoolTest,
+  setAutoInvestFallbackEnabledAaveTest,
 } from '../common/deposit-vault-aave.helpers';
 import {
   approveRequestTest,
@@ -281,6 +283,45 @@ describe('DepositVaultWithAave', function () {
       await setAaveDepositsEnabledTest({ depositVaultWithAave, owner }, true);
 
       await setAaveDepositsEnabledTest({ depositVaultWithAave, owner }, false);
+    });
+  });
+
+  describe('setAutoInvestFallbackEnabled()', () => {
+    it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
+      const { depositVaultWithAave, owner, regularAccounts } =
+        await loadFixture(defaultDeploy);
+
+      await setAutoInvestFallbackEnabledAaveTest(
+        { depositVaultWithAave, owner },
+        true,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'WMAC: hasnt role',
+        },
+      );
+    });
+
+    it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
+      const { depositVaultWithAave, owner } = await loadFixture(defaultDeploy);
+
+      await setAutoInvestFallbackEnabledAaveTest(
+        { depositVaultWithAave, owner },
+        true,
+      );
+    });
+
+    it('toggle on and off', async () => {
+      const { depositVaultWithAave, owner } = await loadFixture(defaultDeploy);
+
+      await setAutoInvestFallbackEnabledAaveTest(
+        { depositVaultWithAave, owner },
+        true,
+      );
+
+      await setAutoInvestFallbackEnabledAaveTest(
+        { depositVaultWithAave, owner },
+        false,
+      );
     });
   });
 
@@ -1752,7 +1793,7 @@ describe('DepositVaultWithAave', function () {
       );
     });
 
-    it('should fail: aaveDepositsEnabled but no pool for token', async () => {
+    it('aaveDepositsEnabled but no pool for token: fallback to normal flow', async () => {
       const {
         owner,
         depositVaultWithAave,
@@ -1795,7 +1836,109 @@ describe('DepositVaultWithAave', function () {
         100,
         {
           from: regularAccounts[0],
-          revertMessage: 'DVA: no pool for token',
+        },
+      );
+    });
+
+    it('aaveDepositsEnabled, pool configured but supply reverts, fallback enabled: fallback to normal flow', async () => {
+      const {
+        owner,
+        depositVaultWithAave,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        dataFeed,
+        aavePoolMock,
+        regularAccounts,
+      } = await loadFixture(defaultDeploy);
+
+      await setAaveDepositsEnabledTest({ depositVaultWithAave, owner }, true);
+      await setAutoInvestFallbackEnabledAaveTest(
+        { depositVaultWithAave, owner },
+        true,
+      );
+      await setMinAmountTest({ vault: depositVaultWithAave, owner }, 10);
+
+      await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.usdc,
+        depositVaultWithAave,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await aavePoolMock.setShouldRevertSupply(true);
+
+      await depositInstantWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+          expectedAaveDeposited: false,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('should fail: aaveDepositsEnabled, pool configured but supply reverts, fallback disabled', async () => {
+      const {
+        owner,
+        depositVaultWithAave,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        dataFeed,
+        aavePoolMock,
+        regularAccounts,
+      } = await loadFixture(defaultDeploy);
+
+      await setAaveDepositsEnabledTest({ depositVaultWithAave, owner }, true);
+      await setMinAmountTest({ vault: depositVaultWithAave, owner }, 10);
+
+      await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.usdc,
+        depositVaultWithAave,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await aavePoolMock.setShouldRevertSupply(true);
+
+      await depositInstantWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+          expectedAaveDeposited: false,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'DVA: auto-invest failed',
         },
       );
     });
@@ -1998,6 +2141,155 @@ describe('DepositVaultWithAave', function () {
         100,
         {
           from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('deposit request 100 USDC with aave auto-invest', async () => {
+      const {
+        owner,
+        depositVaultWithAave,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
+
+      await setAaveDepositsEnabledTest({ depositVaultWithAave, owner }, true);
+      await setMinAmountTest({ vault: depositVaultWithAave, owner }, 10);
+
+      await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.usdc,
+        depositVaultWithAave,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await depositRequestWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('deposit request with aave auto-invest, supply reverts, fallback enabled: fallback to normal flow', async () => {
+      const {
+        owner,
+        depositVaultWithAave,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
+
+      await setAaveDepositsEnabledTest({ depositVaultWithAave, owner }, true);
+      await setAutoInvestFallbackEnabledAaveTest(
+        { depositVaultWithAave, owner },
+        true,
+      );
+      await setMinAmountTest({ vault: depositVaultWithAave, owner }, 10);
+
+      await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.usdc,
+        depositVaultWithAave,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await aavePoolMock.setShouldRevertSupply(true);
+
+      await depositRequestWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+          expectedAaveDeposited: false,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('should fail: deposit request with aave auto-invest, supply reverts, fallback disabled', async () => {
+      const {
+        owner,
+        depositVaultWithAave,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
+        aavePoolMock,
+      } = await loadFixture(defaultDeploy);
+
+      await setAaveDepositsEnabledTest({ depositVaultWithAave, owner }, true);
+      await setMinAmountTest({ vault: depositVaultWithAave, owner }, 10);
+
+      await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.usdc,
+        depositVaultWithAave,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithAave, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await aavePoolMock.setShouldRevertSupply(true);
+
+      await depositRequestWithAaveTest(
+        {
+          depositVaultWithAave,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          aavePoolMock,
+          expectedAaveDeposited: false,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'DVA: auto-invest failed',
         },
       );
     });

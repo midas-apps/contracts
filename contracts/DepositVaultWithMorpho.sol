@@ -30,6 +30,12 @@ contract DepositVaultWithMorpho is DepositVault {
     bool public morphoDepositsEnabled;
 
     /**
+     * @notice Whether to fall back to raw token transfer on auto-invest failure
+     * @dev if false, the transaction will revert when auto-invest fails
+     */
+    bool public autoInvestFallbackEnabled;
+
+    /**
      * @dev leaving a storage gap for futures updates
      */
     uint256[50] private __gap;
@@ -58,6 +64,12 @@ contract DepositVaultWithMorpho is DepositVault {
      * @param enabled Whether Morpho deposits are enabled
      */
     event SetMorphoDepositsEnabled(bool indexed enabled);
+
+    /**
+     * @notice Emitted when `autoInvestFallbackEnabled` flag is updated
+     * @param enabled Whether fallback to raw transfer is enabled
+     */
+    event SetAutoInvestFallbackEnabled(bool indexed enabled);
 
     /**
      * @notice Sets the Morpho Vault for a specific payment token
@@ -101,20 +113,27 @@ contract DepositVaultWithMorpho is DepositVault {
     }
 
     /**
-     * @dev overrides original transfer to tokens receiver function
-     * in case of Morpho deposits are disabled, it will act as the original transfer
-     * otherwise it will take payment tokens from user, deposit them into Morpho Vault
-     * and vault shares will be minted to tokens receiver
-     * @param tokenIn token address
-     * @param amountToken amount of tokens to transfer in base18
-     * @param tokensDecimals decimals of tokens
+     * @notice Updates `autoInvestFallbackEnabled` value
+     * @param enabled whether fallback to raw transfer is enabled on auto-invest failure
+     */
+    function setAutoInvestFallbackEnabled(bool enabled)
+        external
+        onlyVaultAdmin
+    {
+        autoInvestFallbackEnabled = enabled;
+        emit SetAutoInvestFallbackEnabled(enabled);
+    }
+
+    /**
+     * @dev overrides instant deposit transfer hook to auto-invest into Morpho
      */
     function _instantTransferTokensToTokensReceiver(
         address tokenIn,
         uint256 amountToken,
         uint256 tokensDecimals
     ) internal override {
-        if (!morphoDepositsEnabled) {
+        IMorphoVault vault = morphoVaults[tokenIn];
+        if (!morphoDepositsEnabled || address(vault) == address(0)) {
             return
                 super._instantTransferTokensToTokensReceiver(
                     tokenIn,
@@ -123,8 +142,44 @@ contract DepositVaultWithMorpho is DepositVault {
                 );
         }
 
+        _autoInvest(tokenIn, amountToken, tokensDecimals);
+    }
+
+    /**
+     * @dev overrides request deposit transfer hook to auto-invest into Morpho
+     */
+    function _requestTransferTokensToTokensReceiver(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 tokensDecimals
+    ) internal override {
         IMorphoVault vault = morphoVaults[tokenIn];
-        require(address(vault) != address(0), "DVM: no vault for token");
+        if (!morphoDepositsEnabled || address(vault) == address(0)) {
+            return
+                super._requestTransferTokensToTokensReceiver(
+                    tokenIn,
+                    amountToken,
+                    tokensDecimals
+                );
+        }
+
+        _autoInvest(tokenIn, amountToken, tokensDecimals);
+    }
+
+    /**
+     * @dev Transfers tokens from user to this contract and deposits them
+     * into the Morpho Vault. On failure, either falls back to raw transfer
+     * or reverts based on `autoInvestFallbackEnabled`.
+     * @param tokenIn token address
+     * @param amountToken amount of tokens to transfer in base18
+     * @param tokensDecimals decimals of tokens
+     */
+    function _autoInvest(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 tokensDecimals
+    ) private {
+        IMorphoVault vault = morphoVaults[tokenIn];
 
         uint256 transferredAmount = _tokenTransferFromUser(
             tokenIn,
@@ -137,7 +192,18 @@ contract DepositVaultWithMorpho is DepositVault {
             address(vault),
             transferredAmount
         );
-        uint256 shares = vault.deposit(transferredAmount, tokensReceiver);
-        require(shares > 0, "DVM: zero shares");
+
+        try vault.deposit(transferredAmount, tokensReceiver) returns (
+            uint256 shares
+        ) {
+            require(shares > 0, "DVM: zero shares");
+        } catch {
+            if (autoInvestFallbackEnabled) {
+                IERC20(tokenIn).safeApprove(address(vault), 0);
+                IERC20(tokenIn).safeTransfer(tokensReceiver, transferredAmount);
+            } else {
+                revert("DVM: auto-invest failed");
+            }
+        }
     }
 }

@@ -205,9 +205,11 @@ export const depositRequestTest = async (
     mTokenToUsdDataFeed,
     waivedFee,
     customRecipient,
+    checkTokensReceiver = true,
   }: CommonParamsDeposit & {
     waivedFee?: boolean;
     customRecipient?: AccountOrContract;
+    checkTokensReceiver?: boolean;
   },
   tokenIn: ERC20 | string,
   amountUsdIn: number,
@@ -324,9 +326,11 @@ export const depositRequestTest = async (
   expect(request.tokenIn).eq(tokenContract.address);
 
   expect(latestRequestIdAfter).eq(latestRequestIdBefore.add(1));
-  expect(balanceAfterContract).eq(
-    balanceBeforeContract.add(amountInWithoutFee),
-  );
+  if (checkTokensReceiver) {
+    expect(balanceAfterContract).eq(
+      balanceBeforeContract.add(amountInWithoutFee),
+    );
+  }
   expect(feeReceiverBalanceAfterContract).eq(
     feeReceiverBalanceBeforeContract.add(fee),
   );
@@ -728,6 +732,7 @@ export const getFeePercent = async (
     | DepositVaultTest
     | DepositVaultWithAaveTest
     | DepositVaultWithMorphoTest
+    | DepositVaultWithMTokenTest
     | DepositVaultWithUSTBTest,
   isInstant: boolean,
 ) => {
@@ -752,6 +757,7 @@ export const calcExpectedMintAmount = async (
     | DepositVaultTest
     | DepositVaultWithAaveTest
     | DepositVaultWithMorphoTest
+    | DepositVaultWithMTokenTest
     | DepositVaultWithUSTBTest,
   mTokenRate: BigNumber,
   amountIn: BigNumber,

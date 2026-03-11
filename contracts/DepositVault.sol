@@ -535,9 +535,8 @@ contract DepositVault is ManageableVault, IDepositVault {
 
         calcResult = _calcAndValidateDeposit(user, tokenIn, amountToken, false);
 
-        _tokenTransferFromUser(
+        _requestTransferTokensToTokensReceiver(
             tokenIn,
-            tokensReceiver,
             calcResult.amountTokenWithoutFee,
             calcResult.tokenDecimals
         );
@@ -609,12 +608,31 @@ contract DepositVault is ManageableVault, IDepositVault {
     }
 
     /**
-     * @dev internal transfer tokens to tokens receiver
+     * @dev internal transfer tokens to tokens receiver (instant deposits)
      * @param tokenIn tokenIn address
      * @param amountToken amount of tokenIn (decimals 18)
      * @param tokensDecimals tokens decimals
      */
     function _instantTransferTokensToTokensReceiver(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 tokensDecimals
+    ) internal virtual {
+        _tokenTransferFromUser(
+            tokenIn,
+            tokensReceiver,
+            amountToken,
+            tokensDecimals
+        );
+    }
+
+    /**
+     * @dev internal transfer tokens to tokens receiver (deposit requests)
+     * @param tokenIn tokenIn address
+     * @param amountToken amount of tokenIn (decimals 18)
+     * @param tokensDecimals tokens decimals
+     */
+    function _requestTransferTokensToTokensReceiver(
         address tokenIn,
         uint256 amountToken,
         uint256 tokensDecimals

@@ -30,6 +30,12 @@ contract DepositVaultWithAave is DepositVault {
     bool public aaveDepositsEnabled;
 
     /**
+     * @notice Whether to fall back to raw token transfer on auto-invest failure
+     * @dev if false, the transaction will revert when auto-invest fails
+     */
+    bool public autoInvestFallbackEnabled;
+
+    /**
      * @dev leaving a storage gap for futures updates
      */
     uint256[50] private __gap;
@@ -58,6 +64,12 @@ contract DepositVaultWithAave is DepositVault {
      * @param enabled Whether Aave deposits are enabled
      */
     event SetAaveDepositsEnabled(bool indexed enabled);
+
+    /**
+     * @notice Emitted when `autoInvestFallbackEnabled` flag is updated
+     * @param enabled Whether fallback to raw transfer is enabled
+     */
+    event SetAutoInvestFallbackEnabled(bool indexed enabled);
 
     /**
      * @notice Sets the Aave V3 Pool for a specific payment token
@@ -98,20 +110,27 @@ contract DepositVaultWithAave is DepositVault {
     }
 
     /**
-     * @dev overrides original transfer to tokens receiver function
-     * in case of Aave deposits are disabled, it will act as the original transfer
-     * otherwise it will take payment tokens from user, supply them to Aave V3 Pool
-     * and aTokens will be minted to tokens receiver
-     * @param tokenIn token address
-     * @param amountToken amount of tokens to transfer in base18
-     * @param tokensDecimals decimals of tokens
+     * @notice Updates `autoInvestFallbackEnabled` value
+     * @param enabled whether fallback to raw transfer is enabled on auto-invest failure
+     */
+    function setAutoInvestFallbackEnabled(bool enabled)
+        external
+        onlyVaultAdmin
+    {
+        autoInvestFallbackEnabled = enabled;
+        emit SetAutoInvestFallbackEnabled(enabled);
+    }
+
+    /**
+     * @dev overrides instant deposit transfer hook to auto-invest into Aave
      */
     function _instantTransferTokensToTokensReceiver(
         address tokenIn,
         uint256 amountToken,
         uint256 tokensDecimals
     ) internal override {
-        if (!aaveDepositsEnabled) {
+        IAaveV3Pool pool = aavePools[tokenIn];
+        if (!aaveDepositsEnabled || address(pool) == address(0)) {
             return
                 super._instantTransferTokensToTokensReceiver(
                     tokenIn,
@@ -120,8 +139,44 @@ contract DepositVaultWithAave is DepositVault {
                 );
         }
 
+        _autoInvest(tokenIn, amountToken, tokensDecimals);
+    }
+
+    /**
+     * @dev overrides request deposit transfer hook to auto-invest into Aave
+     */
+    function _requestTransferTokensToTokensReceiver(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 tokensDecimals
+    ) internal override {
         IAaveV3Pool pool = aavePools[tokenIn];
-        require(address(pool) != address(0), "DVA: no pool for token");
+        if (!aaveDepositsEnabled || address(pool) == address(0)) {
+            return
+                super._requestTransferTokensToTokensReceiver(
+                    tokenIn,
+                    amountToken,
+                    tokensDecimals
+                );
+        }
+
+        _autoInvest(tokenIn, amountToken, tokensDecimals);
+    }
+
+    /**
+     * @dev Transfers tokens from user to this contract and supplies them
+     * to the Aave V3 Pool. On failure, either falls back to raw transfer
+     * or reverts based on `autoInvestFallbackEnabled`.
+     * @param tokenIn token address
+     * @param amountToken amount of tokens to transfer in base18
+     * @param tokensDecimals decimals of tokens
+     */
+    function _autoInvest(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 tokensDecimals
+    ) private {
+        IAaveV3Pool pool = aavePools[tokenIn];
 
         uint256 transferredAmount = _tokenTransferFromUser(
             tokenIn,
@@ -131,6 +186,16 @@ contract DepositVaultWithAave is DepositVault {
         );
 
         IERC20(tokenIn).safeIncreaseAllowance(address(pool), transferredAmount);
-        pool.supply(tokenIn, transferredAmount, tokensReceiver, 0);
+
+        try
+            pool.supply(tokenIn, transferredAmount, tokensReceiver, 0)
+        {} catch {
+            if (autoInvestFallbackEnabled) {
+                IERC20(tokenIn).safeApprove(address(pool), 0);
+                IERC20(tokenIn).safeTransfer(tokensReceiver, transferredAmount);
+            } else {
+                revert("DVA: auto-invest failed");
+            }
+        }
     }
 }

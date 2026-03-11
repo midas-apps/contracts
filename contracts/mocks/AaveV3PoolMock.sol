@@ -11,6 +11,7 @@ contract AaveV3PoolMock {
 
     mapping(address => address) public reserveATokens;
     uint256 public withdrawReturnBps = 10_000;
+    bool public shouldRevertSupply;
 
     function setReserveAToken(address asset, address aToken) external {
         reserveATokens[asset] = aToken;
@@ -39,12 +40,17 @@ contract AaveV3PoolMock {
         return returnedAmount;
     }
 
+    function setShouldRevertSupply(bool _shouldRevert) external {
+        shouldRevertSupply = _shouldRevert;
+    }
+
     function supply(
         address asset,
         uint256 amount,
         address onBehalfOf,
         uint16 /* referralCode */
     ) external {
+        require(!shouldRevertSupply, "AaveV3PoolMock: SupplyReverted");
         address aToken = reserveATokens[asset];
         require(aToken != address(0), "AaveV3PoolMock: NoReserve");
 

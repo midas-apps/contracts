@@ -19,7 +19,9 @@ import {
 import { setRoundData } from '../common/data-feed.helpers';
 import {
   depositInstantWithMorphoTest,
+  depositRequestWithMorphoTest,
   removeMorphoVaultTest,
+  setAutoInvestFallbackEnabledMorphoTest,
   setMorphoDepositsEnabledTest,
   setMorphoVaultTest,
 } from '../common/deposit-vault-morpho.helpers';
@@ -310,6 +312,49 @@ describe('DepositVaultWithMorpho', function () {
       );
 
       await setMorphoDepositsEnabledTest(
+        { depositVaultWithMorpho, owner },
+        false,
+      );
+    });
+  });
+
+  describe('setAutoInvestFallbackEnabled()', () => {
+    it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
+      const { depositVaultWithMorpho, owner, regularAccounts } =
+        await loadFixture(defaultDeploy);
+
+      await setAutoInvestFallbackEnabledMorphoTest(
+        { depositVaultWithMorpho, owner },
+        true,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'WMAC: hasnt role',
+        },
+      );
+    });
+
+    it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
+      const { depositVaultWithMorpho, owner } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await setAutoInvestFallbackEnabledMorphoTest(
+        { depositVaultWithMorpho, owner },
+        true,
+      );
+    });
+
+    it('toggle on and off', async () => {
+      const { depositVaultWithMorpho, owner } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await setAutoInvestFallbackEnabledMorphoTest(
+        { depositVaultWithMorpho, owner },
+        true,
+      );
+
+      await setAutoInvestFallbackEnabledMorphoTest(
         { depositVaultWithMorpho, owner },
         false,
       );
@@ -1379,7 +1424,7 @@ describe('DepositVaultWithMorpho', function () {
       );
     });
 
-    it('should fail: morphoDepositsEnabled but no vault for token', async () => {
+    it('morphoDepositsEnabled but no vault for token: fallback to normal flow', async () => {
       const {
         owner,
         depositVaultWithMorpho,
@@ -1425,7 +1470,127 @@ describe('DepositVaultWithMorpho', function () {
         100,
         {
           from: regularAccounts[0],
-          revertMessage: 'DVM: no vault for token',
+        },
+      );
+    });
+
+    it('morphoDepositsEnabled, vault configured but deposit reverts, fallback enabled: fallback to normal flow', async () => {
+      const {
+        owner,
+        depositVaultWithMorpho,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+
+      await setMorphoDepositsEnabledTest(
+        { depositVaultWithMorpho, owner },
+        true,
+      );
+      await setAutoInvestFallbackEnabledMorphoTest(
+        { depositVaultWithMorpho, owner },
+        true,
+      );
+
+      await setMorphoVaultTest(
+        { depositVaultWithMorpho, owner },
+        stableCoins.usdc.address,
+        morphoVaultMock.address,
+      );
+
+      await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.usdc,
+        depositVaultWithMorpho,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVaultWithMorpho, owner }, 10);
+
+      await morphoVaultMock.setShouldRevertDeposit(true);
+
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+          expectedMorphoDeposited: false,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('should fail: morphoDepositsEnabled, vault configured but deposit reverts, fallback disabled', async () => {
+      const {
+        owner,
+        depositVaultWithMorpho,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+
+      await setMorphoDepositsEnabledTest(
+        { depositVaultWithMorpho, owner },
+        true,
+      );
+
+      await setMorphoVaultTest(
+        { depositVaultWithMorpho, owner },
+        stableCoins.usdc.address,
+        morphoVaultMock.address,
+      );
+
+      await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.usdc,
+        depositVaultWithMorpho,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVaultWithMorpho, owner }, 10);
+
+      await morphoVaultMock.setShouldRevertDeposit(true);
+
+      await depositInstantWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+          expectedMorphoDeposited: false,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'DVM: auto-invest failed',
         },
       );
     });
@@ -2096,6 +2261,179 @@ describe('DepositVaultWithMorpho', function () {
         100,
         {
           from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('deposit request 100 USDC with morpho auto-invest', async () => {
+      const {
+        owner,
+        depositVaultWithMorpho,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+
+      await setMorphoDepositsEnabledTest(
+        { depositVaultWithMorpho, owner },
+        true,
+      );
+      await setMorphoVaultTest(
+        { depositVaultWithMorpho, owner },
+        stableCoins.usdc.address,
+        morphoVaultMock.address,
+      );
+      await setMinAmountTest({ vault: depositVaultWithMorpho, owner }, 10);
+
+      await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.usdc,
+        depositVaultWithMorpho,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await depositRequestWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('deposit request with morpho auto-invest, deposit reverts, fallback enabled: fallback to normal flow', async () => {
+      const {
+        owner,
+        depositVaultWithMorpho,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+
+      await setMorphoDepositsEnabledTest(
+        { depositVaultWithMorpho, owner },
+        true,
+      );
+      await setAutoInvestFallbackEnabledMorphoTest(
+        { depositVaultWithMorpho, owner },
+        true,
+      );
+      await setMorphoVaultTest(
+        { depositVaultWithMorpho, owner },
+        stableCoins.usdc.address,
+        morphoVaultMock.address,
+      );
+      await setMinAmountTest({ vault: depositVaultWithMorpho, owner }, 10);
+
+      await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.usdc,
+        depositVaultWithMorpho,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await morphoVaultMock.setShouldRevertDeposit(true);
+
+      await depositRequestWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+          expectedMorphoDeposited: false,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('should fail: deposit request with morpho auto-invest, deposit reverts, fallback disabled', async () => {
+      const {
+        owner,
+        depositVaultWithMorpho,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
+        morphoVaultMock,
+      } = await loadFixture(defaultDeploy);
+
+      await setMorphoDepositsEnabledTest(
+        { depositVaultWithMorpho, owner },
+        true,
+      );
+      await setMorphoVaultTest(
+        { depositVaultWithMorpho, owner },
+        stableCoins.usdc.address,
+        morphoVaultMock.address,
+      );
+      await setMinAmountTest({ vault: depositVaultWithMorpho, owner }, 10);
+
+      await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.usdc,
+        depositVaultWithMorpho,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMorpho, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await morphoVaultMock.setShouldRevertDeposit(true);
+
+      await depositRequestWithMorphoTest(
+        {
+          depositVaultWithMorpho,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          morphoVaultMock,
+          expectedMorphoDeposited: false,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'DVM: auto-invest failed',
         },
       );
     });

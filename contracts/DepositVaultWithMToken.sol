@@ -30,6 +30,12 @@ contract DepositVaultWithMToken is DepositVault {
     bool public mTokenDepositsEnabled;
 
     /**
+     * @notice Whether to fall back to raw token transfer on auto-invest failure
+     * @dev if false, the transaction will revert when auto-invest fails
+     */
+    bool public autoInvestFallbackEnabled;
+
+    /**
      * @dev leaving a storage gap for futures updates
      */
     uint256[50] private __gap;
@@ -49,6 +55,12 @@ contract DepositVaultWithMToken is DepositVault {
      * @param enabled Whether mToken deposits are enabled
      */
     event SetMTokenDepositsEnabled(bool indexed enabled);
+
+    /**
+     * @notice Emitted when `autoInvestFallbackEnabled` flag is updated
+     * @param enabled Whether fallback to raw transfer is enabled
+     */
+    event SetAutoInvestFallbackEnabled(bool indexed enabled);
 
     /**
      * @notice upgradeable pattern contract`s initializer
@@ -118,13 +130,19 @@ contract DepositVaultWithMToken is DepositVault {
     }
 
     /**
-     * @dev overrides original transfer to tokens receiver function
-     * in case of mToken deposits are disabled, it will act as the original transfer
-     * otherwise it will take payment tokens from user, deposit them into the target
-     * mToken DepositVault and forward received mTokens to tokens receiver
-     * @param tokenIn token address
-     * @param amountToken amount of tokens to transfer in base18
-     * @param tokensDecimals decimals of tokens
+     * @notice Updates `autoInvestFallbackEnabled` value
+     * @param enabled whether fallback to raw transfer is enabled on auto-invest failure
+     */
+    function setAutoInvestFallbackEnabled(bool enabled)
+        external
+        onlyVaultAdmin
+    {
+        autoInvestFallbackEnabled = enabled;
+        emit SetAutoInvestFallbackEnabled(enabled);
+    }
+
+    /**
+     * @dev overrides instant deposit transfer hook to auto-invest into target mToken DV
      */
     function _instantTransferTokensToTokensReceiver(
         address tokenIn,
@@ -140,6 +158,42 @@ contract DepositVaultWithMToken is DepositVault {
                 );
         }
 
+        _autoInvest(tokenIn, amountToken, tokensDecimals);
+    }
+
+    /**
+     * @dev overrides request deposit transfer hook to auto-invest into target mToken DV
+     */
+    function _requestTransferTokensToTokensReceiver(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 tokensDecimals
+    ) internal override {
+        if (!mTokenDepositsEnabled) {
+            return
+                super._requestTransferTokensToTokensReceiver(
+                    tokenIn,
+                    amountToken,
+                    tokensDecimals
+                );
+        }
+
+        _autoInvest(tokenIn, amountToken, tokensDecimals);
+    }
+
+    /**
+     * @dev Transfers tokens from user to this contract and deposits them
+     * into the target mToken DepositVault. On failure, either falls back
+     * to raw transfer or reverts based on `autoInvestFallbackEnabled`.
+     * @param tokenIn token address
+     * @param amountToken amount of tokens to transfer in base18
+     * @param tokensDecimals decimals of tokens
+     */
+    function _autoInvest(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 tokensDecimals
+    ) private {
         uint256 transferredAmount = _tokenTransferFromUser(
             tokenIn,
             address(this),
@@ -155,12 +209,25 @@ contract DepositVaultWithMToken is DepositVault {
         IERC20 targetMToken = IERC20(address(mTokenDepositVault.mToken()));
         uint256 balanceBefore = targetMToken.balanceOf(address(this));
 
-        mTokenDepositVault.depositInstant(tokenIn, amountToken, 0, bytes32(0));
-
-        uint256 mTokenReceived = targetMToken.balanceOf(address(this)) -
-            balanceBefore;
-        require(mTokenReceived > 0, "DVMT: zero mToken received");
-
-        targetMToken.safeTransfer(tokensReceiver, mTokenReceived);
+        try
+            mTokenDepositVault.depositInstant(
+                tokenIn,
+                amountToken,
+                0,
+                bytes32(0)
+            )
+        {
+            uint256 mTokenReceived = targetMToken.balanceOf(address(this)) -
+                balanceBefore;
+            require(mTokenReceived > 0, "DVMT: zero mToken received");
+            targetMToken.safeTransfer(tokensReceiver, mTokenReceived);
+        } catch {
+            if (autoInvestFallbackEnabled) {
+                IERC20(tokenIn).safeApprove(address(mTokenDepositVault), 0);
+                IERC20(tokenIn).safeTransfer(tokensReceiver, transferredAmount);
+            } else {
+                revert("DVMT: auto-invest failed");
+            }
+        }
     }
 }

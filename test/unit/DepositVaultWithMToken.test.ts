@@ -16,6 +16,8 @@ import {
 import { setRoundData } from '../common/data-feed.helpers';
 import {
   depositInstantWithMTokenTest,
+  depositRequestWithMTokenTest,
+  setAutoInvestFallbackEnabledMTokenTest,
   setMTokenDepositsEnabledTest,
   setMTokenDepositVaultTest,
 } from '../common/deposit-vault-mtoken.helpers';
@@ -244,6 +246,49 @@ describe('DepositVaultWithMToken', function () {
       );
 
       await setMTokenDepositsEnabledTest(
+        { depositVaultWithMToken, owner },
+        false,
+      );
+    });
+  });
+
+  describe('setAutoInvestFallbackEnabled()', () => {
+    it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
+      const { depositVaultWithMToken, owner, regularAccounts } =
+        await loadFixture(defaultDeploy);
+
+      await setAutoInvestFallbackEnabledMTokenTest(
+        { depositVaultWithMToken, owner },
+        true,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'WMAC: hasnt role',
+        },
+      );
+    });
+
+    it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
+      const { depositVaultWithMToken, owner } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await setAutoInvestFallbackEnabledMTokenTest(
+        { depositVaultWithMToken, owner },
+        true,
+      );
+    });
+
+    it('toggle on and off', async () => {
+      const { depositVaultWithMToken, owner } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await setAutoInvestFallbackEnabledMTokenTest(
+        { depositVaultWithMToken, owner },
+        true,
+      );
+
+      await setAutoInvestFallbackEnabledMTokenTest(
         { depositVaultWithMToken, owner },
         false,
       );
@@ -1765,7 +1810,7 @@ describe('DepositVaultWithMToken', function () {
         stableCoins.dai,
         100,
         {
-          revertMessage: 'MV: token not exists',
+          revertMessage: 'DVMT: auto-invest failed',
         },
       );
     });
@@ -1919,6 +1964,107 @@ describe('DepositVaultWithMToken', function () {
         },
       );
     });
+
+    it('mTokenDepositsEnabled, auto-invest fails, fallback enabled: fallback to normal flow', async () => {
+      const {
+        owner,
+        depositVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await setMTokenDepositsEnabledTest(
+        { depositVaultWithMToken, owner },
+        true,
+      );
+      await setAutoInvestFallbackEnabledMTokenTest(
+        { depositVaultWithMToken, owner },
+        true,
+      );
+
+      await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.usdc,
+        depositVaultWithMToken,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVaultWithMToken, owner }, 10);
+
+      await depositInstantWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          expectedMTokenDeposited: false,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('should fail: mTokenDepositsEnabled, auto-invest fails, fallback disabled', async () => {
+      const {
+        owner,
+        depositVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await setMTokenDepositsEnabledTest(
+        { depositVaultWithMToken, owner },
+        true,
+      );
+
+      await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.usdc,
+        depositVaultWithMToken,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVaultWithMToken, owner }, 10);
+
+      await depositInstantWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          expectedMTokenDeposited: false,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'DVMT: auto-invest failed',
+        },
+      );
+    });
   });
 
   describe('depositRequest()', () => {
@@ -1960,6 +2106,163 @@ describe('DepositVaultWithMToken', function () {
         100,
         {
           from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('deposit request 100 USDC with mToken auto-invest', async () => {
+      const {
+        owner,
+        depositVaultWithMToken,
+        depositVault,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await setMTokenDepositsEnabledTest(
+        { depositVaultWithMToken, owner },
+        true,
+      );
+
+      await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.usdc,
+        depositVaultWithMToken,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVault, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVaultWithMToken, owner }, 10);
+      await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+      await depositRequestWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('deposit request with mToken auto-invest fails, fallback enabled: fallback to normal flow', async () => {
+      const {
+        owner,
+        depositVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await setMTokenDepositsEnabledTest(
+        { depositVaultWithMToken, owner },
+        true,
+      );
+      await setAutoInvestFallbackEnabledMTokenTest(
+        { depositVaultWithMToken, owner },
+        true,
+      );
+
+      await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.usdc,
+        depositVaultWithMToken,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVaultWithMToken, owner }, 10);
+
+      await depositRequestWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          expectedMTokenDeposited: false,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('should fail: deposit request with mToken auto-invest fails, fallback disabled', async () => {
+      const {
+        owner,
+        depositVaultWithMToken,
+        stableCoins,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+        dataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await setMTokenDepositsEnabledTest(
+        { depositVaultWithMToken, owner },
+        true,
+      );
+
+      await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+      await approveBase18(
+        regularAccounts[0],
+        stableCoins.usdc,
+        depositVaultWithMToken,
+        100,
+      );
+      await addPaymentTokenTest(
+        { vault: depositVaultWithMToken, owner },
+        stableCoins.usdc,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setMinAmountTest({ vault: depositVaultWithMToken, owner }, 10);
+
+      await depositRequestWithMTokenTest(
+        {
+          depositVaultWithMToken,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          expectedMTokenDeposited: false,
+        },
+        stableCoins.usdc,
+        100,
+        {
+          from: regularAccounts[0],
+          revertMessage: 'DVMT: auto-invest failed',
         },
       );
     });

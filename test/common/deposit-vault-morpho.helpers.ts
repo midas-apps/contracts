@@ -7,7 +7,10 @@ import {
   balanceOfBase18,
   getAccount,
 } from './common.helpers';
-import { depositInstantTest } from './deposit-vault.helpers';
+import {
+  depositInstantTest,
+  depositRequestTest,
+} from './deposit-vault.helpers';
 import { defaultDeploy } from './fixtures';
 
 import {
@@ -201,4 +204,115 @@ export const depositInstantWithMorphoTest = async (
     );
     expect(sharesReceived).to.be.gt(0);
   }
+};
+
+export const setAutoInvestFallbackEnabledMorphoTest = async (
+  { depositVaultWithMorpho, owner }: CommonParamsSetMorphoDepositsEnabled,
+  enabled: boolean,
+  opt?: OptionalCommonParams,
+) => {
+  if (opt?.revertMessage) {
+    await expect(
+      depositVaultWithMorpho
+        .connect(opt?.from ?? owner)
+        .setAutoInvestFallbackEnabled(enabled),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  await expect(
+    depositVaultWithMorpho
+      .connect(opt?.from ?? owner)
+      .setAutoInvestFallbackEnabled(enabled),
+  ).to.emit(
+    depositVaultWithMorpho,
+    depositVaultWithMorpho.interface.events[
+      'SetAutoInvestFallbackEnabled(bool)'
+    ].name,
+  ).to.not.reverted;
+
+  const fallbackEnabledAfter =
+    await depositVaultWithMorpho.autoInvestFallbackEnabled();
+  expect(fallbackEnabledAfter).eq(enabled);
+};
+
+export const depositRequestWithMorphoTest = async (
+  {
+    depositVaultWithMorpho,
+    owner,
+    mTBILL,
+    mTokenToUsdDataFeed,
+    morphoVaultMock,
+    waivedFee,
+    customRecipient,
+    expectedMorphoDeposited = true,
+  }: CommonParamsDeposit & {
+    expectedMorphoDeposited?: boolean;
+    waivedFee?: boolean;
+    customRecipient?: AccountOrContract;
+  },
+  tokenIn: ERC20 | IERC20Metadata | string,
+  amountUsdIn: number,
+  opt?: OptionalCommonParams,
+) => {
+  tokenIn = getAccount(tokenIn);
+
+  if (opt?.revertMessage) {
+    await depositRequestTest(
+      {
+        depositVault: depositVaultWithMorpho,
+        owner,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        waivedFee,
+        customRecipient,
+        checkTokensReceiver: !expectedMorphoDeposited,
+      },
+      tokenIn,
+      amountUsdIn,
+      opt,
+    );
+    return {};
+  }
+
+  const tokensReceiver = await depositVaultWithMorpho.tokensReceiver();
+  const morphoEnabledBefore =
+    await depositVaultWithMorpho.morphoDepositsEnabled();
+
+  const morphoSharesReceiverBefore = await balanceOfBase18(
+    ERC20__factory.connect(morphoVaultMock.address, owner),
+    tokensReceiver,
+  );
+
+  const result = await depositRequestTest(
+    {
+      depositVault: depositVaultWithMorpho,
+      owner,
+      mTBILL,
+      mTokenToUsdDataFeed,
+      waivedFee,
+      customRecipient,
+      checkTokensReceiver: !expectedMorphoDeposited,
+    },
+    tokenIn,
+    amountUsdIn,
+    opt,
+  );
+
+  const morphoEnabledAfter =
+    await depositVaultWithMorpho.morphoDepositsEnabled();
+  expect(morphoEnabledAfter).eq(morphoEnabledBefore);
+
+  if (morphoEnabledAfter && expectedMorphoDeposited) {
+    const morphoSharesReceiverAfter = await balanceOfBase18(
+      ERC20__factory.connect(morphoVaultMock.address, owner),
+      tokensReceiver,
+    );
+    const sharesReceived = morphoSharesReceiverAfter.sub(
+      morphoSharesReceiverBefore,
+    );
+    expect(sharesReceived).to.be.gt(0);
+  }
+
+  return result;
 };
