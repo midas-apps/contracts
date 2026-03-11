@@ -1,7 +1,12 @@
 import { MTokenName } from '../../../../../config';
 import { importWithoutCache } from '../../../../../helpers/utils';
 
-export const getRvSwapperContractFromTemplate = async (mToken: MTokenName) => {
+export const getRvSwapperContractFromTemplate = async (
+  mToken: MTokenName,
+  optionalParams?: Record<string, unknown>,
+) => {
+  const { vaultUseTokenLevelGreenList = false } = optionalParams || {};
+
   const { getTokenContractNames } = await importWithoutCache(
     require.resolve('../../../../../helpers/contracts'),
   );
@@ -40,6 +45,19 @@ export const getRvSwapperContractFromTemplate = async (mToken: MTokenName) => {
        */
       function vaultRole() public pure override returns (bytes32) {
           return ${roles.redemptionVaultAdmin};
+      }
+
+      ${
+        vaultUseTokenLevelGreenList
+          ? `
+        /**
+         * @inheritdoc Greenlistable
+         */
+        function greenlistedRole() public pure override returns (bytes32) {
+            return ${roles.greenlisted};
+        }
+        `
+          : ''
       }
   }`,
   };

@@ -1,4 +1,4 @@
-import { group, multiselect, text } from '@clack/prompts';
+import { group, multiselect, text, confirm } from '@clack/prompts';
 
 import { requireNotCancelled } from '..';
 import { TokenContractNames } from '../../../../../helpers/contracts';
@@ -107,5 +107,12 @@ export const getContractsToGenerateFromUser = async () => {
     ],
     initialValues: ['token', 'dv', 'rvSwapper', 'dataFeed', 'customAggregator'],
     required: true,
+  }).then(requireNotCancelled);
+};
+
+export const getShouldUseTokenLevelGreenListFromUser = async () => {
+  return confirm({
+    message: 'Should use token level green list for vaults?',
+    initialValue: false,
   }).then(requireNotCancelled);
 };
