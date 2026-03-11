@@ -1,7 +1,4 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { expect } from 'chai';
-import { constants } from 'ethers';
-import { parseUnits } from 'ethers/lib/utils';
 
 import { morphoDepositFixture } from './fixtures/morpho.fixture';
 import {
@@ -9,8 +6,6 @@ import {
   assertAutoInvestEnabled,
   depositInstantMorpho,
 } from './helpers/deposit.helpers';
-
-import { approveBase18 } from '../common/common.helpers';
 
 describe('DepositVaultWithMorpho - Mainnet Fork Integration Tests', function () {
   this.timeout(300000);
@@ -201,10 +196,18 @@ describe('DepositVaultWithMorpho - Mainnet Fork Integration Tests', function () 
     });
   });
 
-  describe('Error case: No vault configured for token', function () {
-    it('should revert with DVM: no vault for token', async function () {
-      const { vaultAdmin, testUser, depositVaultWithMorpho, usdc, usdcWhale } =
-        await loadFixture(morphoDepositFixture);
+  describe('Fallback: No vault configured for token', function () {
+    it('deposit succeeds with raw tokens when no vault configured (fallback to normal flow)', async function () {
+      const {
+        vaultAdmin,
+        testUser,
+        tokensReceiver,
+        mTBILL,
+        depositVaultWithMorpho,
+        usdc,
+        morphoVault,
+        usdcWhale,
+      } = await loadFixture(morphoDepositFixture);
 
       await depositVaultWithMorpho
         .connect(vaultAdmin)
@@ -214,29 +217,18 @@ describe('DepositVaultWithMorpho - Mainnet Fork Integration Tests', function () 
         .connect(vaultAdmin)
         .removeMorphoVault(usdc.address);
 
-      const usdcAmountUsd = 100;
+      const result = await depositInstantMorpho({
+        depositVault: depositVaultWithMorpho,
+        user: testUser,
+        tokenIn: usdc,
+        receiptToken: morphoVault,
+        mToken: mTBILL,
+        tokensReceiverAddress: tokensReceiver.address,
+        tokenWhale: usdcWhale,
+        amountUsd: 100,
+      });
 
-      await usdc
-        .connect(usdcWhale)
-        .transfer(testUser.address, parseUnits('100', 6));
-
-      await approveBase18(
-        testUser,
-        usdc,
-        depositVaultWithMorpho,
-        usdcAmountUsd,
-      );
-
-      await expect(
-        depositVaultWithMorpho
-          .connect(testUser)
-          ['depositInstant(address,uint256,uint256,bytes32)'](
-            usdc.address,
-            parseUnits(String(usdcAmountUsd)),
-            constants.Zero,
-            constants.HashZero,
-          ),
-      ).to.be.revertedWith('DVM: no vault for token');
+      assertAutoInvestDisabled(result);
     });
   });
 });

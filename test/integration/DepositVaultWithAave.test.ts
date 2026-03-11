@@ -195,4 +195,40 @@ describe('DepositVaultWithAave - Mainnet Fork Integration Tests', function () {
       assertAutoInvestEnabled(result2);
     });
   });
+
+  describe('Fallback: No pool configured for token', function () {
+    it('deposit succeeds with raw tokens when no pool configured (fallback to normal flow)', async function () {
+      const {
+        vaultAdmin,
+        testUser,
+        tokensReceiver,
+        mTBILL,
+        depositVaultWithAave,
+        usdc,
+        aUsdc,
+        usdcWhale,
+      } = await loadFixture(aaveDepositFixture);
+
+      await depositVaultWithAave
+        .connect(vaultAdmin)
+        .setAaveDepositsEnabled(true);
+
+      await depositVaultWithAave
+        .connect(vaultAdmin)
+        .removeAavePool(usdc.address);
+
+      const result = await depositInstantAave({
+        depositVault: depositVaultWithAave,
+        user: testUser,
+        tokenIn: usdc,
+        receiptToken: aUsdc,
+        mToken: mTBILL,
+        tokensReceiverAddress: tokensReceiver.address,
+        tokenWhale: usdcWhale,
+        amountUsd: 100,
+      });
+
+      assertAutoInvestDisabled(result);
+    });
+  });
 });
