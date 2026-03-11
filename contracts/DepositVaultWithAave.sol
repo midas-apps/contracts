@@ -139,7 +139,7 @@ contract DepositVaultWithAave is DepositVault {
                 );
         }
 
-        _autoInvest(tokenIn, amountToken, tokensDecimals);
+        _autoInvest(tokenIn, amountToken, tokensDecimals, pool);
     }
 
     /**
@@ -160,7 +160,7 @@ contract DepositVaultWithAave is DepositVault {
                 );
         }
 
-        _autoInvest(tokenIn, amountToken, tokensDecimals);
+        _autoInvest(tokenIn, amountToken, tokensDecimals, pool);
     }
 
     /**
@@ -170,14 +170,14 @@ contract DepositVaultWithAave is DepositVault {
      * @param tokenIn token address
      * @param amountToken amount of tokens to transfer in base18
      * @param tokensDecimals decimals of tokens
+     * @param pool Aave V3 Pool
      */
     function _autoInvest(
         address tokenIn,
         uint256 amountToken,
-        uint256 tokensDecimals
+        uint256 tokensDecimals,
+        IAaveV3Pool pool
     ) private {
-        IAaveV3Pool pool = aavePools[tokenIn];
-
         uint256 transferredAmount = _tokenTransferFromUser(
             tokenIn,
             address(this),

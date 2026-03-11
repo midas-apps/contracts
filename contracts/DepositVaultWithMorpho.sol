@@ -142,7 +142,7 @@ contract DepositVaultWithMorpho is DepositVault {
                 );
         }
 
-        _autoInvest(tokenIn, amountToken, tokensDecimals);
+        _autoInvest(tokenIn, amountToken, tokensDecimals, vault);
     }
 
     /**
@@ -163,7 +163,7 @@ contract DepositVaultWithMorpho is DepositVault {
                 );
         }
 
-        _autoInvest(tokenIn, amountToken, tokensDecimals);
+        _autoInvest(tokenIn, amountToken, tokensDecimals, vault);
     }
 
     /**
@@ -173,14 +173,14 @@ contract DepositVaultWithMorpho is DepositVault {
      * @param tokenIn token address
      * @param amountToken amount of tokens to transfer in base18
      * @param tokensDecimals decimals of tokens
+     * @param vault Morpho Vault
      */
     function _autoInvest(
         address tokenIn,
         uint256 amountToken,
-        uint256 tokensDecimals
+        uint256 tokensDecimals,
+        IMorphoVault vault
     ) private {
-        IMorphoVault vault = morphoVaults[tokenIn];
-
         uint256 transferredAmount = _tokenTransferFromUser(
             tokenIn,
             address(this),
