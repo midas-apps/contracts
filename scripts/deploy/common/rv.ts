@@ -14,6 +14,7 @@ import { getTokenContractNames } from '../../../helpers/contracts';
 import {
   MBasisRedemptionVaultWithSwapper,
   RedemptionVault,
+  RedemptionVaultWithMToken,
   RedemptionVaultWIthBUIDL,
 } from '../../../typechain-types';
 
@@ -67,17 +68,33 @@ export type DeployRvSwapperConfig = {
   liquidityProvider?: `0x${string}` | 'dummy';
 } & DeployRvConfigCommon;
 
+export type DeployRvAaveConfig = {
+  type: 'AAVE';
+} & DeployRvConfigCommon;
+
+export type DeployRvMorphoConfig = {
+  type: 'MORPHO';
+} & DeployRvConfigCommon;
+
+export type DeployRvMTokenConfig = {
+  type: 'MTOKEN';
+  redemptionVault: string;
+} & DeployRvConfigCommon;
+
 export type DeployRvConfig =
   | DeployRvRegularConfig
   | DeployRvBuidlConfig
-  | DeployRvSwapperConfig;
+  | DeployRvSwapperConfig
+  | DeployRvAaveConfig
+  | DeployRvMorphoConfig
+  | DeployRvMTokenConfig;
 
 const DUMMY_ADDRESS = '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF';
 
 export const deployRedemptionVault = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
-  type: 'rv' | 'rvBuidl' | 'rvSwapper',
+  type: 'rv' | 'rvBuidl' | 'rvSwapper' | 'rvAave' | 'rvMorpho' | 'rvMToken',
 ) => {
   const addresses = getCurrentAddresses(hre);
   const deployer = await getDeployer(hre);
@@ -97,7 +114,9 @@ export const deployRedemptionVault = async (
 
   const extraParams: unknown[] = [];
 
-  if (networkConfig.type === 'BUIDL') {
+  if (networkConfig.type === 'MTOKEN') {
+    extraParams.push(networkConfig.redemptionVault);
+  } else if (networkConfig.type === 'BUIDL') {
     extraParams.push(networkConfig.buidlRedemption);
     extraParams.push(networkConfig.minBuidlToRedeem);
     extraParams.push(networkConfig.minBuidlBalance);
@@ -183,6 +202,9 @@ export const deployRedemptionVault = async (
       >
     | Parameters<
         MBasisRedemptionVaultWithSwapper['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)']
+      >
+    | Parameters<
+        RedemptionVaultWithMToken['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)']
       >;
 
   await deployAndVerifyProxy(hre, contractName, params, undefined, {
@@ -191,6 +213,8 @@ export const deployRedemptionVault = async (
         ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)'
         : networkConfig.type === 'BUIDL'
         ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,uint256,uint256)'
+        : networkConfig.type === 'MTOKEN'
+        ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
         : 'initialize',
   });
 };

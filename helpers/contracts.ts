@@ -4,10 +4,16 @@ import { VaultType } from '../config/constants/addresses';
 export type TokenContractNames = {
   dv: string;
   dvUstb: string;
+  dvAave: string;
+  dvMorpho: string;
+  dvMToken: string;
   rv: string;
   rvSwapper: string;
+  rvMToken: string;
   rvBuidl: string;
   rvUstb: string;
+  rvAave: string;
+  rvMorpho: string;
   dataFeed?: string;
   dataFeedComposite?: string;
   dataFeedMultiply?: string;
@@ -30,10 +36,16 @@ type CommonContractNames = Omit<TokenContractNames, 'token'> & {
 const vaultTypeToContractNameMap: Record<VaultType, string> = {
   redemptionVault: 'rv',
   redemptionVaultSwapper: 'rvSwapper',
+  redemptionVaultMToken: 'rvMToken',
   redemptionVaultUstb: 'rvUstb',
   depositVault: 'dv',
   depositVaultUstb: 'dvUstb',
+  depositVaultAave: 'dvAave',
+  depositVaultMorpho: 'dvMorpho',
+  depositVaultMToken: 'dvMToken',
   redemptionVaultBuidl: 'rvBuidl',
+  redemptionVaultAave: 'rvAave',
+  redemptionVaultMorpho: 'rvMorpho',
 };
 
 export const vaultTypeToContractName = (
@@ -123,10 +135,16 @@ export const getCommonContractNames = (): CommonContractNames => {
     ac: 'MidasAccessControl',
     dv: 'DepositVault',
     dvUstb: 'DepositVaultWithUSTB',
+    dvAave: 'DepositVaultWithAave',
+    dvMorpho: 'DepositVaultWithMorpho',
+    dvMToken: 'DepositVaultWithMToken',
     rv: 'RedemptionVault',
     rvSwapper: 'RedemptionVaultWithSwapper',
+    rvMToken: 'RedemptionVaultWithMToken',
     rvBuidl: 'RedemptionVaultWIthBUIDL',
     rvUstb: 'RedemptionVaultWithUSTB',
+    rvAave: 'RedemptionVaultWithAave',
+    rvMorpho: 'RedemptionVaultWithMorpho',
     dataFeed: 'DataFeed',
     customAggregator: 'CustomAggregatorV3CompatibleFeed',
     customAggregatorGrowth: 'CustomAggregatorV3CompatibleFeedGrowth',
@@ -154,10 +172,16 @@ export const getTokenContractNames = (
   return {
     dv: `${tokenPrefix}${commonContractNames.dv}`,
     dvUstb: `${tokenPrefix}${commonContractNames.dvUstb}`,
+    dvAave: `${tokenPrefix}${commonContractNames.dvAave}`,
+    dvMorpho: `${tokenPrefix}${commonContractNames.dvMorpho}`,
+    dvMToken: `${tokenPrefix}${commonContractNames.dvMToken}`,
     rv: `${tokenPrefix}${commonContractNames.rv}`,
     rvSwapper: `${tokenPrefix}${commonContractNames.rvSwapper}`,
+    rvMToken: `${tokenPrefix}${commonContractNames.rvMToken}`,
     rvBuidl: `${tokenPrefix}${commonContractNames.rvBuidl}`,
     rvUstb: `${tokenPrefix}${commonContractNames.rvUstb}`,
+    rvAave: `${tokenPrefix}${commonContractNames.rvAave}`,
+    rvMorpho: `${tokenPrefix}${commonContractNames.rvMorpho}`,
     dataFeed: isTac ? undefined : `${prefix}${commonContractNames.dataFeed}`,
     customAggregator: isTac ? undefined : `${prefix}CustomAggregatorFeed`,
     customAggregatorGrowth: isTac

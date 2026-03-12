@@ -16,8 +16,14 @@ import {
   getCustomAggregatorContractFromTemplate,
   getCustomAggregatorGrowthContractFromTemplate,
   getDataFeedContractFromTemplate,
+  getDvAaveContractFromTemplate,
   getDvContractFromTemplate,
+  getDvMorphoContractFromTemplate,
+  getDvMTokenContractFromTemplate,
+  getRvAaveContractFromTemplate,
   getRvContractFromTemplate,
+  getRvMorphoContractFromTemplate,
+  getRvMTokenContractFromTemplate,
   getRvSwapperContractFromTemplate,
   getRvUstbContractFromTemplate,
   getTokenContractFromTemplate,
@@ -30,6 +36,7 @@ import {
 import {
   getConfigFromUser,
   getContractsToGenerateFromUser,
+  getShouldUseTokenLevelGreenListFromUser,
 } from './ui/deployment-contracts';
 
 import { MTokenName } from '../../../../config';
@@ -45,7 +52,10 @@ export type CodeExpr = { [EXPR]: string };
 const generatorPerContract: Partial<
   Record<
     keyof TokenContractNames | 'layerZeroMinterBurner',
-    (mToken: MTokenName) =>
+    (
+      mToken: MTokenName,
+      optionalParams?: Record<string, unknown>,
+    ) =>
       | Promise<
           | {
               name: string;
@@ -62,9 +72,15 @@ const generatorPerContract: Partial<
 > = {
   token: getTokenContractFromTemplate,
   dv: getDvContractFromTemplate,
+  dvAave: getDvAaveContractFromTemplate,
+  dvMorpho: getDvMorphoContractFromTemplate,
+  dvMToken: getDvMTokenContractFromTemplate,
   rv: getRvContractFromTemplate,
   rvSwapper: getRvSwapperContractFromTemplate,
+  rvMToken: getRvMTokenContractFromTemplate,
   rvUstb: getRvUstbContractFromTemplate,
+  rvAave: getRvAaveContractFromTemplate,
+  rvMorpho: getRvMorphoContractFromTemplate,
   dataFeed: getDataFeedContractFromTemplate,
   customAggregator: getCustomAggregatorContractFromTemplate,
   customAggregatorGrowth: getCustomAggregatorGrowthContractFromTemplate,
@@ -505,6 +521,15 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
 
   const contractsToGenerate = await getContractsToGenerateFromUser();
 
+  let shouldUseTokenLevelGreenList = false;
+
+  if (
+    contractsToGenerate.find((v) => v.startsWith('dv') || v.startsWith('rv'))
+  ) {
+    shouldUseTokenLevelGreenList =
+      await getShouldUseTokenLevelGreenListFromUser();
+  }
+
   const mToken = config.tokenContractName;
 
   const folder = path.join(
@@ -527,7 +552,7 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
       },
     },
     {
-      title: 'Generation files',
+      title: 'Generating files',
       task: async () => {
         const isFolderExists = await fs
           .access(folder)
@@ -547,7 +572,11 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
         ].filter((v) => v !== undefined);
 
         const generatedContracts = await Promise.all(
-          generators.map((generator) => generator(mToken as MTokenName)),
+          generators.map((generator) =>
+            generator(mToken as MTokenName, {
+              vaultUseTokenLevelGreenList: shouldUseTokenLevelGreenList,
+            }),
+          ),
         );
 
         for (const contract of generatedContracts) {
