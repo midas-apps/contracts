@@ -10,26 +10,24 @@ contract RedemptionVaultTest is RedemptionVault {
     function _disableInitializers() internal override {}
 
     function initializeWithoutInitializer(
-        address _ac,
+        CommonVaultInitParams calldata _commonVaultInitParams,
         MTokenInitParams calldata _mTokenInitParams,
         ReceiversInitParams calldata _receiversInitParams,
         InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount,
-        FiatRedeptionInitParams calldata _fiatRedemptionInitParams,
-        address _requestRedeemer
+        FiatRedemptionInitParams calldata _fiatRedemptionInitParams,
+        address _requestRedeemer,
+        address _loanLp,
+        address _loanLpFeeReceiver
     ) external {
         __RedemptionVault_init(
-            _ac,
+            _commonVaultInitParams,
             _mTokenInitParams,
             _receiversInitParams,
             _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount,
             _fiatRedemptionInitParams,
-            _requestRedeemer
+            _requestRedeemer,
+            _loanLp,
+            _loanLpFeeReceiver
         );
     }
 
@@ -45,6 +43,10 @@ contract RedemptionVaultTest is RedemptionVault {
         address user,
         address tokenOut,
         uint256 amountMTokenIn,
+        uint256 overrideMTokenRate,
+        uint256 overrideTokenOutRate,
+        bool shouldOverrideFeePercent,
+        uint256 overrideFeePercent,
         bool isInstant,
         bool isFiat
     ) external returns (CalcAndValidateRedeemResult memory calcResult) {
@@ -53,23 +55,28 @@ contract RedemptionVaultTest is RedemptionVault {
                 user,
                 tokenOut,
                 amountMTokenIn,
+                overrideMTokenRate,
+                overrideTokenOutRate,
+                shouldOverrideFeePercent,
+                overrideFeePercent,
                 isInstant,
                 isFiat
             );
     }
 
-    function convertUsdToTokenTest(uint256 amountUsd, address tokenOut)
-        external
-        returns (uint256 amountToken, uint256 tokenRate)
-    {
-        return _convertUsdToToken(amountUsd, tokenOut);
+    function convertUsdToTokenTest(
+        uint256 amountUsd,
+        address tokenOut,
+        uint256 overrideTokenOutRate
+    ) external returns (uint256 amountToken, uint256 tokenRate) {
+        return _convertUsdToToken(amountUsd, tokenOut, overrideTokenOutRate);
     }
 
-    function convertMTokenToUsdTest(uint256 amountMToken)
-        external
-        returns (uint256 amountUsd, uint256 mTokenRate)
-    {
-        return _convertMTokenToUsd(amountMToken);
+    function convertMTokenToUsdTest(
+        uint256 amountMToken,
+        uint256 overrideMTokenRate
+    ) external returns (uint256 amountUsd, uint256 mTokenRate) {
+        return _convertMTokenToUsd(amountMToken, overrideMTokenRate);
     }
 
     function _getTokenRate(address dataFeed, bool stable)

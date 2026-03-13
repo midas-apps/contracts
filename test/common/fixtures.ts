@@ -69,6 +69,8 @@ export const defaultDeploy = async () => {
     feeReceiver,
     requestRedeemer,
     liquidityProvider,
+    loanLp,
+    loanLpFeeReceiver,
     ...regularAccounts
   ] = await ethers.getSigners();
 
@@ -188,7 +190,12 @@ export const defaultDeploy = async () => {
   const depositVault = await new DepositVaultTest__factory(owner).deploy();
 
   await depositVault.initialize(
-    accessControl.address,
+    {
+      ac: accessControl.address,
+      sanctionsList: mockedSanctionsList.address,
+      variationTolerance: 1,
+      minAmount: parseUnits('100'),
+    },
     {
       mToken: mTBILL.address,
       mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -201,9 +208,6 @@ export const defaultDeploy = async () => {
       instantFee: 100,
       instantDailyLimit: parseUnits('100000'),
     },
-    mockedSanctionsList.address,
-    1,
-    parseUnits('100'),
     0,
     constants.MaxUint256,
   );
@@ -218,7 +222,12 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await redemptionVault.initialize(
-    accessControl.address,
+    {
+      ac: accessControl.address,
+      sanctionsList: mockedSanctionsList.address,
+      variationTolerance: 1,
+      minAmount: 1000,
+    },
     {
       mToken: mTBILL.address,
       mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -231,15 +240,14 @@ export const defaultDeploy = async () => {
       instantFee: 100,
       instantDailyLimit: parseUnits('100000'),
     },
-    mockedSanctionsList.address,
-    1,
-    1000,
     {
       fiatAdditionalFee: 100,
       fiatFlatFee: parseUnits('1'),
       minFiatRedeemAmount: 1000,
     },
     requestRedeemer.address,
+    loanLp.address,
+    loanLpFeeReceiver.address,
   );
 
   await accessControl.grantRole(
@@ -271,9 +279,14 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithBUIDLTest__factory(owner).deploy();
 
   await redemptionVaultWithBUIDL[
-    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,uint256,uint256)'
+    'initialize((address,address,uint256,uint256),(address,address),(address,address),(uint256,uint256),(uint256,uint256,uint256),address,address,address,address,uint256,uint256)'
   ](
-    accessControl.address,
+    {
+      ac: accessControl.address,
+      sanctionsList: mockedSanctionsList.address,
+      variationTolerance: 1,
+      minAmount: 1000,
+    },
     {
       mToken: mTBILL.address,
       mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -286,15 +299,14 @@ export const defaultDeploy = async () => {
       instantFee: 100,
       instantDailyLimit: parseUnits('100000'),
     },
-    mockedSanctionsList.address,
-    1,
-    1000,
     {
       fiatAdditionalFee: 100,
       fiatFlatFee: parseUnits('1'),
       minFiatRedeemAmount: 1000,
     },
     requestRedeemer.address,
+    loanLp.address,
+    loanLpFeeReceiver.address,
     buidlRedemption.address,
     parseUnits('250000', 6),
     parseUnits('250000', 6),
@@ -313,9 +325,14 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithUSTB[
-    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)'
+    'initialize((address,address,uint256,uint256),(address,address),(address,address),(uint256,uint256),uint256,uint256,address)'
   ](
-    accessControl.address,
+    {
+      ac: accessControl.address,
+      sanctionsList: mockedSanctionsList.address,
+      variationTolerance: 1,
+      minAmount: parseUnits('100'),
+    },
     {
       mToken: mTBILL.address,
       mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -328,9 +345,6 @@ export const defaultDeploy = async () => {
       instantFee: 100,
       instantDailyLimit: parseUnits('100000'),
     },
-    mockedSanctionsList.address,
-    1,
-    parseUnits('100'),
     0,
     constants.MaxUint256,
     ustbToken.address,
@@ -353,9 +367,14 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithUSTBTest__factory(owner).deploy();
 
   await redemptionVaultWithUSTB[
-    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
+    'initialize((address,address,uint256,uint256),(address,address),(address,address),(uint256,uint256),(uint256,uint256,uint256),address,address,address,address)'
   ](
-    accessControl.address,
+    {
+      ac: accessControl.address,
+      sanctionsList: mockedSanctionsList.address,
+      variationTolerance: 1,
+      minAmount: 1000,
+    },
     {
       mToken: mTBILL.address,
       mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -368,15 +387,14 @@ export const defaultDeploy = async () => {
       instantFee: 100,
       instantDailyLimit: parseUnits('100000'),
     },
-    mockedSanctionsList.address,
-    1,
-    1000,
     {
       fiatAdditionalFee: 100,
       fiatFlatFee: parseUnits('1'),
       minFiatRedeemAmount: 1000,
     },
     requestRedeemer.address,
+    loanLp.address,
+    loanLpFeeReceiver.address,
     ustbRedemption.address,
   );
   await accessControl.grantRole(
@@ -395,7 +413,12 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithAaveTest__factory(owner).deploy();
 
   await redemptionVaultWithAave.initialize(
-    accessControl.address,
+    {
+      ac: accessControl.address,
+      sanctionsList: mockedSanctionsList.address,
+      variationTolerance: 1,
+      minAmount: 1000,
+    },
     {
       mToken: mTBILL.address,
       mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -408,15 +431,14 @@ export const defaultDeploy = async () => {
       instantFee: 100,
       instantDailyLimit: parseUnits('100000'),
     },
-    mockedSanctionsList.address,
-    1,
-    1000,
     {
       fiatAdditionalFee: 100,
       fiatFlatFee: parseUnits('1'),
       minFiatRedeemAmount: 1000,
     },
     requestRedeemer.address,
+    loanLp.address,
+    loanLpFeeReceiver.address,
   );
   await redemptionVaultWithAave.setAavePool(
     stableCoins.usdc.address,
@@ -438,7 +460,12 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithMorphoTest__factory(owner).deploy();
 
   await redemptionVaultWithMorpho.initialize(
-    accessControl.address,
+    {
+      ac: accessControl.address,
+      sanctionsList: mockedSanctionsList.address,
+      variationTolerance: 1,
+      minAmount: 1000,
+    },
     {
       mToken: mTBILL.address,
       mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -451,15 +478,14 @@ export const defaultDeploy = async () => {
       instantFee: 100,
       instantDailyLimit: parseUnits('100000'),
     },
-    mockedSanctionsList.address,
-    1,
-    1000,
     {
       fiatAdditionalFee: 100,
       fiatFlatFee: parseUnits('1'),
       minFiatRedeemAmount: 1000,
     },
     requestRedeemer.address,
+    loanLp.address,
+    loanLpFeeReceiver.address,
   );
   await redemptionVaultWithMorpho.setMorphoVault(
     stableCoins.usdc.address,
@@ -477,7 +503,12 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithAave.initialize(
-    accessControl.address,
+    {
+      ac: accessControl.address,
+      sanctionsList: mockedSanctionsList.address,
+      variationTolerance: 1,
+      minAmount: parseUnits('100'),
+    },
     {
       mToken: mTBILL.address,
       mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -490,9 +521,6 @@ export const defaultDeploy = async () => {
       instantFee: 100,
       instantDailyLimit: parseUnits('100000'),
     },
-    mockedSanctionsList.address,
-    1,
-    parseUnits('100'),
     0,
     constants.MaxUint256,
   );
@@ -513,7 +541,12 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithMorpho.initialize(
-    accessControl.address,
+    {
+      ac: accessControl.address,
+      sanctionsList: mockedSanctionsList.address,
+      variationTolerance: 1,
+      minAmount: parseUnits('100'),
+    },
     {
       mToken: mTBILL.address,
       mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -526,9 +559,6 @@ export const defaultDeploy = async () => {
       instantFee: 100,
       instantDailyLimit: parseUnits('100000'),
     },
-    mockedSanctionsList.address,
-    1,
-    parseUnits('100'),
     0,
     constants.MaxUint256,
   );
@@ -545,9 +575,14 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithMToken[
-    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)'
+    'initialize((address,address,uint256,uint256),(address,address),(address,address),(uint256,uint256),uint256,uint256,address)'
   ](
-    accessControl.address,
+    {
+      ac: accessControl.address,
+      sanctionsList: mockedSanctionsList.address,
+      variationTolerance: 1,
+      minAmount: parseUnits('100'),
+    },
     {
       mToken: mTBILL.address,
       mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -560,9 +595,6 @@ export const defaultDeploy = async () => {
       instantFee: 100,
       instantDailyLimit: parseUnits('100000'),
     },
-    mockedSanctionsList.address,
-    1,
-    parseUnits('100'),
     0,
     constants.MaxUint256,
     depositVault.address,
@@ -581,9 +613,14 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithSwapperTest__factory(owner).deploy();
 
   await redemptionVaultWithSwapper[
-    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)'
+    'initialize((address,address,uint256,uint256),(address,address),(address,address),(uint256,uint256),(uint256,uint256,uint256),address,address,address,address,address)'
   ](
-    accessControl.address,
+    {
+      ac: accessControl.address,
+      sanctionsList: mockedSanctionsList.address,
+      variationTolerance: 1,
+      minAmount: 1000,
+    },
     {
       mToken: mBASIS.address,
       mTokenDataFeed: mBasisToUsdDataFeed.address,
@@ -596,9 +633,6 @@ export const defaultDeploy = async () => {
       instantFee: 100,
       instantDailyLimit: parseUnits('100000'),
     },
-    mockedSanctionsList.address,
-    1,
-    1000,
     {
       fiatAdditionalFee: 100,
       fiatFlatFee: parseUnits('1'),
@@ -606,6 +640,8 @@ export const defaultDeploy = async () => {
     },
     requestRedeemer.address,
     redemptionVault.address,
+    loanLp.address,
+    loanLpFeeReceiver.address,
     liquidityProvider.address,
   );
 
@@ -639,9 +675,14 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithMTokenTest__factory(owner).deploy();
 
   await redemptionVaultWithMToken[
-    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
+    'initialize((address,address,uint256,uint256),(address,address),(address,address),(uint256,uint256),(uint256,uint256,uint256),address,address,address,address)'
   ](
-    accessControl.address,
+    {
+      ac: accessControl.address,
+      sanctionsList: mockedSanctionsList.address,
+      variationTolerance: 1,
+      minAmount: 1000,
+    },
     {
       mToken: mFONE.address,
       mTokenDataFeed: mFoneToUsdDataFeed.address,
@@ -654,9 +695,6 @@ export const defaultDeploy = async () => {
       instantFee: 100,
       instantDailyLimit: parseUnits('100000'),
     },
-    mockedSanctionsList.address,
-    1,
-    1000,
     {
       fiatAdditionalFee: 100,
       fiatFlatFee: parseUnits('1'),
@@ -664,6 +702,8 @@ export const defaultDeploy = async () => {
     },
     requestRedeemer.address,
     redemptionVault.address,
+    loanLp.address,
+    loanLpFeeReceiver.address,
   );
 
   await accessControl.grantRole(
@@ -876,6 +916,8 @@ export const defaultDeploy = async () => {
     depositVaultWithMToken,
     dataFeedGrowth,
     compositeDataFeed,
+    loanLp,
+    loanLpFeeReceiver,
   };
 };
 

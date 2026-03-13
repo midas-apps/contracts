@@ -22,6 +22,12 @@ enum RequestStatus {
     Canceled
 }
 
+struct CommonVaultInitParams {
+    address ac;
+    address sanctionsList;
+    uint256 variationTolerance;
+    uint256 minAmount;
+}
 struct MTokenInitParams {
     address mToken;
     address mTokenDataFeed;

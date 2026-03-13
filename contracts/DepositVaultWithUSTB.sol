@@ -39,36 +39,27 @@ contract DepositVaultWithUSTB is DepositVault {
 
     /**
      * @notice upgradeable pattern contract`s initializer
-     * @param _ac address of MidasAccessControll contract
+     * @param _commonVaultInitParams init params for common vault
      * @param _mTokenInitParams init params for mToken
      * @param _receiversInitParams init params for receivers
      * @param _instantInitParams init params for instant operations
-     * @param _sanctionsList address of sanctionsList contract
-     * @param _variationTolerance percent of prices diviation 1% = 100
-     * @param _minAmount basic min amount for operations in mToken
      * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
      * @param _ustb USTB token address
      */
     function initialize(
-        address _ac,
+        CommonVaultInitParams calldata _commonVaultInitParams,
         MTokenInitParams calldata _mTokenInitParams,
         ReceiversInitParams calldata _receiversInitParams,
         InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount,
         uint256 _minMTokenAmountForFirstDeposit,
         uint256 _maxSupplyCap,
         address _ustb
     ) external {
         initialize(
-            _ac,
+            _commonVaultInitParams,
             _mTokenInitParams,
             _receiversInitParams,
             _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount,
             _minMTokenAmountForFirstDeposit,
             _maxSupplyCap
         );

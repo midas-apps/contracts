@@ -142,44 +142,40 @@ abstract contract ManageableVault is
 
     /**
      * @dev upgradeable pattern contract`s initializer
-     * @param _ac address of MidasAccessControll contract
+     * @param _commonVaultInitParams init params for common vault
      * @param _mTokenInitParams init params for mToken
      * @param _receiversInitParams init params for receivers
      * @param _instantInitParams init params for instant operations
-     * @param _sanctionsList address of sanctionsList contract
-     * @param _variationTolerance percent of prices diviation 1% = 100
-     * @param _minAmount basic min amount for operations
      */
     // solhint-disable func-name-mixedcase
     function __ManageableVault_init(
-        address _ac,
+        CommonVaultInitParams calldata _commonVaultInitParams,
         MTokenInitParams calldata _mTokenInitParams,
         ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount
+        InstantInitParams calldata _instantInitParams
     ) internal onlyInitializing {
         _validateAddress(_mTokenInitParams.mToken, false);
         _validateAddress(_mTokenInitParams.mTokenDataFeed, false);
         _validateAddress(_receiversInitParams.tokensReceiver, true);
         _validateAddress(_receiversInitParams.feeReceiver, true);
         require(_instantInitParams.instantDailyLimit > 0, "zero limit");
-        _validateFee(_variationTolerance, true);
+        _validateFee(_commonVaultInitParams.variationTolerance, true);
         _validateFee(_instantInitParams.instantFee, false);
 
         mToken = IMToken(_mTokenInitParams.mToken);
-        __Pausable_init(_ac);
+        __Pausable_init(_commonVaultInitParams.ac);
         __Greenlistable_init_unchained();
         __Blacklistable_init_unchained();
-        __WithSanctionsList_init_unchained(_sanctionsList);
+        __WithSanctionsList_init_unchained(
+            _commonVaultInitParams.sanctionsList
+        );
 
         tokensReceiver = _receiversInitParams.tokensReceiver;
         feeReceiver = _receiversInitParams.feeReceiver;
         instantFee = _instantInitParams.instantFee;
         instantDailyLimit = _instantInitParams.instantDailyLimit;
-        minAmount = _minAmount;
-        variationTolerance = _variationTolerance;
+        minAmount = _commonVaultInitParams.minAmount;
+        variationTolerance = _commonVaultInitParams.variationTolerance;
         mTokenDataFeed = IDataFeed(_mTokenInitParams.mTokenDataFeed);
     }
 
@@ -445,6 +441,7 @@ abstract contract ManageableVault is
         uint256 amount,
         uint256 tokenDecimals
     ) internal {
+        if (amount == 0) return;
         uint256 transferAmount = amount.convertFromBase18(tokenDecimals);
 
         require(
@@ -471,6 +468,7 @@ abstract contract ManageableVault is
         uint256 amount,
         uint256 tokenDecimals
     ) internal {
+        if (amount == 0) return;
         uint256 transferAmount = amount.convertFromBase18(tokenDecimals);
 
         require(
@@ -487,6 +485,7 @@ abstract contract ManageableVault is
      * @return decimals decinmals value of a given `token`
      */
     function _tokenDecimals(address token) internal view returns (uint8) {
+        if (token == MANUAL_FULLFILMENT_TOKEN) return 18;
         return IERC20Metadata(token).decimals();
     }
 
@@ -528,37 +527,47 @@ abstract contract ManageableVault is
     }
 
     /**
-     * @dev returns calculated fee amount depends on parameters
-     * if additionalFee not zero, token fee replaced with additionalFee
+     * @dev returns calculated fee amount depends on the provided fee percent and amount
+     * @param feePercent fee percent
+     * @param amount amount of token (decimals 18)
+
+     * @return feeAmount calculated fee amount
+     */
+    function _getFeeAmount(uint256 feePercent, uint256 amount)
+        internal
+        view
+        returns (uint256)
+    {
+        return (amount * feePercent) / ONE_HUNDRED_PERCENT;
+    }
+
+    /**
+     * @dev returns calculated fee percent depends on parameters
      * @param sender sender address
      * @param token token address
-     * @param amount amount of token (decimals 18)
      * @param isInstant is instant operation
-     * @param additionalFee fee for fiat operations
-     * @return fee amount of input token
+     * @param overrideTokenFee overrides token fee if not zero
+     *
+     * @return feePercent calculated fee percent
      */
-    function _getFeeAmount(
+    function _getFee(
         address sender,
         address token,
-        uint256 amount,
         bool isInstant,
-        uint256 additionalFee
-    ) internal view returns (uint256) {
+        uint256 overrideTokenFee
+    ) internal view returns (uint256 feePercent) {
         if (waivedFeeRestriction[sender]) return 0;
 
-        uint256 feePercent;
-        if (additionalFee == 0) {
+        if (overrideTokenFee == 0) {
             TokenConfig storage tokenConfig = tokensConfig[token];
             feePercent = tokenConfig.fee;
         } else {
-            feePercent = additionalFee;
+            feePercent = overrideTokenFee;
         }
 
         if (isInstant) feePercent += instantFee;
 
         if (feePercent > ONE_HUNDRED_PERCENT) feePercent = ONE_HUNDRED_PERCENT;
-
-        return (amount * feePercent) / ONE_HUNDRED_PERCENT;
     }
 
     /**

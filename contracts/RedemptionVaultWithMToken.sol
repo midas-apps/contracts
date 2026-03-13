@@ -52,39 +52,34 @@ contract RedemptionVaultWithMToken is RedemptionVault {
 
     /**
      * @notice upgradeable pattern contract`s initializer
-     * @param _ac address of MidasAccessControll contract
+     * @param _commonVaultInitParams init params for common vault
      * @param _mTokenInitParams init params for mToken
      * @param _receiversInitParams init params for receivers
      * @param _instantInitParams init params for instant operations
-     * @param _sanctionsList address of sanctionsList contract
-     * @param _variationTolerance percent of prices diviation 1% = 100
-     * @param _minAmount basic min amount for operations
      * @param _fiatRedemptionInitParams params fiatAdditionalFee, fiatFlatFee, minFiatRedeemAmount
      * @param _requestRedeemer address is designated for standard redemptions, allowing tokens to be pulled from this address
      * @param _redemptionVault address of the mTokenA RedemptionVault
      */
     function initialize(
-        address _ac,
+        CommonVaultInitParams calldata _commonVaultInitParams,
         MTokenInitParams calldata _mTokenInitParams,
         ReceiversInitParams calldata _receiversInitParams,
         InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount,
-        FiatRedeptionInitParams calldata _fiatRedemptionInitParams,
+        FiatRedemptionInitParams calldata _fiatRedemptionInitParams,
         address _requestRedeemer,
+        address _loanLp,
+        address _loanLpFeeReceiver,
         address _redemptionVault
     ) external initializer {
         __RedemptionVault_init(
-            _ac,
+            _commonVaultInitParams,
             _mTokenInitParams,
             _receiversInitParams,
             _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount,
             _fiatRedemptionInitParams,
-            _requestRedeemer
+            _requestRedeemer,
+            _loanLp,
+            _loanLpFeeReceiver
         );
         _validateAddress(_redemptionVault, true);
         redemptionVault = IRedemptionVault(_redemptionVault);
@@ -119,81 +114,33 @@ contract RedemptionVaultWithMToken is RedemptionVault {
      * @param tokenOut token out address
      * @param amountMTokenIn amount of mToken to redeem
      * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
-     * @param recipient address that will receive the tokenOut
+     *
+     * @return calcResult calculated redeem result
      */
     function _redeemInstant(
         address tokenOut,
         uint256 amountMTokenIn,
-        uint256 minReceiveAmount,
-        address recipient
+        uint256 minReceiveAmount
     )
         internal
         override
         returns (
             CalcAndValidateRedeemResult memory calcResult,
-            uint256 amountTokenOutWithoutFee
+            bool spendLiquidity
         )
     {
-        address user = msg.sender;
-
-        calcResult = _calcAndValidateRedeem(
-            user,
+        (calcResult, spendLiquidity) = super._redeemInstant(
             tokenOut,
             amountMTokenIn,
-            true,
-            false
-        );
-
-        _requireAndUpdateLimit(amountMTokenIn);
-
-        uint256 tokenDecimals = _tokenDecimals(tokenOut);
-
-        uint256 amountMTokenInCopy = amountMTokenIn;
-        address tokenOutCopy = tokenOut;
-        uint256 minReceiveAmountCopy = minReceiveAmount;
-
-        (uint256 amountMTokenInUsd, uint256 mTokenRate) = _convertMTokenToUsd(
-            amountMTokenInCopy
-        );
-        (uint256 amountTokenOut, uint256 tokenOutRate) = _convertUsdToToken(
-            amountMTokenInUsd,
-            tokenOutCopy
-        );
-
-        _requireAndUpdateAllowance(tokenOutCopy, amountTokenOut);
-
-        mToken.burn(user, calcResult.amountMTokenWithoutFee);
-        if (calcResult.feeAmount > 0)
-            _tokenTransferFromUser(
-                address(mToken),
-                feeReceiver,
-                calcResult.feeAmount,
-                18
-            );
-
-        uint256 amountTokenOutWithoutFeeFrom18 = ((calcResult
-            .amountMTokenWithoutFee * mTokenRate) / tokenOutRate)
-            .convertFromBase18(tokenDecimals);
-
-        amountTokenOutWithoutFee = amountTokenOutWithoutFeeFrom18
-            .convertToBase18(tokenDecimals);
-
-        require(
-            amountTokenOutWithoutFee >= minReceiveAmountCopy,
-            "RVMT: minReceiveAmount > actual"
+            minReceiveAmount
         );
 
         _checkAndRedeemMToken(
-            tokenOutCopy,
-            amountTokenOutWithoutFeeFrom18,
-            tokenOutRate
-        );
-
-        _tokenTransferToUser(
-            tokenOutCopy,
-            recipient,
-            amountTokenOutWithoutFee,
-            tokenDecimals
+            tokenOut,
+            calcResult.amountTokenOutWithoutFee.convertFromBase18(
+                calcResult.tokenOutDecimals
+            ),
+            calcResult.tokenOutRate
         );
     }
 

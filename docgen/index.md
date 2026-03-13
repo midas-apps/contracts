@@ -1381,11 +1381,11 @@ _check if operation exceed token allowance and update allowance_
 ### _getFeeAmount
 
 ```solidity
-function _getFeeAmount(address sender, address token, uint256 amount, bool isInstant, uint256 additionalFee) internal view returns (uint256)
+function _getFeeAmount(address sender, address token, uint256 amount, bool isInstant, uint256 overrideTokenFee) internal view returns (uint256)
 ```
 
 _returns calculated fee amount depends on parameters
-if additionalFee not zero, token fee replaced with additionalFee_
+if overrideTokenFee not zero, token fee replaced with additionalFee_
 
 #### Parameters
 
@@ -1395,7 +1395,7 @@ if additionalFee not zero, token fee replaced with additionalFee_
 | token | address | token address |
 | amount | uint256 | amount of token (decimals 18) |
 | isInstant | bool | is instant operation |
-| additionalFee | uint256 | fee for fiat operations |
+| overrideTokenFee | uint256 | fee for fiat operations |
 
 #### Return Values
 

@@ -49,41 +49,36 @@ contract RedemptionVaultWithSwapper is
 
     /**
      * @notice upgradeable pattern contract`s initializer
-     * @param _ac address of MidasAccessControll contract
+     * @param _commonVaultInitParams init params for common vault
      * @param _mTokenInitParams init params for mToken1
      * @param _receiversInitParams init params for receivers
      * @param _instantInitParams init params for instant operations
-     * @param _sanctionsList address of sanctionsList contract
-     * @param _variationTolerance percent of prices diviation 1% = 100
-     * @param _minAmount basic min amount for operations
      * @param _fiatRedemptionInitParams params fiatAdditionalFee, fiatFlatFee, minFiatRedeemAmount
      * @param _requestRedeemer address is designated for standard redemptions, allowing tokens to be pulled from this address
      * @param _mTbillRedemptionVault mToken2 redemptionVault address
      * @param _liquidityProvider liquidity provider for pull mToken2
      */
     function initialize(
-        address _ac,
+        CommonVaultInitParams calldata _commonVaultInitParams,
         MTokenInitParams calldata _mTokenInitParams,
         ReceiversInitParams calldata _receiversInitParams,
         InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount,
-        FiatRedeptionInitParams calldata _fiatRedemptionInitParams,
+        FiatRedemptionInitParams calldata _fiatRedemptionInitParams,
         address _requestRedeemer,
+        address _loanLp,
+        address _loanLpFeeReceiver,
         address _mTbillRedemptionVault,
         address _liquidityProvider
     ) external initializer {
         __RedemptionVault_init(
-            _ac,
+            _commonVaultInitParams,
             _mTokenInitParams,
             _receiversInitParams,
             _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount,
             _fiatRedemptionInitParams,
-            _requestRedeemer
+            _requestRedeemer,
+            _loanLp,
+            _loanLpFeeReceiver
         );
         _validateAddress(_mTbillRedemptionVault, true);
         _validateAddress(_liquidityProvider, false);
@@ -101,29 +96,31 @@ contract RedemptionVaultWithSwapper is
      * @param tokenOut token out address
      * @param amountMTokenIn amount of mToken1 to redeem
      * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
+     *
+     * @return calcResult calculated redeem result
      */
     function _redeemInstant(
         address tokenOut,
         uint256 amountMTokenIn,
-        uint256 minReceiveAmount,
-        address recipient
+        uint256 minReceiveAmount
     )
         internal
         override
         returns (
             CalcAndValidateRedeemResult memory calcResult,
-            uint256 amountTokenOutWithoutFee
+            bool spendLiquidity
         )
     {
+        spendLiquidity = false;
+
         address user = msg.sender;
 
-        calcResult = _calcAndValidateRedeem(
-            user,
-            tokenOut,
-            amountMTokenIn,
-            true,
-            false
-        );
+        (
+            uint256 feeAmount,
+            uint256 amountMTokenWithoutFee
+        ) = _calcAndValidateRedeemForInstant(user, tokenOut, amountMTokenIn);
+
+        calcResult.feeAmount = feeAmount;
 
         uint256 tokenDecimals = _tokenDecimals(tokenOut);
 
@@ -132,30 +129,29 @@ contract RedemptionVaultWithSwapper is
         uint256 minReceiveAmountCopy = minReceiveAmount;
 
         (uint256 amountMTokenInUsd, uint256 mTokenRate) = _convertMTokenToUsd(
-            amountMTokenInCopy
+            amountMTokenInCopy,
+            0
         );
         (uint256 amountTokenOut, uint256 tokenOutRate) = _convertUsdToToken(
             amountMTokenInUsd,
-            tokenOutCopy
+            tokenOutCopy,
+            0
         );
 
-        amountTokenOutWithoutFee = _truncate(
-            (calcResult.amountMTokenWithoutFee * mTokenRate) / tokenOutRate,
+        uint256 amountTokenOutWithoutFee = _truncate(
+            (amountMTokenWithoutFee * mTokenRate) / tokenOutRate,
             tokenDecimals
         );
+
+        calcResult.amountTokenOutWithoutFee = amountTokenOutWithoutFee;
 
         require(
             amountTokenOutWithoutFee >= minReceiveAmountCopy,
             "RVS: minReceiveAmount > actual"
         );
 
-        if (calcResult.feeAmount > 0)
-            _tokenTransferFromUser(
-                address(mToken),
-                feeReceiver,
-                calcResult.feeAmount,
-                18
-            );
+        if (feeAmount > 0)
+            _tokenTransferFromUser(address(mToken), feeReceiver, feeAmount, 18);
 
         uint256 contractTokenOutBalance = IERC20(tokenOutCopy).balanceOf(
             address(this)
@@ -168,10 +164,10 @@ contract RedemptionVaultWithSwapper is
             contractTokenOutBalance >=
             amountTokenOutWithoutFee.convertFromBase18(tokenDecimals)
         ) {
-            mToken.burn(user, calcResult.amountMTokenWithoutFee);
+            mToken.burn(user, amountMTokenWithoutFee);
         } else {
             uint256 mTbillAmount = _swapMToken1ToMToken2(
-                calcResult.amountMTokenWithoutFee
+                amountMTokenWithoutFee
             );
 
             IERC20(mTbillRedemptionVault.mToken()).safeIncreaseAllowance(
@@ -190,13 +186,6 @@ contract RedemptionVaultWithSwapper is
             amountTokenOutWithoutFee = (contractTokenOutBalanceAfterRedeem -
                 contractTokenOutBalance).convertToBase18(tokenDecimals);
         }
-
-        _tokenTransferToUser(
-            tokenOutCopy,
-            recipient,
-            amountTokenOutWithoutFee,
-            tokenDecimals
-        );
     }
 
     /**
@@ -261,5 +250,32 @@ contract RedemptionVaultWithSwapper is
             mTokenAmount,
             18
         );
+    }
+
+    function _calcAndValidateRedeemForInstant(
+        address user,
+        address tokenOut,
+        uint256 amountMTokenIn
+    )
+        internal
+        view
+        returns (uint256 feeAmount, uint256 amountMTokenWithoutFee)
+    {
+        require(amountMTokenIn > 0, "RV: invalid amount");
+
+        if (!isFreeFromMinAmount[user]) {
+            require(minAmount <= amountMTokenIn, "RV: amount < min");
+        }
+
+        feeAmount = _getFeeAmount(
+            _getFee(user, tokenOut, true, 0),
+            amountMTokenIn
+        );
+
+        _requireTokenExists(tokenOut);
+
+        require(amountMTokenIn > feeAmount, "RVS: amountMTokenIn < fee");
+
+        amountMTokenWithoutFee = amountMTokenIn - feeAmount;
     }
 }

@@ -86,77 +86,32 @@ contract RedemptionVaultWithAave is RedemptionVault {
      * @param tokenOut token out address
      * @param amountMTokenIn amount of mToken to redeem
      * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
-     * @param recipient address that will receive the tokenOut
+     *
+     * @return calcResult calculated redeem result
      */
     function _redeemInstant(
         address tokenOut,
         uint256 amountMTokenIn,
-        uint256 minReceiveAmount,
-        address recipient
+        uint256 minReceiveAmount
     )
         internal
         override
         returns (
             CalcAndValidateRedeemResult memory calcResult,
-            uint256 amountTokenOutWithoutFee
+            bool spendLiquidity
         )
     {
-        address user = msg.sender;
-
-        calcResult = _calcAndValidateRedeem(
-            user,
+        (calcResult, spendLiquidity) = super._redeemInstant(
             tokenOut,
             amountMTokenIn,
-            true,
-            false
+            minReceiveAmount
         );
 
-        _requireAndUpdateLimit(amountMTokenIn);
-
-        uint256 tokenDecimals = _tokenDecimals(tokenOut);
-
-        uint256 amountMTokenInCopy = amountMTokenIn;
-        address tokenOutCopy = tokenOut;
-        uint256 minReceiveAmountCopy = minReceiveAmount;
-
-        (uint256 amountMTokenInUsd, uint256 mTokenRate) = _convertMTokenToUsd(
-            amountMTokenInCopy
-        );
-        (uint256 amountTokenOut, uint256 tokenOutRate) = _convertUsdToToken(
-            amountMTokenInUsd,
-            tokenOutCopy
-        );
-
-        _requireAndUpdateAllowance(tokenOutCopy, amountTokenOut);
-
-        mToken.burn(user, calcResult.amountMTokenWithoutFee);
-        if (calcResult.feeAmount > 0)
-            _tokenTransferFromUser(
-                address(mToken),
-                feeReceiver,
-                calcResult.feeAmount,
-                18
-            );
-
-        uint256 amountTokenOutWithoutFeeFrom18 = ((calcResult
-            .amountMTokenWithoutFee * mTokenRate) / tokenOutRate)
-            .convertFromBase18(tokenDecimals);
-
-        amountTokenOutWithoutFee = amountTokenOutWithoutFeeFrom18
-            .convertToBase18(tokenDecimals);
-
-        require(
-            amountTokenOutWithoutFee >= minReceiveAmountCopy,
-            "RVA: minReceiveAmount > actual"
-        );
-
-        _checkAndRedeemAave(tokenOutCopy, amountTokenOutWithoutFeeFrom18);
-
-        _tokenTransferToUser(
-            tokenOutCopy,
-            recipient,
-            amountTokenOutWithoutFee,
-            tokenDecimals
+        _checkAndRedeemAave(
+            tokenOut,
+            calcResult.amountTokenOutWithoutFee.convertFromBase18(
+                calcResult.tokenOutDecimals
+            )
         );
     }
 

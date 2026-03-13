@@ -108,35 +108,26 @@ contract DepositVault is ManageableVault, IDepositVault {
      * This ensures that every deployment, whether fresh or upgraded, ends up
      * initialized to the latest contract state without breaking the
      * initializer/reinitializer versioning rules.
-     * @param _ac address of MidasAccessControll contract
+     * @param _commonVaultInitParams init params for common vault
      * @param _mTokenInitParams init params for mToken
      * @param _receiversInitParams init params for receivers
      * @param _instantInitParams init params for instant operations
-     * @param _sanctionsList address of sanctionsList contract
-     * @param _variationTolerance percent of prices diviation 1% = 100
-     * @param _minAmount basic min amount for operations in mToken
      * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
      * @param _maxSupplyCap max supply cap for mToken
      */
     function initialize(
-        address _ac,
+        CommonVaultInitParams calldata _commonVaultInitParams,
         MTokenInitParams calldata _mTokenInitParams,
         ReceiversInitParams calldata _receiversInitParams,
         InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount,
         uint256 _minMTokenAmountForFirstDeposit,
         uint256 _maxSupplyCap
     ) public {
         initializeV1(
-            _ac,
+            _commonVaultInitParams,
             _mTokenInitParams,
             _receiversInitParams,
             _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount,
             _minMTokenAmountForFirstDeposit
         );
 
@@ -145,33 +136,24 @@ contract DepositVault is ManageableVault, IDepositVault {
 
     /**
      * @notice v1 initializer
-     * @param _ac address of MidasAccessControll contract
+     * @param _commonVaultInitParams init params for common vault
      * @param _mTokenInitParams init params for mToken
      * @param _receiversInitParams init params for receivers
      * @param _instantInitParams init params for instant operations
-     * @param _sanctionsList address of sanctionsList contract
-     * @param _variationTolerance percent of prices diviation 1% = 100
-     * @param _minAmount basic min amount for operations in mToken
      * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
      */
     function initializeV1(
-        address _ac,
+        CommonVaultInitParams calldata _commonVaultInitParams,
         MTokenInitParams calldata _mTokenInitParams,
         ReceiversInitParams calldata _receiversInitParams,
         InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount,
         uint256 _minMTokenAmountForFirstDeposit
     ) public initializer {
         __ManageableVault_init(
-            _ac,
+            _commonVaultInitParams,
             _mTokenInitParams,
             _receiversInitParams,
-            _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount
+            _instantInitParams
         );
         minMTokenAmountForFirstDeposit = _minMTokenAmountForFirstDeposit;
     }
@@ -677,7 +659,10 @@ contract DepositVault is ManageableVault, IDepositVault {
         _requireAndUpdateAllowance(tokenIn, amountToken);
 
         result.feeTokenAmount = _truncate(
-            _getFeeAmount(userCopy, tokenIn, amountToken, isInstant, 0),
+            _getFeeAmount(
+                _getFee(userCopy, tokenIn, isInstant, 0),
+                amountToken
+            ),
             result.tokenDecimals
         );
         result.amountTokenWithoutFee = amountToken - result.feeTokenAmount;

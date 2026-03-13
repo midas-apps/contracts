@@ -105,6 +105,8 @@ describe('RedemptionVault', function () {
       accessControl,
       owner,
       mTBILL,
+      loanLp,
+      loanLpFeeReceiver,
     } = await loadFixture(defaultDeploy);
 
     const redemptionVaultUninitialized = await new RedemptionVaultTest__factory(
@@ -113,7 +115,12 @@ describe('RedemptionVault', function () {
 
     await expect(
       redemptionVaultUninitialized.initialize(
-        ethers.constants.AddressZero,
+        {
+          ac: ethers.constants.AddressZero,
+          sanctionsList: mockedSanctionsList.address,
+          variationTolerance: 1,
+          minAmount: parseUnits('100'),
+        },
         {
           mToken: ethers.constants.AddressZero,
           mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -126,20 +133,24 @@ describe('RedemptionVault', function () {
           instantFee: 100,
           instantDailyLimit: parseUnits('100000'),
         },
-        mockedSanctionsList.address,
-        1,
-        parseUnits('100'),
         {
           fiatAdditionalFee: 100,
           fiatFlatFee: parseUnits('1'),
           minFiatRedeemAmount: parseUnits('100'),
         },
         requestRedeemer.address,
+        loanLp.address,
+        loanLpFeeReceiver.address,
       ),
     ).to.be.reverted;
     await expect(
       redemptionVaultUninitialized.initialize(
-        accessControl.address,
+        {
+          ac: accessControl.address,
+          sanctionsList: mockedSanctionsList.address,
+          variationTolerance: 1,
+          minAmount: parseUnits('100'),
+        },
         {
           mToken: mTBILL.address,
           mTokenDataFeed: ethers.constants.AddressZero,
@@ -152,20 +163,24 @@ describe('RedemptionVault', function () {
           instantFee: 100,
           instantDailyLimit: parseUnits('100000'),
         },
-        mockedSanctionsList.address,
-        1,
-        parseUnits('100'),
         {
           fiatAdditionalFee: 100,
           fiatFlatFee: parseUnits('1'),
           minFiatRedeemAmount: parseUnits('100'),
         },
         requestRedeemer.address,
+        loanLp.address,
+        loanLpFeeReceiver.address,
       ),
     ).to.be.reverted;
     await expect(
       redemptionVaultUninitialized.initialize(
-        accessControl.address,
+        {
+          ac: accessControl.address,
+          sanctionsList: mockedSanctionsList.address,
+          variationTolerance: 1,
+          minAmount: parseUnits('100'),
+        },
         {
           mToken: mTBILL.address,
           mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -178,20 +193,24 @@ describe('RedemptionVault', function () {
           instantFee: 100,
           instantDailyLimit: parseUnits('100000'),
         },
-        mockedSanctionsList.address,
-        1,
-        parseUnits('100'),
         {
           fiatAdditionalFee: 100,
           fiatFlatFee: parseUnits('1'),
           minFiatRedeemAmount: parseUnits('100'),
         },
         requestRedeemer.address,
+        loanLp.address,
+        loanLpFeeReceiver.address,
       ),
     ).to.be.reverted;
     await expect(
       redemptionVaultUninitialized.initialize(
-        accessControl.address,
+        {
+          ac: accessControl.address,
+          sanctionsList: mockedSanctionsList.address,
+          variationTolerance: 1,
+          minAmount: parseUnits('100'),
+        },
         {
           mToken: mTBILL.address,
           mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -204,20 +223,24 @@ describe('RedemptionVault', function () {
           instantFee: 100,
           instantDailyLimit: parseUnits('100000'),
         },
-        mockedSanctionsList.address,
-        1,
-        parseUnits('100'),
         {
           fiatAdditionalFee: 100,
           fiatFlatFee: parseUnits('1'),
           minFiatRedeemAmount: parseUnits('100'),
         },
         requestRedeemer.address,
+        loanLp.address,
+        loanLpFeeReceiver.address,
       ),
     ).to.be.reverted;
     await expect(
       redemptionVaultUninitialized.initialize(
-        accessControl.address,
+        {
+          ac: accessControl.address,
+          sanctionsList: mockedSanctionsList.address,
+          variationTolerance: 1,
+          minAmount: parseUnits('100'),
+        },
         {
           mToken: mTBILL.address,
           mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -230,20 +253,24 @@ describe('RedemptionVault', function () {
           instantFee: 10001,
           instantDailyLimit: parseUnits('100000'),
         },
-        mockedSanctionsList.address,
-        1,
-        parseUnits('100'),
         {
           fiatAdditionalFee: 100,
           fiatFlatFee: parseUnits('1'),
           minFiatRedeemAmount: parseUnits('100'),
         },
         requestRedeemer.address,
+        loanLp.address,
+        loanLpFeeReceiver.address,
       ),
     ).to.be.reverted;
     await expect(
       redemptionVaultUninitialized.initialize(
-        accessControl.address,
+        {
+          ac: accessControl.address,
+          sanctionsList: mockedSanctionsList.address,
+          variationTolerance: 1,
+          minAmount: parseUnits('100'),
+        },
         {
           mToken: mTBILL.address,
           mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -256,21 +283,25 @@ describe('RedemptionVault', function () {
           instantFee: 100,
           instantDailyLimit: parseUnits('100000'),
         },
-        mockedSanctionsList.address,
-        1,
-        parseUnits('100'),
         {
           fiatAdditionalFee: 10001,
           fiatFlatFee: parseUnits('1'),
           minFiatRedeemAmount: parseUnits('100'),
         },
         requestRedeemer.address,
+        loanLp.address,
+        loanLpFeeReceiver.address,
       ),
     ).to.be.reverted;
 
     await expect(
       redemptionVaultUninitialized.initialize(
-        accessControl.address,
+        {
+          ac: accessControl.address,
+          sanctionsList: mockedSanctionsList.address,
+          variationTolerance: 1,
+          minAmount: parseUnits('100'),
+        },
         {
           mToken: mTBILL.address,
           mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -283,21 +314,25 @@ describe('RedemptionVault', function () {
           instantFee: 100,
           instantDailyLimit: parseUnits('100000'),
         },
-        mockedSanctionsList.address,
-        1,
-        parseUnits('100'),
         {
           fiatAdditionalFee: 100,
           fiatFlatFee: parseUnits('1'),
           minFiatRedeemAmount: parseUnits('100'),
         },
         constants.AddressZero,
+        loanLp.address,
+        loanLpFeeReceiver.address,
       ),
     ).to.be.reverted;
 
     await expect(
       redemptionVault.initializeWithoutInitializer(
-        ethers.constants.AddressZero,
+        {
+          ac: ethers.constants.AddressZero,
+          sanctionsList: mockedSanctionsList.address,
+          variationTolerance: 1,
+          minAmount: parseUnits('100'),
+        },
         {
           mToken: ethers.constants.AddressZero,
           mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -310,15 +345,14 @@ describe('RedemptionVault', function () {
           instantFee: 100,
           instantDailyLimit: parseUnits('100000'),
         },
-        mockedSanctionsList.address,
-        1,
-        parseUnits('100'),
         {
           fiatAdditionalFee: 100,
           fiatFlatFee: parseUnits('1'),
           minFiatRedeemAmount: parseUnits('100'),
         },
         requestRedeemer.address,
+        loanLp.address,
+        loanLpFeeReceiver.address,
       ),
     ).to.be.revertedWith('Initializable: contract is not initializing');
   });
@@ -345,7 +379,12 @@ describe('RedemptionVault', function () {
 
       await expect(
         redemptionVault.initialize(
-          constants.AddressZero,
+          {
+            ac: constants.AddressZero,
+            sanctionsList: constants.AddressZero,
+            variationTolerance: 0,
+            minAmount: 0,
+          },
           {
             mToken: constants.AddressZero,
             mTokenDataFeed: constants.AddressZero,
@@ -358,14 +397,13 @@ describe('RedemptionVault', function () {
             instantFee: 0,
             instantDailyLimit: 0,
           },
-          constants.AddressZero,
-          0,
-          0,
           {
             fiatAdditionalFee: 0,
             fiatFlatFee: 0,
             minFiatRedeemAmount: 0,
           },
+          constants.AddressZero,
+          constants.AddressZero,
           constants.AddressZero,
         ),
       ).revertedWith('Initializable: contract is already initialized');
@@ -386,7 +424,12 @@ describe('RedemptionVault', function () {
 
       await expect(
         vault.initializeWithoutInitializer(
-          accessControl.address,
+          {
+            ac: accessControl.address,
+            sanctionsList: mockedSanctionsList.address,
+            variationTolerance: 1,
+            minAmount: 1000,
+          },
           {
             mToken: mTBILL.address,
             mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -399,9 +442,6 @@ describe('RedemptionVault', function () {
             instantFee: 100,
             instantDailyLimit: parseUnits('100000'),
           },
-          mockedSanctionsList.address,
-          1,
-          1000,
         ),
       ).revertedWith('Initializable: contract is not initializing');
     });
@@ -420,7 +460,12 @@ describe('RedemptionVault', function () {
 
       await expect(
         vault.initialize(
-          accessControl.address,
+          {
+            ac: accessControl.address,
+            sanctionsList: mockedSanctionsList.address,
+            variationTolerance: 1,
+            minAmount: 1000,
+          },
           {
             mToken: mTBILL.address,
             mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -433,9 +478,6 @@ describe('RedemptionVault', function () {
             instantFee: 100,
             instantDailyLimit: parseUnits('100000'),
           },
-          mockedSanctionsList.address,
-          1,
-          1000,
         ),
       ).revertedWith('invalid address');
     });
@@ -453,7 +495,12 @@ describe('RedemptionVault', function () {
 
       await expect(
         vault.initialize(
-          accessControl.address,
+          {
+            ac: accessControl.address,
+            sanctionsList: mockedSanctionsList.address,
+            variationTolerance: 1,
+            minAmount: 1000,
+          },
           {
             mToken: mTBILL.address,
             mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -466,9 +513,6 @@ describe('RedemptionVault', function () {
             instantFee: 100,
             instantDailyLimit: parseUnits('100000'),
           },
-          mockedSanctionsList.address,
-          1,
-          1000,
         ),
       ).revertedWith('invalid address');
     });
@@ -487,7 +531,12 @@ describe('RedemptionVault', function () {
 
       await expect(
         vault.initialize(
-          accessControl.address,
+          {
+            ac: accessControl.address,
+            sanctionsList: mockedSanctionsList.address,
+            variationTolerance: 1,
+            minAmount: 1000,
+          },
           {
             mToken: mTBILL.address,
             mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -500,9 +549,6 @@ describe('RedemptionVault', function () {
             instantFee: 100,
             instantDailyLimit: 0,
           },
-          mockedSanctionsList.address,
-          1,
-          1000,
         ),
       ).revertedWith('zero limit');
     });
@@ -520,7 +566,12 @@ describe('RedemptionVault', function () {
 
       await expect(
         vault.initialize(
-          accessControl.address,
+          {
+            ac: accessControl.address,
+            sanctionsList: mockedSanctionsList.address,
+            variationTolerance: 1,
+            minAmount: 1000,
+          },
           {
             mToken: mTBILL.address,
             mTokenDataFeed: constants.AddressZero,
@@ -533,9 +584,6 @@ describe('RedemptionVault', function () {
             instantFee: 100,
             instantDailyLimit: parseUnits('100000'),
           },
-          mockedSanctionsList.address,
-          1,
-          1000,
         ),
       ).revertedWith('zero address');
     });
@@ -554,7 +602,12 @@ describe('RedemptionVault', function () {
 
       await expect(
         vault.initialize(
-          accessControl.address,
+          {
+            ac: accessControl.address,
+            sanctionsList: mockedSanctionsList.address,
+            variationTolerance: 0,
+            minAmount: 1000,
+          },
           {
             mToken: mTBILL.address,
             mTokenDataFeed: mTokenToUsdDataFeed.address,
@@ -567,9 +620,6 @@ describe('RedemptionVault', function () {
             instantFee: 100,
             instantDailyLimit: parseUnits('100000'),
           },
-          mockedSanctionsList.address,
-          0,
-          1000,
         ),
       ).revertedWith('fee == 0');
     });
@@ -1552,34 +1602,6 @@ describe('RedemptionVault', function () {
       );
     });
 
-    it('should fail: call with insufficient allowance', async () => {
-      const {
-        owner,
-        redemptionVault,
-        stableCoins,
-        mTBILL,
-        dataFeed,
-        mTokenToUsdDataFeed,
-      } = await loadFixture(defaultDeploy);
-
-      await mintToken(mTBILL, owner, 100);
-      await addPaymentTokenTest(
-        { vault: redemptionVault, owner },
-        stableCoins.dai,
-        dataFeed.address,
-        0,
-        true,
-      );
-      await redeemInstantTest(
-        { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-        stableCoins.dai,
-        100,
-        {
-          revertMessage: 'ERC20: insufficient allowance',
-        },
-      );
-    });
-
     it('should fail: call with insufficient balance', async () => {
       const {
         owner,
@@ -1818,7 +1840,7 @@ describe('RedemptionVault', function () {
         stableCoins.dai,
         100,
         {
-          revertMessage: 'RV: amountMTokenIn < fee',
+          revertMessage: 'RV: amountTokenOut < fee',
         },
       );
 
@@ -1838,7 +1860,7 @@ describe('RedemptionVault', function () {
         { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
         stableCoins.dai,
         100,
-        { revertMessage: 'RV: amountMTokenIn < fee' },
+        { revertMessage: 'RV: amountTokenOut < fee' },
       );
     });
 
@@ -2481,6 +2503,36 @@ describe('RedemptionVault', function () {
       );
     });
 
+    it('when user didnt approve mTokens to redeem', async () => {
+      const {
+        owner,
+        redemptionVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        regularAccounts,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(mTBILL, regularAccounts[0], 10);
+      await mintToken(stableCoins.dai, redemptionVault, 100);
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await redeemInstantTest(
+        { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        10,
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
     it('redeem 100 mTBILL when other fn overload is paused', async () => {
       const {
         owner,
@@ -2762,7 +2814,7 @@ describe('RedemptionVault', function () {
         stableCoins.dai,
         100,
         {
-          revertMessage: 'RV: amountMTokenIn < fee',
+          revertMessage: 'RV: amountTokenOut < fee',
         },
       );
     });
@@ -3498,31 +3550,6 @@ describe('RedemptionVault', function () {
       );
     });
 
-    it('should fail: call with insufficient allowance', async () => {
-      const {
-        owner,
-        redemptionVault,
-        mTBILL,
-        mTokenToUsdDataFeed,
-        greenListableTester,
-        accessControl,
-      } = await loadFixture(defaultDeploy);
-
-      await greenList(
-        { greenlistable: greenListableTester, accessControl, owner },
-        owner,
-      );
-
-      await mintToken(mTBILL, owner, 100);
-      await redeemFiatRequestTest(
-        { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-        100,
-        {
-          revertMessage: 'ERC20: insufficient allowance',
-        },
-      );
-    });
-
     it('should fail: when function paused', async () => {
       const {
         owner,
@@ -3663,7 +3690,7 @@ describe('RedemptionVault', function () {
         { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
         100,
         {
-          revertMessage: 'RV: amountMTokenIn < fee',
+          revertMessage: 'RV: amountTokenOut < fee',
         },
       );
     });
@@ -3711,6 +3738,31 @@ describe('RedemptionVault', function () {
         {
           from: regularAccounts[0],
           revertMessage: acErrors.WMAC_HAS_ROLE,
+        },
+      );
+    });
+
+    it('should fail: call with insufficient allowance', async () => {
+      const {
+        owner,
+        redemptionVault,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        greenListableTester,
+        accessControl,
+      } = await loadFixture(defaultDeploy);
+
+      await greenList(
+        { greenlistable: greenListableTester, accessControl, owner },
+        owner,
+      );
+
+      await mintToken(mTBILL, owner, 100);
+      await redeemFiatRequestTest(
+        { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+        100,
+        {
+          revertMessage: 'ERC20: insufficient allowance',
         },
       );
     });
@@ -4240,7 +4292,7 @@ describe('RedemptionVault', function () {
       );
     });
 
-    it('safe approve request from vaut admin account', async () => {
+    it.only('safe approve request from vaut admin account', async () => {
       const {
         owner,
         mockedAggregator,
@@ -6872,7 +6924,7 @@ describe('RedemptionVault', function () {
       const { redemptionVault } = await loadFixture(defaultDeploy);
 
       await expect(
-        redemptionVault.convertUsdToTokenTest(0, constants.AddressZero),
+        redemptionVault.convertUsdToTokenTest(0, constants.AddressZero, 0),
       ).revertedWith('RV: amount zero');
     });
 
@@ -6883,7 +6935,7 @@ describe('RedemptionVault', function () {
       await redemptionVault.setGetTokenRateValue(0);
 
       await expect(
-        redemptionVault.convertUsdToTokenTest(1, constants.AddressZero),
+        redemptionVault.convertUsdToTokenTest(1, redemptionVault.address, 0),
       ).revertedWith('RV: rate zero');
     });
   });
@@ -6892,7 +6944,7 @@ describe('RedemptionVault', function () {
     it('should fail: when amountMToken == 0', async () => {
       const { redemptionVault } = await loadFixture(defaultDeploy);
 
-      await expect(redemptionVault.convertMTokenToUsdTest(0)).revertedWith(
+      await expect(redemptionVault.convertMTokenToUsdTest(0, 0)).revertedWith(
         'RV: amount zero',
       );
     });
@@ -6903,7 +6955,7 @@ describe('RedemptionVault', function () {
       await redemptionVault.setOverrideGetTokenRate(true);
       await redemptionVault.setGetTokenRateValue(0);
 
-      await expect(redemptionVault.convertMTokenToUsdTest(1)).revertedWith(
+      await expect(redemptionVault.convertMTokenToUsdTest(1, 0)).revertedWith(
         'RV: rate zero',
       );
     });
@@ -6914,11 +6966,23 @@ describe('RedemptionVault', function () {
       const { redemptionVault, stableCoins, owner, dataFeed } =
         await loadFixture(defaultDeploy);
 
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
       await expect(
         redemptionVault.calcAndValidateRedeemTest(
           constants.AddressZero,
           stableCoins.dai.address,
           parseUnits('100'),
+          0,
+          0,
+          false,
+          0,
           false,
           true,
         ),

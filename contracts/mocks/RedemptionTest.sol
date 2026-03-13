@@ -4,8 +4,6 @@ pragma solidity 0.8.9;
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "../interfaces/buidl/IRedemption.sol";
 
-import "hardhat/console.sol";
-
 contract RedemptionTest is IRedemption {
     address public asset;
 

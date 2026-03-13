@@ -4,7 +4,8 @@ pragma solidity ^0.8.9;
 import "./IManageableVault.sol";
 
 /**
- * @notice Redeem request scruct
+ * @notice Legacy Redeem request scruct
+ * @dev used for backward compatibility
  * @param sender user address who create
  * @param tokenOut tokenOut address
  * @param status request status
@@ -21,10 +22,44 @@ struct Request {
     uint256 tokenOutRate;
 }
 
-struct FiatRedeptionInitParams {
+/**
+ * @notice Redeem request v2 scruct
+ * @dev replaces `Request` struct and adds `feePercent` and `version` fields
+ * @param sender user address who create
+ * @param tokenOut tokenOut address
+ * @param status request status
+ * @param amountMToken amount mToken
+ * @param mTokenRate rate of mToken at request creation time
+ * @param tokenOutRate rate of tokenOut at request creation time
+ * @param feePercent fee percent
+ * @param version request version. 0 for legacy, 1 for v2
+ */
+struct RequestV2 {
+    address sender;
+    address tokenOut;
+    RequestStatus status;
+    uint256 amountMToken;
+    uint256 mTokenRate;
+    uint256 tokenOutRate;
+    uint256 feePercent;
+    uint8 version;
+}
+
+struct FiatRedemptionInitParams {
     uint256 fiatAdditionalFee;
     uint256 fiatFlatFee;
     uint256 minFiatRedeemAmount;
+}
+
+struct LiquidityProviderLoanRequest {
+    /// @notice tokenOut address
+    address tokenOut;
+    /// @notice amount of tokenOut
+    uint256 amountTokenOut;
+    /// @notice amount of tokenOut fee
+    uint256 amountFee;
+    /// @notice status of the loan
+    RequestStatus status;
 }
 
 /**
@@ -36,10 +71,10 @@ interface IRedemptionVault is IManageableVault {
      * @param user function caller (msg.sender)
      * @param tokenOut address of tokenOut
      * @param amount amount of mToken
-     * @param feeAmount fee amount in mToken
+     * @param feeAmount fee amount in tokenOut
      * @param amountTokenOut amount of tokenOut
      */
-    event RedeemInstant(
+    event RedeemInstantV2(
         address indexed user,
         address indexed tokenOut,
         uint256 amount,
@@ -52,10 +87,10 @@ interface IRedemptionVault is IManageableVault {
      * @param tokenOut address of tokenOut
      * @param recipient address that receives tokens
      * @param amount amount of mToken
-     * @param feeAmount fee amount in mToken
+     * @param feeAmount fee amount in tokenOut
      * @param amountTokenOut amount of tokenOut
      */
-    event RedeemInstantWithCustomRecipient(
+    event RedeemInstantWithCustomRecipientV2(
         address indexed user,
         address indexed tokenOut,
         address recipient,
@@ -69,14 +104,14 @@ interface IRedemptionVault is IManageableVault {
      * @param user function caller (msg.sender)
      * @param tokenOut address of tokenOut
      * @param amountMTokenIn amount of mToken
-     * @param feeAmount fee amount in mToken
+     * @param feePercent fee percent
      */
-    event RedeemRequest(
+    event RedeemRequestV2(
         uint256 indexed requestId,
         address indexed user,
         address indexed tokenOut,
         uint256 amountMTokenIn,
-        uint256 feeAmount
+        uint256 feePercent
     );
 
     /**
@@ -85,15 +120,32 @@ interface IRedemptionVault is IManageableVault {
      * @param tokenOut address of tokenOut
      * @param recipient address that receives tokens
      * @param amountMTokenIn amount of mToken
-     * @param feeAmount fee amount in mToken
+     * @param feePercent fee percent
      */
-    event RedeemRequestWithCustomRecipient(
+    event RedeemRequestWithCustomRecipientV2(
         uint256 indexed requestId,
         address indexed user,
         address indexed tokenOut,
         address recipient,
         uint256 amountMTokenIn,
-        uint256 feeAmount
+        uint256 feePercent
+    );
+
+    /**
+     * @param loanId loan id
+     * @param tokenOut tokenOut address
+     * @param amountTokenOut amount of tokenOut
+     * @param amountFee fee amount in payment token
+     * @param mTokenRate mToken rate
+     * @param tokenOutRate tokenOut rate
+     */
+    event CreateLiquidityProviderLoanRequest(
+        uint256 indexed loanId,
+        address indexed tokenOut,
+        uint256 amountTokenOut,
+        uint256 amountFee,
+        uint256 mTokenRate,
+        uint256 tokenOutRate
     );
 
     /**
@@ -291,4 +343,25 @@ interface IRedemptionVault is IManageableVault {
      * @param redeemer new address of request redeemer
      */
     function setRequestRedeemer(address redeemer) external;
+
+    /**
+     * @notice backward compatibility function for getting V1 request struct
+     * @dev wont fail even if request by given id is V2
+     * @param requestId request id
+     * @return request
+     */
+    function redeemRequests(uint256 requestId)
+        external
+        view
+        returns (Request memory);
+
+    /**
+     * @notice get redeem request v2
+     * @param requestId request id
+     * @return request
+     */
+    function redeemRequestsV2(uint256 requestId)
+        external
+        view
+        returns (RequestV2 memory);
 }
