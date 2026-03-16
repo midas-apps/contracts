@@ -191,6 +191,21 @@ interface IRedemptionVault is IManageableVault {
     event SetRequestRedeemer(address indexed caller, address redeemer);
 
     /**
+     * @param caller function caller (msg.sender)
+     * @param newLoanLpFeeReceiver new address of loan liquidity provider fee receiver
+     */
+    event SetLoanLpFeeReceiver(
+        address indexed caller,
+        address newLoanLpFeeReceiver
+    );
+
+    /**
+     * @param caller function caller (msg.sender)
+     * @param newLoanLp new address of loan liquidity provider
+     */
+    event SetLoanLp(address indexed caller, address newLoanLp);
+
+    /**
      * @notice redeem mToken to tokenOut if daily limit and allowance not exceeded
      * Burns mToken from the user.
      * Transfers fee in mToken to feeReceiver
@@ -343,6 +358,18 @@ interface IRedemptionVault is IManageableVault {
      * @param redeemer new address of request redeemer
      */
     function setRequestRedeemer(address redeemer) external;
+
+    /**
+     * @notice set address of loan liquidity provider fee receiver
+     * @param newLoanLpFeeReceiver new address of loan liquidity provider fee receiver
+     */
+    function setLoanLpFeeReceiver(address newLoanLpFeeReceiver) external;
+
+    /**
+     * @notice set address of loan liquidity provider
+     * @param newLoanLp new address of loan liquidity provider
+     */
+    function setLoanLp(address newLoanLp) external;
 
     /**
      * @notice backward compatibility function for getting V1 request struct

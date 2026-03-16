@@ -119,7 +119,15 @@ export const redeemInstantTest = async (
   const balanceBeforeReceiver = await mTBILL.balanceOf(tokensReceiver);
   const balanceBeforeFeeReceiverMToken = await mTBILL.balanceOf(feeReceiver);
   const balanceBeforeFeeReceiver = await tokenContract.balanceOf(feeReceiver);
-
+  const balanceBeforeLoanLp = await tokenContract.balanceOf(
+    await redemptionVault.loanLp(),
+  );
+  const balanceBeforeLoanLpFeeReceiver = await tokenContract.balanceOf(
+    await redemptionVault.loanLpFeeReceiver(),
+  );
+  const balanceBeforeVault = await tokenContract.balanceOf(
+    redemptionVault.address,
+  );
   const balanceBeforeTokenOutRecipient = await tokenContract.balanceOf(
     recipient,
   );
@@ -129,15 +137,33 @@ export const redeemInstantTest = async (
 
   const mTokenRate = await mTokenToUsdDataFeed.getDataInBase18();
 
-  const { fee, amountOut, amountOutWithoutFee } =
-    await calcExpectedTokenOutAmount(
-      sender,
-      tokenContract,
-      redemptionVault,
-      mTokenRate,
-      amountIn,
-      true,
-    );
+  const {
+    fee,
+    amountOut,
+    amountOutWithoutFee,
+    amountOutWithoutFeeBase18,
+    feeBase18,
+  } = await calcExpectedTokenOutAmount(
+    sender,
+    tokenContract,
+    redemptionVault,
+    mTokenRate,
+    amountIn,
+    true,
+  );
+
+  const {
+    toTransferFromVault,
+    toTransferFromLpBase18,
+    toTransferFromLp,
+    lpFeePortionBase18,
+    vaultFeePortion,
+  } = await estimateSendTokensFromLiquidity(
+    redemptionVault,
+    tokenContract,
+    amountOutWithoutFeeBase18!,
+    feeBase18!,
+  );
 
   await expect(callFn())
     .to.emit(
@@ -163,9 +189,17 @@ export const redeemInstantTest = async (
   const balanceAfterReceiver = await mTBILL.balanceOf(tokensReceiver);
   const balanceAfterFeeReceiverMToken = await mTBILL.balanceOf(feeReceiver);
   const balanceAfterFeeReceiver = await tokenContract.balanceOf(feeReceiver);
-
+  const balanceAfterLoanLp = await tokenContract.balanceOf(
+    await redemptionVault.loanLp(),
+  );
+  const balanceAfterLoanLpFeeReceiver = await tokenContract.balanceOf(
+    await redemptionVault.loanLpFeeReceiver(),
+  );
   const balanceAfterTokenOutRecipient = await tokenContract.balanceOf(
     recipient,
+  );
+  const balanceAfterVault = await tokenContract.balanceOf(
+    redemptionVault.address,
   );
   const balanceAfterTokenOut = await tokenContract.balanceOf(sender.address);
 
@@ -176,9 +210,14 @@ export const redeemInstantTest = async (
   }
 
   expect(balanceAfterReceiver).eq(balanceBeforeReceiver);
-  expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver.add(fee));
+  expect(balanceAfterFeeReceiver).eq(
+    balanceBeforeFeeReceiver.add(vaultFeePortion),
+  );
   expect(balanceAfterFeeReceiverMToken).eq(balanceBeforeFeeReceiverMToken);
   expect(balanceAfterUser).eq(balanceBeforeUser.sub(amountIn));
+  expect(balanceAfterVault).eq(
+    balanceBeforeVault.sub(toTransferFromVault).sub(vaultFeePortion),
+  );
 
   const expectedAmountToReceive = expectedAmountOut ?? amountOutWithoutFee!;
   expect(balanceAfterTokenOutRecipient).eq(
@@ -189,6 +228,19 @@ export const redeemInstantTest = async (
   }
   if (waivedFee) {
     expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver);
+  }
+
+  if (toTransferFromLpBase18.gt(0)) {
+    expect(balanceAfterLoanLp).eq(balanceBeforeLoanLp.sub(toTransferFromLp));
+    expect(balanceAfterLoanLpFeeReceiver).eq(balanceBeforeLoanLpFeeReceiver);
+
+    const loanRequest = await redemptionVault.loanRequests(
+      (await redemptionVault.currentLoanRequestId()).sub(1),
+    );
+    expect(loanRequest.amountTokenOut).eq(toTransferFromLpBase18);
+    expect(loanRequest.amountFee).eq(lpFeePortionBase18);
+    expect(loanRequest.status).eq(0);
+    expect(loanRequest.tokenOut).eq(tokenOut);
   }
 };
 
@@ -994,6 +1046,57 @@ export const setRequestRedeemerTest = async (
   expect(newRedeemer).eq(redeemer);
 };
 
+export const setLoanLpFeeReceiverTest = async (
+  { redemptionVault, owner }: CommonParams,
+  loanLpFeeReceiver: string,
+  opt?: OptionalCommonParams,
+) => {
+  if (opt?.revertMessage) {
+    await expect(
+      redemptionVault
+        .connect(opt?.from ?? owner)
+        .setLoanLpFeeReceiver(loanLpFeeReceiver),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  await expect(
+    redemptionVault
+      .connect(opt?.from ?? owner)
+      .setLoanLpFeeReceiver(loanLpFeeReceiver),
+  ).to.emit(
+    redemptionVault,
+    redemptionVault.interface.events['SetLoanLpFeeReceiver(address,address)']
+      .name,
+  ).to.not.reverted;
+
+  const newLoanLpFeeReceiver = await redemptionVault.loanLpFeeReceiver();
+  expect(newLoanLpFeeReceiver).eq(loanLpFeeReceiver);
+};
+
+export const setLoanLpTest = async (
+  { redemptionVault, owner }: CommonParams,
+  loanLp: string,
+  opt?: OptionalCommonParams,
+) => {
+  if (opt?.revertMessage) {
+    await expect(
+      redemptionVault.connect(opt?.from ?? owner).setLoanLp(loanLp),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  await expect(
+    redemptionVault.connect(opt?.from ?? owner).setLoanLp(loanLp),
+  ).to.emit(
+    redemptionVault,
+    redemptionVault.interface.events['SetLoanLp(address,address)'].name,
+  ).to.not.reverted;
+
+  const newLoanLp = await redemptionVault.loanLp();
+  expect(newLoanLp).eq(loanLp);
+};
+
 export const getFeePercent = async (
   sender: string,
   token: string,
@@ -1089,5 +1192,74 @@ export const calcExpectedTokenOutAmount = async (
       10 ** (18 - tokenDecimals),
     ),
     feeBase18: fee.mul(10 ** (18 - tokenDecimals)),
+  };
+};
+
+export const estimateSendTokensFromLiquidity = async (
+  redemptionVault:
+    | RedemptionVault
+    | RedemptionVaultWIthBUIDL
+    | RedemptionVaultWithAave
+    | RedemptionVaultWithMorpho
+    | RedemptionVaultWithMToken
+    | RedemptionVaultWithSwapper
+    | RedemptionVaultWithUSTB,
+  tokenOut: ERC20,
+  amountTokenOutWithoutFeeBase18: BigNumber,
+  feeAmountBase18: BigNumber,
+) => {
+  const decimals = await tokenOut.decimals();
+  const balanceVaultBase18 = (
+    await tokenOut.balanceOf(redemptionVault.address)
+  ).mul(10 ** (18 - decimals));
+
+  const totalAmountBase18 = amountTokenOutWithoutFeeBase18.add(feeAmountBase18);
+
+  const toUseVaultLiquidityBase18 = balanceVaultBase18.gte(totalAmountBase18)
+    ? totalAmountBase18
+    : balanceVaultBase18;
+
+  const toUseLpLiquidityBase18 = totalAmountBase18.sub(
+    toUseVaultLiquidityBase18,
+  );
+
+  const lpFeePortionBase18 = feeAmountBase18
+    .mul(toUseLpLiquidityBase18)
+    .div(totalAmountBase18)
+    .div(10 ** (18 - decimals))
+    .mul(10 ** (18 - decimals));
+
+  const vaultFeePortionBase18 = feeAmountBase18.sub(lpFeePortionBase18);
+
+  const toTransferFromVaultBase18 = toUseVaultLiquidityBase18.sub(
+    vaultFeePortionBase18,
+  );
+
+  const toTransferFromLpBase18 = toUseLpLiquidityBase18.sub(lpFeePortionBase18);
+
+  console.log({
+    toTransferFromVaultBase18: toTransferFromVaultBase18.toString(),
+    toTransferFromLpBase18: toTransferFromLpBase18.toString(),
+    lpFeePortionBase18: lpFeePortionBase18.toString(),
+    vaultFeePortionBase18: vaultFeePortionBase18.toString(),
+    decimals: decimals.toString(),
+    balanceVaultBase18: balanceVaultBase18.toString(),
+    amountTokenOutWithoutFeeBase18: amountTokenOutWithoutFeeBase18.toString(),
+    feeAmountBase18: feeAmountBase18.toString(),
+  });
+
+  return {
+    toTransferFromVaultBase18,
+    toTransferFromLpBase18,
+    lpFeePortionBase18,
+    vaultFeePortionBase18,
+    toUseVaultLiquidityBase18,
+    toUseLpLiquidityBase18,
+    toTransferFromVault: toTransferFromVaultBase18.div(10 ** (18 - decimals)),
+    toTransferFromLp: toTransferFromLpBase18.div(10 ** (18 - decimals)),
+    lpFeePortion: lpFeePortionBase18.div(10 ** (18 - decimals)),
+    vaultFeePortion: vaultFeePortionBase18.div(10 ** (18 - decimals)),
+    toUseVaultLiquidity: toUseVaultLiquidityBase18.div(10 ** (18 - decimals)),
+    toUseLpLiquidity: toUseLpLiquidityBase18.div(10 ** (18 - decimals)),
   };
 };

@@ -118,8 +118,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @notice mapping, loanRequestId to loan request data
      */
-    mapping(uint256 => LiquidityProviderLoanRequest)
-        public liquidityProviderLoanRequests;
+    mapping(uint256 => LiquidityProviderLoanRequest) public loanRequests;
 
     /**
      * @dev leaving a storage gap for futures updates
@@ -178,8 +177,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         );
         _validateFee(_fiatRedemptionInitParams.fiatAdditionalFee, false);
         _validateAddress(_requestRedeemer, false);
-        _validateAddress(_loanLp, false);
-        _validateAddress(_loanLpFeeReceiver, false);
 
         minFiatRedeemAmount = _fiatRedemptionInitParams.minFiatRedeemAmount;
         fiatAdditionalFee = _fiatRedemptionInitParams.fiatAdditionalFee;
@@ -457,6 +454,27 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
+    function setLoanLp(address newLoanLp) external onlyVaultAdmin {
+        loanLp = newLoanLp;
+
+        emit SetLoanLp(msg.sender, newLoanLp);
+    }
+
+    /**
+     * @inheritdoc IRedemptionVault
+     */
+    function setLoanLpFeeReceiver(address newLoanLpFeeReceiver)
+        external
+        onlyVaultAdmin
+    {
+        loanLpFeeReceiver = newLoanLpFeeReceiver;
+
+        emit SetLoanLpFeeReceiver(msg.sender, newLoanLpFeeReceiver);
+    }
+
+    /**
+     * @inheritdoc IRedemptionVault
+     */
     function safeBulkApproveRequest(
         uint256[] calldata requestIds,
         uint256 newOutRate
@@ -698,21 +716,24 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             .balanceOf(address(this))
             .convertToBase18(calcResult.tokenOutDecimals);
 
-        uint256 toTransferFromVault = tokenOutBalanceBase18 >=
-            calcResult.amountTokenOutWithoutFee
-            ? calcResult.amountTokenOutWithoutFee
-            : calcResult.amountTokenOutWithoutFee - tokenOutBalanceBase18;
+        uint256 totalAmount = calcResult.amountTokenOutWithoutFee +
+            calcResult.feeAmount;
 
-        uint256 toTransferFromLp = calcResult.amountTokenOutWithoutFee -
-            toTransferFromVault;
+        uint256 toUseVaultLiquidity = tokenOutBalanceBase18 >= totalAmount
+            ? totalAmount
+            : tokenOutBalanceBase18;
+
+        uint256 toUseLpLiquidity = totalAmount - toUseVaultLiquidity;
 
         uint256 lpFeePortion = _truncate(
-            (calcResult.feeAmount * toTransferFromLp) /
-                calcResult.amountTokenOutWithoutFee,
+            (calcResult.feeAmount * toUseLpLiquidity) / totalAmount,
             calcResult.tokenOutDecimals
         );
 
         uint256 vaultFeePortion = calcResult.feeAmount - lpFeePortion;
+
+        uint256 toTransferFromVault = toUseVaultLiquidity - vaultFeePortion;
+        uint256 toTransferFromLp = toUseLpLiquidity - lpFeePortion;
 
         // transfer from vault liquidity to user
         _tokenTransferToUser(
@@ -724,7 +745,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         // transfer from lp liquidity to user
         if (toTransferFromLp > 0) {
-            require(loanLp != address(0), "RV: invalid loanLp");
+            require(loanLp != address(0), "RV: loanLp not set");
         }
 
         _tokenTransferFromTo(
@@ -749,9 +770,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
             uint256 loanRequestId = currentLoanRequestId.current();
 
-            liquidityProviderLoanRequests[
-                loanRequestId
-            ] = LiquidityProviderLoanRequest({
+            loanRequests[loanRequestId] = LiquidityProviderLoanRequest({
                 tokenOut: tokenOut,
                 amountTokenOut: toTransferFromLp,
                 amountFee: lpFeePortion,
