@@ -588,16 +588,17 @@ export const safeApproveRedeemRequestTest = async (
     requestDataBefore.sender,
   );
 
-  const { amountOutWithoutFee } = await calcExpectedTokenOutAmount(
-    sender,
-    tokenContract,
-    redemptionVault,
-    requestDataBefore.mTokenRate,
-    requestDataBefore.amountMToken,
-    false,
-    requestDataBefore.feePercent,
-    requestDataBefore.tokenOutRate,
-  );
+  const { amountOutWithoutFee, feeBase18, amountOutWithoutFeeBase18 } =
+    await calcExpectedTokenOutAmount(
+      sender,
+      tokenContract,
+      redemptionVault,
+      newTokenRate,
+      requestDataBefore.amountMToken,
+      false,
+      requestDataBefore.feePercent,
+      requestDataBefore.tokenOutRate,
+    );
 
   await expect(
     redemptionVault.connect(sender).safeApproveRequest(requestId, newTokenRate),
@@ -628,8 +629,6 @@ export const safeApproveRedeemRequestTest = async (
   const supplyAfter = await mTBILL.totalSupply();
 
   const amountOut = amountOutWithoutFee!;
-
-  console.log('amountOut', amountOut.toString());
 
   expect(balanceUserTokenOutAfter).eq(
     balanceUserTokenOutBefore?.add(amountOut),
@@ -722,7 +721,9 @@ export const safeBulkApproveRequestTest = async (
         sender,
         ERC20__factory.connect(requestData.tokenOut, owner),
         redemptionVault,
-        requestData.mTokenRate,
+        newExpectedRate
+          ? BigNumber.from(newExpectedRate)
+          : requestData.mTokenRate,
         requestData.amountMToken,
         false,
         requestData.feePercent,
@@ -949,22 +950,24 @@ export const setFiatFlatFeeTest = async (
   valueN: number,
   opt?: OptionalCommonParams,
 ) => {
+  const value = parseUnits(valueN.toString());
+
   if (opt?.revertMessage) {
     await expect(
-      redemptionVault.connect(opt?.from ?? owner).setFiatFlatFee(valueN),
+      redemptionVault.connect(opt?.from ?? owner).setFiatFlatFee(value),
     ).revertedWith(opt?.revertMessage);
     return;
   }
 
   await expect(
-    redemptionVault.connect(opt?.from ?? owner).setFiatFlatFee(valueN),
+    redemptionVault.connect(opt?.from ?? owner).setFiatFlatFee(value),
   ).to.emit(
     redemptionVault,
     redemptionVault.interface.events['SetFiatFlatFee(address,uint256)'].name,
   ).to.not.reverted;
 
   const newfee = await redemptionVault.fiatFlatFee();
-  expect(newfee).eq(valueN);
+  expect(newfee).eq(value);
 };
 
 export const setRequestRedeemerTest = async (

@@ -2790,35 +2790,6 @@ describe('RedemptionVault', function () {
       );
     });
 
-    it('should fail: if some fee = 100%', async () => {
-      const {
-        owner,
-        redemptionVault,
-        stableCoins,
-        mTBILL,
-        dataFeed,
-        mTokenToUsdDataFeed,
-      } = await loadFixture(defaultDeploy);
-
-      await mintToken(mTBILL, owner, 100);
-      await approveBase18(owner, mTBILL, redemptionVault, 100);
-      await addPaymentTokenTest(
-        { vault: redemptionVault, owner },
-        stableCoins.dai,
-        dataFeed.address,
-        10000,
-        true,
-      );
-      await redeemRequestTest(
-        { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-        stableCoins.dai,
-        100,
-        {
-          revertMessage: 'RV: amountTokenOut < fee',
-        },
-      );
-    });
-
     it('should fail: greenlist enabled and user not in greenlist ', async () => {
       const {
         owner,
@@ -3668,33 +3639,6 @@ describe('RedemptionVault', function () {
       );
     });
 
-    it('should fail: if some fee = 100%', async () => {
-      const {
-        owner,
-        redemptionVault,
-        mTBILL,
-        mTokenToUsdDataFeed,
-        greenListableTester,
-        accessControl,
-      } = await loadFixture(defaultDeploy);
-
-      await greenList(
-        { greenlistable: greenListableTester, accessControl, owner },
-        owner,
-      );
-
-      await mintToken(mTBILL, owner, 100);
-      await approveBase18(owner, mTBILL, redemptionVault, 100);
-      await setFiatAdditionalFeeTest({ redemptionVault, owner }, 10000);
-      await redeemFiatRequestTest(
-        { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-        100,
-        {
-          revertMessage: 'RV: amountTokenOut < fee',
-        },
-      );
-    });
-
     it('should fail: greenlist enabled and user not in greenlist ', async () => {
       const { owner, redemptionVault, mTBILL, mTokenToUsdDataFeed } =
         await loadFixture(defaultDeploy);
@@ -3975,6 +3919,74 @@ describe('RedemptionVault', function () {
         parseUnits('1'),
         {
           revertMessage: 'WMAC: hasnt role',
+        },
+      );
+    });
+
+    it('should fail: if some fee = 100%', async () => {
+      const {
+        owner,
+        redemptionVault,
+        stableCoins,
+        mTBILL,
+        dataFeed,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(defaultDeploy);
+
+      await mintToken(mTBILL, owner, 100);
+      await approveBase18(owner, mTBILL, redemptionVault, 100);
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        10000,
+        true,
+      );
+      await redeemRequestTest(
+        { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+        stableCoins.dai,
+        100,
+      );
+
+      await approveRedeemRequestTest(
+        { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+        0,
+        parseUnits('1'),
+        {
+          revertMessage: 'RV: amountTokenOut < fee',
+        },
+      );
+    });
+
+    it('should fail: if some fee = 100% when fiat request', async () => {
+      const {
+        owner,
+        redemptionVault,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        greenListableTester,
+        accessControl,
+      } = await loadFixture(defaultDeploy);
+
+      await greenList(
+        { greenlistable: greenListableTester, accessControl, owner },
+        owner,
+      );
+
+      await mintToken(mTBILL, owner, 100);
+      await approveBase18(owner, mTBILL, redemptionVault, 100);
+      await setFiatAdditionalFeeTest({ redemptionVault, owner }, 10000);
+      await redeemFiatRequestTest(
+        { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+        100,
+      );
+
+      await approveRedeemRequestTest(
+        { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+        0,
+        parseUnits('1'),
+        {
+          revertMessage: 'RV: amountTokenOut < fee',
         },
       );
     });
@@ -4292,7 +4304,7 @@ describe('RedemptionVault', function () {
       );
     });
 
-    it.only('safe approve request from vaut admin account', async () => {
+    it('safe approve request from vaut admin account', async () => {
       const {
         owner,
         mockedAggregator,
@@ -6987,6 +6999,160 @@ describe('RedemptionVault', function () {
           true,
         ),
       ).revertedWith('RV: tokenOut != fiat');
+    });
+
+    it('should fail: when amountMTokenIn == 0', async () => {
+      const { redemptionVault, stableCoins, owner, dataFeed } =
+        await loadFixture(defaultDeploy);
+
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await expect(
+        redemptionVault.calcAndValidateRedeemTest(
+          constants.AddressZero,
+          stableCoins.dai.address,
+          0,
+          0,
+          0,
+          false,
+          0,
+          false,
+          true,
+        ),
+      ).revertedWith('RV: invalid amount');
+    });
+
+    it('should override fee percent', async () => {
+      const {
+        redemptionVault,
+        stableCoins,
+        owner,
+        dataFeed,
+        mockedAggregatorMToken,
+      } = await loadFixture(defaultDeploy);
+
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+      const result = await redemptionVault.callStatic.calcAndValidateRedeemTest(
+        constants.AddressZero,
+        stableCoins.dai.address,
+        parseUnits('100'),
+        0,
+        0,
+        true,
+        10_00,
+        false,
+        false,
+      );
+
+      expect(result.feeAmount).eq(parseUnits('10'));
+      expect(result.amountTokenOutWithoutFee).eq(parseUnits('90'));
+    });
+
+    it('should override token out rate and fee percent', async () => {
+      const {
+        redemptionVault,
+        stableCoins,
+        owner,
+        dataFeed,
+        mockedAggregatorMToken,
+      } = await loadFixture(defaultDeploy);
+
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+      const result = await redemptionVault.callStatic.calcAndValidateRedeemTest(
+        constants.AddressZero,
+        stableCoins.dai.address,
+        parseUnits('100'),
+        0,
+        parseUnits('2'),
+        true,
+        10_00,
+        false,
+        false,
+      );
+
+      expect(result.feeAmount).eq(parseUnits('5'));
+      expect(result.amountTokenOutWithoutFee).eq(parseUnits('45'));
+    });
+
+    it('should override token out rate, mtoken rate and fee percent', async () => {
+      const { redemptionVault, stableCoins, owner, dataFeed } =
+        await loadFixture(defaultDeploy);
+
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      const result = await redemptionVault.callStatic.calcAndValidateRedeemTest(
+        constants.AddressZero,
+        stableCoins.dai.address,
+        parseUnits('100'),
+        parseUnits('1'),
+        parseUnits('2'),
+        true,
+        10_00,
+        false,
+        false,
+      );
+
+      expect(result.feeAmount).eq(parseUnits('5'));
+      expect(result.amountTokenOutWithoutFee).eq(parseUnits('45'));
+    });
+
+    it('should correctly convert fiat flat fee to token out', async () => {
+      const { redemptionVault, stableCoins, owner, dataFeed } =
+        await loadFixture(defaultDeploy);
+
+      await addPaymentTokenTest(
+        { vault: redemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await setFiatFlatFeeTest({ redemptionVault, owner }, 1);
+
+      const result = await redemptionVault.callStatic.calcAndValidateRedeemTest(
+        constants.AddressZero,
+        constants.AddressZero,
+        parseUnits('100'),
+        parseUnits('1'),
+        parseUnits('2'),
+        true,
+        10_00,
+        false,
+        true,
+      );
+
+      expect(result.feeAmount).eq(parseUnits('5.5'));
+      expect(result.amountTokenOutWithoutFee).eq(parseUnits('44.5'));
     });
   });
 });

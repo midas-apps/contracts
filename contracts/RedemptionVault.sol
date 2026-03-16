@@ -795,6 +795,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address user = msg.sender;
 
         // TODO: move to function
+        require(amountMTokenIn > 0, "RV: invalid amount");
+
         if (!isFreeFromMinAmount[user]) {
             uint256 minRedeemAmount = isFiat ? minFiatRedeemAmount : minAmount;
             require(minRedeemAmount <= amountMTokenIn, "RV: amount < min");
@@ -856,13 +858,13 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     ) internal view returns (uint256 amountToken, uint256 tokenRate) {
         require(amountUsd > 0, "RV: amount zero");
 
-        if (tokenOut == MANUAL_FULLFILMENT_TOKEN) {
-            return (amountUsd, STABLECOIN_RATE);
-        }
-
         if (overrideTokenRate > 0) {
             tokenRate = overrideTokenRate;
         } else {
+            if (tokenOut == MANUAL_FULLFILMENT_TOKEN) {
+                return (amountUsd, STABLECOIN_RATE);
+            }
+
             TokenConfig storage tokenConfig = tokensConfig[tokenOut];
             tokenRate = _getTokenRate(tokenConfig.dataFeed, tokenConfig.stable);
             require(tokenRate > 0, "RV: rate zero");
@@ -974,6 +976,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         require(amountTokenOut > result.feeAmount, "RV: amountTokenOut < fee");
 
         result.amountTokenOut = amountTokenOut;
+
         result.amountTokenOutWithoutFee = amountTokenOut - result.feeAmount;
     }
 
