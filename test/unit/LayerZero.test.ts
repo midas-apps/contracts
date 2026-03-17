@@ -1376,7 +1376,6 @@ describe('LayerZero', function () {
             console.log('error', _);
             return { nativeFee: parseUnits('0.1', 18), lzTokenFee: 0 };
           });
-        console.log('aboba', nativeFee);
 
         await expect(
           composer

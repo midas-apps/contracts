@@ -10,6 +10,8 @@ import {
   RpcUrl,
 } from '../types';
 
+export * from './verify.config';
+
 const {
   ALCHEMY_KEY,
   INFURA_KEY,
