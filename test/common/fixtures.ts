@@ -921,6 +921,8 @@ export const defaultDeploy = async () => {
   };
 };
 
+export type DefaultFixture = Awaited<ReturnType<typeof defaultDeploy>>;
+
 export const acreAdapterFixture = async () => {
   const defaultFixture = await defaultDeploy();
 

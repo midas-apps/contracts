@@ -134,7 +134,7 @@ export const redeemInstantTest = async (
   const balanceBeforeTokenOut = await tokenContract.balanceOf(sender.address);
 
   const supplyBefore = await mTBILL.totalSupply();
-
+  const lastLoanRequestIdBefore = await redemptionVault.currentLoanRequestId();
   const mTokenRate = await mTokenToUsdDataFeed.getDataInBase18();
 
   const {
@@ -204,6 +204,7 @@ export const redeemInstantTest = async (
   const balanceAfterTokenOut = await tokenContract.balanceOf(sender.address);
 
   const supplyAfter = await mTBILL.totalSupply();
+  const lastLoanRequestIdAfter = await redemptionVault.currentLoanRequestId();
 
   if (checkSupply) {
     expect(supplyAfter).eq(supplyBefore.sub(amountIn));
@@ -235,12 +236,14 @@ export const redeemInstantTest = async (
     expect(balanceAfterLoanLpFeeReceiver).eq(balanceBeforeLoanLpFeeReceiver);
 
     const loanRequest = await redemptionVault.loanRequests(
-      (await redemptionVault.currentLoanRequestId()).sub(1),
+      lastLoanRequestIdAfter.sub(1),
     );
     expect(loanRequest.amountTokenOut).eq(toTransferFromLpBase18);
     expect(loanRequest.amountFee).eq(lpFeePortionBase18);
     expect(loanRequest.status).eq(0);
     expect(loanRequest.tokenOut).eq(tokenOut);
+  } else {
+    expect(lastLoanRequestIdAfter).eq(lastLoanRequestIdBefore);
   }
 };
 
@@ -577,11 +580,6 @@ export const approveRedeemRequestTest = async (
   expect(balanceAfterUser).eq(balanceBeforeUser);
 
   expect(balanceAfterContract).eq(balanceBeforeContract);
-
-  console.log(
-    'requestDataBefore.amountMToken',
-    requestDataBefore.amountMToken.toString(),
-  );
 
   expect(balanceAfterRequestRedeemer).eq(
     balanceBeforeRequestRedeemer.sub(requestDataBefore.amountMToken),
@@ -1236,17 +1234,6 @@ export const estimateSendTokensFromLiquidity = async (
   );
 
   const toTransferFromLpBase18 = toUseLpLiquidityBase18.sub(lpFeePortionBase18);
-
-  console.log({
-    toTransferFromVaultBase18: toTransferFromVaultBase18.toString(),
-    toTransferFromLpBase18: toTransferFromLpBase18.toString(),
-    lpFeePortionBase18: lpFeePortionBase18.toString(),
-    vaultFeePortionBase18: vaultFeePortionBase18.toString(),
-    decimals: decimals.toString(),
-    balanceVaultBase18: balanceVaultBase18.toString(),
-    amountTokenOutWithoutFeeBase18: amountTokenOutWithoutFeeBase18.toString(),
-    feeAmountBase18: feeAmountBase18.toString(),
-  });
 
   return {
     toTransferFromVaultBase18,
