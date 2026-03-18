@@ -2522,7 +2522,7 @@ describe('RedemptionVault', function () {
       );
     });
 
-    it('with permissioned mToken - burns/transfers mToken from greenlisted user, vault and fee recipient', async () => {
+    it('with permissioned mToken - burns/transfers mToken from greenlisted user and fee recipient', async () => {
       const {
         owner,
         stableCoins,
@@ -2540,10 +2540,7 @@ describe('RedemptionVault', function () {
         mTokenPermissionedRoles.greenlisted,
         owner.address,
       );
-      await accessControl.grantRole(
-        mTokenPermissionedRoles.greenlisted,
-        mTokenPermissionedRedemptionVault.address,
-      );
+
       await accessControl.grantRole(
         mTokenPermissionedRoles.greenlisted,
         await mTokenPermissionedRedemptionVault.feeReceiver(),
@@ -2650,7 +2647,7 @@ describe('RedemptionVault', function () {
       );
     });
 
-    it('should fail: with permissioned mToken - burns/transfers mToken from greenlisted user but vault is not greenlisted', async () => {
+    it('should fail: with permissioned mToken - burns/transfers mToken from greenlisted user but fee recipient is not greenlisted', async () => {
       const {
         owner,
         stableCoins,
