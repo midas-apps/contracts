@@ -31,6 +31,7 @@ import {
   getConfigFromUser,
   getContractsToGenerateFromUser,
   getShouldUseTokenLevelGreenListFromUser,
+  getShouldUseTokenPermissionedFromUser,
 } from './ui/deployment-contracts';
 
 import { MTokenName } from '../../../../config';
@@ -82,12 +83,14 @@ export const updateConfigFiles = (
     name,
     symbol,
     mToken,
+    isPermissioned,
   }: {
     contractNamePrefix: string;
     rolesPrefix: string;
     name: string;
     symbol: string;
     mToken: string;
+    isPermissioned?: true;
   },
 ) => {
   const project = new Project();
@@ -163,7 +166,12 @@ export const updateConfigFiles = (
         initializer: (writer) =>
           writer.write(`{
             name: '${name}',
-            symbol: '${symbol}'
+            symbol: '${symbol}'${
+            isPermissioned
+              ? `,
+              isPermissioned: true`
+              : ''
+          }
           }`),
       });
     }
@@ -510,12 +518,17 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
   const contractsToGenerate = await getContractsToGenerateFromUser();
 
   let shouldUseTokenLevelGreenList = false;
+  let shouldUseTokenPermissioned = false;
 
   if (
     contractsToGenerate.find((v) => v.startsWith('dv') || v.startsWith('rv'))
   ) {
     shouldUseTokenLevelGreenList =
       await getShouldUseTokenLevelGreenListFromUser();
+  }
+
+  if (contractsToGenerate.includes('token')) {
+    shouldUseTokenPermissioned = await getShouldUseTokenPermissionedFromUser();
   }
 
   const mToken = config.tokenContractName;
@@ -536,6 +549,7 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
           name: config.tokenName,
           symbol: config.tokenSymbol,
           mToken,
+          isPermissioned: shouldUseTokenPermissioned ? true : undefined,
         });
       },
     },
@@ -563,6 +577,7 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
           generators.map((generator) =>
             generator(mToken as MTokenName, {
               vaultUseTokenLevelGreenList: shouldUseTokenLevelGreenList,
+              isPermissionedMToken: shouldUseTokenPermissioned,
             }),
           ),
         );
