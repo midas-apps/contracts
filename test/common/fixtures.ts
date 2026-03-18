@@ -48,6 +48,7 @@ import {
   MidasLzOFT__factory,
   MidasLzOFTAdapter__factory,
   MidasLzVaultComposerSyncTester,
+  MTokenPermissionedTest__factory,
   AxelarInterchainTokenServiceMock__factory,
   MidasAxelarVaultExecutableTester,
   LzEndpointV2Mock__factory,
@@ -603,6 +604,111 @@ export const defaultDeploy = async () => {
     depositVaultWithUSTB,
     dataFeedGrowth,
     compositeDataFeed,
+  };
+};
+
+/**
+ * mTokenPermissionedTest + dedicated deposit/redemption vaults (for integration-style tests).
+ */
+export const mTokenPermissionedFixture = async (
+  baseFixture?: Awaited<ReturnType<typeof defaultDeploy>>,
+) => {
+  const fx = baseFixture ?? (await defaultDeploy());
+  const {
+    owner,
+    accessControl,
+    mockedSanctionsList,
+    feeReceiver,
+    tokensReceiver,
+    requestRedeemer,
+    mTokenToUsdDataFeed,
+  } = fx;
+
+  const mTokenPermissioned = await new MTokenPermissionedTest__factory(
+    owner,
+  ).deploy();
+  await mTokenPermissioned.initialize(accessControl.address);
+
+  const mintRole = await mTokenPermissioned.M_TOKEN_TEST_MINT_OPERATOR_ROLE();
+  const burnRole = await mTokenPermissioned.M_TOKEN_TEST_BURN_OPERATOR_ROLE();
+  const pauseRole = await mTokenPermissioned.M_TOKEN_TEST_PAUSE_OPERATOR_ROLE();
+  const mTokenPermissionedGreenlistedRole =
+    await mTokenPermissioned.M_TOKEN_TEST_GREENLISTED_ROLE();
+
+  await accessControl.grantRole(mintRole, owner.address);
+  await accessControl.grantRole(burnRole, owner.address);
+  await accessControl.grantRole(pauseRole, owner.address);
+
+  const mTokenPermissionedDepositVault = await new DepositVaultTest__factory(
+    owner,
+  ).deploy();
+  await mTokenPermissionedDepositVault.initialize(
+    accessControl.address,
+    {
+      mToken: mTokenPermissioned.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    parseUnits('100'),
+    0,
+    constants.MaxUint256,
+  );
+  await accessControl.grantRole(
+    mintRole,
+    mTokenPermissionedDepositVault.address,
+  );
+
+  const mTokenPermissionedRedemptionVault =
+    await new RedemptionVaultTest__factory(owner).deploy();
+  await mTokenPermissionedRedemptionVault.initialize(
+    accessControl.address,
+    {
+      mToken: mTokenPermissioned.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 0,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    1000,
+    {
+      fiatAdditionalFee: 100,
+      fiatFlatFee: parseUnits('1'),
+      minFiatRedeemAmount: 1000,
+    },
+    requestRedeemer.address,
+  );
+  await accessControl.grantRole(
+    burnRole,
+    mTokenPermissionedRedemptionVault.address,
+  );
+
+  return {
+    ...fx,
+    mTokenPermissioned,
+    mTokenPermissionedRoles: {
+      mint: mintRole,
+      burn: burnRole,
+      pause: pauseRole,
+      greenlisted: mTokenPermissionedGreenlistedRole,
+    },
+    mTokenPermissionedDepositVault,
+    mTokenPermissionedRedemptionVault,
   };
 };
 

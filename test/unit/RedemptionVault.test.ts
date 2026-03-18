@@ -22,7 +22,7 @@ import {
   setRoundDataGrowth,
 } from '../common/custom-feed-growth.helpers';
 import { setRoundData } from '../common/data-feed.helpers';
-import { defaultDeploy } from '../common/fixtures';
+import { defaultDeploy, mTokenPermissionedFixture } from '../common/fixtures';
 import {
   addPaymentTokenTest,
   addWaivedFeeAccountTest,
@@ -2518,6 +2518,260 @@ describe('RedemptionVault', function () {
         100,
         {
           from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('with permissioned mToken - burns/transfers mToken from greenlisted user, vault and fee recipient', async () => {
+      const {
+        owner,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        mTokenPermissioned,
+        mTokenPermissionedRoles,
+        accessControl,
+        mTokenPermissionedRedemptionVault,
+      } = await loadFixture(mTokenPermissionedFixture);
+
+      await accessControl.grantRole(
+        mTokenPermissionedRoles.greenlisted,
+        owner.address,
+      );
+      await accessControl.grantRole(
+        mTokenPermissionedRoles.greenlisted,
+        mTokenPermissionedRedemptionVault.address,
+      );
+      await accessControl.grantRole(
+        mTokenPermissionedRoles.greenlisted,
+        await mTokenPermissionedRedemptionVault.feeReceiver(),
+      );
+      await mintToken(mTokenPermissioned, owner, 100_000);
+      await setInstantFeeTest(
+        { vault: mTokenPermissionedRedemptionVault, owner },
+        1000,
+      );
+      await approveBase18(
+        owner,
+        mTokenPermissioned,
+        mTokenPermissionedRedemptionVault,
+        100_000,
+      );
+
+      await mintToken(
+        stableCoins.dai,
+        mTokenPermissionedRedemptionVault,
+        100_000,
+      );
+      await addPaymentTokenTest(
+        { vault: mTokenPermissionedRedemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await setRoundData({ mockedAggregator }, 1);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+      await redeemInstantTest(
+        {
+          redemptionVault: mTokenPermissionedRedemptionVault,
+          owner,
+          mTBILL: mTokenPermissioned,
+          mTokenToUsdDataFeed,
+        },
+        stableCoins.dai,
+        999,
+      );
+    });
+
+    it('with permissioned mToken - instant fee is 0, burns/transfers mToken from non-greenlisted user', async () => {
+      const {
+        owner,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        mTokenPermissioned,
+        mTokenPermissionedRoles,
+        accessControl,
+        mTokenPermissionedRedemptionVault,
+      } = await loadFixture(mTokenPermissionedFixture);
+
+      await accessControl.grantRole(
+        mTokenPermissionedRoles.greenlisted,
+        owner.address,
+      );
+      await mintToken(mTokenPermissioned, owner, 100_000);
+      await accessControl.revokeRole(
+        mTokenPermissionedRoles.greenlisted,
+        owner.address,
+      );
+      await setInstantFeeTest(
+        { vault: mTokenPermissionedRedemptionVault, owner },
+        0,
+      );
+      await approveBase18(
+        owner,
+        mTokenPermissioned,
+        mTokenPermissionedRedemptionVault,
+        100_000,
+      );
+
+      await mintToken(
+        stableCoins.dai,
+        mTokenPermissionedRedemptionVault,
+        100_000,
+      );
+      await addPaymentTokenTest(
+        { vault: mTokenPermissionedRedemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await setRoundData({ mockedAggregator }, 1);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+      await redeemInstantTest(
+        {
+          redemptionVault: mTokenPermissionedRedemptionVault,
+          owner,
+          mTBILL: mTokenPermissioned,
+          mTokenToUsdDataFeed,
+        },
+        stableCoins.dai,
+        999,
+      );
+    });
+
+    it('should fail: with permissioned mToken - burns/transfers mToken from greenlisted user but vault is not greenlisted', async () => {
+      const {
+        owner,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        mTokenPermissioned,
+        mTokenPermissionedRoles,
+        accessControl,
+        mTokenPermissionedRedemptionVault,
+      } = await loadFixture(mTokenPermissionedFixture);
+
+      await accessControl.grantRole(
+        mTokenPermissionedRoles.greenlisted,
+        owner.address,
+      );
+      await mintToken(mTokenPermissioned, owner, 100_000);
+      await setInstantFeeTest(
+        { vault: mTokenPermissionedRedemptionVault, owner },
+        1000,
+      );
+      await approveBase18(
+        owner,
+        mTokenPermissioned,
+        mTokenPermissionedRedemptionVault,
+        100_000,
+      );
+
+      await mintToken(
+        stableCoins.dai,
+        mTokenPermissionedRedemptionVault,
+        100_000,
+      );
+      await addPaymentTokenTest(
+        { vault: mTokenPermissionedRedemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await setRoundData({ mockedAggregator }, 1);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+      await redeemInstantTest(
+        {
+          redemptionVault: mTokenPermissionedRedemptionVault,
+          owner,
+          mTBILL: mTokenPermissioned,
+          mTokenToUsdDataFeed,
+        },
+        stableCoins.dai,
+        999,
+        {
+          revertMessage: acErrors.WMAC_HASNT_ROLE,
+        },
+      );
+    });
+
+    it('should fail: with permissioned mToken - redeem instant burns/transfers mToken from non-greenlisted user', async () => {
+      const {
+        owner,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        mockedAggregator,
+        mockedAggregatorMToken,
+        mTokenPermissioned,
+        mTokenPermissionedRedemptionVault,
+        mTokenPermissionedRoles,
+        accessControl,
+      } = await loadFixture(mTokenPermissionedFixture);
+
+      await accessControl.grantRole(
+        mTokenPermissionedRoles.greenlisted,
+        owner.address,
+      );
+      await mintToken(mTokenPermissioned, owner, 100_000);
+      await setInstantFeeTest(
+        { vault: mTokenPermissionedRedemptionVault, owner },
+        1000,
+      );
+      await accessControl.revokeRole(
+        mTokenPermissionedRoles.greenlisted,
+        owner.address,
+      );
+      await approveBase18(
+        owner,
+        mTokenPermissioned,
+        mTokenPermissionedRedemptionVault,
+        100_000,
+      );
+
+      await mintToken(
+        stableCoins.dai,
+        mTokenPermissionedRedemptionVault,
+        100_000,
+      );
+      await addPaymentTokenTest(
+        { vault: mTokenPermissionedRedemptionVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+
+      await setRoundData({ mockedAggregator }, 1);
+      await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+      await redeemInstantTest(
+        {
+          redemptionVault: mTokenPermissionedRedemptionVault,
+          owner,
+          mTBILL: mTokenPermissioned,
+          mTokenToUsdDataFeed,
+        },
+        stableCoins.dai,
+        999,
+        {
+          revertMessage: acErrors.WMAC_HASNT_ROLE,
         },
       );
     });
@@ -6911,8 +7165,7 @@ describe('RedemptionVault', function () {
 
   describe('_calcAndValidateRedeem', () => {
     it('should fail: when tokenOut is not MANUAL_FULLFILMENT_TOKEN but isFiat = true', async () => {
-      const { redemptionVault, stableCoins, owner, dataFeed } =
-        await loadFixture(defaultDeploy);
+      const { redemptionVault, stableCoins } = await loadFixture(defaultDeploy);
 
       await expect(
         redemptionVault.calcAndValidateRedeemTest(
