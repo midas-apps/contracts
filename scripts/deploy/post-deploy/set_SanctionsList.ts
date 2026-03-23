@@ -3,6 +3,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
   getCurrentAddresses,
   sanctionListContracts,
+  VaultType,
 } from '../../../config/constants/addresses';
 import { getChainOrThrow, getMTokenOrThrow } from '../../../helpers/utils';
 import { DeployFunction } from '../common/types';
@@ -25,11 +26,19 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     return;
   }
 
-  const vaultEntries: Array<{ type: string; address?: string }> = [
+  const vaultEntries: Array<{ type: VaultType; address?: string }> = [
     { type: 'depositVault', address: tokenAddresses.depositVault },
     {
       type: 'depositVaultUstb',
       address: tokenAddresses.depositVaultUstb,
+    },
+    {
+      type: 'depositVaultAave',
+      address: tokenAddresses.depositVaultAave,
+    },
+    {
+      type: 'depositVaultMorpho',
+      address: tokenAddresses.depositVaultMorpho,
     },
     {
       type: 'redemptionVault',
@@ -46,6 +55,18 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     {
       type: 'redemptionVaultUstb',
       address: tokenAddresses.redemptionVaultUstb,
+    },
+    {
+      type: 'redemptionVaultAave',
+      address: tokenAddresses.redemptionVaultAave,
+    },
+    {
+      type: 'redemptionVaultMorpho',
+      address: tokenAddresses.redemptionVaultMorpho,
+    },
+    {
+      type: 'redemptionVaultMToken',
+      address: tokenAddresses.redemptionVaultMToken,
     },
   ];
 
