@@ -32,7 +32,7 @@ import {
   safeBulkApproveRequestTest,
   setMaxSupplyCapTest,
 } from '../common/deposit-vault.helpers';
-import { defaultDeploy } from '../common/fixtures';
+import { defaultDeploy, mTokenPermissionedFixture } from '../common/fixtures';
 import { greenListEnable } from '../common/greenlist.helpers';
 import {
   addPaymentTokenTest,
@@ -2572,6 +2572,97 @@ describe('DepositVault', function () {
         100,
         {
           from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('with permissioned mToken - deposit instant mints mToken to greenlisted user', async () => {
+      const baseFixture = await defaultDeploy();
+      const {
+        owner,
+        accessControl,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        mockedAggregator,
+        mTokenPermissioned,
+        mTokenPermissionedRoles,
+        mTokenPermissionedDepositVault,
+      } = await loadFixture(mTokenPermissionedFixture.bind(this, baseFixture));
+
+      await accessControl.grantRole(
+        mTokenPermissionedRoles.greenlisted,
+        owner.address,
+      );
+      await addPaymentTokenTest(
+        { vault: mTokenPermissionedDepositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1);
+
+      await mintToken(stableCoins.dai, owner, 100_000);
+      await approveBase18(
+        owner,
+        stableCoins.dai,
+        mTokenPermissionedDepositVault,
+        100_000,
+      );
+
+      await depositInstantTest(
+        {
+          depositVault: mTokenPermissionedDepositVault,
+          owner,
+          mTBILL: mTokenPermissioned,
+          mTokenToUsdDataFeed,
+        },
+        stableCoins.dai,
+        1000,
+      );
+    });
+
+    it('should fail: with permissioned mToken - deposit instant mints mToken to non-greenlisted user', async () => {
+      const baseFixture = await defaultDeploy();
+      const {
+        owner,
+        stableCoins,
+        dataFeed,
+        mTokenToUsdDataFeed,
+        mockedAggregator,
+        mTokenPermissioned,
+        mTokenPermissionedDepositVault,
+      } = await loadFixture(mTokenPermissionedFixture.bind(this, baseFixture));
+
+      await addPaymentTokenTest(
+        { vault: mTokenPermissionedDepositVault, owner },
+        stableCoins.dai,
+        dataFeed.address,
+        0,
+        true,
+      );
+      await setRoundData({ mockedAggregator }, 1);
+
+      await mintToken(stableCoins.dai, owner, 100_000);
+      await approveBase18(
+        owner,
+        stableCoins.dai,
+        mTokenPermissionedDepositVault,
+        100_000,
+      );
+
+      await depositInstantTest(
+        {
+          depositVault: mTokenPermissionedDepositVault,
+          owner,
+          mTBILL: mTokenPermissioned,
+          mTokenToUsdDataFeed,
+        },
+        stableCoins.dai,
+        1000,
+        {
+          revertMessage: acErrors.WMAC_HASNT_ROLE,
         },
       );
     });
