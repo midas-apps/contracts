@@ -111,6 +111,16 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     address public loanLpFeeReceiver;
 
     /**
+     * @notice address from which payment tokens will be pulled during loan repayment
+     */
+    address public loanRepaymentAddress;
+
+    /**
+     * @notice address of loan RedemptionVault-compatible vault
+     */
+    IRedemptionVault public loanSwapperVault;
+
+    /**
      * @notice last loan request id
      */
     Counters.Counter public currentLoanRequestId;
@@ -123,7 +133,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @dev leaving a storage gap for futures updates
      */
-    uint256[46] private __gap;
+    uint256[44] private __gap;
 
     /**
      * @notice upgradeable pattern contract`s initializer
@@ -131,30 +141,21 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @param _mTokenInitParams init params for mToken
      * @param _receiversInitParams init params for receivers
      * @param _instantInitParams init params for instant operations
-     * @param _fiatRedemptionInitParams params fiatAdditionalFee, fiatFlatFee, minFiatRedeemAmount
-     * @param _requestRedeemer address is designated for standard redemptions, allowing tokens to be pulled from this address
-     * @param _loanLp address of loan liquidity provider
-     * @param _loanLpFeeReceiver address of loan liquidity provider fee receiver
+     * @param _redemptionInitParams init params for vault state values
      */
     function initialize(
         CommonVaultInitParams calldata _commonVaultInitParams,
         MTokenInitParams calldata _mTokenInitParams,
         ReceiversInitParams calldata _receiversInitParams,
         InstantInitParams calldata _instantInitParams,
-        FiatRedemptionInitParams calldata _fiatRedemptionInitParams,
-        address _requestRedeemer,
-        address _loanLp,
-        address _loanLpFeeReceiver
+        RedemptionInitParams calldata _redemptionInitParams
     ) external initializer {
         __RedemptionVault_init(
             _commonVaultInitParams,
             _mTokenInitParams,
             _receiversInitParams,
             _instantInitParams,
-            _fiatRedemptionInitParams,
-            _requestRedeemer,
-            _loanLp,
-            _loanLpFeeReceiver
+            _redemptionInitParams
         );
     }
 
@@ -164,10 +165,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         MTokenInitParams calldata _mTokenInitParams,
         ReceiversInitParams calldata _receiversInitParams,
         InstantInitParams calldata _instantInitParams,
-        FiatRedemptionInitParams calldata _fiatRedemptionInitParams,
-        address _requestRedeemer,
-        address _loanLp,
-        address _loanLpFeeReceiver
+        RedemptionInitParams calldata _redemptionInitParams
     ) internal onlyInitializing {
         __ManageableVault_init(
             _commonVaultInitParams,
@@ -175,15 +173,20 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             _receiversInitParams,
             _instantInitParams
         );
-        _validateFee(_fiatRedemptionInitParams.fiatAdditionalFee, false);
-        _validateAddress(_requestRedeemer, false);
+        _validateFee(_redemptionInitParams.fiatAdditionalFee, false);
+        _validateAddress(_redemptionInitParams.requestRedeemer, false);
 
-        minFiatRedeemAmount = _fiatRedemptionInitParams.minFiatRedeemAmount;
-        fiatAdditionalFee = _fiatRedemptionInitParams.fiatAdditionalFee;
-        fiatFlatFee = _fiatRedemptionInitParams.fiatFlatFee;
-        requestRedeemer = _requestRedeemer;
-        loanLp = _loanLp;
-        loanLpFeeReceiver = _loanLpFeeReceiver;
+        minFiatRedeemAmount = _redemptionInitParams.minFiatRedeemAmount;
+        fiatAdditionalFee = _redemptionInitParams.fiatAdditionalFee;
+        fiatFlatFee = _redemptionInitParams.fiatFlatFee;
+        requestRedeemer = _redemptionInitParams.requestRedeemer;
+        loanLp = _redemptionInitParams.loanLp;
+        loanLpFeeReceiver = _redemptionInitParams.loanLpFeeReceiver;
+
+        loanSwapperVault = IRedemptionVault(
+            _redemptionInitParams.loanSwapperVault
+        );
+        loanRepaymentAddress = _redemptionInitParams.loanRepaymentAddress;
     }
 
     /**

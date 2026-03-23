@@ -53,8 +53,7 @@ contract RedemptionVaultWithSwapper is
      * @param _mTokenInitParams init params for mToken1
      * @param _receiversInitParams init params for receivers
      * @param _instantInitParams init params for instant operations
-     * @param _fiatRedemptionInitParams params fiatAdditionalFee, fiatFlatFee, minFiatRedeemAmount
-     * @param _requestRedeemer address is designated for standard redemptions, allowing tokens to be pulled from this address
+     * @param _redemptionInitParams init params for redemption vault state values
      * @param _mTbillRedemptionVault mToken2 redemptionVault address
      * @param _liquidityProvider liquidity provider for pull mToken2
      */
@@ -63,10 +62,7 @@ contract RedemptionVaultWithSwapper is
         MTokenInitParams calldata _mTokenInitParams,
         ReceiversInitParams calldata _receiversInitParams,
         InstantInitParams calldata _instantInitParams,
-        FiatRedemptionInitParams calldata _fiatRedemptionInitParams,
-        address _requestRedeemer,
-        address _loanLp,
-        address _loanLpFeeReceiver,
+        RedemptionInitParams calldata _redemptionInitParams,
         address _mTbillRedemptionVault,
         address _liquidityProvider
     ) external initializer {
@@ -75,10 +71,7 @@ contract RedemptionVaultWithSwapper is
             _mTokenInitParams,
             _receiversInitParams,
             _instantInitParams,
-            _fiatRedemptionInitParams,
-            _requestRedeemer,
-            _loanLp,
-            _loanLpFeeReceiver
+            _redemptionInitParams
         );
         _validateAddress(_mTbillRedemptionVault, true);
         _validateAddress(_liquidityProvider, false);

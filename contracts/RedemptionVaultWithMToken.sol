@@ -56,8 +56,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
      * @param _mTokenInitParams init params for mToken
      * @param _receiversInitParams init params for receivers
      * @param _instantInitParams init params for instant operations
-     * @param _fiatRedemptionInitParams params fiatAdditionalFee, fiatFlatFee, minFiatRedeemAmount
-     * @param _requestRedeemer address is designated for standard redemptions, allowing tokens to be pulled from this address
+     * @param _redemptionInitParams init params for redemption vault state values
      * @param _redemptionVault address of the mTokenA RedemptionVault
      */
     function initialize(
@@ -65,10 +64,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
         MTokenInitParams calldata _mTokenInitParams,
         ReceiversInitParams calldata _receiversInitParams,
         InstantInitParams calldata _instantInitParams,
-        FiatRedemptionInitParams calldata _fiatRedemptionInitParams,
-        address _requestRedeemer,
-        address _loanLp,
-        address _loanLpFeeReceiver,
+        RedemptionInitParams calldata _redemptionInitParams,
         address _redemptionVault
     ) external initializer {
         __RedemptionVault_init(
@@ -76,10 +72,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
             _mTokenInitParams,
             _receiversInitParams,
             _instantInitParams,
-            _fiatRedemptionInitParams,
-            _requestRedeemer,
-            _loanLp,
-            _loanLpFeeReceiver
+            _redemptionInitParams
         );
         _validateAddress(_redemptionVault, true);
         redemptionVault = IRedemptionVault(_redemptionVault);

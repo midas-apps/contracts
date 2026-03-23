@@ -14,20 +14,14 @@ contract RedemptionVaultTest is RedemptionVault {
         MTokenInitParams calldata _mTokenInitParams,
         ReceiversInitParams calldata _receiversInitParams,
         InstantInitParams calldata _instantInitParams,
-        FiatRedemptionInitParams calldata _fiatRedemptionInitParams,
-        address _requestRedeemer,
-        address _loanLp,
-        address _loanLpFeeReceiver
+        RedemptionInitParams calldata _redemptionInitParams
     ) external {
         __RedemptionVault_init(
             _commonVaultInitParams,
             _mTokenInitParams,
             _receiversInitParams,
             _instantInitParams,
-            _fiatRedemptionInitParams,
-            _requestRedeemer,
-            _loanLp,
-            _loanLpFeeReceiver
+            _redemptionInitParams
         );
     }
 

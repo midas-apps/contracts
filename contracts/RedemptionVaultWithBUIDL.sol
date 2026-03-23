@@ -47,19 +47,15 @@ contract RedemptionVaultWIthBUIDL is RedemptionVault {
      * @param _mTokenInitParams init params for mToken
      * @param _receiversInitParams init params for receivers
      * @param _instantInitParams init params for instant operations
-     * @param _fiatRedemptionInitParams params fiatAdditionalFee, fiatFlatFee, minFiatRedeemAmount
+     * @param _redemptionInitParams init params for redemption vault state values
      * @param _buidlRedemption BUIDL redemption contract address
-     * @param _requestRedeemer address is designated for standard redemptions, allowing tokens to be pulled from this address
      */
     function initialize(
         CommonVaultInitParams calldata _commonVaultInitParams,
         MTokenInitParams calldata _mTokenInitParams,
         ReceiversInitParams calldata _receiversInitParams,
         InstantInitParams calldata _instantInitParams,
-        FiatRedemptionInitParams calldata _fiatRedemptionInitParams,
-        address _requestRedeemer,
-        address _loanLp,
-        address _loanLpFeeReceiver,
+        RedemptionInitParams calldata _redemptionInitParams,
         address _buidlRedemption,
         uint256 _minBuidlToRedeem,
         uint256 _minBuidlBalance
@@ -69,10 +65,7 @@ contract RedemptionVaultWIthBUIDL is RedemptionVault {
             _mTokenInitParams,
             _receiversInitParams,
             _instantInitParams,
-            _fiatRedemptionInitParams,
-            _requestRedeemer,
-            _loanLp,
-            _loanLpFeeReceiver
+            _redemptionInitParams
         );
         _validateAddress(_buidlRedemption, false);
         buidlRedemption = IRedemption(_buidlRedemption);

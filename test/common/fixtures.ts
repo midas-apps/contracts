@@ -71,6 +71,7 @@ export const defaultDeploy = async () => {
     liquidityProvider,
     loanLp,
     loanLpFeeReceiver,
+    loanRepaymentAddress,
     ...regularAccounts
   ] = await ethers.getSigners();
 
@@ -99,6 +100,7 @@ export const defaultDeploy = async () => {
   await expect(mTBILL.initialize(ethers.constants.AddressZero)).to.be.reverted;
   await mTBILL.initialize(accessControl.address);
 
+  await mTBILL.initialize(accessControl.address);
   // separate mTBILL instance for swapper testing
   const mBASIS = await new MTBILLTest__factory(owner).deploy();
   await mBASIS.initialize(accessControl.address);
@@ -221,6 +223,10 @@ export const defaultDeploy = async () => {
     owner,
   ).deploy();
 
+  const redemptionVaultLoanSwapper = await new RedemptionVaultTest__factory(
+    owner,
+  ).deploy();
+
   await redemptionVault.initialize(
     {
       ac: accessControl.address,
@@ -244,10 +250,43 @@ export const defaultDeploy = async () => {
       fiatAdditionalFee: 100,
       fiatFlatFee: parseUnits('1'),
       minFiatRedeemAmount: 1000,
+      requestRedeemer: requestRedeemer.address,
+      loanLp: loanLp.address,
+      loanLpFeeReceiver: loanLpFeeReceiver.address,
+      loanRepaymentAddress: loanRepaymentAddress.address,
+      loanSwapperVault: redemptionVaultLoanSwapper.address,
     },
-    requestRedeemer.address,
-    loanLp.address,
-    loanLpFeeReceiver.address,
+  );
+
+  await redemptionVaultLoanSwapper.initialize(
+    {
+      ac: accessControl.address,
+      sanctionsList: mockedSanctionsList.address,
+      variationTolerance: 1,
+      minAmount: 1000,
+    },
+    {
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    {
+      fiatAdditionalFee: 100,
+      fiatFlatFee: parseUnits('1'),
+      minFiatRedeemAmount: 1000,
+      requestRedeemer: requestRedeemer.address,
+      loanLp: loanLp.address,
+      loanLpFeeReceiver: loanLpFeeReceiver.address,
+      loanRepaymentAddress: loanRepaymentAddress.address,
+      loanSwapperVault: redemptionVaultLoanSwapper.address,
+    },
   );
 
   await accessControl.grantRole(
@@ -613,7 +652,7 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithSwapperTest__factory(owner).deploy();
 
   await redemptionVaultWithSwapper[
-    'initialize((address,address,uint256,uint256),(address,address),(address,address),(uint256,uint256),(uint256,uint256,uint256),address,address,address,address,address)'
+    'initialize((address,address,uint256,uint256),(address,address),(address,address),(uint256,uint256),(uint256,uint256,uint256,address,address,address,address,address),address,address)'
   ](
     {
       ac: accessControl.address,

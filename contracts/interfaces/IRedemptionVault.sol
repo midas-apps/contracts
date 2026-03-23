@@ -45,10 +45,15 @@ struct RequestV2 {
     uint8 version;
 }
 
-struct FiatRedemptionInitParams {
+struct RedemptionInitParams {
     uint256 fiatAdditionalFee;
     uint256 fiatFlatFee;
     uint256 minFiatRedeemAmount;
+    address requestRedeemer;
+    address loanLp;
+    address loanLpFeeReceiver;
+    address loanRepaymentAddress;
+    address loanSwapperVault;
 }
 
 struct LiquidityProviderLoanRequest {
