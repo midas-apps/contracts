@@ -463,6 +463,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xb75B82b2012138815d1A2c4aB5B8b987da043157',
       depositVault: '0xeD22A9861C6eDd4f1292aeAb1E44661D5f3FE65e',
       redemptionVaultSwapper: '0x16d4f955B0aA1b1570Fe3e9bB2f8c19C407cdb67',
+      layerZero: {
+        oft: '0xb67f81069e890A1b3e02c7BED3A9f78bA54A445C',
+      },
     },
     mPortofino: {
       token: '0x9004B9890D6B901A17F734efe028b1Be5bd6CD22',
@@ -1291,6 +1294,14 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x8Faab939BF96308846d9B273fE50DED16ae33fF2',
       layerZero: {
         oft: '0x08BC5Ef2E2Afe697614bf3A9eaA71dcBb577f2Df',
+      },
+    },
+    mHyperBTC: {
+      token: '0xF7Cf282eC810fDed974F99c0163E792f432892BC',
+      customFeed: '0x165d2E3C0A368988F497F649B6fe2134bE20FD8c',
+      dataFeed: '0xf91288dC7F33e6f4aD3B62090A86b8978B48b01c',
+      layerZero: {
+        oft: '0xe9977b9B22Ed2C19DCd68D0403163EFcd45bF874',
       },
     },
   },

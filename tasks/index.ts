@@ -3,15 +3,11 @@ import { task } from 'hardhat/config';
 import path from 'path';
 
 import { extendWithContext } from '../config';
-import {
-  etherscanVerify,
-  etherscanVerifyImplementation,
-  isMTokenName,
-  isPaymentTokenName,
-} from '../helpers/utils';
+import { isMTokenName, isPaymentTokenName } from '../helpers/utils';
 
 import './layerzero';
 import './axelar';
+import './verify';
 
 task('runscript', 'Runs a user-defined script')
   .addPositionalParam('path', 'Path to the script')
@@ -77,16 +73,4 @@ task('runscript', 'Runs a user-defined script')
     }
 
     await run(hre);
-  });
-
-task('verifyProxy')
-  .addPositionalParam('proxyAddress')
-  .setAction(async ({ proxyAddress }, hre) => {
-    await etherscanVerifyImplementation(hre, proxyAddress);
-  });
-
-task('verifyRegular')
-  .addPositionalParam('address')
-  .setAction(async ({ address }, hre) => {
-    await etherscanVerify(hre, address);
   });
