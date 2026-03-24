@@ -1241,7 +1241,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         dataFeed: '0x09dbF92503E42246Cb90Cb916A0f30Ef290F2e1D',
       },
       eurc: {
-        token: '0x174d1A887e971f7d0fe5C68b328c30e0ED743160',
+        token: '0xDCB612005417Dc906fF72c87DF732e5a90D49e11',
         aggregator: '0x6CDbBb744a04740a179AF4C92E03C1Bf1eC552C8',
         dataFeed: '0x0c1E886A0ceBF805f66223333e204d39BE6612De',
       },
