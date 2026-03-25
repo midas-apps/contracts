@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
+import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {ISuperstateToken} from "./interfaces/ustb/ISuperstateToken.sol";
-
-import "./DepositVault.sol";
+import {CommonVaultInitParams, MTokenInitParams, ReceiversInitParams, InstantInitParams} from "./interfaces/IManageableVault.sol";
+import {DepositVault} from "./DepositVault.sol";
+import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
 
 /**
  * @title DepositVaultWithUSTB

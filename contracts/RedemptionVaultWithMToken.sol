@@ -98,59 +98,21 @@ contract RedemptionVaultWithMToken is RedemptionVault {
     }
 
     /**
-     * @dev Redeem mToken to the selected payment token if daily limit and allowance are not exceeded.
-     * If the contract doesn't have enough payment token, the mToken RedemptionVault flow
-     * will be triggered to redeem the missing amount.
-     * Burns mToken from the user.
-     * Transfers fee in mToken to feeReceiver.
-     * Transfers tokenOut to user.
-     * @param tokenOut token out address
-     * @param amountMTokenIn amount of mToken to redeem
-     * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
-     *
-     * @return calcResult calculated redeem result
-     */
-    function _redeemInstant(
-        address tokenOut,
-        uint256 amountMTokenIn,
-        uint256 minReceiveAmount
-    )
-        internal
-        override
-        returns (
-            CalcAndValidateRedeemResult memory calcResult,
-            bool spendLiquidity
-        )
-    {
-        (calcResult, spendLiquidity) = super._redeemInstant(
-            tokenOut,
-            amountMTokenIn,
-            minReceiveAmount
-        );
-
-        _checkAndRedeemMToken(
-            tokenOut,
-            calcResult.amountTokenOutWithoutFee.convertFromBase18(
-                calcResult.tokenOutDecimals
-            ),
-            calcResult.tokenOutRate
-        );
-    }
-
-    /**
      * @notice Check if contract has enough tokenOut balance for redeem;
      * if not, redeem the missing amount via mToken RedemptionVault
      * @dev The other vault burns this contract's mToken and transfers the
      * underlying asset to this contract
      * @param tokenOut tokenOut address
-     * @param amountTokenOut amount of tokenOut needed (native decimals)
-     * @param tokenOutRate tokenOut price rate (decimals 18)
+     * @param calcResult calculated redeem instant result
      */
-    function _checkAndRedeemMToken(
+    function _postRedeemInstant(
         address tokenOut,
-        uint256 amountTokenOut,
-        uint256 tokenOutRate
-    ) internal {
+        CalcAndValidateRedeemResult memory calcResult
+    ) internal override {
+        uint256 amountTokenOut = calcResult
+            .amountTokenOutWithoutFee
+            .convertFromBase18(calcResult.tokenOutDecimals);
+
         uint256 contractBalanceTokenOut = IERC20(tokenOut).balanceOf(
             address(this)
         );
@@ -170,7 +132,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
         // Requires address(this) to have waivedFeeRestriction on the inner vault
         uint256 mTokenAAmount = Math.mulDiv(
             missingAmountBase18,
-            tokenOutRate,
+            calcResult.tokenOutRate,
             mTokenARate,
             Math.Rounding.Up
         );

@@ -81,56 +81,22 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
     }
 
     /**
-     * @dev Redeem mToken to the selected payment token if daily limit and allowance are not exceeded.
-     * If the contract doesn't have enough payment token, the Morpho Vault withdrawal flow will be
-     * triggered to withdraw the missing amount from the Morpho Vault.
-     * Burns mToken from the user.
-     * Transfers fee in mToken to feeReceiver.
-     * Transfers tokenOut to user.
-     * @param tokenOut token out address
-     * @param amountMTokenIn amount of mToken to redeem
-     * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
-     *
-     * @return calcResult calculated redeem result
-     */
-    function _redeemInstant(
-        address tokenOut,
-        uint256 amountMTokenIn,
-        uint256 minReceiveAmount
-    )
-        internal
-        override
-        returns (
-            CalcAndValidateRedeemResult memory calcResult,
-            bool spendLiquidity
-        )
-    {
-        (calcResult, spendLiquidity) = super._redeemInstant(
-            tokenOut,
-            amountMTokenIn,
-            minReceiveAmount
-        );
-
-        _checkAndRedeemMorpho(
-            tokenOut,
-            calcResult.amountTokenOutWithoutFee.convertFromBase18(
-                calcResult.tokenOutDecimals
-            )
-        );
-    }
-
-    /**
      * @notice Check if contract has enough tokenOut balance for redeem;
      * if not, withdraw the missing amount from the Morpho Vault
      * @dev The Morpho Vault burns the vault's shares and transfers the underlying
      * asset directly to this contract. No approval is needed because the vault
      * burns shares from msg.sender (this contract) when msg.sender == owner.
      * @param tokenOut tokenOut address
-     * @param amountTokenOut amount of tokenOut needed
+     * @param calcResult calculated redeem instant result
      */
-    function _checkAndRedeemMorpho(address tokenOut, uint256 amountTokenOut)
-        internal
-    {
+    function _postRedeemInstant(
+        address tokenOut,
+        CalcAndValidateRedeemResult memory calcResult
+    ) internal override {
+        uint256 amountTokenOut = calcResult
+            .amountTokenOutWithoutFee
+            .convertFromBase18(calcResult.tokenOutDecimals);
+
         uint256 contractBalanceTokenOut = IERC20(tokenOut).balanceOf(
             address(this)
         );

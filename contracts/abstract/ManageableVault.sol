@@ -9,16 +9,16 @@ import {EnumerableSetUpgradeable as EnumerableSet} from "@openzeppelin/contracts
 
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 
-import "../interfaces/IManageableVault.sol";
-import "../interfaces/IMToken.sol";
-import "../interfaces/IDataFeed.sol";
+import {IManageableVault, TokenConfig, CommonVaultInitParams, MTokenInitParams, ReceiversInitParams, InstantInitParams} from "../interfaces/IManageableVault.sol";
+import {IMToken} from "../interfaces/IMToken.sol";
+import {IDataFeed} from "../interfaces/IDataFeed.sol";
 
-import "../access/Greenlistable.sol";
-import "../access/Blacklistable.sol";
-import "../abstract/WithSanctionsList.sol";
+import {Greenlistable} from "../access/Greenlistable.sol";
+import {Blacklistable} from "../access/Blacklistable.sol";
+import {WithSanctionsList} from "../abstract/WithSanctionsList.sol";
 
-import "../libraries/DecimalsCorrectionLibrary.sol";
-import "../access/Pausable.sol";
+import {DecimalsCorrectionLibrary} from "../libraries/DecimalsCorrectionLibrary.sol";
+import {Pausable} from "../access/Pausable.sol";
 
 /**
  * @title ManageableVault
@@ -57,8 +57,6 @@ abstract contract ManageableVault is
      * @dev for example, 10% will be (10 * 100)%
      */
     uint256 public constant ONE_HUNDRED_PERCENT = 100 * 100;
-
-    uint256 public constant MAX_UINT = type(uint256).max;
 
     /**
      * @notice mToken token
@@ -379,6 +377,19 @@ abstract contract ManageableVault is
     function vaultRole() public view virtual returns (bytes32);
 
     /**
+     * @inheritdoc Greenlistable
+     */
+    function greenlistTogglerRole()
+        public
+        view
+        virtual
+        override
+        returns (bytes32)
+    {
+        return vaultRole();
+    }
+
+    /**
      * @inheritdoc WithSanctionsList
      */
     function sanctionsListAdminRole()
@@ -414,14 +425,8 @@ abstract contract ManageableVault is
         uint256 amount,
         uint256 tokenDecimals
     ) internal returns (uint256 transferAmount) {
-        transferAmount = amount.convertFromBase18(tokenDecimals);
-
-        require(
-            amount == transferAmount.convertToBase18(tokenDecimals),
-            "MV: invalid rounding"
-        );
-
-        IERC20(token).safeTransferFrom(msg.sender, to, transferAmount);
+        return
+            _tokenTransferFromTo(token, msg.sender, to, amount, tokenDecimals);
     }
 
     /**
@@ -440,9 +445,9 @@ abstract contract ManageableVault is
         address to,
         uint256 amount,
         uint256 tokenDecimals
-    ) internal {
-        if (amount == 0) return;
-        uint256 transferAmount = amount.convertFromBase18(tokenDecimals);
+    ) internal returns (uint256 transferAmount) {
+        if (amount == 0) return 0;
+        transferAmount = amount.convertFromBase18(tokenDecimals);
 
         require(
             amount == transferAmount.convertToBase18(tokenDecimals),
@@ -519,7 +524,7 @@ abstract contract ManageableVault is
         internal
     {
         uint256 prevAllowance = tokensConfig[token].allowance;
-        if (prevAllowance == MAX_UINT) return;
+        if (prevAllowance == type(uint256).max) return;
 
         require(prevAllowance >= amount, "MV: exceed allowance");
 
@@ -650,5 +655,19 @@ abstract contract ManageableVault is
         if (stable) return STABLECOIN_RATE;
 
         return rate;
+    }
+
+    /**
+     * @dev gets and validates mToken rate
+     * @return mTokenRate mToken rate
+     */
+    function _getMTokenRate()
+        internal
+        view
+        virtual
+        returns (uint256 mTokenRate)
+    {
+        mTokenRate = _getTokenRate(address(mTokenDataFeed), false);
+        require(mTokenRate > 0, "MV: rate zero");
     }
 }

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.9;
 
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "../access/WithMidasAccessControl.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
 
 /**
  * @title Pausable
@@ -11,6 +11,9 @@ import "../access/WithMidasAccessControl.sol";
  * @author RedDuck Software
  */
 abstract contract Pausable is WithMidasAccessControl, PausableUpgradeable {
+    /**
+     * @notice function id => paused status
+     */
     mapping(bytes4 => bool) public fnPaused;
 
     /**
@@ -30,9 +33,12 @@ abstract contract Pausable is WithMidasAccessControl, PausableUpgradeable {
      */
     event UnpauseFn(address indexed caller, bytes4 fn);
 
+    /**
+     * @dev checks that a given `fn` is not paused
+     * @param fn function id
+     */
     modifier whenFnNotPaused(bytes4 fn) {
-        _requireNotPaused();
-        require(!fnPaused[fn], "Pausable: fn paused");
+        _requireFnNotPaused(fn);
         _;
     }
     /**
@@ -86,4 +92,13 @@ abstract contract Pausable is WithMidasAccessControl, PausableUpgradeable {
      * @dev virtual function to determine pauseAdmin role
      */
     function pauseAdminRole() public view virtual returns (bytes32);
+
+    /**
+     * @dev checks that a given `fn` is not paused
+     * @param fn function id
+     */
+    function _requireFnNotPaused(bytes4 fn) private view {
+        _requireNotPaused();
+        require(!fnPaused[fn], "Pausable: fn paused");
+    }
 }

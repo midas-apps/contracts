@@ -212,7 +212,7 @@ interface IManageableVault {
 
     /**
      * @notice set new token allowance.
-     * if MAX_UINT = infinite allowance
+     * if type(uint256).max = infinite allowance
      * prev allowance rewrites by new
      * can be called only from permissioned actor.
      * @param token token address

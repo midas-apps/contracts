@@ -58,47 +58,19 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
     }
 
     /**
-     * @dev Redeem mToken to the selected payment token if daily limit and allowance are not exceeded.
-     * If USDC is the payment token and the contract doesn't have enough USDC, the USTB redemption flow will be triggered for the missing amount.
-     * Burns mToken from the user.
-     * Transfers fee in mToken to feeReceiver.
-     * Transfers tokenOut to user.
-     * @param tokenOut token out address
-     * @param amountMTokenIn amount of mToken to redeem
-     * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
-     *
-     * @return calcResult calculated redeem result
-     */
-    function _redeemInstant(
-        address tokenOut,
-        uint256 amountMTokenIn,
-        uint256 minReceiveAmount
-    )
-        internal
-        override
-        returns (
-            CalcAndValidateRedeemResult memory calcResult,
-            bool spendLiquidity
-        )
-    {
-        (calcResult, spendLiquidity) = super._redeemInstant(
-            tokenOut,
-            amountMTokenIn,
-            minReceiveAmount
-        );
-
-        _checkAndRedeemUSTB(tokenOut, calcResult.amountTokenOutWithoutFee);
-    }
-
-    /**
      * @notice Check if contract has enough USDC balance for redeem
      * if not, trigger USTB redemption flow to redeem exactly the missing amount
      * @param tokenOut tokenOut address
-     * @param amountTokenOut amount of tokenOut needed
+     * @param calcResult calculated redeem instant result
      */
-    function _checkAndRedeemUSTB(address tokenOut, uint256 amountTokenOut)
-        internal
-    {
+    function _postRedeemInstant(
+        address tokenOut,
+        CalcAndValidateRedeemResult memory calcResult
+    ) internal override {
+        uint256 amountTokenOut = calcResult
+            .amountTokenOutWithoutFee
+            .convertFromBase18(calcResult.tokenOutDecimals);
+
         uint256 contractBalanceTokenOut = IERC20(tokenOut).balanceOf(
             address(this)
         );

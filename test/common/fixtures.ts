@@ -60,6 +60,7 @@ import {
   AxelarInterchainTokenServiceMock__factory,
   MidasAxelarVaultExecutableTester,
   LzEndpointV2Mock__factory,
+  MTokenTest__factory,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -101,7 +102,11 @@ export const defaultDeploy = async () => {
   await expect(mTBILL.initialize(ethers.constants.AddressZero)).to.be.reverted;
   await mTBILL.initialize(accessControl.address);
 
-  await mTBILL.initialize(accessControl.address);
+  const mTokenLoan = await new MTokenTest__factory(owner).deploy();
+  await expect(mTokenLoan.initialize(ethers.constants.AddressZero)).to.be
+    .reverted;
+  await mTokenLoan.initialize(accessControl.address);
+
   // separate mTBILL instance for swapper testing
   const mBASIS = await new MTBILLTest__factory(owner).deploy();
   await mBASIS.initialize(accessControl.address);
@@ -132,6 +137,10 @@ export const defaultDeploy = async () => {
     owner,
   ).deploy();
 
+  const mockedAggregatorMTokenLoan = await new AggregatorV3Mock__factory(
+    owner,
+  ).deploy();
+
   const mockedAggregatorMBasis = await new AggregatorV3Mock__factory(
     owner,
   ).deploy();
@@ -145,6 +154,10 @@ export const defaultDeploy = async () => {
 
   await mockedAggregatorMToken.setRoundData(
     parseUnits('5', mockedAggregatorMTokenDecimals),
+  );
+
+  await mockedAggregatorMTokenLoan.setRoundData(
+    parseUnits('1', await mockedAggregatorMTokenLoan.decimals()),
   );
 
   await mockedAggregatorMBasis.setRoundData(
@@ -167,6 +180,17 @@ export const defaultDeploy = async () => {
     3 * 24 * 3600,
     parseUnits('0.1', mockedAggregatorMTokenDecimals),
     parseUnits('10000', mockedAggregatorMTokenDecimals),
+  );
+
+  const mTokenLoanToUsdDataFeed = await new DataFeedTest__factory(
+    owner,
+  ).deploy();
+  await mTokenLoanToUsdDataFeed.initialize(
+    accessControl.address,
+    mockedAggregatorMTokenLoan.address,
+    3 * 24 * 3600,
+    parseUnits('0.1', await mockedAggregatorMTokenLoan.decimals()),
+    parseUnits('10000', await mockedAggregatorMTokenLoan.decimals()),
   );
 
   const mBasisToUsdDataFeed = await new DataFeedTest__factory(owner).deploy();
@@ -267,8 +291,8 @@ export const defaultDeploy = async () => {
       minAmount: 1000,
     },
     {
-      mToken: mTBILL.address,
-      mTokenDataFeed: mTokenToUsdDataFeed.address,
+      mToken: mTokenLoan.address,
+      mTokenDataFeed: mTokenLoanToUsdDataFeed.address,
     },
     {
       feeReceiver: feeReceiver.address,
@@ -283,12 +307,24 @@ export const defaultDeploy = async () => {
       fiatFlatFee: parseUnits('1'),
       minFiatRedeemAmount: 1000,
       requestRedeemer: requestRedeemer.address,
-      loanLp: loanLp.address,
-      loanLpFeeReceiver: loanLpFeeReceiver.address,
-      loanRepaymentAddress: loanRepaymentAddress.address,
-      loanSwapperVault: redemptionVaultLoanSwapper.address,
+      loanLp: constants.AddressZero,
+      loanLpFeeReceiver: constants.AddressZero,
+      loanRepaymentAddress: constants.AddressZero,
+      loanSwapperVault: constants.AddressZero,
     },
   );
+
+  await accessControl.grantRole(
+    mTokenLoan.M_TOKEN_TEST_BURN_OPERATOR_ROLE(),
+    redemptionVaultLoanSwapper.address,
+  );
+
+  await accessControl.grantRole(
+    mTokenLoan.M_TOKEN_TEST_MINT_OPERATOR_ROLE(),
+    owner.address,
+  );
+
+  await redemptionVaultLoanSwapper.addWaivedFeeAccount(redemptionVault.address);
 
   await accessControl.grantRole(
     mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
@@ -344,10 +380,10 @@ export const defaultDeploy = async () => {
       fiatFlatFee: parseUnits('1'),
       minFiatRedeemAmount: 1000,
       requestRedeemer: requestRedeemer.address,
-      loanLp: loanLp.address,
-      loanLpFeeReceiver: loanLpFeeReceiver.address,
-      loanRepaymentAddress: loanRepaymentAddress.address,
-      loanSwapperVault: redemptionVaultLoanSwapper.address,
+      loanLp: constants.AddressZero,
+      loanLpFeeReceiver: constants.AddressZero,
+      loanRepaymentAddress: constants.AddressZero,
+      loanSwapperVault: constants.AddressZero,
     },
 
     buidlRedemption.address,
@@ -435,10 +471,10 @@ export const defaultDeploy = async () => {
       fiatFlatFee: parseUnits('1'),
       minFiatRedeemAmount: 1000,
       requestRedeemer: requestRedeemer.address,
-      loanLp: loanLp.address,
-      loanLpFeeReceiver: loanLpFeeReceiver.address,
-      loanRepaymentAddress: loanRepaymentAddress.address,
-      loanSwapperVault: redemptionVaultLoanSwapper.address,
+      loanLp: constants.AddressZero,
+      loanLpFeeReceiver: constants.AddressZero,
+      loanRepaymentAddress: constants.AddressZero,
+      loanSwapperVault: constants.AddressZero,
     },
 
     ustbRedemption.address,
@@ -482,10 +518,10 @@ export const defaultDeploy = async () => {
       fiatFlatFee: parseUnits('1'),
       minFiatRedeemAmount: 1000,
       requestRedeemer: requestRedeemer.address,
-      loanLp: loanLp.address,
-      loanLpFeeReceiver: loanLpFeeReceiver.address,
-      loanRepaymentAddress: loanRepaymentAddress.address,
-      loanSwapperVault: redemptionVaultLoanSwapper.address,
+      loanLp: constants.AddressZero,
+      loanLpFeeReceiver: constants.AddressZero,
+      loanRepaymentAddress: constants.AddressZero,
+      loanSwapperVault: constants.AddressZero,
     },
   );
   await redemptionVaultWithAave.setAavePool(
@@ -531,10 +567,10 @@ export const defaultDeploy = async () => {
       fiatFlatFee: parseUnits('1'),
       minFiatRedeemAmount: 1000,
       requestRedeemer: requestRedeemer.address,
-      loanLp: loanLp.address,
-      loanLpFeeReceiver: loanLpFeeReceiver.address,
-      loanRepaymentAddress: loanRepaymentAddress.address,
-      loanSwapperVault: redemptionVaultLoanSwapper.address,
+      loanLp: constants.AddressZero,
+      loanLpFeeReceiver: constants.AddressZero,
+      loanRepaymentAddress: constants.AddressZero,
+      loanSwapperVault: constants.AddressZero,
     },
   );
   await redemptionVaultWithMorpho.setMorphoVault(
@@ -688,10 +724,10 @@ export const defaultDeploy = async () => {
       fiatFlatFee: parseUnits('1'),
       minFiatRedeemAmount: 1000,
       requestRedeemer: requestRedeemer.address,
-      loanLp: loanLp.address,
-      loanLpFeeReceiver: loanLpFeeReceiver.address,
-      loanRepaymentAddress: loanRepaymentAddress.address,
-      loanSwapperVault: redemptionVaultLoanSwapper.address,
+      loanLp: constants.AddressZero,
+      loanLpFeeReceiver: constants.AddressZero,
+      loanRepaymentAddress: constants.AddressZero,
+      loanSwapperVault: constants.AddressZero,
     },
     redemptionVault.address,
     liquidityProvider.address,
@@ -752,10 +788,10 @@ export const defaultDeploy = async () => {
       fiatFlatFee: parseUnits('1'),
       minFiatRedeemAmount: 1000,
       requestRedeemer: requestRedeemer.address,
-      loanLp: loanLp.address,
-      loanLpFeeReceiver: loanLpFeeReceiver.address,
-      loanRepaymentAddress: loanRepaymentAddress.address,
-      loanSwapperVault: redemptionVaultLoanSwapper.address,
+      loanLp: constants.AddressZero,
+      loanLpFeeReceiver: constants.AddressZero,
+      loanRepaymentAddress: constants.AddressZero,
+      loanSwapperVault: constants.AddressZero,
     },
     redemptionVault.address,
   );
@@ -972,8 +1008,15 @@ export const defaultDeploy = async () => {
     compositeDataFeed,
     loanLp,
     loanLpFeeReceiver,
+    loanRepaymentAddress,
+    redemptionVaultLoanSwapper,
+    mTokenLoan,
+    mTokenLoanToUsdDataFeed,
+    mockedAggregatorMTokenLoan,
   };
 };
+
+export type DefaultFixture = Awaited<ReturnType<typeof defaultDeploy>>;
 
 /**
  * mTokenPermissionedTest + dedicated deposit/redemption vaults (for integration-style tests).

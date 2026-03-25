@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import "../interfaces/ISanctionsList.sol";
-import "../access/WithMidasAccessControl.sol";
-import "./MidasInitializable.sol";
+import {ISanctionsList} from "../interfaces/ISanctionsList.sol";
+import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
 
 /**
  * @title WithSanctionsList

@@ -11,6 +11,16 @@ contract RedemptionVaultWithMTokenTest is RedemptionVaultWithMToken {
         uint256 amount,
         uint256 rate
     ) external {
-        _checkAndRedeemMToken(token, amount, rate);
+        _postRedeemInstant(
+            token,
+            CalcAndValidateRedeemResult({
+                feeAmount: 0,
+                amountTokenOutWithoutFee: amount,
+                amountTokenOut: 0,
+                tokenOutRate: rate,
+                mTokenRate: 0,
+                tokenOutDecimals: 0
+            })
+        );
     }
 }

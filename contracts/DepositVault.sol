@@ -6,10 +6,10 @@ import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contrac
 
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 
-import "./interfaces/IDepositVault.sol";
-import "./interfaces/IDataFeed.sol";
+import {IDepositVault, CommonVaultInitParams, MTokenInitParams, ReceiversInitParams, InstantInitParams, Request, RequestStatus} from "./interfaces/IDepositVault.sol";
+import {TokenConfig} from "./interfaces/IManageableVault.sol";
 
-import "./abstract/ManageableVault.sol";
+import {ManageableVault} from "./abstract/ManageableVault.sol";
 
 /**
  * @title DepositVault
@@ -42,35 +42,36 @@ contract DepositVault is ManageableVault, IDepositVault {
 
     /**
      * @dev default role that grants admin rights to the contract
+     * keccak256("DEPOSIT_VAULT_ADMIN_ROLE");
      */
     bytes32 private constant _DEFAULT_DEPOSIT_VAULT_ADMIN_ROLE =
-        keccak256("DEPOSIT_VAULT_ADMIN_ROLE");
+        0x2728bd32a7e1e24afac41a073e9c92dbb65527c9ec3baa2a8d5ee1d06c0fa779;
 
     /**
      * @dev selector for deposit instant
+     *keccak256("depositInstant(address,uint256,uint256,bytes32)")
      */
-    bytes4 private constant _DEPOSIT_INSTANT_SELECTOR =
-        bytes4(keccak256("depositInstant(address,uint256,uint256,bytes32)"));
+    bytes4 private constant _DEPOSIT_INSTANT_SELECTOR = bytes4(0xc02dd27a); // TODO
 
     /**
      * @dev selector for deposit instant with custom recipient
+     * keccak256("depositInstant(address,uint256,uint256,bytes32,address)")
      */
     bytes4 private constant _DEPOSIT_INSTANT_WITH_CUSTOM_RECIPIENT_SELECTOR =
-        bytes4(
-            keccak256("depositInstant(address,uint256,uint256,bytes32,address)")
-        );
+        bytes4(0x42e8866b); // TODO
 
     /**
      * @dev selector for deposit request
+     * keccak256("depositRequest(address,uint256,bytes32)")
      */
-    bytes4 private constant _DEPOSIT_REQUEST_SELECTOR =
-        bytes4(keccak256("depositRequest(address,uint256,bytes32)"));
+    bytes4 private constant _DEPOSIT_REQUEST_SELECTOR = bytes4(0x6e26b9f8); // TODO
 
     /**
      * @dev selector for deposit request with custom recipient
+     * keccak256("depositRequest(address,uint256,bytes32,address)")
      */
     bytes4 private constant _DEPOSIT_REQUEST_WITH_CUSTOM_RECIPIENT_SELECTOR =
-        bytes4(keccak256("depositRequest(address,uint256,bytes32,address)"));
+        bytes4(0xe50e3dbb);
 
     /**
      * @notice minimal USD amount for first user`s deposit
@@ -431,19 +432,6 @@ contract DepositVault is ManageableVault, IDepositVault {
     }
 
     /**
-     * @inheritdoc Greenlistable
-     */
-    function greenlistTogglerRole()
-        public
-        view
-        virtual
-        override
-        returns (bytes32)
-    {
-        return vaultRole();
-    }
-
-    /**
      * @dev internal deposit instant logic
      * @param tokenIn tokenIn address
      * @param amountToken amount of tokenIn (decimals 18)
@@ -783,14 +771,5 @@ contract DepositVault is ManageableVault, IDepositVault {
         mTokenRate = _getMTokenRate();
 
         amountMToken = (amountUsd * (10**18)) / mTokenRate;
-    }
-
-    /**
-     * @dev gets and validates mToken rate
-     * @return mTokenRate mToken rate
-     */
-    function _getMTokenRate() private view returns (uint256 mTokenRate) {
-        mTokenRate = _getTokenRate(address(mTokenDataFeed), false);
-        require(mTokenRate > 0, "DV: rate zero");
     }
 }

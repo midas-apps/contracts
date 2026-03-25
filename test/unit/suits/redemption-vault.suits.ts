@@ -6,6 +6,7 @@ import { ethers } from 'hardhat';
 
 import { encodeFnSelector } from '../../../helpers/utils';
 import {
+  ERC20Mock,
   ManageableVaultTester__factory,
   MBasisRedemptionVault__factory,
   RedemptionVaultTest__factory,
@@ -40,7 +41,9 @@ import {
 } from '../../common/manageable-vault.helpers';
 import {
   approveRedeemRequestTest,
+  bulkRepayLpLoanRequestTest,
   redeemFiatRequestTest,
+  redeemInstantTest,
   redeemRequestTest,
   rejectRedeemRequestTest,
   safeApproveRedeemRequestTest,
@@ -120,6 +123,8 @@ export const redemptionVaultSuits = (
           mTBILL,
           loanLp,
           loanLpFeeReceiver,
+          loanRepaymentAddress,
+          redemptionVaultLoanSwapper,
         } = await loadFixture(rvFixture);
 
         const redemptionVaultUninitialized =
@@ -149,10 +154,12 @@ export const redemptionVaultSuits = (
               fiatAdditionalFee: 100,
               fiatFlatFee: parseUnits('1'),
               minFiatRedeemAmount: parseUnits('100'),
+              requestRedeemer: requestRedeemer.address,
+              loanLp: loanLp.address,
+              loanLpFeeReceiver: loanLpFeeReceiver.address,
+              loanRepaymentAddress: loanRepaymentAddress.address,
+              loanSwapperVault: redemptionVaultLoanSwapper.address,
             },
-            requestRedeemer.address,
-            loanLp.address,
-            loanLpFeeReceiver.address,
           ),
         ).to.be.reverted;
         await expect(
@@ -179,10 +186,12 @@ export const redemptionVaultSuits = (
               fiatAdditionalFee: 100,
               fiatFlatFee: parseUnits('1'),
               minFiatRedeemAmount: parseUnits('100'),
+              requestRedeemer: requestRedeemer.address,
+              loanLp: loanLp.address,
+              loanLpFeeReceiver: loanLpFeeReceiver.address,
+              loanRepaymentAddress: loanRepaymentAddress.address,
+              loanSwapperVault: redemptionVaultLoanSwapper.address,
             },
-            requestRedeemer.address,
-            loanLp.address,
-            loanLpFeeReceiver.address,
           ),
         ).to.be.reverted;
         await expect(
@@ -209,10 +218,12 @@ export const redemptionVaultSuits = (
               fiatAdditionalFee: 100,
               fiatFlatFee: parseUnits('1'),
               minFiatRedeemAmount: parseUnits('100'),
+              requestRedeemer: requestRedeemer.address,
+              loanLp: loanLp.address,
+              loanLpFeeReceiver: loanLpFeeReceiver.address,
+              loanRepaymentAddress: loanRepaymentAddress.address,
+              loanSwapperVault: redemptionVaultLoanSwapper.address,
             },
-            requestRedeemer.address,
-            loanLp.address,
-            loanLpFeeReceiver.address,
           ),
         ).to.be.reverted;
         await expect(
@@ -239,10 +250,12 @@ export const redemptionVaultSuits = (
               fiatAdditionalFee: 100,
               fiatFlatFee: parseUnits('1'),
               minFiatRedeemAmount: parseUnits('100'),
+              requestRedeemer: requestRedeemer.address,
+              loanLp: loanLp.address,
+              loanLpFeeReceiver: loanLpFeeReceiver.address,
+              loanRepaymentAddress: loanRepaymentAddress.address,
+              loanSwapperVault: redemptionVaultLoanSwapper.address,
             },
-            requestRedeemer.address,
-            loanLp.address,
-            loanLpFeeReceiver.address,
           ),
         ).to.be.reverted;
         await expect(
@@ -269,10 +282,12 @@ export const redemptionVaultSuits = (
               fiatAdditionalFee: 100,
               fiatFlatFee: parseUnits('1'),
               minFiatRedeemAmount: parseUnits('100'),
+              requestRedeemer: requestRedeemer.address,
+              loanLp: loanLp.address,
+              loanLpFeeReceiver: loanLpFeeReceiver.address,
+              loanRepaymentAddress: loanRepaymentAddress.address,
+              loanSwapperVault: redemptionVaultLoanSwapper.address,
             },
-            requestRedeemer.address,
-            loanLp.address,
-            loanLpFeeReceiver.address,
           ),
         ).to.be.reverted;
         await expect(
@@ -299,10 +314,12 @@ export const redemptionVaultSuits = (
               fiatAdditionalFee: 10001,
               fiatFlatFee: parseUnits('1'),
               minFiatRedeemAmount: parseUnits('100'),
+              requestRedeemer: requestRedeemer.address,
+              loanLp: loanLp.address,
+              loanLpFeeReceiver: loanLpFeeReceiver.address,
+              loanRepaymentAddress: loanRepaymentAddress.address,
+              loanSwapperVault: redemptionVaultLoanSwapper.address,
             },
-            requestRedeemer.address,
-            loanLp.address,
-            loanLpFeeReceiver.address,
           ),
         ).to.be.reverted;
 
@@ -330,10 +347,12 @@ export const redemptionVaultSuits = (
               fiatAdditionalFee: 100,
               fiatFlatFee: parseUnits('1'),
               minFiatRedeemAmount: parseUnits('100'),
+              requestRedeemer: constants.AddressZero,
+              loanLp: loanLp.address,
+              loanLpFeeReceiver: loanLpFeeReceiver.address,
+              loanRepaymentAddress: loanRepaymentAddress.address,
+              loanSwapperVault: redemptionVaultLoanSwapper.address,
             },
-            constants.AddressZero,
-            loanLp.address,
-            loanLpFeeReceiver.address,
           ),
         ).to.be.reverted;
 
@@ -361,10 +380,12 @@ export const redemptionVaultSuits = (
               fiatAdditionalFee: 100,
               fiatFlatFee: parseUnits('1'),
               minFiatRedeemAmount: parseUnits('100'),
+              requestRedeemer: requestRedeemer.address,
+              loanLp: loanLp.address,
+              loanLpFeeReceiver: loanLpFeeReceiver.address,
+              loanRepaymentAddress: loanRepaymentAddress.address,
+              loanSwapperVault: redemptionVaultLoanSwapper.address,
             },
-            requestRedeemer.address,
-            loanLp.address,
-            loanLpFeeReceiver.address,
           ),
         ).to.be.revertedWith('Initializable: contract is not initializing');
       });
@@ -413,10 +434,12 @@ export const redemptionVaultSuits = (
                 fiatAdditionalFee: 0,
                 fiatFlatFee: 0,
                 minFiatRedeemAmount: 0,
+                requestRedeemer: constants.AddressZero,
+                loanLp: constants.AddressZero,
+                loanLpFeeReceiver: constants.AddressZero,
+                loanRepaymentAddress: constants.AddressZero,
+                loanSwapperVault: constants.AddressZero,
               },
-              constants.AddressZero,
-              constants.AddressZero,
-              constants.AddressZero,
             ),
           ).revertedWith('Initializable: contract is already initialized');
         });
@@ -5709,6 +5732,353 @@ export const redemptionVaultSuits = (
         });
       });
 
+      describe('bulkRepayLpLoanRequestTest()', () => {
+        const prepareTest = async (
+          fixture: DefaultFixture,
+          stableCoin: ERC20Mock,
+          setupVault = true,
+        ) => {
+          const {
+            redemptionVault,
+            owner,
+            mTBILL,
+            mTokenLoan,
+            loanLp,
+            redemptionVaultLoanSwapper,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            mockedAggregator,
+            mockedAggregatorMToken,
+          } = fixture;
+
+          await mintToken(mTBILL, owner, 100);
+          await mintToken(mTokenLoan, loanLp, 1000);
+          await approveBase18(loanLp, mTokenLoan, redemptionVault, 1000);
+          await mintToken(stableCoin, redemptionVaultLoanSwapper, 1000);
+
+          await approveBase18(loanLp, stableCoin, redemptionVault, 1000);
+
+          if (setupVault) {
+            await withdrawTest(
+              { vault: redemptionVault, owner },
+              stableCoin,
+              await stableCoin.balanceOf(redemptionVault.address),
+              owner,
+            );
+
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoin,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await addPaymentTokenTest(
+              { vault: redemptionVaultLoanSwapper, owner },
+              stableCoin,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setRoundData({ mockedAggregator }, 1);
+          }
+
+          await redeemInstantTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoin,
+            100,
+          );
+        };
+
+        it('approve 1 request', async () => {
+          const fixture = await loadFixture(rvFixture);
+          const {
+            redemptionVault,
+            owner,
+            mTBILL,
+            loanRepaymentAddress,
+            stableCoins,
+          } = fixture;
+
+          await prepareTest(fixture, stableCoins.dai);
+
+          await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
+
+          await approveBase18(
+            loanRepaymentAddress,
+            stableCoins.dai,
+            redemptionVault,
+            100,
+          );
+
+          await bulkRepayLpLoanRequestTest({ redemptionVault, owner, mTBILL }, [
+            { id: 0 },
+          ]);
+        });
+
+        it('approve 2 request with same token out', async () => {
+          const fixture = await loadFixture(rvFixture);
+          const {
+            redemptionVault,
+            owner,
+            mTBILL,
+            loanRepaymentAddress,
+            stableCoins,
+          } = fixture;
+
+          await prepareTest(fixture, stableCoins.dai);
+          await prepareTest(fixture, stableCoins.dai, false);
+
+          await mintToken(stableCoins.dai, loanRepaymentAddress, 200);
+
+          await approveBase18(
+            loanRepaymentAddress,
+            stableCoins.dai,
+            redemptionVault,
+            200,
+          );
+
+          await bulkRepayLpLoanRequestTest({ redemptionVault, owner, mTBILL }, [
+            { id: 0 },
+            { id: 1 },
+          ]);
+        });
+
+        it('approve 2 request with different token out', async () => {
+          const fixture = await loadFixture(rvFixture);
+          const {
+            redemptionVault,
+            owner,
+            mTBILL,
+            loanRepaymentAddress,
+            stableCoins,
+          } = fixture;
+
+          await prepareTest(fixture, stableCoins.dai);
+          await prepareTest(fixture, stableCoins.usdc);
+
+          await mintToken(stableCoins.dai, loanRepaymentAddress, 200);
+          await mintToken(stableCoins.usdc, loanRepaymentAddress, 200);
+
+          await approveBase18(
+            loanRepaymentAddress,
+            stableCoins.dai,
+            redemptionVault,
+            100,
+          );
+
+          await approveBase18(
+            loanRepaymentAddress,
+            stableCoins.usdc,
+            redemptionVault,
+            100,
+          );
+
+          await bulkRepayLpLoanRequestTest({ redemptionVault, owner, mTBILL }, [
+            { id: 0 },
+            { id: 1 },
+          ]);
+        });
+
+        it('approve 1 request when fee is zero and lp fee receiver is not set', async () => {
+          const fixture = await loadFixture(rvFixture);
+          const {
+            redemptionVault,
+            owner,
+            mTBILL,
+            loanRepaymentAddress,
+            stableCoins,
+          } = fixture;
+
+          await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+
+          await prepareTest(fixture, stableCoins.dai);
+
+          await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
+
+          await approveBase18(
+            loanRepaymentAddress,
+            stableCoins.dai,
+            redemptionVault,
+            100,
+          );
+
+          await setLoanLpFeeReceiverTest(
+            { redemptionVault, owner },
+            ethers.constants.AddressZero,
+          );
+
+          await bulkRepayLpLoanRequestTest({ redemptionVault, owner, mTBILL }, [
+            { id: 0 },
+          ]);
+        });
+
+        it('should fail: approve 1 request when fee is not zero and lp fee receiver is not set', async () => {
+          const fixture = await loadFixture(rvFixture);
+          const {
+            redemptionVault,
+            owner,
+            mTBILL,
+            loanRepaymentAddress,
+            stableCoins,
+          } = fixture;
+
+          await prepareTest(fixture, stableCoins.dai);
+
+          await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
+
+          await approveBase18(
+            loanRepaymentAddress,
+            stableCoins.dai,
+            redemptionVault,
+            100,
+          );
+
+          await setLoanLpFeeReceiverTest(
+            { redemptionVault, owner },
+            ethers.constants.AddressZero,
+          );
+
+          await bulkRepayLpLoanRequestTest(
+            { redemptionVault, owner, mTBILL },
+            [{ id: 0 }],
+            {
+              revertMessage: 'RV: !loanLpFeeReceiver',
+            },
+          );
+        });
+
+        it('should fail: when loan repayment address does not have enough balance', async () => {
+          const fixture = await loadFixture(rvFixture);
+          const {
+            redemptionVault,
+            owner,
+            mTBILL,
+            loanRepaymentAddress,
+            stableCoins,
+          } = fixture;
+
+          await prepareTest(fixture, stableCoins.dai);
+
+          await approveBase18(
+            loanRepaymentAddress,
+            stableCoins.dai,
+            redemptionVault,
+            100,
+          );
+
+          await bulkRepayLpLoanRequestTest(
+            { redemptionVault, owner, mTBILL },
+            [{ id: 0 }],
+            {
+              revertMessage: 'ERC20: transfer amount exceeds balance',
+            },
+          );
+        });
+
+        it('should fail: when loan repayment address does not have enough allowance', async () => {
+          const fixture = await loadFixture(rvFixture);
+          const {
+            redemptionVault,
+            owner,
+            mTBILL,
+            loanRepaymentAddress,
+            stableCoins,
+          } = fixture;
+
+          await prepareTest(fixture, stableCoins.dai);
+
+          await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
+
+          await bulkRepayLpLoanRequestTest(
+            { redemptionVault, owner, mTBILL },
+            [{ id: 0 }],
+            {
+              revertMessage: 'ERC20: insufficient allowance',
+            },
+          );
+        });
+
+        it('should fail: when loan repayment address have balance for lp transfer but not enough for fee transfer', async () => {
+          const fixture = await loadFixture(rvFixture);
+          const {
+            redemptionVault,
+            owner,
+            mTBILL,
+            loanRepaymentAddress,
+            stableCoins,
+          } = fixture;
+
+          await setInstantFeeTest({ vault: redemptionVault, owner }, 100);
+          await prepareTest(fixture, stableCoins.dai);
+
+          await mintToken(stableCoins.dai, loanRepaymentAddress, 99);
+          await approveBase18(
+            loanRepaymentAddress,
+            stableCoins.dai,
+            redemptionVault,
+            100,
+          );
+
+          await bulkRepayLpLoanRequestTest(
+            { redemptionVault, owner, mTBILL },
+            [{ id: 0 }],
+            {
+              revertMessage: 'ERC20: transfer amount exceeds balance',
+            },
+          );
+        });
+
+        it('should fail: request was already approved', async () => {
+          const fixture = await loadFixture(rvFixture);
+          const {
+            redemptionVault,
+            owner,
+            mTBILL,
+            loanRepaymentAddress,
+            stableCoins,
+          } = fixture;
+
+          await prepareTest(fixture, stableCoins.dai);
+
+          await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
+          await approveBase18(
+            loanRepaymentAddress,
+            stableCoins.dai,
+            redemptionVault,
+            100,
+          );
+
+          await bulkRepayLpLoanRequestTest({ redemptionVault, owner, mTBILL }, [
+            { id: 0 },
+          ]);
+
+          await bulkRepayLpLoanRequestTest(
+            { redemptionVault, owner, mTBILL },
+            [{ id: 0 }],
+            {
+              revertMessage: 'RV: request not pending',
+            },
+          );
+        });
+
+        it('should fail: request not exist', async () => {
+          const fixture = await loadFixture(rvFixture);
+          const { redemptionVault, owner, mTBILL } = fixture;
+
+          await bulkRepayLpLoanRequestTest(
+            { redemptionVault, owner, mTBILL },
+            [{ id: 0 }],
+            {
+              revertMessage: 'RV: request not exist',
+            },
+          );
+        });
+      });
+
       describe('_convertUsdToToken', () => {
         it('should fail: when amountUsd == 0', async () => {
           const { redemptionVault } = await loadFixture(rvFixture);
@@ -5751,7 +6121,7 @@ export const redemptionVaultSuits = (
 
           await expect(
             redemptionVault.convertMTokenToUsdTest(1, 0),
-          ).revertedWith('RV: rate zero');
+          ).revertedWith('MV: rate zero');
         });
       });
 

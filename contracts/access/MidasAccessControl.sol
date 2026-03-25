@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
-import "./MidasAccessControlRoles.sol";
-import "../abstract/MidasInitializable.sol";
+import {MidasAccessControlRoles} from "./MidasAccessControlRoles.sol";
+import {MidasInitializable} from "../abstract/MidasInitializable.sol";
 
 /**
  * @title MidasAccessControl

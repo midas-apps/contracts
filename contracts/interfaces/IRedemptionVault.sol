@@ -82,22 +82,6 @@ interface IRedemptionVault is IManageableVault {
     event RedeemInstantV2(
         address indexed user,
         address indexed tokenOut,
-        uint256 amount,
-        uint256 feeAmount,
-        uint256 amountTokenOut
-    );
-
-    /**
-     * @param user function caller (msg.sender)
-     * @param tokenOut address of tokenOut
-     * @param recipient address that receives tokens
-     * @param amount amount of mToken
-     * @param feeAmount fee amount in tokenOut
-     * @param amountTokenOut amount of tokenOut
-     */
-    event RedeemInstantWithCustomRecipientV2(
-        address indexed user,
-        address indexed tokenOut,
         address recipient,
         uint256 amount,
         uint256 feeAmount,
@@ -112,22 +96,6 @@ interface IRedemptionVault is IManageableVault {
      * @param feePercent fee percent
      */
     event RedeemRequestV2(
-        uint256 indexed requestId,
-        address indexed user,
-        address indexed tokenOut,
-        uint256 amountMTokenIn,
-        uint256 feePercent
-    );
-
-    /**
-     * @param requestId request id
-     * @param user function caller (msg.sender)
-     * @param tokenOut address of tokenOut
-     * @param recipient address that receives tokens
-     * @param amountMTokenIn amount of mToken
-     * @param feePercent fee percent
-     */
-    event RedeemRequestWithCustomRecipientV2(
         uint256 indexed requestId,
         address indexed user,
         address indexed tokenOut,
@@ -156,14 +124,13 @@ interface IRedemptionVault is IManageableVault {
     /**
      * @param requestId mint request id
      * @param newMTokenRate net mToken rate
+     * @param isSafe if true, approval is safe
      */
-    event ApproveRequest(uint256 indexed requestId, uint256 newMTokenRate);
-
-    /**
-     * @param requestId mint request id
-     * @param newMTokenRate net mToken rate
-     */
-    event SafeApproveRequest(uint256 indexed requestId, uint256 newMTokenRate);
+    event ApproveRequest(
+        uint256 indexed requestId,
+        uint256 newMTokenRate,
+        bool isSafe
+    );
 
     /**
      * @param requestId mint request id
@@ -209,6 +176,39 @@ interface IRedemptionVault is IManageableVault {
      * @param newLoanLp new address of loan liquidity provider
      */
     event SetLoanLp(address indexed caller, address newLoanLp);
+
+    /**
+     * @param caller function caller (msg.sender)
+     * @param newLoanRepaymentAddress new address of loan repayment address
+     */
+    event SetLoanRepaymentAddress(
+        address indexed caller,
+        address newLoanRepaymentAddress
+    );
+
+    /**
+     * @param caller function caller (msg.sender)
+     * @param newLoanSwapperVault new address of loan swapper vault
+     */
+    event SetLoanSwapperVault(
+        address indexed caller,
+        address newLoanSwapperVault
+    );
+
+    /**
+     * @param caller function caller (msg.sender)
+     * @param requestId request id
+     */
+    event RepayLpLoanRequest(address indexed caller, uint256 indexed requestId);
+
+    /**
+     * @param caller function caller (msg.sender)
+     * @param requestId request id
+     */
+    event CancelLpLoanRequest(
+        address indexed caller,
+        uint256 indexed requestId
+    );
 
     /**
      * @notice redeem mToken to tokenOut if daily limit and allowance not exceeded
@@ -341,6 +341,22 @@ interface IRedemptionVault is IManageableVault {
     function rejectRequest(uint256 requestId) external;
 
     /**
+     * @notice repaying loan requests from the `requestIds` array
+     * Transfers tokenOut to loan repayment address
+     * Transfers fee in tokenOut to loan lp fee receiver
+     * Sets request flags to Processed.
+     * @param requestIds request ids array
+     */
+    function bulkRepayLpLoanRequest(uint256[] calldata requestIds) external;
+
+    /**
+     * @notice canceling loan request
+     * Sets request flags to Canceled.
+     * @param requestId request id
+     */
+    function cancelLpLoanRequest(uint256 requestId) external;
+
+    /**
      * @notice set new min amount for fiat requests
      * @param newValue new min amount
      */
@@ -375,6 +391,18 @@ interface IRedemptionVault is IManageableVault {
      * @param newLoanLp new address of loan liquidity provider
      */
     function setLoanLp(address newLoanLp) external;
+
+    /**
+     * @notice set address of loan repayment address
+     * @param newLoanRepaymentAddress new address of loan repayment address
+     */
+    function setLoanRepaymentAddress(address newLoanRepaymentAddress) external;
+
+    /**
+     * @notice set address of loan swapper vault
+     * @param newLoanSwapperVault new address of loan swapper vault
+     */
+    function setLoanSwapperVault(address newLoanSwapperVault) external;
 
     /**
      * @notice backward compatibility function for getting V1 request struct

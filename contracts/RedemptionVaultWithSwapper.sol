@@ -40,6 +40,9 @@ contract RedemptionVaultWithSwapper is
      */
     IRedemptionVault public mTbillRedemptionVault;
 
+    /**
+     * @notice liquidity provider to pull mToken1 from
+     */
     address public liquidityProvider;
 
     /**
@@ -121,15 +124,11 @@ contract RedemptionVaultWithSwapper is
         address tokenOutCopy = tokenOut;
         uint256 minReceiveAmountCopy = minReceiveAmount;
 
-        (uint256 amountMTokenInUsd, uint256 mTokenRate) = _convertMTokenToUsd(
-            amountMTokenInCopy,
-            0
-        );
-        (uint256 amountTokenOut, uint256 tokenOutRate) = _convertUsdToToken(
-            amountMTokenInUsd,
-            tokenOutCopy,
-            0
-        );
+        (
+            uint256 amountTokenOut,
+            uint256 mTokenRate,
+            uint256 tokenOutRate
+        ) = _convertMTokenToTokenOut(amountMTokenInCopy, 0, tokenOutCopy, 0);
 
         uint256 amountTokenOutWithoutFee = _truncate(
             (amountMTokenWithoutFee * mTokenRate) / tokenOutRate,
@@ -254,11 +253,7 @@ contract RedemptionVaultWithSwapper is
         view
         returns (uint256 feeAmount, uint256 amountMTokenWithoutFee)
     {
-        require(amountMTokenIn > 0, "RV: invalid amount");
-
-        if (!isFreeFromMinAmount[user]) {
-            require(minAmount <= amountMTokenIn, "RV: amount < min");
-        }
+        _validateMTokenAmount(user, amountMTokenIn, false);
 
         feeAmount = _getFeeAmount(
             _getFee(user, tokenOut, true, 0),

@@ -2,18 +2,14 @@
 pragma solidity 0.8.9;
 
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
-
-import "./interfaces/IRedemptionVault.sol";
-import "./interfaces/IDataFeed.sol";
-
-import "./abstract/ManageableVault.sol";
-
-import "./access/Greenlistable.sol";
-
-import "hardhat/console.sol";
+import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
+import {IRedemptionVault, CommonVaultInitParams, MTokenInitParams, ReceiversInitParams, InstantInitParams, RedemptionInitParams, LiquidityProviderLoanRequest, Request, RequestV2, RequestStatus} from "./interfaces/IRedemptionVault.sol";
+import {TokenConfig} from "./interfaces/IManageableVault.sol";
+import {ManageableVault} from "./abstract/ManageableVault.sol";
 
 /**
  * @title RedemptionVault
@@ -23,7 +19,7 @@ import "hardhat/console.sol";
 contract RedemptionVault is ManageableVault, IRedemptionVault {
     using DecimalsCorrectionLibrary for uint256;
     using Counters for Counters.Counter;
-
+    using SafeERC20 for IERC20;
     /**
      * @notice return data of _calcAndValidateRedeem
      * packed into a struct to avoid stack too deep errors
@@ -45,33 +41,36 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
     /**
      * @dev default role that grants admin rights to the contract
+     * keccak256("REDEMPTION_VAULT_ADMIN_ROLE")
      */
     bytes32 private constant _DEFAULT_REDEMPTION_VAULT_ADMIN_ROLE =
-        keccak256("REDEMPTION_VAULT_ADMIN_ROLE");
+        0x57df534b215589c7ade8c8abe0978debf2ea95cf1d442550f94eec78a69d238e;
 
     /**
      * @dev selector for redeem instant
+     * keccak256("redeemInstant(address,uint256,uint256)")
      */
-    bytes4 private constant _REDEEM_INSTANT_SELECTOR =
-        bytes4(keccak256("redeemInstant(address,uint256,uint256)"));
+    bytes4 private constant _REDEEM_INSTANT_SELECTOR = bytes4(0x8b53f75e);
 
     /**
      * @dev selector for redeem instant with custom recipient
+     * keccak256("redeemInstant(address,uint256,uint256,address)")
      */
     bytes4 private constant _REDEEM_INSTANT_WITH_CUSTOM_RECIPIENT_SELECTOR =
-        bytes4(keccak256("redeemInstant(address,uint256,uint256,address)"));
+        bytes4(0x85ab2c13);
 
     /**
      * @dev selector for redeem request
+     * keccak256("redeemRequest(address,uint256)")
      */
-    bytes4 private constant _REDEEM_REQUEST_SELECTOR =
-        bytes4(keccak256("redeemRequest(address,uint256)"));
+    bytes4 private constant _REDEEM_REQUEST_SELECTOR = bytes4(0xbfc2d46a);
 
     /**
      * @dev selector for redeem request with custom recipient
+     * keccak256("redeemRequest(address,uint256,address)")
      */
     bytes4 private constant _REDEEM_REQUEST_WITH_CUSTOM_RECIPIENT_SELECTOR =
-        bytes4(keccak256("redeemRequest(address,uint256,address)"));
+        bytes4(0x15571a04);
 
     /**
      * @notice min amount for fiat requests
@@ -197,23 +196,11 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 amountMTokenIn,
         uint256 minReceiveAmount
     ) external whenFnNotPaused(_REDEEM_INSTANT_SELECTOR) {
-        _validateUserAccess(msg.sender);
-
-        (
-            CalcAndValidateRedeemResult memory calcResult,
-            bool spendLiquidity
-        ) = _redeemInstant(tokenOut, amountMTokenIn, minReceiveAmount);
-
-        if (spendLiquidity) {
-            _sendTokensFromLiquidity(tokenOut, msg.sender, calcResult);
-        }
-
-        emit RedeemInstantV2(
-            msg.sender,
+        _redeemInstantWithCustomRecipient(
             tokenOut,
             amountMTokenIn,
-            calcResult.feeAmount,
-            calcResult.amountTokenOutWithoutFee
+            minReceiveAmount,
+            msg.sender
         );
     }
 
@@ -226,28 +213,11 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 minReceiveAmount,
         address recipient
     ) external whenFnNotPaused(_REDEEM_INSTANT_WITH_CUSTOM_RECIPIENT_SELECTOR) {
-        _validateUserAccess(msg.sender);
-
-        if (recipient != msg.sender) {
-            _validateUserAccess(recipient);
-        }
-
-        (
-            CalcAndValidateRedeemResult memory calcResult,
-            bool spendLiquidity
-        ) = _redeemInstant(tokenOut, amountMTokenIn, minReceiveAmount);
-
-        if (spendLiquidity) {
-            _sendTokensFromLiquidity(tokenOut, recipient, calcResult);
-        }
-
-        emit RedeemInstantWithCustomRecipientV2(
-            msg.sender,
+        _redeemInstantWithCustomRecipient(
             tokenOut,
-            recipient,
             amountMTokenIn,
-            calcResult.feeAmount,
-            calcResult.amountTokenOutWithoutFee
+            minReceiveAmount,
+            recipient
         );
     }
 
@@ -261,24 +231,13 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             uint256 /*requestId*/
         )
     {
-        _validateUserAccess(msg.sender);
-
-        (uint256 requestId, uint256 feePercent) = _redeemRequest(
-            tokenOut,
-            amountMTokenIn,
-            false,
-            msg.sender
-        );
-
-        emit RedeemRequestV2(
-            requestId,
-            msg.sender,
-            tokenOut,
-            amountMTokenIn,
-            feePercent
-        );
-
-        return requestId;
+        return
+            _redeemRequestWithCustomRecipient(
+                tokenOut,
+                amountMTokenIn,
+                msg.sender,
+                false
+            );
     }
 
     /**
@@ -295,29 +254,13 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             uint256 /*requestId*/
         )
     {
-        _validateUserAccess(msg.sender);
-
-        if (recipient != msg.sender) {
-            _validateUserAccess(recipient);
-        }
-
-        (uint256 requestId, uint256 feePercent) = _redeemRequest(
-            tokenOut,
-            amountMTokenIn,
-            false,
-            recipient
-        );
-
-        emit RedeemRequestWithCustomRecipientV2(
-            requestId,
-            msg.sender,
-            tokenOut,
-            recipient,
-            amountMTokenIn,
-            feePercent
-        );
-
-        return requestId;
+        return
+            _redeemRequestWithCustomRecipient(
+                tokenOut,
+                amountMTokenIn,
+                recipient,
+                false
+            );
     }
 
     /**
@@ -330,24 +273,13 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             uint256 /*requestId*/
         )
     {
-        _validateUserAccess(msg.sender);
-
-        (uint256 requestId, uint256 feePercent) = _redeemRequest(
-            MANUAL_FULLFILMENT_TOKEN,
-            amountMTokenIn,
-            true,
-            msg.sender
-        );
-
-        emit RedeemRequestV2(
-            requestId,
-            msg.sender,
-            MANUAL_FULLFILMENT_TOKEN,
-            amountMTokenIn,
-            feePercent
-        );
-
-        return requestId;
+        return
+            _redeemRequestWithCustomRecipient(
+                MANUAL_FULLFILMENT_TOKEN,
+                amountMTokenIn,
+                msg.sender,
+                true
+            );
     }
 
     /**
@@ -357,15 +289,13 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         external
         onlyVaultAdmin
     {
-        for (uint256 i = 0; i < requestIds.length; i++) {
+        for (uint256 i = 0; i < requestIds.length; ++i) {
             uint256 rate = _redeemRequests[requestIds[i]].mTokenRate;
             bool success = _approveRequest(requestIds[i], rate, true, true);
 
             if (!success) {
                 continue;
             }
-
-            emit SafeApproveRequest(requestIds[i], rate);
         }
     }
 
@@ -385,8 +315,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         onlyVaultAdmin
     {
         _approveRequest(requestId, newMTokenRate, false, false);
-
-        emit ApproveRequest(requestId, newMTokenRate);
     }
 
     /**
@@ -397,8 +325,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         onlyVaultAdmin
     {
         _approveRequest(requestId, newMTokenRate, true, false);
-
-        emit SafeApproveRequest(requestId, newMTokenRate);
     }
 
     /**
@@ -412,6 +338,61 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         _redeemRequests[requestId].status = RequestStatus.Canceled;
 
         emit RejectRequest(requestId, request.sender);
+    }
+
+    /**
+     * @inheritdoc IRedemptionVault
+     */
+    function bulkRepayLpLoanRequest(uint256[] calldata requestIds)
+        external
+        onlyVaultAdmin
+    {
+        for (uint256 i = 0; i < requestIds.length; ++i) {
+            LiquidityProviderLoanRequest memory request = loanRequests[
+                requestIds[i]
+            ];
+
+            _validateRequest(request.tokenOut, request.status);
+
+            uint256 decimals = _tokenDecimals(request.tokenOut);
+
+            _tokenTransferFromTo(
+                request.tokenOut,
+                loanRepaymentAddress,
+                loanLp,
+                request.amountTokenOut,
+                decimals
+            );
+
+            if (request.amountFee > 0) {
+                require(
+                    loanLpFeeReceiver != address(0),
+                    "RV: !loanLpFeeReceiver"
+                );
+                _tokenTransferFromTo(
+                    request.tokenOut,
+                    loanRepaymentAddress,
+                    loanLpFeeReceiver,
+                    request.amountFee,
+                    decimals
+                );
+            }
+
+            loanRequests[requestIds[i]].status = RequestStatus.Processed;
+            emit RepayLpLoanRequest(msg.sender, requestIds[i]);
+        }
+    }
+
+    /**
+     * @inheritdoc IRedemptionVault
+     */
+    function cancelLpLoanRequest(uint256 requestId) external onlyVaultAdmin {
+        require(
+            loanRequests[requestId].status == RequestStatus.Pending,
+            "RV: loan request not pending"
+        );
+        loanRequests[requestId].status = RequestStatus.Canceled;
+        emit CancelLpLoanRequest(msg.sender, requestId);
     }
 
     /**
@@ -478,11 +459,35 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
+    function setLoanRepaymentAddress(address newLoanRepaymentAddress)
+        external
+        onlyVaultAdmin
+    {
+        loanRepaymentAddress = newLoanRepaymentAddress;
+
+        emit SetLoanRepaymentAddress(msg.sender, newLoanRepaymentAddress);
+    }
+
+    /**
+     * @inheritdoc IRedemptionVault
+     */
+    function setLoanSwapperVault(address newLoanSwapperVault)
+        external
+        onlyVaultAdmin
+    {
+        loanSwapperVault = IRedemptionVault(newLoanSwapperVault);
+
+        emit SetLoanSwapperVault(msg.sender, newLoanSwapperVault);
+    }
+
+    /**
+     * @inheritdoc IRedemptionVault
+     */
     function safeBulkApproveRequest(
         uint256[] calldata requestIds,
         uint256 newOutRate
     ) public onlyVaultAdmin {
-        for (uint256 i = 0; i < requestIds.length; i++) {
+        for (uint256 i = 0; i < requestIds.length; ++i) {
             bool success = _approveRequest(
                 requestIds[i],
                 newOutRate,
@@ -493,8 +498,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             if (!success) {
                 continue;
             }
-
-            emit SafeApproveRequest(requestIds[i], newOutRate);
         }
     }
 
@@ -535,19 +538,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function vaultRole() public pure virtual override returns (bytes32) {
         return _DEFAULT_REDEMPTION_VAULT_ADMIN_ROLE;
-    }
-
-    /**
-     * @inheritdoc Greenlistable
-     */
-    function greenlistTogglerRole()
-        public
-        view
-        virtual
-        override
-        returns (bytes32)
-    {
-        return vaultRole();
     }
 
     /**
@@ -619,11 +609,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 calcResult.tokenOutDecimals
             );
 
-            console.log(
-                "calcResult.amountTokenOutWithoutFee",
-                calcResult.amountTokenOutWithoutFee
-            );
-
             _tokenTransferFromTo(
                 request.tokenOut,
                 requestRedeemer,
@@ -644,6 +629,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         request.mTokenRate = newMTokenRate;
         _redeemRequests[requestId] = request;
 
+        emit ApproveRequest(requestId, newMTokenRate, isSafe);
+
         return true;
     }
 
@@ -651,15 +638,98 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @notice validates request
      * if exist
      * if not processed
-     * @param sender sender address
+     * @param validateAddress address to check if not zero
      * @param status request status
      */
-    function _validateRequest(address sender, RequestStatus status)
+    function _validateRequest(address validateAddress, RequestStatus status)
         internal
         pure
     {
-        require(sender != address(0), "RV: request not exist");
+        require(validateAddress != address(0), "RV: request not exist");
         require(status == RequestStatus.Pending, "RV: request not pending");
+    }
+
+    /**
+     * @dev internal redeem instant logic with custom recipient
+
+     * @param tokenOut tokenOut address
+     * @param amountMTokenIn amount of mToken (decimals 18)
+     * @param minReceiveAmount min amount of tokenOut to receive (decimals 18)
+     * @param recipient recipient address
+     */
+    function _redeemInstantWithCustomRecipient(
+        address tokenOut,
+        uint256 amountMTokenIn,
+        uint256 minReceiveAmount,
+        address recipient
+    ) private {
+        _validateUserAccess(msg.sender);
+
+        if (recipient != msg.sender) {
+            _validateUserAccess(recipient);
+        }
+
+        (
+            CalcAndValidateRedeemResult memory calcResult,
+            bool spendLiquidity
+        ) = _redeemInstant(tokenOut, amountMTokenIn, minReceiveAmount);
+
+        if (spendLiquidity) {
+            _sendTokensFromLiquidity(tokenOut, recipient, calcResult);
+        }
+
+        emit RedeemInstantV2(
+            msg.sender,
+            tokenOut,
+            recipient,
+            amountMTokenIn,
+            calcResult.feeAmount,
+            calcResult.amountTokenOutWithoutFee
+        );
+    }
+
+    /**
+     * @dev internal redeem request logic with custom recipient
+     * @param tokenOut tokenOut address
+     * @param amountMTokenIn amount of mToken (decimals 18)
+     * @param recipient recipient address
+     * @param isFiat is fiat requests
+     * @return requestId request id
+     */
+    function _redeemRequestWithCustomRecipient(
+        address tokenOut,
+        uint256 amountMTokenIn,
+        address recipient,
+        bool isFiat
+    )
+        private
+        returns (
+            uint256 /* requestId */
+        )
+    {
+        _validateUserAccess(msg.sender);
+
+        if (recipient != msg.sender) {
+            _validateUserAccess(recipient);
+        }
+
+        (uint256 requestId, uint256 feePercent) = _redeemRequest(
+            tokenOut,
+            amountMTokenIn,
+            isFiat,
+            recipient
+        );
+
+        emit RedeemRequestV2(
+            requestId,
+            msg.sender,
+            tokenOut,
+            recipient,
+            amountMTokenIn,
+            feePercent
+        );
+
+        return requestId;
     }
 
     /**
@@ -708,7 +778,20 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         _requireAndUpdateAllowance(tokenOut, calcResult.amountTokenOut);
 
         mToken.burn(user, amountMTokenIn);
+
+        _postRedeemInstant(tokenOut, calcResult);
     }
+
+    /**
+     * @dev internal post redeem instant hook logic
+     * can be overridden by the child contract to add custom logic
+     * @param tokenOut tokenOut address
+     * @param calcResult calculated redeem instant result
+     */
+    function _postRedeemInstant(
+        address tokenOut,
+        CalcAndValidateRedeemResult memory calcResult
+    ) internal virtual {}
 
     function _sendTokensFromLiquidity(
         address tokenOut,
@@ -735,27 +818,22 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         uint256 vaultFeePortion = calcResult.feeAmount - lpFeePortion;
 
-        uint256 toTransferFromVault = toUseVaultLiquidity - vaultFeePortion;
         uint256 toTransferFromLp = toUseLpLiquidity - lpFeePortion;
+
+        // transfer from lp liquidity to vault liquidity
+        if (toTransferFromLp > 0) {
+            _useLoanLpLiquidity(
+                tokenOut,
+                toTransferFromLp,
+                calcResult.tokenOutRate
+            );
+        }
 
         // transfer from vault liquidity to user
         _tokenTransferToUser(
             tokenOut,
             recipient,
-            toTransferFromVault,
-            calcResult.tokenOutDecimals
-        );
-
-        // transfer from lp liquidity to user
-        if (toTransferFromLp > 0) {
-            require(loanLp != address(0), "RV: loanLp not set");
-        }
-
-        _tokenTransferFromTo(
-            tokenOut,
-            loanLp,
-            recipient,
-            toTransferFromLp,
+            calcResult.amountTokenOutWithoutFee,
             calcResult.tokenOutDecimals
         );
 
@@ -792,6 +870,48 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         }
     }
 
+    function _useLoanLpLiquidity(
+        address tokenOut,
+        uint256 amountTokenOutBase18,
+        uint256 tokenOutRate
+    ) internal {
+        address _loanLp = loanLp;
+        IRedemptionVault _loanSwapperVault = loanSwapperVault;
+
+        require(
+            _loanLp != address(0) && address(_loanSwapperVault) != address(0),
+            "RV: loan lp not configured"
+        );
+
+        uint256 mTokenARate = _loanSwapperVault
+            .mTokenDataFeed()
+            .getDataInBase18();
+
+        // Ceil so the inner vault's floored output is still >= amountTokenOutBase18.
+        // Requires address(this) to have waivedFeeRestriction on the inner vault
+        uint256 mTokenAAmount = Math.mulDiv(
+            amountTokenOutBase18,
+            tokenOutRate,
+            mTokenARate,
+            Math.Rounding.Up
+        );
+
+        IERC20 mTokenA = IERC20(address(_loanSwapperVault.mToken()));
+
+        mTokenA.transferFrom(_loanLp, address(this), mTokenAAmount);
+
+        mTokenA.safeIncreaseAllowance(
+            address(_loanSwapperVault),
+            mTokenAAmount
+        );
+
+        _loanSwapperVault.redeemInstant(
+            tokenOut,
+            mTokenAAmount,
+            amountTokenOutBase18
+        );
+    }
+
     /**
      * @notice internal redeem request logic
      * @param tokenOut tokenOut address
@@ -816,13 +936,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         address user = msg.sender;
 
-        // TODO: move to function
-        require(amountMTokenIn > 0, "RV: invalid amount");
-
-        if (!isFreeFromMinAmount[user]) {
-            uint256 minRedeemAmount = isFiat ? minFiatRedeemAmount : minAmount;
-            require(minRedeemAmount <= amountMTokenIn, "RV: amount < min");
-        }
+        _validateMTokenAmount(user, amountMTokenIn, isFiat);
 
         feePercent = _getFee(
             user,
@@ -831,13 +945,9 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             isFiat ? fiatAdditionalFee : 0
         );
 
-        // TODO: move to function
-        (uint256 amountMTokenInUsd, uint256 mTokenRate) = _convertMTokenToUsd(
+        (, uint256 mTokenRate, uint256 tokenOutRate) = _convertMTokenToTokenOut(
             amountMTokenIn,
-            0
-        );
-        (, uint256 tokenOutRate) = _convertUsdToToken(
-            amountMTokenInUsd,
+            0,
             tokenOut,
             0
         );
@@ -946,26 +1056,23 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         virtual
         returns (CalcAndValidateRedeemResult memory result)
     {
-        require(amountMTokenIn > 0, "RV: invalid amount");
-
         if (!isFiat) {
             _requireTokenExists(tokenOut);
         }
 
-        if (!isFreeFromMinAmount[user]) {
-            uint256 minRedeemAmount = isFiat ? minFiatRedeemAmount : minAmount;
-            require(minRedeemAmount <= amountMTokenIn, "RV: amount < min");
-        }
+        _validateMTokenAmount(user, amountMTokenIn, isFiat);
 
-        (uint256 amountMTokenInUsd, uint256 mTokenRate) = _convertMTokenToUsd(
-            amountMTokenIn,
-            overrideMTokenRate
-        );
-        (uint256 amountTokenOut, uint256 tokenOutRate) = _convertUsdToToken(
-            amountMTokenInUsd,
-            tokenOut,
-            overrideTokenOutRate
-        );
+        (
+            uint256 amountTokenOut,
+            uint256 mTokenRate,
+            uint256 tokenOutRate
+        ) = _convertMTokenToTokenOut(
+                amountMTokenIn,
+                overrideMTokenRate,
+                tokenOut,
+                overrideTokenOutRate
+            );
+
         result.tokenOutDecimals = _tokenDecimals(tokenOut);
         result.tokenOutRate = tokenOutRate;
         result.mTokenRate = mTokenRate;
@@ -1002,6 +1109,62 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         result.amountTokenOutWithoutFee = amountTokenOut - result.feeAmount;
     }
 
+    /**
+     * @dev converts mToken to tokenOut amount
+     * @param amountMTokenIn amount of mToken
+     * @param overrideMTokenRate override mToken rate if not zero
+     * @param tokenOut tokenOut address
+     * @param overrideTokenOutRate override token rate if not zero
+     *
+     * @return amountTokenOut amount of tokenOut
+     * @return mTokenRate conversion rate
+     * @return tokenOutRate conversion rate
+     */
+    function _convertMTokenToTokenOut(
+        uint256 amountMTokenIn,
+        uint256 overrideMTokenRate,
+        address tokenOut,
+        uint256 overrideTokenOutRate
+    )
+        internal
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        (uint256 amountMTokenInUsd, uint256 mTokenRate) = _convertMTokenToUsd(
+            amountMTokenIn,
+            overrideMTokenRate
+        );
+        (uint256 amountTokenOut, uint256 tokenOutRate) = _convertUsdToToken(
+            amountMTokenInUsd,
+            tokenOut,
+            overrideTokenOutRate
+        );
+        return (amountTokenOut, mTokenRate, tokenOutRate);
+    }
+
+    /**
+     * @dev validates mToken amount for different constraints
+     * @param user user address
+     * @param amountMTokenIn amount of mToken
+     * @param isFiat is fiat operation
+     */
+    function _validateMTokenAmount(
+        address user,
+        uint256 amountMTokenIn,
+        bool isFiat
+    ) internal view {
+        require(amountMTokenIn > 0, "RV: invalid amount");
+
+        if (!isFreeFromMinAmount[user]) {
+            uint256 minRedeemAmount = isFiat ? minFiatRedeemAmount : minAmount;
+            require(minRedeemAmount <= amountMTokenIn, "RV: amount < min");
+        }
+    }
+
     /*
      * @dev validates that liquidity of provided token on `requestRedeemer` is enough
      * @param token token address
@@ -1023,14 +1186,5 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     {
         uint256 balance = IERC20(token).balanceOf(requestRedeemer);
         return balance >= requiredLiquidity.convertFromBase18(tokenDecimals);
-    }
-
-    /**
-     * @dev gets and validates mToken rate
-     * @return mTokenRate mToken rate
-     */
-    function _getMTokenRate() private view returns (uint256 mTokenRate) {
-        mTokenRate = _getTokenRate(address(mTokenDataFeed), false);
-        require(mTokenRate > 0, "RV: rate zero");
     }
 }

@@ -25,6 +25,7 @@ import {
   RedemptionVaultWithMToken,
   RedemptionVaultWithSwapper,
   RedemptionVaultWithUSTB,
+  RedemptionVaultTest__factory,
 } from '../../typechain-types';
 
 type CommonParamsRedeem = {
@@ -80,6 +81,18 @@ export const redeemInstantTest = async (
 
   const tokenContract = ERC20__factory.connect(tokenOut, owner);
 
+  const loanSwapperVault = await redemptionVault.loanSwapperVault();
+  const loanSwapperVaultMToken =
+    loanSwapperVault !== constants.AddressZero
+      ? ERC20__factory.connect(
+          await RedemptionVaultTest__factory.connect(
+            loanSwapperVault,
+            owner,
+          ).mToken(),
+          owner,
+        )
+      : undefined;
+
   const sender = opt?.from ?? owner;
 
   const amountIn = parseUnits(amountTBillIn.toString());
@@ -119,12 +132,15 @@ export const redeemInstantTest = async (
   const balanceBeforeReceiver = await mTBILL.balanceOf(tokensReceiver);
   const balanceBeforeFeeReceiverMToken = await mTBILL.balanceOf(feeReceiver);
   const balanceBeforeFeeReceiver = await tokenContract.balanceOf(feeReceiver);
-  const balanceBeforeLoanLp = await tokenContract.balanceOf(
-    await redemptionVault.loanLp(),
-  );
+  const balanceBeforeLoanLp = loanSwapperVaultMToken
+    ? await loanSwapperVaultMToken.balanceOf(await redemptionVault.loanLp())
+    : constants.Zero;
   const balanceBeforeLoanLpFeeReceiver = await tokenContract.balanceOf(
     await redemptionVault.loanLpFeeReceiver(),
   );
+  const supplyBeforeLoanLp = loanSwapperVaultMToken
+    ? await loanSwapperVaultMToken.totalSupply()
+    : constants.Zero;
   const balanceBeforeVault = await tokenContract.balanceOf(
     redemptionVault.address,
   );
@@ -143,6 +159,7 @@ export const redeemInstantTest = async (
     amountOutWithoutFee,
     amountOutWithoutFeeBase18,
     feeBase18,
+    tokenOutRate,
   } = await calcExpectedTokenOutAmount(
     sender,
     tokenContract,
@@ -155,7 +172,7 @@ export const redeemInstantTest = async (
   const {
     toTransferFromVault,
     toTransferFromLpBase18,
-    toTransferFromLp,
+    toTransferFromLpMToken,
     lpFeePortionBase18,
     vaultFeePortion,
   } = await estimateSendTokensFromLiquidity(
@@ -163,15 +180,14 @@ export const redeemInstantTest = async (
     tokenContract,
     amountOutWithoutFeeBase18!,
     feeBase18!,
+    tokenOutRate,
   );
 
   await expect(callFn())
     .to.emit(
       redemptionVault,
       redemptionVault.interface.events[
-        withRecipient
-          ? 'RedeemInstantWithCustomRecipientV2(address,address,address,uint256,uint256,uint256)'
-          : 'RedeemInstantV2(address,address,uint256,uint256,uint256)'
+        'RedeemInstantV2(address,address,address,uint256,uint256,uint256)'
       ].name,
     )
     .withArgs(
@@ -189,9 +205,13 @@ export const redeemInstantTest = async (
   const balanceAfterReceiver = await mTBILL.balanceOf(tokensReceiver);
   const balanceAfterFeeReceiverMToken = await mTBILL.balanceOf(feeReceiver);
   const balanceAfterFeeReceiver = await tokenContract.balanceOf(feeReceiver);
-  const balanceAfterLoanLp = await tokenContract.balanceOf(
-    await redemptionVault.loanLp(),
-  );
+  const balanceAfterLoanLp = loanSwapperVaultMToken
+    ? await loanSwapperVaultMToken.balanceOf(await redemptionVault.loanLp())
+    : constants.Zero;
+  const supplyAfterLoanLp = loanSwapperVaultMToken
+    ? await loanSwapperVaultMToken.totalSupply()
+    : constants.Zero;
+
   const balanceAfterLoanLpFeeReceiver = await tokenContract.balanceOf(
     await redemptionVault.loanLpFeeReceiver(),
   );
@@ -232,7 +252,12 @@ export const redeemInstantTest = async (
   }
 
   if (toTransferFromLpBase18.gt(0)) {
-    expect(balanceAfterLoanLp).eq(balanceBeforeLoanLp.sub(toTransferFromLp));
+    expect(balanceAfterLoanLp).eq(
+      balanceBeforeLoanLp.sub(toTransferFromLpMToken),
+    );
+    expect(supplyAfterLoanLp).eq(
+      supplyBeforeLoanLp.sub(toTransferFromLpMToken),
+    );
     expect(balanceAfterLoanLpFeeReceiver).eq(balanceBeforeLoanLpFeeReceiver);
 
     const loanRequest = await redemptionVault.loanRequests(
@@ -325,9 +350,7 @@ export const redeemRequestTest = async (
     .to.emit(
       redemptionVault,
       redemptionVault.interface.events[
-        withRecipient
-          ? 'RedeemRequestWithCustomRecipientV2(uint256,address,address,address,uint256,uint256)'
-          : 'RedeemRequestV2(uint256,address,address,uint256,uint256)'
+        'RedeemRequestV2(uint256,address,address,address,uint256,uint256)'
       ].name,
     )
     .withArgs(
@@ -448,7 +471,7 @@ export const redeemFiatRequestTest = async (
     .to.emit(
       redemptionVault,
       redemptionVault.interface.events[
-        'RedeemRequestV2(uint256,address,address,uint256,uint256)'
+        'RedeemRequestV2(uint256,address,address,address,uint256,uint256)'
       ].name,
     )
     .withArgs(
@@ -542,9 +565,10 @@ export const approveRedeemRequestTest = async (
   )
     .to.emit(
       redemptionVault,
-      redemptionVault.interface.events['ApproveRequest(uint256,uint256)'].name,
+      redemptionVault.interface.events['ApproveRequest(uint256,uint256,bool)']
+        .name,
     )
-    .withArgs(requestId, newTokenRate).to.not.reverted;
+    .withArgs(requestId, newTokenRate, false).to.not.reverted;
 
   const requestDataAfter = await redemptionVault.redeemRequestsV2(requestId);
 
@@ -655,10 +679,10 @@ export const safeApproveRedeemRequestTest = async (
   )
     .to.emit(
       redemptionVault,
-      redemptionVault.interface.events['SafeApproveRequest(uint256,uint256)']
+      redemptionVault.interface.events['ApproveRequest(uint256,uint256,bool)']
         .name,
     )
-    .withArgs(requestId, newTokenRate).to.not.reverted;
+    .withArgs(requestId, newTokenRate, true).to.not.reverted;
 
   const requestDataAfter = await redemptionVault.redeemRequestsV2(requestId);
 
@@ -697,6 +721,193 @@ export const safeApproveRedeemRequestTest = async (
   expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver);
   if (waivedFee) {
     expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver);
+  }
+};
+
+export const bulkRepayLpLoanRequestTest = async (
+  {
+    redemptionVault,
+    owner,
+    mTBILL,
+  }: Omit<CommonParamsRedeem, 'mTokenToUsdDataFeed'>,
+  requests: { id: BigNumberish }[],
+  opt?: OptionalCommonParams,
+) => {
+  const sender = opt?.from ?? owner;
+
+  const requestIds = requests.map(({ id }) => id);
+
+  const callFn = redemptionVault
+    .connect(sender)
+    .bulkRepayLpLoanRequest.bind(this, requestIds);
+
+  if (opt?.revertMessage) {
+    await expect(callFn()).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  const loanRepaymentAddress = await redemptionVault.loanRepaymentAddress();
+  const loanLpFeeReceiver = await redemptionVault.loanLpFeeReceiver();
+  const loanLp = await redemptionVault.loanLp();
+
+  const requestDatasBefore = await Promise.all(
+    requestIds.map((requestId) => redemptionVault.loanRequests(requestId)),
+  );
+
+  const balancesBefore = await Promise.all(
+    requestDatasBefore.map(({ tokenOut }) =>
+      balanceOfBase18(
+        ERC20__factory.connect(tokenOut, owner),
+        loanRepaymentAddress,
+      ),
+    ),
+  );
+
+  const balancesLpBefore = await Promise.all(
+    requestDatasBefore.map(({ tokenOut }) =>
+      balanceOfBase18(ERC20__factory.connect(tokenOut, owner), loanLp),
+    ),
+  );
+
+  const balancesFeeBefore = await Promise.all(
+    requestDatasBefore.map(({ tokenOut }) =>
+      balanceOfBase18(
+        ERC20__factory.connect(tokenOut, owner),
+        loanLpFeeReceiver,
+      ),
+    ),
+  );
+
+  const totalSupplyBefore = await mTBILL.totalSupply();
+
+  const feePercents = await Promise.all(
+    requestDatasBefore.map((requestData) => requestData.amountFee),
+  );
+
+  const expectedReceivedAmounts = await Promise.all(
+    requestDatasBefore.map(async (requestData) => {
+      return requestData.amountTokenOut;
+    }),
+  );
+
+  const groupedDataBefore = requests.map(({ id }, index) => {
+    return {
+      id,
+      request: requestDatasBefore[index],
+      expectedReceivedAmount: expectedReceivedAmounts[index],
+      expectedReceivedFeeAmount: feePercents[index],
+      balance: balancesBefore[index],
+      balanceFee: balancesFeeBefore[index],
+      balanceLp: balancesLpBefore[index],
+    };
+  });
+  const expectedTotalBurned = BigNumber.from(0);
+
+  const txPromise = callFn();
+  await expect(txPromise).to.not.reverted;
+
+  const txReceipt = await (await txPromise).wait();
+
+  const parsedLogs = txReceipt.logs
+    .filter((v) => v.address === redemptionVault.address)
+    .map((log) => redemptionVault.interface.parseLog(log))
+    .filter((v) => v.name === 'RepayLpLoanRequest')
+    .map((v) => v.args);
+
+  const requestDatasAfter = await Promise.all(
+    requestIds.map((requestId) => redemptionVault.loanRequests(requestId)),
+  );
+
+  const balancesAfter = await Promise.all(
+    requestDatasAfter.map(({ tokenOut }) =>
+      balanceOfBase18(
+        ERC20__factory.connect(tokenOut, owner),
+        loanRepaymentAddress,
+      ),
+    ),
+  );
+
+  const balancesFeeAfter = await Promise.all(
+    requestDatasAfter.map(({ tokenOut }) =>
+      balanceOfBase18(
+        ERC20__factory.connect(tokenOut, owner),
+        loanLpFeeReceiver,
+      ),
+    ),
+  );
+
+  const balancesLpAfter = await Promise.all(
+    requestDatasAfter.map(({ tokenOut }) =>
+      balanceOfBase18(ERC20__factory.connect(tokenOut, owner), loanLp),
+    ),
+  );
+
+  const totalSupplyAfter = await mTBILL.totalSupply();
+
+  const groupedDataAfter = requests.map(({ id }, index) => {
+    return {
+      id,
+      request: requestDatasAfter[index],
+      balance: balancesAfter[index],
+      balanceFee: balancesFeeAfter[index],
+      balanceLp: balancesLpAfter[index],
+    };
+  });
+
+  expect(totalSupplyAfter).eq(totalSupplyBefore.sub(expectedTotalBurned));
+
+  for (const [i, { id, ...dataBefore }] of groupedDataBefore.entries()) {
+    const dataAfter = groupedDataAfter[i];
+
+    const requestDataBefore = dataBefore.request;
+    const requestDataAfter = dataAfter.request;
+
+    const balanceAfter = dataAfter.balance;
+    const balanceFeeAfter = dataAfter.balanceFee;
+    const balanceLpAfter = dataAfter.balanceLp;
+
+    const balanceBefore = dataBefore.balance;
+    const balanceFeeBefore = dataBefore.balanceFee;
+    const balanceLpBefore = dataBefore.balanceLp;
+
+    expect(requestDataAfter.amountFee).eq(requestDataBefore.amountFee);
+    expect(requestDataAfter.tokenOut).eq(requestDataBefore.tokenOut);
+    expect(requestDataAfter.amountTokenOut).eq(
+      requestDataBefore.amountTokenOut,
+    );
+
+    const logs = parsedLogs.filter((log) => log.requestId.eq(id));
+
+    const expectedReceivedAggregatedByUser = groupedDataBefore
+      .filter((v) => v.request.tokenOut === requestDataBefore.tokenOut)
+      .reduce((prev, curr) => {
+        return prev.add(curr.expectedReceivedAmount);
+      }, BigNumber.from(0));
+
+    const expectedReceivedFeeAggregatedByUser = groupedDataBefore
+      .filter((v) => v.request.tokenOut === requestDataBefore.tokenOut)
+      .reduce((prev, curr) => {
+        return prev.add(curr.expectedReceivedFeeAmount);
+      }, BigNumber.from(0));
+
+    expect(logs.length).eq(1);
+    expect(requestDataAfter.status).eq(1);
+    expect(balanceAfter).eq(
+      balanceBefore.sub(
+        expectedReceivedAggregatedByUser.add(
+          expectedReceivedFeeAggregatedByUser,
+        ),
+      ),
+    );
+    expect(balanceFeeAfter).eq(
+      balanceFeeBefore.add(expectedReceivedFeeAggregatedByUser),
+    );
+    expect(balanceLpAfter).eq(
+      balanceLpBefore.add(expectedReceivedAggregatedByUser),
+    );
+    const log = logs[0];
+
+    expect(log.requestId).eq(id);
   }
 };
 
@@ -814,7 +1025,7 @@ export const safeBulkApproveRequestTest = async (
   const parsedLogs = txReceipt.logs
     .filter((v) => v.address === redemptionVault.address)
     .map((log) => redemptionVault.interface.parseLog(log))
-    .filter((v) => v.name === 'SafeApproveRequest')
+    .filter((v) => v.name === 'ApproveRequest')
     .map((v) => v.args);
 
   const requestDatasAfter = await Promise.all(
@@ -1095,6 +1306,62 @@ export const setLoanLpTest = async (
   expect(newLoanLp).eq(loanLp);
 };
 
+export const setLoanRepaymentAddressTest = async (
+  { redemptionVault, owner }: CommonParams,
+  loanRepaymentAddress: string,
+  opt?: OptionalCommonParams,
+) => {
+  if (opt?.revertMessage) {
+    await expect(
+      redemptionVault
+        .connect(opt?.from ?? owner)
+        .setLoanRepaymentAddress(loanRepaymentAddress),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  await expect(
+    redemptionVault
+      .connect(opt?.from ?? owner)
+      .setLoanRepaymentAddress(loanRepaymentAddress),
+  ).to.emit(
+    redemptionVault,
+    redemptionVault.interface.events['SetLoanRepaymentAddress(address,address)']
+      .name,
+  ).to.not.reverted;
+
+  const newLoanRepaymentAddress = await redemptionVault.loanRepaymentAddress();
+  expect(newLoanRepaymentAddress).eq(loanRepaymentAddress);
+};
+
+export const setLoanSwapperVaultTest = async (
+  { redemptionVault, owner }: CommonParams,
+  loanSwapperVault: string,
+  opt?: OptionalCommonParams,
+) => {
+  if (opt?.revertMessage) {
+    await expect(
+      redemptionVault
+        .connect(opt?.from ?? owner)
+        .setLoanSwapperVault(loanSwapperVault),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  await expect(
+    redemptionVault
+      .connect(opt?.from ?? owner)
+      .setLoanSwapperVault(loanSwapperVault),
+  ).to.emit(
+    redemptionVault,
+    redemptionVault.interface.events['SetLoanSwapperVault(address,address)']
+      .name,
+  ).to.not.reverted;
+
+  const newLoanSwapperVault = await redemptionVault.loanSwapperVault();
+  expect(newLoanSwapperVault).eq(loanSwapperVault);
+};
+
 export const getFeePercent = async (
   sender: string,
   token: string,
@@ -1156,6 +1423,7 @@ export const calcExpectedTokenOutAmount = async (
       amountInWithoutFee: constants.Zero,
       fee: constants.Zero,
       currentStableRate: constants.Zero,
+      tokenOutRate: constants.Zero,
     };
 
   const tokenDecimals = await token.decimals();
@@ -1190,6 +1458,7 @@ export const calcExpectedTokenOutAmount = async (
       10 ** (18 - tokenDecimals),
     ),
     feeBase18: fee.mul(10 ** (18 - tokenDecimals)),
+    tokenOutRate: currentTokenOutRate,
   };
 };
 
@@ -1205,6 +1474,7 @@ export const estimateSendTokensFromLiquidity = async (
   tokenOut: ERC20,
   amountTokenOutWithoutFeeBase18: BigNumber,
   feeAmountBase18: BigNumber,
+  tokenOutRate: BigNumber,
 ) => {
   const decimals = await tokenOut.decimals();
   const balanceVaultBase18 = (
@@ -1212,6 +1482,23 @@ export const estimateSendTokensFromLiquidity = async (
   ).mul(10 ** (18 - decimals));
 
   const totalAmountBase18 = amountTokenOutWithoutFeeBase18.add(feeAmountBase18);
+
+  if (totalAmountBase18.eq(0)) {
+    return {
+      toTransferFromVaultBase18: constants.Zero,
+      toTransferFromLpBase18: constants.Zero,
+      lpFeePortionBase18: constants.Zero,
+      vaultFeePortionBase18: constants.Zero,
+      toUseVaultLiquidityBase18: constants.Zero,
+      toUseLpLiquidityBase18: constants.Zero,
+      toTransferFromVault: constants.Zero,
+      toTransferFromLpMToken: constants.Zero,
+      lpFeePortion: constants.Zero,
+      vaultFeePortion: constants.Zero,
+      toUseVaultLiquidity: constants.Zero,
+      toUseLpLiquidity: constants.Zero,
+    };
+  }
 
   const toUseVaultLiquidityBase18 = balanceVaultBase18.gte(totalAmountBase18)
     ? totalAmountBase18
@@ -1235,6 +1522,47 @@ export const estimateSendTokensFromLiquidity = async (
 
   const toTransferFromLpBase18 = toUseLpLiquidityBase18.sub(lpFeePortionBase18);
 
+  const loanSwapperVault = await redemptionVault.loanSwapperVault();
+  const loanSwapperVaultMTokenDataFeed =
+    loanSwapperVault !== constants.AddressZero
+      ? DataFeedTest__factory.connect(
+          await RedemptionVaultTest__factory.connect(
+            loanSwapperVault,
+            redemptionVault.provider,
+          ).mTokenDataFeed(),
+          redemptionVault.provider,
+        )
+      : undefined;
+
+  const mTokenARate = loanSwapperVaultMTokenDataFeed
+    ? await loanSwapperVaultMTokenDataFeed.getDataInBase18()
+    : constants.Zero;
+
+  if (mTokenARate.eq(0)) {
+    return {
+      toTransferFromVaultBase18,
+      toTransferFromLpBase18,
+      lpFeePortionBase18,
+      vaultFeePortionBase18,
+      toUseVaultLiquidityBase18,
+      toUseLpLiquidityBase18,
+      toTransferFromLpMToken: constants.Zero,
+      toTransferFromVault: toTransferFromVaultBase18.div(10 ** (18 - decimals)),
+      lpFeePortion: lpFeePortionBase18.div(10 ** (18 - decimals)),
+      vaultFeePortion: vaultFeePortionBase18.div(10 ** (18 - decimals)),
+      toUseVaultLiquidity: toUseVaultLiquidityBase18.div(10 ** (18 - decimals)),
+      toUseLpLiquidity: toUseLpLiquidityBase18.div(10 ** (18 - decimals)),
+    };
+  }
+
+  let mTokenAAmount = toTransferFromLpBase18.mul(tokenOutRate).div(mTokenARate);
+
+  mTokenAAmount = mTokenAAmount.add(
+    toTransferFromLpBase18
+      .mul(tokenOutRate)
+      .sub(mTokenAAmount.mul(mTokenARate)),
+  );
+
   return {
     toTransferFromVaultBase18,
     toTransferFromLpBase18,
@@ -1243,7 +1571,7 @@ export const estimateSendTokensFromLiquidity = async (
     toUseVaultLiquidityBase18,
     toUseLpLiquidityBase18,
     toTransferFromVault: toTransferFromVaultBase18.div(10 ** (18 - decimals)),
-    toTransferFromLp: toTransferFromLpBase18.div(10 ** (18 - decimals)),
+    toTransferFromLpMToken: mTokenAAmount,
     lpFeePortion: lpFeePortionBase18.div(10 ** (18 - decimals)),
     vaultFeePortion: vaultFeePortionBase18.div(10 ** (18 - decimals)),
     toUseVaultLiquidity: toUseVaultLiquidityBase18.div(10 ** (18 - decimals)),

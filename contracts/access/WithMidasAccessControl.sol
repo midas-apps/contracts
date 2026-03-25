@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "./MidasAccessControl.sol";
-import "../abstract/MidasInitializable.sol";
+import {MidasAccessControl} from "./MidasAccessControl.sol";
+import {MidasAccessControlRoles} from "./MidasAccessControlRoles.sol";
+import {MidasInitializable} from "../abstract/MidasInitializable.sol";
 
 /**
  * @title WithMidasAccessControl

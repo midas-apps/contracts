@@ -77,56 +77,22 @@ contract RedemptionVaultWithAave is RedemptionVault {
     }
 
     /**
-     * @dev Redeem mToken to the selected payment token if daily limit and allowance are not exceeded.
-     * If the contract doesn't have enough payment token, the Aave V3 withdrawal flow will be
-     * triggered to withdraw the missing amount from the Aave Pool.
-     * Burns mToken from the user.
-     * Transfers fee in mToken to feeReceiver.
-     * Transfers tokenOut to user.
-     * @param tokenOut token out address
-     * @param amountMTokenIn amount of mToken to redeem
-     * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
-     *
-     * @return calcResult calculated redeem result
-     */
-    function _redeemInstant(
-        address tokenOut,
-        uint256 amountMTokenIn,
-        uint256 minReceiveAmount
-    )
-        internal
-        override
-        returns (
-            CalcAndValidateRedeemResult memory calcResult,
-            bool spendLiquidity
-        )
-    {
-        (calcResult, spendLiquidity) = super._redeemInstant(
-            tokenOut,
-            amountMTokenIn,
-            minReceiveAmount
-        );
-
-        _checkAndRedeemAave(
-            tokenOut,
-            calcResult.amountTokenOutWithoutFee.convertFromBase18(
-                calcResult.tokenOutDecimals
-            )
-        );
-    }
-
-    /**
      * @notice Check if contract has enough tokenOut balance for redeem;
      * if not, withdraw the missing amount from the Aave V3 Pool
      * @dev The Aave Pool burns the vault's aTokens and transfers the underlying
      * asset directly to this contract. No approval is needed because the Pool
      * burns aTokens from msg.sender (this contract) internally.
      * @param tokenOut tokenOut address
-     * @param amountTokenOut amount of tokenOut needed
+     * @param calcResult calculated redeem instant result
      */
-    function _checkAndRedeemAave(address tokenOut, uint256 amountTokenOut)
-        internal
-    {
+    function _postRedeemInstant(
+        address tokenOut,
+        CalcAndValidateRedeemResult memory calcResult
+    ) internal override {
+        uint256 amountTokenOut = calcResult
+            .amountTokenOutWithoutFee
+            .convertFromBase18(calcResult.tokenOutDecimals);
+
         uint256 contractBalanceTokenOut = IERC20(tokenOut).balanceOf(
             address(this)
         );

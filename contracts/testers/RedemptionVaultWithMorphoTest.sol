@@ -7,6 +7,16 @@ contract RedemptionVaultWithMorphoTest is RedemptionVaultWithMorpho {
     function _disableInitializers() internal override {}
 
     function checkAndRedeemMorpho(address token, uint256 amount) external {
-        _checkAndRedeemMorpho(token, amount);
+        _postRedeemInstant(
+            token,
+            CalcAndValidateRedeemResult({
+                feeAmount: 0,
+                amountTokenOutWithoutFee: amount,
+                amountTokenOut: 0,
+                tokenOutRate: 0,
+                mTokenRate: 0,
+                tokenOutDecimals: 0
+            })
+        );
     }
 }
