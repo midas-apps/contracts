@@ -76,8 +76,6 @@ contract RedemptionVaultWithSwapper is
             _instantInitParams,
             _redemptionInitParams
         );
-        _validateAddress(_mTbillRedemptionVault, true);
-        _validateAddress(_liquidityProvider, false);
 
         mTbillRedemptionVault = IRedemptionVault(_mTbillRedemptionVault);
         liquidityProvider = _liquidityProvider;
@@ -92,13 +90,15 @@ contract RedemptionVaultWithSwapper is
      * @param tokenOut token out address
      * @param amountMTokenIn amount of mToken1 to redeem
      * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
+     * @param recipient recipient address
      *
      * @return calcResult calculated redeem result
      */
     function _redeemInstant(
         address tokenOut,
         uint256 amountMTokenIn,
-        uint256 minReceiveAmount
+        uint256 minReceiveAmount,
+        address recipient
     )
         internal
         override
@@ -120,17 +120,13 @@ contract RedemptionVaultWithSwapper is
 
         uint256 tokenDecimals = _tokenDecimals(tokenOut);
 
-        uint256 amountMTokenInCopy = amountMTokenIn;
-        address tokenOutCopy = tokenOut;
-        uint256 minReceiveAmountCopy = minReceiveAmount;
-
         (
             uint256 amountTokenOut,
             uint256 mTokenRate,
             uint256 tokenOutRate
-        ) = _convertMTokenToTokenOut(amountMTokenInCopy, 0, tokenOutCopy, 0);
+        ) = _convertMTokenToTokenOut(amountMTokenIn, 0, tokenOut, 0);
 
-        uint256 amountTokenOutWithoutFee = _truncate(
+        calcResult.amountTokenOutWithoutFee = _truncate(
             (amountMTokenWithoutFee * mTokenRate) / tokenOutRate,
             tokenDecimals
         );
@@ -139,45 +135,61 @@ contract RedemptionVaultWithSwapper is
             _tokenTransferFromUser(address(mToken), feeReceiver, feeAmount, 18);
 
         uint256 contractTokenOutBalance = _getBalanceOfThisBase18(
-            tokenOutCopy,
+            tokenOut,
             tokenDecimals
         );
 
-        _requireAndUpdateLimit(amountMTokenInCopy);
-        _requireAndUpdateAllowance(tokenOutCopy, amountTokenOut);
+        _requireAndUpdateLimit(amountMTokenIn);
+        _requireAndUpdateAllowance(tokenOut, amountTokenOut);
 
-        if (contractTokenOutBalance >= amountTokenOutWithoutFee) {
+        if (contractTokenOutBalance >= calcResult.amountTokenOutWithoutFee) {
             mToken.burn(user, amountMTokenWithoutFee);
         } else {
-            uint256 mTbillAmount = _swapMToken1ToMToken2(
-                amountMTokenWithoutFee
-            );
+            // saving stack size
+            {
+                address tokenOutCopy = tokenOut;
+                uint256 minReceiveAmountCopy = minReceiveAmount;
+                uint256 mTbillAmount = _swapMToken1ToMToken2(
+                    amountMTokenWithoutFee
+                );
+                IRedemptionVault _mTokenRedemptionVault = mTbillRedemptionVault;
 
-            IERC20(mTbillRedemptionVault.mToken()).safeIncreaseAllowance(
-                address(mTbillRedemptionVault),
-                mTbillAmount
-            );
+                require(
+                    address(_mTokenRedemptionVault) != address(0),
+                    "RVS: !mTokenRedemptionVault"
+                );
 
-            mTbillRedemptionVault.redeemInstant(
-                tokenOutCopy,
-                mTbillAmount,
-                minReceiveAmountCopy
-            );
+                IERC20(_mTokenRedemptionVault.mToken()).safeIncreaseAllowance(
+                    address(_mTokenRedemptionVault),
+                    mTbillAmount
+                );
+
+                _mTokenRedemptionVault.redeemInstant(
+                    tokenOutCopy,
+                    mTbillAmount,
+                    minReceiveAmountCopy
+                );
+            }
 
             uint256 contractTokenOutBalanceAfterRedeem = _getBalanceOfThisBase18(
-                    tokenOutCopy,
+                    tokenOut,
                     tokenDecimals
                 );
-            amountTokenOutWithoutFee =
+            calcResult.amountTokenOutWithoutFee =
                 contractTokenOutBalanceAfterRedeem -
                 contractTokenOutBalance;
         }
 
-        calcResult.amountTokenOutWithoutFee = amountTokenOutWithoutFee;
-
         require(
-            amountTokenOutWithoutFee >= minReceiveAmountCopy,
+            calcResult.amountTokenOutWithoutFee >= minReceiveAmount,
             "RVS: minReceiveAmount > actual"
+        );
+
+        _tokenTransferToUser(
+            tokenOut,
+            recipient,
+            calcResult.amountTokenOutWithoutFee,
+            tokenDecimals
         );
     }
 
@@ -185,9 +197,6 @@ contract RedemptionVaultWithSwapper is
      * @inheritdoc IRedemptionVaultWithSwapper
      */
     function setLiquidityProvider(address provider) external onlyVaultAdmin {
-        require(liquidityProvider != provider, "MRVS: already provider");
-        _validateAddress(provider, false);
-
         liquidityProvider = provider;
 
         emit SetLiquidityProvider(msg.sender, provider);
@@ -197,12 +206,6 @@ contract RedemptionVaultWithSwapper is
      * @inheritdoc IRedemptionVaultWithSwapper
      */
     function setSwapperVault(address newVault) external onlyVaultAdmin {
-        require(
-            newVault != address(mTbillRedemptionVault),
-            "MRVS: already provider"
-        );
-        _validateAddress(newVault, true);
-
         mTbillRedemptionVault = IRedemptionVault(newVault);
 
         emit SetSwapperVault(msg.sender, newVault);
@@ -218,9 +221,13 @@ contract RedemptionVaultWithSwapper is
         internal
         returns (uint256 mTokenAmount)
     {
+        address _liquidityProvider = liquidityProvider;
+
+        require(_liquidityProvider != address(0), "RVS: !liquidityProvider");
+
         _tokenTransferFromUser(
             address(mToken),
-            liquidityProvider,
+            _liquidityProvider,
             mToken1Amount,
             18
         );
@@ -238,7 +245,7 @@ contract RedemptionVaultWithSwapper is
 
         _tokenTransferFromTo(
             address(mTbillRedemptionVault.mToken()),
-            liquidityProvider,
+            _liquidityProvider,
             address(this),
             mTokenAmount,
             18

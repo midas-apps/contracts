@@ -672,7 +672,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         (
             CalcAndValidateRedeemResult memory calcResult,
             bool spendLiquidity
-        ) = _redeemInstant(tokenOut, amountMTokenIn, minReceiveAmount);
+        ) = _redeemInstant(
+                tokenOut,
+                amountMTokenIn,
+                minReceiveAmount,
+                recipient
+            );
 
         _postRedeemInstant(tokenOut, calcResult);
 
@@ -745,7 +750,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     function _redeemInstant(
         address tokenOut,
         uint256 amountMTokenIn,
-        uint256 minReceiveAmount
+        uint256 minReceiveAmount,
+        address /* recipient */
     )
         internal
         virtual
