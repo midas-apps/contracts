@@ -135,27 +135,18 @@ contract RedemptionVaultWithSwapper is
             tokenDecimals
         );
 
-        calcResult.amountTokenOutWithoutFee = amountTokenOutWithoutFee;
-
-        require(
-            amountTokenOutWithoutFee >= minReceiveAmountCopy,
-            "RVS: minReceiveAmount > actual"
-        );
-
         if (feeAmount > 0)
             _tokenTransferFromUser(address(mToken), feeReceiver, feeAmount, 18);
 
-        uint256 contractTokenOutBalance = IERC20(tokenOutCopy).balanceOf(
-            address(this)
+        uint256 contractTokenOutBalance = _getBalanceOfThisBase18(
+            tokenOutCopy,
+            tokenDecimals
         );
 
         _requireAndUpdateLimit(amountMTokenInCopy);
         _requireAndUpdateAllowance(tokenOutCopy, amountTokenOut);
 
-        if (
-            contractTokenOutBalance >=
-            amountTokenOutWithoutFee.convertFromBase18(tokenDecimals)
-        ) {
+        if (contractTokenOutBalance >= amountTokenOutWithoutFee) {
             mToken.burn(user, amountMTokenWithoutFee);
         } else {
             uint256 mTbillAmount = _swapMToken1ToMToken2(
@@ -173,11 +164,21 @@ contract RedemptionVaultWithSwapper is
                 minReceiveAmountCopy
             );
 
-            uint256 contractTokenOutBalanceAfterRedeem = IERC20(tokenOutCopy)
-                .balanceOf(address(this));
-            amountTokenOutWithoutFee = (contractTokenOutBalanceAfterRedeem -
-                contractTokenOutBalance).convertToBase18(tokenDecimals);
+            uint256 contractTokenOutBalanceAfterRedeem = _getBalanceOfThisBase18(
+                    tokenOutCopy,
+                    tokenDecimals
+                );
+            amountTokenOutWithoutFee =
+                contractTokenOutBalanceAfterRedeem -
+                contractTokenOutBalance;
         }
+
+        calcResult.amountTokenOutWithoutFee = amountTokenOutWithoutFee;
+
+        require(
+            amountTokenOutWithoutFee >= minReceiveAmountCopy,
+            "RVS: minReceiveAmount > actual"
+        );
     }
 
     /**
@@ -242,6 +243,20 @@ contract RedemptionVaultWithSwapper is
             mTokenAmount,
             18
         );
+    }
+
+    /**
+     * @dev get balance of this contract in base18
+     * @param token token address
+     * @param decimals token decimals
+     * @return balance in base18
+     */
+    function _getBalanceOfThisBase18(address token, uint256 decimals)
+        private
+        view
+        returns (uint256)
+    {
+        return IERC20(token).balanceOf(address(this)).convertToBase18(decimals);
     }
 
     function _calcAndValidateRedeemForInstant(

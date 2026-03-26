@@ -387,10 +387,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @inheritdoc IRedemptionVault
      */
     function cancelLpLoanRequest(uint256 requestId) external onlyVaultAdmin {
-        require(
-            loanRequests[requestId].status == RequestStatus.Pending,
-            "RV: loan request not pending"
-        );
+        LiquidityProviderLoanRequest memory request = loanRequests[requestId];
+
+        _validateRequest(request.tokenOut, request.status);
+
         loanRequests[requestId].status = RequestStatus.Canceled;
         emit CancelLpLoanRequest(msg.sender, requestId);
     }
@@ -674,6 +674,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             bool spendLiquidity
         ) = _redeemInstant(tokenOut, amountMTokenIn, minReceiveAmount);
 
+        _postRedeemInstant(tokenOut, calcResult);
+
         if (spendLiquidity) {
             _sendTokensFromLiquidity(tokenOut, recipient, calcResult);
         }
@@ -778,8 +780,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         _requireAndUpdateAllowance(tokenOut, calcResult.amountTokenOut);
 
         mToken.burn(user, amountMTokenIn);
-
-        _postRedeemInstant(tokenOut, calcResult);
     }
 
     /**

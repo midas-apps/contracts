@@ -1156,6 +1156,71 @@ export const rejectRedeemRequestTest = async (
   expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver);
 };
 
+export const cancelLpLoanRequestTest = async (
+  {
+    redemptionVault,
+    owner,
+    mTBILL,
+  }: Omit<CommonParamsRedeem, 'mTokenToUsdDataFeed'>,
+  requestId: BigNumberish,
+  opt?: OptionalCommonParams,
+) => {
+  const sender = opt?.from ?? owner;
+
+  const loanLp = await redemptionVault.loanLp();
+  const loanLpFeeReceiver = await redemptionVault.loanLpFeeReceiver();
+  const loanRepaymentAddress = await redemptionVault.loanRepaymentAddress();
+
+  if (opt?.revertMessage) {
+    await expect(
+      redemptionVault.connect(sender).cancelLpLoanRequest(requestId),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  const requestDataBefore = await redemptionVault.loanRequests(requestId);
+
+  const loanToken = ERC20__factory.connect(requestDataBefore.tokenOut, owner);
+
+  const balanceBeforeLpRepayment = await loanToken.balanceOf(
+    loanRepaymentAddress,
+  );
+  const balanceBeforeLpFee = await loanToken.balanceOf(loanLpFeeReceiver);
+  const balanceBeforeLp = await loanToken.balanceOf(loanLp);
+  const balanceBeforeSender = await loanToken.balanceOf(sender.address);
+
+  const supplyBefore = await mTBILL.totalSupply();
+
+  await expect(redemptionVault.connect(sender).cancelLpLoanRequest(requestId))
+    .to.emit(
+      redemptionVault,
+      redemptionVault.interface.events['CancelLpLoanRequest(address,uint256)']
+        .name,
+    )
+    .withArgs(requestId, sender).to.not.reverted;
+
+  const requestDataAfter = await redemptionVault.loanRequests(requestId);
+
+  const balanceAfterLpRepayment = await loanToken.balanceOf(
+    loanRepaymentAddress,
+  );
+  const balanceAfterLpFee = await loanToken.balanceOf(loanLpFeeReceiver);
+  const balanceAfterLp = await loanToken.balanceOf(loanLp);
+  const balanceAfterSender = await loanToken.balanceOf(sender.address);
+
+  const supplyAfter = await mTBILL.totalSupply();
+
+  expect(requestDataAfter.amountFee).eq(requestDataAfter.amountFee);
+  expect(requestDataAfter.amountTokenOut).eq(requestDataAfter.amountTokenOut);
+  expect(requestDataAfter.status).eq(2);
+
+  expect(supplyAfter).eq(supplyBefore);
+  expect(balanceAfterLpRepayment).eq(balanceBeforeLpRepayment);
+  expect(balanceAfterLpFee).eq(balanceBeforeLpFee);
+  expect(balanceAfterLp).eq(balanceBeforeLp);
+  expect(balanceAfterSender).eq(balanceBeforeSender);
+};
+
 export const setMinFiatRedeemAmountTest = async (
   { redemptionVault, owner }: CommonParams,
   valueN: number,

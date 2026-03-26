@@ -42,6 +42,7 @@ import {
 import {
   approveRedeemRequestTest,
   bulkRepayLpLoanRequestTest,
+  cancelLpLoanRequestTest,
   redeemFiatRequestTest,
   redeemInstantTest,
   redeemRequestTest,
@@ -5732,7 +5733,7 @@ export const redemptionVaultSuits = (
         });
       });
 
-      describe('bulkRepayLpLoanRequestTest()', () => {
+      describe('loan operations', () => {
         const prepareTest = async (
           fixture: DefaultFixture,
           stableCoin: ERC20Mock,
@@ -5792,290 +5793,431 @@ export const redemptionVaultSuits = (
             100,
           );
         };
+        describe('bulkRepayLpLoanRequestTest()', () => {
+          it('approve 1 request', async () => {
+            const fixture = await loadFixture(rvFixture);
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
 
-        it('approve 1 request', async () => {
-          const fixture = await loadFixture(rvFixture);
-          const {
-            redemptionVault,
-            owner,
-            mTBILL,
-            loanRepaymentAddress,
-            stableCoins,
-          } = fixture;
+            await prepareTest(fixture, stableCoins.dai);
 
-          await prepareTest(fixture, stableCoins.dai);
+            await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
 
-          await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.dai,
+              redemptionVault,
+              100,
+            );
 
-          await approveBase18(
-            loanRepaymentAddress,
-            stableCoins.dai,
-            redemptionVault,
-            100,
-          );
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+            );
+          });
 
-          await bulkRepayLpLoanRequestTest({ redemptionVault, owner, mTBILL }, [
-            { id: 0 },
-          ]);
+          it('approve 2 request with same token out', async () => {
+            const fixture = await loadFixture(rvFixture);
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
+
+            await prepareTest(fixture, stableCoins.dai);
+            await prepareTest(fixture, stableCoins.dai, false);
+
+            await mintToken(stableCoins.dai, loanRepaymentAddress, 200);
+
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.dai,
+              redemptionVault,
+              200,
+            );
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }, { id: 1 }],
+            );
+          });
+
+          it('approve 2 request with different token out', async () => {
+            const fixture = await loadFixture(rvFixture);
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
+
+            await prepareTest(fixture, stableCoins.dai);
+            await prepareTest(fixture, stableCoins.usdc);
+
+            await mintToken(stableCoins.dai, loanRepaymentAddress, 200);
+            await mintToken(stableCoins.usdc, loanRepaymentAddress, 200);
+
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.dai,
+              redemptionVault,
+              100,
+            );
+
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.usdc,
+              redemptionVault,
+              100,
+            );
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }, { id: 1 }],
+            );
+          });
+
+          it('approve 1 request when fee is zero and lp fee receiver is not set', async () => {
+            const fixture = await loadFixture(rvFixture);
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
+
+            await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+
+            await prepareTest(fixture, stableCoins.dai);
+
+            await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
+
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.dai,
+              redemptionVault,
+              100,
+            );
+
+            await setLoanLpFeeReceiverTest(
+              { redemptionVault, owner },
+              ethers.constants.AddressZero,
+            );
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+            );
+          });
+
+          it('should fail: approve 1 request when fee is not zero and lp fee receiver is not set', async () => {
+            const fixture = await loadFixture(rvFixture);
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
+
+            await prepareTest(fixture, stableCoins.dai);
+
+            await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
+
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.dai,
+              redemptionVault,
+              100,
+            );
+
+            await setLoanLpFeeReceiverTest(
+              { redemptionVault, owner },
+              ethers.constants.AddressZero,
+            );
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+              {
+                revertMessage: 'RV: !loanLpFeeReceiver',
+              },
+            );
+          });
+
+          it('should fail: when loan repayment address does not have enough balance', async () => {
+            const fixture = await loadFixture(rvFixture);
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
+
+            await prepareTest(fixture, stableCoins.dai);
+
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.dai,
+              redemptionVault,
+              100,
+            );
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+              {
+                revertMessage: 'ERC20: transfer amount exceeds balance',
+              },
+            );
+          });
+
+          it('should fail: when loan repayment address does not have enough allowance', async () => {
+            const fixture = await loadFixture(rvFixture);
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
+
+            await prepareTest(fixture, stableCoins.dai);
+
+            await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+              {
+                revertMessage: 'ERC20: insufficient allowance',
+              },
+            );
+          });
+
+          it('should fail: when loan repayment address have balance for lp transfer but not enough for fee transfer', async () => {
+            const fixture = await loadFixture(rvFixture);
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
+
+            await setInstantFeeTest({ vault: redemptionVault, owner }, 100);
+            await prepareTest(fixture, stableCoins.dai);
+
+            await mintToken(stableCoins.dai, loanRepaymentAddress, 99);
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.dai,
+              redemptionVault,
+              100,
+            );
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+              {
+                revertMessage: 'ERC20: transfer amount exceeds balance',
+              },
+            );
+          });
+
+          it('should fail: request was already approved', async () => {
+            const fixture = await loadFixture(rvFixture);
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
+
+            await prepareTest(fixture, stableCoins.dai);
+
+            await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.dai,
+              redemptionVault,
+              100,
+            );
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+            );
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+              {
+                revertMessage: 'RV: request not pending',
+              },
+            );
+          });
+
+          it('should fail: request not exist', async () => {
+            const fixture = await loadFixture(rvFixture);
+            const { redemptionVault, owner, mTBILL } = fixture;
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+              {
+                revertMessage: 'RV: request not exist',
+              },
+            );
+          });
+
+          it('should fail: call from not vault admin', async () => {
+            const fixture = await loadFixture(rvFixture);
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              regularAccounts,
+              stableCoins,
+              loanRepaymentAddress,
+            } = fixture;
+
+            await prepareTest(fixture, stableCoins.dai);
+
+            await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.dai,
+              redemptionVault,
+              100,
+            );
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+              {
+                from: regularAccounts[0],
+                revertMessage: acErrors.WMAC_HASNT_ROLE,
+              },
+            );
+          });
         });
 
-        it('approve 2 request with same token out', async () => {
-          const fixture = await loadFixture(rvFixture);
-          const {
-            redemptionVault,
-            owner,
-            mTBILL,
-            loanRepaymentAddress,
-            stableCoins,
-          } = fixture;
+        describe('cancelLpLoanRequest()', () => {
+          const prepareCancelTest = async (
+            fixture: DefaultFixture,
+            stableCoin: ERC20Mock,
+          ) => {
+            const { redemptionVault, loanRepaymentAddress } = fixture;
+            await prepareTest(fixture, stableCoin);
+            await mintToken(stableCoin, loanRepaymentAddress, 100);
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoin,
+              redemptionVault,
+              100,
+            );
+          };
+          it('should cancel request', async () => {
+            const fixture = await loadFixture(rvFixture);
+            const { redemptionVault, owner, mTBILL, stableCoins } = fixture;
 
-          await prepareTest(fixture, stableCoins.dai);
-          await prepareTest(fixture, stableCoins.dai, false);
+            await prepareCancelTest(fixture, stableCoins.dai);
 
-          await mintToken(stableCoins.dai, loanRepaymentAddress, 200);
+            await cancelLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              0,
+            );
+          });
 
-          await approveBase18(
-            loanRepaymentAddress,
-            stableCoins.dai,
-            redemptionVault,
-            200,
-          );
+          it('should fail: request not exist', async () => {
+            const fixture = await loadFixture(rvFixture);
+            const { redemptionVault, owner, mTBILL } = fixture;
 
-          await bulkRepayLpLoanRequestTest({ redemptionVault, owner, mTBILL }, [
-            { id: 0 },
-            { id: 1 },
-          ]);
-        });
+            await cancelLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              0,
+              {
+                revertMessage: 'RV: request not exist',
+              },
+            );
+          });
 
-        it('approve 2 request with different token out', async () => {
-          const fixture = await loadFixture(rvFixture);
-          const {
-            redemptionVault,
-            owner,
-            mTBILL,
-            loanRepaymentAddress,
-            stableCoins,
-          } = fixture;
+          it('should fail: request already cancelled', async () => {
+            const fixture = await loadFixture(rvFixture);
+            const { redemptionVault, owner, mTBILL, stableCoins } = fixture;
 
-          await prepareTest(fixture, stableCoins.dai);
-          await prepareTest(fixture, stableCoins.usdc);
+            await prepareCancelTest(fixture, stableCoins.dai);
 
-          await mintToken(stableCoins.dai, loanRepaymentAddress, 200);
-          await mintToken(stableCoins.usdc, loanRepaymentAddress, 200);
+            await cancelLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              0,
+            );
 
-          await approveBase18(
-            loanRepaymentAddress,
-            stableCoins.dai,
-            redemptionVault,
-            100,
-          );
+            await cancelLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              0,
+              {
+                revertMessage: 'RV: request not pending',
+              },
+            );
+          });
 
-          await approveBase18(
-            loanRepaymentAddress,
-            stableCoins.usdc,
-            redemptionVault,
-            100,
-          );
+          it('should fail: request was processed', async () => {
+            const fixture = await loadFixture(rvFixture);
+            const { redemptionVault, owner, mTBILL, stableCoins } = fixture;
 
-          await bulkRepayLpLoanRequestTest({ redemptionVault, owner, mTBILL }, [
-            { id: 0 },
-            { id: 1 },
-          ]);
-        });
+            await prepareCancelTest(fixture, stableCoins.dai);
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+            );
 
-        it('approve 1 request when fee is zero and lp fee receiver is not set', async () => {
-          const fixture = await loadFixture(rvFixture);
-          const {
-            redemptionVault,
-            owner,
-            mTBILL,
-            loanRepaymentAddress,
-            stableCoins,
-          } = fixture;
+            await cancelLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              0,
+              {
+                revertMessage: 'RV: request not pending',
+              },
+            );
+          });
 
-          await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+          it('should fail: call from not vault admin', async () => {
+            const fixture = await loadFixture(rvFixture);
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              stableCoins,
+              regularAccounts,
+            } = fixture;
 
-          await prepareTest(fixture, stableCoins.dai);
+            await prepareCancelTest(fixture, stableCoins.dai);
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+            );
 
-          await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
-
-          await approveBase18(
-            loanRepaymentAddress,
-            stableCoins.dai,
-            redemptionVault,
-            100,
-          );
-
-          await setLoanLpFeeReceiverTest(
-            { redemptionVault, owner },
-            ethers.constants.AddressZero,
-          );
-
-          await bulkRepayLpLoanRequestTest({ redemptionVault, owner, mTBILL }, [
-            { id: 0 },
-          ]);
-        });
-
-        it('should fail: approve 1 request when fee is not zero and lp fee receiver is not set', async () => {
-          const fixture = await loadFixture(rvFixture);
-          const {
-            redemptionVault,
-            owner,
-            mTBILL,
-            loanRepaymentAddress,
-            stableCoins,
-          } = fixture;
-
-          await prepareTest(fixture, stableCoins.dai);
-
-          await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
-
-          await approveBase18(
-            loanRepaymentAddress,
-            stableCoins.dai,
-            redemptionVault,
-            100,
-          );
-
-          await setLoanLpFeeReceiverTest(
-            { redemptionVault, owner },
-            ethers.constants.AddressZero,
-          );
-
-          await bulkRepayLpLoanRequestTest(
-            { redemptionVault, owner, mTBILL },
-            [{ id: 0 }],
-            {
-              revertMessage: 'RV: !loanLpFeeReceiver',
-            },
-          );
-        });
-
-        it('should fail: when loan repayment address does not have enough balance', async () => {
-          const fixture = await loadFixture(rvFixture);
-          const {
-            redemptionVault,
-            owner,
-            mTBILL,
-            loanRepaymentAddress,
-            stableCoins,
-          } = fixture;
-
-          await prepareTest(fixture, stableCoins.dai);
-
-          await approveBase18(
-            loanRepaymentAddress,
-            stableCoins.dai,
-            redemptionVault,
-            100,
-          );
-
-          await bulkRepayLpLoanRequestTest(
-            { redemptionVault, owner, mTBILL },
-            [{ id: 0 }],
-            {
-              revertMessage: 'ERC20: transfer amount exceeds balance',
-            },
-          );
-        });
-
-        it('should fail: when loan repayment address does not have enough allowance', async () => {
-          const fixture = await loadFixture(rvFixture);
-          const {
-            redemptionVault,
-            owner,
-            mTBILL,
-            loanRepaymentAddress,
-            stableCoins,
-          } = fixture;
-
-          await prepareTest(fixture, stableCoins.dai);
-
-          await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
-
-          await bulkRepayLpLoanRequestTest(
-            { redemptionVault, owner, mTBILL },
-            [{ id: 0 }],
-            {
-              revertMessage: 'ERC20: insufficient allowance',
-            },
-          );
-        });
-
-        it('should fail: when loan repayment address have balance for lp transfer but not enough for fee transfer', async () => {
-          const fixture = await loadFixture(rvFixture);
-          const {
-            redemptionVault,
-            owner,
-            mTBILL,
-            loanRepaymentAddress,
-            stableCoins,
-          } = fixture;
-
-          await setInstantFeeTest({ vault: redemptionVault, owner }, 100);
-          await prepareTest(fixture, stableCoins.dai);
-
-          await mintToken(stableCoins.dai, loanRepaymentAddress, 99);
-          await approveBase18(
-            loanRepaymentAddress,
-            stableCoins.dai,
-            redemptionVault,
-            100,
-          );
-
-          await bulkRepayLpLoanRequestTest(
-            { redemptionVault, owner, mTBILL },
-            [{ id: 0 }],
-            {
-              revertMessage: 'ERC20: transfer amount exceeds balance',
-            },
-          );
-        });
-
-        it('should fail: request was already approved', async () => {
-          const fixture = await loadFixture(rvFixture);
-          const {
-            redemptionVault,
-            owner,
-            mTBILL,
-            loanRepaymentAddress,
-            stableCoins,
-          } = fixture;
-
-          await prepareTest(fixture, stableCoins.dai);
-
-          await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
-          await approveBase18(
-            loanRepaymentAddress,
-            stableCoins.dai,
-            redemptionVault,
-            100,
-          );
-
-          await bulkRepayLpLoanRequestTest({ redemptionVault, owner, mTBILL }, [
-            { id: 0 },
-          ]);
-
-          await bulkRepayLpLoanRequestTest(
-            { redemptionVault, owner, mTBILL },
-            [{ id: 0 }],
-            {
-              revertMessage: 'RV: request not pending',
-            },
-          );
-        });
-
-        it('should fail: request not exist', async () => {
-          const fixture = await loadFixture(rvFixture);
-          const { redemptionVault, owner, mTBILL } = fixture;
-
-          await bulkRepayLpLoanRequestTest(
-            { redemptionVault, owner, mTBILL },
-            [{ id: 0 }],
-            {
-              revertMessage: 'RV: request not exist',
-            },
-          );
+            await cancelLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              0,
+              {
+                from: regularAccounts[0],
+                revertMessage: acErrors.WMAC_HASNT_ROLE,
+              },
+            );
+          });
         });
       });
 
