@@ -25,7 +25,6 @@ import {
   DepositVaultWithUSTB,
   MTBILL,
   RedemptionVault,
-  RedemptionVaultWIthBUIDL,
   RedemptionVaultWithSwapper,
 } from '../../typechain-types';
 
@@ -273,37 +272,6 @@ export const tokenContractsTests = (token: MTokenName) => {
       fixture.redemptionVault.address,
     );
 
-    const redemptionVaultWithBuidl =
-      await deployProxyContractIfExists<RedemptionVaultWIthBUIDL>(
-        'rvBuidl',
-        'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,uint256,uint256)',
-        fixture.accessControl.address,
-        {
-          mToken: tokenContract.address,
-          mTokenDataFeed: dataFeed.address,
-        },
-        {
-          feeReceiver: fixture.feeReceiver.address,
-          tokensReceiver: fixture.tokensReceiver.address,
-        },
-        {
-          instantFee: 100,
-          instantDailyLimit: parseUnits('100000'),
-        },
-        fixture.mockedSanctionsList.address,
-        1,
-        1000,
-        {
-          fiatAdditionalFee: 100,
-          fiatFlatFee: parseUnits('1'),
-          minFiatRedeemAmount: 1000,
-        },
-        fixture.requestRedeemer.address,
-        fixture.buidlRedemption.address,
-        parseUnits('250000', 6),
-        parseUnits('250000', 6),
-      );
-
     return {
       ...fixture,
       tokenContract,
@@ -313,7 +281,6 @@ export const tokenContractsTests = (token: MTokenName) => {
       tokenDepositVaultUstb: depositVaultUstb,
       tokenRedemptionVault: redemptionVault,
       tokenRedemptionVaultWithSwapper: redemptionVaultWithSwapper,
-      tokenRedemptionVaultWithBuidl: redemptionVaultWithBuidl,
       tokenCustomAggregatorFeedGrowth: customAggregatorFeedGrowth,
     };
   };
@@ -786,29 +753,6 @@ export const tokenContractsTests = (token: MTokenName) => {
             ](),
       );
       expect(await redemptionVaultWithSwapper.vaultRole()).eq(
-        tokenRoles.redemptionVaultAdmin,
-      );
-    });
-
-    it('RedemptionVaultWithBUIDL', async function () {
-      const fixture = await deployMTokenVaultsWithFixture();
-      const redemptionVaultWithBuidl =
-        fixture.tokenRedemptionVaultWithBuidl as Contract;
-
-      if (!redemptionVaultWithBuidl) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (this as any).skip();
-        return;
-      }
-
-      expect(await redemptionVaultWithBuidl.vaultRole()).eq(
-        token === 'mTBILL'
-          ? tokenRoles.redemptionVaultAdmin
-          : await redemptionVaultWithBuidl[
-              tokenRoleNames.redemptionVaultAdmin
-            ](),
-      );
-      expect(await redemptionVaultWithBuidl.vaultRole()).eq(
         tokenRoles.redemptionVaultAdmin,
       );
     });

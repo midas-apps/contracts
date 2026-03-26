@@ -15,7 +15,6 @@ import {
   MBasisRedemptionVaultWithSwapper,
   RedemptionVault,
   RedemptionVaultWithMToken,
-  RedemptionVaultWIthBUIDL,
 } from '../../../typechain-types';
 
 export type DeployRvConfigCommon = {
@@ -48,13 +47,6 @@ export type DeployRvRegularConfig = {
   type: 'REGULAR';
 } & DeployRvConfigCommon;
 
-export type DeployRvBuidlConfig = {
-  type: 'BUIDL';
-  buidlRedemption: string;
-  minBuidlBalance: BigNumberish;
-  minBuidlToRedeem: BigNumberish;
-} & DeployRvConfigCommon;
-
 type SwapperVault =
   | {
       mToken: MTokenName;
@@ -83,7 +75,6 @@ export type DeployRvMTokenConfig = {
 
 export type DeployRvConfig =
   | DeployRvRegularConfig
-  | DeployRvBuidlConfig
   | DeployRvSwapperConfig
   | DeployRvAaveConfig
   | DeployRvMorphoConfig
@@ -94,7 +85,7 @@ const DUMMY_ADDRESS = '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF';
 export const deployRedemptionVault = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
-  type: 'rv' | 'rvBuidl' | 'rvSwapper' | 'rvAave' | 'rvMorpho' | 'rvMToken',
+  type: 'rv' | 'rvSwapper' | 'rvAave' | 'rvMorpho' | 'rvMToken',
 ) => {
   const addresses = getCurrentAddresses(hre);
   const deployer = await getDeployer(hre);
@@ -116,10 +107,6 @@ export const deployRedemptionVault = async (
 
   if (networkConfig.type === 'MTOKEN') {
     extraParams.push(networkConfig.redemptionVault);
-  } else if (networkConfig.type === 'BUIDL') {
-    extraParams.push(networkConfig.buidlRedemption);
-    extraParams.push(networkConfig.minBuidlToRedeem);
-    extraParams.push(networkConfig.minBuidlBalance);
   } else if (networkConfig.type === 'SWAPPER') {
     const swapperVault = networkConfig.swapperVault;
 
@@ -169,6 +156,7 @@ export const deployRedemptionVault = async (
     throw new Error('Sanctions list address is not found');
   }
 
+  // FIXME: fix according to new initialize params
   const params = [
     addresses?.accessControl,
     {
@@ -198,21 +186,16 @@ export const deployRedemptionVault = async (
   ] as
     | Parameters<RedemptionVault['initialize']>
     | Parameters<
-        RedemptionVaultWIthBUIDL['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,uint256,uint256)']
+        MBasisRedemptionVaultWithSwapper['initialize((address,address,uint256,uint256),(address,address),(address,address),(uint256,uint256),(uint256,uint256,uint256,address,address,address,address,address),address,address)']
       >
     | Parameters<
-        MBasisRedemptionVaultWithSwapper['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)']
-      >
-    | Parameters<
-        RedemptionVaultWithMToken['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)']
+        RedemptionVaultWithMToken['initialize((address,address,uint256,uint256),(address,address),(address,address),(uint256,uint256),(uint256,uint256,uint256,address,address,address,address,address),address)']
       >;
 
   await deployAndVerifyProxy(hre, contractName, params, undefined, {
     initializer:
       networkConfig.type === 'SWAPPER'
         ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)'
-        : networkConfig.type === 'BUIDL'
-        ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,uint256,uint256)'
         : networkConfig.type === 'MTOKEN'
         ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
         : 'initialize',

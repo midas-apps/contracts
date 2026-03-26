@@ -44,7 +44,7 @@ export const mBASISDeploymentConfig: DeploymentConfig = {
         liquidityProvider: undefined,
         swapperVault: {
           mToken: 'mTBILL',
-          redemptionVaultType: 'redemptionVaultBuidl',
+          redemptionVaultType: 'redemptionVaultUstb',
         },
       },
     },
@@ -75,7 +75,7 @@ export const mBASISDeploymentConfig: DeploymentConfig = {
         liquidityProvider: '0x7388e98baCfFF1B3618d7d5bEbeDe483C9526FEd',
         swapperVault: {
           mToken: 'mTBILL',
-          redemptionVaultType: 'redemptionVaultBuidl',
+          redemptionVaultType: 'redemptionVaultUstb',
         },
       },
     },

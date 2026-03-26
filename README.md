@@ -160,6 +160,7 @@ The default role admin for all roles is `defaultAdmin`. Only exceptions are:
 All roles in the system are documented in [`ROLES.md`](./ROLES.md). This file is auto-generated and contains:
 
 - **Common Roles**: Roles shared across all contracts:
+
   - `defaultAdmin`: `0x0000000000000000000000000000000000000000000000000000000000000000`
   - `greenlisted`: Allows access to vault operations (if greenlist is enforced)
   - `blacklisted`: Prevents token transfers and vaults access
@@ -190,7 +191,7 @@ Abstract base contract for all mToken implementations
 
 ### **Vaults**
 
-There are 2 types of vaults - Deposit vaults and Redemption vaults. Also each type of vault have different variations (like USTB, Swapper, BUIDL etc.)
+There are 2 types of vaults - Deposit vaults and Redemption vaults. Also each type of vault have different variations (like USTB, Swapper etc.)
 
 **Common Key Features:**
 
@@ -263,7 +264,6 @@ Manages the redemption process for mTokens. Burns mTokens from a user and transf
 **Vault Variations:**
 
 - Swapper ([`contracts/RedemptionVaultWithSwapper.sol`](contracts/RedemptionVaultWithSwapper.sol)) - Uses an external liquidity source to exchange one mToken for another and redeems the obtained mTokens through a different Midas redemption vault. This flow is activated only when there is insufficient liquidity in the current Redemption Vault.
-- BUIDL ([`contracts/RedemptionVaultWithBUIDL.sol`](contracts/RedemptionVaultWithBUIDL.sol)) (*deprecated*) - Stores pending liquidity as BUIDL tokens. When the vault has insufficient USDC liquidity to fulfill an instant redemption, BUIDL tokens are redeemed for USDC and used to complete the redemption.
 - USTB ([`contracts/RedemptionVaultWithUSTB.sol`](contracts/RedemptionVaultWithUSTB.sol)) - Stores pending liquidity as USTB tokens. When the vault has insufficient USDC liquidity to fulfill an instant redemption, USTB tokens are redeemed for USDC and used to complete the redemption.
 
 ### **DataFeed** ([`contracts/feeds/DataFeed.sol`](contracts/feeds/DataFeed.sol))
@@ -276,7 +276,7 @@ Wraps Chainlink AggregatorV3 price feeds, validates the price (max/min/staleness
 
 **DataFeed Variations:**
 
-- CompositeDataFeed ([`contracts/feeds/CompositeDataFeed.sol`](contracts/feeds/CompositeDataFeed.sol)) -  computing the ratio of two underlying data feeds (numerator ÷ denominator)
+- CompositeDataFeed ([`contracts/feeds/CompositeDataFeed.sol`](contracts/feeds/CompositeDataFeed.sol)) - computing the ratio of two underlying data feeds (numerator ÷ denominator)
 
 ### **CustomAggregatorV3CompatibleFeed** ([`contracts/feeds/CustomAggregatorV3CompatibleFeed.sol`](contracts/feeds/CustomAggregatorV3CompatibleFeed.sol))
 

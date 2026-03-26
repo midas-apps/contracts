@@ -21,7 +21,6 @@ import {
 } from './roles';
 import {
   DeployRvAaveConfig,
-  DeployRvBuidlConfig,
   DeployRvMorphoConfig,
   DeployRvMTokenConfig,
   DeployRvRegularConfig,
@@ -106,7 +105,6 @@ export type DeploymentConfig = {
       dvMorpho?: DeployDvMorphoConfig;
       dvMToken?: DeployDvMTokenConfig;
       rv?: DeployRvRegularConfig;
-      rvBuidl?: DeployRvBuidlConfig;
       rvSwapper?: DeployRvSwapperConfig;
       rvAave?: DeployRvAaveConfig;
       rvMorpho?: DeployRvMorphoConfig;

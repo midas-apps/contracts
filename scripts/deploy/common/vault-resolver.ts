@@ -19,13 +19,11 @@ export const routingRedemptionVaultPriority: RedemptionVaultType[] = [
   'redemptionVaultAave',
   'redemptionVaultMorpho',
   'redemptionVault',
-  'redemptionVaultBuidl',
 ];
 
 export const roleGrantRedemptionVaultPriority: RedemptionVaultType[] = [
   'redemptionVaultMToken',
   'redemptionVaultSwapper',
-  'redemptionVaultBuidl',
   'redemptionVaultUstb',
   'redemptionVaultAave',
   'redemptionVaultMorpho',

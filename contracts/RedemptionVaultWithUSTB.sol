@@ -67,9 +67,9 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
         address tokenOut,
         CalcAndValidateRedeemResult memory calcResult
     ) internal override {
-        uint256 amountTokenOut = calcResult
-            .amountTokenOutWithoutFee
-            .convertFromBase18(calcResult.tokenOutDecimals);
+        uint256 amountTokenOut = calcResult.amountTokenOut.convertFromBase18(
+            calcResult.tokenOutDecimals
+        );
 
         uint256 contractBalanceTokenOut = IERC20(tokenOut).balanceOf(
             address(this)

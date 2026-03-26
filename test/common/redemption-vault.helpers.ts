@@ -19,7 +19,6 @@ import {
   MTBILL,
   MToken,
   RedemptionVault,
-  RedemptionVaultWIthBUIDL,
   RedemptionVaultWithAave,
   RedemptionVaultWithMorpho,
   RedemptionVaultWithMToken,
@@ -36,7 +35,6 @@ type CommonParamsRedeem = {
 > & {
     redemptionVault:
       | RedemptionVault
-      | RedemptionVaultWIthBUIDL
       | RedemptionVaultWithAave
       | RedemptionVaultWithMorpho
       | RedemptionVaultWithMToken
@@ -47,7 +45,6 @@ type CommonParamsRedeem = {
 type CommonParams = Pick<Awaited<ReturnType<typeof defaultDeploy>>, 'owner'> & {
   redemptionVault:
     | RedemptionVault
-    | RedemptionVaultWIthBUIDL
     | RedemptionVaultWithAave
     | RedemptionVaultWithMorpho
     | RedemptionVaultWithMToken
@@ -1434,7 +1431,6 @@ export const getFeePercent = async (
   token: string,
   redemptionVault:
     | RedemptionVault
-    | RedemptionVaultWIthBUIDL
     | RedemptionVaultWithAave
     | RedemptionVaultWithMorpho
     | RedemptionVaultWithMToken
@@ -1461,7 +1457,6 @@ export const calcExpectedTokenOutAmount = async (
   token: ERC20,
   redemptionVault:
     | RedemptionVault
-    | RedemptionVaultWIthBUIDL
     | RedemptionVaultWithAave
     | RedemptionVaultWithMorpho
     | RedemptionVaultWithMToken
@@ -1532,7 +1527,6 @@ export const calcExpectedTokenOutAmount = async (
 export const estimateSendTokensFromLiquidity = async (
   redemptionVault:
     | RedemptionVault
-    | RedemptionVaultWIthBUIDL
     | RedemptionVaultWithAave
     | RedemptionVaultWithMorpho
     | RedemptionVaultWithMToken

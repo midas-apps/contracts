@@ -33,9 +33,7 @@ import {
   CustomAggregatorV3CompatibleFeedTester__factory,
   SanctionsListMock__factory,
   WithSanctionsListTester__factory,
-  RedemptionTest__factory,
   USTBRedemptionMock__factory,
-  RedemptionVaultWithBUIDLTest__factory,
   RedemptionVaultWithUSTBTest__factory,
   RedemptionVaultWithSwapperTest__factory,
   RedemptionVaultWithAaveTest__factory,
@@ -341,59 +339,6 @@ export const defaultDeploy = async () => {
   const otherCoins = {
     wbtc: await new ERC20Mock__factory(owner).deploy(8),
   };
-
-  /* Redemption Vault With BUIDL */
-
-  const buidl = await new ERC20Mock__factory(owner).deploy(8);
-  const buidlRedemption = await new RedemptionTest__factory(owner).deploy(
-    buidl.address,
-    stableCoins.usdc.address,
-  );
-  await stableCoins.usdc.mint(buidlRedemption.address, parseUnits('1000000'));
-
-  const redemptionVaultWithBUIDL =
-    await new RedemptionVaultWithBUIDLTest__factory(owner).deploy();
-
-  await redemptionVaultWithBUIDL[
-    'initialize((address,address,uint256,uint256),(address,address),(address,address),(uint256,uint256),(uint256,uint256,uint256,address,address,address,address,address),address,uint256,uint256)'
-  ](
-    {
-      ac: accessControl.address,
-      sanctionsList: mockedSanctionsList.address,
-      variationTolerance: 1,
-      minAmount: 1000,
-    },
-    {
-      mToken: mTBILL.address,
-      mTokenDataFeed: mTokenToUsdDataFeed.address,
-    },
-    {
-      feeReceiver: feeReceiver.address,
-      tokensReceiver: tokensReceiver.address,
-    },
-    {
-      instantFee: 100,
-      instantDailyLimit: parseUnits('100000'),
-    },
-    {
-      fiatAdditionalFee: 100,
-      fiatFlatFee: parseUnits('1'),
-      minFiatRedeemAmount: 1000,
-      requestRedeemer: requestRedeemer.address,
-      loanLp: constants.AddressZero,
-      loanLpFeeReceiver: constants.AddressZero,
-      loanRepaymentAddress: constants.AddressZero,
-      loanSwapperVault: constants.AddressZero,
-    },
-
-    buidlRedemption.address,
-    parseUnits('250000', 6),
-    parseUnits('250000', 6),
-  );
-  await accessControl.grantRole(
-    mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
-    redemptionVaultWithBUIDL.address,
-  );
 
   const ustbToken = await new USTBMock__factory(owner).deploy();
 
@@ -982,9 +927,6 @@ export const defaultDeploy = async () => {
     withSanctionsListTester,
     mockedSanctionsList,
     requestRedeemer,
-    buidl,
-    buidlRedemption,
-    redemptionVaultWithBUIDL,
     redemptionVaultWithUSTB,
     redemptionVaultWithAave,
     aavePoolMock,

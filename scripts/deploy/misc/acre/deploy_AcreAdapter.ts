@@ -68,9 +68,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
             value: 'redemptionVaultSwapper',
           },
           {
-            value: 'redemptionVaultBuidl',
-          },
-          {
             value: 'redemptionVaultUstb',
           },
           {

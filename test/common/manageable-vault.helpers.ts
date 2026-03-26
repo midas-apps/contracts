@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { BigNumber, BigNumberish, constants } from 'ethers';
+import { BigNumberish, constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import { Account, OptionalCommonParams, getAccount } from './common.helpers';
@@ -16,7 +16,6 @@ import {
   ERC20__factory,
   IERC20,
   RedemptionVault,
-  RedemptionVaultWIthBUIDL,
   RedemptionVaultWithAave,
   RedemptionVaultWithMorpho,
   RedemptionVaultWithMToken,
@@ -32,7 +31,6 @@ type CommonParamsChangePaymentToken = {
     | DepositVaultWithMToken
     | DepositVaultWithUSTB
     | RedemptionVault
-    | RedemptionVaultWIthBUIDL
     | RedemptionVaultWithAave
     | RedemptionVaultWithMorpho
     | RedemptionVaultWithMToken
@@ -442,30 +440,4 @@ export const withdrawTest = async (
 
   expect(balanceAfterContract).eq(balanceBeforeContract.sub(amount));
   expect(balanceAfterTo).eq(balanceBeforeTo.add(amount));
-};
-
-export const setMinBuidlToRedeem = async (
-  {
-    vault,
-    owner,
-  }: { vault: RedemptionVaultWIthBUIDL; owner: SignerWithAddress },
-  value: BigNumber,
-  opt?: OptionalCommonParams,
-) => {
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? owner).setMinBuidlToRedeem(value),
-    ).revertedWith(opt?.revertMessage);
-    return;
-  }
-
-  await expect(
-    vault.connect(opt?.from ?? owner).setMinBuidlToRedeem(value),
-  ).to.emit(
-    vault,
-    vault.interface.events['SetMinBuidlToRedeem(uint256,address)'].name,
-  ).to.not.reverted;
-
-  const newMin = await vault.minBuidlToRedeem();
-  expect(newMin).eq(value);
 };

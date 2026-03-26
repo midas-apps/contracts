@@ -48,7 +48,7 @@ export const mFONEDeploymentConfig: DeploymentConfig = {
         liquidityProvider: undefined,
         swapperVault: {
           mToken: 'mTBILL',
-          redemptionVaultType: 'redemptionVaultBuidl',
+          redemptionVaultType: 'redemptionVaultUstb',
         },
       },
       postDeploy: {
@@ -81,7 +81,7 @@ export const mFONEDeploymentConfig: DeploymentConfig = {
         liquidityProvider: '0x4dc293e0d6BEfe6FCF9d1FFDEaA5266BD15C3071',
         swapperVault: {
           mToken: 'mTBILL',
-          redemptionVaultType: 'redemptionVaultBuidl',
+          redemptionVaultType: 'redemptionVaultUstb',
         },
         enableSanctionsList: true,
       },

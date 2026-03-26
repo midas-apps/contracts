@@ -10,7 +10,6 @@ export type TokenContractNames = {
   rv: string;
   rvSwapper: string;
   rvMToken: string;
-  rvBuidl: string;
   rvUstb: string;
   rvAave: string;
   rvMorpho: string;
@@ -43,7 +42,6 @@ const vaultTypeToContractNameMap: Record<VaultType, string> = {
   depositVaultAave: 'dvAave',
   depositVaultMorpho: 'dvMorpho',
   depositVaultMToken: 'dvMToken',
-  redemptionVaultBuidl: 'rvBuidl',
   redemptionVaultAave: 'rvAave',
   redemptionVaultMorpho: 'rvMorpho',
 };
@@ -141,7 +139,6 @@ export const getCommonContractNames = (): CommonContractNames => {
     rv: 'RedemptionVault',
     rvSwapper: 'RedemptionVaultWithSwapper',
     rvMToken: 'RedemptionVaultWithMToken',
-    rvBuidl: 'RedemptionVaultWIthBUIDL',
     rvUstb: 'RedemptionVaultWithUSTB',
     rvAave: 'RedemptionVaultWithAave',
     rvMorpho: 'RedemptionVaultWithMorpho',
@@ -178,7 +175,6 @@ export const getTokenContractNames = (
     rv: `${tokenPrefix}${commonContractNames.rv}`,
     rvSwapper: `${tokenPrefix}${commonContractNames.rvSwapper}`,
     rvMToken: `${tokenPrefix}${commonContractNames.rvMToken}`,
-    rvBuidl: `${tokenPrefix}${commonContractNames.rvBuidl}`,
     rvUstb: `${tokenPrefix}${commonContractNames.rvUstb}`,
     rvAave: `${tokenPrefix}${commonContractNames.rvAave}`,
     rvMorpho: `${tokenPrefix}${commonContractNames.rvMorpho}`,
