@@ -93,26 +93,32 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
         address tokenOut,
         CalcAndValidateRedeemResult memory calcResult
     ) internal override {
-        uint256 amountTokenOut = calcResult
-            .amountTokenOutWithoutFee
-            .convertFromBase18(calcResult.tokenOutDecimals);
+        uint256 amountTokenOut = (calcResult.amountTokenOutWithoutFee +
+            calcResult.feeAmount).convertFromBase18(
+                calcResult.tokenOutDecimals
+            );
 
         uint256 contractBalanceTokenOut = IERC20(tokenOut).balanceOf(
             address(this)
         );
-        if (contractBalanceTokenOut >= amountTokenOut) return;
+
+        if (contractBalanceTokenOut >= amountTokenOut) {
+            return;
+        }
 
         IMorphoVault vault = morphoVaults[tokenOut];
-        require(address(vault) != address(0), "RVM: no vault for token");
+        if (address(vault) == address(0)) {
+            return;
+        }
 
         uint256 missingAmount = amountTokenOut - contractBalanceTokenOut;
 
         uint256 sharesNeeded = vault.previewWithdraw(missingAmount);
-        require(
-            vault.balanceOf(address(this)) >= sharesNeeded,
-            "RVM: insufficient shares"
-        );
+        uint256 vaultSharesBalance = vault.balanceOf(address(this));
+        uint256 toWithdraw = vaultSharesBalance >= sharesNeeded
+            ? sharesNeeded
+            : vaultSharesBalance;
 
-        vault.withdraw(missingAmount, address(this), address(this));
+        vault.redeem(toWithdraw, address(this), address(this));
     }
 }

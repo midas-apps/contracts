@@ -7,15 +7,17 @@ contract RedemptionVaultWithAaveTest is RedemptionVaultWithAave {
     function _disableInitializers() internal override {}
 
     function checkAndRedeemAave(address token, uint256 amount) external {
+        uint256 tokenDecimals = _tokenDecimals(token);
         _postRedeemInstant(
             token,
             CalcAndValidateRedeemResult({
                 feeAmount: 0,
-                amountTokenOutWithoutFee: amount,
+                amountTokenOutWithoutFee: DecimalsCorrectionLibrary
+                    .convertToBase18(amount, tokenDecimals),
                 amountTokenOut: 0,
                 tokenOutRate: 0,
                 mTokenRate: 0,
-                tokenOutDecimals: 0
+                tokenOutDecimals: tokenDecimals
             })
         );
     }

@@ -89,9 +89,10 @@ contract RedemptionVaultWithAave is RedemptionVault {
         address tokenOut,
         CalcAndValidateRedeemResult memory calcResult
     ) internal override {
-        uint256 amountTokenOut = calcResult
-            .amountTokenOutWithoutFee
-            .convertFromBase18(calcResult.tokenOutDecimals);
+        uint256 amountTokenOut = (calcResult.amountTokenOutWithoutFee +
+            calcResult.feeAmount).convertFromBase18(
+                calcResult.tokenOutDecimals
+            );
 
         uint256 contractBalanceTokenOut = IERC20(tokenOut).balanceOf(
             address(this)
@@ -99,26 +100,34 @@ contract RedemptionVaultWithAave is RedemptionVault {
         if (contractBalanceTokenOut >= amountTokenOut) return;
 
         IAaveV3Pool pool = aavePools[tokenOut];
-        require(address(pool) != address(0), "RVA: no pool for token");
+
+        // if we dont have a pool for the token, we can't withdraw, so do nothing
+        if (address(pool) == address(0)) {
+            return;
+        }
 
         uint256 missingAmount = amountTokenOut - contractBalanceTokenOut;
 
         address aToken = pool.getReserveAToken(tokenOut);
-        require(aToken != address(0), "RVA: token not in Aave pool");
+
+        // if we cant find the aToken, we can't withdraw, so do nothing
+        if (aToken == address(0)) {
+            return;
+        }
 
         uint256 aTokenBalance = IERC20(aToken).balanceOf(address(this));
-        require(
-            aTokenBalance >= missingAmount,
-            "RVA: insufficient aToken balance"
-        );
+
+        uint256 toWithdraw = aTokenBalance >= missingAmount
+            ? missingAmount
+            : aTokenBalance;
 
         uint256 withdrawnAmount = pool.withdraw(
             tokenOut,
-            missingAmount,
+            toWithdraw,
             address(this)
         );
         require(
-            withdrawnAmount >= missingAmount,
+            withdrawnAmount >= toWithdraw,
             "RVA: insufficient withdrawal amount"
         );
     }

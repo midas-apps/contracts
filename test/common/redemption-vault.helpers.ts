@@ -66,12 +66,14 @@ export const redeemInstantTest = async (
     customRecipient,
     checkSupply = true,
     expectedAmountOut,
+    additionalLiquidity,
   }: CommonParamsRedeem & {
     waivedFee?: boolean;
     minAmount?: BigNumberish;
     customRecipient?: AccountOrContract;
     checkSupply?: boolean;
     expectedAmountOut?: BigNumberish;
+    additionalLiquidity?: () => Promise<BigNumberish>;
   },
   tokenOut: IERC20 | ERC20 | string,
   amountTBillIn: number,
@@ -141,9 +143,9 @@ export const redeemInstantTest = async (
   const supplyBeforeLoanLp = loanSwapperVaultMToken
     ? await loanSwapperVaultMToken.totalSupply()
     : constants.Zero;
-  const balanceBeforeVault = await tokenContract.balanceOf(
-    redemptionVault.address,
-  );
+  const balanceBeforeVault = (
+    await tokenContract.balanceOf(redemptionVault.address)
+  ).add((await additionalLiquidity?.()) ?? constants.Zero);
   const balanceBeforeTokenOutRecipient = await tokenContract.balanceOf(
     recipient,
   );
@@ -181,6 +183,7 @@ export const redeemInstantTest = async (
     amountOutWithoutFeeBase18!,
     feeBase18!,
     tokenOutRate,
+    await additionalLiquidity?.(),
   );
 
   await expect(callFn())
@@ -218,9 +221,9 @@ export const redeemInstantTest = async (
   const balanceAfterTokenOutRecipient = await tokenContract.balanceOf(
     recipient,
   );
-  const balanceAfterVault = await tokenContract.balanceOf(
-    redemptionVault.address,
-  );
+  const balanceAfterVault = (
+    await tokenContract.balanceOf(redemptionVault.address)
+  ).add((await additionalLiquidity?.()) ?? constants.Zero);
   const balanceAfterTokenOut = await tokenContract.balanceOf(sender.address);
 
   const supplyAfter = await mTBILL.totalSupply();
@@ -239,7 +242,6 @@ export const redeemInstantTest = async (
   expect(balanceAfterVault).eq(
     balanceBeforeVault.sub(toTransferFromVault).sub(vaultFeePortion),
   );
-
   const expectedAmountToReceive = expectedAmountOut ?? amountOutWithoutFee!;
   expect(balanceAfterTokenOutRecipient).eq(
     balanceBeforeTokenOutRecipient.add(expectedAmountToReceive),
@@ -1540,11 +1542,12 @@ export const estimateSendTokensFromLiquidity = async (
   amountTokenOutWithoutFeeBase18: BigNumber,
   feeAmountBase18: BigNumber,
   tokenOutRate: BigNumber,
+  additionalLiquidity?: BigNumberish,
 ) => {
   const decimals = await tokenOut.decimals();
-  const balanceVaultBase18 = (
-    await tokenOut.balanceOf(redemptionVault.address)
-  ).mul(10 ** (18 - decimals));
+  const balanceVaultBase18 = (await tokenOut.balanceOf(redemptionVault.address))
+    .add(additionalLiquidity ?? constants.Zero)
+    .mul(10 ** (18 - decimals));
 
   const totalAmountBase18 = amountTokenOutWithoutFeeBase18.add(feeAmountBase18);
 

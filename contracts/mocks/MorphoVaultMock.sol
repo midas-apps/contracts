@@ -69,11 +69,20 @@ contract MorphoVaultMock is ERC20 {
         shares = (assets * RATE_PRECISION) / exchangeRateNumerator;
     }
 
+    function redeem(
+        uint256 shares,
+        address receiver,
+        address owner
+    ) external returns (uint256 assets) {
+        assets = convertToAssets(shares);
+        withdraw(assets, receiver, owner);
+    }
+
     function withdraw(
         uint256 assets,
         address receiver,
         address owner
-    ) external returns (uint256 shares) {
+    ) public returns (uint256 shares) {
         shares = previewWithdraw(assets);
 
         require(
@@ -105,7 +114,7 @@ contract MorphoVaultMock is ERC20 {
     }
 
     function convertToAssets(uint256 shares)
-        external
+        public
         view
         returns (uint256 assets)
     {
