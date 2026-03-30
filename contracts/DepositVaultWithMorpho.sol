@@ -80,8 +80,8 @@ contract DepositVaultWithMorpho is DepositVault {
         external
         onlyVaultAdmin
     {
-        _validateAddress(_token, false);
-        _validateAddress(_morphoVault, false);
+        _validateAddress(_token, true);
+        _validateAddress(_morphoVault, true);
         require(
             IMorphoVault(_morphoVault).asset() == _token,
             "DVM: asset mismatch"

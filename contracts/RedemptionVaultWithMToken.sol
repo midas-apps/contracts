@@ -211,23 +211,29 @@ contract RedemptionVaultWithMToken is RedemptionVault {
         uint256 amountTokenOut,
         uint256 tokenOutRate
     ) internal {
-        uint256 contractBalanceTokenOut = IERC20(tokenOut).balanceOf(
-            address(this)
-        );
-        if (contractBalanceTokenOut >= amountTokenOut) return;
-
-        uint256 missingAmount = amountTokenOut - contractBalanceTokenOut;
         uint256 tokenDecimals = _tokenDecimals(tokenOut);
-
-        uint256 missingAmountBase18 = missingAmount.convertToBase18(
+        uint256 amountTokenOutBase18 = amountTokenOut.convertToBase18(
             tokenDecimals
         );
+        uint256 contractBalanceBase18 = IERC20(tokenOut)
+            .balanceOf(address(this))
+            .convertToBase18(tokenDecimals);
+        if (contractBalanceBase18 >= amountTokenOutBase18) return;
+
+        require(
+            ManageableVault(address(redemptionVault)).waivedFeeRestriction(
+                address(this)
+            ),
+            "RVMT: fees not waived on target"
+        );
+
+        uint256 missingAmountBase18 = amountTokenOutBase18 -
+            contractBalanceBase18;
         uint256 mTokenARate = redemptionVault
             .mTokenDataFeed()
             .getDataInBase18();
 
         // Ceil so the inner vault's floored output is still >= missingAmountBase18.
-        // Requires address(this) to have waivedFeeRestriction on the inner vault
         uint256 mTokenAAmount = Math.mulDiv(
             missingAmountBase18,
             tokenOutRate,

@@ -1407,7 +1407,7 @@ describe('RedemptionVaultWithMToken', function () {
         stableCoins.dai,
         100,
         {
-          revertMessage: 'RV: minReceiveAmount > actual',
+          revertMessage: 'RVMT: fees not waived on target',
         },
       );
     });

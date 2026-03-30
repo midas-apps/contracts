@@ -80,8 +80,8 @@ contract DepositVaultWithAave is DepositVault {
         external
         onlyVaultAdmin
     {
-        _validateAddress(_token, false);
-        _validateAddress(_aavePool, false);
+        _validateAddress(_token, true);
+        _validateAddress(_aavePool, true);
         require(
             IAaveV3Pool(_aavePool).getReserveAToken(_token) != address(0),
             "DVA: token not in pool"
