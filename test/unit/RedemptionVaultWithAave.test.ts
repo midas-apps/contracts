@@ -23,12 +23,16 @@ import {
   addWaivedFeeAccountTest,
   changeTokenAllowanceTest,
 } from '../common/manageable-vault.helpers';
-import { redeemInstantTest } from '../common/redemption-vault.helpers';
+import {
+  redeemInstantTest,
+  setLoanLpTest,
+} from '../common/redemption-vault.helpers';
 import { sanctionUser } from '../common/with-sanctions-list.helpers';
 
 redemptionVaultSuits(
   'RedemptionVaultWithAave',
   defaultDeploy,
+  'redemptionVaultWithAave',
   async (fixture) => {
     const { redemptionVaultWithAave, stableCoins, aavePoolMock } = fixture;
     expect(
@@ -36,7 +40,7 @@ redemptionVaultSuits(
     ).eq(aavePoolMock.address);
   },
   (defaultDeploy) => {
-    describe('RedemptionVaultWithAave', function () {
+    describe('RedemptionVaultWithAave', () => {
       describe('setAavePool()', () => {
         it('should fail: call from address without vault admin role', async () => {
           const {
@@ -825,11 +829,6 @@ redemptionVaultSuits(
             redemptionVaultLoanSwapper,
           } = await loadFixture(defaultDeploy);
 
-          await redemptionVaultWithAave.setLoanSwapperVault(
-            redemptionVaultLoanSwapper.address,
-          );
-          await redemptionVaultWithAave.setLoanLp(loanLp.address);
-
           // Vault has 100 USDC + 9900 aTokens
           await mintToken(stableCoins.usdc, redemptionVaultWithAave, 100);
           await mintToken(mTokenLoan, loanLp, 200);
@@ -842,10 +841,6 @@ redemptionVaultSuits(
             true,
           );
           await mintToken(stableCoins.usdc, redemptionVaultLoanSwapper, 200);
-          await addWaivedFeeAccountTest(
-            { vault: redemptionVaultLoanSwapper, owner },
-            redemptionVaultWithAave.address,
-          );
 
           await aUSDC.mint(
             redemptionVaultWithAave.address,
@@ -994,6 +989,11 @@ redemptionVaultSuits(
             aUSDC,
           } = await loadFixture(defaultDeploy);
 
+          await setLoanLpTest(
+            { redemptionVault: redemptionVaultWithAave, owner },
+            ethers.constants.AddressZero,
+          );
+
           // Vault has no USDC and only 10 aTokens (not enough for 1000 mTBILL redemption)
           await aUSDC.mint(
             redemptionVaultWithAave.address,
@@ -1032,6 +1032,10 @@ redemptionVaultSuits(
             dataFeed,
           } = await loadFixture(defaultDeploy);
 
+          await setLoanLpTest(
+            { redemptionVault: redemptionVaultWithAave, owner },
+            ethers.constants.AddressZero,
+          );
           // Vault has no USDC and only 10 aTokens (not enough for 1000 mTBILL redemption)
           await mintToken(mTBILL, owner, 1000);
           await approveBase18(owner, mTBILL, redemptionVaultWithAave, 1000);
@@ -1070,6 +1074,11 @@ redemptionVaultSuits(
             dataFeed,
             aavePoolMock,
           } = await loadFixture(defaultDeploy);
+
+          await setLoanLpTest(
+            { redemptionVault: redemptionVaultWithAave, owner },
+            ethers.constants.AddressZero,
+          );
 
           // Vault has no USDC and only 10 aTokens (not enough for 1000 mTBILL redemption)
           await mintToken(mTBILL, owner, 1000);

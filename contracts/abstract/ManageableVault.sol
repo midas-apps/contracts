@@ -180,19 +180,6 @@ abstract contract ManageableVault is
     /**
      * @inheritdoc IManageableVault
      */
-    function withdrawToken(
-        address token,
-        uint256 amount,
-        address withdrawTo
-    ) external onlyVaultAdmin {
-        IERC20(token).safeTransfer(withdrawTo, amount);
-
-        emit WithdrawToken(msg.sender, token, withdrawTo, amount);
-    }
-
-    /**
-     * @inheritdoc IManageableVault
-     */
     function addPaymentToken(
         address token,
         address dataFeed,
@@ -430,11 +417,31 @@ abstract contract ManageableVault is
     }
 
     /**
-     * @dev do safeTransferFrom on a given token
+     * @dev do safeTransfer on a given token
+     * and converts `amount` from base18
+     * to amount with a correct precision. Sends tokens
+     * from `contract` to `user`
+     * @param token address of token
+     * @param to address of user
+     * @param amount amount of `token` to transfer from `user` (decimals 18)
+     * @param tokenDecimals token decimals
+     */
+    function _tokenTransferToUser(
+        address token,
+        address to,
+        uint256 amount,
+        uint256 tokenDecimals
+    ) internal {
+        _tokenTransferFromTo(token, address(this), to, amount, tokenDecimals);
+    }
+
+    /**
+     * @dev do safeTransfer or safeTransferFrom on a given token
      * and converts `amount` from base18
      * to amount with a correct precision.
      * @param token address of token
-     * @param from address
+     * @param from address. If its address(this) the safeTransfer will be used
+     * instead of safeTransferFrom
      * @param to address
      * @param amount amount of `token` to transfer from `user`
      * @param tokenDecimals token decimals
@@ -454,34 +461,11 @@ abstract contract ManageableVault is
             "MV: invalid rounding"
         );
 
-        IERC20(token).safeTransferFrom(from, to, transferAmount);
-    }
-
-    /**
-     * @dev do safeTransfer on a given token
-     * and converts `amount` from base18
-     * to amount with a correct precision. Sends tokens
-     * from `contract` to `user`
-     * @param token address of token
-     * @param to address of user
-     * @param amount amount of `token` to transfer from `user` (decimals 18)
-     * @param tokenDecimals token decimals
-     */
-    function _tokenTransferToUser(
-        address token,
-        address to,
-        uint256 amount,
-        uint256 tokenDecimals
-    ) internal {
-        if (amount == 0) return;
-        uint256 transferAmount = amount.convertFromBase18(tokenDecimals);
-
-        require(
-            amount == transferAmount.convertToBase18(tokenDecimals),
-            "MV: invalid rounding"
-        );
-
-        IERC20(token).safeTransfer(to, transferAmount);
+        if (from == address(this)) {
+            IERC20(token).safeTransfer(to, transferAmount);
+        } else {
+            IERC20(token).safeTransferFrom(from, to, transferAmount);
+        }
     }
 
     /**
@@ -661,13 +645,31 @@ abstract contract ManageableVault is
      * @dev gets and validates mToken rate
      * @return mTokenRate mToken rate
      */
-    function _getMTokenRate()
+    function _getMTokenRate() internal view returns (uint256 mTokenRate) {
+        mTokenRate = _getTokenRate(address(mTokenDataFeed), false);
+        _validateTokenRate(mTokenRate);
+    }
+
+    /**
+     * @dev gets and validates pToken rate
+     * @param token address of pToken
+     * @return tokenRate token rate
+     */
+    function _getPTokenRate(address token)
         internal
         view
-        virtual
-        returns (uint256 mTokenRate)
+        returns (uint256 tokenRate)
     {
-        mTokenRate = _getTokenRate(address(mTokenDataFeed), false);
-        require(mTokenRate > 0, "MV: rate zero");
+        TokenConfig storage tokenConfig = tokensConfig[token];
+        tokenRate = _getTokenRate(tokenConfig.dataFeed, tokenConfig.stable);
+        _validateTokenRate(tokenRate);
+    }
+
+    /**
+     * @dev validates token rate
+     * @param rate token rate
+     */
+    function _validateTokenRate(uint256 rate) private pure {
+        require(rate > 0, "MV: rate zero");
     }
 }

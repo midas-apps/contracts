@@ -286,4 +286,17 @@ interface IDepositVault is IManageableVault {
      * @param newValue new max supply cap value
      */
     function setMaxSupplyCap(uint256 newValue) external;
+
+    /**
+     * @notice withdraws `amount` of a given `token` from the contract.
+     * can be called only from permissioned actor.
+     * @param token token address
+     * @param amount token amount
+     * @param withdrawTo withdraw destination address
+     */
+    function withdrawToken(
+        address token,
+        uint256 amount,
+        address withdrawTo
+    ) external;
 }

@@ -2,12 +2,11 @@
 pragma solidity 0.8.9;
 
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 
 import {IDepositVault, CommonVaultInitParams, MTokenInitParams, ReceiversInitParams, InstantInitParams, Request, RequestStatus} from "./interfaces/IDepositVault.sol";
-import {TokenConfig} from "./interfaces/IManageableVault.sol";
 
 import {ManageableVault} from "./abstract/ManageableVault.sol";
 
@@ -18,7 +17,7 @@ import {ManageableVault} from "./abstract/ManageableVault.sol";
  */
 contract DepositVault is ManageableVault, IDepositVault {
     using Counters for Counters.Counter;
-
+    using SafeERC20 for IERC20;
     /**
      * @notice return data of _calcAndValidateDeposit
      * packed into a struct to avoid stack too deep errors
@@ -425,6 +424,18 @@ contract DepositVault is ManageableVault, IDepositVault {
     }
 
     /**
+     * @inheritdoc IDepositVault
+     */
+    function withdrawToken(
+        address token,
+        uint256 amount,
+        address withdrawTo
+    ) external {
+        IERC20(token).safeTransfer(withdrawTo, amount);
+        emit WithdrawToken(msg.sender, token, withdrawTo, amount);
+    }
+
+    /**
      * @inheritdoc ManageableVault
      */
     function vaultRole() public pure virtual override returns (bytes32) {
@@ -747,10 +758,7 @@ contract DepositVault is ManageableVault, IDepositVault {
     {
         require(amount > 0, "DV: amount zero");
 
-        TokenConfig storage tokenConfig = tokensConfig[tokenIn];
-
-        rate = _getTokenRate(tokenConfig.dataFeed, tokenConfig.stable);
-        require(rate > 0, "DV: rate zero");
+        rate = _getPTokenRate(tokenIn);
 
         amountInUsd = (amount * rate) / (10**18);
     }

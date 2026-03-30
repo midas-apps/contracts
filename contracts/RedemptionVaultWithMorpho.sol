@@ -92,7 +92,7 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
     function _postRedeemInstant(
         address tokenOut,
         CalcAndValidateRedeemResult memory calcResult
-    ) internal override {
+    ) internal virtual override {
         uint256 amountTokenOut = calcResult.amountTokenOut.convertFromBase18(
             calcResult.tokenOutDecimals
         );
@@ -114,10 +114,10 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
 
         uint256 sharesNeeded = vault.previewWithdraw(missingAmount);
         uint256 vaultSharesBalance = vault.balanceOf(address(this));
-        uint256 toWithdraw = vaultSharesBalance >= sharesNeeded
+        uint256 toRedeemShares = vaultSharesBalance >= sharesNeeded
             ? sharesNeeded
             : vaultSharesBalance;
 
-        vault.redeem(toWithdraw, address(this), address(this));
+        vault.redeem(toRedeemShares, address(this), address(this));
     }
 }

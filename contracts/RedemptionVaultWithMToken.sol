@@ -108,20 +108,20 @@ contract RedemptionVaultWithMToken is RedemptionVault {
     function _postRedeemInstant(
         address tokenOut,
         CalcAndValidateRedeemResult memory calcResult
-    ) internal override {
+    ) internal virtual override {
         uint256 amountTokenOut = calcResult.amountTokenOut.convertFromBase18(
             calcResult.tokenOutDecimals
         );
         uint256 contractBalanceTokenOut = IERC20(tokenOut).balanceOf(
             address(this)
         );
+
         if (contractBalanceTokenOut >= amountTokenOut) return;
 
         uint256 missingAmount = amountTokenOut - contractBalanceTokenOut;
-        uint256 tokenDecimals = _tokenDecimals(tokenOut);
 
         uint256 missingAmountBase18 = missingAmount.convertToBase18(
-            tokenDecimals
+            calcResult.tokenOutDecimals
         );
         uint256 mTokenARate = redemptionVault
             .mTokenDataFeed()
@@ -137,21 +137,29 @@ contract RedemptionVaultWithMToken is RedemptionVault {
         );
 
         address mTokenA = address(redemptionVault.mToken());
+        uint256 mTokenABalance = IERC20(mTokenA).balanceOf(address(this));
 
-        require(
-            IERC20(mTokenA).balanceOf(address(this)) >= mTokenAAmount,
-            "RVMT: insufficient mToken balance"
-        );
+        mTokenAAmount = mTokenABalance >= mTokenAAmount
+            ? mTokenAAmount
+            : mTokenABalance;
 
         IERC20(mTokenA).safeIncreaseAllowance(
             address(redemptionVault),
             mTokenAAmount
         );
 
-        redemptionVault.redeemInstant(
-            tokenOut,
-            mTokenAAmount,
-            missingAmountBase18
-        );
+        // redeem may fail for many reasons, so we just catch all the errors
+        // and reset the allowance to 0, so the execution will safely fallback
+        // to the LP loan redemption flow.
+        try
+            redemptionVault.redeemInstant(
+                tokenOut,
+                mTokenAAmount,
+                missingAmountBase18
+            )
+        {} catch (bytes memory) {
+            // reset the allowance to 0
+            IERC20(mTokenA).safeApprove(address(redemptionVault), 0);
+        }
     }
 }

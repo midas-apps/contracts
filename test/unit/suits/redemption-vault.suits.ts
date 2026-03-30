@@ -34,7 +34,6 @@ import {
   setInstantDailyLimitTest,
   setMinAmountTest,
   setVariabilityToleranceTest,
-  withdrawTest,
   changeTokenFeeTest,
   setTokensReceiverTest,
   setFeeReceiverTest,
@@ -55,18 +54,37 @@ import {
   setLoanLpTest,
   setMinFiatRedeemAmountTest,
   setRequestRedeemerTest,
+  withdrawTest,
 } from '../../common/redemption-vault.helpers';
 import { sanctionUser } from '../../common/with-sanctions-list.helpers';
 
 export const redemptionVaultSuits = (
   rvName: string,
   rvFixture: () => Promise<DefaultFixture>,
+  rvKey:
+    | 'redemptionVault'
+    | 'redemptionVaultWithAave'
+    | 'redemptionVaultWithMToken'
+    | 'redemptionVaultWithUSTB'
+    | 'redemptionVaultWithMorpho' = 'redemptionVault',
   deploymentAdditionalChecks: (fixtureRes: DefaultFixture) => Promise<void>,
   otherTests: (fixture: () => Promise<DefaultFixture>) => void,
 ) => {
+  const loadRvFixture = async () => {
+    const fixture = await loadFixture(rvFixture);
+
+    return {
+      ...fixture,
+      redemptionVault: RedemptionVaultTest__factory.connect(
+        fixture[rvKey].address,
+        fixture.owner,
+      ),
+    };
+  };
+
   describe(rvName, function () {
     it('deployment', async () => {
-      const fixture = await loadFixture(rvFixture);
+      const fixture = await loadRvFixture();
       const {
         redemptionVault,
         mTBILL,
@@ -126,7 +144,7 @@ export const redemptionVaultSuits = (
           loanLpFeeReceiver,
           loanRepaymentAddress,
           redemptionVaultLoanSwapper,
-        } = await loadFixture(rvFixture);
+        } = await loadRvFixture();
 
         const redemptionVaultUninitialized =
           await new RedemptionVaultTest__factory(owner).deploy();
@@ -394,7 +412,7 @@ export const redemptionVaultSuits = (
       describe('MBasisRedemptionVault', () => {
         describe('deployment', () => {
           it('vaultRole', async () => {
-            const fixture = await loadFixture(rvFixture);
+            const fixture = await loadRvFixture();
 
             const tester = await new MBasisRedemptionVault__factory(
               fixture.owner,
@@ -409,7 +427,7 @@ export const redemptionVaultSuits = (
 
       describe('initialization', () => {
         it('should fail: cal; initialize() when already initialized', async () => {
-          const { redemptionVault } = await loadFixture(rvFixture);
+          const { redemptionVault } = await loadRvFixture();
 
           await expect(
             redemptionVault.initialize(
@@ -454,7 +472,7 @@ export const redemptionVaultSuits = (
             feeReceiver,
             mTokenToUsdDataFeed,
             mockedSanctionsList,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           const vault = await new ManageableVaultTester__factory(
             owner,
@@ -492,7 +510,7 @@ export const redemptionVaultSuits = (
             feeReceiver,
             mTokenToUsdDataFeed,
             mockedSanctionsList,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           const vault = await new ManageableVaultTester__factory(
             owner,
@@ -529,7 +547,7 @@ export const redemptionVaultSuits = (
             tokensReceiver,
             mTokenToUsdDataFeed,
             mockedSanctionsList,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           const vault = await new ManageableVaultTester__factory(
             owner,
@@ -567,7 +585,7 @@ export const redemptionVaultSuits = (
             feeReceiver,
             mTokenToUsdDataFeed,
             mockedSanctionsList,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           const vault = await new ManageableVaultTester__factory(
             owner,
@@ -604,7 +622,7 @@ export const redemptionVaultSuits = (
             tokensReceiver,
             feeReceiver,
             mockedSanctionsList,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           const vault = await new ManageableVaultTester__factory(
             owner,
@@ -642,7 +660,7 @@ export const redemptionVaultSuits = (
             feeReceiver,
             mockedSanctionsList,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           const vault = await new ManageableVaultTester__factory(
             owner,
@@ -690,7 +708,7 @@ export const redemptionVaultSuits = (
         });
 
         it('should fail: call with zero address receiver', async () => {
-          const { owner, redemptionVault } = await loadFixture(rvFixture);
+          const { owner, redemptionVault } = await loadRvFixture();
 
           await setTokensReceiverTest(
             { vault: redemptionVault, owner },
@@ -702,7 +720,7 @@ export const redemptionVaultSuits = (
         });
 
         it('should fail: call with address(this) receiver', async () => {
-          const { owner, redemptionVault } = await loadFixture(rvFixture);
+          const { owner, redemptionVault } = await loadRvFixture();
 
           await setTokensReceiverTest(
             { vault: redemptionVault, owner },
@@ -738,7 +756,7 @@ export const redemptionVaultSuits = (
         });
 
         it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-          const { owner, redemptionVault } = await loadFixture(rvFixture);
+          const { owner, redemptionVault } = await loadRvFixture();
           await setMinAmountTest({ vault: redemptionVault, owner }, 1.1);
         });
       });
@@ -756,7 +774,7 @@ export const redemptionVaultSuits = (
         });
 
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-          const { owner, redemptionVault } = await loadFixture(rvFixture);
+          const { owner, redemptionVault } = await loadRvFixture();
           await setMinFiatRedeemAmountTest({ redemptionVault, owner }, 1.1);
         });
       });
@@ -790,7 +808,7 @@ export const redemptionVaultSuits = (
 
       describe('sanctionsListAdminRole()', () => {
         it('should return same role as vaultRole()', async () => {
-          const { redemptionVault } = await loadFixture(rvFixture);
+          const { redemptionVault } = await loadRvFixture();
           const vaultRole = await redemptionVault.vaultRole();
           const sanctionsListAdminRole =
             await redemptionVault.sanctionsListAdminRole();
@@ -812,7 +830,7 @@ export const redemptionVaultSuits = (
         });
 
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-          const { owner, redemptionVault } = await loadFixture(rvFixture);
+          const { owner, redemptionVault } = await loadRvFixture();
           await setFiatFlatFeeTest({ redemptionVault, owner }, 100);
         });
       });
@@ -830,7 +848,7 @@ export const redemptionVaultSuits = (
         });
 
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-          const { owner, redemptionVault } = await loadFixture(rvFixture);
+          const { owner, redemptionVault } = await loadRvFixture();
           await setFiatAdditionalFeeTest({ redemptionVault, owner }, 100);
         });
       });
@@ -852,7 +870,7 @@ export const redemptionVaultSuits = (
         });
 
         it('should fail: try to set 0 limit', async () => {
-          const { owner, redemptionVault } = await loadFixture(rvFixture);
+          const { owner, redemptionVault } = await loadRvFixture();
 
           await setInstantDailyLimitTest(
             { vault: redemptionVault, owner },
@@ -864,7 +882,7 @@ export const redemptionVaultSuits = (
         });
 
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-          const { owner, redemptionVault } = await loadFixture(rvFixture);
+          const { owner, redemptionVault } = await loadRvFixture();
           await setInstantDailyLimitTest(
             { vault: redemptionVault, owner },
             parseUnits('1000'),
@@ -893,7 +911,7 @@ export const redemptionVaultSuits = (
 
         it('should fail: when token is already added', async () => {
           const { redemptionVault, stableCoins, owner, dataFeed } =
-            await loadFixture(rvFixture);
+            await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -933,7 +951,7 @@ export const redemptionVaultSuits = (
 
         it('call when allowance is zero', async () => {
           const { redemptionVault, stableCoins, owner, dataFeed } =
-            await loadFixture(rvFixture);
+            await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -946,7 +964,7 @@ export const redemptionVaultSuits = (
 
         it('call when allowance is not uint256 max', async () => {
           const { redemptionVault, stableCoins, owner, dataFeed } =
-            await loadFixture(rvFixture);
+            await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -959,7 +977,7 @@ export const redemptionVaultSuits = (
 
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
           const { redemptionVault, stableCoins, owner, dataFeed } =
-            await loadFixture(rvFixture);
+            await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -971,7 +989,7 @@ export const redemptionVaultSuits = (
 
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role and add 3 options on a row', async () => {
           const { redemptionVault, stableCoins, owner, dataFeed } =
-            await loadFixture(rvFixture);
+            await loadRvFixture();
 
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
@@ -1012,7 +1030,7 @@ export const redemptionVaultSuits = (
           );
         });
         it('should fail: if account fee already waived', async () => {
-          const { redemptionVault, owner } = await loadFixture(rvFixture);
+          const { redemptionVault, owner } = await loadRvFixture();
           await addWaivedFeeAccountTest(
             { vault: redemptionVault, owner },
             owner.address,
@@ -1025,7 +1043,7 @@ export const redemptionVaultSuits = (
         });
 
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-          const { redemptionVault, owner } = await loadFixture(rvFixture);
+          const { redemptionVault, owner } = await loadRvFixture();
           await addWaivedFeeAccountTest(
             { vault: redemptionVault, owner },
             owner.address,
@@ -1048,7 +1066,7 @@ export const redemptionVaultSuits = (
           );
         });
         it('should fail: if account not found in restriction', async () => {
-          const { redemptionVault, owner } = await loadFixture(rvFixture);
+          const { redemptionVault, owner } = await loadRvFixture();
           await removeWaivedFeeAccountTest(
             { vault: redemptionVault, owner },
             owner.address,
@@ -1057,7 +1075,7 @@ export const redemptionVaultSuits = (
         });
 
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-          const { redemptionVault, owner } = await loadFixture(rvFixture);
+          const { redemptionVault, owner } = await loadRvFixture();
           await addWaivedFeeAccountTest(
             { vault: redemptionVault, owner },
             owner.address,
@@ -1085,14 +1103,14 @@ export const redemptionVaultSuits = (
         });
 
         it('should fail: if new value greater then 100%', async () => {
-          const { redemptionVault, owner } = await loadFixture(rvFixture);
+          const { redemptionVault, owner } = await loadRvFixture();
           await setInstantFeeTest({ vault: redemptionVault, owner }, 10001, {
             revertMessage: 'fee > 100%',
           });
         });
 
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-          const { redemptionVault, owner } = await loadFixture(rvFixture);
+          const { redemptionVault, owner } = await loadRvFixture();
           await setInstantFeeTest({ vault: redemptionVault, owner }, 100);
         });
       });
@@ -1112,7 +1130,7 @@ export const redemptionVaultSuits = (
           );
         });
         it('should fail: if new value zero', async () => {
-          const { redemptionVault, owner } = await loadFixture(rvFixture);
+          const { redemptionVault, owner } = await loadRvFixture();
           await setVariabilityToleranceTest(
             { vault: redemptionVault, owner },
             ethers.constants.Zero,
@@ -1121,7 +1139,7 @@ export const redemptionVaultSuits = (
         });
 
         it('should fail: if new value greater then 100%', async () => {
-          const { redemptionVault, owner } = await loadFixture(rvFixture);
+          const { redemptionVault, owner } = await loadRvFixture();
           await setVariabilityToleranceTest(
             { vault: redemptionVault, owner },
             10001,
@@ -1130,7 +1148,7 @@ export const redemptionVaultSuits = (
         });
 
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-          const { redemptionVault, owner } = await loadFixture(rvFixture);
+          const { redemptionVault, owner } = await loadRvFixture();
           await setVariabilityToleranceTest(
             { vault: redemptionVault, owner },
             100,
@@ -1153,7 +1171,7 @@ export const redemptionVaultSuits = (
           );
         });
         it('should fail: if redeemer address zero', async () => {
-          const { redemptionVault, owner } = await loadFixture(rvFixture);
+          const { redemptionVault, owner } = await loadRvFixture();
           await setRequestRedeemerTest(
             { redemptionVault, owner },
             ethers.constants.AddressZero,
@@ -1162,7 +1180,7 @@ export const redemptionVaultSuits = (
         });
 
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-          const { redemptionVault, owner } = await loadFixture(rvFixture);
+          const { redemptionVault, owner } = await loadRvFixture();
           await setRequestRedeemerTest(
             { redemptionVault, owner },
             owner.address,
@@ -1185,7 +1203,7 @@ export const redemptionVaultSuits = (
           );
         });
         it('if new loanLp address zero', async () => {
-          const { redemptionVault, owner } = await loadFixture(rvFixture);
+          const { redemptionVault, owner } = await loadRvFixture();
           await setLoanLpTest(
             { redemptionVault, owner },
             ethers.constants.AddressZero,
@@ -1193,7 +1211,7 @@ export const redemptionVaultSuits = (
         });
 
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-          const { redemptionVault, owner } = await loadFixture(rvFixture);
+          const { redemptionVault, owner } = await loadRvFixture();
           await setLoanLpTest({ redemptionVault, owner }, owner.address);
         });
       });
@@ -1213,7 +1231,7 @@ export const redemptionVaultSuits = (
           );
         });
         it('if new loanLpFeeReceiver address zero', async () => {
-          const { redemptionVault, owner } = await loadFixture(rvFixture);
+          const { redemptionVault, owner } = await loadRvFixture();
           await setLoanLpFeeReceiverTest(
             { redemptionVault, owner },
             ethers.constants.AddressZero,
@@ -1221,7 +1239,7 @@ export const redemptionVaultSuits = (
         });
 
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-          const { redemptionVault, owner } = await loadFixture(rvFixture);
+          const { redemptionVault, owner } = await loadRvFixture();
           await setLoanLpFeeReceiverTest(
             { redemptionVault, owner },
             owner.address,
@@ -1257,7 +1275,7 @@ export const redemptionVaultSuits = (
 
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
           const { redemptionVault, stableCoins, owner, dataFeed } =
-            await loadFixture(rvFixture);
+            await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -1273,7 +1291,7 @@ export const redemptionVaultSuits = (
 
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role and add 3 options on a row', async () => {
           const { redemptionVault, owner, stableCoins, dataFeed } =
-            await loadFixture(rvFixture);
+            await loadRvFixture();
 
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
@@ -1327,7 +1345,6 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             ethers.constants.AddressZero,
             0,
-            ethers.constants.AddressZero,
             {
               revertMessage: acErrors.WMAC_HASNT_ROLE,
               from: regularAccounts[0],
@@ -1336,26 +1353,22 @@ export const redemptionVaultSuits = (
         });
 
         it('should fail: when there is no token in vault', async () => {
-          const { owner, redemptionVault, regularAccounts, stableCoins } =
-            await loadFixture(rvFixture);
+          const { owner, redemptionVault, stableCoins } = await loadRvFixture();
           await withdrawTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
             1,
-            regularAccounts[0],
             { revertMessage: 'ERC20: transfer amount exceeds balance' },
           );
         });
 
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-          const { redemptionVault, regularAccounts, stableCoins, owner } =
-            await loadFixture(rvFixture);
+          const { redemptionVault, stableCoins, owner } = await loadRvFixture();
           await mintToken(stableCoins.dai, redemptionVault, 1);
           await withdrawTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
             1,
-            regularAccounts[0],
           );
         });
       });
@@ -1433,7 +1446,7 @@ export const redemptionVaultSuits = (
         });
         it('should fail: allowance zero', async () => {
           const { redemptionVault, owner, stableCoins, dataFeed } =
-            await loadFixture(rvFixture);
+            await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -1451,7 +1464,7 @@ export const redemptionVaultSuits = (
 
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
           const { redemptionVault, owner, stableCoins, dataFeed } =
-            await loadFixture(rvFixture);
+            await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -1495,7 +1508,7 @@ export const redemptionVaultSuits = (
         });
         it('should fail: fee > 100%', async () => {
           const { redemptionVault, owner, stableCoins, dataFeed } =
-            await loadFixture(rvFixture);
+            await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -1512,7 +1525,7 @@ export const redemptionVaultSuits = (
         });
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
           const { redemptionVault, owner, stableCoins, dataFeed } =
-            await loadFixture(rvFixture);
+            await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -1536,7 +1549,7 @@ export const redemptionVaultSuits = (
             stableCoins,
             mTBILL,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await redeemRequestTest(
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -1556,7 +1569,7 @@ export const redemptionVaultSuits = (
             mTBILL,
             dataFeed,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -1583,7 +1596,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             regularAccounts,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await mintToken(mTBILL, regularAccounts[0], 100);
           await approveBase18(
             regularAccounts[0],
@@ -1619,7 +1632,7 @@ export const redemptionVaultSuits = (
             mTBILL,
             dataFeed,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(mTBILL, owner, 100);
           await addPaymentTokenTest(
@@ -1647,7 +1660,7 @@ export const redemptionVaultSuits = (
             mTBILL,
             dataFeed,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await approveBase18(owner, mTBILL, redemptionVault, 100);
           await addPaymentTokenTest(
@@ -1677,7 +1690,7 @@ export const redemptionVaultSuits = (
             mockedAggregator,
             mockedAggregatorMToken,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await approveBase18(owner, stableCoins.dai, redemptionVault, 10);
           await addPaymentTokenTest(
@@ -1718,7 +1731,7 @@ export const redemptionVaultSuits = (
             stableCoins,
             dataFeed,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -1750,7 +1763,7 @@ export const redemptionVaultSuits = (
             stableCoins,
             mTBILL,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await redemptionVault.setGreenlistEnable(true);
 
@@ -1774,7 +1787,7 @@ export const redemptionVaultSuits = (
             blackListableTester,
             accessControl,
             regularAccounts,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await blackList(
             { blacklistable: blackListableTester, accessControl, owner },
@@ -1801,7 +1814,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             regularAccounts,
             mockedSanctionsList,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await sanctionUser(
             { sanctionsList: mockedSanctionsList },
@@ -1829,7 +1842,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             regularAccounts,
             customRecipient,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await mintToken(mTBILL, regularAccounts[0], 100);
           await approveBase18(
             regularAccounts[0],
@@ -1875,7 +1888,7 @@ export const redemptionVaultSuits = (
             greenListableTester,
             accessControl,
             customRecipient,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await redemptionVault.setGreenlistEnable(true);
 
@@ -1911,7 +1924,7 @@ export const redemptionVaultSuits = (
             accessControl,
             regularAccounts,
             customRecipient,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await blackList(
             { blacklistable: blackListableTester, accessControl, owner },
@@ -1945,7 +1958,7 @@ export const redemptionVaultSuits = (
             regularAccounts,
             mockedSanctionsList,
             customRecipient,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await sanctionUser(
             { sanctionsList: mockedSanctionsList },
@@ -1978,7 +1991,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             customRecipient,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(mTBILL, owner, 100);
           await approveBase18(owner, mTBILL, redemptionVault, 100);
@@ -2015,7 +2028,7 @@ export const redemptionVaultSuits = (
             mTBILL,
             mTokenToUsdDataFeed,
             dataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(mTBILL, owner, 100);
           await approveBase18(owner, mTBILL, redemptionVault, 100);
@@ -2049,7 +2062,7 @@ export const redemptionVaultSuits = (
             accessControl,
             regularAccounts,
             dataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await redemptionVault.setGreenlistEnable(true);
 
@@ -2089,7 +2102,7 @@ export const redemptionVaultSuits = (
             regularAccounts,
             dataFeed,
             customFeedGrowth,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mTokenToUsdDataFeed.changeAggregator(customFeedGrowth.address);
           await setRoundDataGrowth({ owner, customFeedGrowth }, 1, -1000, 10);
@@ -2125,7 +2138,7 @@ export const redemptionVaultSuits = (
             regularAccounts,
             dataFeed,
             customFeedGrowth,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mTokenToUsdDataFeed.changeAggregator(customFeedGrowth.address);
           await setMinGrowthApr({ owner, customFeedGrowth }, -10);
@@ -2162,7 +2175,7 @@ export const redemptionVaultSuits = (
             mTBILL,
             dataFeed,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, redemptionVault, 100000);
           await mintToken(mTBILL, owner, 100);
@@ -2194,7 +2207,7 @@ export const redemptionVaultSuits = (
             mTBILL,
             dataFeed,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, redemptionVault, 100000);
           await mintToken(mTBILL, owner, 100);
@@ -2225,7 +2238,7 @@ export const redemptionVaultSuits = (
             mTBILL,
             dataFeed,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, redemptionVault, 100000);
           await mintToken(mTBILL, owner, 100);
@@ -2257,7 +2270,7 @@ export const redemptionVaultSuits = (
             mTBILL,
             dataFeed,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, redemptionVault, 100000);
           await mintToken(mTBILL, owner, 100);
@@ -2297,7 +2310,7 @@ export const redemptionVaultSuits = (
             regularAccounts,
             dataFeed,
             customRecipient,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, redemptionVault, 100000);
           await mintToken(mTBILL, regularAccounts[0], 100);
@@ -2335,7 +2348,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             regularAccounts,
             dataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, redemptionVault, 100000);
           await mintToken(mTBILL, regularAccounts[0], 100);
@@ -2374,7 +2387,7 @@ export const redemptionVaultSuits = (
             regularAccounts,
             dataFeed,
             customRecipient,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await pauseVaultFn(
             redemptionVault,
@@ -2416,7 +2429,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             regularAccounts,
             dataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await pauseVaultFn(
             redemptionVault,
@@ -2459,7 +2472,7 @@ export const redemptionVaultSuits = (
             regularAccounts,
             greenListableTester,
             accessControl,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await greenList(
             { greenlistable: greenListableTester, accessControl, owner },
             regularAccounts[0],
@@ -2483,7 +2496,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             regularAccounts,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await mintToken(mTBILL, regularAccounts[0], 100);
           await approveBase18(
             regularAccounts[0],
@@ -2518,7 +2531,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             greenListableTester,
             accessControl,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await greenList(
             { greenlistable: greenListableTester, accessControl, owner },
@@ -2545,7 +2558,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             greenListableTester,
             accessControl,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await greenList(
             { greenlistable: greenListableTester, accessControl, owner },
@@ -2571,7 +2584,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             greenListableTester,
             accessControl,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await greenList(
             { greenlistable: greenListableTester, accessControl, owner },
@@ -2594,7 +2607,7 @@ export const redemptionVaultSuits = (
 
         it('should fail: greenlist enabled and user not in greenlist ', async () => {
           const { owner, redemptionVault, mTBILL, mTokenToUsdDataFeed } =
-            await loadFixture(rvFixture);
+            await loadRvFixture();
 
           await redemptionVault.setGreenlistEnable(true);
 
@@ -2617,7 +2630,7 @@ export const redemptionVaultSuits = (
             regularAccounts,
             greenListableTester,
             accessControl,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await greenList(
             { greenlistable: greenListableTester, accessControl, owner },
@@ -2647,7 +2660,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             greenListableTester,
             accessControl,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await greenList(
             { greenlistable: greenListableTester, accessControl, owner },
@@ -2674,7 +2687,7 @@ export const redemptionVaultSuits = (
             mockedSanctionsList,
             greenListableTester,
             accessControl,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await greenList(
             { greenlistable: greenListableTester, accessControl, owner },
@@ -2705,7 +2718,7 @@ export const redemptionVaultSuits = (
             regularAccounts,
             greenListableTester,
             accessControl,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await greenList(
             { greenlistable: greenListableTester, accessControl, owner },
@@ -2741,7 +2754,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             greenListableTester,
             accessControl,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await greenList(
             { greenlistable: greenListableTester, accessControl, owner },
@@ -2770,7 +2783,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             greenListableTester,
             accessControl,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await greenList(
             { greenlistable: greenListableTester, accessControl, owner },
@@ -2798,7 +2811,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             greenListableTester,
             accessControl,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await greenList(
             { greenlistable: greenListableTester, accessControl, owner },
@@ -2828,7 +2841,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             greenListableTester,
             accessControl,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await greenList(
             { greenlistable: greenListableTester, accessControl, owner },
@@ -2864,7 +2877,7 @@ export const redemptionVaultSuits = (
             regularAccounts,
             mTokenToUsdDataFeed,
             mTBILL,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await approveRedeemRequestTest(
             {
               redemptionVault,
@@ -2888,7 +2901,7 @@ export const redemptionVaultSuits = (
             mTBILL,
             dataFeed,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(mTBILL, owner, 100);
           await approveBase18(owner, mTBILL, redemptionVault, 100);
@@ -2923,7 +2936,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             greenListableTester,
             accessControl,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await greenList(
             { greenlistable: greenListableTester, accessControl, owner },
@@ -2956,7 +2969,7 @@ export const redemptionVaultSuits = (
             mTBILL,
             dataFeed,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -2985,7 +2998,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -3038,7 +3051,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -3085,7 +3098,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             greenListableTester,
             accessControl,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await greenList(
             { greenlistable: greenListableTester, accessControl, owner },
@@ -3124,7 +3137,7 @@ export const redemptionVaultSuits = (
             regularAccounts,
             mTokenToUsdDataFeed,
             mTBILL,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await safeApproveRedeemRequestTest(
             {
               redemptionVault,
@@ -3148,7 +3161,7 @@ export const redemptionVaultSuits = (
             mTBILL,
             dataFeed,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -3177,7 +3190,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -3224,7 +3237,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -3276,7 +3289,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -3320,7 +3333,7 @@ export const redemptionVaultSuits = (
             regularAccounts,
             mTokenToUsdDataFeed,
             mTBILL,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await safeBulkApproveRequestTest(
             {
               redemptionVault,
@@ -3344,7 +3357,7 @@ export const redemptionVaultSuits = (
             mTBILL,
             dataFeed,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -3373,7 +3386,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -3425,7 +3438,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -3482,7 +3495,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -3539,7 +3552,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -3586,7 +3599,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -3639,7 +3652,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             requestRedeemer,
             regularAccounts,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -3693,7 +3706,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await approveBase18(
             requestRedeemer,
@@ -3739,7 +3752,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 600);
 
@@ -3793,7 +3806,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await mintToken(stableCoins.usdc, requestRedeemer, 100000);
@@ -3858,7 +3871,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.usdc, requestRedeemer, 100000);
 
@@ -3914,7 +3927,7 @@ export const redemptionVaultSuits = (
             regularAccounts,
             mTokenToUsdDataFeed,
             mTBILL,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await safeBulkApproveRequestTest(
             {
               redemptionVault,
@@ -3938,7 +3951,7 @@ export const redemptionVaultSuits = (
             mTBILL,
             dataFeed,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -3967,7 +3980,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -4014,7 +4027,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -4061,7 +4074,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -4113,7 +4126,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -4170,7 +4183,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -4227,7 +4240,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -4274,7 +4287,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -4327,7 +4340,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             requestRedeemer,
             regularAccounts,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -4381,7 +4394,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await approveBase18(
             requestRedeemer,
@@ -4427,7 +4440,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 600);
 
@@ -4481,7 +4494,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await mintToken(stableCoins.usdc, requestRedeemer, 100000);
@@ -4546,7 +4559,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.usdc, requestRedeemer, 100000);
 
@@ -4602,7 +4615,7 @@ export const redemptionVaultSuits = (
             regularAccounts,
             mTokenToUsdDataFeed,
             mTBILL,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await safeBulkApproveRequestTest(
             {
               redemptionVault,
@@ -4626,7 +4639,7 @@ export const redemptionVaultSuits = (
             mTBILL,
             dataFeed,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -4655,7 +4668,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -4704,7 +4717,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -4753,7 +4766,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -4805,7 +4818,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -4862,7 +4875,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -4919,7 +4932,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -4967,7 +4980,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             requestRedeemer,
             customFeedGrowth,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mTokenToUsdDataFeed.changeAggregator(customFeedGrowth.address);
           await setRoundDataGrowth({ owner, customFeedGrowth }, 1, -1000, 10);
@@ -5018,7 +5031,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             requestRedeemer,
             customFeedGrowth,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mTokenToUsdDataFeed.changeAggregator(customFeedGrowth.address);
           await setMinGrowthApr({ owner, customFeedGrowth }, -10);
@@ -5069,7 +5082,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -5122,7 +5135,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             requestRedeemer,
             regularAccounts,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await approveBase18(
@@ -5176,7 +5189,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await approveBase18(
             requestRedeemer,
@@ -5222,7 +5235,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 600);
 
@@ -5276,7 +5289,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, requestRedeemer, 100000);
           await mintToken(stableCoins.usdc, requestRedeemer, 100000);
@@ -5341,7 +5354,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             dataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.usdc, requestRedeemer, 100000);
 
@@ -5397,7 +5410,7 @@ export const redemptionVaultSuits = (
             regularAccounts,
             mTokenToUsdDataFeed,
             mTBILL,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await rejectRedeemRequestTest(
             {
               redemptionVault,
@@ -5420,7 +5433,7 @@ export const redemptionVaultSuits = (
             mTBILL,
             dataFeed,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -5447,7 +5460,7 @@ export const redemptionVaultSuits = (
             mTBILL,
             dataFeed,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, redemptionVault, 100000);
           await mintToken(mTBILL, owner, 100);
@@ -5490,7 +5503,7 @@ export const redemptionVaultSuits = (
             mTBILL,
             mTokenToUsdDataFeed,
             dataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await mintToken(stableCoins.dai, redemptionVault, 100000);
           await mintToken(mTBILL, owner, 100);
@@ -5530,7 +5543,7 @@ export const redemptionVaultSuits = (
             regularAccounts,
             dataFeed,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await pauseVault(redemptionVault);
           await mintToken(stableCoins.dai, redemptionVault, 100);
@@ -5568,7 +5581,7 @@ export const redemptionVaultSuits = (
             stableCoins,
             dataFeed,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await pauseVault(redemptionVault);
 
@@ -5604,7 +5617,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -5653,7 +5666,7 @@ export const redemptionVaultSuits = (
             dataFeed,
             mTokenToUsdDataFeed,
             requestRedeemer,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -5701,7 +5714,7 @@ export const redemptionVaultSuits = (
             stableCoins,
             dataFeed,
             mTokenToUsdDataFeed,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai,
@@ -5764,7 +5777,6 @@ export const redemptionVaultSuits = (
               { vault: redemptionVault, owner },
               stableCoin,
               await stableCoin.balanceOf(redemptionVault.address),
-              owner,
             );
 
             await addPaymentTokenTest(
@@ -5795,7 +5807,7 @@ export const redemptionVaultSuits = (
         };
         describe('bulkRepayLpLoanRequestTest()', () => {
           it('approve 1 request', async () => {
-            const fixture = await loadFixture(rvFixture);
+            const fixture = await loadRvFixture();
             const {
               redemptionVault,
               owner,
@@ -5822,7 +5834,7 @@ export const redemptionVaultSuits = (
           });
 
           it('approve 2 request with same token out', async () => {
-            const fixture = await loadFixture(rvFixture);
+            const fixture = await loadRvFixture();
             const {
               redemptionVault,
               owner,
@@ -5850,7 +5862,7 @@ export const redemptionVaultSuits = (
           });
 
           it('approve 2 request with different token out', async () => {
-            const fixture = await loadFixture(rvFixture);
+            const fixture = await loadRvFixture();
             const {
               redemptionVault,
               owner,
@@ -5886,7 +5898,7 @@ export const redemptionVaultSuits = (
           });
 
           it('approve 1 request when fee is zero and lp fee receiver is not set', async () => {
-            const fixture = await loadFixture(rvFixture);
+            const fixture = await loadRvFixture();
             const {
               redemptionVault,
               owner,
@@ -5920,7 +5932,7 @@ export const redemptionVaultSuits = (
           });
 
           it('should fail: approve 1 request when fee is not zero and lp fee receiver is not set', async () => {
-            const fixture = await loadFixture(rvFixture);
+            const fixture = await loadRvFixture();
             const {
               redemptionVault,
               owner,
@@ -5955,7 +5967,7 @@ export const redemptionVaultSuits = (
           });
 
           it('should fail: when loan repayment address does not have enough balance', async () => {
-            const fixture = await loadFixture(rvFixture);
+            const fixture = await loadRvFixture();
             const {
               redemptionVault,
               owner,
@@ -5983,7 +5995,7 @@ export const redemptionVaultSuits = (
           });
 
           it('should fail: when loan repayment address does not have enough allowance', async () => {
-            const fixture = await loadFixture(rvFixture);
+            const fixture = await loadRvFixture();
             const {
               redemptionVault,
               owner,
@@ -6006,7 +6018,7 @@ export const redemptionVaultSuits = (
           });
 
           it('should fail: when loan repayment address have balance for lp transfer but not enough for fee transfer', async () => {
-            const fixture = await loadFixture(rvFixture);
+            const fixture = await loadRvFixture();
             const {
               redemptionVault,
               owner,
@@ -6036,7 +6048,7 @@ export const redemptionVaultSuits = (
           });
 
           it('should fail: request was already approved', async () => {
-            const fixture = await loadFixture(rvFixture);
+            const fixture = await loadRvFixture();
             const {
               redemptionVault,
               owner,
@@ -6070,7 +6082,7 @@ export const redemptionVaultSuits = (
           });
 
           it('should fail: request not exist', async () => {
-            const fixture = await loadFixture(rvFixture);
+            const fixture = await loadRvFixture();
             const { redemptionVault, owner, mTBILL } = fixture;
 
             await bulkRepayLpLoanRequestTest(
@@ -6083,7 +6095,7 @@ export const redemptionVaultSuits = (
           });
 
           it('should fail: call from not vault admin', async () => {
-            const fixture = await loadFixture(rvFixture);
+            const fixture = await loadRvFixture();
             const {
               redemptionVault,
               owner,
@@ -6130,7 +6142,7 @@ export const redemptionVaultSuits = (
             );
           };
           it('should cancel request', async () => {
-            const fixture = await loadFixture(rvFixture);
+            const fixture = await loadRvFixture();
             const { redemptionVault, owner, mTBILL, stableCoins } = fixture;
 
             await prepareCancelTest(fixture, stableCoins.dai);
@@ -6142,7 +6154,7 @@ export const redemptionVaultSuits = (
           });
 
           it('should fail: request not exist', async () => {
-            const fixture = await loadFixture(rvFixture);
+            const fixture = await loadRvFixture();
             const { redemptionVault, owner, mTBILL } = fixture;
 
             await cancelLpLoanRequestTest(
@@ -6155,7 +6167,7 @@ export const redemptionVaultSuits = (
           });
 
           it('should fail: request already cancelled', async () => {
-            const fixture = await loadFixture(rvFixture);
+            const fixture = await loadRvFixture();
             const { redemptionVault, owner, mTBILL, stableCoins } = fixture;
 
             await prepareCancelTest(fixture, stableCoins.dai);
@@ -6175,7 +6187,7 @@ export const redemptionVaultSuits = (
           });
 
           it('should fail: request was processed', async () => {
-            const fixture = await loadFixture(rvFixture);
+            const fixture = await loadRvFixture();
             const { redemptionVault, owner, mTBILL, stableCoins } = fixture;
 
             await prepareCancelTest(fixture, stableCoins.dai);
@@ -6194,7 +6206,7 @@ export const redemptionVaultSuits = (
           });
 
           it('should fail: call from not vault admin', async () => {
-            const fixture = await loadFixture(rvFixture);
+            const fixture = await loadRvFixture();
             const {
               redemptionVault,
               owner,
@@ -6223,7 +6235,7 @@ export const redemptionVaultSuits = (
 
       describe('_convertUsdToToken', () => {
         it('should fail: when amountUsd == 0', async () => {
-          const { redemptionVault } = await loadFixture(rvFixture);
+          const { redemptionVault } = await loadRvFixture();
 
           await expect(
             redemptionVault.convertUsdToTokenTest(0, constants.AddressZero, 0),
@@ -6231,7 +6243,7 @@ export const redemptionVaultSuits = (
         });
 
         it('should fail: when tokenRate == 0', async () => {
-          const { redemptionVault } = await loadFixture(rvFixture);
+          const { redemptionVault } = await loadRvFixture();
 
           await redemptionVault.setOverrideGetTokenRate(true);
           await redemptionVault.setGetTokenRateValue(0);
@@ -6242,13 +6254,13 @@ export const redemptionVaultSuits = (
               redemptionVault.address,
               0,
             ),
-          ).revertedWith('RV: rate zero');
+          ).revertedWith('MV: rate zero');
         });
       });
 
       describe('_convertMTokenToUsd', () => {
         it('should fail: when amountMToken == 0', async () => {
-          const { redemptionVault } = await loadFixture(rvFixture);
+          const { redemptionVault } = await loadRvFixture();
 
           await expect(
             redemptionVault.convertMTokenToUsdTest(0, 0),
@@ -6256,7 +6268,7 @@ export const redemptionVaultSuits = (
         });
 
         it('should fail: when amountMToken == 0', async () => {
-          const { redemptionVault } = await loadFixture(rvFixture);
+          const { redemptionVault } = await loadRvFixture();
 
           await redemptionVault.setOverrideGetTokenRate(true);
           await redemptionVault.setGetTokenRateValue(0);
@@ -6270,7 +6282,7 @@ export const redemptionVaultSuits = (
       describe('_calcAndValidateRedeem', () => {
         it('should fail: when tokenOut is not MANUAL_FULLFILMENT_TOKEN but isFiat = true', async () => {
           const { redemptionVault, stableCoins, owner, dataFeed } =
-            await loadFixture(rvFixture);
+            await loadRvFixture();
 
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
@@ -6297,7 +6309,7 @@ export const redemptionVaultSuits = (
 
         it('should fail: when amountMTokenIn == 0', async () => {
           const { redemptionVault, stableCoins, owner, dataFeed } =
-            await loadFixture(rvFixture);
+            await loadRvFixture();
 
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
@@ -6329,7 +6341,7 @@ export const redemptionVaultSuits = (
             owner,
             dataFeed,
             mockedAggregatorMToken,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
@@ -6365,7 +6377,7 @@ export const redemptionVaultSuits = (
             owner,
             dataFeed,
             mockedAggregatorMToken,
-          } = await loadFixture(rvFixture);
+          } = await loadRvFixture();
 
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
@@ -6395,7 +6407,7 @@ export const redemptionVaultSuits = (
 
         it('should override token out rate, mtoken rate and fee percent', async () => {
           const { redemptionVault, stableCoins, owner, dataFeed } =
-            await loadFixture(rvFixture);
+            await loadRvFixture();
 
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },
@@ -6424,7 +6436,7 @@ export const redemptionVaultSuits = (
 
         it('should correctly convert fiat flat fee to token out', async () => {
           const { redemptionVault, stableCoins, owner, dataFeed } =
-            await loadFixture(rvFixture);
+            await loadRvFixture();
 
           await addPaymentTokenTest(
             { vault: redemptionVault, owner },

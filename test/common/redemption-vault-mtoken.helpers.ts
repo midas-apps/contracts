@@ -9,10 +9,7 @@ import {
   getAccount,
 } from './common.helpers';
 import { defaultDeploy } from './fixtures';
-import {
-  calcExpectedTokenOutAmount,
-  redeemInstantTest,
-} from './redemption-vault.helpers';
+import { redeemInstantTest } from './redemption-vault.helpers';
 
 import {
   ERC20,
@@ -23,11 +20,11 @@ import {
 type CommonParamsRedeem = Pick<
   Awaited<ReturnType<typeof defaultDeploy>>,
   | 'owner'
+  | 'mTokenLoan'
   | 'mTBILL'
-  | 'mFONE'
   | 'redemptionVaultWithMToken'
+  | 'mTokenLoanToUsdDataFeed'
   | 'mTokenToUsdDataFeed'
-  | 'mFoneToUsdDataFeed'
 >;
 
 type CommonParamsSetVault = {
@@ -39,18 +36,20 @@ export const redeemInstantWithMTokenTest = async (
   {
     redemptionVaultWithMToken,
     owner,
+    mTokenLoan,
     mTBILL,
-    mFONE,
-    mFoneToUsdDataFeed,
+    mTokenToUsdDataFeed,
     useMTokenSleeve,
     minAmount,
     waivedFee,
     customRecipient,
+    additionalLiquidity,
   }: CommonParamsRedeem & {
     useMTokenSleeve?: boolean;
     waivedFee?: boolean;
     minAmount?: BigNumberish;
     customRecipient?: AccountOrContract;
+    additionalLiquidity?: () => Promise<BigNumberish>;
   },
   tokenOut: ERC20 | string,
   amountMFoneIn: number,
@@ -69,11 +68,12 @@ export const redeemInstantWithMTokenTest = async (
       {
         redemptionVault: redemptionVaultWithMToken,
         owner,
-        mTBILL: mFONE,
-        mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+        mTBILL,
+        mTokenToUsdDataFeed,
         waivedFee,
         minAmount,
         customRecipient,
+        additionalLiquidity,
       },
       tokenOut,
       amountMFoneIn,
@@ -83,56 +83,46 @@ export const redeemInstantWithMTokenTest = async (
     return;
   }
 
-  const balanceBeforeUserMFone = await mFONE.balanceOf(sender.address);
-  const balanceBeforeVaultMTbill = await mTBILL.balanceOf(
+  const balanceBeforeUserMFone = await mTBILL.balanceOf(sender.address);
+  const balanceBeforeVaultMTbill = await mTokenLoan.balanceOf(
     redemptionVaultWithMToken.address,
   );
-  const supplyBeforeMFone = await mFONE.totalSupply();
-  const supplyBeforeMTbill = await mTBILL.totalSupply();
-
-  const mFoneRate = await mFoneToUsdDataFeed.getDataInBase18();
-
-  const { amountInWithoutFee } = await calcExpectedTokenOutAmount(
-    sender,
-    tokenContract,
-    redemptionVaultWithMToken,
-    mFoneRate,
-    amountIn,
-    true,
-  );
+  const supplyBeforeMFone = await mTBILL.totalSupply();
+  const supplyBeforeMTbill = await mTokenLoan.totalSupply();
 
   await redeemInstantTest(
     {
       redemptionVault: redemptionVaultWithMToken,
       owner,
-      mTBILL: mFONE,
-      mTokenToUsdDataFeed: mFoneToUsdDataFeed,
+      mTBILL,
+      mTokenToUsdDataFeed,
       waivedFee,
       minAmount,
       customRecipient,
+      additionalLiquidity,
     },
     tokenOut,
     amountMFoneIn,
     opt,
   );
 
-  const balanceAfterUserMFone = await mFONE.balanceOf(sender.address);
-  const balanceAfterVaultMTbill = await mTBILL.balanceOf(
+  const balanceAfterUserMFone = await mTBILL.balanceOf(sender.address);
+  const balanceAfterVaultMTbill = await mTokenLoan.balanceOf(
     redemptionVaultWithMToken.address,
   );
-  const supplyAfterMFone = await mFONE.totalSupply();
-  const supplyAfterMTbill = await mTBILL.totalSupply();
+  const supplyAfterMFone = await mTBILL.totalSupply();
+  const supplyAfterMTbill = await mTokenLoan.totalSupply();
 
-  // mFONE is always burned from user
+  // mTBILL is always burned from user
   expect(balanceAfterUserMFone).eq(balanceBeforeUserMFone.sub(amountIn));
-  expect(supplyAfterMFone).eq(supplyBeforeMFone.sub(amountInWithoutFee));
+  expect(supplyAfterMFone).eq(supplyBeforeMFone.sub(amountIn));
 
   if (useMTokenSleeve) {
-    // mTBILL was redeemed from the vault's holdings
+    // mTokenLoan was redeemed from the vault's holdings
     expect(balanceAfterVaultMTbill).lt(balanceBeforeVaultMTbill);
     expect(supplyAfterMTbill).lt(supplyBeforeMTbill);
   } else {
-    // Vault had enough tokenOut, mTBILL untouched
+    // Vault had enough tokenOut, mTokenLoan untouched
     expect(balanceAfterVaultMTbill).eq(balanceBeforeVaultMTbill);
     expect(supplyAfterMTbill).eq(supplyBeforeMTbill);
   }

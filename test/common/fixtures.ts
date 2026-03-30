@@ -59,6 +59,7 @@ import {
   MidasAxelarVaultExecutableTester,
   LzEndpointV2Mock__factory,
   MTokenTest__factory,
+  RedemptionVaultTest,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -416,16 +417,19 @@ export const defaultDeploy = async () => {
       fiatFlatFee: parseUnits('1'),
       minFiatRedeemAmount: 1000,
       requestRedeemer: requestRedeemer.address,
-      loanLp: constants.AddressZero,
-      loanLpFeeReceiver: constants.AddressZero,
-      loanRepaymentAddress: constants.AddressZero,
-      loanSwapperVault: constants.AddressZero,
+      loanLp: loanLp.address,
+      loanLpFeeReceiver: loanLpFeeReceiver.address,
+      loanRepaymentAddress: loanRepaymentAddress.address,
+      loanSwapperVault: redemptionVaultLoanSwapper.address,
     },
 
     ustbRedemption.address,
   );
   await accessControl.grantRole(
     mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
+    redemptionVaultWithUSTB.address,
+  );
+  await redemptionVaultLoanSwapper.addWaivedFeeAccount(
     redemptionVaultWithUSTB.address,
   );
 
@@ -463,10 +467,10 @@ export const defaultDeploy = async () => {
       fiatFlatFee: parseUnits('1'),
       minFiatRedeemAmount: 1000,
       requestRedeemer: requestRedeemer.address,
-      loanLp: constants.AddressZero,
-      loanLpFeeReceiver: constants.AddressZero,
-      loanRepaymentAddress: constants.AddressZero,
-      loanSwapperVault: constants.AddressZero,
+      loanLp: loanLp.address,
+      loanLpFeeReceiver: loanLpFeeReceiver.address,
+      loanRepaymentAddress: loanRepaymentAddress.address,
+      loanSwapperVault: redemptionVaultLoanSwapper.address,
     },
   );
   await redemptionVaultWithAave.setAavePool(
@@ -477,7 +481,9 @@ export const defaultDeploy = async () => {
     mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
     redemptionVaultWithAave.address,
   );
-
+  await redemptionVaultLoanSwapper.addWaivedFeeAccount(
+    redemptionVaultWithAave.address,
+  );
   /* Redemption Vault With Morpho */
 
   const morphoVaultMock = await new MorphoVaultMock__factory(owner).deploy(
@@ -512,10 +518,10 @@ export const defaultDeploy = async () => {
       fiatFlatFee: parseUnits('1'),
       minFiatRedeemAmount: 1000,
       requestRedeemer: requestRedeemer.address,
-      loanLp: constants.AddressZero,
-      loanLpFeeReceiver: constants.AddressZero,
-      loanRepaymentAddress: constants.AddressZero,
-      loanSwapperVault: constants.AddressZero,
+      loanLp: loanLp.address,
+      loanLpFeeReceiver: loanLpFeeReceiver.address,
+      loanRepaymentAddress: loanRepaymentAddress.address,
+      loanSwapperVault: redemptionVaultLoanSwapper.address,
     },
   );
   await redemptionVaultWithMorpho.setMorphoVault(
@@ -526,7 +532,9 @@ export const defaultDeploy = async () => {
     mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
     redemptionVaultWithMorpho.address,
   );
-
+  await redemptionVaultLoanSwapper.addWaivedFeeAccount(
+    redemptionVaultWithMorpho.address,
+  );
   /* Deposit Vault With Aave */
 
   const depositVaultWithAave = await new DepositVaultWithAaveTest__factory(
@@ -717,8 +725,8 @@ export const defaultDeploy = async () => {
       minAmount: 1000,
     },
     {
-      mToken: mFONE.address,
-      mTokenDataFeed: mFoneToUsdDataFeed.address,
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
     },
     {
       feeReceiver: feeReceiver.address,
@@ -733,21 +741,23 @@ export const defaultDeploy = async () => {
       fiatFlatFee: parseUnits('1'),
       minFiatRedeemAmount: 1000,
       requestRedeemer: requestRedeemer.address,
-      loanLp: constants.AddressZero,
-      loanLpFeeReceiver: constants.AddressZero,
-      loanRepaymentAddress: constants.AddressZero,
-      loanSwapperVault: constants.AddressZero,
+      loanLp: loanLp.address,
+      loanLpFeeReceiver: loanLpFeeReceiver.address,
+      loanRepaymentAddress: loanRepaymentAddress.address,
+      loanSwapperVault: redemptionVaultLoanSwapper.address,
     },
-    redemptionVault.address,
+    redemptionVaultLoanSwapper.address,
   );
 
-  await accessControl.grantRole(
-    mFONE.M_TBILL_BURN_OPERATOR_ROLE(),
+  await redemptionVaultLoanSwapper.addWaivedFeeAccount(
     redemptionVaultWithMToken.address,
   );
-  await redemptionVault.addWaivedFeeAccount(redemptionVaultWithMToken.address);
   await accessControl.grantRole(
     mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
+    redemptionVaultWithMToken.address,
+  );
+  await accessControl.grantRole(
+    mTokenLoan.M_TOKEN_TEST_BURN_OPERATOR_ROLE(),
     redemptionVaultWithMToken.address,
   );
 
@@ -958,7 +968,12 @@ export const defaultDeploy = async () => {
   };
 };
 
-export type DefaultFixture = Awaited<ReturnType<typeof defaultDeploy>>;
+export type DefaultFixture = Omit<
+  Awaited<ReturnType<typeof defaultDeploy>>,
+  'redemptionVault'
+> & {
+  redemptionVault: RedemptionVaultTest;
+};
 
 /**
  * mTokenPermissionedTest + dedicated deposit/redemption vaults (for integration-style tests).

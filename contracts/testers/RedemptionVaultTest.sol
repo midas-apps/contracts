@@ -7,7 +7,7 @@ contract RedemptionVaultTest is RedemptionVault {
     bool private _overrideGetTokenRate;
     uint256 private _getTokenRateValue;
 
-    function _disableInitializers() internal override {}
+    function _disableInitializers() internal virtual override {}
 
     function initializeWithoutInitializer(
         CommonVaultInitParams calldata _commonVaultInitParams,
@@ -76,6 +76,7 @@ contract RedemptionVaultTest is RedemptionVault {
     function _getTokenRate(address dataFeed, bool stable)
         internal
         view
+        virtual
         override
         returns (uint256)
     {

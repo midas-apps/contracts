@@ -66,7 +66,7 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
     function _postRedeemInstant(
         address tokenOut,
         CalcAndValidateRedeemResult memory calcResult
-    ) internal override {
+    ) internal virtual override {
         uint256 amountTokenOut = calcResult.amountTokenOut.convertFromBase18(
             calcResult.tokenOutDecimals
         );
@@ -76,12 +76,19 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
         );
         if (contractBalanceTokenOut >= amountTokenOut) return;
 
-        require(tokenOut == ustbRedemption.USDC(), "RVU: invalid token");
+        // If tokenOut is not USDC, do nothing
+        if (tokenOut != ustbRedemption.USDC()) {
+            return;
+        }
 
         uint256 missingAmount = amountTokenOut - contractBalanceTokenOut;
 
         uint256 fee = ustbRedemption.calculateFee(missingAmount);
-        require(fee == 0, "RVU: ustb fee not zero");
+
+        // If fee is not zero, do nothing
+        if (fee != 0) {
+            return;
+        }
 
         (uint256 ustbToRedeem, ) = ustbRedemption.calculateUstbIn(
             missingAmount
@@ -90,7 +97,12 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
         IERC20 ustb = IERC20(ustbRedemption.SUPERSTATE_TOKEN());
         uint256 ustbBalance = ustb.balanceOf(address(this));
 
-        require(ustbBalance >= ustbToRedeem, "RVU: insufficient USTB balance");
+        ustbToRedeem = ustbBalance >= ustbToRedeem ? ustbToRedeem : ustbBalance;
+
+        // if nothing to redeem, do nothing
+        if (ustbToRedeem == 0) {
+            return;
+        }
 
         ustb.safeIncreaseAllowance(address(ustbRedemption), ustbToRedeem);
         ustbRedemption.redeem(ustbToRedeem);

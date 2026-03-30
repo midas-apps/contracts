@@ -174,19 +174,6 @@ interface IManageableVault {
     function mToken() external view returns (IMToken);
 
     /**
-     * @notice withdraws `amount` of a given `token` from the contract.
-     * can be called only from permissioned actor.
-     * @param token token address
-     * @param amount token amount
-     * @param withdrawTo withdraw destination address
-     */
-    function withdrawToken(
-        address token,
-        uint256 amount,
-        address withdrawTo
-    ) external;
-
-    /**
      * @notice adds a token to the stablecoins list.
      * can be called only from permissioned actor.
      * @param token token address

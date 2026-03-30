@@ -1,10 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../RedemptionVaultWithMToken.sol";
+import "./RedemptionVaultTest.sol";
 
-contract RedemptionVaultWithMTokenTest is RedemptionVaultWithMToken {
-    function _disableInitializers() internal override {}
+contract RedemptionVaultWithMTokenTest is
+    RedemptionVaultWithMToken,
+    RedemptionVaultTest
+{
+    function _disableInitializers()
+        internal
+        virtual
+        override(Initializable, RedemptionVaultTest)
+    {
+        RedemptionVaultTest._disableInitializers();
+    }
 
     function checkAndRedeemMToken(
         address token,
@@ -16,13 +27,31 @@ contract RedemptionVaultWithMTokenTest is RedemptionVaultWithMToken {
             token,
             CalcAndValidateRedeemResult({
                 feeAmount: 0,
-                amountTokenOutWithoutFee: DecimalsCorrectionLibrary
-                    .convertToBase18(amount, tokenDecimals),
-                amountTokenOut: 0,
+                amountTokenOutWithoutFee: 0,
+                amountTokenOut: DecimalsCorrectionLibrary.convertToBase18(
+                    amount,
+                    tokenDecimals
+                ),
                 tokenOutRate: rate,
                 mTokenRate: 0,
                 tokenOutDecimals: tokenDecimals
             })
         );
+    }
+
+    function _postRedeemInstant(
+        address token,
+        CalcAndValidateRedeemResult memory calcResult
+    ) internal override(RedemptionVaultWithMToken, RedemptionVault) {
+        RedemptionVaultWithMToken._postRedeemInstant(token, calcResult);
+    }
+
+    function _getTokenRate(address dataFeed, bool stable)
+        internal
+        view
+        override(ManageableVault, RedemptionVaultTest)
+        returns (uint256)
+    {
+        return RedemptionVaultTest._getTokenRate(dataFeed, stable);
     }
 }

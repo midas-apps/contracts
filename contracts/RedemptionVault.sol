@@ -8,7 +8,6 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
 import {IRedemptionVault, CommonVaultInitParams, MTokenInitParams, ReceiversInitParams, InstantInitParams, RedemptionInitParams, LiquidityProviderLoanRequest, Request, RequestV2, RequestStatus} from "./interfaces/IRedemptionVault.sol";
-import {TokenConfig} from "./interfaces/IManageableVault.sol";
 import {ManageableVault} from "./abstract/ManageableVault.sol";
 
 /**
@@ -45,32 +44,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     bytes32 private constant _DEFAULT_REDEMPTION_VAULT_ADMIN_ROLE =
         0x57df534b215589c7ade8c8abe0978debf2ea95cf1d442550f94eec78a69d238e;
-
-    /**
-     * @dev selector for redeem instant
-     * keccak256("redeemInstant(address,uint256,uint256)")
-     */
-    bytes4 private constant _REDEEM_INSTANT_SELECTOR = bytes4(0x8b53f75e);
-
-    /**
-     * @dev selector for redeem instant with custom recipient
-     * keccak256("redeemInstant(address,uint256,uint256,address)")
-     */
-    bytes4 private constant _REDEEM_INSTANT_WITH_CUSTOM_RECIPIENT_SELECTOR =
-        bytes4(0x85ab2c13);
-
-    /**
-     * @dev selector for redeem request
-     * keccak256("redeemRequest(address,uint256)")
-     */
-    bytes4 private constant _REDEEM_REQUEST_SELECTOR = bytes4(0xbfc2d46a);
-
-    /**
-     * @dev selector for redeem request with custom recipient
-     * keccak256("redeemRequest(address,uint256,address)")
-     */
-    bytes4 private constant _REDEEM_REQUEST_WITH_CUSTOM_RECIPIENT_SELECTOR =
-        bytes4(0x15571a04);
 
     /**
      * @notice min amount for fiat requests
@@ -195,7 +168,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address tokenOut,
         uint256 amountMTokenIn,
         uint256 minReceiveAmount
-    ) external whenFnNotPaused(_REDEEM_INSTANT_SELECTOR) {
+    ) external whenFnNotPaused(0x8b53f75e) {
         _redeemInstantWithCustomRecipient(
             tokenOut,
             amountMTokenIn,
@@ -212,7 +185,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 amountMTokenIn,
         uint256 minReceiveAmount,
         address recipient
-    ) external whenFnNotPaused(_REDEEM_INSTANT_WITH_CUSTOM_RECIPIENT_SELECTOR) {
+    ) external whenFnNotPaused(0x85ab2c13) {
         _redeemInstantWithCustomRecipient(
             tokenOut,
             amountMTokenIn,
@@ -226,7 +199,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function redeemRequest(address tokenOut, uint256 amountMTokenIn)
         external
-        whenFnNotPaused(_REDEEM_REQUEST_SELECTOR)
+        whenFnNotPaused(0xbfc2d46a)
         returns (
             uint256 /*requestId*/
         )
@@ -249,7 +222,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address recipient
     )
         external
-        whenFnNotPaused(_REDEEM_REQUEST_WITH_CUSTOM_RECIPIENT_SELECTOR)
+        whenFnNotPaused(0x15571a04)
         returns (
             uint256 /*requestId*/
         )
@@ -287,6 +260,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function safeBulkApproveRequestAtSavedRate(uint256[] calldata requestIds)
         external
+        whenFnNotPaused(this.safeBulkApproveRequestAtSavedRate.selector)
         onlyVaultAdmin
     {
         for (uint256 i = 0; i < requestIds.length; ++i) {
@@ -302,9 +276,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function safeBulkApproveRequest(uint256[] calldata requestIds) external {
+    function safeBulkApproveRequest(uint256[] calldata requestIds)
+        external
+        whenFnNotPaused(0xa0c74afc)
+    {
         uint256 currentMTokenRate = _getMTokenRate();
-        safeBulkApproveRequest(requestIds, currentMTokenRate);
+        _safeBulkApproveRequest(requestIds, currentMTokenRate);
     }
 
     /**
@@ -312,6 +289,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function approveRequest(uint256 requestId, uint256 newMTokenRate)
         external
+        whenFnNotPaused(0x2c0a90a9)
         onlyVaultAdmin
     {
         _approveRequest(requestId, newMTokenRate, false, false);
@@ -323,6 +301,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     function safeApproveRequest(uint256 requestId, uint256 newMTokenRate)
         external
         onlyVaultAdmin
+        whenFnNotPaused(0x88a6de68)
     {
         _approveRequest(requestId, newMTokenRate, true, false);
     }
@@ -486,19 +465,20 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     function safeBulkApproveRequest(
         uint256[] calldata requestIds,
         uint256 newOutRate
-    ) public onlyVaultAdmin {
-        for (uint256 i = 0; i < requestIds.length; ++i) {
-            bool success = _approveRequest(
-                requestIds[i],
-                newOutRate,
-                true,
-                true
-            );
+    ) external whenFnNotPaused(0xf5d46c51) {
+        _safeBulkApproveRequest(requestIds, newOutRate);
+    }
 
-            if (!success) {
-                continue;
-            }
-        }
+    /**
+     * @inheritdoc IRedemptionVault
+     */
+    function withdrawToken(address token, uint256 amount)
+        external
+        onlyVaultAdmin
+    {
+        address withdrawTo = tokensReceiver;
+        IERC20(token).safeTransfer(withdrawTo, amount);
+        emit WithdrawToken(msg.sender, token, withdrawTo, amount);
     }
 
     /**
@@ -538,6 +518,29 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function vaultRole() public pure virtual override returns (bytes32) {
         return _DEFAULT_REDEMPTION_VAULT_ADMIN_ROLE;
+    }
+
+    /**
+     * @dev internal function to approve requests
+     * @param requestIds request ids
+     * @param newOutRate new out rate
+     */
+    function _safeBulkApproveRequest(
+        uint256[] calldata requestIds,
+        uint256 newOutRate
+    ) internal onlyVaultAdmin {
+        for (uint256 i = 0; i < requestIds.length; ++i) {
+            bool success = _approveRequest(
+                requestIds[i],
+                newOutRate,
+                true,
+                true
+            );
+
+            if (!success) {
+                continue;
+            }
+        }
     }
 
     /**
@@ -1002,10 +1005,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             if (tokenOut == MANUAL_FULLFILMENT_TOKEN) {
                 return (amountUsd, STABLECOIN_RATE);
             }
-
-            TokenConfig storage tokenConfig = tokensConfig[tokenOut];
-            tokenRate = _getTokenRate(tokenConfig.dataFeed, tokenConfig.stable);
-            require(tokenRate > 0, "RV: rate zero");
+            tokenRate = _getPTokenRate(tokenOut);
         }
 
         amountToken = (amountUsd * (10**18)) / tokenRate;

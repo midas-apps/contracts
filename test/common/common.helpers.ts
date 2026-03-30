@@ -10,6 +10,7 @@ import {
   IERC20Metadata,
   MTBILL,
   Pausable,
+  USTBMock,
 } from '../../typechain-types';
 
 export type OptionalCommonParams = {
@@ -113,7 +114,7 @@ export const unpauseVault = async (
 };
 
 export const mintToken = async (
-  token: ERC20Mock | MTBILL,
+  token: ERC20Mock | MTBILL | USTBMock,
   to: AccountOrContract,
   amountN: number,
 ) => {

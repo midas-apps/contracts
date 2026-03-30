@@ -424,4 +424,12 @@ interface IRedemptionVault is IManageableVault {
         external
         view
         returns (RequestV2 memory);
+
+    /**
+     * @notice withdraws `amount` of a given `token` from the contract
+     * to the `tokensReceiver` address
+     * @param token token address
+     * @param amount token amount
+     */
+    function withdrawToken(address token, uint256 amount) external;
 }

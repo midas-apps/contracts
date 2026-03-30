@@ -27,29 +27,25 @@ import {
   RedemptionVaultTest__factory,
 } from '../../typechain-types';
 
+type RedemptionVaultType =
+  | RedemptionVault
+  | RedemptionVaultWithAave
+  | RedemptionVaultWithMorpho
+  | RedemptionVaultWithMToken
+  | RedemptionVaultWithUSTB
+  | RedemptionVaultWithSwapper;
+
 type CommonParamsRedeem = {
   mTBILL: MToken | MTBILL;
 } & Pick<
   Awaited<ReturnType<typeof defaultDeploy>>,
   'owner' | 'mTokenToUsdDataFeed'
 > & {
-    redemptionVault:
-      | RedemptionVault
-      | RedemptionVaultWithAave
-      | RedemptionVaultWithMorpho
-      | RedemptionVaultWithMToken
-      | RedemptionVaultWithUSTB
-      | RedemptionVaultWithSwapper;
+    redemptionVault: RedemptionVaultType;
   };
 
 type CommonParams = Pick<Awaited<ReturnType<typeof defaultDeploy>>, 'owner'> & {
-  redemptionVault:
-    | RedemptionVault
-    | RedemptionVaultWithAave
-    | RedemptionVaultWithMorpho
-    | RedemptionVaultWithMToken
-    | RedemptionVaultWithUSTB
-    | RedemptionVaultWithSwapper;
+  redemptionVault: RedemptionVaultType;
 };
 
 export const redeemInstantTest = async (
@@ -1426,6 +1422,43 @@ export const setLoanSwapperVaultTest = async (
   expect(newLoanSwapperVault).eq(loanSwapperVault);
 };
 
+export const withdrawTest = async (
+  { vault, owner }: { vault: RedemptionVaultType; owner: SignerWithAddress },
+  token: IERC20 | ERC20 | string,
+  amount: BigNumberish,
+  opt?: OptionalCommonParams,
+) => {
+  token = getAccount(token);
+
+  const tokenContract = ERC20__factory.connect(token, owner);
+
+  if (opt?.revertMessage) {
+    await expect(
+      vault.connect(opt?.from ?? owner).withdrawToken(token, amount),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  const withdrawTo = await vault.tokensReceiver();
+
+  const balanceBeforeContract = await tokenContract.balanceOf(vault.address);
+  const balanceBeforeTo = await tokenContract.balanceOf(withdrawTo);
+
+  await expect(
+    vault.connect(opt?.from ?? owner).withdrawToken(token, amount),
+  ).to.emit(
+    vault,
+    vault.interface.events['WithdrawToken(address,address,address,uint256)']
+      .name,
+  ).to.not.reverted;
+
+  const balanceAfterContract = await tokenContract.balanceOf(vault.address);
+  const balanceAfterTo = await tokenContract.balanceOf(withdrawTo);
+
+  expect(balanceAfterContract).eq(balanceBeforeContract.sub(amount));
+  expect(balanceAfterTo).eq(balanceBeforeTo.add(amount));
+};
+
 export const getFeePercent = async (
   sender: string,
   token: string,
@@ -1525,13 +1558,7 @@ export const calcExpectedTokenOutAmount = async (
 };
 
 export const estimateSendTokensFromLiquidity = async (
-  redemptionVault:
-    | RedemptionVault
-    | RedemptionVaultWithAave
-    | RedemptionVaultWithMorpho
-    | RedemptionVaultWithMToken
-    | RedemptionVaultWithSwapper
-    | RedemptionVaultWithUSTB,
+  redemptionVault: RedemptionVaultType,
   tokenOut: ERC20,
   amountTokenOutWithoutFeeBase18: BigNumber,
   feeAmountBase18: BigNumber,

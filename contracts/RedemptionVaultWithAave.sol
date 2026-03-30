@@ -88,7 +88,7 @@ contract RedemptionVaultWithAave is RedemptionVault {
     function _postRedeemInstant(
         address tokenOut,
         CalcAndValidateRedeemResult memory calcResult
-    ) internal override {
+    ) internal virtual override {
         uint256 amountTokenOut = calcResult.amountTokenOut.convertFromBase18(
             calcResult.tokenOutDecimals
         );

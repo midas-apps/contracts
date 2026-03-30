@@ -39,6 +39,7 @@ import { sanctionUser } from '../common/with-sanctions-list.helpers';
 redemptionVaultSuits(
   'RedemptionVault',
   defaultDeploy,
+  'redemptionVault',
   async () => {},
   (defaultDeploy) => {
     describe('redeemInstant() complex', () => {
