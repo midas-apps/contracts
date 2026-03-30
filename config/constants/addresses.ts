@@ -560,7 +560,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       customFeed: '0x70E58b7A1c884fFFE7dbce5249337603a28b8422',
       dataFeed: '0xcbCf1e67F1988e2572a2A620321Aef2ff73369f0',
       depositVault: '0x8978e327FE7C72Fa4eaF4649C23147E279ae1470',
-      redemptionVault: '0x2a8c22E3b10036f3AEF5875d04f8441d4188b656',
+      redemptionVaultSwapper: '0x2a8c22E3b10036f3AEF5875d04f8441d4188b656',
     },
     mBASIS: {
       token: '0x1C2757c1FeF1038428b5bEF062495ce94BBe92b2',
@@ -1026,7 +1026,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       customFeed: '0x80dA45b66c4CBaB140aE53c9accB01BE4F41B7Dd',
       dataFeed: '0x2bDC9c452a4F52DfFD92B0cad371aCbCaeabf918',
       depositVault: '0xd65BFeB71271A4408ff335E59eCf6c5b21A33a70',
-      redemptionVault: '0x7f938d26b6179A96870afaECfB0578110E53A3b2',
+      redemptionVaultSwapper: '0x7f938d26b6179A96870afaECfB0578110E53A3b2',
     },
     mBASIS: {
       token: '0x2247B5A46BB79421a314aB0f0b67fFd11dd37Ee4',
