@@ -17,12 +17,21 @@ interface IMToken is IERC20Upgradeable {
     function mint(address to, uint256 amount) external;
 
     /**
-     * @notice burns mToken token `amount` to a given `to` address.
+     * @notice burns mToken token `amount` from a given `from` address.
      * should be called only from permissioned actor
      * @param from addres to burn tokens from
      * @param amount amount to burn
      */
     function burn(address from, uint256 amount) external;
+
+    /**
+     * @notice burns mToken token `amount` from a given `from` address,
+     * bypassing blacklist checks.
+     * should be called only from permissioned actor
+     * @param from address to burn tokens from
+     * @param amount amount to burn
+     */
+    function forceBurn(address from, uint256 amount) external;
 
     /**
      * @notice updates contract`s metadata.

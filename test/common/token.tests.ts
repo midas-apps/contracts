@@ -609,7 +609,7 @@ export const tokenContractsTests = (token: MTokenName) => {
         ).revertedWith(acErrors.WMAC_HAS_ROLE);
       });
 
-      it('burn(...) when address is blacklisted', async () => {
+      it('should fail: burn(...) when address is blacklisted', async () => {
         const { owner, regularAccounts, accessControl, tokenContract } =
           await deployMTokenWithFixture();
 
@@ -620,7 +620,45 @@ export const tokenContractsTests = (token: MTokenName) => {
           { blacklistable: tokenContract, accessControl, owner },
           blacklisted,
         );
-        await burn({ tokenContract, owner }, blacklisted, 1);
+        await burn({ tokenContract, owner }, blacklisted, 1, {
+          revertMessage: acErrors.WMAC_HAS_ROLE,
+        });
+      });
+
+      it('forceBurn(...) when address is blacklisted', async () => {
+        const { owner, regularAccounts, accessControl, tokenContract } =
+          await deployMTokenWithFixture();
+
+        const blacklisted = regularAccounts[0];
+
+        await mint({ tokenContract, owner }, blacklisted, 1);
+        await blackList(
+          { blacklistable: tokenContract, accessControl, owner },
+          blacklisted,
+        );
+
+        const balanceBefore = await tokenContract.balanceOf(
+          blacklisted.address,
+        );
+        await expect(
+          tokenContract.connect(owner).forceBurn(blacklisted.address, 1),
+        ).to.not.reverted;
+        const balanceAfter = await tokenContract.balanceOf(blacklisted.address);
+        expect(balanceBefore.sub(balanceAfter)).eq(1);
+      });
+
+      it('should fail: forceBurn(...) when caller lacks burner role', async () => {
+        const { owner, regularAccounts, tokenContract } =
+          await deployMTokenWithFixture();
+
+        const unauthorized = regularAccounts[0];
+        const target = regularAccounts[1];
+
+        await mint({ tokenContract, owner }, target, 1);
+
+        await expect(
+          tokenContract.connect(unauthorized).forceBurn(target.address, 1),
+        ).revertedWith(acErrors.WMAC_HASNT_ROLE);
       });
 
       it('transferFrom(...) when caller address is blacklisted', async () => {
