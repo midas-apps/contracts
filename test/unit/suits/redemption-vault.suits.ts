@@ -49,6 +49,7 @@ import {
   rejectRedeemRequestTest,
   safeApproveRedeemRequestTest,
   safeBulkApproveRequestTest,
+  setV1RedeemRequestInStorage,
   setFiatAdditionalFeeTest,
   setFiatFlatFeeTest,
   setLoanLpFeeReceiverTest,
@@ -4500,6 +4501,31 @@ export const redemptionVaultSuits = (
         });
       });
 
+      describe('redeemRequests()', () => {
+        it('should not revert for v1 stored request and should decode version=0', async () => {
+          const { owner, redemptionVault } = await loadRvFixture();
+
+          const requestId = 0;
+          const sender = owner.address;
+          const tokenOut = constants.AddressZero;
+
+          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
+            sender,
+            tokenOut,
+            amountMToken: BigInt(parseUnits('1').toString()),
+            mTokenRate: BigInt(parseUnits('2').toString()),
+            tokenOutRate: BigInt(parseUnits('3').toString()),
+            status: 0, // RequestStatus.Pending
+          });
+
+          const request = await redemptionVault.redeemRequests(requestId);
+          expect(request.sender).eq(sender);
+          expect(request.status).eq(0);
+          expect(request.feePercent).eq(0);
+          expect(request.version).eq(0);
+        });
+      });
+
       describe('approveRequest()', async () => {
         it('should fail: call from address without vault admin role', async () => {
           const {
@@ -4521,6 +4547,26 @@ export const redemptionVaultSuits = (
               revertMessage: 'WMAC: hasnt role',
             },
           );
+        });
+
+        it('should fail: v1 stored request (version check)', async () => {
+          const { owner, redemptionVault } = await loadRvFixture();
+
+          const requestId = 0;
+          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
+            sender: owner.address,
+            tokenOut: constants.AddressZero,
+            amountMToken: 1n,
+            mTokenRate: 1n,
+            tokenOutRate: 1n,
+            status: 0,
+          });
+
+          await expect(
+            redemptionVault
+              .connect(owner)
+              .approveRequest(requestId, parseUnits('1')),
+          ).to.be.revertedWith('RV: not v2 request');
         });
 
         it('should fail: when function is paused', async () => {
@@ -4897,6 +4943,26 @@ export const redemptionVaultSuits = (
           );
         });
 
+        it('should fail: v1 stored request (version check)', async () => {
+          const { owner, redemptionVault } = await loadRvFixture();
+
+          const requestId = 0;
+          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
+            sender: owner.address,
+            tokenOut: constants.AddressZero,
+            amountMToken: 1n,
+            mTokenRate: 1n,
+            tokenOutRate: 1n,
+            status: 0,
+          });
+
+          await expect(
+            redemptionVault
+              .connect(owner)
+              .safeApproveRequest(requestId, parseUnits('1')),
+          ).to.be.revertedWith('RV: not v2 request');
+        });
+
         it('should fail: when function is paused', async () => {
           const { owner, redemptionVault, mTBILL, mTokenToUsdDataFeed } =
             await loadRvFixture();
@@ -5160,6 +5226,26 @@ export const redemptionVaultSuits = (
               revertMessage: 'WMAC: hasnt role',
             },
           );
+        });
+
+        it('should fail: v1 stored request (version check)', async () => {
+          const { owner, redemptionVault } = await loadRvFixture();
+
+          const requestId = 0;
+          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
+            sender: owner.address,
+            tokenOut: constants.AddressZero,
+            amountMToken: 1n,
+            mTokenRate: 1n,
+            tokenOutRate: 1n,
+            status: 0,
+          });
+
+          await expect(
+            redemptionVault
+              .connect(owner)
+              .safeBulkApproveRequestAtSavedRate([requestId]),
+          ).to.be.revertedWith('RV: not v2 request');
         });
 
         it('should fail: request by id not exist', async () => {
@@ -5823,6 +5909,29 @@ export const redemptionVaultSuits = (
               revertMessage: 'WMAC: hasnt role',
             },
           );
+        });
+
+        it('should fail: v1 stored request (version check)', async () => {
+          const { owner, redemptionVault } = await loadRvFixture();
+
+          const requestId = 0;
+          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
+            sender: owner.address,
+            tokenOut: constants.AddressZero,
+            amountMToken: 1n,
+            mTokenRate: 1n,
+            tokenOutRate: 1n,
+            status: 0,
+          });
+
+          await expect(
+            redemptionVault
+              .connect(owner)
+              ['safeBulkApproveRequest(uint256[],uint256)'](
+                [requestId],
+                parseUnits('1'),
+              ),
+          ).to.be.revertedWith('RV: not v2 request');
         });
 
         it('should fail: when function is paused', async () => {
@@ -6580,6 +6689,26 @@ export const redemptionVaultSuits = (
               revertMessage: 'WMAC: hasnt role',
             },
           );
+        });
+
+        it('should fail: v1 stored request (version check)', async () => {
+          const { owner, redemptionVault } = await loadRvFixture();
+
+          const requestId = 0;
+          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
+            sender: owner.address,
+            tokenOut: constants.AddressZero,
+            amountMToken: 1n,
+            mTokenRate: 1n,
+            tokenOutRate: 1n,
+            status: 0,
+          });
+
+          await expect(
+            redemptionVault
+              .connect(owner)
+              ['safeBulkApproveRequest(uint256[])']([requestId]),
+          ).to.be.revertedWith('RV: not v2 request');
         });
 
         it('should fail: when function is paused', async () => {

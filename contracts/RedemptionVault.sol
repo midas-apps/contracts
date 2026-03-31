@@ -62,10 +62,9 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
     /**
      * @notice mapping, requestId to request data
-     * @custom:oz-renamed-from redeemRequests
      * @custom:oz-retyped-from Request
      */
-    mapping(uint256 => RequestV2) private _redeemRequests;
+    mapping(uint256 => RequestV2) public redeemRequests;
 
     /**
      * @notice address is designated for standard redemptions, allowing tokens to be pulled from this address
@@ -264,7 +263,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         onlyVaultAdmin
     {
         for (uint256 i = 0; i < requestIds.length; ++i) {
-            uint256 rate = _redeemRequests[requestIds[i]].mTokenRate;
+            uint256 rate = redeemRequests[requestIds[i]].mTokenRate;
             bool success = _approveRequest(requestIds[i], rate, true, true);
 
             if (!success) {
@@ -310,11 +309,11 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @inheritdoc IRedemptionVault
      */
     function rejectRequest(uint256 requestId) external onlyVaultAdmin {
-        RequestV2 memory request = _redeemRequests[requestId];
+        RequestV2 memory request = redeemRequests[requestId];
 
         _validateRequest(request.sender, request.status);
 
-        _redeemRequests[requestId].status = RequestStatus.Canceled;
+        redeemRequests[requestId].status = RequestStatus.Canceled;
 
         emit RejectRequest(requestId, request.sender);
     }
@@ -482,38 +481,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     }
 
     /**
-     * @inheritdoc IRedemptionVault
-     */
-    function redeemRequests(uint256 requestId)
-        external
-        view
-        returns (Request memory)
-    {
-        RequestV2 memory request = _redeemRequests[requestId];
-        return
-            Request({
-                sender: request.sender,
-                tokenOut: request.tokenOut,
-                status: request.status,
-                amountMToken: request.amountMToken,
-                mTokenRate: request.mTokenRate,
-                tokenOutRate: request.tokenOutRate
-            });
-    }
-
-    /**
-     * @inheritdoc IRedemptionVault
-     */
-    function redeemRequestsV2(uint256 requestId)
-        external
-        view
-        returns (RequestV2 memory request)
-    {
-        request = _redeemRequests[requestId];
-        require(request.version == 1, "RV: not v2 request");
-    }
-
-    /**
      * @inheritdoc ManageableVault
      */
     function vaultRole() public pure virtual override returns (bytes32) {
@@ -568,7 +535,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             bool /* success */
         )
     {
-        RequestV2 memory request = _redeemRequests[requestId];
+        RequestV2 memory request = redeemRequests[requestId];
 
         _validateRequest(request.sender, request.status);
 
@@ -630,7 +597,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         request.status = RequestStatus.Processed;
         request.mTokenRate = newMTokenRate;
-        _redeemRequests[requestId] = request;
+        redeemRequests[requestId] = request;
 
         emit ApproveRequest(requestId, newMTokenRate, isSafe);
 
@@ -971,7 +938,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         requestId = currentRequestId.current();
         currentRequestId.increment();
 
-        _redeemRequests[requestId] = RequestV2({
+        redeemRequests[requestId] = RequestV2({
             sender: recipient,
             tokenOut: tokenOut,
             status: RequestStatus.Pending,

@@ -1,7 +1,8 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumber, BigNumberish, constants } from 'ethers';
-import { parseUnits } from 'ethers/lib/utils';
+import { parseUnits, solidityKeccak256 } from 'ethers/lib/utils';
+import { ethers } from 'hardhat';
 
 import {
   AccountOrContract,
@@ -46,6 +47,104 @@ type CommonParamsRedeem = {
 
 type CommonParams = Pick<Awaited<ReturnType<typeof defaultDeploy>>, 'owner'> & {
   redemptionVault: RedemptionVaultType;
+};
+
+/**
+ * Writes a legacy v1 `Request` into the current `redeemRequests` mapping storage.
+ *
+ * The current contract stores `RequestV2` at `redeemRequests`, but all approve entry points
+ * validate `request.version == 1` (v2) and reject v1 (version != 1).
+ *
+ * Used by unit tests to ensure backward compatibility behavior:
+ * - `redeemRequests()` getter must not revert when v1 data exists
+ * - approve-style entry points must revert with `RV: not v2 request`
+ */
+export const setV1RedeemRequestInStorage = async (
+  vault: { address: string },
+  requestId: number,
+  params: {
+    sender: string;
+    tokenOut: string;
+    amountMToken: bigint;
+    mTokenRate: bigint;
+    tokenOutRate: bigint;
+    status?: number; // RequestStatus enum: 0=Pending
+  },
+) => {
+  const REDEMPTION_REQUESTS_SLOT = 422; // hardhat storageLayout(slot) for RedemptionVault.redeemRequests
+  const STATUS_OFFSET_IN_TOKENOUT_SLOT = 20n; // tokenOut is 20 bytes; status is the next byte
+
+  const toWordHex = (value: bigint) => {
+    return `0x${value.toString(16).padStart(64, '0')}`;
+  };
+
+  const { sender, tokenOut, amountMToken, mTokenRate, tokenOutRate } = params;
+  const status = params.status ?? 0;
+
+  // mappingSlot = keccak256(abi.encode(key, mappingSlotBase))
+  const mappingSlotHex = solidityKeccak256(
+    ['uint256', 'uint256'],
+    [requestId, REDEMPTION_REQUESTS_SLOT],
+  );
+  const mappingSlot = BigInt(mappingSlotHex);
+
+  const slotAt = (offset: number) => {
+    return `0x${(mappingSlot + BigInt(offset)).toString(16)}`;
+  };
+
+  // v1 legacy struct layout inside RequestV2 mapping:
+  // sender @ slot + 0
+  // tokenOut + status packed @ slot + 1
+  // amountMToken @ slot + 2
+  // mTokenRate @ slot + 3
+  // tokenOutRate @ slot + 4
+  //
+  // v2 getter will still read feePercent @ slot + 5 and version @ slot + 6.
+  const senderWord = BigInt(sender);
+  const tokenOutWord =
+    BigInt(tokenOut) +
+    BigInt(status) * (1n << (8n * STATUS_OFFSET_IN_TOKENOUT_SLOT));
+  const amountMTokenWord = amountMToken;
+  const mTokenRateWord = mTokenRate;
+  const tokenOutRateWord = tokenOutRate;
+
+  await ethers.provider.send('hardhat_setStorageAt', [
+    vault.address,
+    slotAt(0),
+    toWordHex(senderWord),
+  ]);
+  await ethers.provider.send('hardhat_setStorageAt', [
+    vault.address,
+    slotAt(1),
+    toWordHex(tokenOutWord),
+  ]);
+  await ethers.provider.send('hardhat_setStorageAt', [
+    vault.address,
+    slotAt(2),
+    toWordHex(amountMTokenWord),
+  ]);
+  await ethers.provider.send('hardhat_setStorageAt', [
+    vault.address,
+    slotAt(3),
+    toWordHex(mTokenRateWord),
+  ]);
+  await ethers.provider.send('hardhat_setStorageAt', [
+    vault.address,
+    slotAt(4),
+    toWordHex(tokenOutRateWord),
+  ]);
+
+  // feePercent (slot + 5) and version (slot + 6) must decode as 0 for v1 data.
+  await ethers.provider.send('hardhat_setStorageAt', [
+    vault.address,
+    slotAt(5),
+    toWordHex(0n),
+  ]);
+  await ethers.provider.send('hardhat_setStorageAt', [
+    vault.address,
+    slotAt(6),
+    toWordHex(0n),
+  ]);
 };
 
 export const redeemInstantTest = async (
@@ -360,7 +459,7 @@ export const redeemRequestTest = async (
     ).to.not.reverted;
 
   const latestRequestIdAfter = await redemptionVault.currentRequestId();
-  const request = await redemptionVault.redeemRequestsV2(latestRequestIdBefore);
+  const request = await redemptionVault.redeemRequests(latestRequestIdBefore);
 
   expect(request.sender).eq(recipient);
   expect(request.tokenOut).eq(tokenOut);
@@ -460,7 +559,7 @@ export const redeemFiatRequestTest = async (
     .div(hundredPercent)
     .add(waivedFee ? 0 : flatFee.mul(mTokenRate).div(parseUnits('1')));
 
-  const amountOutWithoutFee = amountOut.sub(fee);
+  const _amountOutWithoutFee = amountOut.sub(fee);
 
   await expect(redemptionVault.connect(sender).redeemFiatRequest(amountIn))
     .to.emit(
@@ -478,7 +577,7 @@ export const redeemFiatRequestTest = async (
     ).to.not.reverted;
 
   const latestRequestIdAfter = await redemptionVault.currentRequestId();
-  const request = await redemptionVault.redeemRequestsV2(latestRequestIdBefore);
+  const request = await redemptionVault.redeemRequests(latestRequestIdBefore);
 
   expect(request.sender).eq(sender.address);
   expect(request.tokenOut).eq(manualToken);
@@ -534,7 +633,7 @@ export const approveRedeemRequestTest = async (
     return;
   }
 
-  const requestDataBefore = await redemptionVault.redeemRequestsV2(requestId);
+  const requestDataBefore = await redemptionVault.redeemRequests(requestId);
 
   const manualToken = await redemptionVault.MANUAL_FULLFILMENT_TOKEN();
 
@@ -565,7 +664,7 @@ export const approveRedeemRequestTest = async (
     )
     .withArgs(requestId, newTokenRate, false).to.not.reverted;
 
-  const requestDataAfter = await redemptionVault.redeemRequestsV2(requestId);
+  const requestDataAfter = await redemptionVault.redeemRequests(requestId);
 
   expect(requestDataBefore.status).not.eq(requestDataAfter.status);
   expect(requestDataAfter.status).eq(1);
@@ -636,7 +735,7 @@ export const safeApproveRedeemRequestTest = async (
     return;
   }
 
-  const requestDataBefore = await redemptionVault.redeemRequestsV2(requestId);
+  const requestDataBefore = await redemptionVault.redeemRequests(requestId);
 
   const tokenContract = ERC20__factory.connect(
     requestDataBefore.tokenOut,
@@ -657,17 +756,20 @@ export const safeApproveRedeemRequestTest = async (
     requestDataBefore.sender,
   );
 
-  const { amountOutWithoutFee, feeBase18, amountOutWithoutFeeBase18 } =
-    await calcExpectedTokenOutAmount(
-      sender,
-      tokenContract,
-      redemptionVault,
-      newTokenRate,
-      requestDataBefore.amountMToken,
-      false,
-      requestDataBefore.feePercent,
-      requestDataBefore.tokenOutRate,
-    );
+  const {
+    amountOutWithoutFee,
+    feeBase18: _feeBase18,
+    amountOutWithoutFeeBase18: _amountOutWithoutFeeBase18,
+  } = await calcExpectedTokenOutAmount(
+    sender,
+    tokenContract,
+    redemptionVault,
+    newTokenRate,
+    requestDataBefore.amountMToken,
+    false,
+    requestDataBefore.feePercent,
+    requestDataBefore.tokenOutRate,
+  );
 
   await expect(
     redemptionVault.connect(sender).safeApproveRequest(requestId, newTokenRate),
@@ -679,7 +781,7 @@ export const safeApproveRedeemRequestTest = async (
     )
     .withArgs(requestId, newTokenRate, true).to.not.reverted;
 
-  const requestDataAfter = await redemptionVault.redeemRequestsV2(requestId);
+  const requestDataAfter = await redemptionVault.redeemRequests(requestId);
 
   expect(requestDataBefore.status).not.eq(requestDataAfter.status);
   expect(requestDataAfter.status).eq(1);
@@ -939,7 +1041,7 @@ export const safeBulkApproveRequestTest = async (
   }
 
   const requestDatasBefore = await Promise.all(
-    requestIds.map((requestId) => redemptionVault.redeemRequestsV2(requestId)),
+    requestIds.map((requestId) => redemptionVault.redeemRequests(requestId)),
   );
 
   const balancesBefore = await Promise.all(
@@ -950,7 +1052,7 @@ export const safeBulkApproveRequestTest = async (
 
   const totalSupplyBefore = await mTBILL.totalSupply();
 
-  const tokenDecimals = await Promise.all(
+  const _tokenDecimals = await Promise.all(
     requestDatasBefore.map(({ tokenOut }) =>
       ERC20__factory.connect(tokenOut, owner).decimals(),
     ),
@@ -1024,7 +1126,7 @@ export const safeBulkApproveRequestTest = async (
     .map((v) => v.args);
 
   const requestDatasAfter = await Promise.all(
-    requestIds.map((requestId) => redemptionVault.redeemRequestsV2(requestId)),
+    requestIds.map((requestId) => redemptionVault.redeemRequests(requestId)),
   );
 
   const balancesAfter = await Promise.all(
@@ -1116,7 +1218,7 @@ export const rejectRedeemRequestTest = async (
     return;
   }
 
-  const requestDataBefore = await redemptionVault.redeemRequestsV2(requestId);
+  const requestDataBefore = await redemptionVault.redeemRequests(requestId);
 
   const balanceBeforeUser = await mTBILL.balanceOf(sender.address);
   const balanceBeforeContract = await mTBILL.balanceOf(redemptionVault.address);
@@ -1132,7 +1234,7 @@ export const rejectRedeemRequestTest = async (
     )
     .withArgs(requestId, sender).to.not.reverted;
 
-  const requestDataAfter = await redemptionVault.redeemRequestsV2(requestId);
+  const requestDataAfter = await redemptionVault.redeemRequests(requestId);
 
   expect(requestDataBefore.status).not.eq(requestDataAfter.status);
   expect(requestDataAfter.status).eq(2);

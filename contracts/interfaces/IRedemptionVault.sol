@@ -31,7 +31,7 @@ struct Request {
  * @param amountMToken amount mToken
  * @param mTokenRate rate of mToken at request creation time
  * @param tokenOutRate rate of tokenOut at request creation time
- * @param feePercent fee percent
+ * @param feePercent fixed fee percent that was calculated at request creation time
  * @param version request version. 0 for legacy, 1 for v2
  */
 struct RequestV2 {
@@ -403,27 +403,6 @@ interface IRedemptionVault is IManageableVault {
      * @param newLoanSwapperVault new address of loan swapper vault
      */
     function setLoanSwapperVault(address newLoanSwapperVault) external;
-
-    /**
-     * @notice backward compatibility function for getting V1 request struct
-     * @dev wont fail even if request by given id is V2
-     * @param requestId request id
-     * @return request
-     */
-    function redeemRequests(uint256 requestId)
-        external
-        view
-        returns (Request memory);
-
-    /**
-     * @notice get redeem request v2
-     * @param requestId request id
-     * @return request
-     */
-    function redeemRequestsV2(uint256 requestId)
-        external
-        view
-        returns (RequestV2 memory);
 
     /**
      * @notice withdraws `amount` of a given `token` from the contract
