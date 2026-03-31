@@ -47,32 +47,6 @@ contract DepositVault is ManageableVault, IDepositVault {
         0x2728bd32a7e1e24afac41a073e9c92dbb65527c9ec3baa2a8d5ee1d06c0fa779;
 
     /**
-     * @dev selector for deposit instant
-     *keccak256("depositInstant(address,uint256,uint256,bytes32)")
-     */
-    bytes4 private constant _DEPOSIT_INSTANT_SELECTOR = bytes4(0xc02dd27a); // TODO
-
-    /**
-     * @dev selector for deposit instant with custom recipient
-     * keccak256("depositInstant(address,uint256,uint256,bytes32,address)")
-     */
-    bytes4 private constant _DEPOSIT_INSTANT_WITH_CUSTOM_RECIPIENT_SELECTOR =
-        bytes4(0x42e8866b); // TODO
-
-    /**
-     * @dev selector for deposit request
-     * keccak256("depositRequest(address,uint256,bytes32)")
-     */
-    bytes4 private constant _DEPOSIT_REQUEST_SELECTOR = bytes4(0x6e26b9f8); // TODO
-
-    /**
-     * @dev selector for deposit request with custom recipient
-     * keccak256("depositRequest(address,uint256,bytes32,address)")
-     */
-    bytes4 private constant _DEPOSIT_REQUEST_WITH_CUSTOM_RECIPIENT_SELECTOR =
-        bytes4(0xe50e3dbb);
-
-    /**
      * @notice minimal USD amount for first user`s deposit
      */
     uint256 public minMTokenAmountForFirstDeposit;
@@ -174,9 +148,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 amountToken,
         uint256 minReceiveAmount,
         bytes32 referrerId
-    ) external whenFnNotPaused(_DEPOSIT_INSTANT_SELECTOR) {
-        _validateUserAccess(msg.sender);
-
+    ) external validateUserAccess(msg.sender) {
         CalcAndValidateDepositResult memory result = _depositInstant(
             tokenIn,
             amountToken,
@@ -204,16 +176,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 minReceiveAmount,
         bytes32 referrerId,
         address recipient
-    )
-        external
-        whenFnNotPaused(_DEPOSIT_INSTANT_WITH_CUSTOM_RECIPIENT_SELECTOR)
-    {
-        _validateUserAccess(msg.sender);
-
-        if (recipient != msg.sender) {
-            _validateUserAccess(recipient);
-        }
-
+    ) external validateUserAccess(recipient) {
         CalcAndValidateDepositResult memory result = _depositInstant(
             tokenIn,
             amountToken,
@@ -242,13 +205,11 @@ contract DepositVault is ManageableVault, IDepositVault {
         bytes32 referrerId
     )
         external
-        whenFnNotPaused(_DEPOSIT_REQUEST_SELECTOR)
+        validateUserAccess(msg.sender)
         returns (
             uint256 /*requestId*/
         )
     {
-        _validateUserAccess(msg.sender);
-
         (
             uint256 requestId,
             CalcAndValidateDepositResult memory calcResult
@@ -278,17 +239,11 @@ contract DepositVault is ManageableVault, IDepositVault {
         address recipient
     )
         external
-        whenFnNotPaused(_DEPOSIT_REQUEST_WITH_CUSTOM_RECIPIENT_SELECTOR)
+        validateUserAccess(recipient)
         returns (
             uint256 /*requestId*/
         )
     {
-        _validateUserAccess(msg.sender);
-
-        if (recipient != msg.sender) {
-            _validateUserAccess(recipient);
-        }
-
         (
             uint256 requestId,
             CalcAndValidateDepositResult memory calcResult
@@ -316,7 +271,7 @@ contract DepositVault is ManageableVault, IDepositVault {
      */
     function safeBulkApproveRequestAtSavedRate(uint256[] calldata requestIds)
         external
-        onlyVaultAdmin
+        validateVaultAdminAccess
     {
         for (uint256 i = 0; i < requestIds.length; i++) {
             uint256 rate = mintRequests[requestIds[i]].tokenOutRate;
@@ -343,7 +298,7 @@ contract DepositVault is ManageableVault, IDepositVault {
      */
     function safeApproveRequest(uint256 requestId, uint256 newOutRate)
         external
-        onlyVaultAdmin
+        validateVaultAdminAccess
     {
         _approveRequest(requestId, newOutRate, true, true);
 
@@ -355,7 +310,7 @@ contract DepositVault is ManageableVault, IDepositVault {
      */
     function approveRequest(uint256 requestId, uint256 newOutRate)
         external
-        onlyVaultAdmin
+        validateVaultAdminAccess
     {
         _approveRequest(requestId, newOutRate, false, true);
 
@@ -365,7 +320,10 @@ contract DepositVault is ManageableVault, IDepositVault {
     /**
      * @inheritdoc IDepositVault
      */
-    function rejectRequest(uint256 requestId) external onlyVaultAdmin {
+    function rejectRequest(uint256 requestId)
+        external
+        validateVaultAdminAccess
+    {
         Request memory request = mintRequests[requestId];
 
         require(request.sender != address(0), "DV: request not exist");
@@ -384,7 +342,7 @@ contract DepositVault is ManageableVault, IDepositVault {
      */
     function setMinMTokenAmountForFirstDeposit(uint256 newValue)
         external
-        onlyVaultAdmin
+        validateVaultAdminAccess
     {
         minMTokenAmountForFirstDeposit = newValue;
 
@@ -394,7 +352,10 @@ contract DepositVault is ManageableVault, IDepositVault {
     /**
      * @inheritdoc IDepositVault
      */
-    function setMaxSupplyCap(uint256 newValue) external onlyVaultAdmin {
+    function setMaxSupplyCap(uint256 newValue)
+        external
+        validateVaultAdminAccess
+    {
         maxSupplyCap = newValue;
 
         emit SetMaxSupplyCap(msg.sender, newValue);
@@ -406,7 +367,7 @@ contract DepositVault is ManageableVault, IDepositVault {
     function safeBulkApproveRequest(
         uint256[] calldata requestIds,
         uint256 newOutRate
-    ) public onlyVaultAdmin {
+    ) public validateVaultAdminAccess {
         for (uint256 i = 0; i < requestIds.length; i++) {
             bool success = _approveRequest(
                 requestIds[i],

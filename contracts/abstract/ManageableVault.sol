@@ -132,9 +132,19 @@ abstract contract ManageableVault is
 
     /**
      * @dev checks that msg.sender do have a vaultRole() role
+     * and validates if function is not paused
      */
-    modifier onlyVaultAdmin() {
-        _onlyRole(vaultRole(), msg.sender);
+    modifier validateVaultAdminAccess() {
+        _validateVaultAdminAccess(msg.sender);
+        _;
+    }
+
+    /**
+     * @dev validate msg.sender and recipient access, validates if function is not paused
+     * @param recipient recipient address
+     */
+    modifier validateUserAccess(address recipient) {
+        _validateUserAccess(msg.sender, recipient);
         _;
     }
 
@@ -186,7 +196,7 @@ abstract contract ManageableVault is
         uint256 tokenFee,
         uint256 allowance,
         bool stable
-    ) external onlyVaultAdmin {
+    ) external validateVaultAdminAccess {
         require(_paymentTokens.add(token), "MV: already added");
         _validateAddress(dataFeed, false);
         _validateFee(tokenFee, false);
@@ -211,7 +221,10 @@ abstract contract ManageableVault is
      * @inheritdoc IManageableVault
      * @dev reverts if token is not presented
      */
-    function removePaymentToken(address token) external onlyVaultAdmin {
+    function removePaymentToken(address token)
+        external
+        validateVaultAdminAccess
+    {
         require(_paymentTokens.remove(token), "MV: not exists");
         delete tokensConfig[token];
         emit RemovePaymentToken(token, msg.sender);
@@ -223,7 +236,7 @@ abstract contract ManageableVault is
      */
     function changeTokenAllowance(address token, uint256 allowance)
         external
-        onlyVaultAdmin
+        validateVaultAdminAccess
     {
         if (token != MANUAL_FULLFILMENT_TOKEN) {
             _requireTokenExists(token);
@@ -240,7 +253,7 @@ abstract contract ManageableVault is
      */
     function changeTokenFee(address token, uint256 fee)
         external
-        onlyVaultAdmin
+        validateVaultAdminAccess
     {
         _requireTokenExists(token);
         _validateFee(fee, false);
@@ -253,7 +266,10 @@ abstract contract ManageableVault is
      * @inheritdoc IManageableVault
      * @dev reverts if new tolerance zero
      */
-    function setVariationTolerance(uint256 tolerance) external onlyVaultAdmin {
+    function setVariationTolerance(uint256 tolerance)
+        external
+        validateVaultAdminAccess
+    {
         _validateFee(tolerance, true);
 
         variationTolerance = tolerance;
@@ -263,7 +279,7 @@ abstract contract ManageableVault is
     /**
      * @inheritdoc IManageableVault
      */
-    function setMinAmount(uint256 newAmount) external onlyVaultAdmin {
+    function setMinAmount(uint256 newAmount) external validateVaultAdminAccess {
         minAmount = newAmount;
         emit SetMinAmount(msg.sender, newAmount);
     }
@@ -272,7 +288,10 @@ abstract contract ManageableVault is
      * @inheritdoc IManageableVault
      * @dev reverts if account is already added
      */
-    function addWaivedFeeAccount(address account) external onlyVaultAdmin {
+    function addWaivedFeeAccount(address account)
+        external
+        validateVaultAdminAccess
+    {
         require(!waivedFeeRestriction[account], "MV: already added");
         waivedFeeRestriction[account] = true;
         emit AddWaivedFeeAccount(account, msg.sender);
@@ -282,7 +301,10 @@ abstract contract ManageableVault is
      * @inheritdoc IManageableVault
      * @dev reverts if account is already removed
      */
-    function removeWaivedFeeAccount(address account) external onlyVaultAdmin {
+    function removeWaivedFeeAccount(address account)
+        external
+        validateVaultAdminAccess
+    {
         require(waivedFeeRestriction[account], "MV: not found");
         waivedFeeRestriction[account] = false;
         emit RemoveWaivedFeeAccount(account, msg.sender);
@@ -292,7 +314,10 @@ abstract contract ManageableVault is
      * @inheritdoc IManageableVault
      * @dev reverts address zero or equal address(this)
      */
-    function setFeeReceiver(address receiver) external onlyVaultAdmin {
+    function setFeeReceiver(address receiver)
+        external
+        validateVaultAdminAccess
+    {
         _validateAddress(receiver, true);
 
         feeReceiver = receiver;
@@ -304,7 +329,10 @@ abstract contract ManageableVault is
      * @inheritdoc IManageableVault
      * @dev reverts address zero or equal address(this)
      */
-    function setTokensReceiver(address receiver) external onlyVaultAdmin {
+    function setTokensReceiver(address receiver)
+        external
+        validateVaultAdminAccess
+    {
         _validateAddress(receiver, true);
 
         tokensReceiver = receiver;
@@ -315,7 +343,10 @@ abstract contract ManageableVault is
     /**
      * @inheritdoc IManageableVault
      */
-    function setInstantFee(uint256 newInstantFee) external onlyVaultAdmin {
+    function setInstantFee(uint256 newInstantFee)
+        external
+        validateVaultAdminAccess
+    {
         _validateFee(newInstantFee, false);
 
         instantFee = newInstantFee;
@@ -327,7 +358,7 @@ abstract contract ManageableVault is
      */
     function setInstantDailyLimit(uint256 newInstantDailyLimit)
         external
-        onlyVaultAdmin
+        validateVaultAdminAccess
     {
         require(newInstantDailyLimit > 0, "MV: limit zero");
         instantDailyLimit = newInstantDailyLimit;
@@ -339,7 +370,7 @@ abstract contract ManageableVault is
      */
     function freeFromMinAmount(address user, bool enable)
         external
-        onlyVaultAdmin
+        validateVaultAdminAccess
     {
         require(isFreeFromMinAmount[user] != enable, "DV: already free");
 
@@ -394,6 +425,14 @@ abstract contract ManageableVault is
      */
     function pauseAdminRole() public view override returns (bytes32) {
         return vaultRole();
+    }
+
+    /**
+     * @inheritdoc Greenlistable
+     */
+    function _onlyGreenlistToggler(address account) internal view override {
+        super._onlyGreenlistToggler(account);
+        _requireFnNotPaused(msg.sig, false);
     }
 
     /**
@@ -580,13 +619,46 @@ abstract contract ManageableVault is
         );
     }
 
-    function _validateUserAccess(address user)
+    /**
+     * @dev validate user access
+     * @param user user address
+     * @param validatePaused if true, validates if function is not paused
+     */
+    function _validateUserAccess(address user, bool validatePaused)
         internal
         view
         onlyGreenlisted(user)
         onlyNotBlacklisted(user)
         onlyNotSanctioned(user)
-    {}
+    {
+        if (!validatePaused) return;
+        _requireFnNotPaused(msg.sig, true);
+    }
+
+    /**
+     * @dev validate user access and validates if function is not paused
+     * @param user user address
+     * @param recipient recipient address
+     */
+    function _validateUserAccess(address user, address recipient)
+        internal
+        view
+    {
+        _validateUserAccess(user, true);
+
+        if (recipient != user) {
+            _validateUserAccess(recipient, false);
+        }
+    }
+
+    /**
+     * @dev validate vault admin access and validates if function is not paused
+     * @param account account address
+     */
+    function _validateVaultAdminAccess(address account) internal view {
+        _onlyRole(vaultRole(), account);
+        _requireFnNotPaused(msg.sig, false);
+    }
 
     /**
      * @dev convert value to inputted decimals precision

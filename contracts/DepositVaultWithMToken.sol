@@ -100,7 +100,7 @@ contract DepositVaultWithMToken is DepositVault {
      */
     function setMTokenDepositVault(address _mTokenDepositVault)
         external
-        onlyVaultAdmin
+        validateVaultAdminAccess
     {
         require(
             _mTokenDepositVault != address(mTokenDepositVault),
@@ -115,7 +115,10 @@ contract DepositVaultWithMToken is DepositVault {
      * @notice Updates `mTokenDepositsEnabled` value
      * @param enabled whether mToken auto-invest deposits are enabled
      */
-    function setMTokenDepositsEnabled(bool enabled) external onlyVaultAdmin {
+    function setMTokenDepositsEnabled(bool enabled)
+        external
+        validateVaultAdminAccess
+    {
         mTokenDepositsEnabled = enabled;
         emit SetMTokenDepositsEnabled(enabled);
     }
@@ -126,7 +129,7 @@ contract DepositVaultWithMToken is DepositVault {
      */
     function setAutoInvestFallbackEnabled(bool enabled)
         external
-        onlyVaultAdmin
+        validateVaultAdminAccess
     {
         autoInvestFallbackEnabled = enabled;
         emit SetAutoInvestFallbackEnabled(enabled);

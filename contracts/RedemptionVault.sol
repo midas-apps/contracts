@@ -167,7 +167,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address tokenOut,
         uint256 amountMTokenIn,
         uint256 minReceiveAmount
-    ) external whenFnNotPaused(0x8b53f75e) {
+    ) external {
         _redeemInstantWithCustomRecipient(
             tokenOut,
             amountMTokenIn,
@@ -184,7 +184,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 amountMTokenIn,
         uint256 minReceiveAmount,
         address recipient
-    ) external whenFnNotPaused(0x85ab2c13) {
+    ) external {
         _redeemInstantWithCustomRecipient(
             tokenOut,
             amountMTokenIn,
@@ -198,7 +198,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function redeemRequest(address tokenOut, uint256 amountMTokenIn)
         external
-        whenFnNotPaused(0xbfc2d46a)
         returns (
             uint256 /*requestId*/
         )
@@ -221,7 +220,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address recipient
     )
         external
-        whenFnNotPaused(0x15571a04)
         returns (
             uint256 /*requestId*/
         )
@@ -240,7 +238,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function redeemFiatRequest(uint256 amountMTokenIn)
         external
-        whenFnNotPaused(this.redeemFiatRequest.selector)
         returns (
             uint256 /*requestId*/
         )
@@ -259,8 +256,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function safeBulkApproveRequestAtSavedRate(uint256[] calldata requestIds)
         external
-        whenFnNotPaused(this.safeBulkApproveRequestAtSavedRate.selector)
-        onlyVaultAdmin
+        validateVaultAdminAccess
     {
         for (uint256 i = 0; i < requestIds.length; ++i) {
             uint256 rate = redeemRequests[requestIds[i]].mTokenRate;
@@ -275,10 +271,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function safeBulkApproveRequest(uint256[] calldata requestIds)
-        external
-        whenFnNotPaused(0xa0c74afc)
-    {
+    function safeBulkApproveRequest(uint256[] calldata requestIds) external {
         uint256 currentMTokenRate = _getMTokenRate();
         _safeBulkApproveRequest(requestIds, currentMTokenRate);
     }
@@ -288,8 +281,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function approveRequest(uint256 requestId, uint256 newMTokenRate)
         external
-        whenFnNotPaused(0x2c0a90a9)
-        onlyVaultAdmin
+        validateVaultAdminAccess
     {
         _approveRequest(requestId, newMTokenRate, false, false);
     }
@@ -299,8 +291,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function safeApproveRequest(uint256 requestId, uint256 newMTokenRate)
         external
-        onlyVaultAdmin
-        whenFnNotPaused(0x88a6de68)
+        validateVaultAdminAccess
     {
         _approveRequest(requestId, newMTokenRate, true, false);
     }
@@ -308,7 +299,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function rejectRequest(uint256 requestId) external onlyVaultAdmin {
+    function rejectRequest(uint256 requestId)
+        external
+        validateVaultAdminAccess
+    {
         RequestV2 memory request = redeemRequests[requestId];
 
         _validateRequest(request.sender, request.status);
@@ -323,7 +317,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function bulkRepayLpLoanRequest(uint256[] calldata requestIds)
         external
-        onlyVaultAdmin
+        validateVaultAdminAccess
     {
         for (uint256 i = 0; i < requestIds.length; ++i) {
             LiquidityProviderLoanRequest memory request = loanRequests[
@@ -364,7 +358,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function cancelLpLoanRequest(uint256 requestId) external onlyVaultAdmin {
+    function cancelLpLoanRequest(uint256 requestId)
+        external
+        validateVaultAdminAccess
+    {
         LiquidityProviderLoanRequest memory request = loanRequests[requestId];
 
         _validateRequest(request.tokenOut, request.status);
@@ -376,7 +373,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function setMinFiatRedeemAmount(uint256 newValue) external onlyVaultAdmin {
+    function setMinFiatRedeemAmount(uint256 newValue)
+        external
+        validateVaultAdminAccess
+    {
         minFiatRedeemAmount = newValue;
 
         emit SetMinFiatRedeemAmount(msg.sender, newValue);
@@ -385,7 +385,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function setFiatFlatFee(uint256 feeInMToken) external onlyVaultAdmin {
+    function setFiatFlatFee(uint256 feeInMToken)
+        external
+        validateVaultAdminAccess
+    {
         fiatFlatFee = feeInMToken;
 
         emit SetFiatFlatFee(msg.sender, feeInMToken);
@@ -394,7 +397,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function setFiatAdditionalFee(uint256 newFee) external onlyVaultAdmin {
+    function setFiatAdditionalFee(uint256 newFee)
+        external
+        validateVaultAdminAccess
+    {
         _validateFee(newFee, false);
 
         fiatAdditionalFee = newFee;
@@ -405,7 +411,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function setRequestRedeemer(address redeemer) external onlyVaultAdmin {
+    function setRequestRedeemer(address redeemer)
+        external
+        validateVaultAdminAccess
+    {
         _validateAddress(redeemer, false);
 
         requestRedeemer = redeemer;
@@ -416,7 +425,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function setLoanLp(address newLoanLp) external onlyVaultAdmin {
+    function setLoanLp(address newLoanLp) external validateVaultAdminAccess {
         loanLp = newLoanLp;
 
         emit SetLoanLp(msg.sender, newLoanLp);
@@ -427,7 +436,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function setLoanLpFeeReceiver(address newLoanLpFeeReceiver)
         external
-        onlyVaultAdmin
+        validateVaultAdminAccess
     {
         loanLpFeeReceiver = newLoanLpFeeReceiver;
 
@@ -439,7 +448,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function setLoanRepaymentAddress(address newLoanRepaymentAddress)
         external
-        onlyVaultAdmin
+        validateVaultAdminAccess
     {
         loanRepaymentAddress = newLoanRepaymentAddress;
 
@@ -451,7 +460,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function setLoanSwapperVault(address newLoanSwapperVault)
         external
-        onlyVaultAdmin
+        validateVaultAdminAccess
     {
         loanSwapperVault = IRedemptionVault(newLoanSwapperVault);
 
@@ -464,7 +473,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     function safeBulkApproveRequest(
         uint256[] calldata requestIds,
         uint256 newOutRate
-    ) external whenFnNotPaused(0xf5d46c51) {
+    ) external {
         _safeBulkApproveRequest(requestIds, newOutRate);
     }
 
@@ -473,7 +482,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function withdrawToken(address token, uint256 amount)
         external
-        onlyVaultAdmin
+        validateVaultAdminAccess
     {
         address withdrawTo = tokensReceiver;
         IERC20(token).safeTransfer(withdrawTo, amount);
@@ -495,7 +504,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     function _safeBulkApproveRequest(
         uint256[] calldata requestIds,
         uint256 newOutRate
-    ) internal onlyVaultAdmin {
+    ) internal validateVaultAdminAccess {
         for (uint256 i = 0; i < requestIds.length; ++i) {
             bool success = _approveRequest(
                 requestIds[i],
@@ -632,13 +641,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 amountMTokenIn,
         uint256 minReceiveAmount,
         address recipient
-    ) private {
-        _validateUserAccess(msg.sender);
-
-        if (recipient != msg.sender) {
-            _validateUserAccess(recipient);
-        }
-
+    ) private validateUserAccess(recipient) {
         (
             CalcAndValidateRedeemResult memory calcResult,
             bool spendLiquidity
@@ -680,16 +683,11 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         bool isFiat
     )
         private
+        validateUserAccess(recipient)
         returns (
             uint256 /* requestId */
         )
     {
-        _validateUserAccess(msg.sender);
-
-        if (recipient != msg.sender) {
-            _validateUserAccess(recipient);
-        }
-
         (uint256 requestId, uint256 feePercent) = _redeemRequest(
             tokenOut,
             amountMTokenIn,

@@ -34,14 +34,6 @@ abstract contract Pausable is WithMidasAccessControl, PausableUpgradeable {
     event UnpauseFn(address indexed caller, bytes4 fn);
 
     /**
-     * @dev checks that a given `fn` is not paused
-     * @param fn function id
-     */
-    modifier whenFnNotPaused(bytes4 fn) {
-        _requireFnNotPaused(fn);
-        _;
-    }
-    /**
      * @dev checks that a given `account`
      * has a determinedPauseAdminRole
      */
@@ -96,9 +88,15 @@ abstract contract Pausable is WithMidasAccessControl, PausableUpgradeable {
     /**
      * @dev checks that a given `fn` is not paused
      * @param fn function id
+     * @param validateGlobalPause if true, validates if global pause is not paused
      */
-    function _requireFnNotPaused(bytes4 fn) private view {
-        _requireNotPaused();
+    function _requireFnNotPaused(bytes4 fn, bool validateGlobalPause)
+        internal
+        view
+    {
+        if (validateGlobalPause) {
+            _requireNotPaused();
+        }
         require(!fnPaused[fn], "Pausable: fn paused");
     }
 }

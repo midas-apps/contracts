@@ -196,7 +196,10 @@ contract RedemptionVaultWithSwapper is
     /**
      * @inheritdoc IRedemptionVaultWithSwapper
      */
-    function setLiquidityProvider(address provider) external onlyVaultAdmin {
+    function setLiquidityProvider(address provider)
+        external
+        validateVaultAdminAccess
+    {
         liquidityProvider = provider;
 
         emit SetLiquidityProvider(msg.sender, provider);
@@ -205,7 +208,10 @@ contract RedemptionVaultWithSwapper is
     /**
      * @inheritdoc IRedemptionVaultWithSwapper
      */
-    function setSwapperVault(address newVault) external onlyVaultAdmin {
+    function setSwapperVault(address newVault)
+        external
+        validateVaultAdminAccess
+    {
         mTbillRedemptionVault = IRedemptionVault(newVault);
 
         emit SetSwapperVault(msg.sender, newVault);

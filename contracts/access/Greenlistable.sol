@@ -103,6 +103,7 @@ abstract contract Greenlistable is WithMidasAccessControl {
     function _onlyGreenlistToggler(address account)
         internal
         view
+        virtual
         onlyRole(greenlistTogglerRole(), account)
     {}
 }
