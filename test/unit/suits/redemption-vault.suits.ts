@@ -25,6 +25,7 @@ import {
 } from '../../common/custom-feed-growth.helpers';
 import { setRoundData } from '../../common/data-feed.helpers';
 import { DefaultFixture } from '../../common/fixtures';
+import { greenListEnable } from '../../common/greenlist.helpers';
 import {
   addPaymentTokenTest,
   addWaivedFeeAccountTest,
@@ -54,6 +55,7 @@ import {
   setFiatFlatFeeTest,
   setLoanLpFeeReceiverTest,
   setLoanLpTest,
+  setLoanRepaymentAddressTest,
   setLoanSwapperVaultTest,
   setMinFiatRedeemAmountTest,
   setRequestRedeemerTest,
@@ -2372,6 +2374,22 @@ export const redemptionVaultSuits = (
             regularAccounts[0].address,
           );
         });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('setTokensReceiver(address)'),
+          );
+
+          await setTokensReceiverTest(
+            { vault: redemptionVault, owner },
+            regularAccounts[0].address,
+            { revertMessage: 'Pausable: fn paused' },
+          );
+        });
       });
 
       describe('setMinAmount()', () => {
@@ -2390,6 +2408,19 @@ export const redemptionVaultSuits = (
           const { owner, redemptionVault } = await loadRvFixture();
           await setMinAmountTest({ vault: redemptionVault, owner }, 1.1);
         });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, redemptionVault } = await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('setMinAmount(uint256)'),
+          );
+
+          await setMinAmountTest({ vault: redemptionVault, owner }, 1.1, {
+            revertMessage: 'Pausable: fn paused',
+          });
+        });
       });
 
       describe('setMinFiatRedeemAmount()', () => {
@@ -2407,6 +2438,19 @@ export const redemptionVaultSuits = (
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
           const { owner, redemptionVault } = await loadRvFixture();
           await setMinFiatRedeemAmountTest({ redemptionVault, owner }, 1.1);
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, redemptionVault } = await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('setMinFiatRedeemAmount(uint256)'),
+          );
+
+          await setMinFiatRedeemAmountTest({ redemptionVault, owner }, 1.1, {
+            revertMessage: 'Pausable: fn paused',
+          });
         });
       });
 
@@ -2435,6 +2479,22 @@ export const redemptionVaultSuits = (
             regularAccounts[0].address,
           );
         });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('setFeeReceiver(address)'),
+          );
+
+          await setFeeReceiverTest(
+            { vault: redemptionVault, owner },
+            regularAccounts[0].address,
+            { revertMessage: 'Pausable: fn paused' },
+          );
+        });
       });
 
       describe('sanctionsListAdminRole()', () => {
@@ -2445,6 +2505,49 @@ export const redemptionVaultSuits = (
             await redemptionVault.sanctionsListAdminRole();
 
           expect(sanctionsListAdminRole).eq(vaultRole);
+        });
+      });
+
+      describe('setGreenlistEnable()', () => {
+        it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
+          const { owner, redemptionVault, regularAccounts } = await loadFixture(
+            rvFixture,
+          );
+
+          await greenListEnable(
+            { greenlistable: redemptionVault, owner },
+            true,
+            {
+              from: regularAccounts[0],
+              revertMessage: acErrors.WMAC_HASNT_ROLE,
+            },
+          );
+        });
+
+        it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
+          const { owner, redemptionVault } = await loadRvFixture();
+
+          await greenListEnable(
+            { greenlistable: redemptionVault, owner },
+            true,
+          );
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, redemptionVault } = await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('setGreenlistEnable(bool)'),
+          );
+
+          await greenListEnable(
+            { greenlistable: redemptionVault, owner },
+            true,
+            {
+              revertMessage: 'Pausable: fn paused',
+            },
+          );
         });
       });
 
@@ -2464,6 +2567,19 @@ export const redemptionVaultSuits = (
           const { owner, redemptionVault } = await loadRvFixture();
           await setFiatFlatFeeTest({ redemptionVault, owner }, 100);
         });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, redemptionVault } = await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('setFiatFlatFee(uint256)'),
+          );
+
+          await setFiatFlatFeeTest({ redemptionVault, owner }, 100, {
+            revertMessage: 'Pausable: fn paused',
+          });
+        });
       });
 
       describe('setFiatAdditionalFee()', () => {
@@ -2481,6 +2597,19 @@ export const redemptionVaultSuits = (
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
           const { owner, redemptionVault } = await loadRvFixture();
           await setFiatAdditionalFeeTest({ redemptionVault, owner }, 100);
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, redemptionVault } = await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('setFiatAdditionalFee(uint256)'),
+          );
+
+          await setFiatAdditionalFeeTest({ redemptionVault, owner }, 100, {
+            revertMessage: 'Pausable: fn paused',
+          });
         });
       });
 
@@ -2517,6 +2646,21 @@ export const redemptionVaultSuits = (
           await setInstantDailyLimitTest(
             { vault: redemptionVault, owner },
             parseUnits('1000'),
+          );
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, redemptionVault } = await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('setInstantDailyLimit(uint256)'),
+          );
+
+          await setInstantDailyLimitTest(
+            { vault: redemptionVault, owner },
+            parseUnits('1000'),
+            { revertMessage: 'Pausable: fn paused' },
           );
         });
       });
@@ -2644,6 +2788,28 @@ export const redemptionVaultSuits = (
             true,
           );
         });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVault, stableCoins, owner, dataFeed } =
+            await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector(
+              'addPaymentToken(address,address,uint256,uint256,bool)',
+            ),
+          );
+
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+            constants.MaxUint256,
+            { revertMessage: 'Pausable: fn paused' },
+          );
+        });
       });
 
       describe('addWaivedFeeAccount()', () => {
@@ -2678,6 +2844,21 @@ export const redemptionVaultSuits = (
           await addWaivedFeeAccountTest(
             { vault: redemptionVault, owner },
             owner.address,
+          );
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVault, owner } = await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('addWaivedFeeAccount(address)'),
+          );
+
+          await addWaivedFeeAccountTest(
+            { vault: redemptionVault, owner },
+            owner.address,
+            { revertMessage: 'Pausable: fn paused' },
           );
         });
       });
@@ -2716,6 +2897,26 @@ export const redemptionVaultSuits = (
             owner.address,
           );
         });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVault, owner } = await loadRvFixture();
+
+          await addWaivedFeeAccountTest(
+            { vault: redemptionVault, owner },
+            owner.address,
+          );
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('removeWaivedFeeAccount(address)'),
+          );
+
+          await removeWaivedFeeAccountTest(
+            { vault: redemptionVault, owner },
+            owner.address,
+            { revertMessage: 'Pausable: fn paused' },
+          );
+        });
       });
 
       describe('setFee()', () => {
@@ -2743,6 +2944,19 @@ export const redemptionVaultSuits = (
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
           const { redemptionVault, owner } = await loadRvFixture();
           await setInstantFeeTest({ vault: redemptionVault, owner }, 100);
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVault, owner } = await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('setInstantFee(uint256)'),
+          );
+
+          await setInstantFeeTest({ vault: redemptionVault, owner }, 100, {
+            revertMessage: 'Pausable: fn paused',
+          });
         });
       });
 
@@ -2785,6 +2999,21 @@ export const redemptionVaultSuits = (
             100,
           );
         });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVault, owner } = await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('setVariationTolerance(uint256)'),
+          );
+
+          await setVariabilityToleranceTest(
+            { vault: redemptionVault, owner },
+            100,
+            { revertMessage: 'Pausable: fn paused' },
+          );
+        });
       });
 
       describe('setRequestRedeemer()', () => {
@@ -2817,6 +3046,21 @@ export const redemptionVaultSuits = (
             owner.address,
           );
         });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVault, owner } = await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('setRequestRedeemer(address)'),
+          );
+
+          await setRequestRedeemerTest(
+            { redemptionVault, owner },
+            owner.address,
+            { revertMessage: 'Pausable: fn paused' },
+          );
+        });
       });
 
       describe('setLoanLp()', () => {
@@ -2844,6 +3088,19 @@ export const redemptionVaultSuits = (
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
           const { redemptionVault, owner } = await loadRvFixture();
           await setLoanLpTest({ redemptionVault, owner }, owner.address);
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVault, owner } = await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('setLoanLp(address)'),
+          );
+
+          await setLoanLpTest({ redemptionVault, owner }, owner.address, {
+            revertMessage: 'Pausable: fn paused',
+          });
         });
       });
 
@@ -2874,6 +3131,103 @@ export const redemptionVaultSuits = (
           await setLoanLpFeeReceiverTest(
             { redemptionVault, owner },
             owner.address,
+          );
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVault, owner } = await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('setLoanLpFeeReceiver(address)'),
+          );
+
+          await setLoanLpFeeReceiverTest(
+            { redemptionVault, owner },
+            owner.address,
+            { revertMessage: 'Pausable: fn paused' },
+          );
+        });
+      });
+
+      describe('setLoanRepaymentAddress()', () => {
+        it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
+          const { redemptionVault, regularAccounts, owner } = await loadFixture(
+            rvFixture,
+          );
+          await setLoanRepaymentAddressTest(
+            { redemptionVault, owner },
+            regularAccounts[0].address,
+            {
+              from: regularAccounts[0],
+              revertMessage: acErrors.WMAC_HASNT_ROLE,
+            },
+          );
+        });
+
+        it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
+          const { redemptionVault, owner, regularAccounts } =
+            await loadRvFixture();
+          await setLoanRepaymentAddressTest(
+            { redemptionVault, owner },
+            regularAccounts[0].address,
+          );
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVault, owner, regularAccounts } =
+            await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('setLoanRepaymentAddress(address)'),
+          );
+
+          await setLoanRepaymentAddressTest(
+            { redemptionVault, owner },
+            regularAccounts[0].address,
+            { revertMessage: 'Pausable: fn paused' },
+          );
+        });
+      });
+
+      describe('setLoanSwapperVault()', () => {
+        it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
+          const { redemptionVault, regularAccounts, owner } = await loadFixture(
+            rvFixture,
+          );
+          await setLoanSwapperVaultTest(
+            { redemptionVault, owner },
+            regularAccounts[0].address,
+            {
+              from: regularAccounts[0],
+              revertMessage: acErrors.WMAC_HASNT_ROLE,
+            },
+          );
+        });
+
+        it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
+          const { redemptionVault, owner, regularAccounts } =
+            await loadRvFixture();
+          await setLoanSwapperVaultTest(
+            { redemptionVault, owner },
+            regularAccounts[0].address,
+          );
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVault, owner, regularAccounts } =
+            await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('setLoanSwapperVault(address)'),
+          );
+
+          await setLoanSwapperVaultTest(
+            { redemptionVault, owner },
+            regularAccounts[0].address,
+            { revertMessage: 'Pausable: fn paused' },
           );
         });
       });
@@ -2965,6 +3319,30 @@ export const redemptionVaultSuits = (
             { revertMessage: 'MV: not exists' },
           );
         });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVault, owner, stableCoins, dataFeed } =
+            await loadRvFixture();
+
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('removePaymentToken(address)'),
+          );
+
+          await removePaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai.address,
+            { revertMessage: 'Pausable: fn paused' },
+          );
+        });
       });
 
       describe('withdrawToken()', () => {
@@ -3000,6 +3378,22 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             stableCoins.dai,
             1,
+          );
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVault, stableCoins, owner } = await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('withdrawToken(address,uint256)'),
+          );
+
+          await withdrawTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            1,
+            { revertMessage: 'Pausable: fn paused' },
           );
         });
       });
@@ -3046,6 +3440,19 @@ export const redemptionVaultSuits = (
           await expect(
             redemptionVault.freeFromMinAmount(regularAccounts[0].address, true),
           ).to.revertedWith('DV: already free');
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVault, regularAccounts } = await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('freeFromMinAmount(address,bool)'),
+          );
+
+          await expect(
+            redemptionVault.freeFromMinAmount(regularAccounts[0].address, true),
+          ).to.be.revertedWith('Pausable: fn paused');
         });
       });
 
@@ -3109,6 +3516,30 @@ export const redemptionVaultSuits = (
             100000000,
           );
         });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVault, owner, stableCoins, dataFeed } =
+            await loadRvFixture();
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('changeTokenAllowance(address,uint256)'),
+          );
+
+          await changeTokenAllowanceTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai.address,
+            100000000,
+            { revertMessage: 'Pausable: fn paused' },
+          );
+        });
       });
 
       describe('changeTokenFee()', () => {
@@ -3168,6 +3599,30 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             stableCoins.dai.address,
             100,
+          );
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVault, owner, stableCoins, dataFeed } =
+            await loadRvFixture();
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('changeTokenFee(address,uint256)'),
+          );
+
+          await changeTokenFeeTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai.address,
+            100,
+            { revertMessage: 'Pausable: fn paused' },
           );
         });
       });
@@ -7574,6 +8029,22 @@ export const redemptionVaultSuits = (
           );
         });
 
+        it('should fail: when function is paused', async () => {
+          const { owner, redemptionVault, mTokenToUsdDataFeed, mTBILL } =
+            await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('rejectRequest(uint256)'),
+          );
+
+          await rejectRedeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            0,
+            { revertMessage: 'Pausable: fn paused' },
+          );
+        });
+
         it('should fail: request by id not exist', async () => {
           const {
             owner,
@@ -7955,6 +8426,22 @@ export const redemptionVaultSuits = (
           );
         };
         describe('bulkRepayLpLoanRequestTest()', () => {
+          it('should fail: when function is paused', async () => {
+            const fixture = await loadRvFixture();
+            const { redemptionVault, owner, mTBILL } = fixture;
+
+            await pauseVaultFn(
+              redemptionVault,
+              encodeFnSelector('bulkRepayLpLoanRequest(uint256[])'),
+            );
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+              { revertMessage: 'Pausable: fn paused' },
+            );
+          });
+
           it('approve 1 request', async () => {
             const fixture = await loadRvFixture();
             const {
@@ -8290,6 +8777,23 @@ export const redemptionVaultSuits = (
               100,
             );
           };
+
+          it('should fail: when function is paused', async () => {
+            const fixture = await loadRvFixture();
+            const { redemptionVault, owner, mTBILL } = fixture;
+
+            await pauseVaultFn(
+              redemptionVault,
+              encodeFnSelector('cancelLpLoanRequest(uint256)'),
+            );
+
+            await cancelLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              0,
+              { revertMessage: 'Pausable: fn paused' },
+            );
+          });
+
           it('should cancel request', async () => {
             const fixture = await loadRvFixture();
             const { redemptionVault, owner, mTBILL, stableCoins } = fixture;

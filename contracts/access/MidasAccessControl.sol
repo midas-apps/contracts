@@ -59,6 +59,17 @@ contract MidasAccessControl is
         }
     }
 
+    /**
+     * @notice set the admin role for a specific role
+     * @dev can be called only by the address that holds current admin role
+     * @param role the role to set the admin role for
+     * @param newAdminRole the new admin role
+     */
+    function setRoleAdmin(bytes32 role, bytes32 newAdminRole) external {
+        _checkRole(getRoleAdmin(role), msg.sender);
+        _setRoleAdmin(role, newAdminRole);
+    }
+
     //solhint-disable disable-next-line
     function renounceRole(bytes32, address) public pure override {
         revert("MAC: Forbidden");

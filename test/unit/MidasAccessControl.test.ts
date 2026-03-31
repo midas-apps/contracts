@@ -42,7 +42,7 @@ describe('MidasAccessControl', function () {
     );
   });
 
-  describe('grantRoleMult()', () => {
+  describe('renounceRole()', () => {
     it('should fail: function is forbidden', async () => {
       const { accessControl } = await loadFixture(defaultDeploy);
 
@@ -135,6 +135,110 @@ describe('MidasAccessControl', function () {
           false,
         );
       }
+    });
+  });
+
+  describe('setRoleAdmin()', () => {
+    it('should fail: caller does not have current role admin', async () => {
+      const { accessControl, regularAccounts, roles } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await expect(
+        accessControl
+          .connect(regularAccounts[0])
+          .setRoleAdmin(
+            roles.common.blacklisted,
+            roles.common.greenlistedOperator,
+          ),
+      ).reverted;
+    });
+
+    it('should fail: caller has DEFAULT_ADMIN_ROLE but not current role admin', async () => {
+      const { accessControl, owner, roles } = await loadFixture(defaultDeploy);
+
+      await accessControl.revokeRole(
+        roles.common.blacklistedOperator,
+        owner.address,
+      );
+
+      await expect(
+        accessControl.setRoleAdmin(
+          roles.common.blacklisted,
+          roles.common.greenlistedOperator,
+        ),
+      ).reverted;
+    });
+
+    it('should fail: caller has admin role for another role', async () => {
+      const { accessControl, regularAccounts, roles } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await accessControl.grantRole(
+        roles.common.greenlistedOperator,
+        regularAccounts[0].address,
+      );
+
+      await expect(
+        accessControl
+          .connect(regularAccounts[0])
+          .setRoleAdmin(
+            roles.common.blacklisted,
+            roles.common.greenlistedOperator,
+          ),
+      ).reverted;
+    });
+
+    it('should set new role admin', async () => {
+      const { accessControl, roles } = await loadFixture(defaultDeploy);
+
+      await expect(
+        accessControl.setRoleAdmin(
+          roles.common.blacklisted,
+          roles.common.greenlistedOperator,
+        ),
+      ).not.reverted;
+
+      expect(await accessControl.getRoleAdmin(roles.common.blacklisted)).eq(
+        roles.common.greenlistedOperator,
+      );
+    });
+
+    it('should use new role admin for role management', async () => {
+      const { accessControl, owner, regularAccounts, roles } =
+        await loadFixture(defaultDeploy);
+
+      const NEW_ADMIN_ROLE = ethers.utils.id('NEW_ADMIN_ROLE');
+      const TEST_ROLE = ethers.utils.id('TEST_ROLE');
+
+      await accessControl.grantRole(
+        roles.common.blacklistedOperator,
+        owner.address,
+      );
+      await accessControl.grantRole(
+        roles.common.blacklistedOperator,
+        regularAccounts[0].address,
+      );
+      await accessControl.grantRole(NEW_ADMIN_ROLE, regularAccounts[1].address);
+
+      await accessControl.setRoleAdmin(TEST_ROLE, NEW_ADMIN_ROLE);
+
+      await expect(
+        accessControl
+          .connect(regularAccounts[0])
+          .grantRole(TEST_ROLE, regularAccounts[2].address),
+      ).reverted;
+
+      await expect(
+        accessControl
+          .connect(regularAccounts[1])
+          .grantRole(TEST_ROLE, regularAccounts[2].address),
+      ).not.reverted;
+
+      expect(
+        await accessControl.hasRole(TEST_ROLE, regularAccounts[2].address),
+      ).eq(true);
     });
   });
 });
