@@ -121,4 +121,8 @@ export const verifyConfig: VerifyConfigPerNetwork = {
     apiUrl: 'https://custom-api.injective.network/api',
     browserUrl: 'https://custom.injective.network',
   },
+  optimism: {
+    type: 'etherscan',
+    browserUrl: 'https://optimistic.etherscan.io',
+  },
 };
