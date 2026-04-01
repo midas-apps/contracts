@@ -51,6 +51,9 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   scroll: 'https://rpc.scroll.io',
   monad: 'https://rpc.monad.xyz',
   injective: `https://${QUICK_NODE_PROJECT}.injective-mainnet.quiknode.pro/${QUICK_NODE_KEY}/`,
+  optimism: ALCHEMY_KEY
+    ? `https://opt-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
+    : `https://optimism-mainnet.infura.io/v3/${INFURA_KEY}`,
 };
 
 export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
@@ -76,6 +79,7 @@ export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
   scroll: undefined,
   monad: undefined,
   injective: undefined,
+  optimism: undefined,
 };
 
 export const chainIds: ConfigPerNetwork<number> = {
@@ -101,6 +105,7 @@ export const chainIds: ConfigPerNetwork<number> = {
   scroll: 534352,
   monad: 143,
   injective: 1776,
+  optimism: 10,
 };
 
 export const mnemonics: ConfigPerNetwork<string | undefined> = {
@@ -126,6 +131,7 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   scroll: MNEMONIC_PROD,
   monad: MNEMONIC_PROD,
   injective: MNEMONIC_PROD,
+  optimism: MNEMONIC_PROD,
 };
 
 export const gases: ConfigPerNetwork<number | undefined> = {
@@ -151,6 +157,7 @@ export const gases: ConfigPerNetwork<number | undefined> = {
   scroll: undefined,
   monad: undefined,
   injective: undefined,
+  optimism: undefined,
 };
 
 export const timeouts: ConfigPerNetwork<number | undefined> = {
@@ -176,6 +183,7 @@ export const timeouts: ConfigPerNetwork<number | undefined> = {
   scroll: undefined,
   monad: undefined,
   injective: undefined,
+  optimism: undefined,
 };
 
 export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
@@ -201,6 +209,7 @@ export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
   scroll: undefined,
   monad: undefined,
   injective: undefined,
+  optimism: undefined,
 };
 
 export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
@@ -226,6 +235,7 @@ export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
   scroll: undefined,
   monad: undefined,
   injective: undefined,
+  optimism: undefined,
 };
 
 export const blockFinality: PartialConfigPerNetwork<number> = {

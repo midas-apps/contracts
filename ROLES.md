@@ -732,3 +732,14 @@ All the roles for the Midas protocol smart contracts are listed below.
 | ***customFeedAdmin*** | `0x611014d106fde488a6777e4edcdf617a5efa1d338bd69a08a39fcc2fc5a0e157` |
 | ***depositVaultAdmin*** | `0x0e1940e672eb264dbd85c24c06c804fabf4f2b2581deda529a1d87e5587959cb` |
 | ***redemptionVaultAdmin*** | `0x46c34f93bd31e702e9aee98b0dc288a6404a0cdbb567f2e1592bb7ccad8bacbc` |
+
+### mRe7ETH Roles
+
+| Role Name | Role |
+| --- | --- |
+| ***minter*** | `0x27299e0a77222f4852a2f0c31e6280cf68ff1b6325ddd69542a3c92e1f2e9b18` |
+| ***burner*** | `0x17bb22a480938428fa8e772c0680a12b4a0f16537133a4af6350ed764795ef1a` |
+| ***pauser*** | `0x8f4b7dfb05ebffc760b8d398af5b0d327b890a22f9030321740d68be514e8f60` |
+| ***customFeedAdmin*** | `0xc9f03f672dadad915001ad6a5393aba8482f9c28ea275c4b5480f7b994778ed5` |
+| ***depositVaultAdmin*** | `0x798de9824ed446b72c97afa7b28844dbbfbde8830d58977e9462289a757aafb7` |
+| ***redemptionVaultAdmin*** | `0x37c36a61c043b91d5ec6d117c64ef865031d25c49609bb25d6530b1fcb8e2e1c` |

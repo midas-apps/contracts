@@ -88,6 +88,7 @@ const config: HardhatUserConfig = {
     scroll: getNetworkConfig('scroll'),
     monad: getNetworkConfig('monad'),
     injective: getNetworkConfig('injective'),
+    optimism: getNetworkConfig('optimism'),
   },
   gasReporter: {
     enabled: REPORT_GAS,
