@@ -1,3 +1,4 @@
+import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumberish, constants } from 'ethers';
@@ -196,25 +197,61 @@ export const removeWaivedFeeAccountTest = async (
 
 export const setInstantDailyLimitTest = async (
   { vault, owner }: CommonParamsChangePaymentToken,
-  newLimit: BigNumberish,
+  newLimit: BigNumberish | { window: number; limit: number },
   opt?: OptionalCommonParams,
 ) => {
+  const { window, limit: newLimitValue } =
+    typeof newLimit === 'object' && 'window' in newLimit
+      ? { window: newLimit.window, limit: newLimit.limit }
+      : { window: days(1), limit: newLimit };
+
   if (opt?.revertMessage) {
     await expect(
-      vault.connect(opt?.from ?? owner).setInstantDailyLimit(newLimit),
+      vault
+        .connect(opt?.from ?? owner)
+        .setInstantLimitConfig(window, newLimitValue),
     ).revertedWith(opt?.revertMessage);
     return;
   }
 
-  await expect(vault.connect(opt?.from ?? owner).setInstantDailyLimit(newLimit))
+  const limitConfigsBefore = await vault.getLimitConfigs();
+
+  await expect(
+    vault
+      .connect(opt?.from ?? owner)
+      .setInstantLimitConfig(window, newLimitValue),
+  )
     .to.emit(
       vault,
-      vault.interface.events['SetInstantDailyLimit(address,uint256)'].name,
+      vault.interface.events['SetInstantLimitConfig(address,uint256,uint256)']
+        .name,
     )
-    .withArgs((opt?.from ?? owner).address, newLimit).to.not.reverted;
+    .withArgs((opt?.from ?? owner).address, window, newLimitValue).to.not
+    .reverted;
 
-  const limit = await vault.instantDailyLimit();
-  expect(limit).eq(newLimit);
+  const limitConfigsAfter = await vault.getLimitConfigs();
+
+  const configBefore = limitConfigsBefore.windows
+    .map((w, i) => ({ window: w, config: limitConfigsBefore.configs[i] }))
+    .filter((w) => w.window.eq(window))?.[0];
+
+  const configAfter = limitConfigsAfter.windows
+    .map((w, i) => ({ window: w, config: limitConfigsAfter.configs[i] }))
+    .filter((w) => w.window.eq(window))?.[0];
+
+  if (configBefore) {
+    expect(configAfter).not.eq(undefined);
+    expect(configBefore).not.eq(undefined);
+    expect(configAfter.config.limit).eq(newLimitValue);
+    expect(configAfter.config.limitUsed).eq(configBefore.config.limitUsed);
+    expect(configAfter.config.lastEpoch).eq(configBefore.config.lastEpoch);
+  } else {
+    expect(configAfter).not.eq(undefined);
+    expect(configBefore).eq(undefined);
+    expect(configAfter.config.limit).eq(newLimitValue);
+    expect(configAfter.config.limitUsed).eq(0);
+    expect(configAfter.config.lastEpoch).eq(0);
+  }
 };
 
 export const setFeeReceiverTest = async (

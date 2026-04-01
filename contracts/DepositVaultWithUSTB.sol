@@ -4,7 +4,7 @@ pragma solidity 0.8.9;
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {ISuperstateToken} from "./interfaces/ustb/ISuperstateToken.sol";
-import {CommonVaultInitParams, MTokenInitParams, ReceiversInitParams, InstantInitParams} from "./interfaces/IManageableVault.sol";
+import {CommonVaultInitParams, CommonVaultV2InitParams} from "./interfaces/IManageableVault.sol";
 import {DepositVault} from "./DepositVault.sol";
 import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
 
@@ -43,26 +43,20 @@ contract DepositVaultWithUSTB is DepositVault {
     /**
      * @notice upgradeable pattern contract`s initializer
      * @param _commonVaultInitParams init params for common vault
-     * @param _mTokenInitParams init params for mToken
-     * @param _receiversInitParams init params for receivers
-     * @param _instantInitParams init params for instant operations
+     * @param _commonVaultV2InitParams init params for common vault v2
      * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
      * @param _ustb USTB token address
      */
     function initialize(
         CommonVaultInitParams calldata _commonVaultInitParams,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
+        CommonVaultV2InitParams calldata _commonVaultV2InitParams,
         uint256 _minMTokenAmountForFirstDeposit,
         uint256 _maxSupplyCap,
         address _ustb
     ) external {
         initialize(
             _commonVaultInitParams,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
+            _commonVaultV2InitParams,
             _minMTokenAmountForFirstDeposit,
             _maxSupplyCap
         );

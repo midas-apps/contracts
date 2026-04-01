@@ -1,4 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
@@ -8,9 +9,13 @@ import { encodeFnSelector } from '../../../helpers/utils';
 import {
   ERC20Mock,
   ManageableVaultTester__factory,
-  MBasisRedemptionVault__factory,
   Pausable,
+  RedemptionVaultTest,
   RedemptionVaultTest__factory,
+  RedemptionVaultWithAave,
+  RedemptionVaultWithMorpho,
+  RedemptionVaultWithMToken,
+  RedemptionVaultWithUSTB,
 } from '../../../typechain-types';
 import { acErrors, blackList, greenList } from '../../common/ac.helpers';
 import {
@@ -86,24 +91,40 @@ const pauseOtherRedemptionApproveFns = async (
 export const redemptionVaultSuits = (
   rvName: string,
   rvFixture: () => Promise<DefaultFixture>,
-  rvKey:
-    | 'redemptionVault'
-    | 'redemptionVaultWithAave'
-    | 'redemptionVaultWithMToken'
-    | 'redemptionVaultWithUSTB'
-    | 'redemptionVaultWithMorpho' = 'redemptionVault',
+  rvConfifg: {
+    createNew: (
+      owner: SignerWithAddress,
+    ) => Promise<
+      | RedemptionVaultTest
+      | RedemptionVaultWithAave
+      | RedemptionVaultWithMToken
+      | RedemptionVaultWithUSTB
+      | RedemptionVaultWithMorpho
+    >;
+    key:
+      | 'redemptionVault'
+      | 'redemptionVaultWithAave'
+      | 'redemptionVaultWithMToken'
+      | 'redemptionVaultWithUSTB'
+      | 'redemptionVaultWithMorpho';
+  },
   deploymentAdditionalChecks: (fixtureRes: DefaultFixture) => Promise<void>,
   otherTests: (fixture: () => Promise<DefaultFixture>) => void,
 ) => {
   const loadRvFixture = async () => {
     const fixture = await loadFixture(rvFixture);
 
+    const { createNew, key } = rvConfifg;
     return {
       ...fixture,
       redemptionVault: RedemptionVaultTest__factory.connect(
-        fixture[rvKey].address,
+        fixture[key].address,
         fixture.owner,
       ),
+      createNew: async () => {
+        const rv = await createNew(fixture.owner);
+        return RedemptionVaultTest__factory.connect(rv.address, fixture.owner);
+      },
     };
   };
 
@@ -117,6 +138,7 @@ export const redemptionVaultSuits = (
         feeReceiver,
         mTokenToUsdDataFeed,
         roles,
+        withdrawTokensReceiver,
       } = fixture;
 
       expect(await redemptionVault.mToken()).eq(mTBILL.address);
@@ -133,10 +155,6 @@ export const redemptionVaultSuits = (
 
       expect(await redemptionVault.instantFee()).eq('100');
 
-      expect(await redemptionVault.instantDailyLimit()).eq(
-        parseUnits('100000'),
-      );
-
       expect(await redemptionVault.mTokenDataFeed()).eq(
         mTokenToUsdDataFeed.address,
       );
@@ -148,6 +166,20 @@ export const redemptionVaultSuits = (
 
       expect(await redemptionVault.MANUAL_FULLFILMENT_TOKEN()).eq(
         ethers.constants.AddressZero,
+      );
+
+      expect(await redemptionVault.minInstantFee()).eq(0);
+      expect(await redemptionVault.maxInstantFee()).eq(10000);
+      expect((await redemptionVault.getLimitConfigs()).length).eq(1);
+      expect((await redemptionVault.getLimitConfigs())[0]).eq([
+        {
+          limit: parseUnits('100000'),
+          limitUsed: 0,
+          lastEpoch: 0,
+        },
+      ]);
+      expect(await redemptionVault.withdrawTokensReceiver()).eq(
+        withdrawTokensReceiver.address,
       );
 
       await deploymentAdditionalChecks(fixture);
@@ -399,55 +431,6 @@ export const redemptionVaultSuits = (
             },
           ),
         ).to.be.reverted;
-
-        await expect(
-          redemptionVault.initializeWithoutInitializer(
-            {
-              ac: ethers.constants.AddressZero,
-              sanctionsList: mockedSanctionsList.address,
-              variationTolerance: 1,
-              minAmount: parseUnits('100'),
-            },
-            {
-              mToken: ethers.constants.AddressZero,
-              mTokenDataFeed: mTokenToUsdDataFeed.address,
-            },
-            {
-              feeReceiver: feeReceiver.address,
-              tokensReceiver: tokensReceiver.address,
-            },
-            {
-              instantFee: 100,
-              instantDailyLimit: parseUnits('100000'),
-            },
-            {
-              fiatAdditionalFee: 100,
-              fiatFlatFee: parseUnits('1'),
-              minFiatRedeemAmount: parseUnits('100'),
-              requestRedeemer: requestRedeemer.address,
-              loanLp: loanLp.address,
-              loanLpFeeReceiver: loanLpFeeReceiver.address,
-              loanRepaymentAddress: loanRepaymentAddress.address,
-              loanSwapperVault: redemptionVaultLoanSwapper.address,
-            },
-          ),
-        ).to.be.revertedWith('Initializable: contract is not initializing');
-      });
-
-      describe('MBasisRedemptionVault', () => {
-        describe('deployment', () => {
-          it('vaultRole', async () => {
-            const fixture = await loadRvFixture();
-
-            const tester = await new MBasisRedemptionVault__factory(
-              fixture.owner,
-            ).deploy();
-
-            expect(await tester.vaultRole()).eq(
-              await tester.M_BASIS_REDEMPTION_VAULT_ADMIN_ROLE(),
-            );
-          });
-        });
       });
 
       describe('initialization', () => {
@@ -713,6 +696,47 @@ export const redemptionVaultSuits = (
               },
             ),
           ).revertedWith('fee == 0');
+        });
+
+        it('should fail: when trying to call initializeV2 on initialized contract', async () => {
+          const { redemptionVault } = await loadRvFixture();
+          await expect(
+            redemptionVault.initializeV2(
+              {
+                withdrawTokensReceiver: constants.AddressZero,
+                minInstantFee: 0,
+                maxInstantFee: 0,
+                limitConfigs: [],
+              },
+              {
+                loanLp: constants.AddressZero,
+                loanLpFeeReceiver: constants.AddressZero,
+                loanRepaymentAddress: constants.AddressZero,
+                loanSwapperVault: constants.AddressZero,
+              },
+            ),
+          ).revertedWith('Initializable: contract is already initialized');
+        });
+
+        it('when trying to call initializeV2 before v1', async () => {
+          const { createNew, regularAccounts } = await loadRvFixture();
+          const redemptionVault = await createNew();
+          await expect(
+            redemptionVault.initializeV2(
+              {
+                withdrawTokensReceiver: regularAccounts[0].address,
+                minInstantFee: 0,
+                maxInstantFee: 1,
+                limitConfigs: [],
+              },
+              {
+                loanLp: regularAccounts[0].address,
+                loanLpFeeReceiver: regularAccounts[0].address,
+                loanRepaymentAddress: regularAccounts[0].address,
+                loanSwapperVault: regularAccounts[0].address,
+              },
+            ),
+          ).not.reverted;
         });
       });
 

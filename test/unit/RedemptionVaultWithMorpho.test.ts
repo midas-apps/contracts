@@ -1,4 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
@@ -6,7 +7,13 @@ import { ethers } from 'hardhat';
 
 import { redemptionVaultSuits } from './suits/redemption-vault.suits';
 
-import { approveBase18, mintToken } from '../common/common.helpers';
+import { encodeFnSelector } from '../../helpers/utils';
+import { RedemptionVaultWithMorphoTest__factory } from '../../typechain-types';
+import {
+  approveBase18,
+  mintToken,
+  pauseVaultFn,
+} from '../common/common.helpers';
 import { setRoundData } from '../common/data-feed.helpers';
 import { defaultDeploy } from '../common/fixtures';
 import {
@@ -26,7 +33,11 @@ import {
 redemptionVaultSuits(
   'RedemptionVaultWithMorpho',
   defaultDeploy,
-  'redemptionVaultWithMorpho',
+  {
+    createNew: async (owner: SignerWithAddress) =>
+      new RedemptionVaultWithMorphoTest__factory(owner).deploy(),
+    key: 'redemptionVaultWithMorpho',
+  },
   async (fixture) => {
     const { redemptionVaultWithMorpho, stableCoins, morphoVaultMock } = fixture;
     expect(
@@ -102,6 +113,27 @@ redemptionVaultSuits(
           );
         });
 
+        it('should fail: when function is paused', async () => {
+          const {
+            redemptionVaultWithMorpho,
+            owner,
+            stableCoins,
+            morphoVaultMock,
+          } = await loadFixture(defaultDeploy);
+
+          await pauseVaultFn(
+            redemptionVaultWithMorpho,
+            encodeFnSelector('setMorphoVault(address,address)'),
+          );
+
+          await setMorphoVaultTest(
+            { redemptionVault: redemptionVaultWithMorpho, owner },
+            stableCoins.usdc.address,
+            morphoVaultMock.address,
+            { revertMessage: 'WMAC: paused fn' },
+          );
+        });
+
         it('call from address with vault admin role', async () => {
           const {
             redemptionVaultWithMorpho,
@@ -147,6 +179,22 @@ redemptionVaultSuits(
             {
               revertMessage: 'RVM: vault not set',
             },
+          );
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVaultWithMorpho, owner, stableCoins } =
+            await loadFixture(defaultDeploy);
+
+          await pauseVaultFn(
+            redemptionVaultWithMorpho,
+            encodeFnSelector('removeMorphoVault(address)'),
+          );
+
+          await removeMorphoVaultTest(
+            { redemptionVault: redemptionVaultWithMorpho, owner },
+            stableCoins.usdc.address,
+            { revertMessage: 'WMAC: paused fn' },
           );
         });
 

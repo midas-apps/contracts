@@ -9,7 +9,7 @@ import {EnumerableSetUpgradeable as EnumerableSet} from "@openzeppelin/contracts
 
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 
-import {IManageableVault, TokenConfig, CommonVaultInitParams, MTokenInitParams, ReceiversInitParams, InstantInitParams} from "../interfaces/IManageableVault.sol";
+import {IManageableVault, TokenConfig, CommonVaultInitParams, CommonVaultV2InitParams, LimitConfig} from "../interfaces/IManageableVault.sol";
 import {IMToken} from "../interfaces/IMToken.sol";
 import {IDataFeed} from "../interfaces/IDataFeed.sol";
 
@@ -33,6 +33,7 @@ abstract contract ManageableVault is
     WithSanctionsList
 {
     using EnumerableSet for EnumerableSet.AddressSet;
+    using EnumerableSet for EnumerableSet.UintSet;
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
     using Counters for Counters.Counter;
@@ -79,16 +80,18 @@ abstract contract ManageableVault is
     uint256 public instantFee;
 
     /**
-     * @dev daily limit for initial operations
-     * if user exceed this limit he will need
-     * to create requests
+     * @dev legacy variable kept for layout compatibility
+     * @custom:oz-renamed-from instantDailyLimit
      */
-    uint256 public instantDailyLimit;
+    // solhint-disable-next-line var-name-mixedcase
+    uint256 private _instantDailyLimit_deprecated;
 
     /**
-     * @dev mapping days (number from 1970) to limit amount
+     * @dev legacy mapping kept for layout compatibility
+     * @custom:oz-renamed-from dailyLimits
      */
-    mapping(uint256 => uint256) public dailyLimits;
+    // solhint-disable-next-line var-name-mixedcase
+    mapping(uint256 => uint256) private _dailyLimits_deprecated;
 
     /**
      * @notice address to which fees will be sent
@@ -126,9 +129,34 @@ abstract contract ManageableVault is
     mapping(address => bool) public isFreeFromMinAmount;
 
     /**
+     * @notice minimum instant fee
+     */
+    uint64 public minInstantFee;
+
+    /**
+     * @notice maximum instant fee
+     */
+    uint64 public maxInstantFee;
+
+    /**
+     * @notice address to which tokens will be withdrawn
+     */
+    address public withdrawTokensReceiver;
+
+    /**
+     * @notice set of limit config windows
+     */
+    EnumerableSet.UintSet private _limitWindows;
+
+    /**
+     * @notice mapping, window duration in seconds => limit config
+     */
+    mapping(uint256 => LimitConfig) public limitConfigs;
+
+    /**
      * @dev leaving a storage gap for futures updates
      */
-    uint256[50] private __gap;
+    uint256[46] private __gap;
 
     /**
      * @dev checks that msg.sender do have a vaultRole() role
@@ -151,26 +179,19 @@ abstract contract ManageableVault is
     /**
      * @dev upgradeable pattern contract`s initializer
      * @param _commonVaultInitParams init params for common vault
-     * @param _mTokenInitParams init params for mToken
-     * @param _receiversInitParams init params for receivers
-     * @param _instantInitParams init params for instant operations
      */
     // solhint-disable func-name-mixedcase
     function __ManageableVault_init(
-        CommonVaultInitParams calldata _commonVaultInitParams,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams
+        CommonVaultInitParams calldata _commonVaultInitParams
     ) internal onlyInitializing {
-        _validateAddress(_mTokenInitParams.mToken, false);
-        _validateAddress(_mTokenInitParams.mTokenDataFeed, false);
-        _validateAddress(_receiversInitParams.tokensReceiver, true);
-        _validateAddress(_receiversInitParams.feeReceiver, true);
-        require(_instantInitParams.instantDailyLimit > 0, "zero limit");
+        _validateAddress(_commonVaultInitParams.mToken, false);
+        _validateAddress(_commonVaultInitParams.mTokenDataFeed, false);
+        _validateAddress(_commonVaultInitParams.tokensReceiver, true);
+        _validateAddress(_commonVaultInitParams.feeReceiver, true);
         _validateFee(_commonVaultInitParams.variationTolerance, true);
-        _validateFee(_instantInitParams.instantFee, false);
+        _validateFee(_commonVaultInitParams.instantFee, false);
 
-        mToken = IMToken(_mTokenInitParams.mToken);
+        mToken = IMToken(_commonVaultInitParams.mToken);
         __Pausable_init(_commonVaultInitParams.ac);
         __Greenlistable_init_unchained();
         __Blacklistable_init_unchained();
@@ -178,13 +199,42 @@ abstract contract ManageableVault is
             _commonVaultInitParams.sanctionsList
         );
 
-        tokensReceiver = _receiversInitParams.tokensReceiver;
-        feeReceiver = _receiversInitParams.feeReceiver;
-        instantFee = _instantInitParams.instantFee;
-        instantDailyLimit = _instantInitParams.instantDailyLimit;
+        tokensReceiver = _commonVaultInitParams.tokensReceiver;
+        feeReceiver = _commonVaultInitParams.feeReceiver;
+        instantFee = _commonVaultInitParams.instantFee;
         minAmount = _commonVaultInitParams.minAmount;
         variationTolerance = _commonVaultInitParams.variationTolerance;
-        mTokenDataFeed = IDataFeed(_mTokenInitParams.mTokenDataFeed);
+        mTokenDataFeed = IDataFeed(_commonVaultInitParams.mTokenDataFeed);
+    }
+
+    /**
+     * @dev upgradeable pattern contract`s initializer
+     * @param _commonVaultV2InitParams init params for common vault v2
+     */
+    // solhint-disable func-name-mixedcase
+    function __ManageableVault_initV2(
+        CommonVaultV2InitParams calldata _commonVaultV2InitParams
+    ) internal onlyInitializing {
+        for (
+            uint256 i = 0;
+            i < _commonVaultV2InitParams.limitConfigs.length;
+            ++i
+        ) {
+            _setInstantLimitConfig(
+                _commonVaultV2InitParams.limitConfigs[i].window,
+                _commonVaultV2InitParams.limitConfigs[i].limit
+            );
+        }
+
+        _validateAddress(_commonVaultV2InitParams.withdrawTokensReceiver, true);
+
+        withdrawTokensReceiver = _commonVaultV2InitParams
+            .withdrawTokensReceiver;
+
+        _setMinMaxInstantFee(
+            _commonVaultV2InitParams.minInstantFee,
+            _commonVaultV2InitParams.maxInstantFee
+        );
     }
 
     /**
@@ -342,6 +392,21 @@ abstract contract ManageableVault is
 
     /**
      * @inheritdoc IManageableVault
+     * @dev reverts address zero or equal address(this)
+     */
+    function setWithdrawTokensReceiver(address receiver)
+        external
+        validateVaultAdminAccess
+    {
+        _validateAddress(receiver, true);
+
+        withdrawTokensReceiver = receiver;
+
+        emit SetWithdrawTokensReceiver(msg.sender, receiver);
+    }
+
+    /**
+     * @inheritdoc IManageableVault
      */
     function setInstantFee(uint256 newInstantFee)
         external
@@ -356,13 +421,33 @@ abstract contract ManageableVault is
     /**
      * @inheritdoc IManageableVault
      */
-    function setInstantDailyLimit(uint256 newInstantDailyLimit)
+    function setMinMaxInstantFee(
+        uint64 newMinInstantFee,
+        uint64 newMaxInstantFee
+    ) external validateVaultAdminAccess {
+        _setMinMaxInstantFee(newMinInstantFee, newMaxInstantFee);
+    }
+
+    /**
+     * @inheritdoc IManageableVault
+     */
+    function setInstantLimitConfig(uint256 window, uint256 limit)
         external
         validateVaultAdminAccess
     {
-        require(newInstantDailyLimit > 0, "MV: limit zero");
-        instantDailyLimit = newInstantDailyLimit;
-        emit SetInstantDailyLimit(msg.sender, newInstantDailyLimit);
+        _setInstantLimitConfig(window, limit);
+    }
+
+    /**
+     * @inheritdoc IManageableVault
+     */
+    function removeInstantLimitConfig(uint256 window)
+        external
+        validateVaultAdminAccess
+    {
+        require(_limitWindows.remove(window), "MV: window not found");
+        delete limitConfigs[window];
+        emit RemoveInstantLimitConfig(msg.sender, window);
     }
 
     /**
@@ -380,12 +465,43 @@ abstract contract ManageableVault is
     }
 
     /**
+     * @inheritdoc IManageableVault
+     */
+    function withdrawToken(address token, uint256 amount)
+        external
+        validateVaultAdminAccess
+    {
+        address withdrawTo = withdrawTokensReceiver;
+        IERC20(token).safeTransfer(withdrawTo, amount);
+        emit WithdrawToken(msg.sender, token, withdrawTo, amount);
+    }
+
+    /**
      * @notice returns array of stablecoins supported by the vault
      * can be called only from permissioned actor.
      * @return paymentTokens array of payment tokens
      */
     function getPaymentTokens() external view returns (address[] memory) {
         return _paymentTokens.values();
+    }
+
+    /**
+     * @notice returns array of limit configs
+     * @return windows array of limit config windows
+     * @return configs array of limit configs
+     */
+    function getLimitConfigs()
+        external
+        view
+        returns (uint256[] memory windows, LimitConfig[] memory configs)
+    {
+        uint256 length = _limitWindows.length();
+        windows = new uint256[](length);
+        configs = new LimitConfig[](length);
+        for (uint256 i = 0; i < length; ++i) {
+            windows[i] = _limitWindows.at(i);
+            configs[i] = limitConfigs[windows[i]];
+        }
     }
 
     /**
@@ -433,6 +549,49 @@ abstract contract ManageableVault is
     function _onlyGreenlistToggler(address account) internal view override {
         super._onlyGreenlistToggler(account);
         _requireFnNotPaused(msg.sig, false);
+    }
+
+    /**
+     * @dev set minimum/maximum instant fee
+     * @param newMinInstantFee new minimum instant fee
+     * @param newMaxInstantFee new maximum instant fee
+     */
+    function _setMinMaxInstantFee(
+        uint64 newMinInstantFee,
+        uint64 newMaxInstantFee
+    ) private {
+        _validateFee(newMinInstantFee, false);
+        _validateFee(newMaxInstantFee, false);
+        require(
+            newMinInstantFee <= newMaxInstantFee,
+            "MV: invalid min/max fee"
+        );
+        minInstantFee = newMinInstantFee;
+        maxInstantFee = newMaxInstantFee;
+        emit SetMinMaxInstantFee(
+            msg.sender,
+            newMinInstantFee,
+            newMaxInstantFee
+        );
+    }
+
+    /**
+     * @dev set instant limit config
+     * @param window window duration in seconds
+     * @param limit limit amount per window
+     */
+    function _setInstantLimitConfig(uint256 window, uint256 limit) private {
+        // add window to set if not exists
+        _limitWindows.add(window);
+
+        LimitConfig memory existingConfig = limitConfigs[window];
+        limitConfigs[window] = LimitConfig({
+            limit: limit,
+            limitUsed: existingConfig.limitUsed,
+            lastEpoch: existingConfig.lastEpoch
+        });
+
+        emit SetInstantLimitConfig(msg.sender, window, limit);
     }
 
     /**
@@ -530,12 +689,22 @@ abstract contract ManageableVault is
      * @param amount operation amount (decimals 18)
      */
     function _requireAndUpdateLimit(uint256 amount) internal {
-        uint256 currentDayNumber = block.timestamp / 1 days;
-        uint256 nextLimitAmount = dailyLimits[currentDayNumber] + amount;
+        for (uint256 i = 0; i < _limitWindows.length(); ++i) {
+            uint256 window = _limitWindows.at(i);
+            LimitConfig memory config = limitConfigs[window];
+            uint256 currentEpochIndex = block.timestamp / window;
 
-        require(nextLimitAmount <= instantDailyLimit, "MV: exceed limit");
+            if (currentEpochIndex != config.lastEpoch) {
+                config.limitUsed = 0;
+                config.lastEpoch = currentEpochIndex;
+            }
 
-        dailyLimits[currentDayNumber] = nextLimitAmount;
+            config.limitUsed += amount;
+
+            require(config.limitUsed <= config.limit, "MV: exceed limit");
+
+            limitConfigs[window] = config;
+        }
     }
 
     /**
@@ -596,6 +765,18 @@ abstract contract ManageableVault is
         if (isInstant) feePercent += instantFee;
 
         if (feePercent > ONE_HUNDRED_PERCENT) feePercent = ONE_HUNDRED_PERCENT;
+    }
+
+    /**
+     * @dev validates instant fee is within the range of min/max instant fee
+     */
+    function _validateInstantFee() internal view {
+        uint256 currentInstantFee = instantFee;
+        require(
+            currentInstantFee >= minInstantFee &&
+                currentInstantFee <= maxInstantFee,
+            "MV: invalid instant fee"
+        );
     }
 
     /**

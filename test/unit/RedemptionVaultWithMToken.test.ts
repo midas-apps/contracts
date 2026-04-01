@@ -1,12 +1,18 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumber, constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import { redemptionVaultSuits } from './suits/redemption-vault.suits';
 
+import { encodeFnSelector } from '../../helpers/utils';
 import { RedemptionVaultWithMTokenTest__factory } from '../../typechain-types';
-import { approveBase18, mintToken } from '../common/common.helpers';
+import {
+  approveBase18,
+  mintToken,
+  pauseVaultFn,
+} from '../common/common.helpers';
 import { setRoundData } from '../common/data-feed.helpers';
 import { defaultDeploy } from '../common/fixtures';
 import {
@@ -15,13 +21,20 @@ import {
   setMinAmountTest,
   addWaivedFeeAccountTest,
 } from '../common/manageable-vault.helpers';
-import { redeemInstantWithMTokenTest } from '../common/redemption-vault-mtoken.helpers';
+import {
+  redeemInstantWithMTokenTest,
+  setRedemptionVaultTest,
+} from '../common/redemption-vault-mtoken.helpers';
 import { setLoanLpTest } from '../common/redemption-vault.helpers';
 
 redemptionVaultSuits(
   'RedemptionVaultWithMToken',
   defaultDeploy,
-  'redemptionVaultWithMToken',
+  {
+    createNew: async (owner: SignerWithAddress) =>
+      new RedemptionVaultWithMTokenTest__factory(owner).deploy(),
+    key: 'redemptionVaultWithMToken',
+  },
   async (fixture) => {
     const { redemptionVaultWithMToken, redemptionVaultLoanSwapper } = fixture;
     expect(await redemptionVaultWithMToken.redemptionVault()).eq(
@@ -204,6 +217,20 @@ redemptionVaultSuits(
               redemptionVaultLoanSwapper.address,
             ),
           ).to.be.revertedWith('RVMT: already set');
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVaultWithMToken, owner, regularAccounts } =
+            await loadFixture(defaultDeploy);
+          await pauseVaultFn(
+            redemptionVaultWithMToken,
+            encodeFnSelector('setRedemptionVault(address)'),
+          );
+          await setRedemptionVaultTest(
+            { vault: redemptionVaultWithMToken, owner },
+            regularAccounts[0].address,
+            { revertMessage: 'WMAC: paused fn' },
+          );
         });
 
         it('should succeed and emit SetRedemptionVault event', async () => {

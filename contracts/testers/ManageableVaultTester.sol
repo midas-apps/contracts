@@ -8,30 +8,18 @@ contract ManageableVaultTester is ManageableVault {
 
     function initialize(
         CommonVaultInitParams calldata _commonVaultInitParams,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams
+        CommonVaultV2InitParams calldata _commonVaultV2InitParams
     ) external initializer {
-        __ManageableVault_init(
-            _commonVaultInitParams,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams
-        );
+        __ManageableVault_init(_commonVaultInitParams);
+        __ManageableVault_initV2(_commonVaultV2InitParams);
     }
 
     function initializeWithoutInitializer(
         CommonVaultInitParams calldata _commonVaultInitParams,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams
+        CommonVaultV2InitParams calldata _commonVaultV2InitParams
     ) external {
-        __ManageableVault_init(
-            _commonVaultInitParams,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams
-        );
+        __ManageableVault_init(_commonVaultInitParams);
+        __ManageableVault_initV2(_commonVaultV2InitParams);
     }
 
     function vaultRole() public view virtual override returns (bytes32) {}

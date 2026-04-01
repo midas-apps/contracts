@@ -45,11 +45,14 @@ struct RequestV2 {
     uint8 version;
 }
 
-struct RedemptionInitParams {
+struct RedemptionVaultInitParams {
     uint256 fiatAdditionalFee;
     uint256 fiatFlatFee;
     uint256 minFiatRedeemAmount;
     address requestRedeemer;
+}
+
+struct RedemptionVaultV2InitParams {
     address loanLp;
     address loanLpFeeReceiver;
     address loanRepaymentAddress;
@@ -403,12 +406,4 @@ interface IRedemptionVault is IManageableVault {
      * @param newLoanSwapperVault new address of loan swapper vault
      */
     function setLoanSwapperVault(address newLoanSwapperVault) external;
-
-    /**
-     * @notice withdraws `amount` of a given `token` from the contract
-     * to the `tokensReceiver` address
-     * @param token token address
-     * @param amount token amount
-     */
-    function withdrawToken(address token, uint256 amount) external;
 }

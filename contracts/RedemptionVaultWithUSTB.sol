@@ -32,26 +32,23 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
     /**
      * @notice upgradeable pattern contract`s initializer
      * @param _commonVaultInitParams init params for common vault
-     * @param _mTokenInitParams init params for mToken
-     * @param _receiversInitParams init params for receivers
-     * @param _instantInitParams init params for instant operations
+     * @param _commonVaultV2InitParams init params for common vault v2
      * @param _redemptionInitParams init params for redemption vault state values
+     * @param _redemptionVaultV2InitParams init params for redemption vault v2
      * @param _ustbRedemption USTB redemption contract address
      */
     function initialize(
         CommonVaultInitParams calldata _commonVaultInitParams,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        RedemptionInitParams calldata _redemptionInitParams,
+        CommonVaultV2InitParams calldata _commonVaultV2InitParams,
+        RedemptionVaultInitParams calldata _redemptionInitParams,
+        RedemptionVaultV2InitParams calldata _redemptionVaultV2InitParams,
         address _ustbRedemption
-    ) external initializer {
-        __RedemptionVault_init(
+    ) external {
+        initialize(
             _commonVaultInitParams,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
-            _redemptionInitParams
+            _commonVaultV2InitParams,
+            _redemptionInitParams,
+            _redemptionVaultV2InitParams
         );
         _validateAddress(_ustbRedemption, false);
         ustbRedemption = IUSTBRedemption(_ustbRedemption);

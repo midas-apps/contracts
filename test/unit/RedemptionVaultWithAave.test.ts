@@ -1,4 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
@@ -6,7 +7,13 @@ import { ethers } from 'hardhat';
 
 import { redemptionVaultSuits } from './suits/redemption-vault.suits';
 
-import { approveBase18, mintToken } from '../common/common.helpers';
+import { encodeFnSelector } from '../../helpers/utils';
+import { RedemptionVaultWithAaveTest__factory } from '../../typechain-types';
+import {
+  approveBase18,
+  mintToken,
+  pauseVaultFn,
+} from '../common/common.helpers';
 import { setRoundData } from '../common/data-feed.helpers';
 import { defaultDeploy } from '../common/fixtures';
 import {
@@ -15,6 +22,10 @@ import {
   addWaivedFeeAccountTest,
 } from '../common/manageable-vault.helpers';
 import {
+  removeAavePoolTest,
+  setAavePoolTest,
+} from '../common/redemption-vault-aave.helpers';
+import {
   redeemInstantTest,
   setLoanLpTest,
 } from '../common/redemption-vault.helpers';
@@ -22,7 +33,11 @@ import {
 redemptionVaultSuits(
   'RedemptionVaultWithAave',
   defaultDeploy,
-  'redemptionVaultWithAave',
+  {
+    createNew: async (owner: SignerWithAddress) =>
+      new RedemptionVaultWithAaveTest__factory(owner).deploy(),
+    key: 'redemptionVaultWithAave',
+  },
   async (fixture) => {
     const { redemptionVaultWithAave, stableCoins, aavePoolMock } = fixture;
     expect(
@@ -56,6 +71,21 @@ redemptionVaultSuits(
               constants.AddressZero,
             ),
           ).to.be.revertedWith('zero address');
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVaultWithAave, owner, stableCoins, aavePoolMock } =
+            await loadFixture(defaultDeploy);
+          await pauseVaultFn(
+            redemptionVaultWithAave,
+            encodeFnSelector('setAavePool(address,address)'),
+          );
+          await setAavePoolTest(
+            { redemptionVault: redemptionVaultWithAave, owner },
+            stableCoins.usdc.address,
+            aavePoolMock.address,
+            { revertMessage: 'WMAC: paused fn' },
+          );
         });
 
         it('should succeed and emit SetAavePool event', async () => {
@@ -99,6 +129,20 @@ redemptionVaultSuits(
           await expect(
             redemptionVaultWithAave.removeAavePool(stableCoins.dai.address),
           ).to.be.revertedWith('RVA: pool not set');
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVaultWithAave, owner, stableCoins } =
+            await loadFixture(defaultDeploy);
+          await pauseVaultFn(
+            redemptionVaultWithAave,
+            encodeFnSelector('removeAavePool(address)'),
+          );
+          await removeAavePoolTest(
+            { redemptionVault: redemptionVaultWithAave, owner },
+            stableCoins.usdc.address,
+            { revertMessage: 'WMAC: paused fn' },
+          );
         });
 
         it('should succeed and emit RemoveAavePool event', async () => {
@@ -665,7 +709,7 @@ redemptionVaultSuits(
             stableCoins,
             mTBILL,
             dataFeed,
-            mTokenToUsdDataFeed,
+            mTokenToUsdDataFeed: _mTokenToUsdDataFeed,
             aUSDC,
             aavePoolMock,
           } = await loadFixture(defaultDeploy);

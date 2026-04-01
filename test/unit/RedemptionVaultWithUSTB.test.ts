@@ -1,4 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
@@ -22,7 +23,11 @@ import {
 redemptionVaultSuits(
   'RedemptionVaultWithUSTB',
   defaultDeploy,
-  'redemptionVaultWithUSTB',
+  {
+    createNew: async (owner: SignerWithAddress) =>
+      new RedemptionVaultWithUSTBTest__factory(owner).deploy(),
+    key: 'redemptionVaultWithUSTB',
+  },
   async (fixture) => {
     const { redemptionVaultWithUSTB, ustbRedemption } = fixture;
     expect(await redemptionVaultWithUSTB.ustbRedemption()).eq(

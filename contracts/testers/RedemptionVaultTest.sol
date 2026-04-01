@@ -9,22 +9,6 @@ contract RedemptionVaultTest is RedemptionVault {
 
     function _disableInitializers() internal virtual override {}
 
-    function initializeWithoutInitializer(
-        CommonVaultInitParams calldata _commonVaultInitParams,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        RedemptionInitParams calldata _redemptionInitParams
-    ) external {
-        __RedemptionVault_init(
-            _commonVaultInitParams,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
-            _redemptionInitParams
-        );
-    }
-
     function setOverrideGetTokenRate(bool val) external {
         _overrideGetTokenRate = val;
     }

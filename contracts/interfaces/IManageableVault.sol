@@ -16,6 +16,18 @@ struct TokenConfig {
     bool stable;
 }
 
+/**
+ * @notice Rate limit configuration
+ * @param limit amount per window
+ * @param limitUsed amount used within the last epoch
+ * @param lastEpoch last epoch id
+ */
+struct LimitConfig {
+    uint256 limit;
+    uint256 limitUsed;
+    uint256 lastEpoch;
+}
+
 enum RequestStatus {
     Pending,
     Processed,
@@ -27,18 +39,23 @@ struct CommonVaultInitParams {
     address sanctionsList;
     uint256 variationTolerance;
     uint256 minAmount;
-}
-struct MTokenInitParams {
     address mToken;
     address mTokenDataFeed;
-}
-struct ReceiversInitParams {
     address tokensReceiver;
     address feeReceiver;
-}
-struct InstantInitParams {
     uint256 instantFee;
-    uint256 instantDailyLimit;
+}
+
+struct LimitConfigInitParams {
+    uint256 window;
+    uint256 limit;
+}
+
+struct CommonVaultV2InitParams {
+    address withdrawTokensReceiver;
+    uint64 minInstantFee;
+    uint64 maxInstantFee;
+    LimitConfigInitParams[] limitConfigs;
 }
 
 /**
@@ -127,15 +144,48 @@ interface IManageableVault {
 
     /**
      * @param caller function caller (msg.sender)
+     * @param newMinInstantFee new minimum instant fee
+     * @param newMaxInstantFee new maximum instant fee
+     */
+    event SetMinMaxInstantFee(
+        address indexed caller,
+        uint64 newMinInstantFee,
+        uint64 newMaxInstantFee
+    );
+    /**
+     * @param caller function caller (msg.sender)
      * @param newAmount new min amount for operation
      */
     event SetMinAmount(address indexed caller, uint256 newAmount);
 
     /**
      * @param caller function caller (msg.sender)
-     * @param newLimit new operation daily limit
+     * @param window window duration in seconds
+     * @param limit limit amount per window
      */
-    event SetInstantDailyLimit(address indexed caller, uint256 newLimit);
+    event SetInstantLimitConfig(
+        address indexed caller,
+        uint256 indexed window,
+        uint256 limit
+    );
+
+    /**
+     * @param caller function caller (msg.sender)
+     * @param window window duration in seconds
+     */
+    event RemoveInstantLimitConfig(
+        address indexed caller,
+        uint256 indexed window
+    );
+
+    /**
+     * @param caller function caller (msg.sender)
+     * @param receiver new receiver address
+     */
+    event SetWithdrawTokensReceiver(
+        address indexed caller,
+        address indexed receiver
+    );
 
     /**
      * @param caller function caller (msg.sender)
@@ -265,11 +315,29 @@ interface IManageableVault {
     function setInstantFee(uint256 newInstantFee) external;
 
     /**
-     * @notice set operation daily limit.
-     * can be called only from permissioned actor.
-     * @param newInstantDailyLimit new operation daily limit (decimals 18)
+     * @notice set new minimum/maximum instant fee
+     * @param newMinInstantFee new minimum instant fee
+     * @param newMaxInstantFee new maximum instant fee
      */
-    function setInstantDailyLimit(uint256 newInstantDailyLimit) external;
+    function setMinMaxInstantFee(
+        uint64 newMinInstantFee,
+        uint64 newMaxInstantFee
+    ) external;
+
+    /**
+     * @notice set operation limit configs.
+     * can be called only from permissioned actor.
+     * @param window window duration in seconds
+     * @param limit limit amount per window
+     */
+    function setInstantLimitConfig(uint256 window, uint256 limit) external;
+
+    /**
+     * @notice remove operation limit config.
+     * can be called only from permissioned actor.
+     * @param window window duration in seconds
+     */
+    function removeInstantLimitConfig(uint256 window) external;
 
     /**
      * @notice frees given `user` from the minimal deposit
@@ -277,4 +345,19 @@ interface IManageableVault {
      * @param user address of user
      */
     function freeFromMinAmount(address user, bool enable) external;
+
+    /**
+     * @notice withdraws `amount` of a given `token` from the contract
+     * to the `withdrawTokensReceiver` address
+     * @param token token address
+     * @param amount token amount
+     */
+    function withdrawToken(address token, uint256 amount) external;
+
+    /**
+     * @notice set new reciever for tokens withdrawal.
+     * can be called only from permissioned actor.
+     * @param reciever new token reciever address
+     */
+    function setWithdrawTokensReceiver(address reciever) external;
 }

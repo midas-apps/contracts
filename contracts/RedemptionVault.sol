@@ -7,7 +7,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
-import {IRedemptionVault, CommonVaultInitParams, MTokenInitParams, ReceiversInitParams, InstantInitParams, RedemptionInitParams, LiquidityProviderLoanRequest, Request, RequestV2, RequestStatus} from "./interfaces/IRedemptionVault.sol";
+import {IRedemptionVault, CommonVaultInitParams, CommonVaultV2InitParams, LiquidityProviderLoanRequest, Request, RequestV2, RequestStatus, RedemptionVaultInitParams, RedemptionVaultV2InitParams} from "./interfaces/IRedemptionVault.sol";
 import {ManageableVault} from "./abstract/ManageableVault.sol";
 
 /**
@@ -109,55 +109,55 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @notice upgradeable pattern contract`s initializer
      * @param _commonVaultInitParams init params for common vault
-     * @param _mTokenInitParams init params for mToken
-     * @param _receiversInitParams init params for receivers
-     * @param _instantInitParams init params for instant operations
-     * @param _redemptionInitParams init params for vault state values
+     * @param _commonVaultV2InitParams init params for common vault v2
+     * @param _redemptionVaultInitParams init params for redemption vault
+     * @param _redemptionVaultV2InitParams init params for redemption vault v2
      */
     function initialize(
         CommonVaultInitParams calldata _commonVaultInitParams,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        RedemptionInitParams calldata _redemptionInitParams
-    ) external initializer {
-        __RedemptionVault_init(
-            _commonVaultInitParams,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
-            _redemptionInitParams
-        );
+        CommonVaultV2InitParams calldata _commonVaultV2InitParams,
+        RedemptionVaultInitParams calldata _redemptionVaultInitParams,
+        RedemptionVaultV2InitParams calldata _redemptionVaultV2InitParams
+    ) public {
+        _initializeV1(_commonVaultInitParams, _redemptionVaultInitParams);
+        initializeV2(_commonVaultV2InitParams, _redemptionVaultV2InitParams);
     }
 
-    // solhint-disable func-name-mixedcase
-    function __RedemptionVault_init(
+    /**
+     * @notice v1 initializer
+     * @param _commonVaultInitParams init params for common vault
+     * @param _redemptionInitParams init params for redemption vault
+     */
+    function _initializeV1(
         CommonVaultInitParams calldata _commonVaultInitParams,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        RedemptionInitParams calldata _redemptionInitParams
-    ) internal onlyInitializing {
-        __ManageableVault_init(
-            _commonVaultInitParams,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams
-        );
+        RedemptionVaultInitParams calldata _redemptionInitParams
+    ) private initializer {
+        __ManageableVault_init(_commonVaultInitParams);
         _validateFee(_redemptionInitParams.fiatAdditionalFee, false);
         _validateAddress(_redemptionInitParams.requestRedeemer, false);
 
-        minFiatRedeemAmount = _redemptionInitParams.minFiatRedeemAmount;
         fiatAdditionalFee = _redemptionInitParams.fiatAdditionalFee;
         fiatFlatFee = _redemptionInitParams.fiatFlatFee;
+        minFiatRedeemAmount = _redemptionInitParams.minFiatRedeemAmount;
         requestRedeemer = _redemptionInitParams.requestRedeemer;
-        loanLp = _redemptionInitParams.loanLp;
-        loanLpFeeReceiver = _redemptionInitParams.loanLpFeeReceiver;
+    }
 
+    /**
+     * @notice v2 initializer
+     * @param _redemptionVaultV2InitParams init params for redemption vault v2
+     */
+    function initializeV2(
+        CommonVaultV2InitParams calldata _commonVaultV2InitParams,
+        RedemptionVaultV2InitParams calldata _redemptionVaultV2InitParams
+    ) public reinitializer(2) {
+        __ManageableVault_initV2(_commonVaultV2InitParams);
+        loanLp = _redemptionVaultV2InitParams.loanLp;
+        loanLpFeeReceiver = _redemptionVaultV2InitParams.loanLpFeeReceiver;
+        loanRepaymentAddress = _redemptionVaultV2InitParams
+            .loanRepaymentAddress;
         loanSwapperVault = IRedemptionVault(
-            _redemptionInitParams.loanSwapperVault
+            _redemptionVaultV2InitParams.loanSwapperVault
         );
-        loanRepaymentAddress = _redemptionInitParams.loanRepaymentAddress;
     }
 
     /**
@@ -478,18 +478,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     }
 
     /**
-     * @inheritdoc IRedemptionVault
-     */
-    function withdrawToken(address token, uint256 amount)
-        external
-        validateVaultAdminAccess
-    {
-        address withdrawTo = tokensReceiver;
-        IERC20(token).safeTransfer(withdrawTo, amount);
-        emit WithdrawToken(msg.sender, token, withdrawTo, amount);
-    }
-
-    /**
      * @inheritdoc ManageableVault
      */
     function vaultRole() public pure virtual override returns (bytes32) {
@@ -732,6 +720,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         address user = msg.sender;
 
+        _validateInstantFee();
+
         calcResult = _calcAndValidateRedeem(
             user,
             tokenOut,
@@ -911,6 +901,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address user = msg.sender;
 
         _validateMTokenAmount(user, amountMTokenIn, isFiat);
+
+        _validateInstantFee();
 
         feePercent = _getFee(
             user,

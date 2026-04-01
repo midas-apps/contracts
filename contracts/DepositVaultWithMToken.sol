@@ -65,27 +65,21 @@ contract DepositVaultWithMToken is DepositVault {
     /**
      * @notice upgradeable pattern contract`s initializer
      * @param _commonVaultInitParams init params for common vault
-     * @param _mTokenInitParams init params for mToken
-     * @param _receiversInitParams init params for receivers
-     * @param _instantInitParams init params for instant operations
+     * @param _commonVaultV2InitParams init params for common vault v2
      * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
      * @param _maxSupplyCap max supply cap for mToken
      * @param _mTokenDepositVault target mToken DepositVault address
      */
     function initialize(
         CommonVaultInitParams calldata _commonVaultInitParams,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
+        CommonVaultV2InitParams calldata _commonVaultV2InitParams,
         uint256 _minMTokenAmountForFirstDeposit,
         uint256 _maxSupplyCap,
         address _mTokenDepositVault
     ) external {
         initialize(
             _commonVaultInitParams,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
+            _commonVaultV2InitParams,
             _minMTokenAmountForFirstDeposit,
             _maxSupplyCap
         );

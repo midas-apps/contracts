@@ -6,7 +6,7 @@ import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgrade
 
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 
-import {IDepositVault, CommonVaultInitParams, MTokenInitParams, ReceiversInitParams, InstantInitParams, Request, RequestStatus} from "./interfaces/IDepositVault.sol";
+import {IDepositVault, CommonVaultInitParams, CommonVaultV2InitParams, Request, RequestStatus} from "./interfaces/IDepositVault.sol";
 
 import {ManageableVault} from "./abstract/ManageableVault.sol";
 
@@ -83,52 +83,31 @@ contract DepositVault is ManageableVault, IDepositVault {
      * initialized to the latest contract state without breaking the
      * initializer/reinitializer versioning rules.
      * @param _commonVaultInitParams init params for common vault
-     * @param _mTokenInitParams init params for mToken
-     * @param _receiversInitParams init params for receivers
-     * @param _instantInitParams init params for instant operations
+     * @param _commonVaultV2InitParams init params for common vault v2
      * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
      * @param _maxSupplyCap max supply cap for mToken
      */
     function initialize(
         CommonVaultInitParams calldata _commonVaultInitParams,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
+        CommonVaultV2InitParams calldata _commonVaultV2InitParams,
         uint256 _minMTokenAmountForFirstDeposit,
         uint256 _maxSupplyCap
     ) public {
-        initializeV1(
-            _commonVaultInitParams,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
-            _minMTokenAmountForFirstDeposit
-        );
-
+        initializeV1(_commonVaultInitParams, _minMTokenAmountForFirstDeposit);
         initializeV2(_maxSupplyCap);
+        initializeV3(_commonVaultV2InitParams);
     }
 
     /**
      * @notice v1 initializer
      * @param _commonVaultInitParams init params for common vault
-     * @param _mTokenInitParams init params for mToken
-     * @param _receiversInitParams init params for receivers
-     * @param _instantInitParams init params for instant operations
      * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
      */
     function initializeV1(
         CommonVaultInitParams calldata _commonVaultInitParams,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
         uint256 _minMTokenAmountForFirstDeposit
     ) public initializer {
-        __ManageableVault_init(
-            _commonVaultInitParams,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams
-        );
+        __ManageableVault_init(_commonVaultInitParams);
         minMTokenAmountForFirstDeposit = _minMTokenAmountForFirstDeposit;
     }
 
@@ -138,6 +117,16 @@ contract DepositVault is ManageableVault, IDepositVault {
      */
     function initializeV2(uint256 _maxSupplyCap) public reinitializer(2) {
         maxSupplyCap = _maxSupplyCap;
+    }
+
+    /**
+     * @notice v2 initializer
+     * @param _commonVaultV2InitParams init params for common vault v2
+     */
+    function initializeV3(
+        CommonVaultV2InitParams calldata _commonVaultV2InitParams
+    ) public reinitializer(3) {
+        __ManageableVault_initV2(_commonVaultV2InitParams);
     }
 
     /**
@@ -385,18 +374,6 @@ contract DepositVault is ManageableVault, IDepositVault {
     }
 
     /**
-     * @inheritdoc IDepositVault
-     */
-    function withdrawToken(
-        address token,
-        uint256 amount,
-        address withdrawTo
-    ) external {
-        IERC20(token).safeTransfer(withdrawTo, amount);
-        emit WithdrawToken(msg.sender, token, withdrawTo, amount);
-    }
-
-    /**
      * @inheritdoc ManageableVault
      */
     function vaultRole() public pure virtual override returns (bytes32) {
@@ -603,6 +580,8 @@ contract DepositVault is ManageableVault, IDepositVault {
         bool isInstant
     ) internal returns (CalcAndValidateDepositResult memory result) {
         require(amountToken > 0, "DV: invalid amount");
+
+        _validateInstantFee();
 
         result.tokenDecimals = _tokenDecimals(tokenIn);
 
