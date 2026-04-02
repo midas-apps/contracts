@@ -4,7 +4,7 @@ import { expect } from 'chai';
 import { BigNumberish, constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
-import { OptionalCommonParams } from './common.helpers';
+import { getAccount, OptionalCommonParams } from './common.helpers';
 import { defaultDeploy } from './fixtures';
 
 import {
@@ -14,6 +14,9 @@ import {
   DepositVaultWithMToken,
   DepositVaultWithUSTB,
   ERC20,
+  ERC20__factory,
+  IERC20,
+  ManageableVault,
   RedemptionVault,
   RedemptionVaultWithAave,
   RedemptionVaultWithMorpho,
@@ -67,6 +70,61 @@ export const setInstantFeeTest = async (
 
   const fee = await vault.instantFee();
   expect(fee).eq(newFee);
+};
+
+export const setMinMaxInstantFeeTest = async (
+  { vault, owner }: CommonParamsChangePaymentToken,
+  newMinInstantFee: BigNumberish,
+  newMaxInstantFee: BigNumberish,
+  opt?: OptionalCommonParams,
+) => {
+  if (opt?.revertMessage) {
+    await expect(
+      vault
+        .connect(opt?.from ?? owner)
+        .setMinMaxInstantFee(newMinInstantFee, newMaxInstantFee),
+    ).revertedWith(opt.revertMessage);
+    return;
+  }
+
+  await expect(
+    vault
+      .connect(opt?.from ?? owner)
+      .setMinMaxInstantFee(newMinInstantFee, newMaxInstantFee),
+  )
+    .to.emit(
+      vault,
+      vault.interface.events['SetMinMaxInstantFee(address,uint64,uint64)'].name,
+    )
+    .withArgs((opt?.from ?? owner).address, newMinInstantFee, newMaxInstantFee)
+    .to.not.reverted;
+
+  expect(await vault.minInstantFee()).eq(newMinInstantFee);
+  expect(await vault.maxInstantFee()).eq(newMaxInstantFee);
+};
+
+export const setWithdrawTokensReceiverTest = async (
+  { vault, owner }: CommonParamsChangePaymentToken,
+  newReceiver: string,
+  opt?: OptionalCommonParams,
+) => {
+  if (opt?.revertMessage) {
+    await expect(
+      vault.connect(opt?.from ?? owner).setWithdrawTokensReceiver(newReceiver),
+    ).revertedWith(opt.revertMessage);
+    return;
+  }
+
+  await expect(
+    vault.connect(opt?.from ?? owner).setWithdrawTokensReceiver(newReceiver),
+  )
+    .to.emit(
+      vault,
+      vault.interface.events['SetWithdrawTokensReceiver(address,address)'].name,
+    )
+    .withArgs((opt?.from ?? owner).address, newReceiver).to.not.reverted;
+
+  expect(await vault.withdrawTokensReceiver()).eq(newReceiver);
 };
 
 export const setVariabilityToleranceTest = async (
@@ -195,9 +253,9 @@ export const removeWaivedFeeAccountTest = async (
   expect(isWaivedFee).eq(false);
 };
 
-export const setInstantDailyLimitTest = async (
+export const setInstantLimitConfigTest = async (
   { vault, owner }: CommonParamsChangePaymentToken,
-  newLimit: BigNumberish | { window: number; limit: number },
+  newLimit: BigNumberish | { window: BigNumberish; limit: BigNumberish },
   opt?: OptionalCommonParams,
 ) => {
   const { window, limit: newLimitValue } =
@@ -252,6 +310,41 @@ export const setInstantDailyLimitTest = async (
     expect(configAfter.config.limitUsed).eq(0);
     expect(configAfter.config.lastEpoch).eq(0);
   }
+};
+
+export const removeInstantLimitConfigTest = async (
+  { vault, owner }: CommonParamsChangePaymentToken,
+  window: BigNumberish,
+  opt?: OptionalCommonParams,
+) => {
+  if (opt?.revertMessage) {
+    await expect(
+      vault.connect(opt?.from ?? owner).removeInstantLimitConfig(window),
+    ).revertedWith(opt.revertMessage);
+    return;
+  }
+
+  const limitConfigsBefore = await vault.getLimitConfigs();
+  const indexBefore = limitConfigsBefore.windows.findIndex((w) => w.eq(window));
+  expect(indexBefore).gte(
+    0,
+    'removeInstantLimitConfigTest: window must exist before removal',
+  );
+
+  await expect(
+    vault.connect(opt?.from ?? owner).removeInstantLimitConfig(window),
+  )
+    .to.emit(
+      vault,
+      vault.interface.events['RemoveInstantLimitConfig(address,uint256)'].name,
+    )
+    .withArgs((opt?.from ?? owner).address, window).to.not.reverted;
+
+  const limitConfigsAfter = await vault.getLimitConfigs();
+  expect(limitConfigsAfter.windows.length).eq(
+    limitConfigsBefore.windows.length - 1,
+  );
+  expect(limitConfigsAfter.windows.filter((w) => w.eq(window)).length).eq(0);
 };
 
 export const setFeeReceiverTest = async (
@@ -436,4 +529,41 @@ export const removePaymentTokenTest = async (
 
   const paymentTokens = await vault.getPaymentTokens();
   expect(paymentTokens.find((v) => v === token)).eq(undefined);
+};
+
+export const withdrawTest = async (
+  { vault, owner }: { vault: ManageableVault; owner: SignerWithAddress },
+  token: IERC20 | ERC20 | string,
+  amount: BigNumberish,
+  opt?: OptionalCommonParams,
+) => {
+  token = getAccount(token);
+
+  const tokenContract = ERC20__factory.connect(token, owner);
+
+  if (opt?.revertMessage) {
+    await expect(
+      vault.connect(opt?.from ?? owner).withdrawToken(token, amount),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  const withdrawTo = await vault.withdrawTokensReceiver();
+
+  const balanceBeforeContract = await tokenContract.balanceOf(vault.address);
+  const balanceBeforeTo = await tokenContract.balanceOf(withdrawTo);
+
+  await expect(
+    vault.connect(opt?.from ?? owner).withdrawToken(token, amount),
+  ).to.emit(
+    vault,
+    vault.interface.events['WithdrawToken(address,address,address,uint256)']
+      .name,
+  ).to.not.reverted;
+
+  const balanceAfterContract = await tokenContract.balanceOf(vault.address);
+  const balanceAfterTo = await tokenContract.balanceOf(withdrawTo);
+
+  expect(balanceAfterContract).eq(balanceBeforeContract.sub(amount));
+  expect(balanceAfterTo).eq(balanceBeforeTo.add(amount));
 };

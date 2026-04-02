@@ -25,8 +25,7 @@ contract RedemptionVaultTest is RedemptionVault {
         uint256 overrideTokenOutRate,
         bool shouldOverrideFeePercent,
         uint256 overrideFeePercent,
-        bool isInstant,
-        bool isFiat
+        bool isInstant
     ) external returns (CalcAndValidateRedeemResult memory calcResult) {
         return
             _calcAndValidateRedeem(
@@ -37,8 +36,7 @@ contract RedemptionVaultTest is RedemptionVault {
                 overrideTokenOutRate,
                 shouldOverrideFeePercent,
                 overrideFeePercent,
-                isInstant,
-                isFiat
+                isInstant
             );
     }
 

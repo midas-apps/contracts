@@ -41,7 +41,7 @@ import {
   removePaymentTokenTest,
   removeWaivedFeeAccountTest,
   setInstantFeeTest,
-  setInstantDailyLimitTest,
+  setInstantLimitConfigTest,
   setMinAmountTest,
   setMinAmountToDepositTest,
   setVariabilityToleranceTest,
@@ -548,7 +548,7 @@ describe('DepositVaultWithUSTB', function () {
       const { owner, depositVaultWithUSTB, regularAccounts } =
         await loadFixture(defaultDeploy);
 
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithUSTB, owner },
         parseUnits('1000'),
         {
@@ -561,7 +561,7 @@ describe('DepositVaultWithUSTB', function () {
     it('should fail: try to set 0 limit', async () => {
       const { owner, depositVaultWithUSTB } = await loadFixture(defaultDeploy);
 
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithUSTB, owner },
         constants.Zero,
         {
@@ -572,7 +572,7 @@ describe('DepositVaultWithUSTB', function () {
 
     it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
       const { owner, depositVaultWithUSTB } = await loadFixture(defaultDeploy);
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithUSTB, owner },
         parseUnits('1000'),
       );
@@ -1519,7 +1519,7 @@ describe('DepositVaultWithUSTB', function () {
         { depositVault: depositVaultWithUSTB, owner },
         100_000,
       );
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithUSTB, owner },
         150_000,
       );
@@ -1570,7 +1570,7 @@ describe('DepositVaultWithUSTB', function () {
         { depositVault: depositVaultWithUSTB, owner },
         100_000,
       );
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithUSTB, owner },
         150_000,
       );
@@ -1657,7 +1657,7 @@ describe('DepositVaultWithUSTB', function () {
       await setRoundData({ mockedAggregator }, 4);
 
       await mintToken(stableCoins.dai, owner, 100_000);
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithUSTB, owner },
         1000,
       );
@@ -5555,7 +5555,7 @@ describe('DepositVaultWithUSTB', function () {
         { depositVault: depositVaultWithUSTB, owner },
         100_000,
       );
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithUSTB, owner },
         parseUnits('150000'),
       );
@@ -5605,7 +5605,7 @@ describe('DepositVaultWithUSTB', function () {
         { depositVault: depositVaultWithUSTB, owner },
         100_000,
       );
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithUSTB, owner },
         parseUnits('150000'),
       );
@@ -5827,7 +5827,7 @@ describe('DepositVaultWithUSTB', function () {
         { depositVault: depositVaultWithUSTB, owner },
         100_000,
       );
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithUSTB, owner },
         150_000,
       );
@@ -5889,7 +5889,7 @@ describe('DepositVaultWithUSTB', function () {
         { depositVault: depositVaultWithUSTB, owner },
         100_000,
       );
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithUSTB, owner },
         150_000,
       );

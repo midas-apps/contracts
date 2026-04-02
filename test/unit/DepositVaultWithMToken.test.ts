@@ -36,7 +36,7 @@ import {
   removePaymentTokenTest,
   removeWaivedFeeAccountTest,
   setInstantFeeTest,
-  setInstantDailyLimitTest,
+  setInstantLimitConfigTest,
   setMinAmountToDepositTest,
   setMinAmountTest,
   setVariabilityToleranceTest,
@@ -371,7 +371,7 @@ describe('DepositVaultWithMToken', function () {
     it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
       const { depositVaultWithMToken, regularAccounts, owner } =
         await loadFixture(defaultDeploy);
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithMToken, owner },
         10,
         { from: regularAccounts[0], revertMessage: 'WMAC: hasnt role' },
@@ -382,7 +382,7 @@ describe('DepositVaultWithMToken', function () {
       const { depositVaultWithMToken, owner } = await loadFixture(
         defaultDeploy,
       );
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithMToken, owner },
         10,
       );
@@ -1034,7 +1034,7 @@ describe('DepositVaultWithMToken', function () {
         { depositVault: depositVaultWithMToken, owner },
         100_000,
       );
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithMToken, owner },
         150_000,
       );
@@ -1085,7 +1085,7 @@ describe('DepositVaultWithMToken', function () {
         { depositVault: depositVaultWithMToken, owner },
         100_000,
       );
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithMToken, owner },
         150_000,
       );
@@ -1172,7 +1172,7 @@ describe('DepositVaultWithMToken', function () {
       await setRoundData({ mockedAggregator }, 4);
 
       await mintToken(stableCoins.dai, owner, 100_000);
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithMToken, owner },
         1000,
       );

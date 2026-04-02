@@ -79,10 +79,6 @@ export const postDeploymentTest = async (
     keccak256('DEPOSIT_VAULT_ADMIN_ROLE'),
   );
 
-  expect(await depositVault.MANUAL_FULLFILMENT_TOKEN()).eq(
-    ethers.constants.AddressZero,
-  );
-
   /** DepositVault tests end */
 
   /** RedemptionVault tests start */
@@ -95,10 +91,6 @@ export const postDeploymentTest = async (
 
   expect(await redemptionVault.vaultRole()).eq(
     keccak256('REDEMPTION_VAULT_ADMIN_ROLE'),
-  );
-
-  expect(await redemptionVault.MANUAL_FULLFILMENT_TOKEN()).eq(
-    ethers.constants.AddressZero,
   );
 
   /** RedemptionVault tests end */

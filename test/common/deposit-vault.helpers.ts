@@ -4,7 +4,6 @@ import { BigNumber, BigNumberish, constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import {
-  Account,
   AccountOrContract,
   OptionalCommonParams,
   balanceOfBase18,
@@ -22,7 +21,6 @@ import {
   DepositVaultWithUSTBTest,
   ERC20,
   ERC20__factory,
-  IERC20,
   MToken,
 } from '../../typechain-types';
 
@@ -40,45 +38,6 @@ type CommonParamsDeposit = {
   Awaited<ReturnType<typeof defaultDeploy>>,
   'owner' | 'mTokenToUsdDataFeed'
 >;
-
-export const withdrawTest = async (
-  { vault, owner }: { vault: DepositVaultType; owner: SignerWithAddress },
-  token: IERC20 | ERC20 | string,
-  amount: BigNumberish,
-  withdrawTo: Account,
-  opt?: OptionalCommonParams,
-) => {
-  withdrawTo = getAccount(withdrawTo);
-  token = getAccount(token);
-
-  const tokenContract = ERC20__factory.connect(token, owner);
-
-  if (opt?.revertMessage) {
-    await expect(
-      vault
-        .connect(opt?.from ?? owner)
-        .withdrawToken(token, amount, withdrawTo),
-    ).revertedWith(opt?.revertMessage);
-    return;
-  }
-
-  const balanceBeforeContract = await tokenContract.balanceOf(vault.address);
-  const balanceBeforeTo = await tokenContract.balanceOf(withdrawTo);
-
-  await expect(
-    vault.connect(opt?.from ?? owner).withdrawToken(token, amount, withdrawTo),
-  ).to.emit(
-    vault,
-    vault.interface.events['WithdrawToken(address,address,address,uint256)']
-      .name,
-  ).to.not.reverted;
-
-  const balanceAfterContract = await tokenContract.balanceOf(vault.address);
-  const balanceAfterTo = await tokenContract.balanceOf(withdrawTo);
-
-  expect(balanceAfterContract).eq(balanceBeforeContract.sub(amount));
-  expect(balanceAfterTo).eq(balanceBeforeTo.add(amount));
-};
 
 export const depositInstantTest = async (
   {

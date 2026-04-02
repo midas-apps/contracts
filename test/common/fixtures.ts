@@ -280,9 +280,6 @@ export const defaultDeploy = async () => {
       withdrawTokensReceiver: withdrawTokensReceiver.address,
     },
     {
-      fiatAdditionalFee: 100,
-      fiatFlatFee: parseUnits('1'),
-      minFiatRedeemAmount: 1000,
       requestRedeemer: requestRedeemer.address,
     },
     {
@@ -317,9 +314,6 @@ export const defaultDeploy = async () => {
       withdrawTokensReceiver: withdrawTokensReceiver.address,
     },
     {
-      fiatAdditionalFee: 100,
-      fiatFlatFee: parseUnits('1'),
-      minFiatRedeemAmount: 1000,
       requestRedeemer: requestRedeemer.address,
     },
     {
@@ -413,7 +407,7 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithUSTBTest__factory(owner).deploy();
 
   await redemptionVaultWithUSTB[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(uint256,uint256,uint256,address),(address,address,address,address),address)'
+    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address),address)'
   ](
     {
       ac: accessControl.address,
@@ -438,9 +432,6 @@ export const defaultDeploy = async () => {
       withdrawTokensReceiver: withdrawTokensReceiver.address,
     },
     {
-      fiatAdditionalFee: 100,
-      fiatFlatFee: parseUnits('1'),
-      minFiatRedeemAmount: 1000,
       requestRedeemer: requestRedeemer.address,
     },
     {
@@ -494,9 +485,6 @@ export const defaultDeploy = async () => {
       withdrawTokensReceiver: withdrawTokensReceiver.address,
     },
     {
-      fiatAdditionalFee: 100,
-      fiatFlatFee: parseUnits('1'),
-      minFiatRedeemAmount: 1000,
       requestRedeemer: requestRedeemer.address,
     },
     {
@@ -551,9 +539,6 @@ export const defaultDeploy = async () => {
       withdrawTokensReceiver: withdrawTokensReceiver.address,
     },
     {
-      fiatAdditionalFee: 100,
-      fiatFlatFee: parseUnits('1'),
-      minFiatRedeemAmount: 1000,
       requestRedeemer: requestRedeemer.address,
     },
     {
@@ -721,7 +706,7 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithMTokenTest__factory(owner).deploy();
 
   await redemptionVaultWithMToken[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(uint256,uint256,uint256,address),(address,address,address,address),address)'
+    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address),address)'
   ](
     {
       ac: accessControl.address,
@@ -746,9 +731,6 @@ export const defaultDeploy = async () => {
       withdrawTokensReceiver: withdrawTokensReceiver.address,
     },
     {
-      fiatAdditionalFee: 100,
-      fiatFlatFee: parseUnits('1'),
-      minFiatRedeemAmount: 1000,
       requestRedeemer: requestRedeemer.address,
     },
     {
@@ -819,9 +801,6 @@ export const defaultDeploy = async () => {
     await customFeed.CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE(),
     owner.address,
   );
-
-  const manualFulfillmentToken =
-    await redemptionVault.MANUAL_FULLFILMENT_TOKEN();
 
   // testers
   const wAccessControlTester = await new WithMidasAccessControlTester__factory(
@@ -934,7 +913,6 @@ export const defaultDeploy = async () => {
     depositVault,
     redemptionVault,
     stableCoins,
-    manualFulfillmentToken,
     mTokenToUsdDataFeed,
     mockedAggregatorMToken,
     mockedAggregatorMBasis,
@@ -1079,9 +1057,6 @@ export const mTokenPermissionedFixture = async (
       withdrawTokensReceiver: withdrawTokensReceiver.address,
     },
     {
-      fiatAdditionalFee: 100,
-      fiatFlatFee: parseUnits('1'),
-      minFiatRedeemAmount: 1000,
       requestRedeemer: requestRedeemer.address,
     },
     {

@@ -41,7 +41,7 @@ import {
   removePaymentTokenTest,
   removeWaivedFeeAccountTest,
   setInstantFeeTest,
-  setInstantDailyLimitTest,
+  setInstantLimitConfigTest,
   setMinAmountTest,
   setMinAmountToDepositTest,
   setVariabilityToleranceTest,
@@ -585,7 +585,7 @@ describe('DepositVault', function () {
         defaultDeploy,
       );
 
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVault, owner },
         parseUnits('1000'),
         {
@@ -598,7 +598,7 @@ describe('DepositVault', function () {
     it('should fail: try to set 0 limit', async () => {
       const { owner, depositVault } = await loadFixture(defaultDeploy);
 
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVault, owner },
         constants.Zero,
         {
@@ -609,7 +609,7 @@ describe('DepositVault', function () {
 
     it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
       const { owner, depositVault } = await loadFixture(defaultDeploy);
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVault, owner },
         parseUnits('1000'),
       );
@@ -1492,7 +1492,7 @@ describe('DepositVault', function () {
       await approveBase18(owner, stableCoins.dai, depositVault, 100_000);
 
       await setMinAmountToDepositTest({ depositVault, owner }, 100_000);
-      await setInstantDailyLimitTest({ vault: depositVault, owner }, 150_000);
+      await setInstantLimitConfigTest({ vault: depositVault, owner }, 150_000);
 
       await depositInstantTest(
         { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -1527,7 +1527,7 @@ describe('DepositVault', function () {
       await approveBase18(owner, stableCoins.dai, depositVault, 100_000);
 
       await setMinAmountToDepositTest({ depositVault, owner }, 100_000);
-      await setInstantDailyLimitTest({ vault: depositVault, owner }, 150_000);
+      await setInstantLimitConfigTest({ vault: depositVault, owner }, 150_000);
 
       await depositInstantTest(
         { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -1596,7 +1596,7 @@ describe('DepositVault', function () {
       await setRoundData({ mockedAggregator }, 4);
 
       await mintToken(stableCoins.dai, owner, 100_000);
-      await setInstantDailyLimitTest({ vault: depositVault, owner }, 1000);
+      await setInstantLimitConfigTest({ vault: depositVault, owner }, 1000);
 
       await approveBase18(owner, stableCoins.dai, depositVault, 100_000);
 
@@ -5756,7 +5756,7 @@ describe('DepositVault', function () {
 
       await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
       await setMinAmountToDepositTest({ depositVault, owner }, 100_000);
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVault, owner },
         parseUnits('150000'),
       );
@@ -5793,7 +5793,7 @@ describe('DepositVault', function () {
 
       await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
       await setMinAmountToDepositTest({ depositVault, owner }, 100_000);
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVault, owner },
         parseUnits('150000'),
       );
@@ -5972,7 +5972,7 @@ describe('DepositVault', function () {
 
       await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
       await setMinAmountToDepositTest({ depositVault, owner }, 100_000);
-      await setInstantDailyLimitTest({ vault: depositVault, owner }, 150_000);
+      await setInstantLimitConfigTest({ vault: depositVault, owner }, 150_000);
 
       await depositRequestTest(
         { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -6013,7 +6013,7 @@ describe('DepositVault', function () {
 
       await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
       await setMinAmountToDepositTest({ depositVault, owner }, 100_000);
-      await setInstantDailyLimitTest({ vault: depositVault, owner }, 150_000);
+      await setInstantLimitConfigTest({ vault: depositVault, owner }, 150_000);
 
       await depositRequestTest(
         { depositVault, owner, mTBILL, mTokenToUsdDataFeed },

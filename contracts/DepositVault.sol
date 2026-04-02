@@ -598,10 +598,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         _requireAndUpdateAllowance(tokenIn, amountToken);
 
         result.feeTokenAmount = _truncate(
-            _getFeeAmount(
-                _getFee(userCopy, tokenIn, isInstant, 0),
-                amountToken
-            ),
+            _getFeeAmount(_getFee(userCopy, tokenIn, isInstant), amountToken),
             result.tokenDecimals
         );
         result.amountTokenWithoutFee = amountToken - result.feeTokenAmount;

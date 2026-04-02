@@ -39,11 +39,6 @@ abstract contract ManageableVault is
     using Counters for Counters.Counter;
 
     /**
-     * @notice address that represents off-chain USD bank transfer
-     */
-    address public constant MANUAL_FULLFILMENT_TOKEN = address(0x0);
-
-    /**
      * @notice stable coin static rate 1:1 USD in 18 decimals
      */
     uint256 public constant STABLECOIN_RATE = 10**18;
@@ -80,7 +75,7 @@ abstract contract ManageableVault is
     uint256 public instantFee;
 
     /**
-     * @dev legacy variable kept for layout compatibility
+     * @dev legacy mapping kept for layout compatibility
      * @custom:oz-renamed-from instantDailyLimit
      */
     // solhint-disable-next-line var-name-mixedcase
@@ -156,7 +151,7 @@ abstract contract ManageableVault is
     /**
      * @dev leaving a storage gap for futures updates
      */
-    uint256[46] private __gap;
+    uint256[45] private __gap;
 
     /**
      * @dev checks that msg.sender do have a vaultRole() role
@@ -288,9 +283,7 @@ abstract contract ManageableVault is
         external
         validateVaultAdminAccess
     {
-        if (token != MANUAL_FULLFILMENT_TOKEN) {
-            _requireTokenExists(token);
-        }
+        _requireTokenExists(token);
 
         require(allowance > 0, "MV: zero allowance");
         tokensConfig[token].allowance = allowance;
@@ -672,7 +665,6 @@ abstract contract ManageableVault is
      * @return decimals decinmals value of a given `token`
      */
     function _tokenDecimals(address token) internal view returns (uint8) {
-        if (token == MANUAL_FULLFILMENT_TOKEN) return 18;
         return IERC20Metadata(token).decimals();
     }
 
@@ -743,24 +735,18 @@ abstract contract ManageableVault is
      * @param sender sender address
      * @param token token address
      * @param isInstant is instant operation
-     * @param overrideTokenFee overrides token fee if not zero
      *
      * @return feePercent calculated fee percent
      */
     function _getFee(
         address sender,
         address token,
-        bool isInstant,
-        uint256 overrideTokenFee
+        bool isInstant
     ) internal view returns (uint256 feePercent) {
         if (waivedFeeRestriction[sender]) return 0;
 
-        if (overrideTokenFee == 0) {
-            TokenConfig storage tokenConfig = tokensConfig[token];
-            feePercent = tokenConfig.fee;
-        } else {
-            feePercent = overrideTokenFee;
-        }
+        TokenConfig storage tokenConfig = tokensConfig[token];
+        feePercent = tokenConfig.fee;
 
         if (isInstant) feePercent += instantFee;
 

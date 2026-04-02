@@ -40,7 +40,7 @@ import {
   changeTokenFeeTest,
   removePaymentTokenTest,
   removeWaivedFeeAccountTest,
-  setInstantDailyLimitTest,
+  setInstantLimitConfigTest,
   setMinAmountToDepositTest,
   setInstantFeeTest,
   setMinAmountTest,
@@ -411,7 +411,7 @@ describe('DepositVaultWithMorpho', function () {
       const { depositVaultWithMorpho, regularAccounts, owner } =
         await loadFixture(defaultDeploy);
 
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithMorpho, owner },
         10,
         {
@@ -426,7 +426,7 @@ describe('DepositVaultWithMorpho', function () {
         defaultDeploy,
       );
 
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithMorpho, owner },
         10,
       );
@@ -1083,7 +1083,7 @@ describe('DepositVaultWithMorpho', function () {
         { depositVault: depositVaultWithMorpho, owner },
         100_000,
       );
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithMorpho, owner },
         150_000,
       );
@@ -1136,7 +1136,7 @@ describe('DepositVaultWithMorpho', function () {
         { depositVault: depositVaultWithMorpho, owner },
         100_000,
       );
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithMorpho, owner },
         150_000,
       );
@@ -1227,7 +1227,7 @@ describe('DepositVaultWithMorpho', function () {
       await setRoundData({ mockedAggregator }, 4);
 
       await mintToken(stableCoins.usdc, owner, 100_000);
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithMorpho, owner },
         1000,
       );

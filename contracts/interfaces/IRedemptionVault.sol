@@ -46,9 +46,6 @@ struct RequestV2 {
 }
 
 struct RedemptionVaultInitParams {
-    uint256 fiatAdditionalFee;
-    uint256 fiatFlatFee;
-    uint256 minFiatRedeemAmount;
     address requestRedeemer;
 }
 
@@ -143,24 +140,6 @@ interface IRedemptionVault is IManageableVault {
 
     /**
      * @param caller function caller (msg.sender)
-     * @param newMinAmount new min amount for fiat requests
-     */
-    event SetMinFiatRedeemAmount(address indexed caller, uint256 newMinAmount);
-
-    /**
-     * @param caller function caller (msg.sender)
-     * @param feeInMToken fee amount in mToken
-     */
-    event SetFiatFlatFee(address indexed caller, uint256 feeInMToken);
-
-    /**
-     * @param caller function caller (msg.sender)
-     * @param newfee new fiat fee percent 1% = 100
-     */
-    event SetFiatAdditionalFee(address indexed caller, uint256 newfee);
-
-    /**
-     * @param caller function caller (msg.sender)
      * @param redeemer new address of request redeemer
      */
     event SetRequestRedeemer(address indexed caller, address redeemer);
@@ -243,7 +222,7 @@ interface IRedemptionVault is IManageableVault {
     ) external;
 
     /**
-     * @notice creating redeem request if tokenOut not fiat
+     * @notice creating redeem request
      * Transfers amount in mToken to contract
      * Transfers fee in mToken to feeReceiver
      * @param tokenOut stable coin token address to redeem to
@@ -266,17 +245,6 @@ interface IRedemptionVault is IManageableVault {
         uint256 amountMTokenIn,
         address recipient
     ) external returns (uint256);
-
-    /**
-     * @notice creating redeem request if tokenOut is fiat
-     * Transfers amount in mToken to contract
-     * Transfers fee in mToken to feeReceiver
-     * @param amountMTokenIn amount of mToken to redeem (decimals 18)
-     * @return request id
-     */
-    function redeemFiatRequest(uint256 amountMTokenIn)
-        external
-        returns (uint256);
 
     /**
      * @notice approving requests from the `requestIds` array with the mToken rate
@@ -358,24 +326,6 @@ interface IRedemptionVault is IManageableVault {
      * @param requestId request id
      */
     function cancelLpLoanRequest(uint256 requestId) external;
-
-    /**
-     * @notice set new min amount for fiat requests
-     * @param newValue new min amount
-     */
-    function setMinFiatRedeemAmount(uint256 newValue) external;
-
-    /**
-     * @notice set fee amount in mToken for fiat requests
-     * @param feeInMToken fee amount in mToken
-     */
-    function setFiatFlatFee(uint256 feeInMToken) external;
-
-    /**
-     * @notice set new fee percent for fiat requests
-     * @param newFee new fee percent 1% = 100
-     */
-    function setFiatAdditionalFee(uint256 newFee) external;
 
     /**
      * @notice set address which is designated for standard redemptions, allowing tokens to be pulled from this address

@@ -37,7 +37,7 @@ import {
   removePaymentTokenTest,
   removeWaivedFeeAccountTest,
   setInstantFeeTest,
-  setInstantDailyLimitTest,
+  setInstantLimitConfigTest,
   setMinAmountToDepositTest,
   setMinAmountTest,
   setVariabilityToleranceTest,
@@ -395,7 +395,7 @@ describe('DepositVaultWithAave', function () {
     it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
       const { depositVaultWithAave, regularAccounts, owner } =
         await loadFixture(defaultDeploy);
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithAave, owner },
         10,
         { from: regularAccounts[0], revertMessage: 'WMAC: hasnt role' },
@@ -404,7 +404,7 @@ describe('DepositVaultWithAave', function () {
 
     it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
       const { depositVaultWithAave, owner } = await loadFixture(defaultDeploy);
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithAave, owner },
         10,
       );
@@ -1073,7 +1073,7 @@ describe('DepositVaultWithAave', function () {
         { depositVault: depositVaultWithAave, owner },
         100_000,
       );
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithAave, owner },
         150_000,
       );
@@ -1126,7 +1126,7 @@ describe('DepositVaultWithAave', function () {
         { depositVault: depositVaultWithAave, owner },
         100_000,
       );
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithAave, owner },
         150_000,
       );
@@ -1217,7 +1217,7 @@ describe('DepositVaultWithAave', function () {
       await setRoundData({ mockedAggregator }, 4);
 
       await mintToken(stableCoins.dai, owner, 100_000);
-      await setInstantDailyLimitTest(
+      await setInstantLimitConfigTest(
         { vault: depositVaultWithAave, owner },
         1000,
       );

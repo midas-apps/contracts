@@ -46,19 +46,25 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         0x57df534b215589c7ade8c8abe0978debf2ea95cf1d442550f94eec78a69d238e;
 
     /**
-     * @notice min amount for fiat requests
+     * @dev legacy variable kept for layout compatibility
+     * @custom:oz-renamed-from minFiatRedeemAmount
      */
-    uint256 public minFiatRedeemAmount;
+    // solhint-disable-next-line var-name-mixedcase
+    uint256 private _minFiatRedeemAmount_deprecated;
 
     /**
-     * @notice fee percent for fiat requests
+     * @dev legacy variable kept for layout compatibility
+     * @custom:oz-renamed-from fiatAdditionalFee
      */
-    uint256 public fiatAdditionalFee;
+    // solhint-disable-next-line var-name-mixedcase
+    uint256 private _fiatAdditionalFee_deprecated;
 
     /**
-     * @notice static fee in mToken for fiat requests
+     * @dev legacy variable kept for layout compatibility
+     * @custom:oz-renamed-from fiatFlatFee
      */
-    uint256 public fiatFlatFee;
+    // solhint-disable-next-line var-name-mixedcase
+    uint256 private _fiatFlatFee_deprecated;
 
     /**
      * @notice mapping, requestId to request data
@@ -133,12 +139,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         RedemptionVaultInitParams calldata _redemptionInitParams
     ) private initializer {
         __ManageableVault_init(_commonVaultInitParams);
-        _validateFee(_redemptionInitParams.fiatAdditionalFee, false);
         _validateAddress(_redemptionInitParams.requestRedeemer, false);
 
-        fiatAdditionalFee = _redemptionInitParams.fiatAdditionalFee;
-        fiatFlatFee = _redemptionInitParams.fiatFlatFee;
-        minFiatRedeemAmount = _redemptionInitParams.minFiatRedeemAmount;
         requestRedeemer = _redemptionInitParams.requestRedeemer;
     }
 
@@ -206,8 +208,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             _redeemRequestWithCustomRecipient(
                 tokenOut,
                 amountMTokenIn,
-                msg.sender,
-                false
+                msg.sender
             );
     }
 
@@ -228,26 +229,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             _redeemRequestWithCustomRecipient(
                 tokenOut,
                 amountMTokenIn,
-                recipient,
-                false
-            );
-    }
-
-    /**
-     * @inheritdoc IRedemptionVault
-     */
-    function redeemFiatRequest(uint256 amountMTokenIn)
-        external
-        returns (
-            uint256 /*requestId*/
-        )
-    {
-        return
-            _redeemRequestWithCustomRecipient(
-                MANUAL_FULLFILMENT_TOKEN,
-                amountMTokenIn,
-                msg.sender,
-                true
+                recipient
             );
     }
 
@@ -373,44 +355,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function setMinFiatRedeemAmount(uint256 newValue)
-        external
-        validateVaultAdminAccess
-    {
-        minFiatRedeemAmount = newValue;
-
-        emit SetMinFiatRedeemAmount(msg.sender, newValue);
-    }
-
-    /**
-     * @inheritdoc IRedemptionVault
-     */
-    function setFiatFlatFee(uint256 feeInMToken)
-        external
-        validateVaultAdminAccess
-    {
-        fiatFlatFee = feeInMToken;
-
-        emit SetFiatFlatFee(msg.sender, feeInMToken);
-    }
-
-    /**
-     * @inheritdoc IRedemptionVault
-     */
-    function setFiatAdditionalFee(uint256 newFee)
-        external
-        validateVaultAdminAccess
-    {
-        _validateFee(newFee, false);
-
-        fiatAdditionalFee = newFee;
-
-        emit SetFiatAdditionalFee(msg.sender, newFee);
-    }
-
-    /**
-     * @inheritdoc IRedemptionVault
-     */
     function setRequestRedeemer(address redeemer)
         external
         validateVaultAdminAccess
@@ -510,7 +454,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @dev validates approve
      * burns amount from contract
-     * transfer tokenOut to user if not fiat
+     * transfer tokenOut to user
      * sets flag Processed
      * @param requestId request id
      * @param newMTokenRate new mToken rate
@@ -542,8 +486,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             _requireVariationTolerance(request.mTokenRate, newMTokenRate);
         }
 
-        bool isFiat = request.tokenOut == MANUAL_FULLFILMENT_TOKEN;
-
         CalcAndValidateRedeemResult memory calcResult = _calcAndValidateRedeem(
             request.sender,
             request.tokenOut,
@@ -552,38 +494,35 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             request.tokenOutRate,
             true,
             request.feePercent,
-            false,
-            isFiat
+            false
         );
 
-        if (!isFiat) {
-            if (
-                safeValidateLiquidity &&
-                !_validateLiquidity(
-                    request.tokenOut,
-                    calcResult.amountTokenOutWithoutFee + calcResult.feeAmount,
-                    calcResult.tokenOutDecimals
-                )
-            ) {
-                return false;
-            }
-
-            _tokenTransferFromTo(
+        if (
+            safeValidateLiquidity &&
+            !_validateLiquidity(
                 request.tokenOut,
-                requestRedeemer,
-                request.sender,
-                calcResult.amountTokenOutWithoutFee,
+                calcResult.amountTokenOutWithoutFee + calcResult.feeAmount,
                 calcResult.tokenOutDecimals
-            );
-
-            _tokenTransferFromTo(
-                request.tokenOut,
-                requestRedeemer,
-                feeReceiver,
-                calcResult.feeAmount,
-                calcResult.tokenOutDecimals
-            );
+            )
+        ) {
+            return false;
         }
+
+        _tokenTransferFromTo(
+            request.tokenOut,
+            requestRedeemer,
+            request.sender,
+            calcResult.amountTokenOutWithoutFee,
+            calcResult.tokenOutDecimals
+        );
+
+        _tokenTransferFromTo(
+            request.tokenOut,
+            requestRedeemer,
+            feeReceiver,
+            calcResult.feeAmount,
+            calcResult.tokenOutDecimals
+        );
 
         _requireAndUpdateAllowance(
             request.tokenOut,
@@ -661,14 +600,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @param tokenOut tokenOut address
      * @param amountMTokenIn amount of mToken (decimals 18)
      * @param recipient recipient address
-     * @param isFiat is fiat requests
      * @return requestId request id
      */
     function _redeemRequestWithCustomRecipient(
         address tokenOut,
         uint256 amountMTokenIn,
-        address recipient,
-        bool isFiat
+        address recipient
     )
         private
         validateUserAccess(recipient)
@@ -679,7 +616,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         (uint256 requestId, uint256 feePercent) = _redeemRequest(
             tokenOut,
             amountMTokenIn,
-            isFiat,
             recipient
         );
 
@@ -730,8 +666,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             0,
             false,
             0,
-            true,
-            false
+            true
         );
 
         _requireAndUpdateLimit(amountMTokenIn);
@@ -887,29 +822,17 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     function _redeemRequest(
         address tokenOut,
         uint256 amountMTokenIn,
-        bool isFiat,
         address recipient
     ) internal returns (uint256 requestId, uint256 feePercent) {
-        if (!isFiat) {
-            require(
-                tokenOut != MANUAL_FULLFILMENT_TOKEN,
-                "RV: tokenOut == fiat"
-            );
-            _requireTokenExists(tokenOut);
-        }
+        _requireTokenExists(tokenOut);
 
         address user = msg.sender;
 
-        _validateMTokenAmount(user, amountMTokenIn, isFiat);
+        _validateMTokenAmount(user, amountMTokenIn);
 
         _validateInstantFee();
 
-        feePercent = _getFee(
-            user,
-            tokenOut,
-            false,
-            isFiat ? fiatAdditionalFee : 0
-        );
+        feePercent = _getFee(user, tokenOut, false);
 
         (, uint256 mTokenRate, uint256 tokenOutRate) = _convertMTokenToTokenOut(
             amountMTokenIn,
@@ -956,14 +879,9 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     ) internal view returns (uint256 amountToken, uint256 tokenRate) {
         require(amountUsd > 0, "RV: amount zero");
 
-        if (overrideTokenRate > 0) {
-            tokenRate = overrideTokenRate;
-        } else {
-            if (tokenOut == MANUAL_FULLFILMENT_TOKEN) {
-                return (amountUsd, STABLECOIN_RATE);
-            }
-            tokenRate = _getPTokenRate(tokenOut);
-        }
+        tokenRate = overrideTokenRate > 0
+            ? overrideTokenRate
+            : _getPTokenRate(tokenOut);
 
         amountToken = (amountUsd * (10**18)) / tokenRate;
     }
@@ -999,7 +917,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @param shouldOverrideFeePercent should override fee percent if true
      * @param overrideFeePercent override fee percent if shouldOverrideFeePercent is true
      * @param isInstant is instant operation
-     * @param isFiat is fiat operation
      *
      * @return result calc result
      */
@@ -1011,19 +928,16 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 overrideTokenOutRate,
         bool shouldOverrideFeePercent,
         uint256 overrideFeePercent,
-        bool isInstant,
-        bool isFiat
+        bool isInstant
     )
         internal
         view
         virtual
         returns (CalcAndValidateRedeemResult memory result)
     {
-        if (!isFiat) {
-            _requireTokenExists(tokenOut);
-        }
+        _requireTokenExists(tokenOut);
 
-        _validateMTokenAmount(user, amountMTokenIn, isFiat);
+        _validateMTokenAmount(user, amountMTokenIn);
 
         (
             uint256 amountTokenOut,
@@ -1043,25 +957,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         result.feeAmount = _getFeeAmount(
             shouldOverrideFeePercent
                 ? overrideFeePercent
-                : _getFee(
-                    user,
-                    tokenOut,
-                    isInstant,
-                    isFiat ? fiatAdditionalFee : 0
-                ),
+                : _getFee(user, tokenOut, isInstant),
             amountTokenOut
         );
 
-        if (isFiat) {
-            require(
-                tokenOut == MANUAL_FULLFILMENT_TOKEN,
-                "RV: tokenOut != fiat"
-            );
-            if (!waivedFeeRestriction[user])
-                // as fee is in tokenOut and fiatFlatFee is in mToken,
-                // we need to convert it to be in tokenOut
-                result.feeAmount += (fiatFlatFee * mTokenRate) / tokenOutRate;
-        }
         amountTokenOut = _truncate(amountTokenOut, result.tokenOutDecimals);
         result.feeAmount = _truncate(result.feeAmount, result.tokenOutDecimals);
 
@@ -1113,18 +1012,15 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @dev validates mToken amount for different constraints
      * @param user user address
      * @param amountMTokenIn amount of mToken
-     * @param isFiat is fiat operation
      */
-    function _validateMTokenAmount(
-        address user,
-        uint256 amountMTokenIn,
-        bool isFiat
-    ) internal view {
+    function _validateMTokenAmount(address user, uint256 amountMTokenIn)
+        internal
+        view
+    {
         require(amountMTokenIn > 0, "RV: invalid amount");
 
         if (!isFreeFromMinAmount[user]) {
-            uint256 minRedeemAmount = isFiat ? minFiatRedeemAmount : minAmount;
-            require(minRedeemAmount <= amountMTokenIn, "RV: amount < min");
+            require(minAmount <= amountMTokenIn, "RV: amount < min");
         }
     }
 
