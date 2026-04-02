@@ -813,7 +813,7 @@ describe('RedemptionVaultWithMToken', function () {
           parseUnits('1000', 9),
           parseUnits('1'),
         ),
-      ).to.be.revertedWith('RVMT: insufficient mToken balance');
+      ).to.be.revertedWith('RVMT: balance < needed');
     });
   });
 
@@ -1455,7 +1455,7 @@ describe('RedemptionVaultWithMToken', function () {
         stableCoins.dai,
         100,
         {
-          revertMessage: 'RVMT: insufficient mToken balance',
+          revertMessage: 'RVMT: balance < needed',
         },
       );
     });

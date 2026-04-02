@@ -245,7 +245,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
 
         require(
             IERC20(mTokenA).balanceOf(address(this)) >= mTokenAAmount,
-            "RVMT: insufficient mToken balance"
+            "RVMT: balance < needed"
         );
 
         IERC20(mTokenA).safeIncreaseAllowance(

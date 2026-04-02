@@ -196,9 +196,6 @@ contract RedemptionVaultWithAave is RedemptionVault {
             missingAmount,
             address(this)
         );
-        require(
-            withdrawnAmount >= missingAmount,
-            "RVA: insufficient withdrawal amount"
-        );
+        require(withdrawnAmount >= missingAmount, "RVA: withdrawn < needed");
     }
 }

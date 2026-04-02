@@ -857,7 +857,7 @@ describe('RedemptionVaultWithAave', function () {
           stableCoins.usdc.address,
           parseUnits('1000', 8),
         ),
-      ).to.be.revertedWith('RVA: insufficient withdrawal amount');
+      ).to.be.revertedWith('RVA: withdrawn < needed');
     });
   });
 
@@ -1675,7 +1675,7 @@ describe('RedemptionVaultWithAave', function () {
           parseUnits('1000'),
           0,
         ),
-      ).to.be.revertedWith('RVA: insufficient withdrawal amount');
+      ).to.be.revertedWith('RVA: withdrawn < needed');
     });
 
     // ── Custom recipient tests ───────────────────────────────────────────
