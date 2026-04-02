@@ -3,8 +3,8 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { AddFeeWaivedConfig, AddPaymentTokensConfig } from './common-vault';
 import {
+  DeployCustomAggregatorAdjustedConfig,
   DeployCustomAggregatorConfig,
-  DeployCustomAggregatorDiscountedConfig,
   DeployDataFeedConfig,
   SetRoundDataConfig,
 } from './data-feed';
@@ -94,7 +94,7 @@ export type PostDeployConfig = {
 export type DeploymentConfig = {
   genericConfigs: {
     customAggregator?: DeployCustomAggregatorConfig;
-    customAggregatorDiscounted?: DeployCustomAggregatorDiscountedConfig;
+    customAggregatorAdjusted?: DeployCustomAggregatorAdjustedConfig;
     dataFeed?: DeployDataFeedConfig;
   };
   networkConfigs: Record<

@@ -26,7 +26,7 @@ export type TokenContractNames = {
 type CommonContractNames = Omit<TokenContractNames, 'token'> & {
   ac: string;
   customAggregator: string;
-  customAggregatorDiscounted: string;
+  customAggregatorAdjusted: string;
   layerZero: {
     oftAdapter: string;
     vaultComposer: string;
@@ -149,7 +149,7 @@ export const getCommonContractNames = (): CommonContractNames => {
     dataFeed: 'DataFeed',
     customAggregator: 'CustomAggregatorV3CompatibleFeed',
     customAggregatorGrowth: 'CustomAggregatorV3CompatibleFeedGrowth',
-    customAggregatorDiscounted: 'CustomAggregatorV3CompatibleFeedDiscounted',
+    customAggregatorAdjusted: 'CustomAggregatorV3CompatibleFeedAdjusted',
     roles: 'MidasAccessControlRoles',
     dataFeedComposite: 'CompositeDataFeed',
     dataFeedMultiply: 'CompositeDataFeedMultiply',

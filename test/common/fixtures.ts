@@ -43,7 +43,7 @@ import {
   RedemptionVaultWithMTokenTest__factory,
   AaveV3PoolMock__factory,
   MorphoVaultMock__factory,
-  CustomAggregatorV3CompatibleFeedDiscountedTester__factory,
+  CustomAggregatorV3CompatibleFeedAdjustedTester__factory,
   DepositVaultWithAaveTest__factory,
   DepositVaultWithMorphoTest__factory,
   DepositVaultWithMTokenTest__factory,
@@ -714,8 +714,8 @@ export const defaultDeploy = async () => {
     parseUnits('10000', mockedAggregatorDecimals),
   );
 
-  const customFeedDiscounted =
-    await new CustomAggregatorV3CompatibleFeedDiscountedTester__factory(
+  const customFeedAdjusted =
+    await new CustomAggregatorV3CompatibleFeedAdjustedTester__factory(
       owner,
     ).deploy(customFeed.address, parseUnits('10', 8));
 
@@ -820,7 +820,7 @@ export const defaultDeploy = async () => {
 
   return {
     customFeed,
-    customFeedDiscounted,
+    customFeedAdjusted,
     customFeedGrowth,
     mTBILL,
     mBASIS,
