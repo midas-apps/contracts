@@ -146,3 +146,10 @@ export const getShouldUseTokenLevelGreenListFromUser = async () => {
     initialValue: false,
   }).then(requireNotCancelled);
 };
+
+export const getShouldUseTokenPermissionedFromUser = async () => {
+  return confirm({
+    message: 'Should use permissioned mToken variant?',
+    initialValue: false,
+  }).then(requireNotCancelled);
+};
