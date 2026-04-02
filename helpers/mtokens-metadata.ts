@@ -2,7 +2,7 @@ import { MTokenName } from '../config';
 
 export const mTokensMetadata: Record<
   MTokenName,
-  { name: string; symbol: string }
+  { name: string; symbol: string; isPermissioned?: boolean }
 > = {
   mTBILL: {
     name: 'Midas US Treasury Bill Token',
