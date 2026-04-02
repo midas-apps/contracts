@@ -53,6 +53,10 @@ export const lzConfigsPerMToken: PartialConfigPerNetwork<
       pathways: 'direct-only',
       linkedNetworks: ['monad', 'katana'],
     },
+    mHyperBTC: {
+      pathways: 'direct-only',
+      linkedNetworks: ['monad'],
+    },
   },
 };
 

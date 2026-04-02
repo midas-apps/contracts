@@ -264,4 +264,8 @@ export const mTokensMetadata: Record<
     name: 'Midas M1 USD Market Neutral',
     symbol: 'mM1-USD',
   },
+  mRe7ETH: {
+    name: 'Midas Re7 Ethereum',
+    symbol: 'mRe7ETH',
+  },
 };
