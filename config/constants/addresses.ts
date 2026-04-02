@@ -469,6 +469,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xb75B82b2012138815d1A2c4aB5B8b987da043157',
       depositVault: '0xeD22A9861C6eDd4f1292aeAb1E44661D5f3FE65e',
       redemptionVaultSwapper: '0x16d4f955B0aA1b1570Fe3e9bB2f8c19C407cdb67',
+      layerZero: {
+        oft: '0xb67f81069e890A1b3e02c7BED3A9f78bA54A445C',
+      },
     },
     mPortofino: {
       token: '0x9004B9890D6B901A17F734efe028b1Be5bd6CD22',
@@ -563,7 +566,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       customFeed: '0x70E58b7A1c884fFFE7dbce5249337603a28b8422',
       dataFeed: '0xcbCf1e67F1988e2572a2A620321Aef2ff73369f0',
       depositVault: '0x8978e327FE7C72Fa4eaF4649C23147E279ae1470',
-      redemptionVault: '0x2a8c22E3b10036f3AEF5875d04f8441d4188b656',
+      redemptionVaultSwapper: '0x2a8c22E3b10036f3AEF5875d04f8441d4188b656',
     },
     mBASIS: {
       token: '0x1C2757c1FeF1038428b5bEF062495ce94BBe92b2',
@@ -1029,7 +1032,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       customFeed: '0x80dA45b66c4CBaB140aE53c9accB01BE4F41B7Dd',
       dataFeed: '0x2bDC9c452a4F52DfFD92B0cad371aCbCaeabf918',
       depositVault: '0xd65BFeB71271A4408ff335E59eCf6c5b21A33a70',
-      redemptionVault: '0x7f938d26b6179A96870afaECfB0578110E53A3b2',
+      redemptionVaultSwapper: '0x7f938d26b6179A96870afaECfB0578110E53A3b2',
     },
     mBASIS: {
       token: '0x2247B5A46BB79421a314aB0f0b67fFd11dd37Ee4',
@@ -1244,7 +1247,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         dataFeed: '0x09dbF92503E42246Cb90Cb916A0f30Ef290F2e1D',
       },
       eurc: {
-        token: '0x174d1A887e971f7d0fe5C68b328c30e0ED743160',
+        token: '0xDCB612005417Dc906fF72c87DF732e5a90D49e11',
         aggregator: '0x6CDbBb744a04740a179AF4C92E03C1Bf1eC552C8',
         dataFeed: '0x0c1E886A0ceBF805f66223333e204d39BE6612De',
       },
@@ -1299,6 +1302,14 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         oft: '0x08BC5Ef2E2Afe697614bf3A9eaA71dcBb577f2Df',
       },
     },
+    mHyperBTC: {
+      token: '0xF7Cf282eC810fDed974F99c0163E792f432892BC',
+      customFeed: '0x165d2E3C0A368988F497F649B6fe2134bE20FD8c',
+      dataFeed: '0xf91288dC7F33e6f4aD3B62090A86b8978B48b01c',
+      layerZero: {
+        oft: '0xe9977b9B22Ed2C19DCd68D0403163EFcd45bF874',
+      },
+    },
   },
   injective: {
     accessControl: '0x76f5c631CD6D65B1a5702E382Be5a37859eE326C',
@@ -1321,6 +1332,34 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x4594367963DE803F0C1311584F7b7A18a25e8b00',
       depositVault: '0x8F42Ef868CaC8BBeD00a1343Cf06373fea1c40C0',
       redemptionVaultSwapper: '0xc5a2ADeacc1cf8424630c0C6B09E1DF6e871c65A',
+    },
+  },
+  optimism: {
+    accessControl: '0x08D0016Ac2Cf7027D460b2816eA3D0e74617beF8',
+    timelock: '0x50382fe9Dab9feACabe1b93aB310131cEd8a9b68',
+    paymentTokens: {
+      weth: {
+        token: '0x4200000000000000000000000000000000000006',
+        aggregator: '0xc79ab9Af2d3E87e91Ec1572C8C1Bc8D2EEBB4c24',
+        dataFeed: '0x4C13A495D7A1eA5Fb9Afda5Faa7218666Ad794e3',
+      },
+      wsteth: {
+        token: '0x1f32b1c2345538c0c6f582fcb022739c4a194ebb',
+        aggregator: '0x524299Ab0987a7c4B3c8022a35669DdcdC715a10',
+        dataFeed: '0x7f711A1E6EF2Cc6De1A5580a634050286Ef27125',
+      },
+      weeth: {
+        token: '0x346e03F8Cce9fE01dCB3d0Da3e9D00dC2c0E08f0',
+        aggregator: '0xb4479d436DDa5c1A79bD88D282725615202406E3',
+        dataFeed: '0x72E7303C4BFf823444098748B12eAd1EBc80768C',
+      },
+    },
+    mRe7ETH: {
+      token: '0xE7Ba07519dFA06e60059563F484d6090dedF21B3',
+      customFeed: '0xcFfe26979e96B9E0454cC83aa03FC973C9Eb0E5E',
+      dataFeed: '0x46129d0863667b1159C55F0B43b898bc3352130a',
+      depositVault: '0xC562F73ADD198ce47E9Af5B0752dE3D7c991225D',
+      redemptionVaultSwapper: '0x2c8AEe33a6B1eBDd047903B5FDe01D71B8854e6D',
     },
   },
   sepolia: {
@@ -1557,6 +1596,7 @@ export const sanctionListContracts: Partial<Record<number, string>> = {
   [chainIds.arbitrum]: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
   [chainIds.base]: '0x3A91A31cB3dC49b4db9Ce721F50a9D076c8D739B',
   [chainIds.bsc]: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
+  [chainIds.optimism]: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
 };
 
 export const ustbContracts: Partial<Record<number, string>> = {

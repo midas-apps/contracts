@@ -37,6 +37,7 @@ import { mMEVDeploymentConfig } from './mMEV';
 import { mPortofinoDeploymentConfig } from './mPortofino';
 import { mRE7DeploymentConfig } from './mRE7';
 import { mRE7BTCDeploymentConfig } from './mRE7BTC';
+import { mRe7ETHDeploymentConfig } from './mRe7ETH';
 import { mRE7SOLDeploymentConfig } from './mRE7SOL';
 import { mROXDeploymentConfig } from './mROX';
 import { mSLDeploymentConfig } from './mSL';
@@ -133,4 +134,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   weEUR: weEURDeploymentConfig,
   mTU: mTUDeploymentConfig,
   mM1USD: mM1USDDeploymentConfig,
+  mRe7ETH: mRe7ETHDeploymentConfig,
 };

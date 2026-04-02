@@ -23,9 +23,9 @@ import { networkDeploymentConfigs } from '../configs/network-configs';
 type Address = `0x${string}`;
 
 export type GrantAllTokenRolesConfig = {
-  tokenManagerAddress?: Address;
+  tokenManagerAddress: Address;
   vaultsManagerAddress?: Address;
-  oracleManagerAddress?: Address;
+  oracleManagerAddress: Address;
 };
 
 const acAdminAddress = '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227';
@@ -112,15 +112,11 @@ export const grantAllProductRoles = async (
         ...contractsRoles,
       ],
       [
-        ...tokenManagerRoles.map(
-          () => networkConfig.tokenManagerAddress ?? defaultManager,
-        ),
+        ...tokenManagerRoles.map(() => networkConfig.tokenManagerAddress),
         ...vaultManagerRoles.map(
           () => networkConfig.vaultsManagerAddress ?? defaultManager,
         ),
-        ...oracleManagerRoles.map(
-          () => networkConfig.oracleManagerAddress ?? defaultManager,
-        ),
+        ...oracleManagerRoles.map(() => networkConfig.oracleManagerAddress),
         ...contractsAddresses,
       ],
     ),
