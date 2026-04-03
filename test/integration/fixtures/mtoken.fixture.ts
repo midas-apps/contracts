@@ -250,6 +250,11 @@ export async function mTokenDepositFixture() {
     depositVaultWithMToken.address,
   );
 
+  // Waive fees on target DV for the product DV (required for _autoInvest)
+  await targetDepositVault
+    .connect(owner)
+    .addWaivedFeeAccount(depositVaultWithMToken.address);
+
   // Add USDC as payment token on product DV
   await depositVaultWithMToken
     .connect(owner)

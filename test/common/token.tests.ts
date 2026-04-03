@@ -173,7 +173,7 @@ export const tokenContractsTests = (token: MTokenName) => {
       parseUnits('10000', 8),
     );
 
-    const depositVault = await deployProxyContract<DepositVault>(
+    const depositVault = await deployProxyContractIfExists<DepositVault>(
       'dv',
       undefined,
       fixture.accessControl.address,
