@@ -27,6 +27,7 @@ import { mevBTCDeploymentConfig } from './mevBTC';
 import { mEVUSDDeploymentConfig } from './mEVUSD';
 import { mFARMDeploymentConfig } from './mFARM';
 import { mFONEDeploymentConfig } from './mFONE';
+import { mGLOBALDeploymentConfig } from './mGLOBAL';
 import { mHYPERDeploymentConfig } from './mHYPER';
 import { mHyperBTCDeploymentConfig } from './mHyperBTC';
 import { mHyperETHDeploymentConfig } from './mHyperETH';
@@ -135,4 +136,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mTU: mTUDeploymentConfig,
   mM1USD: mM1USDDeploymentConfig,
   mRe7ETH: mRe7ETHDeploymentConfig,
+  mGLOBAL: mGLOBALDeploymentConfig,
 };

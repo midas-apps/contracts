@@ -94,7 +94,7 @@ export const deployDepositVault = async (
       `Detected TAC wrapper, will be used data feed from ${originalTokenName}: ${dataFeed}`,
     );
   } else {
-    dataFeed = tokenAddresses?.dataFeed;
+    dataFeed = tokenAddresses?.dataFeedDv ?? tokenAddresses?.dataFeed;
   }
 
   const dvContractName = getTokenContractNames(token)[type];

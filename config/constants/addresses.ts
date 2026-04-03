@@ -30,9 +30,20 @@ type AxelarTokenAddresses = {
   executables?: Partial<Record<PaymentTokenName, string>>;
 };
 
-export type TokenAddresses = {
+type TokenFeedAddresses = {
   customFeed?: string;
+  customFeedGrowth?: string;
+
+  customFeedAdjusted?: string;
+  customFeedDv?: string;
+  customFeedRv?: string;
+
   dataFeed?: string;
+  dataFeedDv?: string;
+  dataFeedRv?: string;
+};
+
+export type TokenAddresses = TokenFeedAddresses & {
   token?: string;
   layerZero?: LayerZeroTokenAddresses;
   axelar?: AxelarTokenAddresses;
@@ -505,6 +516,19 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x0f7e323103b29E1B18d521DE957Ed0c4c0A8189E',
       redemptionVaultSwapper: '0x70Ba3211f2584Bf1C8a2aCdF0a00dba559CE1Ffa',
     },
+    mGLOBAL: {
+      token: '0x7433806912Eae67919e66aea853d46Fa0aef98A8',
+      customFeedGrowth: '0x66Aa9fcD63DF74e1f67A9452E6E59Fbc67f75E38',
+      // Adjusted growth feed: +7%
+      customFeedDv: '0x494F142c35167cFbDD3887E8D7897822e63c9618',
+      // Adjusted growth feed: -7%
+      customFeedRv: '0x4c825154d02eaFAB7F3c779D96c279BCDB9fCf6F',
+      dataFeedDv: '0x58476f452df10E6Bf17dc1fee418E98dE9e14868',
+      dataFeedRv: '0xb468A6F63868cB6C6D99105EDfbe73d6B21f139E',
+      depositVaultAave: '0xCe29c36c6D4556f2d01d79414C1354B968dDDEf1',
+      redemptionVaultAave: '0xA0Fc8BDFb1E6a705C1375810989B1d70a982b01B',
+      redemptionVaultSwapper: '0x1e0fd66753198c7b8bA64edEe8d41D8628Bf20D7',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
@@ -895,7 +919,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
     dnTEST: {
       token: '0x80cAE1bb1B90980148C5bC9c5701b69fAfE7d6B2',
-      customFeed: '0x0c459A098EB325fD7ea602Cd7664EE43f1D4Bd08',
+      customFeedGrowth: '0x0c459A098EB325fD7ea602Cd7664EE43f1D4Bd08',
       dataFeed: '0xA7A8F3414e02AEcb50E206aF31001CC4990b4D0a',
       depositVault: '0xed51fEb552d596F3014B127D21ECcE5a7D8e8b19',
       redemptionVaultSwapper: '0x35D44B87D6c786e9434DA337eb59D373e8b84941',

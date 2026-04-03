@@ -349,9 +349,13 @@ export const generateDeploymentConfig = async (
     genericConfig: {},
   };
 
+  let isGrowthAggregator = false;
+
   if (!deploymentConfigFileExists) {
-    deploymentConfig.genericConfig =
-      await configsPerNetworkConfig.genericConfig(mToken);
+    const genericResult = await configsPerNetworkConfig.genericConfig(mToken);
+    isGrowthAggregator = genericResult.isGrowth;
+    const { isGrowth: _, ...genericConfig } = genericResult;
+    deploymentConfig.genericConfig = genericConfig;
   }
 
   if (
@@ -453,13 +457,21 @@ export const ${deploymentConfigVarName}: DeploymentConfig = {
       postDeployProperty.remove();
     }
 
+    const setRoundData: Record<string, unknown> = isGrowthAggregator
+      ? {
+          type: expr("'GROWTH'"),
+          data: expr('parseUnits("1", 8)'),
+          apr: expr('parseUnits("0", 8)'),
+        }
+      : {
+          data: expr('parseUnits("1", 8)'),
+        };
+
     networkConfigPropertyInit.addPropertyAssignment({
       name: 'postDeploy',
       initializer: objectToCode({
         ...deploymentConfig.postDeploy,
-        setRoundData: {
-          data: expr('parseUnits("1", 8)'),
-        },
+        setRoundData,
       }),
     });
   }
