@@ -1382,6 +1382,16 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x65F3E5e5B25Ba8e0B8D386Ba9Bb36a0600367930',
         dataFeed: '0x8104102946EF43df4939e7Db4b5105a65C63b09A',
       },
+      usdc: {
+        token: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85',
+        aggregator: '0x16a9FA2FDa030272Ce99B29CF780dFA30361E0f3',
+        dataFeed: '0x043defdec041BCcED8FF478490936C8557917C20',
+      },
+      usdt: {
+        token: '0x94b008aA00579c1307B0EF2c499aD98a8ce58e58',
+        aggregator: '0xECef79E109e997bCA29c1c0897ec9d7b03647F5E',
+        dataFeed: '0x9E41963c5D0A2F8800b046989B8815c01845a55f',
+      },
     },
     mRe7ETH: {
       token: '0xE7Ba07519dFA06e60059563F484d6090dedF21B3',
@@ -1396,6 +1406,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xA42A19F6dB6382B94DDFfA752bA682d6Df163D59',
       depositVault: '0xF1b45eE795C8e1B858e191654C95A1B33c573632',
       redemptionVaultSwapper: '0xDC87653FCc5c16407Cd2e199d5Db48BaB71e7861',
+    },
+    liquidRESERVE: {
+      token: '0xca5921DF65E2e1b0B98Ae91c0187BA80D4124898',
+      customFeed: '0x58dDf77A329CcbE2F4C2114C64ed9E12Ec8a1356',
+      dataFeed: '0x843EAa59836599611FA02BC065dCb128F320Af9f',
+      depositVault: '0x1561eC30da97108Df46535CBd9bAD8C8d8611B3a',
+      redemptionVaultSwapper: '0xC87b51735ea5Eeee59D3e12601dC931F77F2837a',
     },
   },
   sepolia: {
