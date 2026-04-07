@@ -84,7 +84,7 @@ redemptionVaultSuits(
             { redemptionVault: redemptionVaultWithAave, owner },
             stableCoins.usdc.address,
             aavePoolMock.address,
-            { revertMessage: 'WMAC: paused fn' },
+            { revertMessage: 'Pausable: fn paused' },
           );
         });
 
@@ -141,7 +141,7 @@ redemptionVaultSuits(
           await removeAavePoolTest(
             { redemptionVault: redemptionVaultWithAave, owner },
             stableCoins.usdc.address,
-            { revertMessage: 'WMAC: paused fn' },
+            { revertMessage: 'Pausable: fn paused' },
           );
         });
 

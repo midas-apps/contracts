@@ -1,4 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumber, constants } from 'ethers';
@@ -59,31 +60,34 @@ redemptionVaultSuits(
 
         await expect(
           redemptionVaultWithMToken[
-            'initialize((address,address,uint256,uint256),(address,address),(address,address),(uint256,uint256),(uint256,uint256,uint256,address,address,address,address,address),address)'
+            'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address),address)'
           ](
             {
               ac: accessControl.address,
               sanctionsList: mockedSanctionsList.address,
               variationTolerance: 1,
               minAmount: parseUnits('100'),
-            },
-            {
               mToken: mTokenLoan.address,
               mTokenDataFeed: mTokenLoanToUsdDataFeed.address,
-            },
-            {
               feeReceiver: feeReceiver.address,
               tokensReceiver: tokensReceiver.address,
-            },
-            {
               instantFee: 100,
-              instantDailyLimit: parseUnits('100000'),
             },
             {
-              fiatAdditionalFee: 10000,
-              fiatFlatFee: parseUnits('1'),
-              minFiatRedeemAmount: parseUnits('100'),
+              limitConfigs: [
+                {
+                  limit: parseUnits('100000'),
+                  window: days(1),
+                },
+              ],
+              minInstantFee: 0,
+              maxInstantFee: 10000,
+              withdrawTokensReceiver: constants.AddressZero,
+            },
+            {
               requestRedeemer: constants.AddressZero,
+            },
+            {
               loanLp: constants.AddressZero,
               loanLpFeeReceiver: constants.AddressZero,
               loanRepaymentAddress: constants.AddressZero,
@@ -102,31 +106,34 @@ redemptionVaultSuits(
 
           await expect(
             redemptionVaultWithMToken[
-              'initialize((address,address,uint256,uint256),(address,address),(address,address),(uint256,uint256),(uint256,uint256,uint256,address,address,address,address,address),address)'
+              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address),address)'
             ](
               {
                 ac: constants.AddressZero,
                 sanctionsList: constants.AddressZero,
                 variationTolerance: 1,
                 minAmount: parseUnits('100'),
-              },
-              {
                 mToken: constants.AddressZero,
                 mTokenDataFeed: constants.AddressZero,
-              },
-              {
                 feeReceiver: constants.AddressZero,
                 tokensReceiver: constants.AddressZero,
-              },
-              {
                 instantFee: 100,
-                instantDailyLimit: parseUnits('100000'),
               },
               {
-                fiatAdditionalFee: 10000,
-                fiatFlatFee: parseUnits('1'),
-                minFiatRedeemAmount: parseUnits('100'),
+                limitConfigs: [
+                  {
+                    limit: parseUnits('100000'),
+                    window: days(1),
+                  },
+                ],
+                minInstantFee: 0,
+                maxInstantFee: 10000,
+                withdrawTokensReceiver: constants.AddressZero,
+              },
+              {
                 requestRedeemer: constants.AddressZero,
+              },
+              {
                 loanLp: constants.AddressZero,
                 loanLpFeeReceiver: constants.AddressZero,
                 loanRepaymentAddress: constants.AddressZero,
@@ -153,31 +160,34 @@ redemptionVaultSuits(
 
           await expect(
             redemptionVaultWithMToken[
-              'initialize((address,address,uint256,uint256),(address,address),(address,address),(uint256,uint256),(uint256,uint256,uint256,address,address,address,address,address),address)'
+              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address),address)'
             ](
               {
                 ac: accessControl.address,
                 sanctionsList: mockedSanctionsList.address,
                 variationTolerance: 1,
                 minAmount: parseUnits('100'),
-              },
-              {
                 mToken: mTokenLoan.address,
                 mTokenDataFeed: mTokenLoanToUsdDataFeed.address,
-              },
-              {
                 feeReceiver: feeReceiver.address,
                 tokensReceiver: tokensReceiver.address,
-              },
-              {
                 instantFee: 100,
-                instantDailyLimit: parseUnits('100000'),
               },
               {
-                fiatAdditionalFee: 10000,
-                fiatFlatFee: parseUnits('1'),
-                minFiatRedeemAmount: parseUnits('100'),
+                limitConfigs: [
+                  {
+                    limit: parseUnits('100000'),
+                    window: days(1),
+                  },
+                ],
+                minInstantFee: 0,
+                maxInstantFee: 10000,
+                withdrawTokensReceiver: constants.AddressZero,
+              },
+              {
                 requestRedeemer: constants.AddressZero,
+              },
+              {
                 loanLp: constants.AddressZero,
                 loanLpFeeReceiver: constants.AddressZero,
                 loanRepaymentAddress: constants.AddressZero,
@@ -229,7 +239,7 @@ redemptionVaultSuits(
           await setRedemptionVaultTest(
             { vault: redemptionVaultWithMToken, owner },
             regularAccounts[0].address,
-            { revertMessage: 'WMAC: paused fn' },
+            { revertMessage: 'Pausable: fn paused' },
           );
         });
 

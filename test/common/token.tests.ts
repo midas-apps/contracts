@@ -1,4 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { expect } from 'chai';
 import { Contract } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
@@ -166,22 +167,28 @@ export const tokenContractsTests = (token: MTokenName) => {
     const depositVault = await deployProxyContract<DepositVault>(
       'dv',
       undefined,
-      fixture.accessControl.address,
       {
+        ac: fixture.accessControl.address,
+        sanctionsList: fixture.mockedSanctionsList.address,
+        variationTolerance: 1,
+        minAmount: parseUnits('100'),
         mToken: tokenContract.address,
         mTokenDataFeed: dataFeed.address,
-      },
-      {
         feeReceiver: fixture.feeReceiver.address,
         tokensReceiver: fixture.tokensReceiver.address,
+        instantFee: 100,
       },
       {
-        instantFee: 100,
-        instantDailyLimit: parseUnits('100000'),
+        withdrawTokensReceiver: fixture.withdrawTokensReceiver.address,
+        minInstantFee: 0,
+        maxInstantFee: 10000,
+        limitConfigs: [
+          {
+            limit: parseUnits('100000'),
+            window: days(1),
+          },
+        ],
       },
-      fixture.mockedSanctionsList.address,
-      1,
-      parseUnits('100'),
       0,
       0,
     );
@@ -189,23 +196,29 @@ export const tokenContractsTests = (token: MTokenName) => {
     const depositVaultUstb =
       await deployProxyContractIfExists<DepositVaultWithUSTB>(
         'dvUstb',
-        'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)',
-        fixture.accessControl.address,
+        'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)',
         {
+          ac: fixture.accessControl.address,
+          sanctionsList: fixture.mockedSanctionsList.address,
+          variationTolerance: 1,
+          minAmount: parseUnits('100'),
           mToken: tokenContract.address,
           mTokenDataFeed: dataFeed.address,
-        },
-        {
           feeReceiver: fixture.feeReceiver.address,
           tokensReceiver: fixture.tokensReceiver.address,
+          instantFee: 100,
         },
         {
-          instantFee: 100,
-          instantDailyLimit: parseUnits('100000'),
+          withdrawTokensReceiver: fixture.withdrawTokensReceiver.address,
+          minInstantFee: 0,
+          maxInstantFee: 10000,
+          limitConfigs: [
+            {
+              limit: parseUnits('100000'),
+              window: days(1),
+            },
+          ],
         },
-        fixture.mockedSanctionsList.address,
-        1,
-        parseUnits('100'),
         0,
         0,
         fixture.ustbToken.address,
@@ -214,58 +227,70 @@ export const tokenContractsTests = (token: MTokenName) => {
     const redemptionVault = await deployProxyContractIfExists<RedemptionVault>(
       'rv',
       undefined,
-      fixture.accessControl.address,
       {
+        ac: fixture.accessControl.address,
+        sanctionsList: fixture.mockedSanctionsList.address,
+        variationTolerance: 1,
+        minAmount: parseUnits('100'),
         mToken: tokenContract.address,
         mTokenDataFeed: dataFeed.address,
-      },
-      {
         feeReceiver: fixture.feeReceiver.address,
         tokensReceiver: fixture.tokensReceiver.address,
-      },
-      {
         instantFee: 100,
-        instantDailyLimit: parseUnits('100000'),
       },
-      fixture.mockedSanctionsList.address,
-      1,
-      1000,
       {
-        fiatAdditionalFee: 100,
-        fiatFlatFee: parseUnits('1'),
-        minFiatRedeemAmount: 1000,
+        limitConfigs: [
+          {
+            limit: parseUnits('100000'),
+            window: days(1),
+          },
+        ],
+        minInstantFee: 0,
+        maxInstantFee: 10000,
+        withdrawTokensReceiver: fixture.withdrawTokensReceiver.address,
       },
-      fixture.requestRedeemer.address,
+      { requestRedeemer: fixture.requestRedeemer.address },
+      {
+        loanLp: fixture.loanLp.address,
+        loanLpFeeReceiver: fixture.loanLpFeeReceiver.address,
+        loanRepaymentAddress: fixture.loanRepaymentAddress.address,
+        loanSwapperVault: fixture.redemptionVaultLoanSwapper.address,
+      },
     );
 
     const redemptionVaultWithSwapper =
       await deployProxyContractIfExists<RedemptionVaultWithSwapper>(
         'rvSwapper',
-        'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)',
-        fixture.accessControl.address,
+        undefined,
         {
+          ac: fixture.accessControl.address,
+          sanctionsList: fixture.mockedSanctionsList.address,
+          variationTolerance: 1,
+          minAmount: parseUnits('100'),
           mToken: tokenContract.address,
           mTokenDataFeed: dataFeed.address,
-        },
-        {
           feeReceiver: fixture.feeReceiver.address,
           tokensReceiver: fixture.tokensReceiver.address,
-        },
-        {
           instantFee: 100,
-          instantDailyLimit: parseUnits('100000'),
         },
-        fixture.mockedSanctionsList.address,
-        1,
-        1000,
         {
-          fiatAdditionalFee: 100,
-          fiatFlatFee: parseUnits('1'),
-          minFiatRedeemAmount: 1000,
+          limitConfigs: [
+            {
+              limit: parseUnits('100000'),
+              window: days(1),
+            },
+          ],
+          minInstantFee: 0,
+          maxInstantFee: 10000,
+          withdrawTokensReceiver: fixture.withdrawTokensReceiver.address,
         },
-        fixture.requestRedeemer.address,
-        fixture.redemptionVault.address,
-        fixture.liquidityProvider.address,
+        { requestRedeemer: fixture.requestRedeemer.address },
+        {
+          loanLp: fixture.loanLp.address,
+          loanLpFeeReceiver: fixture.loanLpFeeReceiver.address,
+          loanRepaymentAddress: fixture.loanRepaymentAddress.address,
+          loanSwapperVault: fixture.redemptionVaultLoanSwapper.address,
+        },
       );
 
     await redemptionVaultWithSwapper?.addWaivedFeeAccount(

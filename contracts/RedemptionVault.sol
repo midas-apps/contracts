@@ -569,21 +569,16 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 minReceiveAmount,
         address recipient
     ) private validateUserAccess(recipient) {
-        (
-            CalcAndValidateRedeemResult memory calcResult,
-            bool spendLiquidity
-        ) = _redeemInstant(
-                tokenOut,
-                amountMTokenIn,
-                minReceiveAmount,
-                recipient
-            );
+        CalcAndValidateRedeemResult memory calcResult = _redeemInstant(
+            tokenOut,
+            amountMTokenIn,
+            minReceiveAmount,
+            recipient
+        );
 
         _postRedeemInstant(tokenOut, calcResult);
 
-        if (spendLiquidity) {
-            _sendTokensFromLiquidity(tokenOut, recipient, calcResult);
-        }
+        _sendTokensFromLiquidity(tokenOut, recipient, calcResult);
 
         emit RedeemInstantV2(
             msg.sender,
@@ -644,16 +639,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 amountMTokenIn,
         uint256 minReceiveAmount,
         address /* recipient */
-    )
-        internal
-        virtual
-        returns (
-            CalcAndValidateRedeemResult memory calcResult,
-            bool spendLiquidity
-        )
-    {
-        spendLiquidity = true;
-
+    ) internal virtual returns (CalcAndValidateRedeemResult memory calcResult) {
         address user = msg.sender;
 
         _validateInstantFee();

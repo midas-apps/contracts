@@ -138,7 +138,7 @@ contract DepositVaultWithMorpho is DepositVault {
         address tokenIn,
         uint256 amountToken,
         uint256 tokensDecimals
-    ) internal override {
+    ) internal virtual override {
         IMorphoVault vault = morphoVaults[tokenIn];
         if (!morphoDepositsEnabled || address(vault) == address(0)) {
             return
@@ -159,7 +159,7 @@ contract DepositVaultWithMorpho is DepositVault {
         address tokenIn,
         uint256 amountToken,
         uint256 tokensDecimals
-    ) internal override {
+    ) internal virtual override {
         IMorphoVault vault = morphoVaults[tokenIn];
         if (!morphoDepositsEnabled || address(vault) == address(0)) {
             return

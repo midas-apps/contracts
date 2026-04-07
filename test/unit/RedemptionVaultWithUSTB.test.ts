@@ -1,4 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { constants } from 'ethers';
@@ -53,31 +54,32 @@ redemptionVaultSuits(
 
         await expect(
           redemptionVaultWithUSTB[
-            'initialize((address,address,uint256,uint256),(address,address),(address,address),(uint256,uint256),(uint256,uint256,uint256,address,address,address,address,address),address)'
+            'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address),address)'
           ](
             {
               ac: accessControl.address,
               sanctionsList: mockedSanctionsList.address,
               variationTolerance: 1,
               minAmount: parseUnits('100'),
-            },
-            {
               mToken: mTBILL.address,
               mTokenDataFeed: mTokenToUsdDataFeed.address,
-            },
-            {
               feeReceiver: feeReceiver.address,
               tokensReceiver: tokensReceiver.address,
-            },
-            {
               instantFee: 100,
-              instantDailyLimit: parseUnits('100000'),
             },
             {
-              fiatAdditionalFee: 10000,
-              fiatFlatFee: parseUnits('1'),
-              minFiatRedeemAmount: parseUnits('100'),
-              requestRedeemer: requestRedeemer.address,
+              limitConfigs: [
+                {
+                  limit: parseUnits('100000'),
+                  window: days(1),
+                },
+              ],
+              minInstantFee: 0,
+              maxInstantFee: 10000,
+              withdrawTokensReceiver: constants.AddressZero,
+            },
+            { requestRedeemer: requestRedeemer.address },
+            {
               loanLp: constants.AddressZero,
               loanLpFeeReceiver: constants.AddressZero,
               loanRepaymentAddress: constants.AddressZero,
@@ -94,31 +96,27 @@ redemptionVaultSuits(
 
           await expect(
             redemptionVaultWithUSTB[
-              'initialize((address,address,uint256,uint256),(address,address),(address,address),(uint256,uint256),(uint256,uint256,uint256,address,address,address,address,address),address)'
+              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address),address)'
             ](
               {
                 ac: constants.AddressZero,
                 sanctionsList: constants.AddressZero,
                 variationTolerance: 0,
                 minAmount: 0,
-              },
-              {
                 mToken: constants.AddressZero,
                 mTokenDataFeed: constants.AddressZero,
-              },
-              {
                 feeReceiver: constants.AddressZero,
                 tokensReceiver: constants.AddressZero,
-              },
-              {
                 instantFee: 0,
-                instantDailyLimit: 0,
               },
               {
-                fiatAdditionalFee: 0,
-                fiatFlatFee: 0,
-                minFiatRedeemAmount: 0,
-                requestRedeemer: constants.AddressZero,
+                limitConfigs: [],
+                minInstantFee: 0,
+                maxInstantFee: 10000,
+                withdrawTokensReceiver: constants.AddressZero,
+              },
+              { requestRedeemer: constants.AddressZero },
+              {
                 loanLp: constants.AddressZero,
                 loanLpFeeReceiver: constants.AddressZero,
                 loanRepaymentAddress: constants.AddressZero,
@@ -146,31 +144,32 @@ redemptionVaultSuits(
 
           await expect(
             redemptionVaultWithUSTB[
-              'initialize((address,address,uint256,uint256),(address,address),(address,address),(uint256,uint256),(uint256,uint256,uint256,address,address,address,address,address),address)'
+              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address),address)'
             ](
               {
                 ac: accessControl.address,
                 sanctionsList: mockedSanctionsList.address,
                 variationTolerance: 1,
                 minAmount: 1000,
-              },
-              {
                 mToken: mTBILL.address,
                 mTokenDataFeed: mTokenToUsdDataFeed.address,
-              },
-              {
                 feeReceiver: feeReceiver.address,
                 tokensReceiver: tokensReceiver.address,
-              },
-              {
                 instantFee: 100,
-                instantDailyLimit: parseUnits('100000'),
               },
               {
-                fiatAdditionalFee: 100,
-                fiatFlatFee: parseUnits('1'),
-                minFiatRedeemAmount: 1000,
-                requestRedeemer: requestRedeemer.address,
+                limitConfigs: [
+                  {
+                    limit: parseUnits('100000'),
+                    window: days(1),
+                  },
+                ],
+                minInstantFee: 0,
+                maxInstantFee: 10000,
+                withdrawTokensReceiver: constants.AddressZero,
+              },
+              { requestRedeemer: requestRedeemer.address },
+              {
                 loanLp: constants.AddressZero,
                 loanLpFeeReceiver: constants.AddressZero,
                 loanRepaymentAddress: constants.AddressZero,

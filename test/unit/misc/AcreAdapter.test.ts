@@ -1,4 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { expect } from 'chai';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
@@ -47,22 +48,28 @@ describe('AcreAdapter', () => {
     ).deploy();
 
     await dvWithDifferentDataFeed.initialize(
-      fixture.accessControl.address,
       {
+        ac: fixture.accessControl.address,
+        sanctionsList: fixture.mockedSanctionsList.address,
+        variationTolerance: 1,
+        minAmount: parseUnits('100'),
         mToken: fixture.mTBILL.address,
         mTokenDataFeed: fixture.dataFeed.address,
-      },
-      {
         feeReceiver: fixture.feeReceiver.address,
         tokensReceiver: fixture.tokensReceiver.address,
+        instantFee: 100,
       },
       {
-        instantFee: 100,
-        instantDailyLimit: parseUnits('100000'),
+        withdrawTokensReceiver: fixture.withdrawTokensReceiver.address,
+        minInstantFee: 0,
+        maxInstantFee: 10000,
+        limitConfigs: [
+          {
+            limit: parseUnits('100000'),
+            window: days(1),
+          },
+        ],
       },
-      fixture.mockedSanctionsList.address,
-      1,
-      parseUnits('100'),
       0,
       constants.MaxUint256,
     );
@@ -81,7 +88,7 @@ describe('AcreAdapter', () => {
       fixture.owner.sendTransaction(
         new AcreAdapter__factory().getDeployTransaction(
           fixture.depositVault.address,
-          fixture.redemptionVaultWithSwapper.address,
+          fixture.redemptionVaultLoanSwapper.address,
           fixture.stableCoins.usdc.address,
         ),
       ),

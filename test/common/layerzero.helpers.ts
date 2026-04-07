@@ -792,7 +792,7 @@ export const redeemAndSend = async (
       .to.emit(
         redemptionVault,
         redemptionVault.interface.events[
-          'RedeemInstantWithCustomRecipient(address,address,address,uint256,uint256,uint256)'
+          'RedeemInstantV2(address,address,address,uint256,uint256,uint256)'
         ].name,
       )
       .withArgs(

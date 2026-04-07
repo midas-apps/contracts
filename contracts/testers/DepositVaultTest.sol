@@ -7,7 +7,7 @@ contract DepositVaultTest is DepositVault {
     bool private _overrideGetTokenRate;
     uint256 private _getTokenRateValue;
 
-    function _disableInitializers() internal override {}
+    function _disableInitializers() internal virtual override {}
 
     function tokenTransferFromToTester(
         address token,
@@ -62,6 +62,7 @@ contract DepositVaultTest is DepositVault {
     function _getTokenRate(address dataFeed, bool stable)
         internal
         view
+        virtual
         override
         returns (uint256)
     {

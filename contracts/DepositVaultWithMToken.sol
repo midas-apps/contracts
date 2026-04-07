@@ -136,7 +136,7 @@ contract DepositVaultWithMToken is DepositVault {
         address tokenIn,
         uint256 amountToken,
         uint256 tokensDecimals
-    ) internal override {
+    ) internal virtual override {
         if (!mTokenDepositsEnabled) {
             return
                 super._instantTransferTokensToTokensReceiver(
@@ -156,7 +156,7 @@ contract DepositVaultWithMToken is DepositVault {
         address tokenIn,
         uint256 amountToken,
         uint256 tokensDecimals
-    ) internal override {
+    ) internal virtual override {
         if (!mTokenDepositsEnabled) {
             return
                 super._requestTransferTokensToTokensReceiver(

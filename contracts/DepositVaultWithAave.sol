@@ -132,7 +132,7 @@ contract DepositVaultWithAave is DepositVault {
         address tokenIn,
         uint256 amountToken,
         uint256 tokensDecimals
-    ) internal override {
+    ) internal virtual override {
         IAaveV3Pool pool = aavePools[tokenIn];
         if (!aaveDepositsEnabled || address(pool) == address(0)) {
             return
@@ -153,7 +153,7 @@ contract DepositVaultWithAave is DepositVault {
         address tokenIn,
         uint256 amountToken,
         uint256 tokensDecimals
-    ) internal override {
+    ) internal virtual override {
         IAaveV3Pool pool = aavePools[tokenIn];
         if (!aaveDepositsEnabled || address(pool) == address(0)) {
             return

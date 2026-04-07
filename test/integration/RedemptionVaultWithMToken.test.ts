@@ -228,7 +228,7 @@ describe('RedemptionVaultWithMToken - Mainnet Fork Integration Tests', function 
       );
       await redemptionVaultWithMToken
         .connect(owner)
-        .withdrawToken(mTBILL.address, vaultMTBILL, owner.address);
+        .withdrawToken(mTBILL.address, vaultMTBILL);
 
       const mFONEAmount = 1000;
 

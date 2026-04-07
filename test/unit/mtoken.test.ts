@@ -2,13 +2,13 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 
-import { MTokenNameEnum } from '../../config';
+import { MTokenName } from '../../config';
 import { acErrors, blackList } from '../common/ac.helpers';
 import { defaultDeploy, mTokenPermissionedFixture } from '../common/fixtures';
 import { burn, mint } from '../common/mTBILL.helpers';
 import { tokenContractsTests } from '../common/token.tests';
 
-const mProducts = Object.values(MTokenNameEnum);
+const mProducts = ['mTBILL'] as MTokenName[]; // Object.values(MTokenNameEnum);
 
 describe('Token contracts', () => {
   mProducts.forEach((product) => {

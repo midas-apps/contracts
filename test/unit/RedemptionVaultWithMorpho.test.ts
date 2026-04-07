@@ -130,7 +130,7 @@ redemptionVaultSuits(
             { redemptionVault: redemptionVaultWithMorpho, owner },
             stableCoins.usdc.address,
             morphoVaultMock.address,
-            { revertMessage: 'WMAC: paused fn' },
+            { revertMessage: 'Pausable: fn paused' },
           );
         });
 
@@ -194,7 +194,7 @@ redemptionVaultSuits(
           await removeMorphoVaultTest(
             { redemptionVault: redemptionVaultWithMorpho, owner },
             stableCoins.usdc.address,
-            { revertMessage: 'WMAC: paused fn' },
+            { revertMessage: 'Pausable: fn paused' },
           );
         });
 

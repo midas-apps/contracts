@@ -93,7 +93,7 @@ contract DepositVaultWithUSTB is DepositVault {
         address tokenIn,
         uint256 amountToken,
         uint256 tokensDecimals
-    ) internal override {
+    ) internal virtual override {
         if (!ustbDepositsEnabled) {
             return
                 super._instantTransferTokensToTokensReceiver(
