@@ -21,6 +21,7 @@ declare module 'hardhat/types/runtime' {
     action?: string;
     skipValidation?: boolean;
     aggregatorType?: 'numerator' | 'denominator';
+    addressBookKeys?: string[];
     logger: Logger & {
       // default: false
       logToFile: boolean;
