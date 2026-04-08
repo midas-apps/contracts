@@ -64,8 +64,14 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('Token addresses not found');
   }
 
+  const allowedKeys = hre.addressBookKeys;
+
   for (const [key, value] of Object.entries(tokenAddresses)) {
     if (!value) {
+      continue;
+    }
+
+    if (allowedKeys && !allowedKeys.includes(key)) {
       continue;
     }
 

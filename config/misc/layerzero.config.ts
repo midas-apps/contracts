@@ -28,6 +28,11 @@ type ConfigPerNetwork<TKey extends string> = Partial<
        */
       pathways?: 'direct-only' | 'all';
       linkedNetworks: Network[];
+      /**
+       * Override DVN names for this token's pathways.
+       * Falls back to ['LayerZero Labs', 'Deutsche Telekom', 'Canary'] when not set.
+       */
+      dvns?: string[];
     }
   >
 >;
@@ -46,6 +51,16 @@ export const lzConfigsPerMToken: PartialConfigPerNetwork<
     },
     liquidHYPE: {
       linkedNetworks: ['scroll'],
+    },
+  },
+  scroll: {
+    weEUR: {
+      linkedNetworks: ['optimism'],
+      dvns: ['LayerZero Labs', 'BCW Group', 'Canary'],
+    },
+    liquidRESERVE: {
+      linkedNetworks: ['optimism'],
+      dvns: ['LayerZero Labs', 'BCW Group', 'Canary'],
     },
   },
   main: {
@@ -201,7 +216,11 @@ export default async function () {
         [
           isTestnetNetwork(networkA) || isTestnetNetwork(networkB)
             ? ['LayerZero Labs']
-            : ['LayerZero Labs', 'Deutsche Telekom', 'Canary'],
+            : tokenConfig.dvns ?? [
+                'LayerZero Labs',
+                'Deutsche Telekom',
+                'Canary',
+              ],
           [],
         ], // [ requiredDVN[], [ optionalDVN[], threshold ] ]
         [blockFinality[networkA] ?? 32, blockFinality[networkB] ?? 32], // [A to B confirmations, B to A confirmations]
