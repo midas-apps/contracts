@@ -48,7 +48,7 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   bsc: ALCHEMY_KEY
     ? `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
     : 'https://bsc-dataseed.bnbchain.org',
-  scroll: 'https://rpc.scroll.io',
+  scroll: 'https://scroll.drpc.org',
   monad: 'https://rpc.monad.xyz',
   injective: `https://${QUICK_NODE_PROJECT}.injective-mainnet.quiknode.pro/${QUICK_NODE_KEY}/`,
   optimism: ALCHEMY_KEY
@@ -244,6 +244,8 @@ export const blockFinality: PartialConfigPerNetwork<number> = {
   arbitrumSepolia: 1,
   monad: 10,
   katana: 20,
+  scroll: 20,
+  optimism: 20,
 };
 
 export const axelarChainNames: PartialConfigPerNetwork<string> = {
@@ -272,6 +274,7 @@ export const layerZeroEids: PartialConfigPerNetwork<EndpointId> = {
   arbitrumSepolia: EndpointId.ARBSEP_V2_TESTNET,
   scroll: EndpointId.SCROLL_V2_MAINNET,
   monad: EndpointId.MONAD_V2_MAINNET,
+  optimism: EndpointId.OPTIMISM_V2_MAINNET,
 };
 
 export const layerZeroEidToNetwork = Object.fromEntries(
