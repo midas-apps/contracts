@@ -255,6 +255,7 @@ export const tokenContractsTests = (token: MTokenName) => {
         loanLpFeeReceiver: fixture.loanLpFeeReceiver.address,
         loanRepaymentAddress: fixture.loanRepaymentAddress.address,
         loanSwapperVault: fixture.redemptionVaultLoanSwapper.address,
+        maxLoanApr: 0,
       },
     );
 
@@ -290,6 +291,7 @@ export const tokenContractsTests = (token: MTokenName) => {
           loanLpFeeReceiver: fixture.loanLpFeeReceiver.address,
           loanRepaymentAddress: fixture.loanRepaymentAddress.address,
           loanSwapperVault: fixture.redemptionVaultLoanSwapper.address,
+          maxLoanApr: 0,
         },
       );
 

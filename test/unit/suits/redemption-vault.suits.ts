@@ -68,6 +68,7 @@ import {
   setLoanLpTest,
   setLoanRepaymentAddressTest,
   setLoanSwapperVaultTest,
+  setMaxLoanAprTest,
   setRequestRedeemerTest,
 } from '../../common/redemption-vault.helpers';
 import { sanctionUser } from '../../common/with-sanctions-list.helpers';
@@ -184,6 +185,7 @@ export const redemptionVaultSuits = (
       expect(await redemptionVault.withdrawTokensReceiver()).eq(
         withdrawTokensReceiver.address,
       );
+      expect(await redemptionVault.maxLoanApr()).eq(0);
 
       await deploymentAdditionalChecks(fixture);
     });
@@ -197,17 +199,16 @@ export const redemptionVaultSuits = (
           mockedSanctionsList,
           requestRedeemer,
           accessControl,
-          owner,
           mTBILL,
           loanLp,
           loanLpFeeReceiver,
           loanRepaymentAddress,
           redemptionVaultLoanSwapper,
           withdrawTokensReceiver,
+          createNew,
         } = await loadRvFixture();
 
-        const redemptionVaultUninitialized =
-          await new RedemptionVaultTest__factory(owner).deploy();
+        const redemptionVaultUninitialized = await createNew();
 
         await expect(
           redemptionVaultUninitialized.initialize(
@@ -239,6 +240,7 @@ export const redemptionVaultSuits = (
               loanLpFeeReceiver: loanLpFeeReceiver.address,
               loanRepaymentAddress: loanRepaymentAddress.address,
               loanSwapperVault: redemptionVaultLoanSwapper.address,
+              maxLoanApr: 0,
             },
           ),
         ).to.be.reverted;
@@ -274,6 +276,7 @@ export const redemptionVaultSuits = (
               loanLpFeeReceiver: loanLpFeeReceiver.address,
               loanRepaymentAddress: loanRepaymentAddress.address,
               loanSwapperVault: redemptionVaultLoanSwapper.address,
+              maxLoanApr: 0,
             },
           ),
         ).to.be.reverted;
@@ -309,6 +312,7 @@ export const redemptionVaultSuits = (
               loanLpFeeReceiver: loanLpFeeReceiver.address,
               loanRepaymentAddress: loanRepaymentAddress.address,
               loanSwapperVault: redemptionVaultLoanSwapper.address,
+              maxLoanApr: 0,
             },
           ),
         ).to.be.reverted;
@@ -344,6 +348,7 @@ export const redemptionVaultSuits = (
               loanLpFeeReceiver: loanLpFeeReceiver.address,
               loanRepaymentAddress: loanRepaymentAddress.address,
               loanSwapperVault: redemptionVaultLoanSwapper.address,
+              maxLoanApr: 0,
             },
           ),
         ).to.be.reverted;
@@ -385,6 +390,7 @@ export const redemptionVaultSuits = (
                 loanLpFeeReceiver: constants.AddressZero,
                 loanRepaymentAddress: constants.AddressZero,
                 loanSwapperVault: constants.AddressZero,
+                maxLoanApr: 0,
               },
             ),
           ).revertedWith('Initializable: contract is already initialized');
@@ -620,6 +626,7 @@ export const redemptionVaultSuits = (
                 loanLpFeeReceiver: constants.AddressZero,
                 loanRepaymentAddress: constants.AddressZero,
                 loanSwapperVault: constants.AddressZero,
+                maxLoanApr: 0,
               },
             ),
           ).revertedWith('Initializable: contract is already initialized');
@@ -641,6 +648,7 @@ export const redemptionVaultSuits = (
                 loanLpFeeReceiver: regularAccounts[0].address,
                 loanRepaymentAddress: regularAccounts[0].address,
                 loanSwapperVault: regularAccounts[0].address,
+                maxLoanApr: 0,
               },
             ),
           ).not.reverted;
@@ -3725,6 +3733,46 @@ export const redemptionVaultSuits = (
             regularAccounts[0].address,
             { revertMessage: 'Pausable: fn paused' },
           );
+        });
+      });
+
+      describe('setMaxLoanApr()', () => {
+        it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
+          const { redemptionVault, regularAccounts, owner } = await loadFixture(
+            rvFixture,
+          );
+          await setMaxLoanAprTest({ redemptionVault, owner }, 100, {
+            from: regularAccounts[0],
+            revertMessage: acErrors.WMAC_HASNT_ROLE,
+          });
+        });
+
+        it('should fail: if new value greater then 100%', async () => {
+          const { redemptionVault, owner } = await loadRvFixture();
+          await setMaxLoanAprTest({ redemptionVault, owner }, 10001);
+        });
+
+        it('if new value zero', async () => {
+          const { redemptionVault, owner } = await loadRvFixture();
+          await setMaxLoanAprTest({ redemptionVault, owner }, 0);
+        });
+
+        it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
+          const { redemptionVault, owner } = await loadRvFixture();
+          await setMaxLoanAprTest({ redemptionVault, owner }, 100);
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVault, owner } = await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('setMaxLoanApr(uint64)'),
+          );
+
+          await setMaxLoanAprTest({ redemptionVault, owner }, 100, {
+            revertMessage: 'Pausable: fn paused',
+          });
         });
       });
 
@@ -8371,12 +8419,13 @@ export const redemptionVaultSuits = (
 
             await pauseVaultFn(
               redemptionVault,
-              encodeFnSelector('bulkRepayLpLoanRequest(uint256[])'),
+              encodeFnSelector('bulkRepayLpLoanRequest(uint256[],uint64)'),
             );
 
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
+              0,
               { revertMessage: 'Pausable: fn paused' },
             );
           });
@@ -8535,6 +8584,7 @@ export const redemptionVaultSuits = (
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
+              0,
               {
                 revertMessage: 'RV: !loanLpFeeReceiver',
               },
@@ -8563,6 +8613,7 @@ export const redemptionVaultSuits = (
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
+              0,
               {
                 revertMessage: 'ERC20: transfer amount exceeds balance',
               },
@@ -8586,6 +8637,7 @@ export const redemptionVaultSuits = (
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
+              0,
               {
                 revertMessage: 'ERC20: insufficient allowance',
               },
@@ -8616,6 +8668,7 @@ export const redemptionVaultSuits = (
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
+              0,
               {
                 revertMessage: 'ERC20: transfer amount exceeds balance',
               },
@@ -8650,6 +8703,7 @@ export const redemptionVaultSuits = (
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
+              0,
               {
                 revertMessage: 'RV: request not pending',
               },
@@ -8663,6 +8717,7 @@ export const redemptionVaultSuits = (
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
+              0,
               {
                 revertMessage: 'RV: request not exist',
               },
@@ -8693,10 +8748,292 @@ export const redemptionVaultSuits = (
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
+              0,
               {
                 from: regularAccounts[0],
                 revertMessage: acErrors.WMAC_HASNT_ROLE,
               },
+            );
+          });
+
+          it('should fail: when loanApr > maxLoanApr', async () => {
+            const fixture = await loadRvFixture();
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
+
+            await setMaxLoanAprTest({ redemptionVault, owner }, 100);
+            await prepareTest(fixture, stableCoins.dai);
+
+            await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.dai,
+              redemptionVault,
+              100,
+            );
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+              101,
+              {
+                revertMessage: 'RV: loanApr > maxLoanApr',
+              },
+            );
+          });
+
+          it('approve 1 request when loanApr is not zero but does not exceed instant fee', async () => {
+            const fixture = await loadRvFixture();
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
+
+            await setInstantFeeTest({ vault: redemptionVault, owner }, 100);
+            await setMaxLoanAprTest({ redemptionVault, owner }, 100);
+            await prepareTest(fixture, stableCoins.dai);
+            await increase(days(365));
+
+            await mintToken(stableCoins.dai, loanRepaymentAddress, 101);
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.dai,
+              redemptionVault,
+              101,
+            );
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+              50,
+            );
+          });
+
+          it('approve 1 request when loanApr is not zero and exceeds instant fee', async () => {
+            const fixture = await loadRvFixture();
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
+
+            await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+            await setMaxLoanAprTest({ redemptionVault, owner }, 10000);
+            await prepareTest(fixture, stableCoins.usdt);
+            const request = await redemptionVault.loanRequests(0);
+            await ethers.provider.send('evm_setNextBlockTimestamp', [
+              request.createdAt.toNumber() + days(365),
+            ]);
+
+            await mintToken(stableCoins.usdt, loanRepaymentAddress, 1000);
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.usdt,
+              redemptionVault,
+              1000,
+            );
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+              10000,
+            );
+          });
+
+          it('approve 1 request when instant fee changed after request creation', async () => {
+            const fixture = await loadRvFixture();
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
+
+            await setInstantFeeTest({ vault: redemptionVault, owner }, 200);
+            await prepareTest(fixture, stableCoins.dai);
+            await setInstantFeeTest({ vault: redemptionVault, owner }, 50);
+            await setMaxLoanAprTest({ redemptionVault, owner }, 200);
+            await increase(days(365));
+
+            await mintToken(stableCoins.dai, loanRepaymentAddress, 102);
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.dai,
+              redemptionVault,
+              102,
+            );
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+              100,
+            );
+          });
+
+          it('approve 1 request when total fee exceeds actual repayment amount', async () => {
+            const fixture = await loadRvFixture();
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
+
+            await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+            await setMaxLoanAprTest({ redemptionVault, owner }, 20000);
+            await prepareTest(fixture, stableCoins.usdt);
+            const request = await redemptionVault.loanRequests(0);
+            await ethers.provider.send('evm_setNextBlockTimestamp', [
+              request.createdAt.toNumber() + days(365),
+            ]);
+
+            await mintToken(stableCoins.usdt, loanRepaymentAddress, 1000);
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.usdt,
+              redemptionVault,
+              1000,
+            );
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+              20000,
+            );
+          });
+
+          it('approve 2 request with same token out when loanApr is not zero', async () => {
+            const fixture = await loadRvFixture();
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
+
+            await prepareTest(fixture, stableCoins.usdt);
+            await prepareTest(fixture, stableCoins.usdt, false);
+            await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+            await setMaxLoanAprTest({ redemptionVault, owner }, 10000);
+
+            const r0 = await redemptionVault.loanRequests(0);
+            const r1 = await redemptionVault.loanRequests(1);
+            await ethers.provider.send('evm_setNextBlockTimestamp', [
+              Math.max(r0.createdAt.toNumber(), r1.createdAt.toNumber()) +
+                days(365),
+            ]);
+
+            await mintToken(stableCoins.usdt, loanRepaymentAddress, 2000);
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.usdt,
+              redemptionVault,
+              2000,
+            );
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }, { id: 1 }],
+              10000,
+            );
+          });
+
+          it('approve 2 request with different token out when loanApr is not zero', async () => {
+            const fixture = await loadRvFixture();
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
+
+            await prepareTest(fixture, stableCoins.dai);
+            await prepareTest(fixture, stableCoins.usdc);
+            await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+            await setMaxLoanAprTest({ redemptionVault, owner }, 10000);
+
+            const r0 = await redemptionVault.loanRequests(0);
+            const r1 = await redemptionVault.loanRequests(1);
+            await ethers.provider.send('evm_setNextBlockTimestamp', [
+              Math.max(r0.createdAt.toNumber(), r1.createdAt.toNumber()) +
+                days(1),
+            ]);
+
+            await mintToken(stableCoins.dai, loanRepaymentAddress, 1000);
+            await mintToken(stableCoins.usdc, loanRepaymentAddress, 1000);
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.dai,
+              redemptionVault,
+              1000,
+            );
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.usdc,
+              redemptionVault,
+              1000,
+            );
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }, { id: 1 }],
+              5000,
+            );
+          });
+
+          it('approve 3 request with same token out when loanApr is not zero', async () => {
+            const fixture = await loadRvFixture();
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
+
+            await prepareTest(fixture, stableCoins.usdt);
+            await prepareTest(fixture, stableCoins.usdt, false);
+            await prepareTest(fixture, stableCoins.usdt, false);
+            await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+            await setMaxLoanAprTest({ redemptionVault, owner }, 5000);
+
+            const r0 = await redemptionVault.loanRequests(0);
+            const r1 = await redemptionVault.loanRequests(1);
+            const r2 = await redemptionVault.loanRequests(2);
+            await ethers.provider.send('evm_setNextBlockTimestamp', [
+              Math.max(
+                r0.createdAt.toNumber(),
+                r1.createdAt.toNumber(),
+                r2.createdAt.toNumber(),
+              ) + days(365),
+            ]);
+
+            await mintToken(stableCoins.usdt, loanRepaymentAddress, 5000);
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.usdt,
+              redemptionVault,
+              5000,
+            );
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }, { id: 1 }, { id: 2 }],
+              5000,
             );
           });
         });

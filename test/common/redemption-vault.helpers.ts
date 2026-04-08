@@ -9,6 +9,7 @@ import {
   OptionalCommonParams,
   balanceOfBase18,
   getAccount,
+  getCurrentBlockTimestamp,
 } from './common.helpers';
 import { defaultDeploy } from './fixtures';
 
@@ -361,6 +362,7 @@ export const redeemInstantTest = async (
     expect(loanRequest.amountFee).eq(lpFeePortionBase18);
     expect(loanRequest.status).eq(0);
     expect(loanRequest.tokenOut).eq(tokenOut);
+    expect(loanRequest.createdAt).eq(await getCurrentBlockTimestamp());
   } else {
     expect(lastLoanRequestIdAfter).eq(lastLoanRequestIdBefore);
   }
@@ -717,6 +719,7 @@ export const bulkRepayLpLoanRequestTest = async (
     mTBILL,
   }: Omit<CommonParamsRedeem, 'mTokenToUsdDataFeed'>,
   requests: { id: BigNumberish }[],
+  loanApr = BigNumber.from(0) as BigNumberish,
   opt?: OptionalCommonParams,
 ) => {
   const sender = opt?.from ?? owner;
@@ -725,7 +728,7 @@ export const bulkRepayLpLoanRequestTest = async (
 
   const callFn = redemptionVault
     .connect(sender)
-    .bulkRepayLpLoanRequest.bind(this, requestIds);
+    .bulkRepayLpLoanRequest.bind(this, requestIds, loanApr);
 
   if (opt?.revertMessage) {
     await expect(callFn()).revertedWith(opt?.revertMessage);
@@ -766,10 +769,6 @@ export const bulkRepayLpLoanRequestTest = async (
 
   const totalSupplyBefore = await mTBILL.totalSupply();
 
-  const feePercents = await Promise.all(
-    requestDatasBefore.map((requestData) => requestData.amountFee),
-  );
-
   const expectedReceivedAmounts = await Promise.all(
     requestDatasBefore.map(async (requestData) => {
       return requestData.amountTokenOut;
@@ -781,7 +780,7 @@ export const bulkRepayLpLoanRequestTest = async (
       id,
       request: requestDatasBefore[index],
       expectedReceivedAmount: expectedReceivedAmounts[index],
-      expectedReceivedFeeAmount: feePercents[index],
+      expectedReceivedFeeAmount: BigNumber.from(0),
       balance: balancesBefore[index],
       balanceFee: balancesFeeBefore[index],
       balanceLp: balancesLpBefore[index],
@@ -793,6 +792,31 @@ export const bulkRepayLpLoanRequestTest = async (
   await expect(txPromise).to.not.reverted;
 
   const txReceipt = await (await txPromise).wait();
+  const txBlock = await ethers.provider.getBlock(txReceipt.blockNumber);
+  const currentTimestamp = txBlock.timestamp;
+
+  const feePercents = await Promise.all(
+    requestDatasBefore.map((requestData) => {
+      const duration = BigNumber.from(currentTimestamp).sub(
+        requestData.createdAt,
+      );
+
+      const accruedInterest = requestData.amountTokenOut
+        .mul(loanApr)
+        .mul(duration)
+        .div(BigNumber.from(10_000).mul(365).mul(86400));
+
+      const amountFee = accruedInterest.gt(requestData.amountFee)
+        ? accruedInterest
+        : requestData.amountFee;
+
+      return amountFee;
+    }),
+  );
+
+  for (const [index, feePercent] of feePercents.entries()) {
+    groupedDataBefore[index].expectedReceivedFeeAmount = feePercent;
+  }
 
   const parsedLogs = txReceipt.logs
     .filter((v) => v.address === redemptionVault.address)
@@ -856,7 +880,7 @@ export const bulkRepayLpLoanRequestTest = async (
     const balanceFeeBefore = dataBefore.balanceFee;
     const balanceLpBefore = dataBefore.balanceLp;
 
-    expect(requestDataAfter.amountFee).eq(requestDataBefore.amountFee);
+    expect(requestDataAfter.amountFee).eq(dataBefore.expectedReceivedFeeAmount);
     expect(requestDataAfter.tokenOut).eq(requestDataBefore.tokenOut);
     expect(requestDataAfter.amountTokenOut).eq(
       requestDataBefore.amountTokenOut,
@@ -877,6 +901,7 @@ export const bulkRepayLpLoanRequestTest = async (
       }, BigNumber.from(0));
 
     expect(logs.length).eq(1);
+    expect(requestDataAfter.createdAt).eq(requestDataBefore.createdAt);
     expect(requestDataAfter.status).eq(1);
     expect(balanceAfter).eq(
       balanceBefore.sub(
@@ -1336,6 +1361,29 @@ export const setLoanSwapperVaultTest = async (
 
   const newLoanSwapperVault = await redemptionVault.loanSwapperVault();
   expect(newLoanSwapperVault).eq(loanSwapperVault);
+};
+
+export const setMaxLoanAprTest = async (
+  { redemptionVault, owner }: CommonParams,
+  maxLoanApr: number,
+  opt?: OptionalCommonParams,
+) => {
+  if (opt?.revertMessage) {
+    await expect(
+      redemptionVault.connect(opt?.from ?? owner).setMaxLoanApr(maxLoanApr),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  await expect(
+    redemptionVault.connect(opt?.from ?? owner).setMaxLoanApr(maxLoanApr),
+  ).to.emit(
+    redemptionVault,
+    redemptionVault.interface.events['SetMaxLoanApr(address,uint64)'].name,
+  ).to.not.reverted;
+
+  const newMaxLoanApr = await redemptionVault.maxLoanApr();
+  expect(newMaxLoanApr).eq(maxLoanApr);
 };
 
 export const getFeePercent = async (

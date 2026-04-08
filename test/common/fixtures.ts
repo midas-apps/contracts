@@ -287,6 +287,7 @@ export const defaultDeploy = async () => {
       loanLpFeeReceiver: loanLpFeeReceiver.address,
       loanRepaymentAddress: loanRepaymentAddress.address,
       loanSwapperVault: redemptionVaultLoanSwapper.address,
+      maxLoanApr: 0,
     },
   );
 
@@ -321,6 +322,7 @@ export const defaultDeploy = async () => {
       loanLpFeeReceiver: constants.AddressZero,
       loanRepaymentAddress: constants.AddressZero,
       loanSwapperVault: constants.AddressZero,
+      maxLoanApr: 0,
     },
   );
 
@@ -407,7 +409,7 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithUSTBTest__factory(owner).deploy();
 
   await redemptionVaultWithUSTB[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address),address)'
+    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
   ](
     {
       ac: accessControl.address,
@@ -439,6 +441,7 @@ export const defaultDeploy = async () => {
       loanLpFeeReceiver: loanLpFeeReceiver.address,
       loanRepaymentAddress: loanRepaymentAddress.address,
       loanSwapperVault: redemptionVaultLoanSwapper.address,
+      maxLoanApr: 0,
     },
 
     ustbRedemption.address,
@@ -492,6 +495,7 @@ export const defaultDeploy = async () => {
       loanLpFeeReceiver: loanLpFeeReceiver.address,
       loanRepaymentAddress: loanRepaymentAddress.address,
       loanSwapperVault: redemptionVaultLoanSwapper.address,
+      maxLoanApr: 0,
     },
   );
   await redemptionVaultWithAave.setAavePool(
@@ -546,6 +550,7 @@ export const defaultDeploy = async () => {
       loanLpFeeReceiver: loanLpFeeReceiver.address,
       loanRepaymentAddress: loanRepaymentAddress.address,
       loanSwapperVault: redemptionVaultLoanSwapper.address,
+      maxLoanApr: 0,
     },
   );
   await redemptionVaultWithMorpho.setMorphoVault(
@@ -706,7 +711,7 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithMTokenTest__factory(owner).deploy();
 
   await redemptionVaultWithMToken[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address),address)'
+    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
   ](
     {
       ac: accessControl.address,
@@ -738,6 +743,7 @@ export const defaultDeploy = async () => {
       loanLpFeeReceiver: loanLpFeeReceiver.address,
       loanRepaymentAddress: loanRepaymentAddress.address,
       loanSwapperVault: redemptionVaultLoanSwapper.address,
+      maxLoanApr: 0,
     },
     redemptionVaultLoanSwapper.address,
   );
@@ -1064,6 +1070,7 @@ export const mTokenPermissionedFixture = async (
       loanLpFeeReceiver: constants.AddressZero,
       loanRepaymentAddress: constants.AddressZero,
       loanSwapperVault: constants.AddressZero,
+      maxLoanApr: 0,
     },
   );
   await accessControl.grantRole(

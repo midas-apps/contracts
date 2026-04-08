@@ -60,7 +60,7 @@ redemptionVaultSuits(
 
         await expect(
           redemptionVaultWithMToken[
-            'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address),address)'
+            'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
           ](
             {
               ac: accessControl.address,
@@ -92,6 +92,7 @@ redemptionVaultSuits(
               loanLpFeeReceiver: constants.AddressZero,
               loanRepaymentAddress: constants.AddressZero,
               loanSwapperVault: constants.AddressZero,
+              maxLoanApr: 0,
             },
             constants.AddressZero,
           ),
@@ -106,7 +107,7 @@ redemptionVaultSuits(
 
           await expect(
             redemptionVaultWithMToken[
-              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address),address)'
+              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
             ](
               {
                 ac: constants.AddressZero,
@@ -138,6 +139,7 @@ redemptionVaultSuits(
                 loanLpFeeReceiver: constants.AddressZero,
                 loanRepaymentAddress: constants.AddressZero,
                 loanSwapperVault: constants.AddressZero,
+                maxLoanApr: 0,
               },
               constants.AddressZero,
             ),
@@ -160,7 +162,7 @@ redemptionVaultSuits(
 
           await expect(
             redemptionVaultWithMToken[
-              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address),address)'
+              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
             ](
               {
                 ac: accessControl.address,
@@ -192,6 +194,7 @@ redemptionVaultSuits(
                 loanLpFeeReceiver: constants.AddressZero,
                 loanRepaymentAddress: constants.AddressZero,
                 loanSwapperVault: constants.AddressZero,
+                maxLoanApr: 0,
               },
               constants.AddressZero,
             ),

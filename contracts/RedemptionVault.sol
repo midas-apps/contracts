@@ -93,6 +93,11 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     address public loanRepaymentAddress;
 
     /**
+     * @notice maximum loan APR value in basis points (100 = 1%)
+     */
+    uint64 public maxLoanApr;
+
+    /**
      * @notice address of loan RedemptionVault-compatible vault
      */
     IRedemptionVault public loanSwapperVault;
@@ -160,6 +165,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         loanSwapperVault = IRedemptionVault(
             _redemptionVaultV2InitParams.loanSwapperVault
         );
+        maxLoanApr = _redemptionVaultV2InitParams.maxLoanApr;
     }
 
     /**
@@ -297,10 +303,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function bulkRepayLpLoanRequest(uint256[] calldata requestIds)
-        external
-        validateVaultAdminAccess
-    {
+    function bulkRepayLpLoanRequest(
+        uint256[] calldata requestIds,
+        uint64 loanApr
+    ) external validateVaultAdminAccess {
+        require(loanApr <= maxLoanApr, "RV: loanApr > maxLoanApr");
+
         for (uint256 i = 0; i < requestIds.length; ++i) {
             LiquidityProviderLoanRequest memory request = loanRequests[
                 requestIds[i]
@@ -309,6 +317,19 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             _validateRequest(request.tokenOut, request.status);
 
             uint256 decimals = _tokenDecimals(request.tokenOut);
+            uint256 duration = block.timestamp - request.createdAt;
+            uint256 accruedInterest = (request.amountTokenOut *
+                loanApr *
+                duration) / (10_000 * 365 days);
+
+            uint256 amountFee;
+
+            if (accruedInterest > request.amountFee) {
+                amountFee = accruedInterest;
+                loanRequests[requestIds[i]].amountFee = amountFee;
+            } else {
+                amountFee = request.amountFee;
+            }
 
             _tokenTransferFromTo(
                 request.tokenOut,
@@ -318,7 +339,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 decimals
             );
 
-            if (request.amountFee > 0) {
+            if (amountFee > 0) {
                 require(
                     loanLpFeeReceiver != address(0),
                     "RV: !loanLpFeeReceiver"
@@ -327,7 +348,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                     request.tokenOut,
                     loanRepaymentAddress,
                     loanLpFeeReceiver,
-                    request.amountFee,
+                    amountFee,
                     decimals
                 );
             }
@@ -409,6 +430,18 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         loanSwapperVault = IRedemptionVault(newLoanSwapperVault);
 
         emit SetLoanSwapperVault(msg.sender, newLoanSwapperVault);
+    }
+
+    /**
+     * @inheritdoc IRedemptionVault
+     */
+    function setMaxLoanApr(uint64 newMaxLoanApr)
+        external
+        validateVaultAdminAccess
+    {
+        maxLoanApr = newMaxLoanApr;
+
+        emit SetMaxLoanApr(msg.sender, newMaxLoanApr);
     }
 
     /**
@@ -740,6 +773,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 tokenOut: tokenOut,
                 amountTokenOut: toTransferFromLp,
                 amountFee: lpFeePortion,
+                createdAt: block.timestamp,
                 status: RequestStatus.Pending
             });
             currentLoanRequestId.increment();

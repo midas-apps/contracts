@@ -192,3 +192,7 @@ export const balanceOfBase18 = async (
   const balance = await token.balanceOf(of);
   return tokenAmountToBase18(token, balance);
 };
+
+export const getCurrentBlockTimestamp = async () => {
+  return (await ethers.provider.getBlock('latest')).timestamp;
+};
