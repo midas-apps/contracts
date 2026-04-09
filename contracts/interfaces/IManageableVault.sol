@@ -52,7 +52,6 @@ struct LimitConfigInitParams {
 }
 
 struct CommonVaultV2InitParams {
-    address withdrawTokensReceiver;
     uint64 minInstantFee;
     uint64 maxInstantFee;
     LimitConfigInitParams[] limitConfigs;
@@ -176,15 +175,6 @@ interface IManageableVault {
     event RemoveInstantLimitConfig(
         address indexed caller,
         uint256 indexed window
-    );
-
-    /**
-     * @param caller function caller (msg.sender)
-     * @param receiver new receiver address
-     */
-    event SetWithdrawTokensReceiver(
-        address indexed caller,
-        address indexed receiver
     );
 
     /**
@@ -348,16 +338,9 @@ interface IManageableVault {
 
     /**
      * @notice withdraws `amount` of a given `token` from the contract
-     * to the `withdrawTokensReceiver` address
+     * to the `tokensReceiver` address
      * @param token token address
      * @param amount token amount
      */
     function withdrawToken(address token, uint256 amount) external;
-
-    /**
-     * @notice set new reciever for tokens withdrawal.
-     * can be called only from permissioned actor.
-     * @param reciever new token reciever address
-     */
-    function setWithdrawTokensReceiver(address reciever) external;
 }

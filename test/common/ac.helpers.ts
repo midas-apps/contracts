@@ -25,6 +25,7 @@ type CommonParamsGreenList = {
 export const acErrors = {
   WMAC_HASNT_ROLE: 'WMAC: hasnt role',
   WMAC_HAS_ROLE: 'WMAC: has role',
+  WMAC_HASNT_PERMISSION: 'WMAC: no function permission',
 };
 
 export const blackList = async (
@@ -94,7 +95,7 @@ export const unBlackList = async (
 };
 
 export const greenListToggler = async (
-  { greenlistable, accessControl, owner, role }: CommonParamsGreenList,
+  { accessControl, owner, role }: CommonParamsGreenList & { role: string },
   account: Account,
   opt?: OptionalCommonParams,
 ) => {
@@ -102,31 +103,19 @@ export const greenListToggler = async (
 
   if (opt?.revertMessage) {
     await expect(
-      accessControl
-        .connect(opt?.from ?? owner)
-        .grantRole(
-          role ?? (await greenlistable.greenlistTogglerRole()),
-          account,
-        ),
+      accessControl.connect(opt?.from ?? owner).grantRole(role, account),
     ).revertedWith(opt?.revertMessage);
     return;
   }
 
   await expect(
-    accessControl
-      .connect(opt?.from ?? owner)
-      .grantRole(role ?? (await greenlistable.greenlistTogglerRole()), account),
+    accessControl.connect(opt?.from ?? owner).grantRole(role, account),
   ).to.emit(
     accessControl,
     accessControl.interface.events['RoleGranted(bytes32,address,address)'].name,
   ).to.not.reverted;
 
-  expect(
-    await accessControl.hasRole(
-      role ?? (await greenlistable.greenlistTogglerRole()),
-      account,
-    ),
-  ).eq(true);
+  expect(await accessControl.hasRole(role, account)).eq(true);
 };
 
 export const greenList = async (

@@ -34,11 +34,10 @@ abstract contract Pausable is WithMidasAccessControl, PausableUpgradeable {
     event UnpauseFn(address indexed caller, bytes4 fn);
 
     /**
-     * @dev checks that a given `account`
-     * has a determinedPauseAdminRole
+     * @dev checks that a given `account` has access to pause functions
      */
     modifier onlyPauseAdmin() {
-        _onlyRole(pauseAdminRole(), msg.sender);
+        _validatePauseAdminAccess(msg.sender);
         _;
     }
 
@@ -81,9 +80,10 @@ abstract contract Pausable is WithMidasAccessControl, PausableUpgradeable {
     }
 
     /**
-     * @dev virtual function to determine pauseAdmin role
+     * @dev validates that the caller has access to pause functions
+     * @param account account address
      */
-    function pauseAdminRole() public view virtual returns (bytes32);
+    function _validatePauseAdminAccess(address account) internal view virtual;
 
     /**
      * @dev checks that a given `fn` is not paused

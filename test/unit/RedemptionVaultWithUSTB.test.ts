@@ -54,7 +54,7 @@ redemptionVaultSuits(
 
         await expect(
           redemptionVaultWithUSTB[
-            'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
+            'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
           ](
             {
               ac: accessControl.address,
@@ -76,7 +76,6 @@ redemptionVaultSuits(
               ],
               minInstantFee: 0,
               maxInstantFee: 10000,
-              withdrawTokensReceiver: constants.AddressZero,
             },
             { requestRedeemer: requestRedeemer.address },
             {
@@ -97,7 +96,7 @@ redemptionVaultSuits(
 
           await expect(
             redemptionVaultWithUSTB[
-              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
+              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
             ](
               {
                 ac: constants.AddressZero,
@@ -114,7 +113,6 @@ redemptionVaultSuits(
                 limitConfigs: [],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
-                withdrawTokensReceiver: constants.AddressZero,
               },
               { requestRedeemer: constants.AddressZero },
               {
@@ -146,7 +144,7 @@ redemptionVaultSuits(
 
           await expect(
             redemptionVaultWithUSTB[
-              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
+              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
             ](
               {
                 ac: accessControl.address,
@@ -168,7 +166,6 @@ redemptionVaultSuits(
                 ],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
-                withdrawTokensReceiver: constants.AddressZero,
               },
               { requestRedeemer: requestRedeemer.address },
               {

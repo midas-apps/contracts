@@ -60,7 +60,6 @@ describe('AcreAdapter', () => {
         instantFee: 100,
       },
       {
-        withdrawTokensReceiver: fixture.withdrawTokensReceiver.address,
         minInstantFee: 0,
         maxInstantFee: 10000,
         limitConfigs: [

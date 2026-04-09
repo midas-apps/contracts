@@ -74,16 +74,17 @@ abstract contract WithSanctionsList is WithMidasAccessControl {
      * @param newSanctionsList new sanctions list address
      */
     function setSanctionsList(address newSanctionsList) external {
-        _onlyRole(sanctionsListAdminRole(), msg.sender);
+        _validateSanctionListAdminAccess(msg.sender);
 
         sanctionsList = newSanctionsList;
         emit SetSanctionsList(msg.sender, newSanctionsList);
     }
 
     /**
-     * @notice AC role of sanctions list admin
-     * @dev address that have this role can use `setSanctionsList`
-     * @return role bytes32 role
+     * @dev validates that the caller has access to sanctions list functions
      */
-    function sanctionsListAdminRole() public view virtual returns (bytes32);
+    function _validateSanctionListAdminAccess(address account)
+        internal
+        view
+        virtual;
 }

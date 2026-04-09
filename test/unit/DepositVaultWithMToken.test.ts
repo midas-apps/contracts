@@ -7,6 +7,7 @@ import { ethers } from 'hardhat';
 import { depositVaultSuits } from './suits/deposit-vault.suits';
 
 import { DepositVaultWithMTokenTest__factory } from '../../typechain-types';
+import { acErrors } from '../common/ac.helpers';
 import { approveBase18, mintToken } from '../common/common.helpers';
 import {
   depositInstantWithMTokenTest,
@@ -45,7 +46,7 @@ depositVaultSuits(
 
           await expect(
             depositVaultWithMToken[
-              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)'
+              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)'
             ](
               {
                 ac: constants.AddressZero,
@@ -59,7 +60,6 @@ depositVaultSuits(
                 instantFee: 0,
               },
               {
-                withdrawTokensReceiver: constants.AddressZero,
                 minInstantFee: 0,
                 maxInstantFee: 0,
                 limitConfigs: [],
@@ -86,7 +86,7 @@ depositVaultSuits(
             depositVault.address,
             {
               from: regularAccounts[0],
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -139,7 +139,7 @@ depositVaultSuits(
             true,
             {
               from: regularAccounts[0],
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -182,7 +182,7 @@ depositVaultSuits(
             true,
             {
               from: regularAccounts[0],
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });

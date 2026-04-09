@@ -9,6 +9,7 @@ import { redemptionVaultSuits } from './suits/redemption-vault.suits';
 
 import { encodeFnSelector } from '../../helpers/utils';
 import { RedemptionVaultWithMTokenTest__factory } from '../../typechain-types';
+import { acErrors } from '../common/ac.helpers';
 import {
   approveBase18,
   mintToken,
@@ -60,7 +61,7 @@ redemptionVaultSuits(
 
         await expect(
           redemptionVaultWithMToken[
-            'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
+            'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
           ](
             {
               ac: accessControl.address,
@@ -82,7 +83,6 @@ redemptionVaultSuits(
               ],
               minInstantFee: 0,
               maxInstantFee: 10000,
-              withdrawTokensReceiver: constants.AddressZero,
             },
             {
               requestRedeemer: constants.AddressZero,
@@ -107,7 +107,7 @@ redemptionVaultSuits(
 
           await expect(
             redemptionVaultWithMToken[
-              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
+              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
             ](
               {
                 ac: constants.AddressZero,
@@ -129,7 +129,6 @@ redemptionVaultSuits(
                 ],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
-                withdrawTokensReceiver: constants.AddressZero,
               },
               {
                 requestRedeemer: constants.AddressZero,
@@ -162,7 +161,7 @@ redemptionVaultSuits(
 
           await expect(
             redemptionVaultWithMToken[
-              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
+              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
             ](
               {
                 ac: accessControl.address,
@@ -184,7 +183,6 @@ redemptionVaultSuits(
                 ],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
-                withdrawTokensReceiver: constants.AddressZero,
               },
               {
                 requestRedeemer: constants.AddressZero,
@@ -210,7 +208,7 @@ redemptionVaultSuits(
             redemptionVaultWithMToken
               .connect(regularAccounts[0])
               .setRedemptionVault(regularAccounts[1].address),
-          ).to.be.revertedWith('WMAC: hasnt role');
+          ).to.be.revertedWith(acErrors.WMAC_HASNT_PERMISSION);
         });
 
         it('should fail: zero address', async () => {

@@ -23,14 +23,4 @@ contract ManageableVaultTester is ManageableVault {
     }
 
     function vaultRole() public view virtual override returns (bytes32) {}
-
-    function greenlistTogglerRole()
-        public
-        view
-        virtual
-        override
-        returns (bytes32)
-    {
-        return keccak256("GREENLIST_TOGGLER_ROLE");
-    }
 }

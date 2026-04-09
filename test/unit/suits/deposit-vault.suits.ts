@@ -112,7 +112,6 @@ export const depositVaultSuits = (
         feeReceiver,
         mTokenToUsdDataFeed,
         roles,
-        withdrawTokensReceiver,
       } = fixture;
 
       expect(await depositVault.mToken()).eq(mTBILL.address);
@@ -151,10 +150,6 @@ export const depositVaultSuits = (
 
       expect(limitWindow).eq(days(1));
 
-      expect(await depositVault.withdrawTokensReceiver()).eq(
-        withdrawTokensReceiver.address,
-      );
-
       expect(await depositVault.minMTokenAmountForFirstDeposit()).eq('0');
 
       expect(await depositVault.maxSupplyCap()).eq(constants.MaxUint256);
@@ -175,7 +170,6 @@ export const depositVaultSuits = (
           tokensReceiver,
           mockedSanctionsList,
           createNew,
-          withdrawTokensReceiver,
         } = await loadDvFixture();
         const depositVault = await createNew();
 
@@ -193,7 +187,6 @@ export const depositVaultSuits = (
               instantFee: 100,
             },
             {
-              withdrawTokensReceiver: withdrawTokensReceiver.address,
               minInstantFee: 0,
               maxInstantFee: 10000,
               limitConfigs: [
@@ -221,7 +214,6 @@ export const depositVaultSuits = (
               instantFee: 100,
             },
             {
-              withdrawTokensReceiver: withdrawTokensReceiver.address,
               minInstantFee: 0,
               maxInstantFee: 10000,
               limitConfigs: [
@@ -249,7 +241,6 @@ export const depositVaultSuits = (
               instantFee: 100,
             },
             {
-              withdrawTokensReceiver: withdrawTokensReceiver.address,
               minInstantFee: 0,
               maxInstantFee: 10000,
               limitConfigs: [
@@ -277,7 +268,6 @@ export const depositVaultSuits = (
               instantFee: 100,
             },
             {
-              withdrawTokensReceiver: withdrawTokensReceiver.address,
               minInstantFee: 0,
               maxInstantFee: 10000,
               limitConfigs: [
@@ -305,7 +295,6 @@ export const depositVaultSuits = (
               instantFee: 100,
             },
             {
-              withdrawTokensReceiver: withdrawTokensReceiver.address,
               minInstantFee: 0,
               maxInstantFee: 10000,
               limitConfigs: [
@@ -333,7 +322,6 @@ export const depositVaultSuits = (
               instantFee: 10001,
             },
             {
-              withdrawTokensReceiver: withdrawTokensReceiver.address,
               minInstantFee: 0,
               maxInstantFee: 10000,
               limitConfigs: [
@@ -367,7 +355,6 @@ export const depositVaultSuits = (
                 instantFee: 0,
               },
               {
-                withdrawTokensReceiver: constants.AddressZero,
                 minInstantFee: 0,
                 maxInstantFee: 0,
                 limitConfigs: [],
@@ -416,7 +403,6 @@ export const depositVaultSuits = (
             feeReceiver,
             mTokenToUsdDataFeed,
             mockedSanctionsList,
-            withdrawTokensReceiver,
           } = await loadDvFixture();
 
           const vault = await new ManageableVaultTester__factory(
@@ -437,7 +423,6 @@ export const depositVaultSuits = (
                 instantFee: 100,
               },
               {
-                withdrawTokensReceiver: withdrawTokensReceiver.address,
                 minInstantFee: 0,
                 maxInstantFee: 10000,
                 limitConfigs: [
@@ -459,7 +444,6 @@ export const depositVaultSuits = (
             feeReceiver,
             mTokenToUsdDataFeed,
             mockedSanctionsList,
-            withdrawTokensReceiver,
           } = await loadDvFixture();
 
           const vault = await new ManageableVaultTester__factory(
@@ -480,7 +464,6 @@ export const depositVaultSuits = (
                 instantFee: 100,
               },
               {
-                withdrawTokensReceiver: withdrawTokensReceiver.address,
                 minInstantFee: 0,
                 maxInstantFee: 10000,
                 limitConfigs: [
@@ -501,7 +484,6 @@ export const depositVaultSuits = (
             tokensReceiver,
             mTokenToUsdDataFeed,
             mockedSanctionsList,
-            withdrawTokensReceiver,
           } = await loadDvFixture();
 
           const vault = await new ManageableVaultTester__factory(
@@ -522,7 +504,6 @@ export const depositVaultSuits = (
                 instantFee: 100,
               },
               {
-                withdrawTokensReceiver: withdrawTokensReceiver.address,
                 minInstantFee: 0,
                 maxInstantFee: 10000,
                 limitConfigs: [
@@ -544,7 +525,6 @@ export const depositVaultSuits = (
             tokensReceiver,
             feeReceiver,
             mockedSanctionsList,
-            withdrawTokensReceiver,
           } = await loadDvFixture();
 
           const vault = await new ManageableVaultTester__factory(
@@ -565,7 +545,6 @@ export const depositVaultSuits = (
                 instantFee: 100,
               },
               {
-                withdrawTokensReceiver: withdrawTokensReceiver.address,
                 minInstantFee: 0,
                 maxInstantFee: 10000,
                 limitConfigs: [
@@ -587,7 +566,6 @@ export const depositVaultSuits = (
             feeReceiver,
             mockedSanctionsList,
             mTokenToUsdDataFeed,
-            withdrawTokensReceiver,
           } = await loadDvFixture();
 
           const vault = await new ManageableVaultTester__factory(
@@ -608,7 +586,6 @@ export const depositVaultSuits = (
                 instantFee: 100,
               },
               {
-                withdrawTokensReceiver: withdrawTokensReceiver.address,
                 minInstantFee: 0,
                 maxInstantFee: 10000,
                 limitConfigs: [
@@ -630,7 +607,7 @@ export const depositVaultSuits = (
 
           await setMinAmountToDepositTest({ depositVault, owner }, 1.1, {
             from: regularAccounts[0],
-            revertMessage: acErrors.WMAC_HASNT_ROLE,
+            revertMessage: acErrors.WMAC_HASNT_PERMISSION,
           });
         });
 
@@ -660,7 +637,7 @@ export const depositVaultSuits = (
 
           await setMaxSupplyCapTest({ depositVault, owner }, 1.1, {
             from: regularAccounts[0],
-            revertMessage: acErrors.WMAC_HASNT_ROLE,
+            revertMessage: acErrors.WMAC_HASNT_PERMISSION,
           });
         });
 
@@ -690,7 +667,7 @@ export const depositVaultSuits = (
 
           await setMinAmountTest({ vault: depositVault, owner }, 1.1, {
             from: regularAccounts[0],
-            revertMessage: acErrors.WMAC_HASNT_ROLE,
+            revertMessage: acErrors.WMAC_HASNT_PERMISSION,
           });
         });
 
@@ -723,7 +700,7 @@ export const depositVaultSuits = (
             parseUnits('1000'),
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -798,7 +775,7 @@ export const depositVaultSuits = (
             days(1),
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -897,7 +874,7 @@ export const depositVaultSuits = (
 
           await greenListEnable({ greenlistable: depositVault, owner }, true, {
             from: regularAccounts[0],
-            revertMessage: acErrors.WMAC_HASNT_ROLE,
+            revertMessage: acErrors.WMAC_HASNT_PERMISSION,
           });
         });
 
@@ -933,7 +910,7 @@ export const depositVaultSuits = (
             false,
             constants.MaxUint256,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -1073,7 +1050,7 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             ethers.constants.AddressZero,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -1123,7 +1100,7 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             ethers.constants.AddressZero,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -1178,7 +1155,7 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             ethers.constants.Zero,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -1219,7 +1196,7 @@ export const depositVaultSuits = (
             0,
             1000,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -1279,7 +1256,7 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             ethers.constants.Zero,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -1325,7 +1302,7 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             ethers.constants.AddressZero,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -1436,7 +1413,7 @@ export const depositVaultSuits = (
             ethers.constants.AddressZero,
             0,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -1488,7 +1465,7 @@ export const depositVaultSuits = (
             depositVault
               .connect(regularAccounts[0])
               .freeFromMinAmount(regularAccounts[1].address, true),
-          ).to.be.revertedWith('WMAC: hasnt role');
+          ).to.be.revertedWith(acErrors.WMAC_HASNT_PERMISSION);
         });
         it('should not fail', async () => {
           const { depositVault, regularAccounts } = await loadDvFixture();
@@ -1538,7 +1515,7 @@ export const depositVaultSuits = (
             ethers.constants.AddressZero,
             0,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -1744,7 +1721,7 @@ export const depositVaultSuits = (
             ethers.constants.AddressZero,
             0,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -2502,7 +2479,7 @@ export const depositVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_ROLE,
             },
           );
         });
@@ -2592,7 +2569,7 @@ export const depositVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_ROLE,
             },
           );
         });
@@ -3925,7 +3902,7 @@ export const depositVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_ROLE,
             },
           );
         });
@@ -4014,7 +3991,7 @@ export const depositVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_ROLE,
             },
           );
         });
@@ -4572,7 +4549,7 @@ export const depositVaultSuits = (
             1,
             parseUnits('5'),
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -4702,7 +4679,7 @@ export const depositVaultSuits = (
             1,
             parseUnits('1'),
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -5144,7 +5121,7 @@ export const depositVaultSuits = (
             [{ id: 1 }],
             'request-rate',
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -5510,7 +5487,7 @@ export const depositVaultSuits = (
             [{ id: 1 }],
             parseUnits('1'),
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -5966,7 +5943,7 @@ export const depositVaultSuits = (
             [{ id: 1 }],
             undefined,
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -6526,7 +6503,7 @@ export const depositVaultSuits = (
             },
             1,
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });

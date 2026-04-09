@@ -73,7 +73,6 @@ export const defaultDeploy = async () => {
     loanLp,
     loanLpFeeReceiver,
     loanRepaymentAddress,
-    withdrawTokensReceiver,
     ...regularAccounts
   ] = await ethers.getSigners();
 
@@ -229,7 +228,6 @@ export const defaultDeploy = async () => {
       instantFee: 100,
     },
     {
-      withdrawTokensReceiver: withdrawTokensReceiver.address,
       minInstantFee: 0,
       maxInstantFee: 10000,
       limitConfigs: [
@@ -277,7 +275,6 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
-      withdrawTokensReceiver: withdrawTokensReceiver.address,
     },
     {
       requestRedeemer: requestRedeemer.address,
@@ -312,7 +309,6 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
-      withdrawTokensReceiver: withdrawTokensReceiver.address,
     },
     {
       requestRedeemer: requestRedeemer.address,
@@ -363,7 +359,7 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithUSTB[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)'
+    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)'
   ](
     {
       ac: accessControl.address,
@@ -385,7 +381,6 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
-      withdrawTokensReceiver: withdrawTokensReceiver.address,
     },
     0,
     constants.MaxUint256,
@@ -409,7 +404,7 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithUSTBTest__factory(owner).deploy();
 
   await redemptionVaultWithUSTB[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
+    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
   ](
     {
       ac: accessControl.address,
@@ -431,7 +426,6 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
-      withdrawTokensReceiver: withdrawTokensReceiver.address,
     },
     {
       requestRedeemer: requestRedeemer.address,
@@ -485,7 +479,6 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
-      withdrawTokensReceiver: withdrawTokensReceiver.address,
     },
     {
       requestRedeemer: requestRedeemer.address,
@@ -540,7 +533,6 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
-      withdrawTokensReceiver: withdrawTokensReceiver.address,
     },
     {
       requestRedeemer: requestRedeemer.address,
@@ -591,7 +583,6 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
-      withdrawTokensReceiver: withdrawTokensReceiver.address,
     },
     0,
     constants.MaxUint256,
@@ -633,7 +624,6 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
-      withdrawTokensReceiver: withdrawTokensReceiver.address,
     },
     0,
     constants.MaxUint256,
@@ -651,7 +641,7 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithMToken[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)'
+    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)'
   ](
     {
       ac: accessControl.address,
@@ -673,7 +663,6 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
-      withdrawTokensReceiver: withdrawTokensReceiver.address,
     },
     0,
     constants.MaxUint256,
@@ -711,7 +700,7 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithMTokenTest__factory(owner).deploy();
 
   await redemptionVaultWithMToken[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
+    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
   ](
     {
       ac: accessControl.address,
@@ -733,7 +722,6 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
-      withdrawTokensReceiver: withdrawTokensReceiver.address,
     },
     {
       requestRedeemer: requestRedeemer.address,
@@ -838,8 +826,8 @@ export const defaultDeploy = async () => {
     allRoles.common.greenlistedOperator,
     greenListableTester.address,
   );
-  const greenlistToggler = await greenListableTester.greenlistTogglerRole();
-  await accessControl.grantRole(greenlistToggler, owner.address);
+  const greenlistAdmin = await greenListableTester.greenlistAdminRole();
+  await accessControl.grantRole(greenlistAdmin, owner.address);
 
   await postDeploymentTest(hre, {
     accessControl,
@@ -907,7 +895,7 @@ export const defaultDeploy = async () => {
     mBasisToUsdDataFeed,
     accessControl,
     wAccessControlTester,
-    roles: { ...allRoles, greenlistToggler },
+    roles: { ...allRoles, greenlistAdmin },
     owner,
     regularAccounts,
     blackListableTester,
@@ -959,7 +947,6 @@ export const defaultDeploy = async () => {
     mTokenLoan,
     mTokenLoanToUsdDataFeed,
     mockedAggregatorMTokenLoan,
-    withdrawTokensReceiver,
   };
 };
 
@@ -985,7 +972,6 @@ export const mTokenPermissionedFixture = async (
     tokensReceiver,
     requestRedeemer,
     mTokenToUsdDataFeed,
-    withdrawTokensReceiver,
   } = fx;
 
   const mTokenPermissioned = await new MTokenPermissionedTest__factory(
@@ -1027,7 +1013,6 @@ export const mTokenPermissionedFixture = async (
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
-      withdrawTokensReceiver: withdrawTokensReceiver.address,
     },
     0,
     constants.MaxUint256,
@@ -1060,7 +1045,6 @@ export const mTokenPermissionedFixture = async (
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
-      withdrawTokensReceiver: withdrawTokensReceiver.address,
     },
     {
       requestRedeemer: requestRedeemer.address,

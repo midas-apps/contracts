@@ -30,8 +30,17 @@ contract WithSanctionsListTester is WithSanctionsList {
         onlyNotSanctioned(user)
     {}
 
-    function sanctionsListAdminRole() public pure override returns (bytes32) {
+    function sanctionsListAdminRole() public pure returns (bytes32) {
         return keccak256("TESTER_SANCTIONS_LIST_ADMIN_ROLE");
+    }
+
+    function _validateSanctionListAdminAccess(address account)
+        internal
+        view
+        override
+    {
+        if (accessControl.hasRole(sanctionsListAdminRole(), account)) return;
+        _hasFunctionPermission(sanctionsListAdminRole(), msg.sig, account);
     }
 
     function _disableInitializers() internal override {}

@@ -46,7 +46,6 @@ import {
   setInstantFeeTest,
   setInstantLimitConfigTest,
   setMinMaxInstantFeeTest,
-  setWithdrawTokensReceiverTest,
   setMinAmountTest,
   setVariabilityToleranceTest,
   changeTokenFeeTest,
@@ -143,7 +142,6 @@ export const redemptionVaultSuits = (
         feeReceiver,
         mTokenToUsdDataFeed,
         roles,
-        withdrawTokensReceiver,
       } = fixture;
 
       expect(await redemptionVault.mToken()).eq(mTBILL.address);
@@ -182,9 +180,6 @@ export const redemptionVaultSuits = (
 
       expect(limitWindow).eq(days(1));
 
-      expect(await redemptionVault.withdrawTokensReceiver()).eq(
-        withdrawTokensReceiver.address,
-      );
       expect(await redemptionVault.maxLoanApr()).eq(0);
 
       await deploymentAdditionalChecks(fixture);
@@ -204,7 +199,6 @@ export const redemptionVaultSuits = (
           loanLpFeeReceiver,
           loanRepaymentAddress,
           redemptionVaultLoanSwapper,
-          withdrawTokensReceiver,
           createNew,
         } = await loadRvFixture();
 
@@ -232,7 +226,6 @@ export const redemptionVaultSuits = (
               ],
               minInstantFee: 0,
               maxInstantFee: 10000,
-              withdrawTokensReceiver: withdrawTokensReceiver.address,
             },
             { requestRedeemer: requestRedeemer.address },
             {
@@ -266,7 +259,6 @@ export const redemptionVaultSuits = (
               ],
               minInstantFee: 0,
               maxInstantFee: 10000,
-              withdrawTokensReceiver: withdrawTokensReceiver.address,
             },
             {
               requestRedeemer: requestRedeemer.address,
@@ -302,7 +294,6 @@ export const redemptionVaultSuits = (
               ],
               minInstantFee: 0,
               maxInstantFee: 10000,
-              withdrawTokensReceiver: withdrawTokensReceiver.address,
             },
             {
               requestRedeemer: requestRedeemer.address,
@@ -338,7 +329,6 @@ export const redemptionVaultSuits = (
               ],
               minInstantFee: 0,
               maxInstantFee: 10000,
-              withdrawTokensReceiver: withdrawTokensReceiver.address,
             },
             {
               requestRedeemer: requestRedeemer.address,
@@ -380,7 +370,6 @@ export const redemptionVaultSuits = (
                 ],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
-                withdrawTokensReceiver: constants.AddressZero,
               },
               {
                 requestRedeemer: constants.AddressZero,
@@ -405,7 +394,6 @@ export const redemptionVaultSuits = (
             feeReceiver,
             mTokenToUsdDataFeed,
             mockedSanctionsList,
-            withdrawTokensReceiver,
           } = await loadRvFixture();
 
           const vault = await new ManageableVaultTester__factory(
@@ -434,7 +422,6 @@ export const redemptionVaultSuits = (
                 ],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
-                withdrawTokensReceiver: withdrawTokensReceiver.address,
               },
             ),
           ).revertedWith('Initializable: contract is not initializing');
@@ -448,7 +435,6 @@ export const redemptionVaultSuits = (
             feeReceiver,
             mTokenToUsdDataFeed,
             mockedSanctionsList,
-            withdrawTokensReceiver,
           } = await loadRvFixture();
 
           const vault = await new ManageableVaultTester__factory(
@@ -477,7 +463,6 @@ export const redemptionVaultSuits = (
                 ],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
-                withdrawTokensReceiver: withdrawTokensReceiver.address,
               },
             ),
           ).revertedWith('invalid address');
@@ -490,7 +475,6 @@ export const redemptionVaultSuits = (
             tokensReceiver,
             mTokenToUsdDataFeed,
             mockedSanctionsList,
-            withdrawTokensReceiver,
           } = await loadRvFixture();
 
           const vault = await new ManageableVaultTester__factory(
@@ -519,7 +503,6 @@ export const redemptionVaultSuits = (
                 ],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
-                withdrawTokensReceiver: withdrawTokensReceiver.address,
               },
             ),
           ).revertedWith('invalid address');
@@ -533,7 +516,6 @@ export const redemptionVaultSuits = (
             tokensReceiver,
             feeReceiver,
             mockedSanctionsList,
-            withdrawTokensReceiver,
           } = await loadRvFixture();
 
           const vault = await new ManageableVaultTester__factory(
@@ -562,7 +544,6 @@ export const redemptionVaultSuits = (
                 ],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
-                withdrawTokensReceiver: withdrawTokensReceiver.address,
               },
             ),
           ).revertedWith('zero address');
@@ -575,7 +556,6 @@ export const redemptionVaultSuits = (
             tokensReceiver,
             feeReceiver,
             mockedSanctionsList,
-            withdrawTokensReceiver,
             mTokenToUsdDataFeed,
           } = await loadRvFixture();
 
@@ -605,7 +585,6 @@ export const redemptionVaultSuits = (
                 ],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
-                withdrawTokensReceiver: withdrawTokensReceiver.address,
               },
             ),
           ).revertedWith('fee == 0');
@@ -616,7 +595,6 @@ export const redemptionVaultSuits = (
           await expect(
             redemptionVault.initializeV2(
               {
-                withdrawTokensReceiver: constants.AddressZero,
                 minInstantFee: 0,
                 maxInstantFee: 0,
                 limitConfigs: [],
@@ -638,7 +616,6 @@ export const redemptionVaultSuits = (
           await expect(
             redemptionVault.initializeV2(
               {
-                withdrawTokensReceiver: regularAccounts[0].address,
                 minInstantFee: 0,
                 maxInstantFee: 1,
                 limitConfigs: [],
@@ -1669,7 +1646,7 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_ROLE,
             },
           );
         });
@@ -1805,7 +1782,7 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_ROLE,
             },
           );
         });
@@ -2675,7 +2652,7 @@ export const redemptionVaultSuits = (
             regularAccounts[0].address,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -2740,7 +2717,7 @@ export const redemptionVaultSuits = (
 
           await setMinAmountTest({ vault: redemptionVault, owner }, 1.1, {
             from: regularAccounts[0],
-            revertMessage: acErrors.WMAC_HASNT_ROLE,
+            revertMessage: acErrors.WMAC_HASNT_PERMISSION,
           });
         });
 
@@ -2774,7 +2751,7 @@ export const redemptionVaultSuits = (
             regularAccounts[0].address,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -2806,85 +2783,6 @@ export const redemptionVaultSuits = (
         });
       });
 
-      describe('setWithdrawTokensReceiver()', () => {
-        it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-          const { owner, redemptionVault, regularAccounts } = await loadFixture(
-            rvFixture,
-          );
-
-          await setWithdrawTokensReceiverTest(
-            { vault: redemptionVault, owner },
-            regularAccounts[0].address,
-            {
-              from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
-            },
-          );
-        });
-
-        it('should fail: call with zero address receiver', async () => {
-          const { owner, redemptionVault } = await loadRvFixture();
-
-          await setWithdrawTokensReceiverTest(
-            { vault: redemptionVault, owner },
-            constants.AddressZero,
-            {
-              revertMessage: 'zero address',
-            },
-          );
-        });
-
-        it('should fail: call with address(this) receiver', async () => {
-          const { owner, redemptionVault } = await loadRvFixture();
-
-          await setWithdrawTokensReceiverTest(
-            { vault: redemptionVault, owner },
-            redemptionVault.address,
-            {
-              revertMessage: 'invalid address',
-            },
-          );
-        });
-
-        it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-          const { owner, redemptionVault, regularAccounts } = await loadFixture(
-            rvFixture,
-          );
-
-          await setWithdrawTokensReceiverTest(
-            { vault: redemptionVault, owner },
-            regularAccounts[0].address,
-          );
-        });
-
-        it('should fail: when function is paused', async () => {
-          const { owner, redemptionVault, regularAccounts } =
-            await loadRvFixture();
-
-          await pauseVaultFn(
-            redemptionVault,
-            encodeFnSelector('setWithdrawTokensReceiver(address)'),
-          );
-
-          await setWithdrawTokensReceiverTest(
-            { vault: redemptionVault, owner },
-            regularAccounts[0].address,
-            { revertMessage: 'Pausable: fn paused' },
-          );
-        });
-      });
-
-      describe('sanctionsListAdminRole()', () => {
-        it('should return same role as vaultRole()', async () => {
-          const { redemptionVault } = await loadRvFixture();
-          const vaultRole = await redemptionVault.vaultRole();
-          const sanctionsListAdminRole =
-            await redemptionVault.sanctionsListAdminRole();
-
-          expect(sanctionsListAdminRole).eq(vaultRole);
-        });
-      });
-
       describe('setGreenlistEnable()', () => {
         it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
           const { owner, redemptionVault, regularAccounts } = await loadFixture(
@@ -2896,7 +2794,7 @@ export const redemptionVaultSuits = (
             true,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -2939,7 +2837,7 @@ export const redemptionVaultSuits = (
             parseUnits('1000'),
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -3015,7 +2913,7 @@ export const redemptionVaultSuits = (
             days(1),
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -3120,7 +3018,7 @@ export const redemptionVaultSuits = (
             true,
             constants.MaxUint256,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -3263,7 +3161,7 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             ethers.constants.AddressZero,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -3314,7 +3212,7 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             ethers.constants.AddressZero,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -3370,7 +3268,7 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             ethers.constants.Zero,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -3412,7 +3310,7 @@ export const redemptionVaultSuits = (
             0,
             1000,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -3473,7 +3371,7 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             ethers.constants.Zero,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -3529,7 +3427,7 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner },
             ethers.constants.AddressZero,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -3576,7 +3474,7 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner },
             ethers.constants.AddressZero,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -3617,7 +3515,7 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner },
             ethers.constants.AddressZero,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -3664,7 +3562,7 @@ export const redemptionVaultSuits = (
             regularAccounts[0].address,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -3705,7 +3603,7 @@ export const redemptionVaultSuits = (
             regularAccounts[0].address,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -3743,7 +3641,7 @@ export const redemptionVaultSuits = (
           );
           await setMaxLoanAprTest({ redemptionVault, owner }, 100, {
             from: regularAccounts[0],
-            revertMessage: acErrors.WMAC_HASNT_ROLE,
+            revertMessage: acErrors.WMAC_HASNT_PERMISSION,
           });
         });
 
@@ -3785,7 +3683,7 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             ethers.constants.AddressZero,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -3899,7 +3797,7 @@ export const redemptionVaultSuits = (
             ethers.constants.AddressZero,
             0,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -3951,7 +3849,7 @@ export const redemptionVaultSuits = (
             redemptionVault
               .connect(regularAccounts[0])
               .freeFromMinAmount(regularAccounts[1].address, true),
-          ).to.be.revertedWith('WMAC: hasnt role');
+          ).to.be.revertedWith(acErrors.WMAC_HASNT_PERMISSION);
         });
         it('should not fail', async () => {
           const { redemptionVault, regularAccounts } = await loadFixture(
@@ -4010,7 +3908,7 @@ export const redemptionVaultSuits = (
             ethers.constants.AddressZero,
             0,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -4096,7 +3994,7 @@ export const redemptionVaultSuits = (
             ethers.constants.AddressZero,
             0,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -4402,7 +4300,7 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_ROLE,
             },
           );
         });
@@ -4538,7 +4436,7 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_ROLE,
             },
           );
         });
@@ -5108,7 +5006,7 @@ export const redemptionVaultSuits = (
             1,
             parseUnits('1'),
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -5380,7 +5278,7 @@ export const redemptionVaultSuits = (
             1,
             parseUnits('1'),
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -5665,7 +5563,7 @@ export const redemptionVaultSuits = (
             [{ id: 1 }],
             'request-rate',
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -6348,7 +6246,7 @@ export const redemptionVaultSuits = (
             [{ id: 1 }],
             parseUnits('1'),
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -7128,7 +7026,7 @@ export const redemptionVaultSuits = (
             [{ id: 1 }],
             undefined,
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -8011,7 +7909,7 @@ export const redemptionVaultSuits = (
             },
             1,
             {
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -8751,7 +8649,7 @@ export const redemptionVaultSuits = (
               0,
               {
                 from: regularAccounts[0],
-                revertMessage: acErrors.WMAC_HASNT_ROLE,
+                revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               },
             );
           });
@@ -9155,7 +9053,7 @@ export const redemptionVaultSuits = (
               0,
               {
                 from: regularAccounts[0],
-                revertMessage: acErrors.WMAC_HASNT_ROLE,
+                revertMessage: acErrors.WMAC_HASNT_PERMISSION,
               },
             );
           });

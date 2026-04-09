@@ -21,19 +21,22 @@ contract GreenlistableTester is Greenlistable {
         onlyGreenlisted(account)
     {}
 
-    function onlyGreenlistTogglerTester(address account) external view {
-        _onlyGreenlistToggler(account);
+    function validateGreenlistableAdminAccess(address account) external view {
+        _validateGreenlistableAdminAccess(account);
     }
 
     function _disableInitializers() internal override {}
 
-    function greenlistTogglerRole()
-        public
+    function _validateGreenlistableAdminAccess(address account)
+        internal
         view
-        virtual
         override
-        returns (bytes32)
     {
-        return keccak256("GREENLIST_TOGGLER_ROLE");
+        if (accessControl.hasRole(greenlistAdminRole(), account)) return;
+        _hasFunctionPermission(greenlistAdminRole(), msg.sig, account);
+    }
+
+    function greenlistAdminRole() public view virtual returns (bytes32) {
+        return keccak256("GREENLIST_ADMIN_ROLE");
     }
 }

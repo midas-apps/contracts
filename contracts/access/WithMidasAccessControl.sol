@@ -70,4 +70,26 @@ abstract contract WithMidasAccessControl is
     function _onlyNotRole(bytes32 role, address account) internal view {
         require(!accessControl.hasRole(role, account), "WMAC: has role");
     }
+
+    /**
+     * @dev checks that given `account` has function permission for the given function selector
+     * @param functionAccessAdminRole OZ role for the scope
+     * @param functionSelector function selector
+     * @param account address checked for permission
+     */
+    function _hasFunctionPermission(
+        bytes32 functionAccessAdminRole,
+        bytes4 functionSelector,
+        address account
+    ) internal view {
+        require(
+            accessControl.hasFunctionPermission(
+                functionAccessAdminRole,
+                address(this),
+                functionSelector,
+                account
+            ),
+            "WMAC: no function permission"
+        );
+    }
 }

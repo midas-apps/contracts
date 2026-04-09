@@ -9,6 +9,7 @@ import { redemptionVaultSuits } from './suits/redemption-vault.suits';
 
 import { encodeFnSelector } from '../../helpers/utils';
 import { RedemptionVaultWithMorphoTest__factory } from '../../typechain-types';
+import { acErrors } from '../common/ac.helpers';
 import {
   approveBase18,
   mintToken,
@@ -62,7 +63,7 @@ redemptionVaultSuits(
             morphoVaultMock.address,
             {
               from: regularAccounts[0],
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -164,7 +165,7 @@ redemptionVaultSuits(
             stableCoins.usdc.address,
             {
               from: regularAccounts[0],
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });

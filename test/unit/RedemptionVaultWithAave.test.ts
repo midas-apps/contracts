@@ -9,6 +9,7 @@ import { redemptionVaultSuits } from './suits/redemption-vault.suits';
 
 import { encodeFnSelector } from '../../helpers/utils';
 import { RedemptionVaultWithAaveTest__factory } from '../../typechain-types';
+import { acErrors } from '../common/ac.helpers';
 import {
   approveBase18,
   mintToken,
@@ -58,7 +59,7 @@ redemptionVaultSuits(
             redemptionVaultWithAave
               .connect(regularAccounts[0])
               .setAavePool(stableCoins.usdc.address, aavePoolMock.address),
-          ).to.be.revertedWith('WMAC: hasnt role');
+          ).to.be.revertedWith(acErrors.WMAC_HASNT_PERMISSION);
         });
 
         it('should fail: zero address', async () => {
@@ -119,7 +120,7 @@ redemptionVaultSuits(
             redemptionVaultWithAave
               .connect(regularAccounts[0])
               .removeAavePool(stableCoins.usdc.address),
-          ).to.be.revertedWith('WMAC: hasnt role');
+          ).to.be.revertedWith(acErrors.WMAC_HASNT_PERMISSION);
         });
 
         it('should fail: pool not set', async () => {

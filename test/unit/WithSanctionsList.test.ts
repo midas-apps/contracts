@@ -82,7 +82,7 @@ describe('WithSanctionsList', function () {
         constants.AddressZero,
         {
           from: regularAccounts[0],
-          revertMessage: acErrors.WMAC_HASNT_ROLE,
+          revertMessage: acErrors.WMAC_HASNT_PERMISSION,
         },
       );
     });

@@ -134,11 +134,6 @@ abstract contract ManageableVault is
     uint64 public maxInstantFee;
 
     /**
-     * @notice address to which tokens will be withdrawn
-     */
-    address public withdrawTokensReceiver;
-
-    /**
      * @notice set of limit config windows
      */
     EnumerableSet.UintSet private _limitWindows;
@@ -151,14 +146,14 @@ abstract contract ManageableVault is
     /**
      * @dev leaving a storage gap for futures updates
      */
-    uint256[45] private __gap;
+    uint256[46] private __gap;
 
     /**
      * @dev checks that msg.sender do have a vaultRole() role
      * and validates if function is not paused
      */
     modifier validateVaultAdminAccess() {
-        _validateVaultAdminAccess(msg.sender);
+        _validateVaultAdminAccess(msg.sender, true);
         _;
     }
 
@@ -220,11 +215,6 @@ abstract contract ManageableVault is
                 _commonVaultV2InitParams.limitConfigs[i].limit
             );
         }
-
-        _validateAddress(_commonVaultV2InitParams.withdrawTokensReceiver, true);
-
-        withdrawTokensReceiver = _commonVaultV2InitParams
-            .withdrawTokensReceiver;
 
         _setMinMaxInstantFee(
             _commonVaultV2InitParams.minInstantFee,
@@ -385,21 +375,6 @@ abstract contract ManageableVault is
 
     /**
      * @inheritdoc IManageableVault
-     * @dev reverts address zero or equal address(this)
-     */
-    function setWithdrawTokensReceiver(address receiver)
-        external
-        validateVaultAdminAccess
-    {
-        _validateAddress(receiver, true);
-
-        withdrawTokensReceiver = receiver;
-
-        emit SetWithdrawTokensReceiver(msg.sender, receiver);
-    }
-
-    /**
-     * @inheritdoc IManageableVault
      */
     function setInstantFee(uint256 newInstantFee)
         external
@@ -464,7 +439,7 @@ abstract contract ManageableVault is
         external
         validateVaultAdminAccess
     {
-        address withdrawTo = withdrawTokensReceiver;
+        address withdrawTo = tokensReceiver;
         IERC20(token).safeTransfer(withdrawTo, amount);
         emit WithdrawToken(msg.sender, token, withdrawTo, amount);
     }
@@ -502,47 +477,6 @@ abstract contract ManageableVault is
      * @return role bytes32 role
      */
     function vaultRole() public view virtual returns (bytes32);
-
-    /**
-     * @inheritdoc Greenlistable
-     */
-    function greenlistTogglerRole()
-        public
-        view
-        virtual
-        override
-        returns (bytes32)
-    {
-        return vaultRole();
-    }
-
-    /**
-     * @inheritdoc WithSanctionsList
-     */
-    function sanctionsListAdminRole()
-        public
-        view
-        virtual
-        override
-        returns (bytes32)
-    {
-        return vaultRole();
-    }
-
-    /**
-     * @inheritdoc Pausable
-     */
-    function pauseAdminRole() public view override returns (bytes32) {
-        return vaultRole();
-    }
-
-    /**
-     * @inheritdoc Greenlistable
-     */
-    function _onlyGreenlistToggler(address account) internal view override {
-        super._onlyGreenlistToggler(account);
-        _requireFnNotPaused(msg.sig, false);
-    }
 
     /**
      * @dev set minimum/maximum instant fee
@@ -819,12 +753,49 @@ abstract contract ManageableVault is
     }
 
     /**
-     * @dev validate vault admin access and validates if function is not paused
-     * @param account account address
+     * @dev validate vault admin access for `account`
+     * and validates if function is not paused
+     * @param account address to check
+     * @param checkPaused if true, validates if function is not paused
      */
-    function _validateVaultAdminAccess(address account) internal view {
-        _onlyRole(vaultRole(), account);
-        _requireFnNotPaused(msg.sig, false);
+    function _validateVaultAdminAccess(address account, bool checkPaused)
+        private
+        view
+    {
+        if (checkPaused) {
+            _requireFnNotPaused(msg.sig, false);
+        }
+        if (accessControl.hasRole(vaultRole(), account)) return;
+        _hasFunctionPermission(vaultRole(), msg.sig, account);
+    }
+
+    /**
+     * @inheritdoc Pausable
+     */
+    function _validatePauseAdminAccess(address account) internal view override {
+        _validateVaultAdminAccess(account, false);
+    }
+
+    /**
+     * @inheritdoc Greenlistable
+     */
+    function _validateGreenlistableAdminAccess(address account)
+        internal
+        view
+        override
+    {
+        _validateVaultAdminAccess(account, true);
+    }
+
+    /**
+     * @inheritdoc WithSanctionsList
+     */
+    function _validateSanctionListAdminAccess(address account)
+        internal
+        view
+        override
+    {
+        _validateVaultAdminAccess(account, true);
     }
 
     /**

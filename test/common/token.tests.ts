@@ -179,7 +179,6 @@ export const tokenContractsTests = (token: MTokenName) => {
         instantFee: 100,
       },
       {
-        withdrawTokensReceiver: fixture.withdrawTokensReceiver.address,
         minInstantFee: 0,
         maxInstantFee: 10000,
         limitConfigs: [
@@ -196,7 +195,7 @@ export const tokenContractsTests = (token: MTokenName) => {
     const depositVaultUstb =
       await deployProxyContractIfExists<DepositVaultWithUSTB>(
         'dvUstb',
-        'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(address,uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)',
+        'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)',
         {
           ac: fixture.accessControl.address,
           sanctionsList: fixture.mockedSanctionsList.address,
@@ -209,7 +208,6 @@ export const tokenContractsTests = (token: MTokenName) => {
           instantFee: 100,
         },
         {
-          withdrawTokensReceiver: fixture.withdrawTokensReceiver.address,
           minInstantFee: 0,
           maxInstantFee: 10000,
           limitConfigs: [
@@ -247,7 +245,6 @@ export const tokenContractsTests = (token: MTokenName) => {
         ],
         minInstantFee: 0,
         maxInstantFee: 10000,
-        withdrawTokensReceiver: fixture.withdrawTokensReceiver.address,
       },
       { requestRedeemer: fixture.requestRedeemer.address },
       {
@@ -283,7 +280,6 @@ export const tokenContractsTests = (token: MTokenName) => {
           ],
           minInstantFee: 0,
           maxInstantFee: 10000,
-          withdrawTokensReceiver: fixture.withdrawTokensReceiver.address,
         },
         { requestRedeemer: fixture.requestRedeemer.address },
         {

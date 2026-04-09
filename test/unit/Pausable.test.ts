@@ -3,6 +3,7 @@ import { expect } from 'chai';
 
 import { encodeFnSelector } from '../../helpers/utils';
 import { PausableTester__factory } from '../../typechain-types';
+import { acErrors } from '../common/ac.helpers';
 import {
   pauseVault,
   pauseVaultFn,
@@ -38,7 +39,7 @@ describe('Pausable', () => {
 
       await pauseVault(pausableTester, {
         from: regularAccounts[0],
-        revertMessage: 'WMAC: hasnt role',
+        revertMessage: acErrors.WMAC_HASNT_PERMISSION,
       });
     });
 
@@ -57,7 +58,7 @@ describe('Pausable', () => {
 
       await pauseVault(pausableTester, {
         from: regularAccounts[0],
-        revertMessage: 'WMAC: hasnt role',
+        revertMessage: acErrors.WMAC_HASNT_PERMISSION,
       });
     });
 
@@ -89,7 +90,7 @@ describe('Pausable', () => {
 
       await pauseVaultFn(pausableTester, selector, {
         from: regularAccounts[0],
-        revertMessage: 'WMAC: hasnt role',
+        revertMessage: acErrors.WMAC_HASNT_PERMISSION,
       });
     });
 
@@ -129,7 +130,7 @@ describe('Pausable', () => {
 
       await unpauseVaultFn(pausableTester, selector, {
         from: regularAccounts[0],
-        revertMessage: 'WMAC: hasnt role',
+        revertMessage: acErrors.WMAC_HASNT_PERMISSION,
       });
     });
 
@@ -165,7 +166,7 @@ describe('Pausable', () => {
 
       await unpauseVault(pausableTester, {
         from: regularAccounts[0],
-        revertMessage: 'WMAC: hasnt role',
+        revertMessage: acErrors.WMAC_HASNT_PERMISSION,
       });
     });
 

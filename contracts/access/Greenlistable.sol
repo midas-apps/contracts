@@ -32,16 +32,6 @@ abstract contract Greenlistable is WithMidasAccessControl {
     }
 
     /**
-     * @dev checks that a given `account`
-     * have `greenlistedRole()`
-     * do the check even if greenlist check is off
-     */
-    modifier onlyAlwaysGreenlisted(address account) {
-        _onlyGreenlisted(account);
-        _;
-    }
-
-    /**
      * @dev upgradeable pattern contract`s initializer
      * @param _accessControl MidasAccessControl contract address
      */
@@ -66,7 +56,7 @@ abstract contract Greenlistable is WithMidasAccessControl {
      * @param enable enable
      */
     function setGreenlistEnable(bool enable) external {
-        _onlyGreenlistToggler(msg.sender);
+        _validateGreenlistableAdminAccess(msg.sender);
         require(greenlistEnabled != enable, "GL: same enable status");
         greenlistEnabled = enable;
         emit SetGreenlistEnable(msg.sender, enable);
@@ -81,12 +71,6 @@ abstract contract Greenlistable is WithMidasAccessControl {
     }
 
     /**
-     * @notice AC role of a greenlist toggler
-     * @return role bytes32 role
-     */
-    function greenlistTogglerRole() public view virtual returns (bytes32);
-
-    /**
      * @dev checks that a given `account`
      * have a `greenlistedRole()`
      */
@@ -97,13 +81,10 @@ abstract contract Greenlistable is WithMidasAccessControl {
     {}
 
     /**
-     * @dev checks that a given `account`
-     * have a `greenlistTogglerRole()`
+     * @dev checks that a given `account` has access to greenlistable functions
      */
-    function _onlyGreenlistToggler(address account)
+    function _validateGreenlistableAdminAccess(address account)
         internal
         view
-        virtual
-        onlyRole(greenlistTogglerRole(), account)
-    {}
+        virtual;
 }

@@ -70,7 +70,12 @@ describe('Greenlistable', function () {
         await loadFixture(defaultDeploy);
 
       await greenList(
-        { greenlistable: greenListableTester, accessControl, owner },
+        {
+          greenlistable: greenListableTester,
+          accessControl,
+          owner,
+          role: await greenListableTester.greenlistAdminRole(),
+        },
         regularAccounts[0],
       );
       await expect(
@@ -86,10 +91,10 @@ describe('Greenlistable', function () {
       );
 
       await expect(
-        greenListableTester.onlyGreenlistTogglerTester(
+        greenListableTester.validateGreenlistableAdminAccess(
           regularAccounts[0].address,
         ),
-      ).revertedWith(acErrors.WMAC_HASNT_ROLE);
+      ).revertedWith(acErrors.WMAC_HASNT_PERMISSION);
     });
 
     it('call from  greenlistToggler user', async () => {
@@ -97,11 +102,16 @@ describe('Greenlistable', function () {
         await loadFixture(defaultDeploy);
 
       await greenListToggler(
-        { greenlistable: greenListableTester, accessControl, owner },
+        {
+          greenlistable: greenListableTester,
+          accessControl,
+          owner,
+          role: await greenListableTester.greenlistAdminRole(),
+        },
         regularAccounts[0],
       );
       await expect(
-        greenListableTester.onlyGreenlistTogglerTester(
+        greenListableTester.validateGreenlistableAdminAccess(
           regularAccounts[0].address,
         ),
       ).not.reverted;
@@ -119,7 +129,7 @@ describe('Greenlistable', function () {
         true,
         {
           from: regularAccounts[0],
-          revertMessage: `WMAC: hasnt role`,
+          revertMessage: acErrors.WMAC_HASNT_PERMISSION,
         },
       );
     });
@@ -151,7 +161,12 @@ describe('Greenlistable', function () {
         await loadFixture(defaultDeploy);
 
       await greenList(
-        { greenlistable: greenListableTester, accessControl, owner },
+        {
+          greenlistable: greenListableTester,
+          accessControl,
+          owner,
+          role: await greenListableTester.greenlistedRole(),
+        },
         regularAccounts[0],
         {
           from: regularAccounts[0],
@@ -164,7 +179,12 @@ describe('Greenlistable', function () {
       const { accessControl, greenListableTester, owner, regularAccounts } =
         await loadFixture(defaultDeploy);
       await greenList(
-        { greenlistable: greenListableTester, accessControl, owner },
+        {
+          greenlistable: greenListableTester,
+          accessControl,
+          owner,
+          role: await greenListableTester.greenlistedRole(),
+        },
         regularAccounts[0],
       );
     });
@@ -176,7 +196,12 @@ describe('Greenlistable', function () {
         await loadFixture(defaultDeploy);
 
       await unGreenList(
-        { greenlistable: greenListableTester, accessControl, owner },
+        {
+          greenlistable: greenListableTester,
+          accessControl,
+          owner,
+          role: await greenListableTester.greenlistedRole(),
+        },
         regularAccounts[0],
         {
           from: regularAccounts[0],
@@ -189,7 +214,12 @@ describe('Greenlistable', function () {
       const { accessControl, greenListableTester, owner, regularAccounts } =
         await loadFixture(defaultDeploy);
       await unGreenList(
-        { greenlistable: greenListableTester, accessControl, owner },
+        {
+          greenlistable: greenListableTester,
+          accessControl,
+          owner,
+          role: await greenListableTester.greenlistAdminRole(),
+        },
         regularAccounts[0],
       );
     });

@@ -10,6 +10,7 @@ import {
   DepositVaultWithMorphoTest__factory,
   MorphoVaultMock__factory,
 } from '../../typechain-types';
+import { acErrors } from '../common/ac.helpers';
 import { approveBase18, mintToken } from '../common/common.helpers';
 import {
   depositInstantWithMorphoTest,
@@ -55,7 +56,7 @@ depositVaultSuits(
             morphoVaultMock.address,
             {
               from: regularAccounts[0],
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -137,7 +138,7 @@ depositVaultSuits(
             stableCoins.usdc.address,
             {
               from: regularAccounts[0],
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -186,7 +187,7 @@ depositVaultSuits(
             true,
             {
               from: regularAccounts[0],
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -229,7 +230,7 @@ depositVaultSuits(
             true,
             {
               from: regularAccounts[0],
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });

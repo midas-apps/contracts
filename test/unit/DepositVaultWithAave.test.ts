@@ -6,6 +6,7 @@ import { ethers } from 'hardhat';
 import { depositVaultSuits } from './suits/deposit-vault.suits';
 
 import { DepositVaultWithAaveTest__factory } from '../../typechain-types';
+import { acErrors } from '../common/ac.helpers';
 import { approveBase18, mintToken } from '../common/common.helpers';
 import {
   depositInstantWithAaveTest,
@@ -54,7 +55,7 @@ depositVaultSuits(
             aavePoolMock.address,
             {
               from: regularAccounts[0],
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -109,7 +110,7 @@ depositVaultSuits(
             stableCoins.usdc.address,
             {
               from: regularAccounts[0],
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -154,7 +155,7 @@ depositVaultSuits(
             true,
             {
               from: regularAccounts[0],
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -197,7 +198,7 @@ depositVaultSuits(
             true,
             {
               from: regularAccounts[0],
-              revertMessage: 'WMAC: hasnt role',
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });

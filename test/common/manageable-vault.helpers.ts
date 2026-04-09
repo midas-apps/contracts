@@ -103,30 +103,6 @@ export const setMinMaxInstantFeeTest = async (
   expect(await vault.maxInstantFee()).eq(newMaxInstantFee);
 };
 
-export const setWithdrawTokensReceiverTest = async (
-  { vault, owner }: CommonParamsChangePaymentToken,
-  newReceiver: string,
-  opt?: OptionalCommonParams,
-) => {
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? owner).setWithdrawTokensReceiver(newReceiver),
-    ).revertedWith(opt.revertMessage);
-    return;
-  }
-
-  await expect(
-    vault.connect(opt?.from ?? owner).setWithdrawTokensReceiver(newReceiver),
-  )
-    .to.emit(
-      vault,
-      vault.interface.events['SetWithdrawTokensReceiver(address,address)'].name,
-    )
-    .withArgs((opt?.from ?? owner).address, newReceiver).to.not.reverted;
-
-  expect(await vault.withdrawTokensReceiver()).eq(newReceiver);
-};
-
 export const setVariabilityToleranceTest = async (
   { vault, owner }: CommonParamsChangePaymentToken,
   newTolerance: BigNumberish,
@@ -548,7 +524,7 @@ export const withdrawTest = async (
     return;
   }
 
-  const withdrawTo = await vault.withdrawTokensReceiver();
+  const withdrawTo = await vault.tokensReceiver();
 
   const balanceBeforeContract = await tokenContract.balanceOf(vault.address);
   const balanceBeforeTo = await tokenContract.balanceOf(withdrawTo);
