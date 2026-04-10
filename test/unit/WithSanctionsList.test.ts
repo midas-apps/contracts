@@ -2,8 +2,13 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { constants } from 'ethers';
 
+import { encodeFnSelector } from '../../helpers/utils';
 import { WithSanctionsListTester__factory } from '../../typechain-types';
-import { acErrors } from '../common/ac.helpers';
+import {
+  acErrors,
+  setFunctionPermissionTester,
+  setupFunctionAccessGrantOperator,
+} from '../common/ac.helpers';
 import { defaultDeploy } from '../common/fixtures';
 import {
   sanctionUser,
@@ -99,6 +104,85 @@ describe('WithSanctionsList', function () {
       await setSanctionsList(
         { withSanctionsList: withSanctionsListTester, owner },
         constants.AddressZero,
+      );
+    });
+
+    it('succeeds with only scoped function permission', async () => {
+      const { accessControl, withSanctionsListTester, owner, regularAccounts } =
+        await loadFixture(defaultDeploy);
+
+      const sanctionsListAdmin =
+        await withSanctionsListTester.sanctionsListAdminRole();
+      const selector = encodeFnSelector('setSanctionsList(address)');
+
+      await accessControl.grantRole(sanctionsListAdmin, owner.address);
+
+      await setupFunctionAccessGrantOperator({
+        accessControl,
+        owner,
+        functionAccessAdminRole: sanctionsListAdmin,
+        targetContract: withSanctionsListTester.address,
+        functionSelector: selector,
+        grantOperator: owner,
+      });
+
+      const user = regularAccounts[0];
+      await setFunctionPermissionTester({ accessControl, owner }, [
+        {
+          functionAccessAdminRole: sanctionsListAdmin,
+          targetContract: withSanctionsListTester.address,
+          functionSelector: selector,
+          account: user.address,
+          enabled: true,
+        },
+      ]);
+      expect(await accessControl.hasRole(sanctionsListAdmin, user.address)).eq(
+        false,
+      );
+
+      await setSanctionsList(
+        { withSanctionsList: withSanctionsListTester, owner },
+        constants.AddressZero,
+        { from: user },
+      );
+    });
+
+    it('succeeds with scoped permission and sanctions list admin role', async () => {
+      const { accessControl, withSanctionsListTester, owner, regularAccounts } =
+        await loadFixture(defaultDeploy);
+
+      const sanctionsListAdmin =
+        await withSanctionsListTester.sanctionsListAdminRole();
+      const selector = encodeFnSelector('setSanctionsList(address)');
+      const user = regularAccounts[0];
+
+      await accessControl.grantRole(sanctionsListAdmin, owner.address);
+
+      await setupFunctionAccessGrantOperator({
+        accessControl,
+        owner,
+        functionAccessAdminRole: sanctionsListAdmin,
+        targetContract: withSanctionsListTester.address,
+        functionSelector: selector,
+        grantOperator: owner,
+      });
+
+      await setFunctionPermissionTester({ accessControl, owner }, [
+        {
+          functionAccessAdminRole: sanctionsListAdmin,
+          targetContract: withSanctionsListTester.address,
+          functionSelector: selector,
+          account: user.address,
+          enabled: true,
+        },
+      ]);
+
+      await accessControl.grantRole(sanctionsListAdmin, user.address);
+
+      await setSanctionsList(
+        { withSanctionsList: withSanctionsListTester, owner },
+        constants.AddressZero,
+        { from: user },
       );
     });
   });

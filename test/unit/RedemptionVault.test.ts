@@ -22,7 +22,7 @@ redemptionVaultSuits(
     key: 'redemptionVault',
   },
   async () => {},
-  (_defaultDeploy) => {
+  () => {
     describe('RedemptionVault', () => {
       describe('redeemInstant() with permissioned mToken', () => {
         it('with permissioned mToken - burns/transfers mToken from greenlisted user and fee recipient', async () => {

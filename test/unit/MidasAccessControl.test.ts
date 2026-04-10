@@ -3,7 +3,14 @@ import { expect } from 'chai';
 import { constants } from 'ethers';
 import { ethers } from 'hardhat';
 
+import { encodeFnSelector } from '../../helpers/utils';
 import { WithMidasAccessControlTester__factory } from '../../typechain-types';
+import {
+  setFunctionAccessAdminRoleEnabledTester,
+  setFunctionAccessGrantOperatorTester,
+  setFunctionPermissionTester,
+  setupFunctionAccessGrantOperator,
+} from '../common/ac.helpers';
 import { defaultDeploy } from '../common/fixtures';
 
 describe('MidasAccessControl', function () {
@@ -139,7 +146,7 @@ describe('MidasAccessControl', function () {
   });
 
   describe('setRoleAdmin()', () => {
-    it('should fail: caller does not have current role admin', async () => {
+    it('should fail: caller does not have `DEFAULT_ADMIN_ROLE`', async () => {
       const { accessControl, regularAccounts, roles } = await loadFixture(
         defaultDeploy,
       );
@@ -151,23 +158,9 @@ describe('MidasAccessControl', function () {
             roles.common.blacklisted,
             roles.common.greenlistedOperator,
           ),
-      ).reverted;
-    });
-
-    it('should fail: caller has DEFAULT_ADMIN_ROLE but not current role admin', async () => {
-      const { accessControl, owner, roles } = await loadFixture(defaultDeploy);
-
-      await accessControl.revokeRole(
-        roles.common.blacklistedOperator,
-        owner.address,
+      ).revertedWith(
+        `AccessControl: account ${regularAccounts[0].address.toLowerCase()} is missing role ${await accessControl.DEFAULT_ADMIN_ROLE()}`,
       );
-
-      await expect(
-        accessControl.setRoleAdmin(
-          roles.common.blacklisted,
-          roles.common.greenlistedOperator,
-        ),
-      ).reverted;
     });
 
     it('should fail: caller has admin role for another role', async () => {
@@ -190,8 +183,30 @@ describe('MidasAccessControl', function () {
       ).reverted;
     });
 
-    it('should set new role admin', async () => {
-      const { accessControl, roles } = await loadFixture(defaultDeploy);
+    it('should fail: caller has current role admin but not the DEFAULT_ADMIN_ROLE', async () => {
+      const { accessControl, roles, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await expect(
+        accessControl
+          .connect(regularAccounts[0])
+          .setRoleAdmin(
+            roles.common.blacklisted,
+            roles.common.greenlistedOperator,
+          ),
+      ).revertedWith(
+        `AccessControl: account ${regularAccounts[0].address.toLowerCase()} is missing role ${await accessControl.DEFAULT_ADMIN_ROLE()}`,
+      );
+    });
+
+    it('caller has DEFAULT_ADMIN_ROLE but not current role admin', async () => {
+      const { accessControl, owner, roles } = await loadFixture(defaultDeploy);
+
+      await accessControl.revokeRole(
+        roles.common.blacklistedOperator,
+        owner.address,
+      );
 
       await expect(
         accessControl.setRoleAdmin(
@@ -212,10 +227,11 @@ describe('MidasAccessControl', function () {
       const NEW_ADMIN_ROLE = ethers.utils.id('NEW_ADMIN_ROLE');
       const TEST_ROLE = ethers.utils.id('TEST_ROLE');
 
-      await accessControl.grantRole(
+      await accessControl.setRoleAdmin(
+        NEW_ADMIN_ROLE,
         roles.common.blacklistedOperator,
-        owner.address,
       );
+
       await accessControl.grantRole(
         roles.common.blacklistedOperator,
         regularAccounts[0].address,
@@ -228,7 +244,9 @@ describe('MidasAccessControl', function () {
         accessControl
           .connect(regularAccounts[0])
           .grantRole(TEST_ROLE, regularAccounts[2].address),
-      ).reverted;
+      ).revertedWith(
+        `AccessControl: account ${regularAccounts[0].address.toLowerCase()} is missing role ${NEW_ADMIN_ROLE}`,
+      );
 
       await expect(
         accessControl
@@ -239,6 +257,199 @@ describe('MidasAccessControl', function () {
       expect(
         await accessControl.hasRole(TEST_ROLE, regularAccounts[2].address),
       ).eq(true);
+    });
+  });
+
+  describe('Function acces control', () => {
+    describe('setFunctionAccessAdminRoleEnabled()', () => {
+      it('should fail: non-DEFAULT_ADMIN reverts', async () => {
+        const { accessControl, regularAccounts, roles } = await loadFixture(
+          defaultDeploy,
+        );
+
+        await setFunctionAccessAdminRoleEnabledTester(
+          {
+            accessControl,
+            owner: regularAccounts[0],
+          },
+          [
+            {
+              functionAccessAdminRole: roles.common.greenlistedOperator,
+              enabled: true,
+            },
+          ],
+          {
+            revertMessage: `AccessControl: account ${regularAccounts[0].address.toLowerCase()} is missing role ${await accessControl.DEFAULT_ADMIN_ROLE()}`,
+          },
+        );
+      });
+
+      it('call from DEFAULT_ADMIN_ROLE', async () => {
+        const { accessControl, owner, roles } = await loadFixture(
+          defaultDeploy,
+        );
+
+        await setFunctionAccessAdminRoleEnabledTester(
+          {
+            accessControl,
+            owner,
+          },
+          [
+            {
+              functionAccessAdminRole: roles.common.greenlistedOperator,
+              enabled: true,
+            },
+          ],
+        );
+      });
+    });
+
+    describe('setFunctionAccessGrantOperator()', () => {
+      it('should fail: reverts when FA admin role is disabled', async () => {
+        const { accessControl, owner, roles } = await loadFixture(
+          defaultDeploy,
+        );
+
+        await setFunctionAccessGrantOperatorTester(
+          {
+            accessControl,
+            owner,
+          },
+          [
+            {
+              functionAccessAdminRole: roles.common.greenlistedOperator,
+              targetContract: accessControl.address,
+              functionSelector: encodeFnSelector('setGreenlistEnable(bool)'),
+              operator: owner.address,
+              enabled: true,
+            },
+          ],
+          { revertMessage: 'MAC: FA admin role disabled' },
+        );
+      });
+
+      it('when FA admin role is enabled', async () => {
+        const { accessControl, owner, roles } = await loadFixture(
+          defaultDeploy,
+        );
+
+        await setFunctionAccessAdminRoleEnabledTester(
+          {
+            accessControl,
+            owner,
+          },
+          [
+            {
+              functionAccessAdminRole: roles.common.greenlistedOperator,
+              enabled: true,
+            },
+          ],
+        );
+
+        await setFunctionAccessGrantOperatorTester(
+          {
+            accessControl,
+            owner,
+          },
+          [
+            {
+              functionAccessAdminRole: roles.common.greenlistedOperator,
+              targetContract: accessControl.address,
+              functionSelector: encodeFnSelector('setGreenlistEnable(bool)'),
+              operator: owner.address,
+              enabled: true,
+            },
+          ],
+        );
+      });
+    });
+
+    describe('setFunctionPermission()', () => {
+      it('when caller is function operator', async () => {
+        const { accessControl, owner, regularAccounts, roles } =
+          await loadFixture(defaultDeploy);
+
+        const selector = encodeFnSelector('setGreenlistEnable(bool)');
+
+        await setupFunctionAccessGrantOperator({
+          accessControl,
+          owner,
+          functionAccessAdminRole: roles.common.greenlistedOperator,
+          targetContract: accessControl.address,
+          functionSelector: selector,
+          grantOperator: owner,
+        });
+
+        await setFunctionPermissionTester({ accessControl, owner }, [
+          {
+            functionAccessAdminRole: roles.common.greenlistedOperator,
+            targetContract: accessControl.address,
+            functionSelector: selector,
+            account: regularAccounts[0].address,
+            enabled: true,
+          },
+        ]);
+      });
+
+      it('should fail: caller is not a grant operator', async () => {
+        const { accessControl, owner, regularAccounts, roles } =
+          await loadFixture(defaultDeploy);
+
+        const selector = encodeFnSelector('setGreenlistEnable(bool)');
+
+        await setupFunctionAccessGrantOperator({
+          accessControl,
+          owner,
+          functionAccessAdminRole: roles.common.greenlistedOperator,
+          targetContract: accessControl.address,
+          functionSelector: selector,
+          grantOperator: owner,
+        });
+
+        await setFunctionPermissionTester(
+          { accessControl, owner: regularAccounts[1] },
+          [
+            {
+              functionAccessAdminRole: roles.common.greenlistedOperator,
+              targetContract: accessControl.address,
+              functionSelector: selector,
+              account: regularAccounts[2].address,
+              enabled: true,
+            },
+          ],
+          { revertMessage: 'MAC: not FA grant operator' },
+        );
+      });
+
+      it('should fail: caller is an operator for a different function', async () => {
+        const { accessControl, owner, regularAccounts, roles } =
+          await loadFixture(defaultDeploy);
+
+        await setupFunctionAccessGrantOperator({
+          accessControl,
+          owner,
+          functionAccessAdminRole: roles.common.greenlistedOperator,
+          targetContract: accessControl.address,
+          functionSelector: encodeFnSelector('setGreenlistEnable1(bool)'),
+          grantOperator: owner,
+        });
+
+        const selector = encodeFnSelector('setGreenlistEnable(bool)');
+
+        await setFunctionPermissionTester(
+          { accessControl, owner },
+          [
+            {
+              functionAccessAdminRole: roles.common.greenlistedOperator,
+              targetContract: accessControl.address,
+              functionSelector: selector,
+              account: regularAccounts[2].address,
+              enabled: true,
+            },
+          ],
+          { revertMessage: 'MAC: not FA grant operator' },
+        );
+      });
     });
   });
 });

@@ -262,7 +262,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         external
         validateVaultAdminAccess
     {
-        for (uint256 i = 0; i < requestIds.length; i++) {
+        for (uint256 i = 0; i < requestIds.length; ++i) {
             uint256 rate = mintRequests[requestIds[i]].tokenOutRate;
             bool success = _approveRequest(requestIds[i], rate, true, false);
 
@@ -357,7 +357,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256[] calldata requestIds,
         uint256 newOutRate
     ) public validateVaultAdminAccess {
-        for (uint256 i = 0; i < requestIds.length; i++) {
+        for (uint256 i = 0; i < requestIds.length; ++i) {
             bool success = _approveRequest(
                 requestIds[i],
                 newOutRate,

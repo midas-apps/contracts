@@ -20,12 +20,18 @@ import {
   DepositVaultWithMorphoTest,
   ManageableVaultTester__factory,
 } from '../../../typechain-types';
-import { acErrors, blackList, greenList } from '../../common/ac.helpers';
+import {
+  acErrors,
+  blackList,
+  greenList,
+  setupVaultScopedFunctionPermission,
+} from '../../common/ac.helpers';
 import {
   approveBase18,
   mintToken,
   pauseVault,
   pauseVaultFn,
+  unpauseVaultFn,
 } from '../../common/common.helpers';
 import {
   setMinGrowthApr,
@@ -628,6 +634,51 @@ export const depositVaultSuits = (
             revertMessage: 'Pausable: fn paused',
           });
         });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, depositVault, regularAccounts } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'setMinMTokenAmountForFirstDeposit(uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setMinAmountToDepositTest({ depositVault, owner }, 2.2, {
+            from: regularAccounts[0],
+          });
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const { accessControl, owner, depositVault, regularAccounts, roles } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'setMinMTokenAmountForFirstDeposit(uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setMinAmountToDepositTest({ depositVault, owner }, 2.2, {
+            from: regularAccounts[0],
+          });
+        });
       });
 
       describe('setMaxSupplyCap()', () => {
@@ -656,6 +707,51 @@ export const depositVaultSuits = (
 
           await setMaxSupplyCapTest({ depositVault, owner }, 1.1, {
             revertMessage: 'Pausable: fn paused',
+          });
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, depositVault, regularAccounts } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'setMaxSupplyCap(uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setMaxSupplyCapTest({ depositVault, owner }, 2.2, {
+            from: regularAccounts[0],
+          });
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const { accessControl, owner, depositVault, regularAccounts, roles } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'setMaxSupplyCap(uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setMaxSupplyCapTest({ depositVault, owner }, 2.2, {
+            from: regularAccounts[0],
           });
         });
       });
@@ -687,6 +783,69 @@ export const depositVaultSuits = (
           await setMinAmountTest({ vault: depositVault, owner }, 1.1, {
             revertMessage: 'Pausable: fn paused',
           });
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, depositVault, regularAccounts } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'setMinAmount(uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setMinAmountTest({ vault: depositVault, owner }, 200, {
+            from: regularAccounts[0],
+          });
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const { accessControl, owner, depositVault, regularAccounts, roles } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'setMinAmount(uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setMinAmountTest({ vault: depositVault, owner }, 200, {
+            from: regularAccounts[0],
+          });
+        });
+      });
+
+      describe('pauseFn()', () => {
+        it('vault admin can pauseFn / unpauseFn other selectors while pauseFn(bytes4) is paused', async () => {
+          const { depositVault } = await loadDvFixture();
+
+          const pauseFnSelector = encodeFnSelector('pauseFn(bytes4)');
+          const otherSelector = encodeFnSelector('setMinAmount(uint256)');
+
+          await pauseVaultFn(depositVault, pauseFnSelector);
+          expect(await depositVault.fnPaused(pauseFnSelector)).eq(true);
+
+          await pauseVaultFn(depositVault, otherSelector);
+          expect(await depositVault.fnPaused(otherSelector)).eq(true);
+
+          await unpauseVaultFn(depositVault, otherSelector);
+          expect(await depositVault.fnPaused(otherSelector)).eq(false);
         });
       });
 
@@ -758,6 +917,55 @@ export const depositVaultSuits = (
             { window: days(1), limit: parseUnits('2000') },
           );
         });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, depositVault, regularAccounts } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'setInstantLimitConfig(uint256,uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setInstantLimitConfigTest(
+            { vault: depositVault, owner },
+            parseUnits('1000'),
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const { accessControl, owner, depositVault, regularAccounts, roles } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'setInstantLimitConfig(uint256,uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setInstantLimitConfigTest(
+            { vault: depositVault, owner },
+            parseUnits('1000'),
+            { from: regularAccounts[0] },
+          );
+        });
       });
 
       describe('removeInstantLimitConfig()', () => {
@@ -807,6 +1015,65 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             days(1),
             { revertMessage: 'Pausable: fn paused' },
+          );
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, depositVault, regularAccounts } =
+            await loadDvFixture();
+
+          await setInstantLimitConfigTest(
+            { vault: depositVault, owner },
+            parseUnits('1000'),
+          );
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'removeInstantLimitConfig(uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await removeInstantLimitConfigTest(
+            { vault: depositVault, owner },
+            days(1),
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const { accessControl, owner, depositVault, regularAccounts, roles } =
+            await loadDvFixture();
+
+          await setInstantLimitConfigTest(
+            { vault: depositVault, owner },
+            parseUnits('1000'),
+          );
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'removeInstantLimitConfig(uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await removeInstantLimitConfigTest(
+            { vault: depositVault, owner },
+            days(1),
+            { from: regularAccounts[0] },
           );
         });
 
@@ -894,6 +1161,51 @@ export const depositVaultSuits = (
 
           await greenListEnable({ greenlistable: depositVault, owner }, true, {
             revertMessage: 'Pausable: fn paused',
+          });
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, depositVault, regularAccounts } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'setGreenlistEnable(bool)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await greenListEnable({ greenlistable: depositVault, owner }, true, {
+            from: regularAccounts[0],
+          });
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const { accessControl, owner, depositVault, regularAccounts, roles } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'setGreenlistEnable(bool)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await greenListEnable({ greenlistable: depositVault, owner }, true, {
+            from: regularAccounts[0],
           });
         });
       });
@@ -1040,6 +1352,76 @@ export const depositVaultSuits = (
             { revertMessage: 'Pausable: fn paused' },
           );
         });
+
+        it('succeeds with only scoped function permission', async () => {
+          const {
+            accessControl,
+            owner,
+            depositVault,
+            regularAccounts,
+            stableCoins,
+            dataFeed,
+          } = await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'addPaymentToken(address,address,uint256,uint256,bool)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.usdc,
+            dataFeed.address,
+            0,
+            true,
+            constants.MaxUint256,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            depositVault,
+            regularAccounts,
+            roles,
+            stableCoins,
+            dataFeed,
+          } = await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'addPaymentToken(address,address,uint256,uint256,bool)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.usdt,
+            dataFeed.address,
+            0,
+            true,
+            constants.MaxUint256,
+            { from: regularAccounts[0] },
+          );
+        });
       });
 
       describe('addWaivedFeeAccount()', () => {
@@ -1088,6 +1470,55 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             owner.address,
             { revertMessage: 'Pausable: fn paused' },
+          );
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, depositVault, regularAccounts } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'addWaivedFeeAccount(address)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await addWaivedFeeAccountTest(
+            { vault: depositVault, owner },
+            regularAccounts[1].address,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const { accessControl, owner, depositVault, regularAccounts, roles } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'addWaivedFeeAccount(address)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await addWaivedFeeAccountTest(
+            { vault: depositVault, owner },
+            regularAccounts[2].address,
+            { from: regularAccounts[0] },
           );
         });
       });
@@ -1145,6 +1576,65 @@ export const depositVaultSuits = (
             { revertMessage: 'Pausable: fn paused' },
           );
         });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, depositVault, regularAccounts } =
+            await loadDvFixture();
+
+          await addWaivedFeeAccountTest(
+            { vault: depositVault, owner },
+            regularAccounts[1].address,
+          );
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'removeWaivedFeeAccount(address)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await removeWaivedFeeAccountTest(
+            { vault: depositVault, owner },
+            regularAccounts[1].address,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const { accessControl, owner, depositVault, regularAccounts, roles } =
+            await loadDvFixture();
+
+          await addWaivedFeeAccountTest(
+            { vault: depositVault, owner },
+            regularAccounts[2].address,
+          );
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'removeWaivedFeeAccount(address)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await removeWaivedFeeAccountTest(
+            { vault: depositVault, owner },
+            regularAccounts[2].address,
+            { from: regularAccounts[0] },
+          );
+        });
       });
 
       describe('setFee()', () => {
@@ -1183,6 +1673,51 @@ export const depositVaultSuits = (
 
           await setInstantFeeTest({ vault: depositVault, owner }, 100, {
             revertMessage: 'Pausable: fn paused',
+          });
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, depositVault, regularAccounts } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'setInstantFee(uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setInstantFeeTest({ vault: depositVault, owner }, 100, {
+            from: regularAccounts[0],
+          });
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const { accessControl, owner, depositVault, regularAccounts, roles } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'setInstantFee(uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setInstantFeeTest({ vault: depositVault, owner }, 100, {
+            from: regularAccounts[0],
           });
         });
       });
@@ -1246,6 +1781,57 @@ export const depositVaultSuits = (
             { revertMessage: 'Pausable: fn paused' },
           );
         });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, depositVault, regularAccounts } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'setMinMaxInstantFee(uint64,uint64)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setMinMaxInstantFeeTest(
+            { vault: depositVault, owner },
+            10,
+            5000,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const { accessControl, owner, depositVault, regularAccounts, roles } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'setMinMaxInstantFee(uint64,uint64)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setMinMaxInstantFeeTest(
+            { vault: depositVault, owner },
+            10,
+            5000,
+            { from: regularAccounts[0] },
+          );
+        });
       });
 
       describe('setVariabilityTolerance()', () => {
@@ -1290,6 +1876,55 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             100,
             { revertMessage: 'Pausable: fn paused' },
+          );
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, depositVault, regularAccounts } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'setVariationTolerance(uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setVariabilityToleranceTest(
+            { vault: depositVault, owner },
+            100,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const { accessControl, owner, depositVault, regularAccounts, roles } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'setVariationTolerance(uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setVariabilityToleranceTest(
+            { vault: depositVault, owner },
+            100,
+            { from: regularAccounts[0] },
           );
         });
       });
@@ -1402,6 +2037,84 @@ export const depositVaultSuits = (
             { revertMessage: 'Pausable: fn paused' },
           );
         });
+
+        it('succeeds with only scoped function permission', async () => {
+          const {
+            accessControl,
+            owner,
+            depositVault,
+            regularAccounts,
+            stableCoins,
+            dataFeed,
+          } = await loadDvFixture();
+
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.usdc,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'removePaymentToken(address)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await removePaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.usdc.address,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            depositVault,
+            regularAccounts,
+            roles,
+            stableCoins,
+            dataFeed,
+          } = await loadDvFixture();
+
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.usdt,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'removePaymentToken(address)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await removePaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.usdt.address,
+            { from: regularAccounts[0] },
+          );
+        });
       });
 
       describe('withdrawToken()', () => {
@@ -1420,8 +2133,7 @@ export const depositVaultSuits = (
         });
 
         it('should fail: when there is no token in vault', async () => {
-          const { owner, depositVault, regularAccounts, stableCoins } =
-            await loadDvFixture();
+          const { owner, depositVault, stableCoins } = await loadDvFixture();
           await withdrawTest(
             { vault: depositVault, owner },
             stableCoins.dai,
@@ -1431,8 +2143,7 @@ export const depositVaultSuits = (
         });
 
         it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-          const { depositVault, regularAccounts, stableCoins, owner } =
-            await loadDvFixture();
+          const { depositVault, stableCoins, owner } = await loadDvFixture();
           await mintToken(stableCoins.dai, depositVault, 1);
           await withdrawTest(
             { vault: depositVault, owner },
@@ -1454,6 +2165,72 @@ export const depositVaultSuits = (
             stableCoins.dai,
             1,
             { revertMessage: 'Pausable: fn paused' },
+          );
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const {
+            accessControl,
+            owner,
+            depositVault,
+            regularAccounts,
+            stableCoins,
+          } = await loadDvFixture();
+
+          await mintToken(stableCoins.dai, depositVault, 1);
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'withdrawToken(address,uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await withdrawTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            1,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            depositVault,
+            regularAccounts,
+            roles,
+            stableCoins,
+          } = await loadDvFixture();
+
+          await mintToken(stableCoins.dai, depositVault, 1);
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'withdrawToken(address,uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await withdrawTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            1,
+            { from: regularAccounts[0] },
           );
         });
       });
@@ -1503,6 +2280,63 @@ export const depositVaultSuits = (
           await expect(
             depositVault.freeFromMinAmount(regularAccounts[0].address, true),
           ).to.be.revertedWith('Pausable: fn paused');
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, depositVault, regularAccounts } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'freeFromMinAmount(address,bool)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await expect(
+            depositVault
+              .connect(regularAccounts[0])
+              .freeFromMinAmount(regularAccounts[2].address, true),
+          ).to.not.reverted;
+
+          expect(
+            await depositVault.isFreeFromMinAmount(regularAccounts[2].address),
+          ).to.eq(true);
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const { accessControl, owner, depositVault, regularAccounts, roles } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'freeFromMinAmount(address,bool)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await expect(
+            depositVault
+              .connect(regularAccounts[0])
+              .freeFromMinAmount(regularAccounts[3].address, true),
+          ).to.not.reverted;
+
+          expect(
+            await depositVault.isFreeFromMinAmount(regularAccounts[3].address),
+          ).to.eq(true);
         });
       });
 
@@ -1710,6 +2544,86 @@ export const depositVaultSuits = (
             { revertMessage: 'Pausable: fn paused' },
           );
         });
+
+        it('succeeds with only scoped function permission', async () => {
+          const {
+            accessControl,
+            owner,
+            depositVault,
+            regularAccounts,
+            stableCoins,
+            dataFeed,
+          } = await loadDvFixture();
+
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'changeTokenAllowance(address,uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await changeTokenAllowanceTest(
+            { vault: depositVault, owner },
+            stableCoins.dai.address,
+            100000000,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            depositVault,
+            regularAccounts,
+            roles,
+            stableCoins,
+            dataFeed,
+          } = await loadDvFixture();
+
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.usdc,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'changeTokenAllowance(address,uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await changeTokenAllowanceTest(
+            { vault: depositVault, owner },
+            stableCoins.usdc.address,
+            100000000,
+            { from: regularAccounts[0] },
+          );
+        });
       });
 
       describe('changeTokenFee()', () => {
@@ -1790,6 +2704,86 @@ export const depositVaultSuits = (
             stableCoins.dai.address,
             100,
             { revertMessage: 'Pausable: fn paused' },
+          );
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const {
+            accessControl,
+            owner,
+            depositVault,
+            regularAccounts,
+            stableCoins,
+            dataFeed,
+          } = await loadDvFixture();
+
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'changeTokenFee(address,uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await changeTokenFeeTest(
+            { vault: depositVault, owner },
+            stableCoins.dai.address,
+            100,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            depositVault,
+            regularAccounts,
+            roles,
+            stableCoins,
+            dataFeed,
+          } = await loadDvFixture();
+
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.usdc,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'changeTokenFee(address,uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await changeTokenFeeTest(
+            { vault: depositVault, owner },
+            stableCoins.usdc.address,
+            100,
+            { from: regularAccounts[0] },
           );
         });
       });

@@ -1,11 +1,14 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 
+import { encodeFnSelector } from '../../helpers/utils';
 import { GreenlistableTester__factory } from '../../typechain-types';
 import {
   acErrors,
   greenList,
   greenListToggler,
+  setFunctionPermissionTester,
+  setupFunctionAccessGrantOperator,
   unGreenList,
 } from '../common/ac.helpers';
 import { defaultDeploy } from '../common/fixtures';
@@ -38,7 +41,7 @@ describe('Greenlistable', function () {
   });
 
   it('onlyInitializing unchained', async () => {
-    const { owner, accessControl } = await loadFixture(defaultDeploy);
+    const { owner } = await loadFixture(defaultDeploy);
 
     const greenListable = await new GreenlistableTester__factory(
       owner,
@@ -151,6 +154,86 @@ describe('Greenlistable', function () {
       await greenListEnable(
         { greenlistable: greenListableTester, owner },
         true,
+      );
+    });
+
+    it('succeeds with only scoped function permission', async () => {
+      const { accessControl, greenListableTester, owner, regularAccounts } =
+        await loadFixture(defaultDeploy);
+
+      const greenlistAdmin = await greenListableTester.greenlistAdminRole();
+      const selector = encodeFnSelector('setGreenlistEnable(bool)');
+
+      await setupFunctionAccessGrantOperator({
+        accessControl,
+        owner,
+        functionAccessAdminRole: greenlistAdmin,
+        targetContract: greenListableTester.address,
+        functionSelector: selector,
+        grantOperator: owner,
+      });
+
+      const user = regularAccounts[0];
+      await setFunctionPermissionTester({ accessControl, owner }, [
+        {
+          functionAccessAdminRole: greenlistAdmin,
+          targetContract: greenListableTester.address,
+          functionSelector: selector,
+          account: user.address,
+          enabled: true,
+        },
+      ]);
+
+      expect(await accessControl.hasRole(greenlistAdmin, user.address)).eq(
+        false,
+      );
+
+      await greenListEnable(
+        { greenlistable: greenListableTester, owner },
+        true,
+        { from: user },
+      );
+    });
+
+    it('succeeds with scoped permission and greenlist admin role', async () => {
+      const { accessControl, greenListableTester, owner, regularAccounts } =
+        await loadFixture(defaultDeploy);
+
+      const greenlistAdmin = await greenListableTester.greenlistAdminRole();
+      const selector = encodeFnSelector('setGreenlistEnable(bool)');
+      const user = regularAccounts[0];
+
+      await setupFunctionAccessGrantOperator({
+        accessControl,
+        owner,
+        functionAccessAdminRole: greenlistAdmin,
+        targetContract: greenListableTester.address,
+        functionSelector: selector,
+        grantOperator: owner,
+      });
+
+      await setFunctionPermissionTester({ accessControl, owner }, [
+        {
+          functionAccessAdminRole: greenlistAdmin,
+          targetContract: greenListableTester.address,
+          functionSelector: selector,
+          account: user.address,
+          enabled: true,
+        },
+      ]);
+
+      await accessControl.grantRole(greenlistAdmin, user.address);
+
+      expect(await accessControl.hasRole(greenlistAdmin, user.address)).eq(
+        true,
+      );
+
+      await greenListEnable(
+        { greenlistable: greenListableTester, owner },
+        true,
+        {
+          from: user,
+        },
       );
     });
   });

@@ -22,12 +22,18 @@ import {
   RedemptionVaultWithMToken,
   RedemptionVaultWithUSTB,
 } from '../../../typechain-types';
-import { acErrors, blackList, greenList } from '../../common/ac.helpers';
+import {
+  acErrors,
+  blackList,
+  greenList,
+  setupVaultScopedFunctionPermission,
+} from '../../common/ac.helpers';
 import {
   approveBase18,
   mintToken,
   pauseVault,
   pauseVaultFn,
+  unpauseVaultFn,
 } from '../../common/common.helpers';
 import {
   setMinGrowthApr,
@@ -2707,6 +2713,60 @@ export const redemptionVaultSuits = (
             { revertMessage: 'Pausable: fn paused' },
           );
         });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setTokensReceiver(address)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setTokensReceiverTest(
+            { vault: redemptionVault, owner },
+            regularAccounts[1].address,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+          } = await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setTokensReceiver(address)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setTokensReceiverTest(
+            { vault: redemptionVault, owner },
+            regularAccounts[2].address,
+            { from: regularAccounts[0] },
+          );
+        });
       });
 
       describe('setMinAmount()', () => {
@@ -2737,6 +2797,74 @@ export const redemptionVaultSuits = (
           await setMinAmountTest({ vault: redemptionVault, owner }, 1.1, {
             revertMessage: 'Pausable: fn paused',
           });
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setMinAmount(uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setMinAmountTest({ vault: redemptionVault, owner }, 200, {
+            from: regularAccounts[0],
+          });
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+          } = await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setMinAmount(uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setMinAmountTest({ vault: redemptionVault, owner }, 200, {
+            from: regularAccounts[0],
+          });
+        });
+      });
+
+      describe('pauseFn()', () => {
+        it('vault admin can pauseFn / unpauseFn other selectors while pauseFn(bytes4) is paused', async () => {
+          const { redemptionVault } = await loadRvFixture();
+
+          const pauseFnSelector = encodeFnSelector('pauseFn(bytes4)');
+          const otherSelector = encodeFnSelector('setMinAmount(uint256)');
+
+          await pauseVaultFn(redemptionVault, pauseFnSelector);
+          expect(await redemptionVault.fnPaused(pauseFnSelector)).eq(true);
+
+          await pauseVaultFn(redemptionVault, otherSelector);
+          expect(await redemptionVault.fnPaused(otherSelector)).eq(true);
+
+          await unpauseVaultFn(redemptionVault, otherSelector);
+          expect(await redemptionVault.fnPaused(otherSelector)).eq(false);
         });
       });
 
@@ -2781,6 +2909,60 @@ export const redemptionVaultSuits = (
             { revertMessage: 'Pausable: fn paused' },
           );
         });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setFeeReceiver(address)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setFeeReceiverTest(
+            { vault: redemptionVault, owner },
+            regularAccounts[1].address,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+          } = await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setFeeReceiver(address)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setFeeReceiverTest(
+            { vault: redemptionVault, owner },
+            regularAccounts[2].address,
+            { from: regularAccounts[0] },
+          );
+        });
       });
 
       describe('setGreenlistEnable()', () => {
@@ -2822,6 +3004,60 @@ export const redemptionVaultSuits = (
             {
               revertMessage: 'Pausable: fn paused',
             },
+          );
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setGreenlistEnable(bool)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await greenListEnable(
+            { greenlistable: redemptionVault, owner },
+            true,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+          } = await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setGreenlistEnable(bool)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await greenListEnable(
+            { greenlistable: redemptionVault, owner },
+            true,
+            { from: regularAccounts[0] },
           );
         });
       });
@@ -2895,6 +3131,60 @@ export const redemptionVaultSuits = (
             { window: days(1), limit: parseUnits('2000') },
           );
         });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setInstantLimitConfig(uint256,uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setInstantLimitConfigTest(
+            { vault: redemptionVault, owner },
+            parseUnits('1000'),
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+          } = await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setInstantLimitConfig(uint256,uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setInstantLimitConfigTest(
+            { vault: redemptionVault, owner },
+            parseUnits('1000'),
+            { from: regularAccounts[0] },
+          );
+        });
       });
 
       describe('removeInstantLimitConfigTest()', () => {
@@ -2945,6 +3235,70 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             days(1),
             { revertMessage: 'Pausable: fn paused' },
+          );
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          await setInstantLimitConfigTest(
+            { vault: redemptionVault, owner },
+            parseUnits('1000'),
+          );
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'removeInstantLimitConfig(uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await removeInstantLimitConfigTest(
+            { vault: redemptionVault, owner },
+            days(1),
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+          } = await loadRvFixture();
+
+          await setInstantLimitConfigTest(
+            { vault: redemptionVault, owner },
+            parseUnits('1000'),
+          );
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'removeInstantLimitConfig(uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await removeInstantLimitConfigTest(
+            { vault: redemptionVault, owner },
+            days(1),
+            { from: regularAccounts[0] },
           );
         });
 
@@ -3150,6 +3504,76 @@ export const redemptionVaultSuits = (
             { revertMessage: 'Pausable: fn paused' },
           );
         });
+
+        it('succeeds with only scoped function permission', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            stableCoins,
+            dataFeed,
+          } = await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'addPaymentToken(address,address,uint256,uint256,bool)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.usdc,
+            dataFeed.address,
+            0,
+            true,
+            constants.MaxUint256,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+            stableCoins,
+            dataFeed,
+          } = await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'addPaymentToken(address,address,uint256,uint256,bool)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.usdt,
+            dataFeed.address,
+            0,
+            true,
+            constants.MaxUint256,
+            { from: regularAccounts[0] },
+          );
+        });
       });
 
       describe('addWaivedFeeAccount()', () => {
@@ -3199,6 +3623,60 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             owner.address,
             { revertMessage: 'Pausable: fn paused' },
+          );
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'addWaivedFeeAccount(address)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await addWaivedFeeAccountTest(
+            { vault: redemptionVault, owner },
+            regularAccounts[1].address,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+          } = await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'addWaivedFeeAccount(address)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await addWaivedFeeAccountTest(
+            { vault: redemptionVault, owner },
+            regularAccounts[2].address,
+            { from: regularAccounts[0] },
           );
         });
       });
@@ -3257,6 +3735,70 @@ export const redemptionVaultSuits = (
             { revertMessage: 'Pausable: fn paused' },
           );
         });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          await addWaivedFeeAccountTest(
+            { vault: redemptionVault, owner },
+            regularAccounts[1].address,
+          );
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'removeWaivedFeeAccount(address)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await removeWaivedFeeAccountTest(
+            { vault: redemptionVault, owner },
+            regularAccounts[1].address,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+          } = await loadRvFixture();
+
+          await addWaivedFeeAccountTest(
+            { vault: redemptionVault, owner },
+            regularAccounts[2].address,
+          );
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'removeWaivedFeeAccount(address)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await removeWaivedFeeAccountTest(
+            { vault: redemptionVault, owner },
+            regularAccounts[2].address,
+            { from: regularAccounts[0] },
+          );
+        });
       });
 
       describe('setFee()', () => {
@@ -3296,6 +3838,56 @@ export const redemptionVaultSuits = (
 
           await setInstantFeeTest({ vault: redemptionVault, owner }, 100, {
             revertMessage: 'Pausable: fn paused',
+          });
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setInstantFee(uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setInstantFeeTest({ vault: redemptionVault, owner }, 100, {
+            from: regularAccounts[0],
+          });
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+          } = await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setInstantFee(uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setInstantFeeTest({ vault: redemptionVault, owner }, 100, {
+            from: regularAccounts[0],
           });
         });
       });
@@ -3360,6 +3952,62 @@ export const redemptionVaultSuits = (
             { revertMessage: 'Pausable: fn paused' },
           );
         });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setMinMaxInstantFee(uint64,uint64)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setMinMaxInstantFeeTest(
+            { vault: redemptionVault, owner },
+            10,
+            5000,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+          } = await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setMinMaxInstantFee(uint64,uint64)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setMinMaxInstantFeeTest(
+            { vault: redemptionVault, owner },
+            10,
+            5000,
+            { from: regularAccounts[0] },
+          );
+        });
       });
 
       describe('setVariabilityTolerance()', () => {
@@ -3416,6 +4064,60 @@ export const redemptionVaultSuits = (
             { revertMessage: 'Pausable: fn paused' },
           );
         });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setVariationTolerance(uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setVariabilityToleranceTest(
+            { vault: redemptionVault, owner },
+            100,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+          } = await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setVariationTolerance(uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setVariabilityToleranceTest(
+            { vault: redemptionVault, owner },
+            100,
+            { from: regularAccounts[0] },
+          );
+        });
       });
 
       describe('setRequestRedeemer()', () => {
@@ -3463,6 +4165,60 @@ export const redemptionVaultSuits = (
             { revertMessage: 'Pausable: fn paused' },
           );
         });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setRequestRedeemer(address)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setRequestRedeemerTest(
+            { redemptionVault, owner },
+            regularAccounts[1].address,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+          } = await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setRequestRedeemer(address)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setRequestRedeemerTest(
+            { redemptionVault, owner },
+            regularAccounts[2].address,
+            { from: regularAccounts[0] },
+          );
+        });
       });
 
       describe('setLoanLp()', () => {
@@ -3503,6 +4259,60 @@ export const redemptionVaultSuits = (
           await setLoanLpTest({ redemptionVault, owner }, owner.address, {
             revertMessage: 'Pausable: fn paused',
           });
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setLoanLp(address)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setLoanLpTest(
+            { redemptionVault, owner },
+            regularAccounts[1].address,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+          } = await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setLoanLp(address)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setLoanLpTest(
+            { redemptionVault, owner },
+            regularAccounts[2].address,
+            { from: regularAccounts[0] },
+          );
         });
       });
 
@@ -3550,6 +4360,60 @@ export const redemptionVaultSuits = (
             { revertMessage: 'Pausable: fn paused' },
           );
         });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setLoanLpFeeReceiver(address)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setLoanLpFeeReceiverTest(
+            { redemptionVault, owner },
+            regularAccounts[1].address,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+          } = await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setLoanLpFeeReceiver(address)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setLoanLpFeeReceiverTest(
+            { redemptionVault, owner },
+            regularAccounts[2].address,
+            { from: regularAccounts[0] },
+          );
+        });
       });
 
       describe('setLoanRepaymentAddress()', () => {
@@ -3589,6 +4453,60 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner },
             regularAccounts[0].address,
             { revertMessage: 'Pausable: fn paused' },
+          );
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setLoanRepaymentAddress(address)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setLoanRepaymentAddressTest(
+            { redemptionVault, owner },
+            regularAccounts[1].address,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+          } = await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setLoanRepaymentAddress(address)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setLoanRepaymentAddressTest(
+            { redemptionVault, owner },
+            regularAccounts[2].address,
+            { from: regularAccounts[0] },
           );
         });
       });
@@ -3632,6 +4550,60 @@ export const redemptionVaultSuits = (
             { revertMessage: 'Pausable: fn paused' },
           );
         });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setLoanSwapperVault(address)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setLoanSwapperVaultTest(
+            { redemptionVault, owner },
+            regularAccounts[1].address,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+          } = await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setLoanSwapperVault(address)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setLoanSwapperVaultTest(
+            { redemptionVault, owner },
+            regularAccounts[2].address,
+            { from: regularAccounts[0] },
+          );
+        });
       });
 
       describe('setMaxLoanApr()', () => {
@@ -3670,6 +4642,56 @@ export const redemptionVaultSuits = (
 
           await setMaxLoanAprTest({ redemptionVault, owner }, 100, {
             revertMessage: 'Pausable: fn paused',
+          });
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setMaxLoanApr(uint64)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setMaxLoanAprTest({ redemptionVault, owner }, 100, {
+            from: regularAccounts[0],
+          });
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+          } = await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setMaxLoanApr(uint64)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setMaxLoanAprTest({ redemptionVault, owner }, 100, {
+            from: regularAccounts[0],
           });
         });
       });
@@ -3785,6 +4807,84 @@ export const redemptionVaultSuits = (
             { revertMessage: 'Pausable: fn paused' },
           );
         });
+
+        it('succeeds with only scoped function permission', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            stableCoins,
+            dataFeed,
+          } = await loadRvFixture();
+
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.usdc,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'removePaymentToken(address)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await removePaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.usdc.address,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+            stableCoins,
+            dataFeed,
+          } = await loadRvFixture();
+
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.usdt,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'removePaymentToken(address)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await removePaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.usdt.address,
+            { from: regularAccounts[0] },
+          );
+        });
       });
 
       describe('withdrawToken()', () => {
@@ -3836,6 +4936,72 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             1,
             { revertMessage: 'Pausable: fn paused' },
+          );
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            stableCoins,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, redemptionVault, 1);
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'withdrawToken(address,uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await withdrawTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            1,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+            stableCoins,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, redemptionVault, 1);
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'withdrawToken(address,uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await withdrawTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            1,
+            { from: regularAccounts[0] },
           );
         });
       });
@@ -3895,6 +5061,72 @@ export const redemptionVaultSuits = (
           await expect(
             redemptionVault.freeFromMinAmount(regularAccounts[0].address, true),
           ).to.be.revertedWith('Pausable: fn paused');
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'freeFromMinAmount(address,bool)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await expect(
+            redemptionVault
+              .connect(regularAccounts[0])
+              .freeFromMinAmount(regularAccounts[2].address, true),
+          ).to.not.reverted;
+
+          expect(
+            await redemptionVault.isFreeFromMinAmount(
+              regularAccounts[2].address,
+            ),
+          ).to.eq(true);
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+          } = await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'freeFromMinAmount(address,bool)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await expect(
+            redemptionVault
+              .connect(regularAccounts[0])
+              .freeFromMinAmount(regularAccounts[3].address, true),
+          ).to.not.reverted;
+
+          expect(
+            await redemptionVault.isFreeFromMinAmount(
+              regularAccounts[3].address,
+            ),
+          ).to.eq(true);
         });
       });
 
@@ -3982,6 +5214,86 @@ export const redemptionVaultSuits = (
             { revertMessage: 'Pausable: fn paused' },
           );
         });
+
+        it('succeeds with only scoped function permission', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            stableCoins,
+            dataFeed,
+          } = await loadRvFixture();
+
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'changeTokenAllowance(address,uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await changeTokenAllowanceTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai.address,
+            100000000,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+            stableCoins,
+            dataFeed,
+          } = await loadRvFixture();
+
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.usdc,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'changeTokenAllowance(address,uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await changeTokenAllowanceTest(
+            { vault: redemptionVault, owner },
+            stableCoins.usdc.address,
+            100000000,
+            { from: regularAccounts[0] },
+          );
+        });
       });
 
       describe('changeTokenFee()', () => {
@@ -4065,6 +5377,86 @@ export const redemptionVaultSuits = (
             stableCoins.dai.address,
             100,
             { revertMessage: 'Pausable: fn paused' },
+          );
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            stableCoins,
+            dataFeed,
+          } = await loadRvFixture();
+
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'changeTokenFee(address,uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await changeTokenFeeTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai.address,
+            100,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+            stableCoins,
+            dataFeed,
+          } = await loadRvFixture();
+
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.usdc,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'changeTokenFee(address,uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await changeTokenFeeTest(
+            { vault: redemptionVault, owner },
+            stableCoins.usdc.address,
+            100,
+            { from: regularAccounts[0] },
           );
         });
       });

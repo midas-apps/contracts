@@ -41,78 +41,153 @@ contract MidasAccessControl is
      */
     function initialize() external initializer {
         __AccessControl_init();
-        _setupRoles(msg.sender);
+        _setupRoles(_msgSender());
     }
 
     /**
      * @inheritdoc IMidasAccessControl
      */
-    function setFunctionAccessAdminRoleEnabled(
-        bytes32 functionAccessAdminRole,
-        bool enabled
+    function setFunctionAccessAdminRoleEnabledMult(
+        SetFunctionAccessAdminRoleEnabledParams[] calldata params
     ) external {
         _checkRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        functionAccessAdminRoleEnabled[functionAccessAdminRole] = enabled;
-        emit FunctionAccessAdminRoleEnabled(functionAccessAdminRole, enabled);
+        for (uint256 i = 0; i < params.length; ++i) {
+            SetFunctionAccessAdminRoleEnabledParams memory param = params[i];
+
+            // if already enabled, skip and do not emit event
+            if (functionAccessAdminRoleEnabled[param.functionAccessAdminRole]) {
+                continue;
+            }
+
+            functionAccessAdminRoleEnabled[
+                param.functionAccessAdminRole
+            ] = param.enabled;
+            emit FunctionAccessAdminRoleEnable(
+                param.functionAccessAdminRole,
+                param.enabled
+            );
+        }
     }
 
     /**
      * @inheritdoc IMidasAccessControl
      */
-    function setFunctionAccessGrantOperator(
-        bytes32 functionAccessAdminRole,
-        address targetContract,
-        bytes4 functionSelector,
-        address operator,
-        bool enabled
+    function setFunctionAccessGrantOperatorMult(
+        SetFunctionAccessGrantOperatorParams[] calldata params
     ) external {
-        require(
-            functionAccessAdminRoleEnabled[functionAccessAdminRole],
-            "MAC: FA admin role disabled"
-        );
-        _checkRole(functionAccessAdminRole, _msgSender());
-        bytes32 key = _functionPermissionKey(
-            functionAccessAdminRole,
-            targetContract,
-            functionSelector
-        );
-        _functionAccessGrantOperators[key][operator] = enabled;
-        emit FunctionAccessGrantOperatorUpdated(
-            functionAccessAdminRole,
-            targetContract,
-            functionSelector,
-            operator,
-            enabled
-        );
+        for (uint256 i = 0; i < params.length; ++i) {
+            SetFunctionAccessGrantOperatorParams memory param = params[i];
+            require(
+                functionAccessAdminRoleEnabled[param.functionAccessAdminRole],
+                "MAC: FA admin role disabled"
+            );
+            _checkRole(param.functionAccessAdminRole, _msgSender());
+            bytes32 key = _functionPermissionKey(
+                param.functionAccessAdminRole,
+                param.targetContract,
+                param.functionSelector
+            );
+
+            // if already enabled, skip and do not emit event
+            if (_functionAccessGrantOperators[key][param.operator]) {
+                continue;
+            }
+
+            _functionAccessGrantOperators[key][param.operator] = param.enabled;
+            emit FunctionAccessGrantOperatorUpdate(
+                param.functionAccessAdminRole,
+                param.targetContract,
+                param.functionSelector,
+                param.operator,
+                param.enabled
+            );
+        }
     }
 
     /**
      * @inheritdoc IMidasAccessControl
      */
-    function setFunctionPermission(
-        bytes32 functionAccessAdminRole,
-        address targetContract,
-        bytes4 functionSelector,
-        address account,
-        bool enabled
+    function setFunctionPermissionMult(
+        SetFunctionPermissionParams[] calldata params
     ) external {
-        bytes32 key = _functionPermissionKey(
-            functionAccessAdminRole,
-            targetContract,
-            functionSelector
-        );
-        require(
-            _functionAccessGrantOperators[key][_msgSender()],
-            "MAC: not FA grant operator"
-        );
-        _functionPermissions[key][account] = enabled;
-        emit FunctionPermissionUpdated(
-            functionAccessAdminRole,
-            targetContract,
-            account,
-            functionSelector,
-            enabled
-        );
+        for (uint256 i = 0; i < params.length; ++i) {
+            SetFunctionPermissionParams memory param = params[i];
+            bytes32 key = _functionPermissionKey(
+                param.functionAccessAdminRole,
+                param.targetContract,
+                param.functionSelector
+            );
+            require(
+                _functionAccessGrantOperators[key][_msgSender()],
+                "MAC: not FA grant operator"
+            );
+
+            // if already enabled, skip and do not emit event
+            if (_functionPermissions[key][param.account]) {
+                continue;
+            }
+
+            _functionPermissions[key][param.account] = param.enabled;
+            emit FunctionPermissionUpdate(
+                param.functionAccessAdminRole,
+                param.targetContract,
+                param.account,
+                param.functionSelector,
+                param.enabled
+            );
+        }
+    }
+
+    /**
+     * @notice grant multiple roles to multiple users
+     * in one transaction
+     * @dev length`s of 2 arays should match
+     * @param roles array of bytes32 roles
+     * @param addresses array of user addresses
+     */
+    function grantRoleMult(bytes32[] memory roles, address[] memory addresses)
+        external
+    {
+        require(roles.length == addresses.length, "MAC: mismatch arrays");
+
+        for (uint256 i = 0; i < roles.length; ++i) {
+            _checkRole(getRoleAdmin(roles[i]), _msgSender());
+            _grantRole(roles[i], addresses[i]);
+        }
+    }
+
+    /**
+     * @notice revoke multiple roles from multiple users
+     * in one transaction
+     * @dev length`s of 2 arays should match
+     * @param roles array of bytes32 roles
+     * @param addresses array of user addresses
+     */
+    function revokeRoleMult(bytes32[] memory roles, address[] memory addresses)
+        external
+    {
+        require(roles.length == addresses.length, "MAC: mismatch arrays");
+        for (uint256 i = 0; i < roles.length; ++i) {
+            _checkRole(getRoleAdmin(roles[i]), _msgSender());
+            _revokeRole(roles[i], addresses[i]);
+        }
+    }
+
+    /**
+     * @inheritdoc IMidasAccessControl
+     */
+    function setRoleAdmin(bytes32 role, bytes32 newAdminRole) external {
+        _checkRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _setRoleAdmin(role, newAdminRole);
+    }
+
+    //solhint-disable disable-next-line
+    function renounceRole(bytes32, address)
+        public
+        pure
+        override(AccessControlUpgradeable, IAccessControlUpgradeable)
+    {
+        revert("MAC: Forbidden");
     }
 
     /**
@@ -147,61 +222,6 @@ contract MidasAccessControl is
             functionSelector
         );
         return _functionPermissions[key][account];
-    }
-
-    /**
-     * @notice grant multiple roles to multiple users
-     * in one transaction
-     * @dev length`s of 2 arays should match
-     * @param roles array of bytes32 roles
-     * @param addresses array of user addresses
-     */
-    function grantRoleMult(bytes32[] memory roles, address[] memory addresses)
-        external
-    {
-        require(roles.length == addresses.length, "MAC: mismatch arrays");
-
-        for (uint256 i = 0; i < roles.length; i++) {
-            _checkRole(getRoleAdmin(roles[i]), msg.sender);
-            _grantRole(roles[i], addresses[i]);
-        }
-    }
-
-    /**
-     * @notice revoke multiple roles from multiple users
-     * in one transaction
-     * @dev length`s of 2 arays should match
-     * @param roles array of bytes32 roles
-     * @param addresses array of user addresses
-     */
-    function revokeRoleMult(bytes32[] memory roles, address[] memory addresses)
-        external
-    {
-        require(roles.length == addresses.length, "MAC: mismatch arrays");
-        for (uint256 i = 0; i < roles.length; i++) {
-            _checkRole(getRoleAdmin(roles[i]), msg.sender);
-            _revokeRole(roles[i], addresses[i]);
-        }
-    }
-
-    /**
-     * @notice set the admin role for a specific role
-     * @dev can be called only by the address that holds current admin role
-     * @param role the role to set the admin role for
-     * @param newAdminRole the new admin role
-     */
-    function setRoleAdmin(bytes32 role, bytes32 newAdminRole) external {
-        _checkRole(getRoleAdmin(role), msg.sender);
-        _setRoleAdmin(role, newAdminRole);
-    }
-
-    //solhint-disable disable-next-line
-    function renounceRole(bytes32, address)
-        public
-        pure
-        override(AccessControlUpgradeable, IAccessControlUpgradeable)
-    {
-        revert("MAC: Forbidden");
     }
 
     /**
