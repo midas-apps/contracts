@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSEDI
-pragma solidity 0.8.9;
+pragma solidity 0.8.34;
 
 import "../access/Pausable.sol";
 import {MidasAccessControl} from "../access/MidasAccessControl.sol";

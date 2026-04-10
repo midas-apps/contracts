@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.22;
+pragma solidity 0.8.34;
 
 import {InterchainTokenExecutable} from "@axelar-network/interchain-token-service/contracts/executable/InterchainTokenExecutable.sol";
 import {IInterchainTokenService} from "@axelar-network/interchain-token-service/contracts/interfaces/IInterchainTokenService.sol";

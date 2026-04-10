@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.34;
 
 interface IUSTBRedemption {
     function SUPERSTATE_TOKEN() external view returns (address);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.34;
 
 import "../../interfaces/IDataFeed.sol";
 import "../../feeds/CompositeDataFeed.sol";

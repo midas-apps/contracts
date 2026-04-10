@@ -5,7 +5,7 @@
   "license": "AGPL-3.0",
   "author": "RedDuck Software",
   "engines": {
-    "node": ">=22"
+    "node": ">=22 <23"
   },
   "scripts": {
     "postinstall": "sh -c '[ \"$NODE_ENV\" = \"production\" ] || husky install'",
