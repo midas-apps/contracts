@@ -268,4 +268,16 @@ export const mTokensMetadata: Record<
     name: 'Midas Re7 Ethereum',
     symbol: 'mRe7ETH',
   },
+  bondUSD: {
+    name: 'Bond USD',
+    symbol: 'bondUSD',
+  },
+  bondETH: {
+    name: 'Bond ETH',
+    symbol: 'bondETH',
+  },
+  bondBTC: {
+    name: 'Bond BTC',
+    symbol: 'bondBTC',
+  },
 };
