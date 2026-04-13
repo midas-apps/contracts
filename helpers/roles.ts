@@ -71,6 +71,9 @@ const prefixes: Record<MTokenName, string> = {
   mTU: 'M_TU',
   mM1USD: 'M_M1_USD',
   mRe7ETH: 'M_RE7ETH',
+  bondUSD: 'BOND_USD',
+  bondETH: 'BOND_ETH',
+  bondBTC: 'BOND_BTC',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {

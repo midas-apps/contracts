@@ -1,4 +1,7 @@
 import { acremBTC1DeploymentConfig } from './acremBTC1';
+import { bondBTCDeploymentConfig } from './bondBTC';
+import { bondETHDeploymentConfig } from './bondETH';
+import { bondUSDDeploymentConfig } from './bondUSD';
 import { cUSDODeploymentConfig } from './cUSDO';
 import { dnETHDeploymentConfig } from './dnETH';
 import { dnFARTDeploymentConfig } from './dnFART';
@@ -135,4 +138,7 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mTU: mTUDeploymentConfig,
   mM1USD: mM1USDDeploymentConfig,
   mRe7ETH: mRe7ETHDeploymentConfig,
+  bondUSD: bondUSDDeploymentConfig,
+  bondETH: bondETHDeploymentConfig,
+  bondBTC: bondBTCDeploymentConfig,
 };
