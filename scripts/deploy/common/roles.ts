@@ -7,6 +7,11 @@ import {
   getNetworkConfig,
   sendAndWaitForCustomTxSign,
 } from './utils';
+import {
+  defaultDepositVaultPriority,
+  resolveVaultAddress,
+  roleGrantRedemptionVaultPriority,
+} from './vault-resolver';
 
 import { MTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
@@ -18,9 +23,9 @@ import { networkDeploymentConfigs } from '../configs/network-configs';
 type Address = `0x${string}`;
 
 export type GrantAllTokenRolesConfig = {
-  tokenManagerAddress?: Address;
+  tokenManagerAddress: Address;
   vaultsManagerAddress?: Address;
-  oracleManagerAddress?: Address;
+  oracleManagerAddress: Address;
 };
 
 const acAdminAddress = '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227';
@@ -74,12 +79,14 @@ export const grantAllProductRoles = async (
   const contractsRoles: string[] = [];
   const contractsAddresses: string[] = [];
 
-  const depositVault = tokenAddresses.depositVault;
-  const redemptionVault =
-    tokenAddresses.redemptionVaultSwapper ??
-    tokenAddresses.redemptionVaultBuidl ??
-    tokenAddresses.redemptionVaultUstb ??
-    tokenAddresses.redemptionVault;
+  const depositVault = resolveVaultAddress(
+    tokenAddresses,
+    defaultDepositVaultPriority,
+  );
+  const redemptionVault = resolveVaultAddress(
+    tokenAddresses,
+    roleGrantRedemptionVaultPriority,
+  );
 
   if (depositVault) {
     contractsRoles.push(tokenRoles.minter);
@@ -105,15 +112,11 @@ export const grantAllProductRoles = async (
         ...contractsRoles,
       ],
       [
-        ...tokenManagerRoles.map(
-          () => networkConfig.tokenManagerAddress ?? defaultManager,
-        ),
+        ...tokenManagerRoles.map(() => networkConfig.tokenManagerAddress),
         ...vaultManagerRoles.map(
           () => networkConfig.vaultsManagerAddress ?? defaultManager,
         ),
-        ...oracleManagerRoles.map(
-          () => networkConfig.oracleManagerAddress ?? defaultManager,
-        ),
+        ...oracleManagerRoles.map(() => networkConfig.oracleManagerAddress),
         ...contractsAddresses,
       ],
     ),

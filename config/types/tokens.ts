@@ -62,6 +62,12 @@ export enum MTokenNameEnum {
   sLINJ = 'sLINJ',
   mROX = 'mROX',
   weEUR = 'weEUR',
+  mTU = 'mTU',
+  mM1USD = 'mM1USD',
+  mRe7ETH = 'mRe7ETH',
+  bondUSD = 'bondUSD',
+  bondETH = 'bondETH',
+  bondBTC = 'bondBTC',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;

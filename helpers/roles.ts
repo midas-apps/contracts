@@ -68,6 +68,12 @@ const prefixes: Record<MTokenName, string> = {
   sLINJ: 'SL_INJ',
   mROX: 'M_ROX',
   weEUR: 'WE_EUR',
+  mTU: 'M_TU',
+  mM1USD: 'M_M1_USD',
+  mRe7ETH: 'M_RE7ETH',
+  bondUSD: 'BOND_USD',
+  bondETH: 'BOND_ETH',
+  bondBTC: 'BOND_BTC',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {
@@ -81,6 +87,7 @@ type TokenRoles = {
   depositVaultAdmin: string;
   redemptionVaultAdmin: string;
   customFeedAdmin: string | null;
+  greenlisted: string;
 };
 
 type CommonRoles = {
@@ -116,6 +123,7 @@ export const getRolesNamesForToken = (token: MTokenName): TokenRoles => {
       : `${tokenPrefix}_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE`,
     depositVaultAdmin: `${restPrefix}DEPOSIT_VAULT_ADMIN_ROLE`,
     redemptionVaultAdmin: `${restPrefix}REDEMPTION_VAULT_ADMIN_ROLE`,
+    greenlisted: `${restPrefix}GREENLISTED_ROLE`,
   };
 };
 export const getRolesNamesCommon = (): CommonRoles => {

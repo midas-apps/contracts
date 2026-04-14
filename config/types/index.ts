@@ -23,7 +23,8 @@ export type Network =
   | 'tacTestnet'
   | 'xrplevm'
   | 'zerog'
-  | 'injective';
+  | 'injective'
+  | 'optimism';
 export type RpcUrl =
   | `https://eth-${RpcNetwork}.g.alchemy.com/v2/${string}`
   | `https://${RpcNetwork}.infura.io/v3/${string}`

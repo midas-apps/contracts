@@ -1,24 +1,10 @@
-import {
-  impersonateAccount,
-  mine,
-} from '@nomicfoundation/hardhat-network-helpers';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { mine } from '@nomicfoundation/hardhat-network-helpers';
 import { parseUnits } from 'ethers/lib/utils';
-import { ethers, network } from 'hardhat';
+import { ethers } from 'hardhat';
 
 import { rpcUrls } from '../../../config';
 import { MToken } from '../../../typechain-types';
-
-async function impersonateAndFundAccount(
-  address: string,
-): Promise<SignerWithAddress> {
-  await impersonateAccount(address);
-  await network.provider.send('hardhat_setBalance', [
-    address,
-    ethers.utils.hexStripZeros(parseUnits('1000', 18).toHexString()),
-  ]);
-  return ethers.getSigner(address);
-}
+import { impersonateAndFundAccount, resetFork } from '../helpers/fork.helpers';
 
 export async function hyperEvmUpgradeFixture() {
   const dvProxyAddress = '0x48fb106Ef0c0C1a19EdDC9C5d27A945E66DA1C4E';
@@ -34,19 +20,7 @@ export async function hyperEvmUpgradeFixture() {
   const proxyAdminAddress = '0xbf25b58cB8DfaD688F7BcB2b87D71C23A6600AaC';
 
   const [customRecipient] = await ethers.getSigners();
-  await network.provider.request({
-    method: 'hardhat_reset',
-    params: [
-      {
-        forking: {
-          jsonRpcUrl: rpcUrls.hyperevm,
-          blockNumber: 9874404,
-        },
-      },
-    ],
-  });
-
-  await network.provider.send('evm_setAutomine', [true]);
+  await resetFork(rpcUrls.hyperevm, 9874404);
 
   await mine();
 

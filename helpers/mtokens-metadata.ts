@@ -2,7 +2,7 @@ import { MTokenName } from '../config';
 
 export const mTokensMetadata: Record<
   MTokenName,
-  { name: string; symbol: string }
+  { name: string; symbol: string; isPermissioned?: boolean }
 > = {
   mTBILL: {
     name: 'Midas US Treasury Bill Token',
@@ -255,5 +255,29 @@ export const mTokensMetadata: Record<
   weEUR: {
     name: 'Liquid Euro',
     symbol: 'weEUR',
+  },
+  mTU: {
+    name: 'X',
+    symbol: 'mTU',
+  },
+  mM1USD: {
+    name: 'Midas M1 USD Market Neutral',
+    symbol: 'mM1-USD',
+  },
+  mRe7ETH: {
+    name: 'Midas Re7 Ethereum',
+    symbol: 'mRe7ETH',
+  },
+  bondUSD: {
+    name: 'Bond USD',
+    symbol: 'bondUSD',
+  },
+  bondETH: {
+    name: 'Bond ETH',
+    symbol: 'bondETH',
+  },
+  bondBTC: {
+    name: 'Bond BTC',
+    symbol: 'bondBTC',
   },
 };

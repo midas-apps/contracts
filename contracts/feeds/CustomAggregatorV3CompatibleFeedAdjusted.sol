@@ -4,38 +4,44 @@ pragma solidity 0.8.9;
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /**
- * @title CustomAggregatorV3CompatibleFeedDiscounted
- * @notice AggregatorV3 compatible proxy-feed that discounts the price
- * of an underlying chainlink compatible feed by a given percentage
+ * @title CustomAggregatorV3CompatibleFeedAdjusted
+ * @notice AggregatorV3 compatible proxy-feed that adjusts the price
+ * of an underlying chainlink compatible feed by a given signed percentage.
+ * Positive adjustmentPercentage raises the reported price.
+ * Negative adjustmentPercentage lowers the reported price.
  * @author RedDuck Software
  */
-contract CustomAggregatorV3CompatibleFeedDiscounted is AggregatorV3Interface {
+contract CustomAggregatorV3CompatibleFeedAdjusted is AggregatorV3Interface {
     /**
      * @notice the underlying chainlink compatible feed
      */
     AggregatorV3Interface public immutable underlyingFeed;
 
     /**
-     * @notice the discount percentage. Expressed in 10 ** decimals() precision
-     * Example: 10 ** decimals() = 1%
+     * @notice the adjustment percentage (signed).
+     * Expressed in 10 ** decimals() precision.
+     * Example: 10 ** decimals() = 1%, -(10 ** decimals()) = -1%
+     * Positive values raise the reported price.
+     * Negative values lower the reported price.
      */
-    uint256 public immutable discountPercentage;
+    int256 public immutable adjustmentPercentage;
 
     /**
      * @notice constructor
      * @param _underlyingFeed the underlying chainlink compatible feed
-     * @param _discountPercentage the discount percentage. Expressed in 10 ** decimals() precision
+     * @param _adjustmentPercentage signed adjustment percentage in 10 ** decimals() precision
      */
-    constructor(address _underlyingFeed, uint256 _discountPercentage) {
-        require(_underlyingFeed != address(0), "CAD: !underlying feed");
+    constructor(address _underlyingFeed, int256 _adjustmentPercentage) {
+        require(_underlyingFeed != address(0), "CAA: !underlying feed");
         underlyingFeed = AggregatorV3Interface(_underlyingFeed);
 
+        int256 maxPct = int256(100 * (10**decimals()));
         require(
-            _discountPercentage <= 100 * (10**decimals()),
-            "CAD: !discount percentage"
+            _adjustmentPercentage >= -maxPct && _adjustmentPercentage <= maxPct,
+            "CAA: invalid adjustment"
         );
 
-        discountPercentage = _discountPercentage;
+        adjustmentPercentage = _adjustmentPercentage;
     }
 
     /**
@@ -60,7 +66,7 @@ contract CustomAggregatorV3CompatibleFeedDiscounted is AggregatorV3Interface {
             answeredInRound
         ) = underlyingFeed.latestRoundData();
 
-        answer = _calculateDiscountedAnswer(answer);
+        answer = _calculateAdjustedAnswer(answer);
     }
 
     /**
@@ -91,7 +97,7 @@ contract CustomAggregatorV3CompatibleFeedDiscounted is AggregatorV3Interface {
             updatedAt,
             answeredInRound
         ) = underlyingFeed.getRoundData(_roundId);
-        answer = _calculateDiscountedAnswer(answer);
+        answer = _calculateAdjustedAnswer(answer);
     }
 
     /**
@@ -105,27 +111,28 @@ contract CustomAggregatorV3CompatibleFeedDiscounted is AggregatorV3Interface {
      * @inheritdoc AggregatorV3Interface
      */
     function description() public view returns (string memory) {
-        return
-            string(
-                abi.encodePacked(underlyingFeed.description(), " Discounted")
-            );
+        if (adjustmentPercentage == 0) return underlyingFeed.description();
+        string memory suffix = adjustmentPercentage > 0
+            ? " PriceRaised"
+            : " PriceLowered";
+        return string(abi.encodePacked(underlyingFeed.description(), suffix));
     }
 
     /**
-     * @dev calculates the discounted answer
-     * @param _answer the answer to discount
-     * @return the discounted answer
+     * @dev calculates the adjusted answer
+     * @param _answer the answer to adjust
+     * @return the adjusted answer
      */
-    function _calculateDiscountedAnswer(int256 _answer)
+    function _calculateAdjustedAnswer(int256 _answer)
         internal
         view
         returns (int256)
     {
-        require(_answer >= 0, "CAD: !_answer");
+        require(_answer >= 0, "CAA: !_answer");
 
-        int256 discount = (_answer * int256(discountPercentage)) /
+        int256 adjustment = (_answer * adjustmentPercentage) /
             int256(100 * 10**decimals());
 
-        return _answer - discount;
+        return _answer + adjustment;
     }
 }

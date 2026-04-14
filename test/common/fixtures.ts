@@ -38,7 +38,15 @@ import {
   RedemptionVaultWithBUIDLTest__factory,
   RedemptionVaultWithUSTBTest__factory,
   RedemptionVaultWithSwapperTest__factory,
-  CustomAggregatorV3CompatibleFeedDiscountedTester__factory,
+  RedemptionVaultWithAaveTest__factory,
+  RedemptionVaultWithMorphoTest__factory,
+  RedemptionVaultWithMTokenTest__factory,
+  AaveV3PoolMock__factory,
+  MorphoVaultMock__factory,
+  CustomAggregatorV3CompatibleFeedAdjustedTester__factory,
+  DepositVaultWithAaveTest__factory,
+  DepositVaultWithMorphoTest__factory,
+  DepositVaultWithMTokenTest__factory,
   DepositVaultWithUSTBTest__factory,
   USTBMock__factory,
   CustomAggregatorV3CompatibleFeedGrowthTester__factory,
@@ -48,6 +56,7 @@ import {
   MidasLzOFT__factory,
   MidasLzOFTAdapter__factory,
   MidasLzVaultComposerSyncTester,
+  MTokenPermissionedTest__factory,
   AxelarInterchainTokenServiceMock__factory,
   MidasAxelarVaultExecutableTester,
   LzEndpointV2Mock__factory,
@@ -243,6 +252,7 @@ export const defaultDeploy = async () => {
     usdc: await new ERC20Mock__factory(owner).deploy(8),
     usdt: await new ERC20Mock__factory(owner).deploy(18),
     dai: await new ERC20Mock__factory(owner).deploy(9),
+    usdc6: await new ERC20Mock__factory(owner).deploy(6),
   };
 
   const otherCoins = {
@@ -375,6 +385,197 @@ export const defaultDeploy = async () => {
     redemptionVaultWithUSTB.address,
   );
 
+  /* Redemption Vault With Aave */
+
+  const aUSDC = await new ERC20Mock__factory(owner).deploy(8); // aToken mock, same decimals as USDC
+  const aavePoolMock = await new AaveV3PoolMock__factory(owner).deploy();
+  await aavePoolMock.setReserveAToken(stableCoins.usdc.address, aUSDC.address);
+  await stableCoins.usdc.mint(aavePoolMock.address, parseUnits('1000000'));
+
+  const redemptionVaultWithAave =
+    await new RedemptionVaultWithAaveTest__factory(owner).deploy();
+
+  await redemptionVaultWithAave.initialize(
+    accessControl.address,
+    {
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    1000,
+    {
+      fiatAdditionalFee: 100,
+      fiatFlatFee: parseUnits('1'),
+      minFiatRedeemAmount: 1000,
+    },
+    requestRedeemer.address,
+  );
+  await redemptionVaultWithAave.setAavePool(
+    stableCoins.usdc.address,
+    aavePoolMock.address,
+  );
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
+    redemptionVaultWithAave.address,
+  );
+
+  /* Redemption Vault With Morpho */
+
+  const morphoVaultMock = await new MorphoVaultMock__factory(owner).deploy(
+    stableCoins.usdc.address,
+  );
+  await stableCoins.usdc.mint(morphoVaultMock.address, parseUnits('1000000'));
+
+  const redemptionVaultWithMorpho =
+    await new RedemptionVaultWithMorphoTest__factory(owner).deploy();
+
+  await redemptionVaultWithMorpho.initialize(
+    accessControl.address,
+    {
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    1000,
+    {
+      fiatAdditionalFee: 100,
+      fiatFlatFee: parseUnits('1'),
+      minFiatRedeemAmount: 1000,
+    },
+    requestRedeemer.address,
+  );
+  await redemptionVaultWithMorpho.setMorphoVault(
+    stableCoins.usdc.address,
+    morphoVaultMock.address,
+  );
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
+    redemptionVaultWithMorpho.address,
+  );
+
+  /* Deposit Vault With Aave */
+
+  const depositVaultWithAave = await new DepositVaultWithAaveTest__factory(
+    owner,
+  ).deploy();
+
+  await depositVaultWithAave.initialize(
+    accessControl.address,
+    {
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    parseUnits('100'),
+    0,
+    constants.MaxUint256,
+  );
+  await depositVaultWithAave.setAavePool(
+    stableCoins.usdc.address,
+    aavePoolMock.address,
+  );
+
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_MINT_OPERATOR_ROLE(),
+    depositVaultWithAave.address,
+  );
+
+  /* Deposit Vault With Morpho */
+
+  const depositVaultWithMorpho = await new DepositVaultWithMorphoTest__factory(
+    owner,
+  ).deploy();
+
+  await depositVaultWithMorpho.initialize(
+    accessControl.address,
+    {
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    parseUnits('100'),
+    0,
+    constants.MaxUint256,
+  );
+
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_MINT_OPERATOR_ROLE(),
+    depositVaultWithMorpho.address,
+  );
+
+  /* Deposit Vault With MToken (deposits into mTBILL DV) */
+
+  const depositVaultWithMToken = await new DepositVaultWithMTokenTest__factory(
+    owner,
+  ).deploy();
+
+  await depositVaultWithMToken[
+    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)'
+  ](
+    accessControl.address,
+    {
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    parseUnits('100'),
+    0,
+    constants.MaxUint256,
+    depositVault.address,
+  );
+
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_MINT_OPERATOR_ROLE(),
+    depositVaultWithMToken.address,
+  );
+
+  await depositVault.addWaivedFeeAccount(depositVaultWithMToken.address);
+
   /* Redemption Vault With Swapper */
 
   const redemptionVaultWithSwapper =
@@ -415,6 +616,67 @@ export const defaultDeploy = async () => {
     redemptionVaultWithSwapper.address,
   );
 
+  /* Redemption Vault With MToken (mFONE -> mTBILL) */
+
+  const mFONE = await new MTBILLTest__factory(owner).deploy();
+  await mFONE.initialize(accessControl.address);
+
+  const mockedAggregatorMFone = await new AggregatorV3Mock__factory(
+    owner,
+  ).deploy();
+  await mockedAggregatorMFone.setRoundData(
+    parseUnits('2', mockedAggregatorDecimals),
+  );
+  const mFoneToUsdDataFeed = await new DataFeedTest__factory(owner).deploy();
+  await mFoneToUsdDataFeed.initialize(
+    accessControl.address,
+    mockedAggregatorMFone.address,
+    3 * 24 * 3600,
+    parseUnits('0.1', mockedAggregatorDecimals),
+    parseUnits('10000', mockedAggregatorDecimals),
+  );
+
+  const redemptionVaultWithMToken =
+    await new RedemptionVaultWithMTokenTest__factory(owner).deploy();
+
+  await redemptionVaultWithMToken[
+    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
+  ](
+    accessControl.address,
+    {
+      mToken: mFONE.address,
+      mTokenDataFeed: mFoneToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    1000,
+    {
+      fiatAdditionalFee: 100,
+      fiatFlatFee: parseUnits('1'),
+      minFiatRedeemAmount: 1000,
+    },
+    requestRedeemer.address,
+    redemptionVault.address,
+  );
+
+  await accessControl.grantRole(
+    mFONE.M_TBILL_BURN_OPERATOR_ROLE(),
+    redemptionVaultWithMToken.address,
+  );
+  await redemptionVault.addWaivedFeeAccount(redemptionVaultWithMToken.address);
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
+    redemptionVaultWithMToken.address,
+  );
+
   const customFeed = await new CustomAggregatorV3CompatibleFeedTester__factory(
     owner,
   ).deploy();
@@ -452,8 +714,8 @@ export const defaultDeploy = async () => {
     parseUnits('10000', mockedAggregatorDecimals),
   );
 
-  const customFeedDiscounted =
-    await new CustomAggregatorV3CompatibleFeedDiscountedTester__factory(
+  const customFeedAdjusted =
+    await new CustomAggregatorV3CompatibleFeedAdjustedTester__factory(
       owner,
     ).deploy(customFeed.address, parseUnits('10', 8));
 
@@ -558,7 +820,7 @@ export const defaultDeploy = async () => {
 
   return {
     customFeed,
-    customFeedDiscounted,
+    customFeedAdjusted,
     customFeedGrowth,
     mTBILL,
     mBASIS,
@@ -595,14 +857,131 @@ export const defaultDeploy = async () => {
     buidlRedemption,
     redemptionVaultWithBUIDL,
     redemptionVaultWithUSTB,
+    redemptionVaultWithAave,
+    aavePoolMock,
+    aUSDC,
+    redemptionVaultWithMorpho,
+    morphoVaultMock,
     liquidityProvider,
+    mFONE,
+    mockedAggregatorMFone,
+    mFoneToUsdDataFeed,
+    redemptionVaultWithMToken,
     otherCoins,
     ustbToken,
     ustbRedemption,
     customRecipient,
     depositVaultWithUSTB,
+    depositVaultWithAave,
+    depositVaultWithMorpho,
+    depositVaultWithMToken,
     dataFeedGrowth,
     compositeDataFeed,
+  };
+};
+
+/**
+ * mTokenPermissionedTest + dedicated deposit/redemption vaults (for integration-style tests).
+ */
+export const mTokenPermissionedFixture = async (
+  baseFixture?: Awaited<ReturnType<typeof defaultDeploy>>,
+) => {
+  const fx = baseFixture ?? (await defaultDeploy());
+  const {
+    owner,
+    accessControl,
+    mockedSanctionsList,
+    feeReceiver,
+    tokensReceiver,
+    requestRedeemer,
+    mTokenToUsdDataFeed,
+  } = fx;
+
+  const mTokenPermissioned = await new MTokenPermissionedTest__factory(
+    owner,
+  ).deploy();
+  await mTokenPermissioned.initialize(accessControl.address);
+
+  const mintRole = await mTokenPermissioned.M_TOKEN_TEST_MINT_OPERATOR_ROLE();
+  const burnRole = await mTokenPermissioned.M_TOKEN_TEST_BURN_OPERATOR_ROLE();
+  const pauseRole = await mTokenPermissioned.M_TOKEN_TEST_PAUSE_OPERATOR_ROLE();
+  const mTokenPermissionedGreenlistedRole =
+    await mTokenPermissioned.M_TOKEN_TEST_GREENLISTED_ROLE();
+
+  await accessControl.grantRole(mintRole, owner.address);
+  await accessControl.grantRole(burnRole, owner.address);
+  await accessControl.grantRole(pauseRole, owner.address);
+
+  const mTokenPermissionedDepositVault = await new DepositVaultTest__factory(
+    owner,
+  ).deploy();
+  await mTokenPermissionedDepositVault.initialize(
+    accessControl.address,
+    {
+      mToken: mTokenPermissioned.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    parseUnits('100'),
+    0,
+    constants.MaxUint256,
+  );
+  await accessControl.grantRole(
+    mintRole,
+    mTokenPermissionedDepositVault.address,
+  );
+
+  const mTokenPermissionedRedemptionVault =
+    await new RedemptionVaultTest__factory(owner).deploy();
+  await mTokenPermissionedRedemptionVault.initialize(
+    accessControl.address,
+    {
+      mToken: mTokenPermissioned.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 0,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    1000,
+    {
+      fiatAdditionalFee: 100,
+      fiatFlatFee: parseUnits('1'),
+      minFiatRedeemAmount: 1000,
+    },
+    requestRedeemer.address,
+  );
+  await accessControl.grantRole(
+    burnRole,
+    mTokenPermissionedRedemptionVault.address,
+  );
+
+  return {
+    ...fx,
+    mTokenPermissioned,
+    mTokenPermissionedRoles: {
+      mint: mintRole,
+      burn: burnRole,
+      pause: pauseRole,
+      greenlisted: mTokenPermissionedGreenlistedRole,
+    },
+    mTokenPermissionedDepositVault,
+    mTokenPermissionedRedemptionVault,
   };
 };
 

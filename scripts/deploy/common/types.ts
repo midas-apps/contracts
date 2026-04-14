@@ -3,18 +3,27 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { AddFeeWaivedConfig, AddPaymentTokensConfig } from './common-vault';
 import {
+  DeployCustomAggregatorAdjustedConfig,
   DeployCustomAggregatorConfig,
-  DeployCustomAggregatorDiscountedConfig,
   DeployDataFeedConfig,
   SetRoundDataConfig,
 } from './data-feed';
-import { DeployDvRegularConfig, DeployDvUstbConfig } from './dv';
+import {
+  DeployDvAaveConfig,
+  DeployDvMorphoConfig,
+  DeployDvMTokenConfig,
+  DeployDvRegularConfig,
+  DeployDvUstbConfig,
+} from './dv';
 import {
   GrantAllTokenRolesConfig,
   GrantDefaultAdminRoleToAcAdminConfig,
 } from './roles';
 import {
+  DeployRvAaveConfig,
   DeployRvBuidlConfig,
+  DeployRvMorphoConfig,
+  DeployRvMTokenConfig,
   DeployRvRegularConfig,
   DeployRvSwapperConfig,
 } from './rv';
@@ -85,7 +94,7 @@ export type PostDeployConfig = {
 export type DeploymentConfig = {
   genericConfigs: {
     customAggregator?: DeployCustomAggregatorConfig;
-    customAggregatorDiscounted?: DeployCustomAggregatorDiscountedConfig;
+    customAggregatorAdjusted?: DeployCustomAggregatorAdjustedConfig;
     dataFeed?: DeployDataFeedConfig;
   };
   networkConfigs: Record<
@@ -93,9 +102,15 @@ export type DeploymentConfig = {
     {
       dv?: DeployDvRegularConfig;
       dvUstb?: DeployDvUstbConfig;
+      dvAave?: DeployDvAaveConfig;
+      dvMorpho?: DeployDvMorphoConfig;
+      dvMToken?: DeployDvMTokenConfig;
       rv?: DeployRvRegularConfig;
       rvBuidl?: DeployRvBuidlConfig;
       rvSwapper?: DeployRvSwapperConfig;
+      rvAave?: DeployRvAaveConfig;
+      rvMorpho?: DeployRvMorphoConfig;
+      rvMToken?: DeployRvMTokenConfig;
       postDeploy?: PostDeployConfig;
     }
   >;
@@ -131,10 +146,5 @@ export type NetworkDeploymentConfig = Record<
     timelock?: DeployTimelockConfig;
   }
 >;
-
-export type RvType =
-  | 'redemptionVault'
-  | 'redemptionVaultBuidl'
-  | 'redemptionVaultSwapper';
 
 export type DeployFunction = (hre: HardhatRuntimeEnvironment) => Promise<void>;

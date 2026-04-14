@@ -72,8 +72,8 @@ export type DeployCustomAggregatorRegularConfig =
     type?: 'REGULAR';
   };
 
-export type DeployCustomAggregatorDiscountedConfig = {
-  discountPercentage: BigNumberish;
+export type DeployCustomAggregatorAdjustedConfig = {
+  adjustmentPercentage: BigNumberish;
   underlyingFeed: `0x${string}` | 'customFeed';
 };
 
@@ -410,14 +410,14 @@ export const deployMTokenDataFeed = async (
   );
 };
 
-export const deployMTokenCustomAggregatorDiscounted = async (
+export const deployMTokenCustomAggregatorAdjusted = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
 ) => {
-  await deployCustomAggregatorDiscounted(
+  await deployCustomAggregatorAdjusted(
     hre,
     token,
-    getDeploymentGenericConfig(hre, token, 'customAggregatorDiscounted'),
+    getDeploymentGenericConfig(hre, token, 'customAggregatorAdjusted'),
   );
 };
 
@@ -536,10 +536,10 @@ const deployCustomAggregator = async (
   );
 };
 
-const deployCustomAggregatorDiscounted = async (
+const deployCustomAggregatorAdjusted = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
-  networkConfig?: DeployCustomAggregatorDiscountedConfig,
+  networkConfig?: DeployCustomAggregatorAdjustedConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
 
@@ -558,7 +558,7 @@ const deployCustomAggregatorDiscounted = async (
 
   await deployAndVerify(
     hre,
-    getCommonContractNames().customAggregatorDiscounted,
-    [underlyingFeed, networkConfig.discountPercentage],
+    getCommonContractNames().customAggregatorAdjusted,
+    [underlyingFeed, networkConfig.adjustmentPercentage],
   );
 };
