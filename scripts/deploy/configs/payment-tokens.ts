@@ -824,6 +824,38 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           maxAnswer: parseUnits('1.2', 18),
         },
       },
+      eurc: {
+        customAggregator: {
+          description: 'EURC/EUR',
+          minAnswer: parseUnits('0.999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+      usdc: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+      usdt: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
     },
   },
 };

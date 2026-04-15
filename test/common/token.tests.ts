@@ -117,6 +117,15 @@ export const tokenContractsTests = (token: MTokenName) => {
       fixture.accessControl.address,
     )) as MTBILL;
 
+    if (mTokensMetadata[token]?.isPermissioned) {
+      const greenlistedRole = tokenRoles.greenlisted;
+      for (const account of fixture.regularAccounts) {
+        await fixture.accessControl
+          .connect(fixture.owner)
+          .grantRole(greenlistedRole, account.address);
+      }
+    }
+
     return { tokenContract, ...fixture };
   };
 
@@ -164,7 +173,7 @@ export const tokenContractsTests = (token: MTokenName) => {
       parseUnits('10000', 8),
     );
 
-    const depositVault = await deployProxyContract<DepositVault>(
+    const depositVault = await deployProxyContractIfExists<DepositVault>(
       'dv',
       undefined,
       fixture.accessControl.address,

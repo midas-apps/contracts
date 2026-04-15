@@ -268,6 +268,11 @@ export const mTokensMetadata: Record<
     name: 'Midas Re7 Ethereum',
     symbol: 'mRe7ETH',
   },
+  mGLOBAL: {
+    name: 'Midas Fasanara Global',
+    symbol: 'mGLOBAL',
+    isPermissioned: true,
+  },
   bondUSD: {
     name: 'Bond USD',
     symbol: 'bondUSD',

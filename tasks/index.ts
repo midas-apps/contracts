@@ -19,11 +19,16 @@ task('runscript', 'Runs a user-defined script')
   .addOptionalParam('logToFile', 'Log to file')
   .addOptionalParam('logsFolderPath', 'Logs folder path')
   .addOptionalParam('originalNetwork', 'Original Network')
+  .addOptionalParam(
+    'keys',
+    'Comma-separated list of address book keys to include (e.g. layerZero)',
+  )
   .setAction(async (taskArgs, hre) => {
     const mtoken = taskArgs.mtoken;
     const ptoken = taskArgs.ptoken;
     const action = taskArgs.action;
     const originalNetwork = taskArgs.originalNetwork;
+    const keys = taskArgs.keys;
 
     const scriptPath = taskArgs.path;
     const skipValidation = taskArgs.skipvalidation;
@@ -63,6 +68,10 @@ task('runscript', 'Runs a user-defined script')
       hre.layerZero = {
         originalNetwork,
       };
+    }
+
+    if (keys) {
+      hre.addressBookKeys = keys.split(',').map((k: string) => k.trim());
     }
 
     const scriptPathResolved = path.resolve(scriptPath);

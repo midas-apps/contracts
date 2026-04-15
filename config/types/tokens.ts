@@ -65,6 +65,7 @@ export enum MTokenNameEnum {
   mTU = 'mTU',
   mM1USD = 'mM1USD',
   mRe7ETH = 'mRe7ETH',
+  mGLOBAL = 'mGLOBAL',
   bondUSD = 'bondUSD',
   bondETH = 'bondETH',
   bondBTC = 'bondBTC',

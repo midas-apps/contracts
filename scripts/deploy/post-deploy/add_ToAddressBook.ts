@@ -3,9 +3,51 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
   getCurrentAddresses,
   LayerZeroTokenAddresses,
+  TokenAddresses,
 } from '../../../config/constants/addresses';
 import { getMTokenOrThrow } from '../../../helpers/utils';
 import { DeployFunction } from '../common/types';
+
+type AddressBookEntryConfig = {
+  contractName: string | ((mToken: string) => string);
+  contractTag?: string;
+  extractAddress?: (value: unknown) => string | undefined;
+};
+
+const ADDRESS_BOOK_MAPPING: Partial<
+  Record<keyof TokenAddresses, AddressBookEntryConfig>
+> = {
+  token: { contractName: (mToken) => mToken },
+
+  customFeed: { contractName: 'Oracle' },
+  customFeedGrowth: { contractName: 'Oracle (Growth)' },
+  customFeedAdjusted: { contractName: 'Oracle (Adjusted)' },
+  customFeedDv: { contractName: 'Oracle (DV)' },
+  customFeedRv: { contractName: 'Oracle (RV)' },
+
+  dataFeed: { contractName: 'Oracle', contractTag: 'datafeed' },
+  dataFeedDv: { contractName: 'Oracle (DV)', contractTag: 'datafeed' },
+  dataFeedRv: { contractName: 'Oracle (RV)', contractTag: 'datafeed' },
+
+  depositVault: { contractName: 'Minter Vault' },
+  depositVaultUstb: { contractName: 'Minter Vault (USTB)' },
+  depositVaultAave: { contractName: 'Minter Vault (Aave)' },
+  depositVaultMorpho: { contractName: 'Minter Vault (Morpho)' },
+  depositVaultMToken: { contractName: 'Minter Vault (MToken)' },
+
+  redemptionVault: { contractName: 'Redemption Vault' },
+  redemptionVaultBuidl: { contractName: 'Redemption Vault (BUIDL)' },
+  redemptionVaultSwapper: { contractName: 'Redemption Vault (Swapper)' },
+  redemptionVaultMToken: { contractName: 'Redemption Vault (MToken)' },
+  redemptionVaultUstb: { contractName: 'Redemption Vault (USTB)' },
+  redemptionVaultAave: { contractName: 'Redemption Vault (Aave)' },
+  redemptionVaultMorpho: { contractName: 'Redemption Vault (Morpho)' },
+
+  layerZero: {
+    contractName: 'OFT Adapter',
+    extractAddress: (v) => (v as LayerZeroTokenAddresses)?.oft,
+  },
+};
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const mToken = getMTokenOrThrow(hre);
@@ -22,40 +64,43 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('Token addresses not found');
   }
 
+  const allowedKeys = hre.addressBookKeys;
+
   for (const [key, value] of Object.entries(tokenAddresses)) {
     if (!value) {
       continue;
     }
 
-    let address = typeof value === 'string' ? value : undefined;
-    let contractName = '';
-    let contractTag: string | undefined;
-
-    if (key.startsWith('redemptionVault')) {
-      contractName = 'Redemption Vault';
-    } else if (key.startsWith('depositVault')) {
-      contractName = 'Minter Vault';
-    } else if (key.startsWith('customFeed')) {
-      contractName = 'Oracle';
-    } else if (key.startsWith('token')) {
-      contractName = mToken;
-    } else if (key.startsWith('dataFeed')) {
-      contractName = 'Oracle';
-      contractTag = 'datafeed';
-    } else if (key.startsWith('layerZero')) {
-      contractName = 'OFT Adapter';
-      address = (value as LayerZeroTokenAddresses).oft;
-    }
-
-    if (!contractName || !address) {
+    if (allowedKeys && !allowedKeys.includes(key)) {
       continue;
     }
+
+    const config = ADDRESS_BOOK_MAPPING[key as keyof TokenAddresses];
+
+    if (!config) {
+      continue;
+    }
+
+    const address = config.extractAddress
+      ? config.extractAddress(value)
+      : typeof value === 'string'
+      ? value
+      : undefined;
+
+    if (!address) {
+      continue;
+    }
+
+    const contractName =
+      typeof config.contractName === 'function'
+        ? config.contractName(mToken)
+        : config.contractName;
 
     const customSigner = await hre.getCustomSigner();
     const result = await customSigner.createAddressBookContract({
       address,
       contractName,
-      contractTag,
+      contractTag: config.contractTag,
     });
 
     console.log('Successfully added to address book', result);
