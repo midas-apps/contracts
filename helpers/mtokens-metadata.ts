@@ -273,4 +273,16 @@ export const mTokensMetadata: Record<
     symbol: 'mGLOBAL',
     isPermissioned: true,
   },
+  bondUSD: {
+    name: 'Bond USD',
+    symbol: 'bondUSD',
+  },
+  bondETH: {
+    name: 'Bond ETH',
+    symbol: 'bondETH',
+  },
+  bondBTC: {
+    name: 'Bond BTC',
+    symbol: 'bondBTC',
+  },
 };

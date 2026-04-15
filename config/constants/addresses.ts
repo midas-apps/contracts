@@ -529,6 +529,27 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVaultAave: '0xA0Fc8BDFb1E6a705C1375810989B1d70a982b01B',
       redemptionVaultSwapper: '0x1e0fd66753198c7b8bA64edEe8d41D8628Bf20D7',
     },
+    bondUSD: {
+      token: '0xaD4748098C2a771cc034d7Dfc10Fad9f9ed605fD',
+      customFeed: '0xBD143c51F448f9F882a4C8CFbD04f3226Bb914C6',
+      dataFeed: '0x55E839B8043a2BC6c455222c3670aC059f794dEa',
+      depositVault: '0x14557b2719EDf86f43E332b4F46F642024a2519D',
+      redemptionVaultSwapper: '0x71b76C2a371DA950AD2a2EB5b469f5f932E341C6',
+    },
+    bondETH: {
+      token: '0x0A640E217A3c5579b920F740B556F44B6e9820C5',
+      customFeed: '0x1C53c83553a71D88c1B1e4bf479bb9D9db0c23a6',
+      dataFeed: '0xA454eC183507a5f0E8aBf039c61d5e34F16e7072',
+      depositVault: '0x556655081B2B39c184b544d962eADa7F8b731C12',
+      redemptionVaultSwapper: '0xfa8845cBd814720259050d6CCF3a9c60d17d6596',
+    },
+    bondBTC: {
+      token: '0x9114650a2b8f8598a6b6Aa1cb2837e145f59f9fD',
+      customFeed: '0xc7871E40712f2D769a2dEA7a2a72d23f12b88A6e',
+      dataFeed: '0x2A5DFe394687750e476aB39c054F6a124FC2E817',
+      depositVault: '0x1F78393689D2979F99b5c90131e166Ae32bC05a4',
+      redemptionVaultSwapper: '0x9d27834687318BFD42aF8e40168FDc37b4932727',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
