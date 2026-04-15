@@ -9,7 +9,7 @@ import {
 } from './utils';
 import {
   defaultDepositVaultPriority,
-  resolveVaultAddress,
+  resolveAllVaultAddresses,
   roleGrantRedemptionVaultPriority,
 } from './vault-resolver';
 
@@ -75,29 +75,38 @@ export const grantAllProductRoles = async (
 
   const defaultManager = provider.address;
 
-  // Build vault contract roles and addresses conditionally
   const contractsRoles: string[] = [];
   const contractsAddresses: string[] = [];
 
-  const depositVault = resolveVaultAddress(
+  const depositVaults = resolveAllVaultAddresses(
     tokenAddresses,
     defaultDepositVaultPriority,
   );
-  const redemptionVault = resolveVaultAddress(
+  const redemptionVaults = resolveAllVaultAddresses(
     tokenAddresses,
     roleGrantRedemptionVaultPriority,
   );
 
-  if (depositVault) {
-    contractsRoles.push(tokenRoles.minter);
-    contractsAddresses.push(depositVault);
+  if (depositVaults.length > 0) {
+    for (const dv of depositVaults) {
+      contractsRoles.push(tokenRoles.minter);
+      contractsAddresses.push(dv);
+    }
+    console.log(
+      `✅ Granting minter role to ${depositVaults.length} deposit vault(s)`,
+    );
   } else {
     console.log(`⚠️  Skipping minter role for depositVault (not deployed)`);
   }
 
-  if (redemptionVault) {
-    contractsRoles.push(tokenRoles.burner);
-    contractsAddresses.push(redemptionVault);
+  if (redemptionVaults.length > 0) {
+    for (const rv of redemptionVaults) {
+      contractsRoles.push(tokenRoles.burner);
+      contractsAddresses.push(rv);
+    }
+    console.log(
+      `✅ Granting burner role to ${redemptionVaults.length} redemption vault(s)`,
+    );
   } else {
     console.log(`⚠️  Skipping burner role for redemptionVault (not deployed)`);
   }

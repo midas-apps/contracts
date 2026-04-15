@@ -129,6 +129,7 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   mTU: 'MTu',
   mM1USD: 'MM1Usd',
   mRe7ETH: 'MRe7Eth',
+  mGLOBAL: 'MGlobal',
   bondUSD: 'BondUsd',
   bondETH: 'BondEth',
   bondBTC: 'BondBtc',

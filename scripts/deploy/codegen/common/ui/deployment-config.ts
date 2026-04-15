@@ -5,6 +5,7 @@ import {
   multiselect,
   outro,
   PromptGroup,
+  select,
   stream,
   text,
 } from '@clack/prompts';
@@ -39,32 +40,109 @@ export const configsPerNetworkConfig = {
 };
 
 async function getGenericConfigFromUser(mToken: MTokenName) {
-  const config = await group({
-    intro: () => Promise.resolve(intro('Generic Config')).then(() => undefined),
-    maxAswerDeviation: () =>
-      text({
-        message: 'Aggregator max answer deviation',
-        validate: (value) => validateFloat(value, 8),
-      })
-        .then(requireNotCancelled)
-        .then((value) => requireFloatToBigNumberish(value, 8)),
-    tokenDenomination: () =>
-      text({
-        message: 'Token Denomination',
-        defaultValue: 'USD',
-        initialValue: 'USD',
-        placeholder: 'USD',
-      }).then(requireNotCancelled),
-    outro: () => Promise.resolve(outro('Done...')).then(() => undefined),
-  }).then(clearIntroOutro);
+  intro('Generic Config');
 
-  return {
-    customAggregator: {
-      maxAnswerDeviation: config.maxAswerDeviation,
-      description: `${mToken}/${config.tokenDenomination}`,
-    },
+  const maxAnswerDeviation = await text({
+    message: 'Aggregator max answer deviation',
+    validate: (value) => validateFloat(value, 8),
+  })
+    .then(requireNotCancelled)
+    .then((value) => requireFloatToBigNumberish(value, 8));
+
+  const tokenDenomination = await text({
+    message: 'Token Denomination',
+    defaultValue: 'USD',
+    initialValue: 'USD',
+    placeholder: 'USD',
+  }).then(requireNotCancelled);
+
+  const aggregatorType = await select<'REGULAR' | 'GROWTH'>({
+    message: 'Aggregator type',
+    options: [
+      { value: 'REGULAR', label: 'Regular' },
+      { value: 'GROWTH', label: 'Growth (applies APR to answer)' },
+    ],
+    initialValue: 'REGULAR',
+  }).then(requireNotCancelled);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const customAggregator: Record<string, any> = {
+    maxAnswerDeviation,
+    description: `${mToken}/${tokenDenomination}`,
+  };
+
+  if (aggregatorType === 'GROWTH') {
+    customAggregator.type = expr("'GROWTH'");
+
+    const onlyUp = await confirm({
+      message: 'Only up? (price can only increase)',
+      initialValue: true,
+    }).then(requireNotCancelled);
+
+    const minGrowthApr = await text({
+      message: 'Min growth APR (in %)',
+      defaultValue: '0',
+      initialValue: '0',
+      validate: (value) => validateFloat(value, 8),
+    })
+      .then(requireNotCancelled)
+      .then((value) => requireFloatToBigNumberish(value, 8));
+
+    const maxGrowthApr = await text({
+      message: 'Max growth APR (in %)',
+      validate: (value) => validateFloat(value, 8),
+    })
+      .then(requireNotCancelled)
+      .then((value) => requireFloatToBigNumberish(value, 8));
+
+    customAggregator.onlyUp = onlyUp;
+    customAggregator.minGrowthApr = minGrowthApr;
+    customAggregator.maxGrowthApr = maxGrowthApr;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result: Record<string, any> = {
+    customAggregator,
     dataFeed: {},
   };
+
+  const useAdjustedDvRv = await confirm({
+    message:
+      'Use adjusted DV/RV feeds? (separate +/- % for deposit/redemption)',
+    initialValue: false,
+  }).then(requireNotCancelled);
+
+  if (useAdjustedDvRv) {
+    const adjustmentPercentageDv = await text({
+      message: 'Adjustment percentage for DV (e.g. 7 for +7%)',
+      validate: (value) => validateFloat(value, 8),
+    })
+      .then(requireNotCancelled)
+      .then((value) => requireFloatToBigNumberish(value, 8));
+
+    const adjustmentPercentageRv = await text({
+      message: 'Adjustment percentage for RV (e.g. -7 for -7%)',
+      validate: (value) => validateFloat(value, 8),
+    })
+      .then(requireNotCancelled)
+      .then((value) => requireFloatToBigNumberish(value, 8));
+
+    const feedRef =
+      aggregatorType === 'GROWTH' ? "'customFeedGrowth'" : "'customFeed'";
+
+    result.customAggregatorAdjustedDv = {
+      adjustmentPercentage: adjustmentPercentageDv,
+      underlyingFeed: expr(feedRef),
+    };
+    result.customAggregatorAdjustedRv = {
+      adjustmentPercentage: adjustmentPercentageRv,
+      underlyingFeed: expr(feedRef),
+    };
+  }
+
+  outro('Done...');
+
+  return { ...result, isGrowth: aggregatorType === 'GROWTH' };
 }
 
 async function getDvConfigFromUser(hre: HardhatRuntimeEnvironment) {

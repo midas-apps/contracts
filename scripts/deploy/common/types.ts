@@ -95,6 +95,8 @@ export type DeploymentConfig = {
   genericConfigs: {
     customAggregator?: DeployCustomAggregatorConfig;
     customAggregatorAdjusted?: DeployCustomAggregatorAdjustedConfig;
+    customAggregatorAdjustedDv?: DeployCustomAggregatorAdjustedConfig;
+    customAggregatorAdjustedRv?: DeployCustomAggregatorAdjustedConfig;
     dataFeed?: DeployDataFeedConfig;
   };
   networkConfigs: Record<
