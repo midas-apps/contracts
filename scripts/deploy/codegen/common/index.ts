@@ -133,10 +133,12 @@ export const updateConfigFiles = (
   const contractNameVar =
     contractNameFile.getVariableDeclarationOrThrow('mTokensMetadata');
 
-  mTokensEnum.addMember({
-    name: mToken,
-    initializer: `"${mToken}"`,
-  });
+  if (!mTokensEnum.getMember(mToken)) {
+    mTokensEnum.addMember({
+      name: mToken,
+      initializer: `"${mToken}"`,
+    });
+  }
 
   {
     const initializer = contractPrefixesVar.getInitializerOrThrow();
@@ -214,7 +216,7 @@ export const requireNotCancelled = <T>(value: T | symbol) => {
 const lintAndFormatTs = (path: string) => {
   try {
     execSync(
-      `yarn prettier "${path}" --write > /dev/null && eslint "${path}" --fix > /dev/null`,
+      `yarn prettier "${path}" --write > /dev/null && yarn exec eslint "${path}" --fix > /dev/null`,
       {
         stdio: 'inherit',
       },
@@ -228,7 +230,7 @@ const lintAndFormatTs = (path: string) => {
 const lintAndFormatSol = (folder: string) => {
   try {
     execSync(
-      `yarn solhint ${folder}/**/*.sol --quiet --fix > /dev/null & yarn prettier ${folder}/**/*.sol --write > /dev/null`,
+      `yarn solhint "${folder}/**/*.sol" --quiet --fix > /dev/null && yarn prettier "${folder}/**/*.sol" --write > /dev/null`,
       {
         stdio: 'inherit',
       },

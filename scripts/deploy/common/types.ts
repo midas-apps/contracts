@@ -1,7 +1,11 @@
 import { BigNumberish } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { AddFeeWaivedConfig, AddPaymentTokensConfig } from './common-vault';
+import {
+  AddFeeWaivedConfig,
+  AddPaymentTokensConfig,
+  SetAaveConfigConfig,
+} from './common-vault';
 import {
   DeployCustomAggregatorAdjustedConfig,
   DeployCustomAggregatorConfig,
@@ -89,6 +93,7 @@ export type PostDeployConfig = {
   pauseFunctions?: PauseFunctionsConfig;
   layerZero?: LayerZeroConfig;
   axelarIts?: AxelarItsConfig;
+  setAaveConfig?: SetAaveConfigConfig;
 };
 
 export type DeploymentConfig = {
