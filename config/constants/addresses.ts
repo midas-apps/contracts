@@ -318,7 +318,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       customFeed: '0x74508886cDFEF22FddEDcA0d9Caf9E00E876C5aF',
       dataFeed: '0xBF2a93B420225558a76FC9888C687c14977E6E7C',
       depositVault: '0xf89fEbef93c54618C4420Ee4173e69Cd21B27e3a',
+      depositVaultAave: '0xc616E6eDB81BA30b8De057eB96557315a1990ea2',
       redemptionVault: '0x97acdfb3956403c4c6bbe837dc611e3a6ba1b3a7',
+      redemptionVaultAave: '0x8521b0063D4B90658Cc8849db78641Da0235D1Cf',
     },
     hypeETH: {
       token: '0x8E2C2C9dEF45efB9Bd3C448945830Ddb254154BE',

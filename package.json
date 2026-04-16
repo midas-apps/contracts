@@ -91,6 +91,7 @@
     "deploy:axelar:post:grant:roles": "yarn hh:run:script scripts/deploy/misc/axelar/grant_Roles.ts",
     "deploy:axelar:post:revoke:roles": "yarn hh:run:script scripts/deploy/misc/axelar/revoke_Roles.ts",
     "deploy:post:set:sanctionsList": "yarn hh:run:script scripts/deploy/post-deploy/set_SanctionsList.ts",
+    "deploy:post:set:aaveconfig": "yarn hh:run:script scripts/deploy/post-deploy/set_AaveConfig.ts",
     "verify:proxy": "yarn hardhat verify --contract @openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy",
     "verify:sourcify": "VERIFY_SOURCIFY=true VERIFY_ETHERSCAN=false yarn hardhat verify",
     "dump:roles": "yarn hh:run scripts/dump_roles.ts",
