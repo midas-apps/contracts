@@ -303,7 +303,7 @@ contract DepositVault is ManageableVault, IDepositVault {
     {
         _approveRequest(requestId, newOutRate, false, true);
 
-        emit ApproveRequest(requestId, newOutRate);
+        emit ApproveRequestV2(requestId, newOutRate);
     }
 
     /**

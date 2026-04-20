@@ -129,7 +129,7 @@ interface IDepositVault is IManageableVault {
      * @param requestId mint request id
      * @param newOutRate mToken rate inputted by admin
      */
-    event ApproveRequest(uint256 indexed requestId, uint256 newOutRate);
+    event ApproveRequestV2(uint256 indexed requestId, uint256 newOutRate);
 
     /**
      * @param requestId mint request id

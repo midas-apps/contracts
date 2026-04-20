@@ -10,6 +10,8 @@ import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.s
 import {IRedemptionVault, CommonVaultInitParams, CommonVaultV2InitParams, LiquidityProviderLoanRequest, Request, RequestV2, RequestStatus, RedemptionVaultInitParams, RedemptionVaultV2InitParams} from "./interfaces/IRedemptionVault.sol";
 import {ManageableVault} from "./abstract/ManageableVault.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title RedemptionVault
  * @notice Smart contract that handles mToken redemptions
@@ -180,7 +182,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             tokenOut,
             amountMTokenIn,
             minReceiveAmount,
-            msg.sender
+            msg.sender,
+            ONE_HUNDRED_PERCENT
         );
     }
 
@@ -197,7 +200,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             tokenOut,
             amountMTokenIn,
             minReceiveAmount,
-            recipient
+            recipient,
+            ONE_HUNDRED_PERCENT
         );
     }
 
@@ -214,6 +218,9 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             _redeemRequestWithCustomRecipient(
                 tokenOut,
                 amountMTokenIn,
+                msg.sender,
+                0,
+                0,
                 msg.sender
             );
     }
@@ -235,7 +242,37 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             _redeemRequestWithCustomRecipient(
                 tokenOut,
                 amountMTokenIn,
+                recipient,
+                0,
+                0,
                 recipient
+            );
+    }
+
+    /**
+     * @inheritdoc IRedemptionVault
+     */
+    function redeemRequest(
+        address tokenOut,
+        uint256 amountMTokenIn,
+        address recipientRequest,
+        uint256 instantShare,
+        uint256 minReceiveAmountInstantShare,
+        address recipientInstant
+    )
+        external
+        returns (
+            uint256 /*requestId*/
+        )
+    {
+        return
+            _redeemRequestWithCustomRecipient(
+                tokenOut,
+                amountMTokenIn,
+                recipientRequest,
+                instantShare,
+                minReceiveAmountInstantShare,
+                recipientInstant
             );
     }
 
@@ -248,7 +285,13 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     {
         for (uint256 i = 0; i < requestIds.length; ++i) {
             uint256 rate = redeemRequests[requestIds[i]].mTokenRate;
-            bool success = _approveRequest(requestIds[i], rate, true, true);
+            bool success = _approveRequest(
+                requestIds[i],
+                rate,
+                true,
+                true,
+                false
+            );
 
             if (!success) {
                 continue;
@@ -261,7 +304,37 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function safeBulkApproveRequest(uint256[] calldata requestIds) external {
         uint256 currentMTokenRate = _getMTokenRate();
-        _safeBulkApproveRequest(requestIds, currentMTokenRate);
+        _safeBulkApproveRequest(requestIds, currentMTokenRate, false);
+    }
+
+    /**
+     * @inheritdoc IRedemptionVault
+     */
+    function safeBulkApproveRequestAvgRate(uint256[] calldata requestIds)
+        external
+    {
+        uint256 currentMTokenRate = _getMTokenRate();
+        _safeBulkApproveRequest(requestIds, currentMTokenRate, true);
+    }
+
+    /**
+     * @inheritdoc IRedemptionVault
+     */
+    function safeBulkApproveRequest(
+        uint256[] calldata requestIds,
+        uint256 newOutRate
+    ) external {
+        _safeBulkApproveRequest(requestIds, newOutRate, false);
+    }
+
+    /**
+     * @inheritdoc IRedemptionVault
+     */
+    function safeBulkApproveRequestAvgRate(
+        uint256[] calldata requestIds,
+        uint256 avgMTokenRate
+    ) external {
+        _safeBulkApproveRequest(requestIds, avgMTokenRate, true);
     }
 
     /**
@@ -271,7 +344,17 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         external
         validateVaultAdminAccess
     {
-        _approveRequest(requestId, newMTokenRate, false, false);
+        _approveRequest(requestId, newMTokenRate, false, false, false);
+    }
+
+    /**
+     * @inheritdoc IRedemptionVault
+     */
+    function approveRequestAvgRate(uint256 requestId, uint256 avgMTokenRate)
+        external
+        validateVaultAdminAccess
+    {
+        _approveRequest(requestId, avgMTokenRate, false, false, true);
     }
 
     /**
@@ -281,7 +364,14 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         external
         validateVaultAdminAccess
     {
-        _approveRequest(requestId, newMTokenRate, true, false);
+        _approveRequest(requestId, newMTokenRate, true, false, false);
+    }
+
+    function safeApproveRequestAvgRate(uint256 requestId, uint256 avgMTokenRate)
+        external
+        validateVaultAdminAccess
+    {
+        _approveRequest(requestId, avgMTokenRate, true, false, true);
     }
 
     /**
@@ -445,16 +535,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     }
 
     /**
-     * @inheritdoc IRedemptionVault
-     */
-    function safeBulkApproveRequest(
-        uint256[] calldata requestIds,
-        uint256 newOutRate
-    ) external {
-        _safeBulkApproveRequest(requestIds, newOutRate);
-    }
-
-    /**
      * @inheritdoc ManageableVault
      */
     function vaultRole() public pure virtual override returns (bytes32) {
@@ -468,14 +548,16 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function _safeBulkApproveRequest(
         uint256[] calldata requestIds,
-        uint256 newOutRate
+        uint256 newOutRate,
+        bool isAvgRate
     ) internal validateVaultAdminAccess {
         for (uint256 i = 0; i < requestIds.length; ++i) {
             bool success = _approveRequest(
                 requestIds[i],
                 newOutRate,
                 true,
-                true
+                true,
+                isAvgRate
             );
 
             if (!success) {
@@ -494,6 +576,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @param isSafe new mToken rate
      * @param safeValidateLiquidity if true, checks if there is enough liquidity
      * and if its not sufficient, function wont fail
+     * @param isAvgRate if true, calculates holdback part rate from avg rate
      *
      * @return success true if success, false only in case if
      * safeValidateLiquidity == true and there is not enough liquidity
@@ -502,7 +585,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 requestId,
         uint256 newMTokenRate,
         bool isSafe,
-        bool safeValidateLiquidity
+        bool safeValidateLiquidity,
+        bool isAvgRate
     )
         internal
         returns (
@@ -516,8 +600,22 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         require(request.version == 1, "RV: not v2 request");
 
         if (isSafe) {
+            require(requestId <= maxApproveRequestId, "RV: !requestId");
             _requireVariationTolerance(request.mTokenRate, newMTokenRate);
         }
+
+        if (isAvgRate) {
+            require(
+                request.amountMTokenInstant > 0,
+                "RV: !amountMTokenInstant"
+            );
+            newMTokenRate = _calculateHoldbackPartRateFromAvg(
+                request,
+                newMTokenRate
+            );
+        }
+
+        require(newMTokenRate > 0, "RV: !newMTokenRate");
 
         CalcAndValidateRedeemResult memory calcResult = _calcAndValidateRedeem(
             request.sender,
@@ -565,10 +663,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         mToken.burn(requestRedeemer, request.amountMToken);
 
         request.status = RequestStatus.Processed;
-        request.mTokenRate = newMTokenRate;
+        request.approvedMTokenRate = newMTokenRate;
         redeemRequests[requestId] = request;
 
-        emit ApproveRequest(requestId, newMTokenRate, isSafe);
+        emit ApproveRequestV2(requestId, newMTokenRate, isSafe, isAvgRate);
 
         return true;
     }
@@ -595,13 +693,17 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @param amountMTokenIn amount of mToken (decimals 18)
      * @param minReceiveAmount min amount of tokenOut to receive (decimals 18)
      * @param recipient recipient address
+     * @param instantShareToValidate % amount of instant share to validate
      */
     function _redeemInstantWithCustomRecipient(
         address tokenOut,
         uint256 amountMTokenIn,
         uint256 minReceiveAmount,
-        address recipient
+        address recipient,
+        uint256 instantShareToValidate
     ) private validateUserAccess(recipient) {
+        require(instantShareToValidate <= maxInstantShare, "RV: !instantShare");
+
         CalcAndValidateRedeemResult memory calcResult = _redeemInstant(
             tokenOut,
             amountMTokenIn,
@@ -627,36 +729,48 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @dev internal redeem request logic with custom recipient
      * @param tokenOut tokenOut address
      * @param amountMTokenIn amount of mToken (decimals 18)
-     * @param recipient recipient address
+     * @param recipientRequest recipient address for the request part
+     * @param instantShare % amount of `amountMTokenIn` that will be redeemed instantly
+     * @param minReceiveAmountInstantShare min amount of tokenOut to receive for the instant share
+     * @param recipientInstant recipient address for the instant part
      * @return requestId request id
      */
     function _redeemRequestWithCustomRecipient(
         address tokenOut,
         uint256 amountMTokenIn,
-        address recipient
+        address recipientRequest,
+        uint256 instantShare,
+        uint256 minReceiveAmountInstantShare,
+        address recipientInstant
     )
         private
-        validateUserAccess(recipient)
+        validateUserAccess(recipientRequest)
         returns (
             uint256 /* requestId */
         )
     {
-        (uint256 requestId, uint256 feePercent) = _redeemRequest(
-            tokenOut,
-            amountMTokenIn,
-            recipient
-        );
+        uint256 amountMTokenInInstant = (amountMTokenIn * instantShare) /
+            ONE_HUNDRED_PERCENT;
 
-        emit RedeemRequestV2(
-            requestId,
-            msg.sender,
-            tokenOut,
-            recipient,
-            amountMTokenIn,
-            feePercent
-        );
+        if (amountMTokenInInstant > 0) {
+            _redeemInstantWithCustomRecipient(
+                tokenOut,
+                amountMTokenInInstant,
+                minReceiveAmountInstantShare,
+                recipientInstant,
+                instantShare
+            );
+        }
 
-        return requestId;
+        uint256 amountMTokenInRequest = amountMTokenIn - amountMTokenInInstant;
+
+        return
+            _redeemRequest(
+                tokenOut,
+                amountMTokenInRequest,
+                recipientRequest,
+                amountMTokenInInstant
+            );
     }
 
     /**
@@ -835,15 +949,17 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @notice internal redeem request logic
      * @param tokenOut tokenOut address
      * @param amountMTokenIn amount of mToken (decimals 18)
+     * @param recipient recipient address
+     * @param amountMTokenInstant amount of mToken that was redeemed instantly
      *
      * @return requestId request id
-     * @return feePercent fee percent
      */
     function _redeemRequest(
         address tokenOut,
         uint256 amountMTokenIn,
-        address recipient
-    ) internal returns (uint256 requestId, uint256 feePercent) {
+        address recipient,
+        uint256 amountMTokenInstant
+    ) internal returns (uint256 requestId) {
         _requireTokenExists(tokenOut);
 
         address user = msg.sender;
@@ -851,8 +967,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         _validateMTokenAmount(user, amountMTokenIn);
 
         _validateInstantFee();
-
-        feePercent = _getFee(user, tokenOut, false);
 
         (, uint256 mTokenRate, uint256 tokenOutRate) = _convertMTokenToTokenOut(
             amountMTokenIn,
@@ -871,6 +985,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         requestId = currentRequestId.current();
         currentRequestId.increment();
 
+        uint256 feePercent = _getFee(user, tokenOut, false);
+
         redeemRequests[requestId] = RequestV2({
             sender: recipient,
             tokenOut: tokenOut,
@@ -879,8 +995,21 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             mTokenRate: mTokenRate,
             tokenOutRate: tokenOutRate,
             feePercent: feePercent,
+            amountMTokenInstant: amountMTokenInstant,
+            approvedMTokenRate: 0,
             version: 1
         });
+
+        emit RedeemRequestV2(
+            requestId,
+            msg.sender,
+            tokenOut,
+            recipient,
+            amountMTokenIn,
+            amountMTokenInstant,
+            mTokenRate,
+            feePercent
+        );
     }
 
     /**
@@ -1065,5 +1194,29 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     {
         uint256 balance = IERC20(token).balanceOf(requestRedeemer);
         return balance >= requiredLiquidity.convertFromBase18(tokenDecimals);
+    }
+
+    /**
+     * @dev calculates holdback part rate from avg rate
+     * @param request request
+     * @param avgMTokenRate avg mToken rate
+     * @return holdback part rate
+     */
+    function _calculateHoldbackPartRateFromAvg(
+        RequestV2 memory request,
+        uint256 avgMTokenRate
+    ) internal pure returns (uint256) {
+        uint256 targetTotalValue = ((request.amountMToken +
+            request.amountMTokenInstant) * avgMTokenRate) / (10**18);
+        uint256 instantPartValue = ((request.amountMTokenInstant *
+            request.mTokenRate) / (10**18));
+
+        if (targetTotalValue <= instantPartValue) {
+            return 0;
+        }
+
+        uint256 holdbackPartValue = targetTotalValue - instantPartValue;
+
+        return (holdbackPartValue * (10**18)) / request.amountMToken;
     }
 }

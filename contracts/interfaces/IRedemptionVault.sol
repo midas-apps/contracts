@@ -32,6 +32,8 @@ struct Request {
  * @param mTokenRate rate of mToken at request creation time
  * @param tokenOutRate rate of tokenOut at request creation time
  * @param feePercent fixed fee percent that was calculated at request creation time
+ * @param amountMTokenInstant amount of mToken that was redeemed instantly
+ * @param approvedMTokenRate approved mToken rate
  * @param version request version. 0 for legacy, 1 for v2
  */
 struct RequestV2 {
@@ -42,6 +44,8 @@ struct RequestV2 {
     uint256 mTokenRate;
     uint256 tokenOutRate;
     uint256 feePercent;
+    uint256 amountMTokenInstant;
+    uint256 approvedMTokenRate;
     uint8 version;
 }
 
@@ -95,7 +99,10 @@ interface IRedemptionVault is IManageableVault {
      * @param requestId request id
      * @param user function caller (msg.sender)
      * @param tokenOut address of tokenOut
+     * @param recipient recipient address
      * @param amountMTokenIn amount of mToken
+     * @param amountMTokenInstant amount of mToken that was redeemed instantly
+     * @param mTokenRate mToken rate
      * @param feePercent fee percent
      */
     event RedeemRequestV2(
@@ -104,6 +111,8 @@ interface IRedemptionVault is IManageableVault {
         address indexed tokenOut,
         address recipient,
         uint256 amountMTokenIn,
+        uint256 amountMTokenInstant,
+        uint256 mTokenRate,
         uint256 feePercent
     );
 
@@ -126,13 +135,15 @@ interface IRedemptionVault is IManageableVault {
 
     /**
      * @param requestId mint request id
-     * @param newMTokenRate net mToken rate
+     * @param newMTokenRate new mToken rate
      * @param isSafe if true, approval is safe
+     * @param isAvgRate if true, newMtokenRate is avg rate
      */
-    event ApproveRequest(
+    event ApproveRequestV2(
         uint256 indexed requestId,
         uint256 newMTokenRate,
-        bool isSafe
+        bool isSafe,
+        bool isAvgRate
     );
 
     /**
@@ -256,6 +267,25 @@ interface IRedemptionVault is IManageableVault {
     ) external returns (uint256);
 
     /**
+     * @notice
+     * @param tokenOut stable coin token address to redeem to
+     * @param amountMTokenIn amount of mToken to redeem (decimals 18)
+     * @param recipientRequest address that receives tokens for the request part
+     * @param instantShare % amount of `amountMTokenIn` that will be redeemed instantly
+     * @param minReceiveAmountInstantShare min receive amount for the instant share
+     * @param recipientInstant address that receives tokens for the instant part
+     * @return request id
+     */
+    function redeemRequest(
+        address tokenOut,
+        uint256 amountMTokenIn,
+        address recipientRequest,
+        uint256 instantShare,
+        uint256 minReceiveAmountInstantShare,
+        address recipientInstant
+    ) external returns (uint256);
+
+    /**
      * @notice approving requests from the `requestIds` array with the mToken rate
      * from the request. WONT fail even if there is not enough liquidity
      * to process all requests.
@@ -279,6 +309,18 @@ interface IRedemptionVault is IManageableVault {
     function safeBulkApproveRequest(uint256[] calldata requestIds) external;
 
     /**
+     * @notice approving requests from the `requestIds` array with the
+     * current mToken rate as avg rate. WONT fail even if there is not enough liquidity
+     * to process all requests.
+     * Does same validation as `safeApproveRequestAvgRate`.
+     * Transfers tokenOut to users
+     * Sets request flags to Processed.
+     * @param requestIds request ids array
+     */
+    function safeBulkApproveRequestAvgRate(uint256[] calldata requestIds)
+        external;
+
+    /**
      * @notice approving requests from the `requestIds` array using the `newMTokenRate`.
      * WONT fail even if there is not enough liquidity to process all requests.
      * Does same validation as `safeApproveRequest`.
@@ -293,6 +335,20 @@ interface IRedemptionVault is IManageableVault {
     ) external;
 
     /**
+     * @notice approving requests from the `requestIds` array using the `avgMTokenRate`.
+     * WONT fail even if there is not enough liquidity to process all requests.
+     * Does same validation as `safeApproveRequestAvgRate`.
+     * Transfers tokenOut to user
+     * Sets request flags to Processed.
+     * @param requestIds request ids array
+     * @param avgMTokenRate avg mToken rate inputted by vault admin
+     */
+    function safeBulkApproveRequestAvgRate(
+        uint256[] calldata requestIds,
+        uint256 avgMTokenRate
+    ) external;
+
+    /**
      * @notice approving redeem request if not exceed tokenOut allowance
      * Burns amount mToken from contract
      * Transfers tokenOut to user
@@ -303,6 +359,17 @@ interface IRedemptionVault is IManageableVault {
     function approveRequest(uint256 requestId, uint256 newMTokenRate) external;
 
     /**
+     * @notice approving redeem request if not exceed tokenOut allowance
+     * Burns amount mToken from contract
+     * Transfers tokenOut to user
+     * Sets flag Processed
+     * @param requestId request id
+     * @param avgMTokenRate avg mToken rate inputted by vault admin
+     */
+    function approveRequestAvgRate(uint256 requestId, uint256 avgMTokenRate)
+        external;
+
+    /**
      * @notice approving request if inputted token rate fit price diviation percent
      * Burns amount mToken from contract
      * Transfers tokenOut to user
@@ -311,6 +378,17 @@ interface IRedemptionVault is IManageableVault {
      * @param newMTokenRate new mToken rate inputted by vault admin
      */
     function safeApproveRequest(uint256 requestId, uint256 newMTokenRate)
+        external;
+
+    /**
+     * @notice approving request if inputted token rate fit price diviation percent
+     * Burns amount mToken from contract
+     * Transfers tokenOut to user
+     * Sets flag Processed
+     * @param requestId request id
+     * @param avgMTokenRate avg mToken rate inputted by vault admin
+     */
+    function safeApproveRequestAvgRate(uint256 requestId, uint256 avgMTokenRate)
         external;
 
     /**

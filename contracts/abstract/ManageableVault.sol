@@ -134,6 +134,16 @@ abstract contract ManageableVault is
     uint64 public maxInstantFee;
 
     /**
+     * @notice maximum instant share value in basis points (100 = 1%)
+     */
+    uint64 public maxInstantShare;
+
+    /**
+     * @notice max requestId that can be approved
+     */
+    uint256 public maxApproveRequestId;
+
+    /**
      * @notice set of limit config windows
      */
     EnumerableSet.UintSet private _limitWindows;
@@ -146,7 +156,7 @@ abstract contract ManageableVault is
     /**
      * @dev leaving a storage gap for futures updates
      */
-    uint256[46] private __gap;
+    uint256[45] private __gap;
 
     /**
      * @dev checks that msg.sender do have a vaultRole() role
@@ -205,6 +215,8 @@ abstract contract ManageableVault is
     function __ManageableVault_initV2(
         CommonVaultV2InitParams calldata _commonVaultV2InitParams
     ) internal onlyInitializing {
+        _validateFee(_commonVaultV2InitParams.maxInstantShare, false);
+
         for (
             uint256 i = 0;
             i < _commonVaultV2InitParams.limitConfigs.length;
@@ -215,6 +227,8 @@ abstract contract ManageableVault is
                 _commonVaultV2InitParams.limitConfigs[i].limit
             );
         }
+
+        maxInstantShare = _commonVaultV2InitParams.maxInstantShare;
 
         _setMinMaxInstantFee(
             _commonVaultV2InitParams.minInstantFee,
@@ -394,6 +408,29 @@ abstract contract ManageableVault is
         uint64 newMaxInstantFee
     ) external validateVaultAdminAccess {
         _setMinMaxInstantFee(newMinInstantFee, newMaxInstantFee);
+    }
+
+    /**
+     * @inheritdoc IManageableVault
+     */
+    function setMaxInstantShare(uint64 newMaxInstantShare)
+        external
+        validateVaultAdminAccess
+    {
+        _validateFee(newMaxInstantShare, false);
+        maxInstantShare = newMaxInstantShare;
+        emit SetMaxInstantShare(msg.sender, newMaxInstantShare);
+    }
+
+    /**
+     * @inheritdoc IManageableVault
+     */
+    function setMaxApproveRequestId(uint256 newMaxApproveRequestId)
+        external
+        validateVaultAdminAccess
+    {
+        maxApproveRequestId = newMaxApproveRequestId;
+        emit SetMaxApproveRequestId(msg.sender, newMaxApproveRequestId);
     }
 
     /**

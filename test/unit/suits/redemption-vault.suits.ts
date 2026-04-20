@@ -66,7 +66,6 @@ import {
   redeemInstantTest,
   redeemRequestTest,
   rejectRedeemRequestTest,
-  safeApproveRedeemRequestTest,
   safeBulkApproveRequestTest,
   setV1RedeemRequestInStorage,
   setLoanLpFeeReceiverTest,
@@ -75,15 +74,21 @@ import {
   setLoanSwapperVaultTest,
   setMaxLoanAprTest,
   setRequestRedeemerTest,
+  setMaxInstantShareTest,
+  expectedHoldbackPartRateFromAvg,
 } from '../../common/redemption-vault.helpers';
 import { sanctionUser } from '../../common/with-sanctions-list.helpers';
 
 const REDEMPTION_APPROVE_FN_SELECTORS = [
   encodeFnSelector('approveRequest(uint256,uint256)'),
   encodeFnSelector('safeApproveRequest(uint256,uint256)'),
+  encodeFnSelector('approveRequestAvgRate(uint256,uint256)'),
+  encodeFnSelector('safeApproveRequestAvgRate(uint256,uint256)'),
   encodeFnSelector('safeBulkApproveRequestAtSavedRate(uint256[])'),
   encodeFnSelector('safeBulkApproveRequest(uint256[])'),
   encodeFnSelector('safeBulkApproveRequest(uint256[],uint256)'),
+  encodeFnSelector('safeBulkApproveRequestAvgRate(uint256[])'),
+  encodeFnSelector('safeBulkApproveRequestAvgRate(uint256[],uint256)'),
 ] as const;
 
 const pauseOtherRedemptionApproveFns = async (
@@ -188,6 +193,8 @@ export const redemptionVaultSuits = (
 
       expect(await redemptionVault.maxLoanApr()).eq(0);
 
+      expect(await redemptionVault.maxInstantShare()).eq(100_00);
+
       await deploymentAdditionalChecks(fixture);
     });
 
@@ -232,6 +239,7 @@ export const redemptionVaultSuits = (
               ],
               minInstantFee: 0,
               maxInstantFee: 10000,
+              maxInstantShare: 100_00,
             },
             { requestRedeemer: requestRedeemer.address },
             {
@@ -265,6 +273,7 @@ export const redemptionVaultSuits = (
               ],
               minInstantFee: 0,
               maxInstantFee: 10000,
+              maxInstantShare: 100_00,
             },
             {
               requestRedeemer: requestRedeemer.address,
@@ -300,6 +309,7 @@ export const redemptionVaultSuits = (
               ],
               minInstantFee: 0,
               maxInstantFee: 10000,
+              maxInstantShare: 100_00,
             },
             {
               requestRedeemer: requestRedeemer.address,
@@ -335,6 +345,7 @@ export const redemptionVaultSuits = (
               ],
               minInstantFee: 0,
               maxInstantFee: 10000,
+              maxInstantShare: 100_00,
             },
             {
               requestRedeemer: requestRedeemer.address,
@@ -376,6 +387,7 @@ export const redemptionVaultSuits = (
                 ],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
+                maxInstantShare: 100_00,
               },
               {
                 requestRedeemer: constants.AddressZero,
@@ -428,6 +440,7 @@ export const redemptionVaultSuits = (
                 ],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
+                maxInstantShare: 100_00,
               },
             ),
           ).revertedWith('Initializable: contract is not initializing');
@@ -469,6 +482,7 @@ export const redemptionVaultSuits = (
                 ],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
+                maxInstantShare: 100_00,
               },
             ),
           ).revertedWith('invalid address');
@@ -509,6 +523,7 @@ export const redemptionVaultSuits = (
                 ],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
+                maxInstantShare: 100_00,
               },
             ),
           ).revertedWith('invalid address');
@@ -550,6 +565,7 @@ export const redemptionVaultSuits = (
                 ],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
+                maxInstantShare: 100_00,
               },
             ),
           ).revertedWith('zero address');
@@ -591,6 +607,7 @@ export const redemptionVaultSuits = (
                 ],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
+                maxInstantShare: 100_00,
               },
             ),
           ).revertedWith('fee == 0');
@@ -603,6 +620,7 @@ export const redemptionVaultSuits = (
               {
                 minInstantFee: 0,
                 maxInstantFee: 0,
+                maxInstantShare: 100_00,
                 limitConfigs: [],
               },
               {
@@ -624,6 +642,7 @@ export const redemptionVaultSuits = (
               {
                 minInstantFee: 0,
                 maxInstantFee: 1,
+                maxInstantShare: 100_00,
                 limitConfigs: [],
               },
               {
@@ -2229,6 +2248,69 @@ export const redemptionVaultSuits = (
               100,
               {
                 revertMessage: 'RV: minReceiveAmount > actual',
+              },
+            );
+          });
+        });
+
+        describe('holdback', () => {
+          it('when max instant share is 100%', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(mTBILL, owner, 100);
+            await mintToken(stableCoins.dai, redemptionVault, 1000);
+
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await redeemInstantTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              100,
+            );
+          });
+
+          it('should fail: when max instant share is not 100%', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(mTBILL, owner, 100);
+            await mintToken(stableCoins.dai, redemptionVault, 1000);
+
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await setMaxInstantShareTest({ redemptionVault, owner }, 90_00);
+
+            await redeemInstantTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              100,
+              {
+                revertMessage: 'RV: !instantShare',
               },
             );
           });
@@ -5462,6 +5544,359 @@ export const redemptionVaultSuits = (
       });
 
       describe('redeemRequest()', () => {
+        describe('holdback', () => {
+          it('when 40% instant and 60% holdback', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(mTBILL, regularAccounts[0], 100);
+            await approveBase18(
+              regularAccounts[0],
+              mTBILL,
+              redemptionVault,
+              100,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 40_00,
+              },
+              stableCoins.dai,
+              100,
+              {
+                from: regularAccounts[0],
+              },
+            );
+          });
+
+          it('when 90% instant and 10% holdback', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(mTBILL, regularAccounts[0], 100);
+            await approveBase18(
+              regularAccounts[0],
+              mTBILL,
+              redemptionVault,
+              100,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 90_00,
+              },
+              stableCoins.dai,
+              100,
+              {
+                from: regularAccounts[0],
+              },
+            );
+          });
+
+          it('when 0% instant and 100% holdback', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(mTBILL, regularAccounts[0], 100);
+            await approveBase18(
+              regularAccounts[0],
+              mTBILL,
+              redemptionVault,
+              100,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 0,
+              },
+              stableCoins.dai,
+              100,
+              {
+                from: regularAccounts[0],
+              },
+            );
+          });
+
+          it('when 50% instant and 50% holdback and request recipient is different from msg.sender', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(mTBILL, regularAccounts[0], 100);
+            await approveBase18(
+              regularAccounts[0],
+              mTBILL,
+              redemptionVault,
+              100,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 0,
+                customRecipient: regularAccounts[1],
+              },
+              stableCoins.dai,
+              100,
+              {
+                from: regularAccounts[0],
+              },
+            );
+          });
+
+          it('when 50% instant and 50% holdback and instant recipient is different from msg.sender', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(mTBILL, regularAccounts[0], 100);
+            await approveBase18(
+              regularAccounts[0],
+              mTBILL,
+              redemptionVault,
+              100,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 0,
+                customRecipientInstant: regularAccounts[1],
+              },
+              stableCoins.dai,
+              100,
+              {
+                from: regularAccounts[0],
+              },
+            );
+          });
+
+          it('when 50% instant and 50% holdback and request and instant recipients are different from msg.sender and from each other', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(mTBILL, regularAccounts[0], 100);
+            await approveBase18(
+              regularAccounts[0],
+              mTBILL,
+              redemptionVault,
+              100,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 0,
+                customRecipient: regularAccounts[1],
+                customRecipientInstant: regularAccounts[2],
+              },
+              stableCoins.dai,
+              100,
+              {
+                from: regularAccounts[0],
+              },
+            );
+          });
+
+          it('should fail: when 100% instant and 0% holdback', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(mTBILL, regularAccounts[0], 100);
+            await approveBase18(
+              regularAccounts[0],
+              mTBILL,
+              redemptionVault,
+              100,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 100_00,
+              },
+              stableCoins.dai,
+              100,
+              {
+                from: regularAccounts[0],
+                revertMessage: 'RV: invalid amount',
+              },
+            );
+          });
+
+          it('should fail: when instant share exceeds max instant share', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(mTBILL, regularAccounts[0], 100);
+            await approveBase18(
+              regularAccounts[0],
+              mTBILL,
+              redemptionVault,
+              100,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await setMaxInstantShareTest({ redemptionVault, owner }, 80_00);
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 90_00,
+              },
+              stableCoins.dai,
+              100,
+              {
+                from: regularAccounts[0],
+                revertMessage: 'RV: !instantShare',
+              },
+            );
+          });
+        });
+
         it('should fail: when there is no token in vault', async () => {
           const {
             owner,
@@ -6660,12 +7095,13 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
             mTBILL,
           } = await loadRvFixture();
-          await safeApproveRedeemRequestTest(
+          await approveRedeemRequestTest(
             {
               redemptionVault,
               owner: regularAccounts[1],
               mTBILL,
               mTokenToUsdDataFeed,
+              isSafe: true,
             },
             1,
             parseUnits('1'),
@@ -6704,8 +7140,14 @@ export const redemptionVaultSuits = (
             encodeFnSelector('safeApproveRequest(uint256,uint256)'),
           );
 
-          await safeApproveRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+            },
             0,
             parseUnits('1'),
             { revertMessage: 'Pausable: fn paused' },
@@ -6728,8 +7170,14 @@ export const redemptionVaultSuits = (
             0,
             true,
           );
-          await safeApproveRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+            },
             1,
             parseUnits('1'),
             {
@@ -6777,8 +7225,14 @@ export const redemptionVaultSuits = (
           );
           const requestId = 0;
 
-          await safeApproveRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+            },
             +requestId,
             parseUnits('6'),
             { revertMessage: 'MV: exceed price diviation' },
@@ -6824,13 +7278,25 @@ export const redemptionVaultSuits = (
           );
           const requestId = 0;
 
-          await safeApproveRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+            },
             +requestId,
             parseUnits('5.000001'),
           );
-          await safeApproveRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+            },
             +requestId,
             parseUnits('5.00001'),
             { revertMessage: 'RV: request not pending' },
@@ -6877,8 +7343,14 @@ export const redemptionVaultSuits = (
           );
           const requestId = 0;
 
-          await safeApproveRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+            },
             +requestId,
             parseUnits('5.000001'),
           );
@@ -6929,10 +7401,1050 @@ export const redemptionVaultSuits = (
             encodeFnSelector('safeApproveRequest(uint256,uint256)'),
           );
 
-          await safeApproveRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+            },
             +requestId,
             parseUnits('5.000001'),
+          );
+        });
+      });
+
+      describe('approveRequestAvgRate()', async () => {
+        it('should fail: call from address without vault admin role', async () => {
+          const {
+            redemptionVault,
+            regularAccounts,
+            mTokenToUsdDataFeed,
+            mTBILL,
+          } = await loadRvFixture();
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner: regularAccounts[1],
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            1,
+            parseUnits('1'),
+            {
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+            },
+          );
+        });
+
+        it('should fail: v1 stored request (version check)', async () => {
+          const { owner, redemptionVault } = await loadRvFixture();
+
+          const requestId = 0;
+          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
+            sender: owner.address,
+            tokenOut: constants.AddressZero,
+            amountMToken: 1n,
+            mTokenRate: 1n,
+            tokenOutRate: 1n,
+            status: 0,
+          });
+
+          await expect(
+            redemptionVault
+              .connect(owner)
+              .approveRequestAvgRate(requestId, parseUnits('1')),
+          ).to.be.revertedWith('RV: not v2 request');
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, redemptionVault, mTBILL, mTokenToUsdDataFeed } =
+            await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('approveRequestAvgRate(uint256,uint256)'),
+          );
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            0,
+            parseUnits('1'),
+            { revertMessage: 'Pausable: fn paused' },
+          );
+        });
+
+        it('should fail: when instant part is 0', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadRvFixture();
+
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            0,
+            parseUnits('1'),
+            {
+              revertMessage: 'RV: !amountMTokenInstant',
+            },
+          );
+        });
+
+        it('should fail: request by id not exist', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadRvFixture();
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            1,
+            parseUnits('1'),
+            {
+              revertMessage: 'RV: request not exist',
+            },
+          );
+        });
+
+        it('should fail: request already processed', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            +requestId,
+            parseUnits('5'),
+          );
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            +requestId,
+            parseUnits('5'),
+            { revertMessage: 'RV: request not pending' },
+          );
+        });
+
+        it('should fail: when calclulated holdback part rate is 0', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            +requestId,
+            parseUnits('1'),
+            {
+              revertMessage: 'RV: !newMTokenRate',
+            },
+          );
+        });
+
+        it('should not check for deviation tolerance', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+          await setVariabilityToleranceTest(
+            { vault: redemptionVault, owner },
+            1,
+          );
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            +requestId,
+            parseUnits('4'),
+          );
+        });
+
+        it('approve request from vaut admin account', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            +requestId,
+            parseUnits('5'),
+          );
+        });
+
+        it('should succeed when other approve entrypoints are paused', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await pauseOtherRedemptionApproveFns(
+            redemptionVault,
+            encodeFnSelector('approveRequestAvgRate(uint256,uint256)'),
+          );
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            +requestId,
+            parseUnits('5'),
+          );
+        });
+      });
+
+      describe('safeApproveRequestAvgRate()', async () => {
+        it('should fail: call from address without vault admin role', async () => {
+          const {
+            redemptionVault,
+            regularAccounts,
+            mTokenToUsdDataFeed,
+            mTBILL,
+          } = await loadRvFixture();
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner: regularAccounts[1],
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+              isSafe: true,
+            },
+            1,
+            parseUnits('1'),
+            {
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+            },
+          );
+        });
+
+        it('should fail: v1 stored request (version check)', async () => {
+          const { owner, redemptionVault } = await loadRvFixture();
+
+          const requestId = 0;
+          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
+            sender: owner.address,
+            tokenOut: constants.AddressZero,
+            amountMToken: 1n,
+            mTokenRate: 1n,
+            tokenOutRate: 1n,
+            status: 0,
+          });
+
+          await expect(
+            redemptionVault
+              .connect(owner)
+              .safeApproveRequestAvgRate(requestId, parseUnits('1')),
+          ).to.be.revertedWith('RV: not v2 request');
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, redemptionVault, mTBILL, mTokenToUsdDataFeed } =
+            await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('safeApproveRequestAvgRate(uint256,uint256)'),
+          );
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+              isSafe: true,
+            },
+            0,
+            parseUnits('1'),
+            { revertMessage: 'Pausable: fn paused' },
+          );
+        });
+
+        it('should fail: when instant part is 0', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadRvFixture();
+
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+              isSafe: true,
+            },
+            0,
+            parseUnits('5'),
+            {
+              revertMessage: 'RV: !amountMTokenInstant',
+            },
+          );
+        });
+
+        it('should fail: request by id not exist', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadRvFixture();
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+              isSafe: true,
+            },
+            1,
+            parseUnits('1'),
+            {
+              revertMessage: 'RV: request not exist',
+            },
+          );
+        });
+
+        it('should fail: request already processed', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            +requestId,
+            parseUnits('5'),
+          );
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+              isSafe: true,
+            },
+            +requestId,
+            parseUnits('5'),
+            { revertMessage: 'RV: request not pending' },
+          );
+        });
+
+        it('should fail: when calclulated holdback part rate is 0', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 99_99,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+          await setVariabilityToleranceTest(
+            { vault: redemptionVault, owner },
+            100_00,
+          );
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+              isSafe: true,
+            },
+            +requestId,
+            parseUnits('4.9'),
+            {
+              revertMessage: 'RV: !newMTokenRate',
+            },
+          );
+        });
+
+        it('should fail: new rate exceeds deviation tolerance', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+          await setVariabilityToleranceTest(
+            { vault: redemptionVault, owner },
+            1,
+          );
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+              isSafe: true,
+            },
+            +requestId,
+            parseUnits('4'),
+            {
+              revertMessage: 'MV: exceed price diviation',
+            },
+          );
+        });
+
+        it('should fail: deviation tolerance should be checked against avg rate and not the holdback rate', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 99_99,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+              isSafe: true,
+            },
+            +requestId,
+            parseUnits('4.9'),
+            {
+              revertMessage: 'MV: exceed price diviation',
+            },
+          );
+
+          await setVariabilityToleranceTest(
+            { vault: redemptionVault, owner },
+            5_00,
+          );
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+              isSafe: true,
+            },
+            +requestId,
+            parseUnits('4.8'),
+            {
+              revertMessage: 'RV: !newMTokenRate',
+            },
+          );
+        });
+
+        it('approve request from vaut admin account', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+              isSafe: true,
+            },
+            +requestId,
+            parseUnits('5'),
+          );
+        });
+
+        it('should succeed when other approve entrypoints are paused', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await pauseOtherRedemptionApproveFns(
+            redemptionVault,
+            encodeFnSelector('safeApproveRequestAvgRate(uint256,uint256)'),
+          );
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+              isSafe: true,
+            },
+            +requestId,
+            parseUnits('5'),
           );
         });
       });
@@ -7119,8 +8631,14 @@ export const redemptionVaultSuits = (
             100,
           );
 
-          await safeApproveRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+            },
             0,
             parseUnits('5.000001'),
           );
@@ -7176,8 +8694,14 @@ export const redemptionVaultSuits = (
             100,
           );
 
-          await safeApproveRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+            },
             0,
             parseUnits('5.000001'),
           );
@@ -7899,8 +9423,14 @@ export const redemptionVaultSuits = (
             100,
           );
 
-          await safeApproveRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+            },
             0,
             parseUnits('5.000001'),
           );
@@ -7956,8 +9486,14 @@ export const redemptionVaultSuits = (
             100,
           );
 
-          await safeApproveRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+            },
             0,
             parseUnits('5.000001'),
           );
@@ -8680,8 +10216,14 @@ export const redemptionVaultSuits = (
             100,
           );
 
-          await safeApproveRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+            },
             0,
             parseUnits('5.000001'),
           );
@@ -8737,8 +10279,14 @@ export const redemptionVaultSuits = (
             100,
           );
 
-          await safeApproveRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+            },
             0,
             parseUnits('5.000001'),
           );
@@ -9284,6 +10832,2282 @@ export const redemptionVaultSuits = (
         });
       });
 
+      describe('safeBulkApproveRequestAvgRate() (custom price overload)', async () => {
+        it('should fail: call from address without vault admin role', async () => {
+          const {
+            redemptionVault,
+            regularAccounts,
+            mTokenToUsdDataFeed,
+            mTBILL,
+          } = await loadRvFixture();
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner: regularAccounts[1],
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: 1 }],
+            parseUnits('1'),
+            {
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+            },
+          );
+        });
+
+        it('should fail: v1 stored request (version check)', async () => {
+          const { owner, redemptionVault } = await loadRvFixture();
+
+          const requestId = 0;
+          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
+            sender: owner.address,
+            tokenOut: constants.AddressZero,
+            amountMToken: 1n,
+            mTokenRate: 1n,
+            tokenOutRate: 1n,
+            status: 0,
+          });
+
+          await expect(
+            redemptionVault
+              .connect(owner)
+              ['safeBulkApproveRequestAvgRate(uint256[],uint256)'](
+                [requestId],
+                parseUnits('1'),
+              ),
+          ).to.be.revertedWith('RV: not v2 request');
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, redemptionVault, mTBILL, mTokenToUsdDataFeed } =
+            await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector(
+              'safeBulkApproveRequestAvgRate(uint256[],uint256)',
+            ),
+          );
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: 0 }],
+            parseUnits('1'),
+            { revertMessage: 'Pausable: fn paused' },
+          );
+        });
+
+        it('should fail: request by id not exist', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadRvFixture();
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: 1 }],
+            parseUnits('1'),
+            {
+              revertMessage: 'RV: request not exist',
+            },
+          );
+        });
+
+        it('should fail: if new rate greater then variabilityTolerance', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.001);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: requestId }],
+            parseUnits('6'),
+            { revertMessage: 'MV: exceed price diviation' },
+          );
+        });
+
+        it('should fail: if new rate lower then variabilityTolerance', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.001);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: requestId }],
+            parseUnits('4'),
+            { revertMessage: 'MV: exceed price diviation' },
+          );
+        });
+
+        it('should fail: request already processed', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.001);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await safeBulkApproveRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            [{ id: requestId }],
+            parseUnits('5.000001'),
+          );
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: requestId }],
+            parseUnits('5.00001'),
+            { revertMessage: 'RV: request not pending' },
+          );
+        });
+
+        it('should fail: process multiple requests, when one of them already precessed', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 200);
+          await approveBase18(owner, mTBILL, redemptionVault, 200);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.001);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+              isAvgRate: true,
+            },
+            0,
+            parseUnits('5.000001'),
+          );
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: 1 }, { id: 0 }],
+            parseUnits('5.00001'),
+            { revertMessage: 'RV: request not pending' },
+          );
+        });
+
+        it('should fail: process multiple requests, when couple of them have equal id', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 200);
+          await approveBase18(owner, mTBILL, redemptionVault, 200);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.001);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+              isAvgRate: true,
+            },
+            0,
+            parseUnits('5.000001'),
+          );
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: 1 }, { id: 1 }],
+            parseUnits('5.00001'),
+            { revertMessage: 'RV: request not pending' },
+          );
+        });
+
+        it('should fail: process multiple requests, when one of them does not have instant part', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 200);
+          await approveBase18(owner, mTBILL, redemptionVault, 200);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.001);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: 1 }, { id: 1 }],
+            parseUnits('5.00001'),
+            { revertMessage: 'RV: !amountMTokenInstant' },
+          );
+        });
+
+        it('approve 1 request from vaut admin account', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: requestId }],
+            parseUnits('5.000001'),
+          );
+        });
+
+        it('approve 2 request from vaut admin account', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 200);
+          await approveBase18(owner, mTBILL, redemptionVault, 200);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: 1 }, { id: 0 }],
+            parseUnits('5.000001'),
+          );
+        });
+
+        it('approve 10 request from vaut admin account', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            requestRedeemer,
+            regularAccounts,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 1000);
+          await approveBase18(owner, mTBILL, redemptionVault, 1000);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          for (let i = 0; i < 10; i++) {
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customRecipient: regularAccounts[i],
+                instantShare: 50_00,
+              },
+              stableCoins.dai,
+              100,
+            );
+          }
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            Array.from({ length: 10 }, (_, i) => ({ id: i })),
+            parseUnits('5.000001'),
+          );
+        });
+
+        it('approve 1 request when there is not enough liquidity', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: requestId, expectedToExecute: false }],
+            parseUnits('5.000001'),
+          );
+        });
+
+        it('approve 2 request when there is enough liquidity only for first one', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 300);
+          await mintToken(stableCoins.dai, redemptionVault, 600);
+
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            600,
+          );
+          await mintToken(mTBILL, owner, 200);
+          await approveBase18(owner, mTBILL, redemptionVault, 200);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [
+              { id: 0, expectedToExecute: true },
+              { id: 1, expectedToExecute: false },
+            ],
+            parseUnits('5.000001'),
+          );
+        });
+
+        it('approve 2 requests both with different payment tokens', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.usdc, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await mintToken(stableCoins.usdc, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.usdc,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 200);
+          await approveBase18(owner, mTBILL, redemptionVault, 200);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.usdc,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.usdc,
+            100,
+          );
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: 1 }, { id: 0 }],
+            parseUnits('5.000001'),
+          );
+        });
+
+        it('approve 2 requests both with different payment tokens when there is not enough liquidity for first one', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.usdc, requestRedeemer, 100000);
+          await mintToken(stableCoins.usdc, redemptionVault, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.usdc,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 200);
+          await approveBase18(owner, mTBILL, redemptionVault, 200);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.usdc,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.usdc,
+            100,
+          );
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: 1 }, { id: 0, expectedToExecute: false }],
+            parseUnits('5.000001'),
+          );
+        });
+
+        it('should succeed when other approve entrypoints are paused', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await pauseOtherRedemptionApproveFns(
+            redemptionVault,
+            encodeFnSelector(
+              'safeBulkApproveRequestAvgRate(uint256[],uint256)',
+            ),
+          );
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: requestId }],
+            parseUnits('5.000001'),
+          );
+        });
+      });
+
+      describe('safeBulkApproveRequestAvgRate() (current price overload)', async () => {
+        it('should fail: call from address without vault admin role', async () => {
+          const {
+            redemptionVault,
+            regularAccounts,
+            mTokenToUsdDataFeed,
+            mTBILL,
+          } = await loadRvFixture();
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner: regularAccounts[1],
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: 1 }],
+            undefined,
+            {
+              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+            },
+          );
+        });
+
+        it('should fail: v1 stored request (version check)', async () => {
+          const { owner, redemptionVault } = await loadRvFixture();
+
+          const requestId = 0;
+          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
+            sender: owner.address,
+            tokenOut: constants.AddressZero,
+            amountMToken: 1n,
+            mTokenRate: 1n,
+            tokenOutRate: 1n,
+            status: 0,
+          });
+
+          await expect(
+            redemptionVault
+              .connect(owner)
+              ['safeBulkApproveRequestAvgRate(uint256[])']([requestId]),
+          ).to.be.revertedWith('RV: not v2 request');
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, redemptionVault, mTBILL, mTokenToUsdDataFeed } =
+            await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('safeBulkApproveRequestAvgRate(uint256[])'),
+          );
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: 0 }],
+            undefined,
+            { revertMessage: 'Pausable: fn paused' },
+          );
+        });
+
+        it('should fail: request by id not exist', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadRvFixture();
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: 1 }],
+            undefined,
+            {
+              revertMessage: 'RV: request not exist',
+            },
+          );
+        });
+
+        it('should fail: if new rate greater then variabilityTolerance', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.001);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 6);
+
+          const requestId = 0;
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: requestId }],
+            undefined,
+            { revertMessage: 'MV: exceed price diviation' },
+          );
+        });
+
+        it('should fail: if new rate lower then variabilityTolerance', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.001);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 4);
+
+          const requestId = 0;
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: requestId }],
+            undefined,
+            { revertMessage: 'MV: exceed price diviation' },
+          );
+        });
+
+        it('should fail: request already processed', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.001);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: requestId }],
+            undefined,
+          );
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: requestId }],
+            undefined,
+            { revertMessage: 'RV: request not pending' },
+          );
+        });
+
+        it('should fail: process multiple requests, when one of them already precessed', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 200);
+          await approveBase18(owner, mTBILL, redemptionVault, 200);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.001);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+              isAvgRate: true,
+            },
+            0,
+            parseUnits('5.000001'),
+          );
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: 1 }, { id: 0 }],
+            undefined,
+            { revertMessage: 'RV: request not pending' },
+          );
+        });
+
+        it('should fail: process multiple requests, when couple of them have equal id', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 200);
+          await approveBase18(owner, mTBILL, redemptionVault, 200);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.001);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+              isAvgRate: true,
+            },
+            0,
+            parseUnits('5.000001'),
+          );
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: 1 }, { id: 1 }],
+            undefined,
+            { revertMessage: 'RV: request not pending' },
+          );
+        });
+
+        it('should fail: when one of the requests instant part is 0', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 200);
+          await approveBase18(owner, mTBILL, redemptionVault, 200);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.001);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: 1 }, { id: 1 }],
+            undefined,
+            { revertMessage: 'RV: !amountMTokenInstant' },
+          );
+        });
+
+        it('approve 1 request from vaut admin account', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: requestId }],
+            undefined,
+          );
+        });
+
+        it('approve 1 request from vaut admin account when 10% growth is applied', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            requestRedeemer,
+            customFeedGrowth,
+          } = await loadRvFixture();
+
+          await mTokenToUsdDataFeed.changeAggregator(customFeedGrowth.address);
+          await setRoundDataGrowth({ owner, customFeedGrowth }, 1, -1000, 10);
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: requestId }],
+            undefined,
+          );
+        });
+
+        it('approve 1 request from vaut admin account when -10% growth is applied', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            requestRedeemer,
+            customFeedGrowth,
+          } = await loadRvFixture();
+
+          await mTokenToUsdDataFeed.changeAggregator(customFeedGrowth.address);
+          await setMinGrowthApr({ owner, customFeedGrowth }, -10);
+          await setRoundDataGrowth({ owner, customFeedGrowth }, 1, -1000, -10);
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: requestId }],
+            undefined,
+          );
+        });
+
+        it('approve 2 request from vaut admin account', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 200);
+          await approveBase18(owner, mTBILL, redemptionVault, 200);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: 1 }, { id: 0 }],
+            undefined,
+          );
+        });
+
+        it('approve 10 request from vaut admin account', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            requestRedeemer,
+            regularAccounts,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 1000);
+          await approveBase18(owner, mTBILL, redemptionVault, 1000);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          for (let i = 0; i < 10; i++) {
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customRecipient: regularAccounts[i],
+                instantShare: 50_00,
+              },
+              stableCoins.dai,
+              100,
+            );
+          }
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            Array.from({ length: 10 }, (_, i) => ({ id: i })),
+            undefined,
+          );
+        });
+
+        it('approve 1 request when there is not enough liquidity', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: requestId, expectedToExecute: false }],
+            undefined,
+          );
+        });
+
+        it('approve 2 request when there is enough liquidity only for first one', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 300);
+          await mintToken(stableCoins.dai, redemptionVault, 1000);
+
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            600,
+          );
+          await mintToken(mTBILL, owner, 200);
+          await approveBase18(owner, mTBILL, redemptionVault, 200);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [
+              { id: 0, expectedToExecute: true },
+              { id: 1, expectedToExecute: false },
+            ],
+            undefined,
+          );
+        });
+
+        it('approve 2 requests both with different payment tokens', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.usdc, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await mintToken(stableCoins.usdc, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.usdc,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 200);
+          await approveBase18(owner, mTBILL, redemptionVault, 200);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.usdc,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.usdc,
+            100,
+          );
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: 1 }, { id: 0 }],
+            undefined,
+          );
+        });
+
+        it('approve 2 requests both with different payment tokens when there is not enough liquidity for first one', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.usdc, requestRedeemer, 100000);
+          await mintToken(stableCoins.usdc, redemptionVault, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.usdc,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 200);
+          await approveBase18(owner, mTBILL, redemptionVault, 200);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.usdc,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.usdc,
+            100,
+          );
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: 1 }, { id: 0, expectedToExecute: false }],
+            undefined,
+          );
+        });
+
+        it('should succeed when other approve entrypoints are paused', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await pauseOtherRedemptionApproveFns(
+            redemptionVault,
+            encodeFnSelector('safeBulkApproveRequestAvgRate(uint256[])'),
+          );
+
+          await safeBulkApproveRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: requestId }],
+            undefined,
+          );
+        });
+      });
+
       describe('rejectRequest()', async () => {
         it('should fail: call from address without vault admin role', async () => {
           const {
@@ -9594,8 +13418,14 @@ export const redemptionVaultSuits = (
 
           const requestId = 0;
 
-          await safeApproveRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+            },
             +requestId,
             parseUnits('1.000001'),
           );
@@ -10495,6 +14325,198 @@ export const redemptionVaultSuits = (
           await expect(
             redemptionVault.convertMTokenToUsdTest(1, 0),
           ).revertedWith('MV: rate zero');
+        });
+      });
+
+      describe('_calculateHoldbackPartRateFromAvg', () => {
+        it('returns 0 when target total value is not above instant part (equality)', async () => {
+          const { redemptionVault } = await loadRvFixture();
+          const amountMToken = parseUnits('50');
+          const amountMTokenInstant = parseUnits('50');
+          const avgMTokenRate = parseUnits('1');
+          const mTokenRate = parseUnits('200');
+          const expected = expectedHoldbackPartRateFromAvg(
+            BigInt(amountMToken.toString()),
+            BigInt(amountMTokenInstant.toString()),
+            BigInt(mTokenRate.toString()),
+            BigInt(avgMTokenRate.toString()),
+          );
+          expect(expected).eq(0n);
+          expect(
+            await redemptionVault.calculateHoldbackPartRateFromAvgTest(
+              amountMToken,
+              amountMTokenInstant,
+              mTokenRate,
+              avgMTokenRate,
+            ),
+          ).eq(expected.toString());
+        });
+
+        it('returns 0 when avg rate implies lower target value than instant leg', async () => {
+          const { redemptionVault } = await loadRvFixture();
+          const amountMToken = parseUnits('100');
+          const amountMTokenInstant = parseUnits('10');
+          const avgMTokenRate = parseUnits('1');
+          const mTokenRate = parseUnits('2000');
+          const expected = expectedHoldbackPartRateFromAvg(
+            BigInt(amountMToken.toString()),
+            BigInt(amountMTokenInstant.toString()),
+            BigInt(mTokenRate.toString()),
+            BigInt(avgMTokenRate.toString()),
+          );
+          expect(expected).eq(0n);
+          expect(
+            await redemptionVault.calculateHoldbackPartRateFromAvgTest(
+              amountMToken,
+              amountMTokenInstant,
+              mTokenRate,
+              avgMTokenRate,
+            ),
+          ).eq(expected.toString());
+        });
+
+        it('returns 0 when amountMTokenInstant is 0 and avgMTokenRate is 0', async () => {
+          const { redemptionVault } = await loadRvFixture();
+          const amountMToken = parseUnits('100');
+          const one = parseUnits('1');
+          const expected = expectedHoldbackPartRateFromAvg(
+            BigInt(amountMToken.toString()),
+            0n,
+            BigInt(one.toString()),
+            0n,
+          );
+          expect(
+            await redemptionVault.calculateHoldbackPartRateFromAvgTest(
+              amountMToken,
+              0,
+              one,
+              0,
+            ),
+          ).eq(expected.toString());
+        });
+
+        it('full holdback rate equals avg when no instant tranche', async () => {
+          const { redemptionVault } = await loadRvFixture();
+          const amountMToken = parseUnits('100');
+          const avgMTokenRate = parseUnits('1.25');
+          const expected = expectedHoldbackPartRateFromAvg(
+            BigInt(amountMToken.toString()),
+            0n,
+            0n,
+            BigInt(avgMTokenRate.toString()),
+          );
+          expect(
+            await redemptionVault.calculateHoldbackPartRateFromAvgTest(
+              amountMToken,
+              0,
+              0,
+              avgMTokenRate,
+            ),
+          ).eq(expected.toString());
+          expect(expected).eq(BigInt(avgMTokenRate.toString()));
+        });
+
+        it('applies integer rounding on the final rate', async () => {
+          const { redemptionVault } = await loadRvFixture();
+          const amountMToken = 3n;
+          const amountMTokenInstant = 0n;
+          const mTokenRate = 0n;
+          const avgMTokenRate = parseUnits('2').div(3);
+          const expected = expectedHoldbackPartRateFromAvg(
+            amountMToken,
+            amountMTokenInstant,
+            mTokenRate,
+            avgMTokenRate,
+          );
+          expect(
+            await redemptionVault.calculateHoldbackPartRateFromAvgTest(
+              amountMToken,
+              amountMTokenInstant,
+              mTokenRate,
+              avgMTokenRate,
+            ),
+          ).eq(expected.toString());
+        });
+
+        it('succeeds with amountMToken == 0 when branch returns 0 before division', async () => {
+          const { redemptionVault } = await loadRvFixture();
+          const amountMTokenInstant = parseUnits('100');
+          const mTokenRate = parseUnits('10');
+          const avgMTokenRate = parseUnits('1');
+          const expected = expectedHoldbackPartRateFromAvg(
+            0n,
+            BigInt(amountMTokenInstant.toString()),
+            BigInt(mTokenRate.toString()),
+            BigInt(avgMTokenRate.toString()),
+          );
+          expect(expected).eq(0n);
+          expect(
+            await redemptionVault.calculateHoldbackPartRateFromAvgTest(
+              0,
+              amountMTokenInstant,
+              mTokenRate,
+              avgMTokenRate,
+            ),
+          ).eq('0');
+        });
+
+        it('reverts when amountMToken == 0 but holdback part would be positive (division by zero)', async () => {
+          const { redemptionVault } = await loadRvFixture();
+          const amountMTokenInstant = parseUnits('100');
+          const avgMTokenRate = parseUnits('2');
+          const mTokenRate = parseUnits('1');
+          await expect(
+            redemptionVault.calculateHoldbackPartRateFromAvgTest(
+              0,
+              amountMTokenInstant,
+              mTokenRate,
+              avgMTokenRate,
+            ),
+          ).to.be.reverted;
+        });
+
+        it('matches reference for mixed instant and holdback with realistic WAD rates', async () => {
+          const { redemptionVault } = await loadRvFixture();
+          const amountMToken = parseUnits('70');
+          const amountMTokenInstant = parseUnits('30');
+          const avgMTokenRate = parseUnits('1');
+          const mTokenRate = parseUnits('1');
+          const expected = expectedHoldbackPartRateFromAvg(
+            BigInt(amountMToken.toString()),
+            BigInt(amountMTokenInstant.toString()),
+            BigInt(mTokenRate.toString()),
+            BigInt(avgMTokenRate.toString()),
+          );
+          expect(
+            await redemptionVault.calculateHoldbackPartRateFromAvgTest(
+              amountMToken,
+              amountMTokenInstant,
+              mTokenRate,
+              avgMTokenRate,
+            ),
+          ).eq(expected.toString());
+        });
+
+        it('handles large values without overflow when inputs are bounded', async () => {
+          const { redemptionVault } = await loadRvFixture();
+          const amountMToken = 10n ** 30n * 6n;
+          const amountMTokenInstant = 10n ** 30n * 4n;
+          const avgMTokenRate = 10n ** 18n * 2n;
+          const mTokenRate = 10n ** 18n * 5n;
+          const expected = expectedHoldbackPartRateFromAvg(
+            amountMToken,
+            amountMTokenInstant,
+            mTokenRate,
+            avgMTokenRate,
+          );
+          expect(
+            await redemptionVault.calculateHoldbackPartRateFromAvgTest(
+              amountMToken,
+              amountMTokenInstant,
+              mTokenRate,
+              avgMTokenRate,
+            ),
+          ).eq(expected.toString());
         });
       });
 

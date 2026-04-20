@@ -1,7 +1,8 @@
+import { setNextBlockTimestamp } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumber, BigNumberish, constants } from 'ethers';
-import { parseUnits, solidityKeccak256 } from 'ethers/lib/utils';
+import { formatUnits, parseUnits, solidityKeccak256 } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
 import {
@@ -148,6 +149,21 @@ export const setV1RedeemRequestInStorage = async (
   ]);
 };
 
+const getTotalFromInstantShare = (
+  amountIn: BigNumber,
+  instantShare?: BigNumberish,
+) => {
+  if (instantShare === undefined) {
+    return amountIn;
+  }
+
+  if (BigNumber.from(instantShare).eq(constants.Zero)) {
+    return BigNumber.from(0);
+  }
+
+  return amountIn.mul(100_00).div(instantShare);
+};
+
 export const redeemInstantTest = async (
   {
     redemptionVault,
@@ -160,6 +176,7 @@ export const redeemInstantTest = async (
     checkSupply = true,
     expectedAmountOut,
     additionalLiquidity,
+    holdback,
   }: CommonParamsRedeem & {
     waivedFee?: boolean;
     minAmount?: BigNumberish;
@@ -167,6 +184,10 @@ export const redeemInstantTest = async (
     checkSupply?: boolean;
     expectedAmountOut?: BigNumberish;
     additionalLiquidity?: () => Promise<BigNumberish>;
+    holdback?: {
+      callFunction: () => Promise<unknown>;
+      instantShare: BigNumberish;
+    };
   },
   tokenOut: IERC20 | ERC20 | string,
   amountTBillIn: number,
@@ -199,24 +220,26 @@ export const redeemInstantTest = async (
     ? getAccount(customRecipient)
     : sender.address;
 
-  const callFn = withRecipient
-    ? redemptionVault
-        .connect(sender)
-        ['redeemInstant(address,uint256,uint256,address)'].bind(
-          this,
-          tokenOut,
-          amountIn,
-          minAmount ?? constants.Zero,
-          recipient,
-        )
-    : redemptionVault
-        .connect(sender)
-        ['redeemInstant(address,uint256,uint256)'].bind(
-          this,
-          tokenOut,
-          amountIn,
-          minAmount ?? constants.Zero,
-        );
+  const callFn =
+    holdback?.callFunction ??
+    (withRecipient
+      ? redemptionVault
+          .connect(sender)
+          ['redeemInstant(address,uint256,uint256,address)'].bind(
+            this,
+            tokenOut,
+            amountIn,
+            minAmount ?? constants.Zero,
+            recipient,
+          )
+      : redemptionVault
+          .connect(sender)
+          ['redeemInstant(address,uint256,uint256)'].bind(
+            this,
+            tokenOut,
+            amountIn,
+            minAmount ?? constants.Zero,
+          ));
 
   if (opt?.revertMessage) {
     await expect(callFn()).revertedWith(opt?.revertMessage);
@@ -279,7 +302,8 @@ export const redeemInstantTest = async (
     await additionalLiquidity?.(),
   );
 
-  await expect(callFn())
+  const callPromise = callFn();
+  await expect(callPromise)
     .to.emit(
       redemptionVault,
       redemptionVault.interface.events[
@@ -331,7 +355,11 @@ export const redeemInstantTest = async (
     balanceBeforeFeeReceiver.add(vaultFeePortion),
   );
   expect(balanceAfterFeeReceiverMToken).eq(balanceBeforeFeeReceiverMToken);
-  expect(balanceAfterUser).eq(balanceBeforeUser.sub(amountIn));
+  expect(balanceAfterUser).eq(
+    balanceBeforeUser.sub(
+      getTotalFromInstantShare(amountIn, holdback?.instantShare),
+    ),
+  );
   expect(balanceAfterVault).eq(
     balanceBeforeVault.sub(toTransferFromVault).sub(vaultFeePortion),
   );
@@ -366,6 +394,8 @@ export const redeemInstantTest = async (
   } else {
     expect(lastLoanRequestIdAfter).eq(lastLoanRequestIdBefore);
   }
+
+  return callPromise;
 };
 
 export const redeemRequestTest = async (
@@ -376,9 +406,15 @@ export const redeemRequestTest = async (
     mTokenToUsdDataFeed,
     waivedFee,
     customRecipient,
+    customRecipientInstant,
+    instantShare,
+    minReceiveAmountInstantShare,
   }: CommonParamsRedeem & {
     waivedFee?: boolean;
     customRecipient?: AccountOrContract;
+    instantShare?: BigNumberish;
+    minReceiveAmountInstantShare?: BigNumberish;
+    customRecipientInstant?: AccountOrContract;
   },
   tokenOut: ERC20 | string,
   amountTBillIn: number,
@@ -395,22 +431,41 @@ export const redeemRequestTest = async (
   const feeReceiver = await redemptionVault.feeReceiver();
 
   const withRecipient = customRecipient !== undefined;
-  const recipient = customRecipient
+
+  const recipientRequest = customRecipient
     ? getAccount(customRecipient)
     : sender.address;
+  const recipientInstant = customRecipientInstant
+    ? getAccount(customRecipientInstant)
+    : sender.address;
 
-  const callFn = withRecipient
-    ? redemptionVault
-        .connect(sender)
-        ['redeemRequest(address,uint256,address)'].bind(
-          this,
-          tokenOut,
-          amountIn,
-          recipient,
-        )
-    : redemptionVault
-        .connect(sender)
-        ['redeemRequest(address,uint256)'].bind(this, tokenOut, amountIn);
+  const callFn =
+    instantShare !== undefined
+      ? redemptionVault
+          .connect(sender)
+          [
+            'redeemRequest(address,uint256,address,uint256,uint256,address)'
+          ].bind(
+            this,
+            tokenOut,
+            amountIn,
+            recipientRequest,
+            instantShare,
+            minReceiveAmountInstantShare ?? constants.Zero,
+            recipientInstant,
+          )
+      : withRecipient
+      ? redemptionVault
+          .connect(sender)
+          ['redeemRequest(address,uint256,address)'].bind(
+            this,
+            tokenOut,
+            amountIn,
+            recipientRequest,
+          )
+      : redemptionVault
+          .connect(sender)
+          ['redeemRequest(address,uint256)'].bind(this, tokenOut, amountIn);
 
   if (opt?.revertMessage) {
     await expect(callFn()).revertedWith(opt?.revertMessage);
@@ -442,11 +497,39 @@ export const redeemRequestTest = async (
       false,
     );
 
-  await expect(callFn())
+  const amountMTokenInInstant = amountIn
+    .mul(instantShare ?? constants.Zero)
+    .div(100_00);
+  const amountMTokenInRequest = amountIn.sub(amountMTokenInInstant);
+
+  let callPromise: Awaited<ReturnType<typeof redeemInstantTest>>;
+
+  if (amountMTokenInInstant.gt(0)) {
+    callPromise = await redeemInstantTest(
+      {
+        redemptionVault,
+        owner,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        waivedFee,
+        minAmount: constants.Zero,
+        customRecipient: recipientInstant,
+        holdback: {
+          callFunction: callFn,
+          instantShare: instantShare ?? constants.Zero,
+        },
+      },
+      tokenOut,
+      +formatUnits(amountMTokenInInstant, 18),
+      { from: sender },
+    );
+  }
+
+  await expect(callPromise ?? callFn())
     .to.emit(
       redemptionVault,
       redemptionVault.interface.events[
-        'RedeemRequestV2(uint256,address,address,address,uint256,uint256)'
+        'RedeemRequestV2(uint256,address,address,address,uint256,uint256,uint256,uint256)'
       ].name,
     )
     .withArgs(
@@ -454,8 +537,8 @@ export const redeemRequestTest = async (
         latestRequestIdBefore.add(1),
         sender,
         tokenOut,
-        withRecipient ? recipient : undefined,
-        amountTBillIn,
+        withRecipient ? recipientRequest : undefined,
+        amountMTokenInRequest,
         feeBase18,
       ].filter((v) => v !== undefined),
     ).to.not.reverted;
@@ -463,9 +546,9 @@ export const redeemRequestTest = async (
   const latestRequestIdAfter = await redemptionVault.currentRequestId();
   const request = await redemptionVault.redeemRequests(latestRequestIdBefore);
 
-  expect(request.sender).eq(recipient);
+  expect(request.sender).eq(recipientRequest);
   expect(request.tokenOut).eq(tokenOut);
-  expect(request.amountMToken).eq(amountIn);
+  expect(request.amountMToken).eq(amountMTokenInRequest);
   expect(request.mTokenRate).eq(mTokenRate);
   expect(request.tokenOutRate).eq(currentStableRate);
   expect(request.version).eq(1);
@@ -488,15 +571,20 @@ export const redeemRequestTest = async (
 
   const supplyAfter = await mTBILL.totalSupply();
 
-  expect(supplyAfter).eq(supplyBefore);
   expect(latestRequestIdAfter).eq(latestRequestIdBefore.add(1));
   expect(balanceAfterUser).eq(balanceBeforeUser.sub(amountIn));
   expect(balanceAfterContract).eq(balanceBeforeContract);
   expect(balanceAfterReceiver).eq(balanceBeforeReceiver);
   expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver);
-  expect(balanceAfterTokenOut).eq(balanceBeforeTokenOut);
+
+  // thos checks is already made in redeemInstantTest
+  if (!amountMTokenInInstant.gt(0)) {
+    expect(supplyAfter).eq(supplyBefore);
+    expect(balanceAfterTokenOut).eq(balanceBeforeTokenOut);
+  }
+
   expect(balanceAfterRequestRedeemer).eq(
-    balanceBeforeRequestRedeemer.add(amountIn),
+    balanceBeforeRequestRedeemer.add(amountMTokenInRequest),
   );
 
   return {
@@ -511,9 +599,15 @@ export const approveRedeemRequestTest = async (
     owner,
     mTBILL,
     waivedFee,
-  }: CommonParamsRedeem & { waivedFee?: boolean },
+    isSafe,
+    isAvgRate,
+  }: CommonParamsRedeem & {
+    waivedFee?: boolean;
+    isSafe?: boolean;
+    isAvgRate?: boolean;
+  },
   requestId: BigNumberish,
-  newTokenRate: BigNumber,
+  rate: BigNumber,
   opt?: OptionalCommonParams,
 ) => {
   const sender = opt?.from ?? owner;
@@ -521,14 +615,37 @@ export const approveRedeemRequestTest = async (
   const tokensReceiver = await redemptionVault.tokensReceiver();
   const feeReceiver = await redemptionVault.feeReceiver();
 
+  const callFn = isAvgRate
+    ? isSafe
+      ? redemptionVault
+          .connect(sender)
+          .safeApproveRequestAvgRate.bind(this, requestId, rate)
+      : redemptionVault
+          .connect(sender)
+          .approveRequestAvgRate.bind(this, requestId, rate)
+    : isSafe
+    ? redemptionVault
+        .connect(sender)
+        .safeApproveRequest.bind(this, requestId, rate)
+    : redemptionVault
+        .connect(sender)
+        .approveRequest.bind(this, requestId, rate);
+
   if (opt?.revertMessage) {
-    await expect(
-      redemptionVault.connect(sender).approveRequest(requestId, newTokenRate),
-    ).revertedWith(opt?.revertMessage);
+    await expect(callFn()).revertedWith(opt?.revertMessage);
     return;
   }
 
   const requestDataBefore = await redemptionVault.redeemRequests(requestId);
+
+  const actualRate = !isAvgRate
+    ? rate
+    : expectedHoldbackPartRateFromAvg(
+        requestDataBefore.amountMToken,
+        requestDataBefore.amountMTokenInstant,
+        requestDataBefore.mTokenRate,
+        rate,
+      );
 
   const tokenContract = ERC20__factory.connect(
     requestDataBefore.tokenOut,
@@ -547,20 +664,20 @@ export const approveRedeemRequestTest = async (
   const balanceUserTokenOutBefore =
     tokenContract && (await tokenContract.balanceOf(sender.address));
 
-  await expect(
-    redemptionVault.connect(sender).approveRequest(requestId, newTokenRate),
-  )
+  await expect(callFn())
     .to.emit(
       redemptionVault,
-      redemptionVault.interface.events['ApproveRequest(uint256,uint256,bool)']
-        .name,
+      redemptionVault.interface.events[
+        'ApproveRequestV2(uint256,uint256,bool,bool)'
+      ].name,
     )
-    .withArgs(requestId, newTokenRate, false).to.not.reverted;
+    .withArgs(requestId, actualRate, isSafe, isAvgRate).to.not.reverted;
 
   const requestDataAfter = await redemptionVault.redeemRequests(requestId);
 
-  expect(requestDataBefore.status).not.eq(requestDataAfter.status);
   expect(requestDataAfter.status).eq(1);
+  expect(requestDataAfter.approvedMTokenRate).eq(actualRate);
+  expect(requestDataAfter.mTokenRate).eq(requestDataBefore.mTokenRate);
 
   const balanceAfterUser = await mTBILL.balanceOf(sender.address);
   const balanceAfterReceiver = await mTBILL.balanceOf(tokensReceiver);
@@ -577,120 +694,9 @@ export const approveRedeemRequestTest = async (
   const tokenDecimals = !tokenContract ? 18 : await tokenContract.decimals();
 
   const amountOut = requestDataBefore.amountMToken
-    .mul(newTokenRate)
+    .mul(actualRate)
     .div(requestDataBefore.tokenOutRate)
     .div(10 ** (18 - tokenDecimals));
-
-  expect(balanceUserTokenOutAfter).eq(
-    balanceUserTokenOutBefore?.add(amountOut),
-  );
-  expect(supplyAfter).eq(supplyBefore.sub(requestDataBefore.amountMToken));
-
-  expect(balanceAfterUser).eq(balanceBeforeUser);
-
-  expect(balanceAfterContract).eq(balanceBeforeContract);
-
-  expect(balanceAfterRequestRedeemer).eq(
-    balanceBeforeRequestRedeemer.sub(requestDataBefore.amountMToken),
-  );
-
-  expect(balanceAfterReceiver).eq(balanceBeforeReceiver);
-  expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver);
-  if (waivedFee) {
-    expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver);
-  }
-};
-
-export const safeApproveRedeemRequestTest = async (
-  {
-    redemptionVault,
-    owner,
-    mTBILL,
-    waivedFee,
-  }: CommonParamsRedeem & { waivedFee?: boolean },
-  requestId: BigNumberish,
-  newTokenRate: BigNumber,
-  opt?: OptionalCommonParams,
-) => {
-  const sender = opt?.from ?? owner;
-
-  const tokensReceiver = await redemptionVault.tokensReceiver();
-  const feeReceiver = await redemptionVault.feeReceiver();
-
-  if (opt?.revertMessage) {
-    await expect(
-      redemptionVault
-        .connect(sender)
-        .safeApproveRequest(requestId, newTokenRate),
-    ).revertedWith(opt?.revertMessage);
-    return;
-  }
-
-  const requestDataBefore = await redemptionVault.redeemRequests(requestId);
-
-  const tokenContract = ERC20__factory.connect(
-    requestDataBefore.tokenOut,
-    owner,
-  );
-
-  const balanceBeforeUser = await mTBILL.balanceOf(requestDataBefore.sender);
-  const balanceBeforeContract = await mTBILL.balanceOf(redemptionVault.address);
-  const balanceBeforeReceiver = await mTBILL.balanceOf(tokensReceiver);
-  const balanceBeforeFeeReceiver = await mTBILL.balanceOf(feeReceiver);
-  const balanceBeforeRequestRedeemer = await mTBILL.balanceOf(
-    await redemptionVault.requestRedeemer(),
-  );
-
-  const supplyBefore = await mTBILL.totalSupply();
-
-  const balanceUserTokenOutBefore = await tokenContract.balanceOf(
-    requestDataBefore.sender,
-  );
-
-  const {
-    amountOutWithoutFee,
-    feeBase18: _feeBase18,
-    amountOutWithoutFeeBase18: _amountOutWithoutFeeBase18,
-  } = await calcExpectedTokenOutAmount(
-    sender,
-    tokenContract,
-    redemptionVault,
-    newTokenRate,
-    requestDataBefore.amountMToken,
-    false,
-    requestDataBefore.feePercent,
-    requestDataBefore.tokenOutRate,
-  );
-
-  await expect(
-    redemptionVault.connect(sender).safeApproveRequest(requestId, newTokenRate),
-  )
-    .to.emit(
-      redemptionVault,
-      redemptionVault.interface.events['ApproveRequest(uint256,uint256,bool)']
-        .name,
-    )
-    .withArgs(requestId, newTokenRate, true).to.not.reverted;
-
-  const requestDataAfter = await redemptionVault.redeemRequests(requestId);
-
-  expect(requestDataBefore.status).not.eq(requestDataAfter.status);
-  expect(requestDataAfter.status).eq(1);
-
-  const balanceAfterUser = await mTBILL.balanceOf(sender.address);
-  const balanceAfterReceiver = await mTBILL.balanceOf(tokensReceiver);
-  const balanceAfterFeeReceiver = await mTBILL.balanceOf(feeReceiver);
-  const balanceAfterContract = await mTBILL.balanceOf(redemptionVault.address);
-  const balanceAfterRequestRedeemer = await mTBILL.balanceOf(
-    await redemptionVault.requestRedeemer(),
-  );
-  const balanceUserTokenOutAfter = await tokenContract.balanceOf(
-    requestDataAfter.sender,
-  );
-
-  const supplyAfter = await mTBILL.totalSupply();
-
-  const amountOut = amountOutWithoutFee!;
 
   expect(balanceUserTokenOutAfter).eq(
     balanceUserTokenOutBefore?.add(amountOut),
@@ -923,7 +929,17 @@ export const bulkRepayLpLoanRequestTest = async (
 };
 
 export const safeBulkApproveRequestTest = async (
-  { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed }: CommonParamsRedeem,
+  {
+    redemptionVault,
+    owner,
+    mTBILL,
+    mTokenToUsdDataFeed,
+    isAvgRate,
+    feedIsGrowth = false,
+  }: CommonParamsRedeem & {
+    isAvgRate?: boolean;
+    feedIsGrowth?: boolean;
+  },
   requests: { id: BigNumberish; expectedToExecute?: boolean }[],
   newRate?: BigNumberish | 'request-rate',
   opt?: OptionalCommonParams,
@@ -936,23 +952,27 @@ export const safeBulkApproveRequestTest = async (
     newRate && newRate !== 'request-rate'
       ? redemptionVault
           .connect(sender)
-          ['safeBulkApproveRequest(uint256[],uint256)'].bind(
-            this,
-            requestIds,
-            newRate,
-          )
+          [
+            `safeBulkApproveRequest${
+              isAvgRate ? 'AvgRate' : ''
+            }(uint256[],uint256)`
+          ].bind(this, requestIds, newRate)
       : newRate === 'request-rate'
       ? redemptionVault
           .connect(sender)
           .safeBulkApproveRequestAtSavedRate.bind(this, requestIds)
       : redemptionVault
           .connect(sender)
-          ['safeBulkApproveRequest(uint256[])'].bind(this, requestIds);
+          [
+            `safeBulkApproveRequest${isAvgRate ? 'AvgRate' : ''}(uint256[])`
+          ].bind(this, requestIds);
 
   if (opt?.revertMessage) {
     await expect(callFn()).revertedWith(opt?.revertMessage);
     return;
   }
+
+  await setNextBlockTimestamp((await getCurrentBlockTimestamp()) + 1);
 
   const requestDatasBefore = await Promise.all(
     requestIds.map((requestId) => redemptionVault.redeemRequests(requestId)),
@@ -982,10 +1002,29 @@ export const safeBulkApproveRequestTest = async (
       ),
     ),
   );
+  const txPromise = callFn();
+  await expect(txPromise).to.not.reverted;
 
   const currentRate = await mTokenToUsdDataFeed.getDataInBase18();
-  const newExpectedRate =
-    newRate === 'request-rate' ? undefined : newRate ?? currentRate;
+
+  const newExpectedRate = (
+    requestData: (typeof requestDatasBefore)[number],
+  ) => {
+    let rate =
+      newRate === 'request-rate'
+        ? requestData.mTokenRate
+        : newRate ?? currentRate;
+
+    if (isAvgRate) {
+      rate = expectedHoldbackPartRateFromAvg(
+        requestData.amountMToken,
+        requestData.amountMTokenInstant,
+        requestData.mTokenRate,
+        rate,
+      );
+    }
+    return BigNumber.from(rate);
+  };
 
   const expectedReceivedAmounts = await Promise.all(
     requestDatasBefore.map(async (requestData) => {
@@ -993,9 +1032,7 @@ export const safeBulkApproveRequestTest = async (
         sender,
         ERC20__factory.connect(requestData.tokenOut, owner),
         redemptionVault,
-        newExpectedRate
-          ? BigNumber.from(newExpectedRate)
-          : requestData.mTokenRate,
+        newExpectedRate(requestData),
         requestData.amountMToken,
         false,
         requestData.feePercent,
@@ -1028,15 +1065,12 @@ export const safeBulkApproveRequestTest = async (
       );
     }, BigNumber.from(0));
 
-  const txPromise = callFn();
-  await expect(txPromise).to.not.reverted;
-
   const txReceipt = await (await txPromise).wait();
 
   const parsedLogs = txReceipt.logs
     .filter((v) => v.address === redemptionVault.address)
     .map((log) => redemptionVault.interface.parseLog(log))
-    .filter((v) => v.name === 'ApproveRequest')
+    .filter((v) => v.name === 'ApproveRequestV2')
     .map((v) => v.args);
 
   const requestDatasAfter = await Promise.all(
@@ -1093,23 +1127,22 @@ export const safeBulkApproveRequestTest = async (
       }, BigNumber.from(0));
 
     if (expectedToExecute) {
+      const expectedRate = newExpectedRate(requestDataBefore);
       expect(logs.length).eq(1);
-      expect(requestDataAfter.mTokenRate).eq(
-        newExpectedRate ?? requestDataBefore.mTokenRate,
-      );
+      expect(requestDataAfter.approvedMTokenRate).eq(expectedRate);
+      expect(requestDataAfter.mTokenRate).eq(requestDataBefore.mTokenRate);
       expect(requestDataAfter.status).eq(1);
       expect(balanceAfter).eq(
         balanceBefore.add(expectedReceivedAggregatedByUser),
       );
       const log = logs[0];
 
-      expect(log.newMTokenRate).eq(
-        newExpectedRate ?? requestDataBefore.mTokenRate,
-      );
+      expect(log.newMTokenRate).eq(expectedRate);
       expect(log.requestId).eq(id);
     } else {
       expect(logs.length).eq(0);
       expect(requestDataAfter.mTokenRate).eq(requestDataBefore.mTokenRate);
+      expect(requestDataAfter.approvedMTokenRate).eq(0);
       expect(requestDataAfter.status).eq(0);
     }
   }
@@ -1386,6 +1419,60 @@ export const setMaxLoanAprTest = async (
   expect(newMaxLoanApr).eq(maxLoanApr);
 };
 
+export const setMaxInstantShareTest = async (
+  { redemptionVault, owner }: CommonParams,
+  maxInstantShare: number,
+  opt?: OptionalCommonParams,
+) => {
+  if (opt?.revertMessage) {
+    await expect(
+      redemptionVault
+        .connect(opt?.from ?? owner)
+        .setMaxInstantShare(maxInstantShare),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  await expect(
+    redemptionVault
+      .connect(opt?.from ?? owner)
+      .setMaxInstantShare(maxInstantShare),
+  ).to.emit(
+    redemptionVault,
+    redemptionVault.interface.events['SetMaxInstantShare(address,uint64)'].name,
+  ).to.not.reverted;
+
+  const newMaxInstantShare = await redemptionVault.maxInstantShare();
+  expect(newMaxInstantShare).eq(maxInstantShare);
+};
+
+export const setMaxApproveRequestIdTest = async (
+  { redemptionVault, owner }: CommonParams,
+  maxApproveRequestId: number,
+  opt?: OptionalCommonParams,
+) => {
+  if (opt?.revertMessage) {
+    await expect(
+      redemptionVault
+        .connect(opt?.from ?? owner)
+        .setMaxApproveRequestId(maxApproveRequestId),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  await expect(
+    redemptionVault
+      .connect(opt?.from ?? owner)
+      .setMaxApproveRequestId(maxApproveRequestId),
+  ).to.emit(
+    redemptionVault,
+    redemptionVault.interface.events['SetMaxApproveRequestId(address,uint256)']
+      .name,
+  ).to.not.reverted;
+
+  const newMaxApproveRequestId = await redemptionVault.maxApproveRequestId();
+  expect(newMaxApproveRequestId).eq(maxApproveRequestId);
+};
 export const getFeePercent = async (
   sender: string,
   token: string,
@@ -1593,4 +1680,25 @@ export const estimateSendTokensFromLiquidity = async (
     toUseVaultLiquidity: toUseVaultLiquidityBase18.div(10 ** (18 - decimals)),
     toUseLpLiquidity: toUseLpLiquidityBase18.div(10 ** (18 - decimals)),
   };
+};
+
+export const expectedHoldbackPartRateFromAvg = (
+  amountMToken: BigNumberish,
+  amountMTokenInstant: BigNumberish,
+  mTokenRate: BigNumberish,
+  avgMTokenRate: BigNumberish,
+): BigNumberish => {
+  amountMToken = BigNumber.from(amountMToken).toBigInt();
+  amountMTokenInstant = BigNumber.from(amountMTokenInstant).toBigInt();
+  mTokenRate = BigNumber.from(mTokenRate).toBigInt();
+  avgMTokenRate = BigNumber.from(avgMTokenRate).toBigInt();
+
+  const targetTotalValue =
+    ((amountMToken + amountMTokenInstant) * avgMTokenRate) / 10n ** 18n;
+  const instantPartValue = (amountMTokenInstant * mTokenRate) / 10n ** 18n;
+  if (targetTotalValue <= instantPartValue) {
+    return 0n;
+  }
+  const holdbackPartValue = targetTotalValue - instantPartValue;
+  return (holdbackPartValue * 10n ** 18n) / amountMToken;
 };

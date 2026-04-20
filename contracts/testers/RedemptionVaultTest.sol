@@ -40,6 +40,30 @@ contract RedemptionVaultTest is RedemptionVault {
             );
     }
 
+    function calculateHoldbackPartRateFromAvgTest(
+        uint256 amountMToken,
+        uint256 amountMTokenInstant,
+        uint256 mTokenRate,
+        uint256 avgMTokenRate
+    ) external pure returns (uint256) {
+        return
+            _calculateHoldbackPartRateFromAvg(
+                RequestV2({
+                    amountMToken: amountMToken,
+                    amountMTokenInstant: amountMTokenInstant,
+                    mTokenRate: mTokenRate,
+                    tokenOut: address(0),
+                    tokenOutRate: 0,
+                    feePercent: 0,
+                    sender: address(0),
+                    status: RequestStatus.Pending,
+                    approvedMTokenRate: 0,
+                    version: 1
+                }),
+                avgMTokenRate
+            );
+    }
+
     function convertUsdToTokenTest(
         uint256 amountUsd,
         address tokenOut,

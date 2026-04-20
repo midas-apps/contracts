@@ -236,6 +236,7 @@ export const defaultDeploy = async () => {
           window: days(1),
         },
       ],
+      maxInstantShare: 100_00,
     },
     0,
     constants.MaxUint256,
@@ -275,6 +276,7 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
+      maxInstantShare: 100_00,
     },
     {
       requestRedeemer: requestRedeemer.address,
@@ -309,6 +311,7 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
+      maxInstantShare: 100_00,
     },
     {
       requestRedeemer: requestRedeemer.address,
@@ -359,7 +362,7 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithUSTB[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)'
+    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)'
   ](
     {
       ac: accessControl.address,
@@ -381,6 +384,7 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
+      maxInstantShare: 100_00,
     },
     0,
     constants.MaxUint256,
@@ -404,7 +408,7 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithUSTBTest__factory(owner).deploy();
 
   await redemptionVaultWithUSTB[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
+    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
   ](
     {
       ac: accessControl.address,
@@ -426,6 +430,7 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
+      maxInstantShare: 100_00,
     },
     {
       requestRedeemer: requestRedeemer.address,
@@ -479,6 +484,7 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
+      maxInstantShare: 100_00,
     },
     {
       requestRedeemer: requestRedeemer.address,
@@ -533,6 +539,7 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
+      maxInstantShare: 100_00,
     },
     {
       requestRedeemer: requestRedeemer.address,
@@ -583,6 +590,7 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
+      maxInstantShare: 100_00,
     },
     0,
     constants.MaxUint256,
@@ -624,6 +632,7 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
+      maxInstantShare: 100_00,
     },
     0,
     constants.MaxUint256,
@@ -641,7 +650,7 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithMToken[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)'
+    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)'
   ](
     {
       ac: accessControl.address,
@@ -663,6 +672,7 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
+      maxInstantShare: 100_00,
     },
     0,
     constants.MaxUint256,
@@ -700,7 +710,7 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithMTokenTest__factory(owner).deploy();
 
   await redemptionVaultWithMToken[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
+    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
   ](
     {
       ac: accessControl.address,
@@ -722,6 +732,7 @@ export const defaultDeploy = async () => {
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
+      maxInstantShare: 100_00,
     },
     {
       requestRedeemer: requestRedeemer.address,
@@ -886,6 +897,14 @@ export const defaultDeploy = async () => {
     parseUnits('10000', mockedUnhealthyAggregatorDecimals),
   );
 
+  await redemptionVault.setMaxApproveRequestId(100);
+  await redemptionVaultLoanSwapper.setMaxApproveRequestId(100);
+  await redemptionVaultLoanSwapper.setMaxApproveRequestId(100);
+  await redemptionVaultWithUSTB.setMaxApproveRequestId(100);
+  await redemptionVaultWithAave.setMaxApproveRequestId(100);
+  await redemptionVaultWithMorpho.setMaxApproveRequestId(100);
+  await redemptionVaultWithMToken.setMaxApproveRequestId(100);
+
   return {
     customFeed,
     customFeedDiscounted,
@@ -1013,6 +1032,7 @@ export const mTokenPermissionedFixture = async (
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
+      maxInstantShare: 100_00,
     },
     0,
     constants.MaxUint256,
@@ -1045,6 +1065,7 @@ export const mTokenPermissionedFixture = async (
       ],
       minInstantFee: 0,
       maxInstantFee: 10000,
+      maxInstantShare: 100_00,
     },
     {
       requestRedeemer: requestRedeemer.address,
@@ -1057,6 +1078,9 @@ export const mTokenPermissionedFixture = async (
       maxLoanApr: 0,
     },
   );
+
+  await mTokenPermissionedRedemptionVault.setMaxApproveRequestId(100);
+
   await accessControl.grantRole(
     burnRole,
     mTokenPermissionedRedemptionVault.address,

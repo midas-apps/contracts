@@ -54,6 +54,7 @@ struct LimitConfigInitParams {
 struct CommonVaultV2InitParams {
     uint64 minInstantFee;
     uint64 maxInstantFee;
+    uint64 maxInstantShare;
     LimitConfigInitParams[] limitConfigs;
 }
 
@@ -170,6 +171,12 @@ interface IManageableVault {
 
     /**
      * @param caller function caller (msg.sender)
+     * @param newMaxInstantShare new maximum instant share value in basis points (100 = 1%)
+     */
+    event SetMaxInstantShare(address indexed caller, uint64 newMaxInstantShare);
+
+    /**
+     * @param caller function caller (msg.sender)
      * @param window window duration in seconds
      */
     event RemoveInstantLimitConfig(
@@ -194,6 +201,15 @@ interface IManageableVault {
      * @param reciever new reciever address
      */
     event SetTokensReceiver(address indexed caller, address indexed reciever);
+
+    /**
+     * @param caller function caller (msg.sender)
+     * @param newMaxApproveRequestId new max requestId that can be approved
+     */
+    event SetMaxApproveRequestId(
+        address indexed caller,
+        uint256 newMaxApproveRequestId
+    );
 
     /**
      * @param user user address
@@ -321,6 +337,18 @@ interface IManageableVault {
      * @param limit limit amount per window
      */
     function setInstantLimitConfig(uint256 window, uint256 limit) external;
+
+    /**
+     * @notice set maximum instant share value in basis points (100 = 1%)
+     * @param newMaxInstantShare new maximum instant share value in basis points (100 = 1%)
+     */
+    function setMaxInstantShare(uint64 newMaxInstantShare) external;
+
+    /**
+     * @notice sets max requestId that can be approved
+     * @param newMaxApproveRequestId new max requestId that can be approved
+     */
+    function setMaxApproveRequestId(uint256 newMaxApproveRequestId) external;
 
     /**
      * @notice remove operation limit config.

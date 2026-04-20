@@ -14,7 +14,7 @@ import { mint } from '../common/mTBILL.helpers';
 import {
   redeemInstantTest,
   redeemRequestTest,
-  safeApproveRedeemRequestTest,
+  approveRedeemRequestTest,
   safeBulkApproveRequestTest as safeBulkApproveRedeemRequestTest,
 } from '../common/redemption-vault.helpers';
 
@@ -356,12 +356,13 @@ describe.skip('ContractsUpgrade - HyperEVM Fork Integration Tests', function () 
       { from: xaut0Whale },
     );
 
-    await safeApproveRedeemRequestTest(
+    await approveRedeemRequestTest(
       {
         mTBILL: xbxaut,
         mTokenToUsdDataFeed: xbxautDataFeed,
         redemptionVault: redemptionVaultSwapper,
         owner: vaultsManager,
+        isSafe: true,
       },
       requestId!,
       rate!,
