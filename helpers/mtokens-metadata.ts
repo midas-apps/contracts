@@ -285,4 +285,9 @@ export const mTokensMetadata: Record<
     name: 'Bond BTC',
     symbol: 'bondBTC',
   },
+  mTEST: {
+    name: 'Midas Test',
+    symbol: 'mTEST',
+    isPermissioned: true,
+  },
 };

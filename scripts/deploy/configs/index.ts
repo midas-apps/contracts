@@ -48,6 +48,7 @@ import { mSLDeploymentConfig } from './mSL';
 import { msyrupUSDDeploymentConfig } from './msyrupUSD';
 import { msyrupUSDpDeploymentConfig } from './msyrupUSDp';
 import { mTBILLDeploymentConfig } from './mTBILL';
+import { mTESTDeploymentConfig } from './mTEST';
 import { mTUDeploymentConfig } from './mTU';
 import { mWildUSDDeploymentConfig } from './mWildUSD';
 import { mXRPDeploymentConfig } from './mXRP';
@@ -143,4 +144,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   bondUSD: bondUSDDeploymentConfig,
   bondETH: bondETHDeploymentConfig,
   bondBTC: bondBTCDeploymentConfig,
+  mTEST: mTESTDeploymentConfig,
 };
