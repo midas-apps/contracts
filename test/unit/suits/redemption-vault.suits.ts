@@ -76,6 +76,7 @@ import {
   setRequestRedeemerTest,
   setMaxInstantShareTest,
   expectedHoldbackPartRateFromAvg,
+  setLoanLpFirstTest,
 } from '../../common/redemption-vault.helpers';
 import { sanctionUser } from '../../common/with-sanctions-list.helpers';
 
@@ -1909,347 +1910,737 @@ export const redemptionVaultSuits = (
           );
         });
 
-        describe('loan lp', () => {
-          it('when enough liquidity on loan lp but not on vault', async () => {
-            const {
-              owner,
-              redemptionVault,
-              stableCoins,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              dataFeed,
-              loanLp,
-              mTokenLoan,
-              redemptionVaultLoanSwapper,
-            } = await loadRvFixture();
+        describe.only('loan lp', () => {
+          describe('loanLpFirst=false', () => {
+            it('when enough liquidity on loan lp but not on vault', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mTokenLoan,
+                redemptionVaultLoanSwapper,
+              } = await loadRvFixture();
 
-            await mintToken(mTBILL, owner, 100);
-            await mintToken(mTokenLoan, loanLp, 1000);
-            await approveBase18(loanLp, mTokenLoan, redemptionVault, 1000);
-            await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 1000);
+              await mintToken(mTBILL, owner, 100);
+              await mintToken(mTokenLoan, loanLp, 1000);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 1000);
+              await mintToken(
+                stableCoins.dai,
+                redemptionVaultLoanSwapper,
+                1000,
+              );
 
-            await approveBase18(loanLp, stableCoins.dai, redemptionVault, 1000);
-            await withdrawTest(
-              { vault: redemptionVault, owner },
-              stableCoins.dai,
-              await stableCoins.dai.balanceOf(redemptionVault.address),
-            );
+              await approveBase18(
+                loanLp,
+                stableCoins.dai,
+                redemptionVault,
+                1000,
+              );
+              await withdrawTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                await stableCoins.dai.balanceOf(redemptionVault.address),
+              );
 
-            await addPaymentTokenTest(
-              { vault: redemptionVault, owner },
-              stableCoins.dai,
-              dataFeed.address,
-              0,
-              true,
-            );
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
 
-            await addPaymentTokenTest(
-              { vault: redemptionVaultLoanSwapper, owner },
-              stableCoins.dai,
-              dataFeed.address,
-              0,
-              true,
-            );
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
 
-            await redeemInstantTest(
-              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-              stableCoins.dai,
-              100,
-            );
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+            });
+
+            it('when 25% of liquidity on vault and 75% on loan lp', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mockedAggregatorMToken,
+                mockedAggregator,
+                mTokenLoan,
+                redemptionVaultLoanSwapper,
+              } = await loadRvFixture();
+
+              await mintToken(mTBILL, owner, 100);
+              await mintToken(stableCoins.dai, redemptionVault, 25);
+
+              await mintToken(mTokenLoan, loanLp, 75);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 75);
+              await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 75);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 75);
+
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMToken },
+                1,
+              );
+              await setRoundData({ mockedAggregator }, 1);
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+            });
+
+            it('when 25% of liquidity on vault and 75% on loan lp and all the fees are 0%', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mockedAggregatorMToken,
+                mockedAggregator,
+                mTokenLoan,
+                redemptionVaultLoanSwapper,
+              } = await loadRvFixture();
+
+              await mintToken(mTBILL, owner, 100);
+              await mintToken(stableCoins.dai, redemptionVault, 25);
+
+              await mintToken(mTokenLoan, loanLp, 75);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 75);
+              await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 75);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 75);
+
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMToken },
+                1,
+              );
+              await setRoundData({ mockedAggregator }, 1);
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+            });
+
+            it('should fail: when not enough liquidity on both vault and loan lp', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mTokenLoan,
+              } = await loadRvFixture();
+
+              await mintToken(mTBILL, owner, 100);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 1000);
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                100,
+                true,
+              );
+
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+                {
+                  revertMessage: 'ERC20: transfer amount exceeds balance',
+                },
+              );
+            });
+
+            it('should fail: when not enough liquidity on vault and loan lp is not set', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+              } = await loadRvFixture();
+
+              await mintToken(mTBILL, owner, 100);
+              await setLoanLpTest(
+                { redemptionVault, owner },
+                ethers.constants.AddressZero,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                100,
+                true,
+              );
+
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+                {
+                  revertMessage: 'RV: loan lp not configured',
+                },
+              );
+            });
+
+            it('should fail: when not enough liquidity on vault and loan swapper is not set', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+              } = await loadRvFixture();
+
+              await mintToken(mTBILL, owner, 100);
+              await setLoanSwapperVaultTest(
+                { redemptionVault, owner },
+                ethers.constants.AddressZero,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                100,
+                true,
+              );
+
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+                {
+                  revertMessage: 'RV: loan lp not configured',
+                },
+              );
+            });
+
+            it('should fail: when not enough liquidity on vault and loan swapper and loanLp are not set', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+              } = await loadRvFixture();
+
+              await mintToken(mTBILL, owner, 100);
+              await setLoanSwapperVaultTest(
+                { redemptionVault, owner },
+                ethers.constants.AddressZero,
+              );
+              await setLoanLpTest(
+                { redemptionVault, owner },
+                ethers.constants.AddressZero,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                100,
+                true,
+              );
+
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+                {
+                  revertMessage: 'RV: loan lp not configured',
+                },
+              );
+            });
+
+            it('should fail: when rv not fee waived on lp swapper', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                redemptionVaultLoanSwapper,
+                loanLp,
+                mTokenLoan,
+                mockedAggregatorMToken,
+                mockedAggregator,
+              } = await loadRvFixture();
+
+              await mintToken(mTBILL, owner, 100);
+
+              await mintToken(mTokenLoan, loanLp, 100);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 100);
+              await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 100);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 100);
+
+              await removeWaivedFeeAccountTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                redemptionVault.address,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                100,
+                true,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                100,
+                true,
+              );
+
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMToken },
+                1,
+              );
+              await setRoundData({ mockedAggregator }, 1);
+
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+                {
+                  revertMessage: 'RV: minReceiveAmount > actual',
+                },
+              );
+            });
           });
 
-          it('when 25% of liquidity on vault and 75% on loan lp', async () => {
-            const {
-              owner,
-              redemptionVault,
-              stableCoins,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              dataFeed,
-              loanLp,
-              mockedAggregatorMToken,
-              mockedAggregator,
-              mTokenLoan,
-              redemptionVaultLoanSwapper,
-            } = await loadRvFixture();
+          describe.only('loanLpFirst=true', () => {
+            it('when enough liquidity on loan lp but not on vault', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mTokenLoan,
+                redemptionVaultLoanSwapper,
+              } = await loadRvFixture();
 
-            await mintToken(mTBILL, owner, 100);
-            await mintToken(stableCoins.dai, redemptionVault, 25);
+              await mintToken(mTBILL, owner, 100);
+              await mintToken(mTokenLoan, loanLp, 1000);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 1000);
+              await mintToken(
+                stableCoins.dai,
+                redemptionVaultLoanSwapper,
+                1000,
+              );
 
-            await mintToken(mTokenLoan, loanLp, 75);
-            await approveBase18(loanLp, mTokenLoan, redemptionVault, 75);
-            await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 75);
-            await approveBase18(loanLp, mTokenLoan, redemptionVault, 75);
+              await approveBase18(
+                loanLp,
+                stableCoins.dai,
+                redemptionVault,
+                1000,
+              );
+              await withdrawTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                await stableCoins.dai.balanceOf(redemptionVault.address),
+              );
 
-            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-            await setRoundData({ mockedAggregator }, 1);
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
 
-            await addPaymentTokenTest(
-              { vault: redemptionVault, owner },
-              stableCoins.dai,
-              dataFeed.address,
-              0,
-              true,
-            );
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
 
-            await addPaymentTokenTest(
-              { vault: redemptionVaultLoanSwapper, owner },
-              stableCoins.dai,
-              dataFeed.address,
-              0,
-              true,
-            );
+              await setLoanLpFirstTest({ redemptionVault, owner }, true);
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+            });
 
-            await redeemInstantTest(
-              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-              stableCoins.dai,
-              100,
-            );
-          });
+            it('when 25% of liquidity on vault and 75% on loan lp', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mockedAggregatorMToken,
+                mockedAggregator,
+                mTokenLoan,
+                redemptionVaultLoanSwapper,
+              } = await loadRvFixture();
 
-          it('when 25% of liquidity on vault and 75% on loan lp and all the fees are 0%', async () => {
-            const {
-              owner,
-              redemptionVault,
-              stableCoins,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              dataFeed,
-              loanLp,
-              mockedAggregatorMToken,
-              mockedAggregator,
-              mTokenLoan,
-              redemptionVaultLoanSwapper,
-            } = await loadRvFixture();
+              await mintToken(mTBILL, owner, 100);
+              await mintToken(stableCoins.dai, redemptionVault, 25);
 
-            await mintToken(mTBILL, owner, 100);
-            await mintToken(stableCoins.dai, redemptionVault, 25);
+              await mintToken(mTokenLoan, loanLp, 75);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 75);
+              await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 75);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 75);
 
-            await mintToken(mTokenLoan, loanLp, 75);
-            await approveBase18(loanLp, mTokenLoan, redemptionVault, 75);
-            await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 75);
-            await approveBase18(loanLp, mTokenLoan, redemptionVault, 75);
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMToken },
+                1,
+              );
+              await setRoundData({ mockedAggregator }, 1);
 
-            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-            await setRoundData({ mockedAggregator }, 1);
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
 
-            await addPaymentTokenTest(
-              { vault: redemptionVault, owner },
-              stableCoins.dai,
-              dataFeed.address,
-              0,
-              true,
-            );
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+              await setLoanLpFirstTest({ redemptionVault, owner }, true);
 
-            await addPaymentTokenTest(
-              { vault: redemptionVaultLoanSwapper, owner },
-              stableCoins.dai,
-              dataFeed.address,
-              0,
-              true,
-            );
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+            });
 
-            await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+            it('when 25% of liquidity on vault and 75% on loan lp and all the fees are 0%', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mockedAggregatorMToken,
+                mockedAggregator,
+                mTokenLoan,
+                redemptionVaultLoanSwapper,
+              } = await loadRvFixture();
 
-            await redeemInstantTest(
-              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-              stableCoins.dai,
-              100,
-            );
-          });
+              await mintToken(mTBILL, owner, 100);
+              await mintToken(stableCoins.dai, redemptionVault, 25);
 
-          it('should fail: when not enough liquidity on both vault and loan lp', async () => {
-            const {
-              owner,
-              redemptionVault,
-              stableCoins,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              dataFeed,
-              loanLp,
-              mTokenLoan,
-            } = await loadRvFixture();
+              await mintToken(mTokenLoan, loanLp, 75);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 75);
+              await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 75);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 75);
 
-            await mintToken(mTBILL, owner, 100);
-            await approveBase18(loanLp, mTokenLoan, redemptionVault, 1000);
-            await addPaymentTokenTest(
-              { vault: redemptionVault, owner },
-              stableCoins.dai,
-              dataFeed.address,
-              100,
-              true,
-            );
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMToken },
+                1,
+              );
+              await setRoundData({ mockedAggregator }, 1);
 
-            await redeemInstantTest(
-              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-              stableCoins.dai,
-              100,
-              {
-                revertMessage: 'ERC20: transfer amount exceeds balance',
-              },
-            );
-          });
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
 
-          it('should fail: when not enough liquidity on vault and loan lp is set', async () => {
-            const {
-              owner,
-              redemptionVault,
-              stableCoins,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              dataFeed,
-            } = await loadRvFixture();
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
 
-            await mintToken(mTBILL, owner, 100);
-            await setLoanLpTest(
-              { redemptionVault, owner },
-              ethers.constants.AddressZero,
-            );
+              await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+              await setLoanLpFirstTest({ redemptionVault, owner }, true);
 
-            await addPaymentTokenTest(
-              { vault: redemptionVault, owner },
-              stableCoins.dai,
-              dataFeed.address,
-              100,
-              true,
-            );
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+            });
 
-            await redeemInstantTest(
-              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-              stableCoins.dai,
-              100,
-              {
-                revertMessage: 'RV: loan lp not configured',
-              },
-            );
-          });
+            it('should fail: when not enough liquidity on both vault and loan lp', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mTokenLoan,
+              } = await loadRvFixture();
 
-          it('should fail: when not enough liquidity on vault and loan swapper is set', async () => {
-            const {
-              owner,
-              redemptionVault,
-              stableCoins,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              dataFeed,
-            } = await loadRvFixture();
+              await mintToken(mTBILL, owner, 100);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 1000);
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                100,
+                true,
+              );
+              await setLoanLpFirstTest({ redemptionVault, owner }, true);
 
-            await mintToken(mTBILL, owner, 100);
-            await setLoanSwapperVaultTest(
-              { redemptionVault, owner },
-              ethers.constants.AddressZero,
-            );
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+                {
+                  revertMessage: 'ERC20: transfer amount exceeds balance',
+                },
+              );
+            });
 
-            await addPaymentTokenTest(
-              { vault: redemptionVault, owner },
-              stableCoins.dai,
-              dataFeed.address,
-              100,
-              true,
-            );
+            it('should fail: when not enough liquidity on vault and loan lp is not set', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+              } = await loadRvFixture();
 
-            await redeemInstantTest(
-              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-              stableCoins.dai,
-              100,
-              {
-                revertMessage: 'RV: loan lp not configured',
-              },
-            );
-          });
+              await mintToken(mTBILL, owner, 100);
+              await setLoanLpTest(
+                { redemptionVault, owner },
+                ethers.constants.AddressZero,
+              );
 
-          it('should fail: when not enough liquidity on vault and loan swapper and loanLp are not set', async () => {
-            const {
-              owner,
-              redemptionVault,
-              stableCoins,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              dataFeed,
-            } = await loadRvFixture();
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                100,
+                true,
+              );
+              await setLoanLpFirstTest({ redemptionVault, owner }, true);
 
-            await mintToken(mTBILL, owner, 100);
-            await setLoanSwapperVaultTest(
-              { redemptionVault, owner },
-              ethers.constants.AddressZero,
-            );
-            await setLoanLpTest(
-              { redemptionVault, owner },
-              ethers.constants.AddressZero,
-            );
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+                {
+                  revertMessage: 'RV: loan lp not configured',
+                },
+              );
+            });
 
-            await addPaymentTokenTest(
-              { vault: redemptionVault, owner },
-              stableCoins.dai,
-              dataFeed.address,
-              100,
-              true,
-            );
+            it('should fail: when not enough liquidity on vault and loan swapper is not set', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+              } = await loadRvFixture();
 
-            await redeemInstantTest(
-              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-              stableCoins.dai,
-              100,
-              {
-                revertMessage: 'RV: loan lp not configured',
-              },
-            );
-          });
+              await mintToken(mTBILL, owner, 100);
+              await setLoanSwapperVaultTest(
+                { redemptionVault, owner },
+                ethers.constants.AddressZero,
+              );
 
-          it('should fail: when rv not fee waived on lp swapper ', async () => {
-            const {
-              owner,
-              redemptionVault,
-              stableCoins,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              dataFeed,
-              redemptionVaultLoanSwapper,
-              loanLp,
-              mTokenLoan,
-              mockedAggregatorMToken,
-              mockedAggregator,
-            } = await loadRvFixture();
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                100,
+                true,
+              );
+              await setLoanLpFirstTest({ redemptionVault, owner }, true);
 
-            await mintToken(mTBILL, owner, 100);
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+                {
+                  revertMessage: 'RV: loan lp not configured',
+                },
+              );
+            });
 
-            await mintToken(mTokenLoan, loanLp, 100);
-            await approveBase18(loanLp, mTokenLoan, redemptionVault, 100);
-            await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 100);
-            await approveBase18(loanLp, mTokenLoan, redemptionVault, 100);
+            it('should fail: when not enough liquidity on vault and loan swapper and loanLp are not set', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+              } = await loadRvFixture();
 
-            await removeWaivedFeeAccountTest(
-              { vault: redemptionVaultLoanSwapper, owner },
-              redemptionVault.address,
-            );
+              await mintToken(mTBILL, owner, 100);
+              await setLoanSwapperVaultTest(
+                { redemptionVault, owner },
+                ethers.constants.AddressZero,
+              );
+              await setLoanLpTest(
+                { redemptionVault, owner },
+                ethers.constants.AddressZero,
+              );
 
-            await addPaymentTokenTest(
-              { vault: redemptionVault, owner },
-              stableCoins.dai,
-              dataFeed.address,
-              100,
-              true,
-            );
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                100,
+                true,
+              );
+              await setLoanLpFirstTest({ redemptionVault, owner }, true);
 
-            await addPaymentTokenTest(
-              { vault: redemptionVaultLoanSwapper, owner },
-              stableCoins.dai,
-              dataFeed.address,
-              100,
-              true,
-            );
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+                {
+                  revertMessage: 'RV: loan lp not configured',
+                },
+              );
+            });
 
-            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-            await setRoundData({ mockedAggregator }, 1);
+            it('should fail: when rv not fee waived on lp swapper', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                redemptionVaultLoanSwapper,
+                loanLp,
+                mTokenLoan,
+                mockedAggregatorMToken,
+                mockedAggregator,
+              } = await loadRvFixture();
 
-            await redeemInstantTest(
-              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-              stableCoins.dai,
-              100,
-              {
-                revertMessage: 'RV: minReceiveAmount > actual',
-              },
-            );
+              await mintToken(mTBILL, owner, 100);
+
+              await mintToken(mTokenLoan, loanLp, 100);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 100);
+              await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 100);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 100);
+
+              await removeWaivedFeeAccountTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                redemptionVault.address,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                100,
+                true,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                100,
+                true,
+              );
+
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMToken },
+                1,
+              );
+              await setRoundData({ mockedAggregator }, 1);
+              await setLoanLpFirstTest({ redemptionVault, owner }, true);
+
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+                {
+                  revertMessage: 'RV: minReceiveAmount > actual',
+                },
+              );
+            });
           });
         });
 

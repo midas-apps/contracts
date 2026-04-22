@@ -887,10 +887,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 );
             }
         }
-
         uint256 vaultFeePortion = calcResult.feeAmount - lpFeePortion;
-
-        uint256 toTransferFromLp = usedLpLiquidity - lpFeePortion;
 
         // transfer from vault liquidity to user
         _tokenTransferToUser(
@@ -908,7 +905,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             calcResult.tokenOutDecimals
         );
 
-        if (toTransferFromLp > 0) {
+        if (usedLpLiquidity > 0) {
             // we dont transfer lp fee portion just yet,
             // it will be transferred during the loan repayment
 
@@ -916,7 +913,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
             loanRequests[loanRequestId] = LiquidityProviderLoanRequest({
                 tokenOut: tokenOut,
-                amountTokenOut: toTransferFromLp,
+                amountTokenOut: usedLpLiquidity,
                 amountFee: lpFeePortion,
                 createdAt: block.timestamp,
                 status: RequestStatus.Pending
@@ -926,7 +923,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             emit CreateLiquidityProviderLoanRequest(
                 loanRequestId,
                 tokenOut,
-                toTransferFromLp,
+                usedLpLiquidity,
                 lpFeePortion,
                 calcResult.mTokenRate,
                 calcResult.tokenOutRate

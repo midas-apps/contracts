@@ -1473,6 +1473,30 @@ export const setMaxApproveRequestIdTest = async (
   const newMaxApproveRequestId = await redemptionVault.maxApproveRequestId();
   expect(newMaxApproveRequestId).eq(maxApproveRequestId);
 };
+
+export const setLoanLpFirstTest = async (
+  { redemptionVault, owner }: CommonParams,
+  loanLpFirst: boolean,
+  opt?: OptionalCommonParams,
+) => {
+  if (opt?.revertMessage) {
+    await expect(
+      redemptionVault.connect(opt?.from ?? owner).setLoanLpFirst(loanLpFirst),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  await expect(
+    redemptionVault.connect(opt?.from ?? owner).setLoanLpFirst(loanLpFirst),
+  ).to.emit(
+    redemptionVault,
+    redemptionVault.interface.events['SetLoanLpFirst(address,bool)'].name,
+  ).to.not.reverted;
+
+  const newLoanLpFirst = await redemptionVault.loanLpFirst();
+  expect(newLoanLpFirst).eq(loanLpFirst);
+};
+
 export const getFeePercent = async (
   sender: string,
   token: string,
@@ -1580,9 +1604,10 @@ export const estimateSendTokensFromLiquidity = async (
   additionalLiquidity?: BigNumberish,
 ) => {
   const decimals = await tokenOut.decimals();
+  const precision = BigNumber.from(10).pow(18 - decimals);
   const balanceVaultBase18 = (await tokenOut.balanceOf(redemptionVault.address))
     .add(additionalLiquidity ?? constants.Zero)
-    .mul(10 ** (18 - decimals));
+    .mul(precision);
 
   const totalAmountBase18 = amountTokenOutWithoutFeeBase18.add(feeAmountBase18);
 
@@ -1603,68 +1628,147 @@ export const estimateSendTokensFromLiquidity = async (
     };
   }
 
-  const toUseVaultLiquidityBase18 = balanceVaultBase18.gte(totalAmountBase18)
-    ? totalAmountBase18
-    : balanceVaultBase18;
-
-  const toUseLpLiquidityBase18 = totalAmountBase18.sub(
-    toUseVaultLiquidityBase18,
-  );
-
-  const lpFeePortionBase18 = feeAmountBase18
-    .mul(toUseLpLiquidityBase18)
-    .div(totalAmountBase18)
-    .div(10 ** (18 - decimals))
-    .mul(10 ** (18 - decimals));
-
-  const vaultFeePortionBase18 = feeAmountBase18.sub(lpFeePortionBase18);
-
-  const toTransferFromVaultBase18 = toUseVaultLiquidityBase18.sub(
-    vaultFeePortionBase18,
-  );
-
-  const toTransferFromLpBase18 = toUseLpLiquidityBase18.sub(lpFeePortionBase18);
-
-  const loanSwapperVault = await redemptionVault.loanSwapperVault();
-  const loanSwapperVaultMTokenDataFeed =
-    loanSwapperVault !== constants.AddressZero
-      ? DataFeedTest__factory.connect(
-          await RedemptionVaultTest__factory.connect(
-            loanSwapperVault,
-            redemptionVault.provider,
-          ).mTokenDataFeed(),
+  const loanSwapperVaultAddress = await redemptionVault.loanSwapperVault();
+  const loanSwapperVault =
+    loanSwapperVaultAddress !== constants.AddressZero
+      ? RedemptionVaultTest__factory.connect(
+          loanSwapperVaultAddress,
           redemptionVault.provider,
         )
       : undefined;
+  const loanSwapperVaultMTokenDataFeed = loanSwapperVault
+    ? DataFeedTest__factory.connect(
+        await loanSwapperVault.mTokenDataFeed(),
+        redemptionVault.provider,
+      )
+    : undefined;
+  const loanSwapperVaultMToken = loanSwapperVault
+    ? ERC20__factory.connect(
+        await loanSwapperVault.mToken(),
+        redemptionVault.provider,
+      )
+    : undefined;
+
+  const truncateToTokenDecimals = (amount: BigNumber) =>
+    amount.div(precision).mul(precision);
+
+  const estimateUseLoanLpLiquidity = async (
+    amountTokenOutBase18: BigNumber,
+    totalAmount: BigNumber,
+    totalFee: BigNumber,
+  ) => {
+    if (amountTokenOutBase18.eq(0)) {
+      return {
+        amountReceivedBase18: constants.Zero,
+        feePortionBase18: constants.Zero,
+      };
+    }
+
+    const loanLp = await redemptionVault.loanLp();
+    if (
+      !loanSwapperVaultMTokenDataFeed ||
+      !loanSwapperVaultMToken ||
+      loanLp === constants.AddressZero
+    ) {
+      return {
+        amountReceivedBase18: constants.Zero,
+        feePortionBase18: constants.Zero,
+      };
+    }
+
+    const mTokenARate = await loanSwapperVaultMTokenDataFeed.getDataInBase18();
+    if (mTokenARate.eq(0)) {
+      return {
+        amountReceivedBase18: constants.Zero,
+        feePortionBase18: constants.Zero,
+      };
+    }
+
+    let grossTokenOutAmount = (await loanSwapperVaultMToken.balanceOf(loanLp))
+      .mul(mTokenARate)
+      .div(tokenOutRate);
+
+    if (grossTokenOutAmount.gt(amountTokenOutBase18)) {
+      grossTokenOutAmount = amountTokenOutBase18;
+    }
+
+    if (grossTokenOutAmount.eq(0)) {
+      return {
+        amountReceivedBase18: constants.Zero,
+        feePortionBase18: constants.Zero,
+      };
+    }
+
+    const feePortionBase18 = truncateToTokenDecimals(
+      totalFee.mul(grossTokenOutAmount).div(totalAmount),
+    );
+
+    if (grossTokenOutAmount.eq(feePortionBase18)) {
+      return {
+        amountReceivedBase18: constants.Zero,
+        feePortionBase18,
+      };
+    }
+
+    return {
+      amountReceivedBase18: grossTokenOutAmount.sub(feePortionBase18),
+      feePortionBase18,
+    };
+  };
+
+  const loanLpFirst = await redemptionVault.loanLpFirst();
+  let usedLpLiquidityBase18 = constants.Zero;
+  let lpFeePortionBase18 = constants.Zero;
+
+  if (loanLpFirst) {
+    ({
+      amountReceivedBase18: usedLpLiquidityBase18,
+      feePortionBase18: lpFeePortionBase18,
+    } = await estimateUseLoanLpLiquidity(
+      totalAmountBase18,
+      totalAmountBase18,
+      feeAmountBase18,
+    ));
+  } else {
+    const obtainedVaultLiquidityBase18 = constants.Zero;
+    const newBalanceBase18 = balanceVaultBase18.add(
+      obtainedVaultLiquidityBase18,
+    );
+
+    if (newBalanceBase18.lt(totalAmountBase18)) {
+      ({
+        amountReceivedBase18: usedLpLiquidityBase18,
+        feePortionBase18: lpFeePortionBase18,
+      } = await estimateUseLoanLpLiquidity(
+        totalAmountBase18.sub(newBalanceBase18),
+        totalAmountBase18,
+        feeAmountBase18,
+      ));
+    }
+  }
+
+  const toTransferFromLpBase18 = usedLpLiquidityBase18;
+  const toTransferFromVaultBase18 = amountTokenOutWithoutFeeBase18.gte(
+    toTransferFromLpBase18,
+  )
+    ? amountTokenOutWithoutFeeBase18.sub(toTransferFromLpBase18)
+    : constants.Zero;
+  const vaultFeePortionBase18 = feeAmountBase18.sub(lpFeePortionBase18);
+  const toUseLpLiquidityBase18 = toTransferFromLpBase18.add(lpFeePortionBase18);
+  const toUseVaultLiquidityBase18 = totalAmountBase18.sub(
+    toUseLpLiquidityBase18,
+  );
 
   const mTokenARate = loanSwapperVaultMTokenDataFeed
     ? await loanSwapperVaultMTokenDataFeed.getDataInBase18()
     : constants.Zero;
-
-  if (mTokenARate.eq(0)) {
-    return {
-      toTransferFromVaultBase18,
-      toTransferFromLpBase18,
-      lpFeePortionBase18,
-      vaultFeePortionBase18,
-      toUseVaultLiquidityBase18,
-      toUseLpLiquidityBase18,
-      toTransferFromLpMToken: constants.Zero,
-      toTransferFromVault: toTransferFromVaultBase18.div(10 ** (18 - decimals)),
-      lpFeePortion: lpFeePortionBase18.div(10 ** (18 - decimals)),
-      vaultFeePortion: vaultFeePortionBase18.div(10 ** (18 - decimals)),
-      toUseVaultLiquidity: toUseVaultLiquidityBase18.div(10 ** (18 - decimals)),
-      toUseLpLiquidity: toUseLpLiquidityBase18.div(10 ** (18 - decimals)),
-    };
-  }
-
-  let mTokenAAmount = toTransferFromLpBase18.mul(tokenOutRate).div(mTokenARate);
-
-  mTokenAAmount = mTokenAAmount.add(
-    toTransferFromLpBase18
-      .mul(tokenOutRate)
-      .sub(mTokenAAmount.mul(mTokenARate)),
-  );
+  const mTokenAAmount =
+    toTransferFromLpBase18.eq(0) || mTokenARate.eq(0)
+      ? constants.Zero
+      : toTransferFromLpBase18
+          .mul(tokenOutRate)
+          .add(mTokenARate.sub(1))
+          .div(mTokenARate);
 
   return {
     toTransferFromVaultBase18,
@@ -1673,12 +1777,12 @@ export const estimateSendTokensFromLiquidity = async (
     vaultFeePortionBase18,
     toUseVaultLiquidityBase18,
     toUseLpLiquidityBase18,
-    toTransferFromVault: toTransferFromVaultBase18.div(10 ** (18 - decimals)),
+    toTransferFromVault: toTransferFromVaultBase18.div(precision),
     toTransferFromLpMToken: mTokenAAmount,
-    lpFeePortion: lpFeePortionBase18.div(10 ** (18 - decimals)),
-    vaultFeePortion: vaultFeePortionBase18.div(10 ** (18 - decimals)),
-    toUseVaultLiquidity: toUseVaultLiquidityBase18.div(10 ** (18 - decimals)),
-    toUseLpLiquidity: toUseLpLiquidityBase18.div(10 ** (18 - decimals)),
+    lpFeePortion: lpFeePortionBase18.div(precision),
+    vaultFeePortion: vaultFeePortionBase18.div(precision),
+    toUseVaultLiquidity: toUseVaultLiquidityBase18.div(precision),
+    toUseLpLiquidity: toUseLpLiquidityBase18.div(precision),
   };
 };
 
