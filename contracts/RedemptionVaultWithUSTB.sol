@@ -58,33 +58,37 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
      * @notice Check if contract has enough USDC balance for redeem
      * if not, trigger USTB redemption flow to redeem exactly the missing amount
      * @param tokenOut tokenOut address
-     * @param calcResult calculated redeem instant result
+     * @param amountTokenOutBase18 amount of tokenOut needed in base 18
+     * @param currentTokenOutBalanceBase18 current balance of tokenOut in the vault in base 18
+     * @param tokenOutDecimals decimals of tokenOut
      */
-    function _postRedeemInstant(
+    function _useVaultLiquidity(
         address tokenOut,
-        CalcAndValidateRedeemResult memory calcResult
-    ) internal virtual override {
-        uint256 amountTokenOut = calcResult.amountTokenOut.convertFromBase18(
-            calcResult.tokenOutDecimals
-        );
-
-        uint256 contractBalanceTokenOut = IERC20(tokenOut).balanceOf(
-            address(this)
-        );
-        if (contractBalanceTokenOut >= amountTokenOut) return;
-
+        uint256 amountTokenOutBase18,
+        uint256, /* tokenOutRate */
+        uint256 currentTokenOutBalanceBase18,
+        uint256 tokenOutDecimals
+    )
+        internal
+        virtual
+        override
+        returns (
+            uint256 /* obtainedLiquidityBase18 */
+        )
+    {
         // If tokenOut is not USDC, do nothing
         if (tokenOut != ustbRedemption.USDC()) {
-            return;
+            return 0;
         }
 
-        uint256 missingAmount = amountTokenOut - contractBalanceTokenOut;
+        uint256 missingAmount = (amountTokenOutBase18 -
+            currentTokenOutBalanceBase18).convertFromBase18(tokenOutDecimals);
 
         uint256 fee = ustbRedemption.calculateFee(missingAmount);
 
         // If fee is not zero, do nothing
         if (fee != 0) {
-            return;
+            return 0;
         }
 
         (uint256 ustbToRedeem, ) = ustbRedemption.calculateUstbIn(
@@ -98,10 +102,12 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
 
         // if nothing to redeem, do nothing
         if (ustbToRedeem == 0) {
-            return;
+            return 0;
         }
 
         ustb.safeIncreaseAllowance(address(ustbRedemption), ustbToRedeem);
         ustbRedemption.redeem(ustbToRedeem);
+
+        return missingAmount.convertToBase18(tokenOutDecimals);
     }
 }

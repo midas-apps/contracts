@@ -100,26 +100,26 @@ contract RedemptionVaultWithMToken is RedemptionVault {
      * @dev The other vault burns this contract's mToken and transfers the
      * underlying asset to this contract
      * @param tokenOut tokenOut address
-     * @param calcResult calculated redeem instant result
+     * @param amountTokenOutBase18 amount of tokenOut needed in base 18
+     * @param currentTokenOutBalanceBase18 current balance of tokenOut in the vault in base 18
      */
-    function _postRedeemInstant(
+    function _useVaultLiquidity(
         address tokenOut,
-        CalcAndValidateRedeemResult memory calcResult
-    ) internal virtual override {
-        uint256 amountTokenOut = calcResult.amountTokenOut.convertFromBase18(
-            calcResult.tokenOutDecimals
-        );
-        uint256 contractBalanceTokenOut = IERC20(tokenOut).balanceOf(
-            address(this)
-        );
+        uint256 amountTokenOutBase18,
+        uint256 tokenOutRate,
+        uint256 currentTokenOutBalanceBase18,
+        uint256 /*tokenOutDecimals*/
+    )
+        internal
+        virtual
+        override
+        returns (
+            uint256 /* obtainedLiquidityBase18 */
+        )
+    {
+        uint256 missingAmountBase18 = amountTokenOutBase18 -
+            currentTokenOutBalanceBase18;
 
-        if (contractBalanceTokenOut >= amountTokenOut) return;
-
-        uint256 missingAmount = amountTokenOut - contractBalanceTokenOut;
-
-        uint256 missingAmountBase18 = missingAmount.convertToBase18(
-            calcResult.tokenOutDecimals
-        );
         uint256 mTokenARate = redemptionVault
             .mTokenDataFeed()
             .getDataInBase18();
@@ -128,7 +128,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
         // Requires address(this) to have waivedFeeRestriction on the inner vault
         uint256 mTokenAAmount = Math.mulDiv(
             missingAmountBase18,
-            calcResult.tokenOutRate,
+            tokenOutRate,
             mTokenARate,
             Math.Rounding.Up
         );
@@ -146,8 +146,8 @@ contract RedemptionVaultWithMToken is RedemptionVault {
         );
 
         // redeem may fail for many reasons, so we just catch all the errors
-        // and reset the allowance to 0, so the execution will safely fallback
-        // to the LP loan redemption flow.
+        // and reset the allowance to 0, so the execution will safely fallbacks
+        // to the original redemption flow.
         try
             redemptionVault.redeemInstant(
                 tokenOut,
@@ -157,6 +157,9 @@ contract RedemptionVaultWithMToken is RedemptionVault {
         {} catch (bytes memory) {
             // reset the allowance to 0
             IERC20(mTokenA).safeApprove(address(redemptionVault), 0);
+            return 0;
         }
+
+        return missingAmountBase18;
     }
 }

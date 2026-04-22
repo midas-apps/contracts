@@ -100,6 +100,11 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     uint64 public maxLoanApr;
 
     /**
+     * @notice flag to determine if the loan LP liquidity should be used first
+     */
+    bool public loanLpFirst;
+
+    /**
      * @notice address of loan RedemptionVault-compatible vault
      */
     IRedemptionVault public loanSwapperVault;
@@ -535,6 +540,18 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     }
 
     /**
+     * @inheritdoc IRedemptionVault
+     */
+    function setLoanLpFirst(bool newLoanLpFirst)
+        external
+        validateVaultAdminAccess
+    {
+        loanLpFirst = newLoanLpFirst;
+
+        emit SetLoanLpFirst(msg.sender, newLoanLpFirst);
+    }
+
+    /**
      * @inheritdoc ManageableVault
      */
     function vaultRole() public pure virtual override returns (bytes32) {
@@ -711,8 +728,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             recipient
         );
 
-        _postRedeemInstant(tokenOut, calcResult);
-
         _sendTokensFromLiquidity(tokenOut, recipient, calcResult);
 
         emit RedeemInstantV2(
@@ -814,22 +829,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         mToken.burn(user, amountMTokenIn);
     }
 
-    /**
-     * @dev internal post redeem instant hook logic
-     * can be overridden by the child contract to add custom logic
-     * @param tokenOut tokenOut address
-     * @param calcResult calculated redeem instant result
-     */
-    function _postRedeemInstant(
-        address tokenOut,
-        CalcAndValidateRedeemResult memory calcResult
-    ) internal virtual {}
-
     function _sendTokensFromLiquidity(
         address tokenOut,
         address recipient,
         CalcAndValidateRedeemResult memory calcResult
     ) internal {
+        // TODO: move to helper
         uint256 tokenOutBalanceBase18 = IERC20(tokenOut)
             .balanceOf(address(this))
             .convertToBase18(calcResult.tokenOutDecimals);
@@ -837,29 +842,55 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 totalAmount = calcResult.amountTokenOutWithoutFee +
             calcResult.feeAmount;
 
-        uint256 toUseVaultLiquidity = tokenOutBalanceBase18 >= totalAmount
-            ? totalAmount
-            : tokenOutBalanceBase18;
+        uint256 usedLpLiquidity;
+        uint256 lpFeePortion;
 
-        uint256 toUseLpLiquidity = totalAmount - toUseVaultLiquidity;
+        if (loanLpFirst) {
+            (usedLpLiquidity, lpFeePortion) = _useLoanLpLiquidity(
+                tokenOut,
+                totalAmount,
+                totalAmount,
+                calcResult.tokenOutRate,
+                calcResult.feeAmount,
+                calcResult.tokenOutDecimals
+            );
+            uint256 newBalance = tokenOutBalanceBase18 + usedLpLiquidity;
 
-        uint256 lpFeePortion = _truncate(
-            (calcResult.feeAmount * toUseLpLiquidity) / totalAmount,
-            calcResult.tokenOutDecimals
-        );
+            if (newBalance < totalAmount) {
+                _useVaultLiquidity(
+                    tokenOut,
+                    totalAmount - newBalance,
+                    calcResult.tokenOutRate,
+                    newBalance,
+                    calcResult.tokenOutDecimals
+                );
+            }
+        } else {
+            uint256 obtainedVaultLiquidity = _useVaultLiquidity(
+                tokenOut,
+                totalAmount,
+                calcResult.tokenOutRate,
+                tokenOutBalanceBase18,
+                calcResult.tokenOutDecimals
+            );
+
+            uint256 newBalance = tokenOutBalanceBase18 + obtainedVaultLiquidity;
+
+            if (newBalance < totalAmount) {
+                (usedLpLiquidity, lpFeePortion) = _useLoanLpLiquidity(
+                    tokenOut,
+                    totalAmount - newBalance,
+                    totalAmount,
+                    calcResult.tokenOutRate,
+                    calcResult.feeAmount,
+                    calcResult.tokenOutDecimals
+                );
+            }
+        }
 
         uint256 vaultFeePortion = calcResult.feeAmount - lpFeePortion;
 
-        uint256 toTransferFromLp = toUseLpLiquidity - lpFeePortion;
-
-        // transfer from lp liquidity to vault liquidity
-        if (toTransferFromLp > 0) {
-            _useLoanLpLiquidity(
-                tokenOut,
-                toTransferFromLp,
-                calcResult.tokenOutRate
-            );
-        }
+        uint256 toTransferFromLp = usedLpLiquidity - lpFeePortion;
 
         // transfer from vault liquidity to user
         _tokenTransferToUser(
@@ -903,13 +934,42 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         }
     }
 
+    function _useVaultLiquidity(
+        address, /*tokenOut*/
+        uint256, /*amountTokenOutBase18*/
+        uint256, /*tokenOutRate*/
+        uint256, /*currentTokenOutBalanceBase18*/
+        uint256 /*tokenOutDecimals*/
+    )
+        internal
+        virtual
+        returns (
+            uint256 /* obtainedLiquidityBase18 */
+        )
+    {
+        return 0;
+    }
+
     function _useLoanLpLiquidity(
         address tokenOut,
         uint256 amountTokenOutBase18,
-        uint256 tokenOutRate
-    ) internal {
+        uint256 totalAmount,
+        uint256 tokenOutRate,
+        uint256 totalFee,
+        uint256 tokenOutDecimals
+    )
+        internal
+        returns (
+            uint256, /* amountReceivedBase18 */
+            uint256 /* feePortionBase18 */
+        )
+    {
         address _loanLp = loanLp;
         IRedemptionVault _loanSwapperVault = loanSwapperVault;
+
+        if (amountTokenOutBase18 == 0) {
+            return (0, 0);
+        }
 
         require(
             _loanLp != address(0) && address(_loanSwapperVault) != address(0),
@@ -920,16 +980,44 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             .mTokenDataFeed()
             .getDataInBase18();
 
-        // Ceil so the inner vault's floored output is still >= amountTokenOutBase18.
-        // Requires address(this) to have waivedFeeRestriction on the inner vault
+        IERC20 mTokenA = IERC20(address(_loanSwapperVault.mToken()));
+
+        uint256 grossTokenOutAmount = Math.mulDiv(
+            mTokenA.balanceOf(_loanLp),
+            mTokenARate,
+            tokenOutRate,
+            Math.Rounding.Down
+        );
+
+        if (grossTokenOutAmount > amountTokenOutBase18) {
+            grossTokenOutAmount = amountTokenOutBase18;
+        }
+
+        if (grossTokenOutAmount == 0) {
+            return (0, 0);
+        }
+
+        uint256 lpFeePortion = _truncate(
+            (totalFee * grossTokenOutAmount) / totalAmount,
+            tokenOutDecimals
+        );
+
+        if (grossTokenOutAmount == lpFeePortion) {
+            return (0, lpFeePortion);
+        }
+
+        address _tokenOut = tokenOut;
+
+        uint256 tokenOutAmountToRedeem = grossTokenOutAmount - lpFeePortion;
+
+        // Ceil so the inner vault's floored output is still >= net token out amount.
+        // Requires address(this) to have waivedFeeRestriction on the inner vault.
         uint256 mTokenAAmount = Math.mulDiv(
-            amountTokenOutBase18,
+            tokenOutAmountToRedeem,
             tokenOutRate,
             mTokenARate,
             Math.Rounding.Up
         );
-
-        IERC20 mTokenA = IERC20(address(_loanSwapperVault.mToken()));
 
         mTokenA.transferFrom(_loanLp, address(this), mTokenAAmount);
 
@@ -939,10 +1027,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         );
 
         _loanSwapperVault.redeemInstant(
-            tokenOut,
+            _tokenOut,
             mTokenAAmount,
-            amountTokenOutBase18
+            tokenOutAmountToRedeem
         );
+
+        return (tokenOutAmountToRedeem, lpFeePortion);
     }
 
     /**

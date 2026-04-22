@@ -83,35 +83,39 @@ contract RedemptionVaultWithAave is RedemptionVault {
      * asset directly to this contract. No approval is needed because the Pool
      * burns aTokens from msg.sender (this contract) internally.
      * @param tokenOut tokenOut address
-     * @param calcResult calculated redeem instant result
+     * @param amountTokenOutBase18 amount of tokenOut needed in base 18
+     * @param currentTokenOutBalanceBase18 current balance of tokenOut in the vault in base 18
+     * @param tokenOutDecimals decimals of tokenOut
      */
-    function _postRedeemInstant(
+    function _useVaultLiquidity(
         address tokenOut,
-        CalcAndValidateRedeemResult memory calcResult
-    ) internal virtual override {
-        uint256 amountTokenOut = calcResult.amountTokenOut.convertFromBase18(
-            calcResult.tokenOutDecimals
-        );
-
-        uint256 contractBalanceTokenOut = IERC20(tokenOut).balanceOf(
-            address(this)
-        );
-        if (contractBalanceTokenOut >= amountTokenOut) return;
-
+        uint256 amountTokenOutBase18,
+        uint256, /* tokenOutRate */
+        uint256 currentTokenOutBalanceBase18,
+        uint256 tokenOutDecimals
+    )
+        internal
+        virtual
+        override
+        returns (
+            uint256 /* obtainedLiquidityBase18 */
+        )
+    {
         IAaveV3Pool pool = aavePools[tokenOut];
 
         // if we dont have a pool for the token, we can't withdraw, so do nothing
         if (address(pool) == address(0)) {
-            return;
+            return 0;
         }
 
-        uint256 missingAmount = amountTokenOut - contractBalanceTokenOut;
+        uint256 missingAmount = (amountTokenOutBase18 -
+            currentTokenOutBalanceBase18).convertFromBase18(tokenOutDecimals);
 
         address aToken = pool.getReserveAToken(tokenOut);
 
         // if we cant find the aToken, we can't withdraw, so do nothing
         if (aToken == address(0)) {
-            return;
+            return 0;
         }
 
         uint256 aTokenBalance = IERC20(aToken).balanceOf(address(this));
@@ -129,5 +133,7 @@ contract RedemptionVaultWithAave is RedemptionVault {
             withdrawnAmount >= toWithdraw,
             "RVA: insufficient withdrawal amount"
         );
+
+        return withdrawnAmount.convertToBase18(tokenOutDecimals);
     }
 }

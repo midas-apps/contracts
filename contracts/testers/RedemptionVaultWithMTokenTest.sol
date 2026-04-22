@@ -21,29 +21,50 @@ contract RedemptionVaultWithMTokenTest is
         address token,
         uint256 amount,
         uint256 rate
-    ) external {
+    )
+        external
+        returns (
+            uint256 /* obtainedLiquidityBase18 */
+        )
+    {
         uint256 tokenDecimals = _tokenDecimals(token);
-        _postRedeemInstant(
-            token,
-            CalcAndValidateRedeemResult({
-                feeAmount: 0,
-                amountTokenOutWithoutFee: 0,
-                amountTokenOut: DecimalsCorrectionLibrary.convertToBase18(
+        return
+            _useVaultLiquidity(
+                token,
+                DecimalsCorrectionLibrary.convertToBase18(
                     amount,
                     tokenDecimals
                 ),
-                tokenOutRate: rate,
-                mTokenRate: 0,
-                tokenOutDecimals: tokenDecimals
-            })
-        );
+                rate,
+                DecimalsCorrectionLibrary.convertToBase18(
+                    IERC20(token).balanceOf(address(this)),
+                    tokenDecimals
+                ),
+                tokenDecimals
+            );
     }
 
-    function _postRedeemInstant(
+    function _useVaultLiquidity(
         address token,
-        CalcAndValidateRedeemResult memory calcResult
-    ) internal override(RedemptionVaultWithMToken, RedemptionVault) {
-        RedemptionVaultWithMToken._postRedeemInstant(token, calcResult);
+        uint256 amountTokenOutBase18,
+        uint256 tokenOutRate,
+        uint256 currentTokenOutBalanceBase18,
+        uint256 tokenOutDecimals
+    )
+        internal
+        override(RedemptionVaultWithMToken, RedemptionVault)
+        returns (
+            uint256 /* obtainedLiquidityBase18 */
+        )
+    {
+        return
+            RedemptionVaultWithMToken._useVaultLiquidity(
+                token,
+                amountTokenOutBase18,
+                tokenOutRate,
+                currentTokenOutBalanceBase18,
+                tokenOutDecimals
+            );
     }
 
     function _getTokenRate(address dataFeed, bool stable)

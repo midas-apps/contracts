@@ -90,30 +90,32 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
      * asset directly to this contract. No approval is needed because the vault
      * burns shares from msg.sender (this contract) when msg.sender == owner.
      * @param tokenOut tokenOut address
-     * @param calcResult calculated redeem instant result
+     * @param amountTokenOutBase18 amount of tokenOut needed in base 18
+     * @param currentTokenOutBalanceBase18 current balance of tokenOut in the vault in base 18
+     * @param tokenOutDecimals decimals of tokenOut
      */
-    function _postRedeemInstant(
+    function _useVaultLiquidity(
         address tokenOut,
-        CalcAndValidateRedeemResult memory calcResult
-    ) internal virtual override {
-        uint256 amountTokenOut = calcResult.amountTokenOut.convertFromBase18(
-            calcResult.tokenOutDecimals
-        );
-
-        uint256 contractBalanceTokenOut = IERC20(tokenOut).balanceOf(
-            address(this)
-        );
-
-        if (contractBalanceTokenOut >= amountTokenOut) {
-            return;
-        }
-
+        uint256 amountTokenOutBase18,
+        uint256, /* tokenOutRate */
+        uint256 currentTokenOutBalanceBase18,
+        uint256 tokenOutDecimals
+    )
+        internal
+        virtual
+        override
+        returns (
+            uint256 /* obtainedLiquidityBase18 */
+        )
+    {
         IMorphoVault vault = morphoVaults[tokenOut];
+
         if (address(vault) == address(0)) {
-            return;
+            return 0;
         }
 
-        uint256 missingAmount = amountTokenOut - contractBalanceTokenOut;
+        uint256 missingAmount = (amountTokenOutBase18 -
+            currentTokenOutBalanceBase18).convertFromBase18(tokenOutDecimals);
 
         uint256 sharesNeeded = vault.previewWithdraw(missingAmount);
         uint256 vaultSharesBalance = vault.balanceOf(address(this));
@@ -122,5 +124,7 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
             : vaultSharesBalance;
 
         vault.redeem(toRedeemShares, address(this), address(this));
+
+        return missingAmount.convertToBase18(tokenOutDecimals);
     }
 }

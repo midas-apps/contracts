@@ -199,6 +199,12 @@ interface IRedemptionVault is IManageableVault {
 
     /**
      * @param caller function caller (msg.sender)
+     * @param newLoanLpFirst new flag to determine if the loan LP liquidity should be used first
+     */
+    event SetLoanLpFirst(address indexed caller, bool newLoanLpFirst);
+
+    /**
+     * @param caller function caller (msg.sender)
      * @param requestId request id
      */
     event RepayLpLoanRequest(address indexed caller, uint256 indexed requestId);
@@ -454,4 +460,10 @@ interface IRedemptionVault is IManageableVault {
      * @param newMaxLoanApr new maximum loan APR value in basis points (100 = 1%)
      */
     function setMaxLoanApr(uint64 newMaxLoanApr) external;
+
+    /**
+     * @notice set flag to determine if the loan LP liquidity should be used first
+     * @param newLoanLpFirst new flag to determine if the loan LP liquidity should be used first
+     */
+    function setLoanLpFirst(bool newLoanLpFirst) external;
 }
