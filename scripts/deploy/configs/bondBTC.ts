@@ -83,5 +83,17 @@ export const bondBTCDeploymentConfig: DeploymentConfig = {
         },
       },
     },
+    [chainIds.zerog]: {
+      postDeploy: {
+        grantRoles: {
+          tokenManagerAddress: '0x9f2B8F5428681afE68aB23205E279D02711Ca128',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0x21f6cb488Df4784FaF2384474C394921B13F7a37',
+        },
+        setRoundData: {
+          data: parseUnits('1', 8),
+        },
+      },
+    },
   },
 };

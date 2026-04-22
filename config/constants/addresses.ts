@@ -1152,6 +1152,21 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     mRE7: {
       token: '0xb1C5aF66208f0ed11bD794561d3e9C6E19984C1e',
     },
+    bondUSD: {
+      token: '0x73666d762275d7337f1A33Aa89e6A272D4Fec804',
+      customFeed: '0xBC2396a98c7bcb57Ff914b32B3d441e67471FeBC',
+      dataFeed: '0xf817E505faBF94A00a53CFEA83Fa74b112d9Dd26',
+    },
+    bondETH: {
+      token: '0x7F9311A65628C990A2942b11B57584EAe559f7dA',
+      customFeed: '0xCE87F9E8273bD790affd7Bc6377aC34e2bf23501',
+      dataFeed: '0xb9184ba8D5A8a772a417C8B38d900aDC5de5E7c9',
+    },
+    bondBTC: {
+      token: '0xf8D772BA6416B05E0Dde14521C386962eB14efA9',
+      customFeed: '0xEc7a43E8F5C5123EeeFfC2F66A0de7A40a49D885',
+      dataFeed: '0x0AdF5e1180Bf6Fa046f42ca6b3efe000a8c8FE2b',
+    },
   },
   tac: {
     accessControl: '0x2365D68d462e9a5660a3208f817519334a706A45',

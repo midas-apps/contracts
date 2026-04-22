@@ -83,5 +83,17 @@ export const bondUSDDeploymentConfig: DeploymentConfig = {
         },
       },
     },
+    [chainIds.zerog]: {
+      postDeploy: {
+        grantRoles: {
+          tokenManagerAddress: '0x7191b6F35f9c8f5b66d0c92450b5dc3BeA29024D',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0xA61eA5763716bC0E662d3F258F561e7F4fa3E335',
+        },
+        setRoundData: {
+          data: parseUnits('1', 8),
+        },
+      },
+    },
   },
 };

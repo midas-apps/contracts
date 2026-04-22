@@ -85,5 +85,17 @@ export const bondETHDeploymentConfig: DeploymentConfig = {
         },
       },
     },
+    [chainIds.zerog]: {
+      postDeploy: {
+        grantRoles: {
+          tokenManagerAddress: '0xAdDBE833B198E503ED2b5E64F8C2871D36b54b18',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0x5EE3E4E43d77Ddf6676488c756C810787C2134cc',
+        },
+        setRoundData: {
+          data: parseUnits('1', 8),
+        },
+      },
+    },
   },
 };
