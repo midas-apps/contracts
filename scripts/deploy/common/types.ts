@@ -73,7 +73,7 @@ export type LayerZeroConfig = {
   delegate: string;
   owner?: string;
   rateLimitConfig?: {
-    default: Omit<RateLimiter.RateLimitConfigStruct, 'dstEid'>;
+    default?: Omit<RateLimiter.RateLimitConfigStruct, 'dstEid'>;
     overrides?: PartialConfigPerNetwork<
       Omit<RateLimiter.RateLimitConfigStruct, 'dstEid'>
     >;

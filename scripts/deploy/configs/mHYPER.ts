@@ -54,17 +54,17 @@ export const mHYPERDeploymentConfig: DeploymentConfig = {
         layerZero: {
           delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
           rateLimitConfig: {
-            default: {
-              limit: parseUnits('500000'),
-              window: hours(24),
-            },
             overrides: {
               katana: {
-                limit: parseUnits('2000000'),
+                limit: parseUnits('1000000'),
                 window: hours(24),
               },
               monad: {
-                limit: parseUnits('2000000'),
+                limit: parseUnits('1000000'),
+                window: hours(24),
+              },
+              plasma: {
+                limit: parseUnits('1000000'),
                 window: hours(24),
               },
             },
@@ -130,9 +130,11 @@ export const mHYPERDeploymentConfig: DeploymentConfig = {
         layerZero: {
           delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
           rateLimitConfig: {
-            default: {
-              limit: parseUnits('10000'),
-              window: hours(24),
+            overrides: {
+              main: {
+                limit: parseUnits('500000'),
+                window: hours(24),
+              },
             },
           },
         },
@@ -151,9 +153,11 @@ export const mHYPERDeploymentConfig: DeploymentConfig = {
         layerZero: {
           delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
           rateLimitConfig: {
-            default: {
-              limit: parseUnits('500000'),
-              window: hours(24),
+            overrides: {
+              main: {
+                limit: parseUnits('500000'),
+                window: hours(24),
+              },
             },
           },
         },
@@ -172,9 +176,11 @@ export const mHYPERDeploymentConfig: DeploymentConfig = {
         layerZero: {
           delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
           rateLimitConfig: {
-            default: {
-              limit: parseUnits('500000'),
-              window: hours(24),
+            overrides: {
+              main: {
+                limit: parseUnits('500000'),
+                window: hours(24),
+              },
             },
           },
         },
