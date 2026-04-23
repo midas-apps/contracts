@@ -76,7 +76,7 @@ import {
   setRequestRedeemerTest,
   setMaxInstantShareTest,
   expectedHoldbackPartRateFromAvg,
-  setLoanLpFirstTest,
+  setPreferLoanLiquidityTest,
 } from '../../common/redemption-vault.helpers';
 import { sanctionUser } from '../../common/with-sanctions-list.helpers';
 
@@ -1910,8 +1910,8 @@ export const redemptionVaultSuits = (
           );
         });
 
-        describe.only('loan lp', () => {
-          describe('loanLpFirst=false', () => {
+        describe('loan lp', () => {
+          describe('preferLoanLiquidity=false', () => {
             it('when enough liquidity on loan lp but not on vault', async () => {
               const {
                 owner,
@@ -1927,6 +1927,64 @@ export const redemptionVaultSuits = (
 
               await mintToken(mTBILL, owner, 100);
               await mintToken(mTokenLoan, loanLp, 1000);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 1000);
+              await mintToken(
+                stableCoins.dai,
+                redemptionVaultLoanSwapper,
+                1000,
+              );
+
+              await approveBase18(
+                loanLp,
+                stableCoins.dai,
+                redemptionVault,
+                1000,
+              );
+              await withdrawTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                await stableCoins.dai.balanceOf(redemptionVault.address),
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+            });
+
+            it('when enough liquidity on loan lp and on vault but lp liquidity should be untouched', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mTokenLoan,
+                redemptionVaultLoanSwapper,
+              } = await loadRvFixture();
+
+              await mintToken(mTBILL, owner, 100);
+              await mintToken(mTokenLoan, loanLp, 1000);
+              await mintToken(stableCoins.dai, redemptionVault, 1000);
               await approveBase18(loanLp, mTokenLoan, redemptionVault, 1000);
               await mintToken(
                 stableCoins.dai,
@@ -2273,7 +2331,7 @@ export const redemptionVaultSuits = (
             });
           });
 
-          describe.only('loanLpFirst=true', () => {
+          describe('preferLoanLiquidity=true', () => {
             it('when enough liquidity on loan lp but not on vault', async () => {
               const {
                 owner,
@@ -2324,7 +2382,72 @@ export const redemptionVaultSuits = (
                 true,
               );
 
-              await setLoanLpFirstTest({ redemptionVault, owner }, true);
+              await setPreferLoanLiquidityTest(
+                { redemptionVault, owner },
+                true,
+              );
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+            });
+
+            it('when enough liquidity on loan lp and on vault but vault liquidity should be untouched', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mTokenLoan,
+                redemptionVaultLoanSwapper,
+              } = await loadRvFixture();
+
+              await mintToken(mTBILL, owner, 100);
+              await mintToken(mTokenLoan, loanLp, 1000);
+              await mintToken(stableCoins.dai, redemptionVault, 1000);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 1000);
+              await mintToken(
+                stableCoins.dai,
+                redemptionVaultLoanSwapper,
+                1000,
+              );
+
+              await approveBase18(
+                loanLp,
+                stableCoins.dai,
+                redemptionVault,
+                1000,
+              );
+              await withdrawTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                await stableCoins.dai.balanceOf(redemptionVault.address),
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              await setPreferLoanLiquidityTest(
+                { redemptionVault, owner },
+                true,
+              );
               await redeemInstantTest(
                 { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
                 stableCoins.dai,
@@ -2376,7 +2499,10 @@ export const redemptionVaultSuits = (
                 0,
                 true,
               );
-              await setLoanLpFirstTest({ redemptionVault, owner }, true);
+              await setPreferLoanLiquidityTest(
+                { redemptionVault, owner },
+                true,
+              );
 
               await redeemInstantTest(
                 { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -2431,7 +2557,10 @@ export const redemptionVaultSuits = (
               );
 
               await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
-              await setLoanLpFirstTest({ redemptionVault, owner }, true);
+              await setPreferLoanLiquidityTest(
+                { redemptionVault, owner },
+                true,
+              );
 
               await redeemInstantTest(
                 { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -2461,7 +2590,10 @@ export const redemptionVaultSuits = (
                 100,
                 true,
               );
-              await setLoanLpFirstTest({ redemptionVault, owner }, true);
+              await setPreferLoanLiquidityTest(
+                { redemptionVault, owner },
+                true,
+              );
 
               await redeemInstantTest(
                 { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -2496,7 +2628,10 @@ export const redemptionVaultSuits = (
                 100,
                 true,
               );
-              await setLoanLpFirstTest({ redemptionVault, owner }, true);
+              await setPreferLoanLiquidityTest(
+                { redemptionVault, owner },
+                true,
+              );
 
               await redeemInstantTest(
                 { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -2531,7 +2666,10 @@ export const redemptionVaultSuits = (
                 100,
                 true,
               );
-              await setLoanLpFirstTest({ redemptionVault, owner }, true);
+              await setPreferLoanLiquidityTest(
+                { redemptionVault, owner },
+                true,
+              );
 
               await redeemInstantTest(
                 { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -2570,7 +2708,10 @@ export const redemptionVaultSuits = (
                 100,
                 true,
               );
-              await setLoanLpFirstTest({ redemptionVault, owner }, true);
+              await setPreferLoanLiquidityTest(
+                { redemptionVault, owner },
+                true,
+              );
 
               await redeemInstantTest(
                 { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -2630,7 +2771,10 @@ export const redemptionVaultSuits = (
                 1,
               );
               await setRoundData({ mockedAggregator }, 1);
-              await setLoanLpFirstTest({ redemptionVault, owner }, true);
+              await setPreferLoanLiquidityTest(
+                { redemptionVault, owner },
+                true,
+              );
 
               await redeemInstantTest(
                 { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -5164,6 +5308,86 @@ export const redemptionVaultSuits = (
           );
 
           await setMaxLoanAprTest({ redemptionVault, owner }, 100, {
+            from: regularAccounts[0],
+          });
+        });
+      });
+
+      describe.only('setPreferLoanLiquidity()', () => {
+        it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
+          const { redemptionVault, regularAccounts, owner } = await loadFixture(
+            rvFixture,
+          );
+          await setPreferLoanLiquidityTest({ redemptionVault, owner }, true, {
+            from: regularAccounts[0],
+            revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+          });
+        });
+
+        it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
+          const { redemptionVault, owner } = await loadRvFixture();
+          await setPreferLoanLiquidityTest({ redemptionVault, owner }, true);
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { redemptionVault, owner } = await loadRvFixture();
+
+          await pauseVaultFn(
+            redemptionVault,
+            encodeFnSelector('setPreferLoanLiquidity(bool)'),
+          );
+
+          await setPreferLoanLiquidityTest({ redemptionVault, owner }, true, {
+            revertMessage: 'Pausable: fn paused',
+          });
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, redemptionVault, regularAccounts } =
+            await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setPreferLoanLiquidity(bool)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setPreferLoanLiquidityTest({ redemptionVault, owner }, true, {
+            from: regularAccounts[0],
+          });
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            redemptionVault,
+            regularAccounts,
+            roles,
+          } = await loadRvFixture();
+
+          const vaultRole = await redemptionVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            redemptionVault.address,
+            'setPreferLoanLiquidity(bool)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setPreferLoanLiquidityTest({ redemptionVault, owner }, true, {
             from: regularAccounts[0],
           });
         });

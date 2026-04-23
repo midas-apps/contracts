@@ -61,7 +61,7 @@ redemptionVaultSuits(
 
         await expect(
           redemptionVaultWithMToken[
-            'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
+            'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
           ](
             {
               ac: accessControl.address,
@@ -83,6 +83,7 @@ redemptionVaultSuits(
               ],
               minInstantFee: 0,
               maxInstantFee: 10000,
+              maxInstantShare: 100_00,
             },
             {
               requestRedeemer: constants.AddressZero,
@@ -107,7 +108,7 @@ redemptionVaultSuits(
 
           await expect(
             redemptionVaultWithMToken[
-              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
+              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
             ](
               {
                 ac: constants.AddressZero,
@@ -129,6 +130,7 @@ redemptionVaultSuits(
                 ],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
+                maxInstantShare: 100_00,
               },
               {
                 requestRedeemer: constants.AddressZero,
@@ -161,7 +163,7 @@ redemptionVaultSuits(
 
           await expect(
             redemptionVaultWithMToken[
-              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
+              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
             ](
               {
                 ac: accessControl.address,
@@ -183,6 +185,7 @@ redemptionVaultSuits(
                 ],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
+                maxInstantShare: 100_00,
               },
               {
                 requestRedeemer: constants.AddressZero,
@@ -261,48 +264,20 @@ redemptionVaultSuits(
       });
 
       describe('checkAndRedeemMToken()', () => {
-        it('should not redeem mTokenLoan when vault has sufficient tokenOut balance', async () => {
-          const {
-            redemptionVaultWithMToken,
-            stableCoins,
-            mTokenLoan,
-            owner,
-            dataFeed,
-            redemptionVaultLoanSwapper,
-          } = await loadFixture(defaultDeploy);
-
-          await addPaymentTokenTest(
-            { vault: redemptionVaultWithMToken, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await addPaymentTokenTest(
-            { vault: redemptionVaultLoanSwapper, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
+        it('should fail: overflow when vault has sufficient tokenOut balance', async () => {
+          const { redemptionVaultWithMToken, stableCoins, mTokenLoan } =
+            await loadFixture(defaultDeploy);
 
           await mintToken(stableCoins.dai, redemptionVaultWithMToken, 1000);
           await mintToken(mTokenLoan, redemptionVaultWithMToken, 1000);
 
-          const mTbillBefore = await mTokenLoan.balanceOf(
-            redemptionVaultWithMToken.address,
-          );
-
-          await redemptionVaultWithMToken.checkAndRedeemMToken(
-            stableCoins.dai.address,
-            parseUnits('500', 9),
-            parseUnits('1'),
-          );
-
-          const mTbillAfter = await mTokenLoan.balanceOf(
-            redemptionVaultWithMToken.address,
-          );
-          expect(mTbillAfter).to.equal(mTbillBefore);
+          await expect(
+            redemptionVaultWithMToken.checkAndRedeemMToken(
+              stableCoins.dai.address,
+              parseUnits('500', 9),
+              parseUnits('1'),
+            ),
+          ).to.be.revertedWithPanic(0x11);
         });
 
         it('should redeem missing amount via mToken RV', async () => {

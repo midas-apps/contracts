@@ -100,15 +100,15 @@ contract RedemptionVaultWithMToken is RedemptionVault {
      * @dev The other vault burns this contract's mToken and transfers the
      * underlying asset to this contract
      * @param tokenOut tokenOut address
-     * @param amountTokenOutBase18 amount of tokenOut needed in base 18
-     * @param currentTokenOutBalanceBase18 current balance of tokenOut in the vault in base 18
+     * @param missingAmountBase18 amount of tokenOut needed in base 18
+     * @param tokenOutRate tokenOut rate
      */
     function _useVaultLiquidity(
         address tokenOut,
-        uint256 amountTokenOutBase18,
+        uint256 missingAmountBase18,
         uint256 tokenOutRate,
-        uint256 currentTokenOutBalanceBase18,
-        uint256 /*tokenOutDecimals*/
+        uint256, /* currentTokenOutBalanceBase18 */
+        uint256 /* tokenOutDecimals */
     )
         internal
         virtual
@@ -117,9 +117,6 @@ contract RedemptionVaultWithMToken is RedemptionVault {
             uint256 /* obtainedLiquidityBase18 */
         )
     {
-        uint256 missingAmountBase18 = amountTokenOutBase18 -
-            currentTokenOutBalanceBase18;
-
         uint256 mTokenARate = redemptionVault
             .mTokenDataFeed()
             .getDataInBase18();
@@ -140,6 +137,17 @@ contract RedemptionVaultWithMToken is RedemptionVault {
             ? mTokenAAmount
             : mTokenABalance;
 
+        uint256 actualTokenOutAmount = Math.mulDiv(
+            mTokenAAmount,
+            mTokenARate,
+            tokenOutRate,
+            Math.Rounding.Down
+        );
+
+        if (actualTokenOutAmount == 0) {
+            return 0;
+        }
+
         IERC20(mTokenA).safeIncreaseAllowance(
             address(redemptionVault),
             mTokenAAmount
@@ -152,14 +160,14 @@ contract RedemptionVaultWithMToken is RedemptionVault {
             redemptionVault.redeemInstant(
                 tokenOut,
                 mTokenAAmount,
-                missingAmountBase18
+                actualTokenOutAmount
             )
-        {} catch (bytes memory) {
+        {
+            return actualTokenOutAmount;
+        } catch (bytes memory) {
             // reset the allowance to 0
             IERC20(mTokenA).safeApprove(address(redemptionVault), 0);
             return 0;
         }
-
-        return missingAmountBase18;
     }
 }

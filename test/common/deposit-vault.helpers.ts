@@ -385,7 +385,7 @@ export const approveRequestTest = async (
   await expect(depositVault.connect(sender).approveRequest(requestId, newRate))
     .to.emit(
       depositVault,
-      depositVault.interface.events['ApproveRequest(uint256,uint256)'].name,
+      depositVault.interface.events['ApproveRequestV2(uint256,uint256)'].name,
     )
     .withArgs(requestId, newRate).to.not.reverted;
 

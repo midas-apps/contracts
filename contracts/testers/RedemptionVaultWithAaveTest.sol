@@ -24,13 +24,19 @@ contract RedemptionVaultWithAaveTest is
         )
     {
         uint256 tokenDecimals = _tokenDecimals(token);
-        _useVaultLiquidity(
-            token,
-            DecimalsCorrectionLibrary.convertToBase18(amount, tokenDecimals),
-            0,
+        uint256 balance = DecimalsCorrectionLibrary.convertToBase18(
             IERC20(token).balanceOf(address(this)),
             tokenDecimals
         );
+        uint256 missingAmount = DecimalsCorrectionLibrary.convertToBase18(
+            amount,
+            tokenDecimals
+        ) > balance
+            ? balance
+            : 0;
+
+        return
+            _useVaultLiquidity(token, missingAmount, 0, balance, tokenDecimals);
     }
 
     function _useVaultLiquidity(

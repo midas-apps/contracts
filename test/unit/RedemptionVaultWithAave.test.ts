@@ -28,6 +28,7 @@ import {
 } from '../common/redemption-vault-aave.helpers';
 import {
   redeemInstantTest,
+  setPreferLoanLiquidityTest,
   setLoanLpTest,
 } from '../common/redemption-vault.helpers';
 
@@ -180,19 +181,22 @@ redemptionVaultSuits(
             redemptionVaultWithAave.address,
           );
 
-          await redemptionVaultWithAave.checkAndRedeemAave(
-            stableCoins.usdc.address,
-            parseUnits('500', 8),
-          );
+          await expect(
+            redemptionVaultWithAave.checkAndRedeemAave(
+              stableCoins.usdc.address,
+              parseUnits('500', 8),
+            ),
+          ).not.reverted;
 
-          const balanceAfter = await stableCoins.usdc.balanceOf(
-            redemptionVaultWithAave.address,
-          );
           const aTokenAfter = await aUSDC.balanceOf(
             redemptionVaultWithAave.address,
           );
-          expect(balanceAfter).to.equal(balanceBefore);
           expect(aTokenAfter).to.equal(aTokenBefore);
+
+          const usdcAfter = await stableCoins.usdc.balanceOf(
+            redemptionVaultWithAave.address,
+          );
+          expect(usdcAfter).to.equal(balanceBefore);
         });
 
         it('should withdraw missing amount from Aave', async () => {
@@ -209,6 +213,44 @@ redemptionVaultSuits(
           // Vault has 600 aUSDC
           const aTokenAmount = parseUnits('600', 8);
           await aUSDC.mint(redemptionVaultWithAave.address, aTokenAmount);
+
+          await redemptionVaultWithAave.checkAndRedeemAave(
+            stableCoins.usdc.address,
+            parseUnits('1000', 8),
+          );
+
+          // Vault should now have 1000 USDC (500 original + 500 withdrawn from Aave)
+          const usdcAfter = await stableCoins.usdc.balanceOf(
+            redemptionVaultWithAave.address,
+          );
+          expect(usdcAfter).to.equal(parseUnits('1000', 8));
+
+          // aToken balance should decrease by 500
+          const aTokenAfter = await aUSDC.balanceOf(
+            redemptionVaultWithAave.address,
+          );
+          expect(aTokenAfter).to.equal(parseUnits('100', 8));
+        });
+
+        it('should withdraw missing amount from Aave when preferLoanLiquidity=true', async () => {
+          const { redemptionVaultWithAave, stableCoins, aUSDC, owner } =
+            await loadFixture(defaultDeploy);
+
+          // Vault has 500 USDC, needs 1000
+          const initialUsdc = parseUnits('500', 8);
+          await stableCoins.usdc.mint(
+            redemptionVaultWithAave.address,
+            initialUsdc,
+          );
+
+          // Vault has 600 aUSDC
+          const aTokenAmount = parseUnits('600', 8);
+          await aUSDC.mint(redemptionVaultWithAave.address, aTokenAmount);
+
+          await setPreferLoanLiquidityTest(
+            { redemptionVault: redemptionVaultWithAave, owner },
+            true,
+          );
 
           await redemptionVaultWithAave.checkAndRedeemAave(
             stableCoins.usdc.address,

@@ -1474,27 +1474,32 @@ export const setMaxApproveRequestIdTest = async (
   expect(newMaxApproveRequestId).eq(maxApproveRequestId);
 };
 
-export const setLoanLpFirstTest = async (
+export const setPreferLoanLiquidityTest = async (
   { redemptionVault, owner }: CommonParams,
-  loanLpFirst: boolean,
+  preferLoanLiquidity: boolean,
   opt?: OptionalCommonParams,
 ) => {
   if (opt?.revertMessage) {
     await expect(
-      redemptionVault.connect(opt?.from ?? owner).setLoanLpFirst(loanLpFirst),
+      redemptionVault
+        .connect(opt?.from ?? owner)
+        .setPreferLoanLiquidity(preferLoanLiquidity),
     ).revertedWith(opt?.revertMessage);
     return;
   }
 
   await expect(
-    redemptionVault.connect(opt?.from ?? owner).setLoanLpFirst(loanLpFirst),
+    redemptionVault
+      .connect(opt?.from ?? owner)
+      .setPreferLoanLiquidity(preferLoanLiquidity),
   ).to.emit(
     redemptionVault,
-    redemptionVault.interface.events['SetLoanLpFirst(address,bool)'].name,
+    redemptionVault.interface.events['SetPreferLoanLiquidity(address,bool)']
+      .name,
   ).to.not.reverted;
 
-  const newLoanLpFirst = await redemptionVault.loanLpFirst();
-  expect(newLoanLpFirst).eq(loanLpFirst);
+  const newPreferLoanLiquidity = await redemptionVault.preferLoanLiquidity();
+  expect(newPreferLoanLiquidity).eq(preferLoanLiquidity);
 };
 
 export const getFeePercent = async (
@@ -1716,11 +1721,11 @@ export const estimateSendTokensFromLiquidity = async (
     };
   };
 
-  const loanLpFirst = await redemptionVault.loanLpFirst();
+  const preferLoanLiquidity = await redemptionVault.preferLoanLiquidity();
   let usedLpLiquidityBase18 = constants.Zero;
   let lpFeePortionBase18 = constants.Zero;
 
-  if (loanLpFirst) {
+  if (preferLoanLiquidity) {
     ({
       amountReceivedBase18: usedLpLiquidityBase18,
       feePortionBase18: lpFeePortionBase18,

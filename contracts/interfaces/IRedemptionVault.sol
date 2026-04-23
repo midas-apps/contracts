@@ -201,7 +201,7 @@ interface IRedemptionVault is IManageableVault {
      * @param caller function caller (msg.sender)
      * @param newLoanLpFirst new flag to determine if the loan LP liquidity should be used first
      */
-    event SetLoanLpFirst(address indexed caller, bool newLoanLpFirst);
+    event SetPreferLoanLiquidity(address indexed caller, bool newLoanLpFirst);
 
     /**
      * @param caller function caller (msg.sender)
@@ -465,5 +465,5 @@ interface IRedemptionVault is IManageableVault {
      * @notice set flag to determine if the loan LP liquidity should be used first
      * @param newLoanLpFirst new flag to determine if the loan LP liquidity should be used first
      */
-    function setLoanLpFirst(bool newLoanLpFirst) external;
+    function setPreferLoanLiquidity(bool newLoanLpFirst) external;
 }

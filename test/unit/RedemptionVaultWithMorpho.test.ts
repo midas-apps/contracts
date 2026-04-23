@@ -28,6 +28,7 @@ import {
 } from '../common/redemption-vault-morpho.helpers';
 import {
   redeemInstantTest,
+  setPreferLoanLiquidityTest,
   setLoanLpTest,
 } from '../common/redemption-vault.helpers';
 
@@ -211,9 +212,10 @@ redemptionVaultSuits(
       });
 
       describe('checkAndRedeemMorpho()', () => {
-        it('should not withdraw from Morpho when contract has enough balance', async () => {
-          const { redemptionVaultWithMorpho, stableCoins, morphoVaultMock } =
-            await loadFixture(defaultDeploy);
+        it('should fail: should overflow when contract has enough balance', async () => {
+          const { redemptionVaultWithMorpho, stableCoins } = await loadFixture(
+            defaultDeploy,
+          );
 
           const usdcAmount = parseUnits('1000', 8);
           await stableCoins.usdc.mint(
@@ -221,26 +223,12 @@ redemptionVaultSuits(
             usdcAmount,
           );
 
-          const balanceBefore = await stableCoins.usdc.balanceOf(
-            redemptionVaultWithMorpho.address,
-          );
-          const sharesBefore = await morphoVaultMock.balanceOf(
-            redemptionVaultWithMorpho.address,
-          );
-
-          await redemptionVaultWithMorpho.checkAndRedeemMorpho(
-            stableCoins.usdc.address,
-            parseUnits('500', 8),
-          );
-
-          const balanceAfter = await stableCoins.usdc.balanceOf(
-            redemptionVaultWithMorpho.address,
-          );
-          const sharesAfter = await morphoVaultMock.balanceOf(
-            redemptionVaultWithMorpho.address,
-          );
-          expect(balanceAfter).to.equal(balanceBefore);
-          expect(sharesAfter).to.equal(sharesBefore);
+          await expect(
+            redemptionVaultWithMorpho.checkAndRedeemMorpho(
+              stableCoins.usdc.address,
+              parseUnits('500', 8),
+            ),
+          ).to.be.revertedWithPanic(0x11);
         });
 
         it('should withdraw missing amount from Morpho', async () => {
@@ -259,6 +247,51 @@ redemptionVaultSuits(
           await morphoVaultMock.mint(
             redemptionVaultWithMorpho.address,
             sharesAmount,
+          );
+
+          await redemptionVaultWithMorpho.checkAndRedeemMorpho(
+            stableCoins.usdc.address,
+            parseUnits('1000', 8),
+          );
+
+          // Vault should now have 1000 USDC (500 original + 500 withdrawn from Morpho)
+          const usdcAfter = await stableCoins.usdc.balanceOf(
+            redemptionVaultWithMorpho.address,
+          );
+          expect(usdcAfter).to.equal(parseUnits('1000', 8));
+
+          // Share balance should decrease by 500 (1:1 rate)
+          const sharesAfter = await morphoVaultMock.balanceOf(
+            redemptionVaultWithMorpho.address,
+          );
+          expect(sharesAfter).to.equal(parseUnits('100', 8));
+        });
+
+        it('should withdraw missing amount from Morpho when preferLoanLiquidity=true', async () => {
+          const {
+            redemptionVaultWithMorpho,
+            stableCoins,
+            morphoVaultMock,
+            owner,
+          } = await loadFixture(defaultDeploy);
+
+          // Vault has 500 USDC, needs 1000
+          const initialUsdc = parseUnits('500', 8);
+          await stableCoins.usdc.mint(
+            redemptionVaultWithMorpho.address,
+            initialUsdc,
+          );
+
+          // Vault has 600 Morpho shares (1:1 exchange rate by default)
+          const sharesAmount = parseUnits('600', 8);
+          await morphoVaultMock.mint(
+            redemptionVaultWithMorpho.address,
+            sharesAmount,
+          );
+
+          await setPreferLoanLiquidityTest(
+            { redemptionVault: redemptionVaultWithMorpho, owner },
+            true,
           );
 
           await redemptionVaultWithMorpho.checkAndRedeemMorpho(

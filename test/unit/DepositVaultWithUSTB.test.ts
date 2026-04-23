@@ -39,7 +39,7 @@ depositVaultSuits(
 
           await expect(
             depositVaultWithUSTB[
-              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)'
+              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)'
             ](
               {
                 ac: constants.AddressZero,
@@ -56,6 +56,7 @@ depositVaultSuits(
                 minInstantFee: 0,
                 maxInstantFee: 0,
                 limitConfigs: [],
+                maxInstantShare: 100_00,
               },
               0,
               0,

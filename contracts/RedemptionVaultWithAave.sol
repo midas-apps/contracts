@@ -83,15 +83,14 @@ contract RedemptionVaultWithAave is RedemptionVault {
      * asset directly to this contract. No approval is needed because the Pool
      * burns aTokens from msg.sender (this contract) internally.
      * @param tokenOut tokenOut address
-     * @param amountTokenOutBase18 amount of tokenOut needed in base 18
-     * @param currentTokenOutBalanceBase18 current balance of tokenOut in the vault in base 18
+     * @param missingAmountBase18 amount of tokenOut needed in base 18
      * @param tokenOutDecimals decimals of tokenOut
      */
     function _useVaultLiquidity(
         address tokenOut,
-        uint256 amountTokenOutBase18,
+        uint256 missingAmountBase18,
         uint256, /* tokenOutRate */
-        uint256 currentTokenOutBalanceBase18,
+        uint256, /* currentTokenOutBalanceBase18 */
         uint256 tokenOutDecimals
     )
         internal
@@ -108,8 +107,9 @@ contract RedemptionVaultWithAave is RedemptionVault {
             return 0;
         }
 
-        uint256 missingAmount = (amountTokenOutBase18 -
-            currentTokenOutBalanceBase18).convertFromBase18(tokenOutDecimals);
+        uint256 missingAmount = missingAmountBase18.convertFromBase18(
+            tokenOutDecimals
+        );
 
         address aToken = pool.getReserveAToken(tokenOut);
 
@@ -123,6 +123,10 @@ contract RedemptionVaultWithAave is RedemptionVault {
         uint256 toWithdraw = aTokenBalance >= missingAmount
             ? missingAmount
             : aTokenBalance;
+
+        if (toWithdraw == 0) {
+            return 0;
+        }
 
         uint256 withdrawnAmount = pool.withdraw(
             tokenOut,

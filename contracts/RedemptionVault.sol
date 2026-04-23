@@ -10,8 +10,6 @@ import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.s
 import {IRedemptionVault, CommonVaultInitParams, CommonVaultV2InitParams, LiquidityProviderLoanRequest, Request, RequestV2, RequestStatus, RedemptionVaultInitParams, RedemptionVaultV2InitParams} from "./interfaces/IRedemptionVault.sol";
 import {ManageableVault} from "./abstract/ManageableVault.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title RedemptionVault
  * @notice Smart contract that handles mToken redemptions
@@ -102,7 +100,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @notice flag to determine if the loan LP liquidity should be used first
      */
-    bool public loanLpFirst;
+    bool public preferLoanLiquidity;
 
     /**
      * @notice address of loan RedemptionVault-compatible vault
@@ -542,13 +540,13 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function setLoanLpFirst(bool newLoanLpFirst)
+    function setPreferLoanLiquidity(bool newLoanLpFirst)
         external
         validateVaultAdminAccess
     {
-        loanLpFirst = newLoanLpFirst;
+        preferLoanLiquidity = newLoanLpFirst;
 
-        emit SetLoanLpFirst(msg.sender, newLoanLpFirst);
+        emit SetPreferLoanLiquidity(msg.sender, newLoanLpFirst);
     }
 
     /**
@@ -829,12 +827,17 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         mToken.burn(user, amountMTokenIn);
     }
 
+    /**
+     * @dev Sends tokens from liquidity to the recipient
+     * @param tokenOut tokenOut address
+     * @param recipient recipient address
+     * @param calcResult calculated redeem result
+     */
     function _sendTokensFromLiquidity(
         address tokenOut,
         address recipient,
         CalcAndValidateRedeemResult memory calcResult
     ) internal {
-        // TODO: move to helper
         uint256 tokenOutBalanceBase18 = IERC20(tokenOut)
             .balanceOf(address(this))
             .convertToBase18(calcResult.tokenOutDecimals);
@@ -845,7 +848,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 usedLpLiquidity;
         uint256 lpFeePortion;
 
-        if (loanLpFirst) {
+        if (preferLoanLiquidity) {
             (usedLpLiquidity, lpFeePortion) = _useLoanLpLiquidity(
                 tokenOut,
                 totalAmount,
@@ -865,10 +868,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                     calcResult.tokenOutDecimals
                 );
             }
-        } else {
+        } else if (tokenOutBalanceBase18 < totalAmount) {
             uint256 obtainedVaultLiquidity = _useVaultLiquidity(
                 tokenOut,
-                totalAmount,
+                totalAmount - tokenOutBalanceBase18,
                 calcResult.tokenOutRate,
                 tokenOutBalanceBase18,
                 calcResult.tokenOutDecimals
@@ -887,6 +890,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 );
             }
         }
+
         uint256 vaultFeePortion = calcResult.feeAmount - lpFeePortion;
 
         // transfer from vault liquidity to user
@@ -905,38 +909,46 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             calcResult.tokenOutDecimals
         );
 
-        if (usedLpLiquidity > 0) {
-            // we dont transfer lp fee portion just yet,
-            // it will be transferred during the loan repayment
-
-            uint256 loanRequestId = currentLoanRequestId.current();
-
-            loanRequests[loanRequestId] = LiquidityProviderLoanRequest({
-                tokenOut: tokenOut,
-                amountTokenOut: usedLpLiquidity,
-                amountFee: lpFeePortion,
-                createdAt: block.timestamp,
-                status: RequestStatus.Pending
-            });
-            currentLoanRequestId.increment();
-
-            emit CreateLiquidityProviderLoanRequest(
-                loanRequestId,
-                tokenOut,
-                usedLpLiquidity,
-                lpFeePortion,
-                calcResult.mTokenRate,
-                calcResult.tokenOutRate
-            );
+        if (usedLpLiquidity == 0) {
+            return;
         }
+
+        // we dont transfer lp fee portion just yet,
+        // it will be transferred during the loan repayment
+
+        uint256 loanRequestId = currentLoanRequestId.current();
+
+        loanRequests[loanRequestId] = LiquidityProviderLoanRequest({
+            tokenOut: tokenOut,
+            amountTokenOut: usedLpLiquidity,
+            amountFee: lpFeePortion,
+            createdAt: block.timestamp,
+            status: RequestStatus.Pending
+        });
+        currentLoanRequestId.increment();
+
+        emit CreateLiquidityProviderLoanRequest(
+            loanRequestId,
+            tokenOut,
+            usedLpLiquidity,
+            lpFeePortion,
+            calcResult.mTokenRate,
+            calcResult.tokenOutRate
+        );
     }
 
+    /**
+     * @dev Check if contract has enough tokenOut balance for redeem,
+     * if not, obtains liquidity trough the custom strategies.
+     * In default implementation it does nothing.
+     * @return obtainedLiquidityBase18 amount of tokenOut obtained
+     */
     function _useVaultLiquidity(
-        address, /*tokenOut*/
-        uint256, /*amountTokenOutBase18*/
-        uint256, /*tokenOutRate*/
-        uint256, /*currentTokenOutBalanceBase18*/
-        uint256 /*tokenOutDecimals*/
+        address, /* tokenOut */
+        uint256, /* missingAmountBase18 */
+        uint256, /* tokenOutRate */
+        uint256, /* currentTokenOutBalanceBase18 */
+        uint256 /* tokenOutDecimals */
     )
         internal
         virtual
@@ -947,9 +959,19 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         return 0;
     }
 
+    /**
+     * @dev Check if contract has enough tokenOut balance for redeem;
+     * if not, redeem the missing amount via loan LP liquidity
+     * @param tokenOut tokenOut address
+     * @param missingAmountBase18 amount of tokenOut needed in base 18
+     * @param totalAmount total amount of tokenOut needed in base 18
+     * @param tokenOutRate tokenOut rate
+     * @param totalFee total fee of tokenOut
+     * @param tokenOutDecimals decimals of tokenOut
+     */
     function _useLoanLpLiquidity(
         address tokenOut,
-        uint256 amountTokenOutBase18,
+        uint256 missingAmountBase18,
         uint256 totalAmount,
         uint256 tokenOutRate,
         uint256 totalFee,
@@ -964,7 +986,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address _loanLp = loanLp;
         IRedemptionVault _loanSwapperVault = loanSwapperVault;
 
-        if (amountTokenOutBase18 == 0) {
+        if (missingAmountBase18 == 0) {
             return (0, 0);
         }
 
@@ -983,11 +1005,11 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             mTokenA.balanceOf(_loanLp),
             mTokenARate,
             tokenOutRate,
-            Math.Rounding.Down
+            Math.Rounding.Up
         );
 
-        if (grossTokenOutAmount > amountTokenOutBase18) {
-            grossTokenOutAmount = amountTokenOutBase18;
+        if (grossTokenOutAmount > missingAmountBase18) {
+            grossTokenOutAmount = missingAmountBase18;
         }
 
         if (grossTokenOutAmount == 0) {

@@ -58,13 +58,13 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
      * @notice Check if contract has enough USDC balance for redeem
      * if not, trigger USTB redemption flow to redeem exactly the missing amount
      * @param tokenOut tokenOut address
-     * @param amountTokenOutBase18 amount of tokenOut needed in base 18
+     * @param missingAmountBase18 amount of tokenOut needed in base 18
      * @param currentTokenOutBalanceBase18 current balance of tokenOut in the vault in base 18
      * @param tokenOutDecimals decimals of tokenOut
      */
     function _useVaultLiquidity(
         address tokenOut,
-        uint256 amountTokenOutBase18,
+        uint256 missingAmountBase18,
         uint256, /* tokenOutRate */
         uint256 currentTokenOutBalanceBase18,
         uint256 tokenOutDecimals
@@ -81,21 +81,24 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
             return 0;
         }
 
-        uint256 missingAmount = (amountTokenOutBase18 -
-            currentTokenOutBalanceBase18).convertFromBase18(tokenOutDecimals);
+        uint256 missingAmount = missingAmountBase18.convertFromBase18(
+            tokenOutDecimals
+        );
 
-        uint256 fee = ustbRedemption.calculateFee(missingAmount);
+        IUSTBRedemption _ustbRedemption = ustbRedemption;
+
+        uint256 fee = _ustbRedemption.calculateFee(missingAmount);
 
         // If fee is not zero, do nothing
         if (fee != 0) {
             return 0;
         }
 
-        (uint256 ustbToRedeem, ) = ustbRedemption.calculateUstbIn(
+        (uint256 ustbToRedeem, ) = _ustbRedemption.calculateUstbIn(
             missingAmount
         );
 
-        IERC20 ustb = IERC20(ustbRedemption.SUPERSTATE_TOKEN());
+        IERC20 ustb = IERC20(_ustbRedemption.SUPERSTATE_TOKEN());
         uint256 ustbBalance = ustb.balanceOf(address(this));
 
         ustbToRedeem = ustbBalance >= ustbToRedeem ? ustbToRedeem : ustbBalance;
@@ -105,9 +108,12 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
             return 0;
         }
 
-        ustb.safeIncreaseAllowance(address(ustbRedemption), ustbToRedeem);
-        ustbRedemption.redeem(ustbToRedeem);
+        ustb.safeIncreaseAllowance(address(_ustbRedemption), ustbToRedeem);
+        _ustbRedemption.redeem(ustbToRedeem);
 
-        return missingAmount.convertToBase18(tokenOutDecimals);
+        return
+            IERC20(tokenOut).balanceOf(address(this)).convertToBase18(
+                tokenOutDecimals
+            ) - currentTokenOutBalanceBase18;
     }
 }

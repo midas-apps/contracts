@@ -54,7 +54,7 @@ redemptionVaultSuits(
 
         await expect(
           redemptionVaultWithUSTB[
-            'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
+            'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
           ](
             {
               ac: accessControl.address,
@@ -76,6 +76,7 @@ redemptionVaultSuits(
               ],
               minInstantFee: 0,
               maxInstantFee: 10000,
+              maxInstantShare: 100_00,
             },
             { requestRedeemer: requestRedeemer.address },
             {
@@ -96,7 +97,7 @@ redemptionVaultSuits(
 
           await expect(
             redemptionVaultWithUSTB[
-              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
+              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
             ](
               {
                 ac: constants.AddressZero,
@@ -113,6 +114,7 @@ redemptionVaultSuits(
                 limitConfigs: [],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
+                maxInstantShare: 100_00,
               },
               { requestRedeemer: constants.AddressZero },
               {
@@ -144,7 +146,7 @@ redemptionVaultSuits(
 
           await expect(
             redemptionVaultWithUSTB[
-              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
+              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
             ](
               {
                 ac: accessControl.address,
@@ -166,6 +168,7 @@ redemptionVaultSuits(
                 ],
                 minInstantFee: 0,
                 maxInstantFee: 10000,
+                maxInstantShare: 100_00,
               },
               { requestRedeemer: requestRedeemer.address },
               {
