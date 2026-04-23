@@ -212,10 +212,9 @@ redemptionVaultSuits(
       });
 
       describe('checkAndRedeemMorpho()', () => {
-        it('should fail: should overflow when contract has enough balance', async () => {
-          const { redemptionVaultWithMorpho, stableCoins } = await loadFixture(
-            defaultDeploy,
-          );
+        it('should not redeem when contract has enough balance', async () => {
+          const { redemptionVaultWithMorpho, stableCoins, morphoVaultMock } =
+            await loadFixture(defaultDeploy);
 
           const usdcAmount = parseUnits('1000', 8);
           await stableCoins.usdc.mint(
@@ -223,12 +222,24 @@ redemptionVaultSuits(
             usdcAmount,
           );
 
+          await morphoVaultMock.mint(
+            redemptionVaultWithMorpho.address,
+            parseUnits('1000', 8),
+          );
+
           await expect(
             redemptionVaultWithMorpho.checkAndRedeemMorpho(
               stableCoins.usdc.address,
               parseUnits('500', 8),
             ),
-          ).to.be.revertedWithPanic(0x11);
+          ).not.reverted;
+
+          expect(
+            await stableCoins.usdc.balanceOf(redemptionVaultWithMorpho.address),
+          ).to.be.eq(parseUnits('1000', 8));
+          expect(
+            await morphoVaultMock.balanceOf(redemptionVaultWithMorpho.address),
+          ).to.be.eq(parseUnits('1000', 8));
         });
 
         it('should withdraw missing amount from Morpho', async () => {
@@ -421,6 +432,306 @@ redemptionVaultSuits(
       });
 
       describe('redeemInstant()', () => {
+        describe('preferLoanLiquidity=true', () => {
+          it('redeem 100 mTBILL when vault has enough USDC (no Morpho needed)', async () => {
+            const {
+              owner,
+              redemptionVaultWithMorpho,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              dataFeed,
+              morphoVaultMock,
+            } = await loadFixture(defaultDeploy);
+
+            await mintToken(
+              stableCoins.usdc,
+              redemptionVaultWithMorpho,
+              100000,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVaultWithMorpho, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithMorpho, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithMorpho, owner },
+              true,
+            );
+
+            const sharesBefore = await morphoVaultMock.balanceOf(
+              redemptionVaultWithMorpho.address,
+            );
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithMorpho,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+              },
+              stableCoins.usdc,
+              100,
+            );
+
+            const sharesAfter = await morphoVaultMock.balanceOf(
+              redemptionVaultWithMorpho.address,
+            );
+            expect(sharesAfter).to.equal(sharesBefore);
+          });
+
+          it('when vault has no USDC but has Morpho shares and LP liquidity, LP liquidity should be used first', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVaultWithMorpho,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              morphoVaultMock,
+              loanLp,
+              mTokenLoan,
+              redemptionVaultLoanSwapper,
+            } = await loadFixture(defaultDeploy);
+
+            await morphoVaultMock.mint(
+              redemptionVaultWithMorpho.address,
+              parseUnits('9900', 8),
+            );
+            await mintToken(
+              stableCoins.usdc,
+              redemptionVaultLoanSwapper,
+              100000,
+            );
+            await mintToken(mTokenLoan, loanLp, 100000);
+            await approveBase18(
+              loanLp,
+              mTokenLoan,
+              redemptionVaultWithMorpho,
+              100000,
+            );
+
+            await mintToken(mTBILL, owner, 1000);
+            await approveBase18(owner, mTBILL, redemptionVaultWithMorpho, 1000);
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithMorpho, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVaultLoanSwapper, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setInstantFeeTest(
+              { vault: redemptionVaultWithMorpho, owner },
+              0,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithMorpho, owner },
+              true,
+            );
+
+            const sharesBefore = await morphoVaultMock.balanceOf(
+              redemptionVaultWithMorpho.address,
+            );
+            const loanLpBalanceBefore = await mTokenLoan.balanceOf(
+              loanLp.address,
+            );
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithMorpho,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                additionalLiquidity: async () => {
+                  return await morphoVaultMock.balanceOf(
+                    redemptionVaultWithMorpho.address,
+                  );
+                },
+              },
+              stableCoins.usdc,
+              1000,
+            );
+
+            const sharesAfter = await morphoVaultMock.balanceOf(
+              redemptionVaultWithMorpho.address,
+            );
+            const loanLpBalanceAfter = await mTokenLoan.balanceOf(
+              loanLp.address,
+            );
+
+            expect(sharesAfter).to.equal(sharesBefore);
+            expect(loanLpBalanceAfter).to.be.lt(loanLpBalanceBefore);
+          });
+
+          it('redeem 1000 mTBILL when vault has no USDC but has Morpho shares', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVaultWithMorpho,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              morphoVaultMock,
+            } = await loadFixture(defaultDeploy);
+
+            await morphoVaultMock.mint(
+              redemptionVaultWithMorpho.address,
+              parseUnits('9900', 8),
+            );
+            await mintToken(mTBILL, owner, 1000);
+            await approveBase18(owner, mTBILL, redemptionVaultWithMorpho, 1000);
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithMorpho, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setInstantFeeTest(
+              { vault: redemptionVaultWithMorpho, owner },
+              0,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithMorpho, owner },
+              true,
+            );
+
+            const sharesBefore = await morphoVaultMock.balanceOf(
+              redemptionVaultWithMorpho.address,
+            );
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithMorpho,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                additionalLiquidity: async () => {
+                  return await morphoVaultMock.balanceOf(
+                    redemptionVaultWithMorpho.address,
+                  );
+                },
+              },
+              stableCoins.usdc,
+              1000,
+            );
+
+            const sharesAfter = await morphoVaultMock.balanceOf(
+              redemptionVaultWithMorpho.address,
+            );
+            expect(sharesAfter).to.be.lt(sharesBefore);
+          });
+
+          it('when vault partially has USDC, partially has Morpho shares and partially has LP liquidity, so all the liquidity should be used', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVaultWithMorpho,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              morphoVaultMock,
+              loanLp,
+              mTokenLoan,
+              redemptionVaultLoanSwapper,
+            } = await loadFixture(defaultDeploy);
+
+            await morphoVaultMock.mint(
+              redemptionVaultWithMorpho.address,
+              parseUnits('300', 8),
+            );
+            await mintToken(stableCoins.usdc, redemptionVaultLoanSwapper, 300);
+            await mintToken(stableCoins.usdc, redemptionVaultWithMorpho, 400);
+            await mintToken(mTokenLoan, loanLp, 300);
+            await approveBase18(
+              loanLp,
+              mTokenLoan,
+              redemptionVaultWithMorpho,
+              300,
+            );
+
+            await mintToken(mTBILL, owner, 1000);
+            await approveBase18(owner, mTBILL, redemptionVaultWithMorpho, 1000);
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithMorpho, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVaultLoanSwapper, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setInstantFeeTest(
+              { vault: redemptionVaultWithMorpho, owner },
+              0,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithMorpho, owner },
+              true,
+            );
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithMorpho,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                additionalLiquidity: async () => {
+                  return await morphoVaultMock.balanceOf(
+                    redemptionVaultWithMorpho.address,
+                  );
+                },
+              },
+              stableCoins.usdc,
+              1000,
+            );
+
+            const sharesAfter = await morphoVaultMock.balanceOf(
+              redemptionVaultWithMorpho.address,
+            );
+            expect(sharesAfter).to.be.eq(0);
+            expect(
+              await stableCoins.usdc.balanceOf(
+                redemptionVaultWithMorpho.address,
+              ),
+            ).to.be.eq(0);
+            expect(
+              await stableCoins.usdc.balanceOf(
+                redemptionVaultLoanSwapper.address,
+              ),
+            ).to.be.eq(0);
+            expect(await mTokenLoan.balanceOf(loanLp.address)).to.be.eq(0);
+          });
+        });
+
         it('redeem 100 mTBILL when vault has enough USDC (no Morpho needed)', async () => {
           const {
             owner,

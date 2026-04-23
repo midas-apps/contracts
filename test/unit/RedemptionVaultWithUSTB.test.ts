@@ -19,6 +19,7 @@ import {
 import {
   redeemInstantTest,
   setLoanLpTest,
+  setPreferLoanLiquidityTest,
 } from '../common/redemption-vault.helpers';
 
 redemptionVaultSuits(
@@ -185,6 +186,313 @@ redemptionVaultSuits(
       });
 
       describe('redeemInstant()', () => {
+        describe('preferLoanLiquidity=true', () => {
+          it('redeem 100 mTBILL when vault has enough USDC (no USTB needed)', async () => {
+            const {
+              owner,
+              redemptionVaultWithUSTB,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              dataFeed,
+              ustbToken,
+            } = await loadFixture(defaultDeploy);
+
+            await mintToken(stableCoins.usdc, redemptionVaultWithUSTB, 100000);
+            await mintToken(ustbToken, redemptionVaultWithUSTB, 9900);
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVaultWithUSTB, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithUSTB, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithUSTB, owner },
+              true,
+            );
+
+            const ustbBalanceBefore = await ustbToken.balanceOf(
+              redemptionVaultWithUSTB.address,
+            );
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithUSTB,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+              },
+              stableCoins.usdc,
+              100,
+            );
+
+            const ustbBalanceAfter = await ustbToken.balanceOf(
+              redemptionVaultWithUSTB.address,
+            );
+            expect(ustbBalanceAfter).to.equal(ustbBalanceBefore);
+          });
+
+          it('when vault has no USDC but has USTB and LP liquidity, LP liquidity should be used first', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVaultWithUSTB,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              ustbToken,
+              ustbRedemption,
+              loanLp,
+              mTokenLoan,
+              redemptionVaultLoanSwapper,
+            } = await loadFixture(defaultDeploy);
+
+            await ustbRedemption.setChainlinkData(parseUnits('1', 8), false);
+            await ustbRedemption.setMaxUstbRedemptionAmount(
+              parseUnits('2000', 6),
+            );
+            await mintToken(ustbToken, redemptionVaultWithUSTB, 9900);
+
+            await mintToken(
+              stableCoins.usdc,
+              redemptionVaultLoanSwapper,
+              100000,
+            );
+            await mintToken(mTokenLoan, loanLp, 100000);
+            await approveBase18(
+              loanLp,
+              mTokenLoan,
+              redemptionVaultWithUSTB,
+              100000,
+            );
+
+            await mintToken(mTBILL, owner, 1000);
+            await approveBase18(owner, mTBILL, redemptionVaultWithUSTB, 1000);
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithUSTB, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVaultLoanSwapper, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setInstantFeeTest(
+              { vault: redemptionVaultWithUSTB, owner },
+              0,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithUSTB, owner },
+              true,
+            );
+
+            const ustbBalanceBefore = await ustbToken.balanceOf(
+              redemptionVaultWithUSTB.address,
+            );
+            const loanLpBalanceBefore = await mTokenLoan.balanceOf(
+              loanLp.address,
+            );
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithUSTB,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                additionalLiquidity: async () => {
+                  return parseUnits('300', 6);
+                },
+              },
+              stableCoins.usdc,
+              1000,
+            );
+
+            const ustbBalanceAfter = await ustbToken.balanceOf(
+              redemptionVaultWithUSTB.address,
+            );
+            const loanLpBalanceAfter = await mTokenLoan.balanceOf(
+              loanLp.address,
+            );
+
+            expect(ustbBalanceAfter).to.equal(ustbBalanceBefore);
+            expect(loanLpBalanceAfter).to.be.lt(loanLpBalanceBefore);
+          });
+
+          it('redeem 1000 mTBILL, when vault has no USDC but has USTB', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVaultWithUSTB,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              ustbToken,
+              ustbRedemption,
+            } = await loadFixture(defaultDeploy);
+
+            await ustbRedemption.setChainlinkData(parseUnits('1', 8), false);
+            await ustbRedemption.setMaxUstbRedemptionAmount(
+              parseUnits('2000', 6),
+            );
+            await mintToken(ustbToken, redemptionVaultWithUSTB, 9900);
+            await mintToken(mTBILL, owner, 1000);
+            await approveBase18(owner, mTBILL, redemptionVaultWithUSTB, 1000);
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithUSTB, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setInstantFeeTest(
+              { vault: redemptionVaultWithUSTB, owner },
+              0,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithUSTB, owner },
+              true,
+            );
+
+            const ustbBalanceBefore = await ustbToken.balanceOf(
+              redemptionVaultWithUSTB.address,
+            );
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithUSTB,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                additionalLiquidity: async () => {
+                  return (
+                    await ustbRedemption.calculateUsdcOut(
+                      await ustbToken.balanceOf(
+                        redemptionVaultWithUSTB.address,
+                      ),
+                    )
+                  ).usdcOutAmountAfterFee;
+                },
+              },
+              stableCoins.usdc,
+              1000,
+            );
+
+            const ustbBalanceAfter = await ustbToken.balanceOf(
+              redemptionVaultWithUSTB.address,
+            );
+            expect(ustbBalanceAfter).to.be.lt(ustbBalanceBefore);
+          });
+
+          it('when vault partially has USDC, partially has USTB and partially has LP liquidity, so all the liquidity should be used', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVaultWithUSTB,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              ustbToken,
+              ustbRedemption,
+              loanLp,
+              mTokenLoan,
+              redemptionVaultLoanSwapper,
+            } = await loadFixture(defaultDeploy);
+
+            await ustbRedemption.setChainlinkData(parseUnits('1', 8), false);
+            await ustbRedemption.setMaxUstbRedemptionAmount(
+              parseUnits('2000', 6),
+            );
+            await mintToken(ustbToken, redemptionVaultWithUSTB, 9900);
+            await mintToken(stableCoins.usdc, redemptionVaultLoanSwapper, 300);
+            await mintToken(stableCoins.usdc, redemptionVaultWithUSTB, 400);
+            await mintToken(mTokenLoan, loanLp, 300);
+            await approveBase18(
+              loanLp,
+              mTokenLoan,
+              redemptionVaultWithUSTB,
+              300,
+            );
+
+            await mintToken(mTBILL, owner, 1000);
+            await approveBase18(owner, mTBILL, redemptionVaultWithUSTB, 1000);
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithUSTB, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVaultLoanSwapper, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setInstantFeeTest(
+              { vault: redemptionVaultWithUSTB, owner },
+              0,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithUSTB, owner },
+              true,
+            );
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithUSTB,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                additionalLiquidity: async () => {
+                  return (
+                    await ustbRedemption.calculateUsdcOut(
+                      await ustbToken.balanceOf(
+                        redemptionVaultWithUSTB.address,
+                      ),
+                    )
+                  ).usdcOutAmountAfterFee;
+                },
+              },
+              stableCoins.usdc,
+              1000,
+            );
+
+            expect(
+              await ustbToken.balanceOf(redemptionVaultWithUSTB.address),
+            ).to.be.lt(parseUnits('9900', 6));
+            expect(
+              await stableCoins.usdc.balanceOf(redemptionVaultWithUSTB.address),
+            ).eq(0);
+            expect(
+              await stableCoins.usdc.balanceOf(
+                redemptionVaultLoanSwapper.address,
+              ),
+            ).eq(0);
+            expect(await mTokenLoan.balanceOf(loanLp.address)).eq(0);
+          });
+        });
+
         it('should fail: user try to instant redeem more than contract can redeem and it hits loan lp flow', async () => {
           const {
             owner,

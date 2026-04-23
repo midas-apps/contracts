@@ -5,19 +5,26 @@ import { Contract } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import { acErrors, blackList, unBlackList } from './ac.helpers';
-import { defaultDeploy } from './fixtures';
-import { burn, mint, setMetadataTest } from './mTBILL.helpers';
-
-import { MTokenName } from '../../config';
-import { getTokenContractNames } from '../../helpers/contracts';
-import { mTokensMetadata } from '../../helpers/mtokens-metadata';
+import { MTokenName } from '../../../config';
+import { getTokenContractNames } from '../../../helpers/contracts';
+import { mTokensMetadata } from '../../../helpers/mtokens-metadata';
 import {
   getAllRoles,
   getRolesForToken,
   getRolesNamesCommon,
   getRolesNamesForToken,
-} from '../../helpers/roles';
+} from '../../../helpers/roles';
+import {
+  acErrors,
+  blackList,
+  unBlackList,
+} from '../../../test/common/ac.helpers';
+import { defaultDeploy } from '../../../test/common/fixtures';
+import {
+  burn,
+  mint,
+  setMetadataTest,
+} from '../../../test/common/mTBILL.helpers';
 import {
   CustomAggregatorV3CompatibleFeed,
   CustomAggregatorV3CompatibleFeedGrowth,
@@ -27,9 +34,9 @@ import {
   MTBILL,
   RedemptionVault,
   RedemptionVaultWithSwapper,
-} from '../../typechain-types';
+} from '../../../typechain-types';
 
-export const tokenContractsTests = (token: MTokenName) => {
+export const mTokenContractsSuits = (token: MTokenName) => {
   const contractNames = getTokenContractNames(token);
   const allRoles = getAllRoles();
   const allRoleNames = getRolesNamesCommon();
@@ -195,7 +202,7 @@ export const tokenContractsTests = (token: MTokenName) => {
     const depositVaultUstb =
       await deployProxyContractIfExists<DepositVaultWithUSTB>(
         'dvUstb',
-        'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)',
+        'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)',
         {
           ac: fixture.accessControl.address,
           sanctionsList: fixture.mockedSanctionsList.address,
@@ -216,6 +223,7 @@ export const tokenContractsTests = (token: MTokenName) => {
               window: days(1),
             },
           ],
+          maxInstantShare: 100_00,
         },
         0,
         0,
@@ -245,6 +253,7 @@ export const tokenContractsTests = (token: MTokenName) => {
         ],
         minInstantFee: 0,
         maxInstantFee: 10000,
+        maxInstantShare: 100_00,
       },
       { requestRedeemer: fixture.requestRedeemer.address },
       {
@@ -280,6 +289,7 @@ export const tokenContractsTests = (token: MTokenName) => {
           ],
           minInstantFee: 0,
           maxInstantFee: 10000,
+          maxInstantShare: 100_00,
         },
         { requestRedeemer: fixture.requestRedeemer.address },
         {

@@ -299,7 +299,299 @@ redemptionVaultSuits(
       });
 
       describe('redeemInstant()', () => {
-        // ── Happy path tests ─────────────────────────────────────────────────
+        describe('preferLoanLiquidity=true', () => {
+          it('redeem 100 mTBILL when vault has enough USDC (no Aave needed)', async () => {
+            const {
+              owner,
+              redemptionVaultWithAave,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              dataFeed,
+              aUSDC,
+            } = await loadFixture(defaultDeploy);
+
+            await mintToken(stableCoins.usdc, redemptionVaultWithAave, 100000);
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVaultWithAave, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithAave, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            const aTokenBefore = await aUSDC.balanceOf(
+              redemptionVaultWithAave.address,
+            );
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithAave, owner },
+              true,
+            );
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithAave,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+              },
+              stableCoins.usdc,
+              100,
+            );
+
+            // aToken balance should not change
+            const aTokenAfter = await aUSDC.balanceOf(
+              redemptionVaultWithAave.address,
+            );
+            expect(aTokenAfter).to.equal(aTokenBefore);
+          });
+          it('redeem 1000 mTBILL when vault has no USDC but has aTokens', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVaultWithAave,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              aUSDC,
+            } = await loadFixture(defaultDeploy);
+
+            // Mint aTokens to vault (enough for redemption)
+            await aUSDC.mint(
+              redemptionVaultWithAave.address,
+              parseUnits('9900', 8),
+            );
+
+            await mintToken(mTBILL, owner, 1000);
+            await approveBase18(owner, mTBILL, redemptionVaultWithAave, 1000);
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithAave, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setInstantFeeTest(
+              { vault: redemptionVaultWithAave, owner },
+              0,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+            const aTokenBefore = await aUSDC.balanceOf(
+              redemptionVaultWithAave.address,
+            );
+
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithAave, owner },
+              true,
+            );
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithAave,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                additionalLiquidity: async () => {
+                  return await aUSDC.balanceOf(redemptionVaultWithAave.address);
+                },
+              },
+              stableCoins.usdc,
+              1000,
+            );
+
+            const aTokenAfter = await aUSDC.balanceOf(
+              redemptionVaultWithAave.address,
+            );
+            // aTokens should decrease
+            expect(aTokenAfter).to.be.lt(aTokenBefore);
+          });
+          it('when vault has no USDC but has aTokens and LP liquidity, so LP liquidity should be used', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVaultWithAave,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              aUSDC,
+              loanLp,
+              mTokenLoan,
+              redemptionVaultLoanSwapper,
+            } = await loadFixture(defaultDeploy);
+
+            // Mint aTokens to vault (enough for redemption)
+            await aUSDC.mint(
+              redemptionVaultWithAave.address,
+              parseUnits('9900', 8),
+            );
+
+            await mintToken(
+              stableCoins.usdc,
+              redemptionVaultLoanSwapper,
+              100000,
+            );
+            await mintToken(mTokenLoan, loanLp, 100000);
+            await approveBase18(
+              loanLp,
+              mTokenLoan,
+              redemptionVaultWithAave,
+              100000,
+            );
+
+            await mintToken(mTBILL, owner, 1000);
+            await approveBase18(owner, mTBILL, redemptionVaultWithAave, 1000);
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithAave, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVaultLoanSwapper, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await setInstantFeeTest(
+              { vault: redemptionVaultWithAave, owner },
+              0,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+            const aTokenBefore = await aUSDC.balanceOf(
+              redemptionVaultWithAave.address,
+            );
+
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithAave, owner },
+              true,
+            );
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithAave,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                additionalLiquidity: async () => {
+                  return await aUSDC.balanceOf(redemptionVaultWithAave.address);
+                },
+              },
+              stableCoins.usdc,
+              1000,
+            );
+
+            const aTokenAfter = await aUSDC.balanceOf(
+              redemptionVaultWithAave.address,
+            );
+            // aTokens should decrease
+            expect(aTokenAfter).to.be.eq(aTokenBefore);
+          });
+
+          it('when vault partially has USDC, partially has aTokens and partially has LP liquidity, so all the liquidity should be used', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVaultWithAave,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              aUSDC,
+              loanLp,
+              mTokenLoan,
+              redemptionVaultLoanSwapper,
+            } = await loadFixture(defaultDeploy);
+
+            // Mint aTokens to vault
+            await aUSDC.mint(
+              redemptionVaultWithAave.address,
+              parseUnits('300', 8),
+            );
+
+            await mintToken(stableCoins.usdc, redemptionVaultLoanSwapper, 300);
+            await mintToken(stableCoins.usdc, redemptionVaultWithAave, 400);
+            await mintToken(mTokenLoan, loanLp, 300);
+            await approveBase18(
+              loanLp,
+              mTokenLoan,
+              redemptionVaultWithAave,
+              300,
+            );
+
+            await mintToken(mTBILL, owner, 1000);
+            await approveBase18(owner, mTBILL, redemptionVaultWithAave, 1000);
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithAave, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVaultLoanSwapper, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await setInstantFeeTest(
+              { vault: redemptionVaultWithAave, owner },
+              0,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithAave, owner },
+              true,
+            );
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithAave,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                additionalLiquidity: async () => {
+                  return await aUSDC.balanceOf(redemptionVaultWithAave.address);
+                },
+              },
+              stableCoins.usdc,
+              1000,
+            );
+
+            const aTokenAfter = await aUSDC.balanceOf(
+              redemptionVaultWithAave.address,
+            );
+
+            // liquidity should be used up
+            expect(aTokenAfter).to.be.eq(0);
+            expect(
+              await stableCoins.usdc.balanceOf(redemptionVaultWithAave.address),
+            ).to.be.eq(0);
+            expect(
+              await stableCoins.usdc.balanceOf(
+                redemptionVaultLoanSwapper.address,
+              ),
+            ).to.be.eq(0);
+            expect(await mTokenLoan.balanceOf(loanLp.address)).to.be.eq(0);
+          });
+        });
 
         it('redeem 100 mTBILL when vault has enough USDC (no Aave needed)', async () => {
           const {

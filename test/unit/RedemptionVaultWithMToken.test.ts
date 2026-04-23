@@ -27,7 +27,12 @@ import {
   redeemInstantWithMTokenTest,
   setRedemptionVaultTest,
 } from '../common/redemption-vault-mtoken.helpers';
-import { setLoanLpTest } from '../common/redemption-vault.helpers';
+import {
+  setLoanLpTest,
+  setLoanSwapperVaultTest,
+  redeemInstantTest,
+  setPreferLoanLiquidityTest,
+} from '../common/redemption-vault.helpers';
 
 redemptionVaultSuits(
   'RedemptionVaultWithMToken',
@@ -264,7 +269,7 @@ redemptionVaultSuits(
       });
 
       describe('checkAndRedeemMToken()', () => {
-        it('should fail: overflow when vault has sufficient tokenOut balance', async () => {
+        it('should not redeem when vault has sufficient tokenOut balance', async () => {
           const { redemptionVaultWithMToken, stableCoins, mTokenLoan } =
             await loadFixture(defaultDeploy);
 
@@ -277,7 +282,14 @@ redemptionVaultSuits(
               parseUnits('500', 9),
               parseUnits('1'),
             ),
-          ).to.be.revertedWithPanic(0x11);
+          ).not.reverted;
+
+          expect(
+            await stableCoins.dai.balanceOf(redemptionVaultWithMToken.address),
+          ).to.be.eq(parseUnits('1000', 9));
+          expect(
+            await mTokenLoan.balanceOf(redemptionVaultWithMToken.address),
+          ).to.be.eq(parseUnits('1000', 18));
         });
 
         it('should redeem missing amount via mToken RV', async () => {
@@ -369,6 +381,472 @@ redemptionVaultSuits(
       });
 
       describe('redeemInstant()', () => {
+        describe('preferLoanLiquidity=true', () => {
+          it('redeem 100 mTBILL, when vault has enough DAI and all fees are 0', async () => {
+            const {
+              owner,
+              redemptionVaultWithMToken,
+              stableCoins,
+              mTokenLoan,
+              mTBILL,
+              mTokenLoanToUsdDataFeed,
+              mTokenToUsdDataFeed,
+              dataFeed,
+              mockedAggregator,
+            } = await loadFixture(defaultDeploy);
+
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithMToken, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await setRoundData({ mockedAggregator }, 1);
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithMToken, owner },
+              true,
+            );
+
+            await mintToken(mTBILL, owner, 100_000);
+            await mintToken(
+              stableCoins.dai,
+              redemptionVaultWithMToken,
+              1_000_000,
+            );
+            await mintToken(mTokenLoan, redemptionVaultWithMToken, 100_000);
+            await approveBase18(
+              owner,
+              mTBILL,
+              redemptionVaultWithMToken,
+              100_000,
+            );
+
+            await setInstantFeeTest(
+              { vault: redemptionVaultWithMToken, owner },
+              0,
+            );
+
+            await redeemInstantWithMTokenTest(
+              {
+                redemptionVaultWithMToken,
+                owner,
+                mTokenLoan,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                mTokenLoanToUsdDataFeed,
+              },
+              stableCoins.dai,
+              100,
+            );
+          });
+
+          it('when vault has no DAI but has mToken sleeve and LP liquidity, LP liquidity should be used first', async () => {
+            const {
+              owner,
+              redemptionVaultWithMToken,
+              stableCoins,
+              mTokenLoan,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              dataFeed,
+              mockedAggregator,
+              mockedAggregatorMTokenLoan,
+              redemptionVaultLoanSwapper,
+              loanLp,
+            } = await loadFixture(defaultDeploy);
+
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithMToken, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVaultLoanSwapper, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData(
+              { mockedAggregator: mockedAggregatorMTokenLoan },
+              1,
+            );
+            await setInstantFeeTest(
+              { vault: redemptionVaultWithMToken, owner },
+              0,
+            );
+            await setInstantFeeTest(
+              { vault: redemptionVaultLoanSwapper, owner },
+              0,
+            );
+            await setLoanLpTest(
+              { redemptionVault: redemptionVaultWithMToken, owner },
+              loanLp.address,
+            );
+            await setLoanSwapperVaultTest(
+              { redemptionVault: redemptionVaultWithMToken, owner },
+              redemptionVaultLoanSwapper.address,
+            );
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithMToken, owner },
+              true,
+            );
+
+            await mintToken(mTBILL, owner, 100_000);
+            await mintToken(mTokenLoan, redemptionVaultWithMToken, 100_000);
+            await mintToken(mTokenLoan, loanLp, 100_000);
+            await mintToken(
+              stableCoins.dai,
+              redemptionVaultLoanSwapper,
+              1_000_000,
+            );
+            await approveBase18(
+              owner,
+              mTBILL,
+              redemptionVaultWithMToken,
+              100_000,
+            );
+            await approveBase18(
+              loanLp,
+              mTokenLoan,
+              redemptionVaultWithMToken,
+              100_000,
+            );
+
+            const loanLpBalanceBefore = await mTokenLoan.balanceOf(
+              loanLp.address,
+            );
+
+            const sleeveBalanceBefore = await mTokenLoan.balanceOf(
+              redemptionVaultWithMToken.address,
+            );
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithMToken,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                additionalLiquidity: async () => {
+                  return (
+                    await mTokenLoan.balanceOf(
+                      redemptionVaultWithMToken.address,
+                    )
+                  ).div(10 ** (await stableCoins.dai.decimals()));
+                },
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            const loanLpBalanceAfter = await mTokenLoan.balanceOf(
+              loanLp.address,
+            );
+            const sleeveBalanceAfter = await mTokenLoan.balanceOf(
+              redemptionVaultWithMToken.address,
+            );
+            expect(sleeveBalanceAfter).to.be.lte(sleeveBalanceBefore);
+            expect(loanLpBalanceAfter).to.be.lt(loanLpBalanceBefore);
+          });
+
+          it('redeem 100 mTBILL, vault has no DAI but has LP liquidity', async () => {
+            const {
+              owner,
+              redemptionVaultWithMToken,
+              stableCoins,
+              mTokenLoan,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              dataFeed,
+              mockedAggregator,
+              redemptionVaultLoanSwapper,
+              loanLp,
+            } = await loadFixture(defaultDeploy);
+
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithMToken, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVaultLoanSwapper, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await setRoundData({ mockedAggregator }, 1);
+            await setLoanLpTest(
+              { redemptionVault: redemptionVaultWithMToken, owner },
+              loanLp.address,
+            );
+            await setLoanSwapperVaultTest(
+              { redemptionVault: redemptionVaultWithMToken, owner },
+              redemptionVaultLoanSwapper.address,
+            );
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithMToken, owner },
+              true,
+            );
+
+            await mintToken(mTBILL, owner, 100_000);
+            await mintToken(mTokenLoan, loanLp, 100_000);
+            await mintToken(
+              stableCoins.dai,
+              redemptionVaultLoanSwapper,
+              1_000_000,
+            );
+            await approveBase18(
+              owner,
+              mTBILL,
+              redemptionVaultWithMToken,
+              100_000,
+            );
+            await approveBase18(
+              loanLp,
+              mTokenLoan,
+              redemptionVaultWithMToken,
+              100_000,
+            );
+
+            await setInstantFeeTest(
+              { vault: redemptionVaultWithMToken, owner },
+              0,
+            );
+
+            const loanLpBalanceBefore = await mTokenLoan.balanceOf(
+              loanLp.address,
+            );
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithMToken,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            const loanLpBalanceAfter = await mTokenLoan.balanceOf(
+              loanLp.address,
+            );
+            expect(loanLpBalanceAfter).to.be.lt(loanLpBalanceBefore);
+          });
+
+          it('when vault has enough DAI and enough LP liquidity, LP should be used first', async () => {
+            const {
+              owner,
+              redemptionVaultWithMToken,
+              stableCoins,
+              mTokenLoan,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              dataFeed,
+              mockedAggregator,
+              redemptionVaultLoanSwapper,
+              loanLp,
+            } = await loadFixture(defaultDeploy);
+
+            await mintToken(
+              stableCoins.dai,
+              redemptionVaultLoanSwapper,
+              1_000_000,
+            );
+            await mintToken(
+              stableCoins.dai,
+              redemptionVaultWithMToken,
+              1_000_000,
+            );
+            await mintToken(mTokenLoan, loanLp, 100_000);
+            await approveBase18(
+              loanLp,
+              mTokenLoan,
+              redemptionVaultWithMToken,
+              100_000,
+            );
+
+            await mintToken(mTBILL, owner, 100_000);
+            await approveBase18(
+              owner,
+              mTBILL,
+              redemptionVaultWithMToken,
+              100_000,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithMToken, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVaultLoanSwapper, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setInstantFeeTest(
+              { vault: redemptionVaultWithMToken, owner },
+              0,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setLoanLpTest(
+              { redemptionVault: redemptionVaultWithMToken, owner },
+              loanLp.address,
+            );
+            await setLoanSwapperVaultTest(
+              { redemptionVault: redemptionVaultWithMToken, owner },
+              redemptionVaultLoanSwapper.address,
+            );
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithMToken, owner },
+              true,
+            );
+
+            const loanLpBalanceBefore = await mTokenLoan.balanceOf(
+              loanLp.address,
+            );
+            const vaultDaiBalanceBefore = await stableCoins.dai.balanceOf(
+              redemptionVaultWithMToken.address,
+            );
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithMToken,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            const loanLpBalanceAfter = await mTokenLoan.balanceOf(
+              loanLp.address,
+            );
+            const vaultDaiBalanceAfter = await stableCoins.dai.balanceOf(
+              redemptionVaultWithMToken.address,
+            );
+            expect(loanLpBalanceAfter).to.be.lt(loanLpBalanceBefore);
+            expect(vaultDaiBalanceAfter).to.be.eq(vaultDaiBalanceBefore);
+          });
+
+          it('when vault partially has USDC, partially has mToken sleeve and partially has LP liquidity, so all the liquidity should be used', async () => {
+            const {
+              owner,
+              redemptionVaultWithMToken,
+              stableCoins,
+              mTokenLoan,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              dataFeed,
+              mockedAggregator,
+              redemptionVaultLoanSwapper,
+              loanLp,
+              redemptionVault,
+              mockedAggregatorMToken,
+            } = await loadFixture(defaultDeploy);
+
+            await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 400);
+            await mintToken(stableCoins.dai, redemptionVaultWithMToken, 300);
+            await mintToken(stableCoins.dai, redemptionVault, 300);
+            await mintToken(mTokenLoan, loanLp, 400);
+            await mintToken(mTBILL, redemptionVaultWithMToken, 300);
+            await approveBase18(
+              loanLp,
+              mTokenLoan,
+              redemptionVaultWithMToken,
+              400,
+            );
+
+            await mintToken(mTBILL, owner, 1000);
+            await approveBase18(owner, mTBILL, redemptionVaultWithMToken, 1000);
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithMToken, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVaultLoanSwapper, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setInstantFeeTest(
+              { vault: redemptionVaultWithMToken, owner },
+              0,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithMToken, owner },
+              true,
+            );
+
+            await redemptionVaultWithMToken.setRedemptionVault(
+              redemptionVault.address,
+            );
+
+            await redemptionVault.addWaivedFeeAccount(
+              redemptionVaultWithMToken.address,
+            );
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithMToken,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                checkSupply: false,
+                additionalLiquidity: async () => {
+                  return (
+                    await mTBILL.balanceOf(redemptionVaultWithMToken.address)
+                  ).div(10 ** (await stableCoins.dai.decimals()));
+                },
+              },
+              stableCoins.dai,
+              1000,
+            );
+
+            expect(await mTokenLoan.balanceOf(loanLp.address)).to.eq(0);
+            expect(
+              await stableCoins.dai.balanceOf(
+                redemptionVaultWithMToken.address,
+              ),
+            ).to.be.eq(0);
+            expect(
+              await stableCoins.dai.balanceOf(redemptionVault.address),
+            ).to.be.eq(0);
+            expect(
+              await mTBILL.balanceOf(redemptionVaultWithMToken.address),
+            ).to.be.eq(0);
+          });
+        });
+
         it('should fail: when inner vault fee is not waived', async () => {
           const {
             owner,

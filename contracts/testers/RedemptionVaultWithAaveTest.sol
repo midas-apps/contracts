@@ -28,11 +28,12 @@ contract RedemptionVaultWithAaveTest is
             IERC20(token).balanceOf(address(this)),
             tokenDecimals
         );
-        uint256 missingAmount = DecimalsCorrectionLibrary.convertToBase18(
+        uint256 amountBase18 = DecimalsCorrectionLibrary.convertToBase18(
             amount,
             tokenDecimals
-        ) > balance
-            ? balance
+        );
+        uint256 missingAmount = amountBase18 > balance
+            ? amountBase18 - balance
             : 0;
 
         return

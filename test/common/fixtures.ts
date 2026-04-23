@@ -899,7 +899,6 @@ export const defaultDeploy = async () => {
 
   await redemptionVault.setMaxApproveRequestId(100);
   await redemptionVaultLoanSwapper.setMaxApproveRequestId(100);
-  await redemptionVaultLoanSwapper.setMaxApproveRequestId(100);
   await redemptionVaultWithUSTB.setMaxApproveRequestId(100);
   await redemptionVaultWithAave.setMaxApproveRequestId(100);
   await redemptionVaultWithMorpho.setMaxApproveRequestId(100);

@@ -5313,7 +5313,7 @@ export const redemptionVaultSuits = (
         });
       });
 
-      describe.only('setPreferLoanLiquidity()', () => {
+      describe('setPreferLoanLiquidity()', () => {
         it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
           const { redemptionVault, regularAccounts, owner } = await loadFixture(
             rvFixture,

@@ -2,18 +2,19 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 
+import { mTokenContractsSuits } from './suits/mtoken.suits';
+
 import { MTokenName } from '../../config';
 import { acErrors, blackList } from '../common/ac.helpers';
 import { defaultDeploy, mTokenPermissionedFixture } from '../common/fixtures';
 import { burn, mint } from '../common/mTBILL.helpers';
-import { tokenContractsTests } from '../common/token.tests';
 
 const mProducts = ['mTBILL'] as MTokenName[]; // Object.values(MTokenNameEnum);
 
 describe('Token contracts', () => {
   mProducts.forEach((product) => {
     describe(`${product}`, () => {
-      tokenContractsTests(product);
+      mTokenContractsSuits(product);
     });
   });
   describe('mTokenPermissioned (mTokenPermissionedTest)', () => {

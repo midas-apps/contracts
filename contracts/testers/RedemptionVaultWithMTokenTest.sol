@@ -28,18 +28,24 @@ contract RedemptionVaultWithMTokenTest is
         )
     {
         uint256 tokenDecimals = _tokenDecimals(token);
+        uint256 balance = DecimalsCorrectionLibrary.convertToBase18(
+            IERC20(token).balanceOf(address(this)),
+            tokenDecimals
+        );
+        uint256 amountBase18 = DecimalsCorrectionLibrary.convertToBase18(
+            amount,
+            tokenDecimals
+        );
+        uint256 missingAmount = amountBase18 > balance
+            ? amountBase18 - balance
+            : 0;
+
         return
             _useVaultLiquidity(
                 token,
-                DecimalsCorrectionLibrary.convertToBase18(
-                    amount,
-                    tokenDecimals
-                ),
+                missingAmount,
                 rate,
-                DecimalsCorrectionLibrary.convertToBase18(
-                    IERC20(token).balanceOf(address(this)),
-                    tokenDecimals
-                ),
+                balance,
                 tokenDecimals
             );
     }

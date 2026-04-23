@@ -24,20 +24,20 @@ contract RedemptionVaultWithUSTBTest is
         )
     {
         uint256 tokenDecimals = _tokenDecimals(token);
+        uint256 balance = DecimalsCorrectionLibrary.convertToBase18(
+            IERC20(token).balanceOf(address(this)),
+            tokenDecimals
+        );
+        uint256 amountBase18 = DecimalsCorrectionLibrary.convertToBase18(
+            amount,
+            tokenDecimals
+        );
+        uint256 missingAmount = amountBase18 > balance
+            ? amountBase18 - balance
+            : 0;
+
         return
-            _useVaultLiquidity(
-                token,
-                DecimalsCorrectionLibrary.convertToBase18(
-                    amount,
-                    tokenDecimals
-                ),
-                0,
-                DecimalsCorrectionLibrary.convertToBase18(
-                    IERC20(token).balanceOf(address(this)),
-                    tokenDecimals
-                ),
-                tokenDecimals
-            );
+            _useVaultLiquidity(token, missingAmount, 0, balance, tokenDecimals);
     }
 
     function _useVaultLiquidity(
