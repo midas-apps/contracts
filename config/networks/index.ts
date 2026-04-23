@@ -249,6 +249,7 @@ export const layerZeroBlockFinality: PartialConfigPerNetwork<number> = {
   scroll: 800,
   optimism: 650,
   plasma: 1800,
+  zerog: 6000,
 };
 
 export const axelarChainNames: PartialConfigPerNetwork<string> = {

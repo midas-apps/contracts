@@ -95,6 +95,15 @@ export const lzConfigsPerMToken: PartialConfigPerNetwork<
       pathways: 'direct-only',
       linkedNetworks: ['monad'],
     },
+    bondUSD: {
+      linkedNetworks: ['zerog'],
+    },
+    bondETH: {
+      linkedNetworks: ['zerog'],
+    },
+    bondBTC: {
+      linkedNetworks: ['zerog'],
+    },
   },
 };
 
