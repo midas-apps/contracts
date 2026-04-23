@@ -42,9 +42,11 @@ export const liquidRESERVEDeploymentConfig: DeploymentConfig = {
         layerZero: {
           delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
           rateLimitConfig: {
-            default: {
-              limit: parseUnits('100000'),
-              window: hours(24),
+            overrides: {
+              optimism: {
+                limit: parseUnits('500000'),
+                window: hours(24),
+              },
             },
           },
         },
@@ -120,9 +122,11 @@ export const liquidRESERVEDeploymentConfig: DeploymentConfig = {
         layerZero: {
           delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
           rateLimitConfig: {
-            default: {
-              limit: parseUnits('100000'),
-              window: hours(24),
+            overrides: {
+              scroll: {
+                limit: parseUnits('100000'),
+                window: hours(24),
+              },
             },
           },
         },

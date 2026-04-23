@@ -7,6 +7,7 @@ import {
   getOriginalNetwork,
   getMTokenOrThrow,
 } from '../../../../helpers/utils';
+import { RateLimiter } from '../../../../typechain-types';
 import { DeployFunction } from '../../common/types';
 import {
   getDeployer,
@@ -48,10 +49,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const rateLimitConfigDefault = config.layerZero.rateLimitConfig?.default;
   const rateLimitConfigOverrides = config.layerZero.rateLimitConfig?.overrides;
 
-  if (!rateLimitConfigDefault) {
-    throw new Error('Rate limit config default not found');
-  }
-
   const lzConfig = lzConfigsPerMToken?.[originalNetwork]?.[mToken];
 
   if (!lzConfig) {
@@ -80,14 +77,37 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     );
   }
 
-  const rateLimitConfigs = networksToRateLimit.map((network) => {
+  const rateLimitConfigs: RateLimiter.RateLimitConfigStruct[] = [];
+
+  for (const network of networksToRateLimit) {
     const configBase =
       rateLimitConfigOverrides?.[network] ?? rateLimitConfigDefault;
-    return {
-      ...configBase,
-      dstEid: layerZeroEids[network]!,
-    };
-  });
+
+    if (!configBase) {
+      throw new Error(`Rate limit config not found for network ${network}`);
+    }
+    const dstEid = layerZeroEids[network]!;
+    const currentRateLimitConfigs = await contract.getRateLimit(dstEid);
+
+    if (
+      !currentRateLimitConfigs.limit.eq(await configBase.limit) ||
+      !currentRateLimitConfigs.window.eq(await configBase.window)
+    ) {
+      rateLimitConfigs.push({
+        dstEid,
+        limit: configBase.limit,
+        window: configBase.window,
+      });
+    } else {
+      console.log(`Rate limit config for network ${network} is up to date`);
+      continue;
+    }
+  }
+
+  if (rateLimitConfigs.length === 0) {
+    console.log('No rate limit configs to set, everything is up to date');
+    return;
+  }
 
   console.log('rateLimitConfigs', rateLimitConfigs);
 
