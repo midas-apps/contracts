@@ -265,7 +265,8 @@ export const sendAndWaitForCustomTxSign = async (
       | 'update-lz-oapp-config'
       | 'axelar-wire-tokens'
       | 'axelar-update-config'
-      | 'deployer';
+      | 'deployer'
+      | 'cre-receiver-owner';
     subAction?:
       | 'add-payment-token'
       | 'grant-token-roles'

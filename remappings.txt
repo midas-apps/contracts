@@ -1,0 +1,2 @@
+@chainlink/contracts/=lib/chainlink-evm/contracts/
+@openzeppelin/contracts@5.0.2/=lib/save/lib/openzeppelin-contracts/contracts/

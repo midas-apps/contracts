@@ -14,6 +14,8 @@ import 'solidity-docgen';
 import './tasks';
 import '@layerzerolabs/toolbox-hardhat';
 import 'hardhat-tracer';
+import '@nomicfoundation/hardhat-foundry';
+import 'hardhat-dependency-compiler';
 import {
   chainIds,
   ENV,
@@ -48,6 +50,24 @@ const config: HardhatUserConfig = {
           },
         },
       },
+      {
+        // PLACEHOLDER optimizer settings — must be reconciled against
+        // upstream `llama-risk/save`'s `foundry.toml` (`optimizer`,
+        // `optimizer_runs`, `via_ir`) before mainnet deploy. Tracked in
+        // docs/superpowers/specs/2026-04-23-save-cre-receiver-proxy-mainnet-deploy-design.md §10.
+        version: '0.8.33',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
+    ],
+  },
+  dependencyCompiler: {
+    paths: [
+      'save/contracts/src/save-cre-receiver-proxy/SaveCreReceiverProxy.sol',
     ],
   },
   namedAccounts: {
@@ -97,6 +117,13 @@ const config: HardhatUserConfig = {
     runOnCompile: OPTIMIZER,
   },
   paths: {
+    // Throwaway `save-cre` deploy branch only. Flat remapped deps (OZ v5 in
+    // `lib/openzeppelin-contracts`) are incompatible with the main `contracts/`
+    // tree (OZ 4.8.3 in node_modules), so we point `sources` at an empty
+    // directory and let `hardhat-dependency-compiler` pull
+    // `save/.../SaveCreReceiverProxy.sol` (forge remapping) in as the only graph.
+    // Main branch must NOT merge this; restore `sources: 'contracts'`.
+    sources: 'contracts-save-cre',
     deploy: 'deploy/',
     deployments: 'deployments/',
   },

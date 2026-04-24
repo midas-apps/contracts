@@ -1,0 +1,11 @@
+# Used by `@nomicfoundation/hardhat-foundry` + `forge config`. Must match
+# `paths.sources` in `hardhat.config.ts`. On the save-cre deploy throwaway
+# branch this is a dummy directory; real Solidity is compiled from
+# `lib/save/...` via `hardhat-dependency-compiler` and flat remappings in
+# `remappings.txt` (global `@openzeppelin` → OZ v5 in lib/).
+
+[profile.default]
+src = "contracts-save-cre"
+libs = ["lib", "node_modules"]
+cache_path = "cache_forge"
+solc_version = "0.8.33"
