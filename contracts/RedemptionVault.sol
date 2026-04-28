@@ -21,6 +21,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     using DecimalsCorrectionLibrary for uint256;
     using Counters for Counters.Counter;
     using SafeERC20 for IERC20;
+
     /**
      * @notice return data of _calcAndValidateRedeem
      * packed into a struct to avoid stack too deep errors

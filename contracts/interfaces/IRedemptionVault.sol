@@ -6,61 +6,80 @@ import "./IManageableVault.sol";
 /**
  * @notice Legacy Redeem request scruct
  * @dev used for backward compatibility
- * @param sender user address who create
- * @param tokenOut tokenOut address
- * @param status request status
- * @param amountMToken amount mToken
- * @param mTokenRate rate of mToken at request creation time
- * @param tokenOutRate rate of tokenOut at request creation time
  */
 struct Request {
+    /// @notice user address which will receive the mTokens
     address sender;
+    /// @notice tokenOut address
     address tokenOut;
+    /// @notice request status
     RequestStatus status;
+    /// @notice amount of mToken
     uint256 amountMToken;
+    /// @notice rate of mToken at request creation time
     uint256 mTokenRate;
+    /// @notice rate of tokenOut at request creation time
     uint256 tokenOutRate;
 }
 
 /**
  * @notice Redeem request v2 scruct
- * @dev replaces `Request` struct and adds `feePercent`, `amountMTokenInstant`, `approvedMTokenRate` and `version` fields
- * @param sender user address who create
- * @param tokenOut tokenOut address
- * @param status request status
- * @param amountMToken amount mToken
- * @param mTokenRate rate of mToken at request creation time
- * @param tokenOutRate rate of tokenOut at request creation time
- * @param feePercent fixed fee percent that was calculated at request creation time
- * @param amountMTokenInstant amount of mToken that was redeemed instantly
- * @param approvedMTokenRate approved mToken rate
- * @param version request version. 0 for legacy, 1 for v2
+ * @dev replaces `Request` struct and adds next fields:
+ * - `feePercent`
+ * - `amountMTokenInstant`
+ * - `approvedMTokenRate`
+ * - `version`
  */
 struct RequestV2 {
+    /// @notice user address which will receive the mTokens
     address sender;
+    /// @notice tokenOut address
     address tokenOut;
+    /// @notice request status
     RequestStatus status;
+    /// @notice amount of mToken
     uint256 amountMToken;
+    /// @notice rate of mToken at request creation time
     uint256 mTokenRate;
+    /// @notice rate of tokenOut at request creation time
     uint256 tokenOutRate;
+    /// @notice fixed fee percent that was calculated at request creation time
     uint256 feePercent;
+    /// @notice amount of mToken that was redeemed instantly
     uint256 amountMTokenInstant;
+    /// @notice approved mToken rate
     uint256 approvedMTokenRate;
+    /// @notice request version. 0 for legacy, 1 for v2
     uint8 version;
 }
 
+/**
+ * @notice Redemption vault init params (v1)
+ */
 struct RedemptionVaultInitParams {
+    /// @notice address of request redeemer
     address requestRedeemer;
 }
 
+/**
+ * @notice Redemption vault init params (v2)
+ */
 struct RedemptionVaultV2InitParams {
+    /// @notice address of loan liquidity provider
     address loanLp;
+    /// @notice address of loan liquidity provider fee receiver
     address loanLpFeeReceiver;
+    /// @notice address of loan repayment address
     address loanRepaymentAddress;
+    /// @notice address of loan swapper vault
     address loanSwapperVault;
+    /// @notice maximum loan APR value in basis points (100 = 1%)
     uint64 maxLoanApr;
 }
 
+/**
+ * @notice Liquidity provider loan request struct
+ */
 struct LiquidityProviderLoanRequest {
     /// @notice tokenOut address
     address tokenOut;

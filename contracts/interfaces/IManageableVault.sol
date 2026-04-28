@@ -5,26 +5,28 @@ import "./IMToken.sol";
 import "./IDataFeed.sol";
 
 /**
- * @param dataFeed data feed token/USD address
- * @param fee fee by token, 1% = 100
- * @param allowance token allowance (decimals 18)
+ * @notice Payment token config
  */
 struct TokenConfig {
+    /// @notice data feed token/USD address
     address dataFeed;
+    /// @notice fee by token, 1% = 100
     uint256 fee;
+    /// @notice token allowance (decimals 18)
     uint256 allowance;
+    /// @notice stablecoin flag
     bool stable;
 }
 
 /**
  * @notice Rate limit configuration
- * @param limit amount per window
- * @param limitUsed amount used within the last epoch
- * @param lastEpoch last epoch id
  */
 struct LimitConfig {
+    /// @notice limit amount per window
     uint256 limit;
+    /// @notice limitUsed amount used within the last epoch
     uint256 limitUsed;
+    /// @notice last epoch id
     uint256 lastEpoch;
 }
 
@@ -34,27 +36,51 @@ enum RequestStatus {
     Canceled
 }
 
+/**
+ * @notice Common vault init params (v1)
+ */
 struct CommonVaultInitParams {
+    /// @notice address of the access control contract
     address ac;
+    /// @notice address of the sanctions list contract
     address sanctionsList;
+    /// @notice variation tolerance of mToken rates for "safe" requests approve
     uint256 variationTolerance;
+    /// @notice minimum amount for operations in mToken
     uint256 minAmount;
+    /// @notice mToken address
     address mToken;
+    /// @notice mToken data feed address
     address mTokenDataFeed;
+    /// @notice address to which proceeds will be sent
     address tokensReceiver;
+    /// @notice address to which fees will be sent
     address feeReceiver;
+    /// @notice fee for initial operations 1% = 100
     uint256 instantFee;
 }
 
+/**
+ * @notice Limit config init params
+ */
 struct LimitConfigInitParams {
+    /// @notice window duration in seconds
     uint256 window;
+    /// @notice limit amount per window
     uint256 limit;
 }
 
+/**
+ * @notice Common vault init params (v2)
+ */
 struct CommonVaultV2InitParams {
+    /// @notice minimum instant fee
     uint64 minInstantFee;
+    /// @notice maximum instant fee
     uint64 maxInstantFee;
+    /// @notice maximum instant share value in basis points (100 = 1%)
     uint64 maxInstantShare;
+    /// @notice limit configs
     LimitConfigInitParams[] limitConfigs;
 }
 

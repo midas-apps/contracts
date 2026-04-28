@@ -5,41 +5,43 @@ import {IAccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acc
 
 interface IMidasAccessControl is IAccessControlUpgradeable {
     /**
-     * @param functionAccessAdminRole OZ role for the scope
-     * @param enabled whether that role may manage grant operators for the scope
+     * @notice Set function access admin role enabled params
      */
     struct SetFunctionAccessAdminRoleEnabledParams {
+        /// @notice OZ role for the scope
         bytes32 functionAccessAdminRole;
+        /// @notice whether that role may manage grant operators for the scope
         bool enabled;
     }
 
     /**
-     * @param functionAccessAdminRole OZ role id governing this scope.
-     * @param targetContract contract whose function is scoped.
-     * @param functionSelector selector of the scoped function.
-     * @param operator address that may call `setFunctionPermission` for this scope.
-     * @param enabled grant or revoke grant-operator status.
+     * @notice Set function access grant operator params
      */
     struct SetFunctionAccessGrantOperatorParams {
+        /// @notice OZ role id governing this scope.
         bytes32 functionAccessAdminRole;
+        /// @notice contract whose function is scoped.
         address targetContract;
+        /// @notice selector of the scoped function.
         bytes4 functionSelector;
+        /// @notice address that may call `setFunctionPermission` for this scope.
         address operator;
+        /// @notice grant or revoke grant-operator status.
         bool enabled;
     }
 
     /**
-     * @param functionAccessAdminRole OZ role for the scope
-     * @param targetContract contract whose function is scoped.
-     * @param functionSelector selector of the scoped function.
-     * @param account address receiving or losing permission
-     * @param enabled grant or revoke
+     * @notice Set function permission params
      */
     struct SetFunctionPermissionParams {
         bytes32 functionAccessAdminRole;
+        /// @notice contract whose function is scoped.
         address targetContract;
+        /// @notice selector of the scoped function.
         bytes4 functionSelector;
+        /// @notice address receiving or losing permission
         address account;
+        /// @notice grant or revoke permission
         bool enabled;
     }
 
@@ -62,8 +64,8 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
     event FunctionAccessGrantOperatorUpdate(
         bytes32 indexed functionAccessAdminRole,
         address indexed targetContract,
-        bytes4 functionSelector,
         address indexed operator,
+        bytes4 functionSelector,
         bool enabled
     );
 

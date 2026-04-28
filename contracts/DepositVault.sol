@@ -6,7 +6,7 @@ import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgrade
 
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 
-import {IDepositVault, CommonVaultInitParams, CommonVaultV2InitParams, Request, RequestV2, RequestStatus} from "./interfaces/IDepositVault.sol";
+import {IDepositVault, CommonVaultInitParams, CommonVaultV2InitParams, RequestV2, RequestStatus} from "./interfaces/IDepositVault.sol";
 
 import {ManageableVault} from "./abstract/ManageableVault.sol";
 
@@ -52,12 +52,14 @@ contract DepositVault is ManageableVault, IDepositVault {
     uint256 public minMTokenAmountForFirstDeposit;
 
     /**
-     * @notice mapping, requestId => request data
+     * @notice request data storage
+     * @dev mapping, requestId => request data
      * @custom:oz-retyped-from Request
      */
     mapping(uint256 => RequestV2) public mintRequests;
 
     /**
+     * @dev how much mTokens were minted by the depositor
      * @dev depositor address => amount minted
      */
     mapping(address => uint256) public totalMinted;

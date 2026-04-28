@@ -97,8 +97,8 @@ contract MidasAccessControl is
             emit FunctionAccessGrantOperatorUpdate(
                 param.functionAccessAdminRole,
                 param.targetContract,
-                param.functionSelector,
                 param.operator,
+                param.functionSelector,
                 param.enabled
             );
         }

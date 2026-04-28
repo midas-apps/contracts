@@ -6,44 +6,47 @@ import "./IManageableVault.sol";
 /**
  * @notice Legacy Mint request scruct
  * @dev used for backward compatibility
- * @param sender user address who create
- * @param tokenIn tokenIn address
- * @param status request status
- * @param depositedUsdAmount amout USD, tokenIn -> USD
- * @param usdAmountWithoutFees amout USD, tokenIn - fees -> USD
- * @param tokenOutRate rate of mToken at request creation time
  */
 struct Request {
+    /// @param user address who create
     address sender;
+    /// @param tokenIn tokenIn address
     address tokenIn;
+    /// @param status request status
     RequestStatus status;
+    /// @param depositedUsdAmount amout USD, tokenIn -> USD
     uint256 depositedUsdAmount;
+    /// @param usdAmountWithoutFees amout USD, tokenIn - fees -> USD
     uint256 usdAmountWithoutFees;
+    /// @param tokenOutRate rate of mToken at request creation time
     uint256 tokenOutRate;
 }
 
 /**
  * @notice Mint request scruct
- * @dev replaces `Request` struct and adds `depositedInstantUsdAmount`, `approvedMTokenRate` and`version` fields
- * @param sender user address who create
- * @param tokenIn tokenIn address
- * @param status request status
- * @param depositedUsdAmount amout USD, tokenIn -> USD
- * @param usdAmountWithoutFees amout USD, tokenIn - fees -> USD
- * @param tokenOutRate rate of mToken at request creation time
- * @param depositedInstantUsdAmount amount of tokenIn that was deposited instantly in USD
- * @param approvedTokenOutRate approved tokenOut rate
- * @param version request version. 0 for legacy, 1 for v2
+ * @dev replaces `Request` struct and adds next fields:
+ * - `depositedInstantUsdAmount`
+ * - `approvedMTokenRate`
+ * - `version`
  */
 struct RequestV2 {
+    /// @notice user address who will receive the mTokens
     address sender;
+    /// @notice tokenIn address
     address tokenIn;
+    /// @notice request status
     RequestStatus status;
+    /// @notice amout USD, tokenIn -> USD
     uint256 depositedUsdAmount;
+    /// @notice amout USD, tokenIn - fees -> USD
     uint256 usdAmountWithoutFees;
+    /// @notice rate of mToken at request creation time
     uint256 tokenOutRate;
+    /// @notice amount of tokenIn that was deposited instantly in USD
     uint256 depositedInstantUsdAmount;
+    /// @notice approved tokenOut rate
     uint256 approvedTokenOutRate;
+    /// @notice request version. 0 for legacy, 1 for v2
     uint8 version;
 }
 
