@@ -32,7 +32,9 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   etherlink: 'https://node.mainnet.etherlink.com',
   hardhat: 'http://localhost:8545',
   localhost: 'http://localhost:8545',
-  base: 'https://mainnet.base.org',
+  base: INFURA_KEY
+    ? `https://base-mainnet.infura.io/v3/${INFURA_KEY}`
+    : 'https://mainnet.base.org',
   oasis: 'https://sapphire.oasis.io',
   plume: 'https://rpc.plume.org',
   rootstock: 'https://mycrypto.rsk.co',

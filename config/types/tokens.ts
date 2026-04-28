@@ -69,6 +69,7 @@ export enum MTokenNameEnum {
   bondUSD = 'bondUSD',
   bondETH = 'bondETH',
   bondBTC = 'bondBTC',
+  mTEST = 'mTEST',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
