@@ -30,4 +30,10 @@ abstract contract MGlobalMidasAccessControlRoles {
      */
     bytes32 public constant M_GLOBAL_GREENLISTED_ROLE =
         keccak256("M_GLOBAL_GREENLISTED_ROLE");
+
+    /**
+     * @notice actor that can manage MGlobalInfiniFiCustomAggregatorFeedGrowth
+     */
+    bytes32 public constant INFINIFI_MG_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE =
+        keccak256("INFINIFI_MG_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE");
 }

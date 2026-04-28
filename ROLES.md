@@ -14,6 +14,12 @@ All the roles for the Midas protocol smart contracts are listed below.
 | **_blacklisted_**         | `0x548c7f0307ab2a7ea894e5c7e8c5353cc750bb9385ee2e945f189a9a83daa8ed` |
 | **_blacklistedOperator_** | `0x2fdc6683bc8d03effec5b41d3834f28bd219e06ca0a6a26fc737e44b1c7889ff` |
 
+## Integration Roles
+
+| Role Name                       | Role                                                                 |
+| ------------------------------- | -------------------------------------------------------------------- |
+| **_infinifiMGCustomFeedAdmin_** | `0xddad02b114be2099404e1b5c1134a1d480d9af4ac7d9a199bc8b63bc88c41692` |
+
 ## Token Roles
 
 ### mTBILL Roles
