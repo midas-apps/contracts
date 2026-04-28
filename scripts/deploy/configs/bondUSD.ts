@@ -1,3 +1,4 @@
+import { hours } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
@@ -80,6 +81,40 @@ export const bondUSDDeploymentConfig: DeploymentConfig = {
         pauseFunctions: {
           depositVault: ['depositRequest', 'depositRequestWithCustomRecipient'],
           redemptionVaultSwapper: ['redeemFiatRequest'],
+        },
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            overrides: {
+              zerog: {
+                limit: parseUnits('100000'),
+                window: hours(24),
+              },
+            },
+          },
+        },
+      },
+    },
+    [chainIds.zerog]: {
+      postDeploy: {
+        grantRoles: {
+          tokenManagerAddress: '0x7191b6F35f9c8f5b66d0c92450b5dc3BeA29024D',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0xA61eA5763716bC0E662d3F258F561e7F4fa3E335',
+        },
+        setRoundData: {
+          data: parseUnits('1', 8),
+        },
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            overrides: {
+              main: {
+                limit: parseUnits('100000'),
+                window: hours(24),
+              },
+            },
+          },
         },
       },
     },

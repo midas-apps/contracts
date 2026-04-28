@@ -537,6 +537,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x55E839B8043a2BC6c455222c3670aC059f794dEa',
       depositVault: '0x14557b2719EDf86f43E332b4F46F642024a2519D',
       redemptionVaultSwapper: '0x71b76C2a371DA950AD2a2EB5b469f5f932E341C6',
+      layerZero: { oft: '0x69ef9a9287DE9cAdfbaB0cd955b2f70A593D3aD0' },
     },
     bondETH: {
       token: '0x0A640E217A3c5579b920F740B556F44B6e9820C5',
@@ -544,6 +545,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xA454eC183507a5f0E8aBf039c61d5e34F16e7072',
       depositVault: '0x556655081B2B39c184b544d962eADa7F8b731C12',
       redemptionVaultSwapper: '0xfa8845cBd814720259050d6CCF3a9c60d17d6596',
+      layerZero: { oft: '0xE65AC723fA5A608f9cC528B24bEfAe6cD91F8cd2' },
     },
     bondBTC: {
       token: '0x9114650a2b8f8598a6b6Aa1cb2837e145f59f9fD',
@@ -551,6 +553,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x2A5DFe394687750e476aB39c054F6a124FC2E817',
       depositVault: '0x1F78393689D2979F99b5c90131e166Ae32bC05a4',
       redemptionVaultSwapper: '0x9d27834687318BFD42aF8e40168FDc37b4932727',
+      layerZero: { oft: '0x3e901737a3673856B8441042D8cF2F0f8F8F6e6C' },
     },
   },
   arbitrum: {
@@ -1151,6 +1154,24 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
     mRE7: {
       token: '0xb1C5aF66208f0ed11bD794561d3e9C6E19984C1e',
+    },
+    bondUSD: {
+      token: '0x73666d762275d7337f1A33Aa89e6A272D4Fec804',
+      customFeed: '0xBC2396a98c7bcb57Ff914b32B3d441e67471FeBC',
+      dataFeed: '0xf817E505faBF94A00a53CFEA83Fa74b112d9Dd26',
+      layerZero: { oft: '0x3b9276343D1395b03398Aa96DB6525898caf071b' },
+    },
+    bondETH: {
+      token: '0x7F9311A65628C990A2942b11B57584EAe559f7dA',
+      customFeed: '0xCE87F9E8273bD790affd7Bc6377aC34e2bf23501',
+      dataFeed: '0xb9184ba8D5A8a772a417C8B38d900aDC5de5E7c9',
+      layerZero: { oft: '0x8F7E844eF8E240dB6e01575aed478e1C342F2639' },
+    },
+    bondBTC: {
+      token: '0xf8D772BA6416B05E0Dde14521C386962eB14efA9',
+      customFeed: '0xEc7a43E8F5C5123EeeFfC2F66A0de7A40a49D885',
+      dataFeed: '0x0AdF5e1180Bf6Fa046f42ca6b3efe000a8c8FE2b',
+      layerZero: { oft: '0xE254B08a275993e3d618BD19073a4315B6cb6158' },
     },
   },
   tac: {

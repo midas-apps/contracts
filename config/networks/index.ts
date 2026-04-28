@@ -240,14 +240,16 @@ export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
   optimism: undefined,
 };
 
-export const blockFinality: PartialConfigPerNetwork<number> = {
-  main: 15,
+export const layerZeroBlockFinality: PartialConfigPerNetwork<number> = {
+  main: 70,
   sepolia: 2,
   arbitrumSepolia: 1,
-  monad: 10,
-  katana: 20,
-  scroll: 20,
-  optimism: 20,
+  monad: 3600,
+  katana: 1200,
+  scroll: 800,
+  optimism: 650,
+  plasma: 1800,
+  zerog: 6000,
 };
 
 export const axelarChainNames: PartialConfigPerNetwork<string> = {
