@@ -21,7 +21,7 @@ import { getDeployer } from '../../deploy/common/utils';
 // TODO: refactor this whole file and make upgrades more generic
 type ContractType = 'customAggregator' | 'customAggregatorGrowth' | 'token';
 
-type ContractTypeToUpgrade = 'customFeed' | 'token';
+type ContractTypeToUpgrade = 'customFeed' | 'customFeedGrowth' | 'token';
 
 type MTokenContractsToUpgrade = {
   mToken: MTokenName;
