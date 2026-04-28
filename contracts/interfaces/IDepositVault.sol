@@ -4,7 +4,8 @@ pragma solidity 0.8.34;
 import "./IManageableVault.sol";
 
 /**
- * @notice Mint request scruct
+ * @notice Legacy Mint request scruct
+ * @dev used for backward compatibility
  * @param sender user address who create
  * @param tokenIn tokenIn address
  * @param status request status
@@ -19,6 +20,31 @@ struct Request {
     uint256 depositedUsdAmount;
     uint256 usdAmountWithoutFees;
     uint256 tokenOutRate;
+}
+
+/**
+ * @notice Mint request scruct
+ * @dev replaces `Request` struct and adds `depositedInstantUsdAmount`, `approvedMTokenRate` and`version` fields
+ * @param sender user address who create
+ * @param tokenIn tokenIn address
+ * @param status request status
+ * @param depositedUsdAmount amout USD, tokenIn -> USD
+ * @param usdAmountWithoutFees amout USD, tokenIn - fees -> USD
+ * @param tokenOutRate rate of mToken at request creation time
+ * @param depositedInstantUsdAmount amount of tokenIn that was deposited instantly in USD
+ * @param approvedTokenOutRate approved tokenOut rate
+ * @param version request version. 0 for legacy, 1 for v2
+ */
+struct RequestV2 {
+    address sender;
+    address tokenIn;
+    RequestStatus status;
+    uint256 depositedUsdAmount;
+    uint256 usdAmountWithoutFees;
+    uint256 tokenOutRate;
+    uint256 depositedInstantUsdAmount;
+    uint256 approvedTokenOutRate;
+    uint8 version;
 }
 
 /**
@@ -44,25 +70,6 @@ interface IDepositVault is IManageableVault {
     /**
      * @param user function caller (msg.sender)
      * @param tokenIn address of tokenIn
-     * @param amountUsd amount of tokenIn converted to USD
-     * @param amountToken amount of tokenIn
-     * @param fee fee amount in tokenIn
-     * @param minted amount of minted mTokens
-     * @param referrerId referrer id
-     */
-    event DepositInstant(
-        address indexed user,
-        address indexed tokenIn,
-        uint256 amountUsd,
-        uint256 amountToken,
-        uint256 fee,
-        uint256 minted,
-        bytes32 referrerId
-    );
-
-    /**
-     * @param user function caller (msg.sender)
-     * @param tokenIn address of tokenIn
      * @param recipient address that receives the mTokens
      * @param amountUsd amount of tokenIn converted to USD
      * @param amountToken amount of tokenIn
@@ -70,7 +77,7 @@ interface IDepositVault is IManageableVault {
      * @param minted amount of minted mTokens
      * @param referrerId referrer id
      */
-    event DepositInstantWithCustomRecipient(
+    event DepositInstantV2(
         address indexed user,
         address indexed tokenIn,
         address recipient,
@@ -78,27 +85,6 @@ interface IDepositVault is IManageableVault {
         uint256 amountToken,
         uint256 fee,
         uint256 minted,
-        bytes32 referrerId
-    );
-
-    /**
-     * @param requestId mint request id
-     * @param user function caller (msg.sender)
-     * @param tokenIn address of tokenIn
-     * @param amountToken amount of tokenIn
-     * @param amountUsd amount of tokenIn converted to USD
-     * @param fee fee amount in tokenIn
-     * @param tokenOutRate mToken rate
-     * @param referrerId referrer id
-     */
-    event DepositRequest(
-        uint256 indexed requestId,
-        address indexed user,
-        address indexed tokenIn,
-        uint256 amountToken,
-        uint256 amountUsd,
-        uint256 fee,
-        uint256 tokenOutRate,
         bytes32 referrerId
     );
 
@@ -113,7 +99,7 @@ interface IDepositVault is IManageableVault {
      * @param tokenOutRate mToken rate
      * @param referrerId referrer id
      */
-    event DepositRequestWithCustomRecipient(
+    event DepositRequestV2(
         uint256 indexed requestId,
         address indexed user,
         address indexed tokenIn,
@@ -128,14 +114,15 @@ interface IDepositVault is IManageableVault {
     /**
      * @param requestId mint request id
      * @param newOutRate mToken rate inputted by admin
+     * @param isSafe if true, approval is safe
+     * @param isAvgRate if true, newOutRate is avg rate
      */
-    event ApproveRequestV2(uint256 indexed requestId, uint256 newOutRate);
-
-    /**
-     * @param requestId mint request id
-     * @param newOutRate mToken rate inputted by admin
-     */
-    event SafeApproveRequest(uint256 indexed requestId, uint256 newOutRate);
+    event ApproveRequestV2(
+        uint256 indexed requestId,
+        uint256 newOutRate,
+        bool isSafe,
+        bool isAvgRate
+    );
 
     /**
      * @param requestId mint request id
@@ -215,6 +202,27 @@ interface IDepositVault is IManageableVault {
     ) external returns (uint256);
 
     /**
+     * @notice Instantly deposits `instantShare` amount of `amountMTokenIn` and creates a request for the remaining amount.
+     * @param tokenIn address of tokenIn
+     * @param amountToken amount of `tokenIn` that will be taken from user (decimals 18)
+     * @param referrerId referrer id
+     * @param recipientRequest address that receives the mTokens for the request part
+     * @param instantShare % amount of `amountToken` that will be deposited instantly
+     * @param minReceiveAmountInstantShare min receive amount for the instant share
+     * @param recipientInstant address that receives the mTokens for the instant part
+     * @return request id
+     */
+    function depositRequest(
+        address tokenIn,
+        uint256 amountToken,
+        bytes32 referrerId,
+        address recipientRequest,
+        uint256 instantShare,
+        uint256 minReceiveAmountInstantShare,
+        address recipientInstant
+    ) external returns (uint256);
+
+    /**
      * @notice approving requests from the `requestIds` array
      * with the mToken rate from the request.
      * Does same validation as `safeApproveRequest`.
@@ -236,6 +244,17 @@ interface IDepositVault is IManageableVault {
     function safeBulkApproveRequest(uint256[] calldata requestIds) external;
 
     /**
+     * @notice approving requests from the `requestIds` array
+     * with the current mToken rate.
+     * Does same validation as `safeApproveRequestAvgRate`.
+     * Mints mToken to request users.
+     * Sets request flags to Processed.
+     * @param requestIds request ids array
+     */
+    function safeBulkApproveRequestAvgRate(uint256[] calldata requestIds)
+        external;
+
+    /**
      * @notice approving requests from the `requestIds` array using the `newOutRate`.
      * Does same validation as `safeApproveRequest`.
      * Mints mToken to request users.
@@ -249,6 +268,19 @@ interface IDepositVault is IManageableVault {
     ) external;
 
     /**
+     * @notice approving requests from the `requestIds` array using the `newOutRate`.
+     * Does same validation as `safeApproveRequestAvgRate`.
+     * Mints mToken to request users.
+     * Sets request flags to Processed.
+     * @param requestIds request ids array
+     * @param avgMTokenRate avg mToken rate inputted by vault admin
+     */
+    function safeBulkApproveRequestAvgRate(
+        uint256[] calldata requestIds,
+        uint256 avgMTokenRate
+    ) external;
+
+    /**
      * @notice approving request if inputted token rate fit price deviation percent
      * Mints mToken to user.
      * Sets request flag to Processed.
@@ -258,6 +290,16 @@ interface IDepositVault is IManageableVault {
     function safeApproveRequest(uint256 requestId, uint256 newOutRate) external;
 
     /**
+     * @notice approving request if inputted token rate fit price deviation percent
+     * Mints mToken to user.
+     * Sets request flag to Processed.
+     * @param requestId request id
+     * @param avgMTokenRate avg mToken rate inputted by vault admin
+     */
+    function safeApproveRequestAvgRate(uint256 requestId, uint256 avgMTokenRate)
+        external;
+
+    /**
      * @notice approving request without price deviation check
      * Mints mToken to user.
      * Sets request flag to Processed.
@@ -265,6 +307,16 @@ interface IDepositVault is IManageableVault {
      * @param newOutRate mToken rate inputted by vault admin
      */
     function approveRequest(uint256 requestId, uint256 newOutRate) external;
+
+    /**
+     * @notice approving request without price deviation check
+     * Mints mToken to user.
+     * Sets request flag to Processed.
+     * @param requestId request id
+     * @param avgMTokenRate avg mToken rate inputted by vault admin
+     */
+    function approveRequestAvgRate(uint256 requestId, uint256 avgMTokenRate)
+        external;
 
     /**
      * @notice rejecting request

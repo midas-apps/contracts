@@ -346,6 +346,29 @@ export const setFeeReceiverTest = async (
   expect(feeReceiver).eq(newReceiver);
 };
 
+export const setMaxInstantShareTest = async (
+  { vault, owner }: CommonParamsChangePaymentToken,
+  maxInstantShare: number,
+  opt?: OptionalCommonParams,
+) => {
+  if (opt?.revertMessage) {
+    await expect(
+      vault.connect(opt?.from ?? owner).setMaxInstantShare(maxInstantShare),
+    ).revertedWith(opt?.revertMessage);
+    return;
+  }
+
+  await expect(
+    vault.connect(opt?.from ?? owner).setMaxInstantShare(maxInstantShare),
+  ).to.emit(
+    vault,
+    vault.interface.events['SetMaxInstantShare(address,uint64)'].name,
+  ).to.not.reverted;
+
+  const newMaxInstantShare = await vault.maxInstantShare();
+  expect(newMaxInstantShare).eq(maxInstantShare);
+};
+
 export const setTokensReceiverTest = async (
   { vault, owner }: CommonParamsChangePaymentToken,
   newReceiver: string,

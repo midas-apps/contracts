@@ -10,6 +10,8 @@ import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.s
 import {IRedemptionVault, CommonVaultInitParams, CommonVaultV2InitParams, LiquidityProviderLoanRequest, Request, RequestV2, RequestStatus, RedemptionVaultInitParams, RedemptionVaultV2InitParams} from "./interfaces/IRedemptionVault.sol";
 import {ManageableVault} from "./abstract/ManageableVault.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title RedemptionVault
  * @notice Smart contract that handles mToken redemptions
@@ -370,6 +372,9 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         _approveRequest(requestId, newMTokenRate, true, false, false);
     }
 
+    /**
+     * @inheritdoc IRedemptionVault
+     */
     function safeApproveRequestAvgRate(uint256 requestId, uint256 avgMTokenRate)
         external
         validateVaultAdminAccess
@@ -560,6 +565,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @dev internal function to approve requests
      * @param requestIds request ids
      * @param newOutRate new out rate
+     * @param isAvgRate if true, newOutRate is avg rate
      */
     function _safeBulkApproveRequest(
         uint256[] calldata requestIds,
@@ -703,7 +709,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
     /**
      * @dev internal redeem instant logic with custom recipient
-
      * @param tokenOut tokenOut address
      * @param amountMTokenIn amount of mToken (decimals 18)
      * @param minReceiveAmount min amount of tokenOut to receive (decimals 18)

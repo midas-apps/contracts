@@ -72,4 +72,27 @@ contract DepositVaultTest is DepositVault {
 
         return super._getTokenRate(dataFeed, stable);
     }
+
+    function calculateHoldbackPartRateFromAvgTest(
+        uint256 depositedUsdAmount,
+        uint256 depositedInstantUsdAmount,
+        uint256 mTokenRate,
+        uint256 avgMTokenRate
+    ) external pure returns (uint256) {
+        return
+            _calculateHoldbackPartRateFromAvg(
+                RequestV2({
+                    depositedInstantUsdAmount: depositedInstantUsdAmount,
+                    tokenOutRate: mTokenRate,
+                    approvedTokenOutRate: 0,
+                    version: 1,
+                    depositedUsdAmount: depositedUsdAmount,
+                    usdAmountWithoutFees: 0,
+                    sender: address(0),
+                    tokenIn: address(0),
+                    status: RequestStatus.Pending
+                }),
+                avgMTokenRate
+            );
+    }
 }

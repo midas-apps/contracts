@@ -24,7 +24,7 @@ struct Request {
 
 /**
  * @notice Redeem request v2 scruct
- * @dev replaces `Request` struct and adds `feePercent` and `version` fields
+ * @dev replaces `Request` struct and adds `feePercent`, `amountMTokenInstant`, `approvedMTokenRate` and `version` fields
  * @param sender user address who create
  * @param tokenOut tokenOut address
  * @param status request status
@@ -273,7 +273,7 @@ interface IRedemptionVault is IManageableVault {
     ) external returns (uint256);
 
     /**
-     * @notice
+     * @notice Instantly redeems `instantShare` amount of `amountMTokenIn` and creates a request for the remaining amount.
      * @param tokenOut stable coin token address to redeem to
      * @param amountMTokenIn amount of mToken to redeem (decimals 18)
      * @param recipientRequest address that receives tokens for the request part

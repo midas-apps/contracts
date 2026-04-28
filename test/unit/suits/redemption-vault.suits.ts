@@ -58,6 +58,7 @@ import {
   setTokensReceiverTest,
   setFeeReceiverTest,
   withdrawTest,
+  setMaxInstantShareTest,
 } from '../../common/manageable-vault.helpers';
 import {
   approveRedeemRequestTest,
@@ -74,7 +75,6 @@ import {
   setLoanSwapperVaultTest,
   setMaxLoanAprTest,
   setRequestRedeemerTest,
-  setMaxInstantShareTest,
   expectedHoldbackPartRateFromAvg,
   setPreferLoanLiquidityTest,
 } from '../../common/redemption-vault.helpers';
@@ -2838,7 +2838,10 @@ export const redemptionVaultSuits = (
               true,
             );
 
-            await setMaxInstantShareTest({ redemptionVault, owner }, 90_00);
+            await setMaxInstantShareTest(
+              { vault: redemptionVault, owner },
+              90_00,
+            );
 
             await redeemInstantTest(
               { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -6493,7 +6496,10 @@ export const redemptionVaultSuits = (
               true,
             );
 
-            await setMaxInstantShareTest({ redemptionVault, owner }, 80_00);
+            await setMaxInstantShareTest(
+              { vault: redemptionVault, owner },
+              80_00,
+            );
             await redeemRequestTest(
               {
                 redemptionVault,

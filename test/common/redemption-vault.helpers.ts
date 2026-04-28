@@ -512,7 +512,7 @@ export const redeemRequestTest = async (
         mTBILL,
         mTokenToUsdDataFeed,
         waivedFee,
-        minAmount: constants.Zero,
+        minAmount: minReceiveAmountInstantShare ?? constants.Zero,
         customRecipient: recipientInstant,
         holdback: {
           callFunction: callFn,
@@ -577,7 +577,7 @@ export const redeemRequestTest = async (
   expect(balanceAfterReceiver).eq(balanceBeforeReceiver);
   expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver);
 
-  // thos checks is already made in redeemInstantTest
+  // those checks is already made in redeemInstantTest
   if (!amountMTokenInInstant.gt(0)) {
     expect(supplyAfter).eq(supplyBefore);
     expect(balanceAfterTokenOut).eq(balanceBeforeTokenOut);
@@ -1417,33 +1417,6 @@ export const setMaxLoanAprTest = async (
 
   const newMaxLoanApr = await redemptionVault.maxLoanApr();
   expect(newMaxLoanApr).eq(maxLoanApr);
-};
-
-export const setMaxInstantShareTest = async (
-  { redemptionVault, owner }: CommonParams,
-  maxInstantShare: number,
-  opt?: OptionalCommonParams,
-) => {
-  if (opt?.revertMessage) {
-    await expect(
-      redemptionVault
-        .connect(opt?.from ?? owner)
-        .setMaxInstantShare(maxInstantShare),
-    ).revertedWith(opt?.revertMessage);
-    return;
-  }
-
-  await expect(
-    redemptionVault
-      .connect(opt?.from ?? owner)
-      .setMaxInstantShare(maxInstantShare),
-  ).to.emit(
-    redemptionVault,
-    redemptionVault.interface.events['SetMaxInstantShare(address,uint64)'].name,
-  ).to.not.reverted;
-
-  const newMaxInstantShare = await redemptionVault.maxInstantShare();
-  expect(newMaxInstantShare).eq(maxInstantShare);
 };
 
 export const setMaxApproveRequestIdTest = async (

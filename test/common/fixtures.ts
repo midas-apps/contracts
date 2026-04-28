@@ -904,6 +904,12 @@ export const defaultDeploy = async () => {
   await redemptionVaultWithMorpho.setMaxApproveRequestId(100);
   await redemptionVaultWithMToken.setMaxApproveRequestId(100);
 
+  await depositVault.setMaxApproveRequestId(100);
+  await depositVaultWithUSTB.setMaxApproveRequestId(100);
+  await depositVaultWithAave.setMaxApproveRequestId(100);
+  await depositVaultWithMorpho.setMaxApproveRequestId(100);
+  await depositVaultWithMToken.setMaxApproveRequestId(100);
+
   return {
     customFeed,
     customFeedDiscounted,
