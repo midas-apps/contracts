@@ -16,6 +16,12 @@ contract MGlobalInfiniFiCustomAggregatorFeedGrowth is
     MGlobalMidasAccessControlRoles
 {
     /**
+     * @notice feed admin for this InfiniFi oracle only — not shared with core mGLOBAL role mixins.
+     */
+    bytes32 public constant INFINIFI_MG_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE =
+        keccak256("INFINIFI_MG_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE");
+
+    /**
      * @dev leaving a storage gap for futures updates
      */
     uint256[50] private __gap;
