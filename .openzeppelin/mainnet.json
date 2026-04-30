@@ -1374,6 +1374,11 @@
       "address": "0xc616E6eDB81BA30b8De057eB96557315a1990ea2",
       "txHash": "0xde18e0545fa2119ce5ae0fbdd98d12479ced270b4571fc05ad1da62eedc2526e",
       "kind": "transparent"
+    },
+    {
+      "address": "0xFc05B888B19f1cCf8aa87ad8fc28A9d5643E65f8",
+      "txHash": "0x655d652e44f56d3b7c2258884b35649d6b2dc1cd6b24e2eb08403223306d4e1d",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -73816,6 +73821,224 @@
               }
             ],
             "numberOfBytes": "160"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          },
+          "t_uint80": {
+            "label": "uint80",
+            "numberOfBytes": "10"
+          }
+        }
+      }
+    },
+    "3d9ac0078987a183e595acbdb82fbb59c8e54ade4e4f638252fc47f414a98e7c": {
+      "address": "0x192C91Da9EC9B23D94ff83B47c9bBABfd2029EeA",
+      "txHash": "0x4c8b4760c4b7e49151593027424e598d31fd34f83516b5a50840afb94331a031",
+      "layout": {
+        "solcVersion": "0.8.9",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "accessControl",
+            "offset": 2,
+            "slot": "0",
+            "type": "t_contract(MidasAccessControl)10707",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:24"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:29"
+          },
+          {
+            "label": "description",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_string_storage",
+            "contract": "CustomAggregatorV3CompatibleFeedGrowth",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeedGrowth.sol:41"
+          },
+          {
+            "label": "maxAnswerDeviation",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_uint256",
+            "contract": "CustomAggregatorV3CompatibleFeedGrowth",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeedGrowth.sol:47"
+          },
+          {
+            "label": "minAnswer",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_int192",
+            "contract": "CustomAggregatorV3CompatibleFeedGrowth",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeedGrowth.sol:52"
+          },
+          {
+            "label": "maxAnswer",
+            "offset": 0,
+            "slot": "54",
+            "type": "t_int192",
+            "contract": "CustomAggregatorV3CompatibleFeedGrowth",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeedGrowth.sol:57"
+          },
+          {
+            "label": "minGrowthApr",
+            "offset": 0,
+            "slot": "55",
+            "type": "t_int80",
+            "contract": "CustomAggregatorV3CompatibleFeedGrowth",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeedGrowth.sol:62"
+          },
+          {
+            "label": "maxGrowthApr",
+            "offset": 10,
+            "slot": "55",
+            "type": "t_int80",
+            "contract": "CustomAggregatorV3CompatibleFeedGrowth",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeedGrowth.sol:67"
+          },
+          {
+            "label": "latestRound",
+            "offset": 20,
+            "slot": "55",
+            "type": "t_uint80",
+            "contract": "CustomAggregatorV3CompatibleFeedGrowth",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeedGrowth.sol:72"
+          },
+          {
+            "label": "onlyUp",
+            "offset": 30,
+            "slot": "55",
+            "type": "t_bool",
+            "contract": "CustomAggregatorV3CompatibleFeedGrowth",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeedGrowth.sol:78"
+          },
+          {
+            "label": "_roundData",
+            "offset": 0,
+            "slot": "56",
+            "type": "t_mapping(t_uint80,t_struct(RoundDataWithGrowth)11032_storage)",
+            "contract": "CustomAggregatorV3CompatibleFeedGrowth",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeedGrowth.sol:83"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "57",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "CustomAggregatorV3CompatibleFeedGrowth",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeedGrowth.sol:88"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "107",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "MGlobalInfiniFiCustomAggregatorFeedGrowth",
+            "src": "contracts/products/mGLOBAL/MGlobalInfiniFiCustomAggregatorFeedGrowth.sol:21"
+          }
+        ],
+        "types": {
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(MidasAccessControl)10707": {
+            "label": "contract MidasAccessControl",
+            "numberOfBytes": "20"
+          },
+          "t_int192": {
+            "label": "int192",
+            "numberOfBytes": "24"
+          },
+          "t_int256": {
+            "label": "int256",
+            "numberOfBytes": "32"
+          },
+          "t_int80": {
+            "label": "int80",
+            "numberOfBytes": "10"
+          },
+          "t_mapping(t_uint80,t_struct(RoundDataWithGrowth)11032_storage)": {
+            "label": "mapping(uint80 => struct CustomAggregatorV3CompatibleFeedGrowth.RoundDataWithGrowth)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(RoundDataWithGrowth)11032_storage": {
+            "label": "struct CustomAggregatorV3CompatibleFeedGrowth.RoundDataWithGrowth",
+            "members": [
+              {
+                "label": "roundId",
+                "type": "t_uint80",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "answeredInRound",
+                "type": "t_uint80",
+                "offset": 10,
+                "slot": "0"
+              },
+              {
+                "label": "growthApr",
+                "type": "t_int80",
+                "offset": 20,
+                "slot": "0"
+              },
+              {
+                "label": "answer",
+                "type": "t_int256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "startedAt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "updatedAt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
           },
           "t_uint256": {
             "label": "uint256",
