@@ -116,7 +116,9 @@ depositVaultSuits(
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'DVU: unsupported USTB token',
+              revertCustomError: {
+                customErrorName: 'UnsupportedUSTBToken',
+              },
             },
           );
         });
@@ -175,7 +177,9 @@ depositVaultSuits(
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'DVU: USTB fee is not 0',
+              revertCustomError: {
+                customErrorName: 'USTBFeeNotZero',
+              },
             },
           );
         });
@@ -287,7 +291,7 @@ depositVaultSuits(
             true,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
             },
           );
         });

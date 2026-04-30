@@ -3,6 +3,7 @@ pragma solidity 0.8.34;
 
 import "./RedemptionVault.sol";
 
+// TODO: remove this contract
 /**
  * @title RedemptionVaultWithSwapper
  * @notice Legacy swapper contract that is keeped for layout compatibility
@@ -15,27 +16,6 @@ import "./RedemptionVault.sol";
  * @author RedDuck Software
  */
 contract RedemptionVaultWithSwapper is RedemptionVault {
-    /**
-     * @dev added second gap here to match the storage layout
-     * from the previous contracts inheritance tree
-     */
-    uint256[50] private ___gap;
-
-    /**
-     * @dev legacy storage slot kept for layout compatibility
-     * @custom:oz-renamed-from mTbillRedemptionVault
-     * @custom:oz-retyped-from IRedemptionVault
-     */
-    // solhint-disable-next-line var-name-mixedcase
-    address private _mTbillRedemptionVault_deprecated;
-
-    /**
-     * @dev legacy storage slot kept for layout compatibility
-     * @custom:oz-renamed-from liquidityProvider
-     */
-    // solhint-disable-next-line var-name-mixedcase
-    address private _liquidityProvider_deprecated;
-
     /**
      * @dev leaving a storage gap for futures updates
      */

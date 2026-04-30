@@ -18,6 +18,10 @@ contract DepositVaultWithMToken is DepositVault {
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
 
+    error SameVaultValue(address vault);
+    error ZeroMTokenReceived(uint256 mTokenReceived);
+    error AutoInvestFailed(bytes err);
+
     /**
      * @notice Target mToken DepositVault for auto-invest
      */
@@ -98,7 +102,7 @@ contract DepositVaultWithMToken is DepositVault {
     {
         require(
             _mTokenDepositVault != address(mTokenDepositVault),
-            "DVMT: already set"
+            SameVaultValue(_mTokenDepositVault)
         );
         _validateAddress(_mTokenDepositVault, false);
         mTokenDepositVault = IDepositVault(_mTokenDepositVault);
@@ -207,14 +211,14 @@ contract DepositVaultWithMToken is DepositVault {
         {
             uint256 mTokenReceived = targetMToken.balanceOf(address(this)) -
                 balanceBefore;
-            require(mTokenReceived > 0, "DVMT: zero mToken received");
+            require(mTokenReceived > 0, ZeroMTokenReceived(mTokenReceived));
             targetMToken.safeTransfer(tokensReceiver, mTokenReceived);
-        } catch {
+        } catch (bytes memory err) {
             if (autoInvestFallbackEnabled) {
                 IERC20(tokenIn).safeApprove(address(mTokenDepositVault), 0);
                 IERC20(tokenIn).safeTransfer(tokensReceiver, transferredAmount);
             } else {
-                revert("DVMT: auto-invest failed");
+                revert AutoInvestFailed(err);
             }
         }
     }

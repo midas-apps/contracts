@@ -20,6 +20,8 @@ contract RedemptionVaultWithMToken is RedemptionVault {
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
 
+    error SameRedemptionVaultValue(address redemptionVault);
+
     /**
      * @dev Storage gap preserved from RedemptionVaultWithSwapper layout
      */
@@ -30,13 +32,6 @@ contract RedemptionVaultWithMToken is RedemptionVault {
      */
     /// @custom:oz-renamed-from mTbillRedemptionVault
     IRedemptionVault public redemptionVault;
-
-    /**
-     * @dev DEPRECATED storage slot kept for layout compatibility
-     */
-    /// @custom:oz-renamed-from liquidityProvider
-    // solhint-disable-next-line var-name-mixedcase
-    address public liquidityProvider_deprecated;
 
     /**
      * @dev leaving a storage gap for futures updates
@@ -85,7 +80,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
     {
         require(
             _redemptionVault != address(redemptionVault),
-            "RVMT: already set"
+            SameRedemptionVaultValue(_redemptionVault)
         );
         _validateAddress(_redemptionVault, true);
 

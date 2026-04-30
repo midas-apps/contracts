@@ -3,7 +3,11 @@ import { expect } from 'chai';
 import { BigNumber, BigNumberish } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
-import { OptionalCommonParams } from './common.helpers';
+import {
+  handleRevert,
+  OptionalCommonParams,
+  shouldRevert,
+} from './common.helpers';
 import { defaultDeploy } from './fixtures';
 
 type CommonParamsSetRoundData = Pick<
@@ -18,10 +22,13 @@ export const setOnlyUp = async (
 ) => {
   const sender = opt?.from ?? owner;
 
-  if (opt?.revertMessage) {
-    await expect(
-      customFeedGrowth.connect(sender).setOnlyUp(newOnlyUp),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      customFeedGrowth.connect(sender).setOnlyUp.bind(this, newOnlyUp),
+      customFeedGrowth,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -48,10 +55,15 @@ export const setMinGrowthApr = async (
     8,
   );
 
-  if (opt?.revertMessage) {
-    await expect(
-      customFeedGrowth.connect(sender).setMinGrowthApr(newMinGrowthAprParsed),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      customFeedGrowth
+        .connect(sender)
+        .setMinGrowthApr.bind(this, newMinGrowthAprParsed),
+      customFeedGrowth,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -80,10 +92,15 @@ export const setMaxGrowthApr = async (
     8,
   );
 
-  if (opt?.revertMessage) {
-    await expect(
-      customFeedGrowth.connect(sender).setMaxGrowthApr(newMaxGrowthAprParsed),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      customFeedGrowth
+        .connect(sender)
+        .setMaxGrowthApr.bind(this, newMaxGrowthAprParsed),
+      customFeedGrowth,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -142,8 +159,7 @@ export const setRoundDataGrowth = async (
         .connect(sender)
         .setRoundData.bind(this, dataParsed, timestamp, growthParsed);
 
-  if (opt?.revertMessage) {
-    await expect(callFn()).revertedWith(opt?.revertMessage);
+  if (await handleRevert(callFn, customFeedGrowth, opt)) {
     return;
   }
 
@@ -244,7 +260,7 @@ export const setRoundDataSafeGrowth = async (
   growthApr: number,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
+  if (shouldRevert(opt)) {
     await setRoundDataGrowth(
       {
         customFeedGrowth,

@@ -56,7 +56,10 @@ describe('Blacklistable', function () {
         blackListableTester.onlyNotBlacklistedTester(
           regularAccounts[0].address,
         ),
-      ).revertedWith(acErrors.WMAC_HAS_ROLE);
+      ).revertedWithCustomError(
+        blackListableTester,
+        acErrors.WMAC_HAS_ROLE().customErrorName,
+      );
     });
 
     it('call from not blacklisted user', async () => {

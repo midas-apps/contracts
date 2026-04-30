@@ -68,7 +68,6 @@ import {
   redeemRequestTest,
   rejectRedeemRequestTest,
   safeBulkApproveRequestTest,
-  setV1RedeemRequestInStorage,
   setLoanLpFeeReceiverTest,
   setLoanLpTest,
   setLoanRepaymentAddressTest,
@@ -486,7 +485,7 @@ export const redemptionVaultSuits = (
                 maxInstantShare: 100_00,
               },
             ),
-          ).revertedWith('invalid address');
+          ).to.be.revertedWithCustomError(vault, 'InvalidAddress');
         });
         it('should fail: when _feeReceiver == address(this)', async () => {
           const {
@@ -527,7 +526,7 @@ export const redemptionVaultSuits = (
                 maxInstantShare: 100_00,
               },
             ),
-          ).revertedWith('invalid address');
+          ).to.be.revertedWithCustomError(vault, 'InvalidAddress');
         });
 
         it('should fail: when mToken dataFeed address zero', async () => {
@@ -569,7 +568,7 @@ export const redemptionVaultSuits = (
                 maxInstantShare: 100_00,
               },
             ),
-          ).revertedWith('zero address');
+          ).to.be.revertedWithCustomError(vault, 'InvalidAddress');
         });
         it('should fail: when variationTolarance zero', async () => {
           const {
@@ -611,7 +610,7 @@ export const redemptionVaultSuits = (
                 maxInstantShare: 100_00,
               },
             ),
-          ).revertedWith('fee == 0');
+          ).to.be.revertedWithCustomError(vault, 'InvalidFee');
         });
 
         it('should fail: when trying to call initializeV2 on initialized contract', async () => {
@@ -848,7 +847,9 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: 'MV: token not exists',
+              revertCustomError: {
+                customErrorName: 'UnknownPaymentToken',
+              },
             },
           );
         });
@@ -874,7 +875,9 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             0,
             {
-              revertMessage: 'RV: invalid amount',
+              revertCustomError: {
+                customErrorName: 'InvalidAmount',
+              },
             },
           );
         });
@@ -913,7 +916,9 @@ export const redemptionVaultSuits = (
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'Pausable: fn paused',
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
             },
           );
         });
@@ -1017,7 +1022,9 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             99_999,
             {
-              revertMessage: 'RV: amount < min',
+              revertCustomError: {
+                customErrorName: 'AmountLessThanMin',
+              },
             },
           );
         });
@@ -1054,7 +1061,9 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             99_999,
             {
-              revertMessage: 'MV: exceed allowance',
+              revertCustomError: {
+                customErrorName: 'AllowanceExceeded',
+              },
             },
           );
         });
@@ -1091,7 +1100,9 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             99_999,
             {
-              revertMessage: 'MV: exceed limit',
+              revertCustomError: {
+                customErrorName: 'InstantLimitExceeded',
+              },
             },
           );
         });
@@ -1132,7 +1143,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             stableCoins.dai,
             100,
-            { revertMessage: 'MV: invalid instant fee' },
+            {
+              revertCustomError: {
+                customErrorName: 'InstantFeeOutOfBounds',
+              },
+            },
           );
         });
 
@@ -1172,7 +1187,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             stableCoins.dai,
             100,
-            { revertMessage: 'MV: invalid instant fee' },
+            {
+              revertCustomError: {
+                customErrorName: 'InstantFeeOutOfBounds',
+              },
+            },
           );
         });
 
@@ -1262,7 +1281,11 @@ export const redemptionVaultSuits = (
               { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
               stableCoins.dai,
               50,
-              { revertMessage: 'MV: exceed limit' },
+              {
+                revertCustomError: {
+                  customErrorName: 'InstantLimitExceeded',
+                },
+              },
             );
           });
 
@@ -1407,7 +1430,11 @@ export const redemptionVaultSuits = (
               { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
               stableCoins.dai,
               60,
-              { revertMessage: 'MV: exceed limit' },
+              {
+                revertCustomError: {
+                  customErrorName: 'InstantLimitExceeded',
+                },
+              },
             );
           });
 
@@ -1603,7 +1630,9 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             99_999,
             {
-              revertMessage: 'RV: minReceiveAmount > actual',
+              revertCustomError: {
+                customErrorName: 'SlippageExceeded',
+              },
             },
           );
         });
@@ -1632,7 +1661,9 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             100,
             {
-              revertMessage: 'RV: amountTokenOut < fee',
+              revertCustomError: {
+                customErrorName: 'FeeExceedsAmount',
+              },
             },
           );
 
@@ -1652,7 +1683,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             stableCoins.dai,
             100,
-            { revertMessage: 'RV: amountTokenOut < fee' },
+            {
+              revertCustomError: {
+                customErrorName: 'FeeExceedsAmount',
+              },
+            },
           );
         });
 
@@ -1672,7 +1707,7 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertCustomError: acErrors.WMAC_HASNT_ROLE,
             },
           );
         });
@@ -1700,7 +1735,7 @@ export const redemptionVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HAS_ROLE,
+              revertCustomError: acErrors.WMAC_HAS_ROLE,
             },
           );
         });
@@ -1727,7 +1762,9 @@ export const redemptionVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertMessage: 'WSL: sanctioned',
+              revertCustomError: {
+                customErrorName: 'Sanctioned',
+              },
             },
           );
         });
@@ -1773,7 +1810,9 @@ export const redemptionVaultSuits = (
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'Pausable: fn paused',
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
             },
           );
         });
@@ -1808,7 +1847,7 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertCustomError: acErrors.WMAC_HASNT_ROLE,
             },
           );
         });
@@ -1843,7 +1882,7 @@ export const redemptionVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HAS_ROLE,
+              revertCustomError: acErrors.WMAC_HAS_ROLE,
             },
           );
         });
@@ -1877,7 +1916,9 @@ export const redemptionVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertMessage: 'WSL: sanctioned',
+              revertCustomError: {
+                customErrorName: 'Sanctioned',
+              },
             },
           );
         });
@@ -2194,7 +2235,9 @@ export const redemptionVaultSuits = (
                 stableCoins.dai,
                 100,
                 {
-                  revertMessage: 'RV: loan lp not configured',
+                  revertCustomError: {
+                    customErrorName: 'LoanLpNotConfigured',
+                  },
                 },
               );
             });
@@ -2228,7 +2271,9 @@ export const redemptionVaultSuits = (
                 stableCoins.dai,
                 100,
                 {
-                  revertMessage: 'RV: loan lp not configured',
+                  revertCustomError: {
+                    customErrorName: 'LoanLpNotConfigured',
+                  },
                 },
               );
             });
@@ -2266,7 +2311,9 @@ export const redemptionVaultSuits = (
                 stableCoins.dai,
                 100,
                 {
-                  revertMessage: 'RV: loan lp not configured',
+                  revertCustomError: {
+                    customErrorName: 'LoanLpNotConfigured',
+                  },
                 },
               );
             });
@@ -2325,7 +2372,9 @@ export const redemptionVaultSuits = (
                 stableCoins.dai,
                 100,
                 {
-                  revertMessage: 'RV: minReceiveAmount > actual',
+                  revertCustomError: {
+                    customErrorName: 'SlippageExceeded',
+                  },
                 },
               );
             });
@@ -2638,7 +2687,9 @@ export const redemptionVaultSuits = (
                 stableCoins.dai,
                 100,
                 {
-                  revertMessage: 'RV: loan lp not configured',
+                  revertCustomError: {
+                    customErrorName: 'LoanLpNotConfigured',
+                  },
                 },
               );
             });
@@ -2676,7 +2727,9 @@ export const redemptionVaultSuits = (
                 stableCoins.dai,
                 100,
                 {
-                  revertMessage: 'RV: loan lp not configured',
+                  revertCustomError: {
+                    customErrorName: 'LoanLpNotConfigured',
+                  },
                 },
               );
             });
@@ -2718,7 +2771,9 @@ export const redemptionVaultSuits = (
                 stableCoins.dai,
                 100,
                 {
-                  revertMessage: 'RV: loan lp not configured',
+                  revertCustomError: {
+                    customErrorName: 'LoanLpNotConfigured',
+                  },
                 },
               );
             });
@@ -2781,7 +2836,9 @@ export const redemptionVaultSuits = (
                 stableCoins.dai,
                 100,
                 {
-                  revertMessage: 'RV: minReceiveAmount > actual',
+                  revertCustomError: {
+                    customErrorName: 'SlippageExceeded',
+                  },
                 },
               );
             });
@@ -2848,7 +2905,9 @@ export const redemptionVaultSuits = (
               stableCoins.dai,
               100,
               {
-                revertMessage: 'RV: !instantShare',
+                revertCustomError: {
+                  customErrorName: 'InstantShareTooHigh',
+                },
               },
             );
           });
@@ -3278,7 +3337,7 @@ export const redemptionVaultSuits = (
             regularAccounts[0].address,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -3290,7 +3349,9 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             constants.AddressZero,
             {
-              revertMessage: 'zero address',
+              revertCustomError: {
+                customErrorName: 'InvalidAddress',
+              },
             },
           );
         });
@@ -3302,7 +3363,9 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             redemptionVault.address,
             {
-              revertMessage: 'invalid address',
+              revertCustomError: {
+                customErrorName: 'InvalidAddress',
+              },
             },
           );
         });
@@ -3330,7 +3393,11 @@ export const redemptionVaultSuits = (
           await setTokensReceiverTest(
             { vault: redemptionVault, owner },
             regularAccounts[0].address,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -3397,7 +3464,7 @@ export const redemptionVaultSuits = (
 
           await setMinAmountTest({ vault: redemptionVault, owner }, 1.1, {
             from: regularAccounts[0],
-            revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+            revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
           });
         });
 
@@ -3415,7 +3482,9 @@ export const redemptionVaultSuits = (
           );
 
           await setMinAmountTest({ vault: redemptionVault, owner }, 1.1, {
-            revertMessage: 'Pausable: fn paused',
+            revertCustomError: {
+              customErrorName: 'FnPaused',
+            },
           });
         });
 
@@ -3499,7 +3568,7 @@ export const redemptionVaultSuits = (
             regularAccounts[0].address,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -3526,7 +3595,11 @@ export const redemptionVaultSuits = (
           await setFeeReceiverTest(
             { vault: redemptionVault, owner },
             regularAccounts[0].address,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -3596,7 +3669,7 @@ export const redemptionVaultSuits = (
             true,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -3622,7 +3695,9 @@ export const redemptionVaultSuits = (
             { greenlistable: redemptionVault, owner },
             true,
             {
-              revertMessage: 'Pausable: fn paused',
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
             },
           );
         });
@@ -3693,7 +3768,7 @@ export const redemptionVaultSuits = (
             parseUnits('1000'),
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -3726,7 +3801,11 @@ export const redemptionVaultSuits = (
           await setInstantLimitConfigTest(
             { vault: redemptionVault, owner },
             parseUnits('1000'),
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -3823,7 +3902,7 @@ export const redemptionVaultSuits = (
             days(1),
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -3834,7 +3913,11 @@ export const redemptionVaultSuits = (
           await removeInstantLimitConfigTest(
             { vault: redemptionVault, owner },
             days(7),
-            { revertMessage: 'MV: window not found' },
+            {
+              revertCustomError: {
+                customErrorName: 'InstantLimitWindowNotExists',
+              },
+            },
           );
         });
 
@@ -3854,7 +3937,11 @@ export const redemptionVaultSuits = (
           await removeInstantLimitConfigTest(
             { vault: redemptionVault, owner },
             days(1),
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -3974,7 +4061,11 @@ export const redemptionVaultSuits = (
           await removeInstantLimitConfigTest(
             { vault: redemptionVault, owner },
             days(1),
-            { revertMessage: 'MV: window not found' },
+            {
+              revertCustomError: {
+                customErrorName: 'InstantLimitWindowNotExists',
+              },
+            },
           );
         });
       });
@@ -3992,7 +4083,7 @@ export const redemptionVaultSuits = (
             true,
             constants.MaxUint256,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -4016,7 +4107,9 @@ export const redemptionVaultSuits = (
             true,
             constants.MaxUint256,
             {
-              revertMessage: 'MV: already added',
+              revertCustomError: {
+                customErrorName: 'PaymentTokenAlreadyAdded',
+              },
             },
           );
         });
@@ -4033,7 +4126,9 @@ export const redemptionVaultSuits = (
             true,
             constants.MaxUint256,
             {
-              revertMessage: 'zero address',
+              revertCustomError: {
+                customErrorName: 'InvalidAddress',
+              },
             },
           );
         });
@@ -4121,7 +4216,11 @@ export const redemptionVaultSuits = (
             0,
             true,
             constants.MaxUint256,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -4205,7 +4304,7 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             ethers.constants.AddressZero,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -4219,7 +4318,11 @@ export const redemptionVaultSuits = (
           await addWaivedFeeAccountTest(
             { vault: redemptionVault, owner },
             owner.address,
-            { revertMessage: 'MV: already added' },
+            {
+              revertCustomError: {
+                customErrorName: 'SameFeeWaivedValue',
+              },
+            },
           );
         });
 
@@ -4242,7 +4345,11 @@ export const redemptionVaultSuits = (
           await addWaivedFeeAccountTest(
             { vault: redemptionVault, owner },
             owner.address,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -4310,7 +4417,7 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             ethers.constants.AddressZero,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -4320,7 +4427,11 @@ export const redemptionVaultSuits = (
           await removeWaivedFeeAccountTest(
             { vault: redemptionVault, owner },
             owner.address,
-            { revertMessage: 'MV: not found' },
+            {
+              revertCustomError: {
+                customErrorName: 'SameFeeWaivedValue',
+              },
+            },
           );
         });
 
@@ -4352,7 +4463,11 @@ export const redemptionVaultSuits = (
           await removeWaivedFeeAccountTest(
             { vault: redemptionVault, owner },
             owner.address,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -4430,7 +4545,7 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             ethers.constants.Zero,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -4439,7 +4554,9 @@ export const redemptionVaultSuits = (
         it('should fail: if new value greater then 100%', async () => {
           const { redemptionVault, owner } = await loadRvFixture();
           await setInstantFeeTest({ vault: redemptionVault, owner }, 10001, {
-            revertMessage: 'fee > 100%',
+            revertCustomError: {
+              customErrorName: 'InvalidFee',
+            },
           });
         });
 
@@ -4457,7 +4574,9 @@ export const redemptionVaultSuits = (
           );
 
           await setInstantFeeTest({ vault: redemptionVault, owner }, 100, {
-            revertMessage: 'Pausable: fn paused',
+            revertCustomError: {
+              customErrorName: 'FnPaused',
+            },
           });
         });
 
@@ -4522,7 +4641,7 @@ export const redemptionVaultSuits = (
             0,
             1000,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -4534,7 +4653,11 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             500,
             100,
-            { revertMessage: 'MV: invalid min/max fee' },
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidMinMaxInstantFee',
+              },
+            },
           );
         });
 
@@ -4544,7 +4667,11 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             10001,
             10001,
-            { revertMessage: 'fee > 100%' },
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidFee',
+              },
+            },
           );
         });
 
@@ -4569,7 +4696,11 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             0,
             1000,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -4639,17 +4770,16 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             ethers.constants.Zero,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
         });
-        it('should fail: if new value zero', async () => {
+        it('if new value zero', async () => {
           const { redemptionVault, owner } = await loadRvFixture();
           await setVariabilityToleranceTest(
             { vault: redemptionVault, owner },
             ethers.constants.Zero,
-            { revertMessage: 'fee == 0' },
           );
         });
 
@@ -4658,7 +4788,11 @@ export const redemptionVaultSuits = (
           await setVariabilityToleranceTest(
             { vault: redemptionVault, owner },
             10001,
-            { revertMessage: 'fee > 100%' },
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidFee',
+              },
+            },
           );
         });
 
@@ -4681,7 +4815,11 @@ export const redemptionVaultSuits = (
           await setVariabilityToleranceTest(
             { vault: redemptionVault, owner },
             100,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -4749,7 +4887,7 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner },
             ethers.constants.AddressZero,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -4759,7 +4897,11 @@ export const redemptionVaultSuits = (
           await setRequestRedeemerTest(
             { redemptionVault, owner },
             ethers.constants.AddressZero,
-            { revertMessage: 'zero address' },
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidAddress',
+              },
+            },
           );
         });
 
@@ -4782,7 +4924,11 @@ export const redemptionVaultSuits = (
           await setRequestRedeemerTest(
             { redemptionVault, owner },
             owner.address,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -4850,7 +4996,7 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner },
             ethers.constants.AddressZero,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -4877,7 +5023,9 @@ export const redemptionVaultSuits = (
           );
 
           await setLoanLpTest({ redemptionVault, owner }, owner.address, {
-            revertMessage: 'Pausable: fn paused',
+            revertCustomError: {
+              customErrorName: 'FnPaused',
+            },
           });
         });
 
@@ -4945,7 +5093,7 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner },
             ethers.constants.AddressZero,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -4977,7 +5125,11 @@ export const redemptionVaultSuits = (
           await setLoanLpFeeReceiverTest(
             { redemptionVault, owner },
             owner.address,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -5046,7 +5198,7 @@ export const redemptionVaultSuits = (
             regularAccounts[0].address,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -5072,7 +5224,11 @@ export const redemptionVaultSuits = (
           await setLoanRepaymentAddressTest(
             { redemptionVault, owner },
             regularAccounts[0].address,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -5141,7 +5297,7 @@ export const redemptionVaultSuits = (
             regularAccounts[0].address,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -5167,7 +5323,11 @@ export const redemptionVaultSuits = (
           await setLoanSwapperVaultTest(
             { redemptionVault, owner },
             regularAccounts[0].address,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -5233,7 +5393,7 @@ export const redemptionVaultSuits = (
           );
           await setMaxLoanAprTest({ redemptionVault, owner }, 100, {
             from: regularAccounts[0],
-            revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+            revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
           });
         });
 
@@ -5261,7 +5421,9 @@ export const redemptionVaultSuits = (
           );
 
           await setMaxLoanAprTest({ redemptionVault, owner }, 100, {
-            revertMessage: 'Pausable: fn paused',
+            revertCustomError: {
+              customErrorName: 'FnPaused',
+            },
           });
         });
 
@@ -5323,7 +5485,7 @@ export const redemptionVaultSuits = (
           );
           await setPreferLoanLiquidityTest({ redemptionVault, owner }, true, {
             from: regularAccounts[0],
-            revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+            revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
           });
         });
 
@@ -5341,7 +5503,9 @@ export const redemptionVaultSuits = (
           );
 
           await setPreferLoanLiquidityTest({ redemptionVault, owner }, true, {
-            revertMessage: 'Pausable: fn paused',
+            revertCustomError: {
+              customErrorName: 'FnPaused',
+            },
           });
         });
 
@@ -5405,7 +5569,7 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             ethers.constants.AddressZero,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -5418,7 +5582,11 @@ export const redemptionVaultSuits = (
           await removePaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai.address,
-            { revertMessage: 'MV: not exists' },
+            {
+              revertCustomError: {
+                customErrorName: 'PaymentTokenNotExists',
+              },
+            },
           );
         });
 
@@ -5480,7 +5648,11 @@ export const redemptionVaultSuits = (
           await removePaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.usdt.address,
-            { revertMessage: 'MV: not exists' },
+            {
+              revertCustomError: {
+                customErrorName: 'PaymentTokenNotExists',
+              },
+            },
           );
         });
 
@@ -5504,7 +5676,11 @@ export const redemptionVaultSuits = (
           await removePaymentTokenTest(
             { vault: redemptionVault, owner },
             stableCoins.dai.address,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -5597,7 +5773,7 @@ export const redemptionVaultSuits = (
             ethers.constants.AddressZero,
             0,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -5635,7 +5811,11 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             stableCoins.dai,
             1,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -5715,7 +5895,11 @@ export const redemptionVaultSuits = (
             redemptionVault
               .connect(regularAccounts[0])
               .freeFromMinAmount(regularAccounts[1].address, true),
-          ).to.be.revertedWith(acErrors.WMAC_HASNT_PERMISSION);
+          ).to.be.revertedWithCustomError(
+            redemptionVault,
+            acErrors.WMAC_HASNT_PERMISSION(undefined, redemptionVault)
+              .customErrorName,
+          );
         });
         it('should not fail', async () => {
           const { redemptionVault, regularAccounts } = await loadFixture(
@@ -5747,7 +5931,10 @@ export const redemptionVaultSuits = (
 
           await expect(
             redemptionVault.freeFromMinAmount(regularAccounts[0].address, true),
-          ).to.revertedWith('DV: already free');
+          ).to.be.revertedWithCustomError(
+            redemptionVault,
+            'SameFreeFromMinAmountValue',
+          );
         });
 
         it('should fail: when function is paused', async () => {
@@ -5760,7 +5947,7 @@ export const redemptionVaultSuits = (
 
           await expect(
             redemptionVault.freeFromMinAmount(regularAccounts[0].address, true),
-          ).to.be.revertedWith('Pausable: fn paused');
+          ).to.be.revertedWithCustomError(redemptionVault, 'FnPaused');
         });
 
         it('succeeds with only scoped function permission', async () => {
@@ -5840,7 +6027,7 @@ export const redemptionVaultSuits = (
             ethers.constants.AddressZero,
             0,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -5853,10 +6040,15 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             stableCoins.dai.address,
             0,
-            { revertMessage: 'MV: token not exists' },
+            {
+              revertCustomError: {
+                customErrorName: 'UnknownPaymentToken',
+              },
+            },
           );
         });
-        it('should fail: allowance zero', async () => {
+
+        it('when allowance zero', async () => {
           const { redemptionVault, owner, stableCoins, dataFeed } =
             await loadRvFixture();
           await addPaymentTokenTest(
@@ -5870,7 +6062,6 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             stableCoins.dai.address,
             0,
-            { revertMessage: 'MV: zero allowance' },
           );
         });
 
@@ -5911,7 +6102,11 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             stableCoins.dai.address,
             100000000,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -6006,7 +6201,7 @@ export const redemptionVaultSuits = (
             ethers.constants.AddressZero,
             0,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -6019,7 +6214,11 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             stableCoins.dai.address,
             0,
-            { revertMessage: 'MV: token not exists' },
+            {
+              revertCustomError: {
+                customErrorName: 'UnknownPaymentToken',
+              },
+            },
           );
         });
         it('should fail: fee > 100%', async () => {
@@ -6036,7 +6235,11 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             stableCoins.dai.address,
             10001,
-            { revertMessage: 'fee > 100%' },
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidFee',
+              },
+            },
           );
         });
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
@@ -6076,7 +6279,11 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             stableCoins.dai.address,
             100,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -6464,7 +6671,9 @@ export const redemptionVaultSuits = (
               100,
               {
                 from: regularAccounts[0],
-                revertMessage: 'RV: invalid amount',
+                revertCustomError: {
+                  customErrorName: 'InvalidAmount',
+                },
               },
             );
           });
@@ -6512,7 +6721,9 @@ export const redemptionVaultSuits = (
               100,
               {
                 from: regularAccounts[0],
-                revertMessage: 'RV: !instantShare',
+                revertCustomError: {
+                  customErrorName: 'InstantShareTooHigh',
+                },
               },
             );
           });
@@ -6532,7 +6743,9 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: 'MV: token not exists',
+              revertCustomError: {
+                customErrorName: 'UnknownPaymentToken',
+              },
             },
           );
         });
@@ -6558,7 +6771,9 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             0,
             {
-              revertMessage: 'RV: invalid amount',
+              revertCustomError: {
+                customErrorName: 'InvalidAmount',
+              },
             },
           );
         });
@@ -6595,7 +6810,9 @@ export const redemptionVaultSuits = (
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'Pausable: fn paused',
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
             },
           );
         });
@@ -6727,7 +6944,9 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             99_999,
             {
-              revertMessage: 'RV: amount < min',
+              revertCustomError: {
+                customErrorName: 'AmountLessThanMin',
+              },
             },
           );
         });
@@ -6748,7 +6967,7 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertCustomError: acErrors.WMAC_HASNT_ROLE,
             },
           );
         });
@@ -6776,7 +6995,7 @@ export const redemptionVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HAS_ROLE,
+              revertCustomError: acErrors.WMAC_HAS_ROLE,
             },
           );
         });
@@ -6803,7 +7022,9 @@ export const redemptionVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertMessage: 'WSL: sanctioned',
+              revertCustomError: {
+                customErrorName: 'Sanctioned',
+              },
             },
           );
         });
@@ -6849,7 +7070,9 @@ export const redemptionVaultSuits = (
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'Pausable: fn paused',
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
             },
           );
         });
@@ -6884,7 +7107,7 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertCustomError: acErrors.WMAC_HASNT_ROLE,
             },
           );
         });
@@ -6919,7 +7142,7 @@ export const redemptionVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HAS_ROLE,
+              revertCustomError: acErrors.WMAC_HAS_ROLE,
             },
           );
         });
@@ -6953,7 +7176,9 @@ export const redemptionVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertMessage: 'WSL: sanctioned',
+              revertCustomError: {
+                customErrorName: 'Sanctioned',
+              },
             },
           );
         });
@@ -7411,31 +7636,6 @@ export const redemptionVaultSuits = (
         });
       });
 
-      describe('redeemRequests()', () => {
-        it('should not revert for v1 stored request and should decode version=0', async () => {
-          const { owner, redemptionVault } = await loadRvFixture();
-
-          const requestId = 0;
-          const sender = owner.address;
-          const tokenOut = constants.AddressZero;
-
-          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
-            sender,
-            tokenOut,
-            amountMToken: BigInt(parseUnits('1').toString()),
-            mTokenRate: BigInt(parseUnits('2').toString()),
-            tokenOutRate: BigInt(parseUnits('3').toString()),
-            status: 0, // RequestStatus.Pending
-          });
-
-          const request = await redemptionVault.redeemRequests(requestId);
-          expect(request.sender).eq(sender);
-          expect(request.status).eq(0);
-          expect(request.feePercent).eq(0);
-          expect(request.version).eq(0);
-        });
-      });
-
       describe('approveRequest()', async () => {
         it('should fail: call from address without vault admin role', async () => {
           const {
@@ -7454,29 +7654,9 @@ export const redemptionVaultSuits = (
             1,
             parseUnits('1'),
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
-        });
-
-        it('should fail: v1 stored request (version check)', async () => {
-          const { owner, redemptionVault } = await loadRvFixture();
-
-          const requestId = 0;
-          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
-            sender: owner.address,
-            tokenOut: constants.AddressZero,
-            amountMToken: 1n,
-            mTokenRate: 1n,
-            tokenOutRate: 1n,
-            status: 0,
-          });
-
-          await expect(
-            redemptionVault
-              .connect(owner)
-              .approveRequest(requestId, parseUnits('1')),
-          ).to.be.revertedWith('RV: not v2 request');
         });
 
         it('should fail: when function is paused', async () => {
@@ -7492,7 +7672,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             0,
             parseUnits('1'),
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -7526,7 +7710,9 @@ export const redemptionVaultSuits = (
             0,
             parseUnits('1'),
             {
-              revertMessage: 'RV: amountTokenOut < fee',
+              revertCustomError: {
+                customErrorName: 'FeeExceedsAmount',
+              },
             },
           );
         });
@@ -7552,7 +7738,9 @@ export const redemptionVaultSuits = (
             1,
             parseUnits('1'),
             {
-              revertMessage: 'RV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -7606,7 +7794,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             +requestId,
             parseUnits('1'),
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -7727,29 +7919,9 @@ export const redemptionVaultSuits = (
             1,
             parseUnits('1'),
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
-        });
-
-        it('should fail: v1 stored request (version check)', async () => {
-          const { owner, redemptionVault } = await loadRvFixture();
-
-          const requestId = 0;
-          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
-            sender: owner.address,
-            tokenOut: constants.AddressZero,
-            amountMToken: 1n,
-            mTokenRate: 1n,
-            tokenOutRate: 1n,
-            status: 0,
-          });
-
-          await expect(
-            redemptionVault
-              .connect(owner)
-              .safeApproveRequest(requestId, parseUnits('1')),
-          ).to.be.revertedWith('RV: not v2 request');
         });
 
         it('should fail: when function is paused', async () => {
@@ -7771,7 +7943,11 @@ export const redemptionVaultSuits = (
             },
             0,
             parseUnits('1'),
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -7802,7 +7978,9 @@ export const redemptionVaultSuits = (
             1,
             parseUnits('1'),
             {
-              revertMessage: 'RV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -7856,7 +8034,11 @@ export const redemptionVaultSuits = (
             },
             +requestId,
             parseUnits('6'),
-            { revertMessage: 'MV: exceed price diviation' },
+            {
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
+            },
           );
         });
 
@@ -7920,7 +8102,11 @@ export const redemptionVaultSuits = (
             },
             +requestId,
             parseUnits('5.00001'),
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -8055,29 +8241,9 @@ export const redemptionVaultSuits = (
             1,
             parseUnits('1'),
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
-        });
-
-        it('should fail: v1 stored request (version check)', async () => {
-          const { owner, redemptionVault } = await loadRvFixture();
-
-          const requestId = 0;
-          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
-            sender: owner.address,
-            tokenOut: constants.AddressZero,
-            amountMToken: 1n,
-            mTokenRate: 1n,
-            tokenOutRate: 1n,
-            status: 0,
-          });
-
-          await expect(
-            redemptionVault
-              .connect(owner)
-              .approveRequestAvgRate(requestId, parseUnits('1')),
-          ).to.be.revertedWith('RV: not v2 request');
         });
 
         it('should fail: when function is paused', async () => {
@@ -8099,7 +8265,11 @@ export const redemptionVaultSuits = (
             },
             0,
             parseUnits('1'),
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -8144,7 +8314,9 @@ export const redemptionVaultSuits = (
             0,
             parseUnits('1'),
             {
-              revertMessage: 'RV: !amountMTokenInstant',
+              revertCustomError: {
+                customErrorName: 'InvalidMTokenInstantAmount',
+              },
             },
           );
         });
@@ -8176,7 +8348,9 @@ export const redemptionVaultSuits = (
             1,
             parseUnits('1'),
             {
-              revertMessage: 'RV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -8249,7 +8423,11 @@ export const redemptionVaultSuits = (
             },
             +requestId,
             parseUnits('5'),
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -8311,7 +8489,9 @@ export const redemptionVaultSuits = (
             +requestId,
             parseUnits('1'),
             {
-              revertMessage: 'RV: !newMTokenRate',
+              revertCustomError: {
+                customErrorName: 'InvalidNewMTokenRate',
+              },
             },
           );
         });
@@ -8523,29 +8703,9 @@ export const redemptionVaultSuits = (
             1,
             parseUnits('1'),
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
-        });
-
-        it('should fail: v1 stored request (version check)', async () => {
-          const { owner, redemptionVault } = await loadRvFixture();
-
-          const requestId = 0;
-          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
-            sender: owner.address,
-            tokenOut: constants.AddressZero,
-            amountMToken: 1n,
-            mTokenRate: 1n,
-            tokenOutRate: 1n,
-            status: 0,
-          });
-
-          await expect(
-            redemptionVault
-              .connect(owner)
-              .safeApproveRequestAvgRate(requestId, parseUnits('1')),
-          ).to.be.revertedWith('RV: not v2 request');
         });
 
         it('should fail: when function is paused', async () => {
@@ -8568,7 +8728,11 @@ export const redemptionVaultSuits = (
             },
             0,
             parseUnits('1'),
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -8614,7 +8778,9 @@ export const redemptionVaultSuits = (
             0,
             parseUnits('5'),
             {
-              revertMessage: 'RV: !amountMTokenInstant',
+              revertCustomError: {
+                customErrorName: 'InvalidMTokenInstantAmount',
+              },
             },
           );
         });
@@ -8647,7 +8813,9 @@ export const redemptionVaultSuits = (
             1,
             parseUnits('1'),
             {
-              revertMessage: 'RV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -8721,7 +8889,11 @@ export const redemptionVaultSuits = (
             },
             +requestId,
             parseUnits('5'),
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -8787,7 +8959,9 @@ export const redemptionVaultSuits = (
             +requestId,
             parseUnits('4.9'),
             {
-              revertMessage: 'RV: !newMTokenRate',
+              revertCustomError: {
+                customErrorName: 'InvalidNewMTokenRate',
+              },
             },
           );
         });
@@ -8854,7 +9028,9 @@ export const redemptionVaultSuits = (
             +requestId,
             parseUnits('4'),
             {
-              revertMessage: 'MV: exceed price diviation',
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
             },
           );
         });
@@ -8918,7 +9094,9 @@ export const redemptionVaultSuits = (
             +requestId,
             parseUnits('4.9'),
             {
-              revertMessage: 'MV: exceed price diviation',
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
             },
           );
 
@@ -8939,7 +9117,9 @@ export const redemptionVaultSuits = (
             +requestId,
             parseUnits('4.8'),
             {
-              revertMessage: 'RV: !newMTokenRate',
+              revertCustomError: {
+                customErrorName: 'InvalidNewMTokenRate',
+              },
             },
           );
         });
@@ -9088,29 +9268,9 @@ export const redemptionVaultSuits = (
             [{ id: 1 }],
             'request-rate',
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
-        });
-
-        it('should fail: v1 stored request (version check)', async () => {
-          const { owner, redemptionVault } = await loadRvFixture();
-
-          const requestId = 0;
-          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
-            sender: owner.address,
-            tokenOut: constants.AddressZero,
-            amountMToken: 1n,
-            mTokenRate: 1n,
-            tokenOutRate: 1n,
-            status: 0,
-          });
-
-          await expect(
-            redemptionVault
-              .connect(owner)
-              .safeBulkApproveRequestAtSavedRate([requestId]),
-          ).to.be.revertedWith('RV: not v2 request');
         });
 
         it('should fail: request by id not exist', async () => {
@@ -9134,7 +9294,9 @@ export const redemptionVaultSuits = (
             [{ id: 1 }],
             'request-rate',
             {
-              revertMessage: 'RV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -9187,7 +9349,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: requestId }],
             'request-rate',
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -9204,7 +9370,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: 0 }],
             'request-rate',
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -9267,7 +9437,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: 1 }, { id: 0 }],
             'request-rate',
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -9330,7 +9504,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: 1 }, { id: 1 }],
             'request-rate',
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -9783,32 +9961,9 @@ export const redemptionVaultSuits = (
             [{ id: 1 }],
             parseUnits('1'),
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
-        });
-
-        it('should fail: v1 stored request (version check)', async () => {
-          const { owner, redemptionVault } = await loadRvFixture();
-
-          const requestId = 0;
-          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
-            sender: owner.address,
-            tokenOut: constants.AddressZero,
-            amountMToken: 1n,
-            mTokenRate: 1n,
-            tokenOutRate: 1n,
-            status: 0,
-          });
-
-          await expect(
-            redemptionVault
-              .connect(owner)
-              ['safeBulkApproveRequest(uint256[],uint256)'](
-                [requestId],
-                parseUnits('1'),
-              ),
-          ).to.be.revertedWith('RV: not v2 request');
         });
 
         it('should fail: when function is paused', async () => {
@@ -9824,7 +9979,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: 0 }],
             parseUnits('1'),
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -9849,7 +10008,9 @@ export const redemptionVaultSuits = (
             [{ id: 1 }],
             parseUnits('1'),
             {
-              revertMessage: 'RV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -9897,7 +10058,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: requestId }],
             parseUnits('6'),
-            { revertMessage: 'MV: exceed price diviation' },
+            {
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
+            },
           );
         });
 
@@ -9944,7 +10109,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: requestId }],
             parseUnits('4'),
-            { revertMessage: 'MV: exceed price diviation' },
+            {
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
+            },
           );
         });
 
@@ -9996,7 +10165,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: requestId }],
             parseUnits('5.00001'),
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -10059,7 +10232,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: 1 }, { id: 0 }],
             parseUnits('5.00001'),
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -10122,7 +10299,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: 1 }, { id: 1 }],
             parseUnits('5.00001'),
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -10575,29 +10756,9 @@ export const redemptionVaultSuits = (
             [{ id: 1 }],
             undefined,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
-        });
-
-        it('should fail: v1 stored request (version check)', async () => {
-          const { owner, redemptionVault } = await loadRvFixture();
-
-          const requestId = 0;
-          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
-            sender: owner.address,
-            tokenOut: constants.AddressZero,
-            amountMToken: 1n,
-            mTokenRate: 1n,
-            tokenOutRate: 1n,
-            status: 0,
-          });
-
-          await expect(
-            redemptionVault
-              .connect(owner)
-              ['safeBulkApproveRequest(uint256[])']([requestId]),
-          ).to.be.revertedWith('RV: not v2 request');
         });
 
         it('should fail: when function is paused', async () => {
@@ -10613,7 +10774,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: 0 }],
             undefined,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -10638,7 +10803,9 @@ export const redemptionVaultSuits = (
             [{ id: 1 }],
             undefined,
             {
-              revertMessage: 'RV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -10688,7 +10855,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: requestId }],
             undefined,
-            { revertMessage: 'MV: exceed price diviation' },
+            {
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
+            },
           );
         });
 
@@ -10737,7 +10908,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: requestId }],
             undefined,
-            { revertMessage: 'MV: exceed price diviation' },
+            {
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
+            },
           );
         });
 
@@ -10789,7 +10964,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: requestId }],
             undefined,
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -10852,7 +11031,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: 1 }, { id: 0 }],
             undefined,
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -10915,7 +11098,11 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: 1 }, { id: 1 }],
             undefined,
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -11472,32 +11659,9 @@ export const redemptionVaultSuits = (
             [{ id: 1 }],
             parseUnits('1'),
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
-        });
-
-        it('should fail: v1 stored request (version check)', async () => {
-          const { owner, redemptionVault } = await loadRvFixture();
-
-          const requestId = 0;
-          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
-            sender: owner.address,
-            tokenOut: constants.AddressZero,
-            amountMToken: 1n,
-            mTokenRate: 1n,
-            tokenOutRate: 1n,
-            status: 0,
-          });
-
-          await expect(
-            redemptionVault
-              .connect(owner)
-              ['safeBulkApproveRequestAvgRate(uint256[],uint256)'](
-                [requestId],
-                parseUnits('1'),
-              ),
-          ).to.be.revertedWith('RV: not v2 request');
         });
 
         it('should fail: when function is paused', async () => {
@@ -11521,7 +11685,11 @@ export const redemptionVaultSuits = (
             },
             [{ id: 0 }],
             parseUnits('1'),
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -11552,7 +11720,9 @@ export const redemptionVaultSuits = (
             [{ id: 1 }],
             parseUnits('1'),
             {
-              revertMessage: 'RV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -11606,7 +11776,11 @@ export const redemptionVaultSuits = (
             },
             [{ id: requestId }],
             parseUnits('6'),
-            { revertMessage: 'MV: exceed price diviation' },
+            {
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
+            },
           );
         });
 
@@ -11659,7 +11833,11 @@ export const redemptionVaultSuits = (
             },
             [{ id: requestId }],
             parseUnits('4'),
-            { revertMessage: 'MV: exceed price diviation' },
+            {
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
+            },
           );
         });
 
@@ -11717,7 +11895,11 @@ export const redemptionVaultSuits = (
             },
             [{ id: requestId }],
             parseUnits('5.00001'),
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -11800,7 +11982,11 @@ export const redemptionVaultSuits = (
             },
             [{ id: 1 }, { id: 0 }],
             parseUnits('5.00001'),
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -11883,7 +12069,11 @@ export const redemptionVaultSuits = (
             },
             [{ id: 1 }, { id: 1 }],
             parseUnits('5.00001'),
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -11953,7 +12143,11 @@ export const redemptionVaultSuits = (
             },
             [{ id: 1 }, { id: 1 }],
             parseUnits('5.00001'),
-            { revertMessage: 'RV: !amountMTokenInstant' },
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidMTokenInstantAmount',
+              },
+            },
           );
         });
 
@@ -12534,29 +12728,9 @@ export const redemptionVaultSuits = (
             [{ id: 1 }],
             undefined,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
-        });
-
-        it('should fail: v1 stored request (version check)', async () => {
-          const { owner, redemptionVault } = await loadRvFixture();
-
-          const requestId = 0;
-          await setV1RedeemRequestInStorage(redemptionVault, requestId, {
-            sender: owner.address,
-            tokenOut: constants.AddressZero,
-            amountMToken: 1n,
-            mTokenRate: 1n,
-            tokenOutRate: 1n,
-            status: 0,
-          });
-
-          await expect(
-            redemptionVault
-              .connect(owner)
-              ['safeBulkApproveRequestAvgRate(uint256[])']([requestId]),
-          ).to.be.revertedWith('RV: not v2 request');
         });
 
         it('should fail: when function is paused', async () => {
@@ -12578,7 +12752,11 @@ export const redemptionVaultSuits = (
             },
             [{ id: 0 }],
             undefined,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -12609,7 +12787,9 @@ export const redemptionVaultSuits = (
             [{ id: 1 }],
             undefined,
             {
-              revertMessage: 'RV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -12672,7 +12852,11 @@ export const redemptionVaultSuits = (
             },
             [{ id: requestId }],
             undefined,
-            { revertMessage: 'MV: exceed price diviation' },
+            {
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
+            },
           );
         });
 
@@ -12734,7 +12918,11 @@ export const redemptionVaultSuits = (
             },
             [{ id: requestId }],
             undefined,
-            { revertMessage: 'MV: exceed price diviation' },
+            {
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
+            },
           );
         });
 
@@ -12805,7 +12993,11 @@ export const redemptionVaultSuits = (
             },
             [{ id: requestId }],
             undefined,
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -12888,7 +13080,11 @@ export const redemptionVaultSuits = (
             },
             [{ id: 1 }, { id: 0 }],
             undefined,
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -12971,7 +13167,11 @@ export const redemptionVaultSuits = (
             },
             [{ id: 1 }, { id: 1 }],
             undefined,
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -13041,7 +13241,11 @@ export const redemptionVaultSuits = (
             },
             [{ id: 1 }, { id: 1 }],
             undefined,
-            { revertMessage: 'RV: !amountMTokenInstant' },
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidMTokenInstantAmount',
+              },
+            },
           );
         });
 
@@ -13746,7 +13950,7 @@ export const redemptionVaultSuits = (
             },
             1,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -13763,7 +13967,11 @@ export const redemptionVaultSuits = (
           await rejectRedeemRequestTest(
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             0,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -13787,7 +13995,9 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             1,
             {
-              revertMessage: 'RV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -13831,7 +14041,11 @@ export const redemptionVaultSuits = (
           await rejectRedeemRequestTest(
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             +requestId,
-            { revertMessage: 'RV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -14167,7 +14381,11 @@ export const redemptionVaultSuits = (
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
               0,
-              { revertMessage: 'Pausable: fn paused' },
+              {
+                revertCustomError: {
+                  customErrorName: 'FnPaused',
+                },
+              },
             );
           });
 
@@ -14327,7 +14545,9 @@ export const redemptionVaultSuits = (
               [{ id: 0 }],
               0,
               {
-                revertMessage: 'RV: !loanLpFeeReceiver',
+                revertCustomError: {
+                  customErrorName: 'InvalidLoanLpReceiver',
+                },
               },
             );
           });
@@ -14446,7 +14666,9 @@ export const redemptionVaultSuits = (
               [{ id: 0 }],
               0,
               {
-                revertMessage: 'RV: request not pending',
+                revertCustomError: {
+                  customErrorName: 'RequestNotPending',
+                },
               },
             );
           });
@@ -14460,7 +14682,9 @@ export const redemptionVaultSuits = (
               [{ id: 0 }],
               0,
               {
-                revertMessage: 'RV: request not exist',
+                revertCustomError: {
+                  customErrorName: 'RequestNotExists',
+                },
               },
             );
           });
@@ -14492,7 +14716,7 @@ export const redemptionVaultSuits = (
               0,
               {
                 from: regularAccounts[0],
-                revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+                revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               },
             );
           });
@@ -14523,7 +14747,9 @@ export const redemptionVaultSuits = (
               [{ id: 0 }],
               101,
               {
-                revertMessage: 'RV: loanApr > maxLoanApr',
+                revertCustomError: {
+                  customErrorName: 'LoanAprTooHigh',
+                },
               },
             );
           });
@@ -14807,7 +15033,11 @@ export const redemptionVaultSuits = (
             await cancelLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               0,
-              { revertMessage: 'Pausable: fn paused' },
+              {
+                revertCustomError: {
+                  customErrorName: 'FnPaused',
+                },
+              },
             );
           });
 
@@ -14831,7 +15061,9 @@ export const redemptionVaultSuits = (
               { redemptionVault, owner, mTBILL },
               0,
               {
-                revertMessage: 'RV: request not exist',
+                revertCustomError: {
+                  customErrorName: 'RequestNotExists',
+                },
               },
             );
           });
@@ -14851,7 +15083,9 @@ export const redemptionVaultSuits = (
               { redemptionVault, owner, mTBILL },
               0,
               {
-                revertMessage: 'RV: request not pending',
+                revertCustomError: {
+                  customErrorName: 'RequestNotPending',
+                },
               },
             );
           });
@@ -14870,7 +15104,9 @@ export const redemptionVaultSuits = (
               { redemptionVault, owner, mTBILL },
               0,
               {
-                revertMessage: 'RV: request not pending',
+                revertCustomError: {
+                  customErrorName: 'RequestNotPending',
+                },
               },
             );
           });
@@ -14896,7 +15132,7 @@ export const redemptionVaultSuits = (
               0,
               {
                 from: regularAccounts[0],
-                revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+                revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               },
             );
           });
@@ -14909,7 +15145,7 @@ export const redemptionVaultSuits = (
 
           await expect(
             redemptionVault.convertUsdToTokenTest(0, constants.AddressZero, 0),
-          ).revertedWith('RV: amount zero');
+          ).to.be.revertedWithCustomError(redemptionVault, 'InvalidAmount');
         });
 
         it('should fail: when tokenRate == 0', async () => {
@@ -14924,7 +15160,7 @@ export const redemptionVaultSuits = (
               redemptionVault.address,
               0,
             ),
-          ).revertedWith('MV: rate zero');
+          ).to.be.revertedWithCustomError(redemptionVault, 'InvalidTokenRate');
         });
       });
 
@@ -14934,7 +15170,7 @@ export const redemptionVaultSuits = (
 
           await expect(
             redemptionVault.convertMTokenToUsdTest(0, 0),
-          ).revertedWith('RV: amount zero');
+          ).to.be.revertedWithCustomError(redemptionVault, 'InvalidAmount');
         });
 
         it('should fail: when amountMToken == 0', async () => {
@@ -14945,7 +15181,7 @@ export const redemptionVaultSuits = (
 
           await expect(
             redemptionVault.convertMTokenToUsdTest(1, 0),
-          ).revertedWith('MV: rate zero');
+          ).to.be.revertedWithCustomError(redemptionVault, 'InvalidTokenRate');
         });
       });
 
@@ -15165,7 +15401,7 @@ export const redemptionVaultSuits = (
               0,
               false,
             ),
-          ).revertedWith('RV: invalid amount');
+          ).to.be.revertedWithCustomError(redemptionVault, 'InvalidAmount');
         });
 
         it('should override fee percent', async () => {

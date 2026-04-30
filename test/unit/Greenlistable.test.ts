@@ -65,7 +65,10 @@ describe('Greenlistable', function () {
 
       await expect(
         greenListableTester.onlyGreenlistedTester(regularAccounts[0].address),
-      ).revertedWith(acErrors.WMAC_HASNT_ROLE);
+      ).revertedWithCustomError(
+        greenListableTester,
+        acErrors.WMAC_HASNT_ROLE().customErrorName,
+      );
     });
 
     it('call from not greenlisted user', async () => {
@@ -97,7 +100,10 @@ describe('Greenlistable', function () {
         greenListableTester.validateGreenlistableAdminAccess(
           regularAccounts[0].address,
         ),
-      ).revertedWith(acErrors.WMAC_HASNT_PERMISSION);
+      ).revertedWithCustomError(
+        greenListableTester,
+        acErrors.WMAC_HASNT_PERMISSION().customErrorName,
+      );
     });
 
     it('call from  greenlistToggler user', async () => {
@@ -132,7 +138,7 @@ describe('Greenlistable', function () {
         true,
         {
           from: regularAccounts[0],
-          revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+          revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
         },
       );
     });
@@ -144,7 +150,9 @@ describe('Greenlistable', function () {
         { greenlistable: greenListableTester, owner },
         false,
         {
-          revertMessage: `GL: same enable status`,
+          revertCustomError: {
+            customErrorName: 'SameGreenlistEnableValue',
+          },
         },
       );
     });

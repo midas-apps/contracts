@@ -48,7 +48,7 @@ contract RedemptionVaultTest is RedemptionVault {
     ) external pure returns (uint256) {
         return
             _calculateHoldbackPartRateFromAvg(
-                RequestV2({
+                Request({
                     amountMToken: amountMToken,
                     amountMTokenInstant: amountMTokenInstant,
                     mTokenRate: mTokenRate,
@@ -57,8 +57,7 @@ contract RedemptionVaultTest is RedemptionVault {
                     feePercent: 0,
                     sender: address(0),
                     status: RequestStatus.Pending,
-                    approvedMTokenRate: 0,
-                    version: 1
+                    approvedMTokenRate: 0
                 }),
                 avgMTokenRate
             );

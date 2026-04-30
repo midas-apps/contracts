@@ -4,33 +4,9 @@ pragma solidity 0.8.34;
 import "./IManageableVault.sol";
 
 /**
- * @notice Legacy Redeem request scruct
- * @dev used for backward compatibility
+ * @notice Redeem request scruct
  */
 struct Request {
-    /// @notice user address which will receive the mTokens
-    address sender;
-    /// @notice tokenOut address
-    address tokenOut;
-    /// @notice request status
-    RequestStatus status;
-    /// @notice amount of mToken
-    uint256 amountMToken;
-    /// @notice rate of mToken at request creation time
-    uint256 mTokenRate;
-    /// @notice rate of tokenOut at request creation time
-    uint256 tokenOutRate;
-}
-
-/**
- * @notice Redeem request v2 scruct
- * @dev replaces `Request` struct and adds next fields:
- * - `feePercent`
- * - `amountMTokenInstant`
- * - `approvedMTokenRate`
- * - `version`
- */
-struct RequestV2 {
     /// @notice user address which will receive the mTokens
     address sender;
     /// @notice tokenOut address
@@ -49,8 +25,6 @@ struct RequestV2 {
     uint256 amountMTokenInstant;
     /// @notice approved mToken rate
     uint256 approvedMTokenRate;
-    /// @notice request version. 0 for legacy, 1 for v2
-    uint8 version;
 }
 
 /**
@@ -98,6 +72,11 @@ struct LiquidityProviderLoanRequest {
  * @author RedDuck Software
  */
 interface IRedemptionVault is IManageableVault {
+    error LoanAprTooHigh(uint256 loanApr, uint256 maxLoanApr);
+    error InvalidLoanLpReceiver();
+    error LoanLpNotConfigured(address loanLp, address loanSwapperVault);
+    error FeeExceedsAmount(uint256 fee, uint256 amount);
+
     /**
      * @param user function caller (msg.sender)
      * @param tokenOut address of tokenOut

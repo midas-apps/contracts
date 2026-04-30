@@ -113,7 +113,7 @@ depositVaultSuits(
             stableCoins.dai,
             1000,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertCustomError: acErrors.WMAC_HASNT_ROLE,
             },
           );
         });

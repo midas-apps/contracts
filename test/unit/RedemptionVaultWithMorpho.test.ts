@@ -64,7 +64,7 @@ redemptionVaultSuits(
             morphoVaultMock.address,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
             },
           );
         });
@@ -78,7 +78,9 @@ redemptionVaultSuits(
             constants.AddressZero,
             morphoVaultMock.address,
             {
-              revertMessage: 'zero address',
+              revertCustomError: {
+                customErrorName: 'InvalidAddress',
+              },
             },
           );
         });
@@ -92,7 +94,9 @@ redemptionVaultSuits(
             stableCoins.usdc.address,
             constants.AddressZero,
             {
-              revertMessage: 'zero address',
+              revertCustomError: {
+                customErrorName: 'InvalidAddress',
+              },
             },
           );
         });
@@ -110,7 +114,9 @@ redemptionVaultSuits(
             stableCoins.dai.address,
             morphoVaultMock.address,
             {
-              revertMessage: 'RVM: asset mismatch',
+              revertCustomError: {
+                customErrorName: 'AssetMismatch',
+              },
             },
           );
         });
@@ -132,7 +138,11 @@ redemptionVaultSuits(
             { redemptionVault: redemptionVaultWithMorpho, owner },
             stableCoins.usdc.address,
             morphoVaultMock.address,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -166,7 +176,7 @@ redemptionVaultSuits(
             stableCoins.usdc.address,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
             },
           );
         });
@@ -179,7 +189,9 @@ redemptionVaultSuits(
             { redemptionVault: redemptionVaultWithMorpho, owner },
             stableCoins.dai.address,
             {
-              revertMessage: 'RVM: vault not set',
+              revertCustomError: {
+                customErrorName: 'VaultNotSet',
+              },
             },
           );
         });
@@ -196,7 +208,11 @@ redemptionVaultSuits(
           await removeMorphoVaultTest(
             { redemptionVault: redemptionVaultWithMorpho, owner },
             stableCoins.usdc.address,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -1100,7 +1116,10 @@ redemptionVaultSuits(
               parseUnits('1000'),
               0,
             ),
-          ).to.be.revertedWith('RV: loan lp not configured');
+          ).to.be.revertedWithCustomError(
+            redemptionVaultWithMorpho,
+            'LoanLpNotConfigured',
+          );
         });
 
         it('should fail: Morpho vault has insufficient liquidity during redeemInstant', async () => {

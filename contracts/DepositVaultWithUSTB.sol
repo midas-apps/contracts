@@ -18,6 +18,9 @@ contract DepositVaultWithUSTB is DepositVault {
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
 
+    error UnsupportedUSTBToken(address token);
+    error USTBFeeNotZero(uint256 fee);
+
     /**
      * @notice USTB token address
      */
@@ -108,10 +111,10 @@ contract DepositVaultWithUSTB is DepositVault {
 
         require(
             config.sweepDestination != address(0),
-            "DVU: unsupported USTB token"
+            UnsupportedUSTBToken(tokenIn)
         );
 
-        require(config.fee == 0, "DVU: USTB fee is not 0");
+        require(config.fee == 0, USTBFeeNotZero(config.fee));
 
         address ustbToken = ustb;
         uint256 transferredAmount = _tokenTransferFromUser(

@@ -6,6 +6,8 @@ import {
   OptionalCommonParams,
   balanceOfBase18,
   getAccount,
+  handleRevert,
+  shouldRevert,
 } from './common.helpers';
 import {
   depositInstantTest,
@@ -42,12 +44,15 @@ export const setMorphoDepositsEnabledTest = async (
   enabled: boolean,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       depositVaultWithMorpho
         .connect(opt?.from ?? owner)
-        .setMorphoDepositsEnabled(enabled),
-    ).revertedWith(opt?.revertMessage);
+        .setMorphoDepositsEnabled.bind(this, enabled),
+      depositVaultWithMorpho,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -72,12 +77,15 @@ export const setMorphoVaultTest = async (
   vault: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       depositVaultWithMorpho
         .connect(opt?.from ?? owner)
-        .setMorphoVault(token, vault),
-    ).revertedWith(opt?.revertMessage);
+        .setMorphoVault.bind(this, token, vault),
+      depositVaultWithMorpho,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -101,12 +109,15 @@ export const removeMorphoVaultTest = async (
   token: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       depositVaultWithMorpho
         .connect(opt?.from ?? owner)
-        .removeMorphoVault(token),
-    ).revertedWith(opt?.revertMessage);
+        .removeMorphoVault.bind(this, token),
+      depositVaultWithMorpho,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -146,7 +157,7 @@ export const depositInstantWithMorphoTest = async (
 ) => {
   tokenIn = getAccount(tokenIn);
 
-  if (opt?.revertMessage) {
+  if (shouldRevert(opt)) {
     await depositInstantTest(
       {
         depositVault: depositVaultWithMorpho,
@@ -211,12 +222,15 @@ export const setAutoInvestFallbackEnabledMorphoTest = async (
   enabled: boolean,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       depositVaultWithMorpho
         .connect(opt?.from ?? owner)
-        .setAutoInvestFallbackEnabled(enabled),
-    ).revertedWith(opt?.revertMessage);
+        .setAutoInvestFallbackEnabled.bind(this, enabled),
+      depositVaultWithMorpho,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -257,7 +271,7 @@ export const depositRequestWithMorphoTest = async (
 ) => {
   tokenIn = getAccount(tokenIn);
 
-  if (opt?.revertMessage) {
+  if (shouldRevert(opt)) {
     await depositRequestTest(
       {
         depositVault: depositVaultWithMorpho,

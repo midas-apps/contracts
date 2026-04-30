@@ -1,7 +1,12 @@
 import { setNextBlockTimestamp } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { BigNumber, BigNumberish, constants } from 'ethers';
+import {
+  BigNumber,
+  BigNumberish,
+  constants,
+  ContractTransaction,
+} from 'ethers';
 import { formatUnits, parseUnits } from 'ethers/lib/utils';
 
 import {
@@ -10,6 +15,7 @@ import {
   balanceOfBase18,
   getAccount,
   getCurrentBlockTimestamp,
+  handleRevert,
 } from './common.helpers';
 import { defaultDeploy } from './fixtures';
 
@@ -75,7 +81,7 @@ export const depositInstantTest = async (
     checkTokensReceiver?: boolean;
     expectedMintAmount?: BigNumberish;
     holdback?: {
-      callFunction: () => Promise<unknown>;
+      callFunction: () => Promise<ContractTransaction>;
       instantShare: BigNumberish;
     };
   },
@@ -122,8 +128,7 @@ export const depositInstantTest = async (
             constants.HashZero,
           ));
 
-  if (opt?.revertMessage) {
-    await expect(callFn()).revertedWith(opt?.revertMessage);
+  if (await handleRevert(callFn, depositVault, opt)) {
     return;
   }
 
@@ -307,8 +312,7 @@ export const depositRequestTest = async (
           constants.HashZero,
         );
 
-  if (opt?.revertMessage) {
-    await expect(callFn()).revertedWith(opt?.revertMessage);
+  if (await handleRevert(callFn, depositVault, opt)) {
     return {};
   }
 
@@ -489,8 +493,7 @@ export const approveRequestTest = async (
         .connect(sender)
         .approveRequest.bind(this, requestId, newRate);
 
-  if (opt?.revertMessage) {
-    await expect(callFn()).revertedWith(opt?.revertMessage);
+  if (await handleRevert(callFn, depositVault, opt)) {
     return;
   }
 
@@ -558,7 +561,6 @@ export const approveRequestTest = async (
     requestData.depositedUsdAmount,
   );
   expect(requestDataAfter.status).eq(1);
-  expect(requestDataAfter.version).eq(1);
   expect(requestDataAfter.depositedInstantUsdAmount).eq(
     requestData.depositedInstantUsdAmount,
   );
@@ -648,8 +650,7 @@ export const safeBulkApproveRequestTest = async (
         .connect(sender)
         ['safeBulkApproveRequest(uint256[])'].bind(this, requestIds);
 
-  if (opt?.revertMessage) {
-    await expect(callFn()).revertedWith(opt?.revertMessage);
+  if (await handleRevert(callFn, depositVault, opt)) {
     return;
   }
 
@@ -768,7 +769,6 @@ export const safeBulkApproveRequestTest = async (
     const totalDepositedAfter = dataAfter.totalDeposited;
     const totalDepositedBefore = dataBefore.totalDeposited;
 
-    expect(requestDataAfter.version).eq(requestDataBefore.version).eq(1);
     expect(requestDataAfter.depositedInstantUsdAmount).eq(
       requestDataBefore.depositedInstantUsdAmount,
     );
@@ -824,10 +824,13 @@ export const rejectRequestTest = async (
 ) => {
   const sender = opt?.from ?? owner;
 
-  if (opt?.revertMessage) {
-    await expect(
-      depositVault.connect(sender).rejectRequest(requestId),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      depositVault.connect(sender).rejectRequest.bind(this, requestId),
+      depositVault,
+      opt,
+    )
+  ) {
     return;
   }
   const balanceMtBillBeforeUser = await balanceOfBase18(mTBILL, sender.address);
@@ -873,10 +876,15 @@ export const setMaxSupplyCapTest = async (
 ) => {
   const value = parseUnits(valueN.toString());
 
-  if (opt?.revertMessage) {
-    await expect(
-      depositVault.connect(opt?.from ?? owner).setMaxSupplyCap(value),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      depositVault
+        .connect(opt?.from ?? owner)
+        .setMaxSupplyCap.bind(this, value),
+      depositVault,
+      opt,
+    )
+  ) {
     return;
   }
 

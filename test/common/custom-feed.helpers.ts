@@ -2,7 +2,7 @@ import { setNextBlockTimestamp } from '@nomicfoundation/hardhat-network-helpers/
 import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 
-import { OptionalCommonParams } from './common.helpers';
+import { handleRevert, OptionalCommonParams } from './common.helpers';
 import { defaultDeploy } from './fixtures';
 
 type CommonParamsSetRoundData = Pick<
@@ -19,10 +19,13 @@ export const setRoundData = async (
 
   const dataParsed = parseUnits(data.toFixed(8).replace(/\.?0+$/, ''), 8);
 
-  if (opt?.revertMessage) {
-    await expect(
-      customFeed.connect(sender).setRoundData(dataParsed),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      customFeed.connect(sender).setRoundData.bind(this, dataParsed),
+      customFeed,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -74,10 +77,13 @@ export const setRoundDataSafe = async (
 
   const dataParsed = parseUnits(data.toFixed(8).replace(/\.?0+$/, ''), 8);
 
-  if (opt?.revertMessage) {
-    await expect(
-      customFeed.connect(sender).setRoundDataSafe(dataParsed),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      customFeed.connect(sender).setRoundDataSafe.bind(this, dataParsed),
+      customFeed,
+      opt,
+    )
+  ) {
     return;
   }
 

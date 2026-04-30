@@ -14,6 +14,15 @@ abstract contract WithMidasAccessControl is
     MidasInitializable,
     MidasAccessControlRoles
 {
+    error InvalidAddress(address addr);
+    error HasRole(bytes32 role, address account);
+    error HasntRole(bytes32 role, address account);
+    error NoFunctionPermission(
+        bytes32 functionAccessAdminRole,
+        bytes4 functionSelector,
+        address account
+    );
+
     /**
      * @notice admin role
      */
@@ -53,7 +62,7 @@ abstract contract WithMidasAccessControl is
         internal
         onlyInitializing
     {
-        require(_accessControl != address(0), "zero address");
+        require(_accessControl != address(0), InvalidAddress(_accessControl));
         accessControl = MidasAccessControl(_accessControl);
     }
 
@@ -61,14 +70,14 @@ abstract contract WithMidasAccessControl is
      * @dev checks that given `address` have `role`
      */
     function _onlyRole(bytes32 role, address account) internal view {
-        require(accessControl.hasRole(role, account), "WMAC: hasnt role");
+        require(accessControl.hasRole(role, account), HasntRole(role, account));
     }
 
     /**
      * @dev checks that given `address` do not have `role`
      */
     function _onlyNotRole(bytes32 role, address account) internal view {
-        require(!accessControl.hasRole(role, account), "WMAC: has role");
+        require(!accessControl.hasRole(role, account), HasRole(role, account));
     }
 
     /**
@@ -89,7 +98,11 @@ abstract contract WithMidasAccessControl is
                 functionSelector,
                 account
             ),
-            "WMAC: no function permission"
+            NoFunctionPermission(
+                functionAccessAdminRole,
+                functionSelector,
+                account
+            )
         );
     }
 }

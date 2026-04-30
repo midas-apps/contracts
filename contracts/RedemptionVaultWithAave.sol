@@ -18,6 +18,13 @@ import "./libraries/DecimalsCorrectionLibrary.sol";
 contract RedemptionVaultWithAave is RedemptionVault {
     using DecimalsCorrectionLibrary for uint256;
 
+    error TokenNotInPool(address aavePool, address token);
+    error PoolNotSet(address token);
+    error InsufficientWithdrawnAmount(
+        uint256 withdrawnAmount,
+        uint256 toWithdraw
+    );
+
     /**
      * @notice mapping payment token to Aave V3 Pool
      */
@@ -60,7 +67,7 @@ contract RedemptionVaultWithAave is RedemptionVault {
         _validateAddress(_aavePool, false);
         require(
             IAaveV3Pool(_aavePool).getReserveAToken(_token) != address(0),
-            "RVA: token not in pool"
+            TokenNotInPool(_aavePool, _token)
         );
         aavePools[_token] = IAaveV3Pool(_aavePool);
         emit SetAavePool(msg.sender, _token, _aavePool);
@@ -71,7 +78,7 @@ contract RedemptionVaultWithAave is RedemptionVault {
      * @param _token payment token address
      */
     function removeAavePool(address _token) external validateVaultAdminAccess {
-        require(address(aavePools[_token]) != address(0), "RVA: pool not set");
+        require(address(aavePools[_token]) != address(0), PoolNotSet(_token));
         delete aavePools[_token];
         emit RemoveAavePool(msg.sender, _token);
     }
@@ -135,7 +142,7 @@ contract RedemptionVaultWithAave is RedemptionVault {
         );
         require(
             withdrawnAmount >= toWithdraw,
-            "RVA: insufficient withdrawal amount"
+            InsufficientWithdrawnAmount(withdrawnAmount, toWithdraw)
         );
 
         return withdrawnAmount.convertToBase18(tokenOutDecimals);

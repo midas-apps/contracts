@@ -4,7 +4,11 @@ import { expect } from 'chai';
 import { BigNumberish, constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
-import { getAccount, OptionalCommonParams } from './common.helpers';
+import {
+  getAccount,
+  handleRevert,
+  OptionalCommonParams,
+} from './common.helpers';
 import { defaultDeploy } from './fixtures';
 
 import {
@@ -54,10 +58,13 @@ export const setInstantFeeTest = async (
   newFee: BigNumberish,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? owner).setInstantFee(newFee),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      vault.connect(opt?.from ?? owner).setInstantFee.bind(this, newFee),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -78,12 +85,15 @@ export const setMinMaxInstantFeeTest = async (
   newMaxInstantFee: BigNumberish,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       vault
         .connect(opt?.from ?? owner)
-        .setMinMaxInstantFee(newMinInstantFee, newMaxInstantFee),
-    ).revertedWith(opt.revertMessage);
+        .setMinMaxInstantFee.bind(this, newMinInstantFee, newMaxInstantFee),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -108,10 +118,15 @@ export const setVariabilityToleranceTest = async (
   newTolerance: BigNumberish,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? owner).setVariationTolerance(newTolerance),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      vault
+        .connect(opt?.from ?? owner)
+        .setVariationTolerance.bind(this, newTolerance),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -133,10 +148,13 @@ export const addWaivedFeeAccountTest = async (
   account: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? owner).addWaivedFeeAccount(account),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      vault.connect(opt?.from ?? owner).addWaivedFeeAccount.bind(this, account),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -157,12 +175,15 @@ export const changeTokenAllowanceTest = async (
   newAllowance: BigNumberish,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       vault
         .connect(opt?.from ?? owner)
-        .changeTokenAllowance(token, newAllowance),
-    ).revertedWith(opt?.revertMessage);
+        .changeTokenAllowance.bind(this, token, newAllowance),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -186,10 +207,15 @@ export const changeTokenFeeTest = async (
   newFee: BigNumberish,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? owner).changeTokenFee(token, newFee),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      vault
+        .connect(opt?.from ?? owner)
+        .changeTokenFee.bind(this, token, newFee),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -209,10 +235,15 @@ export const removeWaivedFeeAccountTest = async (
   account: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? owner).removeWaivedFeeAccount(account),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      vault
+        .connect(opt?.from ?? owner)
+        .removeWaivedFeeAccount.bind(this, account),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -239,12 +270,15 @@ export const setInstantLimitConfigTest = async (
       ? { window: newLimit.window, limit: newLimit.limit }
       : { window: days(1), limit: newLimit };
 
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       vault
         .connect(opt?.from ?? owner)
-        .setInstantLimitConfig(window, newLimitValue),
-    ).revertedWith(opt?.revertMessage);
+        .setInstantLimitConfig.bind(this, window, newLimitValue),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -293,10 +327,15 @@ export const removeInstantLimitConfigTest = async (
   window: BigNumberish,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? owner).removeInstantLimitConfig(window),
-    ).revertedWith(opt.revertMessage);
+  if (
+    await handleRevert(
+      vault
+        .connect(opt?.from ?? owner)
+        .removeInstantLimitConfig.bind(this, window),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -328,10 +367,13 @@ export const setFeeReceiverTest = async (
   newReceiver: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? owner).setFeeReceiver(newReceiver),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      vault.connect(opt?.from ?? owner).setFeeReceiver.bind(this, newReceiver),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -351,10 +393,15 @@ export const setMaxInstantShareTest = async (
   maxInstantShare: number,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? owner).setMaxInstantShare(maxInstantShare),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      vault
+        .connect(opt?.from ?? owner)
+        .setMaxInstantShare.bind(this, maxInstantShare),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -374,10 +421,15 @@ export const setTokensReceiverTest = async (
   newReceiver: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? owner).setTokensReceiver(newReceiver),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      vault
+        .connect(opt?.from ?? owner)
+        .setTokensReceiver.bind(this, newReceiver),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -397,10 +449,13 @@ export const addAccountWaivedFeeRestrictionTest = async (
   account: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? owner).addWaivedFeeAccount(account),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      vault.connect(opt?.from ?? owner).addWaivedFeeAccount.bind(this, account),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -419,12 +474,15 @@ export const setMinAmountToDepositTest = async (
 ) => {
   const value = parseUnits(valueN.toString());
 
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       depositVault
         .connect(opt?.from ?? owner)
-        .setMinMTokenAmountForFirstDeposit(value),
-    ).revertedWith(opt?.revertMessage);
+        .setMinMTokenAmountForFirstDeposit.bind(this, value),
+      depositVault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -450,10 +508,13 @@ export const setMinAmountTest = async (
 ) => {
   const value = parseUnits(valueN.toString());
 
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? owner).setMinAmount(value),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      vault.connect(opt?.from ?? owner).setMinAmount.bind(this, value),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -477,12 +538,15 @@ export const addPaymentTokenTest = async (
 ) => {
   token = (token as ERC20).address ?? (token as string);
 
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       vault
         .connect(opt?.from ?? owner)
-        .addPaymentToken(token, dataFeed, fee, allowance, isStable),
-    ).revertedWith(opt?.revertMessage);
+        .addPaymentToken.bind(this, token, dataFeed, fee, allowance, isStable),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -512,10 +576,13 @@ export const removePaymentTokenTest = async (
 ) => {
   token = (token as ERC20).address ?? (token as string);
 
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? owner).removePaymentToken(token),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      vault.connect(opt?.from ?? owner).removePaymentToken.bind(this, token),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -540,10 +607,13 @@ export const withdrawTest = async (
 
   const tokenContract = ERC20__factory.connect(token, owner);
 
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? owner).withdrawToken(token, amount),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      vault.connect(opt?.from ?? owner).withdrawToken.bind(this, token, amount),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 

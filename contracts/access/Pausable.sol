@@ -11,6 +11,9 @@ import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
  * @author RedDuck Software
  */
 abstract contract Pausable is WithMidasAccessControl, PausableUpgradeable {
+    error SameFnPausedValue(bytes4 fn, bool paused);
+    error FnPaused(bytes4 fn);
+
     /**
      * @notice function id => paused status
      */
@@ -64,7 +67,7 @@ abstract contract Pausable is WithMidasAccessControl, PausableUpgradeable {
      * @param fn function id
      */
     function pauseFn(bytes4 fn) external onlyPauseAdmin {
-        require(!fnPaused[fn], "Pausable: fn paused");
+        require(!fnPaused[fn], SameFnPausedValue(fn, true));
         fnPaused[fn] = true;
         emit PauseFn(msg.sender, fn);
     }
@@ -74,7 +77,7 @@ abstract contract Pausable is WithMidasAccessControl, PausableUpgradeable {
      * @param fn function id
      */
     function unpauseFn(bytes4 fn) external onlyPauseAdmin {
-        require(fnPaused[fn], "Pausable: fn unpaused");
+        require(fnPaused[fn], SameFnPausedValue(fn, false));
         fnPaused[fn] = false;
         emit UnpauseFn(msg.sender, fn);
     }
@@ -97,6 +100,6 @@ abstract contract Pausable is WithMidasAccessControl, PausableUpgradeable {
         if (validateGlobalPause) {
             _requireNotPaused();
         }
-        require(!fnPaused[fn], "Pausable: fn paused");
+        require(!fnPaused[fn], FnPaused(fn));
     }
 }

@@ -514,7 +514,7 @@ export const depositVaultSuits = (
                 maxInstantShare: 100_00,
               },
             ),
-          ).revertedWith('invalid address');
+          ).to.be.revertedWithCustomError(vault, 'InvalidAddress');
         });
         it('should fail: when _feeReceiver == address(this)', async () => {
           const {
@@ -555,7 +555,7 @@ export const depositVaultSuits = (
                 maxInstantShare: 100_00,
               },
             ),
-          ).revertedWith('invalid address');
+          ).to.be.revertedWithCustomError(vault, 'InvalidAddress');
         });
 
         it('should fail: when mToken dataFeed address zero', async () => {
@@ -597,7 +597,7 @@ export const depositVaultSuits = (
                 maxInstantShare: 100_00,
               },
             ),
-          ).revertedWith('zero address');
+          ).to.be.revertedWithCustomError(vault, 'InvalidAddress');
         });
         it('should fail: when variationTolarance zero', async () => {
           const {
@@ -639,7 +639,7 @@ export const depositVaultSuits = (
                 maxInstantShare: 100_00,
               },
             ),
-          ).revertedWith('fee == 0');
+          ).to.be.revertedWithCustomError(vault, 'InvalidFee');
         });
       });
 
@@ -650,7 +650,7 @@ export const depositVaultSuits = (
 
           await setMinAmountToDepositTest({ depositVault, owner }, 1.1, {
             from: regularAccounts[0],
-            revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+            revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
           });
         });
 
@@ -668,7 +668,9 @@ export const depositVaultSuits = (
           );
 
           await setMinAmountToDepositTest({ depositVault, owner }, 1.1, {
-            revertMessage: 'Pausable: fn paused',
+            revertCustomError: {
+              customErrorName: 'FnPaused',
+            },
           });
         });
 
@@ -725,7 +727,7 @@ export const depositVaultSuits = (
 
           await setMaxSupplyCapTest({ depositVault, owner }, 1.1, {
             from: regularAccounts[0],
-            revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+            revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
           });
         });
 
@@ -743,7 +745,9 @@ export const depositVaultSuits = (
           );
 
           await setMaxSupplyCapTest({ depositVault, owner }, 1.1, {
-            revertMessage: 'Pausable: fn paused',
+            revertCustomError: {
+              customErrorName: 'FnPaused',
+            },
           });
         });
 
@@ -800,7 +804,7 @@ export const depositVaultSuits = (
 
           await setMinAmountTest({ vault: depositVault, owner }, 1.1, {
             from: regularAccounts[0],
-            revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+            revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
           });
         });
 
@@ -818,7 +822,9 @@ export const depositVaultSuits = (
           );
 
           await setMinAmountTest({ vault: depositVault, owner }, 1.1, {
-            revertMessage: 'Pausable: fn paused',
+            revertCustomError: {
+              customErrorName: 'FnPaused',
+            },
           });
         });
 
@@ -896,7 +902,7 @@ export const depositVaultSuits = (
             parseUnits('1000'),
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -929,7 +935,11 @@ export const depositVaultSuits = (
           await setInstantLimitConfigTest(
             { vault: depositVault, owner },
             parseUnits('1000'),
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -1020,7 +1030,7 @@ export const depositVaultSuits = (
             days(1),
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -1031,7 +1041,11 @@ export const depositVaultSuits = (
           await removeInstantLimitConfigTest(
             { vault: depositVault, owner },
             days(7),
-            { revertMessage: 'MV: window not found' },
+            {
+              revertCustomError: {
+                customErrorName: 'InstantLimitWindowNotExists',
+              },
+            },
           );
         });
 
@@ -1051,7 +1065,11 @@ export const depositVaultSuits = (
           await removeInstantLimitConfigTest(
             { vault: depositVault, owner },
             days(1),
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -1166,7 +1184,11 @@ export const depositVaultSuits = (
           await removeInstantLimitConfigTest(
             { vault: depositVault, owner },
             days(1),
-            { revertMessage: 'MV: window not found' },
+            {
+              revertCustomError: {
+                customErrorName: 'InstantLimitWindowNotExists',
+              },
+            },
           );
         });
       });
@@ -1178,7 +1200,7 @@ export const depositVaultSuits = (
 
           await greenListEnable({ greenlistable: depositVault, owner }, true, {
             from: regularAccounts[0],
-            revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+            revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
           });
         });
 
@@ -1197,7 +1219,9 @@ export const depositVaultSuits = (
           );
 
           await greenListEnable({ greenlistable: depositVault, owner }, true, {
-            revertMessage: 'Pausable: fn paused',
+            revertCustomError: {
+              customErrorName: 'FnPaused',
+            },
           });
         });
 
@@ -1259,7 +1283,7 @@ export const depositVaultSuits = (
             false,
             constants.MaxUint256,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -1283,7 +1307,9 @@ export const depositVaultSuits = (
             false,
             constants.MaxUint256,
             {
-              revertMessage: 'MV: already added',
+              revertCustomError: {
+                customErrorName: 'PaymentTokenAlreadyAdded',
+              },
             },
           );
         });
@@ -1298,7 +1324,9 @@ export const depositVaultSuits = (
             false,
             constants.MaxUint256,
             {
-              revertMessage: 'zero address',
+              revertCustomError: {
+                customErrorName: 'InvalidAddress',
+              },
             },
           );
         });
@@ -1386,7 +1414,11 @@ export const depositVaultSuits = (
             0,
             true,
             constants.MaxUint256,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -1469,7 +1501,7 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             ethers.constants.AddressZero,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -1483,7 +1515,11 @@ export const depositVaultSuits = (
           await addWaivedFeeAccountTest(
             { vault: depositVault, owner },
             owner.address,
-            { revertMessage: 'MV: already added' },
+            {
+              revertCustomError: {
+                customErrorName: 'SameFeeWaivedValue',
+              },
+            },
           );
         });
 
@@ -1506,7 +1542,11 @@ export const depositVaultSuits = (
           await addWaivedFeeAccountTest(
             { vault: depositVault, owner },
             owner.address,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -1568,7 +1608,7 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             ethers.constants.AddressZero,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -1578,7 +1618,11 @@ export const depositVaultSuits = (
           await removeWaivedFeeAccountTest(
             { vault: depositVault, owner },
             owner.address,
-            { revertMessage: 'MV: not found' },
+            {
+              revertCustomError: {
+                customErrorName: 'SameFeeWaivedValue',
+              },
+            },
           );
         });
 
@@ -1610,7 +1654,11 @@ export const depositVaultSuits = (
           await removeWaivedFeeAccountTest(
             { vault: depositVault, owner },
             owner.address,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -1682,7 +1730,7 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             ethers.constants.Zero,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -1691,7 +1739,9 @@ export const depositVaultSuits = (
         it('should fail: if new value greater then 100%', async () => {
           const { depositVault, owner } = await loadDvFixture();
           await setInstantFeeTest({ vault: depositVault, owner }, 10001, {
-            revertMessage: 'fee > 100%',
+            revertCustomError: {
+              customErrorName: 'InvalidFee',
+            },
           });
         });
 
@@ -1709,7 +1759,9 @@ export const depositVaultSuits = (
           );
 
           await setInstantFeeTest({ vault: depositVault, owner }, 100, {
-            revertMessage: 'Pausable: fn paused',
+            revertCustomError: {
+              customErrorName: 'FnPaused',
+            },
           });
         });
 
@@ -1768,7 +1820,7 @@ export const depositVaultSuits = (
             0,
             1000,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -1780,7 +1832,11 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             500,
             100,
-            { revertMessage: 'MV: invalid min/max fee' },
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidMinMaxInstantFee',
+              },
+            },
           );
         });
 
@@ -1790,7 +1846,11 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             10001,
             10001,
-            { revertMessage: 'fee > 100%' },
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidFee',
+              },
+            },
           );
         });
 
@@ -1815,7 +1875,11 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             0,
             1000,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -1879,17 +1943,16 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             ethers.constants.Zero,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
         });
-        it('should fail: if new value zero', async () => {
+        it('if new value zero', async () => {
           const { depositVault, owner } = await loadDvFixture();
           await setVariabilityToleranceTest(
             { vault: depositVault, owner },
             ethers.constants.Zero,
-            { revertMessage: 'fee == 0' },
           );
         });
 
@@ -1912,7 +1975,11 @@ export const depositVaultSuits = (
           await setVariabilityToleranceTest(
             { vault: depositVault, owner },
             100,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -1974,7 +2041,7 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             ethers.constants.AddressZero,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -1985,7 +2052,11 @@ export const depositVaultSuits = (
           await removePaymentTokenTest(
             { vault: depositVault, owner },
             stableCoins.dai.address,
-            { revertMessage: 'MV: not exists' },
+            {
+              revertCustomError: {
+                customErrorName: 'PaymentTokenNotExists',
+              },
+            },
           );
         });
 
@@ -2047,7 +2118,11 @@ export const depositVaultSuits = (
           await removePaymentTokenTest(
             { vault: depositVault, owner },
             stableCoins.usdt.address,
-            { revertMessage: 'MV: not exists' },
+            {
+              revertCustomError: {
+                customErrorName: 'PaymentTokenNotExists',
+              },
+            },
           );
         });
 
@@ -2071,7 +2146,11 @@ export const depositVaultSuits = (
           await removePaymentTokenTest(
             { vault: depositVault, owner },
             stableCoins.dai.address,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -2163,7 +2242,7 @@ export const depositVaultSuits = (
             ethers.constants.AddressZero,
             0,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -2201,7 +2280,11 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             stableCoins.dai,
             1,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -2279,7 +2362,7 @@ export const depositVaultSuits = (
             depositVault
               .connect(regularAccounts[0])
               .freeFromMinAmount(regularAccounts[1].address, true),
-          ).to.be.revertedWith(acErrors.WMAC_HASNT_PERMISSION);
+          ).to.be.revertedWithCustomError(depositVault, 'NoFunctionPermission');
         });
         it('should not fail', async () => {
           const { depositVault, regularAccounts } = await loadDvFixture();
@@ -2303,7 +2386,10 @@ export const depositVaultSuits = (
 
           await expect(
             depositVault.freeFromMinAmount(regularAccounts[0].address, true),
-          ).to.revertedWith('DV: already free');
+          ).to.be.revertedWithCustomError(
+            depositVault,
+            'SameFreeFromMinAmountValue',
+          );
         });
 
         it('should fail: when function is paused', async () => {
@@ -2316,7 +2402,7 @@ export const depositVaultSuits = (
 
           await expect(
             depositVault.freeFromMinAmount(regularAccounts[0].address, true),
-          ).to.be.revertedWith('Pausable: fn paused');
+          ).to.be.revertedWithCustomError(depositVault, 'FnPaused');
         });
 
         it('succeeds with only scoped function permission', async () => {
@@ -2386,7 +2472,7 @@ export const depositVaultSuits = (
             ethers.constants.AddressZero,
             0,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -2397,10 +2483,14 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             stableCoins.dai.address,
             0,
-            { revertMessage: 'MV: token not exists' },
+            {
+              revertCustomError: {
+                customErrorName: 'UnknownPaymentToken',
+              },
+            },
           );
         });
-        it('should fail: allowance zero', async () => {
+        it('allowance zero', async () => {
           const { depositVault, owner, stableCoins, dataFeed } =
             await loadDvFixture();
           await addPaymentTokenTest(
@@ -2414,7 +2504,6 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             stableCoins.dai.address,
             0,
-            { revertMessage: 'MV: zero allowance' },
           );
         });
         it('should fail: if mint exceed allowance', async () => {
@@ -2446,7 +2535,9 @@ export const depositVaultSuits = (
             stableCoins.dai,
             99_999,
             {
-              revertMessage: 'MV: exceed allowance',
+              revertCustomError: {
+                customErrorName: 'AllowanceExceeded',
+              },
             },
           );
 
@@ -2455,7 +2546,9 @@ export const depositVaultSuits = (
             stableCoins.dai,
             99_999,
             {
-              revertMessage: 'MV: exceed allowance',
+              revertCustomError: {
+                customErrorName: 'AllowanceExceeded',
+              },
             },
           );
         });
@@ -2578,7 +2671,11 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             stableCoins.dai.address,
             100000000,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -2672,7 +2769,7 @@ export const depositVaultSuits = (
             ethers.constants.AddressZero,
             0,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
               from: regularAccounts[0],
             },
           );
@@ -2683,7 +2780,11 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             stableCoins.dai.address,
             0,
-            { revertMessage: 'MV: token not exists' },
+            {
+              revertCustomError: {
+                customErrorName: 'UnknownPaymentToken',
+              },
+            },
           );
         });
         it('should fail: fee > 100%', async () => {
@@ -2700,7 +2801,11 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             stableCoins.dai.address,
             10001,
-            { revertMessage: 'fee > 100%' },
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidFee',
+              },
+            },
           );
         });
         it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
@@ -2740,7 +2845,11 @@ export const depositVaultSuits = (
             { vault: depositVault, owner },
             stableCoins.dai.address,
             100,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -2840,7 +2949,9 @@ export const depositVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: 'MV: token not exists',
+              revertCustomError: {
+                customErrorName: 'UnknownPaymentToken',
+              },
             },
           );
         });
@@ -2866,7 +2977,9 @@ export const depositVaultSuits = (
             stableCoins.dai,
             0,
             {
-              revertMessage: 'DV: invalid amount',
+              revertCustomError: {
+                customErrorName: 'InvalidAmount',
+              },
             },
           );
         });
@@ -2905,7 +3018,9 @@ export const depositVaultSuits = (
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'Pausable: fn paused',
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
             },
           );
         });
@@ -2933,7 +3048,9 @@ export const depositVaultSuits = (
             stableCoins.dai,
             100.0000000001,
             {
-              revertMessage: 'MV: invalid rounding',
+              revertCustomError: {
+                customErrorName: 'InvalidRounding',
+              },
             },
           );
         });
@@ -3060,7 +3177,9 @@ export const depositVaultSuits = (
             stableCoins.dai,
             99_999,
             {
-              revertMessage: 'DV: mint amount < min',
+              revertCustomError: {
+                customErrorName: 'MinAmountFirstDepositNotMet',
+              },
             },
           );
         });
@@ -3098,7 +3217,9 @@ export const depositVaultSuits = (
             stableCoins.dai,
             99,
             {
-              revertMessage: 'DV: mToken amount < min',
+              revertCustomError: {
+                customErrorName: 'AmountLessThanMin',
+              },
             },
           );
         });
@@ -3135,7 +3256,9 @@ export const depositVaultSuits = (
             stableCoins.dai,
             99_999,
             {
-              revertMessage: 'MV: exceed allowance',
+              revertCustomError: {
+                customErrorName: 'AllowanceExceeded',
+              },
             },
           );
         });
@@ -3169,7 +3292,9 @@ export const depositVaultSuits = (
             stableCoins.dai,
             99_999,
             {
-              revertMessage: 'MV: exceed limit',
+              revertCustomError: {
+                customErrorName: 'InstantLimitExceeded',
+              },
             },
           );
         });
@@ -3209,7 +3334,11 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             stableCoins.dai,
             100,
-            { revertMessage: 'MV: invalid instant fee' },
+            {
+              revertCustomError: {
+                customErrorName: 'InstantFeeOutOfBounds',
+              },
+            },
           );
         });
 
@@ -3248,7 +3377,11 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             stableCoins.dai,
             100,
-            { revertMessage: 'MV: invalid instant fee' },
+            {
+              revertCustomError: {
+                customErrorName: 'InstantFeeOutOfBounds',
+              },
+            },
           );
         });
 
@@ -3348,7 +3481,11 @@ export const depositVaultSuits = (
               { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
               stableCoins.dai,
               50,
-              { revertMessage: 'MV: exceed limit' },
+              {
+                revertCustomError: {
+                  customErrorName: 'InstantLimitExceeded',
+                },
+              },
             );
           });
 
@@ -3441,7 +3578,9 @@ export const depositVaultSuits = (
             stableCoins.dai,
             99_999,
             {
-              revertMessage: 'DV: minReceiveAmount > actual',
+              revertCustomError: {
+                customErrorName: 'SlippageExceeded',
+              },
             },
           );
         });
@@ -3470,7 +3609,9 @@ export const depositVaultSuits = (
             stableCoins.dai,
             100,
             {
-              revertMessage: 'DV: mToken amount < min',
+              revertCustomError: {
+                customErrorName: 'InvalidAmount',
+              },
             },
           );
 
@@ -3490,7 +3631,11 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             stableCoins.dai,
             100,
-            { revertMessage: 'DV: mToken amount < min' },
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidAmount',
+              },
+            },
           );
         });
 
@@ -3510,7 +3655,7 @@ export const depositVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertCustomError: acErrors.WMAC_HASNT_ROLE,
             },
           );
         });
@@ -3538,7 +3683,7 @@ export const depositVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HAS_ROLE,
+              revertCustomError: acErrors.WMAC_HAS_ROLE,
             },
           );
         });
@@ -3565,7 +3710,9 @@ export const depositVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertMessage: 'WSL: sanctioned',
+              revertCustomError: {
+                customErrorName: 'Sanctioned',
+              },
             },
           );
         });
@@ -3600,7 +3747,7 @@ export const depositVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertCustomError: acErrors.WMAC_HASNT_ROLE,
             },
           );
         });
@@ -3635,7 +3782,7 @@ export const depositVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HAS_ROLE,
+              revertCustomError: acErrors.WMAC_HAS_ROLE,
             },
           );
         });
@@ -3669,7 +3816,9 @@ export const depositVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertMessage: 'WSL: sanctioned',
+              revertCustomError: {
+                customErrorName: 'Sanctioned',
+              },
             },
           );
         });
@@ -3715,7 +3864,9 @@ export const depositVaultSuits = (
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'Pausable: fn paused',
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
             },
           );
         });
@@ -3781,7 +3932,9 @@ export const depositVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertMessage: 'DV: max supply cap exceeded',
+              revertCustomError: {
+                customErrorName: 'SupplyCapExceeded',
+              },
             },
           );
         });
@@ -3847,7 +4000,9 @@ export const depositVaultSuits = (
             11,
             {
               from: regularAccounts[0],
-              revertMessage: 'DV: max supply cap exceeded',
+              revertCustomError: {
+                customErrorName: 'SupplyCapExceeded',
+              },
             },
           );
         });
@@ -4750,7 +4905,9 @@ export const depositVaultSuits = (
               100,
               {
                 from: regularAccounts[0],
-                revertMessage: 'DV: invalid amount',
+                revertCustomError: {
+                  customErrorName: 'InvalidAmount',
+                },
               },
             );
           });
@@ -4798,7 +4955,9 @@ export const depositVaultSuits = (
               100,
               {
                 from: regularAccounts[0],
-                revertMessage: 'DV: !instantShare',
+                revertCustomError: {
+                  customErrorName: 'InstantShareTooHigh',
+                },
               },
             );
           });
@@ -4817,7 +4976,9 @@ export const depositVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: 'MV: token not exists',
+              revertCustomError: {
+                customErrorName: 'UnknownPaymentToken',
+              },
             },
           );
         });
@@ -4843,7 +5004,9 @@ export const depositVaultSuits = (
             stableCoins.dai,
             0,
             {
-              revertMessage: 'DV: invalid amount',
+              revertCustomError: {
+                customErrorName: 'InvalidAmount',
+              },
             },
           );
         });
@@ -4883,7 +5046,11 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             stableCoins.dai,
             100,
-            { revertMessage: 'MV: invalid instant fee' },
+            {
+              revertCustomError: {
+                customErrorName: 'InstantFeeOutOfBounds',
+              },
+            },
           );
         });
 
@@ -4922,7 +5089,11 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             stableCoins.dai,
             100,
-            { revertMessage: 'MV: invalid instant fee' },
+            {
+              revertCustomError: {
+                customErrorName: 'InstantFeeOutOfBounds',
+              },
+            },
           );
         });
 
@@ -5006,7 +5177,9 @@ export const depositVaultSuits = (
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'Pausable: fn paused',
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
             },
           );
         });
@@ -5052,7 +5225,9 @@ export const depositVaultSuits = (
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'Pausable: fn paused',
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
             },
           );
         });
@@ -5080,7 +5255,9 @@ export const depositVaultSuits = (
             stableCoins.dai,
             100.0000000001,
             {
-              revertMessage: 'MV: invalid rounding',
+              revertCustomError: {
+                customErrorName: 'InvalidRounding',
+              },
             },
           );
         });
@@ -5203,7 +5380,9 @@ export const depositVaultSuits = (
             stableCoins.dai,
             99_999,
             {
-              revertMessage: 'DV: mint amount < min',
+              revertCustomError: {
+                customErrorName: 'MinAmountFirstDepositNotMet',
+              },
             },
           );
         });
@@ -5240,7 +5419,9 @@ export const depositVaultSuits = (
             stableCoins.dai,
             99_999,
             {
-              revertMessage: 'MV: exceed allowance',
+              revertCustomError: {
+                customErrorName: 'AllowanceExceeded',
+              },
             },
           );
         });
@@ -5269,7 +5450,9 @@ export const depositVaultSuits = (
             stableCoins.dai,
             100,
             {
-              revertMessage: 'DV: mToken amount < min',
+              revertCustomError: {
+                customErrorName: 'InvalidAmount',
+              },
             },
           );
         });
@@ -5290,7 +5473,7 @@ export const depositVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertCustomError: acErrors.WMAC_HASNT_ROLE,
             },
           );
         });
@@ -5318,7 +5501,7 @@ export const depositVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HAS_ROLE,
+              revertCustomError: acErrors.WMAC_HAS_ROLE,
             },
           );
         });
@@ -5345,7 +5528,9 @@ export const depositVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertMessage: 'WSL: sanctioned',
+              revertCustomError: {
+                customErrorName: 'Sanctioned',
+              },
             },
           );
         });
@@ -5379,7 +5564,7 @@ export const depositVaultSuits = (
             stableCoins.dai,
             1,
             {
-              revertMessage: acErrors.WMAC_HASNT_ROLE,
+              revertCustomError: acErrors.WMAC_HASNT_ROLE,
             },
           );
         });
@@ -5414,7 +5599,7 @@ export const depositVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HAS_ROLE,
+              revertCustomError: acErrors.WMAC_HAS_ROLE,
             },
           );
         });
@@ -5448,7 +5633,9 @@ export const depositVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertMessage: 'WSL: sanctioned',
+              revertCustomError: {
+                customErrorName: 'Sanctioned',
+              },
             },
           );
         });
@@ -5937,7 +6124,7 @@ export const depositVaultSuits = (
             1,
             parseUnits('5'),
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -5963,7 +6150,9 @@ export const depositVaultSuits = (
             1,
             parseUnits('5'),
             {
-              revertMessage: 'DV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -6009,7 +6198,11 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             requestId,
             parseUnits('5'),
-            { revertMessage: 'DV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -6068,7 +6261,7 @@ export const depositVaultSuits = (
             1,
             parseUnits('5'),
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -6100,7 +6293,9 @@ export const depositVaultSuits = (
             1,
             parseUnits('5'),
             {
-              revertMessage: 'DV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -6152,7 +6347,11 @@ export const depositVaultSuits = (
             },
             requestId,
             parseUnits('5'),
-            { revertMessage: 'DV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -6175,7 +6374,11 @@ export const depositVaultSuits = (
             },
             0,
             parseUnits('5'),
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -6220,7 +6423,11 @@ export const depositVaultSuits = (
             },
             0,
             parseUnits('5'),
-            { revertMessage: 'DV: !depositedInstantUsdAmount' },
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidInstantAmount',
+              },
+            },
           );
         });
 
@@ -6271,7 +6478,11 @@ export const depositVaultSuits = (
             },
             0,
             parseUnits('5'),
-            { revertMessage: 'DV: !newOutRate' },
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidNewMTokenRate',
+              },
+            },
           );
         });
 
@@ -6497,7 +6708,7 @@ export const depositVaultSuits = (
             1,
             parseUnits('1'),
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -6529,7 +6740,9 @@ export const depositVaultSuits = (
             1,
             parseUnits('1'),
             {
-              revertMessage: 'DV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -6575,7 +6788,9 @@ export const depositVaultSuits = (
             requestId,
             parseUnits('6'),
             {
-              revertMessage: 'MV: exceed price diviation',
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
             },
           );
         });
@@ -6621,7 +6836,9 @@ export const depositVaultSuits = (
             requestId,
             parseUnits('4'),
             {
-              revertMessage: 'MV: exceed price diviation',
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
             },
           );
         });
@@ -6667,7 +6884,11 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed, isSafe: true },
             requestId,
             parseUnits('5.000001'),
-            { revertMessage: 'DV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -6739,7 +6960,9 @@ export const depositVaultSuits = (
             0,
             parseUnits('1'),
             {
-              revertMessage: 'DV: max supply cap exceeded',
+              revertCustomError: {
+                customErrorName: 'SupplyCapExceeded',
+              },
             },
           );
         });
@@ -6812,7 +7035,9 @@ export const depositVaultSuits = (
             0,
             parseUnits('1'),
             {
-              revertMessage: 'DV: max supply cap exceeded',
+              revertCustomError: {
+                customErrorName: 'SupplyCapExceeded',
+              },
             },
           );
         });
@@ -6944,7 +7169,7 @@ export const depositVaultSuits = (
             1,
             parseUnits('5'),
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -6977,7 +7202,9 @@ export const depositVaultSuits = (
             1,
             parseUnits('5'),
             {
-              revertMessage: 'DV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -7030,7 +7257,11 @@ export const depositVaultSuits = (
             },
             requestId,
             parseUnits('5'),
-            { revertMessage: 'DV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -7054,7 +7285,11 @@ export const depositVaultSuits = (
             },
             0,
             parseUnits('5'),
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -7100,7 +7335,11 @@ export const depositVaultSuits = (
             },
             0,
             parseUnits('1'),
-            { revertMessage: 'DV: !depositedInstantUsdAmount' },
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidInstantAmount',
+              },
+            },
           );
         });
 
@@ -7156,7 +7395,11 @@ export const depositVaultSuits = (
             },
             0,
             parseUnits('1.6'),
-            { revertMessage: 'DV: !newOutRate' },
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidNewMTokenRate',
+              },
+            },
           );
         });
 
@@ -7317,7 +7560,11 @@ export const depositVaultSuits = (
             },
             requestId,
             parseUnits('0.1'),
-            { revertMessage: 'MV: exceed price diviation' },
+            {
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
+            },
           );
         });
 
@@ -7391,7 +7638,7 @@ export const depositVaultSuits = (
             [{ id: 1 }],
             'request-rate',
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -7422,7 +7669,9 @@ export const depositVaultSuits = (
             [{ id: 1 }],
             'request-rate',
             {
-              revertMessage: 'DV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -7468,7 +7717,11 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: requestId }],
             'request-rate',
-            { revertMessage: 'DV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -7519,7 +7772,11 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: 1 }, { id: 0 }],
             'request-rate',
-            { revertMessage: 'DV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -7570,7 +7827,11 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: 1 }, { id: 1 }],
             'request-rate',
-            { revertMessage: 'DV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -7757,7 +8018,7 @@ export const depositVaultSuits = (
             [{ id: 1 }],
             parseUnits('1'),
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -7788,7 +8049,9 @@ export const depositVaultSuits = (
             [{ id: 1 }],
             parseUnits('1'),
             {
-              revertMessage: 'DV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -7833,7 +8096,9 @@ export const depositVaultSuits = (
             [{ id: requestId }],
             parseUnits('6'),
             {
-              revertMessage: 'MV: exceed price diviation',
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
             },
           );
         });
@@ -7878,7 +8143,9 @@ export const depositVaultSuits = (
             [{ id: requestId }],
             parseUnits('4'),
             {
-              revertMessage: 'MV: exceed price diviation',
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
             },
           );
         });
@@ -7924,7 +8191,11 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: requestId }],
             parseUnits('5.000001'),
-            { revertMessage: 'DV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -7975,7 +8246,11 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: 1 }, { id: 0 }],
             parseUnits('5.000001'),
-            { revertMessage: 'DV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -8026,7 +8301,11 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: 1 }, { id: 1 }],
             parseUnits('5.000001'),
-            { revertMessage: 'DV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -8214,7 +8493,7 @@ export const depositVaultSuits = (
             [{ id: 1 }],
             parseUnits('1'),
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -8246,7 +8525,9 @@ export const depositVaultSuits = (
             [{ id: 1 }],
             parseUnits('1'),
             {
-              revertMessage: 'DV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -8298,7 +8579,9 @@ export const depositVaultSuits = (
             [{ id: requestId }],
             parseUnits('6'),
             {
-              revertMessage: 'MV: exceed price diviation',
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
             },
           );
         });
@@ -8350,7 +8633,9 @@ export const depositVaultSuits = (
             [{ id: requestId }],
             parseUnits('4'),
             {
-              revertMessage: 'MV: exceed price diviation',
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
             },
           );
         });
@@ -8402,7 +8687,11 @@ export const depositVaultSuits = (
             },
             [{ id: requestId }],
             parseUnits('5.000001'),
-            { revertMessage: 'DV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -8471,7 +8760,11 @@ export const depositVaultSuits = (
             },
             [{ id: 1 }, { id: 0 }],
             parseUnits('5.000001'),
-            { revertMessage: 'DV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -8540,7 +8833,11 @@ export const depositVaultSuits = (
             },
             [{ id: 1 }, { id: 1 }],
             parseUnits('5.000001'),
-            { revertMessage: 'DV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -8787,7 +9084,7 @@ export const depositVaultSuits = (
             [{ id: 1 }],
             undefined,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -8818,7 +9115,9 @@ export const depositVaultSuits = (
             [{ id: 1 }],
             undefined,
             {
-              revertMessage: 'DV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -8865,7 +9164,9 @@ export const depositVaultSuits = (
             [{ id: requestId }],
             undefined,
             {
-              revertMessage: 'MV: exceed price diviation',
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
             },
           );
         });
@@ -8912,7 +9213,9 @@ export const depositVaultSuits = (
             [{ id: requestId }],
             undefined,
             {
-              revertMessage: 'MV: exceed price diviation',
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
             },
           );
         });
@@ -8958,7 +9261,11 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: requestId }],
             undefined,
-            { revertMessage: 'DV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -9009,7 +9316,11 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: 1 }, { id: 0 }],
             undefined,
-            { revertMessage: 'DV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -9060,7 +9371,11 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: 1 }, { id: 1 }],
             undefined,
-            { revertMessage: 'DV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -9349,7 +9664,7 @@ export const depositVaultSuits = (
             [{ id: 1 }],
             undefined,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -9381,7 +9696,9 @@ export const depositVaultSuits = (
             [{ id: 1 }],
             undefined,
             {
-              revertMessage: 'DV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -9435,7 +9752,9 @@ export const depositVaultSuits = (
             [{ id: requestId }],
             undefined,
             {
-              revertMessage: 'MV: exceed price diviation',
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
             },
           );
         });
@@ -9489,7 +9808,9 @@ export const depositVaultSuits = (
             [{ id: requestId }],
             undefined,
             {
-              revertMessage: 'MV: exceed price diviation',
+              revertCustomError: {
+                customErrorName: 'PriceVariationExceeded',
+              },
             },
           );
         });
@@ -9553,7 +9874,11 @@ export const depositVaultSuits = (
             },
             [{ id: requestId }],
             undefined,
-            { revertMessage: 'DV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -9628,7 +9953,11 @@ export const depositVaultSuits = (
             },
             [{ id: 1 }, { id: 0 }],
             undefined,
-            { revertMessage: 'DV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -9703,7 +10032,11 @@ export const depositVaultSuits = (
             },
             [{ id: 1 }, { id: 1 }],
             undefined,
-            { revertMessage: 'DV: request not pending' },
+            {
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
+            },
           );
         });
 
@@ -10064,7 +10397,7 @@ export const depositVaultSuits = (
             },
             1,
             {
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -10089,7 +10422,9 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             1,
             {
-              revertMessage: 'DV: request not exist',
+              revertCustomError: {
+                customErrorName: 'RequestNotExists',
+              },
             },
           );
         });
@@ -10135,7 +10470,9 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             requestId,
             {
-              revertMessage: 'DV: request not pending',
+              revertCustomError: {
+                customErrorName: 'RequestNotPending',
+              },
             },
           );
         });
@@ -10732,7 +11069,7 @@ export const depositVaultSuits = (
               parseUnits('999.999999999'),
               8,
             ),
-          ).revertedWith('MV: invalid rounding');
+          ).to.be.revertedWithCustomError(depositVault, 'InvalidRounding');
         });
 
         it('should fail: invalid rounding tokenTransferToUserTester()', async () => {
@@ -10747,67 +11084,80 @@ export const depositVaultSuits = (
               parseUnits('999.999999999'),
               8,
             ),
-          ).revertedWith('MV: invalid rounding');
+          ).to.be.revertedWithCustomError(depositVault, 'InvalidRounding');
         });
       });
 
       describe('_convertUsdToToken', () => {
-        it('should fail: when amountUsd == 0', async () => {
-          const { depositVault } = await loadDvFixture();
-
-          await expect(
-            depositVault.convertTokenToUsdTest(constants.AddressZero, 0),
-          ).revertedWith('DV: amount zero');
-        });
-
-        it('should fail: when tokenRate == 0', async () => {
-          const { depositVault } = await loadDvFixture();
-
-          await depositVault.setOverrideGetTokenRate(true);
-          await depositVault.setGetTokenRateValue(0);
-
-          await expect(
-            depositVault.convertTokenToUsdTest(constants.AddressZero, 1),
-          ).revertedWith('MV: rate zero');
-        });
-      });
-
-      describe('_convertUsdToMToken', () => {
-        it('should fail: when rate == 0', async () => {
-          const { depositVault } = await loadDvFixture();
-
-          await depositVault.setOverrideGetTokenRate(true);
-          await depositVault.setGetTokenRateValue(0);
-
-          await expect(depositVault.convertUsdToMTokenTest(1)).revertedWith(
-            'MV: rate zero',
-          );
-        });
-      });
-
-      describe('_calcAndValidateDeposit', () => {
-        it('should fail: when tokenOut is not MANUAL_FULLFILMENT_TOKEN but isFiat = true', async () => {
-          const { depositVault, stableCoins, owner, dataFeed } =
+        it('when amountUsd == 0', async () => {
+          const { depositVault, owner, stableCoins, dataFeed } =
             await loadDvFixture();
 
           await addPaymentTokenTest(
             { vault: depositVault, owner },
             stableCoins.dai,
             dataFeed.address,
-            parseUnits('100', 2),
+            0,
             true,
           );
 
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
+          expect(
+            (
+              await depositVault.convertTokenToUsdTest(
+                stableCoins.dai.address,
+                0,
+              )
+            ).amountInUsd,
+          ).eq(0);
+        });
+
+        it('should fail: when unknown payment token', async () => {
+          const { depositVault } = await loadDvFixture();
 
           await expect(
-            depositVault.calcAndValidateDeposit(
-              constants.AddressZero,
-              stableCoins.dai.address,
-              parseUnits('100'),
-              true,
-            ),
-          ).revertedWith('DV: invalid mint amount');
+            depositVault.convertTokenToUsdTest(constants.AddressZero, 0),
+          ).to.be.revertedWithoutReason();
+        });
+
+        it('should fail: when tokenRate == 0', async () => {
+          const { depositVault, owner, stableCoins, dataFeed } =
+            await loadDvFixture();
+
+          await depositVault.setOverrideGetTokenRate(true);
+          await depositVault.setGetTokenRateValue(0);
+
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await expect(
+            depositVault.convertTokenToUsdTest(stableCoins.dai.address, 1),
+          ).to.be.revertedWithCustomError(depositVault, 'InvalidTokenRate');
+        });
+      });
+
+      describe('_convertUsdToMToken', () => {
+        it('when amountUsd == 0', async () => {
+          const { depositVault } = await loadDvFixture();
+
+          expect(
+            (await depositVault.convertUsdToMTokenTest(0)).amountMToken,
+          ).eq(0);
+        });
+
+        it('should fail: when rate == 0', async () => {
+          const { depositVault } = await loadDvFixture();
+
+          await depositVault.setOverrideGetTokenRate(true);
+          await depositVault.setGetTokenRateValue(0);
+
+          await expect(
+            depositVault.convertUsdToMTokenTest(1),
+          ).to.be.revertedWithCustomError(depositVault, 'InvalidTokenRate');
         });
       });
 

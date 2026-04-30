@@ -19,6 +19,10 @@ contract DepositVaultWithAave is DepositVault {
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
 
+    error TokenNotInPool(address aavePool, address token);
+    error PoolNotSet(address token);
+    error AutoInvestFailed(bytes err);
+
     /**
      * @notice mapping payment token to Aave V3 Pool
      */
@@ -85,7 +89,7 @@ contract DepositVaultWithAave is DepositVault {
         _validateAddress(_aavePool, false);
         require(
             IAaveV3Pool(_aavePool).getReserveAToken(_token) != address(0),
-            "DVA: token not in pool"
+            TokenNotInPool(_aavePool, _token)
         );
         aavePools[_token] = IAaveV3Pool(_aavePool);
         emit SetAavePool(msg.sender, _token, _aavePool);
@@ -96,7 +100,7 @@ contract DepositVaultWithAave is DepositVault {
      * @param _token payment token address
      */
     function removeAavePool(address _token) external validateVaultAdminAccess {
-        require(address(aavePools[_token]) != address(0), "DVA: pool not set");
+        require(address(aavePools[_token]) != address(0), PoolNotSet(_token));
         delete aavePools[_token];
         emit RemoveAavePool(msg.sender, _token);
     }
@@ -193,12 +197,12 @@ contract DepositVaultWithAave is DepositVault {
 
         try
             pool.supply(tokenIn, transferredAmount, tokensReceiver, 0)
-        {} catch {
+        {} catch (bytes memory error) {
             if (autoInvestFallbackEnabled) {
                 IERC20(tokenIn).safeApprove(address(pool), 0);
                 IERC20(tokenIn).safeTransfer(tokensReceiver, transferredAmount);
             } else {
-                revert("DVA: auto-invest failed");
+                revert AutoInvestFailed(error);
             }
         }
     }

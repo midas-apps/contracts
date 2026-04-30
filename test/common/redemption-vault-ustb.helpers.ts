@@ -2,7 +2,11 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumber, BigNumberish } from 'ethers';
 
-import { AccountOrContract, OptionalCommonParams } from './common.helpers';
+import {
+  AccountOrContract,
+  OptionalCommonParams,
+  shouldRevert,
+} from './common.helpers';
 import { redeemInstantTest } from './redemption-vault.helpers';
 
 import {
@@ -43,7 +47,7 @@ export const redeemInstantWithUstbTest = async (
     customRecipient,
   } = params;
 
-  if (opt?.revertMessage) {
+  if (shouldRevert(opt)) {
     await redeemInstantTest(
       {
         redemptionVault,

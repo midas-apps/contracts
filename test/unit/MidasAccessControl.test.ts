@@ -6,6 +6,7 @@ import { ethers } from 'hardhat';
 import { encodeFnSelector } from '../../helpers/utils';
 import { WithMidasAccessControlTester__factory } from '../../typechain-types';
 import {
+  acErrors,
   setFunctionAccessAdminRoleEnabledTester,
   setFunctionAccessGrantOperatorTester,
   setFunctionPermissionTester,
@@ -482,7 +483,10 @@ describe('WithMidasAccessControl', function () {
         wAccessControlTester
           .connect(regularAccounts[1])
           .withOnlyRole(roles.common.blacklisted, regularAccounts[0].address),
-      ).revertedWith('WMAC: hasnt role');
+      ).revertedWithCustomError(
+        wAccessControlTester,
+        acErrors.WMAC_HASNT_ROLE().customErrorName,
+      );
     });
 
     it('call from DEFAULT_ADMIN_ROLE address', async () => {
@@ -508,7 +512,10 @@ describe('WithMidasAccessControl', function () {
           roles.common.blacklistedOperator,
           owner.address,
         ),
-      ).revertedWith('WMAC: has role');
+      ).revertedWithCustomError(
+        wAccessControlTester,
+        acErrors.WMAC_HAS_ROLE().customErrorName,
+      );
     });
 
     it('call from non DEFAULT_ADMIN_ROLE address', async () => {

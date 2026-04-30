@@ -6,7 +6,7 @@ import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgrade
 
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 
-import {IDepositVault, CommonVaultInitParams, CommonVaultV2InitParams, RequestV2, RequestStatus} from "./interfaces/IDepositVault.sol";
+import {IDepositVault, CommonVaultInitParams, CommonVaultV2InitParams, Request, RequestStatus} from "./interfaces/IDepositVault.sol";
 
 import {ManageableVault} from "./abstract/ManageableVault.sol";
 
@@ -18,6 +18,7 @@ import {ManageableVault} from "./abstract/ManageableVault.sol";
 contract DepositVault is ManageableVault, IDepositVault {
     using Counters for Counters.Counter;
     using SafeERC20 for IERC20;
+
     /**
      * @notice return data of _calcAndValidateDeposit
      * packed into a struct to avoid stack too deep errors
@@ -53,10 +54,8 @@ contract DepositVault is ManageableVault, IDepositVault {
 
     /**
      * @notice request data storage
-     * @dev mapping, requestId => request data
-     * @custom:oz-retyped-from Request
      */
-    mapping(uint256 => RequestV2) public mintRequests;
+    mapping(uint256 => Request) public mintRequests;
 
     /**
      * @dev how much mTokens were minted by the depositor
@@ -359,9 +358,9 @@ contract DepositVault is ManageableVault, IDepositVault {
         external
         validateVaultAdminAccess
     {
-        RequestV2 memory request = mintRequests[requestId];
+        Request memory request = mintRequests[requestId];
 
-        _validateRequest(request.sender, request.status);
+        _validateRequest(requestId, request.sender, request.status);
 
         mintRequests[requestId].status = RequestStatus.Canceled;
 
@@ -446,7 +445,10 @@ contract DepositVault is ManageableVault, IDepositVault {
         validateUserAccess(recipient)
         returns (CalcAndValidateDepositResult memory result)
     {
-        require(instantShareToValidate <= maxInstantShare, "DV: !instantShare");
+        require(
+            instantShareToValidate <= maxInstantShare,
+            InstantShareTooHigh(instantShareToValidate, maxInstantShare)
+        );
 
         result = _depositInstant(
             tokenIn,
@@ -488,7 +490,7 @@ contract DepositVault is ManageableVault, IDepositVault {
 
         require(
             result.mintAmount >= minReceiveAmount,
-            "DV: minReceiveAmount > actual"
+            SlippageExceeded(minReceiveAmount, result.mintAmount)
         );
 
         totalMinted[user] += result.mintAmount;
@@ -614,7 +616,7 @@ contract DepositVault is ManageableVault, IDepositVault {
             );
         }
 
-        mintRequests[requestId] = RequestV2({
+        mintRequests[requestId] = Request({
             sender: recipient,
             tokenIn: tokenIn,
             status: RequestStatus.Pending,
@@ -623,8 +625,7 @@ contract DepositVault is ManageableVault, IDepositVault {
                 calcResult.tokenInRate) / 10**18,
             tokenOutRate: calcResult.tokenOutRate,
             depositedInstantUsdAmount: depositedInstantUsdAmount,
-            approvedTokenOutRate: 0,
-            version: 1
+            approvedTokenOutRate: 0
         });
 
         emit DepositRequestV2(
@@ -662,25 +663,28 @@ contract DepositVault is ManageableVault, IDepositVault {
             bool /* success */
         )
     {
-        RequestV2 memory request = mintRequests[requestId];
+        Request memory request = mintRequests[requestId];
 
-        _validateRequest(request.sender, request.status);
+        _validateRequest(requestId, request.sender, request.status);
 
         if (isSafe) {
-            require(requestId <= maxApproveRequestId, "DV: !requestId");
+            require(
+                requestId <= maxApproveRequestId,
+                RequestIdTooHigh(requestId, maxApproveRequestId)
+            );
             _requireVariationTolerance(request.tokenOutRate, newOutRate);
         }
 
         if (isAvgRate) {
             require(
                 request.depositedInstantUsdAmount > 0,
-                "DV: !depositedInstantUsdAmount"
+                InvalidInstantAmount()
             );
 
             newOutRate = _calculateHoldbackPartRateFromAvg(request, newOutRate);
         }
 
-        require(newOutRate > 0, "DV: !newOutRate");
+        require(newOutRate > 0, InvalidNewMTokenRate());
 
         uint256 amountMToken = (request.usdAmountWithoutFees * (10**18)) /
             newOutRate;
@@ -744,15 +748,17 @@ contract DepositVault is ManageableVault, IDepositVault {
      * @notice validates request
      * if exist
      * if not processed
+     * @param requestId request id
      * @param validateAddress address to check if not zero
      * @param status request status
      */
-    function _validateRequest(address validateAddress, RequestStatus status)
-        internal
-        pure
-    {
-        require(validateAddress != address(0), "DV: request not exist");
-        require(status == RequestStatus.Pending, "DV: request not pending");
+    function _validateRequest(
+        uint256 requestId,
+        address validateAddress,
+        RequestStatus status
+    ) internal pure {
+        require(validateAddress != address(0), RequestNotExists(requestId));
+        require(status == RequestStatus.Pending, RequestNotPending(requestId));
     }
 
     /**
@@ -770,7 +776,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 amountToken,
         bool isInstant
     ) internal returns (CalcAndValidateDepositResult memory result) {
-        require(amountToken > 0, "DV: invalid amount");
+        require(amountToken > 0, InvalidAmount());
 
         _validateInstantFee();
 
@@ -792,6 +798,7 @@ contract DepositVault is ManageableVault, IDepositVault {
             _getFeeAmount(_getFee(userCopy, tokenIn, isInstant), amountToken),
             result.tokenDecimals
         );
+
         result.amountTokenWithoutFee = amountToken - result.feeTokenAmount;
 
         uint256 feeInUsd = (result.feeTokenAmount * result.tokenInRate) /
@@ -803,30 +810,18 @@ contract DepositVault is ManageableVault, IDepositVault {
         result.mintAmount = mTokenAmount;
         result.tokenOutRate = mTokenRate;
 
-        if (!isFreeFromMinAmount[userCopy]) {
-            _validateMinAmount(userCopy, result.mintAmount);
+        if (
+            !_validateMTokenAmount(userCopy, result.mintAmount) &&
+            totalMinted[userCopy] == 0
+        ) {
+            require(
+                result.mintAmount >= minMTokenAmountForFirstDeposit,
+                MinAmountFirstDepositNotMet(
+                    result.mintAmount,
+                    minMTokenAmountForFirstDeposit
+                )
+            );
         }
-        require(result.mintAmount > 0, "DV: invalid mint amount");
-    }
-
-    /**
-     * @dev validates that inputted USD amount >= minAmountToDepositInUsd()
-     * and amount >= minAmount()
-     * @param user user address
-     * @param amountMTokenWithoutFee amount of mToken without fee (decimals 18)
-     */
-    function _validateMinAmount(address user, uint256 amountMTokenWithoutFee)
-        internal
-        view
-    {
-        require(amountMTokenWithoutFee >= minAmount, "DV: mToken amount < min");
-
-        if (totalMinted[user] != 0) return;
-
-        require(
-            amountMTokenWithoutFee >= minMTokenAmountForFirstDeposit,
-            "DV: mint amount < min"
-        );
     }
 
     /**
@@ -865,7 +860,7 @@ contract DepositVault is ManageableVault, IDepositVault {
             return !isExceeded;
         }
 
-        require(!isExceeded, "DV: max supply cap exceeded");
+        require(!isExceeded, SupplyCapExceeded());
 
         return true;
     }
@@ -884,8 +879,6 @@ contract DepositVault is ManageableVault, IDepositVault {
         virtual
         returns (uint256 amountInUsd, uint256 rate)
     {
-        require(amount > 0, "DV: amount zero");
-
         rate = _getPTokenRate(tokenIn);
 
         amountInUsd = (amount * rate) / (10**18);
@@ -916,7 +909,7 @@ contract DepositVault is ManageableVault, IDepositVault {
      * @return holdback part rate
      */
     function _calculateHoldbackPartRateFromAvg(
-        RequestV2 memory request,
+        Request memory request,
         uint256 avgMTokenRate
     ) internal pure returns (uint256) {
         if (avgMTokenRate == 0 || request.tokenOutRate == 0) {

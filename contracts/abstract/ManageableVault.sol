@@ -75,20 +75,6 @@ abstract contract ManageableVault is
     uint256 public instantFee;
 
     /**
-     * @dev legacy mapping kept for layout compatibility
-     * @custom:oz-renamed-from instantDailyLimit
-     */
-    // solhint-disable-next-line var-name-mixedcase
-    uint256 private _instantDailyLimit_deprecated;
-
-    /**
-     * @dev legacy mapping kept for layout compatibility
-     * @custom:oz-renamed-from dailyLimits
-     */
-    // solhint-disable-next-line var-name-mixedcase
-    mapping(uint256 => uint256) private _dailyLimits_deprecated;
-
-    /**
      * @notice address to which fees will be sent
      */
     address public feeReceiver;
@@ -156,7 +142,7 @@ abstract contract ManageableVault is
     /**
      * @dev leaving a storage gap for futures updates
      */
-    uint256[45] private __gap;
+    uint256[50] private __gap;
 
     /**
      * @dev checks that msg.sender do have a vaultRole() role
@@ -246,7 +232,7 @@ abstract contract ManageableVault is
         uint256 allowance,
         bool stable
     ) external validateVaultAdminAccess {
-        require(_paymentTokens.add(token), "MV: already added");
+        require(_paymentTokens.add(token), PaymentTokenAlreadyAdded(token));
         _validateAddress(dataFeed, false);
         _validateFee(tokenFee, false);
 
@@ -274,14 +260,13 @@ abstract contract ManageableVault is
         external
         validateVaultAdminAccess
     {
-        require(_paymentTokens.remove(token), "MV: not exists");
+        require(_paymentTokens.remove(token), PaymentTokenNotExists(token));
         delete tokensConfig[token];
         emit RemovePaymentToken(token, msg.sender);
     }
 
     /**
      * @inheritdoc IManageableVault
-     * @dev reverts if new allowance zero
      */
     function changeTokenAllowance(address token, uint256 allowance)
         external
@@ -289,7 +274,6 @@ abstract contract ManageableVault is
     {
         _requireTokenExists(token);
 
-        require(allowance > 0, "MV: zero allowance");
         tokensConfig[token].allowance = allowance;
         emit ChangeTokenAllowance(token, msg.sender, allowance);
     }
@@ -311,13 +295,13 @@ abstract contract ManageableVault is
 
     /**
      * @inheritdoc IManageableVault
-     * @dev reverts if new tolerance zero
+     * @dev reverts if new tolerance > 100%
      */
     function setVariationTolerance(uint256 tolerance)
         external
         validateVaultAdminAccess
     {
-        _validateFee(tolerance, true);
+        _validateFee(tolerance, false);
 
         variationTolerance = tolerance;
         emit SetVariationTolerance(msg.sender, tolerance);
@@ -339,7 +323,10 @@ abstract contract ManageableVault is
         external
         validateVaultAdminAccess
     {
-        require(!waivedFeeRestriction[account], "MV: already added");
+        require(
+            !waivedFeeRestriction[account],
+            SameFeeWaivedValue(account, true)
+        );
         waivedFeeRestriction[account] = true;
         emit AddWaivedFeeAccount(account, msg.sender);
     }
@@ -352,7 +339,10 @@ abstract contract ManageableVault is
         external
         validateVaultAdminAccess
     {
-        require(waivedFeeRestriction[account], "MV: not found");
+        require(
+            waivedFeeRestriction[account],
+            SameFeeWaivedValue(account, false)
+        );
         waivedFeeRestriction[account] = false;
         emit RemoveWaivedFeeAccount(account, msg.sender);
     }
@@ -450,7 +440,10 @@ abstract contract ManageableVault is
         external
         validateVaultAdminAccess
     {
-        require(_limitWindows.remove(window), "MV: window not found");
+        require(
+            _limitWindows.remove(window),
+            InstantLimitWindowNotExists(window)
+        );
         delete limitConfigs[window];
         emit RemoveInstantLimitConfig(msg.sender, window);
     }
@@ -462,7 +455,10 @@ abstract contract ManageableVault is
         external
         validateVaultAdminAccess
     {
-        require(isFreeFromMinAmount[user] != enable, "DV: already free");
+        require(
+            isFreeFromMinAmount[user] != enable,
+            SameFreeFromMinAmountValue(user, enable)
+        );
 
         isFreeFromMinAmount[user] = enable;
 
@@ -528,7 +524,7 @@ abstract contract ManageableVault is
         _validateFee(newMaxInstantFee, false);
         require(
             newMinInstantFee <= newMaxInstantFee,
-            "MV: invalid min/max fee"
+            InvalidMinMaxInstantFee(newMinInstantFee, newMaxInstantFee)
         );
         minInstantFee = newMinInstantFee;
         maxInstantFee = newMaxInstantFee;
@@ -620,7 +616,10 @@ abstract contract ManageableVault is
 
         require(
             amount == transferAmount.convertToBase18(tokenDecimals),
-            "MV: invalid rounding"
+            InvalidRounding(
+                amount,
+                transferAmount.convertToBase18(tokenDecimals)
+            )
         );
 
         if (from == address(this)) {
@@ -644,7 +643,7 @@ abstract contract ManageableVault is
      * @param token address of token
      */
     function _requireTokenExists(address token) internal view virtual {
-        require(_paymentTokens.contains(token), "MV: token not exists");
+        require(_paymentTokens.contains(token), UnknownPaymentToken(token));
     }
 
     /**
@@ -664,7 +663,10 @@ abstract contract ManageableVault is
 
             config.limitUsed += amount;
 
-            require(config.limitUsed <= config.limit, "MV: exceed limit");
+            require(
+                config.limitUsed <= config.limit,
+                InstantLimitExceeded(window, config.limitUsed, config.limit)
+            );
 
             limitConfigs[window] = config;
         }
@@ -681,7 +683,10 @@ abstract contract ManageableVault is
         uint256 prevAllowance = tokensConfig[token].allowance;
         if (prevAllowance == type(uint256).max) return;
 
-        require(prevAllowance >= amount, "MV: exceed allowance");
+        require(
+            prevAllowance >= amount,
+            AllowanceExceeded(prevAllowance, amount)
+        );
 
         tokensConfig[token].allowance -= amount;
     }
@@ -695,7 +700,7 @@ abstract contract ManageableVault is
      */
     function _getFeeAmount(uint256 feePercent, uint256 amount)
         internal
-        view
+        pure
         returns (uint256)
     {
         return (amount * feePercent) / ONE_HUNDRED_PERCENT;
@@ -732,7 +737,7 @@ abstract contract ManageableVault is
         require(
             currentInstantFee >= minInstantFee &&
                 currentInstantFee <= maxInstantFee,
-            "MV: invalid instant fee"
+            InstantFeeOutOfBounds(currentInstantFee)
         );
     }
 
@@ -753,8 +758,36 @@ abstract contract ManageableVault is
 
         require(
             priceDifPercent <= variationTolerance,
-            "MV: exceed price diviation"
+            PriceVariationExceeded(priceDifPercent, variationTolerance)
         );
+    }
+
+    /**
+     * @dev validates that inputted mToken amount is >= minAmount()
+     * only if the `user` is not free from min amount
+     * @param user user address
+     * @param amountMToken amount of mToken
+     * @return isFreeFromMinAmount if the `user` is free from min amount
+     */
+    function _validateMTokenAmount(address user, uint256 amountMToken)
+        internal
+        view
+        returns (
+            bool /* isFreeFromMinAmount */
+        )
+    {
+        require(amountMToken > 0, InvalidAmount());
+
+        if (isFreeFromMinAmount[user]) {
+            return true;
+        }
+
+        require(
+            amountMToken >= minAmount,
+            AmountLessThanMin(amountMToken, minAmount)
+        );
+
+        return false;
     }
 
     /**
@@ -855,8 +888,8 @@ abstract contract ManageableVault is
      * @param checkMin if need to check minimum
      */
     function _validateFee(uint256 fee, bool checkMin) internal pure {
-        require(fee <= ONE_HUNDRED_PERCENT, "fee > 100%");
-        if (checkMin) require(fee > 0, "fee == 0");
+        require(fee <= ONE_HUNDRED_PERCENT, InvalidFee(fee));
+        if (checkMin) require(fee > 0, InvalidFee(fee));
     }
 
     /**
@@ -865,8 +898,8 @@ abstract contract ManageableVault is
      * @param selfCheck check if address not address(this)
      */
     function _validateAddress(address addr, bool selfCheck) internal view {
-        require(addr != address(0), "zero address");
-        if (selfCheck) require(addr != address(this), "invalid address");
+        require(addr != address(0), InvalidAddress(addr));
+        if (selfCheck) require(addr != address(this), InvalidAddress(addr));
     }
 
     /**
@@ -917,6 +950,6 @@ abstract contract ManageableVault is
      * @param rate token rate
      */
     function _validateTokenRate(uint256 rate) private pure {
-        require(rate > 0, "MV: rate zero");
+        require(rate > 0, InvalidTokenRate(rate));
     }
 }

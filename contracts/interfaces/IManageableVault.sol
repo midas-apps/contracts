@@ -89,6 +89,41 @@ struct CommonVaultV2InitParams {
  * @author RedDuck Software
  */
 interface IManageableVault {
+    error PaymentTokenAlreadyAdded(address token);
+    error PaymentTokenNotExists(address token);
+    error SameFeeWaivedValue(address account, bool value);
+    error InstantLimitWindowNotExists(uint256 window);
+    error SameFreeFromMinAmountValue(address account, bool value);
+    error InvalidMinMaxInstantFee(uint256 minFee, uint256 maxFee);
+    error InvalidRounding(uint256 amount, uint256 requiredAmount);
+    error UnknownPaymentToken(address token);
+    error InstantLimitExceeded(
+        uint256 window,
+        uint256 limitUsed,
+        uint256 limit
+    );
+    error AllowanceExceeded(uint256 prevAllowance, uint256 amount);
+    error InstantFeeOutOfBounds(uint256 instantFee);
+    error PriceVariationExceeded(
+        uint256 difPercent,
+        uint256 variationTolerance
+    );
+    error InvalidFee(uint256 fee);
+    error InvalidTokenRate(uint256 tokenRate);
+
+    error SlippageExceeded(
+        uint256 minReceiveAmount,
+        uint256 actualReceiveAmount
+    );
+    error RequestIdTooHigh(uint256 requestId, uint256 maxApproveRequestId);
+    error InvalidNewMTokenRate();
+    error InvalidInstantAmount();
+    error RequestNotExists(uint256 requestId);
+    error RequestNotPending(uint256 requestId);
+    error InstantShareTooHigh(uint256 instantShare, uint256 maxInstantShare);
+    error InvalidAmount();
+    error AmountLessThanMin(uint256 amount, uint256 minAmount);
+
     /**
      * @param caller function caller (msg.sender)
      * @param token token that was withdrawn

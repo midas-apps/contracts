@@ -19,6 +19,9 @@ import "./libraries/DecimalsCorrectionLibrary.sol";
 contract RedemptionVaultWithMorpho is RedemptionVault {
     using DecimalsCorrectionLibrary for uint256;
 
+    error AssetMismatch(address morphoVault, address token);
+    error VaultNotSet(address token);
+
     /**
      * @notice mapping payment token to Morpho Vault
      */
@@ -61,7 +64,7 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
         _validateAddress(_morphoVault, false);
         require(
             IMorphoVault(_morphoVault).asset() == _token,
-            "RVM: asset mismatch"
+            AssetMismatch(_morphoVault, _token)
         );
         morphoVaults[_token] = IMorphoVault(_morphoVault);
         emit SetMorphoVault(msg.sender, _token, _morphoVault);
@@ -77,7 +80,7 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
     {
         require(
             address(morphoVaults[_token]) != address(0),
-            "RVM: vault not set"
+            VaultNotSet(_token)
         );
         delete morphoVaults[_token];
         emit RemoveMorphoVault(msg.sender, _token);

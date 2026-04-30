@@ -183,7 +183,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       const fixture = await loadFixture(defaultDeploy);
       await setRoundDataGrowth(fixture, 10, -100, 0, {
         from: fixture.regularAccounts[0],
-        revertMessage: acErrors.WMAC_HASNT_ROLE,
+        revertCustomError: acErrors.WMAC_HASNT_ROLE(),
       });
     });
 
@@ -357,7 +357,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       const fixture = await loadFixture(defaultDeploy);
       await setRoundDataSafeGrowth(fixture, 10, -100, 0, {
         from: fixture.regularAccounts[0],
-        revertMessage: acErrors.WMAC_HASNT_ROLE,
+        revertCustomError: acErrors.WMAC_HASNT_ROLE(),
       });
     });
 
@@ -465,7 +465,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       const fixture = await loadFixture(defaultDeploy);
       await setMinGrowthApr(fixture, 10, {
         from: fixture.regularAccounts[0],
-        revertMessage: acErrors.WMAC_HASNT_ROLE,
+        revertCustomError: acErrors.WMAC_HASNT_ROLE(),
       });
     });
 
@@ -498,7 +498,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       const fixture = await loadFixture(defaultDeploy);
       await setMaxGrowthApr(fixture, 10, {
         from: fixture.regularAccounts[0],
-        revertMessage: acErrors.WMAC_HASNT_ROLE,
+        revertCustomError: acErrors.WMAC_HASNT_ROLE(),
       });
     });
 
@@ -542,7 +542,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       const fixture = await loadFixture(defaultDeploy);
       await setOnlyUp(fixture, true, {
         from: fixture.regularAccounts[0],
-        revertMessage: acErrors.WMAC_HASNT_ROLE,
+        revertCustomError: acErrors.WMAC_HASNT_ROLE(),
       });
     });
   });

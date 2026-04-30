@@ -181,7 +181,10 @@ redemptionVaultSuits(
               },
               constants.AddressZero,
             ),
-          ).revertedWith('zero address');
+          ).to.be.revertedWithCustomError(
+            redemptionVaultWithUSTB,
+            'InvalidAddress',
+          );
         });
       });
 
@@ -533,7 +536,9 @@ redemptionVaultSuits(
             stableCoins.usdc,
             100000,
             {
-              revertMessage: 'RV: loan lp not configured',
+              revertCustomError: {
+                customErrorName: 'LoanLpNotConfigured',
+              },
             },
           );
         });

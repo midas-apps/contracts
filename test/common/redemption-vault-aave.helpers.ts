@@ -2,7 +2,12 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumber, BigNumberish } from 'ethers';
 
-import { AccountOrContract, OptionalCommonParams } from './common.helpers';
+import {
+  AccountOrContract,
+  handleRevert,
+  OptionalCommonParams,
+  shouldRevert,
+} from './common.helpers';
 import { redeemInstantTest } from './redemption-vault.helpers';
 
 import {
@@ -37,10 +42,15 @@ export const setAavePoolTest = async (
   pool: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      redemptionVault.connect(opt?.from ?? owner).setAavePool(token, pool),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      redemptionVault
+        .connect(opt?.from ?? owner)
+        .setAavePool.bind(this, token, pool),
+      redemptionVault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -61,10 +71,15 @@ export const removeAavePoolTest = async (
   token: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      redemptionVault.connect(opt?.from ?? owner).removeAavePool(token),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      redemptionVault
+        .connect(opt?.from ?? owner)
+        .removeAavePool.bind(this, token),
+      redemptionVault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -96,7 +111,7 @@ export const redeemInstantWithAaveTest = async (
     customRecipient,
   } = params;
 
-  if (opt?.revertMessage) {
+  if (shouldRevert(opt)) {
     await redeemInstantTest(
       {
         redemptionVault,

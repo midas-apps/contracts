@@ -7,10 +7,8 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
-import {IRedemptionVault, CommonVaultInitParams, CommonVaultV2InitParams, LiquidityProviderLoanRequest, Request, RequestV2, RequestStatus, RedemptionVaultInitParams, RedemptionVaultV2InitParams} from "./interfaces/IRedemptionVault.sol";
+import {IRedemptionVault, CommonVaultInitParams, CommonVaultV2InitParams, LiquidityProviderLoanRequest, Request, RequestStatus, RedemptionVaultInitParams, RedemptionVaultV2InitParams} from "./interfaces/IRedemptionVault.sol";
 import {ManageableVault} from "./abstract/ManageableVault.sol";
-
-import "hardhat/console.sol";
 
 /**
  * @title RedemptionVault
@@ -49,31 +47,9 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         0x57df534b215589c7ade8c8abe0978debf2ea95cf1d442550f94eec78a69d238e;
 
     /**
-     * @dev legacy variable kept for layout compatibility
-     * @custom:oz-renamed-from minFiatRedeemAmount
-     */
-    // solhint-disable-next-line var-name-mixedcase
-    uint256 private _minFiatRedeemAmount_deprecated;
-
-    /**
-     * @dev legacy variable kept for layout compatibility
-     * @custom:oz-renamed-from fiatAdditionalFee
-     */
-    // solhint-disable-next-line var-name-mixedcase
-    uint256 private _fiatAdditionalFee_deprecated;
-
-    /**
-     * @dev legacy variable kept for layout compatibility
-     * @custom:oz-renamed-from fiatFlatFee
-     */
-    // solhint-disable-next-line var-name-mixedcase
-    uint256 private _fiatFlatFee_deprecated;
-
-    /**
      * @notice mapping, requestId to request data
-     * @custom:oz-retyped-from Request
      */
-    mapping(uint256 => RequestV2) public redeemRequests;
+    mapping(uint256 => Request) public redeemRequests;
 
     /**
      * @notice address is designated for standard redemptions, allowing tokens to be pulled from this address
@@ -390,9 +366,9 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         external
         validateVaultAdminAccess
     {
-        RequestV2 memory request = redeemRequests[requestId];
+        Request memory request = redeemRequests[requestId];
 
-        _validateRequest(request.sender, request.status);
+        _validateRequest(requestId, request.sender, request.status);
 
         redeemRequests[requestId].status = RequestStatus.Canceled;
 
@@ -406,14 +382,14 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256[] calldata requestIds,
         uint64 loanApr
     ) external validateVaultAdminAccess {
-        require(loanApr <= maxLoanApr, "RV: loanApr > maxLoanApr");
+        require(loanApr <= maxLoanApr, LoanAprTooHigh(loanApr, maxLoanApr));
 
         for (uint256 i = 0; i < requestIds.length; ++i) {
             LiquidityProviderLoanRequest memory request = loanRequests[
                 requestIds[i]
             ];
 
-            _validateRequest(request.tokenOut, request.status);
+            _validateRequest(requestIds[i], request.tokenOut, request.status);
 
             uint256 decimals = _tokenDecimals(request.tokenOut);
             uint256 duration = block.timestamp - request.createdAt;
@@ -441,7 +417,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             if (amountFee > 0) {
                 require(
                     loanLpFeeReceiver != address(0),
-                    "RV: !loanLpFeeReceiver"
+                    InvalidLoanLpReceiver()
                 );
                 _tokenTransferFromTo(
                     request.tokenOut,
@@ -466,7 +442,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     {
         LiquidityProviderLoanRequest memory request = loanRequests[requestId];
 
-        _validateRequest(request.tokenOut, request.status);
+        _validateRequest(requestId, request.tokenOut, request.status);
 
         loanRequests[requestId].status = RequestStatus.Canceled;
         emit CancelLpLoanRequest(msg.sender, requestId);
@@ -572,7 +548,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256[] calldata requestIds,
         uint256 newOutRate,
         bool isAvgRate
-    ) internal validateVaultAdminAccess {
+    ) private validateVaultAdminAccess {
         for (uint256 i = 0; i < requestIds.length; ++i) {
             bool success = _approveRequest(
                 requestIds[i],
@@ -610,34 +586,32 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         bool safeValidateLiquidity,
         bool isAvgRate
     )
-        internal
+        private
         returns (
             bool /* success */
         )
     {
-        RequestV2 memory request = redeemRequests[requestId];
+        Request memory request = redeemRequests[requestId];
 
-        _validateRequest(request.sender, request.status);
-
-        require(request.version == 1, "RV: not v2 request");
+        _validateRequest(requestId, request.sender, request.status);
 
         if (isSafe) {
-            require(requestId <= maxApproveRequestId, "RV: !requestId");
+            require(
+                requestId <= maxApproveRequestId,
+                RequestIdTooHigh(requestId, maxApproveRequestId)
+            );
             _requireVariationTolerance(request.mTokenRate, newMTokenRate);
         }
 
         if (isAvgRate) {
-            require(
-                request.amountMTokenInstant > 0,
-                "RV: !amountMTokenInstant"
-            );
+            require(request.amountMTokenInstant > 0, InvalidInstantAmount());
             newMTokenRate = _calculateHoldbackPartRateFromAvg(
                 request,
                 newMTokenRate
             );
         }
 
-        require(newMTokenRate > 0, "RV: !newMTokenRate");
+        require(newMTokenRate > 0, InvalidNewMTokenRate());
 
         CalcAndValidateRedeemResult memory calcResult = _calcAndValidateRedeem(
             request.sender,
@@ -700,12 +674,13 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @param validateAddress address to check if not zero
      * @param status request status
      */
-    function _validateRequest(address validateAddress, RequestStatus status)
-        internal
-        pure
-    {
-        require(validateAddress != address(0), "RV: request not exist");
-        require(status == RequestStatus.Pending, "RV: request not pending");
+    function _validateRequest(
+        uint256 requestId,
+        address validateAddress,
+        RequestStatus status
+    ) private pure {
+        require(validateAddress != address(0), RequestNotExists(requestId));
+        require(status == RequestStatus.Pending, RequestNotPending(requestId));
     }
 
     /**
@@ -723,7 +698,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address recipient,
         uint256 instantShareToValidate
     ) private validateUserAccess(recipient) {
-        require(instantShareToValidate <= maxInstantShare, "RV: !instantShare");
+        require(
+            instantShareToValidate <= maxInstantShare,
+            InstantShareTooHigh(instantShareToValidate, maxInstantShare)
+        );
 
         CalcAndValidateRedeemResult memory calcResult = _redeemInstant(
             tokenOut,
@@ -805,7 +783,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 amountMTokenIn,
         uint256 minReceiveAmount,
         address /* recipient */
-    ) internal virtual returns (CalcAndValidateRedeemResult memory calcResult) {
+    ) private returns (CalcAndValidateRedeemResult memory calcResult) {
         address user = msg.sender;
 
         _validateInstantFee();
@@ -825,7 +803,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         require(
             calcResult.amountTokenOutWithoutFee >= minReceiveAmount,
-            "RV: minReceiveAmount > actual"
+            SlippageExceeded(
+                minReceiveAmount,
+                calcResult.amountTokenOutWithoutFee
+            )
         );
 
         _requireAndUpdateAllowance(tokenOut, calcResult.amountTokenOut);
@@ -843,7 +824,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address tokenOut,
         address recipient,
         CalcAndValidateRedeemResult memory calcResult
-    ) internal {
+    ) private {
         uint256 tokenOutBalanceBase18 = IERC20(tokenOut)
             .balanceOf(address(this))
             .convertToBase18(calcResult.tokenOutDecimals);
@@ -983,7 +964,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 totalFee,
         uint256 tokenOutDecimals
     )
-        internal
+        private
         returns (
             uint256, /* amountReceivedBase18 */
             uint256 /* feePortionBase18 */
@@ -998,7 +979,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         require(
             _loanLp != address(0) && address(_loanSwapperVault) != address(0),
-            "RV: loan lp not configured"
+            LoanLpNotConfigured(_loanLp, address(_loanSwapperVault))
         );
 
         uint256 mTokenARate = _loanSwapperVault
@@ -1074,7 +1055,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 amountMTokenIn,
         address recipient,
         uint256 amountMTokenInstant
-    ) internal returns (uint256 requestId) {
+    ) private returns (uint256 requestId) {
         _requireTokenExists(tokenOut);
 
         address user = msg.sender;
@@ -1102,7 +1083,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         uint256 feePercent = _getFee(user, tokenOut, false);
 
-        redeemRequests[requestId] = RequestV2({
+        redeemRequests[requestId] = Request({
             sender: recipient,
             tokenOut: tokenOut,
             status: RequestStatus.Pending,
@@ -1111,8 +1092,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             tokenOutRate: tokenOutRate,
             feePercent: feePercent,
             amountMTokenInstant: amountMTokenInstant,
-            approvedMTokenRate: 0,
-            version: 1
+            approvedMTokenRate: 0
         });
 
         emit RedeemRequestV2(
@@ -1141,8 +1121,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address tokenOut,
         uint256 overrideTokenRate
     ) internal view returns (uint256 amountToken, uint256 tokenRate) {
-        require(amountUsd > 0, "RV: amount zero");
-
         tokenRate = overrideTokenRate > 0
             ? overrideTokenRate
             : _getPTokenRate(tokenOut);
@@ -1162,8 +1140,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 amountMToken,
         uint256 overrideTokenRate
     ) internal view returns (uint256 amountUsd, uint256 mTokenRate) {
-        require(amountMToken > 0, "RV: amount zero");
-
         mTokenRate = overrideTokenRate > 0
             ? overrideTokenRate
             : _getMTokenRate();
@@ -1228,7 +1204,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         amountTokenOut = _truncate(amountTokenOut, result.tokenOutDecimals);
         result.feeAmount = _truncate(result.feeAmount, result.tokenOutDecimals);
 
-        require(amountTokenOut > result.feeAmount, "RV: amountTokenOut < fee");
+        require(
+            amountTokenOut > result.feeAmount,
+            FeeExceedsAmount(result.feeAmount, amountTokenOut)
+        );
 
         result.amountTokenOut = amountTokenOut;
 
@@ -1252,7 +1231,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address tokenOut,
         uint256 overrideTokenOutRate
     )
-        internal
+        private
         view
         returns (
             uint256,
@@ -1272,22 +1251,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         return (amountTokenOut, mTokenRate, tokenOutRate);
     }
 
-    /**
-     * @dev validates mToken amount for different constraints
-     * @param user user address
-     * @param amountMTokenIn amount of mToken
-     */
-    function _validateMTokenAmount(address user, uint256 amountMTokenIn)
-        internal
-        view
-    {
-        require(amountMTokenIn > 0, "RV: invalid amount");
-
-        if (!isFreeFromMinAmount[user]) {
-            require(minAmount <= amountMTokenIn, "RV: amount < min");
-        }
-    }
-
     /*
      * @dev validates that liquidity of provided token on `requestRedeemer` is enough
      * @param token token address
@@ -1301,7 +1264,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 requiredLiquidity,
         uint256 tokenDecimals
     )
-        internal
+        private
         view
         returns (
             bool /* success */
@@ -1318,7 +1281,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @return holdback part rate
      */
     function _calculateHoldbackPartRateFromAvg(
-        RequestV2 memory request,
+        Request memory request,
         uint256 avgMTokenRate
     ) internal pure returns (uint256) {
         uint256 targetTotalValue = ((request.amountMToken +

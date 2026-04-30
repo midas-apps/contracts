@@ -61,7 +61,7 @@ describe('WithSanctionsList', function () {
         withSanctionsListTester.onlyNotSanctionedTester(
           regularAccounts[0].address,
         ),
-      ).revertedWith('WSL: sanctioned');
+      ).revertedWithCustomError(withSanctionsListTester, 'Sanctioned');
     });
 
     it('call from not sanctioned user', async () => {
@@ -87,7 +87,7 @@ describe('WithSanctionsList', function () {
         constants.AddressZero,
         {
           from: regularAccounts[0],
-          revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+          revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
         },
       );
     });

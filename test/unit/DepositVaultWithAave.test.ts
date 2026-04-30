@@ -55,7 +55,7 @@ depositVaultSuits(
             aavePoolMock.address,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -69,7 +69,9 @@ depositVaultSuits(
             stableCoins.usdc.address,
             ethers.constants.AddressZero,
             {
-              revertMessage: 'zero address',
+              revertCustomError: {
+                customErrorName: 'InvalidAddress',
+              },
             },
           );
         });
@@ -83,7 +85,9 @@ depositVaultSuits(
             stableCoins.dai.address,
             aavePoolMock.address,
             {
-              revertMessage: 'DVA: token not in pool',
+              revertCustomError: {
+                customErrorName: 'TokenNotInPool',
+              },
             },
           );
         });
@@ -110,7 +114,7 @@ depositVaultSuits(
             stableCoins.usdc.address,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -123,7 +127,9 @@ depositVaultSuits(
             { depositVaultWithAave, owner },
             stableCoins.dai.address,
             {
-              revertMessage: 'DVA: pool not set',
+              revertCustomError: {
+                customErrorName: 'PoolNotSet',
+              },
             },
           );
         });
@@ -155,7 +161,7 @@ depositVaultSuits(
             true,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -198,7 +204,7 @@ depositVaultSuits(
             true,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
             },
           );
         });
@@ -530,7 +536,9 @@ depositVaultSuits(
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'DVA: auto-invest failed',
+              revertCustomError: {
+                customErrorName: 'AutoInvestFailed',
+              },
             },
           );
         });
@@ -690,7 +698,9 @@ depositVaultSuits(
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'DVA: auto-invest failed',
+              revertCustomError: {
+                customErrorName: 'AutoInvestFailed',
+              },
             },
           );
         });

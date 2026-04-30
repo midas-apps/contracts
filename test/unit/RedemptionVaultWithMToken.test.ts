@@ -204,7 +204,10 @@ redemptionVaultSuits(
               },
               constants.AddressZero,
             ),
-          ).revertedWith('zero address');
+          ).to.be.revertedWithCustomError(
+            redemptionVaultWithMToken,
+            'InvalidAddress',
+          );
         });
       });
 
@@ -216,7 +219,10 @@ redemptionVaultSuits(
             redemptionVaultWithMToken
               .connect(regularAccounts[0])
               .setRedemptionVault(regularAccounts[1].address),
-          ).to.be.revertedWith(acErrors.WMAC_HASNT_PERMISSION);
+          ).to.be.revertedWithCustomError(
+            redemptionVaultWithMToken,
+            acErrors.WMAC_HASNT_PERMISSION().customErrorName,
+          );
         });
 
         it('should fail: zero address', async () => {
@@ -225,7 +231,10 @@ redemptionVaultSuits(
           );
           await expect(
             redemptionVaultWithMToken.setRedemptionVault(constants.AddressZero),
-          ).to.be.revertedWith('zero address');
+          ).to.be.revertedWithCustomError(
+            redemptionVaultWithMToken,
+            'InvalidAddress',
+          );
         });
 
         it('should fail: same address', async () => {
@@ -235,7 +244,10 @@ redemptionVaultSuits(
             redemptionVaultWithMToken.setRedemptionVault(
               redemptionVaultLoanSwapper.address,
             ),
-          ).to.be.revertedWith('RVMT: already set');
+          ).to.be.revertedWithCustomError(
+            redemptionVaultWithMToken,
+            'SameRedemptionVaultValue',
+          );
         });
 
         it('should fail: when function is paused', async () => {
@@ -248,7 +260,11 @@ redemptionVaultSuits(
           await setRedemptionVaultTest(
             { vault: redemptionVaultWithMToken, owner },
             regularAccounts[0].address,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -912,7 +928,9 @@ redemptionVaultSuits(
             stableCoins.dai,
             100,
             {
-              revertMessage: 'RV: loan lp not configured',
+              revertCustomError: {
+                customErrorName: 'LoanLpNotConfigured',
+              },
             },
           );
         });
@@ -970,7 +988,9 @@ redemptionVaultSuits(
             stableCoins.dai,
             100,
             {
-              revertMessage: 'RV: loan lp not configured',
+              revertCustomError: {
+                customErrorName: 'LoanLpNotConfigured',
+              },
             },
           );
         });
@@ -2802,7 +2822,10 @@ redemptionVaultSuits(
                   parseUnits(amount.toString()),
                   tooHigh,
                 ),
-            ).to.be.revertedWith('RV: minReceiveAmount > actual');
+            ).to.be.revertedWithCustomError(
+              redemptionVaultWithMToken,
+              'SlippageExceeded',
+            );
           });
         });
 

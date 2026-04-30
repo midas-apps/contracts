@@ -1,7 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 
-import { OptionalCommonParams } from './common.helpers';
+import { handleRevert, OptionalCommonParams } from './common.helpers';
 
 import { Greenlistable } from '../../typechain-types';
 
@@ -15,10 +15,15 @@ export const greenListEnable = async (
   enable: boolean,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      greenlistable.connect(opt?.from ?? owner).setGreenlistEnable(enable),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      greenlistable
+        .connect(opt?.from ?? owner)
+        .setGreenlistEnable.bind(this, enable),
+      greenlistable,
+      opt,
+    )
+  ) {
     return;
   }
 

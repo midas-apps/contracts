@@ -11,6 +11,8 @@ import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
  * @author RedDuck Software
  */
 abstract contract WithSanctionsList is WithMidasAccessControl {
+    error Sanctioned(address user);
+
     /**
      * @notice address of Chainalysis sanctions oracle
      */
@@ -38,7 +40,7 @@ abstract contract WithSanctionsList is WithMidasAccessControl {
         if (_sanctionsList != address(0)) {
             require(
                 !ISanctionsList(_sanctionsList).isSanctioned(user),
-                "WSL: sanctioned"
+                Sanctioned(user)
             );
         }
         _;

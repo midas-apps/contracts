@@ -6,6 +6,8 @@ import {
   OptionalCommonParams,
   balanceOfBase18,
   getAccount,
+  handleRevert,
+  shouldRevert,
 } from './common.helpers';
 import {
   depositInstantTest,
@@ -40,12 +42,15 @@ export const setMTokenDepositsEnabledTest = async (
   enabled: boolean,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       depositVaultWithMToken
         .connect(opt?.from ?? owner)
-        .setMTokenDepositsEnabled(enabled),
-    ).revertedWith(opt?.revertMessage);
+        .setMTokenDepositsEnabled.bind(this, enabled),
+      depositVaultWithMToken,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -69,12 +74,15 @@ export const setMTokenDepositVaultTest = async (
   newVault: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       depositVaultWithMToken
         .connect(opt?.from ?? owner)
-        .setMTokenDepositVault(newVault),
-    ).revertedWith(opt?.revertMessage);
+        .setMTokenDepositVault.bind(this, newVault),
+      depositVaultWithMToken,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -115,7 +123,7 @@ export const depositInstantWithMTokenTest = async (
 ) => {
   tokenIn = getAccount(tokenIn);
 
-  if (opt?.revertMessage) {
+  if (shouldRevert(opt)) {
     await depositInstantTest(
       {
         depositVault: depositVaultWithMToken,
@@ -189,12 +197,15 @@ export const setAutoInvestFallbackEnabledMTokenTest = async (
   enabled: boolean,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       depositVaultWithMToken
         .connect(opt?.from ?? owner)
-        .setAutoInvestFallbackEnabled(enabled),
-    ).revertedWith(opt?.revertMessage);
+        .setAutoInvestFallbackEnabled.bind(this, enabled),
+      depositVaultWithMToken,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -234,7 +245,7 @@ export const depositRequestWithMTokenTest = async (
 ) => {
   tokenIn = getAccount(tokenIn);
 
-  if (opt?.revertMessage) {
+  if (shouldRevert(opt)) {
     await depositRequestTest(
       {
         depositVault: depositVaultWithMToken,

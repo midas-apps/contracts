@@ -1,7 +1,12 @@
 import { setNextBlockTimestamp } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { BigNumber, BigNumberish, constants } from 'ethers';
+import {
+  BigNumber,
+  BigNumberish,
+  constants,
+  ContractTransaction,
+} from 'ethers';
 import { formatUnits, parseUnits, solidityKeccak256 } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
@@ -11,6 +16,7 @@ import {
   balanceOfBase18,
   getAccount,
   getCurrentBlockTimestamp,
+  handleRevert,
 } from './common.helpers';
 import { defaultDeploy } from './fixtures';
 
@@ -185,7 +191,7 @@ export const redeemInstantTest = async (
     expectedAmountOut?: BigNumberish;
     additionalLiquidity?: () => Promise<BigNumberish>;
     holdback?: {
-      callFunction: () => Promise<unknown>;
+      callFunction: () => Promise<ContractTransaction>;
       instantShare: BigNumberish;
     };
   },
@@ -241,8 +247,7 @@ export const redeemInstantTest = async (
             minAmount ?? constants.Zero,
           ));
 
-  if (opt?.revertMessage) {
-    await expect(callFn()).revertedWith(opt?.revertMessage);
+  if (await handleRevert(callFn, redemptionVault, opt)) {
     return;
   }
 
@@ -467,8 +472,7 @@ export const redeemRequestTest = async (
           .connect(sender)
           ['redeemRequest(address,uint256)'].bind(this, tokenOut, amountIn);
 
-  if (opt?.revertMessage) {
-    await expect(callFn()).revertedWith(opt?.revertMessage);
+  if (await handleRevert(callFn, redemptionVault, opt)) {
     return {};
   }
 
@@ -551,7 +555,6 @@ export const redeemRequestTest = async (
   expect(request.amountMToken).eq(amountMTokenInRequest);
   expect(request.mTokenRate).eq(mTokenRate);
   expect(request.tokenOutRate).eq(currentStableRate);
-  expect(request.version).eq(1);
 
   if (waivedFee) {
     expect(request.feePercent).eq(feePercent).eq(constants.Zero);
@@ -631,8 +634,7 @@ export const approveRedeemRequestTest = async (
         .connect(sender)
         .approveRequest.bind(this, requestId, rate);
 
-  if (opt?.revertMessage) {
-    await expect(callFn()).revertedWith(opt?.revertMessage);
+  if (await handleRevert(callFn, redemptionVault, opt)) {
     return;
   }
 
@@ -736,8 +738,7 @@ export const bulkRepayLpLoanRequestTest = async (
     .connect(sender)
     .bulkRepayLpLoanRequest.bind(this, requestIds, loanApr);
 
-  if (opt?.revertMessage) {
-    await expect(callFn()).revertedWith(opt?.revertMessage);
+  if (await handleRevert(callFn, redemptionVault, opt)) {
     return;
   }
 
@@ -967,8 +968,7 @@ export const safeBulkApproveRequestTest = async (
             `safeBulkApproveRequest${isAvgRate ? 'AvgRate' : ''}(uint256[])`
           ].bind(this, requestIds);
 
-  if (opt?.revertMessage) {
-    await expect(callFn()).revertedWith(opt?.revertMessage);
+  if (await handleRevert(callFn, redemptionVault, opt)) {
     return;
   }
 
@@ -1158,10 +1158,13 @@ export const rejectRedeemRequestTest = async (
   const tokensReceiver = await redemptionVault.tokensReceiver();
   const feeReceiver = await redemptionVault.feeReceiver();
 
-  if (opt?.revertMessage) {
-    await expect(
-      redemptionVault.connect(sender).rejectRequest(requestId),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      redemptionVault.connect(sender).rejectRequest.bind(this, requestId),
+      redemptionVault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -1215,10 +1218,13 @@ export const cancelLpLoanRequestTest = async (
   const loanLpFeeReceiver = await redemptionVault.loanLpFeeReceiver();
   const loanRepaymentAddress = await redemptionVault.loanRepaymentAddress();
 
-  if (opt?.revertMessage) {
-    await expect(
-      redemptionVault.connect(sender).cancelLpLoanRequest(requestId),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      redemptionVault.connect(sender).cancelLpLoanRequest.bind(this, requestId),
+      redemptionVault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -1270,10 +1276,15 @@ export const setRequestRedeemerTest = async (
   redeemer: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      redemptionVault.connect(opt?.from ?? owner).setRequestRedeemer(redeemer),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      redemptionVault
+        .connect(opt?.from ?? owner)
+        .setRequestRedeemer.bind(this, redeemer),
+      redemptionVault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -1294,12 +1305,15 @@ export const setLoanLpFeeReceiverTest = async (
   loanLpFeeReceiver: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       redemptionVault
         .connect(opt?.from ?? owner)
-        .setLoanLpFeeReceiver(loanLpFeeReceiver),
-    ).revertedWith(opt?.revertMessage);
+        .setLoanLpFeeReceiver.bind(this, loanLpFeeReceiver),
+      redemptionVault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -1322,10 +1336,13 @@ export const setLoanLpTest = async (
   loanLp: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      redemptionVault.connect(opt?.from ?? owner).setLoanLp(loanLp),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      redemptionVault.connect(opt?.from ?? owner).setLoanLp.bind(this, loanLp),
+      redemptionVault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -1345,12 +1362,15 @@ export const setLoanRepaymentAddressTest = async (
   loanRepaymentAddress: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       redemptionVault
         .connect(opt?.from ?? owner)
-        .setLoanRepaymentAddress(loanRepaymentAddress),
-    ).revertedWith(opt?.revertMessage);
+        .setLoanRepaymentAddress.bind(this, loanRepaymentAddress),
+      redemptionVault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -1373,12 +1393,15 @@ export const setLoanSwapperVaultTest = async (
   loanSwapperVault: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       redemptionVault
         .connect(opt?.from ?? owner)
-        .setLoanSwapperVault(loanSwapperVault),
-    ).revertedWith(opt?.revertMessage);
+        .setLoanSwapperVault.bind(this, loanSwapperVault),
+      redemptionVault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -1401,10 +1424,15 @@ export const setMaxLoanAprTest = async (
   maxLoanApr: number,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      redemptionVault.connect(opt?.from ?? owner).setMaxLoanApr(maxLoanApr),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      redemptionVault
+        .connect(opt?.from ?? owner)
+        .setMaxLoanApr.bind(this, maxLoanApr),
+      redemptionVault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -1424,12 +1452,15 @@ export const setMaxApproveRequestIdTest = async (
   maxApproveRequestId: number,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       redemptionVault
         .connect(opt?.from ?? owner)
-        .setMaxApproveRequestId(maxApproveRequestId),
-    ).revertedWith(opt?.revertMessage);
+        .setMaxApproveRequestId.bind(this, maxApproveRequestId),
+      redemptionVault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -1452,12 +1483,15 @@ export const setPreferLoanLiquidityTest = async (
   preferLoanLiquidity: boolean,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       redemptionVault
         .connect(opt?.from ?? owner)
-        .setPreferLoanLiquidity(preferLoanLiquidity),
-    ).revertedWith(opt?.revertMessage);
+        .setPreferLoanLiquidity.bind(this, preferLoanLiquidity),
+      redemptionVault,
+      opt,
+    )
+  ) {
     return;
   }
 

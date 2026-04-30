@@ -56,7 +56,7 @@ depositVaultSuits(
             morphoVaultMock.address,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
             },
           );
         });
@@ -70,7 +70,9 @@ depositVaultSuits(
             ethers.constants.AddressZero,
             morphoVaultMock.address,
             {
-              revertMessage: 'zero address',
+              revertCustomError: {
+                customErrorName: 'InvalidAddress',
+              },
             },
           );
         });
@@ -84,7 +86,9 @@ depositVaultSuits(
             stableCoins.usdc.address,
             ethers.constants.AddressZero,
             {
-              revertMessage: 'zero address',
+              revertCustomError: {
+                customErrorName: 'InvalidAddress',
+              },
             },
           );
         });
@@ -103,7 +107,9 @@ depositVaultSuits(
             stableCoins.dai.address,
             morphoVaultMock.address,
             {
-              revertMessage: 'DVM: asset mismatch',
+              revertCustomError: {
+                customErrorName: 'AssetMismatch',
+              },
             },
           );
         });
@@ -138,7 +144,7 @@ depositVaultSuits(
             stableCoins.usdc.address,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
             },
           );
         });
@@ -151,7 +157,9 @@ depositVaultSuits(
             { depositVaultWithMorpho, owner },
             stableCoins.usdc.address,
             {
-              revertMessage: 'DVM: vault not set',
+              revertCustomError: {
+                customErrorName: 'VaultNotSet',
+              },
             },
           );
         });
@@ -187,7 +195,7 @@ depositVaultSuits(
             true,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
             },
           );
         });
@@ -230,7 +238,7 @@ depositVaultSuits(
             true,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
             },
           );
         });
@@ -430,7 +438,9 @@ depositVaultSuits(
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'DVM: auto-invest failed',
+              revertCustomError: {
+                customErrorName: 'AutoInvestFailed',
+              },
             },
           );
         });
@@ -485,7 +495,9 @@ depositVaultSuits(
             stableCoins.usdc,
             0.000001,
             {
-              revertMessage: 'DVM: zero shares',
+              revertCustomError: {
+                customErrorName: 'ZeroShares',
+              },
             },
           );
         });
@@ -957,7 +969,9 @@ depositVaultSuits(
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'DVM: auto-invest failed',
+              revertCustomError: {
+                customErrorName: 'AutoInvestFailed',
+              },
             },
           );
         });

@@ -90,7 +90,10 @@ describe('CompositeDataFeed', function () {
         compositeDataFeed
           .connect(regularAccounts[0])
           .changeNumeratorFeed(ethers.constants.AddressZero),
-      ).revertedWith(acErrors.WMAC_HASNT_ROLE);
+      ).revertedWithCustomError(
+        compositeDataFeed,
+        acErrors.WMAC_HASNT_ROLE().customErrorName,
+      );
     });
 
     it('should fail: pass zero address', async () => {
@@ -122,7 +125,10 @@ describe('CompositeDataFeed', function () {
         compositeDataFeed
           .connect(regularAccounts[0])
           .changeDenominatorFeed(ethers.constants.AddressZero),
-      ).revertedWith(acErrors.WMAC_HASNT_ROLE);
+      ).revertedWithCustomError(
+        compositeDataFeed,
+        acErrors.WMAC_HASNT_ROLE().customErrorName,
+      );
     });
 
     it('should fail: pass zero address', async () => {
@@ -154,7 +160,10 @@ describe('CompositeDataFeed', function () {
         compositeDataFeed
           .connect(regularAccounts[0])
           .setMinExpectedAnswer(parseUnits('1')),
-      ).revertedWith(acErrors.WMAC_HASNT_ROLE);
+      ).revertedWithCustomError(
+        compositeDataFeed,
+        acErrors.WMAC_HASNT_ROLE().customErrorName,
+      );
     });
 
     it('should fail: pass value more than max expected answer', async () => {
@@ -195,7 +204,10 @@ describe('CompositeDataFeed', function () {
         compositeDataFeed
           .connect(regularAccounts[0])
           .setMaxExpectedAnswer(parseUnits('1')),
-      ).revertedWith(acErrors.WMAC_HASNT_ROLE);
+      ).revertedWithCustomError(
+        compositeDataFeed,
+        acErrors.WMAC_HASNT_ROLE().customErrorName,
+      );
     });
 
     it('should fail: pass value less than min expected answer', async () => {

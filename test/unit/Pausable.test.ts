@@ -43,7 +43,7 @@ describe('Pausable', () => {
 
       await pauseVault(pausableTester, {
         from: regularAccounts[0],
-        revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+        revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
       });
     });
 
@@ -62,7 +62,7 @@ describe('Pausable', () => {
 
       await pauseVault(pausableTester, {
         from: regularAccounts[0],
-        revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+        revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
       });
     });
 
@@ -165,7 +165,7 @@ describe('Pausable', () => {
 
       await pauseVaultFn(pausableTester, selector, {
         from: regularAccounts[0],
-        revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+        revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
       });
     });
 
@@ -178,7 +178,9 @@ describe('Pausable', () => {
 
       await pauseVaultFn(pausableTester, selector);
       await pauseVaultFn(pausableTester, selector, {
-        revertMessage: 'Pausable: fn paused',
+        revertCustomError: {
+          customErrorName: 'SameFnPausedValue',
+        },
       });
     });
 
@@ -291,7 +293,7 @@ describe('Pausable', () => {
 
       await unpauseVaultFn(pausableTester, selector, {
         from: regularAccounts[0],
-        revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+        revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
       });
     });
 
@@ -303,7 +305,9 @@ describe('Pausable', () => {
       );
 
       await unpauseVaultFn(pausableTester, selector, {
-        revertMessage: 'Pausable: fn unpaused',
+        revertCustomError: {
+          customErrorName: 'SameFnPausedValue',
+        },
       });
     });
 
@@ -415,7 +419,7 @@ describe('Pausable', () => {
 
       await unpauseVault(pausableTester, {
         from: regularAccounts[0],
-        revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+        revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
       });
     });
 

@@ -102,7 +102,7 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
       const fixture = await loadFixture(defaultDeploy);
       await setRoundData(fixture, 10, {
         from: fixture.regularAccounts[0],
-        revertMessage: acErrors.WMAC_HASNT_ROLE,
+        revertCustomError: acErrors.WMAC_HASNT_ROLE(),
       });
     });
 
@@ -135,7 +135,7 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
       const fixture = await loadFixture(defaultDeploy);
       await setRoundDataSafe(fixture, 10, {
         from: fixture.regularAccounts[0],
-        revertMessage: acErrors.WMAC_HASNT_ROLE,
+        revertCustomError: acErrors.WMAC_HASNT_ROLE(),
       });
     });
 

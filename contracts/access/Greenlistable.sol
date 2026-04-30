@@ -10,6 +10,8 @@ import {WithMidasAccessControl} from "./WithMidasAccessControl.sol";
  * @author RedDuck Software
  */
 abstract contract Greenlistable is WithMidasAccessControl {
+    error SameGreenlistEnableValue(bool enable);
+
     /**
      * @notice is greenlist enabled
      */
@@ -57,7 +59,7 @@ abstract contract Greenlistable is WithMidasAccessControl {
      */
     function setGreenlistEnable(bool enable) external {
         _validateGreenlistableAdminAccess(msg.sender);
-        require(greenlistEnabled != enable, "GL: same enable status");
+        require(greenlistEnabled != enable, SameGreenlistEnableValue(enable));
         greenlistEnabled = enable;
         emit SetGreenlistEnable(msg.sender, enable);
     }

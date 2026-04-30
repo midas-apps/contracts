@@ -47,6 +47,7 @@ contract DepositVaultTest is DepositVault {
 
     function convertTokenToUsdTest(address tokenIn, uint256 amount)
         external
+        view
         returns (uint256 amountInUsd, uint256 rate)
     {
         return _convertTokenToUsd(tokenIn, amount);
@@ -54,6 +55,7 @@ contract DepositVaultTest is DepositVault {
 
     function convertUsdToMTokenTest(uint256 amountUsd)
         external
+        view
         returns (uint256 amountMToken, uint256 mTokenRate)
     {
         return _convertUsdToMToken(amountUsd);
@@ -81,11 +83,10 @@ contract DepositVaultTest is DepositVault {
     ) external pure returns (uint256) {
         return
             _calculateHoldbackPartRateFromAvg(
-                RequestV2({
+                Request({
                     depositedInstantUsdAmount: depositedInstantUsdAmount,
                     tokenOutRate: mTokenRate,
                     approvedTokenOutRate: 0,
-                    version: 1,
                     depositedUsdAmount: depositedUsdAmount,
                     usdAmountWithoutFees: 0,
                     sender: address(0),

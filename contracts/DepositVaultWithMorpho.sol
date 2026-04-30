@@ -19,6 +19,11 @@ contract DepositVaultWithMorpho is DepositVault {
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
 
+    error AssetMismatch(address morphoVault, address token);
+    error VaultNotSet(address token);
+    error ZeroShares(uint256 shares);
+    error AutoInvestFailed(bytes err);
+
     /**
      * @notice mapping payment token to Morpho Vault
      */
@@ -85,7 +90,7 @@ contract DepositVaultWithMorpho is DepositVault {
         _validateAddress(_morphoVault, false);
         require(
             IMorphoVault(_morphoVault).asset() == _token,
-            "DVM: asset mismatch"
+            AssetMismatch(_morphoVault, _token)
         );
         morphoVaults[_token] = IMorphoVault(_morphoVault);
         emit SetMorphoVault(msg.sender, _token, _morphoVault);
@@ -101,7 +106,7 @@ contract DepositVaultWithMorpho is DepositVault {
     {
         require(
             address(morphoVaults[_token]) != address(0),
-            "DVM: vault not set"
+            VaultNotSet(_token)
         );
         delete morphoVaults[_token];
         emit RemoveMorphoVault(msg.sender, _token);
@@ -203,13 +208,13 @@ contract DepositVaultWithMorpho is DepositVault {
         try vault.deposit(transferredAmount, tokensReceiver) returns (
             uint256 shares
         ) {
-            require(shares > 0, "DVM: zero shares");
-        } catch {
+            require(shares > 0, ZeroShares(shares));
+        } catch (bytes memory err) {
             if (autoInvestFallbackEnabled) {
                 IERC20(tokenIn).safeApprove(address(vault), 0);
                 IERC20(tokenIn).safeTransfer(tokensReceiver, transferredAmount);
             } else {
-                revert("DVM: auto-invest failed");
+                revert AutoInvestFailed(err);
             }
         }
     }

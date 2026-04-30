@@ -7,6 +7,8 @@ import {
   AccountOrContract,
   OptionalCommonParams,
   getAccount,
+  handleRevert,
+  shouldRevert,
 } from './common.helpers';
 import { defaultDeploy } from './fixtures';
 import { redeemInstantTest } from './redemption-vault.helpers';
@@ -63,7 +65,7 @@ export const redeemInstantWithMTokenTest = async (
 
   const amountIn = parseUnits(amountMFoneIn.toString());
 
-  if (opt?.revertMessage) {
+  if (shouldRevert(opt)) {
     await redeemInstantTest(
       {
         redemptionVault: redemptionVaultWithMToken,
@@ -133,10 +135,13 @@ export const setRedemptionVaultTest = async (
   newVault: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? owner).setRedemptionVault(newVault),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      vault.connect(opt?.from ?? owner).setRedemptionVault.bind(this, newVault),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 

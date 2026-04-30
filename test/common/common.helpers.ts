@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { BigNumber, BigNumberish, Contract } from 'ethers';
+import { BigNumber, BigNumberish, Contract, ContractTransaction } from 'ethers';
 import { parseUnits, solidityKeccak256 } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
@@ -13,16 +13,78 @@ import {
   USTBMock,
 } from '../../typechain-types';
 
-export type OptionalCommonParams = {
-  from?: SignerWithAddress;
-  revertMessage?: string;
+type RevertCustomError = {
+  contract?: Contract;
+  customErrorName: string;
+  args?: unknown[];
 };
+
+export type OptionalCommonParams =
+  | {
+      from?: SignerWithAddress;
+      revertMessage?: string;
+    }
+  | {
+      from?: SignerWithAddress;
+      revertCustomError: RevertCustomError;
+    }
+  | {
+      from?: SignerWithAddress;
+      revertCustomError: (
+        args?: unknown[],
+        contract?: Contract,
+      ) => RevertCustomError;
+    };
 
 export type Account = SignerWithAddress | string;
 export type AccountOrContract = Account | Contract;
 
 export const keccak256 = (role: string) => {
   return solidityKeccak256(['string'], [role]);
+};
+
+export const shouldRevert = (opt?: OptionalCommonParams) => {
+  return (
+    opt &&
+    (('revertMessage' in opt && opt.revertMessage) ||
+      ('revertCustomError' in opt && opt.revertCustomError))
+  );
+};
+
+export const handleRevert = async (
+  txOrTxFn: (() => Promise<ContractTransaction>) | Promise<ContractTransaction>,
+  contract: Contract,
+  opt?: OptionalCommonParams,
+) => {
+  if (!opt || !shouldRevert(opt)) return false;
+
+  const getPromise = () =>
+    typeof txOrTxFn === 'function' ? txOrTxFn() : txOrTxFn;
+
+  if ('revertCustomError' in opt && opt.revertCustomError) {
+    const txPromise = getPromise();
+    const revertCustomError =
+      typeof opt.revertCustomError === 'function'
+        ? opt.revertCustomError(undefined, contract)
+        : opt.revertCustomError;
+
+    const match = expect(txPromise).revertedWithCustomError(
+      revertCustomError.contract ?? contract,
+      revertCustomError.customErrorName,
+    );
+
+    await (revertCustomError.args
+      ? match.withArgs(...revertCustomError.args)
+      : match);
+
+    return true;
+  } else if ('revertMessage' in opt && opt.revertMessage) {
+    const txPromise = getPromise();
+    await expect(txPromise).revertedWith(opt.revertMessage);
+    return true;
+  } else {
+    return false;
+  }
 };
 
 export const getAccount = (account: AccountOrContract) => {
@@ -39,10 +101,13 @@ export const pauseVault = async (
 ) => {
   const [defaultSigner] = await ethers.getSigners();
 
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? defaultSigner).pause(),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      vault.connect(opt?.from ?? defaultSigner).pause.bind(this),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -59,10 +124,13 @@ export const pauseVaultFn = async (
 ) => {
   const [defaultSigner] = await ethers.getSigners();
 
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? defaultSigner).pauseFn(fnSelector),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      vault.connect(opt?.from ?? defaultSigner).pauseFn.bind(this, fnSelector),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -80,10 +148,15 @@ export const unpauseVaultFn = async (
 ) => {
   const [defaultSigner] = await ethers.getSigners();
 
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? defaultSigner).unpauseFn(fnSelector),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      vault
+        .connect(opt?.from ?? defaultSigner)
+        .unpauseFn.bind(this, fnSelector),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -100,10 +173,13 @@ export const unpauseVault = async (
 ) => {
   const [defaultSigner] = await ethers.getSigners();
 
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? defaultSigner).unpause(),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      vault.connect(opt?.from ?? defaultSigner).unpause.bind(this),
+      vault,
+      opt,
+    )
+  ) {
     return;
   }
 

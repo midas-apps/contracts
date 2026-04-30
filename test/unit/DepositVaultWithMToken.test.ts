@@ -87,7 +87,7 @@ depositVaultSuits(
             depositVault.address,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
             },
           );
         });
@@ -101,7 +101,9 @@ depositVaultSuits(
             { depositVaultWithMToken, owner },
             ethers.constants.AddressZero,
             {
-              revertMessage: 'zero address',
+              revertCustomError: {
+                customErrorName: 'InvalidAddress',
+              },
             },
           );
         });
@@ -114,7 +116,9 @@ depositVaultSuits(
             { depositVaultWithMToken, owner },
             depositVault.address,
             {
-              revertMessage: 'DVMT: already set',
+              revertCustomError: {
+                customErrorName: 'SameVaultValue',
+              },
             },
           );
         });
@@ -140,7 +144,7 @@ depositVaultSuits(
             true,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
             },
           );
         });
@@ -183,7 +187,7 @@ depositVaultSuits(
             true,
             {
               from: regularAccounts[0],
-              revertMessage: acErrors.WMAC_HASNT_PERMISSION,
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
             },
           );
         });
@@ -475,7 +479,9 @@ depositVaultSuits(
             stableCoins.dai,
             100,
             {
-              revertMessage: 'DVMT: auto-invest failed',
+              revertCustomError: {
+                customErrorName: 'AutoInvestFailed',
+              },
             },
           );
         });
@@ -576,7 +582,9 @@ depositVaultSuits(
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'DVMT: auto-invest failed',
+              revertCustomError: {
+                customErrorName: 'AutoInvestFailed',
+              },
             },
           );
         });
@@ -735,7 +743,9 @@ depositVaultSuits(
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'DVMT: auto-invest failed',
+              revertCustomError: {
+                customErrorName: 'AutoInvestFailed',
+              },
             },
           );
         });

@@ -50,7 +50,10 @@ describe('Token contracts', () => {
 
         await expect(
           mTokenPermissioned.connect(from).transfer(to.address, 1),
-        ).revertedWith(acErrors.WMAC_HASNT_ROLE);
+        ).revertedWithCustomError(
+          mTokenPermissioned,
+          acErrors.WMAC_HASNT_ROLE().customErrorName,
+        );
       });
 
       it('should fail: transfer when recipient is not greenlisted', async () => {
@@ -76,7 +79,10 @@ describe('Token contracts', () => {
 
         await expect(
           mTokenPermissioned.connect(from).transfer(to.address, 1),
-        ).revertedWith(acErrors.WMAC_HASNT_ROLE);
+        ).revertedWithCustomError(
+          mTokenPermissioned,
+          acErrors.WMAC_HASNT_ROLE().customErrorName,
+        );
       });
 
       it('should fail: transfer when from is blacklisted', async () => {
@@ -114,7 +120,10 @@ describe('Token contracts', () => {
 
         await expect(
           mTokenPermissioned.connect(from).transfer(to.address, 1),
-        ).revertedWith(acErrors.WMAC_HAS_ROLE);
+        ).revertedWithCustomError(
+          mTokenPermissioned,
+          acErrors.WMAC_HAS_ROLE().customErrorName,
+        );
       });
 
       it('should fail: transfer when token is paused', async () => {
@@ -158,7 +167,7 @@ describe('Token contracts', () => {
           { tokenContract: mTokenPermissioned, owner },
           regularAccounts[0],
           1,
-          { revertMessage: acErrors.WMAC_HASNT_ROLE },
+          { revertCustomError: acErrors.WMAC_HASNT_ROLE() },
         );
       });
 
@@ -355,7 +364,10 @@ describe('Token contracts', () => {
                 await expect(tx).not.reverted;
                 expect(await mTokenPermissioned.balanceOf(to.address)).eq(1);
               } else {
-                await expect(tx).revertedWith(acErrors.WMAC_HASNT_ROLE);
+                await expect(tx).revertedWithCustomError(
+                  mTokenPermissioned,
+                  acErrors.WMAC_HASNT_ROLE().customErrorName,
+                );
               }
             },
           );
@@ -401,7 +413,10 @@ describe('Token contracts', () => {
           mTokenPermissioned
             .connect(spender)
             .transferFrom(from.address, to.address, 1),
-        ).revertedWith(acErrors.WMAC_HAS_ROLE);
+        ).revertedWithCustomError(
+          mTokenPermissioned,
+          acErrors.WMAC_HAS_ROLE().customErrorName,
+        );
       });
 
       it('should fail: transferFrom when to is blacklisted', async () => {
@@ -443,7 +458,10 @@ describe('Token contracts', () => {
           mTokenPermissioned
             .connect(spender)
             .transferFrom(from.address, to.address, 1),
-        ).revertedWith(acErrors.WMAC_HAS_ROLE);
+        ).revertedWithCustomError(
+          mTokenPermissioned,
+          acErrors.WMAC_HAS_ROLE().customErrorName,
+        );
       });
     });
   });

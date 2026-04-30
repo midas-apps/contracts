@@ -3,7 +3,12 @@ import { expect } from 'chai';
 import { BigNumberish } from 'ethers';
 import { defaultAbiCoder, solidityKeccak256 } from 'ethers/lib/utils';
 
-import { Account, OptionalCommonParams, getAccount } from './common.helpers';
+import {
+  Account,
+  OptionalCommonParams,
+  getAccount,
+  handleRevert,
+} from './common.helpers';
 
 import { MTBILL, MToken, MTokenPermissioned } from '../../typechain-types';
 
@@ -21,12 +26,15 @@ export const setMetadataTest = async (
   const keyBytes32 = solidityKeccak256(['string'], [key]);
   const valueBytes = defaultAbiCoder.encode(['string'], [value]);
 
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       tokenContract
         .connect(opt?.from ?? owner)
-        .setMetadata(keyBytes32, valueBytes),
-    ).revertedWith(opt?.revertMessage);
+        .setMetadata.bind(this, keyBytes32, valueBytes),
+      tokenContract,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -47,10 +55,13 @@ export const mint = async (
 ) => {
   to = getAccount(to);
 
-  if (opt?.revertMessage) {
-    await expect(
-      tokenContract.connect(opt?.from ?? owner).mint(to, amount),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      tokenContract.connect(opt?.from ?? owner).mint.bind(this, to, amount),
+      tokenContract,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -74,10 +85,13 @@ export const burn = async (
 ) => {
   from = getAccount(from);
 
-  if (opt?.revertMessage) {
-    await expect(
-      tokenContract.connect(opt?.from ?? owner).burn(from, amount),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      tokenContract.connect(opt?.from ?? owner).burn.bind(this, from, amount),
+      tokenContract,
+      opt,
+    )
+  ) {
     return;
   }
 

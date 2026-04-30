@@ -5,6 +5,8 @@ import {
   AccountOrContract,
   OptionalCommonParams,
   getAccount,
+  handleRevert,
+  shouldRevert,
 } from './common.helpers';
 import { depositInstantTest } from './deposit-vault.helpers';
 import { defaultDeploy } from './fixtures';
@@ -57,12 +59,15 @@ export const setUstbDepositsEnabledTest = async (
   enabled: boolean,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       depositVaultWithUSTB
         .connect(opt?.from ?? owner)
-        .setUstbDepositsEnabled(enabled),
-    ).revertedWith(opt?.revertMessage);
+        .setUstbDepositsEnabled.bind(this, enabled),
+      depositVaultWithUSTB,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -104,7 +109,7 @@ export const depositInstantWithUstbTest = async (
 ) => {
   tokenIn = getAccount(tokenIn);
 
-  if (opt?.revertMessage) {
+  if (shouldRevert(opt)) {
     await depositInstantTest(
       {
         depositVault: depositVaultWithUSTB,

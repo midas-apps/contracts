@@ -1,7 +1,13 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
+import { Contract } from 'ethers';
 
-import { Account, OptionalCommonParams, getAccount } from './common.helpers';
+import {
+  Account,
+  OptionalCommonParams,
+  getAccount,
+  handleRevert,
+} from './common.helpers';
 
 import { encodeFnSelector } from '../../helpers/utils';
 import {
@@ -24,9 +30,21 @@ type CommonParamsGreenList = {
 };
 
 export const acErrors = {
-  WMAC_HASNT_ROLE: 'WMAC: hasnt role',
-  WMAC_HAS_ROLE: 'WMAC: has role',
-  WMAC_HASNT_PERMISSION: 'WMAC: no function permission',
+  WMAC_HASNT_ROLE: (args?: unknown[], contract?: Contract) => ({
+    contract,
+    customErrorName: 'HasntRole',
+    args,
+  }),
+  WMAC_HAS_ROLE: (args?: unknown[], contract?: Contract) => ({
+    contract,
+    customErrorName: 'HasRole',
+    args,
+  }),
+  WMAC_HASNT_PERMISSION: (args?: unknown[], contract?: Contract) => ({
+    contract,
+    customErrorName: 'NoFunctionPermission',
+    args,
+  }),
 };
 
 export const blackList = async (
@@ -36,12 +54,15 @@ export const blackList = async (
 ) => {
   account = getAccount(account);
 
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       accessControl
         .connect(opt?.from ?? owner)
-        .grantRole(await blacklistable.BLACKLISTED_ROLE(), account),
-    ).revertedWith(opt?.revertMessage);
+        .grantRole.bind(this, await blacklistable.BLACKLISTED_ROLE(), account),
+      accessControl,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -69,12 +90,15 @@ export const unBlackList = async (
 ) => {
   account = getAccount(account);
 
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       accessControl
         .connect(opt?.from ?? owner)
-        .revokeRole(await blacklistable.BLACKLISTED_ROLE(), account),
-    ).revertedWith(opt?.revertMessage);
+        .revokeRole.bind(this, await blacklistable.BLACKLISTED_ROLE(), account),
+      accessControl,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -102,10 +126,15 @@ export const greenListToggler = async (
 ) => {
   account = getAccount(account);
 
-  if (opt?.revertMessage) {
-    await expect(
-      accessControl.connect(opt?.from ?? owner).grantRole(role, account),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      accessControl
+        .connect(opt?.from ?? owner)
+        .grantRole.bind(this, role, account),
+      accessControl,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -126,12 +155,19 @@ export const greenList = async (
 ) => {
   account = getAccount(account);
 
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       accessControl
         .connect(opt?.from ?? owner)
-        .grantRole(role ?? (await greenlistable.GREENLISTED_ROLE()), account),
-    ).revertedWith(opt?.revertMessage);
+        .revokeRole.bind(
+          this,
+          role ?? (await greenlistable.GREENLISTED_ROLE()),
+          account,
+        ),
+      accessControl,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -159,12 +195,19 @@ export const unGreenList = async (
 ) => {
   account = getAccount(account);
 
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       accessControl
         .connect(opt?.from ?? owner)
-        .revokeRole(role ?? (await greenlistable.GREENLISTED_ROLE()), account),
-    ).revertedWith(opt?.revertMessage);
+        .revokeRole.bind(
+          this,
+          role ?? (await greenlistable.GREENLISTED_ROLE()),
+          account,
+        ),
+      accessControl,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -199,8 +242,7 @@ export const setFunctionAccessAdminRoleEnabledTester = async (
     .connect(from)
     .setFunctionAccessAdminRoleEnabledMult.bind(this, params);
 
-  if (opt?.revertMessage) {
-    await expect(callFn()).revertedWith(opt?.revertMessage);
+  if (await handleRevert(callFn, accessControl, opt)) {
     return;
   }
 
@@ -273,8 +315,7 @@ export const setFunctionAccessGrantOperatorTester = async (
     }),
   );
 
-  if (opt?.revertMessage) {
-    await expect(callFn()).revertedWith(opt?.revertMessage);
+  if (await handleRevert(callFn, accessControl, opt)) {
     return;
   }
 
@@ -335,8 +376,7 @@ export const setFunctionPermissionTester = async (
     .connect(from)
     .setFunctionPermissionMult.bind(this, params);
 
-  if (opt?.revertMessage) {
-    await expect(callFn()).revertedWith(opt?.revertMessage);
+  if (await handleRevert(callFn, accessControl, opt)) {
     return;
   }
 

@@ -60,7 +60,10 @@ redemptionVaultSuits(
             redemptionVaultWithAave
               .connect(regularAccounts[0])
               .setAavePool(stableCoins.usdc.address, aavePoolMock.address),
-          ).to.be.revertedWith(acErrors.WMAC_HASNT_PERMISSION);
+          ).to.be.revertedWithCustomError(
+            redemptionVaultWithAave,
+            acErrors.WMAC_HASNT_PERMISSION().customErrorName,
+          );
         });
 
         it('should fail: zero address', async () => {
@@ -72,7 +75,10 @@ redemptionVaultSuits(
               stableCoins.usdc.address,
               constants.AddressZero,
             ),
-          ).to.be.revertedWith('zero address');
+          ).to.be.revertedWithCustomError(
+            redemptionVaultWithAave,
+            'InvalidAddress',
+          );
         });
 
         it('should fail: when function is paused', async () => {
@@ -86,7 +92,11 @@ redemptionVaultSuits(
             { redemptionVault: redemptionVaultWithAave, owner },
             stableCoins.usdc.address,
             aavePoolMock.address,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -121,7 +131,10 @@ redemptionVaultSuits(
             redemptionVaultWithAave
               .connect(regularAccounts[0])
               .removeAavePool(stableCoins.usdc.address),
-          ).to.be.revertedWith(acErrors.WMAC_HASNT_PERMISSION);
+          ).to.be.revertedWithCustomError(
+            redemptionVaultWithAave,
+            acErrors.WMAC_HASNT_PERMISSION().customErrorName,
+          );
         });
 
         it('should fail: pool not set', async () => {
@@ -130,7 +143,10 @@ redemptionVaultSuits(
           );
           await expect(
             redemptionVaultWithAave.removeAavePool(stableCoins.dai.address),
-          ).to.be.revertedWith('RVA: pool not set');
+          ).to.be.revertedWithCustomError(
+            redemptionVaultWithAave,
+            'PoolNotSet',
+          );
         });
 
         it('should fail: when function is paused', async () => {
@@ -143,7 +159,11 @@ redemptionVaultSuits(
           await removeAavePoolTest(
             { redemptionVault: redemptionVaultWithAave, owner },
             stableCoins.usdc.address,
-            { revertMessage: 'Pausable: fn paused' },
+            {
+              revertCustomError: {
+                customErrorName: 'FnPaused',
+              },
+            },
           );
         });
 
@@ -294,7 +314,10 @@ redemptionVaultSuits(
               stableCoins.usdc.address,
               parseUnits('1000', 8),
             ),
-          ).to.be.revertedWith('RVA: insufficient withdrawal amount');
+          ).to.be.revertedWithCustomError(
+            redemptionVaultWithAave,
+            'InsufficientWithdrawnAmount',
+          );
         });
       });
 
@@ -945,7 +968,10 @@ redemptionVaultSuits(
               parseUnits('1000'),
               0,
             ),
-          ).to.be.revertedWith('RV: loan lp not configured');
+          ).to.be.revertedWithCustomError(
+            redemptionVaultWithAave,
+            'LoanLpNotConfigured',
+          );
         });
 
         it('should fail: when aave pool is not configured and it hits loan lp flow', async () => {
@@ -987,7 +1013,10 @@ redemptionVaultSuits(
               parseUnits('1000'),
               0,
             ),
-          ).to.be.revertedWith('RV: loan lp not configured');
+          ).to.be.revertedWithCustomError(
+            redemptionVaultWithAave,
+            'LoanLpNotConfigured',
+          );
         });
 
         it('should fail: when aave pool is configured but aToken is not in the pool and it hits loan lp flow', async () => {
@@ -1032,7 +1061,10 @@ redemptionVaultSuits(
               parseUnits('1000'),
               0,
             ),
-          ).to.be.revertedWith('RV: loan lp not configured');
+          ).to.be.revertedWithCustomError(
+            redemptionVaultWithAave,
+            'LoanLpNotConfigured',
+          );
         });
 
         it('should fail: Aave pool has insufficient liquidity during redeemInstant', async () => {
@@ -1125,7 +1157,10 @@ redemptionVaultSuits(
               parseUnits('1000'),
               0,
             ),
-          ).to.be.revertedWith('RVA: insufficient withdrawal amount');
+          ).to.be.revertedWithCustomError(
+            redemptionVaultWithAave,
+            'InsufficientWithdrawnAmount',
+          );
         });
       });
     });

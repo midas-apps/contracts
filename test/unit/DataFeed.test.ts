@@ -78,7 +78,10 @@ describe('DataFeed', function () {
         dataFeed
           .connect(regularAccounts[0])
           .changeAggregator(ethers.constants.AddressZero),
-      ).revertedWith(acErrors.WMAC_HASNT_ROLE);
+      ).revertedWithCustomError(
+        dataFeed,
+        acErrors.WMAC_HASNT_ROLE().customErrorName,
+      );
     });
 
     it('should fail: pass zero address', async () => {

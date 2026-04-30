@@ -4,32 +4,9 @@ pragma solidity 0.8.34;
 import "./IManageableVault.sol";
 
 /**
- * @notice Legacy Mint request scruct
- * @dev used for backward compatibility
+ * @notice Mint request scruct
  */
 struct Request {
-    /// @param user address who create
-    address sender;
-    /// @param tokenIn tokenIn address
-    address tokenIn;
-    /// @param status request status
-    RequestStatus status;
-    /// @param depositedUsdAmount amout USD, tokenIn -> USD
-    uint256 depositedUsdAmount;
-    /// @param usdAmountWithoutFees amout USD, tokenIn - fees -> USD
-    uint256 usdAmountWithoutFees;
-    /// @param tokenOutRate rate of mToken at request creation time
-    uint256 tokenOutRate;
-}
-
-/**
- * @notice Mint request scruct
- * @dev replaces `Request` struct and adds next fields:
- * - `depositedInstantUsdAmount`
- * - `approvedMTokenRate`
- * - `version`
- */
-struct RequestV2 {
     /// @notice user address who will receive the mTokens
     address sender;
     /// @notice tokenIn address
@@ -46,8 +23,6 @@ struct RequestV2 {
     uint256 depositedInstantUsdAmount;
     /// @notice approved tokenOut rate
     uint256 approvedTokenOutRate;
-    /// @notice request version. 0 for legacy, 1 for v2
-    uint8 version;
 }
 
 /**
@@ -55,6 +30,12 @@ struct RequestV2 {
  * @author RedDuck Software
  */
 interface IDepositVault is IManageableVault {
+    error MinAmountFirstDepositNotMet(
+        uint256 amountMTokenWithoutFee,
+        uint256 minAmount
+    );
+    error SupplyCapExceeded();
+
     /**
      * @param caller function caller (msg.sender)
      * @param newValue new min amount to deposit value
