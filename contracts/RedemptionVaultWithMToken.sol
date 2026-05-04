@@ -20,8 +20,6 @@ contract RedemptionVaultWithMToken is RedemptionVault {
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
 
-    error SameRedemptionVaultValue(address redemptionVault);
-
     /**
      * @dev Storage gap preserved from RedemptionVaultWithSwapper layout
      */
@@ -48,24 +46,15 @@ contract RedemptionVaultWithMToken is RedemptionVault {
     /**
      * @notice upgradeable pattern contract`s initializer
      * @param _commonVaultInitParams init params for common vault
-     * @param _commonVaultV2InitParams init params for common vault v2
      * @param _redemptionInitParams init params for redemption vault state values
-     * @param _redemptionVaultV2InitParams init params for redemption vault v2
      * @param _redemptionVault address of the mTokenA RedemptionVault
      */
     function initialize(
         CommonVaultInitParams calldata _commonVaultInitParams,
-        CommonVaultV2InitParams calldata _commonVaultV2InitParams,
         RedemptionVaultInitParams calldata _redemptionInitParams,
-        RedemptionVaultV2InitParams calldata _redemptionVaultV2InitParams,
         address _redemptionVault
     ) external {
-        initialize(
-            _commonVaultInitParams,
-            _commonVaultV2InitParams,
-            _redemptionInitParams,
-            _redemptionVaultV2InitParams
-        );
+        initialize(_commonVaultInitParams, _redemptionInitParams);
         _validateAddress(_redemptionVault, true);
         redemptionVault = IRedemptionVault(_redemptionVault);
     }
@@ -80,7 +69,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
     {
         require(
             _redemptionVault != address(redemptionVault),
-            SameRedemptionVaultValue(_redemptionVault)
+            SameAddressValue(_redemptionVault)
         );
         _validateAddress(_redemptionVault, true);
 

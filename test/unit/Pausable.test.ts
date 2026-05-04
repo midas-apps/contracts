@@ -2,7 +2,6 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 
 import { encodeFnSelector } from '../../helpers/utils';
-import { PausableTester__factory } from '../../typechain-types';
 import {
   acErrors,
   setFunctionPermissionTester,
@@ -23,16 +22,6 @@ describe('Pausable', () => {
     expect(await pausableTester.pauseAdminRole()).eq(roles.common.defaultAdmin);
 
     expect(await pausableTester.paused()).eq(false);
-  });
-
-  it('onlyInitializing', async () => {
-    const { accessControl, owner } = await loadFixture(defaultDeploy);
-
-    const pausable = await new PausableTester__factory(owner).deploy();
-
-    await expect(
-      pausable.initializeWithoutInitializer(accessControl.address),
-    ).revertedWith('Initializable: contract is not initializing');
   });
 
   describe('onlyPauseAdmin modifier', async () => {
@@ -179,7 +168,7 @@ describe('Pausable', () => {
       await pauseVaultFn(pausableTester, selector);
       await pauseVaultFn(pausableTester, selector, {
         revertCustomError: {
-          customErrorName: 'SameFnPausedValue',
+          customErrorName: 'SameBytes4Value',
         },
       });
     });
@@ -200,7 +189,7 @@ describe('Pausable', () => {
 
       const pauseAdminRole = await pausableTester.pauseAdminRole();
       const fnSel = encodeFnSelector('depositRequest(address,uint256,bytes32)');
-      const pauseFnEntrySel = encodeFnSelector('pauseFn(bytes4)');
+      const pauseFnEntrySel = encodeFnSelector('bulkPauseFn(bytes4[])');
 
       await setupFunctionAccessGrantOperator({
         accessControl,
@@ -306,7 +295,7 @@ describe('Pausable', () => {
 
       await unpauseVaultFn(pausableTester, selector, {
         revertCustomError: {
-          customErrorName: 'SameFnPausedValue',
+          customErrorName: 'SameBytes4Value',
         },
       });
     });
@@ -328,7 +317,7 @@ describe('Pausable', () => {
 
       const pauseAdminRole = await pausableTester.pauseAdminRole();
       const fnSel = encodeFnSelector('depositRequest(address,uint256,bytes32)');
-      const unpauseFnSel = encodeFnSelector('unpauseFn(bytes4)');
+      const unpauseFnSel = encodeFnSelector('bulkUnpauseFn(bytes4[])');
 
       await pauseVaultFn(pausableTester, fnSel);
 
@@ -353,6 +342,8 @@ describe('Pausable', () => {
       expect(
         await accessControl.hasRole(pauseAdminRole, regularAccounts[0].address),
       ).eq(false);
+
+      console.log('fnSel', fnSel);
 
       await unpauseVaultFn(pausableTester, fnSel, {
         from: regularAccounts[0],

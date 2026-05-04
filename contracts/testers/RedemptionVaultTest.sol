@@ -67,14 +67,14 @@ contract RedemptionVaultTest is RedemptionVault {
         uint256 amountUsd,
         address tokenOut,
         uint256 overrideTokenOutRate
-    ) external returns (uint256 amountToken, uint256 tokenRate) {
+    ) external view returns (uint256 amountToken, uint256 tokenRate) {
         return _convertUsdToToken(amountUsd, tokenOut, overrideTokenOutRate);
     }
 
     function convertMTokenToUsdTest(
         uint256 amountMToken,
         uint256 overrideMTokenRate
-    ) external returns (uint256 amountUsd, uint256 mTokenRate) {
+    ) external view returns (uint256 amountUsd, uint256 mTokenRate) {
         return _convertMTokenToUsd(amountMToken, overrideMTokenRate);
     }
 

@@ -119,40 +119,18 @@ export const pauseVault = async (
 
 export const pauseVaultFn = async (
   vault: Pausable,
-  fnSelector: string,
+  fnSelector: string | string[],
   opt?: OptionalCommonParams,
 ) => {
   const [defaultSigner] = await ethers.getSigners();
 
-  if (
-    await handleRevert(
-      vault.connect(opt?.from ?? defaultSigner).pauseFn.bind(this, fnSelector),
-      vault,
-      opt,
-    )
-  ) {
-    return;
-  }
-
-  await expect(
-    await vault.connect(opt?.from ?? defaultSigner).pauseFn(fnSelector),
-  ).not.reverted;
-
-  expect(await vault.fnPaused(fnSelector)).eq(true);
-};
-
-export const unpauseVaultFn = async (
-  vault: Pausable,
-  fnSelector: string,
-  opt?: OptionalCommonParams,
-) => {
-  const [defaultSigner] = await ethers.getSigners();
+  const selectors = Array.isArray(fnSelector) ? fnSelector : [fnSelector];
 
   if (
     await handleRevert(
       vault
         .connect(opt?.from ?? defaultSigner)
-        .unpauseFn.bind(this, fnSelector),
+        .bulkPauseFn.bind(this, selectors),
       vault,
       opt,
     )
@@ -161,10 +139,42 @@ export const unpauseVaultFn = async (
   }
 
   await expect(
-    await vault.connect(opt?.from ?? defaultSigner).unpauseFn(fnSelector),
+    await vault.connect(opt?.from ?? defaultSigner).bulkPauseFn(selectors),
   ).not.reverted;
 
-  expect(await vault.fnPaused(fnSelector)).eq(false);
+  for (const fnSelector of selectors) {
+    expect(await vault.fnPaused(fnSelector)).eq(true);
+  }
+};
+
+export const unpauseVaultFn = async (
+  vault: Pausable,
+  fnSelector: string | string[],
+  opt?: OptionalCommonParams,
+) => {
+  const [defaultSigner] = await ethers.getSigners();
+
+  const selectors = Array.isArray(fnSelector) ? fnSelector : [fnSelector];
+
+  if (
+    await handleRevert(
+      vault
+        .connect(opt?.from ?? defaultSigner)
+        .bulkUnpauseFn.bind(this, selectors),
+      vault,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  await expect(
+    await vault.connect(opt?.from ?? defaultSigner).bulkUnpauseFn(selectors),
+  ).not.reverted;
+
+  for (const fnSelector of selectors) {
+    expect(await vault.fnPaused(fnSelector)).eq(false);
+  }
 };
 
 export const unpauseVault = async (

@@ -5,15 +5,7 @@ import "../access/Greenlistable.sol";
 
 contract GreenlistableTester is Greenlistable {
     function initialize(address _accessControl) external initializer {
-        __Greenlistable_init(_accessControl);
-    }
-
-    function initializeWithoutInitializer(address _accessControl) external {
-        __Greenlistable_init(_accessControl);
-    }
-
-    function initializeUnchainedWithoutInitializer() external {
-        __Greenlistable_init_unchained();
+        __WithMidasAccessControl_init(_accessControl);
     }
 
     function onlyGreenlistedTester(address account)

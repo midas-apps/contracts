@@ -37,7 +37,7 @@ enum RequestStatus {
 }
 
 /**
- * @notice Common vault init params (v1)
+ * @notice Common vault init params
  */
 struct CommonVaultInitParams {
     /// @notice address of the access control contract
@@ -58,6 +58,14 @@ struct CommonVaultInitParams {
     address feeReceiver;
     /// @notice fee for initial operations 1% = 100
     uint256 instantFee;
+    /// @notice minimum instant fee
+    uint64 minInstantFee;
+    /// @notice maximum instant fee
+    uint64 maxInstantFee;
+    /// @notice maximum instant share value in basis points (100 = 1%)
+    uint64 maxInstantShare;
+    /// @notice limit configs
+    LimitConfigInitParams[] limitConfigs;
 }
 
 /**
@@ -71,29 +79,14 @@ struct LimitConfigInitParams {
 }
 
 /**
- * @notice Common vault init params (v2)
- */
-struct CommonVaultV2InitParams {
-    /// @notice minimum instant fee
-    uint64 minInstantFee;
-    /// @notice maximum instant fee
-    uint64 maxInstantFee;
-    /// @notice maximum instant share value in basis points (100 = 1%)
-    uint64 maxInstantShare;
-    /// @notice limit configs
-    LimitConfigInitParams[] limitConfigs;
-}
-
-/**
  * @title IManageableVault
  * @author RedDuck Software
  */
 interface IManageableVault {
     error PaymentTokenAlreadyAdded(address token);
     error PaymentTokenNotExists(address token);
-    error SameFeeWaivedValue(address account, bool value);
+    error SameAddressValue(address account);
     error InstantLimitWindowNotExists(uint256 window);
-    error SameFreeFromMinAmountValue(address account, bool value);
     error InvalidMinMaxInstantFee(uint256 minFee, uint256 maxFee);
     error InvalidRounding(uint256 amount, uint256 requiredAmount);
     error UnknownPaymentToken(address token);

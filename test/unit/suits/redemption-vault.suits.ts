@@ -229,8 +229,6 @@ export const redemptionVaultSuits = (
               feeReceiver: feeReceiver.address,
               tokensReceiver: tokensReceiver.address,
               instantFee: 100,
-            },
-            {
               limitConfigs: [
                 {
                   limit: parseUnits('100000'),
@@ -241,8 +239,8 @@ export const redemptionVaultSuits = (
               maxInstantFee: 10000,
               maxInstantShare: 100_00,
             },
-            { requestRedeemer: requestRedeemer.address },
             {
+              requestRedeemer: requestRedeemer.address,
               loanLp: loanLp.address,
               loanLpFeeReceiver: loanLpFeeReceiver.address,
               loanRepaymentAddress: loanRepaymentAddress.address,
@@ -263,8 +261,6 @@ export const redemptionVaultSuits = (
               feeReceiver: feeReceiver.address,
               tokensReceiver: tokensReceiver.address,
               instantFee: 100,
-            },
-            {
               limitConfigs: [
                 {
                   limit: parseUnits('100000'),
@@ -277,8 +273,6 @@ export const redemptionVaultSuits = (
             },
             {
               requestRedeemer: requestRedeemer.address,
-            },
-            {
               loanLp: loanLp.address,
               loanLpFeeReceiver: loanLpFeeReceiver.address,
               loanRepaymentAddress: loanRepaymentAddress.address,
@@ -299,8 +293,6 @@ export const redemptionVaultSuits = (
               feeReceiver: ethers.constants.AddressZero,
               tokensReceiver: tokensReceiver.address,
               instantFee: 100,
-            },
-            {
               limitConfigs: [
                 {
                   limit: parseUnits('100000'),
@@ -313,8 +305,6 @@ export const redemptionVaultSuits = (
             },
             {
               requestRedeemer: requestRedeemer.address,
-            },
-            {
               loanLp: loanLp.address,
               loanLpFeeReceiver: loanLpFeeReceiver.address,
               loanRepaymentAddress: loanRepaymentAddress.address,
@@ -335,8 +325,6 @@ export const redemptionVaultSuits = (
               feeReceiver: feeReceiver.address,
               tokensReceiver: ethers.constants.AddressZero,
               instantFee: 100,
-            },
-            {
               limitConfigs: [
                 {
                   limit: parseUnits('100000'),
@@ -349,8 +337,6 @@ export const redemptionVaultSuits = (
             },
             {
               requestRedeemer: requestRedeemer.address,
-            },
-            {
               loanLp: loanLp.address,
               loanLpFeeReceiver: loanLpFeeReceiver.address,
               loanRepaymentAddress: loanRepaymentAddress.address,
@@ -377,8 +363,6 @@ export const redemptionVaultSuits = (
                 feeReceiver: constants.AddressZero,
                 tokensReceiver: constants.AddressZero,
                 instantFee: 0,
-              },
-              {
                 limitConfigs: [
                   {
                     limit: parseUnits('100000'),
@@ -391,8 +375,6 @@ export const redemptionVaultSuits = (
               },
               {
                 requestRedeemer: constants.AddressZero,
-              },
-              {
                 loanLp: constants.AddressZero,
                 loanLpFeeReceiver: constants.AddressZero,
                 loanRepaymentAddress: constants.AddressZero,
@@ -419,30 +401,26 @@ export const redemptionVaultSuits = (
           ).deploy();
 
           await expect(
-            vault.initializeWithoutInitializer(
-              {
-                ac: accessControl.address,
-                sanctionsList: mockedSanctionsList.address,
-                variationTolerance: 1,
-                minAmount: 1000,
-                mToken: mTBILL.address,
-                mTokenDataFeed: mTokenToUsdDataFeed.address,
-                feeReceiver: feeReceiver.address,
-                tokensReceiver: tokensReceiver.address,
-                instantFee: 100,
-              },
-              {
-                limitConfigs: [
-                  {
-                    limit: parseUnits('100000'),
-                    window: days(1),
-                  },
-                ],
-                minInstantFee: 0,
-                maxInstantFee: 10000,
-                maxInstantShare: 100_00,
-              },
-            ),
+            vault.initializeWithoutInitializer({
+              ac: accessControl.address,
+              sanctionsList: mockedSanctionsList.address,
+              variationTolerance: 1,
+              minAmount: 1000,
+              mToken: mTBILL.address,
+              mTokenDataFeed: mTokenToUsdDataFeed.address,
+              feeReceiver: feeReceiver.address,
+              tokensReceiver: tokensReceiver.address,
+              instantFee: 100,
+              limitConfigs: [
+                {
+                  limit: parseUnits('100000'),
+                  window: days(1),
+                },
+              ],
+              minInstantFee: 0,
+              maxInstantFee: 10000,
+              maxInstantShare: 100_00,
+            }),
           ).revertedWith('Initializable: contract is not initializing');
         });
 
@@ -461,30 +439,26 @@ export const redemptionVaultSuits = (
           ).deploy();
 
           await expect(
-            vault.initialize(
-              {
-                ac: accessControl.address,
-                sanctionsList: mockedSanctionsList.address,
-                variationTolerance: 1,
-                minAmount: 1000,
-                mToken: mTBILL.address,
-                mTokenDataFeed: mTokenToUsdDataFeed.address,
-                feeReceiver: feeReceiver.address,
-                tokensReceiver: vault.address,
-                instantFee: 100,
-              },
-              {
-                limitConfigs: [
-                  {
-                    limit: parseUnits('100000'),
-                    window: days(1),
-                  },
-                ],
-                minInstantFee: 0,
-                maxInstantFee: 10000,
-                maxInstantShare: 100_00,
-              },
-            ),
+            vault.initialize({
+              ac: accessControl.address,
+              sanctionsList: mockedSanctionsList.address,
+              variationTolerance: 1,
+              minAmount: 1000,
+              mToken: mTBILL.address,
+              mTokenDataFeed: mTokenToUsdDataFeed.address,
+              feeReceiver: feeReceiver.address,
+              tokensReceiver: vault.address,
+              instantFee: 100,
+              limitConfigs: [
+                {
+                  limit: parseUnits('100000'),
+                  window: days(1),
+                },
+              ],
+              minInstantFee: 0,
+              maxInstantFee: 10000,
+              maxInstantShare: 100_00,
+            }),
           ).to.be.revertedWithCustomError(vault, 'InvalidAddress');
         });
         it('should fail: when _feeReceiver == address(this)', async () => {
@@ -502,30 +476,26 @@ export const redemptionVaultSuits = (
           ).deploy();
 
           await expect(
-            vault.initialize(
-              {
-                ac: accessControl.address,
-                sanctionsList: mockedSanctionsList.address,
-                variationTolerance: 1,
-                minAmount: 1000,
-                mToken: mTBILL.address,
-                mTokenDataFeed: mTokenToUsdDataFeed.address,
-                feeReceiver: vault.address,
-                tokensReceiver: tokensReceiver.address,
-                instantFee: 100,
-              },
-              {
-                limitConfigs: [
-                  {
-                    limit: parseUnits('100000'),
-                    window: days(1),
-                  },
-                ],
-                minInstantFee: 0,
-                maxInstantFee: 10000,
-                maxInstantShare: 100_00,
-              },
-            ),
+            vault.initialize({
+              ac: accessControl.address,
+              sanctionsList: mockedSanctionsList.address,
+              variationTolerance: 1,
+              minAmount: 1000,
+              mToken: mTBILL.address,
+              mTokenDataFeed: mTokenToUsdDataFeed.address,
+              feeReceiver: vault.address,
+              tokensReceiver: tokensReceiver.address,
+              instantFee: 100,
+              limitConfigs: [
+                {
+                  limit: parseUnits('100000'),
+                  window: days(1),
+                },
+              ],
+              minInstantFee: 0,
+              maxInstantFee: 10000,
+              maxInstantShare: 100_00,
+            }),
           ).to.be.revertedWithCustomError(vault, 'InvalidAddress');
         });
 
@@ -544,30 +514,26 @@ export const redemptionVaultSuits = (
           ).deploy();
 
           await expect(
-            vault.initialize(
-              {
-                ac: accessControl.address,
-                sanctionsList: mockedSanctionsList.address,
-                variationTolerance: 1,
-                minAmount: 1000,
-                mToken: mTBILL.address,
-                mTokenDataFeed: constants.AddressZero,
-                feeReceiver: feeReceiver.address,
-                tokensReceiver: tokensReceiver.address,
-                instantFee: 100,
-              },
-              {
-                limitConfigs: [
-                  {
-                    limit: parseUnits('100000'),
-                    window: days(1),
-                  },
-                ],
-                minInstantFee: 0,
-                maxInstantFee: 10000,
-                maxInstantShare: 100_00,
-              },
-            ),
+            vault.initialize({
+              ac: accessControl.address,
+              sanctionsList: mockedSanctionsList.address,
+              variationTolerance: 1,
+              minAmount: 1000,
+              mToken: mTBILL.address,
+              mTokenDataFeed: constants.AddressZero,
+              feeReceiver: feeReceiver.address,
+              tokensReceiver: tokensReceiver.address,
+              instantFee: 100,
+              limitConfigs: [
+                {
+                  limit: parseUnits('100000'),
+                  window: days(1),
+                },
+              ],
+              minInstantFee: 0,
+              maxInstantFee: 10000,
+              maxInstantShare: 100_00,
+            }),
           ).to.be.revertedWithCustomError(vault, 'InvalidAddress');
         });
         it('should fail: when variationTolarance zero', async () => {
@@ -586,74 +552,27 @@ export const redemptionVaultSuits = (
           ).deploy();
 
           await expect(
-            vault.initialize(
-              {
-                ac: accessControl.address,
-                sanctionsList: mockedSanctionsList.address,
-                variationTolerance: 0,
-                minAmount: 1000,
-                mToken: mTBILL.address,
-                mTokenDataFeed: mTokenToUsdDataFeed.address,
-                feeReceiver: feeReceiver.address,
-                tokensReceiver: tokensReceiver.address,
-                instantFee: 100,
-              },
-              {
-                limitConfigs: [
-                  {
-                    limit: parseUnits('100000'),
-                    window: days(1),
-                  },
-                ],
-                minInstantFee: 0,
-                maxInstantFee: 10000,
-                maxInstantShare: 100_00,
-              },
-            ),
+            vault.initialize({
+              ac: accessControl.address,
+              sanctionsList: mockedSanctionsList.address,
+              variationTolerance: 0,
+              minAmount: 1000,
+              mToken: mTBILL.address,
+              mTokenDataFeed: mTokenToUsdDataFeed.address,
+              feeReceiver: feeReceiver.address,
+              tokensReceiver: tokensReceiver.address,
+              instantFee: 100,
+              limitConfigs: [
+                {
+                  limit: parseUnits('100000'),
+                  window: days(1),
+                },
+              ],
+              minInstantFee: 0,
+              maxInstantFee: 10000,
+              maxInstantShare: 100_00,
+            }),
           ).to.be.revertedWithCustomError(vault, 'InvalidFee');
-        });
-
-        it('should fail: when trying to call initializeV2 on initialized contract', async () => {
-          const { redemptionVault } = await loadRvFixture();
-          await expect(
-            redemptionVault.initializeV2(
-              {
-                minInstantFee: 0,
-                maxInstantFee: 0,
-                maxInstantShare: 100_00,
-                limitConfigs: [],
-              },
-              {
-                loanLp: constants.AddressZero,
-                loanLpFeeReceiver: constants.AddressZero,
-                loanRepaymentAddress: constants.AddressZero,
-                loanSwapperVault: constants.AddressZero,
-                maxLoanApr: 0,
-              },
-            ),
-          ).revertedWith('Initializable: contract is already initialized');
-        });
-
-        it('when trying to call initializeV2 before v1', async () => {
-          const { createNew, regularAccounts } = await loadRvFixture();
-          const redemptionVault = await createNew();
-          await expect(
-            redemptionVault.initializeV2(
-              {
-                minInstantFee: 0,
-                maxInstantFee: 1,
-                maxInstantShare: 100_00,
-                limitConfigs: [],
-              },
-              {
-                loanLp: regularAccounts[0].address,
-                loanLpFeeReceiver: regularAccounts[0].address,
-                loanRepaymentAddress: regularAccounts[0].address,
-                loanSwapperVault: regularAccounts[0].address,
-                maxLoanApr: 0,
-              },
-            ),
-          ).not.reverted;
         });
       });
 
@@ -4320,7 +4239,7 @@ export const redemptionVaultSuits = (
             owner.address,
             {
               revertCustomError: {
-                customErrorName: 'SameFeeWaivedValue',
+                customErrorName: 'SameAddressValue',
               },
             },
           );
@@ -4429,7 +4348,7 @@ export const redemptionVaultSuits = (
             owner.address,
             {
               revertCustomError: {
-                customErrorName: 'SameFeeWaivedValue',
+                customErrorName: 'SameAddressValue',
               },
             },
           );
@@ -5931,10 +5850,7 @@ export const redemptionVaultSuits = (
 
           await expect(
             redemptionVault.freeFromMinAmount(regularAccounts[0].address, true),
-          ).to.be.revertedWithCustomError(
-            redemptionVault,
-            'SameFreeFromMinAmountValue',
-          );
+          ).to.be.revertedWithCustomError(redemptionVault, 'SameAddressValue');
         });
 
         it('should fail: when function is paused', async () => {
@@ -8315,7 +8231,7 @@ export const redemptionVaultSuits = (
             parseUnits('1'),
             {
               revertCustomError: {
-                customErrorName: 'InvalidMTokenInstantAmount',
+                customErrorName: 'InvalidInstantAmount',
               },
             },
           );
@@ -8779,7 +8695,7 @@ export const redemptionVaultSuits = (
             parseUnits('5'),
             {
               revertCustomError: {
-                customErrorName: 'InvalidMTokenInstantAmount',
+                customErrorName: 'InvalidInstantAmount',
               },
             },
           );
@@ -12145,7 +12061,7 @@ export const redemptionVaultSuits = (
             parseUnits('5.00001'),
             {
               revertCustomError: {
-                customErrorName: 'InvalidMTokenInstantAmount',
+                customErrorName: 'InvalidInstantAmount',
               },
             },
           );
@@ -13243,7 +13159,7 @@ export const redemptionVaultSuits = (
             undefined,
             {
               revertCustomError: {
-                customErrorName: 'InvalidMTokenInstantAmount',
+                customErrorName: 'InvalidInstantAmount',
               },
             },
           );
@@ -15140,12 +15056,27 @@ export const redemptionVaultSuits = (
       });
 
       describe('_convertUsdToToken', () => {
-        it('should fail: when amountUsd == 0', async () => {
-          const { redemptionVault } = await loadRvFixture();
+        it('when amountUsd == 0', async () => {
+          const { redemptionVault, owner, stableCoins, dataFeed } =
+            await loadRvFixture();
 
-          await expect(
-            redemptionVault.convertUsdToTokenTest(0, constants.AddressZero, 0),
-          ).to.be.revertedWithCustomError(redemptionVault, 'InvalidAmount');
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          expect(
+            (
+              await redemptionVault.convertUsdToTokenTest(
+                0,
+                stableCoins.dai.address,
+                0,
+              )
+            ).amountToken,
+          ).eq(0);
         });
 
         it('should fail: when tokenRate == 0', async () => {
@@ -15162,18 +15093,69 @@ export const redemptionVaultSuits = (
             ),
           ).to.be.revertedWithCustomError(redemptionVault, 'InvalidTokenRate');
         });
-      });
 
-      describe('_convertMTokenToUsd', () => {
-        it('should fail: when amountMToken == 0', async () => {
+        it('when tokenRate == 0 but override rate is not 0', async () => {
+          const { redemptionVault, stableCoins, owner, dataFeed } =
+            await loadRvFixture();
+
+          await redemptionVault.setOverrideGetTokenRate(true);
+          await redemptionVault.setGetTokenRateValue(0);
+
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          expect(
+            (
+              await redemptionVault.convertUsdToTokenTest(
+                0,
+                stableCoins.dai.address,
+                1,
+              )
+            ).amountToken,
+          ).eq(0);
+        });
+
+        it('when payment token is not setup and override rate is not 0', async () => {
+          const { redemptionVault } = await loadRvFixture();
+
+          await redemptionVault.setOverrideGetTokenRate(true);
+          await redemptionVault.setGetTokenRateValue(0);
+
+          expect(
+            (
+              await redemptionVault.convertUsdToTokenTest(
+                0,
+                constants.AddressZero,
+                1,
+              )
+            ).amountToken,
+          ).eq(0);
+        });
+
+        it('should fail: when unknwon payment token', async () => {
           const { redemptionVault } = await loadRvFixture();
 
           await expect(
-            redemptionVault.convertMTokenToUsdTest(0, 0),
-          ).to.be.revertedWithCustomError(redemptionVault, 'InvalidAmount');
+            redemptionVault.convertUsdToTokenTest(1, constants.AddressZero, 0),
+          ).to.be.revertedWithoutReason();
+        });
+      });
+
+      describe('_convertMTokenToUsd', () => {
+        it('when amountMToken == 0', async () => {
+          const { redemptionVault } = await loadRvFixture();
+
+          expect(
+            (await redemptionVault.convertMTokenToUsdTest(0, 0)).amountUsd,
+          ).eq(0);
         });
 
-        it('should fail: when amountMToken == 0', async () => {
+        it('should fail: when override rate == 0', async () => {
           const { redemptionVault } = await loadRvFixture();
 
           await redemptionVault.setOverrideGetTokenRate(true);

@@ -28,17 +28,11 @@ struct Request {
 }
 
 /**
- * @notice Redemption vault init params (v1)
+ * @notice Redemption vault init params
  */
 struct RedemptionVaultInitParams {
     /// @notice address of request redeemer
     address requestRedeemer;
-}
-
-/**
- * @notice Redemption vault init params (v2)
- */
-struct RedemptionVaultV2InitParams {
     /// @notice address of loan liquidity provider
     address loanLp;
     /// @notice address of loan liquidity provider fee receiver

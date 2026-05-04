@@ -151,7 +151,7 @@ describe('Greenlistable', function () {
         false,
         {
           revertCustomError: {
-            customErrorName: 'SameGreenlistEnableValue',
+            customErrorName: 'SameBoolValue',
           },
         },
       );

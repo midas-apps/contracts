@@ -6,7 +6,7 @@ import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgrade
 
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 
-import {IDepositVault, CommonVaultInitParams, CommonVaultV2InitParams, Request, RequestStatus} from "./interfaces/IDepositVault.sol";
+import {IDepositVault, CommonVaultInitParams, DepositVaultInitParams, Request, RequestStatus} from "./interfaces/IDepositVault.sol";
 
 import {ManageableVault} from "./abstract/ManageableVault.sol";
 
@@ -72,63 +72,23 @@ contract DepositVault is ManageableVault, IDepositVault {
 
     /**
      * @dev leaving a storage gap for futures updates
-     *
-     * used slots:
-     * 50 - `maxSupplyCap`
      */
-    uint256[49] private __gap;
+    uint256[50] private __gap;
 
     /**
      * @notice upgradeable pattern contract`s initializer
-     * @dev Calls all versioned initializers (V1, V2, ...) in chronological order.
-     * This ensures that every deployment, whether fresh or upgraded, ends up
-     * initialized to the latest contract state without breaking the
-     * initializer/reinitializer versioning rules.
      * @param _commonVaultInitParams init params for common vault
-     * @param _commonVaultV2InitParams init params for common vault v2
-     * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
-     * @param _maxSupplyCap max supply cap for mToken
+     * @param _depositVaultInitParams init params for deposit vault
      */
     function initialize(
         CommonVaultInitParams calldata _commonVaultInitParams,
-        CommonVaultV2InitParams calldata _commonVaultV2InitParams,
-        uint256 _minMTokenAmountForFirstDeposit,
-        uint256 _maxSupplyCap
-    ) public {
-        initializeV1(_commonVaultInitParams, _minMTokenAmountForFirstDeposit);
-        initializeV2(_maxSupplyCap);
-        initializeV3(_commonVaultV2InitParams);
-    }
-
-    /**
-     * @notice v1 initializer
-     * @param _commonVaultInitParams init params for common vault
-     * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
-     */
-    function initializeV1(
-        CommonVaultInitParams calldata _commonVaultInitParams,
-        uint256 _minMTokenAmountForFirstDeposit
+        DepositVaultInitParams calldata _depositVaultInitParams
     ) public initializer {
         __ManageableVault_init(_commonVaultInitParams);
-        minMTokenAmountForFirstDeposit = _minMTokenAmountForFirstDeposit;
-    }
 
-    /**
-     * @notice v2 initializer
-     * @param _maxSupplyCap max supply cap for mToken
-     */
-    function initializeV2(uint256 _maxSupplyCap) public reinitializer(2) {
-        maxSupplyCap = _maxSupplyCap;
-    }
-
-    /**
-     * @notice v2 initializer
-     * @param _commonVaultV2InitParams init params for common vault v2
-     */
-    function initializeV3(
-        CommonVaultV2InitParams calldata _commonVaultV2InitParams
-    ) public reinitializer(3) {
-        __ManageableVault_initV2(_commonVaultV2InitParams);
+        minMTokenAmountForFirstDeposit = _depositVaultInitParams
+            .minMTokenAmountForFirstDeposit;
+        maxSupplyCap = _depositVaultInitParams.maxSupplyCap;
     }
 
     /**

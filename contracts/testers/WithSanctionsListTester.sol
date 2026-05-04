@@ -3,20 +3,13 @@ pragma solidity 0.8.34;
 
 import "../abstract/WithSanctionsList.sol";
 
-// TODO: add natspec
 contract WithSanctionsListTester is WithSanctionsList {
     function initialize(address _accessControl, address _sanctionsList)
         external
         initializer
     {
-        __WithSanctionsList_init(_accessControl, _sanctionsList);
-    }
-
-    function initializeWithoutInitializer(
-        address _accessControl,
-        address _sanctionsList
-    ) external {
-        __WithSanctionsList_init(_accessControl, _sanctionsList);
+        __WithMidasAccessControl_init(_accessControl);
+        __WithSanctionsList_init_unchained(_sanctionsList);
     }
 
     function initializeUnchainedWithoutInitializer(address _sanctionsList)

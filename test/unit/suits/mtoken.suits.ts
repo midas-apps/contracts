@@ -184,8 +184,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         feeReceiver: fixture.feeReceiver.address,
         tokensReceiver: fixture.tokensReceiver.address,
         instantFee: 100,
-      },
-      {
         minInstantFee: 0,
         maxInstantFee: 10000,
         limitConfigs: [
@@ -194,15 +192,18 @@ export const mTokenContractsSuits = (token: MTokenName) => {
             window: days(1),
           },
         ],
+        maxInstantShare: 100_00,
       },
-      0,
-      0,
+      {
+        minMTokenAmountForFirstDeposit: 0,
+        maxSupplyCap: 0,
+      },
     );
 
     const depositVaultUstb =
       await deployProxyContractIfExists<DepositVaultWithUSTB>(
         'dvUstb',
-        'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)',
+        'initialize((address,address,uint256,uint256,address,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(uint256,uint256),address)',
         {
           ac: fixture.accessControl.address,
           sanctionsList: fixture.mockedSanctionsList.address,
@@ -213,8 +214,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           feeReceiver: fixture.feeReceiver.address,
           tokensReceiver: fixture.tokensReceiver.address,
           instantFee: 100,
-        },
-        {
           minInstantFee: 0,
           maxInstantFee: 10000,
           limitConfigs: [
@@ -225,8 +224,10 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           ],
           maxInstantShare: 100_00,
         },
-        0,
-        0,
+        {
+          minMTokenAmountForFirstDeposit: 0,
+          maxSupplyCap: 0,
+        },
         fixture.ustbToken.address,
       );
 
@@ -243,8 +244,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         feeReceiver: fixture.feeReceiver.address,
         tokensReceiver: fixture.tokensReceiver.address,
         instantFee: 100,
-      },
-      {
         limitConfigs: [
           {
             limit: parseUnits('100000'),
@@ -255,8 +254,8 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         maxInstantFee: 10000,
         maxInstantShare: 100_00,
       },
-      { requestRedeemer: fixture.requestRedeemer.address },
       {
+        requestRedeemer: fixture.requestRedeemer.address,
         loanLp: fixture.loanLp.address,
         loanLpFeeReceiver: fixture.loanLpFeeReceiver.address,
         loanRepaymentAddress: fixture.loanRepaymentAddress.address,
@@ -264,7 +263,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         maxLoanApr: 0,
       },
     );
-
     const redemptionVaultWithSwapper =
       await deployProxyContractIfExists<RedemptionVaultWithSwapper>(
         'rvSwapper',
@@ -279,8 +277,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           feeReceiver: fixture.feeReceiver.address,
           tokensReceiver: fixture.tokensReceiver.address,
           instantFee: 100,
-        },
-        {
           limitConfigs: [
             {
               limit: parseUnits('100000'),
@@ -291,8 +287,8 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           maxInstantFee: 10000,
           maxInstantShare: 100_00,
         },
-        { requestRedeemer: fixture.requestRedeemer.address },
         {
+          requestRedeemer: fixture.requestRedeemer.address,
           loanLp: fixture.loanLp.address,
           loanLpFeeReceiver: fixture.loanLpFeeReceiver.address,
           loanRepaymentAddress: fixture.loanRepaymentAddress.address,
@@ -304,7 +300,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
     await redemptionVaultWithSwapper?.addWaivedFeeAccount(
       fixture.redemptionVault.address,
     );
-
     return {
       ...fixture,
       tokenContract,
@@ -364,8 +359,11 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         const caller = regularAccounts[0];
 
-        await expect(tokenContract.connect(caller).pause()).revertedWith(
-          acErrors.WMAC_HASNT_ROLE,
+        await expect(
+          tokenContract.connect(caller).pause(),
+        ).revertedWithCustomError(
+          tokenContract,
+          acErrors.WMAC_HASNT_ROLE().customErrorName,
         );
       });
 
@@ -399,8 +397,11 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         const caller = regularAccounts[0];
 
         await tokenContract.connect(owner).pause();
-        await expect(tokenContract.connect(caller).unpause()).revertedWith(
-          acErrors.WMAC_HASNT_ROLE,
+        await expect(
+          tokenContract.connect(caller).unpause(),
+        ).revertedWithCustomError(
+          tokenContract,
+          acErrors.WMAC_HASNT_ROLE().customErrorName,
         );
       });
 
@@ -436,7 +437,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         await mint({ tokenContract, owner }, owner, 0, {
           from: caller,
-          revertMessage: acErrors.WMAC_HASNT_ROLE,
+          revertCustomError: acErrors.WMAC_HASNT_ROLE,
         });
       });
 
@@ -460,7 +461,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         await burn({ tokenContract, owner }, owner, 0, {
           from: caller,
-          revertMessage: acErrors.WMAC_HASNT_ROLE,
+          revertCustomError: acErrors.WMAC_HASNT_ROLE,
         });
       });
 
@@ -497,7 +498,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         await setMetadataTest({ tokenContract, owner }, 'url', 'some value', {
           from: caller,
-          revertMessage: acErrors.WMAC_HASNT_ROLE,
+          revertCustomError: acErrors.WMAC_HASNT_ROLE,
         });
       });
 
@@ -524,7 +525,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           blacklisted,
         );
         await mint({ tokenContract, owner }, blacklisted, 1, {
-          revertMessage: acErrors.WMAC_HAS_ROLE,
+          revertCustomError: acErrors.WMAC_HAS_ROLE,
         });
       });
 
@@ -543,7 +544,10 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         await expect(
           tokenContract.connect(blacklisted).transfer(to.address, 1),
-        ).revertedWith(acErrors.WMAC_HAS_ROLE);
+        ).revertedWithCustomError(
+          tokenContract,
+          acErrors.WMAC_HAS_ROLE().customErrorName,
+        );
       });
 
       it('should fail: transfer(...) when to address is blacklisted', async () => {
@@ -561,7 +565,10 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         await expect(
           tokenContract.connect(from).transfer(blacklisted.address, 1),
-        ).revertedWith(acErrors.WMAC_HAS_ROLE);
+        ).revertedWithCustomError(
+          tokenContract,
+          acErrors.WMAC_HAS_ROLE().customErrorName,
+        );
       });
 
       it('should fail: transferFrom(...) when from address is blacklisted', async () => {
@@ -583,7 +590,10 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           tokenContract
             .connect(to)
             .transferFrom(blacklisted.address, to.address, 1),
-        ).revertedWith(acErrors.WMAC_HAS_ROLE);
+        ).revertedWithCustomError(
+          tokenContract,
+          acErrors.WMAC_HAS_ROLE().customErrorName,
+        );
       });
 
       it('should fail: transferFrom(...) when to address is blacklisted', async () => {
@@ -606,7 +616,10 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           tokenContract
             .connect(caller)
             .transferFrom(from.address, blacklisted.address, 1),
-        ).revertedWith(acErrors.WMAC_HAS_ROLE);
+        ).revertedWithCustomError(
+          tokenContract,
+          acErrors.WMAC_HAS_ROLE().customErrorName,
+        );
       });
 
       it('burn(...) when address is blacklisted', async () => {
@@ -661,7 +674,10 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         await expect(
           tokenContract.connect(blacklisted).transfer(to.address, 1),
-        ).revertedWith(acErrors.WMAC_HAS_ROLE);
+        ).revertedWithCustomError(
+          tokenContract,
+          acErrors.WMAC_HAS_ROLE().customErrorName,
+        );
 
         await unBlackList(
           { blacklistable: tokenContract, accessControl, owner },
@@ -673,70 +689,61 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       });
     });
   });
-  describe('roles check', () => {
-    it('DataFeed', async function () {
-      const fixture = await deployMTokenVaultsWithFixture();
-      const dataFeed = fixture.tokenDataFeed as Contract;
 
-      if (!dataFeed || !tokenRoleNames.customFeedAdmin || isTac) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (this as any).skip();
-        return;
-      }
+  it('roles check', async () => {
+    // 'DataFeed' contract checks
 
+    const fixture = await deployMTokenVaultsWithFixture();
+    const dataFeed = fixture.tokenDataFeed as Contract;
+
+    if (dataFeed && tokenRoleNames.customFeedAdmin && !isTac) {
       expect(await dataFeed.feedAdminRole()).eq(
         await dataFeed[tokenRoleNames.customFeedAdmin](),
       );
       expect(await dataFeed.feedAdminRole()).eq(tokenRoles.customFeedAdmin);
-    });
+    }
 
-    it('CustomAggregator', async function () {
-      const fixture = await deployMTokenVaultsWithFixture();
-      const customAggregator = (fixture.tokenCustomAggregatorFeed ??
-        fixture.tokenCustomAggregatorFeedGrowth) as Contract;
+    // 'CustomAggregator' contract checks
+    const customAggregator = fixture.tokenCustomAggregatorFeed as Contract;
 
-      if (!customAggregator || !tokenRoleNames.customFeedAdmin || isTac) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (this as any).skip();
-        return;
-      }
-
+    if (customAggregator && tokenRoleNames.customFeedAdmin && !isTac) {
       expect(await customAggregator.feedAdminRole()).eq(
         await customAggregator[tokenRoleNames.customFeedAdmin](),
       );
       expect(await customAggregator.feedAdminRole()).eq(
         tokenRoles.customFeedAdmin,
       );
-    });
+    }
 
-    it('DepositVault', async function () {
-      const fixture = await deployMTokenVaultsWithFixture();
-      const depositVault = fixture.tokenDepositVault as Contract;
+    // 'CustomAggregatorGrowth' contract checks
+    const customAggregatorGrowth =
+      fixture.tokenCustomAggregatorFeedGrowth as Contract;
 
-      if (!depositVault) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (this as any).skip();
-        return;
-      }
+    if (customAggregatorGrowth && tokenRoleNames.customFeedAdmin && !isTac) {
+      expect(await customAggregatorGrowth.feedAdminRole()).eq(
+        await customAggregatorGrowth[tokenRoleNames.customFeedAdmin](),
+      );
+      expect(await customAggregatorGrowth.feedAdminRole()).eq(
+        tokenRoles.customFeedAdmin,
+      );
+    }
 
+    // 'DepositVault' contract checks
+    const depositVault = fixture.tokenDepositVault as Contract;
+
+    if (depositVault) {
       expect(await depositVault.vaultRole()).eq(
         token === 'mTBILL'
           ? tokenRoles.depositVaultAdmin
           : await depositVault[tokenRoleNames.depositVaultAdmin](),
       );
       expect(await depositVault.vaultRole()).eq(tokenRoles.depositVaultAdmin);
-    });
+    }
 
-    it('DepositVaultWithUSTB', async function () {
-      const fixture = await deployMTokenVaultsWithFixture();
-      const depositVaultUstb = fixture.tokenDepositVaultUstb as Contract;
+    // 'DepositVaultWithUSTB' contract checks
+    const depositVaultUstb = fixture.tokenDepositVaultUstb as Contract;
 
-      if (!depositVaultUstb) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (this as any).skip();
-        return;
-      }
-
+    if (depositVaultUstb) {
       expect(await depositVaultUstb.vaultRole()).eq(
         token === 'mTBILL'
           ? tokenRoles.depositVaultAdmin
@@ -745,18 +752,12 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       expect(await depositVaultUstb.vaultRole()).eq(
         tokenRoles.depositVaultAdmin,
       );
-    });
+    }
 
-    it('RedemptionVault', async function () {
-      const fixture = await deployMTokenVaultsWithFixture();
-      const redemptionVault = fixture.tokenRedemptionVault as Contract;
+    // 'RedemptionVault' contract checks
+    const redemptionVault = fixture.tokenRedemptionVault as Contract;
 
-      if (!redemptionVault) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (this as any).skip();
-        return;
-      }
-
+    if (redemptionVault) {
       expect(await redemptionVault.vaultRole()).eq(
         token === 'mTBILL'
           ? tokenRoles.redemptionVaultAdmin
@@ -765,19 +766,13 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       expect(await redemptionVault.vaultRole()).eq(
         tokenRoles.redemptionVaultAdmin,
       );
-    });
+    }
 
-    it('RedemptionVaultWithSwapper', async function () {
-      const fixture = await deployMTokenVaultsWithFixture();
-      const redemptionVaultWithSwapper =
-        fixture.tokenRedemptionVaultWithSwapper as Contract;
+    // 'RedemptionVaultWithSwapper' contract checks
+    const redemptionVaultWithSwapper =
+      fixture.tokenRedemptionVaultWithSwapper as Contract;
 
-      if (!redemptionVaultWithSwapper) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (this as any).skip();
-        return;
-      }
-
+    if (redemptionVaultWithSwapper) {
       expect(await redemptionVaultWithSwapper.vaultRole()).eq(
         token === 'mTBILL'
           ? tokenRoles.redemptionVaultAdmin
@@ -788,6 +783,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       expect(await redemptionVaultWithSwapper.vaultRole()).eq(
         tokenRoles.redemptionVaultAdmin,
       );
-    });
+    }
   });
 };

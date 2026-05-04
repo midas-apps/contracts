@@ -26,6 +26,16 @@ struct Request {
 }
 
 /**
+ * @notice Deposit vault init params
+ */
+struct DepositVaultInitParams {
+    /// @notice minimal USD amount for first user`s deposit
+    uint256 minMTokenAmountForFirstDeposit;
+    /// @notice max supply cap value in mToken
+    uint256 maxSupplyCap;
+}
+
+/**
  * @title IDepositVault
  * @author RedDuck Software
  */

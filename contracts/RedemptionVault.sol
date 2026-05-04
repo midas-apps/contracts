@@ -7,7 +7,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
-import {IRedemptionVault, CommonVaultInitParams, CommonVaultV2InitParams, LiquidityProviderLoanRequest, Request, RequestStatus, RedemptionVaultInitParams, RedemptionVaultV2InitParams} from "./interfaces/IRedemptionVault.sol";
+import {IRedemptionVault, CommonVaultInitParams, LiquidityProviderLoanRequest, Request, RequestStatus, RedemptionVaultInitParams} from "./interfaces/IRedemptionVault.sol";
 import {ManageableVault} from "./abstract/ManageableVault.sol";
 
 /**
@@ -99,57 +99,30 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @dev leaving a storage gap for futures updates
      */
-    uint256[44] private __gap;
+    uint256[50] private __gap;
 
     /**
      * @notice upgradeable pattern contract`s initializer
      * @param _commonVaultInitParams init params for common vault
-     * @param _commonVaultV2InitParams init params for common vault v2
      * @param _redemptionVaultInitParams init params for redemption vault
-     * @param _redemptionVaultV2InitParams init params for redemption vault v2
      */
     function initialize(
         CommonVaultInitParams calldata _commonVaultInitParams,
-        CommonVaultV2InitParams calldata _commonVaultV2InitParams,
-        RedemptionVaultInitParams calldata _redemptionVaultInitParams,
-        RedemptionVaultV2InitParams calldata _redemptionVaultV2InitParams
-    ) public {
-        _initializeV1(_commonVaultInitParams, _redemptionVaultInitParams);
-        initializeV2(_commonVaultV2InitParams, _redemptionVaultV2InitParams);
-    }
-
-    /**
-     * @notice v1 initializer
-     * @param _commonVaultInitParams init params for common vault
-     * @param _redemptionInitParams init params for redemption vault
-     */
-    function _initializeV1(
-        CommonVaultInitParams calldata _commonVaultInitParams,
-        RedemptionVaultInitParams calldata _redemptionInitParams
-    ) private initializer {
+        RedemptionVaultInitParams calldata _redemptionVaultInitParams
+    ) public initializer {
         __ManageableVault_init(_commonVaultInitParams);
-        _validateAddress(_redemptionInitParams.requestRedeemer, false);
 
-        requestRedeemer = _redemptionInitParams.requestRedeemer;
-    }
+        _validateAddress(_redemptionVaultInitParams.requestRedeemer, false);
 
-    /**
-     * @notice v2 initializer
-     * @param _redemptionVaultV2InitParams init params for redemption vault v2
-     */
-    function initializeV2(
-        CommonVaultV2InitParams calldata _commonVaultV2InitParams,
-        RedemptionVaultV2InitParams calldata _redemptionVaultV2InitParams
-    ) public reinitializer(2) {
-        __ManageableVault_initV2(_commonVaultV2InitParams);
-        loanLp = _redemptionVaultV2InitParams.loanLp;
-        loanLpFeeReceiver = _redemptionVaultV2InitParams.loanLpFeeReceiver;
-        loanRepaymentAddress = _redemptionVaultV2InitParams
-            .loanRepaymentAddress;
+        requestRedeemer = _redemptionVaultInitParams.requestRedeemer;
+
+        loanLp = _redemptionVaultInitParams.loanLp;
+        loanLpFeeReceiver = _redemptionVaultInitParams.loanLpFeeReceiver;
+        loanRepaymentAddress = _redemptionVaultInitParams.loanRepaymentAddress;
         loanSwapperVault = IRedemptionVault(
-            _redemptionVaultV2InitParams.loanSwapperVault
+            _redemptionVaultInitParams.loanSwapperVault
         );
-        maxLoanApr = _redemptionVaultV2InitParams.maxLoanApr;
+        maxLoanApr = _redemptionVaultInitParams.maxLoanApr;
     }
 
     /**

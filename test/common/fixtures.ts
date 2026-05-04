@@ -226,8 +226,6 @@ export const defaultDeploy = async () => {
       feeReceiver: feeReceiver.address,
       tokensReceiver: tokensReceiver.address,
       instantFee: 100,
-    },
-    {
       minInstantFee: 0,
       maxInstantFee: 10000,
       limitConfigs: [
@@ -238,8 +236,10 @@ export const defaultDeploy = async () => {
       ],
       maxInstantShare: 100_00,
     },
-    0,
-    constants.MaxUint256,
+    {
+      minMTokenAmountForFirstDeposit: 0,
+      maxSupplyCap: constants.MaxUint256,
+    },
   );
 
   await accessControl.grantRole(
@@ -266,8 +266,6 @@ export const defaultDeploy = async () => {
       feeReceiver: feeReceiver.address,
       tokensReceiver: tokensReceiver.address,
       instantFee: 100,
-    },
-    {
       limitConfigs: [
         {
           limit: parseUnits('100000'),
@@ -280,8 +278,6 @@ export const defaultDeploy = async () => {
     },
     {
       requestRedeemer: requestRedeemer.address,
-    },
-    {
       loanLp: loanLp.address,
       loanLpFeeReceiver: loanLpFeeReceiver.address,
       loanRepaymentAddress: loanRepaymentAddress.address,
@@ -301,8 +297,6 @@ export const defaultDeploy = async () => {
       feeReceiver: feeReceiver.address,
       tokensReceiver: tokensReceiver.address,
       instantFee: 100,
-    },
-    {
       limitConfigs: [
         {
           limit: parseUnits('100000'),
@@ -315,8 +309,6 @@ export const defaultDeploy = async () => {
     },
     {
       requestRedeemer: requestRedeemer.address,
-    },
-    {
       loanLp: constants.AddressZero,
       loanLpFeeReceiver: constants.AddressZero,
       loanRepaymentAddress: constants.AddressZero,
@@ -362,7 +354,7 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithUSTB[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)'
+    'initialize((address,address,uint256,uint256,address,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(uint256,uint256),address)'
   ](
     {
       ac: accessControl.address,
@@ -374,8 +366,6 @@ export const defaultDeploy = async () => {
       feeReceiver: feeReceiver.address,
       tokensReceiver: tokensReceiver.address,
       instantFee: 100,
-    },
-    {
       limitConfigs: [
         {
           limit: parseUnits('100000'),
@@ -386,8 +376,10 @@ export const defaultDeploy = async () => {
       maxInstantFee: 10000,
       maxInstantShare: 100_00,
     },
-    0,
-    constants.MaxUint256,
+    {
+      minMTokenAmountForFirstDeposit: 0,
+      maxSupplyCap: constants.MaxUint256,
+    },
     ustbToken.address,
   );
 
@@ -408,7 +400,7 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithUSTBTest__factory(owner).deploy();
 
   await redemptionVaultWithUSTB[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
+    'initialize((address,address,uint256,uint256,address,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(address,address,address,address,address,uint64),address)'
   ](
     {
       ac: accessControl.address,
@@ -420,8 +412,6 @@ export const defaultDeploy = async () => {
       feeReceiver: feeReceiver.address,
       tokensReceiver: tokensReceiver.address,
       instantFee: 100,
-    },
-    {
       limitConfigs: [
         {
           limit: parseUnits('100000'),
@@ -434,15 +424,12 @@ export const defaultDeploy = async () => {
     },
     {
       requestRedeemer: requestRedeemer.address,
-    },
-    {
       loanLp: loanLp.address,
       loanLpFeeReceiver: loanLpFeeReceiver.address,
       loanRepaymentAddress: loanRepaymentAddress.address,
       loanSwapperVault: redemptionVaultLoanSwapper.address,
       maxLoanApr: 0,
     },
-
     ustbRedemption.address,
   );
   await accessControl.grantRole(
@@ -474,8 +461,6 @@ export const defaultDeploy = async () => {
       feeReceiver: feeReceiver.address,
       tokensReceiver: tokensReceiver.address,
       instantFee: 100,
-    },
-    {
       limitConfigs: [
         {
           limit: parseUnits('100000'),
@@ -488,8 +473,6 @@ export const defaultDeploy = async () => {
     },
     {
       requestRedeemer: requestRedeemer.address,
-    },
-    {
       loanLp: loanLp.address,
       loanLpFeeReceiver: loanLpFeeReceiver.address,
       loanRepaymentAddress: loanRepaymentAddress.address,
@@ -529,8 +512,6 @@ export const defaultDeploy = async () => {
       feeReceiver: feeReceiver.address,
       tokensReceiver: tokensReceiver.address,
       instantFee: 100,
-    },
-    {
       limitConfigs: [
         {
           limit: parseUnits('100000'),
@@ -543,8 +524,6 @@ export const defaultDeploy = async () => {
     },
     {
       requestRedeemer: requestRedeemer.address,
-    },
-    {
       loanLp: loanLp.address,
       loanLpFeeReceiver: loanLpFeeReceiver.address,
       loanRepaymentAddress: loanRepaymentAddress.address,
@@ -580,8 +559,6 @@ export const defaultDeploy = async () => {
       feeReceiver: feeReceiver.address,
       tokensReceiver: tokensReceiver.address,
       instantFee: 100,
-    },
-    {
       limitConfigs: [
         {
           limit: parseUnits('100000'),
@@ -592,8 +569,10 @@ export const defaultDeploy = async () => {
       maxInstantFee: 10000,
       maxInstantShare: 100_00,
     },
-    0,
-    constants.MaxUint256,
+    {
+      minMTokenAmountForFirstDeposit: 0,
+      maxSupplyCap: constants.MaxUint256,
+    },
   );
   await depositVaultWithAave.setAavePool(
     stableCoins.usdc.address,
@@ -622,8 +601,6 @@ export const defaultDeploy = async () => {
       feeReceiver: feeReceiver.address,
       tokensReceiver: tokensReceiver.address,
       instantFee: 100,
-    },
-    {
       limitConfigs: [
         {
           limit: parseUnits('100000'),
@@ -634,8 +611,10 @@ export const defaultDeploy = async () => {
       maxInstantFee: 10000,
       maxInstantShare: 100_00,
     },
-    0,
-    constants.MaxUint256,
+    {
+      minMTokenAmountForFirstDeposit: 0,
+      maxSupplyCap: constants.MaxUint256,
+    },
   );
 
   await accessControl.grantRole(
@@ -650,7 +629,7 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithMToken[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)'
+    'initialize((address,address,uint256,uint256,address,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(uint256,uint256),address)'
   ](
     {
       ac: accessControl.address,
@@ -662,8 +641,6 @@ export const defaultDeploy = async () => {
       feeReceiver: feeReceiver.address,
       tokensReceiver: tokensReceiver.address,
       instantFee: 100,
-    },
-    {
       limitConfigs: [
         {
           limit: parseUnits('100000'),
@@ -674,8 +651,10 @@ export const defaultDeploy = async () => {
       maxInstantFee: 10000,
       maxInstantShare: 100_00,
     },
-    0,
-    constants.MaxUint256,
+    {
+      minMTokenAmountForFirstDeposit: 0,
+      maxSupplyCap: constants.MaxUint256,
+    },
     depositVault.address,
   );
 
@@ -710,7 +689,7 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithMTokenTest__factory(owner).deploy();
 
   await redemptionVaultWithMToken[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
+    'initialize((address,address,uint256,uint256,address,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(address,address,address,address,address,uint64),address)'
   ](
     {
       ac: accessControl.address,
@@ -722,8 +701,6 @@ export const defaultDeploy = async () => {
       feeReceiver: feeReceiver.address,
       tokensReceiver: tokensReceiver.address,
       instantFee: 100,
-    },
-    {
       limitConfigs: [
         {
           limit: parseUnits('100000'),
@@ -736,8 +713,6 @@ export const defaultDeploy = async () => {
     },
     {
       requestRedeemer: requestRedeemer.address,
-    },
-    {
       loanLp: loanLp.address,
       loanLpFeeReceiver: loanLpFeeReceiver.address,
       loanRepaymentAddress: loanRepaymentAddress.address,
@@ -1027,8 +1002,6 @@ export const mTokenPermissionedFixture = async (
       feeReceiver: feeReceiver.address,
       tokensReceiver: tokensReceiver.address,
       instantFee: 100,
-    },
-    {
       limitConfigs: [
         {
           limit: parseUnits('100000'),
@@ -1039,8 +1012,10 @@ export const mTokenPermissionedFixture = async (
       maxInstantFee: 10000,
       maxInstantShare: 100_00,
     },
-    0,
-    constants.MaxUint256,
+    {
+      minMTokenAmountForFirstDeposit: 0,
+      maxSupplyCap: constants.MaxUint256,
+    },
   );
   await accessControl.grantRole(
     mintRole,
@@ -1060,8 +1035,6 @@ export const mTokenPermissionedFixture = async (
       feeReceiver: feeReceiver.address,
       tokensReceiver: tokensReceiver.address,
       instantFee: 0,
-    },
-    {
       limitConfigs: [
         {
           limit: parseUnits('100000'),
@@ -1074,8 +1047,6 @@ export const mTokenPermissionedFixture = async (
     },
     {
       requestRedeemer: requestRedeemer.address,
-    },
-    {
       loanLp: constants.AddressZero,
       loanLpFeeReceiver: constants.AddressZero,
       loanRepaymentAddress: constants.AddressZero,

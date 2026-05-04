@@ -18,7 +18,6 @@ contract DepositVaultWithMToken is DepositVault {
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
 
-    error SameVaultValue(address vault);
     error ZeroMTokenReceived(uint256 mTokenReceived);
     error AutoInvestFailed(bytes err);
 
@@ -69,24 +68,15 @@ contract DepositVaultWithMToken is DepositVault {
     /**
      * @notice upgradeable pattern contract`s initializer
      * @param _commonVaultInitParams init params for common vault
-     * @param _commonVaultV2InitParams init params for common vault v2
-     * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
-     * @param _maxSupplyCap max supply cap for mToken
+     * @param _depositVaultInitParams init params for deposit vault
      * @param _mTokenDepositVault target mToken DepositVault address
      */
     function initialize(
         CommonVaultInitParams calldata _commonVaultInitParams,
-        CommonVaultV2InitParams calldata _commonVaultV2InitParams,
-        uint256 _minMTokenAmountForFirstDeposit,
-        uint256 _maxSupplyCap,
+        DepositVaultInitParams calldata _depositVaultInitParams,
         address _mTokenDepositVault
     ) external {
-        initialize(
-            _commonVaultInitParams,
-            _commonVaultV2InitParams,
-            _minMTokenAmountForFirstDeposit,
-            _maxSupplyCap
-        );
+        initialize(_commonVaultInitParams, _depositVaultInitParams);
 
         _validateAddress(_mTokenDepositVault, false);
         mTokenDepositVault = IDepositVault(_mTokenDepositVault);
@@ -102,7 +92,7 @@ contract DepositVaultWithMToken is DepositVault {
     {
         require(
             _mTokenDepositVault != address(mTokenDepositVault),
-            SameVaultValue(_mTokenDepositVault)
+            SameAddressValue(_mTokenDepositVault)
         );
         _validateAddress(_mTokenDepositVault, false);
         mTokenDepositVault = IDepositVault(_mTokenDepositVault);

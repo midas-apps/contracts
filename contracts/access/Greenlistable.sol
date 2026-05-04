@@ -10,7 +10,7 @@ import {WithMidasAccessControl} from "./WithMidasAccessControl.sol";
  * @author RedDuck Software
  */
 abstract contract Greenlistable is WithMidasAccessControl {
-    error SameGreenlistEnableValue(bool enable);
+    error SameBoolValue(bool value);
 
     /**
      * @notice is greenlist enabled
@@ -34,32 +34,13 @@ abstract contract Greenlistable is WithMidasAccessControl {
     }
 
     /**
-     * @dev upgradeable pattern contract`s initializer
-     * @param _accessControl MidasAccessControl contract address
-     */
-    // solhint-disable func-name-mixedcase
-    function __Greenlistable_init(address _accessControl)
-        internal
-        onlyInitializing
-    {
-        __WithMidasAccessControl_init(_accessControl);
-        __Greenlistable_init_unchained();
-    }
-
-    /**
-     * @dev upgradeable pattern contract`s initializer unchained
-     */
-    // solhint-disable func-name-mixedcase
-    function __Greenlistable_init_unchained() internal onlyInitializing {}
-
-    /**
      * @notice enable or disable greenlist.
      * can be called only from permissioned actor.
      * @param enable enable
      */
     function setGreenlistEnable(bool enable) external {
         _validateGreenlistableAdminAccess(msg.sender);
-        require(greenlistEnabled != enable, SameGreenlistEnableValue(enable));
+        require(greenlistEnabled != enable, SameBoolValue(enable));
         greenlistEnabled = enable;
         emit SetGreenlistEnable(msg.sender, enable);
     }

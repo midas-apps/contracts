@@ -32,24 +32,15 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
     /**
      * @notice upgradeable pattern contract`s initializer
      * @param _commonVaultInitParams init params for common vault
-     * @param _commonVaultV2InitParams init params for common vault v2
      * @param _redemptionInitParams init params for redemption vault state values
-     * @param _redemptionVaultV2InitParams init params for redemption vault v2
      * @param _ustbRedemption USTB redemption contract address
      */
     function initialize(
         CommonVaultInitParams calldata _commonVaultInitParams,
-        CommonVaultV2InitParams calldata _commonVaultV2InitParams,
         RedemptionVaultInitParams calldata _redemptionInitParams,
-        RedemptionVaultV2InitParams calldata _redemptionVaultV2InitParams,
         address _ustbRedemption
     ) external {
-        initialize(
-            _commonVaultInitParams,
-            _commonVaultV2InitParams,
-            _redemptionInitParams,
-            _redemptionVaultV2InitParams
-        );
+        initialize(_commonVaultInitParams, _redemptionInitParams);
         _validateAddress(_ustbRedemption, false);
         ustbRedemption = IUSTBRedemption(_ustbRedemption);
     }

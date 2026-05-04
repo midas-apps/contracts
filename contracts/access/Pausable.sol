@@ -11,7 +11,7 @@ import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
  * @author RedDuck Software
  */
 abstract contract Pausable is WithMidasAccessControl, PausableUpgradeable {
-    error SameFnPausedValue(bytes4 fn, bool paused);
+    error SameBytes4Value(bytes4 value);
     error FnPaused(bytes4 fn);
 
     /**
@@ -28,13 +28,11 @@ abstract contract Pausable is WithMidasAccessControl, PausableUpgradeable {
      * @param caller caller address (msg.sender)
      * @param fn function id
      */
-    event PauseFn(address indexed caller, bytes4 fn);
-
-    /**
-     * @param caller caller address (msg.sender)
-     * @param fn function id
-     */
-    event UnpauseFn(address indexed caller, bytes4 fn);
+    event PauseFnStatusChange(
+        address indexed caller,
+        bytes4 indexed fn,
+        bool isPaused
+    );
 
     /**
      * @dev checks that a given `account` has access to pause functions
@@ -42,16 +40,6 @@ abstract contract Pausable is WithMidasAccessControl, PausableUpgradeable {
     modifier onlyPauseAdmin() {
         _validatePauseAdminAccess(msg.sender);
         _;
-    }
-
-    /**
-     * @dev upgradeable pattern contract`s initializer
-     * @param _accessControl MidasAccessControl contract address
-     */
-    // solhint-disable-next-line func-name-mixedcase
-    function __Pausable_init(address _accessControl) internal onlyInitializing {
-        super.__Pausable_init();
-        __WithMidasAccessControl_init(_accessControl);
     }
 
     function pause() external onlyPauseAdmin {
@@ -63,23 +51,29 @@ abstract contract Pausable is WithMidasAccessControl, PausableUpgradeable {
     }
 
     /**
-     * @dev pause specific function
-     * @param fn function id
+     * @notice pause specific functions
+     * @param fns function ids to pause
      */
-    function pauseFn(bytes4 fn) external onlyPauseAdmin {
-        require(!fnPaused[fn], SameFnPausedValue(fn, true));
-        fnPaused[fn] = true;
-        emit PauseFn(msg.sender, fn);
+    function bulkPauseFn(bytes4[] calldata fns) external onlyPauseAdmin {
+        for (uint256 i = 0; i < fns.length; ++i) {
+            bytes4 fn = fns[i];
+            require(!fnPaused[fn], SameBytes4Value(fn));
+            fnPaused[fn] = true;
+            emit PauseFnStatusChange(msg.sender, fn, true);
+        }
     }
 
     /**
-     * @dev unpause specific function
-     * @param fn function id
+     * @notice unpause specific functions
+     * @param fns function ids to unpause
      */
-    function unpauseFn(bytes4 fn) external onlyPauseAdmin {
-        require(fnPaused[fn], SameFnPausedValue(fn, false));
-        fnPaused[fn] = false;
-        emit UnpauseFn(msg.sender, fn);
+    function bulkUnpauseFn(bytes4[] calldata fns) external onlyPauseAdmin {
+        for (uint256 i = 0; i < fns.length; ++i) {
+            bytes4 fn = fns[i];
+            require(fnPaused[fn], SameBytes4Value(fn));
+            fnPaused[fn] = false;
+            emit PauseFnStatusChange(msg.sender, fn, false);
+        }
     }
 
     /**
@@ -100,6 +94,7 @@ abstract contract Pausable is WithMidasAccessControl, PausableUpgradeable {
         if (validateGlobalPause) {
             _requireNotPaused();
         }
+
         require(!fnPaused[fn], FnPaused(fn));
     }
 }

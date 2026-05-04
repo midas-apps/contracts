@@ -47,18 +47,6 @@ abstract contract WithSanctionsList is WithMidasAccessControl {
     }
 
     /**
-     * @dev upgradeable pattern contract`s initializer
-     */
-    // solhint-disable func-name-mixedcase
-    function __WithSanctionsList_init(
-        address _accesControl,
-        address _sanctionsList
-    ) internal onlyInitializing {
-        __WithMidasAccessControl_init(_accesControl);
-        __WithSanctionsList_init_unchained(_sanctionsList);
-    }
-
-    /**
      * @dev upgradeable pattern contract`s initializer unchained
      */
     // solhint-disable func-name-mixedcase

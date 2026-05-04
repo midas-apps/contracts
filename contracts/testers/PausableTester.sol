@@ -6,11 +6,7 @@ import {MidasAccessControl} from "../access/MidasAccessControl.sol";
 
 contract PausableTester is Pausable {
     function initialize(address _accessControl) external initializer {
-        __Pausable_init(_accessControl);
-    }
-
-    function initializeWithoutInitializer(address _accessControl) external {
-        __Pausable_init(_accessControl);
+        __WithMidasAccessControl_init(_accessControl);
     }
 
     function _validatePauseAdminAccess(address account) internal view override {

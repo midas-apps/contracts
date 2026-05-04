@@ -9,7 +9,7 @@ import {EnumerableSetUpgradeable as EnumerableSet} from "@openzeppelin/contracts
 
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 
-import {IManageableVault, TokenConfig, CommonVaultInitParams, CommonVaultV2InitParams, LimitConfig} from "../interfaces/IManageableVault.sol";
+import {IManageableVault, TokenConfig, CommonVaultInitParams, LimitConfig} from "../interfaces/IManageableVault.sol";
 import {IMToken} from "../interfaces/IMToken.sol";
 import {IDataFeed} from "../interfaces/IDataFeed.sol";
 
@@ -170,20 +170,21 @@ abstract contract ManageableVault is
     function __ManageableVault_init(
         CommonVaultInitParams calldata _commonVaultInitParams
     ) internal onlyInitializing {
+        __WithMidasAccessControl_init(_commonVaultInitParams.ac);
+        __Pausable_init_unchained();
+        __WithSanctionsList_init_unchained(
+            _commonVaultInitParams.sanctionsList
+        );
+
         _validateAddress(_commonVaultInitParams.mToken, false);
         _validateAddress(_commonVaultInitParams.mTokenDataFeed, false);
         _validateAddress(_commonVaultInitParams.tokensReceiver, true);
         _validateAddress(_commonVaultInitParams.feeReceiver, true);
         _validateFee(_commonVaultInitParams.variationTolerance, true);
         _validateFee(_commonVaultInitParams.instantFee, false);
+        _validateFee(_commonVaultInitParams.maxInstantShare, false);
 
         mToken = IMToken(_commonVaultInitParams.mToken);
-        __Pausable_init(_commonVaultInitParams.ac);
-        __Greenlistable_init_unchained();
-        __Blacklistable_init_unchained();
-        __WithSanctionsList_init_unchained(
-            _commonVaultInitParams.sanctionsList
-        );
 
         tokensReceiver = _commonVaultInitParams.tokensReceiver;
         feeReceiver = _commonVaultInitParams.feeReceiver;
@@ -191,34 +192,23 @@ abstract contract ManageableVault is
         minAmount = _commonVaultInitParams.minAmount;
         variationTolerance = _commonVaultInitParams.variationTolerance;
         mTokenDataFeed = IDataFeed(_commonVaultInitParams.mTokenDataFeed);
-    }
-
-    /**
-     * @dev upgradeable pattern contract`s initializer
-     * @param _commonVaultV2InitParams init params for common vault v2
-     */
-    // solhint-disable func-name-mixedcase
-    function __ManageableVault_initV2(
-        CommonVaultV2InitParams calldata _commonVaultV2InitParams
-    ) internal onlyInitializing {
-        _validateFee(_commonVaultV2InitParams.maxInstantShare, false);
 
         for (
             uint256 i = 0;
-            i < _commonVaultV2InitParams.limitConfigs.length;
+            i < _commonVaultInitParams.limitConfigs.length;
             ++i
         ) {
             _setInstantLimitConfig(
-                _commonVaultV2InitParams.limitConfigs[i].window,
-                _commonVaultV2InitParams.limitConfigs[i].limit
+                _commonVaultInitParams.limitConfigs[i].window,
+                _commonVaultInitParams.limitConfigs[i].limit
             );
         }
 
-        maxInstantShare = _commonVaultV2InitParams.maxInstantShare;
+        maxInstantShare = _commonVaultInitParams.maxInstantShare;
 
         _setMinMaxInstantFee(
-            _commonVaultV2InitParams.minInstantFee,
-            _commonVaultV2InitParams.maxInstantFee
+            _commonVaultInitParams.minInstantFee,
+            _commonVaultInitParams.maxInstantFee
         );
     }
 
@@ -323,10 +313,7 @@ abstract contract ManageableVault is
         external
         validateVaultAdminAccess
     {
-        require(
-            !waivedFeeRestriction[account],
-            SameFeeWaivedValue(account, true)
-        );
+        require(!waivedFeeRestriction[account], SameAddressValue(account));
         waivedFeeRestriction[account] = true;
         emit AddWaivedFeeAccount(account, msg.sender);
     }
@@ -339,10 +326,7 @@ abstract contract ManageableVault is
         external
         validateVaultAdminAccess
     {
-        require(
-            waivedFeeRestriction[account],
-            SameFeeWaivedValue(account, false)
-        );
+        require(waivedFeeRestriction[account], SameAddressValue(account));
         waivedFeeRestriction[account] = false;
         emit RemoveWaivedFeeAccount(account, msg.sender);
     }
@@ -455,10 +439,7 @@ abstract contract ManageableVault is
         external
         validateVaultAdminAccess
     {
-        require(
-            isFreeFromMinAmount[user] != enable,
-            SameFreeFromMinAmountValue(user, enable)
-        );
+        require(isFreeFromMinAmount[user] != enable, SameAddressValue(user));
 
         isFreeFromMinAmount[user] = enable;
 

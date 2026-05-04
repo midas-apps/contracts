@@ -216,8 +216,6 @@ export const depositVaultSuits = (
               feeReceiver: feeReceiver.address,
               tokensReceiver: tokensReceiver.address,
               instantFee: 100,
-            },
-            {
               minInstantFee: 0,
               maxInstantFee: 10000,
               limitConfigs: [
@@ -228,8 +226,10 @@ export const depositVaultSuits = (
               ],
               maxInstantShare: 100_00,
             },
-            parseUnits('100'),
-            constants.MaxUint256,
+            {
+              minMTokenAmountForFirstDeposit: parseUnits('100'),
+              maxSupplyCap: constants.MaxUint256,
+            },
           ),
         ).to.be.reverted;
         await expect(
@@ -244,8 +244,6 @@ export const depositVaultSuits = (
               feeReceiver: feeReceiver.address,
               tokensReceiver: tokensReceiver.address,
               instantFee: 100,
-            },
-            {
               minInstantFee: 0,
               maxInstantFee: 10000,
               limitConfigs: [
@@ -256,8 +254,10 @@ export const depositVaultSuits = (
               ],
               maxInstantShare: 100_00,
             },
-            parseUnits('100'),
-            constants.MaxUint256,
+            {
+              minMTokenAmountForFirstDeposit: parseUnits('100'),
+              maxSupplyCap: constants.MaxUint256,
+            },
           ),
         ).to.be.reverted;
         await expect(
@@ -272,8 +272,6 @@ export const depositVaultSuits = (
               feeReceiver: feeReceiver.address,
               tokensReceiver: tokensReceiver.address,
               instantFee: 100,
-            },
-            {
               minInstantFee: 0,
               maxInstantFee: 10000,
               limitConfigs: [
@@ -284,8 +282,10 @@ export const depositVaultSuits = (
               ],
               maxInstantShare: 100_00,
             },
-            parseUnits('100'),
-            constants.MaxUint256,
+            {
+              minMTokenAmountForFirstDeposit: parseUnits('100'),
+              maxSupplyCap: constants.MaxUint256,
+            },
           ),
         ).to.be.reverted;
         await expect(
@@ -300,8 +300,6 @@ export const depositVaultSuits = (
               feeReceiver: ethers.constants.AddressZero,
               tokensReceiver: tokensReceiver.address,
               instantFee: 100,
-            },
-            {
               minInstantFee: 0,
               maxInstantFee: 10000,
               limitConfigs: [
@@ -312,8 +310,10 @@ export const depositVaultSuits = (
               ],
               maxInstantShare: 100_00,
             },
-            parseUnits('100'),
-            constants.MaxUint256,
+            {
+              minMTokenAmountForFirstDeposit: parseUnits('100'),
+              maxSupplyCap: constants.MaxUint256,
+            },
           ),
         ).to.be.reverted;
         await expect(
@@ -328,8 +328,6 @@ export const depositVaultSuits = (
               feeReceiver: feeReceiver.address,
               tokensReceiver: ethers.constants.AddressZero,
               instantFee: 100,
-            },
-            {
               minInstantFee: 0,
               maxInstantFee: 10000,
               limitConfigs: [
@@ -340,8 +338,10 @@ export const depositVaultSuits = (
               ],
               maxInstantShare: 100_00,
             },
-            parseUnits('100'),
-            constants.MaxUint256,
+            {
+              minMTokenAmountForFirstDeposit: parseUnits('100'),
+              maxSupplyCap: constants.MaxUint256,
+            },
           ),
         ).to.be.reverted;
         await expect(
@@ -356,8 +356,6 @@ export const depositVaultSuits = (
               feeReceiver: feeReceiver.address,
               tokensReceiver: tokensReceiver.address,
               instantFee: 10001,
-            },
-            {
               minInstantFee: 0,
               maxInstantFee: 10000,
               limitConfigs: [
@@ -368,8 +366,10 @@ export const depositVaultSuits = (
               ],
               maxInstantShare: 100_00,
             },
-            parseUnits('100'),
-            constants.MaxUint256,
+            {
+              minMTokenAmountForFirstDeposit: parseUnits('100'),
+              maxSupplyCap: constants.MaxUint256,
+            },
           ),
         ).to.be.reverted;
       });
@@ -390,45 +390,16 @@ export const depositVaultSuits = (
                 feeReceiver: constants.AddressZero,
                 tokensReceiver: constants.AddressZero,
                 instantFee: 0,
-              },
-              {
                 minInstantFee: 0,
                 maxInstantFee: 0,
                 limitConfigs: [],
                 maxInstantShare: 0,
               },
-              0,
-              constants.MaxUint256,
-            ),
-          ).revertedWith('Initializable: contract is already initialized');
-        });
-
-        it('should fail: cal; initializeV1() when already initialized', async () => {
-          const { depositVault } = await loadDvFixture();
-
-          await expect(
-            depositVault.initializeV1(
               {
-                ac: constants.AddressZero,
-                sanctionsList: constants.AddressZero,
-                variationTolerance: 1,
-                minAmount: 0,
-                mToken: constants.AddressZero,
-                mTokenDataFeed: constants.AddressZero,
-                feeReceiver: constants.AddressZero,
-                tokensReceiver: constants.AddressZero,
-                instantFee: 0,
+                minMTokenAmountForFirstDeposit: 0,
+                maxSupplyCap: constants.MaxUint256,
               },
-              0,
             ),
-          ).revertedWith('Initializable: contract is already initialized');
-        });
-
-        it('should fail: cal; initializeV2() when already reinitialized', async () => {
-          const { depositVault } = await loadDvFixture();
-
-          await expect(
-            depositVault.initializeV2(constants.MaxUint256),
           ).revertedWith('Initializable: contract is already initialized');
         });
 
@@ -448,30 +419,26 @@ export const depositVaultSuits = (
           ).deploy();
 
           await expect(
-            vault.initializeWithoutInitializer(
-              {
-                ac: accessControl.address,
-                sanctionsList: mockedSanctionsList.address,
-                variationTolerance: 1,
-                minAmount: parseUnits('100'),
-                mToken: mTBILL.address,
-                mTokenDataFeed: mTokenToUsdDataFeed.address,
-                feeReceiver: feeReceiver.address,
-                tokensReceiver: tokensReceiver.address,
-                instantFee: 100,
-              },
-              {
-                minInstantFee: 0,
-                maxInstantFee: 10000,
-                limitConfigs: [
-                  {
-                    limit: parseUnits('100000'),
-                    window: days(1),
-                  },
-                ],
-                maxInstantShare: 100_00,
-              },
-            ),
+            vault.initializeWithoutInitializer({
+              ac: accessControl.address,
+              sanctionsList: mockedSanctionsList.address,
+              variationTolerance: 1,
+              minAmount: parseUnits('100'),
+              mToken: mTBILL.address,
+              mTokenDataFeed: mTokenToUsdDataFeed.address,
+              feeReceiver: feeReceiver.address,
+              tokensReceiver: tokensReceiver.address,
+              instantFee: 100,
+              minInstantFee: 0,
+              maxInstantFee: 10000,
+              limitConfigs: [
+                {
+                  limit: parseUnits('100000'),
+                  window: days(1),
+                },
+              ],
+              maxInstantShare: 100_00,
+            }),
           ).revertedWith('Initializable: contract is not initializing');
         });
 
@@ -490,30 +457,26 @@ export const depositVaultSuits = (
           ).deploy();
 
           await expect(
-            vault.initialize(
-              {
-                ac: accessControl.address,
-                sanctionsList: mockedSanctionsList.address,
-                variationTolerance: 1,
-                minAmount: parseUnits('100'),
-                mToken: mTBILL.address,
-                mTokenDataFeed: mTokenToUsdDataFeed.address,
-                feeReceiver: feeReceiver.address,
-                tokensReceiver: vault.address,
-                instantFee: 100,
-              },
-              {
-                minInstantFee: 0,
-                maxInstantFee: 10000,
-                limitConfigs: [
-                  {
-                    limit: parseUnits('100000'),
-                    window: days(1),
-                  },
-                ],
-                maxInstantShare: 100_00,
-              },
-            ),
+            vault.initialize({
+              ac: accessControl.address,
+              sanctionsList: mockedSanctionsList.address,
+              variationTolerance: 1,
+              minAmount: parseUnits('100'),
+              mToken: mTBILL.address,
+              mTokenDataFeed: mTokenToUsdDataFeed.address,
+              feeReceiver: feeReceiver.address,
+              tokensReceiver: vault.address,
+              instantFee: 100,
+              minInstantFee: 0,
+              maxInstantFee: 10000,
+              limitConfigs: [
+                {
+                  limit: parseUnits('100000'),
+                  window: days(1),
+                },
+              ],
+              maxInstantShare: 100_00,
+            }),
           ).to.be.revertedWithCustomError(vault, 'InvalidAddress');
         });
         it('should fail: when _feeReceiver == address(this)', async () => {
@@ -531,30 +494,26 @@ export const depositVaultSuits = (
           ).deploy();
 
           await expect(
-            vault.initialize(
-              {
-                ac: accessControl.address,
-                sanctionsList: mockedSanctionsList.address,
-                variationTolerance: 1,
-                minAmount: parseUnits('100'),
-                mToken: mTBILL.address,
-                mTokenDataFeed: mTokenToUsdDataFeed.address,
-                feeReceiver: vault.address,
-                tokensReceiver: tokensReceiver.address,
-                instantFee: 100,
-              },
-              {
-                minInstantFee: 0,
-                maxInstantFee: 10000,
-                limitConfigs: [
-                  {
-                    limit: parseUnits('100000'),
-                    window: days(1),
-                  },
-                ],
-                maxInstantShare: 100_00,
-              },
-            ),
+            vault.initialize({
+              ac: accessControl.address,
+              sanctionsList: mockedSanctionsList.address,
+              variationTolerance: 1,
+              minAmount: parseUnits('100'),
+              mToken: mTBILL.address,
+              mTokenDataFeed: mTokenToUsdDataFeed.address,
+              feeReceiver: vault.address,
+              tokensReceiver: tokensReceiver.address,
+              instantFee: 100,
+              minInstantFee: 0,
+              maxInstantFee: 10000,
+              limitConfigs: [
+                {
+                  limit: parseUnits('100000'),
+                  window: days(1),
+                },
+              ],
+              maxInstantShare: 100_00,
+            }),
           ).to.be.revertedWithCustomError(vault, 'InvalidAddress');
         });
 
@@ -573,30 +532,26 @@ export const depositVaultSuits = (
           ).deploy();
 
           await expect(
-            vault.initialize(
-              {
-                ac: accessControl.address,
-                sanctionsList: mockedSanctionsList.address,
-                variationTolerance: 1,
-                minAmount: parseUnits('100'),
-                mToken: mTBILL.address,
-                mTokenDataFeed: constants.AddressZero,
-                feeReceiver: feeReceiver.address,
-                tokensReceiver: tokensReceiver.address,
-                instantFee: 100,
-              },
-              {
-                minInstantFee: 0,
-                maxInstantFee: 10000,
-                limitConfigs: [
-                  {
-                    limit: parseUnits('100000'),
-                    window: days(1),
-                  },
-                ],
-                maxInstantShare: 100_00,
-              },
-            ),
+            vault.initialize({
+              ac: accessControl.address,
+              sanctionsList: mockedSanctionsList.address,
+              variationTolerance: 1,
+              minAmount: parseUnits('100'),
+              mToken: mTBILL.address,
+              mTokenDataFeed: constants.AddressZero,
+              feeReceiver: feeReceiver.address,
+              tokensReceiver: tokensReceiver.address,
+              instantFee: 100,
+              minInstantFee: 0,
+              maxInstantFee: 10000,
+              limitConfigs: [
+                {
+                  limit: parseUnits('100000'),
+                  window: days(1),
+                },
+              ],
+              maxInstantShare: 100_00,
+            }),
           ).to.be.revertedWithCustomError(vault, 'InvalidAddress');
         });
         it('should fail: when variationTolarance zero', async () => {
@@ -615,30 +570,26 @@ export const depositVaultSuits = (
           ).deploy();
 
           await expect(
-            vault.initialize(
-              {
-                ac: accessControl.address,
-                sanctionsList: mockedSanctionsList.address,
-                variationTolerance: 0,
-                minAmount: parseUnits('100'),
-                mToken: mTBILL.address,
-                mTokenDataFeed: mTokenToUsdDataFeed.address,
-                feeReceiver: feeReceiver.address,
-                tokensReceiver: tokensReceiver.address,
-                instantFee: 100,
-              },
-              {
-                minInstantFee: 0,
-                maxInstantFee: 10000,
-                limitConfigs: [
-                  {
-                    limit: parseUnits('100000'),
-                    window: days(1),
-                  },
-                ],
-                maxInstantShare: 100_00,
-              },
-            ),
+            vault.initialize({
+              ac: accessControl.address,
+              sanctionsList: mockedSanctionsList.address,
+              variationTolerance: 0,
+              minAmount: parseUnits('100'),
+              mToken: mTBILL.address,
+              mTokenDataFeed: mTokenToUsdDataFeed.address,
+              feeReceiver: feeReceiver.address,
+              tokensReceiver: tokensReceiver.address,
+              instantFee: 100,
+              minInstantFee: 0,
+              maxInstantFee: 10000,
+              limitConfigs: [
+                {
+                  limit: parseUnits('100000'),
+                  window: days(1),
+                },
+              ],
+              maxInstantShare: 100_00,
+            }),
           ).to.be.revertedWithCustomError(vault, 'InvalidFee');
         });
       });
@@ -1517,7 +1468,7 @@ export const depositVaultSuits = (
             owner.address,
             {
               revertCustomError: {
-                customErrorName: 'SameFeeWaivedValue',
+                customErrorName: 'SameAddressValue',
               },
             },
           );
@@ -1620,7 +1571,7 @@ export const depositVaultSuits = (
             owner.address,
             {
               revertCustomError: {
-                customErrorName: 'SameFeeWaivedValue',
+                customErrorName: 'SameAddressValue',
               },
             },
           );
@@ -2386,10 +2337,7 @@ export const depositVaultSuits = (
 
           await expect(
             depositVault.freeFromMinAmount(regularAccounts[0].address, true),
-          ).to.be.revertedWithCustomError(
-            depositVault,
-            'SameFreeFromMinAmountValue',
-          );
+          ).to.be.revertedWithCustomError(depositVault, 'SameAddressValue');
         });
 
         it('should fail: when function is paused', async () => {
