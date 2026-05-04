@@ -2,11 +2,7 @@ import { Provider } from '@ethersproject/providers';
 import { Signer } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import {
-  getDeployer,
-  getNetworkConfig,
-  sendAndWaitForCustomTxSign,
-} from './utils';
+import { getDeployer, sendAndWaitForCustomTxSign } from './utils';
 import {
   defaultDepositVaultPriority,
   resolveAllVaultAddresses,
@@ -16,8 +12,10 @@ import {
 import { MTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import { getCommonContractNames } from '../../../helpers/contracts';
-import { getAllRoles } from '../../../helpers/roles';
+import { getAllRoles, getRolesForToken } from '../../../helpers/roles';
 import { MidasAccessControl } from '../../../typechain-types';
+import { getDeploymentTokenAddresses } from '../configs/deployment-profiles';
+import { getDeploymentConfigForToken } from '../configs/index';
 import { networkDeploymentConfigs } from '../configs/network-configs';
 
 type Address = `0x${string}`;
@@ -34,25 +32,27 @@ export const grantAllProductRoles = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
 ) => {
-  const { grantRoles: networkConfig } = getNetworkConfig(
-    hre,
+  const chainId = hre.network.config.chainId!;
+  const managerGrantConfig = getDeploymentConfigForToken(
     token,
-    'postDeploy',
-  );
-
-  if (!networkConfig) {
-    throw new Error('Network config is not found');
-  }
+    hre.deploymentConfig,
+  )?.networkConfigs?.[chainId]?.postDeploy?.grantRoles;
 
   const addresses = getCurrentAddresses(hre);
-  const tokenAddresses = addresses?.[token];
+  const tokenAddresses = addresses?.[token]
+    ? getDeploymentTokenAddresses(
+        addresses[token]!,
+        token,
+        hre.deploymentConfig,
+      )
+    : undefined;
 
   if (!tokenAddresses) {
     throw new Error(`Token addresses are not found for ${token}`);
   }
 
   const allRoles = getAllRoles();
-  const tokenRoles = allRoles.tokenRoles[token];
+  const tokenRoles = getRolesForToken(token);
 
   const provider = await getDeployer(hre);
 
@@ -75,9 +75,6 @@ export const grantAllProductRoles = async (
 
   const defaultManager = provider.address;
 
-  const contractsRoles: string[] = [];
-  const contractsAddresses: string[] = [];
-
   const depositVaults = resolveAllVaultAddresses(
     tokenAddresses,
     defaultDepositVaultPriority,
@@ -87,45 +84,50 @@ export const grantAllProductRoles = async (
     roleGrantRedemptionVaultPriority,
   );
 
-  for (const dv of depositVaults) {
-    contractsRoles.push(tokenRoles.minter);
-    contractsAddresses.push(dv);
-  }
-  for (const rv of redemptionVaults) {
-    contractsRoles.push(tokenRoles.burner);
-    contractsAddresses.push(rv);
+  const roleBatch: string[] = [];
+  const addressBatch: string[] = [];
+
+  // Token / vault / oracle managers
+  if (managerGrantConfig) {
+    roleBatch.push(
+      ...tokenManagerRoles,
+      ...vaultManagerRoles,
+      ...oracleManagerRoles,
+    );
+    addressBatch.push(
+      ...tokenManagerRoles.map(() => managerGrantConfig.tokenManagerAddress),
+      ...vaultManagerRoles.map(
+        () => managerGrantConfig.vaultsManagerAddress ?? defaultManager,
+      ),
+      ...oracleManagerRoles.map(() => managerGrantConfig.oracleManagerAddress),
+    );
   }
 
-  const grantRoles = [
-    ...tokenManagerRoles,
-    ...vaultManagerRoles,
-    ...oracleManagerRoles,
-    ...contractsRoles,
-  ];
-  const grantAddresses = [
-    ...tokenManagerRoles.map(() => networkConfig.tokenManagerAddress),
-    ...vaultManagerRoles.map(
-      () => networkConfig.vaultsManagerAddress ?? defaultManager,
-    ),
-    ...oracleManagerRoles.map(() => networkConfig.oracleManagerAddress),
-    ...contractsAddresses,
-  ];
+  for (const dv of depositVaults) {
+    roleBatch.push(tokenRoles.minter);
+    addressBatch.push(dv);
+  }
+
+  for (const rv of redemptionVaults) {
+    roleBatch.push(tokenRoles.burner);
+    addressBatch.push(rv);
+  }
 
   const present = await Promise.all(
-    grantRoles.map((role, i) => accessControl.hasRole(role, grantAddresses[i])),
+    roleBatch.map((role, i) => accessControl.hasRole(role, addressBatch[i])),
   );
-  const rolesToGrant = grantRoles.filter((_, i) => !present[i]);
-  const addressesToGrant = grantAddresses.filter((_, i) => !present[i]);
+  const rolesToGrant = roleBatch.filter((_, i) => !present[i]);
+  const addressesToGrant = addressBatch.filter((_, i) => !present[i]);
 
   if (rolesToGrant.length === 0) {
     console.log(`${token}: all product roles already granted — skip`);
     return;
   }
 
-  const alreadyHeld = grantRoles.length - rolesToGrant.length;
+  const alreadyHeld = roleBatch.length - rolesToGrant.length;
   console.log(
     alreadyHeld > 0
-      ? `${token}: grant ${rolesToGrant.length} missing (${alreadyHeld}/${grantRoles.length} already held)`
+      ? `${token}: grant ${rolesToGrant.length} missing (${alreadyHeld}/${roleBatch.length} already held)`
       : `${token}: grant ${rolesToGrant.length} missing`,
   );
 
