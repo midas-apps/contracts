@@ -52,15 +52,15 @@ export const getDvMTokenContractFromTemplate = async (
         ${
           vaultUseTokenLevelGreenList
             ? `
-          /**
-           * @inheritdoc Greenlistable
-           */
-          function greenlistedRole() public pure override returns (bytes32) {
-              return ${roles.greenlisted};
-          }
-  `
+        /**
+         * @inheritdoc Greenlistable
+         */
+        function greenlistedRole() public pure override returns (bytes32) {
+            return ${roles.greenlisted};
+        }
+        `
             : ''
-        }            
+        }
     }`,
   };
 };

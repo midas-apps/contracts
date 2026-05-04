@@ -8,7 +8,7 @@ import type { OmniPointHardhat } from '@layerzerolabs/toolbox-hardhat';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
-  blockFinality,
+  layerZeroBlockFinality,
   isTestnetNetwork,
   layerZeroEids,
   MTokenName,
@@ -19,6 +19,14 @@ import {
 import { getMTokenOrPaymentTokenOrThrow } from '../../helpers/utils';
 import { midasAddressesPerNetwork } from '../constants/addresses';
 
+enum DVN {
+  LayerZeroLabs = 'LayerZero Labs',
+  DeutscheTelekom = 'Deutsche Telekom',
+  Canary = 'Canary',
+  BCWGroup = 'BCW Group',
+  Nethermind = 'Nethermind',
+}
+
 type ConfigPerNetwork<TKey extends string> = Partial<
   Record<
     TKey,
@@ -28,9 +36,27 @@ type ConfigPerNetwork<TKey extends string> = Partial<
        */
       pathways?: 'direct-only' | 'all';
       linkedNetworks: Network[];
+      /**
+       * Override DVN names for this token's pathways.
+       * Falls back to `defaultDVNs` when not set.
+       */
+      dvns?: DVN[];
+
+      /**
+       * Exclude DVN names for this token's pathways.
+       * Falls back to `[]` when not set.
+       */
+      excludedDVNs?: DVN[];
     }
   >
 >;
+
+const defaultDVNs = [
+  DVN.LayerZeroLabs,
+  DVN.DeutscheTelekom,
+  DVN.Canary,
+  DVN.Nethermind,
+];
 
 export const lzConfigsPerMToken: PartialConfigPerNetwork<
   ConfigPerNetwork<MTokenName>
@@ -48,10 +74,35 @@ export const lzConfigsPerMToken: PartialConfigPerNetwork<
       linkedNetworks: ['scroll'],
     },
   },
+  scroll: {
+    weEUR: {
+      linkedNetworks: ['optimism'],
+      dvns: [...defaultDVNs, DVN.BCWGroup],
+      excludedDVNs: [DVN.DeutscheTelekom],
+    },
+    liquidRESERVE: {
+      linkedNetworks: ['optimism'],
+      dvns: [...defaultDVNs, DVN.BCWGroup],
+      excludedDVNs: [DVN.DeutscheTelekom],
+    },
+  },
   main: {
     mHYPER: {
       pathways: 'direct-only',
-      linkedNetworks: ['monad', 'katana'],
+      linkedNetworks: ['monad', 'katana', 'plasma'],
+    },
+    mHyperBTC: {
+      pathways: 'direct-only',
+      linkedNetworks: ['monad'],
+    },
+    bondUSD: {
+      linkedNetworks: ['zerog'],
+    },
+    bondETH: {
+      linkedNetworks: ['zerog'],
+    },
+    bondBTC: {
+      linkedNetworks: ['zerog'],
     },
   },
 };
@@ -185,6 +236,22 @@ export default async function () {
         );
       }
 
+      const dvns = tokenConfig.dvns ?? defaultDVNs;
+      const dvnsWoExcluded = dvns.filter(
+        (v) => !tokenConfig.excludedDVNs?.includes(v),
+      );
+
+      console.log('dvnsWoExcluded', dvnsWoExcluded);
+
+      if (
+        !layerZeroBlockFinality[networkA] ||
+        !layerZeroBlockFinality[networkB]
+      ) {
+        throw new Error(
+          `Block finality not found for network ${networkA} or ${networkB}`,
+        );
+      }
+
       pathways.push([
         {
           eid: layerZeroEids[networkA]!,
@@ -196,11 +263,11 @@ export default async function () {
         }, // Chain B contract
         [
           isTestnetNetwork(networkA) || isTestnetNetwork(networkB)
-            ? ['LayerZero Labs']
-            : ['LayerZero Labs', 'Deutsche Telekom', 'Canary'],
+            ? [DVN.LayerZeroLabs]
+            : dvnsWoExcluded,
           [],
         ], // [ requiredDVN[], [ optionalDVN[], threshold ] ]
-        [blockFinality[networkA] ?? 32, blockFinality[networkB] ?? 32], // [A to B confirmations, B to A confirmations]
+        [layerZeroBlockFinality[networkA], layerZeroBlockFinality[networkB]], // [A to B confirmations, B to A confirmations]
         [
           getEnforcedOptionsForNetwork(networkB),
           getEnforcedOptionsForNetwork(networkA),

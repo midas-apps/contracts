@@ -1,3 +1,4 @@
+import { hours } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
@@ -38,6 +39,17 @@ export const liquidRESERVEDeploymentConfig: DeploymentConfig = {
         swapperVault: 'dummy',
       },
       postDeploy: {
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            overrides: {
+              optimism: {
+                limit: parseUnits('500000'),
+                window: hours(24),
+              },
+            },
+          },
+        },
         addPaymentTokens: {
           vaults: [
             {
@@ -75,6 +87,86 @@ export const liquidRESERVEDeploymentConfig: DeploymentConfig = {
         },
         setRoundData: {
           data: parseUnits('1', 8),
+        },
+        pauseFunctions: {
+          depositVault: ['depositRequest', 'depositRequestWithCustomRecipient'],
+          redemptionVaultSwapper: ['redeemFiatRequest'],
+        },
+      },
+    },
+    [chainIds.optimism]: {
+      dv: {
+        type: 'REGULAR',
+        enableSanctionsList: true,
+        feeReceiver: '0xfC55F922013Cf5bbDA1cF6e0aB2a9B3FF3088c63',
+        tokensReceiver: '0x5A8BFA4837FA9861F9d027d7fdC03d4964B09b51',
+        instantDailyLimit: constants.MaxUint256,
+        instantFee: parseUnits('0', 2),
+        variationTolerance: parseUnits('0.2', 2),
+        minMTokenAmountForFirstDeposit: parseUnits('0', 18),
+        maxSupplyCap: constants.MaxUint256,
+      },
+      rvSwapper: {
+        type: 'SWAPPER',
+        feeReceiver: '0xfC55F922013Cf5bbDA1cF6e0aB2a9B3FF3088c63',
+        tokensReceiver: '0x5A8BFA4837FA9861F9d027d7fdC03d4964B09b51',
+        requestRedeemer: '0x47A6D842F32EC8005a9cdfCb0CFEc8Fe12276A42',
+        instantDailyLimit: parseUnits('100000', 18),
+        instantFee: parseUnits('0.2', 2),
+        variationTolerance: parseUnits('0.2', 2),
+        liquidityProvider: 'dummy',
+        enableSanctionsList: true,
+        swapperVault: 'dummy',
+      },
+      postDeploy: {
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            overrides: {
+              scroll: {
+                limit: parseUnits('100000'),
+                window: hours(24),
+              },
+            },
+          },
+        },
+        addPaymentTokens: {
+          vaults: [
+            {
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  allowance: parseUnits('500000000', 18),
+                },
+                {
+                  token: 'usdt',
+                  allowance: parseUnits('500000000', 18),
+                },
+              ],
+              type: 'depositVault',
+            },
+            {
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  allowance: parseUnits('500000000', 18),
+                },
+                {
+                  token: 'usdt',
+                  allowance: parseUnits('500000000', 18),
+                },
+              ],
+              type: 'redemptionVaultSwapper',
+            },
+          ],
+        },
+        grantRoles: {
+          tokenManagerAddress: '0x5f8759f5916c59cE3Eace1f9681706E335b7D40b',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0xe13bcC0b18642e6102C734fEBe1e50D855DFD0e6',
+        },
+        setRoundData: {
+          data: parseUnits('1.01023439', 8),
         },
         pauseFunctions: {
           depositVault: ['depositRequest', 'depositRequestWithCustomRecipient'],

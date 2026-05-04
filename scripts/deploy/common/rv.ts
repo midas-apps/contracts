@@ -145,7 +145,7 @@ export const deployRedemptionVault = async (
       `Detected TAC wrapper, will be used data feed from ${originalTokenName}: ${dataFeed}`,
     );
   } else {
-    dataFeed = tokenAddresses?.dataFeed;
+    dataFeed = tokenAddresses?.dataFeedRv ?? tokenAddresses?.dataFeed;
   }
 
   const sanctionsList = networkConfig.enableSanctionsList

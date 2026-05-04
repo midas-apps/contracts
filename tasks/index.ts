@@ -3,15 +3,11 @@ import { task } from 'hardhat/config';
 import path from 'path';
 
 import { extendWithContext } from '../config';
-import {
-  etherscanVerify,
-  etherscanVerifyImplementation,
-  isMTokenName,
-  isPaymentTokenName,
-} from '../helpers/utils';
+import { isMTokenName, isPaymentTokenName } from '../helpers/utils';
 
 import './layerzero';
 import './axelar';
+import './verify';
 
 task('runscript', 'Runs a user-defined script')
   .addPositionalParam('path', 'Path to the script')
@@ -23,11 +19,16 @@ task('runscript', 'Runs a user-defined script')
   .addOptionalParam('logToFile', 'Log to file')
   .addOptionalParam('logsFolderPath', 'Logs folder path')
   .addOptionalParam('originalNetwork', 'Original Network')
+  .addOptionalParam(
+    'keys',
+    'Comma-separated list of address book keys to include (e.g. layerZero)',
+  )
   .setAction(async (taskArgs, hre) => {
     const mtoken = taskArgs.mtoken;
     const ptoken = taskArgs.ptoken;
     const action = taskArgs.action;
     const originalNetwork = taskArgs.originalNetwork;
+    const keys = taskArgs.keys;
 
     const scriptPath = taskArgs.path;
     const skipValidation = taskArgs.skipvalidation;
@@ -69,6 +70,10 @@ task('runscript', 'Runs a user-defined script')
       };
     }
 
+    if (keys) {
+      hre.addressBookKeys = keys.split(',').map((k: string) => k.trim());
+    }
+
     const scriptPathResolved = path.resolve(scriptPath);
     const { default: run } = await import(scriptPathResolved);
 
@@ -77,16 +82,4 @@ task('runscript', 'Runs a user-defined script')
     }
 
     await run(hre);
-  });
-
-task('verifyProxy')
-  .addPositionalParam('proxyAddress')
-  .setAction(async ({ proxyAddress }, hre) => {
-    await etherscanVerifyImplementation(hre, proxyAddress);
-  });
-
-task('verifyRegular')
-  .addPositionalParam('address')
-  .setAction(async ({ address }, hre) => {
-    await etherscanVerify(hre, address);
   });

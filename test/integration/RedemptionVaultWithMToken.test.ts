@@ -252,7 +252,7 @@ describe('RedemptionVaultWithMToken - Mainnet Fork Integration Tests', function 
             parseUnits(String(mFONEAmount)),
             0,
           ),
-      ).to.be.revertedWith('RVMT: insufficient mToken balance');
+      ).to.be.revertedWith('RVMT: balance < needed');
     });
   });
 });

@@ -10,6 +10,8 @@ import {
   RpcUrl,
 } from '../types';
 
+export * from './verify.config';
+
 const {
   ALCHEMY_KEY,
   INFURA_KEY,
@@ -30,7 +32,9 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   etherlink: 'https://node.mainnet.etherlink.com',
   hardhat: 'http://localhost:8545',
   localhost: 'http://localhost:8545',
-  base: 'https://mainnet.base.org',
+  base: INFURA_KEY
+    ? `https://base-mainnet.infura.io/v3/${INFURA_KEY}`
+    : 'https://mainnet.base.org',
   oasis: 'https://sapphire.oasis.io',
   plume: 'https://rpc.plume.org',
   rootstock: 'https://mycrypto.rsk.co',
@@ -46,9 +50,12 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   bsc: ALCHEMY_KEY
     ? `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
     : 'https://bsc-dataseed.bnbchain.org',
-  scroll: 'https://rpc.scroll.io',
+  scroll: 'https://scroll.drpc.org',
   monad: 'https://rpc.monad.xyz',
   injective: `https://${QUICK_NODE_PROJECT}.injective-mainnet.quiknode.pro/${QUICK_NODE_KEY}/`,
+  optimism: ALCHEMY_KEY
+    ? `https://opt-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
+    : `https://optimism-mainnet.infura.io/v3/${INFURA_KEY}`,
 };
 
 export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
@@ -74,6 +81,7 @@ export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
   scroll: undefined,
   monad: undefined,
   injective: undefined,
+  optimism: undefined,
 };
 
 export const chainIds: ConfigPerNetwork<number> = {
@@ -99,6 +107,7 @@ export const chainIds: ConfigPerNetwork<number> = {
   scroll: 534352,
   monad: 143,
   injective: 1776,
+  optimism: 10,
 };
 
 export const mnemonics: ConfigPerNetwork<string | undefined> = {
@@ -124,6 +133,7 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   scroll: MNEMONIC_PROD,
   monad: MNEMONIC_PROD,
   injective: MNEMONIC_PROD,
+  optimism: MNEMONIC_PROD,
 };
 
 export const gases: ConfigPerNetwork<number | undefined> = {
@@ -149,6 +159,7 @@ export const gases: ConfigPerNetwork<number | undefined> = {
   scroll: undefined,
   monad: undefined,
   injective: undefined,
+  optimism: undefined,
 };
 
 export const timeouts: ConfigPerNetwork<number | undefined> = {
@@ -174,6 +185,7 @@ export const timeouts: ConfigPerNetwork<number | undefined> = {
   scroll: undefined,
   monad: undefined,
   injective: undefined,
+  optimism: undefined,
 };
 
 export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
@@ -199,6 +211,7 @@ export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
   scroll: undefined,
   monad: undefined,
   injective: undefined,
+  optimism: undefined,
 };
 
 export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
@@ -224,14 +237,19 @@ export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
   scroll: undefined,
   monad: undefined,
   injective: undefined,
+  optimism: undefined,
 };
 
-export const blockFinality: PartialConfigPerNetwork<number> = {
-  main: 15,
+export const layerZeroBlockFinality: PartialConfigPerNetwork<number> = {
+  main: 70,
   sepolia: 2,
   arbitrumSepolia: 1,
-  monad: 10,
-  katana: 20,
+  monad: 3600,
+  katana: 1200,
+  scroll: 800,
+  optimism: 650,
+  plasma: 1800,
+  zerog: 6000,
 };
 
 export const axelarChainNames: PartialConfigPerNetwork<string> = {
@@ -260,6 +278,7 @@ export const layerZeroEids: PartialConfigPerNetwork<EndpointId> = {
   arbitrumSepolia: EndpointId.ARBSEP_V2_TESTNET,
   scroll: EndpointId.SCROLL_V2_MAINNET,
   monad: EndpointId.MONAD_V2_MAINNET,
+  optimism: EndpointId.OPTIMISM_V2_MAINNET,
 };
 
 export const layerZeroEidToNetwork = Object.fromEntries(

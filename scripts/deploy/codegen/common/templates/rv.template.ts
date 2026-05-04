@@ -29,7 +29,7 @@ export const getRvContractFromTemplate = async (
 
   /**
    * @title ${contractNames.rv}
-   * @notice Smart contract that handles ${contractNames.token} minting
+   * @notice Smart contract that handles ${contractNames.token} redemptions
    * @author RedDuck Software
    */
   contract ${contractNames.rv} is

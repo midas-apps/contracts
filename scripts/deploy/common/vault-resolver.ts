@@ -41,3 +41,15 @@ export const resolveVaultAddress = (
 
   return undefined;
 };
+
+export const resolveAllVaultAddresses = (
+  tokenAddresses: TokenAddresses,
+  vaultTypes: readonly (DepositVaultType | RedemptionVaultType)[],
+): string[] => {
+  const addresses: string[] = [];
+  for (const key of vaultTypes) {
+    const value = tokenAddresses[key];
+    if (value) addresses.push(value);
+  }
+  return addresses;
+};

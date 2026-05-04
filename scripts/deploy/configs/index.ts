@@ -1,4 +1,7 @@
 import { acremBTC1DeploymentConfig } from './acremBTC1';
+import { bondBTCDeploymentConfig } from './bondBTC';
+import { bondETHDeploymentConfig } from './bondETH';
+import { bondUSDDeploymentConfig } from './bondUSD';
 import { cUSDODeploymentConfig } from './cUSDO';
 import { dnETHDeploymentConfig } from './dnETH';
 import { dnFARTDeploymentConfig } from './dnFART';
@@ -27,6 +30,7 @@ import { mevBTCDeploymentConfig } from './mevBTC';
 import { mEVUSDDeploymentConfig } from './mEVUSD';
 import { mFARMDeploymentConfig } from './mFARM';
 import { mFONEDeploymentConfig } from './mFONE';
+import { mGLOBALDeploymentConfig } from './mGLOBAL';
 import { mHYPERDeploymentConfig } from './mHYPER';
 import { mHyperBTCDeploymentConfig } from './mHyperBTC';
 import { mHyperETHDeploymentConfig } from './mHyperETH';
@@ -37,12 +41,14 @@ import { mMEVDeploymentConfig } from './mMEV';
 import { mPortofinoDeploymentConfig } from './mPortofino';
 import { mRE7DeploymentConfig } from './mRE7';
 import { mRE7BTCDeploymentConfig } from './mRE7BTC';
+import { mRe7ETHDeploymentConfig } from './mRe7ETH';
 import { mRE7SOLDeploymentConfig } from './mRE7SOL';
 import { mROXDeploymentConfig } from './mROX';
 import { mSLDeploymentConfig } from './mSL';
 import { msyrupUSDDeploymentConfig } from './msyrupUSD';
 import { msyrupUSDpDeploymentConfig } from './msyrupUSDp';
 import { mTBILLDeploymentConfig } from './mTBILL';
+import { mTESTDeploymentConfig } from './mTEST';
 import { mTUDeploymentConfig } from './mTU';
 import { mWildUSDDeploymentConfig } from './mWildUSD';
 import { mXRPDeploymentConfig } from './mXRP';
@@ -133,4 +139,10 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   weEUR: weEURDeploymentConfig,
   mTU: mTUDeploymentConfig,
   mM1USD: mM1USDDeploymentConfig,
+  mRe7ETH: mRe7ETHDeploymentConfig,
+  mGLOBAL: mGLOBALDeploymentConfig,
+  bondUSD: bondUSDDeploymentConfig,
+  bondETH: bondETHDeploymentConfig,
+  bondBTC: bondBTCDeploymentConfig,
+  mTEST: mTESTDeploymentConfig,
 };

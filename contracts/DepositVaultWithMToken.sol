@@ -78,7 +78,7 @@ contract DepositVaultWithMToken is DepositVault {
     ) external {
         initialize(_commonVaultInitParams, _depositVaultInitParams);
 
-        _validateAddress(_mTokenDepositVault, false);
+        _validateAddress(_mTokenDepositVault, true);
         mTokenDepositVault = IDepositVault(_mTokenDepositVault);
     }
 
@@ -94,7 +94,7 @@ contract DepositVaultWithMToken is DepositVault {
             _mTokenDepositVault != address(mTokenDepositVault),
             SameAddressValue(_mTokenDepositVault)
         );
-        _validateAddress(_mTokenDepositVault, false);
+        _validateAddress(_mTokenDepositVault, true);
         mTokenDepositVault = IDepositVault(_mTokenDepositVault);
         emit SetMTokenDepositVault(msg.sender, _mTokenDepositVault);
     }
@@ -176,6 +176,13 @@ contract DepositVaultWithMToken is DepositVault {
         uint256 amountToken,
         uint256 tokensDecimals
     ) private {
+        require(
+            ManageableVault(address(mTokenDepositVault)).waivedFeeRestriction(
+                address(this)
+            ),
+            "DVMT: fees not waived on target"
+        );
+
         uint256 transferredAmount = _tokenTransferFromUser(
             tokenIn,
             address(this),

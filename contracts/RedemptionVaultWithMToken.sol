@@ -27,8 +27,8 @@ contract RedemptionVaultWithMToken is RedemptionVault {
 
     /**
      * @notice mToken RedemptionVault used for fallback redemptions
+     * @custom:oz-renamed-from mTbillRedemptionVault
      */
-    /// @custom:oz-renamed-from mTbillRedemptionVault
     IRedemptionVault public redemptionVault;
 
     /**
@@ -106,7 +106,6 @@ contract RedemptionVaultWithMToken is RedemptionVault {
             .getDataInBase18();
 
         // Ceil so the inner vault's floored output is still >= missingAmountBase18.
-        // Requires address(this) to have waivedFeeRestriction on the inner vault
         uint256 mTokenAAmount = Math.mulDiv(
             missingAmountBase18,
             tokenOutRate,
@@ -120,6 +119,12 @@ contract RedemptionVaultWithMToken is RedemptionVault {
         mTokenAAmount = mTokenABalance >= mTokenAAmount
             ? mTokenAAmount
             : mTokenABalance;
+        //         require(
+        //             ManageableVault(address(redemptionVault)).waivedFeeRestriction(
+        //                 address(this)
+        //             ),
+        //             "RVMT: fees not waived on target"
+        //         );
 
         uint256 actualTokenOutAmount = Math.mulDiv(
             mTokenAAmount,

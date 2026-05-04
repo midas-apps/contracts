@@ -1,10 +1,14 @@
 import { BigNumberish } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { AddFeeWaivedConfig, AddPaymentTokensConfig } from './common-vault';
 import {
+  AddFeeWaivedConfig,
+  AddPaymentTokensConfig,
+  SetAaveConfigConfig,
+} from './common-vault';
+import {
+  DeployCustomAggregatorAdjustedConfig,
   DeployCustomAggregatorConfig,
-  DeployCustomAggregatorDiscountedConfig,
   DeployDataFeedConfig,
   SetRoundDataConfig,
 } from './data-feed';
@@ -68,7 +72,7 @@ export type LayerZeroConfig = {
   delegate: string;
   owner?: string;
   rateLimitConfig?: {
-    default: Omit<RateLimiter.RateLimitConfigStruct, 'dstEid'>;
+    default?: Omit<RateLimiter.RateLimitConfigStruct, 'dstEid'>;
     overrides?: PartialConfigPerNetwork<
       Omit<RateLimiter.RateLimitConfigStruct, 'dstEid'>
     >;
@@ -88,12 +92,15 @@ export type PostDeployConfig = {
   pauseFunctions?: PauseFunctionsConfig;
   layerZero?: LayerZeroConfig;
   axelarIts?: AxelarItsConfig;
+  setAaveConfig?: SetAaveConfigConfig;
 };
 
 export type DeploymentConfig = {
   genericConfigs: {
     customAggregator?: DeployCustomAggregatorConfig;
-    customAggregatorDiscounted?: DeployCustomAggregatorDiscountedConfig;
+    customAggregatorAdjusted?: DeployCustomAggregatorAdjustedConfig;
+    customAggregatorAdjustedDv?: DeployCustomAggregatorAdjustedConfig;
+    customAggregatorAdjustedRv?: DeployCustomAggregatorAdjustedConfig;
     dataFeed?: DeployDataFeedConfig;
   };
   networkConfigs: Record<

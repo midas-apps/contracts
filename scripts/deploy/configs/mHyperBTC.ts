@@ -1,3 +1,4 @@
+import { hours } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { parseUnits } from 'ethers/lib/utils';
 
 import { chainIds } from '../../../config';
@@ -79,6 +80,18 @@ export const mHyperBTCDeploymentConfig: DeploymentConfig = {
           depositVault: ['depositRequest', 'depositRequestWithCustomRecipient'],
           redemptionVaultSwapper: ['redeemFiatRequest'],
         },
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          owner: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            overrides: {
+              monad: {
+                limit: parseUnits('50'),
+                window: hours(24),
+              },
+            },
+          },
+        },
       },
     },
     [chainIds.rootstock]: {
@@ -138,6 +151,31 @@ export const mHyperBTCDeploymentConfig: DeploymentConfig = {
         },
         pauseFunctions: {
           redemptionVaultSwapper: ['redeemFiatRequest'],
+        },
+      },
+    },
+    [chainIds.monad]: {
+      postDeploy: {
+        grantRoles: {
+          tokenManagerAddress: '0x8D5CcA2b1A7Fc79505dBC5d42BF1b0B33f7144Ef',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0x40468649412585665ad1B756261BB30D768a0956',
+        },
+        setRoundData: {
+          // price from mainnet at 2026-03-16 14:46 UTC
+          data: 101281620,
+        },
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          owner: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            overrides: {
+              main: {
+                limit: parseUnits('50'),
+                window: hours(24),
+              },
+            },
+          },
         },
       },
     },

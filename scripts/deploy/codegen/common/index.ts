@@ -133,10 +133,12 @@ export const updateConfigFiles = (
   const contractNameVar =
     contractNameFile.getVariableDeclarationOrThrow('mTokensMetadata');
 
-  mTokensEnum.addMember({
-    name: mToken,
-    initializer: `"${mToken}"`,
-  });
+  if (!mTokensEnum.getMember(mToken)) {
+    mTokensEnum.addMember({
+      name: mToken,
+      initializer: `"${mToken}"`,
+    });
+  }
 
   {
     const initializer = contractPrefixesVar.getInitializerOrThrow();
@@ -214,7 +216,7 @@ export const requireNotCancelled = <T>(value: T | symbol) => {
 const lintAndFormatTs = (path: string) => {
   try {
     execSync(
-      `yarn prettier "${path}" --write > /dev/null && eslint "${path}" --fix > /dev/null`,
+      `yarn prettier "${path}" --write > /dev/null && yarn exec eslint "${path}" --fix > /dev/null`,
       {
         stdio: 'inherit',
       },
@@ -228,7 +230,7 @@ const lintAndFormatTs = (path: string) => {
 const lintAndFormatSol = (folder: string) => {
   try {
     execSync(
-      `yarn solhint ${folder}/**/*.sol --quiet --fix > /dev/null & yarn prettier ${folder}/**/*.sol --write > /dev/null`,
+      `yarn solhint "${folder}/**/*.sol" --quiet --fix > /dev/null && yarn prettier "${folder}/**/*.sol" --write > /dev/null`,
       {
         stdio: 'inherit',
       },
@@ -349,9 +351,13 @@ export const generateDeploymentConfig = async (
     genericConfig: {},
   };
 
+  let isGrowthAggregator = false;
+
   if (!deploymentConfigFileExists) {
-    deploymentConfig.genericConfig =
-      await configsPerNetworkConfig.genericConfig(mToken);
+    const genericResult = await configsPerNetworkConfig.genericConfig(mToken);
+    isGrowthAggregator = genericResult.isGrowth;
+    const { isGrowth: _, ...genericConfig } = genericResult;
+    deploymentConfig.genericConfig = genericConfig;
   }
 
   if (
@@ -453,13 +459,21 @@ export const ${deploymentConfigVarName}: DeploymentConfig = {
       postDeployProperty.remove();
     }
 
+    const setRoundData: Record<string, unknown> = isGrowthAggregator
+      ? {
+          type: expr("'GROWTH'"),
+          data: expr('parseUnits("1", 8)'),
+          apr: expr('parseUnits("0", 8)'),
+        }
+      : {
+          data: expr('parseUnits("1", 8)'),
+        };
+
     networkConfigPropertyInit.addPropertyAssignment({
       name: 'postDeploy',
       initializer: objectToCode({
         ...deploymentConfig.postDeploy,
-        setRoundData: {
-          data: expr('parseUnits("1", 8)'),
-        },
+        setRoundData,
       }),
     });
   }

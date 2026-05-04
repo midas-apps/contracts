@@ -70,6 +70,12 @@ const prefixes: Record<MTokenName, string> = {
   weEUR: 'WE_EUR',
   mTU: 'M_TU',
   mM1USD: 'M_M1_USD',
+  mRe7ETH: 'M_RE7ETH',
+  mGLOBAL: 'M_GLOBAL',
+  bondUSD: 'BOND_USD',
+  bondETH: 'BOND_ETH',
+  bondBTC: 'BOND_BTC',
+  mTEST: 'M_TEST',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {
@@ -94,9 +100,14 @@ type CommonRoles = {
   defaultAdmin: string;
 };
 
+type IntegrationRoles = {
+  infinifiMGCustomFeedAdmin: string;
+};
+
 type AllRoles = {
   common: CommonRoles;
   tokenRoles: Record<MTokenName, TokenRoles>;
+  integration: IntegrationRoles;
 };
 
 const keccak256 = (role: string) => {
@@ -156,8 +167,15 @@ export const getRolesForToken = (token: MTokenName): TokenRoles => {
   return getRolesHashes(rolesNames) as TokenRoles;
 };
 
+export const getRolesNamesIntegration = (): IntegrationRoles => {
+  return {
+    infinifiMGCustomFeedAdmin: 'INFINIFI_MG_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE',
+  };
+};
+
 export const getAllRoles = (): AllRoles => {
   const rolesNamesCommon = getRolesNamesCommon();
+  const rolesNamesIntegration = getRolesNamesIntegration();
   return {
     common: {
       defaultAdmin: constants.HashZero,
@@ -172,5 +190,10 @@ export const getAllRoles = (): AllRoles => {
         getRolesForToken(token as MTokenName),
       ]),
     ) as Record<MTokenName, TokenRoles>,
+    integration: {
+      infinifiMGCustomFeedAdmin: keccak256(
+        rolesNamesIntegration.infinifiMGCustomFeedAdmin,
+      ),
+    },
   };
 };

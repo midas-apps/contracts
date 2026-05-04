@@ -63,8 +63,8 @@ contract RedemptionVaultWithAave is RedemptionVault {
         external
         validateVaultAdminAccess
     {
-        _validateAddress(_token, false);
-        _validateAddress(_aavePool, false);
+        _validateAddress(_token, true);
+        _validateAddress(_aavePool, true);
         require(
             IAaveV3Pool(_aavePool).getReserveAToken(_token) != address(0),
             TokenNotInPool(_aavePool, _token)

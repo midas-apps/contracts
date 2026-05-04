@@ -9,7 +9,7 @@ import {
 } from './utils';
 import {
   defaultDepositVaultPriority,
-  resolveVaultAddress,
+  resolveAllVaultAddresses,
   roleGrantRedemptionVaultPriority,
 } from './vault-resolver';
 
@@ -23,9 +23,9 @@ import { networkDeploymentConfigs } from '../configs/network-configs';
 type Address = `0x${string}`;
 
 export type GrantAllTokenRolesConfig = {
-  tokenManagerAddress?: Address;
+  tokenManagerAddress: Address;
   vaultsManagerAddress?: Address;
-  oracleManagerAddress?: Address;
+  oracleManagerAddress: Address;
 };
 
 const acAdminAddress = '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227';
@@ -75,54 +75,65 @@ export const grantAllProductRoles = async (
 
   const defaultManager = provider.address;
 
-  // Build vault contract roles and addresses conditionally
   const contractsRoles: string[] = [];
   const contractsAddresses: string[] = [];
 
-  const depositVault = resolveVaultAddress(
+  const depositVaults = resolveAllVaultAddresses(
     tokenAddresses,
     defaultDepositVaultPriority,
   );
-  const redemptionVault = resolveVaultAddress(
+  const redemptionVaults = resolveAllVaultAddresses(
     tokenAddresses,
     roleGrantRedemptionVaultPriority,
   );
 
-  if (depositVault) {
+  for (const dv of depositVaults) {
     contractsRoles.push(tokenRoles.minter);
-    contractsAddresses.push(depositVault);
-  } else {
-    console.log(`⚠️  Skipping minter role for depositVault (not deployed)`);
+    contractsAddresses.push(dv);
+  }
+  for (const rv of redemptionVaults) {
+    contractsRoles.push(tokenRoles.burner);
+    contractsAddresses.push(rv);
   }
 
-  if (redemptionVault) {
-    contractsRoles.push(tokenRoles.burner);
-    contractsAddresses.push(redemptionVault);
-  } else {
-    console.log(`⚠️  Skipping burner role for redemptionVault (not deployed)`);
+  const grantRoles = [
+    ...tokenManagerRoles,
+    ...vaultManagerRoles,
+    ...oracleManagerRoles,
+    ...contractsRoles,
+  ];
+  const grantAddresses = [
+    ...tokenManagerRoles.map(() => networkConfig.tokenManagerAddress),
+    ...vaultManagerRoles.map(
+      () => networkConfig.vaultsManagerAddress ?? defaultManager,
+    ),
+    ...oracleManagerRoles.map(() => networkConfig.oracleManagerAddress),
+    ...contractsAddresses,
+  ];
+
+  const present = await Promise.all(
+    grantRoles.map((role, i) => accessControl.hasRole(role, grantAddresses[i])),
+  );
+  const rolesToGrant = grantRoles.filter((_, i) => !present[i]);
+  const addressesToGrant = grantAddresses.filter((_, i) => !present[i]);
+
+  if (rolesToGrant.length === 0) {
+    console.log(`${token}: all product roles already granted — skip`);
+    return;
   }
+
+  const alreadyHeld = grantRoles.length - rolesToGrant.length;
+  console.log(
+    alreadyHeld > 0
+      ? `${token}: grant ${rolesToGrant.length} missing (${alreadyHeld}/${grantRoles.length} already held)`
+      : `${token}: grant ${rolesToGrant.length} missing`,
+  );
 
   await sendAndWaitForCustomTxSign(
     hre,
     await accessControl.populateTransaction.grantRoleMult(
-      [
-        ...tokenManagerRoles,
-        ...vaultManagerRoles,
-        ...oracleManagerRoles,
-        ...contractsRoles,
-      ],
-      [
-        ...tokenManagerRoles.map(
-          () => networkConfig.tokenManagerAddress ?? defaultManager,
-        ),
-        ...vaultManagerRoles.map(
-          () => networkConfig.vaultsManagerAddress ?? defaultManager,
-        ),
-        ...oracleManagerRoles.map(
-          () => networkConfig.oracleManagerAddress ?? defaultManager,
-        ),
-        ...contractsAddresses,
-      ],
+      rolesToGrant,
+      addressesToGrant,
     ),
     {
       action: 'update-ac',
