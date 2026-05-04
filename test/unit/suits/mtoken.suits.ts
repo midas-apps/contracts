@@ -852,6 +852,26 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         await expect(tokenContract.connect(blacklisted).transfer(to.address, 1))
           .not.reverted;
       });
+
+      it('transfer(...) is not affected by mint rate limits set to 0', async () => {
+        const { owner, regularAccounts, tokenContract } =
+          await deployMTokenWithFixture();
+        const from = regularAccounts[0];
+        const to = regularAccounts[1];
+        const dayWindow = days(1);
+        const minuteWindow = 60;
+
+        await mint({ tokenContract, owner }, from, 1);
+
+        await increaseMintRateLimit({ tokenContract, owner }, dayWindow, 1);
+        await decreaseMintRateLimit({ tokenContract, owner }, dayWindow, 0);
+        await increaseMintRateLimit({ tokenContract, owner }, minuteWindow, 1);
+        await decreaseMintRateLimit({ tokenContract, owner }, minuteWindow, 0);
+
+        await expect(tokenContract.connect(from).transfer(to.address, 1)).not
+          .reverted;
+        expect(await tokenContract.balanceOf(to.address)).eq(1);
+      });
     });
   });
 
