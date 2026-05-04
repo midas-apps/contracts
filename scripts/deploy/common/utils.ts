@@ -12,7 +12,7 @@ import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
 } from '../../../helpers/utils';
-import { configsPerToken } from '../configs';
+import { getDeploymentConfigForToken } from '../configs';
 
 const safeAbi = [
   {
@@ -211,7 +211,8 @@ export const getDeploymentGenericConfig = <
   token: MTokenName,
   configKey: TConfigKey,
 ) => {
-  const config = configsPerToken[token]?.genericConfigs?.[configKey] as TConfig;
+  const config = getDeploymentConfigForToken(token, hre.deploymentConfig)
+    ?.genericConfigs?.[configKey] as TConfig;
 
   if (!config) {
     throw new Error('Deployment config is not found');
@@ -228,9 +229,8 @@ export const getNetworkConfig = <
   token: MTokenName,
   configKey: TConfigKey,
 ) => {
-  const config = configsPerToken[token]?.networkConfigs?.[
-    hre.network.config.chainId!
-  ]?.[configKey] as TConfig;
+  const config = getDeploymentConfigForToken(token, hre.deploymentConfig)
+    ?.networkConfigs?.[hre.network.config.chainId!]?.[configKey] as TConfig;
 
   if (!config) {
     throw new Error('Deployment config is not found');

@@ -19,6 +19,7 @@ declare module 'hardhat/types/runtime' {
     };
     paymentToken?: PaymentTokenName;
     action?: string;
+    deploymentConfig?: string;
     skipValidation?: boolean;
     aggregatorType?: 'numerator' | 'denominator';
     addressBookKeys?: string[];

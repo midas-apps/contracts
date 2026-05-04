@@ -30,7 +30,7 @@ type AxelarTokenAddresses = {
   executables?: Partial<Record<PaymentTokenName, string>>;
 };
 
-type TokenFeedAddresses = {
+export type TokenFeedAddresses = {
   customFeed?: string;
   customFeedGrowth?: string;
 
@@ -43,10 +43,14 @@ type TokenFeedAddresses = {
   dataFeedRv?: string;
 };
 
+export type AddressProfileTokenAddresses = TokenFeedAddresses &
+  Partial<Record<DepositVaultType | RedemptionVaultType, string>>;
+
 export type TokenAddresses = TokenFeedAddresses & {
   token?: string;
   layerZero?: LayerZeroTokenAddresses;
   axelar?: AxelarTokenAddresses;
+  addressProfiles?: Partial<Record<string, AddressProfileTokenAddresses>>;
 } & Partial<Record<DepositVaultType | RedemptionVaultType, string>>;
 
 export type VaultType = RedemptionVaultType | DepositVaultType;
@@ -295,6 +299,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xCF4e49f5e750Af8F2f9Aa1642B68E5839D9c1C00',
       depositVault: '0x41438435c20B1C2f1fcA702d387889F346A0C3DE',
       redemptionVaultSwapper: '0x44b0440e35c596e858cEA433D0d82F5a985fD19C',
+      addressProfiles: {
+        mFONEUnloop: {
+          customFeed: '0x6dfD4f744273142AcdAaFd96E3A194D604a14Db3',
+          dataFeed: '0x24dF63499E8116724E8189aFa7e9a1F812e62Cca',
+          redemptionVaultSwapper: '0x375ea756418fe30Eea21E1189104974c185aBB48',
+        },
+      },
     },
     mHYPER: {
       token: '0x9b5528528656DBC094765E2abB79F293c21191B9',
