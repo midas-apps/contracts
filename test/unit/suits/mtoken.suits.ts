@@ -22,6 +22,8 @@ import {
 import { defaultDeploy } from '../../../test/common/fixtures';
 import {
   burn,
+  decreaseMintRateLimit,
+  increaseMintRateLimit,
   mint,
   setMetadataTest,
 } from '../../../test/common/mTBILL.helpers';
@@ -322,6 +324,11 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       expect(await tokenContract.symbol()).eq(expected.symbol);
 
       expect(await tokenContract.paused()).eq(false);
+
+      const limits = await tokenContract.getMintRateLimitConfigs();
+
+      expect(limits.windows.length).eq(0);
+      expect(limits.configs.length).eq(0);
     });
 
     it('roles', async () => {
@@ -450,6 +457,76 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         await mint({ tokenContract, owner }, to, amount);
       });
+
+      it('when 1h limit is set but not exceeded', async () => {
+        const { owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        const amount = parseUnits('100');
+        const to = regularAccounts[0].address;
+
+        await increaseMintRateLimit(
+          { tokenContract, owner },
+          3600,
+          parseUnits('10000'),
+        );
+        await mint({ tokenContract, owner }, to, amount);
+      });
+
+      it('when 1h and 10h limit is set but not exceeded', async () => {
+        const { owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        const amount = parseUnits('100');
+        const to = regularAccounts[0].address;
+
+        await increaseMintRateLimit(
+          { tokenContract, owner },
+          3600,
+          parseUnits('1000'),
+        );
+        await increaseMintRateLimit(
+          { tokenContract, owner },
+          3600 * 10,
+          parseUnits('10000'),
+        );
+
+        await mint({ tokenContract, owner }, to, amount);
+      });
+
+      it('should fail: mint when amount exceeds mint rate limit', async () => {
+        const { owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+        const to = regularAccounts[0];
+        const window = days(1);
+
+        await increaseMintRateLimit({ tokenContract, owner }, window, 100);
+        await mint({ tokenContract, owner }, to, 100);
+        await mint({ tokenContract, owner }, to, 1, {
+          revertCustomError: {
+            customErrorName: 'MintRateLimitExceeded',
+            args: [window, 101, 100],
+          },
+        });
+      });
+
+      it('should fail: mint when one of multiple mint rate limits is exceeded', async () => {
+        const { owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+        const to = regularAccounts[0];
+        const longWindow = days(1);
+        const shortWindow = 60;
+
+        await increaseMintRateLimit({ tokenContract, owner }, longWindow, 100);
+        await increaseMintRateLimit({ tokenContract, owner }, shortWindow, 50);
+
+        await mint({ tokenContract, owner }, to, 60, {
+          revertCustomError: {
+            customErrorName: 'MintRateLimitExceeded',
+            args: [shortWindow, 60, 50],
+          },
+        });
+      });
     });
 
     describe('burn()', () => {
@@ -487,6 +564,24 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         await mint({ tokenContract, owner }, to, amount);
         await burn({ tokenContract, owner }, to, amount);
       });
+
+      it('burn is not affected by mint rate limits', async () => {
+        const { owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+        const holder = regularAccounts[0];
+        const window = days(1);
+
+        await increaseMintRateLimit({ tokenContract, owner }, window, 100);
+        await mint({ tokenContract, owner }, holder, 100);
+        await mint({ tokenContract, owner }, holder, 1, {
+          revertCustomError: {
+            customErrorName: 'MintRateLimitExceeded',
+            args: [window, 101, 100],
+          },
+        });
+
+        await burn({ tokenContract, owner }, holder, 50);
+      });
     });
 
     describe('setMetadata()', () => {
@@ -511,6 +606,76 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           'some value',
           undefined,
         );
+      });
+    });
+
+    describe('increaseMintRateLimit()', () => {
+      it('should fail: call from address without DEFAULT_ADMIN_ROLE role', async () => {
+        const { owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        const caller = regularAccounts[0];
+
+        await increaseMintRateLimit({ tokenContract, owner }, days(1), 1, {
+          from: caller,
+          revertCustomError: acErrors.WMAC_HASNT_ROLE,
+        });
+      });
+
+      it('should fail: call with new limit <= existing limit', async () => {
+        const { owner, tokenContract } = await deployMTokenWithFixture();
+        const window = days(1);
+
+        await increaseMintRateLimit({ tokenContract, owner }, window, 100);
+        await increaseMintRateLimit({ tokenContract, owner }, window, 100, {
+          revertCustomError: {
+            customErrorName: 'InvalidNewLimit',
+            args: [100, 100],
+          },
+        });
+      });
+
+      it('call from address with DEFAULT_ADMIN_ROLE role', async () => {
+        const { owner, tokenContract } = await deployMTokenWithFixture();
+        const window = days(1);
+
+        await increaseMintRateLimit({ tokenContract, owner }, window, 100);
+        await increaseMintRateLimit({ tokenContract, owner }, window, 200);
+      });
+    });
+
+    describe('decreaseMintRateLimit()', () => {
+      it('should fail: call from address without DEFAULT_ADMIN_ROLE role', async () => {
+        const { owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        const caller = regularAccounts[0];
+
+        await decreaseMintRateLimit({ tokenContract, owner }, days(1), 1, {
+          from: caller,
+          revertCustomError: acErrors.WMAC_HASNT_ROLE,
+        });
+      });
+
+      it('should fail: call with new limit >= existing limit', async () => {
+        const { owner, tokenContract } = await deployMTokenWithFixture();
+        const window = days(1);
+
+        await increaseMintRateLimit({ tokenContract, owner }, window, 100);
+        await decreaseMintRateLimit({ tokenContract, owner }, window, 100, {
+          revertCustomError: {
+            customErrorName: 'InvalidNewLimit',
+            args: [100, 100],
+          },
+        });
+      });
+
+      it('call from address with DEFAULT_ADMIN_ROLE role', async () => {
+        const { owner, tokenContract } = await deployMTokenWithFixture();
+        const window = days(1);
+
+        await increaseMintRateLimit({ tokenContract, owner }, window, 200);
+        await decreaseMintRateLimit({ tokenContract, owner }, window, 100);
       });
     });
 

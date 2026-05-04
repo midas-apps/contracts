@@ -112,6 +112,28 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     }
 
     /**
+     * @notice returns array of mint rate limit configs
+     * @return windows array of mint rate limit config windows
+     * @return configs array of mint rate limit configs
+     */
+    function getMintRateLimitConfigs()
+        external
+        view
+        returns (
+            uint256[] memory windows,
+            MTokenRateLimitConfig[] memory configs
+        )
+    {
+        uint256 length = _mintRateLimitWindows.length();
+        windows = new uint256[](length);
+        configs = new MTokenRateLimitConfig[](length);
+        for (uint256 i = 0; i < length; ++i) {
+            windows[i] = _mintRateLimitWindows.at(i);
+            configs[i] = mintRateLimitConfigs[windows[i]];
+        }
+    }
+
+    /**
      * @dev set mint rate limit config
      * @param window window duration in seconds
      * @param limit limit amount per window
