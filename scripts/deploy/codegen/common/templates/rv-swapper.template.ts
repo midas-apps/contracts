@@ -21,7 +21,7 @@ export const getRvSwapperContractFromTemplate = async (
     name: contractNames.rvSwapper,
     content: `
   // SPDX-License-Identifier: MIT
-  pragma solidity 0.8.9;
+  pragma solidity 0.8.34;
 
   import "../../RedemptionVaultWithSwapper.sol";
   import "./${contractNames.roles}.sol";

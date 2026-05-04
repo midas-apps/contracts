@@ -3,10 +3,10 @@ pragma solidity 0.8.34;
 
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
-import "./RedemptionVault.sol";
+import {RedemptionVault} from "./RedemptionVault.sol";
 
 import {IMorphoVault} from "./interfaces/morpho/IMorphoVault.sol";
-import "./libraries/DecimalsCorrectionLibrary.sol";
+import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
 
 /**
  * @title RedemptionVaultWithMorpho

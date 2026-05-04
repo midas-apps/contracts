@@ -22,7 +22,7 @@ export const getRvContractFromTemplate = async (
     name: contractNames.rv,
     content: `
   // SPDX-License-Identifier: MIT
-  pragma solidity 0.8.9;
+  pragma solidity 0.8.34;
 
   import "../../RedemptionVault.sol";
   import "./${contractNames.roles}.sol";

@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import "./RedemptionVault.sol";
+import {Greenlistable} from "./access/Greenlistable.sol";
 
 // TODO: remove this contract
 /**

@@ -22,7 +22,7 @@ export const getTokenRolesContractFromTemplate = async (
     name: contractNames.roles,
     content: `
   // SPDX-License-Identifier: MIT
-  pragma solidity 0.8.9;
+  pragma solidity 0.8.34;
 
   /**
    * @title ${contractNames.roles}

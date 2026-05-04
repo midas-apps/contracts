@@ -21,7 +21,7 @@ export const getRvMorphoContractFromTemplate = async (
     name: contractNames.rvMorpho,
     content: `
     // SPDX-License-Identifier: MIT
-    pragma solidity 0.8.9;
+    pragma solidity 0.8.34;
 
     import "../../RedemptionVaultWithMorpho.sol";
     import "./${contractNames.roles}.sol";

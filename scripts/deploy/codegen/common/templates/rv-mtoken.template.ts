@@ -21,7 +21,7 @@ export const getRvMTokenContractFromTemplate = async (
     name: contractNames.rvMToken,
     content: `
     // SPDX-License-Identifier: MIT
-    pragma solidity 0.8.9;
+    pragma solidity 0.8.34;
 
     import "../../RedemptionVaultWithMToken.sol";
     import "./${contractNames.roles}.sol";

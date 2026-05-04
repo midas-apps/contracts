@@ -9,6 +9,7 @@ import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 import {IDepositVault, CommonVaultInitParams, DepositVaultInitParams, Request, RequestStatus} from "./interfaces/IDepositVault.sol";
 
 import {ManageableVault} from "./abstract/ManageableVault.sol";
+import {Greenlistable} from "./access/Greenlistable.sol";
 
 /**
  * @title DepositVault

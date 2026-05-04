@@ -21,7 +21,7 @@ export const getDvAaveContractFromTemplate = async (
     name: contractNames.dvAave,
     content: `
     // SPDX-License-Identifier: MIT
-    pragma solidity 0.8.9;
+    pragma solidity 0.8.34;
 
     import "../../DepositVaultWithAave.sol";
     import "./${contractNames.roles}.sol";

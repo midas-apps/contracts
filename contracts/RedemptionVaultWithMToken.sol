@@ -6,9 +6,9 @@ import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgrade
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import "./RedemptionVault.sol";
-import "./interfaces/IRedemptionVault.sol";
-import "./libraries/DecimalsCorrectionLibrary.sol";
+import {RedemptionVault, ManageableVault} from "./RedemptionVault.sol";
+import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
+import {CommonVaultInitParams, RedemptionVaultInitParams, IRedemptionVault} from "./interfaces/IRedemptionVault.sol";
 
 /**
  * @title RedemptionVaultWithMToken
@@ -19,6 +19,8 @@ import "./libraries/DecimalsCorrectionLibrary.sol";
 contract RedemptionVaultWithMToken is RedemptionVault {
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
+
+    error FeesNotWaivedOnTarget(address target);
 
     /**
      * @dev Storage gap preserved from RedemptionVaultWithSwapper layout
@@ -101,7 +103,9 @@ contract RedemptionVaultWithMToken is RedemptionVault {
             uint256 /* obtainedLiquidityBase18 */
         )
     {
-        uint256 mTokenARate = redemptionVault
+        IRedemptionVault _redemptionVault = redemptionVault;
+
+        uint256 mTokenARate = _redemptionVault
             .mTokenDataFeed()
             .getDataInBase18();
 
@@ -113,18 +117,19 @@ contract RedemptionVaultWithMToken is RedemptionVault {
             Math.Rounding.Up
         );
 
-        address mTokenA = address(redemptionVault.mToken());
+        address mTokenA = address(_redemptionVault.mToken());
         uint256 mTokenABalance = IERC20(mTokenA).balanceOf(address(this));
 
         mTokenAAmount = mTokenABalance >= mTokenAAmount
             ? mTokenAAmount
             : mTokenABalance;
-        //         require(
-        //             ManageableVault(address(redemptionVault)).waivedFeeRestriction(
-        //                 address(this)
-        //             ),
-        //             "RVMT: fees not waived on target"
-        //         );
+
+        require(
+            ManageableVault(address(_redemptionVault)).waivedFeeRestriction(
+                address(this)
+            ),
+            FeesNotWaivedOnTarget(address(_redemptionVault))
+        );
 
         uint256 actualTokenOutAmount = Math.mulDiv(
             mTokenAAmount,
@@ -138,7 +143,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
         }
 
         IERC20(mTokenA).safeIncreaseAllowance(
-            address(redemptionVault),
+            address(_redemptionVault),
             mTokenAAmount
         );
 
@@ -146,7 +151,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
         // and reset the allowance to 0, so the execution will safely fallbacks
         // to the original redemption flow.
         try
-            redemptionVault.redeemInstant(
+            _redemptionVault.redeemInstant(
                 tokenOut,
                 mTokenAAmount,
                 actualTokenOutAmount
@@ -155,7 +160,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
             return actualTokenOutAmount;
         } catch (bytes memory) {
             // reset the allowance to 0
-            IERC20(mTokenA).safeApprove(address(redemptionVault), 0);
+            IERC20(mTokenA).safeApprove(address(_redemptionVault), 0);
             return 0;
         }
     }

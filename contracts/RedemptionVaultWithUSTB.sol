@@ -4,10 +4,11 @@ pragma solidity 0.8.34;
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "./RedemptionVault.sol";
+import {RedemptionVault} from "./RedemptionVault.sol";
+import {CommonVaultInitParams, RedemptionVaultInitParams} from "./interfaces/IRedemptionVault.sol";
 
-import "./interfaces/ustb/IUSTBRedemption.sol";
-import "./libraries/DecimalsCorrectionLibrary.sol";
+import {IUSTBRedemption} from "./interfaces/ustb/IUSTBRedemption.sol";
+import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
 
 /**
  * @title RedemptionVaultWithUSTB

@@ -3,10 +3,12 @@ pragma solidity 0.8.34;
 
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
-import "./RedemptionVault.sol";
+import {RedemptionVault} from "./RedemptionVault.sol";
 
-import "./interfaces/aave/IAaveV3Pool.sol";
-import "./libraries/DecimalsCorrectionLibrary.sol";
+import {IAaveV3Pool} from "./interfaces/aave/IAaveV3Pool.sol";
+import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
+import {Greenlistable} from "./access/Greenlistable.sol";
+import {ManageableVault} from "./abstract/ManageableVault.sol";
 
 /**
  * @title RedemptionVaultWithAave

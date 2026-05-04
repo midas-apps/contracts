@@ -7,6 +7,8 @@ import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgrade
 import {DepositVault} from "./DepositVault.sol";
 import {IAaveV3Pool} from "./interfaces/aave/IAaveV3Pool.sol";
 import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
+import {Greenlistable} from "./access/Greenlistable.sol";
+import {ManageableVault} from "./abstract/ManageableVault.sol";
 
 /**
  * @title DepositVaultWithAave

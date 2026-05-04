@@ -22,7 +22,7 @@ export const getCustomAggregatorContractFromTemplate = async (
     name: contractNames.customAggregator,
     content: `
   // SPDX-License-Identifier: MIT
-  pragma solidity 0.8.9;
+  pragma solidity 0.8.34;
 
   import "../../feeds/CustomAggregatorV3CompatibleFeed.sol";
   import "./${contractNames.roles}.sol";
@@ -73,7 +73,7 @@ export const getCustomAggregatorGrowthContractFromTemplate = async (
     name: contractNames.customAggregatorGrowth,
     content: `
   // SPDX-License-Identifier: MIT
-  pragma solidity 0.8.9;
+  pragma solidity 0.8.34;
 
   import "../../feeds/CustomAggregatorV3CompatibleFeedGrowth.sol";
   import "./${contractNames.roles}.sol";

@@ -19,7 +19,7 @@ export const getDataFeedContractFromTemplate = async (mToken: MTokenName) => {
     name: contractNames.dataFeed,
     content: `
   // SPDX-License-Identifier: MIT
-  pragma solidity 0.8.9;
+  pragma solidity 0.8.34;
 
   import "../../feeds/DataFeed.sol";
   import "./${contractNames.roles}.sol";
