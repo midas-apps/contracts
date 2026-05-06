@@ -1,13 +1,4 @@
-import {
-  cancel,
-  confirm,
-  group,
-  isCancel,
-  multiselect,
-  stream,
-  tasks,
-  text,
-} from '@clack/prompts';
+import { cancel, confirm, isCancel, stream, tasks } from '@clack/prompts';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
   ObjectLiteralExpression,
@@ -23,9 +14,16 @@ import path from 'path';
 
 import {
   getCustomAggregatorContractFromTemplate,
+  getCustomAggregatorGrowthContractFromTemplate,
   getDataFeedContractFromTemplate,
+  getDvAaveContractFromTemplate,
   getDvContractFromTemplate,
+  getDvMorphoContractFromTemplate,
+  getDvMTokenContractFromTemplate,
+  getRvAaveContractFromTemplate,
   getRvContractFromTemplate,
+  getRvMorphoContractFromTemplate,
+  getRvMTokenContractFromTemplate,
   getRvSwapperContractFromTemplate,
   getRvUstbContractFromTemplate,
   getTokenContractFromTemplate,
@@ -38,6 +36,8 @@ import {
 import {
   getConfigFromUser,
   getContractsToGenerateFromUser,
+  getShouldUseTokenLevelGreenListFromUser,
+  getShouldUseTokenPermissionedFromUser,
 } from './ui/deployment-contracts';
 
 import { MTokenName } from '../../../../config';
@@ -52,8 +52,11 @@ export type CodeExpr = { [EXPR]: string };
 
 const generatorPerContract: Partial<
   Record<
-    keyof TokenContractNames,
-    (mToken: MTokenName) =>
+    keyof TokenContractNames | 'layerZeroMinterBurner',
+    (
+      mToken: MTokenName,
+      optionalParams?: Record<string, unknown>,
+    ) =>
       | Promise<
           | {
               name: string;
@@ -70,11 +73,18 @@ const generatorPerContract: Partial<
 > = {
   token: getTokenContractFromTemplate,
   dv: getDvContractFromTemplate,
+  dvAave: getDvAaveContractFromTemplate,
+  dvMorpho: getDvMorphoContractFromTemplate,
+  dvMToken: getDvMTokenContractFromTemplate,
   rv: getRvContractFromTemplate,
   rvSwapper: getRvSwapperContractFromTemplate,
+  rvMToken: getRvMTokenContractFromTemplate,
   rvUstb: getRvUstbContractFromTemplate,
+  rvAave: getRvAaveContractFromTemplate,
+  rvMorpho: getRvMorphoContractFromTemplate,
   dataFeed: getDataFeedContractFromTemplate,
   customAggregator: getCustomAggregatorContractFromTemplate,
+  customAggregatorGrowth: getCustomAggregatorGrowthContractFromTemplate,
 };
 
 export const updateConfigFiles = (
@@ -85,12 +95,14 @@ export const updateConfigFiles = (
     name,
     symbol,
     mToken,
+    isPermissioned,
   }: {
     contractNamePrefix: string;
     rolesPrefix: string;
     name: string;
     symbol: string;
     mToken: string;
+    isPermissioned?: true;
   },
 ) => {
   const project = new Project();
@@ -121,10 +133,12 @@ export const updateConfigFiles = (
   const contractNameVar =
     contractNameFile.getVariableDeclarationOrThrow('mTokensMetadata');
 
-  mTokensEnum.addMember({
-    name: mToken,
-    initializer: `"${mToken}"`,
-  });
+  if (!mTokensEnum.getMember(mToken)) {
+    mTokensEnum.addMember({
+      name: mToken,
+      initializer: `"${mToken}"`,
+    });
+  }
 
   {
     const initializer = contractPrefixesVar.getInitializerOrThrow();
@@ -166,7 +180,12 @@ export const updateConfigFiles = (
         initializer: (writer) =>
           writer.write(`{
             name: '${name}',
-            symbol: '${symbol}'
+            symbol: '${symbol}'${
+            isPermissioned
+              ? `,
+              isPermissioned: true`
+              : ''
+          }
           }`),
       });
     }
@@ -197,7 +216,7 @@ export const requireNotCancelled = <T>(value: T | symbol) => {
 const lintAndFormatTs = (path: string) => {
   try {
     execSync(
-      `yarn prettier "${path}" --write > /dev/null && eslint "${path}" --fix > /dev/null`,
+      `yarn prettier "${path}" --write > /dev/null && yarn exec eslint "${path}" --fix > /dev/null`,
       {
         stdio: 'inherit',
       },
@@ -211,7 +230,7 @@ const lintAndFormatTs = (path: string) => {
 const lintAndFormatSol = (folder: string) => {
   try {
     execSync(
-      `yarn solhint ${folder}/**/*.sol --quiet --fix > /dev/null & yarn prettier ${folder}/**/*.sol --write > /dev/null`,
+      `yarn solhint "${folder}/**/*.sol" --quiet --fix > /dev/null && yarn prettier "${folder}/**/*.sol" --write > /dev/null`,
       {
         stdio: 'inherit',
       },
@@ -224,6 +243,7 @@ const lintAndFormatSol = (folder: string) => {
 
 export const expr = (code: string): CodeExpr => ({ [EXPR]: code });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function objectToCode(value: any, indent = 0): string {
   const pad = ' '.repeat(indent);
   if (value && typeof value === 'object' && EXPR in value)
@@ -324,24 +344,35 @@ export const generateDeploymentConfig = async (
   const { deploymentConfigs, postDeployConfigs } =
     await getDeploymentConfigFromUser(overrideNetworkConfig);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const deploymentConfig: Record<string, any> = {
     networkConfig: {},
     postDeploy: {},
     genericConfig: {},
   };
 
+  let isGrowthAggregator = false;
+
   if (!deploymentConfigFileExists) {
-    deploymentConfig.genericConfig =
-      await configsPerNetworkConfig.genericConfig(mToken);
+    const genericResult = await configsPerNetworkConfig.genericConfig(mToken);
+    isGrowthAggregator = genericResult.isGrowth;
+    const { isGrowth: _, ...genericConfig } = genericResult;
+    deploymentConfig.genericConfig = genericConfig;
   }
 
-  if (!deploymentConfigFileExists || overrideNetworkConfig) {
+  if (
+    !deploymentConfigFileExists ||
+    overrideNetworkConfig ||
+    !hasNetworkConfig
+  ) {
     for (const configKey of deploymentConfigs) {
       const config = await configsPerNetworkConfig[configKey](hre);
       deploymentConfig.networkConfig[configKey] = config;
     }
   } else {
-    await stream.warn(`No-override is selected, skipping network config...`);
+    await stream.warn(
+      `No-override is selected and network config exists, skipping network config...`,
+    );
   }
 
   if (postDeployConfigs) {
@@ -428,13 +459,21 @@ export const ${deploymentConfigVarName}: DeploymentConfig = {
       postDeployProperty.remove();
     }
 
+    const setRoundData: Record<string, unknown> = isGrowthAggregator
+      ? {
+          type: expr("'GROWTH'"),
+          data: expr('parseUnits("1", 8)'),
+          apr: expr('parseUnits("0", 8)'),
+        }
+      : {
+          data: expr('parseUnits("1", 8)'),
+        };
+
     networkConfigPropertyInit.addPropertyAssignment({
       name: 'postDeploy',
       initializer: objectToCode({
         ...deploymentConfig.postDeploy,
-        setRoundData: {
-          data: expr('parseUnits("1", 8)'),
-        },
+        setRoundData,
       }),
     });
   }
@@ -504,9 +543,27 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
 
   const contractsToGenerate = await getContractsToGenerateFromUser();
 
+  let shouldUseTokenLevelGreenList = false;
+  let shouldUseTokenPermissioned = false;
+
+  if (
+    contractsToGenerate.find((v) => v.startsWith('dv') || v.startsWith('rv'))
+  ) {
+    shouldUseTokenLevelGreenList =
+      await getShouldUseTokenLevelGreenListFromUser();
+  }
+
+  if (contractsToGenerate.includes('token')) {
+    shouldUseTokenPermissioned = await getShouldUseTokenPermissionedFromUser();
+  }
+
   const mToken = config.tokenContractName;
 
-  const folder = path.join(hre.config.paths.root, 'contracts', `${mToken}`);
+  const folder = path.join(
+    hre.config.paths.root,
+    'contracts/products',
+    `${mToken}`,
+  );
 
   await tasks([
     {
@@ -518,11 +575,12 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
           name: config.tokenName,
           symbol: config.tokenSymbol,
           mToken,
+          isPermissioned: shouldUseTokenPermissioned ? true : undefined,
         });
       },
     },
     {
-      title: 'Generation files',
+      title: 'Generating files',
       task: async () => {
         const isFolderExists = await fs
           .access(folder)
@@ -542,7 +600,12 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
         ].filter((v) => v !== undefined);
 
         const generatedContracts = await Promise.all(
-          generators.map((generator) => generator(mToken as MTokenName)),
+          generators.map((generator) =>
+            generator(mToken as MTokenName, {
+              vaultUseTokenLevelGreenList: shouldUseTokenLevelGreenList,
+              isPermissionedMToken: shouldUseTokenPermissioned,
+            }),
+          ),
         );
 
         for (const contract of generatedContracts) {

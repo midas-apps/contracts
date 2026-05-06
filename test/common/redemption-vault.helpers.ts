@@ -12,16 +12,17 @@ import {
 import { defaultDeploy } from './fixtures';
 
 import {
-  // eslint-disable-next-line camelcase
   DataFeedTest__factory,
   ERC20,
-  // eslint-disable-next-line camelcase
   ERC20__factory,
   IERC20,
   MTBILL,
   MToken,
   RedemptionVault,
   RedemptionVaultWIthBUIDL,
+  RedemptionVaultWithAave,
+  RedemptionVaultWithMorpho,
+  RedemptionVaultWithMToken,
   RedemptionVaultWithSwapper,
   RedemptionVaultWithUSTB,
 } from '../../typechain-types';
@@ -35,6 +36,9 @@ type CommonParamsRedeem = {
     redemptionVault:
       | RedemptionVault
       | RedemptionVaultWIthBUIDL
+      | RedemptionVaultWithAave
+      | RedemptionVaultWithMorpho
+      | RedemptionVaultWithMToken
       | RedemptionVaultWithUSTB
       | RedemptionVaultWithSwapper;
   };
@@ -43,6 +47,9 @@ type CommonParams = Pick<Awaited<ReturnType<typeof defaultDeploy>>, 'owner'> & {
   redemptionVault:
     | RedemptionVault
     | RedemptionVaultWIthBUIDL
+    | RedemptionVaultWithAave
+    | RedemptionVaultWithMorpho
+    | RedemptionVaultWithMToken
     | RedemptionVaultWithUSTB
     | RedemptionVaultWithSwapper;
 };
@@ -71,7 +78,6 @@ export const redeemInstantTest = async (
 ) => {
   tokenOut = getAccount(tokenOut);
 
-  // eslint-disable-next-line camelcase
   const tokenContract = ERC20__factory.connect(tokenOut, owner);
 
   const sender = opt?.from ?? owner;
@@ -206,7 +212,6 @@ export const redeemRequestTest = async (
 ) => {
   tokenOut = getAccount(tokenOut);
 
-  // eslint-disable-next-line camelcase
   const tokenContract = ERC20__factory.connect(tokenOut, owner);
 
   const sender = opt?.from ?? owner;
@@ -442,7 +447,6 @@ export const approveRedeemRequestTest = async (
 
   let tokenContract;
   if (requestDataBefore.tokenOut !== manualToken) {
-    // eslint-disable-next-line camelcase
     tokenContract = ERC20__factory.connect(requestDataBefore.tokenOut, owner);
   }
 
@@ -533,7 +537,6 @@ export const safeApproveRedeemRequestTest = async (
 
   const requestDataBefore = await redemptionVault.redeemRequests(requestId);
 
-  // eslint-disable-next-line camelcase
   const tokenContract = ERC20__factory.connect(
     requestDataBefore.tokenOut,
     owner,
@@ -603,24 +606,29 @@ export const safeApproveRedeemRequestTest = async (
 export const safeBulkApproveRequestTest = async (
   { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed }: CommonParamsRedeem,
   requests: { id: BigNumberish; expectedToExecute?: boolean }[],
-  newRate?: BigNumberish,
+  newRate?: BigNumberish | 'request-rate',
   opt?: OptionalCommonParams,
 ) => {
   const sender = opt?.from ?? owner;
 
   const requestIds = requests.map(({ id }) => id);
 
-  const callFn = newRate
-    ? redemptionVault
-        .connect(sender)
-        ['safeBulkApproveRequest(uint256[],uint256)'].bind(
-          this,
-          requestIds,
-          newRate,
-        )
-    : redemptionVault
-        .connect(sender)
-        ['safeBulkApproveRequest(uint256[])'].bind(this, requestIds);
+  const callFn =
+    newRate && newRate !== 'request-rate'
+      ? redemptionVault
+          .connect(sender)
+          ['safeBulkApproveRequest(uint256[],uint256)'].bind(
+            this,
+            requestIds,
+            newRate,
+          )
+      : newRate === 'request-rate'
+      ? redemptionVault
+          .connect(sender)
+          .safeBulkApproveRequestAtSavedRate.bind(this, requestIds)
+      : redemptionVault
+          .connect(sender)
+          ['safeBulkApproveRequest(uint256[])'].bind(this, requestIds);
 
   if (opt?.revertMessage) {
     await expect(callFn()).revertedWith(opt?.revertMessage);
@@ -633,7 +641,6 @@ export const safeBulkApproveRequestTest = async (
 
   const balancesBefore = await Promise.all(
     requestDatasBefore.map(({ tokenOut, sender }) =>
-      // eslint-disable-next-line camelcase
       balanceOfBase18(ERC20__factory.connect(tokenOut, owner), sender),
     ),
   );
@@ -642,7 +649,6 @@ export const safeBulkApproveRequestTest = async (
 
   const tokenDecimals = await Promise.all(
     requestDatasBefore.map(({ tokenOut }) =>
-      // eslint-disable-next-line camelcase
       ERC20__factory.connect(tokenOut, owner).decimals(),
     ),
   );
@@ -659,11 +665,12 @@ export const safeBulkApproveRequestTest = async (
   );
 
   const currentRate = await mTokenToUsdDataFeed.getDataInBase18();
-  const newExpectedRate = newRate ?? currentRate;
+  const newExpectedRate =
+    newRate === 'request-rate' ? undefined : newRate ?? currentRate;
 
   const expectedReceivedAmounts = requestDatasBefore.map((requestData, i) =>
     requestData.amountMToken
-      .mul(newExpectedRate)
+      .mul(newExpectedRate ?? requestData.mTokenRate)
       .div(requestData.tokenOutRate)
       .div(10 ** (18 - tokenDecimals[i]))
       .mul(10 ** (18 - tokenDecimals[i])),
@@ -708,7 +715,6 @@ export const safeBulkApproveRequestTest = async (
 
   const balancesAfter = await Promise.all(
     requestDatasAfter.map(({ tokenOut, sender }) =>
-      // eslint-disable-next-line camelcase
       balanceOfBase18(ERC20__factory.connect(tokenOut, owner), sender),
     ),
   );
@@ -758,14 +764,18 @@ export const safeBulkApproveRequestTest = async (
 
     if (expectedToExecute) {
       expect(logs.length).eq(1);
-      expect(requestDataAfter.mTokenRate).eq(newExpectedRate);
+      expect(requestDataAfter.mTokenRate).eq(
+        newExpectedRate ?? requestDataBefore.mTokenRate,
+      );
       expect(requestDataAfter.status).eq(1);
       expect(balanceAfter).eq(
         balanceBefore.add(expectedReceivedAggregatedByUser),
       );
       const log = logs[0];
 
-      expect(log.newMTokenRate).eq(newExpectedRate);
+      expect(log.newMTokenRate).eq(
+        newExpectedRate ?? requestDataBefore.mTokenRate,
+      );
       expect(log.requestId).eq(id);
     } else {
       expect(logs.length).eq(0);
@@ -930,6 +940,9 @@ export const getFeePercent = async (
   redemptionVault:
     | RedemptionVault
     | RedemptionVaultWIthBUIDL
+    | RedemptionVaultWithAave
+    | RedemptionVaultWithMorpho
+    | RedemptionVaultWithMToken
     | RedemptionVaultWithSwapper
     | RedemptionVaultWithUSTB,
   isInstant: boolean,
@@ -954,6 +967,9 @@ export const calcExpectedTokenOutAmount = async (
   redemptionVault:
     | RedemptionVault
     | RedemptionVaultWIthBUIDL
+    | RedemptionVaultWithAave
+    | RedemptionVaultWithMorpho
+    | RedemptionVaultWithMToken
     | RedemptionVaultWithSwapper
     | RedemptionVaultWithUSTB,
   mTokenRate: BigNumber,
@@ -961,7 +977,7 @@ export const calcExpectedTokenOutAmount = async (
   isInstant: boolean,
 ) => {
   const tokenConfig = await redemptionVault.tokensConfig(token.address);
-  // eslint-disable-next-line camelcase
+
   const dataFeedContract = DataFeedTest__factory.connect(
     tokenConfig.dataFeed,
     sender,

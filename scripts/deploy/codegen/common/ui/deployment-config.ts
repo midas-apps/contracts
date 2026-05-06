@@ -5,6 +5,7 @@ import {
   multiselect,
   outro,
   PromptGroup,
+  select,
   stream,
   text,
 } from '@clack/prompts';
@@ -23,8 +24,14 @@ import { DeploymentConfig, PostDeployConfig } from '../../../common/types';
 
 export const configsPerNetworkConfig = {
   dv: getDvConfigFromUser,
+  dvAave: getDvAaveConfigFromUser,
+  dvMorpho: getDvMorphoConfigFromUser,
+  dvMToken: getDvMTokenConfigFromUser,
   rv: getRvConfigFromUser,
   rvSwapper: getRvSwapperConfigFromUser,
+  rvMToken: getRvMTokenConfigFromUser,
+  rvAave: getRvAaveConfigFromUser,
+  rvMorpho: getRvMorphoConfigFromUser,
   genericConfig: getGenericConfigFromUser,
   postDeploy: {
     grantRoles: getPostDeployGrantRolesConfigFromUser,
@@ -33,32 +40,109 @@ export const configsPerNetworkConfig = {
 };
 
 async function getGenericConfigFromUser(mToken: MTokenName) {
-  const config = await group({
-    intro: () => Promise.resolve(intro('Generic Config')).then(() => undefined),
-    maxAswerDeviation: () =>
-      text({
-        message: 'Aggregator max answer deviation',
-        validate: (value) => validateFloat(value, 8),
-      })
-        .then(requireNotCancelled)
-        .then((value) => requireFloatToBigNumberish(value, 8)),
-    tokenDenomination: () =>
-      text({
-        message: 'Token Denomination',
-        defaultValue: 'USD',
-        initialValue: 'USD',
-        placeholder: 'USD',
-      }).then(requireNotCancelled),
-    outro: () => Promise.resolve(outro('Done...')).then(() => undefined),
-  }).then(clearIntroOutro);
+  intro('Generic Config');
 
-  return {
-    customAggregator: {
-      maxAnswerDeviation: config.maxAswerDeviation,
-      description: `${mToken}/${config.tokenDenomination}`,
-    },
+  const maxAnswerDeviation = await text({
+    message: 'Aggregator max answer deviation',
+    validate: (value) => validateFloat(value, 8),
+  })
+    .then(requireNotCancelled)
+    .then((value) => requireFloatToBigNumberish(value, 8));
+
+  const tokenDenomination = await text({
+    message: 'Token Denomination',
+    defaultValue: 'USD',
+    initialValue: 'USD',
+    placeholder: 'USD',
+  }).then(requireNotCancelled);
+
+  const aggregatorType = await select<'REGULAR' | 'GROWTH'>({
+    message: 'Aggregator type',
+    options: [
+      { value: 'REGULAR', label: 'Regular' },
+      { value: 'GROWTH', label: 'Growth (applies APR to answer)' },
+    ],
+    initialValue: 'REGULAR',
+  }).then(requireNotCancelled);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const customAggregator: Record<string, any> = {
+    maxAnswerDeviation,
+    description: `${mToken}/${tokenDenomination}`,
+  };
+
+  if (aggregatorType === 'GROWTH') {
+    customAggregator.type = expr("'GROWTH'");
+
+    const onlyUp = await confirm({
+      message: 'Only up? (price can only increase)',
+      initialValue: true,
+    }).then(requireNotCancelled);
+
+    const minGrowthApr = await text({
+      message: 'Min growth APR (in %)',
+      defaultValue: '0',
+      initialValue: '0',
+      validate: (value) => validateFloat(value, 8),
+    })
+      .then(requireNotCancelled)
+      .then((value) => requireFloatToBigNumberish(value, 8));
+
+    const maxGrowthApr = await text({
+      message: 'Max growth APR (in %)',
+      validate: (value) => validateFloat(value, 8),
+    })
+      .then(requireNotCancelled)
+      .then((value) => requireFloatToBigNumberish(value, 8));
+
+    customAggregator.onlyUp = onlyUp;
+    customAggregator.minGrowthApr = minGrowthApr;
+    customAggregator.maxGrowthApr = maxGrowthApr;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result: Record<string, any> = {
+    customAggregator,
     dataFeed: {},
   };
+
+  const useAdjustedDvRv = await confirm({
+    message:
+      'Use adjusted DV/RV feeds? (separate +/- % for deposit/redemption)',
+    initialValue: false,
+  }).then(requireNotCancelled);
+
+  if (useAdjustedDvRv) {
+    const adjustmentPercentageDv = await text({
+      message: 'Adjustment percentage for DV (e.g. 7 for +7%)',
+      validate: (value) => validateFloat(value, 8),
+    })
+      .then(requireNotCancelled)
+      .then((value) => requireFloatToBigNumberish(value, 8));
+
+    const adjustmentPercentageRv = await text({
+      message: 'Adjustment percentage for RV (e.g. -7 for -7%)',
+      validate: (value) => validateFloat(value, 8),
+    })
+      .then(requireNotCancelled)
+      .then((value) => requireFloatToBigNumberish(value, 8));
+
+    const feedRef =
+      aggregatorType === 'GROWTH' ? "'customFeedGrowth'" : "'customFeed'";
+
+    result.customAggregatorAdjustedDv = {
+      adjustmentPercentage: adjustmentPercentageDv,
+      underlyingFeed: expr(feedRef),
+    };
+    result.customAggregatorAdjustedRv = {
+      adjustmentPercentage: adjustmentPercentageRv,
+      underlyingFeed: expr(feedRef),
+    };
+  }
+
+  outro('Done...');
+
+  return { ...result, isGrowth: aggregatorType === 'GROWTH' };
 }
 
 async function getDvConfigFromUser(hre: HardhatRuntimeEnvironment) {
@@ -73,13 +157,19 @@ async function getDvConfigFromUser(hre: HardhatRuntimeEnvironment) {
         .then(requireNotCancelled)
         .then(requireAddress),
     instantDailyLimit: () =>
-      text({ message: 'Instant Daily Limit', validate: validateBase18 })
+      text({
+        message: 'Instant Daily Limit',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
         .then(requireNotCancelled)
-        .then(requireBase18),
+        .then(requireBase18OrInfinite),
     instantFee: () =>
       text({
         message: 'Instant Fee',
         defaultValue: '0',
+        placeholder: '0',
         validate: validateFloat,
       })
         .then(requireNotCancelled)
@@ -91,11 +181,258 @@ async function getDvConfigFromUser(hre: HardhatRuntimeEnvironment) {
       })
         .then(requireNotCancelled)
         .then(requirePercentageToBigNumberish),
+    minMTokenAmountForFirstDeposit: () =>
+      text({
+        message: 'Min mToken Amount For First Deposit',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
+    maxSupplyCap: () =>
+      text({
+        message: 'Max Supply Cap',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18OrInfinite),
     outro: () => Promise.resolve(outro('Done...')).then(() => undefined),
   }).then(clearIntroOutro);
 
   return {
     type: 'REGULAR',
+    enableSanctionsList: shouldEnableSanctionsList(hre),
+    ...config,
+  };
+}
+
+async function getDvAaveConfigFromUser(hre: HardhatRuntimeEnvironment) {
+  const config = await group({
+    intro: () =>
+      Promise.resolve(intro('Deposit Vault With Aave')).then(() => undefined),
+    feeReceiver: () =>
+      text({ message: 'Fee Receiver', validate: validateAddress })
+        .then(requireNotCancelled)
+        .then(requireAddress),
+    tokensReceiver: () =>
+      text({ message: 'Tokens Receiver', validate: validateAddress })
+        .then(requireNotCancelled)
+        .then(requireAddress),
+    instantDailyLimit: () =>
+      text({
+        message: 'Instant Daily Limit',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18OrInfinite),
+    instantFee: () =>
+      text({
+        message: 'Instant Fee',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateFloat,
+      })
+        .then(requireNotCancelled)
+        .then(requireFloatToBigNumberish),
+    variationTolerance: () =>
+      text({
+        message: 'Variation Tolerance',
+        validate: validateFloat,
+      })
+        .then(requireNotCancelled)
+        .then(requirePercentageToBigNumberish),
+    minAmount: () =>
+      text({
+        message: 'Min Amount',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
+    minMTokenAmountForFirstDeposit: () =>
+      text({
+        message: 'Min mToken Amount For First Deposit',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
+    maxSupplyCap: () =>
+      text({
+        message: 'Max Supply Cap',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18OrInfinite),
+    outro: () => Promise.resolve(outro('Done...')).then(() => undefined),
+  }).then(clearIntroOutro);
+
+  return {
+    type: 'AAVE' as const,
+    enableSanctionsList: shouldEnableSanctionsList(hre),
+    ...config,
+  };
+}
+
+async function getDvMorphoConfigFromUser(hre: HardhatRuntimeEnvironment) {
+  const config = await group({
+    intro: () =>
+      Promise.resolve(intro('Deposit Vault With Morpho')).then(() => undefined),
+    feeReceiver: () =>
+      text({ message: 'Fee Receiver', validate: validateAddress })
+        .then(requireNotCancelled)
+        .then(requireAddress),
+    tokensReceiver: () =>
+      text({ message: 'Tokens Receiver', validate: validateAddress })
+        .then(requireNotCancelled)
+        .then(requireAddress),
+    instantDailyLimit: () =>
+      text({
+        message: 'Instant Daily Limit',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18OrInfinite),
+    instantFee: () =>
+      text({
+        message: 'Instant Fee',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateFloat,
+      })
+        .then(requireNotCancelled)
+        .then(requireFloatToBigNumberish),
+    variationTolerance: () =>
+      text({
+        message: 'Variation Tolerance',
+        validate: validateFloat,
+      })
+        .then(requireNotCancelled)
+        .then(requirePercentageToBigNumberish),
+    minAmount: () =>
+      text({
+        message: 'Min Amount',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
+    minMTokenAmountForFirstDeposit: () =>
+      text({
+        message: 'Min mToken Amount For First Deposit',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
+    maxSupplyCap: () =>
+      text({
+        message: 'Max Supply Cap',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18OrInfinite),
+    outro: () => Promise.resolve(outro('Done...')).then(() => undefined),
+  }).then(clearIntroOutro);
+
+  return {
+    type: 'MORPHO' as const,
+    enableSanctionsList: shouldEnableSanctionsList(hre),
+    ...config,
+  };
+}
+
+async function getDvMTokenConfigFromUser(hre: HardhatRuntimeEnvironment) {
+  const config = await group({
+    intro: () =>
+      Promise.resolve(intro('Deposit Vault With MToken')).then(() => undefined),
+    feeReceiver: () =>
+      text({ message: 'Fee Receiver', validate: validateAddress })
+        .then(requireNotCancelled)
+        .then(requireAddress),
+    tokensReceiver: () =>
+      text({ message: 'Tokens Receiver', validate: validateAddress })
+        .then(requireNotCancelled)
+        .then(requireAddress),
+    mTokenDepositVault: () =>
+      text({
+        message: 'Target mToken DepositVault Address',
+        validate: validateAddress,
+      })
+        .then(requireNotCancelled)
+        .then(requireAddress),
+    instantDailyLimit: () =>
+      text({
+        message: 'Instant Daily Limit',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18OrInfinite),
+    instantFee: () =>
+      text({
+        message: 'Instant Fee',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateFloat,
+      })
+        .then(requireNotCancelled)
+        .then(requireFloatToBigNumberish),
+    variationTolerance: () =>
+      text({
+        message: 'Variation Tolerance',
+        validate: validateFloat,
+      })
+        .then(requireNotCancelled)
+        .then(requirePercentageToBigNumberish),
+    minAmount: () =>
+      text({
+        message: 'Min Amount',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
+    minMTokenAmountForFirstDeposit: () =>
+      text({
+        message: 'Min mToken Amount For First Deposit',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
+    maxSupplyCap: () =>
+      text({
+        message: 'Max Supply Cap',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18OrInfinite),
+    outro: () => Promise.resolve(outro('Done...')).then(() => undefined),
+  }).then(clearIntroOutro);
+
+  return {
+    type: 'MTOKEN' as const,
     enableSanctionsList: shouldEnableSanctionsList(hre),
     ...config,
   };
@@ -124,9 +461,14 @@ async function getRvConfigFromUser<T>(
         .then(requireNotCancelled)
         .then(requireAddress),
     instantDailyLimit: () =>
-      text({ message: 'Instant Daily Limit', validate: validateBase18 })
+      text({
+        message: 'Instant Daily Limit',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
         .then(requireNotCancelled)
-        .then(requireBase18),
+        .then(requireBase18OrInfinite),
     instantFee: () =>
       text({
         message: 'Instant Fee',
@@ -154,17 +496,70 @@ async function getRvConfigFromUser<T>(
   };
 }
 
+async function getRvAaveConfigFromUser(hre: HardhatRuntimeEnvironment) {
+  const config = await getRvConfigFromUser(
+    hre,
+    {},
+    'Redemption Vault With Aave',
+  );
+
+  return {
+    ...config,
+    type: 'AAVE' as const,
+  };
+}
+
+async function getRvMorphoConfigFromUser(hre: HardhatRuntimeEnvironment) {
+  const config = await getRvConfigFromUser(
+    hre,
+    {},
+    'Redemption Vault With Morpho',
+  );
+
+  return {
+    ...config,
+    type: 'MORPHO' as const,
+  };
+}
+
+async function getRvMTokenConfigFromUser(hre: HardhatRuntimeEnvironment) {
+  const config = await getRvConfigFromUser(
+    hre,
+    {
+      redemptionVault: () =>
+        text({
+          message: 'mTokenA Redemption Vault Address',
+          validate: validateAddress,
+        })
+          .then(requireNotCancelled)
+          .then(requireAddress),
+    },
+    'Redemption Vault With MToken',
+  );
+
+  return {
+    ...config,
+    type: 'MTOKEN' as const,
+  };
+}
+
 const getVaultForSwapper = (
   hre: HardhatRuntimeEnvironment,
   mToken: MTokenName,
 ) => {
   const addresses = getCurrentAddresses(hre);
-  if (addresses?.[mToken]?.redemptionVaultSwapper) {
+  if (addresses?.[mToken]?.redemptionVaultMToken) {
+    return 'redemptionVaultMToken';
+  } else if (addresses?.[mToken]?.redemptionVaultSwapper) {
     return 'redemptionVaultSwapper';
   } else if (addresses?.[mToken]?.redemptionVaultUstb) {
     return 'redemptionVaultUstb';
   } else if (addresses?.[mToken]?.redemptionVaultBuidl) {
     return 'redemptionVaultBuidl';
+  } else if (addresses?.[mToken]?.redemptionVaultAave) {
+    return 'redemptionVaultAave';
+  } else if (addresses?.[mToken]?.redemptionVaultMorpho) {
+    return 'redemptionVaultMorpho';
   } else if (addresses?.[mToken]?.redemptionVault) {
     return 'redemptionVault';
   }
@@ -361,7 +756,15 @@ export async function getDeploymentConfigFromUser(
       multiselect<
         keyof Pick<
           DeploymentConfig['networkConfigs'][number],
-          'rv' | 'rvSwapper' | 'dv'
+          | 'rv'
+          | 'rvSwapper'
+          | 'rvMToken'
+          | 'rvAave'
+          | 'rvMorpho'
+          | 'dv'
+          | 'dvAave'
+          | 'dvMorpho'
+          | 'dvMToken'
         >
       >({
         message:
@@ -373,6 +776,21 @@ export async function getDeploymentConfigFromUser(
             hint: 'Deposit Vault contract',
           },
           {
+            value: 'dvAave',
+            label: 'Deposit Vault With Aave',
+            hint: 'Deposit Vault with Aave V3 auto-invest',
+          },
+          {
+            value: 'dvMorpho',
+            label: 'Deposit Vault With Morpho',
+            hint: 'Deposit Vault with Morpho auto-invest',
+          },
+          {
+            value: 'dvMToken',
+            label: 'Deposit Vault With MToken',
+            hint: 'Deposit Vault with mToken auto-invest',
+          },
+          {
             value: 'rv',
             label: 'Redemption Vault',
             hint: 'Redemption Vault contract',
@@ -381,6 +799,21 @@ export async function getDeploymentConfigFromUser(
             value: 'rvSwapper',
             label: 'Redemption Vault With Swapper',
             hint: 'Redemption Vault With Swapper contract',
+          },
+          {
+            value: 'rvMToken',
+            label: 'Redemption Vault With MToken',
+            hint: 'Redemption Vault With MToken liquid strategy contract',
+          },
+          {
+            value: 'rvAave',
+            label: 'Redemption Vault With Aave',
+            hint: 'Redemption Vault With Aave V3 contract',
+          },
+          {
+            value: 'rvMorpho',
+            label: 'Redemption Vault With Morpho',
+            hint: 'Redemption Vault With Morpho Vault (ERC-4626) contract',
           },
         ],
         initialValues: ['dv', 'rvSwapper'],
@@ -454,6 +887,13 @@ const requireBase18OrNull = (value: string) => {
   return value === '0' ? null : expr(`parseUnits("${value}", 18)`);
 };
 
+const requireBase18OrInfinite = (value: string) => {
+  if (isInfinite(value)) {
+    return expr('constants.MaxUint256');
+  }
+  return requireBase18(value);
+};
+
 const requireFloatToBigNumberish = (value: string, maxDecimals = 2) => {
   const error = validateFloat(value, maxDecimals);
   if (error) {
@@ -481,20 +921,29 @@ const validateBase18 = (value: string) => {
   try {
     parseUnits(value, 18);
     return undefined;
-  } catch (_) {
+  } catch {
     return new Error('Invalid value');
   }
+};
+
+const validateBase18OrInfinite = (value: string) => {
+  if (isInfinite(value)) return undefined;
+  return validateBase18(value);
 };
 
 const validateFloat = (value: string, maxDecimals = 2) => {
   try {
     parseUnits(value, maxDecimals);
     return undefined;
-  } catch (_) {
+  } catch {
     return new Error('Invalid float');
   }
 };
 
 const requirePercentageToBigNumberish = (value: string) => {
   return requireFloatToBigNumberish(value, 2);
+};
+
+const isInfinite = (value: string) => {
+  return value.trim().toLowerCase() === 'infinite';
 };

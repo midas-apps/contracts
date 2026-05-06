@@ -1,4 +1,3 @@
-import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import { chainIds } from '../../../config';

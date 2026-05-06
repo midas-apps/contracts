@@ -49,6 +49,7 @@ export async function pythAdapterFixture(
     deployer.address,
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result: any = {
     deployer,
     user,

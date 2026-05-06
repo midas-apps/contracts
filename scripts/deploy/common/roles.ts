@@ -7,6 +7,11 @@ import {
   getNetworkConfig,
   sendAndWaitForCustomTxSign,
 } from './utils';
+import {
+  defaultDepositVaultPriority,
+  resolveAllVaultAddresses,
+  roleGrantRedemptionVaultPriority,
+} from './vault-resolver';
 
 import { MTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
@@ -18,9 +23,9 @@ import { networkDeploymentConfigs } from '../configs/network-configs';
 type Address = `0x${string}`;
 
 export type GrantAllTokenRolesConfig = {
-  tokenManagerAddress?: Address;
+  tokenManagerAddress: Address;
   vaultsManagerAddress?: Address;
-  oracleManagerAddress?: Address;
+  oracleManagerAddress: Address;
 };
 
 const acAdminAddress = '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227';
@@ -67,37 +72,68 @@ export const grantAllProductRoles = async (
   ];
 
   const oracleManagerRoles = [tokenRoles.customFeedAdmin!];
-  const contractsRoles = [tokenRoles.minter, tokenRoles.burner];
 
   const defaultManager = provider.address;
 
-  const tx = await sendAndWaitForCustomTxSign(
+  const contractsRoles: string[] = [];
+  const contractsAddresses: string[] = [];
+
+  const depositVaults = resolveAllVaultAddresses(
+    tokenAddresses,
+    defaultDepositVaultPriority,
+  );
+  const redemptionVaults = resolveAllVaultAddresses(
+    tokenAddresses,
+    roleGrantRedemptionVaultPriority,
+  );
+
+  for (const dv of depositVaults) {
+    contractsRoles.push(tokenRoles.minter);
+    contractsAddresses.push(dv);
+  }
+  for (const rv of redemptionVaults) {
+    contractsRoles.push(tokenRoles.burner);
+    contractsAddresses.push(rv);
+  }
+
+  const grantRoles = [
+    ...tokenManagerRoles,
+    ...vaultManagerRoles,
+    ...oracleManagerRoles,
+    ...contractsRoles,
+  ];
+  const grantAddresses = [
+    ...tokenManagerRoles.map(() => networkConfig.tokenManagerAddress),
+    ...vaultManagerRoles.map(
+      () => networkConfig.vaultsManagerAddress ?? defaultManager,
+    ),
+    ...oracleManagerRoles.map(() => networkConfig.oracleManagerAddress),
+    ...contractsAddresses,
+  ];
+
+  const present = await Promise.all(
+    grantRoles.map((role, i) => accessControl.hasRole(role, grantAddresses[i])),
+  );
+  const rolesToGrant = grantRoles.filter((_, i) => !present[i]);
+  const addressesToGrant = grantAddresses.filter((_, i) => !present[i]);
+
+  if (rolesToGrant.length === 0) {
+    console.log(`${token}: all product roles already granted — skip`);
+    return;
+  }
+
+  const alreadyHeld = grantRoles.length - rolesToGrant.length;
+  console.log(
+    alreadyHeld > 0
+      ? `${token}: grant ${rolesToGrant.length} missing (${alreadyHeld}/${grantRoles.length} already held)`
+      : `${token}: grant ${rolesToGrant.length} missing`,
+  );
+
+  await sendAndWaitForCustomTxSign(
     hre,
     await accessControl.populateTransaction.grantRoleMult(
-      [
-        ...tokenManagerRoles,
-        ...vaultManagerRoles,
-        ...oracleManagerRoles,
-        ...contractsRoles,
-      ],
-      [
-        ...tokenManagerRoles.map(
-          () => networkConfig.tokenManagerAddress ?? defaultManager,
-        ),
-        ...vaultManagerRoles.map(
-          () => networkConfig.vaultsManagerAddress ?? defaultManager,
-        ),
-        ...oracleManagerRoles.map(
-          () => networkConfig.oracleManagerAddress ?? defaultManager,
-        ),
-        ...[
-          tokenAddresses.depositVault!,
-          tokenAddresses.redemptionVaultSwapper ??
-            tokenAddresses.redemptionVaultBuidl ??
-            tokenAddresses.redemptionVaultUstb ??
-            tokenAddresses.redemptionVault!,
-        ],
-      ],
+      rolesToGrant,
+      addressesToGrant,
     ),
     {
       action: 'update-ac',
@@ -105,8 +141,6 @@ export const grantAllProductRoles = async (
       comment: `grant all ${token} roles`,
     },
   );
-
-  console.log('Transaction is initiated successfully', tx);
 };
 
 export const revokeDefaultRolesFromDeployer = async (
@@ -119,12 +153,17 @@ export const revokeDefaultRolesFromDeployer = async (
 
   const roles = [allRoles.common.defaultAdmin];
 
-  const tx = await accessControl.revokeRoleMult(
-    roles,
-    roles.map(() => deployer.address),
+  await sendAndWaitForCustomTxSign(
+    hre,
+    await accessControl.populateTransaction.revokeRoleMult(
+      roles,
+      roles.map(() => deployer.address),
+    ),
+    {
+      action: 'deployer',
+      comment: 'revoke default roles from deployer',
+    },
   );
-
-  console.log('Transaction is initiated successfully', tx.hash);
 };
 
 export type GrantDefaultAdminRoleToAcAdminConfig = {
@@ -147,12 +186,17 @@ export const grantDefaultAdminRoleToAcAdmin = async (
 
   const accessControl = await getAcContract(hre, deployer);
 
-  const tx = await accessControl.grantRole(
-    allRoles.common.defaultAdmin,
-    networkConfig?.acAdminAddress ?? acAdminAddress,
+  await sendAndWaitForCustomTxSign(
+    hre,
+    await accessControl.populateTransaction.grantRole(
+      allRoles.common.defaultAdmin,
+      networkConfig?.acAdminAddress ?? acAdminAddress,
+    ),
+    {
+      action: 'deployer',
+      comment: 'grant default admin role to ac admin',
+    },
   );
-
-  console.log('Transaction is initiated successfully', tx.hash);
 };
 
 const getAcContract = async (

@@ -1,23 +1,14 @@
 import { mine } from '@nomicfoundation/hardhat-network-helpers';
-import { PopulatedTransaction } from 'ethers';
 import { task } from 'hardhat/config';
 
 import path from 'path';
 
-import { chainIds, ENV, Network, rpcUrls } from '../config';
-import { initializeLogger } from '../helpers/logger';
-import {
-  etherscanVerify,
-  etherscanVerifyImplementation,
-  isMTokenName,
-  isPaymentTokenName,
-} from '../helpers/utils';
-export const logPopulatedTx = (tx: PopulatedTransaction) => {
-  console.log({
-    data: tx.data,
-    to: tx.to,
-  });
-};
+import { chainIds, ENV, extendWithContext, Network, rpcUrls } from '../config';
+import { isMTokenName, isPaymentTokenName } from '../helpers/utils';
+
+import './layerzero';
+import './axelar';
+import './verify';
 
 task('runscript', 'Runs a user-defined script')
   .addPositionalParam('path', 'Path to the script')
@@ -30,13 +21,16 @@ task('runscript', 'Runs a user-defined script')
   .addOptionalParam('logToFile', 'Log to file')
   .addOptionalParam('logsFolderPath', 'Logs folder path')
   .addOptionalParam('forkingNetwork', 'Forking Network')
+  .addOptionalParam('originalNetwork', 'Original Network')
+  .addOptionalParam(
+    'keys',
+    'Comma-separated list of address book keys to include (e.g. layerZero)',
+  )
   .setAction(async (taskArgs, hre) => {
     const mtoken = taskArgs.mtoken;
     const ptoken = taskArgs.ptoken;
     const action = taskArgs.action;
-    const customSignerScript =
-      taskArgs.customSignerScript ?? ENV.CUSTOM_SIGNER_SCRIPT_PATH;
-    const logToFile = taskArgs.logToFile ?? ENV.LOG_TO_FILE;
+
     const forkingNetwork: Network =
       taskArgs.forkingNetwork ?? ENV.FORKING_NETWORK;
 
@@ -61,15 +55,11 @@ task('runscript', 'Runs a user-defined script')
       hre.network.name = forkingNetwork;
     }
 
-    const logsFolderPath =
-      (taskArgs.logsFolderPath as string | undefined) ??
-      ENV.LOGS_FOLDER_PATH ??
-      path.resolve(hre.config.paths.root, 'logs/');
+    const originalNetwork = taskArgs.originalNetwork;
+    const keys = taskArgs.keys;
 
     const scriptPath = taskArgs.path;
     const skipValidation = taskArgs.skipValidation;
-
-    initializeLogger(hre);
 
     hre.skipValidation = (skipValidation ?? 'false') === 'true';
     hre.aggregatorType = taskArgs.aggregatorType;
@@ -81,16 +71,11 @@ task('runscript', 'Runs a user-defined script')
       throw new Error('Invalid aggregator type parameter');
     }
 
-    const { deployer } = await hre.getNamedAccounts();
-    const deployerSigner = await hre.ethers.getSigner(deployer);
-
     hre.action = action;
 
-    hre.logger = {
-      logToFile,
-      logsFolderPath,
-      executionLogContext: `${action}-${new Date().toISOString()}`,
-    };
+    if (action) {
+      extendWithContext(hre, `${action}-${new Date().toISOString()}`);
+    }
 
     if (mtoken) {
       if (!isMTokenName(mtoken)) {
@@ -107,65 +92,14 @@ task('runscript', 'Runs a user-defined script')
       hre.paymentToken = ptoken;
     }
 
-    if (!customSignerScript) {
-      hre.customSigner = {
-        getWalletAddress: async () => {
-          return deployer;
-        },
-        createAddressBookContract: async (_) => {
-          throw new Error(
-            'createAddressBookContract is not available for hardhat signer',
-          );
-        },
-        sendTransaction: async (transaction) => {
-          const tx = await deployerSigner.sendTransaction({
-            ...transaction,
-          });
-          return {
-            type: 'hardhatSigner',
-            tx,
-          };
-        },
+    if (originalNetwork) {
+      hre.layerZero = {
+        originalNetwork,
       };
-    } else {
-      const scriptPathResolved = path.resolve(customSignerScript);
-      const {
-        signTransaction,
-        createAddressBookContract,
-        getWalletAddressForAction,
-      } = await import(scriptPathResolved);
+    }
 
-      hre.customSigner = {
-        getWalletAddress: async (action, mtokenOverride) => {
-          return getWalletAddressForAction(
-            action,
-            mtokenOverride ?? hre.mtoken,
-          );
-        },
-        createAddressBookContract: async (data) => {
-          return {
-            payload: await createAddressBookContract({
-              ...data,
-              chainId: hre.network.config.chainId,
-              mToken: mtoken,
-            }),
-          };
-        },
-
-        sendTransaction: async (transaction, txSignMetadata) => {
-          return {
-            type: 'customSigner',
-            payload: await signTransaction(transaction, {
-              chain: {
-                name: hre.network.name,
-                id: hre.network.config.chainId,
-              },
-              mToken: hre.mtoken,
-              ...txSignMetadata,
-            }),
-          };
-        },
-      };
+    if (keys) {
+      hre.addressBookKeys = keys.split(',').map((k: string) => k.trim());
     }
 
     const scriptPathResolved = path.resolve(scriptPath);
@@ -176,16 +110,4 @@ task('runscript', 'Runs a user-defined script')
     }
 
     await run(hre);
-  });
-
-task('verifyProxy')
-  .addPositionalParam('proxyAddress')
-  .setAction(async ({ proxyAddress }, hre) => {
-    await etherscanVerifyImplementation(hre, proxyAddress);
-  });
-
-task('verifyRegular')
-  .addPositionalParam('address')
-  .setAction(async ({ address }, hre) => {
-    await etherscanVerify(hre, address);
   });

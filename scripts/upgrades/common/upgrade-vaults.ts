@@ -103,6 +103,7 @@ const getImplAddressFromDeployment = async (
   }
   const tx = await deployment.wait(5);
   const address =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tx.contractAddress ?? tx.to ?? ((tx as any).creates as string);
 
   if (tx.confirmations <= 20) {
@@ -356,6 +357,7 @@ const upgradeAllVaults = async (
         initializerCalldata: initializer
           ? contract.interface.encodeFunctionData(
               initializer,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (initializerArgs ?? []) as readonly any[],
             )
           : undefined,
@@ -374,7 +376,7 @@ const upgradeAllVaults = async (
 
   const deployments: ({
     implementationAddress: string;
-  } & typeof upgradeContracts[number])[] = [];
+  } & (typeof upgradeContracts)[number])[] = [];
 
   for (const upgradeContract of upgradeContracts) {
     const {

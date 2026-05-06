@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity ^0.8.9;
 
 import "./IManageableVault.sol";
 
@@ -213,6 +213,17 @@ interface IDepositVault is IManageableVault {
         bytes32 referrerId,
         address recipient
     ) external returns (uint256);
+
+    /**
+     * @notice approving requests from the `requestIds` array
+     * with the mToken rate from the request.
+     * Does same validation as `safeApproveRequest`.
+     * Mints mToken to request users.
+     * Sets request flags to Processed.
+     * @param requestIds request ids array
+     */
+    function safeBulkApproveRequestAtSavedRate(uint256[] calldata requestIds)
+        external;
 
     /**
      * @notice approving requests from the `requestIds` array

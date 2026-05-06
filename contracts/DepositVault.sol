@@ -332,6 +332,25 @@ contract DepositVault is ManageableVault, IDepositVault {
     /**
      * @inheritdoc IDepositVault
      */
+    function safeBulkApproveRequestAtSavedRate(uint256[] calldata requestIds)
+        external
+        onlyVaultAdmin
+    {
+        for (uint256 i = 0; i < requestIds.length; i++) {
+            uint256 rate = mintRequests[requestIds[i]].tokenOutRate;
+            bool success = _approveRequest(requestIds[i], rate, true, false);
+
+            if (!success) {
+                continue;
+            }
+
+            emit SafeApproveRequest(requestIds[i], rate);
+        }
+    }
+
+    /**
+     * @inheritdoc IDepositVault
+     */
     function safeBulkApproveRequest(uint256[] calldata requestIds) external {
         uint256 currentMTokenRate = _getMTokenRate();
         safeBulkApproveRequest(requestIds, currentMTokenRate);
@@ -516,9 +535,8 @@ contract DepositVault is ManageableVault, IDepositVault {
 
         calcResult = _calcAndValidateDeposit(user, tokenIn, amountToken, false);
 
-        _tokenTransferFromUser(
+        _requestTransferTokensToTokensReceiver(
             tokenIn,
-            tokensReceiver,
             calcResult.amountTokenWithoutFee,
             calcResult.tokenDecimals
         );
@@ -590,12 +608,31 @@ contract DepositVault is ManageableVault, IDepositVault {
     }
 
     /**
-     * @dev internal transfer tokens to tokens receiver
+     * @dev internal transfer tokens to tokens receiver (instant deposits)
      * @param tokenIn tokenIn address
      * @param amountToken amount of tokenIn (decimals 18)
      * @param tokensDecimals tokens decimals
      */
     function _instantTransferTokensToTokensReceiver(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 tokensDecimals
+    ) internal virtual {
+        _tokenTransferFromUser(
+            tokenIn,
+            tokensReceiver,
+            amountToken,
+            tokensDecimals
+        );
+    }
+
+    /**
+     * @dev internal transfer tokens to tokens receiver (deposit requests)
+     * @param tokenIn tokenIn address
+     * @param amountToken amount of tokenIn (decimals 18)
+     * @param tokensDecimals tokens decimals
+     */
+    function _requestTransferTokensToTokensReceiver(
         address tokenIn,
         uint256 amountToken,
         uint256 tokensDecimals

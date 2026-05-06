@@ -4,12 +4,19 @@ import { VaultType } from '../config/constants/addresses';
 export type TokenContractNames = {
   dv: string;
   dvUstb: string;
+  dvAave: string;
+  dvMorpho: string;
+  dvMToken: string;
   rv: string;
   rvSwapper: string;
+  rvMToken: string;
   rvBuidl: string;
   rvUstb: string;
+  rvAave: string;
+  rvMorpho: string;
   dataFeed?: string;
   dataFeedComposite?: string;
+  dataFeedMultiply?: string;
   customAggregator?: string;
   customAggregatorGrowth?: string;
   token: string;
@@ -19,15 +26,26 @@ export type TokenContractNames = {
 type CommonContractNames = Omit<TokenContractNames, 'token'> & {
   ac: string;
   customAggregator: string;
-  customAggregatorDiscounted: string;
+  customAggregatorAdjusted: string;
+  layerZero: {
+    oftAdapter: string;
+    vaultComposer: string;
+  };
 };
 
 const vaultTypeToContractNameMap: Record<VaultType, string> = {
   redemptionVault: 'rv',
   redemptionVaultSwapper: 'rvSwapper',
+  redemptionVaultMToken: 'rvMToken',
   redemptionVaultUstb: 'rvUstb',
   depositVault: 'dv',
+  depositVaultUstb: 'dvUstb',
+  depositVaultAave: 'dvAave',
+  depositVaultMorpho: 'dvMorpho',
+  depositVaultMToken: 'dvMToken',
   redemptionVaultBuidl: 'rvBuidl',
+  redemptionVaultAave: 'rvAave',
+  redemptionVaultMorpho: 'rvMorpho',
 };
 
 export const vaultTypeToContractName = (
@@ -40,7 +58,7 @@ export const contractNameToVaultType = (
   contractName: string,
 ): VaultType | undefined => {
   return Object.entries(vaultTypeToContractNameMap).find(
-    ([_, value]) => value === contractName,
+    ([, value]) => value === contractName,
   )?.[0] as VaultType | undefined;
 };
 
@@ -89,6 +107,33 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   kitBTC: 'KitBtc',
   dnFART: 'DnFart',
   mXRP: 'MXrp',
+  mWildUSD: 'MWildUsd',
+  plUSD: 'PlUsd',
+  splUSD: 'SplUsd',
+  tacTON: 'TacTon',
+  wNLP: 'WNlp',
+  dnETH: 'DnEth',
+  dnTEST: 'DnTest',
+  acremBTC1: 'AcreMBtc1',
+  obeatUSD: 'ObeatUsd',
+  mEVUSD: 'MEvUsd',
+  cUSDO: 'CUsdo',
+  mHyperETH: 'MHyperEth',
+  mHyperBTC: 'MHyperBtc',
+  mPortofino: 'MPortofino',
+  liquidRESERVE: 'LiquidReserve',
+  mKRalpha: 'MKRalpha',
+  sLINJ: 'SLInj',
+  mROX: 'MRox',
+  weEUR: 'WeEur',
+  mTU: 'MTu',
+  mM1USD: 'MM1Usd',
+  mRe7ETH: 'MRe7Eth',
+  mGLOBAL: 'MGlobal',
+  bondUSD: 'BondUsd',
+  bondETH: 'BondEth',
+  bondBTC: 'BondBtc',
+  mTEST: 'MTest',
 };
 
 export const getCommonContractNames = (): CommonContractNames => {
@@ -96,16 +141,27 @@ export const getCommonContractNames = (): CommonContractNames => {
     ac: 'MidasAccessControl',
     dv: 'DepositVault',
     dvUstb: 'DepositVaultWithUSTB',
+    dvAave: 'DepositVaultWithAave',
+    dvMorpho: 'DepositVaultWithMorpho',
+    dvMToken: 'DepositVaultWithMToken',
     rv: 'RedemptionVault',
     rvSwapper: 'RedemptionVaultWithSwapper',
+    rvMToken: 'RedemptionVaultWithMToken',
     rvBuidl: 'RedemptionVaultWIthBUIDL',
     rvUstb: 'RedemptionVaultWithUSTB',
+    rvAave: 'RedemptionVaultWithAave',
+    rvMorpho: 'RedemptionVaultWithMorpho',
     dataFeed: 'DataFeed',
     customAggregator: 'CustomAggregatorV3CompatibleFeed',
     customAggregatorGrowth: 'CustomAggregatorV3CompatibleFeedGrowth',
-    customAggregatorDiscounted: 'CustomAggregatorV3CompatibleFeedDiscounted',
+    customAggregatorAdjusted: 'CustomAggregatorV3CompatibleFeedAdjusted',
     roles: 'MidasAccessControlRoles',
     dataFeedComposite: 'CompositeDataFeed',
+    dataFeedMultiply: 'CompositeDataFeedMultiply',
+    layerZero: {
+      oftAdapter: 'MidasLzMintBurnOFTAdapter',
+      vaultComposer: 'MidasLzVaultComposerSync',
+    },
   };
 };
 
@@ -122,10 +178,16 @@ export const getTokenContractNames = (
   return {
     dv: `${tokenPrefix}${commonContractNames.dv}`,
     dvUstb: `${tokenPrefix}${commonContractNames.dvUstb}`,
+    dvAave: `${tokenPrefix}${commonContractNames.dvAave}`,
+    dvMorpho: `${tokenPrefix}${commonContractNames.dvMorpho}`,
+    dvMToken: `${tokenPrefix}${commonContractNames.dvMToken}`,
     rv: `${tokenPrefix}${commonContractNames.rv}`,
     rvSwapper: `${tokenPrefix}${commonContractNames.rvSwapper}`,
+    rvMToken: `${tokenPrefix}${commonContractNames.rvMToken}`,
     rvBuidl: `${tokenPrefix}${commonContractNames.rvBuidl}`,
     rvUstb: `${tokenPrefix}${commonContractNames.rvUstb}`,
+    rvAave: `${tokenPrefix}${commonContractNames.rvAave}`,
+    rvMorpho: `${tokenPrefix}${commonContractNames.rvMorpho}`,
     dataFeed: isTac ? undefined : `${prefix}${commonContractNames.dataFeed}`,
     customAggregator: isTac ? undefined : `${prefix}CustomAggregatorFeed`,
     customAggregatorGrowth: isTac

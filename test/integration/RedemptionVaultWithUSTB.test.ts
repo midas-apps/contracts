@@ -2,14 +2,14 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 
-import { ustbRedemptionVaultFixture } from './fixtures/ustb.fixture';
+import { ustbRedemptionFixture } from './fixtures/ustb.fixture';
 import { transferUSTBFromWhale } from './helpers/ustb-helpers';
 
 import { mintToken, approveBase18 } from '../common/common.helpers';
 import { redeemInstantWithUstbTest } from '../common/redemption-vault-ustb.helpers';
 
 describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function () {
-  this.timeout(120000);
+  this.timeout(300000);
 
   describe('Scenario 1: Vault has sufficient USDC', function () {
     it('should redeem mTBILL for USDC directly without USTB', async function () {
@@ -22,7 +22,7 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         ustbToken,
         usdcWhale,
         mTokenToUsdDataFeed,
-      } = await loadFixture(ustbRedemptionVaultFixture);
+      } = await loadFixture(ustbRedemptionFixture);
 
       const mTBILLAmount = 1000;
 
@@ -89,7 +89,7 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         usdcWhale,
         redemptionIdle,
         mTokenToUsdDataFeed,
-      } = await loadFixture(ustbRedemptionVaultFixture);
+      } = await loadFixture(ustbRedemptionFixture);
 
       const mTBILLAmount = 5000;
 
@@ -159,7 +159,7 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         redemptionIdle,
         mTokenToUsdDataFeed,
         ustbOwner,
-      } = await loadFixture(ustbRedemptionVaultFixture);
+      } = await loadFixture(ustbRedemptionFixture);
 
       const mTBILLAmount = 5000;
 
@@ -225,7 +225,7 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         ustbToken,
         ustbWhale,
         mTokenToUsdDataFeed,
-      } = await loadFixture(ustbRedemptionVaultFixture);
+      } = await loadFixture(ustbRedemptionFixture);
 
       const mTBILLAmount = 100000000; // 100 million mTBILL
 

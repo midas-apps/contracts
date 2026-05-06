@@ -3,10 +3,7 @@ import { expect } from 'chai';
 import { constants } from 'ethers';
 import { ethers } from 'hardhat';
 
-import {
-  // eslint-disable-next-line camelcase
-  WithMidasAccessControlTester__factory,
-} from '../../typechain-types';
+import { WithMidasAccessControlTester__factory } from '../../typechain-types';
 import { defaultDeploy } from '../common/fixtures';
 
 describe('MidasAccessControl', function () {

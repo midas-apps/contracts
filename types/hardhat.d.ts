@@ -1,0 +1,65 @@
+import { TransactionResponse } from '@ethersproject/providers';
+import { BigNumberish } from 'ethers';
+import { EIP1193Provider } from 'hardhat/types';
+
+import {
+  MTokenName,
+  PaymentTokenName,
+  Network as MidasNetwork,
+} from '../config/types';
+
+import 'hardhat/types/runtime';
+
+declare module 'hardhat/types/runtime' {
+  export interface HardhatRuntimeEnvironment {
+    mtoken?: MTokenName;
+    layerZero?: {
+      originalNetwork?: MidasNetwork;
+    };
+    paymentToken?: PaymentTokenName;
+    action?: string;
+    skipValidation?: boolean;
+    aggregatorType?: 'numerator' | 'denominator';
+    addressBookKeys?: string[];
+    logger: {
+      // default: false
+      logToFile: boolean;
+      // default: logs/
+      logsFolderPath: string;
+    };
+    contextId: string;
+    getCustomSigner: () => Promise<{
+      type: 'hardhatSigner' | 'customSigner';
+      getWeb3Provider: (params: { action: string }) => Promise<EIP1193Provider>;
+      getWalletAddress: (
+        action?: string,
+        mtoken?: MTokenName,
+        chainId?: number,
+      ) => Promise<string>;
+      createAddressBookContract: (data: {
+        address: string;
+        contractName: string;
+        contractTag?: string;
+      }) => Promise<{ payload: unknown }>;
+      sendTransaction: (
+        transaction: {
+          data: string;
+          to: string;
+          value?: BigNumberish;
+          gasLimit?: number;
+        },
+        txSignMetadata?: {
+          comment?: string;
+          action?: string;
+          from?: string;
+          mToken?: string;
+          chainId?: number;
+          idempotenceId?: string;
+        },
+      ) => Promise<
+        | { type: 'hardhatSigner'; tx: TransactionResponse }
+        | { type: 'customSigner'; payload: unknown }
+      >;
+    }>;
+  }
+}

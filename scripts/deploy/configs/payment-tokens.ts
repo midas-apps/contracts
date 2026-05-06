@@ -1,3 +1,4 @@
+import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
@@ -7,6 +8,15 @@ import { PaymentTokenDeploymentConfig } from '../common/types';
 export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
   networkConfigs: {
     [chainIds.sepolia]: {
+      usdt: {
+        postDeploy: {
+          layerZero: {
+            delegate: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+            sharedDecimals: 9,
+          },
+          axelar: {},
+        },
+      },
       usdc: {
         dataFeed: {
           healthyDiff: 24 * 60 * 60,
@@ -46,6 +56,58 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           minAnswer: parseUnits('0.99999', 8),
           maxAnswer: parseUnits('1', 8),
           maxAnswerDeviation: parseUnits('0', 8),
+        },
+      },
+    },
+    [chainIds.bsc]: {
+      xrp: {
+        customAggregator: {
+          description: 'XRP/XRP',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.1', 18),
+          maxAnswer: parseUnits('1000', 18),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+      usdt: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+    },
+    [chainIds.arbitrumSepolia]: {
+      usdt: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99', 8),
+          maxAnswer: parseUnits('1.01', 8),
+        },
+        customAggregator: {
+          description: 'USDT/USD',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        postDeploy: {
+          layerZero: {
+            delegate: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+            sharedDecimals: 9,
+          },
+          axelar: {},
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
         },
       },
     },
@@ -449,6 +511,7 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
             minAnswer: 1,
             maxAnswer: constants.MaxInt256,
           },
+          feedType: 'composite',
           minAnswer: parseUnits('0.987'),
           maxAnswer: parseUnits('1.013'),
         },
@@ -493,11 +556,189 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           },
         },
       },
+      vbusdc: {
+        customAggregator: {
+          description: 'USD/USD',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          numerator: {
+            minAnswer: parseUnits('0.99999', 8),
+            maxAnswer: parseUnits('1', 8),
+            healthyDiff: constants.MaxUint256,
+          },
+          denominator: {
+            minAnswer: parseUnits('0.999', 8),
+            maxAnswer: parseUnits('1.42857142', 8),
+            healthyDiff: days(1),
+          },
+          feedType: 'composite',
+          minAnswer: parseUnits('0.7', 18),
+          maxAnswer: parseUnits('1.001', 18),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+      vbusdt: {
+        customAggregator: {
+          description: 'USD/USD',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          numerator: {
+            minAnswer: parseUnits('0.99999', 8),
+            maxAnswer: parseUnits('1', 8),
+            healthyDiff: constants.MaxUint256,
+          },
+          denominator: {
+            minAnswer: parseUnits('0.999', 8),
+            maxAnswer: parseUnits('1.42857142', 8),
+            healthyDiff: days(1),
+          },
+          feedType: 'composite',
+          minAnswer: parseUnits('0.7', 18),
+          maxAnswer: parseUnits('1.001', 18),
+        },
+      },
     },
     [chainIds.xrplevm]: {
       xrp: {
         customAggregator: {
           description: 'XRP/XRP',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.1', 18),
+          maxAnswer: parseUnits('1000', 18),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+    },
+    [chainIds.tacTestnet]: {
+      usdt: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+    },
+    [chainIds.tac]: {
+      ton: {
+        customAggregator: {
+          description: 'TON/TON',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+      usdt: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+    },
+    [chainIds.zerog]: {
+      usdc: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+    },
+    [chainIds.plasma]: {
+      usdt0: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60, // FIXME: update when get a value
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+    },
+    [chainIds.scroll]: {
+      whype: {
+        customAggregator: {
+          description: 'wHYPE/HYPE',
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+      behype: {
+        dataFeed: {
+          // DO NOT USE: These numerator/denominator feeds should NOT be used. Blending two
+          // USD-denominated feeds (beHYPE/USD and HYPE/USD) can lead to precision issues that
+          // allow users to under/over-mint/redeem. A real aggregator is used instead.
+          // numerator: {
+          //   healthyDiff: 3600,
+          //   minAnswer: parseUnits('10', 8),
+          //   maxAnswer: parseUnits('200', 8),
+          // },
+          // denominator: {
+          //   healthyDiff: 3600,
+          //   minAnswer: parseUnits('10', 8),
+          //   maxAnswer: parseUnits('200', 8),
+          // },
+          // feedType: 'composite',
+          healthyDiff: 3600,
+          minAnswer: parseUnits('1'),
+          maxAnswer: parseUnits('1.2'),
+        },
+      },
+      usdc: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+      usdt: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+      eurc: {
+        customAggregator: {
+          description: 'EURC/EUR',
           minAnswer: parseUnits('0.99999', 8),
           maxAnswer: parseUnits('1', 8),
           maxAnswerDeviation: parseUnits('0', 8),
@@ -514,7 +755,100 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
         },
       },
     },
-    [chainIds.tacTestnet]: {
+    [chainIds.monad]: {
+      usdc: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+    },
+    [chainIds.injective]: {
+      winj: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        customAggregator: {
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          description: 'WINJ/INJ',
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+      yinj: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('1', 8),
+          maxAnswer: parseUnits('1.02', 8),
+        },
+      },
+    },
+    [chainIds.optimism]: {
+      weth: {
+        customAggregator: {
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          description: 'WETH/ETH',
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+      wsteth: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('1.23056234', 18),
+          maxAnswer: parseUnits('1.35', 18),
+        },
+      },
+      weeth: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('1.09132691', 18),
+          maxAnswer: parseUnits('1.2', 18),
+        },
+      },
+      eurc: {
+        customAggregator: {
+          description: 'EURC/EUR',
+          minAnswer: parseUnits('0.999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+      usdc: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
       usdt: {
         dataFeed: {
           healthyDiff: 24 * 60 * 60,

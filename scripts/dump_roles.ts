@@ -11,7 +11,7 @@ const formatValue = (v: string) => {
 };
 
 const func = async () => {
-  const { common, tokenRoles } = getAllRoles();
+  const { common, tokenRoles, integration } = getAllRoles();
 
   const mdHeaders = ['Role Name', 'Role'];
 
@@ -45,6 +45,17 @@ const func = async () => {
     .map((row) => '| ' + row.join(' | ') + ' |')
     .join('\n');
 
+  const integrationTable = [
+    commonHeaders,
+    commonHeaders.map((_) => '---'),
+    ...Object.entries(integration).map(([key, value]) => [
+      formatKey(key),
+      formatValue(value),
+    ]),
+  ]
+    .map((row) => '| ' + row.join(' | ') + ' |')
+    .join('\n');
+
   const content = `
 *Note: this file is auto-generated*
 
@@ -55,6 +66,11 @@ All the roles for the Midas protocol smart contracts are listed below.
 ## Common Roles
 
 ${commonTable}
+
+
+## Integration Roles
+
+${integrationTable}
 
 
 ## Token Roles

@@ -1,34 +1,49 @@
 export * from './tokens';
-type NetworkBase = 'sepolia';
-type RpcNetwork = NetworkBase | 'mainnet';
-export type Network =
-  | NetworkBase
-  | 'main'
-  | 'hardhat'
-  | 'localhost'
-  | 'etherlink'
-  | 'base'
-  | 'oasis'
-  | 'plume'
-  | 'rootstock'
-  | 'arbitrum'
-  | 'tacTestnet'
-  | 'tac'
-  | 'hyperevm'
-  | 'katana'
-  | 'xrplevm';
+
+type RpcNetwork = 'sepolia' | 'mainnet';
+
+export const networks = [
+  'sepolia',
+  'main',
+  'arbitrum',
+  'arbitrumSepolia',
+  'base',
+  'bsc',
+  'etherlink',
+  'hardhat',
+  'hyperevm',
+  'katana',
+  'localhost',
+  'main',
+  'oasis',
+  'plasma',
+  'plume',
+  'rootstock',
+  'scroll',
+  'monad',
+  'tac',
+  'tacTestnet',
+  'xrplevm',
+  'zerog',
+  'injective',
+  'optimism',
+] as const;
+
+export type Network = (typeof networks)[number];
+
 export type RpcUrl =
-  | `https://eth-${RpcNetwork}.g.alchemy.com/v2/${string}`
-  | `https://${RpcNetwork}.infura.io/v3/${string}`
   | `http://localhost:${number}`
   | `https://${string}.${string}`;
 
 export type ConfigPerNetwork<T> = Record<Network, T>;
+export type PartialConfigPerNetwork<T> = Partial<ConfigPerNetwork<T>>;
 
 export interface Environment {
   readonly ALCHEMY_KEY?: string;
   readonly INFURA_KEY?: string;
   readonly CONDUIT_API_KEY?: string;
+  readonly QUICK_NODE_KEY?: string;
+  readonly QUICK_NODE_PROJECT?: string;
   readonly ETHERSCAN_API_KEY?: string;
   readonly OPTIMIZER: boolean;
   readonly COVERAGE: boolean;

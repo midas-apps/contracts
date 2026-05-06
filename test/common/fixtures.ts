@@ -1,65 +1,65 @@
+import { Options } from '@layerzerolabs/lz-v2-utilities';
 import { expect } from 'chai';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import * as hre from 'hardhat';
 
+import { approve, approveBase18, mintToken } from './common.helpers';
+import { deployProxyContract } from './deploy.helpers';
+import {
+  addPaymentTokenTest,
+  addWaivedFeeAccountTest,
+  setInstantFeeTest,
+  setMinAmountTest,
+} from './manageable-vault.helpers';
 import { postDeploymentTest } from './post-deploy.helpers';
 
-import { getAllRoles } from '../../helpers/roles';
+import { getAllRoles, getRolesForToken } from '../../helpers/roles';
 import {
-  // eslint-disable-next-line camelcase
   AggregatorV3Mock__factory,
-  // eslint-disable-next-line camelcase
   BlacklistableTester__factory,
-  // eslint-disable-next-line camelcase
   DepositVaultTest__factory,
-  // eslint-disable-next-line camelcase
   ERC20Mock__factory,
-  // eslint-disable-next-line camelcase
   GreenlistableTester__factory,
-  // eslint-disable-next-line camelcase
   MidasAccessControlTest__factory,
-  // eslint-disable-next-line camelcase
   PausableTester__factory,
-  // eslint-disable-next-line camelcase
   RedemptionVaultTest__factory,
-  // eslint-disable-next-line camelcase
   MTBILLTest__factory,
-  // eslint-disable-next-line camelcase
   WithMidasAccessControlTester__factory,
-  // eslint-disable-next-line camelcase
   DataFeedTest__factory,
-  // eslint-disable-next-line camelcase
   AggregatorV3DeprecatedMock__factory,
-  // eslint-disable-next-line camelcase
   AggregatorV3UnhealthyMock__factory,
-  // eslint-disable-next-line camelcase
   CustomAggregatorV3CompatibleFeedTester__factory,
-  // eslint-disable-next-line camelcase
   SanctionsListMock__factory,
-  // eslint-disable-next-line camelcase
   WithSanctionsListTester__factory,
-  // eslint-disable-next-line camelcase
   RedemptionTest__factory,
-  // eslint-disable-next-line camelcase
   USTBRedemptionMock__factory,
-  // eslint-disable-next-line camelcase
   RedemptionVaultWithBUIDLTest__factory,
-  // eslint-disable-next-line camelcase
   RedemptionVaultWithUSTBTest__factory,
-  // eslint-disable-next-line camelcase
   RedemptionVaultWithSwapperTest__factory,
-  // eslint-disable-next-line camelcase
-  CustomAggregatorV3CompatibleFeedDiscountedTester__factory,
-  // eslint-disable-next-line camelcase
+  RedemptionVaultWithAaveTest__factory,
+  RedemptionVaultWithMorphoTest__factory,
+  RedemptionVaultWithMTokenTest__factory,
+  AaveV3PoolMock__factory,
+  MorphoVaultMock__factory,
+  CustomAggregatorV3CompatibleFeedAdjustedTester__factory,
+  DepositVaultWithAaveTest__factory,
+  DepositVaultWithMorphoTest__factory,
+  DepositVaultWithMTokenTest__factory,
   DepositVaultWithUSTBTest__factory,
-  // eslint-disable-next-line camelcase
   USTBMock__factory,
-  // eslint-disable-next-line camelcase
   CustomAggregatorV3CompatibleFeedGrowthTester__factory,
-  // eslint-disable-next-line camelcase
+  AcreAdapter__factory,
   CompositeDataFeedTest__factory,
+  MidasLzMintBurnOFTAdapter__factory,
+  MidasLzOFT__factory,
+  MidasLzOFTAdapter__factory,
+  MidasLzVaultComposerSyncTester,
+  MTokenPermissionedTest__factory,
+  AxelarInterchainTokenServiceMock__factory,
+  MidasAxelarVaultExecutableTester,
+  LzEndpointV2Mock__factory,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -252,6 +252,7 @@ export const defaultDeploy = async () => {
     usdc: await new ERC20Mock__factory(owner).deploy(8),
     usdt: await new ERC20Mock__factory(owner).deploy(18),
     dai: await new ERC20Mock__factory(owner).deploy(9),
+    usdc6: await new ERC20Mock__factory(owner).deploy(6),
   };
 
   const otherCoins = {
@@ -384,6 +385,197 @@ export const defaultDeploy = async () => {
     redemptionVaultWithUSTB.address,
   );
 
+  /* Redemption Vault With Aave */
+
+  const aUSDC = await new ERC20Mock__factory(owner).deploy(8); // aToken mock, same decimals as USDC
+  const aavePoolMock = await new AaveV3PoolMock__factory(owner).deploy();
+  await aavePoolMock.setReserveAToken(stableCoins.usdc.address, aUSDC.address);
+  await stableCoins.usdc.mint(aavePoolMock.address, parseUnits('1000000'));
+
+  const redemptionVaultWithAave =
+    await new RedemptionVaultWithAaveTest__factory(owner).deploy();
+
+  await redemptionVaultWithAave.initialize(
+    accessControl.address,
+    {
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    1000,
+    {
+      fiatAdditionalFee: 100,
+      fiatFlatFee: parseUnits('1'),
+      minFiatRedeemAmount: 1000,
+    },
+    requestRedeemer.address,
+  );
+  await redemptionVaultWithAave.setAavePool(
+    stableCoins.usdc.address,
+    aavePoolMock.address,
+  );
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
+    redemptionVaultWithAave.address,
+  );
+
+  /* Redemption Vault With Morpho */
+
+  const morphoVaultMock = await new MorphoVaultMock__factory(owner).deploy(
+    stableCoins.usdc.address,
+  );
+  await stableCoins.usdc.mint(morphoVaultMock.address, parseUnits('1000000'));
+
+  const redemptionVaultWithMorpho =
+    await new RedemptionVaultWithMorphoTest__factory(owner).deploy();
+
+  await redemptionVaultWithMorpho.initialize(
+    accessControl.address,
+    {
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    1000,
+    {
+      fiatAdditionalFee: 100,
+      fiatFlatFee: parseUnits('1'),
+      minFiatRedeemAmount: 1000,
+    },
+    requestRedeemer.address,
+  );
+  await redemptionVaultWithMorpho.setMorphoVault(
+    stableCoins.usdc.address,
+    morphoVaultMock.address,
+  );
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
+    redemptionVaultWithMorpho.address,
+  );
+
+  /* Deposit Vault With Aave */
+
+  const depositVaultWithAave = await new DepositVaultWithAaveTest__factory(
+    owner,
+  ).deploy();
+
+  await depositVaultWithAave.initialize(
+    accessControl.address,
+    {
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    parseUnits('100'),
+    0,
+    constants.MaxUint256,
+  );
+  await depositVaultWithAave.setAavePool(
+    stableCoins.usdc.address,
+    aavePoolMock.address,
+  );
+
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_MINT_OPERATOR_ROLE(),
+    depositVaultWithAave.address,
+  );
+
+  /* Deposit Vault With Morpho */
+
+  const depositVaultWithMorpho = await new DepositVaultWithMorphoTest__factory(
+    owner,
+  ).deploy();
+
+  await depositVaultWithMorpho.initialize(
+    accessControl.address,
+    {
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    parseUnits('100'),
+    0,
+    constants.MaxUint256,
+  );
+
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_MINT_OPERATOR_ROLE(),
+    depositVaultWithMorpho.address,
+  );
+
+  /* Deposit Vault With MToken (deposits into mTBILL DV) */
+
+  const depositVaultWithMToken = await new DepositVaultWithMTokenTest__factory(
+    owner,
+  ).deploy();
+
+  await depositVaultWithMToken[
+    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)'
+  ](
+    accessControl.address,
+    {
+      mToken: mTBILL.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    parseUnits('100'),
+    0,
+    constants.MaxUint256,
+    depositVault.address,
+  );
+
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_MINT_OPERATOR_ROLE(),
+    depositVaultWithMToken.address,
+  );
+
+  await depositVault.addWaivedFeeAccount(depositVaultWithMToken.address);
+
   /* Redemption Vault With Swapper */
 
   const redemptionVaultWithSwapper =
@@ -424,7 +616,67 @@ export const defaultDeploy = async () => {
     redemptionVaultWithSwapper.address,
   );
 
-  // eslint-disable-next-line camelcase
+  /* Redemption Vault With MToken (mFONE -> mTBILL) */
+
+  const mFONE = await new MTBILLTest__factory(owner).deploy();
+  await mFONE.initialize(accessControl.address);
+
+  const mockedAggregatorMFone = await new AggregatorV3Mock__factory(
+    owner,
+  ).deploy();
+  await mockedAggregatorMFone.setRoundData(
+    parseUnits('2', mockedAggregatorDecimals),
+  );
+  const mFoneToUsdDataFeed = await new DataFeedTest__factory(owner).deploy();
+  await mFoneToUsdDataFeed.initialize(
+    accessControl.address,
+    mockedAggregatorMFone.address,
+    3 * 24 * 3600,
+    parseUnits('0.1', mockedAggregatorDecimals),
+    parseUnits('10000', mockedAggregatorDecimals),
+  );
+
+  const redemptionVaultWithMToken =
+    await new RedemptionVaultWithMTokenTest__factory(owner).deploy();
+
+  await redemptionVaultWithMToken[
+    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
+  ](
+    accessControl.address,
+    {
+      mToken: mFONE.address,
+      mTokenDataFeed: mFoneToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    1000,
+    {
+      fiatAdditionalFee: 100,
+      fiatFlatFee: parseUnits('1'),
+      minFiatRedeemAmount: 1000,
+    },
+    requestRedeemer.address,
+    redemptionVault.address,
+  );
+
+  await accessControl.grantRole(
+    mFONE.M_TBILL_BURN_OPERATOR_ROLE(),
+    redemptionVaultWithMToken.address,
+  );
+  await redemptionVault.addWaivedFeeAccount(redemptionVaultWithMToken.address);
+  await accessControl.grantRole(
+    mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
+    redemptionVaultWithMToken.address,
+  );
+
   const customFeed = await new CustomAggregatorV3CompatibleFeedTester__factory(
     owner,
   ).deploy();
@@ -437,7 +689,6 @@ export const defaultDeploy = async () => {
     'Custom Data Feed',
   );
 
-  // eslint-disable-next-line camelcase
   const customFeedGrowth =
     await new CustomAggregatorV3CompatibleFeedGrowthTester__factory(
       owner,
@@ -463,8 +714,8 @@ export const defaultDeploy = async () => {
     parseUnits('10000', mockedAggregatorDecimals),
   );
 
-  const customFeedDiscounted =
-    await new CustomAggregatorV3CompatibleFeedDiscountedTester__factory(
+  const customFeedAdjusted =
+    await new CustomAggregatorV3CompatibleFeedAdjustedTester__factory(
       owner,
     ).deploy(customFeed.address, parseUnits('10', 8));
 
@@ -569,7 +820,7 @@ export const defaultDeploy = async () => {
 
   return {
     customFeed,
-    customFeedDiscounted,
+    customFeedAdjusted,
     customFeedGrowth,
     mTBILL,
     mBASIS,
@@ -606,13 +857,495 @@ export const defaultDeploy = async () => {
     buidlRedemption,
     redemptionVaultWithBUIDL,
     redemptionVaultWithUSTB,
+    redemptionVaultWithAave,
+    aavePoolMock,
+    aUSDC,
+    redemptionVaultWithMorpho,
+    morphoVaultMock,
     liquidityProvider,
+    mFONE,
+    mockedAggregatorMFone,
+    mFoneToUsdDataFeed,
+    redemptionVaultWithMToken,
     otherCoins,
     ustbToken,
     ustbRedemption,
     customRecipient,
     depositVaultWithUSTB,
+    depositVaultWithAave,
+    depositVaultWithMorpho,
+    depositVaultWithMToken,
     dataFeedGrowth,
     compositeDataFeed,
+  };
+};
+
+/**
+ * mTokenPermissionedTest + dedicated deposit/redemption vaults (for integration-style tests).
+ */
+export const mTokenPermissionedFixture = async (
+  baseFixture?: Awaited<ReturnType<typeof defaultDeploy>>,
+) => {
+  const fx = baseFixture ?? (await defaultDeploy());
+  const {
+    owner,
+    accessControl,
+    mockedSanctionsList,
+    feeReceiver,
+    tokensReceiver,
+    requestRedeemer,
+    mTokenToUsdDataFeed,
+  } = fx;
+
+  const mTokenPermissioned = await new MTokenPermissionedTest__factory(
+    owner,
+  ).deploy();
+  await mTokenPermissioned.initialize(accessControl.address);
+
+  const mintRole = await mTokenPermissioned.M_TOKEN_TEST_MINT_OPERATOR_ROLE();
+  const burnRole = await mTokenPermissioned.M_TOKEN_TEST_BURN_OPERATOR_ROLE();
+  const pauseRole = await mTokenPermissioned.M_TOKEN_TEST_PAUSE_OPERATOR_ROLE();
+  const mTokenPermissionedGreenlistedRole =
+    await mTokenPermissioned.M_TOKEN_TEST_GREENLISTED_ROLE();
+
+  await accessControl.grantRole(mintRole, owner.address);
+  await accessControl.grantRole(burnRole, owner.address);
+  await accessControl.grantRole(pauseRole, owner.address);
+
+  const mTokenPermissionedDepositVault = await new DepositVaultTest__factory(
+    owner,
+  ).deploy();
+  await mTokenPermissionedDepositVault.initialize(
+    accessControl.address,
+    {
+      mToken: mTokenPermissioned.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 100,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    parseUnits('100'),
+    0,
+    constants.MaxUint256,
+  );
+  await accessControl.grantRole(
+    mintRole,
+    mTokenPermissionedDepositVault.address,
+  );
+
+  const mTokenPermissionedRedemptionVault =
+    await new RedemptionVaultTest__factory(owner).deploy();
+  await mTokenPermissionedRedemptionVault.initialize(
+    accessControl.address,
+    {
+      mToken: mTokenPermissioned.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: 0,
+      instantDailyLimit: parseUnits('100000'),
+    },
+    mockedSanctionsList.address,
+    1,
+    1000,
+    {
+      fiatAdditionalFee: 100,
+      fiatFlatFee: parseUnits('1'),
+      minFiatRedeemAmount: 1000,
+    },
+    requestRedeemer.address,
+  );
+  await accessControl.grantRole(
+    burnRole,
+    mTokenPermissionedRedemptionVault.address,
+  );
+
+  return {
+    ...fx,
+    mTokenPermissioned,
+    mTokenPermissionedRoles: {
+      mint: mintRole,
+      burn: burnRole,
+      pause: pauseRole,
+      greenlisted: mTokenPermissionedGreenlistedRole,
+    },
+    mTokenPermissionedDepositVault,
+    mTokenPermissionedRedemptionVault,
+  };
+};
+
+export const acreAdapterFixture = async () => {
+  const defaultFixture = await defaultDeploy();
+
+  const acreUsdcMTbillAdapter = await new AcreAdapter__factory(
+    defaultFixture.owner,
+  ).deploy(
+    defaultFixture.depositVault.address,
+    defaultFixture.redemptionVault.address,
+    defaultFixture.stableCoins.usdc.address,
+  );
+
+  // prepare vaults for tests
+  await setMinAmountTest(
+    { vault: defaultFixture.depositVault, owner: defaultFixture.owner },
+    0,
+  );
+  await setInstantFeeTest(
+    { vault: defaultFixture.depositVault, owner: defaultFixture.owner },
+    0,
+  );
+
+  await setMinAmountTest(
+    { vault: defaultFixture.redemptionVault, owner: defaultFixture.owner },
+    0,
+  );
+  await setInstantFeeTest(
+    { vault: defaultFixture.redemptionVault, owner: defaultFixture.owner },
+    0,
+  );
+
+  await addWaivedFeeAccountTest(
+    { vault: defaultFixture.redemptionVault, owner: defaultFixture.owner },
+    acreUsdcMTbillAdapter.address,
+  );
+
+  await addPaymentTokenTest(
+    { vault: defaultFixture.depositVault, owner: defaultFixture.owner },
+    defaultFixture.stableCoins.usdc,
+    defaultFixture.dataFeed.address,
+    0,
+    true,
+  );
+
+  await addPaymentTokenTest(
+    { vault: defaultFixture.redemptionVault, owner: defaultFixture.owner },
+    defaultFixture.stableCoins.usdc,
+    defaultFixture.dataFeed.address,
+    0,
+    true,
+  );
+
+  // prepare caller for tests
+  await approve(
+    defaultFixture.regularAccounts[0],
+    defaultFixture.stableCoins.usdc,
+    acreUsdcMTbillAdapter.address,
+    parseUnits('100', 8),
+  );
+
+  await mintToken(
+    defaultFixture.stableCoins.usdc,
+    defaultFixture.regularAccounts[0],
+    100,
+  );
+
+  await mintToken(
+    defaultFixture.stableCoins.usdc,
+    defaultFixture.redemptionVault,
+    100,
+  );
+
+  await approveBase18(
+    defaultFixture.regularAccounts[0],
+    defaultFixture.mTBILL,
+    acreUsdcMTbillAdapter.address,
+    20,
+  );
+
+  await mintToken(defaultFixture.mTBILL, defaultFixture.regularAccounts[0], 20);
+
+  return { acreUsdcMTbillAdapter, ...defaultFixture };
+};
+
+export const layerZeroFixture = async () => {
+  const defaultFixture = await defaultDeploy();
+
+  const {
+    owner,
+    accessControl,
+    mTBILL,
+    depositVault,
+    redemptionVault,
+    stableCoins,
+  } = defaultFixture;
+  const eidA = 30001;
+  const eidB = 30002;
+
+  // await setBlockGasLimit(100000000000);
+
+  const mockEndpointA = await new LzEndpointV2Mock__factory(owner).deploy(eidA);
+  const mockEndpointB = await new LzEndpointV2Mock__factory(owner).deploy(eidB);
+
+  const roles = getRolesForToken('mTBILL');
+
+  const oftAdapterA = await new MidasLzMintBurnOFTAdapter__factory(
+    owner,
+  ).deploy(mTBILL.address, mockEndpointA.address, owner.address, [
+    {
+      dstEid: eidB,
+      limit: parseUnits('1000000000', 18),
+      window: 60,
+    },
+  ]);
+
+  const oftAdapterB = await new MidasLzMintBurnOFTAdapter__factory(
+    owner,
+  ).deploy(mTBILL.address, mockEndpointB.address, owner.address, [
+    {
+      dstEid: eidA,
+      limit: parseUnits('1000000000', 18),
+      window: 60,
+    },
+  ]);
+
+  await accessControl.grantRoleMult(
+    [roles.minter, roles.burner, roles.minter, roles.burner],
+    [
+      oftAdapterA.address,
+      oftAdapterA.address,
+      oftAdapterB.address,
+      oftAdapterB.address,
+    ],
+  );
+
+  await mockEndpointA.setDestLzEndpoint(
+    oftAdapterB.address,
+    mockEndpointB.address,
+  );
+  await mockEndpointB.setDestLzEndpoint(
+    oftAdapterA.address,
+    mockEndpointA.address,
+  );
+
+  await oftAdapterA.setEnforcedOptions([
+    {
+      eid: eidB,
+      options: Options.newOptions()
+        .addExecutorLzReceiveOption(200_000, 0)
+        .toHex(),
+      msgType: 1,
+    },
+    {
+      eid: eidB,
+      options: Options.newOptions()
+        .addExecutorLzReceiveOption(200_000, 0)
+        .addExecutorComposeOption(0, 600_000, 0)
+        .toHex(),
+      msgType: 2,
+    },
+  ]);
+  await oftAdapterB.setEnforcedOptions([
+    {
+      eid: eidA,
+      options: Options.newOptions()
+        .addExecutorLzReceiveOption(200_000, 0)
+        .toHex(),
+      msgType: 1,
+    },
+    {
+      eid: eidA,
+      options: Options.newOptions()
+        .addExecutorLzReceiveOption(200_000, 0)
+        .addExecutorComposeOption(0, 600_000, 0)
+        .toHex(),
+      msgType: 2,
+    },
+  ]);
+
+  await oftAdapterA
+    .connect(owner)
+    .setPeer(eidB, ethers.utils.zeroPad(oftAdapterB.address, 32));
+  await oftAdapterB
+    .connect(owner)
+    .setPeer(eidA, ethers.utils.zeroPad(oftAdapterA.address, 32));
+
+  const pTokenLzOft = await new MidasLzOFT__factory(owner).deploy(
+    'LZ Payment Token OFT',
+    'PTOFT',
+    9,
+    mockEndpointB.address,
+    owner.address,
+  );
+
+  const pTokenLzOftAdapter = await new MidasLzOFTAdapter__factory(owner).deploy(
+    stableCoins.usdt.address,
+    9,
+    mockEndpointA.address,
+    owner.address,
+  );
+
+  await mockEndpointA.setDestLzEndpoint(
+    pTokenLzOft.address,
+    mockEndpointB.address,
+  );
+  await mockEndpointB.setDestLzEndpoint(
+    pTokenLzOftAdapter.address,
+    mockEndpointA.address,
+  );
+
+  await pTokenLzOftAdapter.setEnforcedOptions([
+    {
+      eid: eidB,
+      options: Options.newOptions()
+        .addExecutorLzReceiveOption(200_000, 0)
+        .toHex(),
+      msgType: 1,
+    },
+    {
+      eid: eidB,
+      options: Options.newOptions()
+        .addExecutorLzReceiveOption(200_000, 0)
+        .toHex(),
+      msgType: 2,
+    },
+  ]);
+  await pTokenLzOft.setEnforcedOptions([
+    {
+      eid: eidA,
+      options: Options.newOptions()
+        .addExecutorLzReceiveOption(200_000, 0)
+        .toHex(),
+      msgType: 1,
+    },
+    {
+      eid: eidA,
+      options: Options.newOptions()
+        .addExecutorLzReceiveOption(200_000, 0)
+        .toHex(),
+      msgType: 2,
+    },
+  ]);
+
+  await pTokenLzOftAdapter
+    .connect(owner)
+    .setPeer(eidB, ethers.utils.zeroPad(pTokenLzOft.address, 32));
+  await pTokenLzOft
+    .connect(owner)
+    .setPeer(eidA, ethers.utils.zeroPad(pTokenLzOftAdapter.address, 32));
+
+  const composer = await deployProxyContract<MidasLzVaultComposerSyncTester>(
+    'MidasLzVaultComposerSyncTester',
+    undefined,
+    undefined,
+    [
+      depositVault.address,
+      redemptionVault.address,
+      pTokenLzOftAdapter.address,
+      oftAdapterA.address,
+    ],
+  );
+  return {
+    mockEndpointA,
+    mockEndpointB,
+    oftAdapterA,
+    oftAdapterB,
+    eidA,
+    eidB,
+    pTokenLzOft,
+    pTokenLzOftAdapter,
+    composer,
+    ...defaultFixture,
+  };
+};
+
+export const axelarFixture = async () => {
+  const defaultFixture = await defaultDeploy();
+
+  const {
+    owner,
+    accessControl,
+    mTBILL,
+    depositVault,
+    redemptionVault,
+    stableCoins,
+  } = defaultFixture;
+  const chainNameA = 'ChainA';
+  const chainNameB = 'ChainB';
+
+  const chainNameHashA = ethers.utils.solidityKeccak256(
+    ['string'],
+    [chainNameA],
+  );
+
+  const chainNameHashB = ethers.utils.solidityKeccak256(
+    ['string'],
+    [chainNameB],
+  );
+
+  const axelarItsA = await new AxelarInterchainTokenServiceMock__factory(
+    owner,
+  ).deploy();
+
+  const axelarItsB = await new AxelarInterchainTokenServiceMock__factory(
+    owner,
+  ).deploy();
+
+  await axelarItsA.setChainNameHash(chainNameHashA);
+  await axelarItsB.setChainNameHash(chainNameHashB);
+
+  const mTokenId = ethers.utils.solidityKeccak256(['string'], ['mTOKEN']);
+  const paymentTokenId = ethers.utils.solidityKeccak256(['string'], ['pTOKEN']);
+
+  await axelarItsA.registerToken(mTokenId, mTBILL.address, true);
+  await axelarItsB.registerToken(mTokenId, mTBILL.address, true);
+
+  await axelarItsA.registerToken(
+    paymentTokenId,
+    stableCoins.usdt.address,
+    false,
+  );
+  await axelarItsB.registerToken(
+    paymentTokenId,
+    stableCoins.usdt.address,
+    false,
+  );
+
+  const roles = getRolesForToken('mTBILL');
+
+  await accessControl.grantRoleMult(
+    [roles.minter, roles.burner, roles.minter, roles.burner],
+    [
+      axelarItsA.address,
+      axelarItsA.address,
+      axelarItsB.address,
+      axelarItsB.address,
+    ],
+  );
+
+  const executor = await deployProxyContract<MidasAxelarVaultExecutableTester>(
+    'MidasAxelarVaultExecutableTester',
+    undefined,
+    undefined,
+    [
+      depositVault.address,
+      redemptionVault.address,
+      paymentTokenId,
+      mTokenId,
+      axelarItsA.address,
+    ],
+  );
+
+  return {
+    axelarItsA,
+    axelarItsB,
+    executor,
+    chainNameHashA,
+    chainNameHashB,
+    mTokenId,
+    paymentTokenId,
+    chainNameA,
+    chainNameB,
+    ...defaultFixture,
   };
 };

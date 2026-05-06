@@ -1,12 +1,16 @@
+import { mine } from '@nomicfoundation/hardhat-network-helpers';
 import { getImplementationAddress } from '@openzeppelin/upgrades-core';
 import { ethers } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
+  chainIds,
   MTokenName,
   MTokenNameEnum,
+  Network,
   PaymentTokenName,
   PaymentTokenNameEnum,
+  rpcUrls,
 } from '../config';
 
 export const DAY = 86400;
@@ -25,6 +29,26 @@ export const isPaymentTokenName = (name: string): name is PaymentTokenName => {
   );
 };
 
+export const forkNetwork = async (
+  hre: HardhatRuntimeEnvironment,
+  network: Network,
+  blockNumber?: number,
+) => {
+  if (
+    hre.network.name === network &&
+    hre.network.config.chainId === chainIds[network]
+  )
+    return;
+
+  await hre.network.provider.request({
+    method: 'hardhat_reset',
+    params: [{ forking: { jsonRpcUrl: rpcUrls[network], blockNumber } }],
+  });
+  await mine();
+  hre.network.name = network;
+  hre.network.config.chainId = chainIds[network];
+};
+
 export const getChainOrThrow = (hre: HardhatRuntimeEnvironment) => {
   const { chainId } = hre.network.config;
   const { name } = hre.network;
@@ -40,6 +64,19 @@ export const getMTokenOrThrow = (hre: HardhatRuntimeEnvironment) => {
     throw new Error('MToken parameter not found');
   }
   return mToken;
+};
+
+export const getOriginalNetwork = (hre: HardhatRuntimeEnvironment) => {
+  const originalNetwork = hre.layerZero?.originalNetwork;
+  return originalNetwork;
+};
+
+export const getOriginalNetworkOrThrow = (hre: HardhatRuntimeEnvironment) => {
+  const originalNetwork = hre.layerZero?.originalNetwork;
+  if (!originalNetwork) {
+    throw new Error('OriginalNetwork parameter not found');
+  }
+  return originalNetwork;
 };
 
 export const getPaymentTokenOrThrow = (hre: HardhatRuntimeEnvironment) => {
@@ -160,8 +197,6 @@ export const verify = async (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ...constructorArguments: any[]
 ) => {
-  console.log('Arguments: ', constructorArguments);
-
   await hre.run('verify:verify', {
     address: contractAddress,
     constructorArguments,

@@ -5,7 +5,6 @@ import { ethers } from 'hardhat';
 
 import {
   DecimalsCorrectionTester,
-  // eslint-disable-next-line camelcase
   DecimalsCorrectionTester__factory,
 } from '../../typechain-types';
 

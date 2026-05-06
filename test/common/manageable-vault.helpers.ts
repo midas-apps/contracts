@@ -8,13 +8,18 @@ import { defaultDeploy } from './fixtures';
 
 import {
   DepositVault,
+  DepositVaultWithAave,
+  DepositVaultWithMorpho,
+  DepositVaultWithMToken,
   DepositVaultWithUSTB,
   ERC20,
-  // eslint-disable-next-line camelcase
   ERC20__factory,
   IERC20,
   RedemptionVault,
   RedemptionVaultWIthBUIDL,
+  RedemptionVaultWithAave,
+  RedemptionVaultWithMorpho,
+  RedemptionVaultWithMToken,
   RedemptionVaultWithSwapper,
   RedemptionVaultWithUSTB,
 } from '../../typechain-types';
@@ -22,15 +27,26 @@ import {
 type CommonParamsChangePaymentToken = {
   vault:
     | DepositVault
+    | DepositVaultWithAave
+    | DepositVaultWithMorpho
+    | DepositVaultWithMToken
     | DepositVaultWithUSTB
     | RedemptionVault
     | RedemptionVaultWIthBUIDL
+    | RedemptionVaultWithAave
+    | RedemptionVaultWithMorpho
+    | RedemptionVaultWithMToken
     | RedemptionVaultWithSwapper
     | RedemptionVaultWithUSTB;
   owner: SignerWithAddress;
 };
 type CommonParams = {
-  depositVault: DepositVault | DepositVaultWithUSTB;
+  depositVault:
+    | DepositVault
+    | DepositVaultWithAave
+    | DepositVaultWithMorpho
+    | DepositVaultWithMToken
+    | DepositVaultWithUSTB;
 } & Pick<Awaited<ReturnType<typeof defaultDeploy>>, 'owner'>;
 
 export const setInstantFeeTest = async (
@@ -399,7 +415,6 @@ export const withdrawTest = async (
   withdrawTo = getAccount(withdrawTo);
   token = getAccount(token);
 
-  // eslint-disable-next-line camelcase
   const tokenContract = ERC20__factory.connect(token, owner);
 
   if (opt?.revertMessage) {

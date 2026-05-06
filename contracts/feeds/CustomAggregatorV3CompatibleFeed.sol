@@ -84,7 +84,7 @@ contract CustomAggregatorV3CompatibleFeed is
         int192 _maxAnswer,
         uint256 _maxAnswerDeviation,
         string calldata _description
-    ) external initializer {
+    ) public virtual initializer {
         __WithMidasAccessControl_init(_accessControl);
 
         require(_minAnswer < _maxAnswer, "CA: !min/max");

@@ -12,19 +12,26 @@ import {
 import { defaultDeploy } from './fixtures';
 
 import {
-  // eslint-disable-next-line camelcase
   DataFeedTest__factory,
   DepositVault,
   DepositVaultTest,
+  DepositVaultWithAaveTest,
+  DepositVaultWithMorphoTest,
+  DepositVaultWithMTokenTest,
   DepositVaultWithUSTBTest,
   ERC20,
-  // eslint-disable-next-line camelcase
   ERC20__factory,
   MToken,
 } from '../../typechain-types';
 
 type CommonParamsDeposit = {
-  depositVault: DepositVault | DepositVaultTest | DepositVaultWithUSTBTest;
+  depositVault:
+    | DepositVault
+    | DepositVaultTest
+    | DepositVaultWithAaveTest
+    | DepositVaultWithMorphoTest
+    | DepositVaultWithMTokenTest
+    | DepositVaultWithUSTBTest;
   mTBILL: MToken;
 } & Pick<
   Awaited<ReturnType<typeof defaultDeploy>>,
@@ -56,7 +63,7 @@ export const depositInstantTest = async (
   tokenIn = getAccount(tokenIn);
 
   const sender = opt?.from ?? owner;
-  // eslint-disable-next-line camelcase
+
   const tokenContract = ERC20__factory.connect(tokenIn, owner);
 
   const tokensReceiver = await depositVault.tokensReceiver();
@@ -198,9 +205,11 @@ export const depositRequestTest = async (
     mTokenToUsdDataFeed,
     waivedFee,
     customRecipient,
+    checkTokensReceiver = true,
   }: CommonParamsDeposit & {
     waivedFee?: boolean;
     customRecipient?: AccountOrContract;
+    checkTokensReceiver?: boolean;
   },
   tokenIn: ERC20 | string,
   amountUsdIn: number,
@@ -209,7 +218,7 @@ export const depositRequestTest = async (
   tokenIn = getAccount(tokenIn);
 
   const sender = opt?.from ?? owner;
-  // eslint-disable-next-line camelcase
+
   const tokenContract = ERC20__factory.connect(tokenIn, owner);
 
   const tokensReceiver = await depositVault.tokensReceiver();
@@ -317,9 +326,11 @@ export const depositRequestTest = async (
   expect(request.tokenIn).eq(tokenContract.address);
 
   expect(latestRequestIdAfter).eq(latestRequestIdBefore.add(1));
-  expect(balanceAfterContract).eq(
-    balanceBeforeContract.add(amountInWithoutFee),
-  );
+  if (checkTokensReceiver) {
+    expect(balanceAfterContract).eq(
+      balanceBeforeContract.add(amountInWithoutFee),
+    );
+  }
   expect(feeReceiverBalanceAfterContract).eq(
     feeReceiverBalanceBeforeContract.add(fee),
   );
@@ -469,24 +480,29 @@ export const safeApproveRequestTest = async (
 export const safeBulkApproveRequestTest = async (
   { depositVault, owner, mTBILL, mTokenToUsdDataFeed }: CommonParamsDeposit,
   requests: { id: BigNumberish; expectedToExecute?: boolean }[],
-  newRate?: BigNumberish,
+  newRate?: BigNumberish | 'request-rate',
   opt?: OptionalCommonParams,
 ) => {
   const sender = opt?.from ?? owner;
 
   const requestIds = requests.map(({ id }) => id);
 
-  const callFn = newRate
-    ? depositVault
-        .connect(sender)
-        ['safeBulkApproveRequest(uint256[],uint256)'].bind(
-          this,
-          requestIds,
-          newRate,
-        )
-    : depositVault
-        .connect(sender)
-        ['safeBulkApproveRequest(uint256[])'].bind(this, requestIds);
+  const callFn =
+    newRate && newRate !== 'request-rate'
+      ? depositVault
+          .connect(sender)
+          ['safeBulkApproveRequest(uint256[],uint256)'].bind(
+            this,
+            requestIds,
+            newRate,
+          )
+      : newRate === 'request-rate'
+      ? depositVault
+          .connect(sender)
+          .safeBulkApproveRequestAtSavedRate.bind(this, requestIds)
+      : depositVault
+          .connect(sender)
+          ['safeBulkApproveRequest(uint256[])'].bind(this, requestIds);
 
   if (opt?.revertMessage) {
     await expect(callFn()).revertedWith(opt?.revertMessage);
@@ -523,13 +539,14 @@ export const safeBulkApproveRequestTest = async (
   await expect(txPromise).to.not.reverted;
 
   const currentRate = await mTokenToUsdDataFeed.getDataInBase18();
-  const newExpectedRate = newRate ?? currentRate;
+  const newExpectedRate =
+    newRate === 'request-rate' ? undefined : newRate ?? currentRate;
 
   const expectedMintAmounts = requestDatasBefore.map((requestData, i) =>
     requestData.depositedUsdAmount
       .sub(requestData.depositedUsdAmount.mul(feePercents[i]).div(10000))
       .mul(constants.WeiPerEther)
-      .div(newExpectedRate),
+      .div(newExpectedRate ?? requestData.tokenOutRate),
   );
 
   const groupedDataBefore = requests.map(({ id, expectedToExecute }, index) => {
@@ -611,17 +628,24 @@ export const safeBulkApproveRequestTest = async (
       expect(requestDataAfter.status).eq(0);
     } else {
       expect(logs.length).eq(1);
-      expect(requestDataAfter.tokenOutRate).eq(newExpectedRate);
+      expect(requestDataAfter.tokenOutRate).eq(
+        newExpectedRate ?? requestDataBefore.tokenOutRate,
+      );
       expect(requestDataAfter.status).eq(1);
-
+      expect(totalDepositedAfter).eq(
+        totalDepositedBefore.add(expectedMintedAggregatedByUser),
+      );
       const log = logs[0];
 
-      expect(log.newOutRate).eq(newExpectedRate);
+      expect(log.newOutRate).eq(
+        newExpectedRate ?? requestDataBefore.tokenOutRate,
+      );
       expect(log.requestId).eq(id);
     }
     expect(totalDepositedAfter).eq(
       totalDepositedBefore.add(expectedMintedAggregatedByUser),
     );
+
     expect(balanceAfter).eq(balanceBefore.add(expectedMintedAggregatedByUser));
   }
 };
@@ -703,7 +727,13 @@ export const setMaxSupplyCapTest = async (
 export const getFeePercent = async (
   sender: string,
   token: string,
-  depositVault: DepositVault | DepositVaultTest | DepositVaultWithUSTBTest,
+  depositVault:
+    | DepositVault
+    | DepositVaultTest
+    | DepositVaultWithAaveTest
+    | DepositVaultWithMorphoTest
+    | DepositVaultWithMTokenTest
+    | DepositVaultWithUSTBTest,
   isInstant: boolean,
 ) => {
   const tokenConfig = await depositVault.tokensConfig(token);
@@ -722,13 +752,19 @@ export const getFeePercent = async (
 export const calcExpectedMintAmount = async (
   sender: SignerWithAddress,
   token: string,
-  depositVault: DepositVault | DepositVaultTest | DepositVaultWithUSTBTest,
+  depositVault:
+    | DepositVault
+    | DepositVaultTest
+    | DepositVaultWithAaveTest
+    | DepositVaultWithMorphoTest
+    | DepositVaultWithMTokenTest
+    | DepositVaultWithUSTBTest,
   mTokenRate: BigNumber,
   amountIn: BigNumber,
   isInstant: boolean,
 ) => {
   const tokenConfig = await depositVault.tokensConfig(token);
-  // eslint-disable-next-line camelcase
+
   const dataFeedContract = DataFeedTest__factory.connect(
     tokenConfig.dataFeed,
     sender,
