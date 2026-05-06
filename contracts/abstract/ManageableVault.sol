@@ -816,8 +816,7 @@ abstract contract ManageableVault is
         if (checkPaused) {
             _requireFnNotPaused(msg.sig, false);
         }
-        if (accessControl.hasRole(vaultRole(), account)) return;
-        _hasFunctionPermission(vaultRole(), msg.sig, account);
+        _validateFunctionAccessWithTimelock(vaultRole(), account);
     }
 
     /**

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.34;
 
-import {MidasAccessControl} from "./MidasAccessControl.sol";
+import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
 import {MidasAccessControlRoles} from "./MidasAccessControlRoles.sol";
 import {MidasInitializable} from "../abstract/MidasInitializable.sol";
+import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.sol";
 
 /**
  * @title WithMidasAccessControl
@@ -14,24 +15,33 @@ abstract contract WithMidasAccessControl is
     MidasInitializable,
     MidasAccessControlRoles
 {
+    using AccessControlUtilsLibrary for IMidasAccessControl;
+
     error InvalidAddress(address addr);
     error HasRole(bytes32 role, address account);
     error HasntRole(bytes32 role, address account);
     error NoFunctionPermission(
-        bytes32 functionAccessAdminRole,
+        bytes32 roleUsed,
         bytes4 functionSelector,
         address account
+    );
+    error FunctionNotReady(bytes32 roleUsed, bytes4 functionSelector);
+    error SenderIsNotTimelock(
+        bytes32 roleUsed,
+        bytes4 functionSelector,
+        address sender
     );
 
     /**
      * @notice admin role
      */
-    bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
+    bytes32 internal constant _DEFAULT_ADMIN_ROLE = 0x00;
 
+    // TODO: put OZ natspec for type change
     /**
      * @notice MidasAccessControl contract address
      */
-    MidasAccessControl public accessControl;
+    IMidasAccessControl public accessControl;
 
     /**
      * @dev leaving a storage gap for futures updates
@@ -63,7 +73,7 @@ abstract contract WithMidasAccessControl is
         onlyInitializing
     {
         require(_accessControl != address(0), InvalidAddress(_accessControl));
-        accessControl = MidasAccessControl(_accessControl);
+        accessControl = IMidasAccessControl(_accessControl);
     }
 
     /**
@@ -80,29 +90,10 @@ abstract contract WithMidasAccessControl is
         require(!accessControl.hasRole(role, account), HasRole(role, account));
     }
 
-    /**
-     * @dev checks that given `account` has function permission for the given function selector
-     * @param functionAccessAdminRole OZ role for the scope
-     * @param functionSelector function selector
-     * @param account address checked for permission
-     */
-    function _hasFunctionPermission(
-        bytes32 functionAccessAdminRole,
-        bytes4 functionSelector,
-        address account
-    ) internal view {
-        require(
-            accessControl.hasFunctionPermission(
-                functionAccessAdminRole,
-                address(this),
-                functionSelector,
-                account
-            ),
-            NoFunctionPermission(
-                functionAccessAdminRole,
-                functionSelector,
-                account
-            )
-        );
+    function _validateFunctionAccessWithTimelock(bytes32 role, address account)
+        internal
+        view
+    {
+        accessControl.validateFunctionAccessWithTimelock(role, account);
     }
 }

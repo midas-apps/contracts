@@ -32,8 +32,7 @@ contract WithSanctionsListTester is WithSanctionsList {
         view
         override
     {
-        if (accessControl.hasRole(sanctionsListAdminRole(), account)) return;
-        _hasFunctionPermission(sanctionsListAdminRole(), msg.sig, account);
+        _validateFunctionAccessWithTimelock(sanctionsListAdminRole(), account);
     }
 
     function _disableInitializers() internal override {}

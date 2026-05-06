@@ -10,8 +10,7 @@ contract PausableTester is Pausable {
     }
 
     function _validatePauseAdminAccess(address account) internal view override {
-        if (accessControl.hasRole(pauseAdminRole(), account)) return;
-        _hasFunctionPermission(pauseAdminRole(), msg.sig, account);
+        _validateFunctionAccessWithTimelock(pauseAdminRole(), account);
     }
 
     function pauseAdminRole() public view returns (bytes32) {

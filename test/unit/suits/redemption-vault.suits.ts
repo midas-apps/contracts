@@ -25,7 +25,9 @@ import {
 import {
   acErrors,
   blackList,
+  executeTimelockTransactionTester,
   greenList,
+  scheduleTimelockTransactionTester,
   setupVaultScopedFunctionPermission,
 } from '../../common/ac.helpers';
 import {
@@ -5827,6 +5829,56 @@ export const redemptionVaultSuits = (
           await expect(
             redemptionVault.freeFromMinAmount(regularAccounts[0].address, true),
           ).to.not.reverted;
+
+          expect(
+            await redemptionVault.isFreeFromMinAmount(
+              regularAccounts[0].address,
+            ),
+          ).to.eq(true);
+        });
+
+        it.only('should not fail with timelock', async () => {
+          const {
+            redemptionVault,
+            regularAccounts,
+            timelock,
+            accessControl,
+            owner,
+          } = await loadFixture(rvFixture);
+
+          const calldata = redemptionVault.interface.encodeFunctionData(
+            'freeFromMinAmount',
+            [regularAccounts[0].address, true],
+          );
+
+          expect(
+            await redemptionVault.isFreeFromMinAmount(
+              regularAccounts[0].address,
+            ),
+          ).to.eq(false);
+
+          await scheduleTimelockTransactionTester(
+            {
+              accessControl,
+              timelock,
+              owner,
+            },
+            redemptionVault.address,
+            calldata,
+          );
+
+          await increase(3600);
+
+          await executeTimelockTransactionTester(
+            {
+              accessControl,
+              timelock,
+              owner,
+            },
+            redemptionVault.address,
+            calldata,
+            owner.address,
+          );
 
           expect(
             await redemptionVault.isFreeFromMinAmount(

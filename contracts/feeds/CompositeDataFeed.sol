@@ -167,6 +167,6 @@ contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
      * @inheritdoc IDataFeed
      */
     function feedAdminRole() public pure virtual override returns (bytes32) {
-        return DEFAULT_ADMIN_ROLE;
+        return _DEFAULT_ADMIN_ROLE;
     }
 }

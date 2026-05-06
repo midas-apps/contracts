@@ -24,8 +24,7 @@ contract GreenlistableTester is Greenlistable {
         view
         override
     {
-        if (accessControl.hasRole(greenlistAdminRole(), account)) return;
-        _hasFunctionPermission(greenlistAdminRole(), msg.sig, account);
+        _validateFunctionAccessWithTimelock(greenlistAdminRole(), account);
     }
 
     function greenlistAdminRole() public view virtual returns (bytes32) {

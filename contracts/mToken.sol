@@ -84,7 +84,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     function setMetadata(bytes32 key, bytes memory data)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE, msg.sender)
+        onlyRole(_DEFAULT_ADMIN_ROLE, msg.sender)
     {
         metadata[key] = data;
     }
@@ -95,7 +95,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     function increaseMintRateLimit(uint256 window, uint256 newLimit)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE, msg.sender)
+        onlyRole(_DEFAULT_ADMIN_ROLE, msg.sender)
     {
         _setMintRateLimitConfig(window, newLimit, true);
     }
@@ -106,7 +106,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     function decreaseMintRateLimit(uint256 window, uint256 newLimit)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE, msg.sender)
+        onlyRole(_DEFAULT_ADMIN_ROLE, msg.sender)
     {
         _setMintRateLimitConfig(window, newLimit, false);
     }

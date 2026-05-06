@@ -208,7 +208,7 @@ contract CustomAggregatorV3CompatibleFeed is
      * @return role descriptor
      */
     function feedAdminRole() public view virtual returns (bytes32) {
-        return DEFAULT_ADMIN_ROLE;
+        return _DEFAULT_ADMIN_ROLE;
     }
 
     /**

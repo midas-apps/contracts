@@ -60,6 +60,7 @@ import {
   LzEndpointV2Mock__factory,
   MTokenTest__factory,
   RedemptionVaultTest,
+  MidasAccessControlTimelockController__factory,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -83,6 +84,14 @@ export const defaultDeploy = async () => {
     owner,
   ).deploy();
   await accessControl.initialize();
+
+  const timelock = await new MidasAccessControlTimelockController__factory(
+    owner,
+  ).deploy();
+
+  await timelock.initialize(accessControl.address);
+
+  await accessControl.initializeTimelock(timelock.address);
 
   const mockedSanctionsList = await new SanctionsListMock__factory(
     owner,
@@ -946,6 +955,7 @@ export const defaultDeploy = async () => {
     mTokenLoan,
     mTokenLoanToUsdDataFeed,
     mockedAggregatorMTokenLoan,
+    timelock,
   };
 };
 
