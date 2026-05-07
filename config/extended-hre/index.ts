@@ -77,6 +77,7 @@ const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
           });
           return {
             tx,
+            type: 'hardhatSigner',
           };
         },
         getWeb3Provider: async () => {
@@ -113,8 +114,10 @@ const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
             }),
           };
         },
+
         sendTransaction: async (transaction, txSignMetadata) => {
           return {
+            type: 'customSigner',
             payload: await signEVMTransaction(transaction, {
               chain: {
                 name: hre.network.name,
