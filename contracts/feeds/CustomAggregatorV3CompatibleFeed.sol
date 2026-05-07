@@ -101,15 +101,23 @@ contract CustomAggregatorV3CompatibleFeed is
 
     /**
      * @notice works as `setRoundData()`, but also checks the
-     * deviation with the lattest submitted data
+     * deviation with the lattest submitted data, and that at least
+     * 1 hour passed since the lattest submission
      * @dev deviation with previous data needs to be <= `maxAnswerDeviation`
      * @param _data data value
      */
     function setRoundDataSafe(int256 _data) external {
-        if (lastTimestamp() != 0) {
+        uint256 _lastUpdatedAt = lastTimestamp();
+
+        if (_lastUpdatedAt != 0) {
             uint256 deviation = _getDeviation(lastAnswer(), _data);
             require(deviation <= maxAnswerDeviation, "CA: !deviation");
         }
+
+        require(
+            block.timestamp - _lastUpdatedAt > 1 hours,
+            "CA: not enough time passed"
+        );
 
         return setRoundData(_data);
     }
