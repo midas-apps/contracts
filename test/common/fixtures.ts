@@ -60,8 +60,11 @@ import {
   LzEndpointV2Mock__factory,
   MTokenTest__factory,
   RedemptionVaultTest,
-  MidasAccessControlTimelockController__factory,
+  MidasTimelockManagerTest__factory,
+  MidasAccessControlTimelockControllerTest__factory,
+  MidasPauseManagerTest__factory,
 } from '../../typechain-types';
+MidasTimelockManagerTest__factory;
 
 export const defaultDeploy = async () => {
   const [
@@ -85,13 +88,25 @@ export const defaultDeploy = async () => {
   ).deploy();
   await accessControl.initialize();
 
-  const timelock = await new MidasAccessControlTimelockController__factory(
+  const timelockManager = await new MidasTimelockManagerTest__factory(
     owner,
   ).deploy();
 
-  await timelock.initialize(accessControl.address);
+  await timelockManager.initialize(accessControl.address);
 
-  await accessControl.initializeTimelock(timelock.address);
+  const timelock = await new MidasAccessControlTimelockControllerTest__factory(
+    owner,
+  ).deploy();
+  await timelock.initialize(timelockManager.address);
+
+  const pauseManager = await new MidasPauseManagerTest__factory(owner).deploy();
+  await pauseManager.initialize(accessControl.address);
+
+  await accessControl.initializeRelationships(
+    timelockManager.address,
+    pauseManager.address,
+  );
+  await timelockManager.initializeTimelock(timelock.address);
 
   const mockedSanctionsList = await new SanctionsListMock__factory(
     owner,
@@ -956,6 +971,8 @@ export const defaultDeploy = async () => {
     mTokenLoanToUsdDataFeed,
     mockedAggregatorMTokenLoan,
     timelock,
+    timelockManager,
+    pauseManager,
   };
 };
 

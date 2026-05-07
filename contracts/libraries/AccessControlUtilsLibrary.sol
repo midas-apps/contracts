@@ -3,6 +3,7 @@
 pragma solidity 0.8.34;
 
 import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
+import {IMidasTimelockManager} from "../interfaces/IMidasTimelockManager.sol";
 
 /**
  * @title AccessControlUtilsLibrary
@@ -33,10 +34,14 @@ library AccessControlUtilsLibrary {
     function validateFunctionAccessWithTimelock(
         IMidasAccessControl accessControl,
         bytes32 contractAdminRole,
-        address accountToCheck
+        address accountToCheck,
+        bool validateFunctionRole
     ) internal view {
-        bool isPreflight = accountToCheck == address(accessControl);
-        bool isTimelock = accountToCheck == accessControl.timelock();
+        IMidasTimelockManager timelockManager = IMidasTimelockManager(
+            accessControl.timelockManager()
+        );
+        bool isPreflight = accountToCheck == address(timelockManager);
+        bool isTimelock = accountToCheck == timelockManager.timelock();
 
         address account;
 
@@ -49,19 +54,21 @@ library AccessControlUtilsLibrary {
         bytes32 roleUsed = validateFunctionAccess(
             accessControl,
             contractAdminRole,
-            account
+            account,
+            validateFunctionRole
         );
 
         if (isPreflight) {
-            revert IMidasAccessControl.RolePreflightSucceeded(roleUsed);
+            revert IMidasTimelockManager.RolePreflightSucceeded(roleUsed);
         }
 
-        (bool ready, bool timelocked) = accessControl.isFunctionReadyToExecute(
-            roleUsed,
-            address(this),
-            msg.data,
-            account
-        );
+        (bool ready, bool timelocked) = timelockManager
+            .isFunctionReadyToExecute(
+                roleUsed,
+                address(this),
+                msg.data,
+                account
+            );
 
         if (!ready) {
             revert FunctionNotReady(roleUsed, msg.sig);
@@ -69,7 +76,7 @@ library AccessControlUtilsLibrary {
 
         if (timelocked) {
             require(
-                accountToCheck == accessControl.timelock(),
+                isTimelock,
                 SenderIsNotTimelock(roleUsed, msg.sig, accountToCheck)
             );
         }
@@ -99,7 +106,8 @@ library AccessControlUtilsLibrary {
     function validateFunctionAccess(
         IMidasAccessControl accessControl,
         bytes32 contractAdminRole,
-        address account
+        address account,
+        bool validateFunctionRole
     )
         internal
         view
@@ -111,12 +119,14 @@ library AccessControlUtilsLibrary {
             return contractAdminRole;
         }
 
-        (bytes32 key, bool hasPermission) = hasFunctionPermission(
-            accessControl,
-            contractAdminRole,
-            msg.sig,
-            account
-        );
+        (bytes32 key, bool hasPermission) = validateFunctionRole
+            ? hasFunctionPermission(
+                accessControl,
+                contractAdminRole,
+                msg.sig,
+                account
+            )
+            : (bytes32(0), false);
 
         if (hasPermission) {
             return key;

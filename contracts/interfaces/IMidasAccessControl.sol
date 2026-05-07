@@ -4,8 +4,6 @@ pragma solidity 0.8.34;
 import {IAccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
 
 interface IMidasAccessControl is IAccessControlUpgradeable {
-    error RolePreflightSucceeded(bytes32 role);
-
     /**
      * @notice Set function access admin role enabled params
      */
@@ -164,22 +162,6 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
         returns (bool);
 
     /**
-     * @notice Whether the function is ready to execute
-     * @param targetRole the role of the target
-     * @param target the target address
-     * @param data the data to execute the function
-     * @param originalCaller the original caller of the function
-     * @return ready whether the function can be executed
-     * @return timelocked whether the function will be called via timelock
-     */
-    function isFunctionReadyToExecute(
-        bytes32 targetRole,
-        address target,
-        bytes calldata data,
-        address originalCaller
-    ) external view returns (bool ready, bool timelocked);
-
-    /**
      * @notice calculates the base key for function permission mappings
      * @param functionAccessAdminRole OZ role
      * @param targetContract scoped contract
@@ -193,8 +175,14 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
     ) external pure returns (bytes32);
 
     /**
-     * @notice address of the timelock controller
-     * @return timelock address of the timelock controller
+     * @notice address of the timelock manager
+     * @return timelockManager address of the timelock manager
      */
-    function timelock() external view returns (address);
+    function timelockManager() external view returns (address);
+
+    /**
+     * @notice address of the pause manager
+     * @return pauseManager address of the pause manager
+     */
+    function pauseManager() external view returns (address);
 }

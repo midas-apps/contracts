@@ -22,11 +22,6 @@ contract MidasAccessControl is
     MidasAccessControlRoles
 {
     /**
-     * @notice role that can execute timelock transactions
-     */
-    bytes32 public constant EXECUTOR_ROLE = keccak256("EXECUTOR_ROLE");
-
-    /**
      * @dev Only when true may holders of `functionAccessAdminRole` manage grant operators for that role's scopes.
      */
     mapping(bytes32 => bool) public functionAccessAdminRoleEnabled;
@@ -39,14 +34,14 @@ contract MidasAccessControl is
     mapping(bytes32 => mapping(address => bool)) private _functionPermissions;
 
     /**
-     * @notice timelock delay for each role
+     * @notice address of MidasAccessControlTimelockController contract
      */
-    mapping(bytes32 => uint256) public roleTimelocks;
+    address public timelockManager;
 
     /**
      * @notice address of MidasAccessControlTimelockController contract
      */
-    address public timelock;
+    address public pauseManager;
 
     /**
      * @dev leaving a storage gap for futures updates
@@ -62,16 +57,30 @@ contract MidasAccessControl is
     }
 
     /**
-     * @notice initializes timelock. Moved to a searate initializer
+     * @notice initializes timelock manager. Moved to a searate initializer
      * as its 2-way dependency between the contracts.
      * @dev can be called only by DEFAULT_ADMIN_ROLE
-     * @param _timelock address of the timelock controller
+     * @param _timelockManager address of the timelock manager
+     * @param _pauseManager address of the pause manager
      */
-    function initializeTimelock(address _timelock) external {
+    function initializeRelationships(
+        address _timelockManager,
+        address _pauseManager
+    ) external {
         _checkRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        require(timelock == address(0), "MAC: timelock already set");
-        require(_timelock != address(0), "MAC: invalid timelock");
-        timelock = _timelock;
+        require(
+            timelockManager == address(0),
+            "MAC: timelock manager already set"
+        );
+        require(
+            _timelockManager != address(0),
+            "MAC: invalid timelock manager"
+        );
+        require(pauseManager == address(0), "MAC: pause manager already set");
+        require(_pauseManager != address(0), "MAC: invalid pause manager");
+
+        timelockManager = _timelockManager;
+        pauseManager = _pauseManager;
     }
 
     /**
@@ -211,16 +220,6 @@ contract MidasAccessControl is
         _setRoleAdmin(role, newAdminRole);
     }
 
-    function setRoleTimelocks(bytes32[] memory roles, uint256[] memory delays)
-        external
-    {
-        // TODO: check the role admin instead of default admin
-        _checkRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        for (uint256 i = 0; i < roles.length; ++i) {
-            roleTimelocks[roles[i]] = delays[i];
-        }
-    }
-
     //solhint-disable disable-next-line
     function renounceRole(bytes32, address)
         public
@@ -278,79 +277,6 @@ contract MidasAccessControl is
     /**
      * @inheritdoc IMidasAccessControl
      */
-    function isFunctionReadyToExecute(
-        bytes32 targetRole,
-        address target,
-        bytes calldata data,
-        address originalCaller
-    ) external view returns (bool ready, bool timelocked) {
-        uint256 delay = roleTimelocks[targetRole];
-
-        TimelockController _timelock = TimelockController(payable(timelock));
-
-        bytes32 operationId = _timelock.hashOperation(
-            target,
-            0,
-            _appendCallerToCalldata(data, originalCaller),
-            bytes32(0),
-            bytes32(0)
-        );
-
-        bool isOperation = _timelock.isOperation(operationId);
-
-        if (!isOperation && delay == 0) {
-            return (true, false);
-        }
-
-        bool isReadyToExecute = _timelock.isOperationReady(operationId);
-
-        if (isReadyToExecute) {
-            return (true, true);
-        } else {
-            return (false, true);
-        }
-    }
-
-    function _appendCallerToCalldata(bytes calldata data, address caller)
-        internal
-        pure
-        returns (bytes memory)
-    {
-        return abi.encodePacked(data, caller);
-    }
-
-    function scheduleTimelockTransactions(
-        address[] calldata targets,
-        bytes[] calldata datas
-    ) external {
-        for (uint256 i = 0; i < targets.length; ++i) {
-            _scheduleTimelockTransaction(targets[i], datas[i]);
-        }
-    }
-
-    function executeTimelockTransaction(
-        address target,
-        bytes calldata data,
-        address originalCaller
-    ) external {
-        require(
-            _msgSender() == originalCaller ||
-                hasRole(EXECUTOR_ROLE, _msgSender()),
-            "MAC: unauthorized"
-        );
-
-        TimelockController(payable(timelock)).execute(
-            target,
-            0,
-            _appendCallerToCalldata(data, originalCaller),
-            bytes32(0),
-            bytes32(0)
-        );
-    }
-
-    /**
-     * @inheritdoc IMidasAccessControl
-     */
     function functionPermissionKey(
         bytes32 functionAccessAdminRole,
         address targetContract,
@@ -364,65 +290,6 @@ contract MidasAccessControl is
                     functionSelector
                 )
             );
-    }
-
-    function _scheduleTimelockTransaction(address target, bytes calldata data)
-        internal
-    {
-        bytes memory dataWithCaller = _appendCallerToCalldata(
-            data,
-            _msgSender()
-        );
-        bytes32 targetRole = _getTargetRole(target, dataWithCaller);
-
-        uint256 delay = roleTimelocks[targetRole];
-
-        require(delay != type(uint256).max, "MAC: no timelock");
-
-        // TODO: replace 3600 with the default delay that is passed in the initializer
-        delay = delay == 0 ? 3600 : (delay == type(uint256).max ? 0 : delay);
-
-        TimelockController(payable(timelock)).schedule(
-            target,
-            0,
-            dataWithCaller,
-            bytes32(0),
-            bytes32(0),
-            delay
-        );
-    }
-
-    function _getTargetRole(address target, bytes memory data)
-        private
-        returns (bytes32)
-    {
-        (bool success, bytes memory err) = target.call(data);
-
-        require(!success, "MAC: expected to revert");
-
-        return _decodePreflightSucceededError(err);
-    }
-
-    function _decodePreflightSucceededError(bytes memory err)
-        private
-        pure
-        returns (bytes32 role)
-    {
-        require(err.length == 36, "MAC: invalid error length");
-
-        bytes4 selector;
-
-        // getting the selector of custom error
-        assembly {
-            selector := mload(add(err, 32))
-        }
-
-        // checking if the error is a RolePreflightSucceeded error
-        require(selector == RolePreflightSucceeded.selector, "MAC: expected");
-
-        assembly {
-            role := mload(add(err, 36))
-        }
     }
 
     /**

@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { BigNumberish, Contract, ethers } from 'ethers';
+import { Contract } from 'ethers';
 
 import {
   Account,
@@ -14,7 +14,6 @@ import {
   Blacklistable,
   Greenlistable,
   MidasAccessControl,
-  MidasAccessControlTimelockController,
 } from '../../typechain-types';
 
 type CommonParamsBlackList = {
@@ -227,112 +226,6 @@ export const unGreenList = async (
       account,
     ),
   ).eq(false);
-};
-
-export const setRoleTimelocksTester = async (
-  { accessControl, owner }: CommonParamsTimelock,
-  roles: string[],
-  delays: BigNumberish[],
-  opt?: OptionalCommonParams,
-) => {
-  const from = opt?.from ?? owner;
-
-  const callFn = accessControl
-    .connect(from)
-    .setRoleTimelocks.bind(this, roles, delays);
-
-  if (await handleRevert(callFn, accessControl, opt)) {
-    return;
-  }
-
-  await expect(callFn()).to.not.reverted;
-
-  for (const [index, role] of roles.entries()) {
-    expect(await accessControl.roleTimelocks(role)).eq(delays[index]);
-  }
-};
-
-type CommonParamsTimelock = {
-  accessControl: MidasAccessControl;
-  timelock: MidasAccessControlTimelockController;
-  owner: SignerWithAddress;
-};
-
-export const scheduleTimelockTransactionTester = async (
-  { accessControl, timelock, owner }: CommonParamsTimelock,
-  target: string,
-  data: string,
-  opt?: OptionalCommonParams,
-) => {
-  const from = opt?.from ?? owner;
-
-  const callFn = accessControl
-    .connect(from)
-    .scheduleTimelockTransactions.bind(this, [target], [data]);
-
-  if (await handleRevert(callFn, accessControl, opt)) {
-    return;
-  }
-
-  const txPromise = callFn();
-  await expect(txPromise).to.not.reverted;
-
-  const calldataWithCaller = ethers.utils.solidityPack(
-    ['bytes', 'address'],
-    [data, from.address],
-  );
-
-  const operationId = await timelock.hashOperation(
-    target,
-    0,
-    calldataWithCaller,
-    ethers.constants.HashZero,
-    ethers.constants.HashZero,
-  );
-
-  expect(await timelock.isOperation(operationId)).to.be.true;
-  expect(await timelock.isOperationReady(operationId)).to.be.false;
-  expect(await timelock.isOperationDone(operationId)).to.be.false;
-  expect(await timelock.isOperationPending(operationId)).to.be.true;
-};
-
-export const executeTimelockTransactionTester = async (
-  { accessControl, timelock, owner }: CommonParamsTimelock,
-  target: string,
-  data: string,
-  originalCaller: string,
-  opt?: OptionalCommonParams,
-) => {
-  const from = opt?.from ?? owner;
-
-  const callFn = accessControl
-    .connect(from)
-    .executeTimelockTransaction.bind(this, target, data, originalCaller);
-
-  if (await handleRevert(callFn, accessControl, opt)) {
-    return;
-  }
-
-  const txPromise = callFn();
-  await expect(txPromise).to.not.reverted;
-
-  const calldataWithCaller = ethers.utils.solidityPack(
-    ['bytes', 'address'],
-    [data, originalCaller],
-  );
-
-  const operationId = await timelock.hashOperation(
-    target,
-    0,
-    calldataWithCaller,
-    ethers.constants.HashZero,
-    ethers.constants.HashZero,
-  );
-
-  expect(await timelock.isOperation(operationId)).to.be.true;
-  expect(await timelock.isOperationReady(operationId)).to.be.false;
-  expect(await timelock.isOperationDone(operationId)).to.be.true;
-  expect(await timelock.isOperationPending(operationId)).to.be.false;
 };
 
 export const setFunctionAccessAdminRoleEnabledTester = async (

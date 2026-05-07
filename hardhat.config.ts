@@ -14,6 +14,7 @@ import 'solidity-docgen';
 import './tasks';
 import '@layerzerolabs/toolbox-hardhat';
 import 'hardhat-tracer';
+import 'hardhat-storage-layout';
 import {
   chainIds,
   ENV,

@@ -32,7 +32,11 @@ contract WithSanctionsListTester is WithSanctionsList {
         view
         override
     {
-        _validateFunctionAccessWithTimelock(sanctionsListAdminRole(), account);
+        _validateFunctionAccessWithTimelock(
+            sanctionsListAdminRole(),
+            account,
+            true
+        );
     }
 
     function _disableInitializers() internal override {}

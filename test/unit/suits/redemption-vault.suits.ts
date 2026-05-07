@@ -25,9 +25,7 @@ import {
 import {
   acErrors,
   blackList,
-  executeTimelockTransactionTester,
   greenList,
-  scheduleTimelockTransactionTester,
   setupVaultScopedFunctionPermission,
 } from '../../common/ac.helpers';
 import {
@@ -79,6 +77,10 @@ import {
   expectedHoldbackPartRateFromAvg,
   setPreferLoanLiquidityTest,
 } from '../../common/redemption-vault.helpers';
+import {
+  executeTimelockTransactionTester,
+  scheduleTimelockTransactionTester,
+} from '../../common/timelock-manager.helpers';
 import { sanctionUser } from '../../common/with-sanctions-list.helpers';
 
 const REDEMPTION_APPROVE_FN_SELECTORS = [
@@ -5843,6 +5845,7 @@ export const redemptionVaultSuits = (
             regularAccounts,
             timelock,
             accessControl,
+            timelockManager,
             owner,
           } = await loadFixture(rvFixture);
 
@@ -5861,6 +5864,7 @@ export const redemptionVaultSuits = (
             {
               accessControl,
               timelock,
+              timelockManager,
               owner,
             },
             redemptionVault.address,
@@ -5873,6 +5877,7 @@ export const redemptionVaultSuits = (
             {
               accessControl,
               timelock,
+              timelockManager,
               owner,
             },
             redemptionVault.address,

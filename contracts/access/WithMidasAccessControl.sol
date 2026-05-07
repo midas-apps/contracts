@@ -90,10 +90,15 @@ abstract contract WithMidasAccessControl is
         require(!accessControl.hasRole(role, account), HasRole(role, account));
     }
 
-    function _validateFunctionAccessWithTimelock(bytes32 role, address account)
-        internal
-        view
-    {
-        accessControl.validateFunctionAccessWithTimelock(role, account);
+    function _validateFunctionAccessWithTimelock(
+        bytes32 role,
+        address account,
+        bool validateFunctionRole
+    ) internal view {
+        accessControl.validateFunctionAccessWithTimelock(
+            role,
+            account,
+            validateFunctionRole
+        );
     }
 }

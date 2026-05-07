@@ -88,10 +88,10 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     uint256[50] private __gap;
 
     /**
-     * @dev checks that msg.sender do have a feedAdminRole() role
+     * @dev checks that msg.sender has access to a function
      */
     modifier onlyAggregatorAdmin() {
-        _onlyRole(feedAdminRole(), msg.sender);
+        _validateFunctionAccessWithTimelock(feedAdminRole(), msg.sender, true);
         _;
     }
 

@@ -8,6 +8,7 @@ import {
   ERC20,
   ERC20Mock,
   IERC20Metadata,
+  MidasPauseManager,
   MTBILL,
   Pausable,
   USTBMock,
@@ -95,15 +96,87 @@ export const getAccount = (account: AccountOrContract) => {
   );
 };
 
-export const pauseVault = async (
-  vault: Pausable,
+type PauseParams = {
+  pauseManager: MidasPauseManager;
+  owner: SignerWithAddress;
+};
+
+export const pauseGlobalTest = async (
+  { pauseManager, owner }: PauseParams,
   opt?: OptionalCommonParams,
 ) => {
-  const [defaultSigner] = await ethers.getSigners();
+  const from = opt?.from ?? owner;
 
   if (
     await handleRevert(
-      vault.connect(opt?.from ?? defaultSigner).pause.bind(this),
+      pauseManager.connect(from).globalPause.bind(this),
+      pauseManager,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  await expect(await pauseManager.connect(from).globalPause()).not.reverted;
+
+  expect(await pauseManager.paused()).eq(true);
+};
+
+export const unpauseGlobalTest = async (
+  { pauseManager, owner }: PauseParams,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+
+  if (
+    await handleRevert(
+      pauseManager.connect(from).globalUnpause.bind(this),
+      pauseManager,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  await expect(await pauseManager.connect(from).globalUnpause()).not.reverted;
+
+  expect(await pauseManager.paused()).eq(false);
+};
+
+export const pauseVault = async (
+  { pauseManager, owner }: PauseParams,
+  vault: Pausable,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+
+  if (
+    await handleRevert(
+      pauseManager.connect(from).pauseContract.bind(this, vault.address),
+      pauseManager,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  await expect(await pauseManager.connect(from).pauseContract(vault.address))
+    .not.reverted;
+
+  expect(await pauseManager.isPaused(vault.address, '0x')).eq(true);
+  expect(await pauseManager.contractPaused(vault.address)).eq(true);
+};
+
+export const unpauseVault = async (
+  { owner, pauseManager }: PauseParams,
+  vault: Pausable,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+
+  if (
+    await handleRevert(
+      pauseManager.connect(from).unpauseContract.bind(this, vault.address),
       vault,
       opt,
     )
@@ -111,27 +184,29 @@ export const pauseVault = async (
     return;
   }
 
-  await expect(await vault.connect(opt?.from ?? defaultSigner).pause()).not
-    .reverted;
+  await expect(await pauseManager.connect(from).unpauseContract(vault.address))
+    .not.reverted;
 
-  expect(await vault.paused()).eq(true);
+  expect(await pauseManager.isPaused(vault.address, '0x')).eq(false);
+  expect(await pauseManager.contractPaused(vault.address)).eq(false);
 };
 
 export const pauseVaultFn = async (
+  { pauseManager, owner }: PauseParams,
   vault: Pausable,
   fnSelector: string | string[],
   opt?: OptionalCommonParams,
 ) => {
-  const [defaultSigner] = await ethers.getSigners();
+  const from = opt?.from ?? owner;
 
   const selectors = Array.isArray(fnSelector) ? fnSelector : [fnSelector];
 
   if (
     await handleRevert(
-      vault
-        .connect(opt?.from ?? defaultSigner)
-        .bulkPauseFn.bind(this, selectors),
-      vault,
+      pauseManager
+        .connect(from)
+        .bulkPauseContractFn.bind(this, vault.address, selectors),
+      pauseManager,
       opt,
     )
   ) {
@@ -139,29 +214,35 @@ export const pauseVaultFn = async (
   }
 
   await expect(
-    await vault.connect(opt?.from ?? defaultSigner).bulkPauseFn(selectors),
+    await pauseManager
+      .connect(from)
+      .bulkPauseContractFn(vault.address, selectors),
   ).not.reverted;
 
   for (const fnSelector of selectors) {
-    expect(await vault.fnPaused(fnSelector)).eq(true);
+    expect(await pauseManager.isPaused(vault.address, fnSelector)).eq(true);
+    expect(await pauseManager.contractFnPaused(vault.address, fnSelector)).eq(
+      true,
+    );
   }
 };
 
 export const unpauseVaultFn = async (
+  { pauseManager, owner }: PauseParams,
   vault: Pausable,
   fnSelector: string | string[],
   opt?: OptionalCommonParams,
 ) => {
-  const [defaultSigner] = await ethers.getSigners();
+  const from = opt?.from ?? owner;
 
   const selectors = Array.isArray(fnSelector) ? fnSelector : [fnSelector];
 
   if (
     await handleRevert(
-      vault
-        .connect(opt?.from ?? defaultSigner)
-        .bulkUnpauseFn.bind(this, selectors),
-      vault,
+      pauseManager
+        .connect(from)
+        .bulkUnpauseContractFn.bind(this, vault.address, selectors),
+      pauseManager,
       opt,
     )
   ) {
@@ -169,34 +250,17 @@ export const unpauseVaultFn = async (
   }
 
   await expect(
-    await vault.connect(opt?.from ?? defaultSigner).bulkUnpauseFn(selectors),
+    await pauseManager
+      .connect(from)
+      .bulkUnpauseContractFn(vault.address, selectors),
   ).not.reverted;
 
   for (const fnSelector of selectors) {
-    expect(await vault.fnPaused(fnSelector)).eq(false);
+    expect(await pauseManager.isPaused(vault.address, fnSelector)).eq(false);
+    expect(await pauseManager.contractFnPaused(vault.address, fnSelector)).eq(
+      false,
+    );
   }
-};
-
-export const unpauseVault = async (
-  vault: Pausable,
-  opt?: OptionalCommonParams,
-) => {
-  const [defaultSigner] = await ethers.getSigners();
-
-  if (
-    await handleRevert(
-      vault.connect(opt?.from ?? defaultSigner).unpause.bind(this),
-      vault,
-      opt,
-    )
-  ) {
-    return;
-  }
-
-  await expect(await vault.connect(opt?.from ?? defaultSigner).unpause()).not
-    .reverted;
-
-  expect(await vault.paused()).eq(false);
 };
 
 export const mintToken = async (

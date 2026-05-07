@@ -18,7 +18,7 @@ import {Blacklistable} from "../access/Blacklistable.sol";
 import {WithSanctionsList} from "../abstract/WithSanctionsList.sol";
 
 import {DecimalsCorrectionLibrary} from "../libraries/DecimalsCorrectionLibrary.sol";
-import {Pausable} from "../access/Pausable.sol";
+import {Pausable, IPausable} from "../access/Pausable.sol";
 
 /**
  * @title ManageableVault
@@ -149,7 +149,7 @@ abstract contract ManageableVault is
      * and validates if function is not paused
      */
     modifier validateVaultAdminAccess() {
-        _validateVaultAdminAccess(msg.sender, true);
+        _validateVaultAdminAccess(msg.sender);
         _;
     }
 
@@ -171,7 +171,6 @@ abstract contract ManageableVault is
         CommonVaultInitParams calldata _commonVaultInitParams
     ) internal onlyInitializing {
         __WithMidasAccessControl_init(_commonVaultInitParams.ac);
-        __Pausable_init_unchained();
         __WithSanctionsList_init_unchained(
             _commonVaultInitParams.sanctionsList
         );
@@ -493,6 +492,13 @@ abstract contract ManageableVault is
     function vaultRole() public view virtual returns (bytes32);
 
     /**
+     * @inheritdoc IPausable
+     */
+    function pauserRole() external view override returns (bytes32, bool) {
+        return (vaultRole(), true);
+    }
+
+    /**
      * @dev set minimum/maximum instant fee
      * @param newMinInstantFee new minimum instant fee
      * @param newMaxInstantFee new maximum instant fee
@@ -784,7 +790,7 @@ abstract contract ManageableVault is
         onlyNotSanctioned(user)
     {
         if (!validatePaused) return;
-        _requireFnNotPaused(msg.sig, true);
+        _requireFnNotPaused(msg.sig);
     }
 
     /**
@@ -807,23 +813,10 @@ abstract contract ManageableVault is
      * @dev validate vault admin access for `account`
      * and validates if function is not paused
      * @param account address to check
-     * @param checkPaused if true, validates if function is not paused
      */
-    function _validateVaultAdminAccess(address account, bool checkPaused)
-        private
-        view
-    {
-        if (checkPaused) {
-            _requireFnNotPaused(msg.sig, false);
-        }
-        _validateFunctionAccessWithTimelock(vaultRole(), account);
-    }
-
-    /**
-     * @inheritdoc Pausable
-     */
-    function _validatePauseAdminAccess(address account) internal view override {
-        _validateVaultAdminAccess(account, false);
+    function _validateVaultAdminAccess(address account) private view {
+        _requireFnNotPaused(msg.sig);
+        _validateFunctionAccessWithTimelock(vaultRole(), account, true);
     }
 
     /**
@@ -834,7 +827,7 @@ abstract contract ManageableVault is
         view
         override
     {
-        _validateVaultAdminAccess(account, true);
+        _validateVaultAdminAccess(account);
     }
 
     /**
@@ -845,7 +838,7 @@ abstract contract ManageableVault is
         view
         override
     {
-        _validateVaultAdminAccess(account, true);
+        _validateVaultAdminAccess(account);
     }
 
     /**

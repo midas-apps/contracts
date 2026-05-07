@@ -35,6 +35,15 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     // FIXME: update gap
     uint256[50] private __gap;
 
+    modifier onlyTokenAdmin(bytes32 role, bool validateFunctionRole) {
+        _validateFunctionAccessWithTimelock(
+            role,
+            msg.sender,
+            validateFunctionRole
+        );
+        _;
+    }
+
     /**
      * @notice upgradeable pattern contract`s initializer
      * @param _accessControl address of MidasAccessControll contract
@@ -50,7 +59,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     function mint(address to, uint256 amount)
         external
-        onlyRole(_minterRole(), msg.sender)
+        onlyTokenAdmin(_minterRole(), false)
     {
         _mint(to, amount);
     }
@@ -60,7 +69,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     function burn(address from, uint256 amount)
         external
-        onlyRole(_burnerRole(), msg.sender)
+        onlyTokenAdmin(_burnerRole(), false)
     {
         _burn(from, amount);
     }
@@ -68,14 +77,14 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     /**
      * @inheritdoc IMToken
      */
-    function pause() external override onlyRole(_pauserRole(), msg.sender) {
+    function pause() external override onlyTokenAdmin(_pauserRole(), false) {
         _pause();
     }
 
     /**
      * @inheritdoc IMToken
      */
-    function unpause() external override onlyRole(_pauserRole(), msg.sender) {
+    function unpause() external override onlyTokenAdmin(_pauserRole(), false) {
         _unpause();
     }
 
@@ -84,7 +93,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     function setMetadata(bytes32 key, bytes memory data)
         external
-        onlyRole(_DEFAULT_ADMIN_ROLE, msg.sender)
+        onlyTokenAdmin(_DEFAULT_ADMIN_ROLE, true)
     {
         metadata[key] = data;
     }
@@ -95,7 +104,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     function increaseMintRateLimit(uint256 window, uint256 newLimit)
         external
-        onlyRole(_DEFAULT_ADMIN_ROLE, msg.sender)
+        onlyTokenAdmin(_rateLimitManagerRole(), true)
     {
         _setMintRateLimitConfig(window, newLimit, true);
     }
@@ -106,7 +115,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     function decreaseMintRateLimit(uint256 window, uint256 newLimit)
         external
-        onlyRole(_DEFAULT_ADMIN_ROLE, msg.sender)
+        onlyTokenAdmin(_rateLimitManagerRole(), true)
     {
         _setMintRateLimitConfig(window, newLimit, false);
     }
@@ -238,4 +247,11 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      * @dev AC role, owner of which can pause mToken token
      */
     function _pauserRole() internal pure virtual returns (bytes32);
+
+    /**
+     * @dev AC role, owner of which can manage mint rate limit
+     */
+    function _rateLimitManagerRole() internal pure virtual returns (bytes32) {
+        return _DEFAULT_ADMIN_ROLE;
+    }
 }

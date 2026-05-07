@@ -6192,6 +6192,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"console-table-printer@npm:^2.9.0":
+  version: 2.15.0
+  resolution: "console-table-printer@npm:2.15.0"
+  dependencies:
+    simple-wcswidth: "npm:^1.1.2"
+  checksum: 10c0/ec63b6c7b7b7d6fe78087e5960743710f6f8e9dc239daf8ce625b305056fc39d891f5d6f7827117e47917f9f97f0e5e4352e9eb397ca5a0b381a05de6d382ea2
+  languageName: node
+  linkType: hard
+
 "consolidate@npm:^0.15.1":
   version: 0.15.1
   resolution: "consolidate@npm:0.15.1"
@@ -9634,6 +9643,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"hardhat-storage-layout@npm:0.1.7":
+  version: 0.1.7
+  resolution: "hardhat-storage-layout@npm:0.1.7"
+  dependencies:
+    console-table-printer: "npm:^2.9.0"
+  peerDependencies:
+    hardhat: ^2.0.3
+  checksum: 10c0/257b52a079183953d079ae221d05551391ff57adbad1ba033a3ccfa1b9df495ddd29285e67a7d03da484aa69f65850feb64a9bd7e37f53c549efd3833ed8b38c
+  languageName: node
+  linkType: hard
+
 "hardhat-tracer@npm:3.4.0":
   version: 3.4.0
   resolution: "hardhat-tracer@npm:3.4.0"
@@ -11801,6 +11821,7 @@ __metadata:
     hardhat-deploy: "npm:0.11.19"
     hardhat-docgen: "npm:1.3.0"
     hardhat-gas-reporter: "npm:1.0.9"
+    hardhat-storage-layout: "npm:0.1.7"
     hardhat-tracer: "npm:3.4.0"
     husky: "npm:9.1.7"
     lint-staged: "npm:16.2.6"
@@ -15088,6 +15109,13 @@ __metadata:
     once: "npm:^1.3.1"
     simple-concat: "npm:^1.0.0"
   checksum: 10c0/12747f008848e573a3d09c88d15fae37d4a359d1ef56a0bed36713952b1d236a3829cd77e862816cf32c7779f6800a0c4076ba7f71fe3684127eaccffb831aba
+  languageName: node
+  linkType: hard
+
+"simple-wcswidth@npm:^1.1.2":
+  version: 1.1.2
+  resolution: "simple-wcswidth@npm:1.1.2"
+  checksum: 10c0/0db23ffef39d81a018a2354d64db1d08a44123c54263e48173992c61d808aaa8b58e5651d424e8c275589671f35e9094ac6fa2bbf2c98771b1bae9e007e611dd
   languageName: node
   linkType: hard
 
