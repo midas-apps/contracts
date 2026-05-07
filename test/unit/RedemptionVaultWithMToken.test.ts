@@ -251,9 +251,14 @@ redemptionVaultSuits(
         });
 
         it('should fail: when function is paused', async () => {
-          const { redemptionVaultWithMToken, owner, regularAccounts } =
-            await loadFixture(defaultDeploy);
+          const {
+            redemptionVaultWithMToken,
+            owner,
+            regularAccounts,
+            pauseManager,
+          } = await loadFixture(defaultDeploy);
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVaultWithMToken,
             encodeFnSelector('setRedemptionVault(address)'),
           );

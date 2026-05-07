@@ -54,6 +54,7 @@ contract MidasPauseManager is
         external
         onlyPausableContractAdmin(contractAddr)
     {
+        require(!contractPaused[contractAddr], SameBoolValue(true));
         contractPaused[contractAddr] = true;
         emit PauseFnStatusChange(msg.sender, contractAddr, msg.sig, true);
     }
@@ -65,8 +66,9 @@ contract MidasPauseManager is
         external
         onlyPausableContractAdmin(contractAddr)
     {
+        require(contractPaused[contractAddr], SameBoolValue(false));
         contractPaused[contractAddr] = false;
-        emit PauseFnStatusChange(msg.sender, contractAddr, msg.sig, true);
+        emit PauseFnStatusChange(msg.sender, contractAddr, msg.sig, false);
     }
 
     /**
@@ -78,6 +80,11 @@ contract MidasPauseManager is
     ) external onlyPausableContractAdmin(contractAddr) {
         for (uint256 i = 0; i < selectors.length; ++i) {
             bytes4 selector = selectors[i];
+            require(
+                !contractFnPaused[contractAddr][selector],
+                SameBoolValue(true)
+            );
+
             contractFnPaused[contractAddr][selector] = true;
             emit PauseFnStatusChange(msg.sender, contractAddr, selector, true);
         }
@@ -92,6 +99,10 @@ contract MidasPauseManager is
     ) external onlyPausableContractAdmin(contractAddr) {
         for (uint256 i = 0; i < selectors.length; ++i) {
             bytes4 selector = selectors[i];
+            require(
+                contractFnPaused[contractAddr][selector],
+                SameBoolValue(false)
+            );
             contractFnPaused[contractAddr][selector] = false;
             emit PauseFnStatusChange(msg.sender, contractAddr, selector, false);
         }

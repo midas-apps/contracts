@@ -17,20 +17,10 @@ abstract contract WithMidasAccessControl is
 {
     using AccessControlUtilsLibrary for IMidasAccessControl;
 
+    error SameBoolValue(bool value);
     error InvalidAddress(address addr);
     error HasRole(bytes32 role, address account);
     error HasntRole(bytes32 role, address account);
-    error NoFunctionPermission(
-        bytes32 roleUsed,
-        bytes4 functionSelector,
-        address account
-    );
-    error FunctionNotReady(bytes32 roleUsed, bytes4 functionSelector);
-    error SenderIsNotTimelock(
-        bytes32 roleUsed,
-        bytes4 functionSelector,
-        address sender
-    );
 
     /**
      * @notice admin role

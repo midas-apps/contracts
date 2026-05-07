@@ -95,6 +95,9 @@ const REDEMPTION_APPROVE_FN_SELECTORS = [
   encodeFnSelector('safeBulkApproveRequestAvgRate(uint256[],uint256)'),
 ] as const;
 
+let pauseManager: DefaultFixture['pauseManager'];
+let owner: DefaultFixture['owner'];
+
 const pauseOtherRedemptionApproveFns = async (
   redemptionVault: Pausable,
   exceptSelector: (typeof REDEMPTION_APPROVE_FN_SELECTORS)[number],
@@ -103,7 +106,7 @@ const pauseOtherRedemptionApproveFns = async (
     if (selector === exceptSelector) {
       continue;
     }
-    await pauseVaultFn(redemptionVault, selector);
+    await pauseVaultFn({ pauseManager, owner }, redemptionVault, selector);
   }
 };
 
@@ -132,6 +135,7 @@ export const redemptionVaultSuits = (
 ) => {
   const loadRvFixture = async () => {
     const fixture = await loadFixture(rvFixture);
+    ({ pauseManager, owner } = fixture);
 
     const { createNew, key } = rvConfifg;
     return {
@@ -592,7 +596,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
           } = await loadRvFixture();
 
-          await pauseVault(redemptionVault);
+          await pauseVault({ pauseManager, owner }, redemptionVault);
           await mintToken(stableCoins.dai, redemptionVault, 100);
           await mintToken(mTBILL, regularAccounts[0], 100);
           await approveBase18(
@@ -630,7 +634,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
           } = await loadRvFixture();
 
-          await pauseVault(redemptionVault);
+          await pauseVault({ pauseManager, owner }, redemptionVault);
 
           await mintToken(stableCoins.dai, redemptionVault, 100);
           await mintToken(mTBILL, owner, 100);
@@ -832,7 +836,11 @@ export const redemptionVaultSuits = (
           const selector = encodeFnSelector(
             'redeemInstant(address,uint256,uint256)',
           );
-          await pauseVaultFn(redemptionVault, selector);
+          await pauseVaultFn(
+            { pauseManager, owner },
+            redemptionVault,
+            selector,
+          );
           await redeemInstantTest(
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             stableCoins.dai,
@@ -1720,7 +1728,11 @@ export const redemptionVaultSuits = (
           const selector = encodeFnSelector(
             'redeemInstant(address,uint256,uint256,address)',
           );
-          await pauseVaultFn(redemptionVault, selector);
+          await pauseVaultFn(
+            { pauseManager, owner },
+            redemptionVault,
+            selector,
+          );
           await redeemInstantTest(
             {
               redemptionVault,
@@ -3147,6 +3159,7 @@ export const redemptionVaultSuits = (
           } = await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('redeemInstant(address,uint256,uint256)'),
           );
@@ -3219,6 +3232,7 @@ export const redemptionVaultSuits = (
           } = await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('redeemInstant(address,uint256,uint256,address)'),
           );
@@ -3309,6 +3323,7 @@ export const redemptionVaultSuits = (
             await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('setTokensReceiver(address)'),
           );
@@ -3400,6 +3415,7 @@ export const redemptionVaultSuits = (
           const { owner, redemptionVault } = await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('setMinAmount(uint256)'),
           );
@@ -3469,14 +3485,23 @@ export const redemptionVaultSuits = (
           const pauseFnSelector = encodeFnSelector('pauseFn(bytes4)');
           const otherSelector = encodeFnSelector('setMinAmount(uint256)');
 
-          await pauseVaultFn(redemptionVault, pauseFnSelector);
-          expect(await redemptionVault.fnPaused(pauseFnSelector)).eq(true);
+          await pauseVaultFn(
+            { pauseManager, owner },
+            redemptionVault,
+            pauseFnSelector,
+          );
 
-          await pauseVaultFn(redemptionVault, otherSelector);
-          expect(await redemptionVault.fnPaused(otherSelector)).eq(true);
+          await pauseVaultFn(
+            { pauseManager, owner },
+            redemptionVault,
+            otherSelector,
+          );
 
-          await unpauseVaultFn(redemptionVault, otherSelector);
-          expect(await redemptionVault.fnPaused(otherSelector)).eq(false);
+          await unpauseVaultFn(
+            { pauseManager, owner },
+            redemptionVault,
+            otherSelector,
+          );
         });
       });
 
@@ -3511,6 +3536,7 @@ export const redemptionVaultSuits = (
             await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('setFeeReceiver(address)'),
           );
@@ -3610,6 +3636,7 @@ export const redemptionVaultSuits = (
           const { owner, redemptionVault } = await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('setGreenlistEnable(bool)'),
           );
@@ -3717,6 +3744,7 @@ export const redemptionVaultSuits = (
           const { owner, redemptionVault } = await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('setInstantLimitConfig(uint256,uint256)'),
           );
@@ -3853,6 +3881,7 @@ export const redemptionVaultSuits = (
           );
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('removeInstantLimitConfig(uint256)'),
           );
@@ -4126,6 +4155,7 @@ export const redemptionVaultSuits = (
             await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector(
               'addPaymentToken(address,address,uint256,uint256,bool)',
@@ -4261,6 +4291,7 @@ export const redemptionVaultSuits = (
           const { redemptionVault, owner } = await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('addWaivedFeeAccount(address)'),
           );
@@ -4379,6 +4410,7 @@ export const redemptionVaultSuits = (
           );
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('removeWaivedFeeAccount(address)'),
           );
@@ -4492,6 +4524,7 @@ export const redemptionVaultSuits = (
           const { redemptionVault, owner } = await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('setInstantFee(uint256)'),
           );
@@ -4611,6 +4644,7 @@ export const redemptionVaultSuits = (
           const { redemptionVault, owner } = await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('setMinMaxInstantFee(uint64,uint64)'),
           );
@@ -4731,6 +4765,7 @@ export const redemptionVaultSuits = (
           const { redemptionVault, owner } = await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('setVariationTolerance(uint256)'),
           );
@@ -4840,6 +4875,7 @@ export const redemptionVaultSuits = (
           const { redemptionVault, owner } = await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('setRequestRedeemer(address)'),
           );
@@ -4941,6 +4977,7 @@ export const redemptionVaultSuits = (
           const { redemptionVault, owner } = await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('setLoanLp(address)'),
           );
@@ -5041,6 +5078,7 @@ export const redemptionVaultSuits = (
           const { redemptionVault, owner } = await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('setLoanLpFeeReceiver(address)'),
           );
@@ -5140,6 +5178,7 @@ export const redemptionVaultSuits = (
             await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('setLoanRepaymentAddress(address)'),
           );
@@ -5239,6 +5278,7 @@ export const redemptionVaultSuits = (
             await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('setLoanSwapperVault(address)'),
           );
@@ -5339,6 +5379,7 @@ export const redemptionVaultSuits = (
           const { redemptionVault, owner } = await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('setMaxLoanApr(uint64)'),
           );
@@ -5421,6 +5462,7 @@ export const redemptionVaultSuits = (
           const { redemptionVault, owner } = await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('setPreferLoanLiquidity(bool)'),
           );
@@ -5592,6 +5634,7 @@ export const redemptionVaultSuits = (
           );
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('removePaymentToken(address)'),
           );
@@ -5726,6 +5769,7 @@ export const redemptionVaultSuits = (
           const { redemptionVault, stableCoins, owner } = await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('withdrawToken(address,uint256)'),
           );
@@ -5914,6 +5958,7 @@ export const redemptionVaultSuits = (
           const { redemptionVault, regularAccounts } = await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('freeFromMinAmount(address,bool)'),
           );
@@ -6067,6 +6112,7 @@ export const redemptionVaultSuits = (
           );
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('changeTokenAllowance(address,uint256)'),
           );
@@ -6244,6 +6290,7 @@ export const redemptionVaultSuits = (
           );
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('changeTokenFee(address,uint256)'),
           );
@@ -6776,7 +6823,11 @@ export const redemptionVaultSuits = (
             true,
           );
           const selector = encodeFnSelector('redeemRequest(address,uint256)');
-          await pauseVaultFn(redemptionVault, selector);
+          await pauseVaultFn(
+            { pauseManager, owner },
+            redemptionVault,
+            selector,
+          );
           await redeemRequestTest(
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             stableCoins.dai,
@@ -7030,7 +7081,11 @@ export const redemptionVaultSuits = (
           const selector = encodeFnSelector(
             'redeemRequest(address,uint256,address)',
           );
-          await pauseVaultFn(redemptionVault, selector);
+          await pauseVaultFn(
+            { pauseManager, owner },
+            redemptionVault,
+            selector,
+          );
           await redeemRequestTest(
             {
               redemptionVault,
@@ -7537,6 +7592,7 @@ export const redemptionVaultSuits = (
           } = await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('redeemRequest(address,uint256)'),
           );
@@ -7579,6 +7635,7 @@ export const redemptionVaultSuits = (
           } = await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('redeemRequest(address,uint256,address)'),
           );
@@ -7637,6 +7694,7 @@ export const redemptionVaultSuits = (
             await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('approveRequest(uint256,uint256)'),
           );
@@ -7902,6 +7960,7 @@ export const redemptionVaultSuits = (
             await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('safeApproveRequest(uint256,uint256)'),
           );
@@ -8224,6 +8283,7 @@ export const redemptionVaultSuits = (
             await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('approveRequestAvgRate(uint256,uint256)'),
           );
@@ -8686,6 +8746,7 @@ export const redemptionVaultSuits = (
             await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('safeApproveRequestAvgRate(uint256,uint256)'),
           );
@@ -9335,6 +9396,7 @@ export const redemptionVaultSuits = (
             await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('safeBulkApproveRequestAtSavedRate(uint256[])'),
           );
@@ -9944,6 +10006,7 @@ export const redemptionVaultSuits = (
             await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('safeBulkApproveRequest(uint256[],uint256)'),
           );
@@ -10739,6 +10802,7 @@ export const redemptionVaultSuits = (
             await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('safeBulkApproveRequest(uint256[])'),
           );
@@ -11642,6 +11706,7 @@ export const redemptionVaultSuits = (
             await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector(
               'safeBulkApproveRequestAvgRate(uint256[],uint256)',
@@ -12711,6 +12776,7 @@ export const redemptionVaultSuits = (
             await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('safeBulkApproveRequestAvgRate(uint256[])'),
           );
@@ -13933,6 +13999,7 @@ export const redemptionVaultSuits = (
             await loadRvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVault,
             encodeFnSelector('rejectRequest(uint256)'),
           );
@@ -14074,7 +14141,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
           } = await loadRvFixture();
 
-          await pauseVault(redemptionVault);
+          await pauseVault({ pauseManager, owner }, redemptionVault);
           await mintToken(stableCoins.dai, redemptionVault, 100);
           await mintToken(mTBILL, regularAccounts[0], 100);
           await approveBase18(
@@ -14112,7 +14179,7 @@ export const redemptionVaultSuits = (
             mTokenToUsdDataFeed,
           } = await loadRvFixture();
 
-          await pauseVault(redemptionVault);
+          await pauseVault({ pauseManager, owner }, redemptionVault);
 
           await mintToken(stableCoins.dai, redemptionVault, 1000);
           await mintToken(mTBILL, owner, 100);
@@ -14346,6 +14413,7 @@ export const redemptionVaultSuits = (
             const { redemptionVault, owner, mTBILL } = fixture;
 
             await pauseVaultFn(
+              { pauseManager, owner },
               redemptionVault,
               encodeFnSelector('bulkRepayLpLoanRequest(uint256[],uint64)'),
             );
@@ -14999,6 +15067,7 @@ export const redemptionVaultSuits = (
             const { redemptionVault, owner, mTBILL } = fixture;
 
             await pauseVaultFn(
+              { pauseManager, owner },
               redemptionVault,
               encodeFnSelector('cancelLpLoanRequest(uint256)'),
             );

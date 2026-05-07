@@ -130,6 +130,7 @@ redemptionVaultSuits(
           } = await loadFixture(defaultDeploy);
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVaultWithMorpho,
             encodeFnSelector('setMorphoVault(address,address)'),
           );
@@ -201,6 +202,7 @@ redemptionVaultSuits(
             await loadFixture(defaultDeploy);
 
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVaultWithMorpho,
             encodeFnSelector('removeMorphoVault(address)'),
           );

@@ -81,6 +81,9 @@ const REDEMPTION_APPROVE_FN_SELECTORS = [
   encodeFnSelector('safeBulkApproveRequestAvgRate(uint256[],uint256)'),
 ] as const;
 
+let pauseManager: DefaultFixture['pauseManager'];
+let owner: DefaultFixture['owner'];
+
 const pauseOtherDepositApproveFns = async (
   depositVault: Pausable,
   exceptSelector: (typeof REDEMPTION_APPROVE_FN_SELECTORS)[number],
@@ -89,7 +92,7 @@ const pauseOtherDepositApproveFns = async (
     if (selector === exceptSelector) {
       continue;
     }
-    await pauseVaultFn(depositVault, selector);
+    await pauseVaultFn({ pauseManager, owner }, depositVault, selector);
   }
 };
 export const depositVaultSuits = (
@@ -117,6 +120,7 @@ export const depositVaultSuits = (
 ) => {
   const loadDvFixture = async () => {
     const fixture = await loadFixture(dvFixture);
+    ({ pauseManager, owner } = fixture);
 
     const { createNew, key } = dvConfifg;
     return {
@@ -148,8 +152,6 @@ export const depositVaultSuits = (
       expect(await depositVault.mToken()).eq(mTBILL.address);
 
       expect(await depositVault.ONE_HUNDRED_PERCENT()).eq('10000');
-
-      expect(await depositVault.paused()).eq(false);
 
       expect(await depositVault.tokensReceiver()).eq(tokensReceiver.address);
       expect(await depositVault.feeReceiver()).eq(feeReceiver.address);
@@ -614,6 +616,7 @@ export const depositVaultSuits = (
           const { owner, depositVault } = await loadDvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('setMinMTokenAmountForFirstDeposit(uint256)'),
           );
@@ -691,6 +694,7 @@ export const depositVaultSuits = (
           const { owner, depositVault } = await loadDvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('setMaxSupplyCap(uint256)'),
           );
@@ -768,6 +772,7 @@ export const depositVaultSuits = (
           const { owner, depositVault } = await loadDvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('setMinAmount(uint256)'),
           );
@@ -832,14 +837,23 @@ export const depositVaultSuits = (
           const pauseFnSelector = encodeFnSelector('pauseFn(bytes4)');
           const otherSelector = encodeFnSelector('setMinAmount(uint256)');
 
-          await pauseVaultFn(depositVault, pauseFnSelector);
-          expect(await depositVault.fnPaused(pauseFnSelector)).eq(true);
+          await pauseVaultFn(
+            { pauseManager, owner },
+            depositVault,
+            pauseFnSelector,
+          );
 
-          await pauseVaultFn(depositVault, otherSelector);
-          expect(await depositVault.fnPaused(otherSelector)).eq(true);
+          await pauseVaultFn(
+            { pauseManager, owner },
+            depositVault,
+            otherSelector,
+          );
 
-          await unpauseVaultFn(depositVault, otherSelector);
-          expect(await depositVault.fnPaused(otherSelector)).eq(false);
+          await unpauseVaultFn(
+            { pauseManager, owner },
+            depositVault,
+            otherSelector,
+          );
         });
       });
 
@@ -879,6 +893,7 @@ export const depositVaultSuits = (
           const { owner, depositVault } = await loadDvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('setInstantLimitConfig(uint256,uint256)'),
           );
@@ -1009,6 +1024,7 @@ export const depositVaultSuits = (
           );
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('removeInstantLimitConfig(uint256)'),
           );
@@ -1165,6 +1181,7 @@ export const depositVaultSuits = (
           const { owner, depositVault } = await loadDvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('setGreenlistEnable(bool)'),
           );
@@ -1352,6 +1369,7 @@ export const depositVaultSuits = (
             await loadDvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector(
               'addPaymentToken(address,address,uint256,uint256,bool)',
@@ -1486,6 +1504,7 @@ export const depositVaultSuits = (
           const { depositVault, owner } = await loadDvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('addWaivedFeeAccount(address)'),
           );
@@ -1598,6 +1617,7 @@ export const depositVaultSuits = (
           );
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('removeWaivedFeeAccount(address)'),
           );
@@ -1705,6 +1725,7 @@ export const depositVaultSuits = (
           const { depositVault, owner } = await loadDvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('setInstantFee(uint256)'),
           );
@@ -1818,6 +1839,7 @@ export const depositVaultSuits = (
           const { depositVault, owner } = await loadDvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('setMinMaxInstantFee(uint64,uint64)'),
           );
@@ -1919,6 +1941,7 @@ export const depositVaultSuits = (
           const { depositVault, owner } = await loadDvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('setVariationTolerance(uint256)'),
           );
@@ -2090,6 +2113,7 @@ export const depositVaultSuits = (
           );
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('removePaymentToken(address)'),
           );
@@ -2223,6 +2247,7 @@ export const depositVaultSuits = (
           const { depositVault, stableCoins, owner } = await loadDvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('withdrawToken(address,uint256)'),
           );
@@ -2344,6 +2369,7 @@ export const depositVaultSuits = (
           const { depositVault, regularAccounts } = await loadDvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('freeFromMinAmount(address,bool)'),
           );
@@ -2611,6 +2637,7 @@ export const depositVaultSuits = (
           );
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('changeTokenAllowance(address,uint256)'),
           );
@@ -2785,6 +2812,7 @@ export const depositVaultSuits = (
           );
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('changeTokenFee(address,uint256)'),
           );
@@ -2959,7 +2987,7 @@ export const depositVaultSuits = (
           const selector = encodeFnSelector(
             'depositInstant(address,uint256,uint256,bytes32)',
           );
-          await pauseVaultFn(depositVault, selector);
+          await pauseVaultFn({ pauseManager, owner }, depositVault, selector);
           await depositInstantTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             stableCoins.dai,
@@ -3799,7 +3827,7 @@ export const depositVaultSuits = (
           const selector = encodeFnSelector(
             'depositInstant(address,uint256,uint256,bytes32,address)',
           );
-          await pauseVaultFn(depositVault, selector);
+          await pauseVaultFn({ pauseManager, owner }, depositVault, selector);
           await depositInstantTest(
             {
               depositVault,
@@ -4462,6 +4490,7 @@ export const depositVaultSuits = (
           } = await loadDvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('depositInstant(address,uint256,uint256,bytes32)'),
           );
@@ -4510,6 +4539,7 @@ export const depositVaultSuits = (
           } = await loadDvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector(
               'depositInstant(address,uint256,uint256,bytes32,address)',
@@ -5118,7 +5148,7 @@ export const depositVaultSuits = (
           const selector = encodeFnSelector(
             'depositRequest(address,uint256,bytes32)',
           );
-          await pauseVaultFn(depositVault, selector);
+          await pauseVaultFn({ pauseManager, owner }, depositVault, selector);
           await depositRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             stableCoins.dai,
@@ -5160,7 +5190,7 @@ export const depositVaultSuits = (
           const selector = encodeFnSelector(
             'depositRequest(address,uint256,bytes32,address)',
           );
-          await pauseVaultFn(depositVault, selector);
+          await pauseVaultFn({ pauseManager, owner }, depositVault, selector);
           await depositRequestTest(
             {
               depositVault,
@@ -5979,6 +6009,7 @@ export const depositVaultSuits = (
           } = await loadDvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('depositRequest(address,uint256,bytes32)'),
           );
@@ -6027,6 +6058,7 @@ export const depositVaultSuits = (
           } = await loadDvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('depositRequest(address,uint256,bytes32,address)'),
           );
@@ -6308,6 +6340,7 @@ export const depositVaultSuits = (
             await loadDvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('approveRequestAvgRate(uint256,uint256)'),
           );
@@ -7218,6 +7251,7 @@ export const depositVaultSuits = (
             await loadDvFixture();
 
           await pauseVaultFn(
+            { pauseManager, owner },
             depositVault,
             encodeFnSelector('safeApproveRequestAvgRate(uint256,uint256)'),
           );
@@ -10476,7 +10510,7 @@ export const depositVaultSuits = (
             mTokenToUsdDataFeed,
           } = await loadDvFixture();
 
-          await pauseVault(depositVault);
+          await pauseVault({ pauseManager, owner }, depositVault);
           await mintToken(stableCoins.dai, regularAccounts[0], 100);
           await approveBase18(
             regularAccounts[0],
@@ -10513,7 +10547,7 @@ export const depositVaultSuits = (
             mTokenToUsdDataFeed,
           } = await loadDvFixture();
 
-          await pauseVault(depositVault);
+          await pauseVault({ pauseManager, owner }, depositVault);
 
           await mintToken(stableCoins.dai, owner, 100);
           await approveBase18(owner, stableCoins.dai, depositVault, 100);
@@ -10692,7 +10726,7 @@ export const depositVaultSuits = (
             mTokenToUsdDataFeed,
           } = await loadDvFixture();
 
-          await pauseVault(depositVault);
+          await pauseVault({ pauseManager, owner }, depositVault);
           await mintToken(stableCoins.dai, regularAccounts[0], 100);
           await approveBase18(
             regularAccounts[0],
@@ -10729,7 +10763,7 @@ export const depositVaultSuits = (
             mTokenToUsdDataFeed,
           } = await loadDvFixture();
 
-          await pauseVault(depositVault);
+          await pauseVault({ pauseManager, owner }, depositVault);
 
           await mintToken(stableCoins.dai, owner, 100);
           await approveBase18(owner, stableCoins.dai, depositVault, 100);

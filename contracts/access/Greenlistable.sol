@@ -10,8 +10,6 @@ import {WithMidasAccessControl} from "./WithMidasAccessControl.sol";
  * @author RedDuck Software
  */
 abstract contract Greenlistable is WithMidasAccessControl {
-    error SameBoolValue(bool value);
-
     /**
      * @notice is greenlist enabled
      */

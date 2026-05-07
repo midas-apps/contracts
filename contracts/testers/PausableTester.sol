@@ -9,6 +9,10 @@ contract PausableTester is Pausable {
         __WithMidasAccessControl_init(_accessControl);
     }
 
+    function requireFnNotPaused(bytes4 fn) external {
+        _requireFnNotPaused(fn);
+    }
+
     /**
      * @inheritdoc IPausable
      */

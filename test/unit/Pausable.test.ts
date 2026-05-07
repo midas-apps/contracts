@@ -10,85 +10,268 @@ import {
 import {
   pauseVault,
   pauseVaultFn,
+  pauseGlobalTest,
   unpauseVault,
   unpauseVaultFn,
+  unpauseGlobalTest,
 } from '../common/common.helpers';
 import { defaultDeploy } from '../common/fixtures';
 
 describe('Pausable', () => {
   it('deployment', async () => {
-    const { pausableTester, roles } = await loadFixture(defaultDeploy);
+    const { pausableTester, roles, pauseManager } = await loadFixture(
+      defaultDeploy,
+    );
 
-    expect(await pausableTester.pauseAdminRole()).eq(roles.common.defaultAdmin);
+    expect((await pausableTester.pauserRole())[0]).eq(
+      roles.common.defaultAdmin,
+    );
 
-    expect(await pausableTester.paused()).eq(false);
+    expect(
+      await pauseManager.isPaused(pausableTester.address, '0x00000000'),
+    ).eq(false);
   });
 
   describe('onlyPauseAdmin modifier', async () => {
     it('should fail: can`t pause if doesn`t have role', async () => {
-      const { pausableTester, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { pausableTester, regularAccounts, pauseManager, owner } =
+        await loadFixture(defaultDeploy);
 
-      await pauseVault(pausableTester, {
+      await pauseVault({ pauseManager, owner }, pausableTester, {
         from: regularAccounts[0],
-        revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
+        revertCustomError: {
+          ...acErrors.WMAC_HASNT_PERMISSION(),
+          contract: pauseManager,
+        },
       });
     });
 
     it('can change state if has role', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
-
-      await pauseVault(pausableTester);
-    });
-  });
-
-  describe('pause()', async () => {
-    it('fail: can`t pause if caller doesnt have admin role', async () => {
-      const { pausableTester, regularAccounts } = await loadFixture(
+      const { pausableTester, pauseManager, owner } = await loadFixture(
         defaultDeploy,
       );
 
-      await pauseVault(pausableTester, {
+      await pauseVault({ pauseManager, owner }, pausableTester);
+    });
+  });
+
+  describe('_requireFnNotPaused()', () => {
+    it('should not fail when fn is not paused', async () => {
+      const { pausableTester } = await loadFixture(defaultDeploy);
+      const selector = encodeFnSelector(
+        'depositRequest(address,uint256,bytes32)',
+      );
+
+      await expect(pausableTester.requireFnNotPaused(selector)).not.reverted;
+    });
+
+    it('should not fail when contract is not paused', async () => {
+      const { pausableTester } = await loadFixture(defaultDeploy);
+
+      await expect(
+        pausableTester.requireFnNotPaused(encodeFnSelector('randomSelector()')),
+      ).not.reverted;
+    });
+
+    it('should not fail when globally is not paused', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await expect(
+        pausableTester.requireFnNotPaused(encodeFnSelector('randomSelector()')),
+      ).not.reverted;
+    });
+
+    it('should fail: when fn is paused', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
+      const selector = encodeFnSelector(
+        'depositRequest(address,uint256,bytes32)',
+      );
+
+      await pauseVaultFn({ pauseManager, owner }, pausableTester, selector);
+
+      await expect(pausableTester.requireFnNotPaused(selector))
+        .revertedWithCustomError(pausableTester, 'Paused')
+        .withArgs(pausableTester.address, selector);
+    });
+
+    it('should fail: when contract is paused', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
+      const selector = encodeFnSelector(
+        'depositRequest(address,uint256,bytes32)',
+      );
+
+      await pauseVault({ pauseManager, owner }, pausableTester);
+
+      await expect(pausableTester.requireFnNotPaused(selector))
+        .revertedWithCustomError(pausableTester, 'Paused')
+        .withArgs(pausableTester.address, selector);
+    });
+
+    it('should fail: when globally is paused', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
+      const selector = encodeFnSelector(
+        'depositRequest(address,uint256,bytes32)',
+      );
+
+      await pauseGlobalTest({ pauseManager, owner });
+
+      await expect(pausableTester.requireFnNotPaused(selector))
+        .revertedWithCustomError(pausableTester, 'Paused')
+        .withArgs(pausableTester.address, selector);
+    });
+
+    it('should fail: when globally, contract and fn are paused', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
+      const selector = encodeFnSelector(
+        'depositRequest(address,uint256,bytes32)',
+      );
+
+      await pauseGlobalTest({ pauseManager, owner });
+      await pauseVault({ pauseManager, owner }, pausableTester);
+      await pauseVaultFn({ pauseManager, owner }, pausableTester, selector);
+
+      await expect(pausableTester.requireFnNotPaused(selector))
+        .revertedWithCustomError(pausableTester, 'Paused')
+        .withArgs(pausableTester.address, selector);
+    });
+  });
+});
+
+describe('MidasPauseManager', () => {
+  describe('globalPause()', () => {
+    it('should fail: when caller doesnt have admin role', async () => {
+      const { pauseManager, owner, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await pauseGlobalTest(
+        { pauseManager, owner },
+        {
+          from: regularAccounts[0],
+          revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
+        },
+      );
+    });
+
+    it('should fail: when already paused', async () => {
+      const { pauseManager, owner } = await loadFixture(defaultDeploy);
+
+      await pauseGlobalTest({ pauseManager, owner });
+      await pauseGlobalTest(
+        { pauseManager, owner },
+        {
+          revertMessage: 'Pausable: paused',
+        },
+      );
+    });
+
+    it('call from admin', async () => {
+      const { pauseManager, owner } = await loadFixture(defaultDeploy);
+      await pauseGlobalTest({ pauseManager, owner });
+    });
+  });
+
+  describe('globalUnpause()', () => {
+    it('should fail: when caller doesnt have admin role', async () => {
+      const { pauseManager, owner, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await unpauseGlobalTest(
+        { pauseManager, owner },
+        {
+          from: regularAccounts[0],
+          revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
+        },
+      );
+    });
+
+    it('should fail: when not paused', async () => {
+      const { pauseManager, owner } = await loadFixture(defaultDeploy);
+
+      await unpauseGlobalTest(
+        { pauseManager, owner },
+        {
+          revertMessage: 'Pausable: not paused',
+        },
+      );
+    });
+
+    it('call from admin', async () => {
+      const { pauseManager, owner } = await loadFixture(defaultDeploy);
+
+      await pauseGlobalTest({ pauseManager, owner });
+      await unpauseGlobalTest({ pauseManager, owner });
+    });
+  });
+
+  describe('pauseContract()', async () => {
+    it('should fail: can`t pause if caller doesnt have admin role', async () => {
+      const { pausableTester, regularAccounts, pauseManager, owner } =
+        await loadFixture(defaultDeploy);
+
+      await pauseVault({ pauseManager, owner }, pausableTester, {
         from: regularAccounts[0],
         revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
       });
     });
 
-    it('fail: when paused', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
+    it('should fail: when paused', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
 
-      await pauseVault(pausableTester);
-      await pauseVault(pausableTester, {
-        revertMessage: 'Pausable: paused',
+      await pauseVault({ pauseManager, owner }, pausableTester);
+      await pauseVault({ pauseManager, owner }, pausableTester, {
+        revertCustomError: {
+          customErrorName: 'SameBoolValue',
+          args: [true],
+        },
       });
     });
 
     it('when not paused and caller is admin', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
 
-      await pauseVault(pausableTester);
+      await pauseVault({ pauseManager, owner }, pausableTester);
     });
 
     it('succeeds with only scoped function permission', async () => {
-      const { accessControl, pausableTester, owner, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const {
+        accessControl,
+        pausableTester,
+        owner,
+        regularAccounts,
+        pauseManager,
+      } = await loadFixture(defaultDeploy);
 
-      const pauseAdminRole = await pausableTester.pauseAdminRole();
-      const pauseSel = encodeFnSelector('pause()');
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
+      const pauseSel = encodeFnSelector('pauseContract(address)');
 
       await setupFunctionAccessGrantOperator({
         accessControl,
         owner,
         functionAccessAdminRole: pauseAdminRole,
-        targetContract: pausableTester.address,
+        targetContract: pauseManager.address,
         functionSelector: pauseSel,
         grantOperator: owner,
       });
       await setFunctionPermissionTester({ accessControl, owner }, [
         {
           functionAccessAdminRole: pauseAdminRole,
-          targetContract: pausableTester.address,
+          targetContract: pauseManager.address,
           functionSelector: pauseSel,
           account: regularAccounts[0].address,
           enabled: true,
@@ -98,39 +281,50 @@ describe('Pausable', () => {
         await accessControl.hasRole(pauseAdminRole, regularAccounts[0].address),
       ).eq(false);
 
-      await pauseVault(pausableTester, { from: regularAccounts[0] });
+      await pauseVault({ pauseManager, owner }, pausableTester, {
+        from: regularAccounts[0],
+      });
     });
 
     it('admin can call pause() while pause() is per-fn paused', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
 
       const pauseSelector = encodeFnSelector('pause()');
-      await pauseVaultFn(pausableTester, pauseSelector);
-      expect(await pausableTester.fnPaused(pauseSelector)).eq(true);
+      await pauseVaultFn(
+        { pauseManager, owner },
+        pausableTester,
+        pauseSelector,
+      );
 
-      await pauseVault(pausableTester);
-      expect(await pausableTester.paused()).eq(true);
+      await pauseVault({ pauseManager, owner }, pausableTester);
     });
 
     it('succeeds with scoped permission and pause admin role', async () => {
-      const { accessControl, pausableTester, owner, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const {
+        accessControl,
+        pausableTester,
+        owner,
+        regularAccounts,
+        pauseManager,
+      } = await loadFixture(defaultDeploy);
 
-      const pauseAdminRole = await pausableTester.pauseAdminRole();
-      const pauseSel = encodeFnSelector('pause()');
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
+      const pauseSel = encodeFnSelector('pauseContract(address)');
 
       await setupFunctionAccessGrantOperator({
         accessControl,
         owner,
         functionAccessAdminRole: pauseAdminRole,
-        targetContract: pausableTester.address,
+        targetContract: pauseManager.address,
         functionSelector: pauseSel,
         grantOperator: owner,
       });
       await setFunctionPermissionTester({ accessControl, owner }, [
         {
           functionAccessAdminRole: pauseAdminRole,
-          targetContract: pausableTester.address,
+          targetContract: pauseManager.address,
           functionSelector: pauseSel,
           account: regularAccounts[0].address,
           enabled: true,
@@ -138,13 +332,186 @@ describe('Pausable', () => {
       ]);
       await accessControl.grantRole(pauseAdminRole, regularAccounts[0].address);
 
-      await pauseVault(pausableTester, { from: regularAccounts[0] });
+      await pauseVault({ pauseManager, owner }, pausableTester, {
+        from: regularAccounts[0],
+      });
     });
   });
 
-  describe('pauseFn()', async () => {
-    it('fail: can`t pause if caller doesnt have admin role', async () => {
-      const { pausableTester, regularAccounts } = await loadFixture(
+  describe('unpauseContract()', async () => {
+    it('should fail: can`t unpause if caller doesnt have admin role', async () => {
+      const { pausableTester, regularAccounts, pauseManager, owner } =
+        await loadFixture(defaultDeploy);
+
+      await unpauseVault({ pauseManager, owner }, pausableTester, {
+        from: regularAccounts[0],
+        revertCustomError: {
+          ...acErrors.WMAC_HASNT_PERMISSION(),
+          contract: pauseManager,
+        },
+      });
+    });
+
+    it('should fail: when not paused', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await unpauseVault({ pauseManager, owner }, pausableTester, {
+        revertCustomError: {
+          customErrorName: 'SameBoolValue',
+          args: [false],
+        },
+      });
+    });
+
+    it('when paused and caller is admin', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await pauseVault({ pauseManager, owner }, pausableTester);
+      await unpauseVault({ pauseManager, owner }, pausableTester);
+    });
+
+    it('succeeds with only scoped function permission', async () => {
+      const {
+        accessControl,
+        pausableTester,
+        owner,
+        regularAccounts,
+        pauseManager,
+      } = await loadFixture(defaultDeploy);
+
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
+      const pauseSel = encodeFnSelector('pauseContract(address)');
+      const unpauseSel = encodeFnSelector('unpauseContract(address)');
+
+      await setupFunctionAccessGrantOperator({
+        accessControl,
+        owner,
+        functionAccessAdminRole: pauseAdminRole,
+        targetContract: pauseManager.address,
+        functionSelector: pauseSel,
+        grantOperator: owner,
+      });
+      await setFunctionPermissionTester({ accessControl, owner }, [
+        {
+          functionAccessAdminRole: pauseAdminRole,
+          targetContract: pauseManager.address,
+          functionSelector: pauseSel,
+          account: regularAccounts[0].address,
+          enabled: true,
+        },
+      ]);
+
+      await setupFunctionAccessGrantOperator({
+        accessControl,
+        owner,
+        functionAccessAdminRole: pauseAdminRole,
+        targetContract: pauseManager.address,
+        functionSelector: unpauseSel,
+        grantOperator: owner,
+      });
+      await setFunctionPermissionTester({ accessControl, owner }, [
+        {
+          functionAccessAdminRole: pauseAdminRole,
+          targetContract: pauseManager.address,
+          functionSelector: unpauseSel,
+          account: regularAccounts[0].address,
+          enabled: true,
+        },
+      ]);
+
+      expect(
+        await accessControl.hasRole(pauseAdminRole, regularAccounts[0].address),
+      ).eq(false);
+
+      await pauseVault({ pauseManager, owner }, pausableTester, {
+        from: regularAccounts[0],
+      });
+      await unpauseVault({ pauseManager, owner }, pausableTester, {
+        from: regularAccounts[0],
+      });
+    });
+
+    it('succeeds with scoped permission and pause admin role', async () => {
+      const {
+        accessControl,
+        pausableTester,
+        owner,
+        regularAccounts,
+        pauseManager,
+      } = await loadFixture(defaultDeploy);
+
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
+      const pauseSel = encodeFnSelector('pauseContract(address)');
+      const unpauseSel = encodeFnSelector('unpauseContract(address)');
+
+      await setupFunctionAccessGrantOperator({
+        accessControl,
+        owner,
+        functionAccessAdminRole: pauseAdminRole,
+        targetContract: pauseManager.address,
+        functionSelector: pauseSel,
+        grantOperator: owner,
+      });
+      await setFunctionPermissionTester({ accessControl, owner }, [
+        {
+          functionAccessAdminRole: pauseAdminRole,
+          targetContract: pauseManager.address,
+          functionSelector: pauseSel,
+          account: regularAccounts[0].address,
+          enabled: true,
+        },
+      ]);
+
+      await setupFunctionAccessGrantOperator({
+        accessControl,
+        owner,
+        functionAccessAdminRole: pauseAdminRole,
+        targetContract: pauseManager.address,
+        functionSelector: unpauseSel,
+        grantOperator: owner,
+      });
+      await setFunctionPermissionTester({ accessControl, owner }, [
+        {
+          functionAccessAdminRole: pauseAdminRole,
+          targetContract: pauseManager.address,
+          functionSelector: unpauseSel,
+          account: regularAccounts[0].address,
+          enabled: true,
+        },
+      ]);
+
+      await accessControl.grantRole(pauseAdminRole, regularAccounts[0].address);
+
+      await pauseVault({ pauseManager, owner }, pausableTester, {
+        from: regularAccounts[0],
+      });
+      await unpauseVault({ pauseManager, owner }, pausableTester, {
+        from: regularAccounts[0],
+      });
+    });
+  });
+
+  describe('bulkPauseContractFn()', async () => {
+    it('should fail: can`t pause if caller doesnt have admin role', async () => {
+      const { pausableTester, regularAccounts, pauseManager, owner } =
+        await loadFixture(defaultDeploy);
+
+      const selector = encodeFnSelector(
+        'depositRequest(address,uint256,bytes32)',
+      );
+
+      await pauseVaultFn({ pauseManager, owner }, pausableTester, selector, {
+        from: regularAccounts[0],
+        revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
+      });
+    });
+
+    it('should fail: when paused', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
         defaultDeploy,
       );
 
@@ -152,57 +519,54 @@ describe('Pausable', () => {
         'depositRequest(address,uint256,bytes32)',
       );
 
-      await pauseVaultFn(pausableTester, selector, {
-        from: regularAccounts[0],
-        revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
-      });
-    });
-
-    it('fail: when paused', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
-
-      const selector = encodeFnSelector(
-        'depositRequest(address,uint256,bytes32)',
-      );
-
-      await pauseVaultFn(pausableTester, selector);
-      await pauseVaultFn(pausableTester, selector, {
+      await pauseVaultFn({ pauseManager, owner }, pausableTester, selector);
+      await pauseVaultFn({ pauseManager, owner }, pausableTester, selector, {
         revertCustomError: {
-          customErrorName: 'SameBytes4Value',
+          customErrorName: 'SameBoolValue',
+          args: [true],
         },
       });
     });
 
     it('when not paused and caller is admin', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
 
       const selector = encodeFnSelector(
         'depositRequest(address,uint256,bytes32)',
       );
 
-      await pauseVaultFn(pausableTester, selector);
+      await pauseVaultFn({ pauseManager, owner }, pausableTester, selector);
     });
 
     it('succeeds with only scoped function permission', async () => {
-      const { accessControl, pausableTester, owner, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const {
+        accessControl,
+        pausableTester,
+        owner,
+        regularAccounts,
+        pauseManager,
+      } = await loadFixture(defaultDeploy);
 
-      const pauseAdminRole = await pausableTester.pauseAdminRole();
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
       const fnSel = encodeFnSelector('depositRequest(address,uint256,bytes32)');
-      const pauseFnEntrySel = encodeFnSelector('bulkPauseFn(bytes4[])');
+      const pauseFnEntrySel = encodeFnSelector(
+        'bulkPauseContractFn(address,bytes4[])',
+      );
 
       await setupFunctionAccessGrantOperator({
         accessControl,
         owner,
         functionAccessAdminRole: pauseAdminRole,
-        targetContract: pausableTester.address,
+        targetContract: pauseManager.address,
         functionSelector: pauseFnEntrySel,
         grantOperator: owner,
       });
       await setFunctionPermissionTester({ accessControl, owner }, [
         {
           functionAccessAdminRole: pauseAdminRole,
-          targetContract: pausableTester.address,
+          targetContract: pauseManager.address,
           functionSelector: pauseFnEntrySel,
           account: regularAccounts[0].address,
           enabled: true,
@@ -213,31 +577,38 @@ describe('Pausable', () => {
         await accessControl.hasRole(pauseAdminRole, regularAccounts[0].address),
       ).eq(false);
 
-      await pauseVaultFn(pausableTester, fnSel, {
+      await pauseVaultFn({ pauseManager, owner }, pausableTester, fnSel, {
         from: regularAccounts[0],
       });
     });
 
     it('succeeds with scoped permission and DEFAULT_ADMIN role', async () => {
-      const { accessControl, pausableTester, owner, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const {
+        accessControl,
+        pausableTester,
+        owner,
+        regularAccounts,
+        pauseManager,
+      } = await loadFixture(defaultDeploy);
 
-      const pauseAdminRole = await pausableTester.pauseAdminRole();
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
       const fnSel = encodeFnSelector('depositRequest(address,uint256,bytes32)');
-      const pauseFnEntrySel = encodeFnSelector('pauseFn(bytes4)');
+      const pauseFnEntrySel = encodeFnSelector(
+        'bulkPauseContractFn(address,bytes4[])',
+      );
 
       await setupFunctionAccessGrantOperator({
         accessControl,
         owner,
         functionAccessAdminRole: pauseAdminRole,
-        targetContract: pausableTester.address,
+        targetContract: pauseManager.address,
         functionSelector: pauseFnEntrySel,
         grantOperator: owner,
       });
       await setFunctionPermissionTester({ accessControl, owner }, [
         {
           functionAccessAdminRole: pauseAdminRole,
-          targetContract: pausableTester.address,
+          targetContract: pauseManager.address,
           functionSelector: pauseFnEntrySel,
           account: regularAccounts[0].address,
           enabled: true,
@@ -246,93 +617,115 @@ describe('Pausable', () => {
 
       await accessControl.grantRole(pauseAdminRole, regularAccounts[0].address);
 
-      await pauseVaultFn(pausableTester, fnSel, {
+      await pauseVaultFn({ pauseManager, owner }, pausableTester, fnSel, {
         from: regularAccounts[0],
       });
     });
 
     it('admin can pauseFn / unpauseFn other selectors while pauseFn(bytes4) is paused', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
 
-      const pauseFnSelector = encodeFnSelector('pauseFn(bytes4)');
+      const pauseFnSelector = encodeFnSelector('pauseContract(address)');
       const otherSelector = encodeFnSelector(
         'depositRequest(address,uint256,bytes32)',
       );
 
-      await pauseVaultFn(pausableTester, pauseFnSelector);
-      expect(await pausableTester.fnPaused(pauseFnSelector)).eq(true);
+      await pauseVaultFn(
+        { pauseManager, owner },
+        pausableTester,
+        pauseFnSelector,
+      );
 
-      await pauseVaultFn(pausableTester, otherSelector);
-      expect(await pausableTester.fnPaused(otherSelector)).eq(true);
+      await pauseVaultFn(
+        { pauseManager, owner },
+        pausableTester,
+        otherSelector,
+      );
 
-      await unpauseVaultFn(pausableTester, otherSelector);
-      expect(await pausableTester.fnPaused(otherSelector)).eq(false);
+      await unpauseVaultFn(
+        { pauseManager, owner },
+        pausableTester,
+        otherSelector,
+      );
     });
   });
 
-  describe('unpauseFn()', async () => {
-    it('fail: can`t pause if caller doesnt have admin role', async () => {
-      const { pausableTester, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+  describe('bulkUnpauseContractFn()', async () => {
+    it('should fail: can`t pause if caller doesnt have admin role', async () => {
+      const { pausableTester, regularAccounts, pauseManager, owner } =
+        await loadFixture(defaultDeploy);
 
       const selector = encodeFnSelector(
         'depositRequest(address,uint256,bytes32)',
       );
 
-      await unpauseVaultFn(pausableTester, selector, {
+      await unpauseVaultFn({ pauseManager, owner }, pausableTester, selector, {
         from: regularAccounts[0],
         revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
       });
     });
 
-    it('fail: when unpaused', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
+    it('should fail: when unpaused', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
 
       const selector = encodeFnSelector(
         'function depositRequest(address,uint256,bytes32)',
       );
 
-      await unpauseVaultFn(pausableTester, selector, {
+      await unpauseVaultFn({ pauseManager, owner }, pausableTester, selector, {
         revertCustomError: {
-          customErrorName: 'SameBytes4Value',
+          customErrorName: 'SameBoolValue',
+          args: [false],
         },
       });
     });
 
     it('when paused and caller is admin', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
 
       const selector = encodeFnSelector(
         'depositRequest(address,uint256,bytes32)',
       );
 
-      await pauseVaultFn(pausableTester, selector);
-      await unpauseVaultFn(pausableTester, selector);
+      await pauseVaultFn({ pauseManager, owner }, pausableTester, selector);
+      await unpauseVaultFn({ pauseManager, owner }, pausableTester, selector);
     });
 
     it('succeeds with only scoped function permission', async () => {
-      const { accessControl, pausableTester, owner, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const {
+        accessControl,
+        pausableTester,
+        owner,
+        regularAccounts,
+        pauseManager,
+      } = await loadFixture(defaultDeploy);
 
-      const pauseAdminRole = await pausableTester.pauseAdminRole();
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
       const fnSel = encodeFnSelector('depositRequest(address,uint256,bytes32)');
-      const unpauseFnSel = encodeFnSelector('bulkUnpauseFn(bytes4[])');
+      const unpauseFnSel = encodeFnSelector(
+        'bulkUnpauseContractFn(address,bytes4[])',
+      );
 
-      await pauseVaultFn(pausableTester, fnSel);
+      await pauseVaultFn({ pauseManager, owner }, pausableTester, fnSel);
 
       await setupFunctionAccessGrantOperator({
         accessControl,
         owner,
         functionAccessAdminRole: pauseAdminRole,
-        targetContract: pausableTester.address,
+        targetContract: pauseManager.address,
         functionSelector: unpauseFnSel,
         grantOperator: owner,
       });
       await setFunctionPermissionTester({ accessControl, owner }, [
         {
           functionAccessAdminRole: pauseAdminRole,
-          targetContract: pausableTester.address,
+          targetContract: pauseManager.address,
           functionSelector: unpauseFnSel,
           account: regularAccounts[0].address,
           enabled: true,
@@ -343,35 +736,40 @@ describe('Pausable', () => {
         await accessControl.hasRole(pauseAdminRole, regularAccounts[0].address),
       ).eq(false);
 
-      console.log('fnSel', fnSel);
-
-      await unpauseVaultFn(pausableTester, fnSel, {
+      await unpauseVaultFn({ pauseManager, owner }, pausableTester, fnSel, {
         from: regularAccounts[0],
       });
     });
 
     it('succeeds with scoped permission and pause admin role', async () => {
-      const { accessControl, pausableTester, owner, regularAccounts } =
-        await loadFixture(defaultDeploy);
+      const {
+        accessControl,
+        pausableTester,
+        owner,
+        regularAccounts,
+        pauseManager,
+      } = await loadFixture(defaultDeploy);
 
-      const pauseAdminRole = await pausableTester.pauseAdminRole();
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
       const fnSel = encodeFnSelector('depositRequest(address,uint256,bytes32)');
-      const unpauseFnSel = encodeFnSelector('unpauseFn(bytes4)');
+      const unpauseFnSel = encodeFnSelector(
+        'bulkUnpauseContractFn(address,bytes4[])',
+      );
 
-      await pauseVaultFn(pausableTester, fnSel);
+      await pauseVaultFn({ pauseManager, owner }, pausableTester, fnSel);
 
       await setupFunctionAccessGrantOperator({
         accessControl,
         owner,
         functionAccessAdminRole: pauseAdminRole,
-        targetContract: pausableTester.address,
+        targetContract: pauseManager.address,
         functionSelector: unpauseFnSel,
         grantOperator: owner,
       });
       await setFunctionPermissionTester({ accessControl, owner }, [
         {
           functionAccessAdminRole: pauseAdminRole,
-          targetContract: pausableTester.address,
+          targetContract: pauseManager.address,
           functionSelector: unpauseFnSel,
           account: regularAccounts[0].address,
           enabled: true,
@@ -380,155 +778,37 @@ describe('Pausable', () => {
 
       await accessControl.grantRole(pauseAdminRole, regularAccounts[0].address);
 
-      await unpauseVaultFn(pausableTester, fnSel, {
+      await unpauseVaultFn({ pauseManager, owner }, pausableTester, fnSel, {
         from: regularAccounts[0],
       });
     });
 
     it('admin can unpauseFn other selectors while unpauseFn(bytes4) is per-fn paused', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
 
-      const unpauseFnSelector = encodeFnSelector('unpauseFn(bytes4)');
+      const unpauseFnSelector = encodeFnSelector('unpauseContract(address)');
       const otherSelector = encodeFnSelector(
         'depositRequest(address,uint256,bytes32)',
       );
 
-      await pauseVaultFn(pausableTester, otherSelector);
-      await pauseVaultFn(pausableTester, unpauseFnSelector);
-      expect(await pausableTester.fnPaused(unpauseFnSelector)).eq(true);
-
-      await unpauseVaultFn(pausableTester, otherSelector);
-      expect(await pausableTester.fnPaused(otherSelector)).eq(false);
-    });
-  });
-
-  describe('unpause()', async () => {
-    it('fail: can`t unpause if caller doesnt have admin role', async () => {
-      const { pausableTester, regularAccounts } = await loadFixture(
-        defaultDeploy,
+      await pauseVaultFn(
+        { pauseManager, owner },
+        pausableTester,
+        otherSelector,
+      );
+      await pauseVaultFn(
+        { pauseManager, owner },
+        pausableTester,
+        unpauseFnSelector,
       );
 
-      await unpauseVault(pausableTester, {
-        from: regularAccounts[0],
-        revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
-      });
-    });
-
-    it('fail: when not paused', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
-
-      await unpauseVault(pausableTester, {
-        revertMessage: 'Pausable: not paused',
-      });
-    });
-
-    it('when paused and caller is admin', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
-
-      await pauseVault(pausableTester);
-      await unpauseVault(pausableTester);
-    });
-
-    it('succeeds with only scoped function permission', async () => {
-      const { accessControl, pausableTester, owner, regularAccounts } =
-        await loadFixture(defaultDeploy);
-
-      const pauseAdminRole = await pausableTester.pauseAdminRole();
-      const pauseSel = encodeFnSelector('pause()');
-      const unpauseSel = encodeFnSelector('unpause()');
-
-      await setupFunctionAccessGrantOperator({
-        accessControl,
-        owner,
-        functionAccessAdminRole: pauseAdminRole,
-        targetContract: pausableTester.address,
-        functionSelector: pauseSel,
-        grantOperator: owner,
-      });
-      await setFunctionPermissionTester({ accessControl, owner }, [
-        {
-          functionAccessAdminRole: pauseAdminRole,
-          targetContract: pausableTester.address,
-          functionSelector: pauseSel,
-          account: regularAccounts[0].address,
-          enabled: true,
-        },
-      ]);
-
-      await setupFunctionAccessGrantOperator({
-        accessControl,
-        owner,
-        functionAccessAdminRole: pauseAdminRole,
-        targetContract: pausableTester.address,
-        functionSelector: unpauseSel,
-        grantOperator: owner,
-      });
-      await setFunctionPermissionTester({ accessControl, owner }, [
-        {
-          functionAccessAdminRole: pauseAdminRole,
-          targetContract: pausableTester.address,
-          functionSelector: unpauseSel,
-          account: regularAccounts[0].address,
-          enabled: true,
-        },
-      ]);
-
-      expect(
-        await accessControl.hasRole(pauseAdminRole, regularAccounts[0].address),
-      ).eq(false);
-
-      await pauseVault(pausableTester, { from: regularAccounts[0] });
-      await unpauseVault(pausableTester, { from: regularAccounts[0] });
-    });
-
-    it('succeeds with scoped permission and pause admin role', async () => {
-      const { accessControl, pausableTester, owner, regularAccounts } =
-        await loadFixture(defaultDeploy);
-
-      const pauseAdminRole = await pausableTester.pauseAdminRole();
-      const pauseSel = encodeFnSelector('pause()');
-      const unpauseSel = encodeFnSelector('unpause()');
-
-      await setupFunctionAccessGrantOperator({
-        accessControl,
-        owner,
-        functionAccessAdminRole: pauseAdminRole,
-        targetContract: pausableTester.address,
-        functionSelector: pauseSel,
-        grantOperator: owner,
-      });
-      await setFunctionPermissionTester({ accessControl, owner }, [
-        {
-          functionAccessAdminRole: pauseAdminRole,
-          targetContract: pausableTester.address,
-          functionSelector: pauseSel,
-          account: regularAccounts[0].address,
-          enabled: true,
-        },
-      ]);
-
-      await setupFunctionAccessGrantOperator({
-        accessControl,
-        owner,
-        functionAccessAdminRole: pauseAdminRole,
-        targetContract: pausableTester.address,
-        functionSelector: unpauseSel,
-        grantOperator: owner,
-      });
-      await setFunctionPermissionTester({ accessControl, owner }, [
-        {
-          functionAccessAdminRole: pauseAdminRole,
-          targetContract: pausableTester.address,
-          functionSelector: unpauseSel,
-          account: regularAccounts[0].address,
-          enabled: true,
-        },
-      ]);
-
-      await accessControl.grantRole(pauseAdminRole, regularAccounts[0].address);
-
-      await pauseVault(pausableTester, { from: regularAccounts[0] });
-      await unpauseVault(pausableTester, { from: regularAccounts[0] });
+      await unpauseVaultFn(
+        { pauseManager, owner },
+        pausableTester,
+        otherSelector,
+      );
     });
   });
 });

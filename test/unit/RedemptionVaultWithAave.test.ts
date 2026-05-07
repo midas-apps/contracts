@@ -85,6 +85,7 @@ redemptionVaultSuits(
           const { redemptionVaultWithAave, owner, stableCoins, aavePoolMock } =
             await loadFixture(defaultDeploy);
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVaultWithAave,
             encodeFnSelector('setAavePool(address,address)'),
           );
@@ -153,6 +154,7 @@ redemptionVaultSuits(
           const { redemptionVaultWithAave, owner, stableCoins } =
             await loadFixture(defaultDeploy);
           await pauseVaultFn(
+            { pauseManager, owner },
             redemptionVaultWithAave,
             encodeFnSelector('removeAavePool(address)'),
           );

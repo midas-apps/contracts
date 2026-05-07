@@ -163,7 +163,7 @@ export const pauseVault = async (
   await expect(await pauseManager.connect(from).pauseContract(vault.address))
     .not.reverted;
 
-  expect(await pauseManager.isPaused(vault.address, '0x')).eq(true);
+  expect(await pauseManager.isPaused(vault.address, '0x00000000')).eq(true);
   expect(await pauseManager.contractPaused(vault.address)).eq(true);
 };
 
@@ -187,7 +187,7 @@ export const unpauseVault = async (
   await expect(await pauseManager.connect(from).unpauseContract(vault.address))
     .not.reverted;
 
-  expect(await pauseManager.isPaused(vault.address, '0x')).eq(false);
+  expect(await pauseManager.isPaused(vault.address, '0x00000000')).eq(false);
   expect(await pauseManager.contractPaused(vault.address)).eq(false);
 };
 
