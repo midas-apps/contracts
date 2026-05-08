@@ -77,10 +77,7 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
      * @notice updates `aggregator` address
      * @param _aggregator new AggregatorV3Interface contract address
      */
-    function changeAggregator(address _aggregator)
-        external
-        onlyRole(feedAdminRole(), msg.sender)
-    {
+    function changeAggregator(address _aggregator) external onlyContractAdmin {
         require(_aggregator != address(0), "DF: invalid address");
 
         aggregator = AggregatorV3Interface(_aggregator);
@@ -90,10 +87,7 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
      * @dev updates `healthyDiff` value
      * @param _healthyDiff new value
      */
-    function setHealthyDiff(uint256 _healthyDiff)
-        external
-        onlyRole(feedAdminRole(), msg.sender)
-    {
+    function setHealthyDiff(uint256 _healthyDiff) external onlyContractAdmin {
         require(_healthyDiff > 0, "DF: invalid diff");
 
         healthyDiff = _healthyDiff;
@@ -105,7 +99,7 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
      */
     function setMinExpectedAnswer(int256 _minExpectedAnswer)
         external
-        onlyRole(feedAdminRole(), msg.sender)
+        onlyContractAdmin
     {
         require(_minExpectedAnswer > 0, "DF: invalid min exp. price");
         require(
@@ -122,7 +116,7 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
      */
     function setMaxExpectedAnswer(int256 _maxExpectedAnswer)
         external
-        onlyRole(feedAdminRole(), msg.sender)
+        onlyContractAdmin
     {
         require(_maxExpectedAnswer > 0, "DF: invalid max exp. price");
         require(
@@ -145,6 +139,10 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
      */
     function feedAdminRole() public pure virtual override returns (bytes32) {
         return _DEFAULT_ADMIN_ROLE;
+    }
+
+    function _contractAdminRole() internal pure override returns (bytes32) {
+        return feedAdminRole();
     }
 
     /**

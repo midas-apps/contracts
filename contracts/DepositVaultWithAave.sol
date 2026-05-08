@@ -85,7 +85,7 @@ contract DepositVaultWithAave is DepositVault {
      */
     function setAavePool(address _token, address _aavePool)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         _validateAddress(_token, true);
         _validateAddress(_aavePool, true);
@@ -101,7 +101,7 @@ contract DepositVaultWithAave is DepositVault {
      * @notice Removes the Aave V3 Pool for a specific payment token
      * @param _token payment token address
      */
-    function removeAavePool(address _token) external validateVaultAdminAccess {
+    function removeAavePool(address _token) external onlyContractAdmin {
         require(address(aavePools[_token]) != address(0), PoolNotSet(_token));
         delete aavePools[_token];
         emit RemoveAavePool(msg.sender, _token);
@@ -111,10 +111,7 @@ contract DepositVaultWithAave is DepositVault {
      * @notice Updates `aaveDepositsEnabled` value
      * @param enabled whether Aave auto-invest deposits are enabled
      */
-    function setAaveDepositsEnabled(bool enabled)
-        external
-        validateVaultAdminAccess
-    {
+    function setAaveDepositsEnabled(bool enabled) external onlyContractAdmin {
         aaveDepositsEnabled = enabled;
         emit SetAaveDepositsEnabled(enabled);
     }
@@ -125,7 +122,7 @@ contract DepositVaultWithAave is DepositVault {
      */
     function setAutoInvestFallbackEnabled(bool enabled)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         autoInvestFallbackEnabled = enabled;
         emit SetAutoInvestFallbackEnabled(enabled);

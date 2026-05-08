@@ -44,9 +44,10 @@ abstract contract mTokenPermissioned is mToken {
      * @dev checks that a given `account`
      * have `greenlistedRole()`
      */
-    function _onlyGreenlisted(address account)
-        private
-        view
-        onlyRole(_greenlistedRole(), account)
-    {}
+    function _onlyGreenlisted(address account) private view {
+        require(
+            accessControl.hasRole(_greenlistedRole(), account),
+            HasntRole(_greenlistedRole(), account)
+        );
+    }
 }

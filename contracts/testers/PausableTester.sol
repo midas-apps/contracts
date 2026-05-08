@@ -26,5 +26,9 @@ contract PausableTester is Pausable {
         return (_DEFAULT_ADMIN_ROLE, true);
     }
 
+    function _contractAdminRole() internal pure override returns (bytes32) {
+        return _DEFAULT_ADMIN_ROLE;
+    }
+
     function _disableInitializers() internal override {}
 }

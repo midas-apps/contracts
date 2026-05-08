@@ -4,8 +4,12 @@ pragma solidity 0.8.34;
 import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
 import {TimelockControllerUpgradeable as TimelockController} from "@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol";
 import {IMidasTimelockManager} from "../interfaces/IMidasTimelockManager.sol";
+import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.sol";
+import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
 
 contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
+    using AccessControlUtilsLibrary for IMidasAccessControl;
+
     /**
      * @notice role that can execute timelock transactions
      */
@@ -41,7 +45,10 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
      * @dev can be called only by DEFAULT_ADMIN_ROLE
      */
     function initializeTimelock(address _timelock) external {
-        _onlyRole(_DEFAULT_ADMIN_ROLE, msg.sender);
+        require(
+            accessControl.hasRole(_DEFAULT_ADMIN_ROLE, msg.sender),
+            HasntRole(_DEFAULT_ADMIN_ROLE, msg.sender)
+        );
         require(timelock == address(0), "MAC: timelock already set");
         require(_timelock != address(0), "MAC: invalid timelock");
         timelock = _timelock;
@@ -152,6 +159,10 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         );
     }
 
+    function _contractAdminRole() internal pure override returns (bytes32) {
+        return _DEFAULT_ADMIN_ROLE;
+    }
+
     function _getTargetRole(address target, bytes memory data)
         private
         returns (bytes32)
@@ -160,14 +171,40 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
         require(!success, "MAC: expected to revert");
 
-        return _decodePreflightSucceededError(err);
+        (
+            bytes32 role,
+            bool roleIsFunctionOperator,
+            bool validateFunctionRole
+        ) = _decodePreflightSucceededError(err);
+
+        return
+            accessControl.validateFunctionAccess(
+                role,
+                roleIsFunctionOperator,
+                msg.sender,
+                _getFunctionSelector(data),
+                validateFunctionRole
+            );
+    }
+
+    function _getFunctionSelector(bytes memory data)
+        private
+        pure
+        returns (bytes4)
+    {
+        return bytes4(data);
     }
 
     function _decodePreflightSucceededError(bytes memory err)
         private
         pure
-        returns (bytes32 role)
+        returns (
+            bytes32 role,
+            bool roleIsFunctionOperator,
+            bool validateFunctionRole
+        )
     {
+        // TODO: decode bools as well
         require(err.length == 36, "MAC: invalid error length");
 
         bytes4 selector;

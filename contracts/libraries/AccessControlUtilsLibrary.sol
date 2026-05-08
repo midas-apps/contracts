@@ -29,11 +29,14 @@ library AccessControlUtilsLibrary {
      * @dev validates that the function access is valid with timelock
      * @param accessControl access control contract
      * @param contractAdminRole contract admin role
+     * @param roleIsFunctionOperator whether the role is a function operator
      * @param accountToCheck account to check
+     * @param validateFunctionRole whether to validate the function role
      */
     function validateFunctionAccessWithTimelock(
         IMidasAccessControl accessControl,
         bytes32 contractAdminRole,
+        bool roleIsFunctionOperator,
         address accountToCheck,
         bool validateFunctionRole
     ) internal view {
@@ -51,16 +54,22 @@ library AccessControlUtilsLibrary {
             account = accountToCheck;
         }
 
+        if (isPreflight) {
+            revert IMidasTimelockManager.RolePreflightSucceeded(
+                contractAdminRole,
+                roleIsFunctionOperator,
+                validateFunctionRole
+            );
+        }
+
         bytes32 roleUsed = validateFunctionAccess(
             accessControl,
             contractAdminRole,
+            roleIsFunctionOperator,
             account,
+            msg.sig,
             validateFunctionRole
         );
-
-        if (isPreflight) {
-            revert IMidasTimelockManager.RolePreflightSucceeded(roleUsed);
-        }
 
         (bool ready, bool timelocked) = timelockManager
             .isFunctionReadyToExecute(
@@ -95,18 +104,22 @@ library AccessControlUtilsLibrary {
         return address(bytes20(data[data.length - 20:]));
     }
 
-    // TODO: move it to AC?
     /**
      * @dev validates that the function access is valid
      * @param accessControl access control contract
-     * @param contractAdminRole contract admin role
+     * @param role admin role
+     * @param roleIsFunctionOperator whether the role is a function operator
      * @param account account to check
+     * @param functionSelector function selector
+     * @param validateFunctionRole whether to validate the function role
      * @return roleUsed role used to validate the function access
      */
     function validateFunctionAccess(
         IMidasAccessControl accessControl,
-        bytes32 contractAdminRole,
+        bytes32 role,
+        bool roleIsFunctionOperator,
         address account,
+        bytes4 functionSelector,
         bool validateFunctionRole
     )
         internal
@@ -115,41 +128,58 @@ library AccessControlUtilsLibrary {
             bytes32 /* roleUsed */
         )
     {
-        if (accessControl.hasRole(contractAdminRole, account)) {
-            return contractAdminRole;
+        if (roleIsFunctionOperator) {
+            bytes32 operatorRole = accessControl.functionAccessGrantOperatorKey(
+                role,
+                address(this),
+                functionSelector
+            );
+
+            if (
+                accessControl.isFunctionAccessGrantOperator(
+                    operatorRole,
+                    account
+                )
+            ) {
+                return operatorRole;
+            }
+        } else {
+            if (accessControl.hasRole(role, account)) {
+                return role;
+            }
+
+            (bytes32 key, bool hasPermission) = validateFunctionRole
+                ? hasFunctionPermission(
+                    accessControl,
+                    role,
+                    functionSelector,
+                    account
+                )
+                : (bytes32(0), false);
+
+            if (hasPermission) {
+                return key;
+            }
+
+            revert NoFunctionPermission(role, msg.sig, account);
         }
-
-        (bytes32 key, bool hasPermission) = validateFunctionRole
-            ? hasFunctionPermission(
-                accessControl,
-                contractAdminRole,
-                msg.sig,
-                account
-            )
-            : (bytes32(0), false);
-
-        if (hasPermission) {
-            return key;
-        }
-
-        revert NoFunctionPermission(contractAdminRole, msg.sig, account);
     }
 
     /**
      * @dev checks that given `account` has function permission for the given function selector
      * @param accessControl access control contract
-     * @param functionAccessAdminRole OZ role for the scope
+     * @param role OZ role for the scope
      * @param functionSelector function selector
      * @param account address checked for permission
      */
     function hasFunctionPermission(
         IMidasAccessControl accessControl,
-        bytes32 functionAccessAdminRole,
+        bytes32 role,
         bytes4 functionSelector,
         address account
     ) internal view returns (bytes32 key, bool hasPermission) {
         bytes32 key = accessControl.functionPermissionKey(
-            functionAccessAdminRole,
+            role,
             address(this),
             functionSelector
         );

@@ -7,7 +7,11 @@ pragma solidity 0.8.34;
  * @author RedDuck Software
  */
 interface IMidasTimelockManager {
-    error RolePreflightSucceeded(bytes32 role);
+    error RolePreflightSucceeded(
+        bytes32 role,
+        bool roleIsFunctionOperator,
+        bool validateFunctionRole
+    );
 
     /**
      * @notice Whether the function is ready to execute

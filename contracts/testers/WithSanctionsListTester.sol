@@ -27,16 +27,8 @@ contract WithSanctionsListTester is WithSanctionsList {
         return keccak256("TESTER_SANCTIONS_LIST_ADMIN_ROLE");
     }
 
-    function _validateSanctionListAdminAccess(address account)
-        internal
-        view
-        override
-    {
-        _validateFunctionAccessWithTimelock(
-            sanctionsListAdminRole(),
-            account,
-            true
-        );
+    function _contractAdminRole() internal pure override returns (bytes32) {
+        return _DEFAULT_ADMIN_ROLE;
     }
 
     function _disableInitializers() internal override {}

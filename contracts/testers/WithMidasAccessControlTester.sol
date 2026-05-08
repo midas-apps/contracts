@@ -20,15 +20,16 @@ contract WithMidasAccessControlTester is WithMidasAccessControl {
         accessControl.revokeRole(role, account);
     }
 
-    function withOnlyRole(bytes32 role, address account)
+    function withOnlyRole(bytes32 role, bool validateFunctionRole)
         external
-        onlyRole(role, account)
+        onlyRole(role, validateFunctionRole)
     {}
 
-    function withOnlyNotRole(bytes32 role, address account)
-        external
-        onlyNotRole(role, account)
-    {}
+    function withOnlyContractAdmin() external onlyContractAdmin {}
+
+    function _contractAdminRole() internal pure override returns (bytes32) {
+        return _DEFAULT_ADMIN_ROLE;
+    }
 
     function _disableInitializers() internal override {}
 }

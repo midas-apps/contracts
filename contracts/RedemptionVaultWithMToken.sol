@@ -67,7 +67,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
      */
     function setRedemptionVault(address _redemptionVault)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         require(
             _redemptionVault != address(redemptionVault),

@@ -236,7 +236,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function safeBulkApproveRequestAtSavedRate(uint256[] calldata requestIds)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         for (uint256 i = 0; i < requestIds.length; ++i) {
             uint256 rate = redeemRequests[requestIds[i]].mTokenRate;
@@ -297,7 +297,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function approveRequest(uint256 requestId, uint256 newMTokenRate)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         _approveRequest(requestId, newMTokenRate, false, false, false);
     }
@@ -307,7 +307,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function approveRequestAvgRate(uint256 requestId, uint256 avgMTokenRate)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         _approveRequest(requestId, avgMTokenRate, false, false, true);
     }
@@ -317,7 +317,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function safeApproveRequest(uint256 requestId, uint256 newMTokenRate)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         _approveRequest(requestId, newMTokenRate, true, false, false);
     }
@@ -327,7 +327,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function safeApproveRequestAvgRate(uint256 requestId, uint256 avgMTokenRate)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         _approveRequest(requestId, avgMTokenRate, true, false, true);
     }
@@ -335,10 +335,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function rejectRequest(uint256 requestId)
-        external
-        validateVaultAdminAccess
-    {
+    function rejectRequest(uint256 requestId) external onlyContractAdmin {
         Request memory request = redeemRequests[requestId];
 
         _validateRequest(requestId, request.sender, request.status);
@@ -354,7 +351,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     function bulkRepayLpLoanRequest(
         uint256[] calldata requestIds,
         uint64 loanApr
-    ) external validateVaultAdminAccess {
+    ) external onlyContractAdmin {
         require(loanApr <= maxLoanApr, LoanAprTooHigh(loanApr, maxLoanApr));
 
         for (uint256 i = 0; i < requestIds.length; ++i) {
@@ -409,10 +406,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function cancelLpLoanRequest(uint256 requestId)
-        external
-        validateVaultAdminAccess
-    {
+    function cancelLpLoanRequest(uint256 requestId) external onlyContractAdmin {
         LiquidityProviderLoanRequest memory request = loanRequests[requestId];
 
         _validateRequest(requestId, request.tokenOut, request.status);
@@ -424,10 +418,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function setRequestRedeemer(address redeemer)
-        external
-        validateVaultAdminAccess
-    {
+    function setRequestRedeemer(address redeemer) external onlyContractAdmin {
         _validateAddress(redeemer, false);
 
         requestRedeemer = redeemer;
@@ -438,7 +429,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function setLoanLp(address newLoanLp) external validateVaultAdminAccess {
+    function setLoanLp(address newLoanLp) external onlyContractAdmin {
         loanLp = newLoanLp;
 
         emit SetLoanLp(msg.sender, newLoanLp);
@@ -449,7 +440,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function setLoanLpFeeReceiver(address newLoanLpFeeReceiver)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         loanLpFeeReceiver = newLoanLpFeeReceiver;
 
@@ -461,7 +452,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function setLoanRepaymentAddress(address newLoanRepaymentAddress)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         loanRepaymentAddress = newLoanRepaymentAddress;
 
@@ -473,7 +464,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function setLoanSwapperVault(address newLoanSwapperVault)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         loanSwapperVault = IRedemptionVault(newLoanSwapperVault);
 
@@ -483,10 +474,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function setMaxLoanApr(uint64 newMaxLoanApr)
-        external
-        validateVaultAdminAccess
-    {
+    function setMaxLoanApr(uint64 newMaxLoanApr) external onlyContractAdmin {
         maxLoanApr = newMaxLoanApr;
 
         emit SetMaxLoanApr(msg.sender, newMaxLoanApr);
@@ -497,7 +485,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function setPreferLoanLiquidity(bool newLoanLpFirst)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         preferLoanLiquidity = newLoanLpFirst;
 
@@ -521,7 +509,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256[] calldata requestIds,
         uint256 newOutRate,
         bool isAvgRate
-    ) private validateVaultAdminAccess {
+    ) private onlyContractAdmin {
         for (uint256 i = 0; i < requestIds.length; ++i) {
             bool success = _approveRequest(
                 requestIds[i],

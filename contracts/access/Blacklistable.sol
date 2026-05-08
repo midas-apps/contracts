@@ -10,6 +10,8 @@ import {WithMidasAccessControl} from "./WithMidasAccessControl.sol";
  * @author RedDuck Software
  */
 abstract contract Blacklistable is WithMidasAccessControl {
+    error HasRole(bytes32 role, address account);
+
     /**
      * @dev leaving a storage gap for futures updates
      */
@@ -28,9 +30,10 @@ abstract contract Blacklistable is WithMidasAccessControl {
      * @dev checks that a given `account` doesnt
      * have BLACKLISTED_ROLE
      */
-    function _onlyNotBlacklisted(address account)
-        internal
-        view
-        onlyNotRole(BLACKLISTED_ROLE, account)
-    {}
+    function _onlyNotBlacklisted(address account) internal view {
+        require(
+            !accessControl.hasRole(BLACKLISTED_ROLE, account),
+            HasRole(BLACKLISTED_ROLE, account)
+        );
+    }
 }

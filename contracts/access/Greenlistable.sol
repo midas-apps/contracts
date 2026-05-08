@@ -36,8 +36,7 @@ abstract contract Greenlistable is WithMidasAccessControl {
      * can be called only from permissioned actor.
      * @param enable enable
      */
-    function setGreenlistEnable(bool enable) external {
-        _validateGreenlistableAdminAccess(msg.sender);
+    function setGreenlistEnable(bool enable) external onlyContractAdmin {
         require(greenlistEnabled != enable, SameBoolValue(enable));
         greenlistEnabled = enable;
         emit SetGreenlistEnable(msg.sender, enable);
@@ -55,17 +54,10 @@ abstract contract Greenlistable is WithMidasAccessControl {
      * @dev checks that a given `account`
      * have a `greenlistedRole()`
      */
-    function _onlyGreenlisted(address account)
-        private
-        view
-        onlyRole(greenlistedRole(), account)
-    {}
-
-    /**
-     * @dev checks that a given `account` has access to greenlistable functions
-     */
-    function _validateGreenlistableAdminAccess(address account)
-        internal
-        view
-        virtual;
+    function _onlyGreenlisted(address account) private view {
+        require(
+            accessControl.hasRole(greenlistedRole(), account),
+            HasntRole(greenlistedRole(), account)
+        );
+    }
 }

@@ -63,14 +63,6 @@ contract CustomAggregatorV3CompatibleFeed is
     );
 
     /**
-     * @dev checks that msg.sender has access to a function
-     */
-    modifier onlyAggregatorAdmin() {
-        _validateFunctionAccessWithTimelock(feedAdminRole(), msg.sender, true);
-        _;
-    }
-
-    /**
      * @notice upgradeable pattern contract`s initializer
      * @param _accessControl address of MidasAccessControll contract
      * @param _minAnswer init value for `minAnswer`. Should be < `_maxAnswer`
@@ -120,7 +112,7 @@ contract CustomAggregatorV3CompatibleFeed is
      * Function should be called only from address with `feedAdminRole()`
      * @param _data data value
      */
-    function setRoundData(int256 _data) public onlyAggregatorAdmin {
+    function setRoundData(int256 _data) public onlyContractAdmin {
         require(
             _data >= minAnswer && _data <= maxAnswer,
             "CA: out of [min;max]"
@@ -207,8 +199,12 @@ contract CustomAggregatorV3CompatibleFeed is
      * @dev describes a role, owner of which can update prices in this feed
      * @return role descriptor
      */
-    function feedAdminRole() public view virtual returns (bytes32) {
+    function feedAdminRole() public pure virtual returns (bytes32) {
         return _DEFAULT_ADMIN_ROLE;
+    }
+
+    function _contractAdminRole() internal pure override returns (bytes32) {
+        return feedAdminRole();
     }
 
     /**

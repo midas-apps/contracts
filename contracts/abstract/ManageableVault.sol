@@ -19,6 +19,7 @@ import {WithSanctionsList} from "../abstract/WithSanctionsList.sol";
 
 import {DecimalsCorrectionLibrary} from "../libraries/DecimalsCorrectionLibrary.sol";
 import {Pausable, IPausable} from "../access/Pausable.sol";
+import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
 
 /**
  * @title ManageableVault
@@ -145,15 +146,6 @@ abstract contract ManageableVault is
     uint256[50] private __gap;
 
     /**
-     * @dev checks that msg.sender do have a vaultRole() role
-     * and validates if function is not paused
-     */
-    modifier validateVaultAdminAccess() {
-        _validateVaultAdminAccess(msg.sender);
-        _;
-    }
-
-    /**
      * @dev validate msg.sender and recipient access, validates if function is not paused
      * @param recipient recipient address
      */
@@ -220,7 +212,7 @@ abstract contract ManageableVault is
         uint256 tokenFee,
         uint256 allowance,
         bool stable
-    ) external validateVaultAdminAccess {
+    ) external onlyContractAdmin {
         require(_paymentTokens.add(token), PaymentTokenAlreadyAdded(token));
         _validateAddress(dataFeed, false);
         _validateFee(tokenFee, false);
@@ -245,10 +237,7 @@ abstract contract ManageableVault is
      * @inheritdoc IManageableVault
      * @dev reverts if token is not presented
      */
-    function removePaymentToken(address token)
-        external
-        validateVaultAdminAccess
-    {
+    function removePaymentToken(address token) external onlyContractAdmin {
         require(_paymentTokens.remove(token), PaymentTokenNotExists(token));
         delete tokensConfig[token];
         emit RemovePaymentToken(token, msg.sender);
@@ -259,7 +248,7 @@ abstract contract ManageableVault is
      */
     function changeTokenAllowance(address token, uint256 allowance)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         _requireTokenExists(token);
 
@@ -273,7 +262,7 @@ abstract contract ManageableVault is
      */
     function changeTokenFee(address token, uint256 fee)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         _requireTokenExists(token);
         _validateFee(fee, false);
@@ -288,7 +277,7 @@ abstract contract ManageableVault is
      */
     function setVariationTolerance(uint256 tolerance)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         _validateFee(tolerance, false);
 
@@ -299,7 +288,7 @@ abstract contract ManageableVault is
     /**
      * @inheritdoc IManageableVault
      */
-    function setMinAmount(uint256 newAmount) external validateVaultAdminAccess {
+    function setMinAmount(uint256 newAmount) external onlyContractAdmin {
         minAmount = newAmount;
         emit SetMinAmount(msg.sender, newAmount);
     }
@@ -308,10 +297,7 @@ abstract contract ManageableVault is
      * @inheritdoc IManageableVault
      * @dev reverts if account is already added
      */
-    function addWaivedFeeAccount(address account)
-        external
-        validateVaultAdminAccess
-    {
+    function addWaivedFeeAccount(address account) external onlyContractAdmin {
         require(!waivedFeeRestriction[account], SameAddressValue(account));
         waivedFeeRestriction[account] = true;
         emit AddWaivedFeeAccount(account, msg.sender);
@@ -323,7 +309,7 @@ abstract contract ManageableVault is
      */
     function removeWaivedFeeAccount(address account)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         require(waivedFeeRestriction[account], SameAddressValue(account));
         waivedFeeRestriction[account] = false;
@@ -334,10 +320,7 @@ abstract contract ManageableVault is
      * @inheritdoc IManageableVault
      * @dev reverts address zero or equal address(this)
      */
-    function setFeeReceiver(address receiver)
-        external
-        validateVaultAdminAccess
-    {
+    function setFeeReceiver(address receiver) external onlyContractAdmin {
         _validateAddress(receiver, true);
 
         feeReceiver = receiver;
@@ -349,10 +332,7 @@ abstract contract ManageableVault is
      * @inheritdoc IManageableVault
      * @dev reverts address zero or equal address(this)
      */
-    function setTokensReceiver(address receiver)
-        external
-        validateVaultAdminAccess
-    {
+    function setTokensReceiver(address receiver) external onlyContractAdmin {
         _validateAddress(receiver, true);
 
         tokensReceiver = receiver;
@@ -363,10 +343,7 @@ abstract contract ManageableVault is
     /**
      * @inheritdoc IManageableVault
      */
-    function setInstantFee(uint256 newInstantFee)
-        external
-        validateVaultAdminAccess
-    {
+    function setInstantFee(uint256 newInstantFee) external onlyContractAdmin {
         _validateFee(newInstantFee, false);
 
         instantFee = newInstantFee;
@@ -379,7 +356,7 @@ abstract contract ManageableVault is
     function setMinMaxInstantFee(
         uint64 newMinInstantFee,
         uint64 newMaxInstantFee
-    ) external validateVaultAdminAccess {
+    ) external onlyContractAdmin {
         _setMinMaxInstantFee(newMinInstantFee, newMaxInstantFee);
     }
 
@@ -388,7 +365,7 @@ abstract contract ManageableVault is
      */
     function setMaxInstantShare(uint64 newMaxInstantShare)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         _validateFee(newMaxInstantShare, false);
         maxInstantShare = newMaxInstantShare;
@@ -400,7 +377,7 @@ abstract contract ManageableVault is
      */
     function setMaxApproveRequestId(uint256 newMaxApproveRequestId)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         maxApproveRequestId = newMaxApproveRequestId;
         emit SetMaxApproveRequestId(msg.sender, newMaxApproveRequestId);
@@ -411,7 +388,7 @@ abstract contract ManageableVault is
      */
     function setInstantLimitConfig(uint256 window, uint256 limit)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         _setInstantLimitConfig(window, limit);
     }
@@ -421,7 +398,7 @@ abstract contract ManageableVault is
      */
     function removeInstantLimitConfig(uint256 window)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         require(
             _limitWindows.remove(window),
@@ -436,7 +413,7 @@ abstract contract ManageableVault is
      */
     function freeFromMinAmount(address user, bool enable)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         require(isFreeFromMinAmount[user] != enable, SameAddressValue(user));
 
@@ -450,7 +427,7 @@ abstract contract ManageableVault is
      */
     function withdrawToken(address token, uint256 amount)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         address withdrawTo = tokensReceiver;
         IERC20(token).safeTransfer(withdrawTo, amount);
@@ -810,35 +787,29 @@ abstract contract ManageableVault is
     }
 
     /**
-     * @dev validate vault admin access for `account`
-     * and validates if function is not paused
-     * @param account address to check
+     * @dev returns vault admin role
      */
-    function _validateVaultAdminAccess(address account) private view {
+    function _contractAdminRole() internal view override returns (bytes32) {
+        return vaultRole();
+    }
+
+    /**
+     * @inheritdoc WithMidasAccessControl
+     */
+    function _validateFunctionAccessWithTimelock(
+        bytes32 role,
+        bool roleIsFunctionOperator,
+        address account,
+        bool validateFunctionRole
+    ) internal view override {
         _requireFnNotPaused(msg.sig);
-        _validateFunctionAccessWithTimelock(vaultRole(), account, true);
-    }
 
-    /**
-     * @inheritdoc Greenlistable
-     */
-    function _validateGreenlistableAdminAccess(address account)
-        internal
-        view
-        override
-    {
-        _validateVaultAdminAccess(account);
-    }
-
-    /**
-     * @inheritdoc WithSanctionsList
-     */
-    function _validateSanctionListAdminAccess(address account)
-        internal
-        view
-        override
-    {
-        _validateVaultAdminAccess(account);
+        super._validateFunctionAccessWithTimelock(
+            role,
+            roleIsFunctionOperator,
+            account,
+            validateFunctionRole
+        );
     }
 
     /**

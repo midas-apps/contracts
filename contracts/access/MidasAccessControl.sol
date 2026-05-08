@@ -7,7 +7,7 @@ import {IAccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acc
 import {MidasAccessControlRoles} from "./MidasAccessControlRoles.sol";
 import {MidasInitializable} from "../abstract/MidasInitializable.sol";
 import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
-
+import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.sol";
 import {TimelockControllerUpgradeable as TimelockController} from "@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol";
 
 /**
@@ -89,7 +89,8 @@ contract MidasAccessControl is
     function setFunctionAccessAdminRoleEnabledMult(
         SetFunctionAccessAdminRoleEnabledParams[] calldata params
     ) external {
-        _checkRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _validateRoleAccess(DEFAULT_ADMIN_ROLE, _msgSender(), true);
+
         for (uint256 i = 0; i < params.length; ++i) {
             SetFunctionAccessAdminRoleEnabledParams memory param = params[i];
 
@@ -112,17 +113,20 @@ contract MidasAccessControl is
      * @inheritdoc IMidasAccessControl
      */
     function setFunctionAccessGrantOperatorMult(
+        bytes32 functionAccessAdminRole,
         SetFunctionAccessGrantOperatorParams[] calldata params
     ) external {
+        require(
+            functionAccessAdminRoleEnabled[functionAccessAdminRole],
+            "MAC: FA admin role disabled"
+        );
+        _validateRoleAccess(functionAccessAdminRole, _msgSender(), false);
+
         for (uint256 i = 0; i < params.length; ++i) {
             SetFunctionAccessGrantOperatorParams memory param = params[i];
-            require(
-                functionAccessAdminRoleEnabled[param.functionAccessAdminRole],
-                "MAC: FA admin role disabled"
-            );
-            _checkRole(param.functionAccessAdminRole, _msgSender());
+
             bytes32 key = functionPermissionKey(
-                param.functionAccessAdminRole,
+                functionAccessAdminRole,
                 param.targetContract,
                 param.functionSelector
             );
@@ -134,7 +138,7 @@ contract MidasAccessControl is
 
             _functionAccessGrantOperators[key][param.operator] = param.enabled;
             emit FunctionAccessGrantOperatorUpdate(
-                param.functionAccessAdminRole,
+                functionAccessAdminRole,
                 param.targetContract,
                 param.operator,
                 param.functionSelector,
@@ -147,19 +151,34 @@ contract MidasAccessControl is
      * @inheritdoc IMidasAccessControl
      */
     function setFunctionPermissionMult(
+        bytes32 functionAccessAdminRole,
+        address targetContract,
+        bytes4 functionSelector,
         SetFunctionPermissionParams[] calldata params
     ) external {
+        require(params.length > 0, "MAC: no params");
+
+        bytes32 key = functionPermissionKey(
+            functionAccessAdminRole,
+            targetContract,
+            functionSelector
+        );
+
+        bytes32 operatorRole = functionAccessGrantOperatorKey(
+            functionAccessAdminRole,
+            targetContract,
+            functionSelector
+        );
+
+        require(
+            _functionAccessGrantOperators[operatorRole][_msgSender()],
+            "MAC: not FA grant operator"
+        );
+
+        _validateRoleAccess(operatorRole, _msgSender(), false);
+
         for (uint256 i = 0; i < params.length; ++i) {
             SetFunctionPermissionParams memory param = params[i];
-            bytes32 key = functionPermissionKey(
-                param.functionAccessAdminRole,
-                param.targetContract,
-                param.functionSelector
-            );
-            require(
-                _functionAccessGrantOperators[key][_msgSender()],
-                "MAC: not FA grant operator"
-            );
 
             // if already enabled, skip and do not emit event
             if (_functionPermissions[key][param.account]) {
@@ -168,10 +187,10 @@ contract MidasAccessControl is
 
             _functionPermissions[key][param.account] = param.enabled;
             emit FunctionPermissionUpdate(
-                param.functionAccessAdminRole,
-                param.targetContract,
+                functionAccessAdminRole,
+                targetContract,
                 param.account,
-                param.functionSelector,
+                functionSelector,
                 param.enabled
             );
         }
@@ -180,7 +199,7 @@ contract MidasAccessControl is
     /**
      * @notice grant multiple roles to multiple users
      * in one transaction
-     * @dev length`s of 2 arays should match
+     * @dev length`s of 2 arays should match. All the roles should have the same admin role.
      * @param roles array of bytes32 roles
      * @param addresses array of user addresses
      */
@@ -188,9 +207,16 @@ contract MidasAccessControl is
         external
     {
         require(roles.length == addresses.length, "MAC: mismatch arrays");
+        require(roles.length > 0, "MAC: no roles");
+
+        bytes32 adminRole = getRoleAdmin(roles[0]);
+        _validateRoleAccess(adminRole, _msgSender(), false);
 
         for (uint256 i = 0; i < roles.length; ++i) {
-            _checkRole(getRoleAdmin(roles[i]), _msgSender());
+            require(
+                getRoleAdmin(roles[i]) == adminRole,
+                "MAC: role admin mismatch"
+            );
             _grantRole(roles[i], addresses[i]);
         }
     }
@@ -198,7 +224,7 @@ contract MidasAccessControl is
     /**
      * @notice revoke multiple roles from multiple users
      * in one transaction
-     * @dev length`s of 2 arays should match
+     * @dev length`s of 2 arays should match. All the roles should have the same admin role.
      * @param roles array of bytes32 roles
      * @param addresses array of user addresses
      */
@@ -206,8 +232,16 @@ contract MidasAccessControl is
         external
     {
         require(roles.length == addresses.length, "MAC: mismatch arrays");
+        require(roles.length > 0, "MAC: no roles");
+
+        bytes32 adminRole = getRoleAdmin(roles[0]);
+        _validateRoleAccess(adminRole, _msgSender(), false);
+
         for (uint256 i = 0; i < roles.length; ++i) {
-            _checkRole(getRoleAdmin(roles[i]), _msgSender());
+            require(
+                getRoleAdmin(roles[i]) == adminRole,
+                "MAC: role admin mismatch"
+            );
             _revokeRole(roles[i], addresses[i]);
         }
     }
@@ -216,7 +250,7 @@ contract MidasAccessControl is
      * @inheritdoc IMidasAccessControl
      */
     function setRoleAdmin(bytes32 role, bytes32 newAdminRole) external {
-        _checkRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _validateRoleAccess(getRoleAdmin(role), _msgSender(), true);
         _setRoleAdmin(role, newAdminRole);
     }
 
@@ -238,11 +272,22 @@ contract MidasAccessControl is
         bytes4 functionSelector,
         address operator
     ) external view returns (bool) {
-        bytes32 key = functionPermissionKey(
+        bytes32 key = functionAccessGrantOperatorKey(
             functionAccessAdminRole,
             targetContract,
             functionSelector
         );
+        return _functionAccessGrantOperators[key][operator];
+    }
+
+    /**
+     * @inheritdoc IMidasAccessControl
+     */
+    function isFunctionAccessGrantOperator(bytes32 key, address operator)
+        external
+        view
+        returns (bool)
+    {
         return _functionAccessGrantOperators[key][operator];
     }
 
@@ -283,11 +328,48 @@ contract MidasAccessControl is
         bytes4 functionSelector
     ) public pure returns (bytes32) {
         return
+            _functionPermissionKey(
+                functionAccessAdminRole,
+                targetContract,
+                functionSelector,
+                ""
+            );
+    }
+
+    /**
+     * @inheritdoc IMidasAccessControl
+     */
+    function functionAccessGrantOperatorKey(
+        bytes32 functionAccessAdminRole,
+        address targetContract,
+        bytes4 functionSelector
+    ) public pure returns (bytes32) {
+        return
+            _functionPermissionKey(
+                functionAccessAdminRole,
+                targetContract,
+                functionSelector,
+                "operator"
+            );
+    }
+
+    /**
+     * @dev calculates the base key for function permission mappings
+     * @param functionAccessAdminRole OZ role for the scope
+     */
+    function _functionPermissionKey(
+        bytes32 functionAccessAdminRole,
+        address targetContract,
+        bytes4 functionSelector,
+        bytes memory additionalData
+    ) private pure returns (bytes32) {
+        return
             keccak256(
                 abi.encode(
                     functionAccessAdminRole,
                     targetContract,
-                    functionSelector
+                    functionSelector,
+                    additionalData
                 )
             );
     }
@@ -300,5 +382,32 @@ contract MidasAccessControl is
 
         _setRoleAdmin(BLACKLISTED_ROLE, BLACKLIST_OPERATOR_ROLE);
         _setRoleAdmin(GREENLISTED_ROLE, GREENLIST_OPERATOR_ROLE);
+    }
+
+    function _validateRoleAccess(
+        bytes32 role,
+        address account,
+        bool validateFunctionRole
+    ) internal view {
+        AccessControlUtilsLibrary.validateFunctionAccessWithTimelock(
+            this,
+            role,
+            false,
+            account,
+            validateFunctionRole
+        );
+    }
+
+    function _validateOperatorRoleAccess(bytes32 role, address account)
+        internal
+        view
+    {
+        AccessControlUtilsLibrary.validateFunctionAccessWithTimelock(
+            this,
+            role,
+            true,
+            account,
+            false
+        );
     }
 }

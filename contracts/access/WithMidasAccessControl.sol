@@ -19,7 +19,6 @@ abstract contract WithMidasAccessControl is
 
     error SameBoolValue(bool value);
     error InvalidAddress(address addr);
-    error HasRole(bytes32 role, address account);
     error HasntRole(bytes32 role, address account);
 
     /**
@@ -38,19 +37,23 @@ abstract contract WithMidasAccessControl is
      */
     uint256[50] private __gap;
 
-    /**
-     * @dev checks that given `address` have `role`
-     */
-    modifier onlyRole(bytes32 role, address account) {
-        _onlyRole(role, account);
+    modifier onlyRole(bytes32 role, bool validateFunctionRole) {
+        _validateFunctionAccessWithTimelock(
+            role,
+            false,
+            msg.sender,
+            validateFunctionRole
+        );
         _;
     }
 
-    /**
-     * @dev checks that given `address` do not have `role`
-     */
-    modifier onlyNotRole(bytes32 role, address account) {
-        _onlyNotRole(role, account);
+    modifier onlyContractAdmin() {
+        _validateFunctionAccessWithTimelock(
+            _contractAdminRole(),
+            false,
+            msg.sender,
+            true
+        );
         _;
     }
 
@@ -66,29 +69,22 @@ abstract contract WithMidasAccessControl is
         accessControl = IMidasAccessControl(_accessControl);
     }
 
-    /**
-     * @dev checks that given `address` have `role`
-     */
-    function _onlyRole(bytes32 role, address account) internal view {
-        require(accessControl.hasRole(role, account), HasntRole(role, account));
-    }
-
-    /**
-     * @dev checks that given `address` do not have `role`
-     */
-    function _onlyNotRole(bytes32 role, address account) internal view {
-        require(!accessControl.hasRole(role, account), HasRole(role, account));
-    }
-
     function _validateFunctionAccessWithTimelock(
         bytes32 role,
+        bool roleIsFunctionOperator,
         address account,
         bool validateFunctionRole
-    ) internal view {
+    ) internal view virtual {
         accessControl.validateFunctionAccessWithTimelock(
             role,
+            roleIsFunctionOperator,
             account,
             validateFunctionRole
         );
     }
+
+    /**
+     * @dev main admin role for the contract
+     */
+    function _contractAdminRole() internal view virtual returns (bytes32);
 }

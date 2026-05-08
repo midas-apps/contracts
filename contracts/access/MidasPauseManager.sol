@@ -28,11 +28,6 @@ contract MidasPauseManager is
      */
     mapping(address => bool) public contractPaused;
 
-    modifier onlyPauseAdmin() {
-        _validateFunctionAccessWithTimelock(pauseAdminRole(), msg.sender, true);
-        _;
-    }
-
     modifier onlyPausableContractAdmin(address contractAddr) {
         _validateContractAdminAccess(contractAddr);
         _;
@@ -111,14 +106,14 @@ contract MidasPauseManager is
     /**
      * @inheritdoc IMidasPauseManager
      */
-    function globalPause() external onlyPauseAdmin {
+    function globalPause() external onlyContractAdmin {
         _pause();
     }
 
     /**
      * @inheritdoc IMidasPauseManager
      */
-    function globalUnpause() external onlyPauseAdmin {
+    function globalUnpause() external onlyContractAdmin {
         _unpause();
     }
 
@@ -143,11 +138,16 @@ contract MidasPauseManager is
         return _PAUSE_ADMIN_ROLE;
     }
 
+    function _contractAdminRole() internal pure override returns (bytes32) {
+        return _PAUSE_ADMIN_ROLE;
+    }
+
     function _validateContractAdminAccess(address contractAddr) internal view {
         (bytes32 role, bool validateFunctionRole) = IPausable(contractAddr)
             .pauserRole();
         _validateFunctionAccessWithTimelock(
             role,
+            false,
             msg.sender,
             validateFunctionRole
         );

@@ -65,10 +65,7 @@ contract DepositVaultWithUSTB is DepositVault {
      * @notice Updates `ustbDepositsEnabled` value
      * @param enabled whether USTB deposits are enabled
      */
-    function setUstbDepositsEnabled(bool enabled)
-        external
-        validateVaultAdminAccess
-    {
+    function setUstbDepositsEnabled(bool enabled) external onlyContractAdmin {
         ustbDepositsEnabled = enabled;
         emit SetUstbDepositsEnabled(enabled);
     }

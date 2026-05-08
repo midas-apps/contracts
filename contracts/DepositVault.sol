@@ -216,7 +216,7 @@ contract DepositVault is ManageableVault, IDepositVault {
      */
     function safeBulkApproveRequestAtSavedRate(uint256[] calldata requestIds)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         for (uint256 i = 0; i < requestIds.length; ++i) {
             uint256 rate = mintRequests[requestIds[i]].tokenOutRate;
@@ -277,7 +277,7 @@ contract DepositVault is ManageableVault, IDepositVault {
      */
     function safeApproveRequest(uint256 requestId, uint256 newOutRate)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         _approveRequest(requestId, newOutRate, true, false, true);
     }
@@ -287,7 +287,7 @@ contract DepositVault is ManageableVault, IDepositVault {
      */
     function safeApproveRequestAvgRate(uint256 requestId, uint256 avgMTokenRate)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         _approveRequest(requestId, avgMTokenRate, true, true, true);
     }
@@ -297,7 +297,7 @@ contract DepositVault is ManageableVault, IDepositVault {
      */
     function approveRequest(uint256 requestId, uint256 newOutRate)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         _approveRequest(requestId, newOutRate, false, false, true);
     }
@@ -307,7 +307,7 @@ contract DepositVault is ManageableVault, IDepositVault {
      */
     function approveRequestAvgRate(uint256 requestId, uint256 avgMTokenRate)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         _approveRequest(requestId, avgMTokenRate, false, true, true);
     }
@@ -315,10 +315,7 @@ contract DepositVault is ManageableVault, IDepositVault {
     /**
      * @inheritdoc IDepositVault
      */
-    function rejectRequest(uint256 requestId)
-        external
-        validateVaultAdminAccess
-    {
+    function rejectRequest(uint256 requestId) external onlyContractAdmin {
         Request memory request = mintRequests[requestId];
 
         _validateRequest(requestId, request.sender, request.status);
@@ -333,7 +330,7 @@ contract DepositVault is ManageableVault, IDepositVault {
      */
     function setMinMTokenAmountForFirstDeposit(uint256 newValue)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         minMTokenAmountForFirstDeposit = newValue;
 
@@ -343,10 +340,7 @@ contract DepositVault is ManageableVault, IDepositVault {
     /**
      * @inheritdoc IDepositVault
      */
-    function setMaxSupplyCap(uint256 newValue)
-        external
-        validateVaultAdminAccess
-    {
+    function setMaxSupplyCap(uint256 newValue) external onlyContractAdmin {
         maxSupplyCap = newValue;
 
         emit SetMaxSupplyCap(msg.sender, newValue);
@@ -369,7 +363,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256[] calldata requestIds,
         uint256 newOutRate,
         bool isAvgRate
-    ) internal validateVaultAdminAccess {
+    ) internal onlyContractAdmin {
         for (uint256 i = 0; i < requestIds.length; ++i) {
             bool success = _approveRequest(
                 requestIds[i],

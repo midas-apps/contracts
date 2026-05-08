@@ -13,25 +13,13 @@ contract GreenlistableTester is Greenlistable {
         onlyGreenlisted(account)
     {}
 
-    function validateGreenlistableAdminAccess(address account) external view {
-        _validateGreenlistableAdminAccess(account);
-    }
-
     function _disableInitializers() internal override {}
-
-    function _validateGreenlistableAdminAccess(address account)
-        internal
-        view
-        override
-    {
-        _validateFunctionAccessWithTimelock(
-            greenlistAdminRole(),
-            account,
-            true
-        );
-    }
 
     function greenlistAdminRole() public view virtual returns (bytes32) {
         return keccak256("GREENLIST_ADMIN_ROLE");
+    }
+
+    function _contractAdminRole() internal pure override returns (bytes32) {
+        return _DEFAULT_ADMIN_ROLE;
     }
 }

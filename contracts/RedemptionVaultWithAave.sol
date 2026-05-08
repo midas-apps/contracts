@@ -63,7 +63,7 @@ contract RedemptionVaultWithAave is RedemptionVault {
      */
     function setAavePool(address _token, address _aavePool)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         _validateAddress(_token, true);
         _validateAddress(_aavePool, true);
@@ -79,7 +79,7 @@ contract RedemptionVaultWithAave is RedemptionVault {
      * @notice Removes the Aave V3 Pool for a specific payment token
      * @param _token payment token address
      */
-    function removeAavePool(address _token) external validateVaultAdminAccess {
+    function removeAavePool(address _token) external onlyContractAdmin {
         require(address(aavePools[_token]) != address(0), PoolNotSet(_token));
         delete aavePools[_token];
         emit RemoveAavePool(msg.sender, _token);

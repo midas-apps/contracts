@@ -84,7 +84,7 @@ contract DepositVaultWithMorpho is DepositVault {
      */
     function setMorphoVault(address _token, address _morphoVault)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         _validateAddress(_token, true);
         _validateAddress(_morphoVault, true);
@@ -100,10 +100,7 @@ contract DepositVaultWithMorpho is DepositVault {
      * @notice Removes the Morpho Vault for a specific payment token
      * @param _token payment token address
      */
-    function removeMorphoVault(address _token)
-        external
-        validateVaultAdminAccess
-    {
+    function removeMorphoVault(address _token) external onlyContractAdmin {
         require(
             address(morphoVaults[_token]) != address(0),
             VaultNotSet(_token)
@@ -116,10 +113,7 @@ contract DepositVaultWithMorpho is DepositVault {
      * @notice Updates `morphoDepositsEnabled` value
      * @param enabled whether Morpho auto-invest deposits are enabled
      */
-    function setMorphoDepositsEnabled(bool enabled)
-        external
-        validateVaultAdminAccess
-    {
+    function setMorphoDepositsEnabled(bool enabled) external onlyContractAdmin {
         morphoDepositsEnabled = enabled;
         emit SetMorphoDepositsEnabled(enabled);
     }
@@ -130,7 +124,7 @@ contract DepositVaultWithMorpho is DepositVault {
      */
     function setAutoInvestFallbackEnabled(bool enabled)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         autoInvestFallbackEnabled = enabled;
         emit SetAutoInvestFallbackEnabled(enabled);

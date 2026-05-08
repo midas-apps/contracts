@@ -77,7 +77,7 @@ contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
      */
     function changeNumeratorFeed(address _numeratorFeed)
         external
-        onlyRole(feedAdminRole(), msg.sender)
+        onlyContractAdmin
     {
         require(_numeratorFeed != address(0), "CDF: invalid address");
 
@@ -91,7 +91,7 @@ contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
      */
     function changeDenominatorFeed(address _denominatorFeed)
         external
-        onlyRole(feedAdminRole(), msg.sender)
+        onlyContractAdmin
     {
         require(_denominatorFeed != address(0), "CDF: invalid address");
 
@@ -104,7 +104,7 @@ contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
      */
     function setMinExpectedAnswer(uint256 _minExpectedAnswer)
         external
-        onlyRole(feedAdminRole(), msg.sender)
+        onlyContractAdmin
     {
         require(
             maxExpectedAnswer >= _minExpectedAnswer,
@@ -120,7 +120,7 @@ contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
      */
     function setMaxExpectedAnswer(uint256 _maxExpectedAnswer)
         external
-        onlyRole(feedAdminRole(), msg.sender)
+        onlyContractAdmin
     {
         require(
             _maxExpectedAnswer >= minExpectedAnswer,
@@ -168,5 +168,9 @@ contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
      */
     function feedAdminRole() public pure virtual override returns (bytes32) {
         return _DEFAULT_ADMIN_ROLE;
+    }
+
+    function _contractAdminRole() internal pure override returns (bytes32) {
+        return feedAdminRole();
     }
 }

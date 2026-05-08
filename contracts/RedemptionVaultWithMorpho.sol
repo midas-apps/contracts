@@ -58,7 +58,7 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
      */
     function setMorphoVault(address _token, address _morphoVault)
         external
-        validateVaultAdminAccess
+        onlyContractAdmin
     {
         _validateAddress(_token, true);
         _validateAddress(_morphoVault, true);
@@ -74,10 +74,7 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
      * @notice Removes the Morpho Vault for a specific payment token
      * @param _token payment token address
      */
-    function removeMorphoVault(address _token)
-        external
-        validateVaultAdminAccess
-    {
+    function removeMorphoVault(address _token) external onlyContractAdmin {
         require(
             address(morphoVaults[_token]) != address(0),
             VaultNotSet(_token)

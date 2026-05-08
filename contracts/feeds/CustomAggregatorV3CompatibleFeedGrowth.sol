@@ -88,14 +88,6 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     uint256[50] private __gap;
 
     /**
-     * @dev checks that msg.sender has access to a function
-     */
-    modifier onlyAggregatorAdmin() {
-        _validateFunctionAccessWithTimelock(feedAdminRole(), msg.sender, true);
-        _;
-    }
-
-    /**
      * @notice upgradeable pattern contract`s initializer
      * @param _accessControl address of MidasAccessControll contract
      * @param _minAnswer init value for `minAnswer`. Should be < `_maxAnswer`
@@ -135,7 +127,7 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     /**
      * @inheritdoc IAggregatorV3CompatibleFeedGrowth
      */
-    function setOnlyUp(bool _onlyUp) external override onlyAggregatorAdmin {
+    function setOnlyUp(bool _onlyUp) external override onlyContractAdmin {
         onlyUp = _onlyUp;
         emit OnlyUpUpdated(_onlyUp);
     }
@@ -146,7 +138,7 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     function setMaxGrowthApr(int80 _maxGrowthApr)
         external
         override
-        onlyAggregatorAdmin
+        onlyContractAdmin
     {
         require(_maxGrowthApr >= minGrowthApr, "CAG: !max growth");
         maxGrowthApr = _maxGrowthApr;
@@ -159,7 +151,7 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     function setMinGrowthApr(int80 _minGrowthApr)
         external
         override
-        onlyAggregatorAdmin
+        onlyContractAdmin
     {
         require(_minGrowthApr <= maxGrowthApr, "CAG: !min growth");
         minGrowthApr = _minGrowthApr;
@@ -211,7 +203,7 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
         int256 _data,
         uint256 _dataTimestamp,
         int80 _growthApr
-    ) public onlyAggregatorAdmin {
+    ) public onlyContractAdmin {
         require(
             _data >= minAnswer && _data <= maxAnswer,
             "CAG: out of [min;max]"
@@ -394,8 +386,12 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
      * @dev describes a role, owner of which can update prices in this feed
      * @return role descriptor
      */
-    function feedAdminRole() public view virtual returns (bytes32) {
+    function feedAdminRole() public pure virtual returns (bytes32) {
         return _DEFAULT_ADMIN_ROLE;
+    }
+
+    function _contractAdminRole() internal pure override returns (bytes32) {
+        return feedAdminRole();
     }
 
     /**
