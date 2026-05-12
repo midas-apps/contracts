@@ -10,9 +10,6 @@ import {IMidasTimelockManager} from "../interfaces/IMidasTimelockManager.sol";
  * @author RedDuck Software
  */
 library AccessControlUtilsLibrary {
-    error InvalidAddress(address addr);
-    error HasRole(bytes32 role, address account);
-    error HasntRole(bytes32 role, address account);
     error NoFunctionPermission(
         bytes32 roleUsed,
         bytes4 functionSelector,
@@ -75,8 +72,8 @@ library AccessControlUtilsLibrary {
             .isFunctionReadyToExecute(
                 roleUsed,
                 address(this),
-                msg.data,
-                account
+                // if call comes from timelock it already has the caller appended
+                isTimelock ? msg.data : appendAddressToData(msg.data, account)
             );
 
         if (!ready) {
@@ -102,6 +99,20 @@ library AccessControlUtilsLibrary {
         returns (address)
     {
         return address(bytes20(data[data.length - 20:]));
+    }
+
+    /**
+     * @dev appends the address to the end of the data
+     * @param data data to append the caller to
+     * @param addr address to append
+     * @return data with the caller appended
+     */
+    function appendAddressToData(bytes calldata data, address addr)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return abi.encodePacked(data, addr);
     }
 
     /**
@@ -160,9 +171,8 @@ library AccessControlUtilsLibrary {
             if (hasPermission) {
                 return key;
             }
-
-            revert NoFunctionPermission(role, msg.sig, account);
         }
+        revert NoFunctionPermission(role, msg.sig, account);
     }
 
     /**
@@ -178,7 +188,7 @@ library AccessControlUtilsLibrary {
         bytes4 functionSelector,
         address account
     ) internal view returns (bytes32 key, bool hasPermission) {
-        bytes32 key = accessControl.functionPermissionKey(
+        key = accessControl.functionPermissionKey(
             role,
             address(this),
             functionSelector

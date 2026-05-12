@@ -135,9 +135,10 @@ contract MidasPauseManager is
      * @inheritdoc IMidasPauseManager
      */
     function pauseAdminRole() public view returns (bytes32) {
-        return _PAUSE_ADMIN_ROLE;
+        return _contractAdminRole();
     }
 
+    // TODO: add natspec
     function _contractAdminRole() internal pure override returns (bytes32) {
         return _PAUSE_ADMIN_ROLE;
     }

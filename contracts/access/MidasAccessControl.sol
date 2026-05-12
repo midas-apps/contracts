@@ -197,6 +197,28 @@ contract MidasAccessControl is
     }
 
     /**
+     * @inheritdoc AccessControlUpgradeable
+     */
+    function grantRole(bytes32 role, address account)
+        public
+        override(AccessControlUpgradeable, IAccessControlUpgradeable)
+    {
+        _validateRoleAccess(getRoleAdmin(role), _msgSender(), false);
+        _grantRole(role, account);
+    }
+
+    /**
+     * @inheritdoc AccessControlUpgradeable
+     */
+    function revokeRole(bytes32 role, address account)
+        public
+        override(AccessControlUpgradeable, IAccessControlUpgradeable)
+    {
+        _validateRoleAccess(getRoleAdmin(role), _msgSender(), false);
+        _revokeRole(role, account);
+    }
+
+    /**
      * @notice grant multiple roles to multiple users
      * in one transaction
      * @dev length`s of 2 arays should match. All the roles should have the same admin role.
