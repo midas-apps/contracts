@@ -8,20 +8,21 @@ import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.
 import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
 import {EnumerableSetUpgradeable as EnumerableSet} from "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 
-enum TimelockOperationChallengeStatus {
+enum TimelockOperationStatus {
     NotChallenged,
     Challenged,
     Disputed,
     ReadyToExecute,
-    ReadyToCancel,
-    Cancelled,
+    ReadyToAbort,
+    Aborted,
     Executed
 }
 
 struct TimelockOperationChallenge {
-    TimelockOperationChallengeStatus status;
-    uint256 timerStartedAt;
-    uint256 votesFor;
+    TimelockOperationStatus status;
+    uint256 challengedAt;
+    uint256 firstDisputedAt;
+    uint256 votesForDispute;
     mapping(address => bool) voted;
 }
 
@@ -144,17 +145,13 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         }
 
         (
-            TimelockOperationChallengeStatus challengeStatus,
+            TimelockOperationStatus challengeStatus,
 
-        ) = _getTimelockChallengedOperationStatus(
-                operationId,
-                dataHash,
-                dataHashIndex
-            );
+        ) = _getChallengedOperationStatus(operationId, dataHash, dataHashIndex);
 
         if (
-            challengeStatus != TimelockOperationChallengeStatus.NotChallenged &&
-            challengeStatus != TimelockOperationChallengeStatus.ReadyToExecute
+            challengeStatus != TimelockOperationStatus.NotChallenged &&
+            challengeStatus != TimelockOperationStatus.ReadyToExecute
         ) {
             return (false, true);
         }
@@ -186,7 +183,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         );
     }
 
-    function scheduleTimelockTransactions(
+    function scheduleTimelockOperations(
         address[] calldata targets,
         bytes[] calldata datas
     ) external {
@@ -195,7 +192,13 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         }
     }
 
-    function executeTimelockTransaction(
+    function scheduleTimelockOperation(address target, bytes calldata data)
+        external
+    {
+        _scheduleTimelockTransaction(target, data);
+    }
+
+    function executeTimelockOperation(
         address target,
         bytes calldata data,
         address originalCaller
@@ -218,17 +221,13 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         ) = _getOperationId(_timelock, target, dataWithCaller);
 
         (
-            TimelockOperationChallengeStatus status,
+            TimelockOperationStatus status,
             TimelockOperationChallenge storage challenge
-        ) = _getTimelockChallengedOperationStatus(
-                operationId,
-                dataHash,
-                dataHashIndex
-            );
+        ) = _getChallengedOperationStatus(operationId, dataHash, dataHashIndex);
 
         require(
-            status == TimelockOperationChallengeStatus.NotChallenged ||
-                status == TimelockOperationChallengeStatus.ReadyToExecute,
+            status == TimelockOperationStatus.NotChallenged ||
+                status == TimelockOperationStatus.ReadyToExecute,
             "not ready to execute"
         );
 
@@ -240,11 +239,11 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             bytes32(dataHashIndex)
         );
 
-        challenge.status = TimelockOperationChallengeStatus.Executed;
+        challenge.status = TimelockOperationStatus.Executed;
         _dataHashIndexes[dataHash] = dataHashIndex + 1;
     }
 
-    function challengeTransaction(bytes32 operationId) external {
+    function challengeOperation(bytes32 operationId) external {
         require(
             accessControl.hasRole(CHALLENGER_ROLE, msg.sender),
             "MAC: unauthorized"
@@ -264,66 +263,61 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         );
 
         (
-            TimelockOperationChallengeStatus status,
+            TimelockOperationStatus status,
             TimelockOperationChallenge storage challenge,
             ,
 
-        ) = _getTimelockChallengedOperationStatus(operationId);
+        ) = _getChallengedOperationStatus(operationId);
 
         require(
-            status == TimelockOperationChallengeStatus.NotChallenged,
+            status == TimelockOperationStatus.NotChallenged,
             "already challenged"
         );
 
-        challenge.status = TimelockOperationChallengeStatus.Challenged;
-        challenge.timerStartedAt = block.timestamp;
+        challenge.status = TimelockOperationStatus.Challenged;
+        challenge.challengedAt = block.timestamp;
     }
 
-    function supportExecution(bytes32 operationId) external {
+    function disputeOperationChallenge(bytes32 operationId) external {
         require(_securityCouncil.contains(msg.sender), "not in council");
 
         (
-            TimelockOperationChallengeStatus status,
+            TimelockOperationStatus status,
             TimelockOperationChallenge storage challenge,
             ,
 
-        ) = _getTimelockChallengedOperationStatus(operationId);
+        ) = _getChallengedOperationStatus(operationId);
 
         require(
-            status == TimelockOperationChallengeStatus.Challenged ||
-                status == TimelockOperationChallengeStatus.Disputed,
+            status == TimelockOperationStatus.Challenged ||
+                status == TimelockOperationStatus.Disputed,
             "not challenged or disputed"
         );
 
         require(!challenge.voted[msg.sender], "already voted");
 
         challenge.voted[msg.sender] = true;
-        ++challenge.votesFor;
+        ++challenge.votesForDispute;
 
-        if (challenge.votesFor >= councilQuorum()) {
-            challenge.status = TimelockOperationChallengeStatus.ReadyToExecute;
-        } else if (status == TimelockOperationChallengeStatus.Challenged) {
-            challenge.status = TimelockOperationChallengeStatus.Disputed;
-            challenge.timerStartedAt = block.timestamp;
+        if (status == TimelockOperationStatus.Challenged) {
+            challenge.status = TimelockOperationStatus.Disputed;
+            challenge.firstDisputedAt = block.timestamp;
         }
     }
 
     // TODO: add AC
-    function cancelTransaction(bytes32 operationId) external {
+    function abortOperation(bytes32 operationId) external {
         (
-            TimelockOperationChallengeStatus status,
+            TimelockOperationStatus status,
             TimelockOperationChallenge storage challenge,
             bytes32 dataHash,
             uint256 dataHashIndex
-        ) = _getTimelockChallengedOperationStatus(operationId);
+        ) = _getChallengedOperationStatus(operationId);
 
-        require(
-            status == TimelockOperationChallengeStatus.ReadyToCancel,
-            "status"
-        );
+        require(status == TimelockOperationStatus.ReadyToAbort, "status");
 
         _dataHashIndexes[dataHash] = dataHashIndex + 1;
-        challenge.status = TimelockOperationChallengeStatus.Cancelled;
+        challenge.status = TimelockOperationStatus.Aborted;
 
         TimelockController(payable(timelock)).cancel(operationId);
     }
@@ -336,7 +330,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         bytes32 operationId,
         TimelockController _timelock
     )
-        internal
+        private
         view
         returns (bool operationExists, bool operationReadyToExecute)
     {
@@ -344,11 +338,53 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         operationReadyToExecute = _timelock.isOperationReady(operationId);
     }
 
-    function _getTimelockChallengedOperationStatus(bytes32 operationId)
-        internal
+    function getCouncilMemberDisputeVoteStatus(
+        bytes32 operationId,
+        address councilMember
+    ) external view returns (bool) {
+        (
+            ,
+            TimelockOperationChallenge storage challenge,
+            ,
+
+        ) = _getChallengedOperationStatus(operationId);
+        return challenge.voted[councilMember];
+    }
+
+    function getChallengedOperationStatus(bytes32 operationId)
+        external
         view
         returns (
-            TimelockOperationChallengeStatus status,
+            TimelockOperationStatus, /* status */
+            uint256, /* challengedAt */
+            uint256, /* firstDisputedAt */
+            uint256, /* votesForDispute */
+            bytes32, /* dataHash */
+            uint256 /* dataHashIndex */
+        )
+    {
+        (
+            TimelockOperationStatus status,
+            TimelockOperationChallenge storage challenge,
+            bytes32 dataHash,
+            uint256 dataHashIndex
+        ) = _getChallengedOperationStatus(operationId);
+
+        return (
+            status,
+            challenge.challengedAt,
+            challenge.firstDisputedAt,
+            challenge.votesForDispute,
+            dataHash,
+            dataHashIndex
+        );
+    }
+
+    function _getChallengedOperationStatus(bytes32 operationId)
+        private
+        view
+        returns (
+            TimelockOperationStatus status,
             TimelockOperationChallenge storage challenge,
             bytes32 dataHash,
             uint256 dataHashIndex
@@ -356,22 +392,22 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     {
         dataHash = _operationDataHashes[operationId];
         dataHashIndex = _dataHashIndexes[dataHash];
-        (status, challenge) = _getTimelockChallengedOperationStatus(
+        (status, challenge) = _getChallengedOperationStatus(
             operationId,
             dataHash,
             dataHashIndex
         );
     }
 
-    function _getTimelockChallengedOperationStatus(
+    function _getChallengedOperationStatus(
         bytes32 operationId,
         bytes32 dataHash,
         uint256 dataHashIndex
     )
-        internal
+        private
         view
         returns (
-            TimelockOperationChallengeStatus status,
+            TimelockOperationStatus status,
             TimelockOperationChallenge storage challenge
         )
     {
@@ -381,32 +417,37 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         status = challenge.status;
 
         if (
-            status != TimelockOperationChallengeStatus.Challenged &&
-            status != TimelockOperationChallengeStatus.Disputed
+            status != TimelockOperationStatus.Challenged &&
+            status != TimelockOperationStatus.Disputed
         ) {
             return (status, challenge);
         }
 
-        if (challenge.votesFor >= councilQuorum()) {
-            status = TimelockOperationChallengeStatus.ReadyToExecute;
-            return (status, challenge);
-        }
-
-        uint256 period = status == TimelockOperationChallengeStatus.Challenged
+        uint256 period = status == TimelockOperationStatus.Challenged
             ? CHALLENGE_PERIOD
             : DISPUTE_PERIOD;
 
-        uint256 timePassed = block.timestamp - challenge.timerStartedAt;
+        uint256 timePassed = block.timestamp -
+            (
+                status == TimelockOperationStatus.Challenged
+                    ? challenge.challengedAt
+                    : challenge.firstDisputedAt
+            );
 
         if (timePassed >= period) {
-            status = TimelockOperationChallengeStatus.ReadyToCancel;
+            if (challenge.votesForDispute >= councilQuorum()) {
+                status = TimelockOperationStatus.ReadyToExecute;
+                return (status, challenge);
+            } else {
+                status = TimelockOperationStatus.ReadyToAbort;
+            }
         }
 
         return (status, challenge);
     }
 
     function _scheduleTimelockTransaction(address target, bytes calldata data)
-        internal
+        private
     {
         require(target != timelock, "MAC: target cannot be timelock");
 
@@ -421,19 +462,17 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         // TODO: replace 3600 with the default delay that is passed in the initializer
         delay = delay == 0 ? 3600 : delay;
 
+        TimelockController _timelock = TimelockController(payable(timelock));
+
         (
             bytes32 operationId,
             bytes32 dataHash,
             uint256 dataHashIndex
-        ) = _getOperationId(
-                TimelockController(payable(timelock)),
-                target,
-                dataWithCaller
-            );
+        ) = _getOperationId(_timelock, target, dataWithCaller);
 
         _operationDataHashes[operationId] = dataHash;
 
-        TimelockController(payable(timelock)).schedule(
+        _timelock.schedule(
             target,
             0,
             dataWithCaller,
@@ -448,7 +487,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     }
 
     function _getDataHash(address target, bytes memory data)
-        internal
+        private
         pure
         returns (bytes32)
     {
@@ -481,12 +520,24 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             );
     }
 
+    function getOperationId(address target, bytes calldata data)
+        external
+        view
+        returns (bytes32 operationId)
+    {
+        (operationId, , ) = _getOperationId(
+            TimelockController(payable(timelock)),
+            target,
+            data
+        );
+    }
+
     function _getOperationId(
         TimelockController _timelock,
         address target,
         bytes memory data
     )
-        internal
+        private
         view
         returns (
             bytes32 operationId,
