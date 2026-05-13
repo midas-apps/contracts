@@ -767,7 +767,7 @@ abstract contract ManageableVault is
         onlyNotSanctioned(user)
     {
         if (!validatePaused) return;
-        _requireFnNotPaused(msg.sig);
+        _requireNotPaused(msg.sig);
     }
 
     /**

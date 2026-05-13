@@ -141,7 +141,7 @@ redemptionVaultSuits(
             morphoVaultMock.address,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -212,7 +212,7 @@ redemptionVaultSuits(
             stableCoins.usdc.address,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );

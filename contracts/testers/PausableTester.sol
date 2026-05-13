@@ -13,6 +13,10 @@ contract PausableTester is Pausable {
         _requireFnNotPaused(fn);
     }
 
+    function requireNotPaused(bytes4 fn) external {
+        _requireNotPaused(fn);
+    }
+
     /**
      * @inheritdoc IPausable
      */

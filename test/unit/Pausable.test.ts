@@ -170,7 +170,9 @@ describe('MidasPauseManager', () => {
       await pauseGlobalTest(
         { pauseManager, owner },
         {
-          revertMessage: 'Pausable: paused',
+          revertCustomError: {
+            customErrorName: 'Paused',
+          },
         },
       );
     });

@@ -623,7 +623,7 @@ export const depositVaultSuits = (
 
           await setMinAmountToDepositTest({ depositVault, owner }, 1.1, {
             revertCustomError: {
-              customErrorName: 'FnPaused',
+              customErrorName: 'Paused',
             },
           });
         });
@@ -701,7 +701,7 @@ export const depositVaultSuits = (
 
           await setMaxSupplyCapTest({ depositVault, owner }, 1.1, {
             revertCustomError: {
-              customErrorName: 'FnPaused',
+              customErrorName: 'Paused',
             },
           });
         });
@@ -779,7 +779,7 @@ export const depositVaultSuits = (
 
           await setMinAmountTest({ vault: depositVault, owner }, 1.1, {
             revertCustomError: {
-              customErrorName: 'FnPaused',
+              customErrorName: 'Paused',
             },
           });
         });
@@ -903,7 +903,7 @@ export const depositVaultSuits = (
             parseUnits('1000'),
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -1034,7 +1034,7 @@ export const depositVaultSuits = (
             days(1),
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -1188,7 +1188,7 @@ export const depositVaultSuits = (
 
           await greenListEnable({ greenlistable: depositVault, owner }, true, {
             revertCustomError: {
-              customErrorName: 'FnPaused',
+              customErrorName: 'Paused',
             },
           });
         });
@@ -1385,7 +1385,7 @@ export const depositVaultSuits = (
             constants.MaxUint256,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -1514,7 +1514,7 @@ export const depositVaultSuits = (
             owner.address,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -1627,7 +1627,7 @@ export const depositVaultSuits = (
             owner.address,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -1732,7 +1732,7 @@ export const depositVaultSuits = (
 
           await setInstantFeeTest({ vault: depositVault, owner }, 100, {
             revertCustomError: {
-              customErrorName: 'FnPaused',
+              customErrorName: 'Paused',
             },
           });
         });
@@ -1850,7 +1850,7 @@ export const depositVaultSuits = (
             1000,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -1951,7 +1951,7 @@ export const depositVaultSuits = (
             100,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -2123,7 +2123,7 @@ export const depositVaultSuits = (
             stableCoins.dai.address,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -2258,7 +2258,7 @@ export const depositVaultSuits = (
             1,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -2376,7 +2376,7 @@ export const depositVaultSuits = (
 
           await expect(
             depositVault.freeFromMinAmount(regularAccounts[0].address, true),
-          ).to.be.revertedWithCustomError(depositVault, 'FnPaused');
+          ).to.be.revertedWithCustomError(depositVault, 'Paused');
         });
 
         it('succeeds with only scoped function permission', async () => {
@@ -2648,7 +2648,7 @@ export const depositVaultSuits = (
             100000000,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -2823,7 +2823,7 @@ export const depositVaultSuits = (
             100,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -2995,7 +2995,7 @@ export const depositVaultSuits = (
             {
               from: regularAccounts[0],
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -3841,7 +3841,7 @@ export const depositVaultSuits = (
             {
               from: regularAccounts[0],
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -5156,7 +5156,7 @@ export const depositVaultSuits = (
             {
               from: regularAccounts[0],
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -5204,7 +5204,7 @@ export const depositVaultSuits = (
             {
               from: regularAccounts[0],
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -6357,7 +6357,7 @@ export const depositVaultSuits = (
             parseUnits('5'),
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -7269,7 +7269,7 @@ export const depositVaultSuits = (
             parseUnits('5'),
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -10532,7 +10532,9 @@ export const depositVaultSuits = (
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'Pausable: paused',
+              revertCustomError: {
+                customErrorName: 'Paused',
+              },
             },
           );
         });
@@ -10564,7 +10566,9 @@ export const depositVaultSuits = (
             stableCoins.dai,
             100,
             {
-              revertMessage: 'Pausable: paused',
+              revertCustomError: {
+                customErrorName: 'Paused',
+              },
             },
           );
         });
@@ -10748,7 +10752,9 @@ export const depositVaultSuits = (
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'Pausable: paused',
+              revertCustomError: {
+                customErrorName: 'Paused',
+              },
             },
           );
         });
@@ -10780,7 +10786,9 @@ export const depositVaultSuits = (
             stableCoins.dai,
             100,
             {
-              revertMessage: 'Pausable: paused',
+              revertCustomError: {
+                customErrorName: 'Paused',
+              },
             },
           );
         });

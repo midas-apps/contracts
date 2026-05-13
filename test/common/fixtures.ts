@@ -64,7 +64,6 @@ import {
   MidasAccessControlTimelockControllerTest__factory,
   MidasPauseManagerTest__factory,
 } from '../../typechain-types';
-MidasTimelockManagerTest__factory;
 
 export const defaultDeploy = async () => {
   const [
@@ -77,8 +76,21 @@ export const defaultDeploy = async () => {
     loanLp,
     loanLpFeeReceiver,
     loanRepaymentAddress,
+    councilMember1,
+    councilMember2,
+    councilMember3,
+    councilMember4,
+    councilMember5,
     ...regularAccounts
   ] = await ethers.getSigners();
+
+  const councilMembers = [
+    councilMember1,
+    councilMember2,
+    councilMember3,
+    councilMember4,
+    councilMember5,
+  ];
 
   const allRoles = getAllRoles();
 
@@ -92,7 +104,10 @@ export const defaultDeploy = async () => {
     owner,
   ).deploy();
 
-  await timelockManager.initialize(accessControl.address);
+  await timelockManager.initialize(
+    accessControl.address,
+    councilMembers.map((v) => v.address),
+  );
 
   const timelock = await new MidasAccessControlTimelockControllerTest__factory(
     owner,
@@ -145,6 +160,19 @@ export const defaultDeploy = async () => {
   ]
     .flat(2)
     .filter((v) => v !== '-' && !!v && !excludedRoles.includes(v)) as string[];
+
+  // const rolesToUpdateDelay = [
+  //   ...rolesFlat,
+  //   await mTokenLoan.M_TOKEN_TEST_BURN_OPERATOR_ROLE(),
+  //   await mTokenLoan.M_TOKEN_TEST_MINT_OPERATOR_ROLE(),
+  //   await mTokenLoan.M_TOKEN_TEST_PAUSE_OPERATOR_ROLE(),
+  // ];
+
+  // await setRoleTimelocksAndExecute(
+  //   { timelockManager, timelock, owner, accessControl },
+  //   rolesToUpdateDelay,
+  //   rolesToUpdateDelay.map((_) => constants.MaxUint256),
+  // );
 
   await expect(
     accessControl.grantRoleMult(
@@ -806,6 +834,11 @@ export const defaultDeploy = async () => {
     owner.address,
   );
 
+  // await timelockManager.setRoleDelays(
+  //   [await customFeed.CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE()],
+  //   [constants.MaxUint256],
+  // );
+
   // testers
   const wAccessControlTester = await new WithMidasAccessControlTester__factory(
     owner,
@@ -973,6 +1006,7 @@ export const defaultDeploy = async () => {
     timelock,
     timelockManager,
     pauseManager,
+    councilMembers,
   };
 };
 

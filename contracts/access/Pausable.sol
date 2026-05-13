@@ -24,6 +24,20 @@ abstract contract Pausable is WithMidasAccessControl, IPausable {
      */
     function _requireFnNotPaused(bytes4 fn) internal view {
         require(
+            !IMidasPauseManager(accessControl.pauseManager()).isFunctionPaused(
+                address(this),
+                fn
+            ),
+            Paused(address(this), fn)
+        );
+    }
+
+    /**
+     * @dev checks that a given `fn` and contract/global are not paused
+     * @param fn function id
+     */
+    function _requireNotPaused(bytes4 fn) internal view {
+        require(
             !IMidasPauseManager(accessControl.pauseManager()).isPaused(
                 address(this),
                 fn

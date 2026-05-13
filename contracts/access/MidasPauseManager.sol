@@ -128,7 +128,18 @@ contract MidasPauseManager is
         return
             paused() ||
             contractPaused[contractAddr] ||
-            contractFnPaused[contractAddr][selector];
+            isFunctionPaused(contractAddr, selector);
+    }
+
+    /**
+     * @inheritdoc IMidasPauseManager
+     */
+    function isFunctionPaused(address contractAddr, bytes4 selector)
+        public
+        view
+        returns (bool)
+    {
+        return contractFnPaused[contractAddr][selector];
     }
 
     /**

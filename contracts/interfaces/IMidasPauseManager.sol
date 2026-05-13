@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.34;
 
+// TODO: add natspec
 /**
  * @title IMidasPauseManager
  * @notice Interface for the MidasPauseManager
@@ -39,6 +40,11 @@ interface IMidasPauseManager {
     function globalPause() external;
 
     function globalUnpause() external;
+
+    function isFunctionPaused(address contractAddr, bytes4 selector)
+        external
+        view
+        returns (bool);
 
     function isPaused(address contractAddr, bytes4 selector)
         external

@@ -267,7 +267,7 @@ redemptionVaultSuits(
             regularAccounts[0].address,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );

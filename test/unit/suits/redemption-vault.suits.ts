@@ -78,8 +78,9 @@ import {
   setPreferLoanLiquidityTest,
 } from '../../common/redemption-vault.helpers';
 import {
-  executeTimelockTransactionTester,
-  scheduleTimelockTransactionTester,
+  executeTimelockOperationTester,
+  scheduleTimelockOperationsTester,
+  setRoleTimelocksTester,
 } from '../../common/timelock-manager.helpers';
 import { sanctionUser } from '../../common/with-sanctions-list.helpers';
 
@@ -166,8 +167,6 @@ export const redemptionVaultSuits = (
       expect(await redemptionVault.mToken()).eq(mTBILL.address);
 
       expect(await redemptionVault.ONE_HUNDRED_PERCENT()).eq('10000');
-
-      expect(await redemptionVault.paused()).eq(false);
 
       expect(await redemptionVault.tokensReceiver()).eq(tokensReceiver.address);
       expect(await redemptionVault.feeReceiver()).eq(feeReceiver.address);
@@ -585,7 +584,7 @@ export const redemptionVaultSuits = (
       });
 
       describe('redeemInstant() complex', () => {
-        it('should fail: when is paused', async () => {
+        it('should fail: when vault is paused', async () => {
           const {
             redemptionVault,
             owner,
@@ -619,7 +618,9 @@ export const redemptionVaultSuits = (
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'Pausable: paused',
+              revertCustomError: {
+                customErrorName: 'Paused',
+              },
             },
           );
         });
@@ -652,7 +653,9 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             100,
             {
-              revertMessage: 'Pausable: paused',
+              revertCustomError: {
+                customErrorName: 'Paused',
+              },
             },
           );
         });
@@ -848,7 +851,7 @@ export const redemptionVaultSuits = (
             {
               from: regularAccounts[0],
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -1746,7 +1749,7 @@ export const redemptionVaultSuits = (
             {
               from: regularAccounts[0],
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -3333,7 +3336,7 @@ export const redemptionVaultSuits = (
             regularAccounts[0].address,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -3422,7 +3425,7 @@ export const redemptionVaultSuits = (
 
           await setMinAmountTest({ vault: redemptionVault, owner }, 1.1, {
             revertCustomError: {
-              customErrorName: 'FnPaused',
+              customErrorName: 'Paused',
             },
           });
         });
@@ -3546,7 +3549,7 @@ export const redemptionVaultSuits = (
             regularAccounts[0].address,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -3646,7 +3649,7 @@ export const redemptionVaultSuits = (
             true,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -3754,7 +3757,7 @@ export const redemptionVaultSuits = (
             parseUnits('1000'),
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -3891,7 +3894,7 @@ export const redemptionVaultSuits = (
             days(1),
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -4171,7 +4174,7 @@ export const redemptionVaultSuits = (
             constants.MaxUint256,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -4301,7 +4304,7 @@ export const redemptionVaultSuits = (
             owner.address,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -4420,7 +4423,7 @@ export const redemptionVaultSuits = (
             owner.address,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -4531,7 +4534,7 @@ export const redemptionVaultSuits = (
 
           await setInstantFeeTest({ vault: redemptionVault, owner }, 100, {
             revertCustomError: {
-              customErrorName: 'FnPaused',
+              customErrorName: 'Paused',
             },
           });
         });
@@ -4655,7 +4658,7 @@ export const redemptionVaultSuits = (
             1000,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -4775,7 +4778,7 @@ export const redemptionVaultSuits = (
             100,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -4885,7 +4888,7 @@ export const redemptionVaultSuits = (
             owner.address,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -4984,7 +4987,7 @@ export const redemptionVaultSuits = (
 
           await setLoanLpTest({ redemptionVault, owner }, owner.address, {
             revertCustomError: {
-              customErrorName: 'FnPaused',
+              customErrorName: 'Paused',
             },
           });
         });
@@ -5088,7 +5091,7 @@ export const redemptionVaultSuits = (
             owner.address,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -5188,7 +5191,7 @@ export const redemptionVaultSuits = (
             regularAccounts[0].address,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -5288,7 +5291,7 @@ export const redemptionVaultSuits = (
             regularAccounts[0].address,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -5386,7 +5389,7 @@ export const redemptionVaultSuits = (
 
           await setMaxLoanAprTest({ redemptionVault, owner }, 100, {
             revertCustomError: {
-              customErrorName: 'FnPaused',
+              customErrorName: 'Paused',
             },
           });
         });
@@ -5469,7 +5472,7 @@ export const redemptionVaultSuits = (
 
           await setPreferLoanLiquidityTest({ redemptionVault, owner }, true, {
             revertCustomError: {
-              customErrorName: 'FnPaused',
+              customErrorName: 'Paused',
             },
           });
         });
@@ -5644,7 +5647,7 @@ export const redemptionVaultSuits = (
             stableCoins.dai.address,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -5780,7 +5783,7 @@ export const redemptionVaultSuits = (
             1,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -5883,7 +5886,66 @@ export const redemptionVaultSuits = (
           ).to.eq(true);
         });
 
-        it.only('should not fail with timelock', async () => {
+        it('should not fail with timelock', async () => {
+          const {
+            redemptionVault,
+            regularAccounts,
+            timelock,
+            accessControl,
+            timelockManager,
+            owner,
+          } = await loadFixture(rvFixture);
+
+          await setRoleTimelocksTester(
+            { timelockManager, timelock, owner, accessControl },
+            [await redemptionVault.vaultRole()],
+            [3600],
+          );
+
+          const calldata = redemptionVault.interface.encodeFunctionData(
+            'freeFromMinAmount',
+            [regularAccounts[0].address, true],
+          );
+
+          expect(
+            await redemptionVault.isFreeFromMinAmount(
+              regularAccounts[0].address,
+            ),
+          ).to.eq(false);
+
+          await scheduleTimelockOperationsTester(
+            {
+              accessControl,
+              timelock,
+              timelockManager,
+              owner,
+            },
+            [redemptionVault.address],
+            [calldata],
+          );
+
+          await increase(3600);
+
+          await executeTimelockOperationTester(
+            {
+              accessControl,
+              timelock,
+              timelockManager,
+              owner,
+            },
+            redemptionVault.address,
+            calldata,
+            owner.address,
+          );
+
+          expect(
+            await redemptionVault.isFreeFromMinAmount(
+              regularAccounts[0].address,
+            ),
+          ).to.eq(true);
+        });
+
+        it('should fail: when trying to initiate trough timelock but timelock delay is not set', async () => {
           const {
             redemptionVault,
             regularAccounts,
@@ -5904,37 +5966,21 @@ export const redemptionVaultSuits = (
             ),
           ).to.eq(false);
 
-          await scheduleTimelockTransactionTester(
+          await scheduleTimelockOperationsTester(
             {
               accessControl,
               timelock,
               timelockManager,
               owner,
             },
-            redemptionVault.address,
-            calldata,
-          );
-
-          await increase(3600);
-
-          await executeTimelockTransactionTester(
+            [redemptionVault.address],
+            [calldata],
             {
-              accessControl,
-              timelock,
-              timelockManager,
-              owner,
+              revertMessage: 'MAC: no timelock',
             },
-            redemptionVault.address,
-            calldata,
-            owner.address,
           );
-
-          expect(
-            await redemptionVault.isFreeFromMinAmount(
-              regularAccounts[0].address,
-            ),
-          ).to.eq(true);
         });
+
         it('should fail: already in list', async () => {
           const { redemptionVault, regularAccounts } = await loadFixture(
             rvFixture,
@@ -5965,7 +6011,7 @@ export const redemptionVaultSuits = (
 
           await expect(
             redemptionVault.freeFromMinAmount(regularAccounts[0].address, true),
-          ).to.be.revertedWithCustomError(redemptionVault, 'FnPaused');
+          ).to.be.revertedWithCustomError(redemptionVault, 'Paused');
         });
 
         it('succeeds with only scoped function permission', async () => {
@@ -6123,7 +6169,7 @@ export const redemptionVaultSuits = (
             100000000,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -6301,7 +6347,7 @@ export const redemptionVaultSuits = (
             100,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -6835,7 +6881,7 @@ export const redemptionVaultSuits = (
             {
               from: regularAccounts[0],
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -7099,7 +7145,7 @@ export const redemptionVaultSuits = (
             {
               from: regularAccounts[0],
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -7705,7 +7751,7 @@ export const redemptionVaultSuits = (
             parseUnits('1'),
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -7977,7 +8023,7 @@ export const redemptionVaultSuits = (
             parseUnits('1'),
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -8300,7 +8346,7 @@ export const redemptionVaultSuits = (
             parseUnits('1'),
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -8764,7 +8810,7 @@ export const redemptionVaultSuits = (
             parseUnits('1'),
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -9407,7 +9453,7 @@ export const redemptionVaultSuits = (
             'request-rate',
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -10017,7 +10063,7 @@ export const redemptionVaultSuits = (
             parseUnits('1'),
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -10813,7 +10859,7 @@ export const redemptionVaultSuits = (
             undefined,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -11725,7 +11771,7 @@ export const redemptionVaultSuits = (
             parseUnits('1'),
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -12793,7 +12839,7 @@ export const redemptionVaultSuits = (
             undefined,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -14009,7 +14055,7 @@ export const redemptionVaultSuits = (
             0,
             {
               revertCustomError: {
-                customErrorName: 'FnPaused',
+                customErrorName: 'Paused',
               },
             },
           );
@@ -14164,7 +14210,9 @@ export const redemptionVaultSuits = (
             100,
             {
               from: regularAccounts[0],
-              revertMessage: 'Pausable: paused',
+              revertCustomError: {
+                customErrorName: 'Paused',
+              },
             },
           );
         });
@@ -14197,7 +14245,9 @@ export const redemptionVaultSuits = (
             stableCoins.dai,
             100,
             {
-              revertMessage: 'Pausable: paused',
+              revertCustomError: {
+                customErrorName: 'Paused',
+              },
             },
           );
         });
@@ -14424,7 +14474,7 @@ export const redemptionVaultSuits = (
               0,
               {
                 revertCustomError: {
-                  customErrorName: 'FnPaused',
+                  customErrorName: 'Paused',
                 },
               },
             );
@@ -15077,7 +15127,7 @@ export const redemptionVaultSuits = (
               0,
               {
                 revertCustomError: {
-                  customErrorName: 'FnPaused',
+                  customErrorName: 'Paused',
                 },
               },
             );

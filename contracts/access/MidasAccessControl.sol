@@ -125,18 +125,19 @@ contract MidasAccessControl is
         for (uint256 i = 0; i < params.length; ++i) {
             SetFunctionAccessGrantOperatorParams memory param = params[i];
 
-            bytes32 key = functionPermissionKey(
+            bytes32 operatorKey = functionAccessGrantOperatorKey(
                 functionAccessAdminRole,
                 param.targetContract,
                 param.functionSelector
             );
 
             // if already enabled, skip and do not emit event
-            if (_functionAccessGrantOperators[key][param.operator]) {
+            if (_functionAccessGrantOperators[operatorKey][param.operator]) {
                 continue;
             }
 
-            _functionAccessGrantOperators[key][param.operator] = param.enabled;
+            _functionAccessGrantOperators[operatorKey][param.operator] = param
+                .enabled;
             emit FunctionAccessGrantOperatorUpdate(
                 functionAccessAdminRole,
                 param.targetContract,
@@ -158,12 +159,6 @@ contract MidasAccessControl is
     ) external {
         require(params.length > 0, "MAC: no params");
 
-        bytes32 key = functionPermissionKey(
-            functionAccessAdminRole,
-            targetContract,
-            functionSelector
-        );
-
         bytes32 operatorRole = functionAccessGrantOperatorKey(
             functionAccessAdminRole,
             targetContract,
@@ -171,21 +166,27 @@ contract MidasAccessControl is
         );
 
         require(
-            _functionAccessGrantOperators[operatorRole][_msgSender()],
+            isFunctionAccessGrantOperator(operatorRole, _msgSender()),
             "MAC: not FA grant operator"
         );
 
-        _validateRoleAccess(operatorRole, _msgSender(), false);
+        _validateOperatorRoleAccess(operatorRole, _msgSender());
+
+        bytes32 functionKey = functionPermissionKey(
+            functionAccessAdminRole,
+            targetContract,
+            functionSelector
+        );
 
         for (uint256 i = 0; i < params.length; ++i) {
             SetFunctionPermissionParams memory param = params[i];
 
             // if already enabled, skip and do not emit event
-            if (_functionPermissions[key][param.account]) {
+            if (_functionPermissions[functionKey][param.account]) {
                 continue;
             }
 
-            _functionPermissions[key][param.account] = param.enabled;
+            _functionPermissions[functionKey][param.account] = param.enabled;
             emit FunctionPermissionUpdate(
                 functionAccessAdminRole,
                 targetContract,
@@ -299,14 +300,14 @@ contract MidasAccessControl is
             targetContract,
             functionSelector
         );
-        return _functionAccessGrantOperators[key][operator];
+        return isFunctionAccessGrantOperator(key, operator);
     }
 
     /**
      * @inheritdoc IMidasAccessControl
      */
     function isFunctionAccessGrantOperator(bytes32 key, address operator)
-        external
+        public
         view
         returns (bool)
     {

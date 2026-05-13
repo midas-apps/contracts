@@ -51,9 +51,9 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     address public timelock;
 
     /**
-     * @notice timelock delay for each role
+     * @dev timelock delay for each role
      */
-    mapping(bytes32 => uint256) public roleTimelocks;
+    mapping(bytes32 => uint256) private _roleTimelocks;
 
     /**
      * @dev set of security council addresses
@@ -63,9 +63,9 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     mapping(bytes32 => mapping(uint256 => TimelockOperationChallenge))
         private _operationChallenges;
 
-    mapping(bytes32 => uint256) private _dataHashIndexes;
+    mapping(bytes32 => uint256) public dataHashIndexes;
 
-    mapping(bytes32 => bytes32) private _operationDataHashes;
+    mapping(bytes32 => bytes32) public operationDataHashes;
 
     /**
      * @dev leaving a storage gap for futures updates
@@ -110,15 +110,37 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         timelock = _timelock;
     }
 
-    function setRoleTimelocks(bytes32[] memory roles, uint256[] memory delays)
+    function setRoleDelays(bytes32[] memory roles, uint256[] memory delays)
         external
         onlyRole(_DEFAULT_ADMIN_ROLE, false)
     {
         require(roles.length == delays.length, "MAC: invalid lengths");
 
         for (uint256 i = 0; i < roles.length; ++i) {
-            roleTimelocks[roles[i]] = delays[i];
+            _roleTimelocks[roles[i]] = delays[i];
         }
+    }
+
+    function getRoleTimelockDelay(bytes32 role)
+        public
+        view
+        returns (
+            uint256, /* delay */
+            bool /* isDefault */
+        )
+    {
+        uint256 delay = _roleTimelocks[role];
+        uint256 actualDelay = delay == 0
+            ? defaultDelay()
+            : delay == type(uint256).max
+            ? 0
+            : delay;
+
+        return (actualDelay, delay == 0);
+    }
+
+    function defaultDelay() public view virtual returns (uint256) {
+        return 3600;
     }
 
     /**
@@ -129,7 +151,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         address target,
         bytes calldata dataWithCaller
     ) external view returns (bool ready, bool timelocked) {
-        uint256 delay = roleTimelocks[targetRole];
+        (uint256 delay, ) = getRoleTimelockDelay(targetRole);
 
         TimelockController _timelock = TimelockController(payable(timelock));
         (
@@ -188,14 +210,14 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         bytes[] calldata datas
     ) external {
         for (uint256 i = 0; i < targets.length; ++i) {
-            _scheduleTimelockTransaction(targets[i], datas[i]);
+            _scheduleTimelockOperation(targets[i], datas[i]);
         }
     }
 
     function scheduleTimelockOperation(address target, bytes calldata data)
         external
     {
-        _scheduleTimelockTransaction(target, data);
+        _scheduleTimelockOperation(target, data);
     }
 
     function executeTimelockOperation(
@@ -240,7 +262,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         );
 
         challenge.status = TimelockOperationStatus.Executed;
-        _dataHashIndexes[dataHash] = dataHashIndex + 1;
+        dataHashIndexes[dataHash] = dataHashIndex + 1;
     }
 
     function challengeOperation(bytes32 operationId) external {
@@ -316,7 +338,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
         require(status == TimelockOperationStatus.ReadyToAbort, "status");
 
-        _dataHashIndexes[dataHash] = dataHashIndex + 1;
+        dataHashIndexes[dataHash] = dataHashIndex + 1;
         challenge.status = TimelockOperationStatus.Aborted;
 
         TimelockController(payable(timelock)).cancel(operationId);
@@ -380,6 +402,14 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         );
     }
 
+    function getSecurityCouncilMembers()
+        external
+        view
+        returns (address[] memory)
+    {
+        return _securityCouncil.values();
+    }
+
     function _getChallengedOperationStatus(bytes32 operationId)
         private
         view
@@ -390,8 +420,8 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             uint256 dataHashIndex
         )
     {
-        dataHash = _operationDataHashes[operationId];
-        dataHashIndex = _dataHashIndexes[dataHash];
+        dataHash = operationDataHashes[operationId];
+        dataHashIndex = dataHashIndexes[dataHash];
         (status, challenge) = _getChallengedOperationStatus(
             operationId,
             dataHash,
@@ -411,8 +441,8 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             TimelockOperationChallenge storage challenge
         )
     {
-        dataHash = _operationDataHashes[operationId];
-        dataHashIndex = _dataHashIndexes[dataHash];
+        dataHash = operationDataHashes[operationId];
+        dataHashIndex = dataHashIndexes[dataHash];
         challenge = _operationChallenges[operationId][dataHashIndex];
         status = challenge.status;
 
@@ -446,7 +476,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         return (status, challenge);
     }
 
-    function _scheduleTimelockTransaction(address target, bytes calldata data)
+    function _scheduleTimelockOperation(address target, bytes calldata data)
         private
     {
         require(target != timelock, "MAC: target cannot be timelock");
@@ -455,12 +485,9 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             .appendAddressToData(data, msg.sender);
         bytes32 targetRole = _getTargetRole(target, dataWithCaller);
 
-        uint256 delay = roleTimelocks[targetRole];
+        (uint256 delay, ) = getRoleTimelockDelay(targetRole);
 
-        require(delay != type(uint256).max, "MAC: no timelock");
-
-        // TODO: replace 3600 with the default delay that is passed in the initializer
-        delay = delay == 0 ? 3600 : delay;
+        require(delay != 0, "MAC: no timelock");
 
         TimelockController _timelock = TimelockController(payable(timelock));
 
@@ -470,7 +497,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             uint256 dataHashIndex
         ) = _getOperationId(_timelock, target, dataWithCaller);
 
-        _operationDataHashes[operationId] = dataHash;
+        operationDataHashes[operationId] = dataHash;
 
         _timelock.schedule(
             target,
@@ -546,7 +573,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         )
     {
         dataHash = _getDataHash(target, data);
-        dataHashIndex = _dataHashIndexes[dataHash];
+        dataHashIndex = dataHashIndexes[dataHash];
 
         operationId = _timelock.hashOperation(
             target,

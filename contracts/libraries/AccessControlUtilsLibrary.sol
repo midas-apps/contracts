@@ -26,14 +26,14 @@ library AccessControlUtilsLibrary {
      * @dev validates that the function access is valid with timelock
      * @param accessControl access control contract
      * @param contractAdminRole contract admin role
-     * @param roleIsFunctionOperator whether the role is a function operator
+     * @param roleIsFunctionOperatorRole whether the role is a function operator
      * @param accountToCheck account to check
      * @param validateFunctionRole whether to validate the function role
      */
     function validateFunctionAccessWithTimelock(
         IMidasAccessControl accessControl,
         bytes32 contractAdminRole,
-        bool roleIsFunctionOperator,
+        bool roleIsFunctionOperatorRole,
         address accountToCheck,
         bool validateFunctionRole
     ) internal view {
@@ -54,7 +54,7 @@ library AccessControlUtilsLibrary {
         if (isPreflight) {
             revert IMidasTimelockManager.RolePreflightSucceeded(
                 contractAdminRole,
-                roleIsFunctionOperator,
+                roleIsFunctionOperatorRole,
                 validateFunctionRole
             );
         }
@@ -62,7 +62,7 @@ library AccessControlUtilsLibrary {
         bytes32 roleUsed = validateFunctionAccess(
             accessControl,
             contractAdminRole,
-            roleIsFunctionOperator,
+            roleIsFunctionOperatorRole,
             account,
             msg.sig,
             validateFunctionRole
@@ -119,7 +119,7 @@ library AccessControlUtilsLibrary {
      * @dev validates that the function access is valid
      * @param accessControl access control contract
      * @param role admin role
-     * @param roleIsFunctionOperator whether the role is a function operator
+     * @param roleIsFunctionOperatorRole whether the role is a function operator role
      * @param account account to check
      * @param functionSelector function selector
      * @param validateFunctionRole whether to validate the function role
@@ -128,7 +128,7 @@ library AccessControlUtilsLibrary {
     function validateFunctionAccess(
         IMidasAccessControl accessControl,
         bytes32 role,
-        bool roleIsFunctionOperator,
+        bool roleIsFunctionOperatorRole,
         address account,
         bytes4 functionSelector,
         bool validateFunctionRole
@@ -139,20 +139,9 @@ library AccessControlUtilsLibrary {
             bytes32 /* roleUsed */
         )
     {
-        if (roleIsFunctionOperator) {
-            bytes32 operatorRole = accessControl.functionAccessGrantOperatorKey(
-                role,
-                address(this),
-                functionSelector
-            );
-
-            if (
-                accessControl.isFunctionAccessGrantOperator(
-                    operatorRole,
-                    account
-                )
-            ) {
-                return operatorRole;
+        if (roleIsFunctionOperatorRole) {
+            if (accessControl.isFunctionAccessGrantOperator(role, account)) {
+                return role;
             }
         } else {
             if (accessControl.hasRole(role, account)) {
