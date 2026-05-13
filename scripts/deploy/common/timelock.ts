@@ -68,6 +68,9 @@ export type GetUpgradeTxParams = {
   newImplementation: string;
   initializer?: string;
   initializerCalldata?: string;
+};
+
+type GetVaultUpgradeTxParams = GetUpgradeTxParams & {
   vaultType: VaultType;
   mToken: MTokenName;
 };
@@ -117,7 +120,7 @@ export const executeTimeLockUpgradeTx = async (
 
 export const validateSimulateTimeLockUpgradeTx = async (
   hre: HardhatRuntimeEnvironment,
-  upgradeParams: GetUpgradeTxParams,
+  upgradeParams: GetVaultUpgradeTxParams,
   salt: string,
 ) => {
   return await createUpgradeTimelockTx(
@@ -133,7 +136,7 @@ export const validateSimulateTimeLockUpgradeTx = async (
 
 export const validateSimulateTimeLockProposeUpgradeTx = async (
   hre: HardhatRuntimeEnvironment,
-  upgradeParams: GetUpgradeTxParams,
+  upgradeParams: GetVaultUpgradeTxParams,
   salt: string,
 ) => {
   return await createUpgradeTimelockTx(
@@ -150,17 +153,13 @@ export const validateSimulateTimeLockProposeUpgradeTx = async (
   );
 };
 
-const bigNumberMin = (bn1: BigNumber, bn2: BigNumber) => {
-  return bn1.lt(bn2) ? bn1 : bn2;
-};
-
 const bigNumberMax = (bn1: BigNumber, bn2: BigNumber) => {
   return bn1.gt(bn2) ? bn1 : bn2;
 };
 
 const validateSimulateContractUpgrade = async (
   hre: HardhatRuntimeEnvironment,
-  upgradeParams: GetUpgradeTxParams,
+  upgradeParams: GetVaultUpgradeTxParams,
   tx: PopulatedTransaction,
 ) => {
   await increase(days(3));

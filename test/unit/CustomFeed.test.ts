@@ -178,6 +178,14 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
         revertMessage: 'CA: not enough time passed',
       });
     });
+
+    it('should fail: when previous unsafe update happened within 1 hour', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setRoundData(fixture, 10);
+      await setRoundDataSafe(fixture, 10.05, {
+        revertMessage: 'CA: not enough time passed',
+      });
+    });
   });
 
   describe('_getDeviation', async () => {
