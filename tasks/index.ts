@@ -23,6 +23,10 @@ task('runscript', 'Runs a user-defined script')
   .addOptionalParam('forkingNetwork', 'Forking Network')
   .addOptionalParam('originalNetwork', 'Original Network')
   .addOptionalParam(
+    'deploymentConfig',
+    'Named deployment config profile (for example: mfone-unloop)',
+  )
+  .addOptionalParam(
     'keys',
     'Comma-separated list of address book keys to include (e.g. layerZero)',
   )
@@ -56,6 +60,7 @@ task('runscript', 'Runs a user-defined script')
     }
 
     const originalNetwork = taskArgs.originalNetwork;
+    const deploymentConfig = taskArgs.deploymentConfig;
     const keys = taskArgs.keys;
 
     const scriptPath = taskArgs.path;
@@ -72,6 +77,7 @@ task('runscript', 'Runs a user-defined script')
     }
 
     hre.action = action;
+    hre.deploymentConfig = deploymentConfig;
 
     if (action) {
       extendWithContext(hre, `${action}-${new Date().toISOString()}`);

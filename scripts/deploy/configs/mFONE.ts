@@ -12,8 +12,8 @@ export const mFONEDeploymentConfig: DeploymentConfig = {
       maxAnswerDeviation: parseUnits('0.4', 8),
       description: 'mF-ONE/USD',
     },
-    customAggregatorDiscounted: {
-      discountPercentage: parseUnits('7.7', 8),
+    customAggregatorAdjusted: {
+      adjustmentPercentage: parseUnits('7.7', 8),
       underlyingFeed: 'customFeed',
     },
     dataFeed: {
@@ -51,9 +51,6 @@ export const mFONEDeploymentConfig: DeploymentConfig = {
           redemptionVaultType: 'redemptionVaultBuidl',
         },
       },
-      postDeploy: {
-        grantRoles: {},
-      },
     },
     [chainIds.main]: {
       dv: {
@@ -84,6 +81,71 @@ export const mFONEDeploymentConfig: DeploymentConfig = {
           redemptionVaultType: 'redemptionVaultBuidl',
         },
         enableSanctionsList: true,
+      },
+    },
+  },
+};
+
+// Select with `--deployment-config mfone-unloop`; store deployed addresses under
+// `addressProfiles.mFONEUnloop` using the standard feed/vault keys.
+export const mFONEUnloopDeploymentConfig: DeploymentConfig = {
+  genericConfigs: {
+    customAggregator: {
+      minAnswer: parseUnits('0.1', 8),
+      maxAnswer: parseUnits('1000', 8),
+      maxAnswerDeviation: parseUnits('0.4', 8),
+      description: 'mF-ONE/USD',
+    },
+    dataFeed: {
+      minAnswer: parseUnits('0.1', 8),
+      maxAnswer: parseUnits('1000', 8),
+      healthyDiff: 2592000,
+    },
+  },
+  networkConfigs: {
+    [chainIds.main]: {
+      rvSwapper: {
+        type: 'SWAPPER',
+        feeReceiver: '0x0ff15C0555Add64e53E8c738176D896D489F1F6D',
+        tokensReceiver: '0x86B16681E21E857A9a71a8FDfC33AB1eB8213b74',
+        instantDailyLimit: constants.MaxUint256,
+        instantFee: parseUnits('1', 2),
+        minAmount: parseUnits('1'),
+        variationTolerance: parseUnits('0.6', 2),
+        fiatAdditionalFee: parseUnits('0.1', 2),
+        fiatFlatFee: parseUnits('30'),
+        minFiatRedeemAmount: parseUnits('1000'),
+        requestRedeemer: '0x82FB69DD7f31eD9FF8A44579D674e5032A4adc9C',
+        liquidityProvider: 'dummy',
+        swapperVault: 'dummy',
+        enableSanctionsList: true,
+      },
+      postDeploy: {
+        addPaymentTokens: {
+          vaults: [
+            {
+              type: 'redemptionVaultSwapper',
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  fee: 10000,
+                  allowance: parseUnits('1000000000', 18),
+                  isStable: true,
+                },
+              ],
+            },
+          ],
+        },
+        setRoundData: {
+          data: parseUnits('1.06913749', 8),
+        },
+        pauseFunctions: {
+          redemptionVaultSwapper: [
+            'redeemFiatRequest',
+            'redeemRequest',
+            'redeemRequestWithCustomRecipient',
+          ],
+        },
       },
     },
   },

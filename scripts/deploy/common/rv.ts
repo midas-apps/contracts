@@ -17,6 +17,7 @@ import {
   RedemptionVaultWithMToken,
   RedemptionVaultWIthBUIDL,
 } from '../../../typechain-types';
+import { getDeploymentTokenAddresses } from '../configs/deployment-profiles';
 
 export type DeployRvConfigCommon = {
   feeReceiver?: string;
@@ -98,7 +99,13 @@ export const deployRedemptionVault = async (
 ) => {
   const addresses = getCurrentAddresses(hre);
   const deployer = await getDeployer(hre);
-  const tokenAddresses = addresses?.[token];
+  const tokenAddresses = addresses?.[token]
+    ? getDeploymentTokenAddresses(
+        addresses[token]!,
+        token,
+        hre.deploymentConfig,
+      )
+    : undefined;
 
   const networkConfig = getNetworkConfig(hre, token, type);
 
@@ -129,7 +136,7 @@ export const deployRedemptionVault = async (
       swapperVaultAddress = DUMMY_ADDRESS;
     } else {
       swapperVaultAddress =
-        addresses[swapperVault.mToken]?.[swapperVault.redemptionVaultType];
+        addresses?.[swapperVault.mToken]?.[swapperVault.redemptionVaultType];
     }
 
     if (!swapperVaultAddress) {

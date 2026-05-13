@@ -26,6 +26,7 @@ import {
   CustomAggregatorV3CompatibleFeed,
   CustomAggregatorV3CompatibleFeedGrowth,
 } from '../../../typechain-types';
+import { getDeploymentTokenAddresses } from '../configs/deployment-profiles';
 import { paymentTokenDeploymentConfigs } from '../configs/payment-tokens';
 
 export type DeployDataFeedConfigCommon = {
@@ -159,7 +160,13 @@ export const setRoundDataMToken = async (
   }
 
   const addresses = getCurrentAddresses(hre);
-  const tokenAddresses = addresses?.[token];
+  const tokenAddresses = addresses?.[token]
+    ? getDeploymentTokenAddresses(
+        addresses[token]!,
+        token,
+        hre.deploymentConfig,
+      )
+    : undefined;
   const customFeed =
     tokenAddresses?.customFeedGrowth ?? tokenAddresses?.customFeed;
 
@@ -224,6 +231,7 @@ const setRoundData = async (
   const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
     action: isMToken ? 'update-feed-mtoken' : 'update-feed-ptoken',
     comment: log,
+    ...(isMToken ? { mToken: token as MTokenName } : {}),
   });
 
   console.log(log, txRes);
@@ -393,7 +401,13 @@ export const deployMTokenDataFeed = async (
   token: MTokenName,
 ) => {
   const addresses = getCurrentAddresses(hre);
-  const tokenAddresses = addresses?.[token];
+  const tokenAddresses = addresses?.[token]
+    ? getDeploymentTokenAddresses(
+        addresses[token]!,
+        token,
+        hre.deploymentConfig,
+      )
+    : undefined;
 
   const aggregator =
     tokenAddresses?.customFeedAdjusted ??

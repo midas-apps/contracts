@@ -3,6 +3,7 @@ import { bondBTCDeploymentConfig } from './bondBTC';
 import { bondETHDeploymentConfig } from './bondETH';
 import { bondUSDDeploymentConfig } from './bondUSD';
 import { cUSDODeploymentConfig } from './cUSDO';
+import { deploymentConfigNames } from './deployment-profiles';
 import { dnETHDeploymentConfig } from './dnETH';
 import { dnFARTDeploymentConfig } from './dnFART';
 import { dnHYPEDeploymentConfig } from './dnHYPE';
@@ -29,7 +30,7 @@ import { mEDGEDeploymentConfig } from './mEDGE';
 import { mevBTCDeploymentConfig } from './mevBTC';
 import { mEVUSDDeploymentConfig } from './mEVUSD';
 import { mFARMDeploymentConfig } from './mFARM';
-import { mFONEDeploymentConfig } from './mFONE';
+import { mFONEDeploymentConfig, mFONEUnloopDeploymentConfig } from './mFONE';
 import { mGLOBALDeploymentConfig } from './mGLOBAL';
 import { mHYPERDeploymentConfig } from './mHYPER';
 import { mHyperBTCDeploymentConfig } from './mHyperBTC';
@@ -145,4 +146,61 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   bondETH: bondETHDeploymentConfig,
   bondBTC: bondBTCDeploymentConfig,
   mTEST: mTESTDeploymentConfig,
+};
+
+type NamedDeploymentConfig = {
+  configsPerToken: Partial<Record<MTokenName, DeploymentConfig>>;
+};
+
+const namedDeploymentConfigs: Record<
+  (typeof deploymentConfigNames)[number],
+  NamedDeploymentConfig
+> = {
+  'mfone-unloop': {
+    configsPerToken: {
+      mFONE: mFONEUnloopDeploymentConfig,
+    },
+  },
+};
+
+const getNamedDeploymentConfig = (deploymentConfigName?: string) => {
+  if (!deploymentConfigName || deploymentConfigName === 'default') {
+    return undefined;
+  }
+
+  const namedDeploymentConfig =
+    namedDeploymentConfigs[
+      deploymentConfigName as (typeof deploymentConfigNames)[number]
+    ];
+
+  if (!namedDeploymentConfig) {
+    throw new Error(
+      `Unknown deployment config "${deploymentConfigName}". Available configs: default, ${deploymentConfigNames.join(
+        ', ',
+      )}`,
+    );
+  }
+
+  return namedDeploymentConfig;
+};
+
+export const getDeploymentConfigForToken = (
+  token: MTokenName,
+  deploymentConfigName?: string,
+): DeploymentConfig => {
+  const namedDeploymentConfig = getNamedDeploymentConfig(deploymentConfigName);
+
+  if (!namedDeploymentConfig) {
+    return configsPerToken[token];
+  }
+
+  const config = namedDeploymentConfig.configsPerToken[token];
+
+  if (!config) {
+    throw new Error(
+      `Deployment config "${deploymentConfigName}" is not available for ${token}`,
+    );
+  }
+
+  return config;
 };
