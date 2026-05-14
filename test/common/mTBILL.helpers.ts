@@ -48,6 +48,72 @@ export const setMetadataTest = async (
   expect(await tokenContract.metadata(keyBytes32)).eq(valueBytes);
 };
 
+export const setClawbackReceiverTest = async (
+  { tokenContract, owner }: CommonParams,
+  newReceiver: string,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+
+  if (
+    await handleRevert(
+      tokenContract.connect(from).setClawbackReceiver.bind(this, newReceiver),
+      tokenContract,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  await expect(tokenContract.connect(from).setClawbackReceiver(newReceiver))
+    .to.emit(
+      tokenContract,
+      tokenContract.interface.events['ClawbackReceiverSet(address,address)']
+        .name,
+    )
+    .withArgs(from.address, newReceiver);
+
+  expect(await tokenContract.clawbackReceiver()).eq(newReceiver);
+};
+
+export const clawbackTest = async (
+  { tokenContract, owner }: CommonParams,
+  amount: BigNumberish,
+  from: Account,
+  opt?: OptionalCommonParams,
+) => {
+  const fromAddr = getAccount(from);
+  const caller = opt?.from ?? owner;
+  const receiver = await tokenContract.clawbackReceiver();
+
+  if (
+    await handleRevert(
+      tokenContract.connect(caller).clawback.bind(this, amount, fromAddr),
+      tokenContract,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  const balanceFromBefore = await tokenContract.balanceOf(fromAddr);
+  const balanceReceiverBefore = await tokenContract.balanceOf(receiver);
+
+  await expect(
+    tokenContract.connect(caller).clawback(amount, fromAddr),
+  ).to.emit(
+    tokenContract,
+    tokenContract.interface.events['Transfer(address,address,uint256)'].name,
+  ).to.not.reverted;
+
+  expect(await tokenContract.balanceOf(fromAddr)).eq(
+    balanceFromBefore.sub(amount),
+  );
+  expect(await tokenContract.balanceOf(receiver)).eq(
+    balanceReceiverBefore.add(amount),
+  );
+};
+
 export const mint = async (
   { tokenContract, owner }: CommonParams,
   to: Account,

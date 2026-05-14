@@ -76,6 +76,7 @@ export const defaultDeploy = async () => {
     loanLp,
     loanLpFeeReceiver,
     loanRepaymentAddress,
+    clawbackReceiver,
     councilMember1,
     councilMember2,
     councilMember3,
@@ -138,17 +139,23 @@ export const defaultDeploy = async () => {
   );
 
   const mTBILL = await new MTBILLTest__factory(owner).deploy();
-  await expect(mTBILL.initialize(ethers.constants.AddressZero)).to.be.reverted;
-  await mTBILL.initialize(accessControl.address);
+  await expect(
+    mTBILL.initialize(ethers.constants.AddressZero, clawbackReceiver.address),
+  ).to.be.reverted;
+  await mTBILL.initialize(accessControl.address, clawbackReceiver.address);
 
   const mTokenLoan = await new MTokenTest__factory(owner).deploy();
-  await expect(mTokenLoan.initialize(ethers.constants.AddressZero)).to.be
-    .reverted;
-  await mTokenLoan.initialize(accessControl.address);
+  await expect(
+    mTokenLoan.initialize(
+      ethers.constants.AddressZero,
+      clawbackReceiver.address,
+    ),
+  ).to.be.reverted;
+  await mTokenLoan.initialize(accessControl.address, clawbackReceiver.address);
 
   // separate mTBILL instance for swapper testing
   const mBASIS = await new MTBILLTest__factory(owner).deploy();
-  await mBASIS.initialize(accessControl.address);
+  await mBASIS.initialize(accessControl.address, clawbackReceiver.address);
 
   const excludedRoles = [
     allRoles.common.blacklisted,
@@ -721,7 +728,7 @@ export const defaultDeploy = async () => {
   /* Redemption Vault With MToken (mFONE -> mTBILL) */
 
   const mFONE = await new MTBILLTest__factory(owner).deploy();
-  await mFONE.initialize(accessControl.address);
+  await mFONE.initialize(accessControl.address, clawbackReceiver.address);
 
   const mockedAggregatorMFone = await new AggregatorV3Mock__factory(
     owner,
@@ -1008,6 +1015,7 @@ export const defaultDeploy = async () => {
     timelockManager,
     pauseManager,
     councilMembers,
+    clawbackReceiver,
   };
 };
 
@@ -1038,7 +1046,10 @@ export const mTokenPermissionedFixture = async (
   const mTokenPermissioned = await new MTokenPermissionedTest__factory(
     owner,
   ).deploy();
-  await mTokenPermissioned.initialize(accessControl.address);
+  await mTokenPermissioned.initialize(
+    accessControl.address,
+    fx.clawbackReceiver.address,
+  );
 
   const mintRole = await mTokenPermissioned.M_TOKEN_TEST_MINT_OPERATOR_ROLE();
   const burnRole = await mTokenPermissioned.M_TOKEN_TEST_BURN_OPERATOR_ROLE();

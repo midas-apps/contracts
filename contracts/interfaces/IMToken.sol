@@ -39,6 +39,15 @@ interface IMToken is IERC20Upgradeable {
     );
 
     /**
+     * @param caller function caller (msg.sender)
+     * @param clawbackReceiver address to which clawback tokens will be sent
+     */
+    event ClawbackReceiverSet(
+        address indexed caller,
+        address indexed clawbackReceiver
+    );
+
+    /**
      * @notice mints mToken token `amount` to a given `to` address.
      * should be called only from permissioned actor
      * @param to addres to mint tokens to
@@ -53,6 +62,19 @@ interface IMToken is IERC20Upgradeable {
      * @param amount amount to burn
      */
     function burn(address from, uint256 amount) external;
+
+    /**
+     * @notice claws back tokens from a given address
+     * @param amount amount to clawback
+     * @param from address to clawback tokens from
+     */
+    function clawback(uint256 amount, address from) external;
+
+    /**
+     * @notice sets the address to which clawback tokens will be sent
+     * @param clawbackReceiver address to which clawback tokens will be sent
+     */
+    function setClawbackReceiver(address clawbackReceiver) external;
 
     /**
      * @notice updates contract`s metadata.

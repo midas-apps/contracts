@@ -14,17 +14,22 @@ import {
   getRolesNamesCommon,
   getRolesNamesForToken,
 } from '../../../helpers/roles';
+import { encodeFnSelector } from '../../../helpers/utils';
 import {
   acErrors,
   blackList,
+  setupFunctionAccessGrantOperator,
+  setFunctionPermissionTester,
   unBlackList,
 } from '../../../test/common/ac.helpers';
 import { defaultDeploy } from '../../../test/common/fixtures';
 import {
   burn,
+  clawbackTest,
   decreaseMintRateLimit,
   increaseMintRateLimit,
   mint,
+  setClawbackReceiverTest,
   setMetadataTest,
 } from '../../../test/common/mTBILL.helpers';
 import {
@@ -124,6 +129,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       'token',
       undefined,
       fixture.accessControl.address,
+      fixture.clawbackReceiver.address,
     )) as MTBILL;
 
     if (mTokensMetadata[token]?.isPermissioned) {
@@ -341,7 +347,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
     });
 
     it('roles', async () => {
-      const { tokenContract } = await deployMTokenWithFixture();
+      const { tokenContract, accessControl } = await deployMTokenWithFixture();
 
       const contract = tokenContract as Contract;
 
@@ -349,7 +355,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       expect(await contract[tokenRoleNames.minter]()).eq(tokenRoles.minter);
       expect(await contract[tokenRoleNames.pauser]()).eq(tokenRoles.pauser);
 
-      expect(await contract[allRoleNames.defaultAdmin]()).eq(
+      expect(await accessControl.DEFAULT_ADMIN_ROLE()).eq(
         allRoles.common.defaultAdmin,
       );
       expect(await contract[allRoleNames.blacklistedOperator]()).eq(
@@ -360,17 +366,25 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       );
     });
 
-    it('initialize', async () => {
-      const { tokenContract } = await deployMTokenWithFixture();
+    it('initialize and v2 initialize', async () => {
+      const { tokenContract, clawbackReceiver } =
+        await deployMTokenWithFixture();
 
       await expect(
-        tokenContract.initialize(ethers.constants.AddressZero),
+        tokenContract.initialize(
+          ethers.constants.AddressZero,
+          clawbackReceiver.address,
+        ),
       ).revertedWith('Initializable: contract is already initialized');
+
+      await expect(
+        tokenContract.initializeV2(clawbackReceiver.address),
+      ).to.revertedWith('Clawback receiver already set');
     });
 
     describe('pause()', () => {
       it('should fail: call from address without "token pauser" role', async () => {
-        const { accessControl, regularAccounts, tokenContract } =
+        const { regularAccounts, tokenContract } =
           await deployMTokenWithFixture();
 
         const caller = regularAccounts[0];
@@ -379,13 +393,12 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           tokenContract.connect(caller).pause(),
         ).revertedWithCustomError(
           tokenContract,
-          acErrors.WMAC_HASNT_ROLE().customErrorName,
+          acErrors.WMAC_HASNT_PERMISSION().customErrorName,
         );
       });
 
       it('should fail: call when already paused', async () => {
-        const { accessControl, tokenContract, owner } =
-          await deployMTokenWithFixture();
+        const { tokenContract, owner } = await deployMTokenWithFixture();
 
         await tokenContract.connect(owner).pause();
         await expect(tokenContract.connect(owner).pause()).revertedWith(
@@ -417,7 +430,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           tokenContract.connect(caller).unpause(),
         ).revertedWithCustomError(
           tokenContract,
-          acErrors.WMAC_HASNT_ROLE().customErrorName,
+          acErrors.WMAC_HASNT_PERMISSION().customErrorName,
         );
       });
 
@@ -453,7 +466,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         await mint({ tokenContract, owner }, owner, 0, {
           from: caller,
-          revertCustomError: acErrors.WMAC_HASNT_ROLE,
+          revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
         });
       });
 
@@ -547,7 +560,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         await burn({ tokenContract, owner }, owner, 0, {
           from: caller,
-          revertCustomError: acErrors.WMAC_HASNT_ROLE,
+          revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
         });
       });
 
@@ -602,7 +615,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         await setMetadataTest({ tokenContract, owner }, 'url', 'some value', {
           from: caller,
-          revertCustomError: acErrors.WMAC_HASNT_ROLE,
+          revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
         });
       });
 
@@ -618,6 +631,193 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       });
     });
 
+    describe('setClawbackReceiver()', () => {
+      it('should fail: call from address without DEFAULT_ADMIN_ROLE nor function permission', async () => {
+        const { owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        const caller = regularAccounts[0];
+
+        await setClawbackReceiverTest(
+          { tokenContract, owner },
+          regularAccounts[1].address,
+          {
+            from: caller,
+            revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
+          },
+        );
+      });
+
+      it('should fail: new clawback receiver cannot be address zero', async () => {
+        const { owner, tokenContract } = await deployMTokenWithFixture();
+
+        await setClawbackReceiverTest(
+          { tokenContract, owner },
+          ethers.constants.AddressZero,
+          { revertMessage: 'Invalid clawback receiver' },
+        );
+      });
+
+      it('call from address with DEFAULT_ADMIN_ROLE role', async () => {
+        const { owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await setClawbackReceiverTest(
+          { tokenContract, owner },
+          regularAccounts[2].address,
+          undefined,
+        );
+      });
+
+      it('call from address with scoped function permission only', async () => {
+        const { owner, tokenContract, regularAccounts, accessControl } =
+          await deployMTokenWithFixture();
+
+        const user = regularAccounts[0];
+        const nextReceiver = regularAccounts[3].address;
+        const selector = encodeFnSelector('setClawbackReceiver(address)');
+
+        await setupFunctionAccessGrantOperator({
+          accessControl,
+          owner,
+          functionAccessAdminRole: allRoles.common.defaultAdmin,
+          targetContract: tokenContract.address,
+          functionSelector: selector,
+          grantOperator: owner,
+        });
+
+        await setFunctionPermissionTester(
+          { accessControl, owner },
+          allRoles.common.defaultAdmin,
+          tokenContract.address,
+          selector,
+          [{ account: user.address, enabled: true }],
+        );
+
+        expect(
+          await accessControl.hasRole(
+            allRoles.common.defaultAdmin,
+            user.address,
+          ),
+        ).eq(false);
+
+        await setClawbackReceiverTest({ tokenContract, owner }, nextReceiver, {
+          from: user,
+        });
+      });
+    });
+
+    describe('clawback()', () => {
+      it('should fail: call from address without DEFAULT_ADMIN_ROLE nor function permission', async () => {
+        const { owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        const caller = regularAccounts[0];
+        const victim = regularAccounts[1];
+        const amount = parseUnits('1');
+
+        await mint({ tokenContract, owner }, victim, amount);
+
+        await clawbackTest({ tokenContract, owner }, amount, victim, {
+          from: caller,
+          revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
+        });
+      });
+
+      it('should not fail when from address is blacklisted', async () => {
+        const { owner, tokenContract, regularAccounts, accessControl } =
+          await deployMTokenWithFixture();
+
+        const holder = regularAccounts[0];
+        const amount = parseUnits('10');
+
+        await mint({ tokenContract, owner }, holder, amount);
+        await blackList(
+          { blacklistable: tokenContract, accessControl, owner },
+          holder,
+        );
+
+        await clawbackTest({ tokenContract, owner }, amount, holder, undefined);
+
+        expect(await tokenContract.balanceOf(holder.address)).eq(0);
+      });
+
+      it('should fail: when clawbackReceiver is blacklisted', async () => {
+        const { owner, tokenContract, regularAccounts, accessControl } =
+          await deployMTokenWithFixture();
+
+        const holder = regularAccounts[0];
+        const amount = parseUnits('5');
+
+        await mint({ tokenContract, owner }, holder, amount);
+
+        await blackList(
+          { blacklistable: tokenContract, accessControl, owner },
+          regularAccounts[2],
+        );
+        await setClawbackReceiverTest(
+          { tokenContract, owner },
+          regularAccounts[2].address,
+          undefined,
+        );
+
+        await clawbackTest({ tokenContract, owner }, amount, holder, {
+          revertCustomError: acErrors.WMAC_HAS_ROLE,
+        });
+      });
+
+      it('call from address with DEFAULT_ADMIN_ROLE role', async () => {
+        const { owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        const holder = regularAccounts[0];
+        const amount = parseUnits('7');
+
+        await mint({ tokenContract, owner }, holder, amount);
+        await clawbackTest({ tokenContract, owner }, amount, holder, undefined);
+      });
+
+      it('call from address with scoped function permission only', async () => {
+        const { owner, tokenContract, regularAccounts, accessControl } =
+          await deployMTokenWithFixture();
+
+        const operator = regularAccounts[0];
+        const holder = regularAccounts[1];
+        const amount = parseUnits('3');
+        const selector = encodeFnSelector('clawback(uint256,address)');
+
+        await mint({ tokenContract, owner }, holder, amount);
+
+        await setupFunctionAccessGrantOperator({
+          accessControl,
+          owner,
+          functionAccessAdminRole: allRoles.common.defaultAdmin,
+          targetContract: tokenContract.address,
+          functionSelector: selector,
+          grantOperator: owner,
+        });
+
+        await setFunctionPermissionTester(
+          { accessControl, owner },
+          allRoles.common.defaultAdmin,
+          tokenContract.address,
+          selector,
+          [{ account: operator.address, enabled: true }],
+        );
+
+        expect(
+          await accessControl.hasRole(
+            allRoles.common.defaultAdmin,
+            operator.address,
+          ),
+        ).eq(false);
+
+        await clawbackTest({ tokenContract, owner }, amount, holder, {
+          from: operator,
+        });
+      });
+    });
+
     describe('increaseMintRateLimit()', () => {
       it('should fail: call from address without DEFAULT_ADMIN_ROLE role', async () => {
         const { owner, tokenContract, regularAccounts } =
@@ -627,7 +827,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         await increaseMintRateLimit({ tokenContract, owner }, days(1), 1, {
           from: caller,
-          revertCustomError: acErrors.WMAC_HASNT_ROLE,
+          revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
         });
       });
 
@@ -662,7 +862,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         await decreaseMintRateLimit({ tokenContract, owner }, days(1), 1, {
           from: caller,
-          revertCustomError: acErrors.WMAC_HASNT_ROLE,
+          revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
         });
       });
 

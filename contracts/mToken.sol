@@ -6,6 +6,7 @@ import {EnumerableSetUpgradeable as EnumerableSet} from "@openzeppelin/contracts
 import "./access/Blacklistable.sol";
 import "./interfaces/IMToken.sol";
 
+// TODO: update to use custom errors
 /**
  * @title mToken
  * @author RedDuck Software
@@ -18,6 +19,16 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      * @notice metadata key => metadata value
      */
     mapping(bytes32 => bytes) public metadata;
+
+    /**
+     * @notice address to which clawback tokens will be sent
+     */
+    address public clawbackReceiver;
+
+    /**
+     * @notice if true then current transfer is clawback operation
+     */
+    bool private _inClawback;
 
     /**
      * @notice set of mint rate limit config windows
@@ -38,11 +49,46 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     /**
      * @notice upgradeable pattern contract`s initializer
      * @param _accessControl address of MidasAccessControll contract
+     * @param _clawbackReceiver address to which clawback tokens will be sent
      */
-    function initialize(address _accessControl) external virtual initializer {
+    function initialize(address _accessControl, address _clawbackReceiver)
+        external
+        initializer
+    {
         __WithMidasAccessControl_init(_accessControl);
         (string memory _name, string memory _symbol) = _getNameSymbol();
         __ERC20_init(_name, _symbol);
+        require(_clawbackReceiver != address(0), "Invalid clawback receiver");
+        clawbackReceiver = _clawbackReceiver;
+    }
+
+    /**
+     * @dev v2 initializer for existing proxies migrating to clawback storage
+     * @param _clawbackReceiver address to which clawback tokens will be sent
+     */
+    function initializeV2(address _clawbackReceiver)
+        external
+        virtual
+        reinitializer(2)
+    {
+        require(_clawbackReceiver != address(0), "Invalid clawback receiver");
+        require(
+            clawbackReceiver == address(0),
+            "Clawback receiver already set"
+        );
+        clawbackReceiver = _clawbackReceiver;
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function setClawbackReceiver(address _clawbackReceiver)
+        external
+        onlyContractAdmin
+    {
+        require(_clawbackReceiver != address(0), "Invalid clawback receiver");
+        clawbackReceiver = _clawbackReceiver;
+        emit ClawbackReceiverSet(msg.sender, _clawbackReceiver);
     }
 
     /**
@@ -63,6 +109,15 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         onlyRole(_burnerRole(), false)
     {
         _burn(from, amount);
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function clawback(uint256 amount, address from) external onlyContractAdmin {
+        _inClawback = true;
+        _transfer(from, clawbackReceiver, amount);
+        _inClawback = false;
     }
 
     /**
@@ -89,24 +144,22 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         metadata[key] = data;
     }
 
-    // FIXME: update role
     /**
      * @inheritdoc IMToken
      */
     function increaseMintRateLimit(uint256 window, uint256 newLimit)
         external
-        onlyRole(_rateLimitManagerRole(), true)
+        onlyContractAdmin
     {
         _setMintRateLimitConfig(window, newLimit, true);
     }
 
-    // FIXME: update role
     /**
      * @inheritdoc IMToken
      */
     function decreaseMintRateLimit(uint256 window, uint256 newLimit)
         external
-        onlyRole(_rateLimitManagerRole(), true)
+        onlyContractAdmin
     {
         _setMintRateLimitConfig(window, newLimit, false);
     }
@@ -202,7 +255,9 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         uint256 amount
     ) internal virtual override(ERC20PausableUpgradeable) {
         if (to != address(0)) {
-            _onlyNotBlacklisted(from);
+            if (!_inClawback) {
+                _onlyNotBlacklisted(from);
+            }
             _onlyNotBlacklisted(to);
         }
 
@@ -244,12 +299,5 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     function _contractAdminRole() internal pure override returns (bytes32) {
         return _DEFAULT_ADMIN_ROLE;
-    }
-
-    /**
-     * @dev AC role, owner of which can manage mint rate limit
-     */
-    function _rateLimitManagerRole() internal view virtual returns (bytes32) {
-        return _contractAdminRole();
     }
 }
