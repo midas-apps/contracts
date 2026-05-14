@@ -2399,10 +2399,10 @@ function initialize() external
 
 upgradeable pattern contract`s initializer
 
-### setFunctionAccessAdminRoleEnabledMult
+### setIsUserFacingRoleMult
 
 ```solidity
-function setFunctionAccessAdminRoleEnabledMult(struct IMidasAccessControl.SetFunctionAccessAdminRoleEnabledParams[] params) external
+function setIsUserFacingRoleMult(struct IMidasAccessControl.SetIsUserFacingRoleParams[] params) external
 ```
 
 Enable or disable which OZ role may administer function-access scopes for that role.
@@ -2414,7 +2414,7 @@ Prevents unrelated role admins from spamming access mappings._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| params | struct IMidasAccessControl.SetFunctionAccessAdminRoleEnabledParams[] | array of SetFunctionAccessAdminRoleEnabledParams |
+| params | struct IMidasAccessControl.SetIsUserFacingRoleParams[] | array of SetIsUserFacingRoleParams |
 
 ### setFunctionAccessGrantOperatorMult
 
@@ -4000,7 +4000,7 @@ to the `tokensReceiver` address
 
 ## IMidasAccessControl
 
-### SetFunctionAccessAdminRoleEnabledParams
+### SetIsUserFacingRoleParams
 
 #### Parameters
 
@@ -4008,7 +4008,7 @@ to the `tokensReceiver` address
 | ---- | ---- | ----------- |
 
 ```solidity
-struct SetFunctionAccessAdminRoleEnabledParams {
+struct SetIsUserFacingRoleParams {
   bytes32 functionAccessAdminRole;
   bool enabled;
 }
@@ -4048,10 +4048,10 @@ struct SetFunctionPermissionParams {
 }
 ```
 
-### FunctionAccessAdminRoleEnable
+### IsUserFacingRoleSet
 
 ```solidity
-event FunctionAccessAdminRoleEnable(bytes32 functionAccessAdminRole, bool enabled)
+event IsUserFacingRoleSet(bytes32 functionAccessAdminRole, bool enabled)
 ```
 
 #### Parameters
@@ -4093,10 +4093,10 @@ event FunctionPermissionUpdate(bytes32 functionAccessAdminRole, address targetCo
 | functionSelector | bytes4 | selector of the scoped function. |
 | enabled | bool | grant or revoke |
 
-### setFunctionAccessAdminRoleEnabledMult
+### setIsUserFacingRoleMult
 
 ```solidity
-function setFunctionAccessAdminRoleEnabledMult(struct IMidasAccessControl.SetFunctionAccessAdminRoleEnabledParams[] params) external
+function setIsUserFacingRoleMult(struct IMidasAccessControl.SetIsUserFacingRoleParams[] params) external
 ```
 
 Enable or disable which OZ role may administer function-access scopes for that role.
@@ -4108,7 +4108,7 @@ Prevents unrelated role admins from spamming access mappings._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| params | struct IMidasAccessControl.SetFunctionAccessAdminRoleEnabledParams[] | array of SetFunctionAccessAdminRoleEnabledParams |
+| params | struct IMidasAccessControl.SetIsUserFacingRoleParams[] | array of SetIsUserFacingRoleParams |
 
 ### setFunctionAccessGrantOperatorMult
 

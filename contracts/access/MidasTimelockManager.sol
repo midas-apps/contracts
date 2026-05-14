@@ -20,6 +20,7 @@ enum TimelockOperationStatus {
 
 struct TimelockOperationChallenge {
     TimelockOperationStatus status;
+    address operationProposer;
     uint256 challengedAt;
     uint256 firstDisputedAt;
     uint256 votesForDispute;
@@ -50,6 +51,8 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
      */
     address public timelock;
 
+    uint256 public maxPendingOperationsPerProposer;
+
     /**
      * @dev timelock delay for each role
      */
@@ -67,6 +70,8 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
     mapping(bytes32 => bytes32) public operationDataHashes;
 
+    mapping(address => uint256) public proposerPendingOperationsCount;
+
     /**
      * @dev leaving a storage gap for futures updates
      */
@@ -75,9 +80,12 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     /**
      * @notice upgradeable pattern contract`s initializer
      * @param _accessControl address of MidasAccessControl contract
+     * @param _maxPendingOperationsPerProposer maximum number of pending operations per proposer
+     * @param _initSecurityCouncil initial security council members
      */
     function initialize(
         address _accessControl,
+        uint256 _maxPendingOperationsPerProposer,
         address[] memory _initSecurityCouncil
     ) external initializer {
         __WithMidasAccessControl_init(_accessControl);
@@ -86,6 +94,13 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             _initSecurityCouncil.length >= SECURITY_COUNCIL_MIN_MEMBERS,
             "MAC: not enough members"
         );
+
+        require(
+            _maxPendingOperationsPerProposer > 0,
+            "MAC: invalid max pending operations per proposer"
+        );
+
+        maxPendingOperationsPerProposer = _maxPendingOperationsPerProposer;
 
         for (uint256 i = 0; i < _initSecurityCouncil.length; ++i) {
             require(
@@ -108,6 +123,16 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         require(timelock == address(0), "MAC: timelock already set");
         require(_timelock != address(0), "MAC: invalid timelock");
         timelock = _timelock;
+    }
+
+    function setMaxPendingOperationsPerProposer(
+        uint256 _maxPendingOperationsPerProposer
+    ) external onlyRole(_DEFAULT_ADMIN_ROLE, false) {
+        require(
+            _maxPendingOperationsPerProposer > 0,
+            "MAC: invalid max pending operations per proposer"
+        );
+        maxPendingOperationsPerProposer = _maxPendingOperationsPerProposer;
     }
 
     function setRoleDelays(bytes32[] memory roles, uint256[] memory delays)
@@ -223,7 +248,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     function executeTimelockOperation(
         address target,
         bytes calldata data,
-        address originalCaller
+        address originalProposer
     ) external {
         require(
             accessControl.hasRole(_DEFAULT_ADMIN_ROLE, msg.sender) ||
@@ -232,7 +257,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         );
 
         bytes memory dataWithCaller = AccessControlUtilsLibrary
-            .appendAddressToData(data, originalCaller);
+            .appendAddressToData(data, originalProposer);
 
         TimelockController _timelock = TimelockController(payable(timelock));
 
@@ -263,6 +288,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
         challenge.status = TimelockOperationStatus.Executed;
         dataHashIndexes[dataHash] = dataHashIndex + 1;
+        --proposerPendingOperationsCount[originalProposer];
     }
 
     function challengeOperation(bytes32 operationId) external {
@@ -340,6 +366,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
         dataHashIndexes[dataHash] = dataHashIndex + 1;
         challenge.status = TimelockOperationStatus.Aborted;
+        --proposerPendingOperationsCount[challenge.operationProposer];
 
         TimelockController(payable(timelock)).cancel(operationId);
     }
@@ -481,8 +508,9 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     {
         require(target != timelock, "MAC: target cannot be timelock");
 
+        address proposer = msg.sender;
         bytes memory dataWithCaller = AccessControlUtilsLibrary
-            .appendAddressToData(data, msg.sender);
+            .appendAddressToData(data, proposer);
         bytes32 targetRole = _getTargetRole(target, dataWithCaller);
 
         (uint256 delay, ) = getRoleTimelockDelay(targetRole);
@@ -498,6 +526,16 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         ) = _getOperationId(_timelock, target, dataWithCaller);
 
         operationDataHashes[operationId] = dataHash;
+        ++proposerPendingOperationsCount[proposer];
+
+        require(
+            proposerPendingOperationsCount[proposer] <=
+                maxPendingOperationsPerProposer,
+            "MAC: too many pending operations"
+        );
+
+        _operationChallenges[operationId][dataHashIndex]
+            .operationProposer = proposer;
 
         _timelock.schedule(
             target,
@@ -536,6 +574,13 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             bool roleIsFunctionOperator,
             bool validateFunctionRole
         ) = _decodePreflightSucceededError(err);
+
+        if (!roleIsFunctionOperator) {
+            require(
+                !accessControl.isUserFacingRole(role),
+                "MAC: user facing role"
+            );
+        }
 
         return
             accessControl.validateFunctionAccess(

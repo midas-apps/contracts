@@ -5,12 +5,12 @@ import {IAccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acc
 
 interface IMidasAccessControl is IAccessControlUpgradeable {
     /**
-     * @notice Set function access admin role enabled params
+     * @notice Set user facing role params
      */
-    struct SetFunctionAccessAdminRoleEnabledParams {
+    struct SetIsUserFacingRoleParams {
         /// @notice OZ role for the scope
-        bytes32 functionAccessAdminRole;
-        /// @notice whether that role may manage grant operators for the scope
+        bytes32 role;
+        /// @notice whether that role is user facing
         bool enabled;
     }
 
@@ -39,13 +39,10 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
     }
 
     /**
-     * @param functionAccessAdminRole OZ role for the scope
-     * @param enabled whether that role may manage grant operators for the scope.
+     * @param role OZ role for the scope
+     * @param enabled whether that role is user facing
      */
-    event FunctionAccessAdminRoleEnable(
-        bytes32 indexed functionAccessAdminRole,
-        bool enabled
-    );
+    event IsUserFacingRoleSet(bytes32 indexed role, bool enabled);
 
     /**
      * @param functionAccessAdminRole OZ role for the scope
@@ -81,10 +78,10 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
      * @notice Enable or disable which OZ role may administer function-access scopes for that role.
      * @dev Only `DEFAULT_ADMIN_ROLE` can call this function.
      * Prevents unrelated role admins from spamming access mappings.
-     * @param params array of SetFunctionAccessAdminRoleEnabledParams
+     * @param params array of SetIsUserFacingRoleParams
      */
-    function setFunctionAccessAdminRoleEnabledMult(
-        SetFunctionAccessAdminRoleEnabledParams[] calldata params
+    function setIsUserFacingRoleMult(
+        SetIsUserFacingRoleParams[] calldata params
     ) external;
 
     /**
@@ -120,6 +117,13 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
      * @param newAdminRole the new admin role
      */
     function setRoleAdmin(bytes32 role, bytes32 newAdminRole) external;
+
+    /**
+     * @notice Whether `role` is user facing.
+     * @param role OZ role for the scope
+     * @return enabled whether `role` is user facing
+     */
+    function isUserFacingRole(bytes32 role) external view returns (bool);
 
     /**
      * @notice Whether `operator` may call `setFunctionPermission` for the function scope

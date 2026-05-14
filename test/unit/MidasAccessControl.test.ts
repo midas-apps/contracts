@@ -7,7 +7,7 @@ import { encodeFnSelector } from '../../helpers/utils';
 import { WithMidasAccessControlTester__factory } from '../../typechain-types';
 import {
   acErrors,
-  setFunctionAccessAdminRoleEnabledTester,
+  setIsUserFacingRoleTester,
   setFunctionAccessGrantOperatorTester,
   setFunctionPermissionTester,
   setupFunctionAccessGrantOperator,
@@ -22,11 +22,6 @@ describe('MidasAccessControl', function () {
       roles.common.blacklistedOperator,
       roles.common.greenlistedOperator,
       roles.common.defaultAdmin,
-      roles.tokenRoles.mTBILL.burner,
-      roles.tokenRoles.mTBILL.minter,
-      roles.tokenRoles.mTBILL.pauser,
-      roles.tokenRoles.mTBILL.redemptionVaultAdmin,
-      roles.tokenRoles.mTBILL.depositVaultAdmin,
     ];
 
     for (const role of initGrantedRoles) {
@@ -39,6 +34,14 @@ describe('MidasAccessControl', function () {
 
     expect(await accessControl.getRoleAdmin(roles.common.greenlisted)).eq(
       roles.common.greenlistedOperator,
+    );
+
+    expect(await accessControl.isUserFacingRole(roles.common.blacklisted)).eq(
+      true,
+    );
+
+    expect(await accessControl.isUserFacingRole(roles.common.greenlisted)).eq(
+      true,
     );
   });
 
@@ -262,20 +265,20 @@ describe('MidasAccessControl', function () {
   });
 
   describe('Function acces control', () => {
-    describe('setFunctionAccessAdminRoleEnabled()', () => {
+    describe('setIsUserFacingRole()', () => {
       it('should fail: non-DEFAULT_ADMIN reverts', async () => {
         const { accessControl, regularAccounts, roles } = await loadFixture(
           defaultDeploy,
         );
 
-        await setFunctionAccessAdminRoleEnabledTester(
+        await setIsUserFacingRoleTester(
           {
             accessControl,
             owner: regularAccounts[0],
           },
           [
             {
-              functionAccessAdminRole: roles.common.greenlistedOperator,
+              role: roles.common.greenlistedOperator,
               enabled: true,
             },
           ],
@@ -290,14 +293,14 @@ describe('MidasAccessControl', function () {
           defaultDeploy,
         );
 
-        await setFunctionAccessAdminRoleEnabledTester(
+        await setIsUserFacingRoleTester(
           {
             accessControl,
             owner,
           },
           [
             {
-              functionAccessAdminRole: roles.common.greenlistedOperator,
+              role: roles.common.greenlistedOperator,
               enabled: true,
             },
           ],
@@ -316,16 +319,16 @@ describe('MidasAccessControl', function () {
             accessControl,
             owner,
           },
+          roles.common.greenlistedOperator,
           [
             {
-              functionAccessAdminRole: roles.common.greenlistedOperator,
               targetContract: accessControl.address,
               functionSelector: encodeFnSelector('setGreenlistEnable(bool)'),
               operator: owner.address,
               enabled: true,
             },
           ],
-          { revertMessage: 'MAC: FA admin role disabled' },
+          { revertMessage: 'MAC: user facing role' },
         );
       });
 
@@ -334,14 +337,14 @@ describe('MidasAccessControl', function () {
           defaultDeploy,
         );
 
-        await setFunctionAccessAdminRoleEnabledTester(
+        await setIsUserFacingRoleTester(
           {
             accessControl,
             owner,
           },
           [
             {
-              functionAccessAdminRole: roles.common.greenlistedOperator,
+              role: roles.common.greenlistedOperator,
               enabled: true,
             },
           ],
@@ -352,9 +355,9 @@ describe('MidasAccessControl', function () {
             accessControl,
             owner,
           },
+          roles.common.greenlistedOperator,
           [
             {
-              functionAccessAdminRole: roles.common.greenlistedOperator,
               targetContract: accessControl.address,
               functionSelector: encodeFnSelector('setGreenlistEnable(bool)'),
               operator: owner.address,
@@ -381,15 +384,18 @@ describe('MidasAccessControl', function () {
           grantOperator: owner,
         });
 
-        await setFunctionPermissionTester({ accessControl, owner }, [
-          {
-            functionAccessAdminRole: roles.common.greenlistedOperator,
-            targetContract: accessControl.address,
-            functionSelector: selector,
-            account: regularAccounts[0].address,
-            enabled: true,
-          },
-        ]);
+        await setFunctionPermissionTester(
+          { accessControl, owner },
+          roles.common.greenlistedOperator,
+          accessControl.address,
+          selector,
+          [
+            {
+              account: regularAccounts[0].address,
+              enabled: true,
+            },
+          ],
+        );
       });
 
       it('should fail: caller is not a grant operator', async () => {
@@ -409,11 +415,11 @@ describe('MidasAccessControl', function () {
 
         await setFunctionPermissionTester(
           { accessControl, owner: regularAccounts[1] },
+          roles.common.greenlistedOperator,
+          accessControl.address,
+          selector,
           [
             {
-              functionAccessAdminRole: roles.common.greenlistedOperator,
-              targetContract: accessControl.address,
-              functionSelector: selector,
               account: regularAccounts[2].address,
               enabled: true,
             },
@@ -439,11 +445,11 @@ describe('MidasAccessControl', function () {
 
         await setFunctionPermissionTester(
           { accessControl, owner },
+          roles.common.greenlistedOperator,
+          accessControl.address,
+          selector,
           [
             {
-              functionAccessAdminRole: roles.common.greenlistedOperator,
-              targetContract: accessControl.address,
-              functionSelector: selector,
               account: regularAccounts[2].address,
               enabled: true,
             },
@@ -482,7 +488,7 @@ describe('WithMidasAccessControl', function () {
       await expect(
         wAccessControlTester
           .connect(regularAccounts[1])
-          .withOnlyRole(roles.common.blacklisted, regularAccounts[0].address),
+          .withOnlyRole(roles.common.defaultAdmin, false),
       ).revertedWithCustomError(
         wAccessControlTester,
         acErrors.WMAC_HASNT_ROLE().customErrorName,
@@ -494,38 +500,7 @@ describe('WithMidasAccessControl', function () {
         defaultDeploy,
       );
       await expect(
-        wAccessControlTester.withOnlyRole(
-          roles.common.blacklistedOperator,
-          owner.address,
-        ),
-      ).not.reverted;
-    });
-  });
-
-  describe('modifier onlyNotRole', () => {
-    it('should fail when call from DEFAULT_ADMIN_ROLE address', async () => {
-      const { wAccessControlTester, owner, roles } = await loadFixture(
-        defaultDeploy,
-      );
-      await expect(
-        wAccessControlTester.withOnlyNotRole(
-          roles.common.blacklistedOperator,
-          owner.address,
-        ),
-      ).revertedWithCustomError(
-        wAccessControlTester,
-        acErrors.WMAC_HAS_ROLE().customErrorName,
-      );
-    });
-
-    it('call from non DEFAULT_ADMIN_ROLE address', async () => {
-      const { wAccessControlTester, regularAccounts, roles } =
-        await loadFixture(defaultDeploy);
-      await expect(
-        wAccessControlTester.withOnlyNotRole(
-          roles.common.blacklisted,
-          regularAccounts[1].address,
-        ),
+        wAccessControlTester.withOnlyRole(roles.common.defaultAdmin, false),
       ).not.reverted;
     });
   });

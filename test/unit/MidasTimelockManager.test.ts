@@ -8,6 +8,7 @@ import { defaultDeploy } from '../common/fixtures';
 import {
   executeTimelockOperationTester,
   scheduleTimelockOperationsTester,
+  setMaxPendingOperationsPerProposerTester,
   setRoleTimelocksTester,
 } from '../common/timelock-manager.helpers';
 
@@ -29,6 +30,7 @@ describe('MidasTimelockManager', () => {
     }
     expect(await timelockManager.CHALLENGE_PERIOD()).to.eq(days(3));
     expect(await timelockManager.DISPUTE_PERIOD()).to.eq(days(3));
+    expect(await timelockManager.maxPendingOperationsPerProposer()).to.eq(100);
   });
 
   describe('scheduleTimelockOperation()', () => {
@@ -97,6 +99,57 @@ describe('MidasTimelockManager', () => {
       );
     });
 
+    it('when too many pending operations for a signle proposer but should affect different proposer', async () => {
+      const {
+        timelockManager,
+        timelock,
+        owner,
+        accessControl,
+        wAccessControlTester,
+        regularAccounts,
+      } = await loadFixture(defaultDeploy);
+
+      await accessControl.grantRole(
+        constants.HashZero,
+        regularAccounts[0].address,
+      );
+
+      await setMaxPendingOperationsPerProposerTester(
+        { timelockManager, owner, accessControl, timelock },
+        1,
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [constants.HashZero],
+        [3600],
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [
+          wAccessControlTester.interface.encodeFunctionData(
+            'withOnlyContractAdmin',
+          ),
+        ],
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [accessControl.address],
+        [
+          accessControl.interface.encodeFunctionData('grantRole', [
+            constants.HashZero,
+            wAccessControlTester.address,
+          ]),
+        ],
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
     it('should fail: when same operation is scheduled and not yet executed', async () => {
       const {
         timelockManager,
@@ -154,6 +207,76 @@ describe('MidasTimelockManager', () => {
         ],
         {
           revertMessage: 'MAC: no timelock',
+        },
+      );
+    });
+
+    it('should fail: when too many pending operations for a signle proposer', async () => {
+      const {
+        timelockManager,
+        timelock,
+        owner,
+        accessControl,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      await setMaxPendingOperationsPerProposerTester(
+        { timelockManager, owner, accessControl, timelock },
+        1,
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [constants.HashZero],
+        [3600],
+      );
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [
+          wAccessControlTester.interface.encodeFunctionData(
+            'withOnlyContractAdmin',
+          ),
+        ],
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [accessControl.address],
+        [
+          accessControl.interface.encodeFunctionData('grantRole', [
+            constants.HashZero,
+            wAccessControlTester.address,
+          ]),
+        ],
+        {
+          revertMessage: 'MAC: too many pending operations',
+        },
+      );
+    });
+
+    it('should fail: when required role is user facing', async () => {
+      const {
+        timelockManager,
+        timelock,
+        owner,
+        accessControl,
+        wAccessControlTester,
+        roles,
+      } = await loadFixture(defaultDeploy);
+
+      await wAccessControlTester.setContractAdminRole(roles.common.greenlisted);
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [
+          wAccessControlTester.interface.encodeFunctionData(
+            'withOnlyContractAdmin',
+          ),
+        ],
+        {
+          revertMessage: 'MAC: user facing role',
         },
       );
     });

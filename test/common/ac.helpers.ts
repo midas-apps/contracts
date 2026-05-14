@@ -228,19 +228,19 @@ export const unGreenList = async (
   ).eq(false);
 };
 
-export const setFunctionAccessAdminRoleEnabledTester = async (
+export const setIsUserFacingRoleTester = async (
   {
     accessControl,
     owner,
   }: { accessControl: MidasAccessControl; owner: SignerWithAddress },
-  params: { functionAccessAdminRole: string; enabled: boolean }[],
+  params: { role: string; enabled: boolean }[],
   opt?: OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
 
   const callFn = accessControl
     .connect(from)
-    .setFunctionAccessAdminRoleEnabledMult.bind(this, params);
+    .setIsUserFacingRoleMult.bind(this, params);
 
   if (await handleRevert(callFn, accessControl, opt)) {
     return;
@@ -248,9 +248,7 @@ export const setFunctionAccessAdminRoleEnabledTester = async (
 
   const statesBefore = await Promise.all(
     params.map(async (param) => {
-      return await accessControl.functionAccessAdminRoleEnabled(
-        param.functionAccessAdminRole,
-      );
+      return await accessControl.isUserFacingRole(param.role);
     }),
   );
 
@@ -261,7 +259,7 @@ export const setFunctionAccessAdminRoleEnabledTester = async (
   const logs = txReceipt.logs
     .filter((log) => log.address === accessControl.address)
     .map((log) => accessControl.interface.parseLog(log))
-    .filter((v) => v.name === 'FunctionAccessAdminRoleEnable')
+    .filter((v) => v.name === 'IsUserFacingRoleSet')
     .map((v) => v.args);
 
   for (const [index, stateBefore] of statesBefore.entries()) {
@@ -269,18 +267,12 @@ export const setFunctionAccessAdminRoleEnabledTester = async (
 
     if (stateBefore !== param.enabled) {
       const log = logs.filter(
-        (log) =>
-          log.functionAccessAdminRole === param.functionAccessAdminRole &&
-          log.enabled === param.enabled,
+        (log) => log.role === param.role && log.enabled === param.enabled,
       );
       expect(log.length).eq(1);
     }
 
-    expect(
-      await accessControl.functionAccessAdminRoleEnabled(
-        param.functionAccessAdminRole,
-      ),
-    ).eq(param.enabled);
+    expect(await accessControl.isUserFacingRole(param.role)).eq(param.enabled);
   }
 };
 
@@ -464,9 +456,9 @@ export const setupFunctionAccessGrantOperator = async ({
   functionSelector,
   grantOperator,
 }: SetupFunctionAccessGrantOperatorParams) => {
-  await setFunctionAccessAdminRoleEnabledTester({ accessControl, owner }, [
-    { functionAccessAdminRole, enabled: true },
-  ]);
+  // await setIsUserFacingRoleTester({ accessControl, owner }, [
+  //   { role: functionAccessAdminRole, enabled: true },
+  // ]);
   await setFunctionAccessGrantOperatorTester(
     { accessControl, owner },
     functionAccessAdminRole,

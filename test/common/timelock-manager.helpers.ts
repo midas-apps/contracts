@@ -3,14 +3,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumber, BigNumberish, constants, ethers } from 'ethers';
 
-import {
-  OptionalCommonParams,
-  getCurrentBlockTimestamp,
-  handleRevert,
-  OptionalCommonParams,
-  getCurrentBlockTimestamp,
-  handleRevert,
-} from './common.helpers';
+import { OptionalCommonParams, handleRevert } from './common.helpers';
 
 import {
   MidasAccessControl,
@@ -55,6 +48,33 @@ export const setRoleTimelocksTester = async (
     expect(delay).eq(expectedDelay);
     expect(isDefault).eq(BigNumber.from(0).eq(delayParam));
   }
+};
+
+export const setMaxPendingOperationsPerProposerTester = async (
+  { timelockManager, owner }: CommonParamsTimelock,
+  maxPendingOperationsPerProposer: BigNumberish,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+  const callFn = timelockManager
+    .connect(from)
+    .setMaxPendingOperationsPerProposer.bind(
+      this,
+      maxPendingOperationsPerProposer,
+    );
+
+  if (await handleRevert(callFn, timelockManager, opt)) {
+    return;
+  }
+
+  await expect(callFn()).to.not.reverted;
+
+  const actualMaxPendingOperationsPerProposer =
+    await timelockManager.maxPendingOperationsPerProposer();
+
+  expect(actualMaxPendingOperationsPerProposer).eq(
+    maxPendingOperationsPerProposer,
+  );
 };
 
 export const setRoleTimelocksAndExecute = async (
@@ -135,9 +155,6 @@ export const scheduleTimelockOperationsTester = async (
       ethers.constants.HashZero,
       getTimelockSalt(dataHashIndex),
     );
-
-    console.log('timestamp', await timelock.getTimestamp(operationId));
-    console.log('current timestamp', await getCurrentBlockTimestamp());
 
     expect(await timelock.isOperation(operationId)).to.be.true;
     expect(await timelock.isOperationReady(operationId)).to.be.false;

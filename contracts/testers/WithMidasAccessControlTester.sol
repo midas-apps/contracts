@@ -4,6 +4,12 @@ pragma solidity 0.8.34;
 import "../access/WithMidasAccessControl.sol";
 
 contract WithMidasAccessControlTester is WithMidasAccessControl {
+    bytes32 private _contractAdminRoleOverride;
+
+    function setContractAdminRole(bytes32 role) external {
+        _contractAdminRoleOverride = role;
+    }
+
     function initialize(address _accessControl) external initializer {
         __WithMidasAccessControl_init(_accessControl);
     }
@@ -27,8 +33,8 @@ contract WithMidasAccessControlTester is WithMidasAccessControl {
 
     function withOnlyContractAdmin() external onlyContractAdmin {}
 
-    function _contractAdminRole() internal pure override returns (bytes32) {
-        return _DEFAULT_ADMIN_ROLE;
+    function _contractAdminRole() internal view override returns (bytes32) {
+        return _contractAdminRoleOverride;
     }
 
     function _disableInitializers() internal override {}

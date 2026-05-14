@@ -22,9 +22,9 @@ contract MidasAccessControl is
     MidasAccessControlRoles
 {
     /**
-     * @dev Only when true may holders of `functionAccessAdminRole` manage grant operators for that role's scopes.
+     * @notice roles that are held by users
      */
-    mapping(bytes32 => bool) public functionAccessAdminRoleEnabled;
+    mapping(bytes32 => bool) public isUserFacingRole;
 
     /// @dev Grant operators may call `setFunctionPermission` for the corresponding permission key.
     mapping(bytes32 => mapping(address => bool))
@@ -43,6 +43,7 @@ contract MidasAccessControl is
      */
     address public pauseManager;
 
+    // TODO: adjust gap if needed?
     /**
      * @dev leaving a storage gap for futures updates
      */
@@ -51,9 +52,36 @@ contract MidasAccessControl is
     /**
      * @notice upgradeable pattern contract`s initializer
      */
-    function initialize() external initializer {
+    function initialize() external {
+        _initializeV1();
+
+        bytes32[] memory userFacingRoles = new bytes32[](2);
+
+        userFacingRoles[0] = BLACKLISTED_ROLE;
+        userFacingRoles[1] = GREENLISTED_ROLE;
+
+        initializeV2(userFacingRoles);
+    }
+
+    /**
+     * @notice upgradeable pattern contract`s initializer
+     */
+    function _initializeV1() private initializer {
         __AccessControl_init();
         _setupRoles(_msgSender());
+    }
+
+    /**
+     * @notice initializerV2. Initializes user facing roles
+     * @param userFacingRoles array of user facing roles
+     */
+    function initializeV2(bytes32[] memory userFacingRoles)
+        public
+        reinitializer(2)
+    {
+        for (uint256 i = 0; i < userFacingRoles.length; ++i) {
+            isUserFacingRole[userFacingRoles[i]] = true;
+        }
     }
 
     /**
@@ -86,26 +114,21 @@ contract MidasAccessControl is
     /**
      * @inheritdoc IMidasAccessControl
      */
-    function setFunctionAccessAdminRoleEnabledMult(
-        SetFunctionAccessAdminRoleEnabledParams[] calldata params
+    function setIsUserFacingRoleMult(
+        SetIsUserFacingRoleParams[] calldata params
     ) external {
         _validateRoleAccess(DEFAULT_ADMIN_ROLE, _msgSender(), true);
 
         for (uint256 i = 0; i < params.length; ++i) {
-            SetFunctionAccessAdminRoleEnabledParams memory param = params[i];
+            SetIsUserFacingRoleParams memory param = params[i];
 
             // if already enabled, skip and do not emit event
-            if (functionAccessAdminRoleEnabled[param.functionAccessAdminRole]) {
+            if (isUserFacingRole[param.role]) {
                 continue;
             }
 
-            functionAccessAdminRoleEnabled[
-                param.functionAccessAdminRole
-            ] = param.enabled;
-            emit FunctionAccessAdminRoleEnable(
-                param.functionAccessAdminRole,
-                param.enabled
-            );
+            isUserFacingRole[param.role] = param.enabled;
+            emit IsUserFacingRoleSet(param.role, param.enabled);
         }
     }
 
@@ -117,8 +140,8 @@ contract MidasAccessControl is
         SetFunctionAccessGrantOperatorParams[] calldata params
     ) external {
         require(
-            functionAccessAdminRoleEnabled[functionAccessAdminRole],
-            "MAC: FA admin role disabled"
+            !isUserFacingRole[functionAccessAdminRole],
+            "MAC: user facing role"
         );
         _validateRoleAccess(functionAccessAdminRole, _msgSender(), false);
 

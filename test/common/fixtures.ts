@@ -106,6 +106,7 @@ export const defaultDeploy = async () => {
 
   await timelockManager.initialize(
     accessControl.address,
+    100,
     councilMembers.map((v) => v.address),
   );
 
