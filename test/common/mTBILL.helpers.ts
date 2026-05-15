@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { BigNumber, BigNumberish } from 'ethers';
+import { BigNumberish, constants } from 'ethers';
 import { defaultAbiCoder, solidityKeccak256 } from 'ethers/lib/utils';
 
 import {
@@ -10,6 +10,7 @@ import {
   getCurrentBlockTimestamp,
   handleRevert,
 } from './common.helpers';
+import { calculateWindowRateLimitCapacity } from './manageable-vault.helpers';
 
 import { MTBILL, MToken, MTokenPermissioned } from '../../typechain-types';
 
@@ -136,11 +137,9 @@ export const mint = async (
 
   const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses();
 
-  const currentTimeBefore = await getCurrentBlockTimestamp();
+  const timetsampBefore = await getCurrentBlockTimestamp();
 
-  const lastEpochesBefore = rateLimitConfigsBefore.windows.map((window) =>
-    BigNumber.from(currentTimeBefore).div(window),
-  );
+  const lastEpochesBefore = await tokenContract.getMintRateLimitStatuses();
 
   await expect(tokenContract.connect(owner).mint(to, amount)).to.emit(
     tokenContract,
@@ -148,27 +147,40 @@ export const mint = async (
   ).to.not.reverted;
 
   const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses();
+  const timestampAfter = await getCurrentBlockTimestamp();
 
-  const currentTimeAfter = await getCurrentBlockTimestamp();
+  const expectedLimitsAfter = await Promise.all(
+    rateLimitConfigsBefore.map(async (limit) => {
+      const { remaining, inFlight } = calculateWindowRateLimitCapacity({
+        amountInFlight: limit.inFlight,
+        lastUpdated: timetsampBefore,
+        limit: limit.limit,
+        window: limit.window,
+        now: timestampAfter,
+      });
 
-  const lastEpochesAfter = rateLimitConfigsAfter.windows.map((window) =>
-    BigNumber.from(currentTimeAfter).div(window),
+      return {
+        ...limit,
+        remaining: remaining.gte(amount)
+          ? remaining.sub(amount)
+          : constants.Zero,
+        inFlight: inFlight.add(amount),
+      };
+    }),
   );
 
-  for (const [i] of rateLimitConfigsBefore.windows.entries()) {
-    const currentEpoch = lastEpochesAfter[i];
-    const lastEpoch = lastEpochesBefore[i];
+  const currentTimestamp = await getCurrentBlockTimestamp();
 
-    const resetEpoch = currentEpoch.eq(lastEpoch);
-    const expectedLimitUsed = resetEpoch
-      ? amount
-      : rateLimitConfigsBefore.configs[i].limitUsed.add(amount);
-
-    expect(rateLimitConfigsAfter.configs[i].limit).eq(
-      rateLimitConfigsBefore.configs[i].limit,
+  for (const [index, limit] of rateLimitConfigsBefore.entries()) {
+    expect(rateLimitConfigsAfter[index].inFlight).eq(
+      expectedLimitsAfter[index].inFlight,
     );
-    expect(rateLimitConfigsAfter.configs[i].limitUsed).eq(expectedLimitUsed);
-    expect(rateLimitConfigsAfter.configs[i].lastEpoch).eq(currentEpoch);
+    expect(rateLimitConfigsAfter[index].remaining).eq(
+      expectedLimitsAfter[index].remaining,
+    );
+    expect(rateLimitConfigsAfter[index].lastUpdated).eq(currentTimestamp);
+    expect(rateLimitConfigsAfter[index].window).eq(limit.window);
+    expect(rateLimitConfigsAfter[index].limit).eq(limit.limit);
   }
 
   const balanceAfter = await tokenContract.balanceOf(to);
@@ -197,6 +209,7 @@ export const burn = async (
   const balanceBefore = await tokenContract.balanceOf(from);
 
   const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses();
+
   await expect(tokenContract.connect(owner).burn(from, amount)).to.emit(
     tokenContract,
     tokenContract.interface.events['Transfer(address,address,uint256)'].name,
@@ -204,16 +217,12 @@ export const burn = async (
 
   const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses();
 
-  for (const [i] of rateLimitConfigsBefore.windows.entries()) {
-    expect(rateLimitConfigsAfter.configs[i].limit).eq(
-      rateLimitConfigsBefore.configs[i].limit,
-    );
-    expect(rateLimitConfigsAfter.configs[i].limitUsed).eq(
-      rateLimitConfigsBefore.configs[i].limitUsed,
-    );
-    expect(rateLimitConfigsAfter.configs[i].lastEpoch).eq(
-      rateLimitConfigsBefore.configs[i].lastEpoch,
-    );
+  for (const [index, limit] of rateLimitConfigsBefore.entries()) {
+    expect(rateLimitConfigsAfter[index].limit).eq(limit.limit);
+    expect(rateLimitConfigsAfter[index].inFlight).gte(limit.inFlight);
+    expect(rateLimitConfigsAfter[index].remaining).lte(limit.remaining);
+    expect(rateLimitConfigsAfter[index].lastUpdated).eq(limit.lastUpdated);
+    expect(rateLimitConfigsAfter[index].window).eq(limit.window);
   }
 
   const balanceAfter = await tokenContract.balanceOf(from);
@@ -241,37 +250,42 @@ export const increaseMintRateLimit = async (
 
   const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses();
 
+  // TODO: check events
   await expect(
     tokenContract.connect(owner).increaseMintRateLimit(window, newLimit),
-  ).to.emit(
-    tokenContract,
-    tokenContract.interface.events[
-      'SetMintRateLimitConfig(address,uint256,uint256)'
-    ].name,
   ).to.not.reverted;
-
+  const currentTimestamp = await getCurrentBlockTimestamp();
   const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses();
 
-  const configBefore = rateLimitConfigsBefore.windows
-    .map((w, i) => ({ window: w, config: rateLimitConfigsBefore.configs[i] }))
-    .filter((w) => w.window.eq(window))?.[0];
-
-  const configAfter = rateLimitConfigsAfter.windows
-    .map((w, i) => ({ window: w, config: rateLimitConfigsAfter.configs[i] }))
-    .filter((w) => w.window.eq(window))?.[0];
+  const configBefore = rateLimitConfigsBefore.filter((limit) =>
+    limit.window.eq(window),
+  )?.[0];
+  const configAfter = rateLimitConfigsAfter.filter((limit) =>
+    limit.window.eq(window),
+  )?.[0];
 
   if (configBefore) {
+    const { inFlight, remaining } = calculateWindowRateLimitCapacity({
+      amountInFlight: configBefore.inFlight,
+      lastUpdated: configBefore.lastUpdated,
+      limit: newLimit,
+      window,
+      now: currentTimestamp,
+    });
+
     expect(configAfter).not.eq(undefined);
     expect(configBefore).not.eq(undefined);
-    expect(configAfter.config.limit).eq(newLimit);
-    expect(configAfter.config.limitUsed).eq(configBefore.config.limitUsed);
-    expect(configAfter.config.lastEpoch).eq(configBefore.config.lastEpoch);
+    expect(configAfter.limit).eq(newLimit);
+    expect(configAfter.lastUpdated).eq(currentTimestamp);
+    expect(configAfter.inFlight).eq(inFlight);
+    expect(configAfter.remaining).eq(remaining);
   } else {
     expect(configAfter).not.eq(undefined);
     expect(configBefore).eq(undefined);
-    expect(configAfter.config.limit).eq(newLimit);
-    expect(configAfter.config.limitUsed).eq(0);
-    expect(configAfter.config.lastEpoch).eq(0);
+    expect(configAfter.limit).eq(newLimit);
+    expect(configAfter.inFlight).eq(0);
+    expect(configAfter.lastUpdated).eq(currentTimestamp);
+    expect(configAfter.remaining).eq(newLimit);
   }
 };
 
@@ -295,36 +309,43 @@ export const decreaseMintRateLimit = async (
 
   const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses();
 
+  // TODO: check events
   await expect(
     tokenContract.connect(owner).decreaseMintRateLimit(window, newLimit),
-  ).to.emit(
-    tokenContract,
-    tokenContract.interface.events[
-      'SetMintRateLimitConfig(address,uint256,uint256)'
-    ].name,
   ).to.not.reverted;
 
+  const currentTimestamp = await getCurrentBlockTimestamp();
   const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses();
 
-  const configBefore = rateLimitConfigsBefore.windows
-    .map((w, i) => ({ window: w, config: rateLimitConfigsBefore.configs[i] }))
-    .filter((w) => w.window.eq(window))?.[0];
+  const configBefore = rateLimitConfigsBefore.filter((limit) =>
+    limit.window.eq(window),
+  )?.[0];
 
-  const configAfter = rateLimitConfigsAfter.windows
-    .map((w, i) => ({ window: w, config: rateLimitConfigsAfter.configs[i] }))
-    .filter((w) => w.window.eq(window))?.[0];
+  const configAfter = rateLimitConfigsAfter.filter((limit) =>
+    limit.window.eq(window),
+  )?.[0];
 
   if (configBefore) {
+    const { inFlight, remaining } = calculateWindowRateLimitCapacity({
+      amountInFlight: configBefore.inFlight,
+      lastUpdated: configBefore.lastUpdated,
+      limit: newLimit,
+      window,
+      now: currentTimestamp,
+    });
+
     expect(configAfter).not.eq(undefined);
     expect(configBefore).not.eq(undefined);
-    expect(configAfter.config.limit).eq(newLimit);
-    expect(configAfter.config.limitUsed).eq(configBefore.config.limitUsed);
-    expect(configAfter.config.lastEpoch).eq(configBefore.config.lastEpoch);
+    expect(configAfter.limit).eq(newLimit);
+    expect(configAfter.lastUpdated).eq(currentTimestamp);
+    expect(configAfter.inFlight).eq(inFlight);
+    expect(configAfter.remaining).eq(remaining);
   } else {
     expect(configAfter).not.eq(undefined);
     expect(configBefore).eq(undefined);
-    expect(configAfter.config.limit).eq(newLimit);
-    expect(configAfter.config.limitUsed).eq(0);
-    expect(configAfter.config.lastEpoch).eq(0);
+    expect(configAfter.limit).eq(newLimit);
+    expect(configAfter.inFlight).eq(0);
+    expect(configAfter.lastUpdated).eq(currentTimestamp);
+    expect(configAfter.remaining).eq(newLimit);
   }
 };

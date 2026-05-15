@@ -929,6 +929,21 @@ export const depositVaultSuits = (
           );
         });
 
+        it('should fail: when window is shorter than 1 minute', async () => {
+          const { owner, depositVault } = await loadDvFixture();
+
+          await setInstantLimitConfigTest(
+            { vault: depositVault, owner },
+            { window: 59, limit: parseUnits('1000') },
+            {
+              revertCustomError: {
+                customErrorName: 'WindowTooShort',
+                args: [59],
+              },
+            },
+          );
+        });
+
         it('succeeds with only scoped function permission', async () => {
           const { accessControl, owner, depositVault, regularAccounts } =
             await loadDvFixture();
@@ -1007,7 +1022,7 @@ export const depositVaultSuits = (
             days(7),
             {
               revertCustomError: {
-                customErrorName: 'InstantLimitWindowNotExists',
+                customErrorName: 'UnknownWindowLimit',
               },
             },
           );
@@ -1151,7 +1166,7 @@ export const depositVaultSuits = (
             days(1),
             {
               revertCustomError: {
-                customErrorName: 'InstantLimitWindowNotExists',
+                customErrorName: 'UnknownWindowLimit',
               },
             },
           );
@@ -3267,7 +3282,7 @@ export const depositVaultSuits = (
             99_999,
             {
               revertCustomError: {
-                customErrorName: 'InstantLimitExceeded',
+                customErrorName: 'WindowLimitExceeded',
               },
             },
           );
@@ -3357,6 +3372,204 @@ export const depositVaultSuits = (
               },
             },
           );
+        });
+
+        describe('depositInstant() sliding rate limit (RateLimitLibrary)', () => {
+          const setupDepositInstantRateLimitFixture = async () => {
+            const fixture = await loadDvFixture();
+            const {
+              depositVault,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              owner,
+              mTBILL,
+              stableCoins,
+              dataFeed,
+            } = fixture;
+
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 4);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await mintToken(stableCoins.dai, owner, 1_000_000);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
+            await approveBase18(
+              owner,
+              stableCoins.dai,
+              depositVault,
+              1_000_000,
+            );
+
+            return fixture;
+          };
+
+          it('10h window: full consume, after 1h restores ~10% and two deposits use it', async () => {
+            const {
+              depositVault,
+              owner,
+              mTBILL,
+              stableCoins,
+              mTokenToUsdDataFeed,
+            } = await setupDepositInstantRateLimitFixture();
+
+            await setInstantLimitConfigTest(
+              { vault: depositVault, owner },
+              { window: hours(10), limit: parseUnits('1000') },
+            );
+
+            await depositInstantTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              1000,
+            );
+
+            await increase(hours(1));
+
+            await depositInstantTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              100,
+            );
+          });
+
+          it('1d window: after 80% consumed and limit halved, deposit fails', async () => {
+            const {
+              depositVault,
+              owner,
+              mTBILL,
+              stableCoins,
+              mTokenToUsdDataFeed,
+            } = await setupDepositInstantRateLimitFixture();
+
+            const initialLimit = parseUnits('1000');
+
+            await setInstantLimitConfigTest(
+              { vault: depositVault, owner },
+              { window: days(1), limit: initialLimit },
+            );
+
+            await depositInstantTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              800,
+            );
+
+            await setInstantLimitConfigTest(
+              { vault: depositVault, owner },
+              { window: days(1), limit: initialLimit.div(2) },
+            );
+
+            await depositInstantTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              100,
+              {
+                revertCustomError: {
+                  customErrorName: 'WindowLimitExceeded',
+                },
+              },
+            );
+          });
+
+          it('1d window: after limit halved, wait 12h and deposit small amount', async () => {
+            const {
+              depositVault,
+              owner,
+              mTBILL,
+              stableCoins,
+              mTokenToUsdDataFeed,
+            } = await setupDepositInstantRateLimitFixture();
+
+            const initialLimit = parseUnits('1000');
+
+            await setInstantLimitConfigTest(
+              { vault: depositVault, owner },
+              { window: days(1), limit: initialLimit },
+            );
+
+            await depositInstantTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              800,
+            );
+
+            await setInstantLimitConfigTest(
+              { vault: depositVault, owner },
+              { window: days(1), limit: initialLimit.div(2) },
+            );
+
+            await depositInstantTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              100,
+              {
+                revertCustomError: {
+                  customErrorName: 'WindowLimitExceeded',
+                },
+              },
+            );
+
+            await increase(hours(18));
+
+            await depositInstantTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              1,
+            );
+          });
+
+          it('multiple windows active at the same time', async () => {
+            const {
+              depositVault,
+              owner,
+              mTBILL,
+              stableCoins,
+              mTokenToUsdDataFeed,
+            } = await setupDepositInstantRateLimitFixture();
+
+            await setInstantLimitConfigTest(
+              { vault: depositVault, owner },
+              { window: hours(1), limit: parseUnits('100') },
+            );
+            await setInstantLimitConfigTest(
+              { vault: depositVault, owner },
+              { window: hours(6), limit: parseUnits('500') },
+            );
+            await setInstantLimitConfigTest(
+              { vault: depositVault, owner },
+              { window: days(1), limit: parseUnits('10000') },
+            );
+
+            await depositInstantTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              100,
+            );
+
+            await depositInstantTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              50,
+              {
+                revertCustomError: {
+                  customErrorName: 'WindowLimitExceeded',
+                },
+              },
+            );
+
+            await increase(hours(1));
+
+            await depositInstantTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              50,
+            );
+          });
         });
 
         describe('depositInstant() multiple instant limits', () => {
@@ -3457,7 +3670,7 @@ export const depositVaultSuits = (
               50,
               {
                 revertCustomError: {
-                  customErrorName: 'InstantLimitExceeded',
+                  customErrorName: 'WindowLimitExceeded',
                 },
               },
             );

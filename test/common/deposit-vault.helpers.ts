@@ -18,6 +18,7 @@ import {
   handleRevert,
 } from './common.helpers';
 import { defaultDeploy } from './fixtures';
+import { calculateWindowRateLimitCapacity } from './manageable-vault.helpers';
 
 import {
   DataFeedTest__factory,
@@ -162,6 +163,9 @@ export const depositInstantTest = async (
       true,
     );
 
+  const instantLimitsBefore = await depositVault.getInstantLimitStatuses();
+  const timestampBefore = await getCurrentBlockTimestamp();
+
   const callPromise = callFn();
 
   await expect(callPromise)
@@ -184,6 +188,31 @@ export const depositInstantTest = async (
       ].filter((v) => v !== undefined),
     ).to.not.reverted;
 
+  const instantLimitsAfter = await depositVault.getInstantLimitStatuses();
+  const timestampAfter = await getCurrentBlockTimestamp();
+
+  const expectedMinted = expectedMintAmount ?? mintAmount;
+
+  const expectedLimitsAfter = await Promise.all(
+    instantLimitsBefore.map(async (limit) => {
+      const { remaining, inFlight } = calculateWindowRateLimitCapacity({
+        amountInFlight: limit.inFlight,
+        lastUpdated: timestampBefore,
+        limit: limit.limit,
+        window: limit.window,
+        now: timestampAfter,
+      });
+
+      return {
+        ...limit,
+        remaining: remaining.gte(expectedMinted)
+          ? remaining.sub(expectedMinted)
+          : constants.Zero,
+        inFlight: inFlight.add(expectedMinted),
+      };
+    }),
+  );
+
   const totalMintedAfter = await depositVault.totalMinted(sender.address);
   const totalMintedAfterRecipient = await depositVault.totalMinted(recipient);
 
@@ -199,8 +228,6 @@ export const depositInstantTest = async (
   const balanceMtBillAfterUser = await balanceOfBase18(mTBILL, recipient);
 
   const maxSupplyCapAfter = await depositVault.maxSupplyCap();
-
-  const expectedMinted = expectedMintAmount ?? mintAmount;
 
   expect(balanceMtBillAfterUser).eq(
     balanceMtBillBeforeUser.add(expectedMinted),
@@ -230,6 +257,18 @@ export const depositInstantTest = async (
   }
 
   expect(maxSupplyCapAfter).eq(maxSupplyCapBefore);
+
+  for (const [index, limit] of instantLimitsBefore.entries()) {
+    expect(instantLimitsAfter[index].inFlight).eq(
+      expectedLimitsAfter[index].inFlight,
+    );
+    expect(instantLimitsAfter[index].remaining).eq(
+      expectedLimitsAfter[index].remaining,
+    );
+    expect(instantLimitsAfter[index].lastUpdated).eq(timestampAfter);
+    expect(instantLimitsAfter[index].window).eq(limit.window);
+    expect(instantLimitsAfter[index].limit).eq(limit.limit);
+  }
 
   return callPromise;
 };

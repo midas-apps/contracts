@@ -1,5 +1,9 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
+import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
+import {
+  days,
+  hours,
+} from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { expect } from 'chai';
 import { Contract } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
@@ -278,6 +282,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         loanRepaymentAddress: fixture.loanRepaymentAddress.address,
         loanSwapperVault: fixture.redemptionVaultLoanSwapper.address,
         maxLoanApr: 0,
+        loanApr: 0,
       },
     );
     const redemptionVaultWithSwapper =
@@ -311,6 +316,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           loanRepaymentAddress: fixture.loanRepaymentAddress.address,
           loanSwapperVault: fixture.redemptionVaultLoanSwapper.address,
           maxLoanApr: 0,
+          loanApr: 0,
         },
       );
 
@@ -378,7 +384,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
       await expect(
         tokenContract.initializeV2(clawbackReceiver.address),
-      ).to.revertedWith('Clawback receiver already set');
+      ).to.revertedWith('Initializable: contract is already initialized');
     });
 
     describe('pause()', () => {
@@ -525,8 +531,8 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         await mint({ tokenContract, owner }, to, 100);
         await mint({ tokenContract, owner }, to, 1, {
           revertCustomError: {
-            customErrorName: 'MintRateLimitExceeded',
-            args: [window, 101, 100],
+            customErrorName: 'WindowLimitExceeded',
+            args: [window, 0, 1],
           },
         });
       });
@@ -543,9 +549,183 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         await mint({ tokenContract, owner }, to, 60, {
           revertCustomError: {
-            customErrorName: 'MintRateLimitExceeded',
-            args: [shortWindow, 60, 50],
+            customErrorName: 'WindowLimitExceeded',
+            args: [shortWindow, 50, 60],
           },
+        });
+      });
+
+      describe('mint() sliding rate limit (RateLimitLibrary)', () => {
+        const setupMintRateLimitFixture = async () => {
+          const { owner, tokenContract, regularAccounts } =
+            await deployMTokenWithFixture();
+
+          return {
+            owner,
+            tokenContract,
+            holder: regularAccounts[0],
+            recipient: regularAccounts[1],
+          };
+        };
+
+        it('10h window: full consume, after 1h restores ~10% and second mint uses it', async () => {
+          const { owner, tokenContract, holder } =
+            await setupMintRateLimitFixture();
+
+          await increaseMintRateLimit(
+            { tokenContract, owner },
+            hours(10),
+            parseUnits('1000'),
+          );
+
+          await mint({ tokenContract, owner }, holder, parseUnits('1000'));
+
+          await increase(hours(1));
+
+          await mint({ tokenContract, owner }, holder, parseUnits('100'));
+        });
+
+        it('1d window: after 80% consumed and limit halved, mint fails', async () => {
+          const { owner, tokenContract, holder } =
+            await setupMintRateLimitFixture();
+
+          const window = days(1);
+          const initialLimit = parseUnits('1000');
+
+          await increaseMintRateLimit(
+            { tokenContract, owner },
+            window,
+            initialLimit,
+          );
+
+          await mint({ tokenContract, owner }, holder, parseUnits('800'));
+
+          await decreaseMintRateLimit(
+            { tokenContract, owner },
+            window,
+            initialLimit.div(2),
+          );
+
+          await mint({ tokenContract, owner }, holder, parseUnits('100'), {
+            revertCustomError: {
+              customErrorName: 'WindowLimitExceeded',
+            },
+          });
+        });
+
+        it('1d window: after limit halved, wait 12h and mint small amount', async () => {
+          const { owner, tokenContract, holder } =
+            await setupMintRateLimitFixture();
+
+          const window = days(1);
+          const initialLimit = parseUnits('1000');
+
+          await increaseMintRateLimit(
+            { tokenContract, owner },
+            window,
+            initialLimit,
+          );
+
+          await mint({ tokenContract, owner }, holder, parseUnits('800'));
+
+          await decreaseMintRateLimit(
+            { tokenContract, owner },
+            window,
+            initialLimit.div(2),
+          );
+
+          await mint({ tokenContract, owner }, holder, parseUnits('100'), {
+            revertCustomError: {
+              customErrorName: 'WindowLimitExceeded',
+            },
+          });
+
+          await increase(hours(18));
+
+          await mint({ tokenContract, owner }, holder, parseUnits('1'));
+        });
+
+        it('multiple windows active at the same time', async () => {
+          const { owner, tokenContract, holder } =
+            await setupMintRateLimitFixture();
+
+          await increaseMintRateLimit(
+            { tokenContract, owner },
+            hours(1),
+            parseUnits('100'),
+          );
+          await increaseMintRateLimit(
+            { tokenContract, owner },
+            hours(6),
+            parseUnits('500'),
+          );
+          await increaseMintRateLimit(
+            { tokenContract, owner },
+            days(1),
+            parseUnits('10000'),
+          );
+
+          await mint({ tokenContract, owner }, holder, parseUnits('100'));
+
+          await mint({ tokenContract, owner }, holder, parseUnits('50'), {
+            revertCustomError: {
+              customErrorName: 'WindowLimitExceeded',
+            },
+          });
+
+          await increase(hours(1));
+
+          await mint({ tokenContract, owner }, holder, parseUnits('50'));
+        });
+
+        it('burn is not affected when mint rate limit is exhausted', async () => {
+          const { owner, tokenContract, holder } =
+            await setupMintRateLimitFixture();
+
+          const window = days(1);
+
+          await increaseMintRateLimit(
+            { tokenContract, owner },
+            window,
+            parseUnits('100'),
+          );
+
+          await mint({ tokenContract, owner }, holder, parseUnits('100'));
+
+          await mint({ tokenContract, owner }, holder, parseUnits('1'), {
+            revertCustomError: {
+              customErrorName: 'WindowLimitExceeded',
+            },
+          });
+
+          await tokenContract
+            .connect(owner)
+            .burn(holder.address, parseUnits('50'));
+        });
+
+        it('transfer is not affected when mint rate limit is exhausted', async () => {
+          const { owner, tokenContract, holder, recipient } =
+            await setupMintRateLimitFixture();
+
+          const window = days(1);
+
+          await increaseMintRateLimit(
+            { tokenContract, owner },
+            window,
+            parseUnits('100'),
+          );
+
+          await mint({ tokenContract, owner }, holder, parseUnits('100'));
+
+          await mint({ tokenContract, owner }, holder, parseUnits('1'), {
+            revertCustomError: {
+              customErrorName: 'WindowLimitExceeded',
+            },
+          });
+
+          await tokenContract
+            .connect(holder)
+            .transfer(recipient.address, parseUnits('50'));
         });
       });
     });
@@ -596,8 +776,8 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         await mint({ tokenContract, owner }, holder, 100);
         await mint({ tokenContract, owner }, holder, 1, {
           revertCustomError: {
-            customErrorName: 'MintRateLimitExceeded',
-            args: [window, 101, 100],
+            customErrorName: 'WindowLimitExceeded',
+            args: [window, 0, 1],
           },
         });
 
@@ -653,7 +833,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         await setClawbackReceiverTest(
           { tokenContract, owner },
           ethers.constants.AddressZero,
-          { revertMessage: 'Invalid clawback receiver' },
+          { revertCustomError: { customErrorName: 'InvalidAddress' } },
         );
       });
 
@@ -849,6 +1029,22 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         await increaseMintRateLimit({ tokenContract, owner }, window, 100);
         await increaseMintRateLimit({ tokenContract, owner }, window, 200);
+      });
+
+      it('should fail: when window is shorter than 1 minute', async () => {
+        const { owner, tokenContract } = await deployMTokenWithFixture();
+
+        await increaseMintRateLimit(
+          { tokenContract, owner },
+          59,
+          parseUnits('1000'),
+          {
+            revertCustomError: {
+              customErrorName: 'WindowTooShort',
+              args: [59],
+            },
+          },
+        );
       });
     });
 

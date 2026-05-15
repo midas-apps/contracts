@@ -187,7 +187,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      * @dev set mint rate limit config
      * @param window window duration in seconds
      * @param limit limit amount per window
-     * @param increaseOnly whether to only increase the limit or decrease it
+     * @param increaseOnly if true - only increase the limit, if false - only decrease the limit
      */
     function _setMintRateLimitConfig(
         uint256 window,
