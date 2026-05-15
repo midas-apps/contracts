@@ -63,6 +63,15 @@ contract CustomAggregatorV3CompatibleFeed is
     );
 
     /**
+     * @param sender the address that updated the max answer deviation
+     * @param maxAnswerDeviation the new max answer deviation
+     */
+    event MaxAnswerDeviationUpdated(
+        address indexed sender,
+        uint256 indexed maxAnswerDeviation
+    );
+
+    /**
      * @notice upgradeable pattern contract`s initializer
      * @param _accessControl address of MidasAccessControll contract
      * @param _minAnswer init value for `minAnswer`. Should be < `_maxAnswer`
@@ -131,6 +140,23 @@ contract CustomAggregatorV3CompatibleFeed is
         latestRound = roundId;
 
         emit AnswerUpdated(_data, roundId, block.timestamp);
+    }
+
+    /**
+     * @notice sets the max answer deviation
+     * @dev the max answer deviation is the maximum allowed deviation from the latest price
+     * @param _maxAnswerDeviation the new max answer deviation
+     */
+    function setMaxAnswerDeviation(uint256 _maxAnswerDeviation)
+        external
+        onlyContractAdmin
+    {
+        require(
+            _maxAnswerDeviation <= 100 * (10**decimals()),
+            "CA: !max deviation"
+        );
+        maxAnswerDeviation = _maxAnswerDeviation;
+        emit MaxAnswerDeviationUpdated(msg.sender, _maxAnswerDeviation);
     }
 
     /**

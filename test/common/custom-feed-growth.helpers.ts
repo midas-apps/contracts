@@ -317,5 +317,39 @@ export const applyGrowth = ({
   return BigNumber.from(answer).add(interest);
 };
 
+export const setMaxAnswerDeviationTest = async (
+  { customFeedGrowth, owner }: CommonParamsSetRoundData,
+  maxAnswerDeviation: BigNumberish,
+  opt?: OptionalCommonParams,
+) => {
+  const sender = opt?.from ?? owner;
+
+  if (
+    await handleRevert(
+      customFeedGrowth
+        .connect(sender)
+        .setMaxAnswerDeviation.bind(this, maxAnswerDeviation),
+      customFeedGrowth,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  await expect(
+    customFeedGrowth.connect(sender).setMaxAnswerDeviation(maxAnswerDeviation),
+  )
+    .to.emit(
+      customFeedGrowth,
+      customFeedGrowth.interface.events[
+        'MaxAnswerDeviationUpdated(address,uint256)'
+      ].name,
+    )
+    .withArgs(sender, maxAnswerDeviation).to.not.reverted;
+
+  const maxAnswerDeviationAfter = await customFeedGrowth.maxAnswerDeviation();
+  expect(maxAnswerDeviationAfter).eq(maxAnswerDeviation);
+};
+
 export const calculatePriceDiviation = (last: number, next: number) =>
   Math.abs(((next - last) * 100) / last);

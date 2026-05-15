@@ -1,5 +1,6 @@
 import { setNextBlockTimestamp } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
 import { expect } from 'chai';
+import { BigNumberish } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import { handleRevert, OptionalCommonParams } from './common.helpers';
@@ -124,6 +125,39 @@ export const setRoundDataSafe = async (
 
   expect(await customFeed.lastTimestamp()).eq(lastRoundDataAfter.updatedAt);
   expect(await customFeed.lastAnswer()).eq(lastRoundDataAfter.answer);
+};
+
+export const setMaxAnswerDeviationTest = async (
+  { customFeed, owner }: CommonParamsSetRoundData,
+  maxAnswerDeviation: BigNumberish,
+  opt?: OptionalCommonParams,
+) => {
+  const sender = opt?.from ?? owner;
+
+  if (
+    await handleRevert(
+      customFeed
+        .connect(sender)
+        .setMaxAnswerDeviation.bind(this, maxAnswerDeviation),
+      customFeed,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  await expect(
+    customFeed.connect(sender).setMaxAnswerDeviation(maxAnswerDeviation),
+  )
+    .to.emit(
+      customFeed,
+      customFeed.interface.events['MaxAnswerDeviationUpdated(address,uint256)']
+        .name,
+    )
+    .withArgs(sender, maxAnswerDeviation).to.not.reverted;
+
+  const maxAnswerDeviationAfter = await customFeed.maxAnswerDeviation();
+  expect(maxAnswerDeviationAfter).eq(maxAnswerDeviation);
 };
 
 export const calculatePriceDiviation = (last: number, next: number) =>

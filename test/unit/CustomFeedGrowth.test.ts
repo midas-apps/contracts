@@ -4,13 +4,19 @@ import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
+import { encodeFnSelector } from '../../helpers/utils';
 import {
   CustomAggregatorV3CompatibleFeedGrowth__factory,
   CustomAggregatorV3CompatibleFeedGrowthTester__factory,
 } from '../../typechain-types';
-import { acErrors } from '../common/ac.helpers';
+import {
+  acErrors,
+  setFunctionPermissionTester,
+  setupFunctionAccessGrantOperator,
+} from '../common/ac.helpers';
 import {
   setMaxGrowthApr,
+  setMaxAnswerDeviationTest,
   setMinGrowthApr,
   setOnlyUp,
   setRoundDataGrowth,
@@ -18,6 +24,11 @@ import {
 } from '../common/custom-feed-growth.helpers';
 import { calculatePriceDiviation } from '../common/custom-feed.helpers';
 import { defaultDeploy } from '../common/fixtures';
+import {
+  executeTimelockOperationTester,
+  scheduleTimelockOperationsTester,
+  setRoleTimelocksTester,
+} from '../common/timelock-manager.helpers';
 
 describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
   it('deployment', async () => {
@@ -42,9 +53,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       owner,
     ).deploy();
 
-    expect(await newFeed.feedAdminRole()).eq(
-      await newFeed.DEFAULT_ADMIN_ROLE(),
-    );
+    expect(await newFeed.feedAdminRole()).eq(ethers.constants.HashZero);
   });
 
   it('initialize', async () => {
@@ -544,6 +553,248 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
         from: fixture.regularAccounts[0],
         revertCustomError: acErrors.WMAC_HASNT_ROLE(),
       });
+    });
+  });
+
+  describe('setMaxAnswerDeviation()', () => {
+    const validMaxAnswerDeviation = parseUnits('0.5', 8);
+    const invalidMaxAnswerDeviation = parseUnits('101', 8);
+    const setMaxAnswerDeviationSelector = encodeFnSelector(
+      'setMaxAnswerDeviation(uint256)',
+    );
+
+    it('call from owner', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      await setMaxAnswerDeviationTest(fixture, validMaxAnswerDeviation);
+    });
+
+    it('should fail: call from non owner', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      await setMaxAnswerDeviationTest(fixture, validMaxAnswerDeviation, {
+        from: fixture.regularAccounts[0],
+        revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
+      });
+    });
+
+    it('should fail: when maxAnswerDeviation is greater than 100%', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      await setMaxAnswerDeviationTest(fixture, invalidMaxAnswerDeviation, {
+        revertMessage: 'CAG: !max deviation',
+      });
+    });
+
+    it('succeeds with only scoped function permission', async () => {
+      const { accessControl, customFeedGrowth, owner, regularAccounts } =
+        await loadFixture(defaultDeploy);
+
+      const user = regularAccounts[0];
+      const feedAdminRole = await customFeedGrowth.feedAdminRole();
+
+      await setupFunctionAccessGrantOperator({
+        accessControl,
+        owner,
+        functionAccessAdminRole: feedAdminRole,
+        targetContract: customFeedGrowth.address,
+        functionSelector: setMaxAnswerDeviationSelector,
+        grantOperator: owner,
+      });
+
+      await setFunctionPermissionTester(
+        { accessControl, owner },
+        feedAdminRole,
+        customFeedGrowth.address,
+        setMaxAnswerDeviationSelector,
+        [{ account: user.address, enabled: true }],
+      );
+
+      expect(await accessControl.hasRole(feedAdminRole, user.address)).eq(
+        false,
+      );
+
+      await setMaxAnswerDeviationTest(
+        { customFeedGrowth, owner },
+        validMaxAnswerDeviation,
+        { from: user },
+      );
+    });
+
+    it('succeeds with scoped permission and feed admin role', async () => {
+      const { accessControl, customFeedGrowth, owner, regularAccounts } =
+        await loadFixture(defaultDeploy);
+
+      const user = regularAccounts[0];
+      const feedAdminRole = await customFeedGrowth.feedAdminRole();
+
+      await setupFunctionAccessGrantOperator({
+        accessControl,
+        owner,
+        functionAccessAdminRole: feedAdminRole,
+        targetContract: customFeedGrowth.address,
+        functionSelector: setMaxAnswerDeviationSelector,
+        grantOperator: owner,
+      });
+
+      await setFunctionPermissionTester(
+        { accessControl, owner },
+        feedAdminRole,
+        customFeedGrowth.address,
+        setMaxAnswerDeviationSelector,
+        [{ account: user.address, enabled: true }],
+      );
+
+      await accessControl.grantRole(feedAdminRole, user.address);
+
+      await setMaxAnswerDeviationTest(
+        { customFeedGrowth, owner },
+        validMaxAnswerDeviation,
+        { from: user },
+      );
+    });
+
+    it('when called through timelock with contract admin role', async () => {
+      const {
+        accessControl,
+        customFeedGrowth,
+        owner,
+        regularAccounts,
+        timelock,
+        timelockManager,
+      } = await loadFixture(defaultDeploy);
+
+      const proposer = regularAccounts[0];
+      const feedAdminRole = await customFeedGrowth.feedAdminRole();
+
+      await accessControl.grantRole(feedAdminRole, proposer.address);
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [feedAdminRole],
+        [3600],
+      );
+
+      const calldata = customFeedGrowth.interface.encodeFunctionData(
+        'setMaxAnswerDeviation',
+        [validMaxAnswerDeviation],
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [customFeedGrowth.address],
+        [calldata],
+        { from: proposer },
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        customFeedGrowth.address,
+        calldata,
+        proposer.address,
+        { from: owner },
+      );
+
+      expect(await customFeedGrowth.maxAnswerDeviation()).eq(
+        validMaxAnswerDeviation,
+      );
+    });
+
+    it('when called through timelock with function admin role', async () => {
+      const {
+        accessControl,
+        customFeedGrowth,
+        owner,
+        regularAccounts,
+        timelock,
+        timelockManager,
+      } = await loadFixture(defaultDeploy);
+
+      const proposer = regularAccounts[0];
+      const feedAdminRole = await customFeedGrowth.feedAdminRole();
+
+      await setupFunctionAccessGrantOperator({
+        accessControl,
+        owner,
+        functionAccessAdminRole: feedAdminRole,
+        targetContract: customFeedGrowth.address,
+        functionSelector: setMaxAnswerDeviationSelector,
+        grantOperator: owner,
+      });
+
+      await setupFunctionAccessGrantOperator({
+        accessControl,
+        owner,
+        functionAccessAdminRole: feedAdminRole,
+        targetContract: timelockManager.address,
+        functionSelector: setMaxAnswerDeviationSelector,
+        grantOperator: owner,
+      });
+
+      await setFunctionPermissionTester(
+        { accessControl, owner },
+        feedAdminRole,
+        customFeedGrowth.address,
+        setMaxAnswerDeviationSelector,
+        [{ account: proposer.address, enabled: true }],
+      );
+
+      await setFunctionPermissionTester(
+        { accessControl, owner },
+        feedAdminRole,
+        timelockManager.address,
+        setMaxAnswerDeviationSelector,
+        [{ account: proposer.address, enabled: true }],
+      );
+
+      expect(await accessControl.hasRole(feedAdminRole, proposer.address)).eq(
+        false,
+      );
+
+      const feedPermissionKey = await accessControl.functionPermissionKey(
+        feedAdminRole,
+        customFeedGrowth.address,
+        setMaxAnswerDeviationSelector,
+      );
+      const timelockPermissionKey = await accessControl.functionPermissionKey(
+        feedAdminRole,
+        timelockManager.address,
+        setMaxAnswerDeviationSelector,
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [feedPermissionKey, timelockPermissionKey],
+        [3600, 3600],
+      );
+
+      const calldata = customFeedGrowth.interface.encodeFunctionData(
+        'setMaxAnswerDeviation',
+        [validMaxAnswerDeviation],
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [customFeedGrowth.address],
+        [calldata],
+        { from: proposer },
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        customFeedGrowth.address,
+        calldata,
+        proposer.address,
+        { from: owner },
+      );
+
+      expect(await customFeedGrowth.maxAnswerDeviation()).eq(
+        validMaxAnswerDeviation,
+      );
     });
   });
 

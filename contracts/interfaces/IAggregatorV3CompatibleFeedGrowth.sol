@@ -24,6 +24,15 @@ interface IAggregatorV3CompatibleFeedGrowth is AggregatorV3Interface {
     );
 
     /**
+     * @param sender the address that updated the max answer deviation
+     * @param maxAnswerDeviation the new max answer deviation
+     */
+    event MaxAnswerDeviationUpdated(
+        address indexed sender,
+        uint256 indexed maxAnswerDeviation
+    );
+
+    /**
      * @notice emitted when max growth apr is updated
      *
      * @param newMaxGrowthApr new max growth apr
@@ -64,6 +73,13 @@ interface IAggregatorV3CompatibleFeedGrowth is AggregatorV3Interface {
      * @param _minGrowthApr new min growth apr
      */
     function setMinGrowthApr(int80 _minGrowthApr) external;
+
+    /**
+     * @notice sets the max answer deviation
+     * @dev the max answer deviation is the maximum allowed deviation from the latest price
+     * @param _maxAnswerDeviation the new max answer deviation in %
+     */
+    function setMaxAnswerDeviation(uint256 _maxAnswerDeviation) external;
 
     /**
      * @notice works as `setRoundData()`, but also checks the

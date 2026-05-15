@@ -161,6 +161,18 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     /**
      * @inheritdoc IAggregatorV3CompatibleFeedGrowth
      */
+    function setMaxAnswerDeviation(uint256 _maxAnswerDeviation)
+        external
+        onlyContractAdmin
+    {
+        require(_maxAnswerDeviation <= 100 * _ONE, "CAG: !max deviation");
+        maxAnswerDeviation = _maxAnswerDeviation;
+        emit MaxAnswerDeviationUpdated(msg.sender, _maxAnswerDeviation);
+    }
+
+    /**
+     * @inheritdoc IAggregatorV3CompatibleFeedGrowth
+     */
     function setRoundDataSafe(
         int256 _data,
         uint256 _dataTimestamp,

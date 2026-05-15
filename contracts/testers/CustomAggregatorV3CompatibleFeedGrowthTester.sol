@@ -15,10 +15,6 @@ contract CustomAggregatorV3CompatibleFeedGrowthTester is
         return CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE;
     }
 
-    function setMaxAnswerDeviation(uint256 _deviation) public {
-        maxAnswerDeviation = _deviation;
-    }
-
     function getDeviation(
         int256 _lastPrice,
         int256 _newPrice,
