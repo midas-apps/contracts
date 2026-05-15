@@ -77,6 +77,11 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     uint64 public maxLoanApr;
 
     /**
+     * @notice loan APR value in basis points (100 = 1%)
+     */
+    uint64 public loanApr;
+
+    /**
      * @notice flag to determine if the loan LP liquidity should be used first
      */
     bool public preferLoanLiquidity;
@@ -123,6 +128,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             _redemptionVaultInitParams.loanSwapperVault
         );
         maxLoanApr = _redemptionVaultInitParams.maxLoanApr;
+        loanApr = _redemptionVaultInitParams.loanApr;
     }
 
     /**
@@ -348,11 +354,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function bulkRepayLpLoanRequest(
-        uint256[] calldata requestIds,
-        uint64 loanApr
-    ) external onlyContractAdmin {
-        require(loanApr <= maxLoanApr, LoanAprTooHigh(loanApr, maxLoanApr));
+    function bulkRepayLpLoanRequest(uint256[] calldata requestIds)
+        external
+        onlyContractAdmin
+    {
+        uint64 _loanApr = loanApr;
+        require(_loanApr <= maxLoanApr, LoanAprTooHigh(_loanApr, maxLoanApr));
 
         for (uint256 i = 0; i < requestIds.length; ++i) {
             LiquidityProviderLoanRequest memory request = loanRequests[
@@ -364,7 +371,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             uint256 decimals = _tokenDecimals(request.tokenOut);
             uint256 duration = block.timestamp - request.createdAt;
             uint256 accruedInterest = (request.amountTokenOut *
-                loanApr *
+                _loanApr *
                 duration) / (10_000 * 365 days);
 
             uint256 amountFee;
@@ -478,6 +485,14 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         maxLoanApr = newMaxLoanApr;
 
         emit SetMaxLoanApr(msg.sender, newMaxLoanApr);
+    }
+
+    /**
+     * @inheritdoc IRedemptionVault
+     */
+    function setLoanApr(uint64 newLoanApr) external onlyContractAdmin {
+        loanApr = newLoanApr;
+        emit SetLoanApr(msg.sender, newLoanApr);
     }
 
     /**

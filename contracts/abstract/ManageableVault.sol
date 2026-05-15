@@ -21,6 +21,8 @@ import {DecimalsCorrectionLibrary} from "../libraries/DecimalsCorrectionLibrary.
 import {Pausable, IPausable} from "../access/Pausable.sol";
 import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
 
+import {RateLimitLibrary} from "../libraries/RateLimitLibrary.sol";
+
 /**
  * @title ManageableVault
  * @author RedDuck Software
@@ -38,6 +40,7 @@ abstract contract ManageableVault is
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
     using Counters for Counters.Counter;
+    using RateLimitLibrary for RateLimitLibrary.WindowRateLimits;
 
     /**
      * @notice stable coin static rate 1:1 USD in 18 decimals
@@ -131,14 +134,9 @@ abstract contract ManageableVault is
     uint256 public maxApproveRequestId;
 
     /**
-     * @notice set of limit config windows
+     * @notice instant rate limits state
      */
-    EnumerableSet.UintSet private _limitWindows;
-
-    /**
-     * @notice mapping, window duration in seconds => limit config
-     */
-    mapping(uint256 => LimitConfig) public limitConfigs;
+    RateLimitLibrary.WindowRateLimits private _instantRateLimits;
 
     /**
      * @dev leaving a storage gap for futures updates
@@ -400,12 +398,7 @@ abstract contract ManageableVault is
         external
         onlyContractAdmin
     {
-        require(
-            _limitWindows.remove(window),
-            InstantLimitWindowNotExists(window)
-        );
-        delete limitConfigs[window];
-        emit RemoveInstantLimitConfig(msg.sender, window);
+        _instantRateLimits.removeWindowLimit(window);
     }
 
     /**
@@ -444,22 +437,17 @@ abstract contract ManageableVault is
     }
 
     /**
-     * @notice returns array of limit configs
-     * @return windows array of limit config windows
-     * @return configs array of limit configs
+     * @notice returns array of instant rate limit statuses
+     * @return statuses array of instant rate limit statuses
      */
-    function getLimitConfigs()
+    function getInstantLimitStatuses()
         external
         view
-        returns (uint256[] memory windows, LimitConfig[] memory configs)
+        returns (
+            RateLimitLibrary.WindowRateLimitStatus[] memory /* statuses */
+        )
     {
-        uint256 length = _limitWindows.length();
-        windows = new uint256[](length);
-        configs = new LimitConfig[](length);
-        for (uint256 i = 0; i < length; ++i) {
-            windows[i] = _limitWindows.at(i);
-            configs[i] = limitConfigs[windows[i]];
-        }
+        return _instantRateLimits.getWindowStatuses();
     }
 
     /**
@@ -505,17 +493,7 @@ abstract contract ManageableVault is
      * @param limit limit amount per window
      */
     function _setInstantLimitConfig(uint256 window, uint256 limit) private {
-        // add window to set if not exists
-        _limitWindows.add(window);
-
-        LimitConfig memory existingConfig = limitConfigs[window];
-        limitConfigs[window] = LimitConfig({
-            limit: limit,
-            limitUsed: existingConfig.limitUsed,
-            lastEpoch: existingConfig.lastEpoch
-        });
-
-        emit SetInstantLimitConfig(msg.sender, window, limit);
+        _instantRateLimits.setWindowLimit(window, limit);
     }
 
     /**
@@ -615,25 +593,7 @@ abstract contract ManageableVault is
      * @param amount operation amount (decimals 18)
      */
     function _requireAndUpdateLimit(uint256 amount) internal {
-        for (uint256 i = 0; i < _limitWindows.length(); ++i) {
-            uint256 window = _limitWindows.at(i);
-            LimitConfig memory config = limitConfigs[window];
-            uint256 currentEpochIndex = block.timestamp / window;
-
-            if (currentEpochIndex != config.lastEpoch) {
-                config.limitUsed = 0;
-                config.lastEpoch = currentEpochIndex;
-            }
-
-            config.limitUsed += amount;
-
-            require(
-                config.limitUsed <= config.limit,
-                InstantLimitExceeded(window, config.limitUsed, config.limit)
-            );
-
-            limitConfigs[window] = config;
-        }
+        _instantRateLimits.consumeLimit(amount);
     }
 
     /**

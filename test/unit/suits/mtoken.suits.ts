@@ -340,10 +340,9 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
       expect(await tokenContract.paused()).eq(false);
 
-      const limits = await tokenContract.getMintRateLimitConfigs();
+      const limits = await tokenContract.getMintRateLimitStatuses();
 
-      expect(limits.windows.length).eq(0);
-      expect(limits.configs.length).eq(0);
+      expect(limits.length).eq(0);
     });
 
     it('roles', async () => {

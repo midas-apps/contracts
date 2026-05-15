@@ -134,7 +134,7 @@ export const mint = async (
 
   const balanceBefore = await tokenContract.balanceOf(to);
 
-  const rateLimitConfigsBefore = await tokenContract.getMintRateLimitConfigs();
+  const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses();
 
   const currentTimeBefore = await getCurrentBlockTimestamp();
 
@@ -147,7 +147,7 @@ export const mint = async (
     tokenContract.interface.events['Transfer(address,address,uint256)'].name,
   ).to.not.reverted;
 
-  const rateLimitConfigsAfter = await tokenContract.getMintRateLimitConfigs();
+  const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses();
 
   const currentTimeAfter = await getCurrentBlockTimestamp();
 
@@ -196,13 +196,13 @@ export const burn = async (
 
   const balanceBefore = await tokenContract.balanceOf(from);
 
-  const rateLimitConfigsBefore = await tokenContract.getMintRateLimitConfigs();
+  const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses();
   await expect(tokenContract.connect(owner).burn(from, amount)).to.emit(
     tokenContract,
     tokenContract.interface.events['Transfer(address,address,uint256)'].name,
   ).to.not.reverted;
 
-  const rateLimitConfigsAfter = await tokenContract.getMintRateLimitConfigs();
+  const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses();
 
   for (const [i] of rateLimitConfigsBefore.windows.entries()) {
     expect(rateLimitConfigsAfter.configs[i].limit).eq(
@@ -239,7 +239,7 @@ export const increaseMintRateLimit = async (
     return;
   }
 
-  const rateLimitConfigsBefore = await tokenContract.getMintRateLimitConfigs();
+  const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses();
 
   await expect(
     tokenContract.connect(owner).increaseMintRateLimit(window, newLimit),
@@ -250,7 +250,7 @@ export const increaseMintRateLimit = async (
     ].name,
   ).to.not.reverted;
 
-  const rateLimitConfigsAfter = await tokenContract.getMintRateLimitConfigs();
+  const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses();
 
   const configBefore = rateLimitConfigsBefore.windows
     .map((w, i) => ({ window: w, config: rateLimitConfigsBefore.configs[i] }))
@@ -293,7 +293,7 @@ export const decreaseMintRateLimit = async (
     return;
   }
 
-  const rateLimitConfigsBefore = await tokenContract.getMintRateLimitConfigs();
+  const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses();
 
   await expect(
     tokenContract.connect(owner).decreaseMintRateLimit(window, newLimit),
@@ -304,7 +304,7 @@ export const decreaseMintRateLimit = async (
     ].name,
   ).to.not.reverted;
 
-  const rateLimitConfigsAfter = await tokenContract.getMintRateLimitConfigs();
+  const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses();
 
   const configBefore = rateLimitConfigsBefore.windows
     .map((w, i) => ({ window: w, config: rateLimitConfigsBefore.configs[i] }))

@@ -76,6 +76,7 @@ import {
   setRequestRedeemerTest,
   expectedHoldbackPartRateFromAvg,
   setPreferLoanLiquidityTest,
+  setLoanAprTest,
 } from '../../common/redemption-vault.helpers';
 import {
   executeTimelockOperationTester,
@@ -186,17 +187,15 @@ export const redemptionVaultSuits = (
 
       expect(await redemptionVault.minInstantFee()).eq(0);
       expect(await redemptionVault.maxInstantFee()).eq(10000);
-      expect((await redemptionVault.getLimitConfigs()).windows.length).eq(1);
-      expect((await redemptionVault.getLimitConfigs()).configs.length).eq(1);
-      const limitConfigs = await redemptionVault.getLimitConfigs();
-      const limitConfig = limitConfigs.configs[0];
-      const limitWindow = limitConfigs.windows[0];
+
+      expect((await redemptionVault.getInstantLimitStatuses()).length).eq(1);
+      const limitConfigs = await redemptionVault.getInstantLimitStatuses();
+      const limitConfig = limitConfigs[0];
 
       expect(limitConfig.limit).eq(parseUnits('100000'));
-      expect(limitConfig.limitUsed).eq(0);
-      expect(limitConfig.lastEpoch).eq(0);
-
-      expect(limitWindow).eq(days(1));
+      expect(limitConfig.lastUpdated).not.eq(0);
+      expect(limitConfig.remaining).eq(parseUnits('100000'));
+      expect(limitConfig.window).eq(days(1));
 
       expect(await redemptionVault.maxLoanApr()).eq(0);
 
@@ -253,6 +252,7 @@ export const redemptionVaultSuits = (
               loanRepaymentAddress: loanRepaymentAddress.address,
               loanSwapperVault: redemptionVaultLoanSwapper.address,
               maxLoanApr: 0,
+              loanApr: 0,
             },
           ),
         ).to.be.reverted;
@@ -285,6 +285,7 @@ export const redemptionVaultSuits = (
               loanRepaymentAddress: loanRepaymentAddress.address,
               loanSwapperVault: redemptionVaultLoanSwapper.address,
               maxLoanApr: 0,
+              loanApr: 0,
             },
           ),
         ).to.be.reverted;
@@ -317,6 +318,7 @@ export const redemptionVaultSuits = (
               loanRepaymentAddress: loanRepaymentAddress.address,
               loanSwapperVault: redemptionVaultLoanSwapper.address,
               maxLoanApr: 0,
+              loanApr: 0,
             },
           ),
         ).to.be.reverted;
@@ -349,6 +351,7 @@ export const redemptionVaultSuits = (
               loanRepaymentAddress: loanRepaymentAddress.address,
               loanSwapperVault: redemptionVaultLoanSwapper.address,
               maxLoanApr: 0,
+              loanApr: 0,
             },
           ),
         ).to.be.reverted;
@@ -387,6 +390,7 @@ export const redemptionVaultSuits = (
                 loanRepaymentAddress: constants.AddressZero,
                 loanSwapperVault: constants.AddressZero,
                 maxLoanApr: 0,
+                loanApr: 0,
               },
             ),
           ).revertedWith('Initializable: contract is already initialized');
@@ -1035,7 +1039,7 @@ export const redemptionVaultSuits = (
             99_999,
             {
               revertCustomError: {
-                customErrorName: 'InstantLimitExceeded',
+                customErrorName: 'WindowLimitExceeded',
               },
             },
           );
@@ -1217,7 +1221,7 @@ export const redemptionVaultSuits = (
               50,
               {
                 revertCustomError: {
-                  customErrorName: 'InstantLimitExceeded',
+                  customErrorName: 'WindowLimitExceeded',
                 },
               },
             );
@@ -1366,7 +1370,7 @@ export const redemptionVaultSuits = (
               60,
               {
                 revertCustomError: {
-                  customErrorName: 'InstantLimitExceeded',
+                  customErrorName: 'WindowLimitExceeded',
                 },
               },
             );
@@ -1467,12 +1471,12 @@ export const redemptionVaultSuits = (
               { window: days(1), limit: parseUnits('1000') },
             );
 
-            const { windows, configs } =
-              await redemptionVault.getLimitConfigs();
-            const idx = windows.findIndex((w) => w.eq(days(1)));
-            expect(idx).gte(0);
-            expect(configs[idx].limitUsed).eq(0);
-            expect(configs[idx].lastEpoch).eq(0);
+            const statuses = await redemptionVault.getInstantLimitStatuses();
+
+            expect(statuses[0].remaining).eq(parseUnits('1000'));
+            expect(statuses[0].lastUpdated).not.eq(0);
+            expect(statuses[0].window).eq(days(1));
+            expect(statuses[0].limit).eq(parseUnits('1000'));
 
             await redeemInstantTest(
               { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -1526,6 +1530,199 @@ export const redemptionVaultSuits = (
               { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
               stableCoins.dai,
               500,
+            );
+          });
+        });
+
+        describe('redeemInstant() sliding rate limit (RateLimitLibrary)', () => {
+          const setupRedeemInstantRateLimitFixture = async () => {
+            const fixture = await loadRvFixture();
+            const {
+              redemptionVault,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              owner,
+              mTBILL,
+              stableCoins,
+              dataFeed,
+            } = fixture;
+
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 4);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await mintToken(stableCoins.dai, redemptionVault, 1_000_000);
+            await mintToken(mTBILL, owner, 100_000);
+            await approveBase18(owner, mTBILL, redemptionVault, 100_000);
+
+            return fixture;
+          };
+
+          it('10h window: full consume, after 1h restores ~10% and two redeems use it', async () => {
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              stableCoins,
+              mTokenToUsdDataFeed,
+            } = await setupRedeemInstantRateLimitFixture();
+
+            await setInstantLimitConfigTest(
+              { vault: redemptionVault, owner },
+              { window: hours(10), limit: parseUnits('1000') },
+            );
+
+            await redeemInstantTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              1000,
+            );
+
+            await increase(hours(1));
+
+            await redeemInstantTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              100,
+            );
+          });
+
+          it('1d window: after 80% consumed and limit halved, redeem fails', async () => {
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              stableCoins,
+              mTokenToUsdDataFeed,
+            } = await setupRedeemInstantRateLimitFixture();
+
+            const initialLimit = parseUnits('1000');
+
+            await setInstantLimitConfigTest(
+              { vault: redemptionVault, owner },
+              { window: days(1), limit: initialLimit },
+            );
+
+            await redeemInstantTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              800,
+            );
+
+            await setInstantLimitConfigTest(
+              { vault: redemptionVault, owner },
+              { window: days(1), limit: initialLimit.div(2) },
+            );
+
+            await redeemInstantTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              100,
+              {
+                revertCustomError: {
+                  customErrorName: 'WindowLimitExceeded',
+                },
+              },
+            );
+          });
+
+          it('1d window: after limit halved, wait 12h and redeem small amount', async () => {
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              stableCoins,
+              mTokenToUsdDataFeed,
+            } = await setupRedeemInstantRateLimitFixture();
+
+            const initialLimit = parseUnits('1000');
+
+            await setInstantLimitConfigTest(
+              { vault: redemptionVault, owner },
+              { window: days(1), limit: initialLimit },
+            );
+
+            await redeemInstantTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              800,
+            );
+
+            await setInstantLimitConfigTest(
+              { vault: redemptionVault, owner },
+              { window: days(1), limit: initialLimit.div(2) },
+            );
+
+            await redeemInstantTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              100,
+              {
+                revertCustomError: {
+                  customErrorName: 'WindowLimitExceeded',
+                },
+              },
+            );
+
+            await increase(hours(18));
+
+            await redeemInstantTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              1,
+            );
+          });
+
+          it('multiple windows active at the same time', async () => {
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              stableCoins,
+              mTokenToUsdDataFeed,
+            } = await setupRedeemInstantRateLimitFixture();
+
+            await setInstantLimitConfigTest(
+              { vault: redemptionVault, owner },
+              { window: hours(1), limit: parseUnits('100') },
+            );
+            await setInstantLimitConfigTest(
+              { vault: redemptionVault, owner },
+              { window: hours(6), limit: parseUnits('500') },
+            );
+            await setInstantLimitConfigTest(
+              { vault: redemptionVault, owner },
+              { window: days(1), limit: parseUnits('10000') },
+            );
+
+            await redeemInstantTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              100,
+            );
+
+            await redeemInstantTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              50,
+              {
+                revertCustomError: {
+                  customErrorName: 'WindowLimitExceeded',
+                },
+              },
+            );
+
+            await increase(hours(1));
+
+            await redeemInstantTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              50,
             );
           });
         });
@@ -3710,7 +3907,7 @@ export const redemptionVaultSuits = (
         });
       });
 
-      describe('setInstantLimitConfigTest()', () => {
+      describe('setInstantLimitConfig()', () => {
         it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
           const { owner, redemptionVault, regularAccounts } = await loadFixture(
             rvFixture,
@@ -3779,6 +3976,7 @@ export const redemptionVaultSuits = (
             { vault: redemptionVault, owner },
             { window: days(1), limit: parseUnits('1000') },
           );
+
           await setInstantLimitConfigTest(
             { vault: redemptionVault, owner },
             { window: days(1), limit: parseUnits('2000') },
@@ -3838,6 +4036,21 @@ export const redemptionVaultSuits = (
             { from: regularAccounts[0] },
           );
         });
+
+        it('should fail: when window is shorter than 1 minute', async () => {
+          const { owner, redemptionVault } = await loadRvFixture();
+
+          await setInstantLimitConfigTest(
+            { vault: redemptionVault, owner },
+            { window: 59, limit: parseUnits('1000') },
+            {
+              revertCustomError: {
+                customErrorName: 'WindowTooShort',
+                args: [59],
+              },
+            },
+          );
+        });
       });
 
       describe('removeInstantLimitConfigTest()', () => {
@@ -3869,7 +4082,7 @@ export const redemptionVaultSuits = (
             days(7),
             {
               revertCustomError: {
-                customErrorName: 'InstantLimitWindowNotExists',
+                customErrorName: 'UnknownWindowLimit',
               },
             },
           );
@@ -3995,10 +4208,10 @@ export const redemptionVaultSuits = (
             days(1),
           );
 
-          const { windows, configs } = await redemptionVault.getLimitConfigs();
-          expect(windows.length).eq(1);
-          expect(windows[0]).eq(days(2));
-          expect(configs[0].limit).eq(parseUnits('2000'));
+          const statuses = await redemptionVault.getInstantLimitStatuses();
+          expect(statuses.length).eq(1);
+          expect(statuses[0].window).eq(days(2));
+          expect(statuses[0].limit).eq(parseUnits('2000'));
         });
 
         it('should fail: removing the same window twice', async () => {
@@ -4018,7 +4231,7 @@ export const redemptionVaultSuits = (
             days(1),
             {
               revertCustomError: {
-                customErrorName: 'InstantLimitWindowNotExists',
+                customErrorName: 'UnknownWindowLimit',
               },
             },
           );
@@ -14457,7 +14670,7 @@ export const redemptionVaultSuits = (
             100,
           );
         };
-        describe('bulkRepayLpLoanRequestTest()', () => {
+        describe('bulkRepayLpLoanRequest()', () => {
           it('should fail: when function is paused', async () => {
             const fixture = await loadRvFixture();
             const { redemptionVault, owner, mTBILL } = fixture;
@@ -14465,13 +14678,12 @@ export const redemptionVaultSuits = (
             await pauseVaultFn(
               { pauseManager, owner },
               redemptionVault,
-              encodeFnSelector('bulkRepayLpLoanRequest(uint256[],uint64)'),
+              encodeFnSelector('bulkRepayLpLoanRequest(uint256[])'),
             );
 
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
-              0,
               {
                 revertCustomError: {
                   customErrorName: 'Paused',
@@ -14634,7 +14846,6 @@ export const redemptionVaultSuits = (
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
-              0,
               {
                 revertCustomError: {
                   customErrorName: 'InvalidLoanLpReceiver',
@@ -14665,7 +14876,6 @@ export const redemptionVaultSuits = (
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
-              0,
               {
                 revertMessage: 'ERC20: transfer amount exceeds balance',
               },
@@ -14689,7 +14899,6 @@ export const redemptionVaultSuits = (
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
-              0,
               {
                 revertMessage: 'ERC20: insufficient allowance',
               },
@@ -14720,7 +14929,6 @@ export const redemptionVaultSuits = (
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
-              0,
               {
                 revertMessage: 'ERC20: transfer amount exceeds balance',
               },
@@ -14755,7 +14963,6 @@ export const redemptionVaultSuits = (
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
-              0,
               {
                 revertCustomError: {
                   customErrorName: 'RequestNotPending',
@@ -14771,7 +14978,6 @@ export const redemptionVaultSuits = (
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
-              0,
               {
                 revertCustomError: {
                   customErrorName: 'RequestNotExists',
@@ -14804,7 +15010,6 @@ export const redemptionVaultSuits = (
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
-              0,
               {
                 from: regularAccounts[0],
                 revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
@@ -14833,10 +15038,11 @@ export const redemptionVaultSuits = (
               100,
             );
 
+            await setLoanAprTest({ redemptionVault, owner }, 101);
+
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
-              101,
               {
                 revertCustomError: {
                   customErrorName: 'LoanAprTooHigh',
@@ -14868,10 +15074,11 @@ export const redemptionVaultSuits = (
               101,
             );
 
+            await setLoanAprTest({ redemptionVault, owner }, 50);
+
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
-              50,
             );
           });
 
@@ -14901,10 +15108,11 @@ export const redemptionVaultSuits = (
               1000,
             );
 
+            await setLoanAprTest({ redemptionVault, owner }, 10000);
+
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
-              10000,
             );
           });
 
@@ -14932,10 +15140,11 @@ export const redemptionVaultSuits = (
               102,
             );
 
+            await setLoanAprTest({ redemptionVault, owner }, 100);
+
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
-              100,
             );
           });
 
@@ -14965,10 +15174,10 @@ export const redemptionVaultSuits = (
               1000,
             );
 
+            await setLoanAprTest({ redemptionVault, owner }, 20000);
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
-              20000,
             );
           });
 
@@ -15002,10 +15211,11 @@ export const redemptionVaultSuits = (
               2000,
             );
 
+            await setLoanAprTest({ redemptionVault, owner }, 10000);
+
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }, { id: 1 }],
-              10000,
             );
           });
 
@@ -15046,10 +15256,10 @@ export const redemptionVaultSuits = (
               1000,
             );
 
+            await setLoanAprTest({ redemptionVault, owner }, 5000);
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }, { id: 1 }],
-              5000,
             );
           });
 
@@ -15088,10 +15298,11 @@ export const redemptionVaultSuits = (
               5000,
             );
 
+            await setLoanAprTest({ redemptionVault, owner }, 5000);
+
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }, { id: 1 }, { id: 2 }],
-              5000,
             );
           });
         });

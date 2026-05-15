@@ -19,6 +19,7 @@ import {
   handleRevert,
 } from './common.helpers';
 import { defaultDeploy } from './fixtures';
+import { calculateWindowRateLimitCapacity } from './manageable-vault.helpers';
 
 import {
   DataFeedTest__factory,
@@ -307,6 +308,9 @@ export const redeemInstantTest = async (
     await additionalLiquidity?.(),
   );
 
+  const instantLimitsBefore = await redemptionVault.getInstantLimitStatuses();
+  const timestampBefore = await getCurrentBlockTimestamp();
+
   const callPromise = callFn();
   await expect(callPromise)
     .to.emit(
@@ -325,6 +329,29 @@ export const redeemInstantTest = async (
         amountOut,
       ].filter((v) => v !== undefined),
     ).to.not.reverted;
+
+  const instantLimitsAfter = await redemptionVault.getInstantLimitStatuses();
+  const timestampAfter = await getCurrentBlockTimestamp();
+
+  const expectedLimitsAfter = await Promise.all(
+    instantLimitsBefore.map(async (limit) => {
+      const { remaining, inFlight } = calculateWindowRateLimitCapacity({
+        amountInFlight: limit.inFlight,
+        lastUpdated: timestampBefore,
+        limit: limit.limit,
+        window: limit.window,
+        now: timestampAfter,
+      });
+
+      return {
+        ...limit,
+        remaining: remaining.gte(amountIn)
+          ? remaining.sub(amountIn)
+          : constants.Zero,
+        inFlight: inFlight.add(amountIn),
+      };
+    }),
+  );
 
   const balanceAfterUser = await mTBILL.balanceOf(sender.address);
   const balanceAfterReceiver = await mTBILL.balanceOf(tokensReceiver);
@@ -398,6 +425,18 @@ export const redeemInstantTest = async (
     expect(loanRequest.createdAt).eq(await getCurrentBlockTimestamp());
   } else {
     expect(lastLoanRequestIdAfter).eq(lastLoanRequestIdBefore);
+  }
+
+  for (const [index, limit] of instantLimitsBefore.entries()) {
+    expect(instantLimitsAfter[index].inFlight).eq(
+      expectedLimitsAfter[index].inFlight,
+    );
+    expect(instantLimitsAfter[index].remaining).eq(
+      expectedLimitsAfter[index].remaining,
+    );
+    expect(instantLimitsAfter[index].lastUpdated).eq(timestampAfter);
+    expect(instantLimitsAfter[index].window).eq(limit.window);
+    expect(instantLimitsAfter[index].limit).eq(limit.limit);
   }
 
   return callPromise;
@@ -720,6 +759,36 @@ export const approveRedeemRequestTest = async (
   }
 };
 
+export const setLoanAprTest = async (
+  {
+    redemptionVault,
+    owner,
+  }: {
+    redemptionVault: RedemptionVaultType;
+    owner: SignerWithAddress;
+  },
+  loanApr: BigNumberish,
+  opt?: OptionalCommonParams,
+) => {
+  const sender = opt?.from ?? owner;
+
+  const callFn = redemptionVault.connect(sender).setLoanApr.bind(this, loanApr);
+
+  if (await handleRevert(callFn, redemptionVault, opt)) {
+    return;
+  }
+
+  await expect(callFn())
+    .to.emit(
+      redemptionVault,
+      redemptionVault.interface.events['SetLoanApr(address,uint64)'].name,
+    )
+    .withArgs(sender, loanApr).to.not.reverted;
+
+  const newLoanApr = await redemptionVault.loanApr();
+  expect(newLoanApr).eq(loanApr);
+};
+
 export const bulkRepayLpLoanRequestTest = async (
   {
     redemptionVault,
@@ -727,7 +796,6 @@ export const bulkRepayLpLoanRequestTest = async (
     mTBILL,
   }: Omit<CommonParamsRedeem, 'mTokenToUsdDataFeed'>,
   requests: { id: BigNumberish }[],
-  loanApr = BigNumber.from(0) as BigNumberish,
   opt?: OptionalCommonParams,
 ) => {
   const sender = opt?.from ?? owner;
@@ -736,7 +804,7 @@ export const bulkRepayLpLoanRequestTest = async (
 
   const callFn = redemptionVault
     .connect(sender)
-    .bulkRepayLpLoanRequest.bind(this, requestIds, loanApr);
+    .bulkRepayLpLoanRequest.bind(this, requestIds);
 
   if (await handleRevert(callFn, redemptionVault, opt)) {
     return;
@@ -801,6 +869,8 @@ export const bulkRepayLpLoanRequestTest = async (
   const txReceipt = await (await txPromise).wait();
   const txBlock = await ethers.provider.getBlock(txReceipt.blockNumber);
   const currentTimestamp = txBlock.timestamp;
+
+  const loanApr = await redemptionVault.loanApr();
 
   const feePercents = await Promise.all(
     requestDatasBefore.map((requestData) => {

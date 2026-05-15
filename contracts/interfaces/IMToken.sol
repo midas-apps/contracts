@@ -21,22 +21,6 @@ struct MTokenRateLimitConfig {
  */
 interface IMToken is IERC20Upgradeable {
     error InvalidNewLimit(uint256 newLimit, uint256 existingLimit);
-    error MintRateLimitExceeded(
-        uint256 window,
-        uint256 limitUsed,
-        uint256 limit
-    );
-
-    /**
-     * @param caller function caller (msg.sender)
-     * @param window window duration in seconds
-     * @param limit limit amount per window
-     */
-    event SetMintRateLimitConfig(
-        address indexed caller,
-        uint256 indexed window,
-        uint256 limit
-    );
 
     /**
      * @param caller function caller (msg.sender)

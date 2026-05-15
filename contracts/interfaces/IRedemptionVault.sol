@@ -41,6 +41,8 @@ struct RedemptionVaultInitParams {
     address loanRepaymentAddress;
     /// @notice address of loan swapper vault
     address loanSwapperVault;
+    /// @notice loan APR value in basis points (100 = 1%)
+    uint64 loanApr;
     /// @notice maximum loan APR value in basis points (100 = 1%)
     uint64 maxLoanApr;
 }
@@ -188,6 +190,12 @@ interface IRedemptionVault is IManageableVault {
      * @param newMaxLoanApr new maximum loan APR value in basis points (100 = 1%)
      */
     event SetMaxLoanApr(address indexed caller, uint64 newMaxLoanApr);
+
+    /**
+     * @param caller function caller (msg.sender)
+     * @param newLoanApr new loan APR value in basis points (100 = 1%)
+     */
+    event SetLoanApr(address indexed caller, uint64 newLoanApr);
 
     /**
      * @param caller function caller (msg.sender)
@@ -402,13 +410,8 @@ interface IRedemptionVault is IManageableVault {
      * Transfers fee in tokenOut to loan lp fee receiver
      * Sets request flags to Processed.
      * @param requestIds request ids array
-     * @param loanApr loan APR. Overrides calculated loan fee in case if
-     * accrued interest is greater than the calculated loan fee.
      */
-    function bulkRepayLpLoanRequest(
-        uint256[] calldata requestIds,
-        uint64 loanApr
-    ) external;
+    function bulkRepayLpLoanRequest(uint256[] calldata requestIds) external;
 
     /**
      * @notice canceling loan request
@@ -452,6 +455,12 @@ interface IRedemptionVault is IManageableVault {
      * @param newMaxLoanApr new maximum loan APR value in basis points (100 = 1%)
      */
     function setMaxLoanApr(uint64 newMaxLoanApr) external;
+
+    /**
+     * @notice set loan APR value in basis points (100 = 1%)
+     * @param newLoanApr new loan APR value in basis points (100 = 1%)
+     */
+    function setLoanApr(uint64 newLoanApr) external;
 
     /**
      * @notice set flag to determine if the loan LP liquidity should be used first

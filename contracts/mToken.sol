@@ -2,7 +2,8 @@
 pragma solidity 0.8.34;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
-import {EnumerableSetUpgradeable as EnumerableSet} from "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
+
+import {RateLimitLibrary} from "./libraries/RateLimitLibrary.sol";
 import "./access/Blacklistable.sol";
 import "./interfaces/IMToken.sol";
 
@@ -13,7 +14,7 @@ import "./interfaces/IMToken.sol";
  */
 //solhint-disable contract-name-camelcase
 abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
-    using EnumerableSet for EnumerableSet.UintSet;
+    using RateLimitLibrary for RateLimitLibrary.WindowRateLimits;
 
     /**
      * @notice metadata key => metadata value
@@ -31,14 +32,9 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     bool private _inClawback;
 
     /**
-     * @notice set of mint rate limit config windows
+     * @notice mint rate limits state
      */
-    EnumerableSet.UintSet private _mintRateLimitWindows;
-
-    /**
-     * @notice mapping, window duration in seconds => limit config
-     */
-    mapping(uint256 => MTokenRateLimitConfig) public mintRateLimitConfigs;
+    RateLimitLibrary.WindowRateLimits private _mintRateLimits;
 
     /**
      * @dev leaving a storage gap for futures updates
@@ -53,29 +49,35 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     function initialize(address _accessControl, address _clawbackReceiver)
         external
-        initializer
     {
-        __WithMidasAccessControl_init(_accessControl);
-        (string memory _name, string memory _symbol) = _getNameSymbol();
-        __ERC20_init(_name, _symbol);
-        require(_clawbackReceiver != address(0), "Invalid clawback receiver");
-        clawbackReceiver = _clawbackReceiver;
+        _initializeV1(_accessControl);
+        initializeV2(_clawbackReceiver);
     }
 
     /**
-     * @dev v2 initializer for existing proxies migrating to clawback storage
+     * @dev v1 initializer
+     * @param _accessControl address of MidasAccessControll contract
+     */
+    function _initializeV1(address _accessControl) private initializer {
+        __WithMidasAccessControl_init(_accessControl);
+        (string memory _name, string memory _symbol) = _getNameSymbol();
+        __ERC20_init(_name, _symbol);
+    }
+
+    /**
+     * @dev v2 initializer
      * @param _clawbackReceiver address to which clawback tokens will be sent
      */
     function initializeV2(address _clawbackReceiver)
-        external
+        public
         virtual
         reinitializer(2)
     {
-        require(_clawbackReceiver != address(0), "Invalid clawback receiver");
         require(
-            clawbackReceiver == address(0),
-            "Clawback receiver already set"
+            _clawbackReceiver != address(0),
+            InvalidAddress(_clawbackReceiver)
         );
+
         clawbackReceiver = _clawbackReceiver;
     }
 
@@ -86,7 +88,10 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         external
         onlyContractAdmin
     {
-        require(_clawbackReceiver != address(0), "Invalid clawback receiver");
+        require(
+            _clawbackReceiver != address(0),
+            InvalidAddress(_clawbackReceiver)
+        );
         clawbackReceiver = _clawbackReceiver;
         emit ClawbackReceiverSet(msg.sender, _clawbackReceiver);
     }
@@ -166,24 +171,16 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
 
     /**
      * @notice returns array of mint rate limit configs
-     * @return windows array of mint rate limit config windows
-     * @return configs array of mint rate limit configs
+     * @return statuses array of mint rate limit statuses
      */
-    function getMintRateLimitConfigs()
+    function getMintRateLimitStatuses()
         external
         view
         returns (
-            uint256[] memory windows,
-            MTokenRateLimitConfig[] memory configs
+            RateLimitLibrary.WindowRateLimitStatus[] memory /* statuses */
         )
     {
-        uint256 length = _mintRateLimitWindows.length();
-        windows = new uint256[](length);
-        configs = new MTokenRateLimitConfig[](length);
-        for (uint256 i = 0; i < length; ++i) {
-            windows[i] = _mintRateLimitWindows.at(i);
-            configs[i] = mintRateLimitConfigs[windows[i]];
-        }
+        return _mintRateLimits.getWindowStatuses();
     }
 
     /**
@@ -197,52 +194,13 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         uint256 limit,
         bool increaseOnly
     ) private {
-        // add window to set if not exists
-        _mintRateLimitWindows.add(window);
-
-        MTokenRateLimitConfig memory existingConfig = mintRateLimitConfigs[
-            window
-        ];
+        uint256 previousLimit = _mintRateLimits.setWindowLimit(window, limit);
 
         bool isNewLimitValid = increaseOnly
-            ? limit > existingConfig.limit
-            : limit < existingConfig.limit;
+            ? limit > previousLimit
+            : limit < previousLimit;
 
-        require(isNewLimitValid, InvalidNewLimit(limit, existingConfig.limit));
-
-        mintRateLimitConfigs[window] = MTokenRateLimitConfig({
-            limit: limit,
-            limitUsed: existingConfig.limitUsed,
-            lastEpoch: existingConfig.lastEpoch
-        });
-
-        emit SetMintRateLimitConfig(msg.sender, window, limit);
-    }
-
-    /**
-     * @dev check if operation exceed mint rate limit and update limit data
-     * @param amount mint amount (decimals 18)
-     */
-    function _requireAndUpdateMintRateLimit(uint256 amount) internal {
-        for (uint256 i = 0; i < _mintRateLimitWindows.length(); ++i) {
-            uint256 window = _mintRateLimitWindows.at(i);
-            MTokenRateLimitConfig memory config = mintRateLimitConfigs[window];
-            uint256 currentEpochIndex = block.timestamp / window;
-
-            if (currentEpochIndex != config.lastEpoch) {
-                config.limitUsed = 0;
-                config.lastEpoch = currentEpochIndex;
-            }
-
-            config.limitUsed += amount;
-
-            require(
-                config.limitUsed <= config.limit,
-                MintRateLimitExceeded(window, config.limitUsed, config.limit)
-            );
-
-            mintRateLimitConfigs[window] = config;
-        }
+        require(isNewLimitValid, InvalidNewLimit(limit, previousLimit));
     }
 
     /**
@@ -263,7 +221,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
 
         // if minting, check and update mint rate limit
         if (from == address(0)) {
-            _requireAndUpdateMintRateLimit(amount);
+            _mintRateLimits.consumeLimit(amount);
         }
 
         ERC20PausableUpgradeable._beforeTokenTransfer(from, to, amount);

@@ -171,17 +171,15 @@ export const depositVaultSuits = (
 
       expect(await depositVault.minInstantFee()).eq(0);
       expect(await depositVault.maxInstantFee()).eq(10000);
-      expect((await depositVault.getLimitConfigs()).windows.length).eq(1);
-      expect((await depositVault.getLimitConfigs()).configs.length).eq(1);
-      const limitConfigs = await depositVault.getLimitConfigs();
-      const limitConfig = limitConfigs.configs[0];
-      const limitWindow = limitConfigs.windows[0];
+      expect((await depositVault.getInstantLimitStatuses()).length).eq(1);
+      expect((await depositVault.getInstantLimitStatuses()).length).eq(1);
+      const limitConfigs = await depositVault.getInstantLimitStatuses();
+      const limitConfig = limitConfigs[0];
 
       expect(limitConfig.limit).eq(parseUnits('100000'));
-      expect(limitConfig.limitUsed).eq(0);
-      expect(limitConfig.lastEpoch).eq(0);
-
-      expect(limitWindow).eq(days(1));
+      expect(limitConfig.lastUpdated).not.eq(0);
+      expect(limitConfig.remaining).eq(parseUnits('100000'));
+      expect(limitConfig.window).eq(days(1));
 
       expect(await depositVault.minMTokenAmountForFirstDeposit()).eq('0');
 
@@ -1130,10 +1128,10 @@ export const depositVaultSuits = (
             days(1),
           );
 
-          const { windows, configs } = await depositVault.getLimitConfigs();
-          expect(windows.length).eq(1);
-          expect(windows[0]).eq(days(2));
-          expect(configs[0].limit).eq(parseUnits('2000'));
+          const statuses = await depositVault.getInstantLimitStatuses();
+          expect(statuses.length).eq(1);
+          expect(statuses[0].window).eq(days(2));
+          expect(statuses[0].limit).eq(parseUnits('2000'));
         });
 
         it('should fail: removing the same window twice', async () => {

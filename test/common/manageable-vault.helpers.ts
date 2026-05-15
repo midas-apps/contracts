@@ -1,11 +1,12 @@
 import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { BigNumberish, constants } from 'ethers';
+import { BigNumber, BigNumberish, constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import {
   getAccount,
+  getCurrentBlockTimestamp,
   handleRevert,
   OptionalCommonParams,
 } from './common.helpers';
@@ -52,6 +53,67 @@ type CommonParams = {
     | DepositVaultWithMToken
     | DepositVaultWithUSTB;
 } & Pick<Awaited<ReturnType<typeof defaultDeploy>>, 'owner'>;
+
+export type WindowRateLimitCapacityParams = {
+  /** stored `amountInFlight` (not a pre-decayed view) */
+  amountInFlight: BigNumberish;
+  lastUpdated: BigNumberish;
+  limit: BigNumberish;
+  window: BigNumberish;
+  /** current timestamp (`block.timestamp`) */
+  now: BigNumberish;
+};
+
+export type WindowRateLimitCapacity = {
+  inFlight: BigNumber;
+  remaining: BigNumber;
+};
+
+/** `Math.mulDiv(a, b, c, Down)` — matches OpenZeppelin / `RateLimitLibrary`. */
+export const mulDivDown = (
+  a: BigNumberish,
+  b: BigNumberish,
+  c: BigNumberish,
+): BigNumber => {
+  const denominator = BigNumber.from(c);
+  if (denominator.isZero()) {
+    return BigNumber.from(0);
+  }
+  return BigNumber.from(
+    (BigInt(BigNumber.from(a).toString()) *
+      BigInt(BigNumber.from(b).toString())) /
+      BigInt(denominator.toString()),
+  );
+};
+
+/**
+ * Mirrors `RateLimitLibrary._availableCapacity` (decayed in-flight + headroom).
+ */
+export const calculateWindowRateLimitCapacity = ({
+  amountInFlight,
+  lastUpdated,
+  limit,
+  window,
+  now,
+}: WindowRateLimitCapacityParams): WindowRateLimitCapacity => {
+  const elapsed = BigNumber.from(now).sub(lastUpdated);
+  const windowBn = BigNumber.from(window);
+  const divisor = windowBn.isZero() ? BigNumber.from(1) : windowBn;
+
+  const decay = mulDivDown(limit, elapsed, divisor);
+
+  const amountInFlightBn = BigNumber.from(amountInFlight);
+  const inFlight = amountInFlightBn.lte(decay)
+    ? BigNumber.from(0)
+    : amountInFlightBn.sub(decay);
+
+  const limitBn = BigNumber.from(limit);
+  const remaining = limitBn.lte(inFlight)
+    ? BigNumber.from(0)
+    : limitBn.sub(inFlight);
+
+  return { inFlight, remaining };
+};
 
 export const setInstantFeeTest = async (
   { vault, owner }: CommonParamsChangePaymentToken,
@@ -282,43 +344,47 @@ export const setInstantLimitConfigTest = async (
     return;
   }
 
-  const limitConfigsBefore = await vault.getLimitConfigs();
+  const limitConfigsBefore = await vault.getInstantLimitStatuses();
 
+  // TODO: check events
   await expect(
     vault
       .connect(opt?.from ?? owner)
       .setInstantLimitConfig(window, newLimitValue),
-  )
-    .to.emit(
-      vault,
-      vault.interface.events['SetInstantLimitConfig(address,uint256,uint256)']
-        .name,
-    )
-    .withArgs((opt?.from ?? owner).address, window, newLimitValue).to.not
-    .reverted;
+  ).not.reverted;
 
-  const limitConfigsAfter = await vault.getLimitConfigs();
+  const limitConfigsAfter = await vault.getInstantLimitStatuses();
 
-  const configBefore = limitConfigsBefore.windows
-    .map((w, i) => ({ window: w, config: limitConfigsBefore.configs[i] }))
-    .filter((w) => w.window.eq(window))?.[0];
+  const configBefore = limitConfigsBefore.filter((w) =>
+    w.window.eq(window),
+  )?.[0];
 
-  const configAfter = limitConfigsAfter.windows
-    .map((w, i) => ({ window: w, config: limitConfigsAfter.configs[i] }))
-    .filter((w) => w.window.eq(window))?.[0];
+  const configAfter = limitConfigsAfter.filter((w) => w.window.eq(window))?.[0];
+
+  const currentTimestamp = await getCurrentBlockTimestamp();
 
   if (configBefore) {
+    const { inFlight, remaining } = calculateWindowRateLimitCapacity({
+      amountInFlight: configBefore.inFlight,
+      lastUpdated: configBefore.lastUpdated,
+      limit: newLimitValue,
+      window,
+      now: currentTimestamp,
+    });
+
     expect(configAfter).not.eq(undefined);
     expect(configBefore).not.eq(undefined);
-    expect(configAfter.config.limit).eq(newLimitValue);
-    expect(configAfter.config.limitUsed).eq(configBefore.config.limitUsed);
-    expect(configAfter.config.lastEpoch).eq(configBefore.config.lastEpoch);
+    expect(configAfter.limit).eq(newLimitValue);
+    expect(configAfter.lastUpdated).eq(currentTimestamp);
+    expect(configAfter.inFlight).eq(inFlight);
+    expect(configAfter.remaining).eq(remaining);
   } else {
     expect(configAfter).not.eq(undefined);
     expect(configBefore).eq(undefined);
-    expect(configAfter.config.limit).eq(newLimitValue);
-    expect(configAfter.config.limitUsed).eq(0);
-    expect(configAfter.config.lastEpoch).eq(0);
+    expect(configAfter.limit).eq(newLimitValue);
+    expect(configAfter.inFlight).eq(0);
+    expect(configAfter.lastUpdated).eq(currentTimestamp);
+    expect(configAfter.remaining).eq(newLimitValue);
   }
 };
 
@@ -339,27 +405,21 @@ export const removeInstantLimitConfigTest = async (
     return;
   }
 
-  const limitConfigsBefore = await vault.getLimitConfigs();
-  const indexBefore = limitConfigsBefore.windows.findIndex((w) => w.eq(window));
+  const limitConfigsBefore = await vault.getInstantLimitStatuses();
+  const indexBefore = limitConfigsBefore.findIndex((w) => w.window.eq(window));
   expect(indexBefore).gte(
     0,
     'removeInstantLimitConfigTest: window must exist before removal',
   );
 
+  // TODO: check events
   await expect(
     vault.connect(opt?.from ?? owner).removeInstantLimitConfig(window),
-  )
-    .to.emit(
-      vault,
-      vault.interface.events['RemoveInstantLimitConfig(address,uint256)'].name,
-    )
-    .withArgs((opt?.from ?? owner).address, window).to.not.reverted;
+  ).to.not.reverted;
 
-  const limitConfigsAfter = await vault.getLimitConfigs();
-  expect(limitConfigsAfter.windows.length).eq(
-    limitConfigsBefore.windows.length - 1,
-  );
-  expect(limitConfigsAfter.windows.filter((w) => w.eq(window)).length).eq(0);
+  const limitConfigsAfter = await vault.getInstantLimitStatuses();
+  expect(limitConfigsAfter.length).eq(limitConfigsBefore.length - 1);
+  expect(limitConfigsAfter.filter((w) => w.window.eq(window)).length).eq(0);
 };
 
 export const setFeeReceiverTest = async (

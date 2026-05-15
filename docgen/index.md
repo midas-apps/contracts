@@ -1783,10 +1783,10 @@ can be called only from permissioned actor.
 | ---- | ---- | ----------- |
 | [0] | address[] | paymentTokens array of payment tokens |
 
-### getLimitConfigs
+### getInstantLimitStatuses
 
 ```solidity
-function getLimitConfigs() external view returns (uint256[] windows, struct LimitConfig[] configs)
+function getInstantLimitStatuses() external view returns (uint256[] windows, struct LimitConfig[] configs)
 ```
 
 returns array of limit configs
