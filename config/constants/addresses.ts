@@ -555,6 +555,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVaultSwapper: '0x9d27834687318BFD42aF8e40168FDc37b4932727',
       layerZero: { oft: '0x3e901737a3673856B8441042D8cF2F0f8F8F6e6C' },
     },
+    stockMarketTRBasisTrade: {
+      token: '0x827Ce7E8e35861D9Ac7fE002755767b695A5594a',
+      customFeed: '0x1c7bEc0281080C0A4f85e55151191aF27EC69940',
+      dataFeed: '0xCF79a4ae663117238aB6DD9d0FCca942Be5d1644',
+      depositVault: '0xfD28BdEb8f8504a13Ea7917ee75E8fb080909C6F',
+      redemptionVaultSwapper: '0x85A7A5FFf71EaEF79e76730F2E717A04aADea27B',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',

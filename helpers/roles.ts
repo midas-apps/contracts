@@ -76,6 +76,7 @@ const prefixes: Record<MTokenName, string> = {
   bondETH: 'BOND_ETH',
   bondBTC: 'BOND_BTC',
   mTEST: 'M_TEST',
+  stockMarketTRBasisTrade: 'STOCK_MARKET_TR_BASIS_TRADE',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {

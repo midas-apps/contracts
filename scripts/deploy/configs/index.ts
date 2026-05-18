@@ -56,6 +56,7 @@ import { obeatUSDDeploymentConfig } from './obeatUSD';
 import { plUSDDeploymentConfig } from './plUSD';
 import { sLINJDeploymentConfig } from './sLINJ';
 import { splUSDDeploymentConfig } from './splUSD';
+import { stockMarketTRBasisTradeDeploymentConfig } from './stockMarketTRBasisTrade';
 import { TACmBTCDeploymentConfig } from './tac/TACmBTC';
 import { TACmEDGEDeploymentConfig } from './tac/TACmEDGE';
 import { TACmMEVDeploymentConfig } from './tac/TACmMEV';
@@ -145,4 +146,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   bondETH: bondETHDeploymentConfig,
   bondBTC: bondBTCDeploymentConfig,
   mTEST: mTESTDeploymentConfig,
+  stockMarketTRBasisTrade: stockMarketTRBasisTradeDeploymentConfig,
 };

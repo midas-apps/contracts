@@ -290,4 +290,8 @@ export const mTokensMetadata: Record<
     symbol: 'mTEST',
     isPermissioned: true,
   },
+  stockMarketTRBasisTrade: {
+    name: 'Morini StockMarketTRBasisTrade Vault',
+    symbol: 'StockMarketTRBasisTrade',
+  },
 };
