@@ -59,9 +59,10 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
      * @notice role that can execute timelock transactions
      */
     bytes32 public constant EXECUTOR_ROLE = keccak256("EXECUTOR_ROLE");
-    bytes32 public constant CHALLENGER_ROLE = keccak256("CHALLENGER_ROLE");
-    bytes32 public constant COUNCIL_MANAGER_ROLE =
-        keccak256("COUNCIL_MANAGER_ROLE");
+    bytes32 public constant TIMELOCK_CHALLENGER_ROLE =
+        keccak256("TIMELOCK_CHALLENGER_ROLE");
+    bytes32 public constant SECURITY_COUNCIL_MANAGER_ROLE =
+        keccak256("SECURITY_COUNCIL_MANAGER_ROLE");
 
     uint256 public constant SECURITY_COUNCIL_MIN_MEMBERS = 5;
     uint256 public constant SECURITY_COUNCIL_MAX_MEMBERS = 15;
@@ -218,7 +219,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
     function setSecurityCouncil(address[] calldata members)
         external
-        onlyRole(COUNCIL_MANAGER_ROLE, false)
+        onlyRole(SECURITY_COUNCIL_MANAGER_ROLE, false)
     {
         uint256 version = securityCouncilVersion + 1;
         securityCouncilVersion = version;
@@ -302,7 +303,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         external
     {
         require(
-            accessControl.hasRole(CHALLENGER_ROLE, msg.sender),
+            accessControl.hasRole(TIMELOCK_CHALLENGER_ROLE, msg.sender),
             "MAC: unauthorized"
         );
 
@@ -417,8 +418,8 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         TimelockController(payable(timelock)).cancel(operationId);
     }
 
-    function councilQuorum(uint256 version) public view returns (uint256) {
-        return (_securityCouncils[version].length() / 2 + 1);
+    function councilQuorum(uint256 version) public view returns (uint8) {
+        return uint8(_securityCouncils[version].length()) / 2 + 1;
     }
 
     function getCouncilMemberVoteStatus(

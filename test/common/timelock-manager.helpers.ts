@@ -139,7 +139,7 @@ export const scheduleTimelockOperationsTester = async (
           .scheduleTimelockOperation.bind(this, target[0], data[0]);
 
   if (await handleRevert(callFn, timelockManager, opt)) {
-    return;
+    return [];
   }
 
   const councilVersionBefore = await timelockManager.securityCouncilVersion();
@@ -151,6 +151,7 @@ export const scheduleTimelockOperationsTester = async (
   expect(councilVersionAfter).to.be.equal(councilVersionBefore);
   const blockTimestamp = await getCurrentBlockTimestamp();
 
+  const operationIds: string[] = [];
   for (const [index, operationTarget] of target.entries()) {
     const operationData = ethers.utils.solidityPack(
       ['bytes', 'address'],
@@ -186,7 +187,11 @@ export const scheduleTimelockOperationsTester = async (
     expect(details.pauseReasonCode).to.be.equal(0);
     expect(details.councilVersion).to.be.equal(councilVersionBefore);
     expect(details.isSetCouncilOperation).to.be.equal(isSetCouncilOperation);
+
+    operationIds.push(operationId);
   }
+
+  return operationIds;
 };
 
 export const executeTimelockOperationTester = async (
@@ -260,6 +265,260 @@ export const executeTimelockOperationTester = async (
   expect(detailsAfter.isSetCouncilOperation).to.be.equal(
     detailsBefore.isSetCouncilOperation,
   );
+};
+
+export const setSecurityCouncilTest = async (
+  { timelockManager, owner }: CommonParamsTimelock,
+  members: string[],
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+  const callFn = timelockManager
+    .connect(from)
+    .setSecurityCouncil.bind(this, members);
+
+  if (await handleRevert(callFn, timelockManager, opt)) {
+    return;
+  }
+
+  const councilVersionBefore = await timelockManager.securityCouncilVersion();
+  const oldCouncilBefore = await timelockManager.getSecurityCouncilMembers(
+    councilVersionBefore,
+  );
+
+  await expect(callFn()).to.not.reverted;
+  const oldCouncilAfter = await timelockManager.getSecurityCouncilMembers(
+    councilVersionBefore,
+  );
+
+  const councilVersionAfter = await timelockManager.securityCouncilVersion();
+
+  expect(councilVersionAfter).to.be.equal(councilVersionBefore.add(1));
+  const currentCouncilAfter = await timelockManager.getSecurityCouncilMembers(
+    councilVersionAfter,
+  );
+  expect(currentCouncilAfter.length).to.be.equal(members.length);
+  for (const member of members) {
+    expect(currentCouncilAfter.includes(member)).to.be.true;
+  }
+
+  // check that old council is not changed
+  for (const member of oldCouncilBefore) {
+    expect(oldCouncilAfter.includes(member)).to.be.true;
+  }
+};
+
+export const pauseTimelockOperationTest = async (
+  { timelockManager, owner }: CommonParamsTimelock,
+  operationId: string,
+  pauseReasonCode: BigNumberish = 1,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+  const callFn = timelockManager
+    .connect(from)
+    .pauseOperation.bind(this, operationId, pauseReasonCode);
+
+  if (await handleRevert(callFn, timelockManager, opt)) {
+    return;
+  }
+
+  const detailsBefore = await timelockManager.getOperationDetails(operationId);
+
+  await expect(callFn()).to.not.reverted;
+
+  const details = await timelockManager.getOperationDetails(operationId);
+
+  expect(details.status).to.be.equal(2);
+  expect(details.challenger).to.be.equal(from.address);
+  expect(details.pauseReasonCode).to.be.equal(pauseReasonCode);
+  expect(details.councilVersion).to.be.equal(detailsBefore.councilVersion);
+  expect(details.operationProposer).to.be.equal(
+    detailsBefore.operationProposer,
+  );
+  expect(details.dataHash).to.be.equal(detailsBefore.dataHash);
+  expect(details.votesForExecution).to.be.equal(0);
+  expect(details.votesForVeto).to.be.equal(0);
+  expect(details.isSetCouncilOperation).to.be.equal(
+    detailsBefore.isSetCouncilOperation,
+  );
+  expect(details.createdAt).to.be.equal(detailsBefore.createdAt);
+  expect(details.executionApprovedAt).to.be.equal(0);
+};
+
+export const voteForVetoTest = async (
+  { timelockManager, owner }: CommonParamsTimelock,
+  operationId: string,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+  const callFn = timelockManager
+    .connect(from)
+    .voteForVeto.bind(this, operationId);
+
+  if (await handleRevert(callFn, timelockManager, opt)) {
+    return;
+  }
+
+  const detailsBefore = await timelockManager.getOperationDetails(operationId);
+
+  await expect(callFn()).to.not.reverted;
+
+  const quorum = await timelockManager.councilQuorum(
+    detailsBefore.councilVersion,
+  );
+
+  const details = await timelockManager.getOperationDetails(operationId);
+  expect(details.challenger).to.be.equal(detailsBefore.challenger);
+  expect(details.pauseReasonCode).to.be.equal(detailsBefore.pauseReasonCode);
+  expect(details.councilVersion).to.be.equal(detailsBefore.councilVersion);
+  expect(details.operationProposer).to.be.equal(
+    detailsBefore.operationProposer,
+  );
+  expect(details.dataHash).to.be.equal(detailsBefore.dataHash);
+  expect(details.votesForExecution).to.be.equal(
+    detailsBefore.votesForExecution,
+  );
+  expect(details.votesForVeto).to.be.equal(detailsBefore.votesForVeto + 1);
+
+  if (details.votesForVeto >= quorum) {
+    expect(details.status).to.be.equal(5);
+  } else {
+    expect(details.status).to.be.equal(detailsBefore.status);
+  }
+};
+
+export const voteForExecutionTest = async (
+  { timelockManager, owner }: CommonParamsTimelock,
+  operationId: string,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+  const callFn = timelockManager
+    .connect(from)
+    .voteForExecution.bind(this, operationId);
+
+  if (await handleRevert(callFn, timelockManager, opt)) {
+    return;
+  }
+
+  const detailsBefore = await timelockManager.getOperationDetails(operationId);
+
+  await expect(callFn()).to.not.reverted;
+
+  const quorum = await timelockManager.councilQuorum(
+    detailsBefore.councilVersion,
+  );
+
+  const details = await timelockManager.getOperationDetails(operationId);
+  expect(details.challenger).to.be.equal(detailsBefore.challenger);
+  expect(details.pauseReasonCode).to.be.equal(detailsBefore.pauseReasonCode);
+  expect(details.councilVersion).to.be.equal(detailsBefore.councilVersion);
+  expect(details.operationProposer).to.be.equal(
+    detailsBefore.operationProposer,
+  );
+  expect(details.dataHash).to.be.equal(detailsBefore.dataHash);
+  expect(details.votesForExecution).to.be.equal(
+    detailsBefore.votesForExecution + 1,
+  );
+  expect(details.votesForVeto).to.be.equal(detailsBefore.votesForVeto);
+
+  if (details.votesForExecution >= quorum) {
+    expect(details.status).to.be.equal(3);
+    expect(details.executionApprovedAt).to.be.equal(
+      await getCurrentBlockTimestamp(),
+    );
+  } else {
+    expect(details.status).to.be.equal(detailsBefore.status);
+  }
+};
+
+export const abortOperationTest = async (
+  { timelockManager, owner, timelock }: CommonParamsTimelock,
+  operationId: string,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+  const callFn = timelockManager
+    .connect(from)
+    .abortOperation.bind(this, operationId);
+
+  if (await handleRevert(callFn, timelockManager, opt)) {
+    return;
+  }
+
+  const detailsBefore = await timelockManager.getOperationDetails(operationId);
+
+  const pendingSetCouncilOperationIdBefore =
+    await timelockManager.pendingSetCouncilOperationId();
+
+  const dataHashIndexBefore = await timelockManager.dataHashIndexes(
+    detailsBefore.dataHash,
+  );
+
+  const pendingOperationsBefore = await timelockManager.getPendingOperations();
+  const pendingOperationsPerProposerBefore =
+    await timelockManager.proposerPendingOperationsCount(
+      detailsBefore.operationProposer,
+    );
+  await expect(callFn()).to.not.reverted;
+
+  const pendingOperationsPerProposerAfter =
+    await timelockManager.proposerPendingOperationsCount(
+      detailsBefore.operationProposer,
+    );
+  const pendingOperationsAfter = await timelockManager.getPendingOperations();
+
+  expect(pendingOperationsAfter.length).to.be.equal(
+    pendingOperationsBefore.length - 1,
+  );
+  expect(pendingOperationsAfter.includes(operationId)).to.be.false;
+
+  expect(pendingOperationsPerProposerAfter).to.be.equal(
+    pendingOperationsPerProposerBefore.sub(1),
+  );
+
+  const dataHashIndexAfter = await timelockManager.dataHashIndexes(
+    detailsBefore.dataHash,
+  );
+
+  expect(dataHashIndexAfter).to.be.equal(dataHashIndexBefore.add(1));
+
+  const pendingSetCouncilOperationIdAfter =
+    await timelockManager.pendingSetCouncilOperationId();
+
+  const details = await timelockManager.getOperationDetails(operationId);
+
+  expect(details.status).to.be.equal(7);
+  expect(details.challenger).to.be.equal(detailsBefore.challenger);
+  expect(details.pauseReasonCode).to.be.equal(detailsBefore.pauseReasonCode);
+  expect(details.councilVersion).to.be.equal(detailsBefore.councilVersion);
+  expect(details.operationProposer).to.be.equal(
+    detailsBefore.operationProposer,
+  );
+  expect(details.dataHash).to.be.equal(detailsBefore.dataHash);
+  expect(details.votesForExecution).to.be.equal(
+    detailsBefore.votesForExecution,
+  );
+  expect(details.votesForVeto).to.be.equal(detailsBefore.votesForVeto);
+  expect(details.isSetCouncilOperation).to.be.equal(
+    detailsBefore.isSetCouncilOperation,
+  );
+  expect(details.createdAt).to.be.equal(detailsBefore.createdAt);
+  expect(details.executionApprovedAt).to.be.equal(
+    detailsBefore.executionApprovedAt,
+  );
+  expect(await timelock.isOperation(operationId)).to.be.false;
+
+  if (details.isSetCouncilOperation) {
+    expect(pendingSetCouncilOperationIdAfter).to.be.equal(
+      ethers.constants.HashZero,
+    );
+  } else {
+    expect(pendingSetCouncilOperationIdAfter).to.be.equal(
+      pendingSetCouncilOperationIdBefore,
+    );
+  }
 };
 
 const getTimelockSalt = (dataHashIndex: BigNumber) => {
