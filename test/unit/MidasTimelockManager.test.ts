@@ -19,17 +19,22 @@ describe('MidasTimelockManager', () => {
 
     expect(await timelockManager.accessControl()).to.eq(accessControl.address);
     expect(await timelockManager.timelock()).to.eq(timelock.address);
-    expect(await timelockManager.councilQuorum()).to.eq(3);
+    expect(await timelockManager.councilQuorum(0)).to.eq(3);
     const councilMembersInContract =
-      await timelockManager.getSecurityCouncilMembers();
+      await timelockManager.getSecurityCouncilMembers(0);
     expect(await timelockManager.SECURITY_COUNCIL_MIN_MEMBERS()).to.eq(5);
     expect(councilMembersInContract.length).to.eq(councilMembers.length);
 
     for (const member of councilMembersInContract) {
       expect(councilMembersInContract.includes(member)).to.eq(true);
     }
-    expect(await timelockManager.CHALLENGE_PERIOD()).to.eq(days(3));
+    expect(await timelockManager.EXPIRY_PERIOD()).to.eq(days(45));
     expect(await timelockManager.DISPUTE_PERIOD()).to.eq(days(3));
+    expect(await timelockManager.MAX_PENDING_OPERATIONS_PER_PROPOSER()).to.eq(
+      100,
+    );
+    expect(await timelockManager.SECURITY_COUNCIL_MAX_MEMBERS()).to.eq(15);
+    expect(await timelockManager.SECURITY_COUNCIL_MIN_MEMBERS()).to.eq(5);
     expect(await timelockManager.maxPendingOperationsPerProposer()).to.eq(100);
   });
 
@@ -144,6 +149,7 @@ describe('MidasTimelockManager', () => {
             wAccessControlTester.address,
           ]),
         ],
+        {},
         {
           from: regularAccounts[0],
         },
@@ -182,8 +188,9 @@ describe('MidasTimelockManager', () => {
             'withOnlyContractAdmin',
           ),
         ],
+        {},
         {
-          revertMessage: 'TimelockController: operation already scheduled',
+          revertMessage: 'MAC: already pending',
         },
       );
     });
@@ -205,6 +212,7 @@ describe('MidasTimelockManager', () => {
             'withOnlyContractAdmin',
           ),
         ],
+        {},
         {
           revertMessage: 'MAC: no timelock',
         },
@@ -249,6 +257,7 @@ describe('MidasTimelockManager', () => {
             wAccessControlTester.address,
           ]),
         ],
+        {},
         {
           revertMessage: 'MAC: too many pending operations',
         },
@@ -275,6 +284,7 @@ describe('MidasTimelockManager', () => {
             'withOnlyContractAdmin',
           ),
         ],
+        {},
         {
           revertMessage: 'MAC: user facing role',
         },
@@ -301,7 +311,7 @@ describe('MidasTimelockManager', () => {
         calldata,
         owner.address,
         {
-          revertMessage: 'TimelockController: operation is not ready',
+          revertMessage: 'not ready to execute',
         },
       );
     });
@@ -337,7 +347,7 @@ describe('MidasTimelockManager', () => {
         calldata,
         owner.address,
         {
-          revertMessage: 'TimelockController: operation is not ready',
+          revertMessage: 'timelock is not passed',
         },
       );
     });
@@ -397,6 +407,7 @@ describe('MidasTimelockManager', () => {
         { timelockManager, timelock, owner, accessControl },
         [wAccessControlTester.address],
         [calldata],
+        {},
         {
           from: regularAccounts[0],
         },

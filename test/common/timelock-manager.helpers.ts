@@ -3,7 +3,11 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumber, BigNumberish, constants, ethers } from 'ethers';
 
-import { OptionalCommonParams, handleRevert } from './common.helpers';
+import {
+  OptionalCommonParams,
+  getCurrentBlockTimestamp,
+  handleRevert,
+} from './common.helpers';
 
 import {
   MidasAccessControl,
@@ -100,6 +104,7 @@ export const setRoleTimelocksAndExecute = async (
     { timelockManager, timelock, owner, accessControl },
     [timelockManager.address],
     [data],
+    { isSetCouncilOperation: false },
     { from },
   );
 
@@ -118,9 +123,11 @@ export const scheduleTimelockOperationsTester = async (
   { timelockManager, timelock, owner }: CommonParamsTimelock,
   target: string[],
   data: string[],
+  { isSetCouncilOperation }: { isSetCouncilOperation?: boolean } = {},
   opt?: OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
+  isSetCouncilOperation ??= false;
 
   const callFn =
     target.length > 1 || data.length > 1
@@ -135,8 +142,14 @@ export const scheduleTimelockOperationsTester = async (
     return;
   }
 
+  const councilVersionBefore = await timelockManager.securityCouncilVersion();
+
   const txPromise = callFn();
   await expect(txPromise).to.not.reverted;
+  const councilVersionAfter = await timelockManager.securityCouncilVersion();
+
+  expect(councilVersionAfter).to.be.equal(councilVersionBefore);
+  const blockTimestamp = await getCurrentBlockTimestamp();
 
   for (const [index, operationTarget] of target.entries()) {
     const operationData = ethers.utils.solidityPack(
@@ -160,6 +173,19 @@ export const scheduleTimelockOperationsTester = async (
     expect(await timelock.isOperationReady(operationId)).to.be.false;
     expect(await timelock.isOperationDone(operationId)).to.be.false;
     expect(await timelock.isOperationPending(operationId)).to.be.true;
+
+    const details = await timelockManager.getOperationDetails(operationId);
+    expect(details.status).to.be.equal(1);
+    expect(details.challenger).to.be.equal(ethers.constants.AddressZero);
+    expect(details.operationProposer).to.be.equal(from.address);
+    expect(details.dataHash).to.be.equal(dataHash);
+    expect(details.votesForExecution).to.be.equal(0);
+    expect(details.votesForVeto).to.be.equal(0);
+    expect(details.createdAt).to.be.equal(blockTimestamp);
+    expect(details.executionApprovedAt).to.be.equal(0);
+    expect(details.pauseReasonCode).to.be.equal(0);
+    expect(details.councilVersion).to.be.equal(councilVersionBefore);
+    expect(details.isSetCouncilOperation).to.be.equal(isSetCouncilOperation);
   }
 };
 
@@ -189,13 +215,6 @@ export const executeTimelockOperationTester = async (
 
   const dataHashIndexBefore = await timelockManager.dataHashIndexes(dataHash);
 
-  const txPromise = callFn();
-  await expect(txPromise).to.not.reverted;
-
-  const dataHashIndexAfter = await timelockManager.dataHashIndexes(dataHash);
-
-  expect(dataHashIndexAfter).to.eq(dataHashIndexBefore.add(1));
-
   const operationId = await timelock.hashOperation(
     target,
     0,
@@ -204,10 +223,43 @@ export const executeTimelockOperationTester = async (
     getTimelockSalt(dataHashIndexBefore),
   );
 
+  const detailsBefore = await timelockManager.getOperationDetails(operationId);
+
+  const txPromise = callFn();
+  await expect(txPromise).to.not.reverted;
+
+  const dataHashIndexAfter = await timelockManager.dataHashIndexes(dataHash);
+
+  expect(dataHashIndexAfter).to.eq(dataHashIndexBefore.add(1));
+
   expect(await timelock.isOperation(operationId)).to.be.true;
   expect(await timelock.isOperationReady(operationId)).to.be.false;
   expect(await timelock.isOperationDone(operationId)).to.be.true;
   expect(await timelock.isOperationPending(operationId)).to.be.false;
+
+  const detailsAfter = await timelockManager.getOperationDetails(operationId);
+
+  expect(detailsAfter.status).to.be.equal(8);
+  expect(detailsAfter.challenger).to.be.equal(detailsBefore.challenger);
+  expect(detailsAfter.operationProposer).to.be.equal(
+    detailsBefore.operationProposer,
+  );
+  expect(detailsAfter.dataHash).to.be.equal(detailsBefore.dataHash);
+  expect(detailsAfter.votesForExecution).to.be.equal(
+    detailsBefore.votesForExecution,
+  );
+  expect(detailsAfter.votesForVeto).to.be.equal(detailsBefore.votesForVeto);
+  expect(detailsAfter.createdAt).to.be.equal(detailsBefore.createdAt);
+  expect(detailsAfter.executionApprovedAt).to.be.equal(
+    detailsBefore.executionApprovedAt,
+  );
+  expect(detailsAfter.pauseReasonCode).to.be.equal(
+    detailsBefore.pauseReasonCode,
+  );
+  expect(detailsAfter.councilVersion).to.be.equal(detailsBefore.councilVersion);
+  expect(detailsAfter.isSetCouncilOperation).to.be.equal(
+    detailsBefore.isSetCouncilOperation,
+  );
 };
 
 const getTimelockSalt = (dataHashIndex: BigNumber) => {
