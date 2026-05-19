@@ -71,6 +71,7 @@ export enum MTokenNameEnum {
   bondBTC = 'bondBTC',
   mTEST = 'mTEST',
   stockMarketTRBasisTrade = 'stockMarketTRBasisTrade',
+  carryTradeUSDTRYLeverage = 'carryTradeUSDTRYLeverage',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;

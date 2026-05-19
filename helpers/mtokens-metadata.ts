@@ -294,4 +294,8 @@ export const mTokensMetadata: Record<
     name: 'Morini StockMarketTRBasisTrade Vault',
     symbol: 'StockMarketTRBasisTrade',
   },
+  carryTradeUSDTRYLeverage: {
+    name: 'Morini CarryTradeUSDTRYLeverage Vault',
+    symbol: 'CarryTradeUSDTRYLeverage',
+  },
 };

@@ -2,6 +2,7 @@ import { acremBTC1DeploymentConfig } from './acremBTC1';
 import { bondBTCDeploymentConfig } from './bondBTC';
 import { bondETHDeploymentConfig } from './bondETH';
 import { bondUSDDeploymentConfig } from './bondUSD';
+import { carryTradeUSDTRYLeverageDeploymentConfig } from './carryTradeUSDTRYLeverage';
 import { cUSDODeploymentConfig } from './cUSDO';
 import { dnETHDeploymentConfig } from './dnETH';
 import { dnFARTDeploymentConfig } from './dnFART';
@@ -147,4 +148,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   bondBTC: bondBTCDeploymentConfig,
   mTEST: mTESTDeploymentConfig,
   stockMarketTRBasisTrade: stockMarketTRBasisTradeDeploymentConfig,
+  carryTradeUSDTRYLeverage: carryTradeUSDTRYLeverageDeploymentConfig,
 };
