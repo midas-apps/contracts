@@ -873,3 +873,27 @@ All the roles for the Midas protocol smart contracts are listed below.
 | **_depositVaultAdmin_**    | `0xdf22d0766c576aa653934e9dbd118179366c13863b84dfde15be21854404f3ad` |
 | **_redemptionVaultAdmin_** | `0x0dd95668472ae52905a312d993d2ad881b95371af4f5258756954992589fe911` |
 | **_greenlisted_**          | `0x19bb2578851ca88871a53ed29cbea343d0c7845746be7720066fb0fa8ce707ac` |
+
+### stockMarketTRBasisTrade Roles
+
+| Role Name                  | Role                                                                 |
+| -------------------------- | -------------------------------------------------------------------- |
+| **_minter_**               | `0xb9dc40afdfa13c4eeb7d2fc0b224108f82d33d96509b6ea277516392419b0f51` |
+| **_burner_**               | `0x9345cdce9e94e58bef2272d8d00b33b1ba2d562564aa453e5f108f3fbe529f94` |
+| **_pauser_**               | `0xf5a80cc733b10e6ca39947e795cd258707b36002a486c45430bace46d32c51a7` |
+| **_customFeedAdmin_**      | `0x76ac1b959747e70ca826cd465b43b357c391aaffd53689633190dfa287a6556f` |
+| **_depositVaultAdmin_**    | `0xf7fa32fbd543d58ed4e2e39f18d1fba187fa6fd0c86eaad8ab28bdbfc28a36c4` |
+| **_redemptionVaultAdmin_** | `0xd294959c156ca614e934f6a8814f3277f6c8bb8d1974e59f8e6bdb69031e0a12` |
+| **_greenlisted_**          | `0x81b949d1730762952193b7aa2ebf48c6095914573e9c2b9df1aee424977ce367` |
+
+### carryTradeUSDTRYLeverage Roles
+
+| Role Name                  | Role                                                                 |
+| -------------------------- | -------------------------------------------------------------------- |
+| **_minter_**               | `0x422e15547d0d7b7651b85c6f350e7fc95ed24b31e7a0dd60bcd0ef85395c15ba` |
+| **_burner_**               | `0x143b55265c4d173aaa08ef937309ca59a6697ecf8cc2adb70abdb36b520be840` |
+| **_pauser_**               | `0x643a4ad9b1aa74dc5179024c52ea14300f56431fc1c8a9aa158cf544f424d6a5` |
+| **_customFeedAdmin_**      | `0x13d379c00afaf685dc6f5ef2d2f4f65b40e83d344750bdcfddba7fd1b77cc816` |
+| **_depositVaultAdmin_**    | `0xa5ff6076b4cdfe57840bc6f69fdcbddfd690739ed0745071ac07f6fa922e7041` |
+| **_redemptionVaultAdmin_** | `0x376c2cc42dd52720749dccd6d8ba29231f38e9dbb4f36ebcbad9aeaa2407ba16` |
+| **_greenlisted_**          | `0x358cc724b5a4e2e60667a580ddb2715c9ef96533f1d9c18ee590b0ab01159332` |
