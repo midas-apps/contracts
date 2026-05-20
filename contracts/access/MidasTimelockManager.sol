@@ -679,6 +679,8 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             bytes32(dataHashIndex),
             delay
         );
+
+        emit ScheduleTimelockOperation(proposer, operationId);
     }
 
     function _contractAdminRole() internal pure override returns (bytes32) {
