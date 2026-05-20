@@ -555,6 +555,20 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVaultSwapper: '0x9d27834687318BFD42aF8e40168FDc37b4932727',
       layerZero: { oft: '0x3e901737a3673856B8441042D8cF2F0f8F8F6e6C' },
     },
+    stockMarketTRBasisTrade: {
+      token: '0x827Ce7E8e35861D9Ac7fE002755767b695A5594a',
+      customFeed: '0x1c7bEc0281080C0A4f85e55151191aF27EC69940',
+      dataFeed: '0xCF79a4ae663117238aB6DD9d0FCca942Be5d1644',
+      depositVault: '0xfD28BdEb8f8504a13Ea7917ee75E8fb080909C6F',
+      redemptionVaultSwapper: '0x85A7A5FFf71EaEF79e76730F2E717A04aADea27B',
+    },
+    carryTradeUSDTRYLeverage: {
+      token: '0x2bf11d2E04Bc40daa95c24B8b90EC4F5c57Dd326',
+      customFeed: '0xc69731B51C6dBb2fb818D8DB1F4116FB8A379288',
+      dataFeed: '0xE65F08D9D0b010965d69253769A33511b72d8E79',
+      depositVault: '0x55ed98baa90d59931C9cfEaa89AcDfB8d31BAc76',
+      redemptionVaultSwapper: '0xD980df2A697bfd38279BE1Ee2bc13495c101d5C9',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',

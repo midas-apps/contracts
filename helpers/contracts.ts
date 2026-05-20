@@ -134,6 +134,8 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   bondETH: 'BondEth',
   bondBTC: 'BondBtc',
   mTEST: 'MTest',
+  stockMarketTRBasisTrade: 'StockMarketTRBasisTrade',
+  carryTradeUSDTRYLeverage: 'CarryTradeUsdTryLeverage',
 };
 
 export const getCommonContractNames = (): CommonContractNames => {
