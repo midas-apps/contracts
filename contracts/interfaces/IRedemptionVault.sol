@@ -80,7 +80,7 @@ interface IRedemptionVault is IManageableVault {
      * @param feeAmount fee amount in tokenOut
      * @param amountTokenOut amount of tokenOut
      */
-    event RedeemInstantV2(
+    event RedeemInstant(
         address indexed user,
         address indexed tokenOut,
         address recipient,
@@ -99,7 +99,7 @@ interface IRedemptionVault is IManageableVault {
      * @param mTokenRate mToken rate
      * @param feePercent fee percent
      */
-    event RedeemRequestV2(
+    event RedeemRequest(
         uint256 indexed requestId,
         address indexed user,
         address indexed tokenOut,
@@ -133,7 +133,7 @@ interface IRedemptionVault is IManageableVault {
      * @param isSafe if true, approval is safe
      * @param isAvgRate if true, newMtokenRate is avg rate
      */
-    event ApproveRequestV2(
+    event ApproveRequest(
         uint256 indexed requestId,
         uint256 newMTokenRate,
         bool isSafe,

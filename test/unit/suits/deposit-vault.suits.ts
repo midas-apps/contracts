@@ -7112,7 +7112,12 @@ export const depositVaultSuits = (
             true,
           );
 
-          await setMaxSupplyCapTest({ depositVault, owner }, 99);
+          await setVariabilityToleranceTest(
+            { vault: depositVault, owner },
+            1000,
+          );
+          await setInstantFeeTest({ vault: depositVault, owner }, 0);
+          await setMaxSupplyCapTest({ depositVault, owner }, 100);
           await setRoundData({ mockedAggregator }, 1);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
           await setMinAmountTest({ vault: depositVault, owner }, 0);
@@ -7150,7 +7155,7 @@ export const depositVaultSuits = (
           await approveRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed, isSafe: true },
             0,
-            parseUnits('1'),
+            parseUnits('0.99'),
             {
               revertCustomError: {
                 customErrorName: 'SupplyCapExceeded',
@@ -7159,7 +7164,7 @@ export const depositVaultSuits = (
           );
         });
 
-        it('should fail: when 10 supply cap is left and try to mint 11', async () => {
+        it('should fail: when 10 supply cap is left and try to mint more', async () => {
           const {
             owner,
             depositVault,
@@ -7187,6 +7192,11 @@ export const depositVaultSuits = (
             true,
           );
 
+          await setVariabilityToleranceTest(
+            { vault: depositVault, owner },
+            1000,
+          );
+          await setInstantFeeTest({ vault: depositVault, owner }, 0);
           await setMaxSupplyCapTest({ depositVault, owner }, 100);
           await setRoundData({ mockedAggregator }, 1);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
@@ -7216,7 +7226,7 @@ export const depositVaultSuits = (
               customRecipient,
             },
             stableCoins.dai,
-            11,
+            10,
             {
               from: regularAccounts[0],
             },
@@ -7225,7 +7235,7 @@ export const depositVaultSuits = (
           await approveRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed, isSafe: true },
             0,
-            parseUnits('1'),
+            parseUnits('0.99'),
             {
               revertCustomError: {
                 customErrorName: 'SupplyCapExceeded',
@@ -8028,7 +8038,7 @@ export const depositVaultSuits = (
           );
         });
 
-        it('approve 2 requests when second one exceeds supply cap', async () => {
+        it('approve 2 requests it should decrese the upcoming supply value fully', async () => {
           const {
             owner,
             mockedAggregator,
@@ -8052,7 +8062,7 @@ export const depositVaultSuits = (
           await setRoundData({ mockedAggregator }, 1);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
           await setMinAmountTest({ vault: depositVault, owner }, 0);
-          await setMaxSupplyCapTest({ depositVault, owner }, 50);
+          await setMaxSupplyCapTest({ depositVault, owner }, 100);
 
           await depositRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -8068,7 +8078,7 @@ export const depositVaultSuits = (
 
           await safeBulkApproveRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            [{ id: 0 }, { id: 1, expectedToExecute: false }],
+            [{ id: 0 }, { id: 1 }],
             'request-rate',
           );
         });
@@ -8523,10 +8533,15 @@ export const depositVaultSuits = (
             0,
             true,
           );
+          await setInstantFeeTest({ vault: depositVault, owner }, 0);
+          await setVariabilityToleranceTest(
+            { vault: depositVault, owner },
+            2000,
+          );
           await setRoundData({ mockedAggregator }, 1);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
           await setMinAmountTest({ vault: depositVault, owner }, 0);
-          await setMaxSupplyCapTest({ depositVault, owner }, 50);
+          await setMaxSupplyCapTest({ depositVault, owner }, 100);
 
           await depositRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -8537,13 +8552,13 @@ export const depositVaultSuits = (
           await depositRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             stableCoins.dai,
-            50,
+            40,
           );
 
           await safeBulkApproveRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: 0 }, { id: 1, expectedToExecute: false }],
-            parseUnits('1'),
+            parseUnits('0.899'),
           );
         });
 
@@ -9055,10 +9070,16 @@ export const depositVaultSuits = (
             0,
             true,
           );
+
+          await setInstantFeeTest({ vault: depositVault, owner }, 0);
+          await setVariabilityToleranceTest(
+            { vault: depositVault, owner },
+            2000,
+          );
           await setRoundData({ mockedAggregator }, 1);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
           await setMinAmountTest({ vault: depositVault, owner }, 0);
-          await setMaxSupplyCapTest({ depositVault, owner }, 75);
+          await setMaxSupplyCapTest({ depositVault, owner }, 100);
 
           await depositRequestTest(
             {
@@ -9081,7 +9102,7 @@ export const depositVaultSuits = (
               instantShare: 50_00,
             },
             stableCoins.dai,
-            50,
+            40,
           );
 
           await safeBulkApproveRequestTest(
@@ -9093,7 +9114,7 @@ export const depositVaultSuits = (
               isAvgRate: true,
             },
             [{ id: 0 }, { id: 1, expectedToExecute: false }],
-            parseUnits('1'),
+            parseUnits('0.899'),
           );
         });
 
@@ -11189,7 +11210,7 @@ export const depositVaultSuits = (
           );
         });
 
-        it('when 10 supply cap is left and try to mint request 100', async () => {
+        it('should fail: when 10 supply cap is left and try to mint request 100', async () => {
           const {
             owner,
             depositVault,
@@ -11249,6 +11270,9 @@ export const depositVaultSuits = (
             100,
             {
               from: regularAccounts[0],
+              revertCustomError: {
+                customErrorName: 'SupplyCapExceeded',
+              },
             },
           );
         });

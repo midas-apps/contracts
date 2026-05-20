@@ -54,6 +54,19 @@ contract DepositVault is ManageableVault, IDepositVault {
     uint256 public minMTokenAmountForFirstDeposit;
 
     /**
+     * @notice max supply cap value in mToken
+     * @dev if after the deposit, mToken.totalSupply() > maxSupplyCap,
+     * the tx will be reverted
+     */
+    uint256 public maxSupplyCap;
+
+    /**
+     * @notice pending supply in mToken that will be released
+     * after the deposit request is processed
+     */
+    uint256 public upcomingSupply;
+
+    /**
      * @notice request data storage
      */
     mapping(uint256 => Request) public mintRequests;
@@ -63,13 +76,6 @@ contract DepositVault is ManageableVault, IDepositVault {
      * @dev depositor address => amount minted
      */
     mapping(address => uint256) public totalMinted;
-
-    /**
-     * @notice max supply cap value in mToken
-     * @dev if after the deposit, mToken.totalSupply() > maxSupplyCap,
-     * the tx will be reverted
-     */
-    uint256 public maxSupplyCap;
 
     /**
      * @dev leaving a storage gap for futures updates
@@ -322,6 +328,11 @@ contract DepositVault is ManageableVault, IDepositVault {
 
         mintRequests[requestId].status = RequestStatus.Canceled;
 
+        upcomingSupply -= _quoteMTokenFromRequest(
+            request,
+            request.tokenOutRate
+        );
+
         emit RejectRequest(requestId, request.sender);
     }
 
@@ -344,6 +355,14 @@ contract DepositVault is ManageableVault, IDepositVault {
         maxSupplyCap = newValue;
 
         emit SetMaxSupplyCap(msg.sender, newValue);
+    }
+
+    /**
+     * @notice calculates effective mToken supply including upcoming supply
+     * @return effective mToken supply
+     */
+    function getEffectiveMTokenSupply() external view returns (uint256) {
+        return _getEffectiveMTokenSupply();
     }
 
     /**
@@ -412,7 +431,7 @@ contract DepositVault is ManageableVault, IDepositVault {
             recipient
         );
 
-        emit DepositInstantV2(
+        emit DepositInstant(
             msg.sender,
             tokenIn,
             recipient,
@@ -571,7 +590,7 @@ contract DepositVault is ManageableVault, IDepositVault {
             );
         }
 
-        mintRequests[requestId] = Request({
+        Request memory request = Request({
             sender: recipient,
             tokenIn: tokenIn,
             status: RequestStatus.Pending,
@@ -583,7 +602,16 @@ contract DepositVault is ManageableVault, IDepositVault {
             approvedTokenOutRate: 0
         });
 
-        emit DepositRequestV2(
+        mintRequests[requestId] = request;
+
+        upcomingSupply += _quoteMTokenFromRequest(
+            request,
+            request.tokenOutRate
+        );
+
+        _validateMaxSupplyCap(true);
+
+        emit DepositRequest(
             requestId,
             msg.sender,
             tokenIn,
@@ -641,10 +669,18 @@ contract DepositVault is ManageableVault, IDepositVault {
 
         require(newOutRate > 0, InvalidNewMTokenRate());
 
-        uint256 amountMToken = (request.usdAmountWithoutFees * (10**18)) /
-            newOutRate;
+        uint256 amountMToken = _quoteMTokenFromRequest(request, newOutRate);
+
+        uint256 upcomingSupplyDecrease = _quoteMTokenFromRequest(
+            request,
+            request.tokenOutRate
+        );
+
+        upcomingSupply -= upcomingSupplyDecrease;
 
         if (!_validateMaxSupplyCap(amountMToken, revertAboveSupplyCap)) {
+            // revert the upcoming supply decrease
+            upcomingSupply += upcomingSupplyDecrease;
             return false;
         }
 
@@ -656,7 +692,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         request.approvedTokenOutRate = newOutRate;
         mintRequests[requestId] = request;
 
-        emit ApproveRequestV2(requestId, newOutRate, isSafe, isAvgRate);
+        emit ApproveRequest(requestId, newOutRate, isSafe, isAvgRate);
 
         return true;
     }
@@ -805,11 +841,12 @@ contract DepositVault is ManageableVault, IDepositVault {
      * @return true if supply is valid, false otherwise
      */
     function _validateMaxSupplyCap(uint256 mintAmount, bool revertOnError)
-        internal
+        private
         view
         returns (bool)
     {
-        bool isExceeded = mToken.totalSupply() + mintAmount > maxSupplyCap;
+        bool isExceeded = _getEffectiveMTokenSupply() + mintAmount >
+            maxSupplyCap;
 
         if (!revertOnError) {
             return !isExceeded;
@@ -885,5 +922,27 @@ contract DepositVault is ManageableVault, IDepositVault {
             instantPartMTokenValue;
 
         return (request.depositedUsdAmount * (10**18)) / holdbackPartValue;
+    }
+
+    /**
+     * @dev calculates mToken amount to mint from request and provided mToken rate
+     * @param request request
+     * @param mTokenRate mToken rate
+     * @return mToken amount to mint
+     */
+    function _quoteMTokenFromRequest(Request memory request, uint256 mTokenRate)
+        private
+        view
+        returns (uint256)
+    {
+        return (request.usdAmountWithoutFees * (10**18)) / mTokenRate;
+    }
+
+    /**
+     * @dev calculates effective mToken supply including upcoming supply
+     * @return effective mToken supply
+     */
+    function _getEffectiveMTokenSupply() private view returns (uint256) {
+        return mToken.totalSupply() + upcomingSupply;
     }
 }

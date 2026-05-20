@@ -638,7 +638,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         request.approvedMTokenRate = newMTokenRate;
         redeemRequests[requestId] = request;
 
-        emit ApproveRequestV2(requestId, newMTokenRate, isSafe, isAvgRate);
+        emit ApproveRequest(requestId, newMTokenRate, isSafe, isAvgRate);
 
         return true;
     }
@@ -688,7 +688,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         _sendTokensFromLiquidity(tokenOut, recipient, calcResult);
 
-        emit RedeemInstantV2(
+        emit RedeemInstant(
             msg.sender,
             tokenOut,
             recipient,
@@ -1071,7 +1071,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             approvedMTokenRate: 0
         });
 
-        emit RedeemRequestV2(
+        emit RedeemRequest(
             requestId,
             msg.sender,
             tokenOut,

@@ -2902,10 +2902,10 @@ event SetMaxSupplyCap(address caller, uint256 newValue)
 | caller | address | function caller (msg.sender) |
 | newValue | uint256 | new max supply cap value |
 
-### DepositInstantV2
+### DepositInstant
 
 ```solidity
-event DepositInstantV2(address user, address tokenIn, address recipient, uint256 amountUsd, uint256 amountToken, uint256 fee, uint256 minted, bytes32 referrerId)
+event DepositInstant(address user, address tokenIn, address recipient, uint256 amountUsd, uint256 amountToken, uint256 fee, uint256 minted, bytes32 referrerId)
 ```
 
 #### Parameters
@@ -2921,10 +2921,10 @@ event DepositInstantV2(address user, address tokenIn, address recipient, uint256
 | minted | uint256 | amount of minted mTokens |
 | referrerId | bytes32 | referrer id |
 
-### DepositRequestV2
+### DepositRequest
 
 ```solidity
-event DepositRequestV2(uint256 requestId, address user, address tokenIn, address recipient, uint256 amountToken, uint256 amountUsd, uint256 fee, uint256 tokenOutRate, bytes32 referrerId)
+event DepositRequest(uint256 requestId, address user, address tokenIn, address recipient, uint256 amountToken, uint256 amountUsd, uint256 fee, uint256 tokenOutRate, bytes32 referrerId)
 ```
 
 #### Parameters
@@ -2941,10 +2941,10 @@ event DepositRequestV2(uint256 requestId, address user, address tokenIn, address
 | tokenOutRate | uint256 | mToken rate |
 | referrerId | bytes32 | referrer id |
 
-### ApproveRequestV2
+### ApproveRequest
 
 ```solidity
-event ApproveRequestV2(uint256 requestId, uint256 newOutRate, bool isSafe, bool isAvgRate)
+event ApproveRequest(uint256 requestId, uint256 newOutRate, bool isSafe, bool isAvgRate)
 ```
 
 #### Parameters
@@ -4287,10 +4287,10 @@ struct LiquidityProviderLoanRequest {
 
 ## IRedemptionVault
 
-### RedeemInstantV2
+### RedeemInstant
 
 ```solidity
-event RedeemInstantV2(address user, address tokenOut, address recipient, uint256 amount, uint256 feeAmount, uint256 amountTokenOut)
+event RedeemInstant(address user, address tokenOut, address recipient, uint256 amount, uint256 feeAmount, uint256 amountTokenOut)
 ```
 
 #### Parameters
@@ -4304,10 +4304,10 @@ event RedeemInstantV2(address user, address tokenOut, address recipient, uint256
 | feeAmount | uint256 | fee amount in tokenOut |
 | amountTokenOut | uint256 | amount of tokenOut |
 
-### RedeemRequestV2
+### RedeemRequest
 
 ```solidity
-event RedeemRequestV2(uint256 requestId, address user, address tokenOut, address recipient, uint256 amountMTokenIn, uint256 amountMTokenInstant, uint256 mTokenRate, uint256 feePercent)
+event RedeemRequest(uint256 requestId, address user, address tokenOut, address recipient, uint256 amountMTokenIn, uint256 amountMTokenInstant, uint256 mTokenRate, uint256 feePercent)
 ```
 
 #### Parameters
@@ -4340,10 +4340,10 @@ event CreateLiquidityProviderLoanRequest(uint256 loanId, address tokenOut, uint2
 | mTokenRate | uint256 | mToken rate |
 | tokenOutRate | uint256 | tokenOut rate |
 
-### ApproveRequestV2
+### ApproveRequest
 
 ```solidity
-event ApproveRequestV2(uint256 requestId, uint256 newMTokenRate, bool isSafe, bool isAvgRate)
+event ApproveRequest(uint256 requestId, uint256 newMTokenRate, bool isSafe, bool isAvgRate)
 ```
 
 #### Parameters

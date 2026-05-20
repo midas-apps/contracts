@@ -71,7 +71,7 @@ interface IDepositVault is IManageableVault {
      * @param minted amount of minted mTokens
      * @param referrerId referrer id
      */
-    event DepositInstantV2(
+    event DepositInstant(
         address indexed user,
         address indexed tokenIn,
         address recipient,
@@ -93,7 +93,7 @@ interface IDepositVault is IManageableVault {
      * @param tokenOutRate mToken rate
      * @param referrerId referrer id
      */
-    event DepositRequestV2(
+    event DepositRequest(
         uint256 indexed requestId,
         address indexed user,
         address indexed tokenIn,
@@ -111,7 +111,7 @@ interface IDepositVault is IManageableVault {
      * @param isSafe if true, approval is safe
      * @param isAvgRate if true, newOutRate is avg rate
      */
-    event ApproveRequestV2(
+    event ApproveRequest(
         uint256 indexed requestId,
         uint256 newOutRate,
         bool isSafe,

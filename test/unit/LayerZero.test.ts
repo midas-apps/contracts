@@ -1673,7 +1673,7 @@ describe('LayerZero', function () {
           .emit(
             redemptionVault,
             redemptionVault.interface.events[
-              'RedeemInstantV2(address,address,address,uint256,uint256,uint256)'
+              'RedeemInstant(address,address,address,uint256,uint256,uint256)'
             ].name,
           )
           .withArgs(

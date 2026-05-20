@@ -316,7 +316,7 @@ export const redeemInstantTest = async (
     .to.emit(
       redemptionVault,
       redemptionVault.interface.events[
-        'RedeemInstantV2(address,address,address,uint256,uint256,uint256)'
+        'RedeemInstant(address,address,address,uint256,uint256,uint256)'
       ].name,
     )
     .withArgs(
@@ -572,7 +572,7 @@ export const redeemRequestTest = async (
     .to.emit(
       redemptionVault,
       redemptionVault.interface.events[
-        'RedeemRequestV2(uint256,address,address,address,uint256,uint256,uint256,uint256)'
+        'RedeemRequest(uint256,address,address,address,uint256,uint256,uint256,uint256)'
       ].name,
     )
     .withArgs(
@@ -709,7 +709,7 @@ export const approveRedeemRequestTest = async (
     .to.emit(
       redemptionVault,
       redemptionVault.interface.events[
-        'ApproveRequestV2(uint256,uint256,bool,bool)'
+        'ApproveRequest(uint256,uint256,bool,bool)'
       ].name,
     )
     .withArgs(requestId, actualRate, isSafe, isAvgRate).to.not.reverted;
@@ -1140,7 +1140,7 @@ export const safeBulkApproveRequestTest = async (
   const parsedLogs = txReceipt.logs
     .filter((v) => v.address === redemptionVault.address)
     .map((log) => redemptionVault.interface.parseLog(log))
-    .filter((v) => v.name === 'ApproveRequestV2')
+    .filter((v) => v.name === 'ApproveRequest')
     .map((v) => v.args);
 
   const requestDatasAfter = await Promise.all(
