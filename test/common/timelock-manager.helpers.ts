@@ -22,6 +22,26 @@ type CommonParamsTimelock = {
   owner: SignerWithAddress;
 };
 
+export const timelockManagerRevert = (
+  timelockManager: MidasTimelockManager,
+  customErrorName: string,
+  args?: unknown[],
+): OptionalCommonParams =>
+  args !== undefined
+    ? {
+        revertCustomError: {
+          contract: timelockManager,
+          customErrorName,
+          args,
+        },
+      }
+    : {
+        revertCustomError: {
+          contract: timelockManager,
+          customErrorName,
+        },
+      };
+
 export const setRoleTimelocksTester = async (
   { timelockManager, owner }: CommonParamsTimelock,
   roles: string[],

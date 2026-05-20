@@ -82,6 +82,7 @@ import {
   executeTimelockOperationTester,
   scheduleTimelockOperationsTester,
   setRoleTimelocksTester,
+  timelockManagerRevert,
 } from '../../common/timelock-manager.helpers';
 import { sanctionUser } from '../../common/with-sanctions-list.helpers';
 
@@ -6188,9 +6189,8 @@ export const redemptionVaultSuits = (
             },
             [redemptionVault.address],
             [calldata],
-            {
-              revertMessage: 'MAC: no timelock',
-            },
+            {},
+            timelockManagerRevert(timelockManager, 'NoTimelockDelayForRole'),
           );
         });
 

@@ -3,83 +3,93 @@ pragma solidity 0.8.34;
 
 import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
 import {TimelockControllerUpgradeable as TimelockController} from "@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol";
-import {IMidasTimelockManager} from "../interfaces/IMidasTimelockManager.sol";
+import {IMidasTimelockManager, GetOperationStatusResult, TimelockOperationStatus} from "../interfaces/IMidasTimelockManager.sol";
 import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.sol";
 import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
 import {EnumerableSetUpgradeable as EnumerableSet} from "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 
-enum TimelockOperationStatus {
-    NotExist,
-    NotPaused,
-    Paused,
-    ApprovedExecution,
-    ReadyToExecute,
-    ReadyToAbort,
-    Expired,
-    Aborted,
-    Executed
-}
-
-struct TimelockOperationChallenge {
-    TimelockOperationStatus status;
-    uint256 councilVersion;
-    address operationProposer;
-    address challenger;
-    uint32 createdAt;
-    uint32 executionApprovedAt;
-    uint8 pauseReasonCode;
-    bool isSetCouncilOperation;
-    bytes32 dataHash;
-    EnumerableSet.AddressSet votersForExecution;
-    EnumerableSet.AddressSet votersForVeto;
-}
-
-struct GetOperationStatusResult {
-    TimelockOperationStatus status;
-    uint32 createdAt;
-    uint32 executionApprovedAt;
-    uint8 pauseReasonCode;
-    uint256 councilVersion;
-    address operationProposer;
-    address challenger;
-    bytes32 dataHash;
-    uint8 votesForExecution;
-    uint8 votesForVeto;
-    bool isSetCouncilOperation;
-}
-
-// TODO: add natspec
-// TODO: add events
+/**
+ * @title MidasTimelockManager
+ * @notice Manages timelock scheduling, security council votes, and operation challenges.
+ * @author RedDuck Software
+ */
 contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     using AccessControlUtilsLibrary for IMidasAccessControl;
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     /**
+     * @dev internal storage for a timelock operation challenge
+     */
+    struct TimelockOperationChallenge {
+        TimelockOperationStatus status;
+        uint256 councilVersion;
+        address operationProposer;
+        address challenger;
+        uint32 createdAt;
+        uint32 executionApprovedAt;
+        uint8 pauseReasonCode;
+        bool isSetCouncilOperation;
+        bytes32 dataHash;
+        EnumerableSet.AddressSet votersForExecution;
+        EnumerableSet.AddressSet votersForVeto;
+    }
+
+    /**
      * @notice role that can execute timelock transactions
      */
     bytes32 public constant EXECUTOR_ROLE = keccak256("EXECUTOR_ROLE");
+
+    /**
+     * @notice role that can pause (challenge) timelock operations
+     */
     bytes32 public constant TIMELOCK_CHALLENGER_ROLE =
         keccak256("TIMELOCK_CHALLENGER_ROLE");
+
+    /**
+     * @notice role that can set security council
+     */
     bytes32 public constant SECURITY_COUNCIL_MANAGER_ROLE =
         keccak256("SECURITY_COUNCIL_MANAGER_ROLE");
 
+    /**
+     * @notice min security council members
+     */
     uint256 public constant SECURITY_COUNCIL_MIN_MEMBERS = 5;
+
+    /**
+     * @notice max security council members
+     */
     uint256 public constant SECURITY_COUNCIL_MAX_MEMBERS = 15;
 
+    /**
+     * @notice time after schedule when operation expires
+     */
     uint256 public constant EXPIRY_PERIOD = 45 days;
+
+    /**
+     * @notice dispute period after execution approval
+     */
     uint256 public constant DISPUTE_PERIOD = 3 days;
 
+    /**
+     * @notice hard cap for max pending operations per proposer
+     */
     uint256 public constant MAX_PENDING_OPERATIONS_PER_PROPOSER = 100;
 
     /**
-     * @notice address of the timelock controller
-     * @return timelock address of the timelock controller
+     * @inheritdoc IMidasTimelockManager
      */
     address public timelock;
 
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
     uint256 public maxPendingOperationsPerProposer;
 
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
     uint256 public securityCouncilVersion;
 
     /**
@@ -94,12 +104,21 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
     mapping(bytes32 => TimelockOperationChallenge) private _operationChallenges;
 
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
     mapping(bytes32 => uint256) public dataHashIndexes;
 
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
     mapping(address => uint256) public proposerPendingOperationsCount;
 
     EnumerableSet.Bytes32Set private _pendingOperations;
 
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
     bytes32 public pendingSetCouncilOperationId;
 
     /**
@@ -108,10 +127,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     uint256[50] private __gap;
 
     /**
-     * @notice upgradeable pattern contract`s initializer
-     * @param _accessControl address of MidasAccessControl contract
-     * @param _maxPendingOperationsPerProposer maximum number of pending operations per proposer
-     * @param _initSecurityCouncil initial security council members
+     * @inheritdoc IMidasTimelockManager
      */
     function initialize(
         address _accessControl,
@@ -126,57 +142,265 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     }
 
     /**
-     * @notice initializes the timelock
-     * @param _timelock address of the timelock controller
-     * @dev can be called only by DEFAULT_ADMIN_ROLE
+     * @inheritdoc IMidasTimelockManager
      */
     function initializeTimelock(address _timelock) external {
         require(
             accessControl.hasRole(_DEFAULT_ADMIN_ROLE, msg.sender),
             HasntRole(_DEFAULT_ADMIN_ROLE, msg.sender)
         );
-        require(timelock == address(0), "MAC: timelock already set");
-        require(_timelock != address(0), "MAC: invalid timelock");
+        require(timelock == address(0), TimelockAlreadySet());
+        require(_timelock != address(0), InvalidAddress(_timelock));
         timelock = _timelock;
     }
 
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
     function setMaxPendingOperationsPerProposer(
         uint256 _maxPendingOperationsPerProposer
     ) external onlyRole(_DEFAULT_ADMIN_ROLE, false) {
         _setMaxPendingOperationsPerProposer(_maxPendingOperationsPerProposer);
     }
 
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
     function setRoleDelays(bytes32[] memory roles, uint256[] memory delays)
         external
         onlyRole(_DEFAULT_ADMIN_ROLE, false)
     {
-        require(roles.length == delays.length, "MAC: invalid lengths");
+        require(roles.length == delays.length, MismatchingArrayLengths());
 
         for (uint256 i = 0; i < roles.length; ++i) {
             _roleTimelocks[roles[i]] = delays[i];
         }
+
+        emit SetRoleDelays(roles, delays);
     }
 
-    function getRoleTimelockDelay(bytes32 role)
-        public
-        view
-        returns (
-            uint256, /* delay */
-            bool /* isDefault */
-        )
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
+    function setSecurityCouncil(address[] calldata members)
+        external
+        onlyRole(SECURITY_COUNCIL_MANAGER_ROLE, false)
     {
-        uint256 delay = _roleTimelocks[role];
-        uint256 actualDelay = delay == 0
-            ? defaultDelay()
-            : delay == type(uint256).max
-            ? 0
-            : delay;
-
-        return (actualDelay, delay == 0);
+        uint256 version = securityCouncilVersion + 1;
+        securityCouncilVersion = version;
+        _setSecurityCouncil(members, version);
     }
 
-    function defaultDelay() public view virtual returns (uint256) {
-        return 3600;
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
+    function scheduleTimelockOperations(
+        address[] calldata targets,
+        bytes[] calldata datas
+    ) external {
+        for (uint256 i = 0; i < targets.length; ++i) {
+            _scheduleTimelockOperation(targets[i], datas[i]);
+        }
+    }
+
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
+    function scheduleTimelockOperation(address target, bytes calldata data)
+        external
+    {
+        _scheduleTimelockOperation(target, data);
+    }
+
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
+    function executeTimelockOperation(address target, bytes calldata data)
+        external
+    {
+        require(
+            accessControl.hasRole(_DEFAULT_ADMIN_ROLE, msg.sender) ||
+                accessControl.hasRole(EXECUTOR_ROLE, msg.sender),
+            HasntRole(EXECUTOR_ROLE, msg.sender)
+        );
+
+        TimelockController _timelock = TimelockController(payable(timelock));
+
+        (
+            bytes32 operationId,
+            bytes32 dataHash,
+            uint256 dataHashIndex
+        ) = _getOperationId(_timelock, target, data);
+
+        (
+            TimelockOperationStatus status,
+            TimelockOperationChallenge storage challenge
+        ) = _getOperationStatus(operationId);
+
+        require(
+            status == TimelockOperationStatus.NotPaused ||
+                status == TimelockOperationStatus.ReadyToExecute,
+            UnexpectedOperationStatus(status)
+        );
+
+        require(
+            _timelock.isOperationReady(operationId),
+            TimelockOperationNotReady()
+        );
+
+        _timelock.execute(target, 0, data, bytes32(0), bytes32(dataHashIndex));
+
+        // TODO: move to util
+        if (challenge.isSetCouncilOperation) {
+            pendingSetCouncilOperationId = bytes32(0);
+        }
+        // updating state after execution to be able to verify tx against current context
+        // in case of reentrancy timelock.execute will revert
+        challenge.status = TimelockOperationStatus.Executed;
+        dataHashIndexes[dataHash] = dataHashIndex + 1;
+        --proposerPendingOperationsCount[challenge.operationProposer];
+        require(_pendingOperations.remove(operationId), OperationNotPending());
+
+        emit ExecuteTimelockOperation(msg.sender, operationId);
+    }
+
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
+    function pauseOperation(bytes32 operationId, uint8 pauseReasonCode)
+        external
+    {
+        require(
+            accessControl.hasRole(TIMELOCK_CHALLENGER_ROLE, msg.sender),
+            HasntRole(TIMELOCK_CHALLENGER_ROLE, msg.sender)
+        );
+
+        // TODO: move to util
+        require(
+            _pendingOperations.contains(operationId),
+            OperationNotPending()
+        );
+
+        (
+            TimelockOperationStatus status,
+            TimelockOperationChallenge storage challenge
+        ) = _getOperationStatus(operationId);
+
+        require(
+            status == TimelockOperationStatus.NotPaused,
+            UnexpectedOperationStatus(status)
+        );
+
+        uint256 councilVersion = securityCouncilVersion;
+        challenge.status = TimelockOperationStatus.Paused;
+        challenge.pauseReasonCode = pauseReasonCode;
+        challenge.councilVersion = councilVersion;
+        challenge.challenger = msg.sender;
+
+        emit PauseTimelockOperation(
+            msg.sender,
+            operationId,
+            pauseReasonCode,
+            councilVersion
+        );
+    }
+
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
+    function voteForVeto(bytes32 operationId) external {
+        (
+            TimelockOperationStatus status,
+            TimelockOperationChallenge storage challenge
+        ) = _getOperationStatus(operationId);
+
+        require(
+            _securityCouncils[challenge.councilVersion].contains(msg.sender),
+            NotInSecurityCouncil()
+        );
+
+        require(
+            status == TimelockOperationStatus.Paused ||
+                status == TimelockOperationStatus.ApprovedExecution ||
+                status == TimelockOperationStatus.ReadyToExecute,
+            UnexpectedOperationStatus(status)
+        );
+
+        require(challenge.votersForVeto.add(msg.sender), AlreadyVoted());
+
+        if (
+            challenge.votersForVeto.length() >=
+            councilQuorum(challenge.councilVersion)
+        ) {
+            challenge.status = TimelockOperationStatus.ReadyToAbort;
+        }
+
+        emit PausedProposalVoteCast(msg.sender, operationId, false);
+    }
+
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
+    function voteForExecution(bytes32 operationId) external {
+        (
+            TimelockOperationStatus status,
+            TimelockOperationChallenge storage challenge
+        ) = _getOperationStatus(operationId);
+
+        require(
+            _securityCouncils[challenge.councilVersion].contains(msg.sender),
+            NotInSecurityCouncil()
+        );
+
+        require(
+            status == TimelockOperationStatus.Paused,
+            UnexpectedOperationStatus(status)
+        );
+
+        require(challenge.votersForExecution.add(msg.sender), AlreadyVoted());
+        require(!challenge.votersForVeto.contains(msg.sender), AlreadyVoted());
+
+        if (
+            challenge.votersForExecution.length() >=
+            councilQuorum(challenge.councilVersion)
+        ) {
+            challenge.status = TimelockOperationStatus.ApprovedExecution;
+            challenge.executionApprovedAt = uint32(block.timestamp);
+        }
+
+        emit PausedProposalVoteCast(msg.sender, operationId, true);
+    }
+
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
+    function abortOperation(bytes32 operationId) external {
+        (
+            TimelockOperationStatus status,
+            TimelockOperationChallenge storage challenge
+        ) = _getOperationStatus(operationId);
+
+        uint256 dataHashIndex = dataHashIndexes[challenge.dataHash];
+
+        require(
+            status == TimelockOperationStatus.ReadyToAbort ||
+                status == TimelockOperationStatus.Expired,
+            UnexpectedOperationStatus(status)
+        );
+
+        // TODO: move to util
+        if (challenge.isSetCouncilOperation) {
+            pendingSetCouncilOperationId = bytes32(0);
+        }
+
+        dataHashIndexes[challenge.dataHash] = dataHashIndex + 1;
+        challenge.status = TimelockOperationStatus.Aborted;
+        --proposerPendingOperationsCount[challenge.operationProposer];
+        require(_pendingOperations.remove(operationId), OperationNotPending());
+
+        TimelockController(payable(timelock)).cancel(operationId);
+
+        emit AbortTimelockOperation(msg.sender, operationId, status);
     }
 
     /**
@@ -226,200 +450,44 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         return _operationChallenges[operationId].operationProposer;
     }
 
-    function setSecurityCouncil(address[] calldata members)
-        external
-        onlyRole(SECURITY_COUNCIL_MANAGER_ROLE, false)
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
+    function getRoleTimelockDelay(bytes32 role)
+        public
+        view
+        returns (
+            uint256, /* delay */
+            bool /* isDefault */
+        )
     {
-        uint256 version = securityCouncilVersion + 1;
-        securityCouncilVersion = version;
-        _setSecurityCouncil(members, version);
+        uint256 delay = _roleTimelocks[role];
+        uint256 actualDelay = delay == 0
+            ? defaultDelay()
+            : delay == type(uint256).max
+            ? 0
+            : delay;
+
+        return (actualDelay, delay == 0);
     }
 
-    function scheduleTimelockOperations(
-        address[] calldata targets,
-        bytes[] calldata datas
-    ) external {
-        for (uint256 i = 0; i < targets.length; ++i) {
-            _scheduleTimelockOperation(targets[i], datas[i]);
-        }
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
+    function defaultDelay() public view virtual returns (uint256) {
+        return 3600;
     }
 
-    function scheduleTimelockOperation(address target, bytes calldata data)
-        external
-    {
-        _scheduleTimelockOperation(target, data);
-    }
-
-    function executeTimelockOperation(address target, bytes calldata data)
-        external
-    {
-        require(
-            accessControl.hasRole(_DEFAULT_ADMIN_ROLE, msg.sender) ||
-                accessControl.hasRole(EXECUTOR_ROLE, msg.sender),
-            "MAC: unauthorized"
-        );
-
-        TimelockController _timelock = TimelockController(payable(timelock));
-
-        (
-            bytes32 operationId,
-            bytes32 dataHash,
-            uint256 dataHashIndex
-        ) = _getOperationId(_timelock, target, data);
-
-        (
-            TimelockOperationStatus status,
-            TimelockOperationChallenge storage challenge
-        ) = _getOperationStatus(operationId);
-
-        require(
-            status == TimelockOperationStatus.NotPaused ||
-                status == TimelockOperationStatus.ReadyToExecute,
-            "not ready to execute"
-        );
-
-        require(
-            _timelock.isOperationReady(operationId),
-            "timelock is not passed"
-        );
-
-        _timelock.execute(target, 0, data, bytes32(0), bytes32(dataHashIndex));
-
-        // TODO: move to util
-        if (challenge.isSetCouncilOperation) {
-            pendingSetCouncilOperationId = bytes32(0);
-        }
-        // updating state after execution to be able to verify tx against current context
-        // in case of reentrancy timelock.execute will revert
-        challenge.status = TimelockOperationStatus.Executed;
-        dataHashIndexes[dataHash] = dataHashIndex + 1;
-        --proposerPendingOperationsCount[challenge.operationProposer];
-        require(_pendingOperations.remove(operationId), "MAC: not pending");
-    }
-
-    function pauseOperation(bytes32 operationId, uint8 pauseReasonCode)
-        external
-    {
-        require(
-            accessControl.hasRole(TIMELOCK_CHALLENGER_ROLE, msg.sender),
-            "MAC: unauthorized"
-        );
-
-        // TODO: move to util
-        require(_pendingOperations.contains(operationId), "MAC: not pending");
-
-        (
-            TimelockOperationStatus status,
-            TimelockOperationChallenge storage challenge
-        ) = _getOperationStatus(operationId);
-
-        require(
-            status == TimelockOperationStatus.NotPaused,
-            "already challenged"
-        );
-
-        challenge.status = TimelockOperationStatus.Paused;
-        challenge.pauseReasonCode = pauseReasonCode;
-        challenge.councilVersion = securityCouncilVersion;
-        challenge.challenger = msg.sender;
-    }
-
-    function voteForVeto(bytes32 operationId) external {
-        (
-            TimelockOperationStatus status,
-            TimelockOperationChallenge storage challenge
-        ) = _getOperationStatus(operationId);
-
-        require(
-            _securityCouncils[challenge.councilVersion].contains(msg.sender),
-            "not in council"
-        );
-
-        require(
-            status == TimelockOperationStatus.Paused ||
-                status == TimelockOperationStatus.ApprovedExecution ||
-                status == TimelockOperationStatus.ReadyToExecute,
-            "not challenged or disputed"
-        );
-
-        require(
-            challenge.votersForVeto.add(msg.sender),
-            "already voted for veto"
-        );
-
-        if (
-            challenge.votersForVeto.length() >=
-            councilQuorum(challenge.councilVersion)
-        ) {
-            challenge.status = TimelockOperationStatus.ReadyToAbort;
-        }
-    }
-
-    function voteForExecution(bytes32 operationId) external {
-        (
-            TimelockOperationStatus status,
-            TimelockOperationChallenge storage challenge
-        ) = _getOperationStatus(operationId);
-
-        require(
-            _securityCouncils[challenge.councilVersion].contains(msg.sender),
-            "not in council"
-        );
-
-        require(
-            status == TimelockOperationStatus.Paused,
-            "not challenged or approved execution"
-        );
-
-        require(
-            challenge.votersForExecution.add(msg.sender),
-            "already voted for execution"
-        );
-        require(
-            !challenge.votersForVeto.contains(msg.sender),
-            "veto has already been voted for"
-        );
-
-        if (
-            challenge.votersForExecution.length() >=
-            councilQuorum(challenge.councilVersion)
-        ) {
-            challenge.status = TimelockOperationStatus.ApprovedExecution;
-            challenge.executionApprovedAt = uint32(block.timestamp);
-        }
-    }
-
-    function abortOperation(bytes32 operationId) external {
-        (
-            TimelockOperationStatus status,
-            TimelockOperationChallenge storage challenge
-        ) = _getOperationStatus(operationId);
-
-        uint256 dataHashIndex = dataHashIndexes[challenge.dataHash];
-
-        require(
-            status == TimelockOperationStatus.ReadyToAbort ||
-                status == TimelockOperationStatus.Expired,
-            "status"
-        );
-
-        // TODO: move to util
-        if (challenge.isSetCouncilOperation) {
-            pendingSetCouncilOperationId = bytes32(0);
-        }
-
-        dataHashIndexes[challenge.dataHash] = dataHashIndex + 1;
-        challenge.status = TimelockOperationStatus.Aborted;
-        --proposerPendingOperationsCount[challenge.operationProposer];
-        require(_pendingOperations.remove(operationId), "MAC: not pending");
-
-        TimelockController(payable(timelock)).cancel(operationId);
-    }
-
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
     function councilQuorum(uint256 version) public view returns (uint8) {
         return uint8(_securityCouncils[version].length()) / 2 + 1;
     }
 
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
     function getCouncilMemberVoteStatus(
         bytes32 operationId,
         address councilMember
@@ -433,10 +501,16 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         );
     }
 
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
     function getPendingOperations() external view returns (bytes32[] memory) {
         return _pendingOperations.values();
     }
 
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
     function getOperationDetails(bytes32 operationId)
         external
         view
@@ -460,6 +534,9 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         result.isSetCouncilOperation = challenge.isSetCouncilOperation;
     }
 
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
     function getOperationStatus(bytes32 operationId)
         external
         view
@@ -468,6 +545,9 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         (status, ) = _getOperationStatus(operationId);
     }
 
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
     function getOperationStatusRaw(bytes32 operationId)
         external
         view
@@ -476,12 +556,30 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         return _operationChallenges[operationId].status;
     }
 
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
     function getSecurityCouncilMembers(uint256 version)
         external
         view
         returns (address[] memory)
     {
         return _securityCouncils[version].values();
+    }
+
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
+    function getOperationId(address target, bytes calldata data)
+        external
+        view
+        returns (bytes32 operationId)
+    {
+        (operationId, , ) = _getOperationId(
+            TimelockController(payable(timelock)),
+            target,
+            data
+        );
     }
 
     function _getOperationStatus(bytes32 operationId)
@@ -524,7 +622,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     function _scheduleTimelockOperation(address target, bytes calldata data)
         private
     {
-        require(target != timelock, "MAC: target cannot be timelock");
+        require(target != timelock, InvalidAddress(target));
 
         address proposer = msg.sender;
 
@@ -532,7 +630,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
         (uint256 delay, ) = getRoleTimelockDelay(targetRole);
 
-        require(delay != 0, "MAC: no timelock");
+        require(delay != 0, NoTimelockDelayForRole());
 
         TimelockController _timelock = TimelockController(payable(timelock));
 
@@ -550,7 +648,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         require(
             proposerPendingOperationsCount[proposer] <=
                 maxPendingOperationsPerProposer,
-            "MAC: too many pending operations"
+            TooManyPendingOperations()
         );
 
         TimelockOperationChallenge storage challenge = _operationChallenges[
@@ -560,7 +658,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         if (isSetCouncil) {
             require(
                 pendingSetCouncilOperationId == bytes32(0),
-                "MAC: pending council set operation already exists"
+                PendingSetCouncilOperationExists()
             );
             challenge.isSetCouncilOperation = true;
             pendingSetCouncilOperationId = operationId;
@@ -571,7 +669,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         challenge.createdAt = uint32(block.timestamp);
         challenge.status = TimelockOperationStatus.NotPaused;
 
-        require(_pendingOperations.add(operationId), "MAC: already pending");
+        require(_pendingOperations.add(operationId), OperationAlreadyPending());
 
         _timelock.schedule(
             target,
@@ -593,7 +691,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         require(
             members.length >= SECURITY_COUNCIL_MIN_MEMBERS &&
                 members.length <= SECURITY_COUNCIL_MAX_MEMBERS,
-            "MAC: invalid members length"
+            InvalidSecurityCouncilMembersLength()
         );
 
         EnumerableSet.AddressSet storage securityCouncil = _securityCouncils[
@@ -602,8 +700,13 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
         for (uint256 i = 0; i < members.length; ++i) {
             require(members[i] != address(0), InvalidAddress(members[i]));
-            require(securityCouncil.add(members[i]), "MAC: already in council");
+            require(
+                securityCouncil.add(members[i]),
+                InvalidAddress(members[i])
+            );
         }
+
+        emit SetSecurityCouncil(version, members);
     }
 
     function _setMaxPendingOperationsPerProposer(
@@ -613,9 +716,13 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             _maxPendingOperationsPerProposer > 0 &&
                 _maxPendingOperationsPerProposer <=
                 MAX_PENDING_OPERATIONS_PER_PROPOSER,
-            "MAC: invalid max pending operations per proposer"
+            InvalidMaxPendingOperationsPerProposer()
         );
         maxPendingOperationsPerProposer = _maxPendingOperationsPerProposer;
+
+        emit SetMaxPendingOperationsPerProposer(
+            _maxPendingOperationsPerProposer
+        );
     }
 
     function _getDataHash(address target, bytes calldata data)
@@ -637,7 +744,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             _appendAddressToData(data, proposer)
         );
 
-        require(!success, "MAC: expected to revert");
+        require(!success, PreflightCallUnexpectedSuccess());
 
         (
             bytes32 role,
@@ -648,7 +755,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         if (!roleIsFunctionOperator) {
             require(
                 !accessControl.isUserFacingRole(role),
-                "MAC: user facing role"
+                UserFacingRoleNotAllowed(role)
             );
         }
 
@@ -660,18 +767,6 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
                 _getFunctionSelector(data),
                 validateFunctionRole
             );
-    }
-
-    function getOperationId(address target, bytes calldata data)
-        external
-        view
-        returns (bytes32 operationId)
-    {
-        (operationId, , ) = _getOperationId(
-            TimelockController(payable(timelock)),
-            target,
-            data
-        );
     }
 
     function _getOperationId(
@@ -717,7 +812,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         )
     {
         // TODO: decode bools as well
-        require(err.length == 100, "MAC: invalid error length");
+        require(err.length == 100, InvalidPreflightError(err));
 
         bytes4 selector;
 
@@ -727,7 +822,10 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         }
 
         // checking if the error is a RolePreflightSucceeded error
-        require(selector == RolePreflightSucceeded.selector, "MAC: expected");
+        require(
+            selector == RolePreflightSucceeded.selector,
+            InvalidPreflightError(err)
+        );
 
         assembly {
             role := mload(add(err, 36))
