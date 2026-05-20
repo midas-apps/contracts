@@ -43,21 +43,19 @@ library AccessControlUtilsLibrary {
         bool isPreflight = accountToCheck == address(timelockManager);
         bool isTimelock = accountToCheck == timelockManager.timelock();
 
-        address account;
-
-        if (isPreflight || isTimelock) {
-            account = getAppendedAddress(msg.data);
-        } else {
-            account = accountToCheck;
-        }
-
         if (isPreflight) {
+            address account = _getAppendedAddress(msg.data);
+
             revert IMidasTimelockManager.RolePreflightSucceeded(
                 contractAdminRole,
                 roleIsFunctionOperatorRole,
                 validateFunctionRole
             );
         }
+
+        address account = isTimelock
+            ? timelockManager.getOriginalProposer(address(this), msg.data)
+            : accountToCheck;
 
         bytes32 roleUsed = validateFunctionAccess(
             accessControl,
@@ -69,16 +67,9 @@ library AccessControlUtilsLibrary {
         );
 
         (bool ready, bool timelocked) = timelockManager
-            .isFunctionReadyToExecute(
-                roleUsed,
-                address(this),
-                // if call comes from timelock it already has the caller appended
-                isTimelock ? msg.data : appendAddressToData(msg.data, account)
-            );
+            .isFunctionReadyToExecute(roleUsed, address(this), msg.data);
 
-        if (!ready) {
-            revert FunctionNotReady(roleUsed, msg.sig);
-        }
+        require(ready, FunctionNotReady(roleUsed, msg.sig));
 
         if (timelocked) {
             require(
@@ -86,33 +77,6 @@ library AccessControlUtilsLibrary {
                 SenderIsNotTimelock(roleUsed, msg.sig, accountToCheck)
             );
         }
-    }
-
-    /**
-     * @dev gets the appended address from the data
-     * @param data data to get the appended address from
-     * @return appended address
-     */
-    function getAppendedAddress(bytes calldata data)
-        internal
-        pure
-        returns (address)
-    {
-        return address(bytes20(data[data.length - 20:]));
-    }
-
-    /**
-     * @dev appends the address to the end of the data
-     * @param data data to append the caller to
-     * @param addr address to append
-     * @return data with the caller appended
-     */
-    function appendAddressToData(bytes calldata data, address addr)
-        internal
-        pure
-        returns (bytes memory)
-    {
-        return abi.encodePacked(data, addr);
     }
 
     /**
@@ -149,7 +113,7 @@ library AccessControlUtilsLibrary {
             }
 
             (bytes32 key, bool hasPermission) = validateFunctionRole
-                ? hasFunctionPermission(
+                ? _hasFunctionPermission(
                     accessControl,
                     role,
                     functionSelector,
@@ -171,12 +135,12 @@ library AccessControlUtilsLibrary {
      * @param functionSelector function selector
      * @param account address checked for permission
      */
-    function hasFunctionPermission(
+    function _hasFunctionPermission(
         IMidasAccessControl accessControl,
         bytes32 role,
         bytes4 functionSelector,
         address account
-    ) internal view returns (bytes32 key, bool hasPermission) {
+    ) private view returns (bytes32 key, bool hasPermission) {
         key = accessControl.functionPermissionKey(
             role,
             address(this),
@@ -184,5 +148,18 @@ library AccessControlUtilsLibrary {
         );
 
         hasPermission = accessControl.hasFunctionPermission(key, account);
+    }
+
+    /**
+     * @dev gets the appended address from the data
+     * @param data data to get the appended address from
+     * @return appended address
+     */
+    function _getAppendedAddress(bytes calldata data)
+        private
+        pure
+        returns (address)
+    {
+        return address(bytes20(data[data.length - 20:]));
     }
 }

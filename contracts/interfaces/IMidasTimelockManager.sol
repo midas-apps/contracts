@@ -28,6 +28,17 @@ interface IMidasTimelockManager {
     ) external view returns (bool ready, bool timelocked);
 
     /**
+     * @notice Get the original proposer of the pending operation
+     * @param target the target address
+     * @param data the data to execute the function
+     * @return originalProposer the original proposer of currently pending operation
+     */
+    function getOriginalProposer(address target, bytes calldata data)
+        external
+        view
+        returns (address);
+
+    /**
      * @notice address of the timelock manager
      * @return timelockManager address of the timelock manager
      */

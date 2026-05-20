@@ -96,8 +96,6 @@ export const setRoleTimelocksAndExecute = async (
     delays,
   ]);
 
-  console.log('data', delay.toString());
-
   const from = opt?.from ?? owner;
 
   await scheduleTimelockOperationsTester(
@@ -153,10 +151,7 @@ export const scheduleTimelockOperationsTester = async (
 
   const operationIds: string[] = [];
   for (const [index, operationTarget] of target.entries()) {
-    const operationData = ethers.utils.solidityPack(
-      ['bytes', 'address'],
-      [data[index], from.address],
-    );
+    const operationData = data[index];
 
     const dataHash = getDataHash(operationTarget, operationData);
 
@@ -205,25 +200,20 @@ export const executeTimelockOperationTester = async (
 
   const callFn = timelockManager
     .connect(from)
-    .executeTimelockOperation.bind(this, target, data, originalCaller);
+    .executeTimelockOperation.bind(this, target, data);
 
   if (await handleRevert(callFn, timelockManager, opt)) {
     return;
   }
 
-  const calldataWithCaller = ethers.utils.solidityPack(
-    ['bytes', 'address'],
-    [data, originalCaller],
-  );
-
-  const dataHash = getDataHash(target, calldataWithCaller);
+  const dataHash = getDataHash(target, data);
 
   const dataHashIndexBefore = await timelockManager.dataHashIndexes(dataHash);
 
   const operationId = await timelock.hashOperation(
     target,
     0,
-    calldataWithCaller,
+    data,
     ethers.constants.HashZero,
     getTimelockSalt(dataHashIndexBefore),
   );

@@ -185,16 +185,12 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     function isFunctionReadyToExecute(
         bytes32 targetRole,
         address target,
-        bytes calldata dataWithCaller
+        bytes calldata data
     ) external view returns (bool ready, bool timelocked) {
         (uint256 delay, ) = getRoleTimelockDelay(targetRole);
 
         TimelockController _timelock = TimelockController(payable(timelock));
-        (bytes32 operationId, , ) = _getOperationId(
-            _timelock,
-            target,
-            dataWithCaller
-        );
+        (bytes32 operationId, , ) = _getOperationId(_timelock, target, data);
 
         if (!_pendingOperations.contains(operationId) && delay == 0) {
             return (true, false);
@@ -215,6 +211,19 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         }
 
         return (false, true);
+    }
+
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
+    function getOriginalProposer(address target, bytes calldata data)
+        external
+        view
+        returns (address)
+    {
+        TimelockController _timelock = TimelockController(payable(timelock));
+        (bytes32 operationId, , ) = _getOperationId(_timelock, target, data);
+        return _operationChallenges[operationId].operationProposer;
     }
 
     function setSecurityCouncil(address[] calldata members)
@@ -241,19 +250,14 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         _scheduleTimelockOperation(target, data);
     }
 
-    function executeTimelockOperation(
-        address target,
-        bytes calldata data,
-        address originalProposer
-    ) external {
+    function executeTimelockOperation(address target, bytes calldata data)
+        external
+    {
         require(
             accessControl.hasRole(_DEFAULT_ADMIN_ROLE, msg.sender) ||
                 accessControl.hasRole(EXECUTOR_ROLE, msg.sender),
             "MAC: unauthorized"
         );
-
-        bytes memory dataWithCaller = AccessControlUtilsLibrary
-            .appendAddressToData(data, originalProposer);
 
         TimelockController _timelock = TimelockController(payable(timelock));
 
@@ -261,7 +265,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             bytes32 operationId,
             bytes32 dataHash,
             uint256 dataHashIndex
-        ) = _getOperationId(_timelock, target, dataWithCaller);
+        ) = _getOperationId(_timelock, target, data);
 
         (
             TimelockOperationStatus status,
@@ -279,13 +283,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             "timelock is not passed"
         );
 
-        _timelock.execute(
-            target,
-            0,
-            dataWithCaller,
-            bytes32(0),
-            bytes32(dataHashIndex)
-        );
+        _timelock.execute(target, 0, data, bytes32(0), bytes32(dataHashIndex));
 
         // TODO: move to util
         if (challenge.isSetCouncilOperation) {
@@ -295,7 +293,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         // in case of reentrancy timelock.execute will revert
         challenge.status = TimelockOperationStatus.Executed;
         dataHashIndexes[dataHash] = dataHashIndex + 1;
-        --proposerPendingOperationsCount[originalProposer];
+        --proposerPendingOperationsCount[challenge.operationProposer];
         require(_pendingOperations.remove(operationId), "MAC: not pending");
     }
 
@@ -529,9 +527,8 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         require(target != timelock, "MAC: target cannot be timelock");
 
         address proposer = msg.sender;
-        bytes memory dataWithCaller = AccessControlUtilsLibrary
-            .appendAddressToData(data, proposer);
-        bytes32 targetRole = _getTargetRole(target, dataWithCaller);
+
+        bytes32 targetRole = _getTargetRole(target, data, proposer);
 
         (uint256 delay, ) = getRoleTimelockDelay(targetRole);
 
@@ -543,11 +540,10 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             bytes32 operationId,
             bytes32 dataHash,
             uint256 dataHashIndex
-        ) = _getOperationId(_timelock, target, dataWithCaller);
+        ) = _getOperationId(_timelock, target, data);
 
         bool isSetCouncil = target == address(this) &&
-            _getFunctionSelector(dataWithCaller) ==
-            this.setSecurityCouncil.selector;
+            _getFunctionSelector(data) == this.setSecurityCouncil.selector;
 
         ++proposerPendingOperationsCount[proposer];
 
@@ -580,7 +576,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         _timelock.schedule(
             target,
             0,
-            dataWithCaller,
+            data,
             bytes32(0),
             bytes32(dataHashIndex),
             delay
@@ -622,7 +618,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         maxPendingOperationsPerProposer = _maxPendingOperationsPerProposer;
     }
 
-    function _getDataHash(address target, bytes memory data)
+    function _getDataHash(address target, bytes calldata data)
         private
         pure
         returns (bytes32)
@@ -631,12 +627,15 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         return keccak256(abi.encodePacked(target, uint256(0), data));
     }
 
-    function _getTargetRole(address target, bytes memory data)
-        private
-        returns (bytes32)
-    {
+    function _getTargetRole(
+        address target,
+        bytes calldata data,
+        address proposer
+    ) private returns (bytes32) {
         // TODO: convert to staticcall?
-        (bool success, bytes memory err) = target.call(data);
+        (bool success, bytes memory err) = target.call(
+            _appendAddressToData(data, proposer)
+        );
 
         require(!success, "MAC: expected to revert");
 
@@ -663,7 +662,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             );
     }
 
-    function getOperationId(address target, bytes calldata dataWithCaller)
+    function getOperationId(address target, bytes calldata data)
         external
         view
         returns (bytes32 operationId)
@@ -671,14 +670,14 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         (operationId, , ) = _getOperationId(
             TimelockController(payable(timelock)),
             target,
-            dataWithCaller
+            data
         );
     }
 
     function _getOperationId(
         TimelockController _timelock,
         address target,
-        bytes memory data
+        bytes calldata data
     )
         private
         view
@@ -700,7 +699,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         );
     }
 
-    function _getFunctionSelector(bytes memory data)
+    function _getFunctionSelector(bytes calldata data)
         private
         pure
         returns (bytes4)
@@ -735,5 +734,19 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             roleIsFunctionOperator := mload(add(err, 68))
             validateFunctionRole := mload(add(err, 100))
         }
+    }
+
+    /**
+     * @dev appends the address to the end of the data
+     * @param data data to append the caller to
+     * @param addr address to append
+     * @return data with the caller appended
+     */
+    function _appendAddressToData(bytes calldata data, address addr)
+        private
+        pure
+        returns (bytes memory)
+    {
+        return abi.encodePacked(data, addr);
     }
 }

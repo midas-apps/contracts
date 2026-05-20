@@ -2077,10 +2077,6 @@ describe('MidasTimelockManager', () => {
       const calldata = wAccessControlTester.interface.encodeFunctionData(
         'withOnlyContractAdmin',
       );
-      const dataWithCaller = ethers.utils.solidityPack(
-        ['bytes', 'address'],
-        [calldata, owner.address],
-      );
 
       const [operationId] = await scheduleTimelockOperationsTester(
         { timelockManager, timelock, owner, accessControl },
@@ -2091,7 +2087,7 @@ describe('MidasTimelockManager', () => {
       expect(
         await timelockManager.getOperationId(
           wAccessControlTester.address,
-          dataWithCaller,
+          calldata,
         ),
       ).to.eq(operationId);
     });
@@ -2649,10 +2645,6 @@ describe('MidasTimelockManager', () => {
       const calldata = wAccessControlTester.interface.encodeFunctionData(
         'withOnlyContractAdmin',
       );
-      const dataWithCaller = ethers.utils.solidityPack(
-        ['bytes', 'address'],
-        [calldata, owner.address],
-      );
 
       await scheduleTimelockOperationsTester(
         { timelockManager, timelock, owner, accessControl },
@@ -2666,7 +2658,7 @@ describe('MidasTimelockManager', () => {
         await timelockManager.isFunctionReadyToExecute(
           constants.HashZero,
           wAccessControlTester.address,
-          dataWithCaller,
+          calldata,
         );
 
       expect(ready).to.eq(true);
@@ -2691,10 +2683,6 @@ describe('MidasTimelockManager', () => {
 
       const calldata = wAccessControlTester.interface.encodeFunctionData(
         'withOnlyContractAdmin',
-      );
-      const dataWithCaller = ethers.utils.solidityPack(
-        ['bytes', 'address'],
-        [calldata, owner.address],
       );
 
       const [operationId] = await scheduleTimelockOperationsTester(
@@ -2726,7 +2714,7 @@ describe('MidasTimelockManager', () => {
         await timelockManager.isFunctionReadyToExecute(
           constants.HashZero,
           wAccessControlTester.address,
-          dataWithCaller,
+          calldata,
         );
 
       expect(ready).to.eq(true);
