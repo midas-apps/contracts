@@ -6299,6 +6299,129 @@ export const depositVaultSuits = (
             },
           );
         });
+
+        it('should fail: cant deposit if effective supply is > max cap', async () => {
+          const {
+            owner,
+            depositVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            regularAccounts,
+            customRecipient,
+            mockedAggregator,
+            mockedAggregatorMToken,
+          } = await loadDvFixture();
+          await mintToken(stableCoins.dai, regularAccounts[0], 101);
+          await approveBase18(
+            regularAccounts[0],
+            stableCoins.dai,
+            depositVault,
+            101,
+          );
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setRoundData({ mockedAggregator }, 1);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+          await setInstantFeeTest({ vault: depositVault, owner }, 0);
+          await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+          await depositInstantTest(
+            {
+              depositVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              customRecipient,
+            },
+            stableCoins.dai,
+            99,
+            {
+              from: regularAccounts[0],
+            },
+          );
+
+          await depositRequestTest(
+            {
+              depositVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              customRecipient,
+            },
+            stableCoins.dai,
+            2,
+            {
+              from: regularAccounts[0],
+              revertCustomError: {
+                customErrorName: 'SupplyCapExceeded',
+              },
+            },
+          );
+        });
+
+        it('should fail: cant deposit if effective supply is > max cap when pending requests fill cap', async () => {
+          const {
+            owner,
+            depositVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            regularAccounts,
+            mockedAggregator,
+            mockedAggregatorMToken,
+          } = await loadDvFixture();
+          await mintToken(stableCoins.dai, regularAccounts[0], 120);
+          await approveBase18(
+            regularAccounts[0],
+            stableCoins.dai,
+            depositVault,
+            120,
+          );
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setRoundData({ mockedAggregator }, 1);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+          await setInstantFeeTest({ vault: depositVault, owner }, 0);
+          await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+          await depositRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            60,
+            {
+              from: regularAccounts[0],
+            },
+          );
+
+          await depositRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            50,
+            {
+              from: regularAccounts[0],
+              revertCustomError: {
+                customErrorName: 'SupplyCapExceeded',
+              },
+            },
+          );
+        });
       });
 
       describe('approveRequest()', async () => {
@@ -6433,6 +6556,97 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             requestId,
             parseUnits('5'),
+          );
+        });
+
+        it('approve request should decrease pending supply', async () => {
+          const {
+            owner,
+            depositVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            mockedAggregator,
+            mockedAggregatorMToken,
+          } = await loadDvFixture();
+
+          await mintToken(stableCoins.dai, owner, 100);
+          await approveBase18(owner, stableCoins.dai, depositVault, 100);
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setRoundData({ mockedAggregator }, 1);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+          await setInstantFeeTest({ vault: depositVault, owner }, 0);
+          await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+          await depositRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            50,
+          );
+
+          await approveRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            0,
+            parseUnits('1'),
+          );
+        });
+
+        it('should fail: when after approval supply exceeds max cap', async () => {
+          const {
+            owner,
+            depositVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            mockedAggregator,
+            mockedAggregatorMToken,
+          } = await loadDvFixture();
+
+          await mintToken(stableCoins.dai, owner, 100);
+          await approveBase18(owner, stableCoins.dai, depositVault, 100);
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setRoundData({ mockedAggregator }, 1);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+          await setInstantFeeTest({ vault: depositVault, owner }, 0);
+          await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+          await depositInstantTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            90,
+          );
+
+          await depositRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            10,
+          );
+
+          await approveRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            0,
+            parseUnits('0.99'),
+            {
+              revertCustomError: {
+                customErrorName: 'SupplyCapExceeded',
+              },
+            },
           );
         });
       });
@@ -7079,6 +7293,117 @@ export const depositVaultSuits = (
             {
               revertCustomError: {
                 customErrorName: 'RequestNotPending',
+              },
+            },
+          );
+        });
+
+        it('approve request should decrease pending supply', async () => {
+          const {
+            owner,
+            depositVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            mockedAggregator,
+            mockedAggregatorMToken,
+          } = await loadDvFixture();
+
+          await mintToken(stableCoins.dai, owner, 100);
+          await approveBase18(owner, stableCoins.dai, depositVault, 100);
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setVariabilityToleranceTest(
+            { vault: depositVault, owner },
+            1000,
+          );
+          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setRoundData({ mockedAggregator }, 1);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+          await setInstantFeeTest({ vault: depositVault, owner }, 0);
+          await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+          await depositRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            50,
+          );
+
+          await approveRequestTest(
+            {
+              depositVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+            },
+            0,
+            parseUnits('1'),
+          );
+        });
+
+        it('should fail: when after approval supply exceeds max cap', async () => {
+          const {
+            owner,
+            depositVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            mockedAggregator,
+            mockedAggregatorMToken,
+          } = await loadDvFixture();
+
+          await mintToken(stableCoins.dai, owner, 100);
+          await approveBase18(owner, stableCoins.dai, depositVault, 100);
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setVariabilityToleranceTest(
+            { vault: depositVault, owner },
+            1000,
+          );
+          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setRoundData({ mockedAggregator }, 1);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+          await setInstantFeeTest({ vault: depositVault, owner }, 0);
+          await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+          await depositInstantTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            90,
+          );
+
+          await depositRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            10,
+          );
+
+          await approveRequestTest(
+            {
+              depositVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isSafe: true,
+            },
+            0,
+            parseUnits('0.99'),
+            {
+              revertCustomError: {
+                customErrorName: 'SupplyCapExceeded',
               },
             },
           );
@@ -10726,6 +11051,45 @@ export const depositVaultSuits = (
           await rejectRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             requestId,
+          );
+        });
+
+        it('rejecting request should decrease pending supply', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            depositVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadDvFixture();
+
+          await mintToken(stableCoins.dai, owner, 100);
+          await approveBase18(owner, stableCoins.dai, depositVault, 100);
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setRoundData({ mockedAggregator }, 1);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+          await setInstantFeeTest({ vault: depositVault, owner }, 0);
+          await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+          await depositRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            50,
+          );
+
+          await rejectRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            0,
           );
         });
       });
