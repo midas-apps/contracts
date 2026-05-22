@@ -77,6 +77,7 @@ import {
   expectedHoldbackPartRateFromAvg,
   setPreferLoanLiquidityTest,
   setLoanAprTest,
+  claimRedeemRequestTest,
 } from '../../common/redemption-vault.helpers';
 import {
   executeTimelockOperationTester,
@@ -3461,6 +3462,593 @@ export const redemptionVaultSuits = (
               from: regularAccounts[0],
             },
           );
+        });
+      });
+
+      describe('claimRequest()', () => {
+        const setupApprovedClaimerRequest = async (
+          customClaimer?: SignerWithAddress,
+          customRecipient?: SignerWithAddress,
+        ) => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            regularAccounts,
+            dataFeed,
+            requestRedeemer,
+            mockedAggregator,
+            mockedAggregatorMToken,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, regularAccounts[0], 100);
+          await approveBase18(regularAccounts[0], mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              customClaimer: customClaimer ?? regularAccounts[1],
+              customRecipient,
+            },
+            stableCoins.dai,
+            100,
+            {
+              from: regularAccounts[0],
+            },
+          );
+
+          await approveRedeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            0,
+            parseUnits('5'),
+          );
+
+          return {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            regularAccounts,
+            requestRedeemer,
+          };
+        };
+
+        it('should fail: when caller is not claimer or recipient', async () => {
+          const { redemptionVault, owner, regularAccounts } =
+            await setupApprovedClaimerRequest();
+
+          await claimRedeemRequestTest({ redemptionVault, owner }, 0, {
+            from: regularAccounts[2],
+            revertCustomError: {
+              customErrorName: 'InvalidClaimer',
+              args: [0, regularAccounts[2].address],
+            },
+          });
+        });
+
+        it('should fail: when request is not exist', async () => {
+          const { redemptionVault, owner, regularAccounts } =
+            await loadRvFixture();
+
+          await claimRedeemRequestTest({ redemptionVault, owner }, 1, {
+            from: regularAccounts[0],
+            revertCustomError: {
+              customErrorName: 'RequestNotExists',
+            },
+          });
+        });
+
+        it('should fail: when request exists but not approved', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            regularAccounts,
+            dataFeed,
+          } = await loadRvFixture();
+
+          await mintToken(mTBILL, regularAccounts[0], 100);
+          await approveBase18(regularAccounts[0], mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              customClaimer: regularAccounts[1],
+            },
+            stableCoins.dai,
+            100,
+            {
+              from: regularAccounts[0],
+            },
+          );
+
+          await claimRedeemRequestTest({ redemptionVault, owner }, 0, {
+            from: regularAccounts[1],
+            revertCustomError: {
+              customErrorName: 'UnexpectedRequestStatus',
+            },
+          });
+        });
+
+        it('should fail: when request was already rejected', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            regularAccounts,
+            dataFeed,
+          } = await loadRvFixture();
+
+          await mintToken(mTBILL, regularAccounts[0], 100);
+          await approveBase18(regularAccounts[0], mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              customClaimer: regularAccounts[1],
+            },
+            stableCoins.dai,
+            100,
+            {
+              from: regularAccounts[0],
+            },
+          );
+
+          await rejectRedeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            0,
+          );
+
+          await claimRedeemRequestTest({ redemptionVault, owner }, 0, {
+            from: regularAccounts[1],
+            revertCustomError: {
+              customErrorName: 'UnexpectedRequestStatus',
+            },
+          });
+        });
+
+        it('should fail: when already claimed', async () => {
+          const { redemptionVault, owner, regularAccounts } =
+            await setupApprovedClaimerRequest();
+
+          await claimRedeemRequestTest({ redemptionVault, owner }, 0, {
+            from: regularAccounts[1],
+          });
+
+          await claimRedeemRequestTest({ redemptionVault, owner }, 0, {
+            from: regularAccounts[1],
+            revertCustomError: {
+              customErrorName: 'UnexpectedRequestStatus',
+            },
+          });
+        });
+
+        it('should fail: when requestRedeemer balance is insufficient', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            regularAccounts,
+            dataFeed,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(mTBILL, regularAccounts[0], 100);
+          await approveBase18(regularAccounts[0], mTBILL, redemptionVault, 100);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100,
+          );
+          await addWaivedFeeAccountTest(
+            { vault: redemptionVault, owner },
+            regularAccounts[0].address,
+          );
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              customClaimer: regularAccounts[1],
+              waivedFee: true,
+            },
+            stableCoins.dai,
+            100,
+            {
+              from: regularAccounts[0],
+            },
+          );
+
+          await approveRedeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              waivedFee: true,
+            },
+            0,
+            parseUnits('5'),
+          );
+
+          await claimRedeemRequestTest({ redemptionVault, owner }, 0, {
+            from: regularAccounts[1],
+            revertMessage: 'ERC20: transfer amount exceeds balance',
+          });
+        });
+
+        it('should fail: when requestRedeemer allowance is insufficient', async () => {
+          const {
+            redemptionVault,
+            owner,
+            regularAccounts,
+            stableCoins,
+            requestRedeemer,
+          } = await setupApprovedClaimerRequest();
+
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            0,
+          );
+
+          await claimRedeemRequestTest({ redemptionVault, owner }, 0, {
+            from: regularAccounts[1],
+            revertMessage: 'ERC20: insufficient allowance',
+          });
+        });
+
+        it('when caller is recipient', async () => {
+          const { redemptionVault, owner, regularAccounts } =
+            await setupApprovedClaimerRequest();
+
+          await claimRedeemRequestTest({ redemptionVault, owner }, 0, {
+            from: regularAccounts[0],
+          });
+        });
+
+        it('when caller is claimer', async () => {
+          const { redemptionVault, owner, regularAccounts } =
+            await setupApprovedClaimerRequest();
+
+          await claimRedeemRequestTest({ redemptionVault, owner }, 0, {
+            from: regularAccounts[1],
+          });
+        });
+
+        it('should fail: when claimer got blacklisted after the request is created and then call claim from claimer', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            regularAccounts,
+            dataFeed,
+            requestRedeemer,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            blackListableTester,
+            accessControl,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, regularAccounts[0], 100);
+          await approveBase18(regularAccounts[0], mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              customClaimer: regularAccounts[1],
+              instantShare: 0,
+            },
+            stableCoins.dai,
+            100,
+            { from: regularAccounts[0] },
+          );
+
+          await approveRedeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            0,
+            parseUnits('5'),
+          );
+
+          await blackList(
+            { blacklistable: blackListableTester, accessControl, owner },
+            regularAccounts[1],
+          );
+
+          await claimRedeemRequestTest({ redemptionVault, owner }, 0, {
+            from: regularAccounts[1],
+            revertCustomError: acErrors.WMAC_HAS_ROLE,
+          });
+        });
+
+        it('should fail: when recipient got blacklisted after the request is created and then call claim from recipient', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            regularAccounts,
+            dataFeed,
+            requestRedeemer,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            blackListableTester,
+            accessControl,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, regularAccounts[0], 100);
+          await approveBase18(regularAccounts[0], mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              customClaimer: regularAccounts[1],
+              instantShare: 0,
+            },
+            stableCoins.dai,
+            100,
+            { from: regularAccounts[0] },
+          );
+
+          await approveRedeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            0,
+            parseUnits('5'),
+          );
+
+          await blackList(
+            { blacklistable: blackListableTester, accessControl, owner },
+            regularAccounts[0],
+          );
+
+          await claimRedeemRequestTest({ redemptionVault, owner }, 0, {
+            from: regularAccounts[0],
+            revertCustomError: acErrors.WMAC_HAS_ROLE,
+          });
+        });
+
+        it('should fail: when claimer is not greenlisted but greenlist is enforced', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            regularAccounts,
+            dataFeed,
+            requestRedeemer,
+            mockedAggregator,
+            mockedAggregatorMToken,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, regularAccounts[0], 100);
+          await approveBase18(regularAccounts[0], mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              customClaimer: regularAccounts[1],
+              instantShare: 0,
+            },
+            stableCoins.dai,
+            100,
+            { from: regularAccounts[0] },
+          );
+
+          await approveRedeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            0,
+            parseUnits('5'),
+          );
+
+          await redemptionVault.setGreenlistEnable(true);
+
+          await claimRedeemRequestTest({ redemptionVault, owner }, 0, {
+            from: regularAccounts[1],
+            revertCustomError: acErrors.WMAC_HASNT_ROLE,
+          });
+        });
+
+        it('should fail: when recipient is not greenlisted but greenlist is enforced', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            regularAccounts,
+            dataFeed,
+            requestRedeemer,
+            mockedAggregator,
+            mockedAggregatorMToken,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await mintToken(mTBILL, regularAccounts[0], 100);
+          await approveBase18(regularAccounts[0], mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              customClaimer: regularAccounts[1],
+              instantShare: 0,
+            },
+            stableCoins.dai,
+            100,
+            { from: regularAccounts[0] },
+          );
+
+          await approveRedeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            0,
+            parseUnits('5'),
+          );
+
+          await redemptionVault.setGreenlistEnable(true);
+
+          await claimRedeemRequestTest({ redemptionVault, owner }, 0, {
+            from: regularAccounts[0],
+            revertCustomError: acErrors.WMAC_HASNT_ROLE,
+          });
+        });
+
+        it('should fail: when claim fn is paused', async () => {
+          const { redemptionVault, owner, regularAccounts } =
+            await setupApprovedClaimerRequest();
+
+          await pauseVaultFn(
+            { pauseManager, owner },
+            redemptionVault,
+            encodeFnSelector('claimRequest(uint256)'),
+          );
+
+          await claimRedeemRequestTest({ redemptionVault, owner }, 0, {
+            from: regularAccounts[1],
+            revertCustomError: {
+              customErrorName: 'Paused',
+            },
+          });
         });
       });
 
@@ -7434,6 +8022,52 @@ export const redemptionVaultSuits = (
           );
         });
 
+        it('should fail: when specified claimer is blacklisted', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            blackListableTester,
+            accessControl,
+            regularAccounts,
+            dataFeed,
+          } = await loadRvFixture();
+
+          await blackList(
+            { blacklistable: blackListableTester, accessControl, owner },
+            regularAccounts[1],
+          );
+
+          await mintToken(mTBILL, regularAccounts[0], 100);
+          await approveBase18(regularAccounts[0], mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              customClaimer: regularAccounts[1],
+              instantShare: 0,
+            },
+            stableCoins.dai,
+            100,
+            {
+              from: regularAccounts[0],
+              revertCustomError: acErrors.WMAC_HAS_ROLE,
+            },
+          );
+        });
+
         it('should fail: recipient in sanctions list (custom recipient overload)', async () => {
           const {
             owner,
@@ -7923,6 +8557,180 @@ export const redemptionVaultSuits = (
             },
           );
         });
+
+        describe('claimer', () => {
+          it('when claimer is address(0)', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(mTBILL, regularAccounts[0], 100);
+            await approveBase18(
+              regularAccounts[0],
+              mTBILL,
+              redemptionVault,
+              100,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 0,
+              },
+              stableCoins.dai,
+              100,
+              {
+                from: regularAccounts[0],
+              },
+            );
+          });
+
+          it('when claimer is the same as recipient', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(mTBILL, regularAccounts[0], 100);
+            await approveBase18(
+              regularAccounts[0],
+              mTBILL,
+              redemptionVault,
+              100,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[0],
+                instantShare: 0,
+              },
+              stableCoins.dai,
+              100,
+              {
+                from: regularAccounts[0],
+              },
+            );
+          });
+
+          it('when claimer is not zero', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(mTBILL, regularAccounts[0], 100);
+            await approveBase18(
+              regularAccounts[0],
+              mTBILL,
+              redemptionVault,
+              100,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 0,
+              },
+              stableCoins.dai,
+              100,
+              {
+                from: regularAccounts[0],
+              },
+            );
+          });
+
+          it('when claimer is not zero and instant part is not zero', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(mTBILL, regularAccounts[0], 100);
+            await approveBase18(
+              regularAccounts[0],
+              mTBILL,
+              redemptionVault,
+              100,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 50_00,
+              },
+              stableCoins.dai,
+              100,
+              {
+                from: regularAccounts[0],
+              },
+            );
+          });
+        });
       });
 
       describe('approveRequest()', async () => {
@@ -8086,7 +8894,7 @@ export const redemptionVaultSuits = (
             parseUnits('1'),
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -8187,6 +8995,170 @@ export const redemptionVaultSuits = (
             +requestId,
             parseUnits('1'),
           );
+        });
+
+        describe('claimer', () => {
+          it('when claimer address is not address(0)', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              requestRedeemer,
+              regularAccounts,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 0,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await approveRedeemRequestTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('1'),
+            );
+          });
+
+          it('when claimer address is the same as recipient', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              requestRedeemer,
+              regularAccounts,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: owner,
+                instantShare: 0,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await approveRedeemRequestTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('1'),
+            );
+          });
+
+          it('when claimer specified and request redeemer has not enough balance', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+            } = await loadRvFixture();
+
+            await addWaivedFeeAccountTest(
+              { vault: redemptionVault, owner },
+              owner.address,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 0,
+                waivedFee: true,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await approveRedeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                waivedFee: true,
+              },
+              0,
+              parseUnits('1'),
+            );
+          });
         });
       });
 
@@ -8395,7 +9367,7 @@ export const redemptionVaultSuits = (
             parseUnits('5.00001'),
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -8510,6 +9482,182 @@ export const redemptionVaultSuits = (
             +requestId,
             parseUnits('5.000001'),
           );
+        });
+
+        describe('claimer', () => {
+          it('when claimer address is not address(0)', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              requestRedeemer,
+              regularAccounts,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 0,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await approveRedeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+              },
+              0,
+              parseUnits('1'),
+            );
+          });
+
+          it('when claimer address is the same as recipient', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              requestRedeemer,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: owner,
+                instantShare: 0,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await approveRedeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+              },
+              0,
+              parseUnits('1'),
+            );
+          });
+
+          it('when claimer specified and request redeemer has not enough balance', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+            } = await loadRvFixture();
+
+            await addWaivedFeeAccountTest(
+              { vault: redemptionVault, owner },
+              owner.address,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 0,
+                waivedFee: true,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await approveRedeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+                waivedFee: true,
+              },
+              0,
+              parseUnits('1'),
+            );
+          });
         });
       });
 
@@ -8717,7 +9865,7 @@ export const redemptionVaultSuits = (
             parseUnits('5'),
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -8973,6 +10121,185 @@ export const redemptionVaultSuits = (
             parseUnits('5'),
           );
         });
+
+        describe('claimer', () => {
+          it('when claimer address is not address(0)', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              requestRedeemer,
+              regularAccounts,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 50_00,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await approveRedeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isAvgRate: true,
+              },
+              0,
+              parseUnits('5'),
+            );
+          });
+
+          it('when claimer address is the same as recipient', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              requestRedeemer,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: owner,
+                instantShare: 50_00,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await approveRedeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isAvgRate: true,
+              },
+              0,
+              parseUnits('5'),
+            );
+          });
+
+          it('when claimer specified and request redeemer has not enough balance', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await addWaivedFeeAccountTest(
+              { vault: redemptionVault, owner },
+              owner.address,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 50_00,
+                waivedFee: true,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await approveRedeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isAvgRate: true,
+                waivedFee: true,
+              },
+              0,
+              parseUnits('5'),
+            );
+          });
+        });
       });
 
       describe('safeApproveRequestAvgRate()', async () => {
@@ -9184,7 +10511,7 @@ export const redemptionVaultSuits = (
             parseUnits('5'),
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -9541,6 +10868,188 @@ export const redemptionVaultSuits = (
             parseUnits('5'),
           );
         });
+
+        describe('claimer', () => {
+          it('when claimer address is not address(0)', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              requestRedeemer,
+              regularAccounts,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 50_00,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await approveRedeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isAvgRate: true,
+                isSafe: true,
+              },
+              0,
+              parseUnits('5'),
+            );
+          });
+
+          it('when claimer address is the same as recipient', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              requestRedeemer,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: owner,
+                instantShare: 50_00,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await approveRedeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isAvgRate: true,
+                isSafe: true,
+              },
+              0,
+              parseUnits('5'),
+            );
+          });
+
+          it('when claimer specified and request redeemer has not enough balance', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await addWaivedFeeAccountTest(
+              { vault: redemptionVault, owner },
+              owner.address,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 50_00,
+                waivedFee: true,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await approveRedeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isAvgRate: true,
+                isSafe: true,
+                waivedFee: true,
+              },
+              0,
+              parseUnits('5'),
+            );
+          });
+        });
       });
 
       describe('safeBulkApproveRequestAtSavedRate()', async () => {
@@ -9644,7 +11153,7 @@ export const redemptionVaultSuits = (
             'request-rate',
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -9733,7 +11242,7 @@ export const redemptionVaultSuits = (
             'request-rate',
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -9800,7 +11309,7 @@ export const redemptionVaultSuits = (
             'request-rate',
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -10002,6 +11511,51 @@ export const redemptionVaultSuits = (
           await safeBulkApproveRequestTest(
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: requestId, expectedToExecute: false }],
+            'request-rate',
+          );
+        });
+
+        it('should fail: when token fee is not 0, user is not fee waived and request redeemer do not have enough tokens to transfer the fee', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            regularAccounts,
+          } = await loadRvFixture();
+
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            100,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              customClaimer: regularAccounts[1],
+              instantShare: 0,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await safeBulkApproveRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            [{ id: 0, expectedToExecute: false }],
             'request-rate',
           );
         });
@@ -10234,6 +11788,168 @@ export const redemptionVaultSuits = (
             [{ id: requestId }],
             'request-rate',
           );
+        });
+
+        describe('claimer', () => {
+          it('when claimer address is not address(0)', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              requestRedeemer,
+              regularAccounts,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 0,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await safeBulkApproveRequestTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              [{ id: 0 }],
+              'request-rate',
+            );
+          });
+
+          it('when claimer address is the same as recipient', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              requestRedeemer,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: owner,
+                instantShare: 0,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await safeBulkApproveRequestTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              [{ id: 0 }],
+              'request-rate',
+            );
+          });
+
+          it('when claimer specified and request redeemer has not enough balance', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+            } = await loadRvFixture();
+
+            await addWaivedFeeAccountTest(
+              { vault: redemptionVault, owner },
+              owner.address,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 0,
+                waivedFee: true,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await safeBulkApproveRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+              },
+              [{ id: 0 }],
+              'request-rate',
+            );
+          });
         });
       });
 
@@ -10462,7 +12178,7 @@ export const redemptionVaultSuits = (
             parseUnits('5.00001'),
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -10529,7 +12245,7 @@ export const redemptionVaultSuits = (
             parseUnits('5.00001'),
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -10596,7 +12312,7 @@ export const redemptionVaultSuits = (
             parseUnits('5.00001'),
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -11030,6 +12746,163 @@ export const redemptionVaultSuits = (
             [{ id: requestId }],
             parseUnits('5.000001'),
           );
+        });
+
+        describe('claimer', () => {
+          it('when claimer address is not address(0)', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              requestRedeemer,
+              regularAccounts,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 0,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await safeBulkApproveRequestTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              [{ id: 0 }],
+              parseUnits('1'),
+            );
+          });
+
+          it('when claimer address is the same as recipient', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              requestRedeemer,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: owner,
+                instantShare: 0,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await safeBulkApproveRequestTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              [{ id: 0 }],
+              parseUnits('1'),
+            );
+          });
+
+          it('when claimer specified and request redeemer has not enough balance', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+            } = await loadRvFixture();
+
+            await addWaivedFeeAccountTest(
+              { vault: redemptionVault, owner },
+              owner.address,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 0,
+                waivedFee: true,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await safeBulkApproveRequestTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              [{ id: 0 }],
+              parseUnits('1'),
+            );
+          });
         });
       });
 
@@ -11262,7 +13135,7 @@ export const redemptionVaultSuits = (
             undefined,
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -11329,7 +13202,7 @@ export const redemptionVaultSuits = (
             undefined,
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -11396,7 +13269,7 @@ export const redemptionVaultSuits = (
             undefined,
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -11934,6 +13807,160 @@ export const redemptionVaultSuits = (
             undefined,
           );
         });
+
+        describe('claimer', () => {
+          it('when claimer address is not address(0)', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              requestRedeemer,
+              regularAccounts,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 0,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await safeBulkApproveRequestTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              [{ id: 0 }],
+            );
+          });
+
+          it('when claimer address is the same as recipient', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              requestRedeemer,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: owner,
+                instantShare: 0,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await safeBulkApproveRequestTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              [{ id: 0 }],
+            );
+          });
+
+          it('when claimer specified and request redeemer has not enough balance', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+            } = await loadRvFixture();
+
+            await addWaivedFeeAccountTest(
+              { vault: redemptionVault, owner },
+              owner.address,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 0,
+                waivedFee: true,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await safeBulkApproveRequestTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              [{ id: 0 }],
+            );
+          });
+        });
       });
 
       describe('safeBulkApproveRequestAvgRate() (custom price overload)', async () => {
@@ -12194,7 +14221,7 @@ export const redemptionVaultSuits = (
             parseUnits('5.00001'),
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -12281,7 +14308,7 @@ export const redemptionVaultSuits = (
             parseUnits('5.00001'),
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -12368,7 +14395,7 @@ export const redemptionVaultSuits = (
             parseUnits('5.00001'),
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -13004,6 +15031,184 @@ export const redemptionVaultSuits = (
             parseUnits('5.000001'),
           );
         });
+
+        describe('claimer', () => {
+          it('when claimer address is not address(0)', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              requestRedeemer,
+              regularAccounts,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 50_00,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await safeBulkApproveRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isAvgRate: true,
+              },
+              [{ id: 0 }],
+              parseUnits('5'),
+            );
+          });
+
+          it('when claimer address is the same as recipient', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              requestRedeemer,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: owner,
+                instantShare: 50_00,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await safeBulkApproveRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isAvgRate: true,
+              },
+              [{ id: 0 }],
+              parseUnits('5'),
+            );
+          });
+
+          it('when claimer specified and request redeemer has not enough balance', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await addWaivedFeeAccountTest(
+              { vault: redemptionVault, owner },
+              owner.address,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 50_00,
+                waivedFee: true,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await safeBulkApproveRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isAvgRate: true,
+              },
+              [{ id: 0 }],
+              parseUnits('5'),
+            );
+          });
+        });
       });
 
       describe('safeBulkApproveRequestAvgRate() (current price overload)', async () => {
@@ -13293,7 +15498,7 @@ export const redemptionVaultSuits = (
             undefined,
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -13380,7 +15585,7 @@ export const redemptionVaultSuits = (
             undefined,
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -13467,7 +15672,7 @@ export const redemptionVaultSuits = (
             undefined,
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -14229,6 +16434,181 @@ export const redemptionVaultSuits = (
             undefined,
           );
         });
+
+        describe('claimer', () => {
+          it('when claimer address is not address(0)', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              requestRedeemer,
+              regularAccounts,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 50_00,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await safeBulkApproveRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isAvgRate: true,
+              },
+              [{ id: 0 }],
+            );
+          });
+
+          it('when claimer address is the same as recipient', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              requestRedeemer,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: owner,
+                instantShare: 50_00,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await safeBulkApproveRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isAvgRate: true,
+              },
+              [{ id: 0 }],
+            );
+          });
+
+          it('when claimer specified and request redeemer has not enough balance', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100);
+            await addWaivedFeeAccountTest(
+              { vault: redemptionVault, owner },
+              owner.address,
+            );
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 50_00,
+                waivedFee: true,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await safeBulkApproveRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isAvgRate: true,
+              },
+              [{ id: 0 }],
+            );
+          });
+        });
       });
 
       describe('rejectRequest()', async () => {
@@ -14342,7 +16722,7 @@ export const redemptionVaultSuits = (
             +requestId,
             {
               revertCustomError: {
-                customErrorName: 'RequestNotPending',
+                customErrorName: 'UnexpectedRequestStatus',
               },
             },
           );
@@ -14385,6 +16765,123 @@ export const redemptionVaultSuits = (
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             +requestId,
           );
+        });
+
+        describe('claimer', () => {
+          it('should fail: when request was approved and claimed', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+              requestRedeemer,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, regularAccounts[0], 100);
+            await approveBase18(
+              regularAccounts[0],
+              mTBILL,
+              redemptionVault,
+              100,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 0,
+              },
+              stableCoins.dai,
+              100,
+              {
+                from: regularAccounts[0],
+              },
+            );
+
+            await approveRedeemRequestTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('5'),
+            );
+
+            await claimRedeemRequestTest({ redemptionVault, owner }, 0, {
+              from: regularAccounts[1],
+            });
+
+            await rejectRedeemRequestTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              {
+                revertCustomError: {
+                  customErrorName: 'UnexpectedRequestStatus',
+                },
+              },
+            );
+          });
+
+          it('when claimer is specified but request is not approved', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customClaimer: regularAccounts[1],
+                instantShare: 0,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            await rejectRedeemRequestTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+            );
+          });
         });
       });
 
@@ -14965,7 +17462,7 @@ export const redemptionVaultSuits = (
               [{ id: 0 }],
               {
                 revertCustomError: {
-                  customErrorName: 'RequestNotPending',
+                  customErrorName: 'UnexpectedRequestStatus',
                 },
               },
             );
@@ -15387,7 +17884,7 @@ export const redemptionVaultSuits = (
               0,
               {
                 revertCustomError: {
-                  customErrorName: 'RequestNotPending',
+                  customErrorName: 'UnexpectedRequestStatus',
                 },
               },
             );
@@ -15408,7 +17905,7 @@ export const redemptionVaultSuits = (
               0,
               {
                 revertCustomError: {
-                  customErrorName: 'RequestNotPending',
+                  customErrorName: 'UnexpectedRequestStatus',
                 },
               },
             );

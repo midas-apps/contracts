@@ -89,9 +89,11 @@ contract DepositVaultTest is DepositVault {
                     approvedTokenOutRate: 0,
                     depositedUsdAmount: depositedUsdAmount,
                     usdAmountWithoutFees: 0,
-                    sender: address(0),
+                    recipient: address(0),
+                    claimer: address(0),
                     tokenIn: address(0),
-                    status: RequestStatus.Pending
+                    status: RequestStatus.Pending,
+                    amountMToken: 0
                 }),
                 avgMTokenRate
             );

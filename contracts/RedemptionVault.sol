@@ -180,6 +180,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 tokenOut,
                 amountMTokenIn,
                 msg.sender,
+                address(0),
                 0,
                 0,
                 msg.sender
@@ -204,6 +205,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 tokenOut,
                 amountMTokenIn,
                 recipient,
+                address(0),
                 0,
                 0,
                 recipient
@@ -217,6 +219,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address tokenOut,
         uint256 amountMTokenIn,
         address recipientRequest,
+        address claimerRequest,
         uint256 instantShare,
         uint256 minReceiveAmountInstantShare,
         address recipientInstant
@@ -231,10 +234,43 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 tokenOut,
                 amountMTokenIn,
                 recipientRequest,
+                claimerRequest,
                 instantShare,
                 minReceiveAmountInstantShare,
                 recipientInstant
             );
+    }
+
+    /**
+     * @inheritdoc IRedemptionVault
+     */
+    function claimRequest(uint256 requestId)
+        external
+        validateUserAccess(msg.sender)
+    {
+        Request memory request = redeemRequests[requestId];
+        _validateRequest(
+            requestId,
+            request.recipient,
+            request.status,
+            RequestStatus.Approved
+        );
+        require(
+            msg.sender == request.claimer || msg.sender == request.recipient,
+            InvalidClaimer(requestId, msg.sender)
+        );
+
+        redeemRequests[requestId].status = RequestStatus.Processed;
+
+        _tokenTransferFromTo(
+            request.tokenOut,
+            requestRedeemer,
+            msg.sender,
+            request.amountTokenOut,
+            _tokenDecimals(request.tokenOut)
+        );
+
+        emit ClaimRequest(msg.sender, requestId);
     }
 
     /**
@@ -344,11 +380,11 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     function rejectRequest(uint256 requestId) external onlyContractAdmin {
         Request memory request = redeemRequests[requestId];
 
-        _validateRequest(requestId, request.sender, request.status);
+        _validateRequest(requestId, request.recipient, request.status);
 
         redeemRequests[requestId].status = RequestStatus.Canceled;
 
-        emit RejectRequest(requestId, request.sender);
+        emit RejectRequest(requestId, request.recipient);
     }
 
     /**
@@ -569,7 +605,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     {
         Request memory request = redeemRequests[requestId];
 
-        _validateRequest(requestId, request.sender, request.status);
+        _validateRequest(requestId, request.recipient, request.status);
 
         if (isSafe) {
             require(
@@ -590,7 +626,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         require(newMTokenRate > 0, InvalidNewMTokenRate());
 
         CalcAndValidateRedeemResult memory calcResult = _calcAndValidateRedeem(
-            request.sender,
+            request.recipient,
             request.tokenOut,
             request.amountMToken,
             newMTokenRate,
@@ -600,24 +636,34 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             false
         );
 
+        bool hasClaimer = request.claimer != address(0);
+
         if (
             safeValidateLiquidity &&
             !_validateLiquidity(
                 request.tokenOut,
-                calcResult.amountTokenOutWithoutFee + calcResult.feeAmount,
+                hasClaimer
+                    ? calcResult.feeAmount
+                    : calcResult.amountTokenOutWithoutFee +
+                        calcResult.feeAmount,
                 calcResult.tokenOutDecimals
             )
         ) {
             return false;
         }
 
-        _tokenTransferFromTo(
-            request.tokenOut,
-            requestRedeemer,
-            request.sender,
-            calcResult.amountTokenOutWithoutFee,
-            calcResult.tokenOutDecimals
-        );
+        if (hasClaimer) {
+            request.status = RequestStatus.Approved;
+        } else {
+            _tokenTransferFromTo(
+                request.tokenOut,
+                requestRedeemer,
+                request.recipient,
+                calcResult.amountTokenOutWithoutFee,
+                calcResult.tokenOutDecimals
+            );
+            request.status = RequestStatus.Processed;
+        }
 
         _tokenTransferFromTo(
             request.tokenOut,
@@ -634,7 +680,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         mToken.burn(requestRedeemer, request.amountMToken);
 
-        request.status = RequestStatus.Processed;
+        request.amountTokenOut = calcResult.amountTokenOutWithoutFee;
         request.approvedMTokenRate = newMTokenRate;
         redeemRequests[requestId] = request;
 
@@ -646,17 +692,44 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @notice validates request
      * if exist
-     * if not processed
+     * if status is pending
+     * @param requestId request id
      * @param validateAddress address to check if not zero
-     * @param status request status
+     * @param status actual request status
      */
     function _validateRequest(
         uint256 requestId,
         address validateAddress,
         RequestStatus status
     ) private pure {
+        _validateRequest(
+            requestId,
+            validateAddress,
+            status,
+            RequestStatus.Pending
+        );
+    }
+
+    /**
+     * @notice validates request
+     * if exist
+     * if status is expected
+     * @param requestId request id
+     * @param validateAddress address to check if not zero
+     * @param status actual request status
+     * @param expectedStatus expected status
+     */
+    function _validateRequest(
+        uint256 requestId,
+        address validateAddress,
+        RequestStatus status,
+        RequestStatus expectedStatus
+    ) private pure {
         require(validateAddress != address(0), RequestNotExists(requestId));
-        require(status == RequestStatus.Pending, RequestNotPending(requestId));
+        require(
+            status == expectedStatus,
+            UnexpectedRequestStatus(requestId, status)
+        );
     }
 
     /**
@@ -703,6 +776,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @param tokenOut tokenOut address
      * @param amountMTokenIn amount of mToken (decimals 18)
      * @param recipientRequest recipient address for the request part
+     * @param claimerRequest claimer address for the request part
      * @param instantShare % amount of `amountMTokenIn` that will be redeemed instantly
      * @param minReceiveAmountInstantShare min amount of tokenOut to receive for the instant share
      * @param recipientInstant recipient address for the instant part
@@ -712,6 +786,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address tokenOut,
         uint256 amountMTokenIn,
         address recipientRequest,
+        address claimerRequest,
         uint256 instantShare,
         uint256 minReceiveAmountInstantShare,
         address recipientInstant
@@ -722,6 +797,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             uint256 /* requestId */
         )
     {
+        if (claimerRequest != address(0)) {
+            _validateUserAccess(claimerRequest, false);
+        }
+
         uint256 amountMTokenInInstant = (amountMTokenIn * instantShare) /
             ONE_HUNDRED_PERCENT;
 
@@ -742,6 +821,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 tokenOut,
                 amountMTokenInRequest,
                 recipientRequest,
+                claimerRequest,
                 amountMTokenInInstant
             );
     }
@@ -1022,6 +1102,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @param tokenOut tokenOut address
      * @param amountMTokenIn amount of mToken (decimals 18)
      * @param recipient recipient address
+     * @param claimer claimer address
      * @param amountMTokenInstant amount of mToken that was redeemed instantly
      *
      * @return requestId request id
@@ -1030,6 +1111,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address tokenOut,
         uint256 amountMTokenIn,
         address recipient,
+        address claimer,
         uint256 amountMTokenInstant
     ) private returns (uint256 requestId) {
         _requireTokenExists(tokenOut);
@@ -1060,7 +1142,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 feePercent = _getFee(user, tokenOut, false);
 
         redeemRequests[requestId] = Request({
-            sender: recipient,
+            recipient: recipient,
+            claimer: claimer,
             tokenOut: tokenOut,
             status: RequestStatus.Pending,
             amountMToken: amountMTokenIn,
@@ -1068,7 +1151,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             tokenOutRate: tokenOutRate,
             feePercent: feePercent,
             amountMTokenInstant: amountMTokenInstant,
-            approvedMTokenRate: 0
+            approvedMTokenRate: 0,
+            amountTokenOut: 0
         });
 
         emit RedeemRequest(
@@ -1076,6 +1160,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             msg.sender,
             tokenOut,
             recipient,
+            claimer,
             amountMTokenIn,
             amountMTokenInstant,
             mTokenRate,

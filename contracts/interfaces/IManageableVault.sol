@@ -32,6 +32,7 @@ struct LimitConfig {
 
 enum RequestStatus {
     Pending,
+    Approved,
     Processed,
     Canceled
 }
@@ -112,10 +113,11 @@ interface IManageableVault {
     error InvalidNewMTokenRate();
     error InvalidInstantAmount();
     error RequestNotExists(uint256 requestId);
-    error RequestNotPending(uint256 requestId);
+    error UnexpectedRequestStatus(uint256 requestId, RequestStatus status);
     error InstantShareTooHigh(uint256 instantShare, uint256 maxInstantShare);
     error InvalidAmount();
     error AmountLessThanMin(uint256 amount, uint256 minAmount);
+    error InvalidClaimer(uint256 requestId, address claimer);
 
     /**
      * @param caller function caller (msg.sender)

@@ -7,8 +7,10 @@ import "./IManageableVault.sol";
  * @notice Mint request scruct
  */
 struct Request {
-    /// @notice user address who will receive the mTokens
-    address sender;
+    /// @notice address who will receive the mTokens
+    address recipient;
+    /// @notice address who can claim the request if it is approved
+    address claimer;
     /// @notice tokenIn address
     address tokenIn;
     /// @notice request status
@@ -23,6 +25,8 @@ struct Request {
     uint256 depositedInstantUsdAmount;
     /// @notice approved tokenOut rate
     uint256 approvedTokenOutRate;
+    /// @notice amount of mToken that was minted
+    uint256 amountMToken;
 }
 
 /**
@@ -86,6 +90,7 @@ interface IDepositVault is IManageableVault {
      * @param requestId mint request id
      * @param user function caller (msg.sender)
      * @param recipient address that receives the mTokens
+     * @param claimer address that can claim the request
      * @param tokenIn address of tokenIn
      * @param amountToken amount of tokenIn
      * @param amountUsd amount of tokenIn converted to USD
@@ -98,12 +103,19 @@ interface IDepositVault is IManageableVault {
         address indexed user,
         address indexed tokenIn,
         address recipient,
+        address claimer,
         uint256 amountToken,
         uint256 amountUsd,
         uint256 fee,
         uint256 tokenOutRate,
         bytes32 referrerId
     );
+
+    /**
+     * @param requestId request id
+     * @param caller function caller (msg.sender)
+     */
+    event ClaimRequest(address indexed caller, uint256 indexed requestId);
 
     /**
      * @param requestId mint request id
@@ -201,6 +213,7 @@ interface IDepositVault is IManageableVault {
      * @param amountToken amount of `tokenIn` that will be taken from user (decimals 18)
      * @param referrerId referrer id
      * @param recipientRequest address that receives the mTokens for the request part
+     * @param claimerRequest address that can claim the request
      * @param instantShare % amount of `amountToken` that will be deposited instantly
      * @param minReceiveAmountInstantShare min receive amount for the instant share
      * @param recipientInstant address that receives the mTokens for the instant part
@@ -211,10 +224,18 @@ interface IDepositVault is IManageableVault {
         uint256 amountToken,
         bytes32 referrerId,
         address recipientRequest,
+        address claimerRequest,
         uint256 instantShare,
         uint256 minReceiveAmountInstantShare,
         address recipientInstant
     ) external returns (uint256);
+
+    /**
+     * @notice claiming of approved request where claimer is specified
+     * @dev can be called by claimer or original request recipient
+     * @param requestId request id
+     */
+    function claimRequest(uint256 requestId) external;
 
     /**
      * @notice approving requests from the `requestIds` array

@@ -6,6 +6,9 @@ import { ethers } from 'hardhat';
 
 import {
   ERC20,
+  ERC20,
+  ERC20,
+  ERC20__factory,
   ERC20Mock,
   IERC20Metadata,
   MidasPauseManager,
@@ -333,9 +336,13 @@ export const tokenAmountFromBase18 = async (
 };
 
 export const balanceOfBase18 = async (
-  token: ERC20 | IERC20Metadata,
+  token: ERC20 | IERC20Metadata | string,
   of: AccountOrContract,
 ) => {
+  if (typeof token === 'string') {
+    token = ERC20__factory.connect(token, ethers.provider);
+  }
+
   if (token.address === ethers.constants.AddressZero)
     return ethers.constants.Zero;
   of = getAccount(of);

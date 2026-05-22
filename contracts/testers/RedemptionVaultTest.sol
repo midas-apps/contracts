@@ -55,9 +55,11 @@ contract RedemptionVaultTest is RedemptionVault {
                     tokenOut: address(0),
                     tokenOutRate: 0,
                     feePercent: 0,
-                    sender: address(0),
+                    recipient: address(0),
+                    claimer: address(0),
                     status: RequestStatus.Pending,
-                    approvedMTokenRate: 0
+                    approvedMTokenRate: 0,
+                    amountTokenOut: 0
                 }),
                 avgMTokenRate
             );
