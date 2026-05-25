@@ -1,49 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.34;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 import "../DepositVault.sol";
+import {ManageableVaultTester} from "./ManageableVaultTester.sol";
 
-contract DepositVaultTest is DepositVault {
-    bool private _overrideGetTokenRate;
-    uint256 private _getTokenRateValue;
-
-    function _disableInitializers() internal virtual override {}
-
-    function tokenTransferFromToTester(
-        address token,
-        address from,
-        address to,
-        uint256 amount,
-        uint256 tokenDecimals
-    ) external {
-        _tokenTransferFromTo(token, from, to, amount, tokenDecimals);
-    }
-
-    function tokenTransferToUserTester(
-        address token,
-        address to,
-        uint256 amount,
-        uint256 tokenDecimals
-    ) external {
-        _tokenTransferToUser(token, to, amount, tokenDecimals);
-    }
-
-    function setOverrideGetTokenRate(bool val) external {
-        _overrideGetTokenRate = val;
-    }
-
-    function setGetTokenRateValue(uint256 val) external {
-        _getTokenRateValue = val;
-    }
-
-    function calcAndValidateDeposit(
-        address user,
-        address tokenIn,
-        uint256 amountToken,
-        bool isInstant
-    ) external returns (CalcAndValidateDepositResult memory) {
-        return _calcAndValidateDeposit(user, tokenIn, amountToken, isInstant);
-    }
+contract DepositVaultTest is DepositVault, ManageableVaultTester {
+    function _disableInitializers()
+        internal
+        virtual
+        override(Initializable, ManageableVaultTester)
+    {}
 
     function convertTokenToUsdTest(address tokenIn, uint256 amount)
         external
@@ -61,18 +29,13 @@ contract DepositVaultTest is DepositVault {
         return _convertUsdToMToken(amountUsd);
     }
 
-    function _getTokenRate(address dataFeed, bool stable)
-        internal
-        view
-        virtual
-        override
-        returns (uint256)
-    {
-        if (_overrideGetTokenRate) {
-            return _getTokenRateValue;
-        }
-
-        return super._getTokenRate(dataFeed, stable);
+    function calcAndValidateDeposit(
+        address user,
+        address tokenIn,
+        uint256 amountToken,
+        bool isInstant
+    ) external returns (CalcAndValidateDepositResult memory) {
+        return _calcAndValidateDeposit(user, tokenIn, amountToken, isInstant);
     }
 
     function calculateHoldbackPartRateFromAvgTest(
@@ -97,5 +60,25 @@ contract DepositVaultTest is DepositVault {
                 }),
                 avgMTokenRate
             );
+    }
+
+    function _getTokenRate(address dataFeed, bool stable)
+        internal
+        view
+        virtual
+        override(ManageableVaultTester, ManageableVault)
+        returns (uint256)
+    {
+        return ManageableVaultTester._getTokenRate(dataFeed, stable);
+    }
+
+    function vaultRole()
+        public
+        pure
+        virtual
+        override(ManageableVaultTester, DepositVault)
+        returns (bytes32)
+    {
+        return DepositVault.vaultRole();
     }
 }

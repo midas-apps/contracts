@@ -46,4 +46,13 @@ contract DepositVaultWithAaveTest is DepositVaultTest, DepositVaultWithAave {
     {
         return DepositVaultTest._getTokenRate(dataFeed, stable);
     }
+
+    function vaultRole()
+        public
+        pure
+        override(DepositVaultTest, DepositVault)
+        returns (bytes32)
+    {
+        return DepositVaultTest.vaultRole();
+    }
 }

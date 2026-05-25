@@ -1,21 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.34;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 import "../RedemptionVault.sol";
+import {ManageableVaultTester} from "./ManageableVaultTester.sol";
 
-contract RedemptionVaultTest is RedemptionVault {
-    bool private _overrideGetTokenRate;
-    uint256 private _getTokenRateValue;
-
-    function _disableInitializers() internal virtual override {}
-
-    function setOverrideGetTokenRate(bool val) external {
-        _overrideGetTokenRate = val;
-    }
-
-    function setGetTokenRateValue(uint256 val) external {
-        _getTokenRateValue = val;
-    }
+contract RedemptionVaultTest is RedemptionVault, ManageableVaultTester {
+    function _disableInitializers()
+        internal
+        virtual
+        override(Initializable, ManageableVaultTester)
+    {}
 
     function calcAndValidateRedeemTest(
         address user,
@@ -84,13 +80,19 @@ contract RedemptionVaultTest is RedemptionVault {
         internal
         view
         virtual
-        override
+        override(ManageableVaultTester, ManageableVault)
         returns (uint256)
     {
-        if (_overrideGetTokenRate) {
-            return _getTokenRateValue;
-        }
+        return ManageableVaultTester._getTokenRate(dataFeed, stable);
+    }
 
-        return super._getTokenRate(dataFeed, stable);
+    function vaultRole()
+        public
+        pure
+        virtual
+        override(ManageableVaultTester, RedemptionVault)
+        returns (bytes32)
+    {
+        return RedemptionVault.vaultRole();
     }
 }

@@ -2,11 +2,9 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 
 import { encodeFnSelector } from '../../helpers/utils';
-import { GreenlistableTester__factory } from '../../typechain-types';
 import {
   acErrors,
   greenList,
-  greenListToggler,
   setFunctionPermissionTester,
   setupFunctionAccessGrantOperator,
   unGreenList,
@@ -26,30 +24,6 @@ describe('Greenlistable', function () {
         greenListableTester.address,
       ),
     ).eq(true);
-  });
-
-  it('onlyInitializing', async () => {
-    const { owner, accessControl } = await loadFixture(defaultDeploy);
-
-    const greenListable = await new GreenlistableTester__factory(
-      owner,
-    ).deploy();
-
-    await expect(
-      greenListable.initializeWithoutInitializer(accessControl.address),
-    ).revertedWith('Initializable: contract is not initializing');
-  });
-
-  it('onlyInitializing unchained', async () => {
-    const { owner } = await loadFixture(defaultDeploy);
-
-    const greenListable = await new GreenlistableTester__factory(
-      owner,
-    ).deploy();
-
-    await expect(
-      greenListable.initializeUnchainedWithoutInitializer(),
-    ).revertedWith('Initializable: contract is not initializing');
   });
 
   describe('modifier onlyGreenlisted', () => {
@@ -86,43 +60,6 @@ describe('Greenlistable', function () {
       );
       await expect(
         greenListableTester.onlyGreenlistedTester(regularAccounts[0].address),
-      ).not.reverted;
-    });
-  });
-
-  describe('modifier onlyGreenlistToggler', () => {
-    it('should fail: call from not greenlistToggler user', async () => {
-      const { greenListableTester, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
-
-      await expect(
-        greenListableTester.validateGreenlistableAdminAccess(
-          regularAccounts[0].address,
-        ),
-      ).revertedWithCustomError(
-        greenListableTester,
-        acErrors.WMAC_HASNT_PERMISSION().customErrorName,
-      );
-    });
-
-    it('call from  greenlistToggler user', async () => {
-      const { accessControl, greenListableTester, owner, regularAccounts } =
-        await loadFixture(defaultDeploy);
-
-      await greenListToggler(
-        {
-          greenlistable: greenListableTester,
-          accessControl,
-          owner,
-          role: await greenListableTester.greenlistAdminRole(),
-        },
-        regularAccounts[0],
-      );
-      await expect(
-        greenListableTester.validateGreenlistableAdminAccess(
-          regularAccounts[0].address,
-        ),
       ).not.reverted;
     });
   });
@@ -182,15 +119,18 @@ describe('Greenlistable', function () {
       });
 
       const user = regularAccounts[0];
-      await setFunctionPermissionTester({ accessControl, owner }, [
-        {
-          functionAccessAdminRole: greenlistAdmin,
-          targetContract: greenListableTester.address,
-          functionSelector: selector,
-          account: user.address,
-          enabled: true,
-        },
-      ]);
+      await setFunctionPermissionTester(
+        { accessControl, owner },
+        greenlistAdmin,
+        greenListableTester.address,
+        selector,
+        [
+          {
+            account: user.address,
+            enabled: true,
+          },
+        ],
+      );
 
       expect(await accessControl.hasRole(greenlistAdmin, user.address)).eq(
         false,
@@ -220,15 +160,18 @@ describe('Greenlistable', function () {
         grantOperator: owner,
       });
 
-      await setFunctionPermissionTester({ accessControl, owner }, [
-        {
-          functionAccessAdminRole: greenlistAdmin,
-          targetContract: greenListableTester.address,
-          functionSelector: selector,
-          account: user.address,
-          enabled: true,
-        },
-      ]);
+      await setFunctionPermissionTester(
+        { accessControl, owner },
+        greenlistAdmin,
+        greenListableTester.address,
+        selector,
+        [
+          {
+            account: user.address,
+            enabled: true,
+          },
+        ],
+      );
 
       await accessControl.grantRole(greenlistAdmin, user.address);
 

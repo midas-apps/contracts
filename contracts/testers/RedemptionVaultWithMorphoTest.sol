@@ -66,9 +66,18 @@ contract RedemptionVaultWithMorphoTest is
     function _getTokenRate(address dataFeed, bool stable)
         internal
         view
-        override(ManageableVault, RedemptionVaultTest)
+        override(RedemptionVaultTest, ManageableVault)
         returns (uint256)
     {
         return RedemptionVaultTest._getTokenRate(dataFeed, stable);
+    }
+
+    function vaultRole()
+        public
+        pure
+        override(RedemptionVaultTest, RedemptionVault)
+        returns (bytes32)
+    {
+        return RedemptionVaultTest.vaultRole();
     }
 }

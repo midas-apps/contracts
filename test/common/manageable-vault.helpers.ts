@@ -42,7 +42,8 @@ type CommonParamsChangePaymentToken = {
     | RedemptionVaultWithMorpho
     | RedemptionVaultWithMToken
     | RedemptionVaultWithSwapper
-    | RedemptionVaultWithUSTB;
+    | RedemptionVaultWithUSTB
+    | ManageableVault;
   owner: SignerWithAddress;
 };
 type CommonParams = {

@@ -69,29 +69,19 @@ import {
   MidasTimelockManagerTest__factory,
   MidasAccessControlTimelockControllerTest__factory,
   MidasPauseManagerTest__factory,
+  ManageableVaultTester__factory,
 } from '../../typechain-types';
 
 export const getDeployParamsRv = <TExtraParams extends readonly [] = []>(
   {
-    accessControl,
-    mockedSanctionsList,
-    mTBILL,
-    mTokenToUsdDataFeed,
-    feeReceiver,
-    tokensReceiver,
     requestRedeemer,
     loanLp,
     loanLpFeeReceiver,
     loanRepaymentAddress,
     redemptionVaultLoanSwapper,
-    minAmount,
-    instantFee,
-    limitConfigs,
-    minInstantFee,
-    maxInstantFee,
-    maxInstantShare,
-    variationTolerance,
+
     loanApr,
+    ...commonParams
   }: {
     accessControl: AccountOrContract;
     mockedSanctionsList: AccountOrContract;
@@ -119,6 +109,52 @@ export const getDeployParamsRv = <TExtraParams extends readonly [] = []>(
   extraParams?: TExtraParams,
 ) => {
   return [
+    ...getDeployParamsMv(commonParams),
+    {
+      requestRedeemer: getAccount(requestRedeemer),
+      loanLp: getAccount(loanLp),
+      loanLpFeeReceiver: getAccount(loanLpFeeReceiver),
+      loanRepaymentAddress: getAccount(loanRepaymentAddress),
+      loanSwapperVault: getAccount(redemptionVaultLoanSwapper),
+      loanApr: loanApr ?? 0,
+    },
+    ...(extraParams ?? []),
+  ] as const;
+};
+
+export const getDeployParamsMv = ({
+  accessControl,
+  mockedSanctionsList,
+  mTBILL,
+  mTokenToUsdDataFeed,
+  feeReceiver,
+  tokensReceiver,
+  minAmount,
+  instantFee,
+  limitConfigs,
+  minInstantFee,
+  maxInstantFee,
+  maxInstantShare,
+  variationTolerance,
+}: {
+  accessControl: AccountOrContract;
+  mockedSanctionsList: AccountOrContract;
+  mTBILL: AccountOrContract;
+  mTokenToUsdDataFeed: AccountOrContract;
+  feeReceiver: AccountOrContract;
+  tokensReceiver: AccountOrContract;
+  minAmount?: BigNumberish;
+  instantFee?: BigNumberish;
+  limitConfigs?: {
+    limit: BigNumberish;
+    window: BigNumberish;
+  }[];
+  minInstantFee?: BigNumberish;
+  maxInstantFee?: BigNumberish;
+  maxInstantShare?: BigNumberish;
+  variationTolerance?: BigNumberish;
+}) => {
+  return [
     {
       ac: getAccount(accessControl),
       sanctionsList: getAccount(mockedSanctionsList),
@@ -139,15 +175,6 @@ export const getDeployParamsRv = <TExtraParams extends readonly [] = []>(
       maxInstantFee: maxInstantFee ?? 10000,
       maxInstantShare: maxInstantShare ?? 100_00,
     },
-    {
-      requestRedeemer: getAccount(requestRedeemer),
-      loanLp: getAccount(loanLp),
-      loanLpFeeReceiver: getAccount(loanLpFeeReceiver),
-      loanRepaymentAddress: getAccount(loanRepaymentAddress),
-      loanSwapperVault: getAccount(redemptionVaultLoanSwapper),
-      loanApr: loanApr ?? 0,
-    },
-    ...(extraParams ?? []),
   ] as const;
 };
 
@@ -254,19 +281,6 @@ export const defaultDeploy = async () => {
   ]
     .flat(2)
     .filter((v) => v !== '-' && !!v && !excludedRoles.includes(v)) as string[];
-
-  // const rolesToUpdateDelay = [
-  //   ...rolesFlat,
-  //   await mTokenLoan.M_TOKEN_TEST_BURN_OPERATOR_ROLE(),
-  //   await mTokenLoan.M_TOKEN_TEST_MINT_OPERATOR_ROLE(),
-  //   await mTokenLoan.M_TOKEN_TEST_PAUSE_OPERATOR_ROLE(),
-  // ];
-
-  // await setRoleTimelocksAndExecute(
-  //   { timelockManager, timelock, owner, accessControl },
-  //   rolesToUpdateDelay,
-  //   rolesToUpdateDelay.map((_) => constants.MaxUint256),
-  // );
 
   await expect(
     accessControl.grantRoleMult(
@@ -448,6 +462,20 @@ export const defaultDeploy = async () => {
   await accessControl.grantRole(
     mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
     redemptionVault.address,
+  );
+  const manageableVault = await new ManageableVaultTester__factory(
+    owner,
+  ).deploy();
+
+  await manageableVault.initializeExternal(
+    ...getDeployParamsMv({
+      accessControl,
+      mockedSanctionsList,
+      mTBILL,
+      mTokenToUsdDataFeed,
+      feeReceiver,
+      tokensReceiver,
+    }),
   );
 
   const stableCoins = {
@@ -1012,6 +1040,7 @@ export const defaultDeploy = async () => {
     pauseManager,
     councilMembers,
     clawbackReceiver,
+    manageableVault,
   };
 };
 

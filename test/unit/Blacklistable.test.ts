@@ -1,7 +1,6 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 
-import { BlacklistableTester__factory } from '../../typechain-types';
 import { acErrors, blackList, unBlackList } from '../common/ac.helpers';
 import { defaultDeploy } from '../common/fixtures';
 
@@ -17,30 +16,6 @@ describe('Blacklistable', function () {
         blackListableTester.address,
       ),
     ).eq(true);
-  });
-
-  it('onlyInitializing', async () => {
-    const { accessControl, owner } = await loadFixture(defaultDeploy);
-
-    const blackListable = await new BlacklistableTester__factory(
-      owner,
-    ).deploy();
-
-    await expect(
-      blackListable.initializeWithoutInitializer(accessControl.address),
-    ).revertedWith('Initializable: contract is not initializing');
-  });
-
-  it('onlyInitializing unchained', async () => {
-    const { accessControl, owner } = await loadFixture(defaultDeploy);
-
-    const blackListable = await new BlacklistableTester__factory(
-      owner,
-    ).deploy();
-
-    await expect(
-      blackListable.initializeUnchainedWithoutInitializer(),
-    ).revertedWith('Initializable: contract is not initializing');
   });
 
   describe('modifier onlyNotBlacklisted', () => {
