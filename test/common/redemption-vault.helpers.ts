@@ -1573,34 +1573,6 @@ export const setLoanSwapperVaultTest = async (
   expect(newLoanSwapperVault).eq(loanSwapperVault);
 };
 
-export const setMaxLoanAprTest = async (
-  { redemptionVault, owner }: CommonParams,
-  maxLoanApr: number,
-  opt?: OptionalCommonParams,
-) => {
-  if (
-    await handleRevert(
-      redemptionVault
-        .connect(opt?.from ?? owner)
-        .setMaxLoanApr.bind(this, maxLoanApr),
-      redemptionVault,
-      opt,
-    )
-  ) {
-    return;
-  }
-
-  await expect(
-    redemptionVault.connect(opt?.from ?? owner).setMaxLoanApr(maxLoanApr),
-  ).to.emit(
-    redemptionVault,
-    redemptionVault.interface.events['SetMaxLoanApr(address,uint64)'].name,
-  ).to.not.reverted;
-
-  const newMaxLoanApr = await redemptionVault.maxLoanApr();
-  expect(newMaxLoanApr).eq(maxLoanApr);
-};
-
 export const setMaxApproveRequestIdTest = async (
   { redemptionVault, owner }: CommonParams,
   maxApproveRequestId: number,

@@ -6,8 +6,6 @@ import { ethers } from 'hardhat';
 
 import {
   ERC20,
-  ERC20,
-  ERC20,
   ERC20__factory,
   ERC20Mock,
   IERC20Metadata,

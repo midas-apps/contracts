@@ -47,8 +47,6 @@ struct RedemptionVaultInitParams {
     address loanSwapperVault;
     /// @notice loan APR value in basis points (100 = 1%)
     uint64 loanApr;
-    /// @notice maximum loan APR value in basis points (100 = 1%)
-    uint64 maxLoanApr;
 }
 
 /**
@@ -72,7 +70,6 @@ struct LiquidityProviderLoanRequest {
  * @author RedDuck Software
  */
 interface IRedemptionVault is IManageableVault {
-    error LoanAprTooHigh(uint256 loanApr, uint256 maxLoanApr);
     error InvalidLoanLpReceiver();
     error LoanLpNotConfigured(address loanLp, address loanSwapperVault);
     error FeeExceedsAmount(uint256 fee, uint256 amount);
@@ -470,12 +467,6 @@ interface IRedemptionVault is IManageableVault {
      * @param newLoanSwapperVault new address of loan swapper vault
      */
     function setLoanSwapperVault(address newLoanSwapperVault) external;
-
-    /**
-     * @notice set maximum loan APR value in basis points (100 = 1%)
-     * @param newMaxLoanApr new maximum loan APR value in basis points (100 = 1%)
-     */
-    function setMaxLoanApr(uint64 newMaxLoanApr) external;
 
     /**
      * @notice set loan APR value in basis points (100 = 1%)

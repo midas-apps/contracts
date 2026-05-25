@@ -72,11 +72,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     address public loanRepaymentAddress;
 
     /**
-     * @notice maximum loan APR value in basis points (100 = 1%)
-     */
-    uint64 public maxLoanApr;
-
-    /**
      * @notice loan APR value in basis points (100 = 1%)
      */
     uint64 public loanApr;
@@ -127,7 +122,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         loanSwapperVault = IRedemptionVault(
             _redemptionVaultInitParams.loanSwapperVault
         );
-        maxLoanApr = _redemptionVaultInitParams.maxLoanApr;
         loanApr = _redemptionVaultInitParams.loanApr;
     }
 
@@ -395,8 +389,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         onlyContractAdmin
     {
         uint64 _loanApr = loanApr;
-        require(_loanApr <= maxLoanApr, LoanAprTooHigh(_loanApr, maxLoanApr));
-
         for (uint256 i = 0; i < requestIds.length; ++i) {
             LiquidityProviderLoanRequest memory request = loanRequests[
                 requestIds[i]
@@ -517,15 +509,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function setMaxLoanApr(uint64 newMaxLoanApr) external onlyContractAdmin {
-        maxLoanApr = newMaxLoanApr;
-
-        emit SetMaxLoanApr(msg.sender, newMaxLoanApr);
-    }
-
-    /**
-     * @inheritdoc IRedemptionVault
-     */
     function setLoanApr(uint64 newLoanApr) external onlyContractAdmin {
         loanApr = newLoanApr;
         emit SetLoanApr(msg.sender, newLoanApr);
@@ -606,6 +589,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         Request memory request = redeemRequests[requestId];
 
         _validateRequest(requestId, request.recipient, request.status);
+        _validateRequestAddressesAccess(request);
 
         if (isSafe) {
             require(
@@ -1333,6 +1317,20 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     {
         uint256 balance = IERC20(token).balanceOf(requestRedeemer);
         return balance >= requiredLiquidity.convertFromBase18(tokenDecimals);
+    }
+
+    /**
+     * @dev validates request addresses access
+     * @param request request
+     */
+    function _validateRequestAddressesAccess(Request memory request)
+        private
+        view
+    {
+        _validateUserAccess(request.recipient, false);
+        if (request.claimer != address(0)) {
+            _validateUserAccess(request.claimer, false);
+        }
     }
 
     /**

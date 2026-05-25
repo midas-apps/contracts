@@ -7197,6 +7197,226 @@ export const depositVaultSuits = (
           );
         });
 
+        describe('request addresses access', () => {
+          const setupPendingDepositRequest = async (
+            fixture: Awaited<ReturnType<typeof loadDvFixture>>,
+            opts?: {
+              customRecipient?: SignerWithAddress;
+              customClaimer?: SignerWithAddress;
+            },
+          ) => {
+            const {
+              owner,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = fixture;
+
+            await mintToken(stableCoins.dai, regularAccounts[0], 100);
+            await approveBase18(
+              regularAccounts[0],
+              stableCoins.dai,
+              depositVault,
+              100,
+            );
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await depositRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customRecipient: opts?.customRecipient ?? regularAccounts[0],
+                ...(opts?.customClaimer
+                  ? {
+                      customClaimer: opts.customClaimer,
+                      instantShare: 0,
+                    }
+                  : {}),
+              },
+              stableCoins.dai,
+              100,
+              { from: regularAccounts[0] },
+            );
+          };
+
+          it('should fail approve request when recipient got blacklisted', async () => {
+            const fixture = await loadDvFixture();
+            const {
+              owner,
+              depositVault,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              blackListableTester,
+              accessControl,
+              regularAccounts,
+            } = fixture;
+            await setupPendingDepositRequest(fixture);
+
+            await blackList(
+              { blacklistable: blackListableTester, accessControl, owner },
+              regularAccounts[0],
+            );
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('5'),
+              { revertCustomError: acErrors.WMAC_HAS_ROLE },
+            );
+          });
+
+          it('should fail approve request when recipient got ungreenlisted when greenlist enable flag is true', async () => {
+            const fixture = await loadDvFixture();
+            const { owner, depositVault, mTBILL, mTokenToUsdDataFeed } =
+              fixture;
+            await setupPendingDepositRequest(fixture);
+
+            await depositVault.setGreenlistEnable(true);
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('5'),
+              { revertCustomError: acErrors.WMAC_HASNT_ROLE },
+            );
+          });
+
+          it('should fail approve request when recipient got sanction listed', async () => {
+            const fixture = await loadDvFixture();
+            const {
+              owner,
+              depositVault,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              mockedSanctionsList,
+            } = fixture;
+            await setupPendingDepositRequest(fixture);
+
+            await sanctionUser(
+              { sanctionsList: mockedSanctionsList },
+              regularAccounts[0],
+            );
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('5'),
+              {
+                revertCustomError: {
+                  customErrorName: 'Sanctioned',
+                },
+              },
+            );
+          });
+
+          it('should fail approve request when claimer got blacklisted', async () => {
+            const fixture = await loadDvFixture();
+            const {
+              owner,
+              depositVault,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              blackListableTester,
+              accessControl,
+              regularAccounts,
+            } = fixture;
+            await setupPendingDepositRequest(fixture, {
+              customRecipient: regularAccounts[0],
+              customClaimer: regularAccounts[1],
+            });
+
+            await blackList(
+              { blacklistable: blackListableTester, accessControl, owner },
+              regularAccounts[1],
+            );
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('5'),
+              { revertCustomError: acErrors.WMAC_HAS_ROLE },
+            );
+          });
+
+          it('should fail approve request when claimer got ungreenlisted when greenlist enable flag is true', async () => {
+            const fixture = await loadDvFixture();
+            const {
+              owner,
+              depositVault,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              greenListableTester,
+              accessControl,
+              regularAccounts,
+            } = fixture;
+            await setupPendingDepositRequest(fixture, {
+              customRecipient: regularAccounts[0],
+              customClaimer: regularAccounts[1],
+            });
+
+            await depositVault.setGreenlistEnable(true);
+            await greenList(
+              { greenlistable: greenListableTester, accessControl, owner },
+              regularAccounts[0],
+            );
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('5'),
+              { revertCustomError: acErrors.WMAC_HASNT_ROLE },
+            );
+          });
+
+          it('should fail approve request when claimer got sanction listed', async () => {
+            const fixture = await loadDvFixture();
+            const {
+              owner,
+              depositVault,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              mockedSanctionsList,
+            } = fixture;
+            await setupPendingDepositRequest(fixture, {
+              customRecipient: regularAccounts[0],
+              customClaimer: regularAccounts[1],
+            });
+
+            await sanctionUser(
+              { sanctionsList: mockedSanctionsList },
+              regularAccounts[1],
+            );
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('5'),
+              {
+                revertCustomError: {
+                  customErrorName: 'Sanctioned',
+                },
+              },
+            );
+          });
+        });
+
         it('should fail: request already precessed', async () => {
           const {
             owner,

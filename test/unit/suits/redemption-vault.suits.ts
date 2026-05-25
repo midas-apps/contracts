@@ -40,7 +40,7 @@ import {
   setRoundDataGrowth,
 } from '../../common/custom-feed-growth.helpers';
 import { setRoundData } from '../../common/data-feed.helpers';
-import { DefaultFixture } from '../../common/fixtures';
+import { DefaultFixture, getDeployParamsRv } from '../../common/fixtures';
 import { greenListEnable } from '../../common/greenlist.helpers';
 import {
   addPaymentTokenTest,
@@ -72,7 +72,6 @@ import {
   setLoanLpTest,
   setLoanRepaymentAddressTest,
   setLoanSwapperVaultTest,
-  setMaxLoanAprTest,
   setRequestRedeemerTest,
   expectedHoldbackPartRateFromAvg,
   setPreferLoanLiquidityTest,
@@ -199,8 +198,6 @@ export const redemptionVaultSuits = (
       expect(limitConfig.remaining).eq(parseUnits('100000'));
       expect(limitConfig.window).eq(days(1));
 
-      expect(await redemptionVault.maxLoanApr()).eq(0);
-
       expect(await redemptionVault.maxInstantShare()).eq(100_00);
 
       await deploymentAdditionalChecks(fixture);
@@ -227,134 +224,70 @@ export const redemptionVaultSuits = (
 
         await expect(
           redemptionVaultUninitialized.initialize(
-            {
-              ac: ethers.constants.AddressZero,
-              sanctionsList: mockedSanctionsList.address,
-              variationTolerance: 1,
-              minAmount: parseUnits('100'),
-              mToken: ethers.constants.AddressZero,
-              mTokenDataFeed: mTokenToUsdDataFeed.address,
-              feeReceiver: feeReceiver.address,
-              tokensReceiver: tokensReceiver.address,
-              instantFee: 100,
-              limitConfigs: [
-                {
-                  limit: parseUnits('100000'),
-                  window: days(1),
-                },
-              ],
-              minInstantFee: 0,
-              maxInstantFee: 10000,
-              maxInstantShare: 100_00,
-            },
-            {
-              requestRedeemer: requestRedeemer.address,
-              loanLp: loanLp.address,
-              loanLpFeeReceiver: loanLpFeeReceiver.address,
-              loanRepaymentAddress: loanRepaymentAddress.address,
-              loanSwapperVault: redemptionVaultLoanSwapper.address,
-              maxLoanApr: 0,
-              loanApr: 0,
-            },
+            ...getDeployParamsRv({
+              accessControl: constants.AddressZero,
+              mockedSanctionsList,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              feeReceiver,
+              tokensReceiver,
+              requestRedeemer,
+              loanLp,
+              loanLpFeeReceiver,
+              loanRepaymentAddress,
+              redemptionVaultLoanSwapper,
+            }),
           ),
         ).to.be.reverted;
         await expect(
           redemptionVaultUninitialized.initialize(
-            {
-              ac: accessControl.address,
-              sanctionsList: mockedSanctionsList.address,
-              variationTolerance: 1,
-              minAmount: parseUnits('100'),
-              mToken: mTBILL.address,
-              mTokenDataFeed: ethers.constants.AddressZero,
-              feeReceiver: feeReceiver.address,
-              tokensReceiver: tokensReceiver.address,
-              instantFee: 100,
-              limitConfigs: [
-                {
-                  limit: parseUnits('100000'),
-                  window: days(1),
-                },
-              ],
-              minInstantFee: 0,
-              maxInstantFee: 10000,
-              maxInstantShare: 100_00,
-            },
-            {
-              requestRedeemer: requestRedeemer.address,
-              loanLp: loanLp.address,
-              loanLpFeeReceiver: loanLpFeeReceiver.address,
-              loanRepaymentAddress: loanRepaymentAddress.address,
-              loanSwapperVault: redemptionVaultLoanSwapper.address,
-              maxLoanApr: 0,
-              loanApr: 0,
-            },
+            ...getDeployParamsRv({
+              accessControl,
+              mockedSanctionsList,
+              mTBILL,
+              mTokenToUsdDataFeed: constants.AddressZero,
+              feeReceiver,
+              tokensReceiver,
+              requestRedeemer,
+              loanLp,
+              loanLpFeeReceiver,
+              loanRepaymentAddress,
+              redemptionVaultLoanSwapper,
+            }),
           ),
         ).to.be.reverted;
         await expect(
           redemptionVaultUninitialized.initialize(
-            {
-              ac: accessControl.address,
-              sanctionsList: mockedSanctionsList.address,
-              variationTolerance: 1,
-              minAmount: parseUnits('100'),
-              mToken: mTBILL.address,
-              mTokenDataFeed: mTokenToUsdDataFeed.address,
-              feeReceiver: ethers.constants.AddressZero,
-              tokensReceiver: tokensReceiver.address,
-              instantFee: 100,
-              limitConfigs: [
-                {
-                  limit: parseUnits('100000'),
-                  window: days(1),
-                },
-              ],
-              minInstantFee: 0,
-              maxInstantFee: 10000,
-              maxInstantShare: 100_00,
-            },
-            {
-              requestRedeemer: requestRedeemer.address,
-              loanLp: loanLp.address,
-              loanLpFeeReceiver: loanLpFeeReceiver.address,
-              loanRepaymentAddress: loanRepaymentAddress.address,
-              loanSwapperVault: redemptionVaultLoanSwapper.address,
-              maxLoanApr: 0,
-              loanApr: 0,
-            },
+            ...getDeployParamsRv({
+              accessControl,
+              mockedSanctionsList,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              feeReceiver: constants.AddressZero,
+              tokensReceiver,
+              requestRedeemer,
+              loanLp,
+              loanLpFeeReceiver,
+              loanRepaymentAddress,
+              redemptionVaultLoanSwapper,
+            }),
           ),
         ).to.be.reverted;
         await expect(
           redemptionVaultUninitialized.initialize(
-            {
-              ac: accessControl.address,
-              sanctionsList: mockedSanctionsList.address,
-              variationTolerance: 1,
-              minAmount: parseUnits('100'),
-              mToken: mTBILL.address,
-              mTokenDataFeed: mTokenToUsdDataFeed.address,
-              feeReceiver: feeReceiver.address,
-              tokensReceiver: ethers.constants.AddressZero,
-              instantFee: 100,
-              limitConfigs: [
-                {
-                  limit: parseUnits('100000'),
-                  window: days(1),
-                },
-              ],
-              minInstantFee: 0,
-              maxInstantFee: 10000,
-              maxInstantShare: 100_00,
-            },
-            {
-              requestRedeemer: requestRedeemer.address,
-              loanLp: loanLp.address,
-              loanLpFeeReceiver: loanLpFeeReceiver.address,
-              loanRepaymentAddress: loanRepaymentAddress.address,
-              loanSwapperVault: redemptionVaultLoanSwapper.address,
-              maxLoanApr: 0,
-              loanApr: 0,
-            },
+            ...getDeployParamsRv({
+              accessControl,
+              mockedSanctionsList,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              feeReceiver,
+              tokensReceiver: constants.AddressZero,
+              requestRedeemer,
+              loanLp,
+              loanLpFeeReceiver,
+              loanRepaymentAddress,
+              redemptionVaultLoanSwapper,
+            }),
           ),
         ).to.be.reverted;
       });
@@ -365,35 +298,19 @@ export const redemptionVaultSuits = (
 
           await expect(
             redemptionVault.initialize(
-              {
-                ac: constants.AddressZero,
-                sanctionsList: constants.AddressZero,
-                variationTolerance: 0,
-                minAmount: 0,
-                mToken: constants.AddressZero,
-                mTokenDataFeed: constants.AddressZero,
+              ...getDeployParamsRv({
+                accessControl: constants.AddressZero,
+                mockedSanctionsList: constants.AddressZero,
+                mTBILL: constants.AddressZero,
+                mTokenToUsdDataFeed: constants.AddressZero,
                 feeReceiver: constants.AddressZero,
                 tokensReceiver: constants.AddressZero,
-                instantFee: 0,
-                limitConfigs: [
-                  {
-                    limit: parseUnits('100000'),
-                    window: days(1),
-                  },
-                ],
-                minInstantFee: 0,
-                maxInstantFee: 10000,
-                maxInstantShare: 100_00,
-              },
-              {
                 requestRedeemer: constants.AddressZero,
                 loanLp: constants.AddressZero,
                 loanLpFeeReceiver: constants.AddressZero,
                 loanRepaymentAddress: constants.AddressZero,
-                loanSwapperVault: constants.AddressZero,
-                maxLoanApr: 0,
-                loanApr: 0,
-              },
+                redemptionVaultLoanSwapper: constants.AddressZero,
+              }),
             ),
           ).revertedWith('Initializable: contract is already initialized');
         });
@@ -6154,99 +6071,6 @@ export const redemptionVaultSuits = (
         });
       });
 
-      describe('setMaxLoanApr()', () => {
-        it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-          const { redemptionVault, regularAccounts, owner } = await loadFixture(
-            rvFixture,
-          );
-          await setMaxLoanAprTest({ redemptionVault, owner }, 100, {
-            from: regularAccounts[0],
-            revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
-          });
-        });
-
-        it('should fail: if new value greater then 100%', async () => {
-          const { redemptionVault, owner } = await loadRvFixture();
-          await setMaxLoanAprTest({ redemptionVault, owner }, 10001);
-        });
-
-        it('if new value zero', async () => {
-          const { redemptionVault, owner } = await loadRvFixture();
-          await setMaxLoanAprTest({ redemptionVault, owner }, 0);
-        });
-
-        it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-          const { redemptionVault, owner } = await loadRvFixture();
-          await setMaxLoanAprTest({ redemptionVault, owner }, 100);
-        });
-
-        it('should fail: when function is paused', async () => {
-          const { redemptionVault, owner } = await loadRvFixture();
-
-          await pauseVaultFn(
-            { pauseManager, owner },
-            redemptionVault,
-            encodeFnSelector('setMaxLoanApr(uint64)'),
-          );
-
-          await setMaxLoanAprTest({ redemptionVault, owner }, 100, {
-            revertCustomError: {
-              customErrorName: 'Paused',
-            },
-          });
-        });
-
-        it('succeeds with only scoped function permission', async () => {
-          const { accessControl, owner, redemptionVault, regularAccounts } =
-            await loadRvFixture();
-
-          const vaultRole = await redemptionVault.vaultRole();
-          await setupVaultScopedFunctionPermission(
-            { accessControl, owner },
-            vaultRole,
-            redemptionVault.address,
-            'setMaxLoanApr(uint64)',
-            regularAccounts[0].address,
-          );
-
-          expect(
-            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
-          ).eq(false);
-
-          await setMaxLoanAprTest({ redemptionVault, owner }, 100, {
-            from: regularAccounts[0],
-          });
-        });
-
-        it('succeeds with scoped permission and vault admin role', async () => {
-          const {
-            accessControl,
-            owner,
-            redemptionVault,
-            regularAccounts,
-            roles,
-          } = await loadRvFixture();
-
-          const vaultRole = await redemptionVault.vaultRole();
-          await setupVaultScopedFunctionPermission(
-            { accessControl, owner },
-            vaultRole,
-            redemptionVault.address,
-            'setMaxLoanApr(uint64)',
-            regularAccounts[0].address,
-          );
-
-          await accessControl.grantRole(
-            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
-            regularAccounts[0].address,
-          );
-
-          await setMaxLoanAprTest({ redemptionVault, owner }, 100, {
-            from: regularAccounts[0],
-          });
-        });
-      });
-
       describe('setPreferLoanLiquidity()', () => {
         it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
           const { redemptionVault, regularAccounts, owner } = await loadFixture(
@@ -8841,6 +8665,234 @@ export const redemptionVaultSuits = (
               },
             },
           );
+        });
+
+        describe('request addresses access', () => {
+          const setupPendingRedeemRequest = async (
+            fixture: Awaited<ReturnType<typeof loadRvFixture>>,
+            opts?: {
+              customRecipient?: SignerWithAddress;
+              customClaimer?: SignerWithAddress;
+            },
+          ) => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+              requestRedeemer,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = fixture;
+
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+            await mintToken(mTBILL, regularAccounts[0], 100);
+            await approveBase18(
+              regularAccounts[0],
+              mTBILL,
+              redemptionVault,
+              100,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customRecipient: opts?.customRecipient ?? regularAccounts[0],
+                ...(opts?.customClaimer
+                  ? {
+                      customClaimer: opts.customClaimer,
+                      instantShare: 0,
+                    }
+                  : {}),
+              },
+              stableCoins.dai,
+              100,
+              { from: regularAccounts[0] },
+            );
+          };
+
+          it('should fail approve request when recipient got blacklisted', async () => {
+            const fixture = await loadRvFixture();
+            const {
+              owner,
+              redemptionVault,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              blackListableTester,
+              accessControl,
+              regularAccounts,
+            } = fixture;
+            await setupPendingRedeemRequest(fixture);
+
+            await blackList(
+              { blacklistable: blackListableTester, accessControl, owner },
+              regularAccounts[0],
+            );
+
+            await approveRedeemRequestTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('5'),
+              { revertCustomError: acErrors.WMAC_HAS_ROLE },
+            );
+          });
+
+          it('should fail approve request when recipient got ungreenlisted when greenlist enable flag is true', async () => {
+            const fixture = await loadRvFixture();
+            const { owner, redemptionVault, mTBILL, mTokenToUsdDataFeed } =
+              fixture;
+            await setupPendingRedeemRequest(fixture);
+
+            await redemptionVault.setGreenlistEnable(true);
+
+            await approveRedeemRequestTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('5'),
+              { revertCustomError: acErrors.WMAC_HASNT_ROLE },
+            );
+          });
+
+          it('should fail approve request when recipient got sanction listed', async () => {
+            const fixture = await loadRvFixture();
+            const {
+              owner,
+              redemptionVault,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              mockedSanctionsList,
+            } = fixture;
+            await setupPendingRedeemRequest(fixture);
+
+            await sanctionUser(
+              { sanctionsList: mockedSanctionsList },
+              regularAccounts[0],
+            );
+
+            await approveRedeemRequestTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('5'),
+              {
+                revertCustomError: {
+                  customErrorName: 'Sanctioned',
+                },
+              },
+            );
+          });
+
+          it('should fail approve request when claimer got blacklisted', async () => {
+            const fixture = await loadRvFixture();
+            const {
+              owner,
+              redemptionVault,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              blackListableTester,
+              accessControl,
+              regularAccounts,
+            } = fixture;
+            await setupPendingRedeemRequest(fixture, {
+              customRecipient: regularAccounts[0],
+              customClaimer: regularAccounts[1],
+            });
+
+            await blackList(
+              { blacklistable: blackListableTester, accessControl, owner },
+              regularAccounts[1],
+            );
+
+            await approveRedeemRequestTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('5'),
+              { revertCustomError: acErrors.WMAC_HAS_ROLE },
+            );
+          });
+
+          it('should fail approve request when claimer got ungreenlisted when greenlist enable flag is true', async () => {
+            const fixture = await loadRvFixture();
+            const {
+              owner,
+              redemptionVault,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              greenListableTester,
+              accessControl,
+              regularAccounts,
+            } = fixture;
+            await setupPendingRedeemRequest(fixture, {
+              customRecipient: regularAccounts[0],
+              customClaimer: regularAccounts[1],
+            });
+
+            await redemptionVault.setGreenlistEnable(true);
+            await greenList(
+              { greenlistable: greenListableTester, accessControl, owner },
+              regularAccounts[0],
+            );
+
+            await approveRedeemRequestTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('5'),
+              { revertCustomError: acErrors.WMAC_HASNT_ROLE },
+            );
+          });
+
+          it('should fail approve request when claimer got sanction listed', async () => {
+            const fixture = await loadRvFixture();
+            const {
+              owner,
+              redemptionVault,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              mockedSanctionsList,
+            } = fixture;
+            await setupPendingRedeemRequest(fixture, {
+              customRecipient: regularAccounts[0],
+              customClaimer: regularAccounts[1],
+            });
+
+            await sanctionUser(
+              { sanctionsList: mockedSanctionsList },
+              regularAccounts[1],
+            );
+
+            await approveRedeemRequestTest(
+              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('5'),
+              {
+                revertCustomError: {
+                  customErrorName: 'Sanctioned',
+                },
+              },
+            );
+          });
         });
 
         it('should fail: request already processed', async () => {
@@ -17514,40 +17566,6 @@ export const redemptionVaultSuits = (
             );
           });
 
-          it('should fail: when loanApr > maxLoanApr', async () => {
-            const fixture = await loadRvFixture();
-            const {
-              redemptionVault,
-              owner,
-              mTBILL,
-              loanRepaymentAddress,
-              stableCoins,
-            } = fixture;
-
-            await setMaxLoanAprTest({ redemptionVault, owner }, 100);
-            await prepareTest(fixture, stableCoins.dai);
-
-            await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
-            await approveBase18(
-              loanRepaymentAddress,
-              stableCoins.dai,
-              redemptionVault,
-              100,
-            );
-
-            await setLoanAprTest({ redemptionVault, owner }, 101);
-
-            await bulkRepayLpLoanRequestTest(
-              { redemptionVault, owner, mTBILL },
-              [{ id: 0 }],
-              {
-                revertCustomError: {
-                  customErrorName: 'LoanAprTooHigh',
-                },
-              },
-            );
-          });
-
           it('approve 1 request when loanApr is not zero but does not exceed instant fee', async () => {
             const fixture = await loadRvFixture();
             const {
@@ -17559,7 +17577,6 @@ export const redemptionVaultSuits = (
             } = fixture;
 
             await setInstantFeeTest({ vault: redemptionVault, owner }, 100);
-            await setMaxLoanAprTest({ redemptionVault, owner }, 100);
             await prepareTest(fixture, stableCoins.dai);
             await increase(days(365));
 
@@ -17590,7 +17607,6 @@ export const redemptionVaultSuits = (
             } = fixture;
 
             await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
-            await setMaxLoanAprTest({ redemptionVault, owner }, 10000);
             await prepareTest(fixture, stableCoins.usdt);
             const request = await redemptionVault.loanRequests(0);
             await ethers.provider.send('evm_setNextBlockTimestamp', [
@@ -17626,7 +17642,6 @@ export const redemptionVaultSuits = (
             await setInstantFeeTest({ vault: redemptionVault, owner }, 200);
             await prepareTest(fixture, stableCoins.dai);
             await setInstantFeeTest({ vault: redemptionVault, owner }, 50);
-            await setMaxLoanAprTest({ redemptionVault, owner }, 200);
             await increase(days(365));
 
             await mintToken(stableCoins.dai, loanRepaymentAddress, 102);
@@ -17656,7 +17671,6 @@ export const redemptionVaultSuits = (
             } = fixture;
 
             await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
-            await setMaxLoanAprTest({ redemptionVault, owner }, 20000);
             await prepareTest(fixture, stableCoins.usdt);
             const request = await redemptionVault.loanRequests(0);
             await ethers.provider.send('evm_setNextBlockTimestamp', [
@@ -17691,7 +17705,6 @@ export const redemptionVaultSuits = (
             await prepareTest(fixture, stableCoins.usdt);
             await prepareTest(fixture, stableCoins.usdt, false);
             await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
-            await setMaxLoanAprTest({ redemptionVault, owner }, 10000);
 
             const r0 = await redemptionVault.loanRequests(0);
             const r1 = await redemptionVault.loanRequests(1);
@@ -17729,7 +17742,6 @@ export const redemptionVaultSuits = (
             await prepareTest(fixture, stableCoins.dai);
             await prepareTest(fixture, stableCoins.usdc);
             await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
-            await setMaxLoanAprTest({ redemptionVault, owner }, 10000);
 
             const r0 = await redemptionVault.loanRequests(0);
             const r1 = await redemptionVault.loanRequests(1);
@@ -17774,7 +17786,6 @@ export const redemptionVaultSuits = (
             await prepareTest(fixture, stableCoins.usdt, false);
             await prepareTest(fixture, stableCoins.usdt, false);
             await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
-            await setMaxLoanAprTest({ redemptionVault, owner }, 5000);
 
             const r0 = await redemptionVault.loanRequests(0);
             const r1 = await redemptionVault.loanRequests(1);

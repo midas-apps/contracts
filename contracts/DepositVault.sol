@@ -693,6 +693,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         Request memory request = mintRequests[requestId];
 
         _validateRequest(requestId, request.recipient, request.status);
+        _validateRequestAddressesAccess(request);
 
         if (isSafe) {
             require(
@@ -830,6 +831,20 @@ contract DepositVault is ManageableVault, IDepositVault {
             status == expectedStatus,
             UnexpectedRequestStatus(requestId, status)
         );
+    }
+
+    /**
+     * @dev validates request addresses access
+     * @param request request
+     */
+    function _validateRequestAddressesAccess(Request memory request)
+        private
+        view
+    {
+        _validateUserAccess(request.recipient, false);
+        if (request.claimer != address(0)) {
+            _validateUserAccess(request.claimer, false);
+        }
     }
 
     /**
