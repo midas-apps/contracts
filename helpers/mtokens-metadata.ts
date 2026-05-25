@@ -298,4 +298,8 @@ export const mTokensMetadata: Record<
     name: 'Morini CarryTradeUSDTRYLeverage Vault',
     symbol: 'CarryTradeUSDTRYLeverage',
   },
+  mEVETH: {
+    name: 'Midas Everstake ETH',
+    symbol: 'mEVETH',
+  },
 };

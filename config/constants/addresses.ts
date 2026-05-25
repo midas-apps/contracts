@@ -463,6 +463,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x5455222CCDd32F85C1998f57DC6CF613B4498C2a',
       redemptionVaultSwapper: '0x9C3743582e8b2d7cCb5e08caF3c9C33780ac446f',
     },
+    mEVETH: {
+      token: '0x462bE06b03641f0880F694EBc82295572837ba53',
+      customFeed: '0x8B747cDC36418c7AD822f9e21F69C6bE878e7510',
+      dataFeed: '0xC7322eFdA17cF7d2A5E35E1a06c78eFd9cb5624e',
+      depositVault: '0x2801B9B6b2596813f08A8d26ac3E2E37a1899F80',
+      redemptionVaultSwapper: '0x818Fb14558d848FFd54758b21472dB334cee1605',
+    },
     obeatUSD: {
       token: '0x2ce15146958Bf305dAdeBbbF31F2d5a4F2574B43',
       layerZero: {
