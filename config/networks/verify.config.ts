@@ -41,12 +41,21 @@ export const verifyConfig: VerifyConfigPerNetwork = {
     type: 'etherscan',
     browserUrl: 'https://basescan.org',
   },
+  arbitrum: {
+    type: 'etherscan',
+    browserUrl: 'https://arbiscan.io',
+  },
+  arbitrumSepolia: {
+    type: 'etherscan',
+    browserUrl: 'https://sepolia.arbiscan.io',
+  },
   hyperevm: {
     type: 'etherscan',
     browserUrl: 'https://hyperevmscan.io',
   },
   scroll: {
-    type: 'etherscan',
+    type: 'custom',
+    apiUrl: 'https://scrollscan.com/api',
     browserUrl: 'https://scrollscan.com',
   },
   monad: [
@@ -61,9 +70,8 @@ export const verifyConfig: VerifyConfigPerNetwork = {
     },
   ],
   oasis: {
-    type: 'custom',
-    apiUrl: '',
-    browserUrl: '',
+    type: 'sourcify',
+    browserUrl: 'https://explorer.oasis.io/mainnet/sapphire',
   },
   plume: {
     type: 'custom',
@@ -77,8 +85,8 @@ export const verifyConfig: VerifyConfigPerNetwork = {
   },
   rootstock: {
     type: 'custom',
-    apiUrl: 'https://rootstock.custom.com/api/',
-    browserUrl: 'https://rootstock.custom.com/',
+    apiUrl: 'https://rootstock.blockscout.com/api',
+    browserUrl: 'https://rootstock.blockscout.com',
   },
   tacTestnet: {
     type: 'custom',
@@ -86,8 +94,7 @@ export const verifyConfig: VerifyConfigPerNetwork = {
     browserUrl: 'https://turin.explorer.tac.build',
   },
   katana: {
-    type: 'custom',
-    apiUrl: 'https://explorer.katanarpc.com/api',
+    type: 'etherscan',
     browserUrl: 'https://explorer.katanarpc.com',
   },
   xrplevm: {
@@ -106,20 +113,17 @@ export const verifyConfig: VerifyConfigPerNetwork = {
     browserUrl: 'https://chainscan.0g.ai',
   },
   plasma: {
-    type: 'custom',
-    apiUrl:
-      'https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api',
+    type: 'etherscan',
     browserUrl: 'https://plasmascan.to',
   },
   bsc: {
-    type: 'custom',
-    apiUrl: 'https://api.bscscan.com/api',
+    type: 'etherscan',
     browserUrl: 'https://bscscan.com',
   },
   injective: {
     type: 'custom',
-    apiUrl: 'https://custom-api.injective.network/api',
-    browserUrl: 'https://custom.injective.network',
+    apiUrl: 'https://blockscout-api.injective.network/api',
+    browserUrl: 'https://blockscout.injective.network',
   },
   optimism: {
     type: 'etherscan',

@@ -136,9 +136,7 @@ task('verify:verify').setAction(
               chainId: chainIds[network],
               network,
               urls: {
-                apiURL:
-                  'https://api.etherscan.io/v2/api?chainid=' +
-                  chainIds[network],
+                apiURL: 'https://api.etherscan.io/v2/api',
                 browserURL: config.browserUrl,
               },
             },
@@ -164,7 +162,10 @@ task('verify:verify').setAction(
       } else if (config.type === 'sourcify') {
         hre.config.sourcify = {
           enabled: true,
-          apiUrl: config.overrideApiUrl,
+          apiUrl:
+            config.overrideApiUrl ??
+            ENV.SOURCIFY_API_URL ??
+            'https://sourcify.dev/server',
           browserUrl: config.browserUrl,
         };
       } else {

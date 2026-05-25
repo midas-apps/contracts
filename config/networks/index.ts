@@ -51,7 +51,9 @@ const defaultRpcUrls: ConfigPerNetwork<RpcUrl> = {
   bsc: ALCHEMY_KEY
     ? `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
     : 'https://bsc-dataseed.bnbchain.org',
-  scroll: 'https://scroll.drpc.org',
+  scroll: INFURA_KEY
+    ? `https://scroll-mainnet.infura.io/v3/${INFURA_KEY}`
+    : 'https://scroll.drpc.org',
   monad: 'https://rpc.monad.xyz',
   injective: `https://${QUICK_NODE_PROJECT}.injective-mainnet.quiknode.pro/${QUICK_NODE_KEY}/`,
   optimism: ALCHEMY_KEY
