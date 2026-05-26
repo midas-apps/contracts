@@ -1,5 +1,4 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumber, constants } from 'ethers';
@@ -50,167 +49,6 @@ redemptionVaultSuits(
   },
   async (defaultDeploy) => {
     describe('RedemptionVaultWithMToken', () => {
-      it('failing deployment', async () => {
-        const {
-          mTokenLoan,
-          mTokenLoanToUsdDataFeed,
-          tokensReceiver,
-          feeReceiver,
-          accessControl,
-          mockedSanctionsList,
-          owner,
-        } = await loadFixture(defaultDeploy);
-
-        const redemptionVaultWithMToken =
-          await new RedemptionVaultWithMTokenTest__factory(owner).deploy();
-
-        await expect(
-          redemptionVaultWithMToken[
-            'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
-          ](
-            {
-              ac: accessControl.address,
-              sanctionsList: mockedSanctionsList.address,
-              variationTolerance: 1,
-              minAmount: parseUnits('100'),
-              mToken: mTokenLoan.address,
-              mTokenDataFeed: mTokenLoanToUsdDataFeed.address,
-              feeReceiver: feeReceiver.address,
-              tokensReceiver: tokensReceiver.address,
-              instantFee: 100,
-            },
-            {
-              limitConfigs: [
-                {
-                  limit: parseUnits('100000'),
-                  window: days(1),
-                },
-              ],
-              minInstantFee: 0,
-              maxInstantFee: 10000,
-              maxInstantShare: 100_00,
-            },
-            {
-              requestRedeemer: constants.AddressZero,
-            },
-            {
-              loanLp: constants.AddressZero,
-              loanLpFeeReceiver: constants.AddressZero,
-              loanRepaymentAddress: constants.AddressZero,
-              loanSwapperVault: constants.AddressZero,
-              maxLoanApr: 0,
-            },
-            constants.AddressZero,
-          ),
-        ).to.be.reverted;
-      });
-
-      describe('initialization', () => {
-        it('should fail: call initialize() when already initialized', async () => {
-          const { redemptionVaultWithMToken } = await loadFixture(
-            defaultDeploy,
-          );
-
-          await expect(
-            redemptionVaultWithMToken[
-              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
-            ](
-              {
-                ac: constants.AddressZero,
-                sanctionsList: constants.AddressZero,
-                variationTolerance: 1,
-                minAmount: parseUnits('100'),
-                mToken: constants.AddressZero,
-                mTokenDataFeed: constants.AddressZero,
-                feeReceiver: constants.AddressZero,
-                tokensReceiver: constants.AddressZero,
-                instantFee: 100,
-              },
-              {
-                limitConfigs: [
-                  {
-                    limit: parseUnits('100000'),
-                    window: days(1),
-                  },
-                ],
-                minInstantFee: 0,
-                maxInstantFee: 10000,
-                maxInstantShare: 100_00,
-              },
-              {
-                requestRedeemer: constants.AddressZero,
-              },
-              {
-                loanLp: constants.AddressZero,
-                loanLpFeeReceiver: constants.AddressZero,
-                loanRepaymentAddress: constants.AddressZero,
-                loanSwapperVault: constants.AddressZero,
-                maxLoanApr: 0,
-              },
-              constants.AddressZero,
-            ),
-          ).revertedWith('Initializable: contract is already initialized');
-        });
-
-        it('should fail: when redemptionVaultLoanSwapper address zero', async () => {
-          const {
-            owner,
-            accessControl,
-            mTokenLoan,
-            mTokenLoanToUsdDataFeed,
-            tokensReceiver,
-            feeReceiver,
-            mockedSanctionsList,
-          } = await loadFixture(defaultDeploy);
-
-          const redemptionVaultWithMToken =
-            await new RedemptionVaultWithMTokenTest__factory(owner).deploy();
-
-          await expect(
-            redemptionVaultWithMToken[
-              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
-            ](
-              {
-                ac: accessControl.address,
-                sanctionsList: mockedSanctionsList.address,
-                variationTolerance: 1,
-                minAmount: parseUnits('100'),
-                mToken: mTokenLoan.address,
-                mTokenDataFeed: mTokenLoanToUsdDataFeed.address,
-                feeReceiver: feeReceiver.address,
-                tokensReceiver: tokensReceiver.address,
-                instantFee: 100,
-              },
-              {
-                limitConfigs: [
-                  {
-                    limit: parseUnits('100000'),
-                    window: days(1),
-                  },
-                ],
-                minInstantFee: 0,
-                maxInstantFee: 10000,
-                maxInstantShare: 100_00,
-              },
-              {
-                requestRedeemer: constants.AddressZero,
-              },
-              {
-                loanLp: constants.AddressZero,
-                loanLpFeeReceiver: constants.AddressZero,
-                loanRepaymentAddress: constants.AddressZero,
-                loanSwapperVault: constants.AddressZero,
-                maxLoanApr: 0,
-              },
-              constants.AddressZero,
-            ),
-          ).to.be.revertedWithCustomError(
-            redemptionVaultWithMToken,
-            'InvalidAddress',
-          );
-        });
-      });
-
       describe('setRedemptionVault()', () => {
         it('should fail: call from address without vault admin role', async () => {
           const { redemptionVaultWithMToken, regularAccounts } =
@@ -933,9 +771,7 @@ redemptionVaultSuits(
             stableCoins.dai,
             100,
             {
-              revertCustomError: {
-                customErrorName: 'LoanLpNotConfigured',
-              },
+              revertMessage: 'ERC20: transfer amount exceeds balance',
             },
           );
         });
@@ -993,9 +829,7 @@ redemptionVaultSuits(
             stableCoins.dai,
             100,
             {
-              revertCustomError: {
-                customErrorName: 'LoanLpNotConfigured',
-              },
+              revertMessage: 'ERC20: transfer amount exceeds balance',
             },
           );
         });

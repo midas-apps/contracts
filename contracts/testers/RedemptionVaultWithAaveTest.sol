@@ -37,10 +37,16 @@ contract RedemptionVaultWithAaveTest is
             : 0;
 
         return
-            _useVaultLiquidity(token, missingAmount, 0, balance, tokenDecimals);
+            _obtainVaultLiquidity(
+                token,
+                missingAmount,
+                0,
+                balance,
+                tokenDecimals
+            );
     }
 
-    function _useVaultLiquidity(
+    function _obtainVaultLiquidity(
         address tokenOut,
         uint256 amountTokenOutBase18,
         uint256 tokenOutRate,
@@ -54,7 +60,7 @@ contract RedemptionVaultWithAaveTest is
         )
     {
         return
-            RedemptionVaultWithAave._useVaultLiquidity(
+            RedemptionVaultWithAave._obtainVaultLiquidity(
                 tokenOut,
                 amountTokenOutBase18,
                 tokenOutRate,

@@ -71,8 +71,8 @@ struct LiquidityProviderLoanRequest {
  */
 interface IRedemptionVault is IManageableVault {
     error InvalidLoanLpReceiver();
-    error LoanLpNotConfigured(address loanLp, address loanSwapperVault);
     error FeeExceedsAmount(uint256 fee, uint256 amount);
+    error NotSelfCall();
 
     /**
      * @param user function caller (msg.sender)

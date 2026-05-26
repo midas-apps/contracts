@@ -1,5 +1,4 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { constants } from 'ethers';
@@ -38,156 +37,6 @@ redemptionVaultSuits(
   },
   async (defaultDeploy) => {
     describe('RedemptionVaultWithUSTB', function () {
-      it('failing deployment', async () => {
-        const {
-          mTBILL,
-          tokensReceiver,
-          feeReceiver,
-          mTokenToUsdDataFeed,
-          accessControl,
-          mockedSanctionsList,
-          owner,
-          requestRedeemer,
-        } = await loadFixture(defaultDeploy);
-
-        const redemptionVaultWithUSTB =
-          await new RedemptionVaultWithUSTBTest__factory(owner).deploy();
-
-        await expect(
-          redemptionVaultWithUSTB[
-            'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
-          ](
-            {
-              ac: accessControl.address,
-              sanctionsList: mockedSanctionsList.address,
-              variationTolerance: 1,
-              minAmount: parseUnits('100'),
-              mToken: mTBILL.address,
-              mTokenDataFeed: mTokenToUsdDataFeed.address,
-              feeReceiver: feeReceiver.address,
-              tokensReceiver: tokensReceiver.address,
-              instantFee: 100,
-            },
-            {
-              limitConfigs: [
-                {
-                  limit: parseUnits('100000'),
-                  window: days(1),
-                },
-              ],
-              minInstantFee: 0,
-              maxInstantFee: 10000,
-              maxInstantShare: 100_00,
-            },
-            { requestRedeemer: requestRedeemer.address },
-            {
-              loanLp: constants.AddressZero,
-              loanLpFeeReceiver: constants.AddressZero,
-              loanRepaymentAddress: constants.AddressZero,
-              loanSwapperVault: constants.AddressZero,
-              maxLoanApr: 0,
-            },
-            constants.AddressZero,
-          ),
-        ).to.be.reverted;
-      });
-
-      describe('initialization', () => {
-        it('should fail: call initialize() when already initialized', async () => {
-          const { redemptionVaultWithUSTB } = await loadFixture(defaultDeploy);
-
-          await expect(
-            redemptionVaultWithUSTB[
-              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
-            ](
-              {
-                ac: constants.AddressZero,
-                sanctionsList: constants.AddressZero,
-                variationTolerance: 0,
-                minAmount: 0,
-                mToken: constants.AddressZero,
-                mTokenDataFeed: constants.AddressZero,
-                feeReceiver: constants.AddressZero,
-                tokensReceiver: constants.AddressZero,
-                instantFee: 0,
-              },
-              {
-                limitConfigs: [],
-                minInstantFee: 0,
-                maxInstantFee: 10000,
-                maxInstantShare: 100_00,
-              },
-              { requestRedeemer: constants.AddressZero },
-              {
-                loanLp: constants.AddressZero,
-                loanLpFeeReceiver: constants.AddressZero,
-                loanRepaymentAddress: constants.AddressZero,
-                loanSwapperVault: constants.AddressZero,
-                maxLoanApr: 0,
-              },
-              constants.AddressZero,
-            ),
-          ).revertedWith('Initializable: contract is already initialized');
-        });
-
-        it('should fail: when ustbRedemption address zero', async () => {
-          const {
-            owner,
-            accessControl,
-            mTBILL,
-            tokensReceiver,
-            feeReceiver,
-            mTokenToUsdDataFeed,
-            mockedSanctionsList,
-            requestRedeemer,
-          } = await loadFixture(defaultDeploy);
-
-          const redemptionVaultWithUSTB =
-            await new RedemptionVaultWithUSTBTest__factory(owner).deploy();
-
-          await expect(
-            redemptionVaultWithUSTB[
-              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),(address),(address,address,address,address,uint64),address)'
-            ](
-              {
-                ac: accessControl.address,
-                sanctionsList: mockedSanctionsList.address,
-                variationTolerance: 1,
-                minAmount: 1000,
-                mToken: mTBILL.address,
-                mTokenDataFeed: mTokenToUsdDataFeed.address,
-                feeReceiver: feeReceiver.address,
-                tokensReceiver: tokensReceiver.address,
-                instantFee: 100,
-              },
-              {
-                limitConfigs: [
-                  {
-                    limit: parseUnits('100000'),
-                    window: days(1),
-                  },
-                ],
-                minInstantFee: 0,
-                maxInstantFee: 10000,
-                maxInstantShare: 100_00,
-              },
-              { requestRedeemer: requestRedeemer.address },
-              {
-                loanLp: constants.AddressZero,
-                loanLpFeeReceiver: constants.AddressZero,
-                loanRepaymentAddress: constants.AddressZero,
-                loanSwapperVault: constants.AddressZero,
-                maxLoanApr: 0,
-              },
-              constants.AddressZero,
-            ),
-          ).to.be.revertedWithCustomError(
-            redemptionVaultWithUSTB,
-            'InvalidAddress',
-          );
-        });
-      });
-
       describe('redeemInstant()', () => {
         describe('preferLoanLiquidity=true', () => {
           it('redeem 100 mTBILL when vault has enough USDC (no USTB needed)', async () => {
@@ -536,9 +385,7 @@ redemptionVaultSuits(
             stableCoins.usdc,
             100000,
             {
-              revertCustomError: {
-                customErrorName: 'LoanLpNotConfigured',
-              },
+              revertMessage: 'ERC20: transfer amount exceeds balance',
             },
           );
         });

@@ -54,7 +54,7 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
      * @param currentTokenOutBalanceBase18 current balance of tokenOut in the vault in base 18
      * @param tokenOutDecimals decimals of tokenOut
      */
-    function _useVaultLiquidity(
+    function _obtainVaultLiquidity(
         address tokenOut,
         uint256 missingAmountBase18,
         uint256, /* tokenOutRate */

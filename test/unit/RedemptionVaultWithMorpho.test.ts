@@ -127,6 +127,7 @@ redemptionVaultSuits(
             owner,
             stableCoins,
             morphoVaultMock,
+            pauseManager,
           } = await loadFixture(defaultDeploy);
 
           await pauseVaultFn(
@@ -198,8 +199,12 @@ redemptionVaultSuits(
         });
 
         it('should fail: when function is paused', async () => {
-          const { redemptionVaultWithMorpho, owner, stableCoins } =
-            await loadFixture(defaultDeploy);
+          const {
+            redemptionVaultWithMorpho,
+            owner,
+            stableCoins,
+            pauseManager,
+          } = await loadFixture(defaultDeploy);
 
           await pauseVaultFn(
             { pauseManager, owner },
@@ -1118,10 +1123,7 @@ redemptionVaultSuits(
               parseUnits('1000'),
               0,
             ),
-          ).to.be.revertedWithCustomError(
-            redemptionVaultWithMorpho,
-            'LoanLpNotConfigured',
-          );
+          ).to.be.revertedWith('ERC20: transfer amount exceeds balance');
         });
 
         it('should fail: Morpho vault has insufficient liquidity during redeemInstant', async () => {

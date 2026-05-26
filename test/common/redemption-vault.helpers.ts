@@ -183,6 +183,7 @@ export const redeemInstantTest = async (
     checkSupply = true,
     expectedAmountOut,
     additionalLiquidity,
+    loanLiquidityExpectToFail,
     holdback,
   }: CommonParamsRedeem & {
     waivedFee?: boolean;
@@ -191,6 +192,7 @@ export const redeemInstantTest = async (
     checkSupply?: boolean;
     expectedAmountOut?: BigNumberish;
     additionalLiquidity?: () => Promise<BigNumberish>;
+    loanLiquidityExpectToFail?: boolean;
     holdback?: {
       callFunction: () => Promise<ContractTransaction>;
       instantShare: BigNumberish;
@@ -305,7 +307,10 @@ export const redeemInstantTest = async (
     amountOutWithoutFeeBase18!,
     feeBase18!,
     tokenOutRate,
-    await additionalLiquidity?.(),
+    {
+      additionalLiquidity: await additionalLiquidity?.(),
+      loanLiquidityExpectToFail,
+    },
   );
 
   const instantLimitsBefore = await redemptionVault.getInstantLimitStatuses();
@@ -1739,7 +1744,13 @@ export const estimateSendTokensFromLiquidity = async (
   amountTokenOutWithoutFeeBase18: BigNumber,
   feeAmountBase18: BigNumber,
   tokenOutRate: BigNumber,
-  additionalLiquidity?: BigNumberish,
+  {
+    additionalLiquidity,
+    loanLiquidityExpectToFail,
+  }: {
+    additionalLiquidity?: BigNumberish;
+    loanLiquidityExpectToFail?: boolean;
+  },
 ) => {
   const decimals = await tokenOut.decimals();
   const precision = BigNumber.from(10).pow(18 - decimals);
@@ -1862,11 +1873,16 @@ export const estimateSendTokensFromLiquidity = async (
     ({
       amountReceivedBase18: usedLpLiquidityBase18,
       feePortionBase18: lpFeePortionBase18,
-    } = await estimateUseLoanLpLiquidity(
-      totalAmountBase18,
-      totalAmountBase18,
-      feeAmountBase18,
-    ));
+    } = loanLiquidityExpectToFail
+      ? {
+          amountReceivedBase18: constants.Zero,
+          feePortionBase18: constants.Zero,
+        }
+      : await estimateUseLoanLpLiquidity(
+          totalAmountBase18,
+          totalAmountBase18,
+          feeAmountBase18,
+        ));
   } else {
     const obtainedVaultLiquidityBase18 = constants.Zero;
     const newBalanceBase18 = balanceVaultBase18.add(

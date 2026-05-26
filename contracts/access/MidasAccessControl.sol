@@ -300,7 +300,7 @@ contract MidasAccessControl is
         _setRoleAdmin(role, newAdminRole);
     }
 
-    //solhint-disable disable-next-line
+    // solhint-disable-next-line
     function renounceRole(bytes32, address)
         public
         pure

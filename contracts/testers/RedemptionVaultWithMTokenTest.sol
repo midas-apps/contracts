@@ -41,7 +41,7 @@ contract RedemptionVaultWithMTokenTest is
             : 0;
 
         return
-            _useVaultLiquidity(
+            _obtainVaultLiquidity(
                 token,
                 missingAmount,
                 rate,
@@ -50,7 +50,7 @@ contract RedemptionVaultWithMTokenTest is
             );
     }
 
-    function _useVaultLiquidity(
+    function _obtainVaultLiquidity(
         address token,
         uint256 amountTokenOutBase18,
         uint256 tokenOutRate,
@@ -64,7 +64,7 @@ contract RedemptionVaultWithMTokenTest is
         )
     {
         return
-            RedemptionVaultWithMToken._useVaultLiquidity(
+            RedemptionVaultWithMToken._obtainVaultLiquidity(
                 token,
                 amountTokenOutBase18,
                 tokenOutRate,

@@ -37,10 +37,16 @@ contract RedemptionVaultWithMorphoTest is
             : 0;
 
         return
-            _useVaultLiquidity(token, missingAmount, 0, balance, tokenDecimals);
+            _obtainVaultLiquidity(
+                token,
+                missingAmount,
+                0,
+                balance,
+                tokenDecimals
+            );
     }
 
-    function _useVaultLiquidity(
+    function _obtainVaultLiquidity(
         address token,
         uint256 amountTokenOutBase18,
         uint256 tokenOutRate,
@@ -54,7 +60,7 @@ contract RedemptionVaultWithMorphoTest is
         )
     {
         return
-            RedemptionVaultWithMorpho._useVaultLiquidity(
+            RedemptionVaultWithMorpho._obtainVaultLiquidity(
                 token,
                 amountTokenOutBase18,
                 tokenOutRate,

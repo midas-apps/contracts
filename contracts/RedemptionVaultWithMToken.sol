@@ -89,7 +89,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
      * @param missingAmountBase18 amount of tokenOut needed in base 18
      * @param tokenOutRate tokenOut rate
      */
-    function _useVaultLiquidity(
+    function _obtainVaultLiquidity(
         address tokenOut,
         uint256 missingAmountBase18,
         uint256 tokenOutRate,

@@ -743,7 +743,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             recipient
         );
 
-        _sendTokensFromLiquidity(tokenOut, recipient, calcResult);
+        _obtainLiquidityAndTransfer(tokenOut, recipient, calcResult);
 
         emit RedeemInstant(
             msg.sender,
@@ -855,16 +855,14 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     }
 
     /**
-     * @dev Sends tokens from liquidity to the recipient
-     * @param tokenOut tokenOut address
-     * @param recipient recipient address
-     * @param calcResult calculated redeem result
+     * @dev Calculates how much of liquidity is needed to fulfill the redemption
+     * and gets missing amount from all the available sources - vault liquidity and loan LP liquidity
+     * if `preferLoanLiquidity` is true, it will first try to use loan LP liquidity,
      */
-    function _sendTokensFromLiquidity(
+    function _obtainLiquidity(
         address tokenOut,
-        address recipient,
         CalcAndValidateRedeemResult memory calcResult
-    ) private {
+    ) private returns (uint256 usedLpLiquidity, uint256 lpFeePortion) {
         uint256 tokenOutBalanceBase18 = IERC20(tokenOut)
             .balanceOf(address(this))
             .convertToBase18(calcResult.tokenOutDecimals);
@@ -872,51 +870,74 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 totalAmount = calcResult.amountTokenOutWithoutFee +
             calcResult.feeAmount;
 
-        uint256 usedLpLiquidity;
-        uint256 lpFeePortion;
-
         if (preferLoanLiquidity) {
-            (usedLpLiquidity, lpFeePortion) = _useLoanLpLiquidity(
+            (usedLpLiquidity, lpFeePortion) = _tryObtainLoanLpLiquidity(
                 tokenOut,
                 totalAmount,
                 totalAmount,
                 calcResult.tokenOutRate,
                 calcResult.feeAmount,
-                calcResult.tokenOutDecimals
+                calcResult.tokenOutDecimals,
+                false
             );
+
             uint256 newBalance = tokenOutBalanceBase18 + usedLpLiquidity;
 
             if (newBalance < totalAmount) {
-                _useVaultLiquidity(
+                _tryObtainVaultLiquidity(
                     tokenOut,
                     totalAmount - newBalance,
                     calcResult.tokenOutRate,
                     newBalance,
-                    calcResult.tokenOutDecimals
+                    calcResult.tokenOutDecimals,
+                    true
                 );
             }
         } else if (tokenOutBalanceBase18 < totalAmount) {
-            uint256 obtainedVaultLiquidity = _useVaultLiquidity(
+            uint256 obtainedVaultLiquidity = _tryObtainVaultLiquidity(
                 tokenOut,
                 totalAmount - tokenOutBalanceBase18,
                 calcResult.tokenOutRate,
                 tokenOutBalanceBase18,
-                calcResult.tokenOutDecimals
+                calcResult.tokenOutDecimals,
+                false
             );
 
             uint256 newBalance = tokenOutBalanceBase18 + obtainedVaultLiquidity;
 
             if (newBalance < totalAmount) {
-                (usedLpLiquidity, lpFeePortion) = _useLoanLpLiquidity(
+                (usedLpLiquidity, lpFeePortion) = _tryObtainLoanLpLiquidity(
                     tokenOut,
                     totalAmount - newBalance,
                     totalAmount,
                     calcResult.tokenOutRate,
                     calcResult.feeAmount,
-                    calcResult.tokenOutDecimals
+                    calcResult.tokenOutDecimals,
+                    true
                 );
             }
         }
+    }
+
+    /**
+     * @dev Obtains liquidity from different sources and transfers it to the recipient
+     * as well as fee distribution
+     * @param tokenOut tokenOut address
+     * @param recipient recipient address
+     * @param calcResult calculated redeem result
+     */
+    function _obtainLiquidityAndTransfer(
+        address tokenOut,
+        address recipient,
+        CalcAndValidateRedeemResult memory calcResult
+    ) private {
+        uint256 usedLpLiquidity;
+        uint256 lpFeePortion;
+
+        (usedLpLiquidity, lpFeePortion) = _obtainLiquidity(
+            tokenOut,
+            calcResult
+        );
 
         uint256 vaultFeePortion = calcResult.feeAmount - lpFeePortion;
 
@@ -965,12 +986,86 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     }
 
     /**
+     * @dev wraps _obtainVaultLiquidityExternal with try/catch and reverts
+     * with original error if revertOnError is true
+     * @param tokenOut tokenOut address
+     * @param missingAmountBase18 amount of tokenOut needed in base 18
+     * @param tokenOutRate tokenOut rate
+     * @param currentTokenOutBalanceBase18 current balance of tokenOut in the vault in base 18
+     * @param tokenOutDecimals decimals of tokenOut
+     */
+    function _tryObtainVaultLiquidity(
+        address tokenOut,
+        uint256 missingAmountBase18,
+        uint256 tokenOutRate,
+        uint256 currentTokenOutBalanceBase18,
+        uint256 tokenOutDecimals,
+        bool revertOnError
+    ) private returns (uint256 obtainedLiquidityBase18) {
+        try
+            this._obtainVaultLiquidityExternal(
+                tokenOut,
+                missingAmountBase18,
+                tokenOutRate,
+                currentTokenOutBalanceBase18,
+                tokenOutDecimals
+            )
+        returns (uint256 _obtainedLiquidityBase18) {
+            obtainedLiquidityBase18 = _obtainedLiquidityBase18;
+        } catch (bytes memory errorData) {
+            if (revertOnError) {
+                _revertWithOriginalError(errorData);
+            }
+        }
+    }
+
+    /**
+     * @dev wraps _obtainLoanLpLiquidityExternal with try/catch and reverts
+     * with original error if revertOnError is true
+     * @param tokenOut tokenOut address
+     * @param missingAmountBase18 amount of tokenOut needed in base 18
+     * @param totalAmount total amount of tokenOut needed in base 18
+     * @param tokenOutRate tokenOut rate
+     * @param totalFee total fee of tokenOut
+     * @param tokenOutDecimals decimals of tokenOut
+     */
+    function _tryObtainLoanLpLiquidity(
+        address tokenOut,
+        uint256 missingAmountBase18,
+        uint256 totalAmount,
+        uint256 tokenOutRate,
+        uint256 totalFee,
+        uint256 tokenOutDecimals,
+        bool revertOnError
+    ) private returns (uint256 obtainedLiquidityBase18, uint256 lpFeePortion) {
+        try
+            this._obtainLoanLpLiquidityExternal(
+                tokenOut,
+                missingAmountBase18,
+                totalAmount,
+                tokenOutRate,
+                totalFee,
+                tokenOutDecimals
+            )
+        returns (uint256 _obtainedLiquidityBase18, uint256 _lpFeePortion) {
+            (obtainedLiquidityBase18, lpFeePortion) = (
+                _obtainedLiquidityBase18,
+                _lpFeePortion
+            );
+        } catch (bytes memory errorData) {
+            if (revertOnError) {
+                _revertWithOriginalError(errorData);
+            }
+        }
+    }
+
+    /**
      * @dev Check if contract has enough tokenOut balance for redeem,
      * if not, obtains liquidity trough the custom strategies.
      * In default implementation it does nothing.
      * @return obtainedLiquidityBase18 amount of tokenOut obtained
      */
-    function _useVaultLiquidity(
+    function _obtainVaultLiquidity(
         address, /* tokenOut */
         uint256, /* missingAmountBase18 */
         uint256, /* tokenOutRate */
@@ -987,6 +1082,41 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     }
 
     /**
+     * @notice This function can only be called by the contract itself (self-call restriction)
+     * @dev only calls _obtainVaultLiquidity internally and external because its used with try/catch
+     * @param tokenOut tokenOut address
+     * @param missingAmountBase18 amount of tokenOut needed in base 18
+     * @param tokenOutRate tokenOut rate
+     * @param currentTokenOutBalanceBase18 current balance of tokenOut in the vault in base 18
+     * @param tokenOutDecimals decimals of tokenOut
+     * @return obtainedLiquidityBase18 amount of tokenOut obtained
+     */
+    // solhint-disable-next-line private-vars-leading-underscore
+    function _obtainVaultLiquidityExternal(
+        address tokenOut,
+        uint256 missingAmountBase18,
+        uint256 tokenOutRate,
+        uint256 currentTokenOutBalanceBase18,
+        uint256 tokenOutDecimals
+    )
+        external
+        returns (
+            uint256 /* obtainedLiquidityBase18 */
+        )
+    {
+        require(msg.sender == address(this), NotSelfCall());
+        return
+            _obtainVaultLiquidity(
+                tokenOut,
+                missingAmountBase18,
+                tokenOutRate,
+                currentTokenOutBalanceBase18,
+                tokenOutDecimals
+            );
+    }
+
+    /**
+     * @notice This function can only be called by the contract itself (self-call restriction)
      * @dev Check if contract has enough tokenOut balance for redeem;
      * if not, redeem the missing amount via loan LP liquidity
      * @param tokenOut tokenOut address
@@ -996,7 +1126,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @param totalFee total fee of tokenOut
      * @param tokenOutDecimals decimals of tokenOut
      */
-    function _useLoanLpLiquidity(
+    // solhint-disable-next-line private-vars-leading-underscore
+    function _obtainLoanLpLiquidityExternal(
         address tokenOut,
         uint256 missingAmountBase18,
         uint256 totalAmount,
@@ -1004,12 +1135,13 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 totalFee,
         uint256 tokenOutDecimals
     )
-        private
+        external
         returns (
             uint256, /* amountReceivedBase18 */
             uint256 /* feePortionBase18 */
         )
     {
+        require(msg.sender == address(this), NotSelfCall());
         address _loanLp = loanLp;
         IRedemptionVault _loanSwapperVault = loanSwapperVault;
 
@@ -1017,10 +1149,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             return (0, 0);
         }
 
-        require(
-            _loanLp != address(0) && address(_loanSwapperVault) != address(0),
-            LoanLpNotConfigured(_loanLp, address(_loanSwapperVault))
-        );
+        // loan lp is not configured
+        if (_loanLp == address(0) || address(_loanSwapperVault) == address(0)) {
+            return (0, 0);
+        }
 
         uint256 mTokenARate = _loanSwapperVault
             .mTokenDataFeed()
@@ -1257,6 +1389,20 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         result.amountTokenOut = amountTokenOut;
 
         result.amountTokenOutWithoutFee = amountTokenOut - result.feeAmount;
+    }
+
+    /**
+     * @dev reverts with the original error data
+     * @param errorData error data
+     */
+    function _revertWithOriginalError(bytes memory errorData) private {
+        if (errorData.length > 0) {
+            assembly {
+                revert(add(32, errorData), mload(errorData))
+            }
+        }
+        // bare revert if no data
+        revert();
     }
 
     /**

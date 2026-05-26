@@ -1,4 +1,7 @@
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import {
+  loadFixture,
+  setBalance,
+} from '@nomicfoundation/hardhat-network-helpers';
 import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
 import {
   days,
@@ -1960,9 +1963,7 @@ export const redemptionVaultSuits = (
                 stableCoins.dai,
                 100,
                 {
-                  revertCustomError: {
-                    customErrorName: 'LoanLpNotConfigured',
-                  },
+                  revertMessage: 'ERC20: transfer amount exceeds balance',
                 },
               );
             });
@@ -1996,9 +1997,7 @@ export const redemptionVaultSuits = (
                 stableCoins.dai,
                 100,
                 {
-                  revertCustomError: {
-                    customErrorName: 'LoanLpNotConfigured',
-                  },
+                  revertMessage: 'ERC20: transfer amount exceeds balance',
                 },
               );
             });
@@ -2036,9 +2035,7 @@ export const redemptionVaultSuits = (
                 stableCoins.dai,
                 100,
                 {
-                  revertCustomError: {
-                    customErrorName: 'LoanLpNotConfigured',
-                  },
+                  revertMessage: 'ERC20: transfer amount exceeds balance',
                 },
               );
             });
@@ -2412,9 +2409,7 @@ export const redemptionVaultSuits = (
                 stableCoins.dai,
                 100,
                 {
-                  revertCustomError: {
-                    customErrorName: 'LoanLpNotConfigured',
-                  },
+                  revertMessage: 'ERC20: transfer amount exceeds balance',
                 },
               );
             });
@@ -2452,9 +2447,7 @@ export const redemptionVaultSuits = (
                 stableCoins.dai,
                 100,
                 {
-                  revertCustomError: {
-                    customErrorName: 'LoanLpNotConfigured',
-                  },
+                  revertMessage: 'ERC20: transfer amount exceeds balance',
                 },
               );
             });
@@ -2496,9 +2489,7 @@ export const redemptionVaultSuits = (
                 stableCoins.dai,
                 100,
                 {
-                  revertCustomError: {
-                    customErrorName: 'LoanLpNotConfigured',
-                  },
+                  revertMessage: 'ERC20: transfer amount exceeds balance',
                 },
               );
             });
@@ -2561,9 +2552,76 @@ export const redemptionVaultSuits = (
                 stableCoins.dai,
                 100,
                 {
-                  revertCustomError: {
-                    customErrorName: 'SlippageExceeded',
-                  },
+                  revertMessage: 'ERC20: transfer amount exceeds balance',
+                },
+              );
+            });
+
+            it('should fail: when swapper fails it should catch the error and fail later during the transfer', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                redemptionVaultLoanSwapper,
+                loanLp,
+                mTokenLoan,
+                mockedAggregatorMToken,
+                mockedAggregatorMTokenLoan,
+                mockedAggregator,
+              } = await loadRvFixture();
+
+              await mintToken(mTBILL, owner, 100);
+
+              await mintToken(mTokenLoan, loanLp, 100);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 100);
+              await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 100);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 100);
+
+              await removeWaivedFeeAccountTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                redemptionVault.address,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                100,
+                true,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                100,
+                true,
+              );
+
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMToken },
+                1,
+              );
+              await setRoundData({ mockedAggregator }, 1);
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMTokenLoan },
+                0,
+              );
+
+              await setPreferLoanLiquidityTest(
+                { redemptionVault, owner },
+                true,
+              );
+
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+                {
+                  revertMessage: 'ERC20: transfer amount exceeds balance',
                 },
               );
             });
@@ -15014,6 +15072,76 @@ export const redemptionVaultSuits = (
               },
             );
           });
+        });
+      });
+
+      describe('_obtainVaultLiquidityExternal', () => {
+        it('should fail: when not self call', async () => {
+          const { redemptionVault } = await loadRvFixture();
+
+          await expect(
+            redemptionVault._obtainVaultLiquidityExternal(
+              constants.AddressZero,
+              0,
+              0,
+              0,
+              0,
+            ),
+          ).to.be.revertedWithCustomError(redemptionVault, 'NotSelfCall');
+        });
+
+        it('when is self call', async () => {
+          const { redemptionVault } = await loadRvFixture();
+
+          const impersonatedRv = await ethers.getImpersonatedSigner(
+            redemptionVault.address,
+          );
+          await setBalance(impersonatedRv.address, parseUnits('100'));
+
+          await expect(
+            redemptionVault
+              .connect(impersonatedRv)
+              ._obtainVaultLiquidityExternal(constants.AddressZero, 0, 0, 0, 0),
+          ).to.not.revertedWithCustomError(redemptionVault, 'NotSelfCall');
+        });
+      });
+
+      describe('_obtainLoanLpLiquidityExternal', () => {
+        it('should fail: when not self call', async () => {
+          const { redemptionVault } = await loadRvFixture();
+
+          await expect(
+            redemptionVault._obtainLoanLpLiquidityExternal(
+              constants.AddressZero,
+              0,
+              0,
+              0,
+              0,
+              0,
+            ),
+          ).to.be.revertedWithCustomError(redemptionVault, 'NotSelfCall');
+        });
+
+        it('when is self call', async () => {
+          const { redemptionVault } = await loadRvFixture();
+
+          const impersonatedRv = await ethers.getImpersonatedSigner(
+            redemptionVault.address,
+          );
+          await setBalance(impersonatedRv.address, parseUnits('100'));
+
+          await expect(
+            redemptionVault
+              .connect(impersonatedRv)
+              ._obtainLoanLpLiquidityExternal(
+                constants.AddressZero,
+                0,
+                0,
+                0,
+                0,
+                0,
+              ),
+          ).to.not.revertedWithCustomError(redemptionVault, 'NotSelfCall');
         });
       });
 

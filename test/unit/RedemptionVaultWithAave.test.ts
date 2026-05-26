@@ -82,8 +82,13 @@ redemptionVaultSuits(
         });
 
         it('should fail: when function is paused', async () => {
-          const { redemptionVaultWithAave, owner, stableCoins, aavePoolMock } =
-            await loadFixture(defaultDeploy);
+          const {
+            redemptionVaultWithAave,
+            owner,
+            stableCoins,
+            aavePoolMock,
+            pauseManager,
+          } = await loadFixture(defaultDeploy);
           await pauseVaultFn(
             { pauseManager, owner },
             redemptionVaultWithAave,
@@ -151,7 +156,7 @@ redemptionVaultSuits(
         });
 
         it('should fail: when function is paused', async () => {
-          const { redemptionVaultWithAave, owner, stableCoins } =
+          const { redemptionVaultWithAave, owner, stableCoins, pauseManager } =
             await loadFixture(defaultDeploy);
           await pauseVaultFn(
             { pauseManager, owner },
@@ -970,10 +975,7 @@ redemptionVaultSuits(
               parseUnits('1000'),
               0,
             ),
-          ).to.be.revertedWithCustomError(
-            redemptionVaultWithAave,
-            'LoanLpNotConfigured',
-          );
+          ).to.be.revertedWith('ERC20: transfer amount exceeds balance');
         });
 
         it('should fail: when aave pool is not configured and it hits loan lp flow', async () => {
@@ -1015,10 +1017,7 @@ redemptionVaultSuits(
               parseUnits('1000'),
               0,
             ),
-          ).to.be.revertedWithCustomError(
-            redemptionVaultWithAave,
-            'LoanLpNotConfigured',
-          );
+          ).to.be.revertedWith('ERC20: transfer amount exceeds balance');
         });
 
         it('should fail: when aave pool is configured but aToken is not in the pool and it hits loan lp flow', async () => {
@@ -1063,10 +1062,7 @@ redemptionVaultSuits(
               parseUnits('1000'),
               0,
             ),
-          ).to.be.revertedWithCustomError(
-            redemptionVaultWithAave,
-            'LoanLpNotConfigured',
-          );
+          ).to.be.revertedWith('ERC20: transfer amount exceeds balance');
         });
 
         it('should fail: Aave pool has insufficient liquidity during redeemInstant', async () => {
