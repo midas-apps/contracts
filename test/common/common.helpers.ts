@@ -108,17 +108,13 @@ export const pauseGlobalTest = async (
 ) => {
   const from = opt?.from ?? owner;
 
-  if (
-    await handleRevert(
-      pauseManager.connect(from).globalPause.bind(this),
-      pauseManager,
-      opt,
-    )
-  ) {
+  const callFn = pauseManager.connect(from).globalPause.bind(this);
+
+  if (await handleRevert(callFn, pauseManager, opt)) {
     return;
   }
 
-  await expect(await pauseManager.connect(from).globalPause()).not.reverted;
+  await expect(callFn()).not.reverted;
 
   expect(await pauseManager.paused()).eq(true);
 };

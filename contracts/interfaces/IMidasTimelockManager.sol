@@ -135,12 +135,6 @@ interface IMidasTimelockManager {
     error PreflightCallUnexpectedSuccess();
 
     /**
-     * @notice User-facing role cannot be used for timelock scheduling
-     * @param role role id
-     */
-    error UserFacingRoleNotAllowed(bytes32 role);
-
-    /**
      * @notice Preflight revert data is invalid
      * @param err revert bytes
      */

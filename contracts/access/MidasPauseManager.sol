@@ -157,6 +157,10 @@ contract MidasPauseManager is
     function _validateContractAdminAccess(address contractAddr) internal view {
         (bytes32 role, bool validateFunctionRole) = IPausable(contractAddr)
             .pauserRole();
+        require(
+            !accessControl.isUserFacingRole(role),
+            UserFacingRoleNotAllowed(role)
+        );
         _validateFunctionAccessWithTimelock(
             role,
             false,

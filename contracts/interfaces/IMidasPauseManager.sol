@@ -8,8 +8,6 @@ pragma solidity 0.8.34;
  * @author RedDuck Software
  */
 interface IMidasPauseManager {
-    error SameBytes4Value(bytes4 value);
-
     /**
      * @param caller caller address (msg.sender)
      * @param contractAddr contract address

@@ -20,6 +20,7 @@ abstract contract WithMidasAccessControl is
     error SameBoolValue(bool value);
     error InvalidAddress(address addr);
     error HasntRole(bytes32 role, address account);
+    error UserFacingRoleNotAllowed(bytes32 role);
 
     /**
      * @notice admin role

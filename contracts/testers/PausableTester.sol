@@ -5,6 +5,12 @@ import "../access/Pausable.sol";
 import {MidasAccessControl} from "../access/MidasAccessControl.sol";
 
 contract PausableTester is Pausable {
+    bytes32 private _contractAdminRoleOverride;
+
+    function setContractAdminRole(bytes32 role) external {
+        _contractAdminRoleOverride = role;
+    }
+
     function initialize(address _accessControl) external initializer {
         __WithMidasAccessControl_init(_accessControl);
     }
@@ -27,11 +33,11 @@ contract PausableTester is Pausable {
         override
         returns (bytes32, bool)
     {
-        return (_DEFAULT_ADMIN_ROLE, true);
+        return (_contractAdminRole(), true);
     }
 
-    function _contractAdminRole() internal pure override returns (bytes32) {
-        return _DEFAULT_ADMIN_ROLE;
+    function _contractAdminRole() internal view override returns (bytes32) {
+        return _contractAdminRoleOverride;
     }
 
     function _disableInitializers() internal override {}
