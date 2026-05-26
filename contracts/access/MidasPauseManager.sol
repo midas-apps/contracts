@@ -28,6 +28,10 @@ contract MidasPauseManager is
      */
     mapping(address => bool) public contractPaused;
 
+    /**
+     * @dev validates that caller has access to the `contractAddr` contract admin role
+     * @param contractAddr address of the contract
+     */
     modifier onlyPausableContractAdmin(address contractAddr) {
         _validateContractAdminAccess(contractAddr);
         _;
@@ -149,11 +153,17 @@ contract MidasPauseManager is
         return _contractAdminRole();
     }
 
-    // TODO: add natspec
+    /**
+     * @inheritdoc WithMidasAccessControl
+     */
     function _contractAdminRole() internal pure override returns (bytes32) {
         return _PAUSE_ADMIN_ROLE;
     }
 
+    /**
+     * @dev validates that caller has access to the `contractAddr` contract admin role
+     * @param contractAddr address of the contract
+     */
     function _validateContractAdminAccess(address contractAddr) internal view {
         (bytes32 role, bool validateFunctionRole) = IPausable(contractAddr)
             .pauserRole();

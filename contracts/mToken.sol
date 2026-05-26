@@ -7,7 +7,6 @@ import {RateLimitLibrary} from "./libraries/RateLimitLibrary.sol";
 import "./access/Blacklistable.sol";
 import "./interfaces/IMToken.sol";
 
-// TODO: update to use custom errors
 /**
  * @title mToken
  * @author RedDuck Software

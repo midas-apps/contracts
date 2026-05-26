@@ -8,6 +8,7 @@ import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.
 import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
 import {EnumerableSetUpgradeable as EnumerableSet} from "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 
+// TODO: add natspec
 /**
  * @title MidasTimelockManager
  * @notice Manages timelock scheduling, security council votes, and operation challenges.
@@ -250,10 +251,8 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
         _timelock.execute(target, 0, data, bytes32(0), bytes32(dataHashIndex));
 
-        // TODO: move to util
-        if (challenge.isSetCouncilOperation) {
-            pendingSetCouncilOperationId = bytes32(0);
-        }
+        _resetPendingSetCouncilOperation(challenge);
+
         // updating state after execution to be able to verify tx against current context
         // in case of reentrancy timelock.execute will revert
         challenge.status = TimelockOperationStatus.Executed;
@@ -275,11 +274,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             HasntRole(TIMELOCK_CHALLENGER_ROLE, msg.sender)
         );
 
-        // TODO: move to util
-        require(
-            _pendingOperations.contains(operationId),
-            OperationNotPending()
-        );
+        require(_isPrivateOperation(operationId), OperationNotPending());
 
         (
             TimelockOperationStatus status,
@@ -388,10 +383,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             UnexpectedOperationStatus(status)
         );
 
-        // TODO: move to util
-        if (challenge.isSetCouncilOperation) {
-            pendingSetCouncilOperationId = bytes32(0);
-        }
+        _resetPendingSetCouncilOperation(challenge);
 
         dataHashIndexes[challenge.dataHash] = dataHashIndex + 1;
         challenge.status = TimelockOperationStatus.Aborted;
@@ -416,7 +408,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         TimelockController _timelock = TimelockController(payable(timelock));
         (bytes32 operationId, , ) = _getOperationId(_timelock, target, data);
 
-        if (!_pendingOperations.contains(operationId) && delay == 0) {
+        if (!_isPrivateOperation(operationId) && delay == 0) {
             return (true, false);
         }
 
@@ -727,22 +719,22 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         );
     }
 
-    function _getDataHash(address target, bytes calldata data)
-        private
-        pure
-        returns (bytes32)
-    {
-        // adding 0 as msg.value to make hash generation future-proof
-        return keccak256(abi.encodePacked(target, uint256(0), data));
+    function _resetPendingSetCouncilOperation(
+        TimelockOperationChallenge storage challenge
+    ) private {
+        if (!challenge.isSetCouncilOperation) {
+            return;
+        }
+
+        pendingSetCouncilOperationId = bytes32(0);
     }
 
     function _getTargetRole(
         address target,
         bytes calldata data,
         address proposer
-    ) private returns (bytes32) {
-        // TODO: convert to staticcall?
-        (bool success, bytes memory err) = target.call(
+    ) private view returns (bytes32) {
+        (bool success, bytes memory err) = target.staticcall(
             _appendAddressToData(data, proposer)
         );
 
@@ -796,12 +788,29 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         );
     }
 
+    function _isPrivateOperation(bytes32 operationId)
+        private
+        view
+        returns (bool)
+    {
+        return _pendingOperations.contains(operationId);
+    }
+
     function _getFunctionSelector(bytes calldata data)
         private
         pure
         returns (bytes4)
     {
         return bytes4(data);
+    }
+
+    function _getDataHash(address target, bytes calldata data)
+        private
+        pure
+        returns (bytes32)
+    {
+        // adding 0 as msg.value to make hash generation future-proof
+        return keccak256(abi.encodePacked(target, uint256(0), data));
     }
 
     function _decodePreflightSucceededError(bytes memory err)
@@ -813,7 +822,6 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             bool validateFunctionRole
         )
     {
-        // TODO: decode bools as well
         require(err.length == 100, InvalidPreflightError(err));
 
         bytes4 selector;
