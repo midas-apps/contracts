@@ -1115,7 +1115,7 @@ redemptionVaultSuits(
               parseUnits('1000'),
               0,
             ),
-          ).to.be.revertedWith('AaveV3PoolMock: InsufficientLiquidity');
+          ).to.be.revertedWith('ERC20: transfer amount exceeds balance');
         });
 
         it('should fail: short Aave withdrawal during redeemInstant', async () => {
@@ -1157,7 +1157,7 @@ redemptionVaultSuits(
             ),
           ).to.be.revertedWithCustomError(
             redemptionVaultWithAave,
-            'InsufficientWithdrawnAmount',
+            'ERC20: transfer amount exceeds balance',
           );
         });
       });

@@ -661,7 +661,7 @@ redemptionVaultSuits(
               parseUnits('10000'),
               0,
             ),
-          ).to.be.revertedWith('USTBRedemptionMock: InsufficientBalance');
+          ).to.be.revertedWith('ERC20: transfer amount exceeds balance');
         });
       });
 

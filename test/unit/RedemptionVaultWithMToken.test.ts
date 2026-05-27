@@ -84,7 +84,7 @@ redemptionVaultSuits(
             ),
           ).to.be.revertedWithCustomError(
             redemptionVaultWithMToken,
-            'SameRedemptionVaultValue',
+            'SameAddressValue',
           );
         });
 

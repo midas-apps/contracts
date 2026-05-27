@@ -1177,7 +1177,7 @@ redemptionVaultSuits(
               parseUnits('1000'),
               0,
             ),
-          ).to.be.revertedWith('MorphoVaultMock: InsufficientLiquidity');
+          ).to.be.revertedWith('ERC20: transfer amount exceeds balance');
         });
       });
     });

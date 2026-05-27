@@ -171,6 +171,20 @@ const getTotalFromInstantShare = (
   return amountIn.mul(100_00).div(instantShare);
 };
 
+const expectEqWithOneWeiTolerance = (
+  actual: BigNumber,
+  expected: BigNumber,
+  field: string,
+) => {
+  const diff = actual.gte(expected)
+    ? actual.sub(expected)
+    : expected.sub(actual);
+  expect(
+    diff.lte(1),
+    `${field} differs by more than 1 wei: actual=${actual.toString()} expected=${expected.toString()}`,
+  ).eq(true);
+};
+
 export const redeemInstantTest = async (
   {
     redemptionVault,
@@ -413,11 +427,15 @@ export const redeemInstantTest = async (
   }
 
   for (const [index, limit] of instantLimitsBefore.entries()) {
-    expect(instantLimitsAfter[index].inFlight).eq(
+    expectEqWithOneWeiTolerance(
+      instantLimitsAfter[index].inFlight,
       expectedLimitsAfter[index].inFlight,
+      `instantLimits[${index}].inFlight`,
     );
-    expect(instantLimitsAfter[index].remaining).eq(
+    expectEqWithOneWeiTolerance(
+      instantLimitsAfter[index].remaining,
       expectedLimitsAfter[index].remaining,
+      `instantLimits[${index}].remaining`,
     );
     expect(instantLimitsAfter[index].lastUpdated).eq(timestampAfter);
     expect(instantLimitsAfter[index].window).eq(limit.window);

@@ -71,7 +71,7 @@ export type WindowRateLimitCapacity = {
 };
 
 /** `Math.mulDiv(a, b, c, Down)` — matches OpenZeppelin / `RateLimitLibrary`. */
-export const mulDivDown = (
+export const mulDiv = (
   a: BigNumberish,
   b: BigNumberish,
   c: BigNumberish,
@@ -101,7 +101,7 @@ export const calculateWindowRateLimitCapacity = ({
   const windowBn = BigNumber.from(window);
   const divisor = windowBn.isZero() ? BigNumber.from(1) : windowBn;
 
-  const decay = mulDivDown(limit, elapsed, divisor);
+  const decay = mulDiv(limit, elapsed, divisor);
 
   const amountInFlightBn = BigNumber.from(amountInFlight);
   const inFlight = amountInFlightBn.lte(decay)

@@ -147,21 +147,12 @@ contract RedemptionVaultWithMToken is RedemptionVault {
             mTokenAAmount
         );
 
-        // redeem may fail for many reasons, so we just catch all the errors
-        // and reset the allowance to 0, so the execution will safely fallbacks
-        // to the original redemption flow.
-        try
-            _redemptionVault.redeemInstant(
-                tokenOut,
-                mTokenAAmount,
-                actualTokenOutAmount
-            )
-        {
-            return actualTokenOutAmount;
-        } catch (bytes memory) {
-            // reset the allowance to 0
-            IERC20(mTokenA).safeApprove(address(_redemptionVault), 0);
-            return 0;
-        }
+        _redemptionVault.redeemInstant(
+            tokenOut,
+            mTokenAAmount,
+            actualTokenOutAmount
+        );
+
+        return actualTokenOutAmount;
     }
 }
