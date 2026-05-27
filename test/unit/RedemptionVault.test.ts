@@ -25,7 +25,7 @@ redemptionVaultSuits(
   () => {
     describe('RedemptionVault', () => {
       describe('redeemInstant() with permissioned mToken', () => {
-        it('with permissioned mToken - burns/transfers mToken from greenlisted user and fee recipient', async () => {
+        it('with permissioned mToken - burns/transfers mToken from greenlisted user', async () => {
           const {
             owner,
             stableCoins,
@@ -44,10 +44,6 @@ redemptionVaultSuits(
             owner.address,
           );
 
-          await accessControl.grantRole(
-            mTokenPermissionedRoles.greenlisted,
-            await mTokenPermissionedRedemptionVault.feeReceiver(),
-          );
           await mintToken(mTokenPermissioned, owner, 100_000);
           await setInstantFeeTest(
             { vault: mTokenPermissionedRedemptionVault, owner },

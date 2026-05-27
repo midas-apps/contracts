@@ -97,7 +97,6 @@ export const depositInstantTest = async (
   const tokenContract = ERC20__factory.connect(tokenIn, owner);
 
   const tokensReceiver = await depositVault.tokensReceiver();
-  const feeReceiver = await depositVault.feeReceiver();
 
   const amountIn = parseUnits(amountUsdIn.toFixed(18).replace(/\.?0+$/, ''));
 
@@ -133,14 +132,11 @@ export const depositInstantTest = async (
     return;
   }
 
-  const balanceBeforeContract = await balanceOfBase18(
+  const balanceBeforeReceiver = await balanceOfBase18(
     tokenContract,
     tokensReceiver,
   );
-  const feeReceiverBalanceBeforeContract = await balanceOfBase18(
-    tokenContract,
-    feeReceiver,
-  );
+
   const balanceBeforeUser = await balanceOfBase18(
     tokenContract,
     sender.address,
@@ -153,15 +149,14 @@ export const depositInstantTest = async (
 
   const mTokenRate = await mTokenToUsdDataFeed.getDataInBase18();
 
-  const { fee, mintAmount, amountInWithoutFee, actualAmountInUsd } =
-    await calcExpectedMintAmount(
-      sender,
-      tokenIn,
-      depositVault,
-      mTokenRate,
-      amountIn,
-      true,
-    );
+  const { fee, mintAmount, actualAmountInUsd } = await calcExpectedMintAmount(
+    sender,
+    tokenIn,
+    depositVault,
+    mTokenRate,
+    amountIn,
+    true,
+  );
 
   const instantLimitsBefore = await depositVault.getInstantLimitStatuses();
   const timestampBefore = await getCurrentBlockTimestamp();
@@ -216,14 +211,11 @@ export const depositInstantTest = async (
   const totalMintedAfter = await depositVault.totalMinted(sender.address);
   const totalMintedAfterRecipient = await depositVault.totalMinted(recipient);
 
-  const balanceAfterContract = await balanceOfBase18(
+  const balanceAfterReceiver = await balanceOfBase18(
     tokenContract,
     tokensReceiver,
   );
-  const feeReceiverBalanceAfterContract = await balanceOfBase18(
-    tokenContract,
-    feeReceiver,
-  );
+
   const balanceAfterUser = await balanceOfBase18(tokenContract, sender.address);
   const balanceMtBillAfterUser = await balanceOfBase18(mTBILL, recipient);
 
@@ -238,18 +230,9 @@ export const depositInstantTest = async (
   }
 
   if (checkTokensReceiver) {
-    expect(balanceAfterContract).eq(
-      balanceBeforeContract.add(amountInWithoutFee),
-    );
-  }
-
-  expect(feeReceiverBalanceAfterContract).eq(
-    feeReceiverBalanceBeforeContract.add(fee),
-  );
-  if (waivedFee) {
-    expect(feeReceiverBalanceAfterContract).eq(
-      feeReceiverBalanceBeforeContract,
-    );
+    expect(balanceAfterReceiver).eq(balanceBeforeReceiver.add(amountIn));
+  } else if (!holdback) {
+    expect(balanceAfterReceiver).eq(balanceBeforeReceiver.add(fee));
   }
 
   if (!holdback) {
@@ -309,7 +292,6 @@ export const depositRequestTest = async (
   const tokenContract = ERC20__factory.connect(tokenIn, owner);
 
   const tokensReceiver = await depositVault.tokensReceiver();
-  const feeReceiver = await depositVault.feeReceiver();
 
   const amountIn = parseUnits(amountUsdIn.toFixed(18).replace(/\.?0+$/, ''));
 
@@ -366,10 +348,7 @@ export const depositRequestTest = async (
     tokenContract,
     tokensReceiver,
   );
-  const feeReceiverBalanceBeforeContract = await balanceOfBase18(
-    tokenContract,
-    feeReceiver,
-  );
+
   const balanceBeforeUser = await balanceOfBase18(
     tokenContract,
     sender.address,
@@ -456,10 +435,7 @@ export const depositRequestTest = async (
     tokenContract,
     tokensReceiver,
   );
-  const feeReceiverBalanceAfterContract = await balanceOfBase18(
-    tokenContract,
-    feeReceiver,
-  );
+
   const balanceAfterUser = await balanceOfBase18(tokenContract, sender.address);
   const request = await depositVault.mintRequests(latestRequestIdBefore);
   const maxSupplyCapAfter = await depositVault.maxSupplyCap();
@@ -475,25 +451,19 @@ export const depositRequestTest = async (
   expect(request.tokenIn).eq(tokenContract.address);
 
   expect(latestRequestIdAfter).eq(latestRequestIdBefore.add(1));
+
   if (checkTokensReceiver) {
     expect(balanceAfterContract).eq(
+      balanceBeforeContract.add(amountTokenInRequest.add(amountTokenInInstant)),
+    );
+  } else {
+    expect(balanceAfterContract).eq(
       balanceBeforeContract.add(
-        calcMintAmountRequest.amountInWithoutFee.add(
-          calcMintAmountInstant.amountInWithoutFee,
-        ),
+        calcMintAmountRequest.fee.add(calcMintAmountInstant.fee),
       ),
     );
   }
-  expect(feeReceiverBalanceAfterContract).eq(
-    feeReceiverBalanceBeforeContract.add(
-      calcMintAmountRequest.fee.add(calcMintAmountInstant.fee),
-    ),
-  );
-  if (waivedFee) {
-    expect(feeReceiverBalanceAfterContract).eq(
-      feeReceiverBalanceBeforeContract,
-    );
-  }
+
   expect(balanceAfterUser).eq(balanceBeforeUser.sub(amountIn));
 
   expect(maxSupplyCapAfter).eq(maxSupplyCapBefore);

@@ -76,7 +76,6 @@ export const getDeployParamsRv = <TExtraParams extends readonly [] = []>(
   {
     requestRedeemer,
     loanLp,
-    loanLpFeeReceiver,
     loanRepaymentAddress,
     redemptionVaultLoanSwapper,
 
@@ -87,11 +86,9 @@ export const getDeployParamsRv = <TExtraParams extends readonly [] = []>(
     mockedSanctionsList: AccountOrContract;
     mTBILL: AccountOrContract;
     mTokenToUsdDataFeed: AccountOrContract;
-    feeReceiver: AccountOrContract;
     tokensReceiver: AccountOrContract;
     requestRedeemer: AccountOrContract;
     loanLp: AccountOrContract;
-    loanLpFeeReceiver: AccountOrContract;
     loanRepaymentAddress: AccountOrContract;
     redemptionVaultLoanSwapper: AccountOrContract;
     minAmount?: BigNumberish;
@@ -113,7 +110,6 @@ export const getDeployParamsRv = <TExtraParams extends readonly [] = []>(
     {
       requestRedeemer: getAccount(requestRedeemer),
       loanLp: getAccount(loanLp),
-      loanLpFeeReceiver: getAccount(loanLpFeeReceiver),
       loanRepaymentAddress: getAccount(loanRepaymentAddress),
       loanSwapperVault: getAccount(redemptionVaultLoanSwapper),
       loanApr: loanApr ?? 0,
@@ -132,7 +128,6 @@ export const getDeployParamsDv = ({
   mockedSanctionsList: AccountOrContract;
   mTBILL: AccountOrContract;
   mTokenToUsdDataFeed: AccountOrContract;
-  feeReceiver: AccountOrContract;
   tokensReceiver: AccountOrContract;
   minAmount?: BigNumberish;
   instantFee?: BigNumberish;
@@ -163,7 +158,6 @@ export const getDeployParamsMv = ({
   mockedSanctionsList,
   mTBILL,
   mTokenToUsdDataFeed,
-  feeReceiver,
   tokensReceiver,
   minAmount,
   instantFee,
@@ -177,7 +171,6 @@ export const getDeployParamsMv = ({
   mockedSanctionsList: AccountOrContract;
   mTBILL: AccountOrContract;
   mTokenToUsdDataFeed: AccountOrContract;
-  feeReceiver: AccountOrContract;
   tokensReceiver: AccountOrContract;
   minAmount?: BigNumberish;
   instantFee?: BigNumberish;
@@ -198,7 +191,6 @@ export const getDeployParamsMv = ({
       minAmount: minAmount ?? 1000,
       mToken: getAccount(mTBILL),
       mTokenDataFeed: getAccount(mTokenToUsdDataFeed),
-      feeReceiver: getAccount(feeReceiver),
       tokensReceiver: getAccount(tokensReceiver),
       instantFee: instantFee ?? 100,
       limitConfigs: limitConfigs ?? [
@@ -219,11 +211,9 @@ export const defaultDeploy = async () => {
     owner,
     customRecipient,
     tokensReceiver,
-    feeReceiver,
     requestRedeemer,
     liquidityProvider,
     loanLp,
-    loanLpFeeReceiver,
     loanRepaymentAddress,
     clawbackReceiver,
     councilMember1,
@@ -417,7 +407,6 @@ export const defaultDeploy = async () => {
       mockedSanctionsList,
       mTBILL,
       mTokenToUsdDataFeed,
-      feeReceiver,
       tokensReceiver,
     }),
   );
@@ -441,11 +430,9 @@ export const defaultDeploy = async () => {
       mockedSanctionsList,
       mTBILL,
       mTokenToUsdDataFeed,
-      feeReceiver,
       tokensReceiver,
       requestRedeemer,
       loanLp,
-      loanLpFeeReceiver,
       loanRepaymentAddress,
       redemptionVaultLoanSwapper,
     }),
@@ -457,11 +444,9 @@ export const defaultDeploy = async () => {
       mockedSanctionsList,
       mTBILL: mTokenLoan,
       mTokenToUsdDataFeed: mTokenLoanToUsdDataFeed,
-      feeReceiver,
       tokensReceiver,
       requestRedeemer,
       loanLp: constants.AddressZero,
-      loanLpFeeReceiver: constants.AddressZero,
       loanRepaymentAddress: constants.AddressZero,
       redemptionVaultLoanSwapper: constants.AddressZero,
     }),
@@ -493,7 +478,6 @@ export const defaultDeploy = async () => {
       mockedSanctionsList,
       mTBILL,
       mTokenToUsdDataFeed,
-      feeReceiver,
       tokensReceiver,
     }),
   );
@@ -518,14 +502,13 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithUSTB[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(uint256,uint256,uint256),address)'
+    'initialize((address,address,uint256,uint256,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(uint256,uint256,uint256),address)'
   ](
     ...getDeployParamsDv({
       accessControl,
       mockedSanctionsList,
       mTBILL,
       mTokenToUsdDataFeed,
-      feeReceiver,
       tokensReceiver,
     }),
     ustbToken.address,
@@ -548,18 +531,16 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithUSTBTest__factory(owner).deploy();
 
   await redemptionVaultWithUSTB[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(address,address,address,address,address,uint64),address)'
+    'initialize((address,address,uint256,uint256,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(address,address,address,address,uint64),address)'
   ](
     ...getDeployParamsRv({
       accessControl,
       mockedSanctionsList,
       mTBILL,
       mTokenToUsdDataFeed,
-      feeReceiver,
       tokensReceiver,
       requestRedeemer,
       loanLp,
-      loanLpFeeReceiver,
       loanRepaymentAddress,
       redemptionVaultLoanSwapper,
     }),
@@ -589,11 +570,9 @@ export const defaultDeploy = async () => {
       mockedSanctionsList,
       mTBILL,
       mTokenToUsdDataFeed,
-      feeReceiver,
       tokensReceiver,
       requestRedeemer,
       loanLp,
-      loanLpFeeReceiver,
       loanRepaymentAddress,
       redemptionVaultLoanSwapper,
     }),
@@ -625,11 +604,9 @@ export const defaultDeploy = async () => {
       mockedSanctionsList,
       mTBILL,
       mTokenToUsdDataFeed,
-      feeReceiver,
       tokensReceiver,
       requestRedeemer,
       loanLp,
-      loanLpFeeReceiver,
       loanRepaymentAddress,
       redemptionVaultLoanSwapper,
     }),
@@ -657,7 +634,6 @@ export const defaultDeploy = async () => {
       mockedSanctionsList,
       mTBILL,
       mTokenToUsdDataFeed,
-      feeReceiver,
       tokensReceiver,
     }),
   );
@@ -683,7 +659,6 @@ export const defaultDeploy = async () => {
       mockedSanctionsList,
       mTBILL,
       mTokenToUsdDataFeed,
-      feeReceiver,
       tokensReceiver,
     }),
   );
@@ -700,14 +675,13 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithMToken[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(uint256,uint256,uint256),address)'
+    'initialize((address,address,uint256,uint256,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(uint256,uint256,uint256),address)'
   ](
     ...getDeployParamsDv({
       accessControl,
       mockedSanctionsList,
       mTBILL,
       mTokenToUsdDataFeed,
-      feeReceiver,
       tokensReceiver,
     }),
     depositVault.address,
@@ -744,18 +718,16 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithMTokenTest__factory(owner).deploy();
 
   await redemptionVaultWithMToken[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(address,address,address,address,address,uint64),address)'
+    'initialize((address,address,uint256,uint256,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(address,address,address,address,uint64),address)'
   ](
     ...getDeployParamsRv({
       accessControl,
       mockedSanctionsList,
       mTBILL,
       mTokenToUsdDataFeed,
-      feeReceiver,
       tokensReceiver,
       requestRedeemer,
       loanLp,
-      loanLpFeeReceiver,
       loanRepaymentAddress,
       redemptionVaultLoanSwapper,
     }),
@@ -957,7 +929,6 @@ export const defaultDeploy = async () => {
     offChainUsdToken,
     mockedAggregatorMTokenDecimals,
     tokensReceiver,
-    feeReceiver,
     dataFeedDeprecated,
     dataFeedUnhealthy,
     withSanctionsListTester,
@@ -985,7 +956,6 @@ export const defaultDeploy = async () => {
     dataFeedGrowth,
     compositeDataFeed,
     loanLp,
-    loanLpFeeReceiver,
     loanRepaymentAddress,
     redemptionVaultLoanSwapper,
     mTokenLoan,
@@ -1018,7 +988,6 @@ export const mTokenPermissionedFixture = async (
     owner,
     accessControl,
     mockedSanctionsList,
-    feeReceiver,
     tokensReceiver,
     requestRedeemer,
     mTokenToUsdDataFeed,
@@ -1051,7 +1020,6 @@ export const mTokenPermissionedFixture = async (
       mockedSanctionsList,
       mTBILL: mTokenPermissioned,
       mTokenToUsdDataFeed,
-      feeReceiver,
       tokensReceiver,
     }),
   );
@@ -1068,11 +1036,9 @@ export const mTokenPermissionedFixture = async (
       mockedSanctionsList,
       mTBILL: mTokenPermissioned,
       mTokenToUsdDataFeed,
-      feeReceiver,
       tokensReceiver,
       requestRedeemer,
       loanLp: constants.AddressZero,
-      loanLpFeeReceiver: constants.AddressZero,
       loanRepaymentAddress: constants.AddressZero,
       redemptionVaultLoanSwapper: constants.AddressZero,
     }),

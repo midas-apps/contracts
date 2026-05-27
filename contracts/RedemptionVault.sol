@@ -62,11 +62,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     address public loanLp;
 
     /**
-     * @notice address of loan liquidity provider fee receiver
-     */
-    address public loanLpFeeReceiver;
-
-    /**
      * @notice address from which payment tokens will be pulled during loan repayment
      */
     address public loanRepaymentAddress;
@@ -123,7 +118,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         requestRedeemer = _redemptionVaultInitParams.requestRedeemer;
 
         loanLp = _redemptionVaultInitParams.loanLp;
-        loanLpFeeReceiver = _redemptionVaultInitParams.loanLpFeeReceiver;
         loanRepaymentAddress = _redemptionVaultInitParams.loanRepaymentAddress;
         loanSwapperVault = IRedemptionVault(
             _redemptionVaultInitParams.loanSwapperVault
@@ -430,26 +424,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 request.tokenOut,
                 loanRepaymentAddress,
                 loanLp,
-                request.amountTokenOut,
+                request.amountTokenOut + amountFee,
                 decimals
             );
 
-            if (amountFee > 0) {
-                require(
-                    loanLpFeeReceiver != address(0),
-                    InvalidLoanLpReceiver()
-                );
-                _tokenTransferFromTo(
-                    request.tokenOut,
-                    loanRepaymentAddress,
-                    loanLpFeeReceiver,
-                    amountFee,
-                    decimals
-                );
-            }
-
             loanRequests[requestIds[i]].status = RequestStatus.Processed;
-            emit RepayLpLoanRequest(msg.sender, requestIds[i]);
+            emit RepayLpLoanRequest(msg.sender, requestIds[i], amountFee);
         }
     }
 
@@ -483,18 +463,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         loanLp = newLoanLp;
 
         emit SetLoanLp(msg.sender, newLoanLp);
-    }
-
-    /**
-     * @inheritdoc IRedemptionVault
-     */
-    function setLoanLpFeeReceiver(address newLoanLpFeeReceiver)
-        external
-        onlyContractAdmin
-    {
-        loanLpFeeReceiver = newLoanLpFeeReceiver;
-
-        emit SetLoanLpFeeReceiver(msg.sender, newLoanLpFeeReceiver);
     }
 
     /**
@@ -671,14 +639,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             calcResult.tokenOutDecimals
         );
 
-        _tokenTransferFromTo(
-            request.tokenOut,
-            requestRedeemer,
-            feeReceiver,
-            calcResult.feeAmount,
-            calcResult.tokenOutDecimals
-        );
-
         _requireAndUpdateAllowance(
             request.tokenOut,
             calcResult.amountTokenOutWithoutFee
@@ -765,8 +725,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             recipient
         );
 
-        _obtainLiquidityAndTransfer(tokenOut, recipient, calcResult);
-
+        // emitting earlier for easier loan matching on the indexer
         emit RedeemInstant(
             msg.sender,
             tokenOut,
@@ -775,6 +734,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             calcResult.feeAmount,
             calcResult.amountTokenOutWithoutFee
         );
+
+        _obtainLiquidityAndTransfer(tokenOut, recipient, calcResult);
     }
 
     /**
@@ -959,21 +920,11 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             calcResult
         );
 
-        uint256 vaultFeePortion = calcResult.feeAmount - lpFeePortion;
-
         // transfer from vault liquidity to user
         _tokenTransferToUser(
             tokenOut,
             recipient,
             calcResult.amountTokenOutWithoutFee,
-            calcResult.tokenOutDecimals
-        );
-
-        // transfer vault fee portion to fee receiver
-        _tokenTransferToUser(
-            tokenOut,
-            feeReceiver,
-            vaultFeePortion,
             calcResult.tokenOutDecimals
         );
 

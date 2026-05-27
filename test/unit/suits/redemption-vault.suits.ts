@@ -67,7 +67,6 @@ import {
   redeemRequestTest,
   rejectRedeemRequestTest,
   safeBulkApproveRequestTest,
-  setLoanLpFeeReceiverTest,
   setLoanLpTest,
   setLoanRepaymentAddressTest,
   setLoanSwapperVaultTest,
@@ -159,16 +158,13 @@ export const redemptionVaultSuits = (
       const {
         redemptionVault,
         loanLp,
-        loanLpFeeReceiver,
         loanRepaymentAddress,
         redemptionVaultLoanSwapper,
       } = fixture;
 
       expect(await redemptionVault.maxInstantShare()).eq(100_00);
       expect(await redemptionVault.loanLp()).eq(loanLp.address);
-      expect(await redemptionVault.loanLpFeeReceiver()).eq(
-        loanLpFeeReceiver.address,
-      );
+
       expect(await redemptionVault.loanRepaymentAddress()).eq(
         loanRepaymentAddress.address,
       );
@@ -3697,111 +3693,6 @@ export const redemptionVaultSuits = (
           );
 
           await setLoanLpTest(
-            { redemptionVault, owner },
-            regularAccounts[2].address,
-            { from: regularAccounts[0] },
-          );
-        });
-      });
-
-      describe('setLoanLpFeeReceiver()', () => {
-        it('should fail: call from address without REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-          const { redemptionVault, regularAccounts, owner } = await loadFixture(
-            rvFixture,
-          );
-          await setLoanLpFeeReceiverTest(
-            { redemptionVault, owner },
-            ethers.constants.AddressZero,
-            {
-              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
-              from: regularAccounts[0],
-            },
-          );
-        });
-        it('if new loanLpFeeReceiver address zero', async () => {
-          const { redemptionVault, owner } = await loadRvFixture();
-          await setLoanLpFeeReceiverTest(
-            { redemptionVault, owner },
-            ethers.constants.AddressZero,
-          );
-        });
-
-        it('call from address with REDEMPTION_VAULT_ADMIN_ROLE role', async () => {
-          const { redemptionVault, owner } = await loadRvFixture();
-          await setLoanLpFeeReceiverTest(
-            { redemptionVault, owner },
-            owner.address,
-          );
-        });
-
-        it('should fail: when function is paused', async () => {
-          const { redemptionVault, owner } = await loadRvFixture();
-
-          await pauseVaultFn(
-            { pauseManager, owner },
-            redemptionVault,
-            encodeFnSelector('setLoanLpFeeReceiver(address)'),
-          );
-
-          await setLoanLpFeeReceiverTest(
-            { redemptionVault, owner },
-            owner.address,
-            {
-              revertCustomError: {
-                customErrorName: 'Paused',
-              },
-            },
-          );
-        });
-
-        it('succeeds with only scoped function permission', async () => {
-          const { accessControl, owner, redemptionVault, regularAccounts } =
-            await loadRvFixture();
-
-          const vaultRole = await redemptionVault.vaultRole();
-          await setupVaultScopedFunctionPermission(
-            { accessControl, owner },
-            vaultRole,
-            redemptionVault.address,
-            'setLoanLpFeeReceiver(address)',
-            regularAccounts[0].address,
-          );
-
-          expect(
-            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
-          ).eq(false);
-
-          await setLoanLpFeeReceiverTest(
-            { redemptionVault, owner },
-            regularAccounts[1].address,
-            { from: regularAccounts[0] },
-          );
-        });
-
-        it('succeeds with scoped permission and vault admin role', async () => {
-          const {
-            accessControl,
-            owner,
-            redemptionVault,
-            regularAccounts,
-            roles,
-          } = await loadRvFixture();
-
-          const vaultRole = await redemptionVault.vaultRole();
-          await setupVaultScopedFunctionPermission(
-            { accessControl, owner },
-            vaultRole,
-            redemptionVault.address,
-            'setLoanLpFeeReceiver(address)',
-            regularAccounts[0].address,
-          );
-
-          await accessControl.grantRole(
-            roles.tokenRoles.mTBILL.redemptionVaultAdmin,
-            regularAccounts[0].address,
-          );
-
-          await setLoanLpFeeReceiverTest(
             { redemptionVault, owner },
             regularAccounts[2].address,
             { from: regularAccounts[0] },
@@ -14391,77 +14282,6 @@ export const redemptionVaultSuits = (
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }, { id: 1 }],
-            );
-          });
-
-          it('approve 1 request when fee is zero and lp fee receiver is not set', async () => {
-            const fixture = await loadRvFixture();
-            const {
-              redemptionVault,
-              owner,
-              mTBILL,
-              loanRepaymentAddress,
-              stableCoins,
-            } = fixture;
-
-            await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
-
-            await prepareTest(fixture, stableCoins.dai);
-
-            await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
-
-            await approveBase18(
-              loanRepaymentAddress,
-              stableCoins.dai,
-              redemptionVault,
-              100,
-            );
-
-            await setLoanLpFeeReceiverTest(
-              { redemptionVault, owner },
-              ethers.constants.AddressZero,
-            );
-
-            await bulkRepayLpLoanRequestTest(
-              { redemptionVault, owner, mTBILL },
-              [{ id: 0 }],
-            );
-          });
-
-          it('should fail: approve 1 request when fee is not zero and lp fee receiver is not set', async () => {
-            const fixture = await loadRvFixture();
-            const {
-              redemptionVault,
-              owner,
-              mTBILL,
-              loanRepaymentAddress,
-              stableCoins,
-            } = fixture;
-
-            await prepareTest(fixture, stableCoins.dai);
-
-            await mintToken(stableCoins.dai, loanRepaymentAddress, 100);
-
-            await approveBase18(
-              loanRepaymentAddress,
-              stableCoins.dai,
-              redemptionVault,
-              100,
-            );
-
-            await setLoanLpFeeReceiverTest(
-              { redemptionVault, owner },
-              ethers.constants.AddressZero,
-            );
-
-            await bulkRepayLpLoanRequestTest(
-              { redemptionVault, owner, mTBILL },
-              [{ id: 0 }],
-              {
-                revertCustomError: {
-                  customErrorName: 'InvalidLoanLpReceiver',
-                },
-              },
             );
           });
 

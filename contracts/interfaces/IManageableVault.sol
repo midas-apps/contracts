@@ -55,8 +55,6 @@ struct CommonVaultInitParams {
     address mTokenDataFeed;
     /// @notice address to which proceeds will be sent
     address tokensReceiver;
-    /// @notice address to which fees will be sent
-    address feeReceiver;
     /// @notice fee for initial operations 1% = 100
     uint256 instantFee;
     /// @notice minimum instant fee
@@ -250,12 +248,6 @@ interface IManageableVault {
      * @param caller function caller (msg.sender)
      * @param reciever new reciever address
      */
-    event SetFeeReceiver(address indexed caller, address indexed reciever);
-
-    /**
-     * @param caller function caller (msg.sender)
-     * @param reciever new reciever address
-     */
     event SetTokensReceiver(address indexed caller, address indexed reciever);
 
     /**
@@ -354,13 +346,6 @@ interface IManageableVault {
      * @param account user address
      */
     function removeWaivedFeeAccount(address account) external;
-
-    /**
-     * @notice set new reciever for fees.
-     * can be called only from permissioned actor.
-     * @param reciever new fee reciever address
-     */
-    function setFeeReceiver(address reciever) external;
 
     /**
      * @notice set new reciever for tokens.

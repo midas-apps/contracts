@@ -202,7 +202,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         minAmount: parseUnits('100'),
         mToken: tokenContract.address,
         mTokenDataFeed: dataFeed.address,
-        feeReceiver: fixture.feeReceiver.address,
         tokensReceiver: fixture.tokensReceiver.address,
         instantFee: 100,
         minInstantFee: 0,
@@ -232,7 +231,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           minAmount: parseUnits('100'),
           mToken: tokenContract.address,
           mTokenDataFeed: dataFeed.address,
-          feeReceiver: fixture.feeReceiver.address,
           tokensReceiver: fixture.tokensReceiver.address,
           instantFee: 100,
           minInstantFee: 0,
@@ -262,7 +260,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         minAmount: parseUnits('100'),
         mToken: tokenContract.address,
         mTokenDataFeed: dataFeed.address,
-        feeReceiver: fixture.feeReceiver.address,
         tokensReceiver: fixture.tokensReceiver.address,
         instantFee: 100,
         limitConfigs: [
@@ -278,7 +275,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       {
         requestRedeemer: fixture.requestRedeemer.address,
         loanLp: fixture.loanLp.address,
-        loanLpFeeReceiver: fixture.loanLpFeeReceiver.address,
         loanRepaymentAddress: fixture.loanRepaymentAddress.address,
         loanSwapperVault: fixture.redemptionVaultLoanSwapper.address,
         maxLoanApr: 0,
@@ -296,7 +292,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           minAmount: parseUnits('100'),
           mToken: tokenContract.address,
           mTokenDataFeed: dataFeed.address,
-          feeReceiver: fixture.feeReceiver.address,
           tokensReceiver: fixture.tokensReceiver.address,
           instantFee: 100,
           limitConfigs: [
@@ -312,7 +307,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         {
           requestRedeemer: fixture.requestRedeemer.address,
           loanLp: fixture.loanLp.address,
-          loanLpFeeReceiver: fixture.loanLpFeeReceiver.address,
           loanRepaymentAddress: fixture.loanRepaymentAddress.address,
           loanSwapperVault: fixture.redemptionVaultLoanSwapper.address,
           maxLoanApr: 0,

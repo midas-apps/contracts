@@ -222,7 +222,6 @@ export const redeemInstantTest = async (
 
   const amountIn = parseUnits(amountTBillIn.toString());
   const tokensReceiver = await redemptionVault.tokensReceiver();
-  const feeReceiver = await redemptionVault.feeReceiver();
 
   const withRecipient = customRecipient !== undefined;
   const recipient = customRecipient
@@ -256,14 +255,10 @@ export const redeemInstantTest = async (
 
   const balanceBeforeUser = await mTBILL.balanceOf(sender.address);
   const balanceBeforeReceiver = await mTBILL.balanceOf(tokensReceiver);
-  const balanceBeforeFeeReceiverMToken = await mTBILL.balanceOf(feeReceiver);
-  const balanceBeforeFeeReceiver = await tokenContract.balanceOf(feeReceiver);
   const balanceBeforeLoanLp = loanSwapperVaultMToken
     ? await loanSwapperVaultMToken.balanceOf(await redemptionVault.loanLp())
     : constants.Zero;
-  const balanceBeforeLoanLpFeeReceiver = await tokenContract.balanceOf(
-    await redemptionVault.loanLpFeeReceiver(),
-  );
+
   const supplyBeforeLoanLp = loanSwapperVaultMToken
     ? await loanSwapperVaultMToken.totalSupply()
     : constants.Zero;
@@ -360,8 +355,6 @@ export const redeemInstantTest = async (
 
   const balanceAfterUser = await mTBILL.balanceOf(sender.address);
   const balanceAfterReceiver = await mTBILL.balanceOf(tokensReceiver);
-  const balanceAfterFeeReceiverMToken = await mTBILL.balanceOf(feeReceiver);
-  const balanceAfterFeeReceiver = await tokenContract.balanceOf(feeReceiver);
   const balanceAfterLoanLp = loanSwapperVaultMToken
     ? await loanSwapperVaultMToken.balanceOf(await redemptionVault.loanLp())
     : constants.Zero;
@@ -369,9 +362,6 @@ export const redeemInstantTest = async (
     ? await loanSwapperVaultMToken.totalSupply()
     : constants.Zero;
 
-  const balanceAfterLoanLpFeeReceiver = await tokenContract.balanceOf(
-    await redemptionVault.loanLpFeeReceiver(),
-  );
   const balanceAfterTokenOutRecipient = await tokenContract.balanceOf(
     recipient,
   );
@@ -388,27 +378,18 @@ export const redeemInstantTest = async (
   }
 
   expect(balanceAfterReceiver).eq(balanceBeforeReceiver);
-  expect(balanceAfterFeeReceiver).eq(
-    balanceBeforeFeeReceiver.add(vaultFeePortion),
-  );
-  expect(balanceAfterFeeReceiverMToken).eq(balanceBeforeFeeReceiverMToken);
   expect(balanceAfterUser).eq(
     balanceBeforeUser.sub(
       getTotalFromInstantShare(amountIn, holdback?.instantShare),
     ),
   );
-  expect(balanceAfterVault).eq(
-    balanceBeforeVault.sub(toTransferFromVault).sub(vaultFeePortion),
-  );
+  expect(balanceAfterVault).eq(balanceBeforeVault.sub(toTransferFromVault));
   const expectedAmountToReceive = expectedAmountOut ?? amountOutWithoutFee!;
   expect(balanceAfterTokenOutRecipient).eq(
     balanceBeforeTokenOutRecipient.add(expectedAmountToReceive),
   );
   if (recipient !== sender.address) {
     expect(balanceAfterTokenOut).eq(balanceBeforeTokenOut);
-  }
-  if (waivedFee) {
-    expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver);
   }
 
   if (toTransferFromLpBase18.gt(0)) {
@@ -418,7 +399,6 @@ export const redeemInstantTest = async (
     expect(supplyAfterLoanLp).eq(
       supplyBeforeLoanLp.sub(toTransferFromLpMToken),
     );
-    expect(balanceAfterLoanLpFeeReceiver).eq(balanceBeforeLoanLpFeeReceiver);
 
     const loanRequest = await redemptionVault.loanRequests(
       lastLoanRequestIdAfter.sub(1),
@@ -482,7 +462,6 @@ export const redeemRequestTest = async (
 
   const amountIn = parseUnits(amountTBillIn.toString());
   const tokensReceiver = await redemptionVault.tokensReceiver();
-  const feeReceiver = await redemptionVault.feeReceiver();
 
   const withRecipient = customRecipient !== undefined;
 
@@ -529,9 +508,12 @@ export const redeemRequestTest = async (
   const balanceBeforeUser = await mTBILL.balanceOf(sender.address);
   const balanceBeforeContract = await mTBILL.balanceOf(redemptionVault.address);
   const balanceBeforeReceiver = await mTBILL.balanceOf(tokensReceiver);
-  const balanceBeforeFeeReceiver = await mTBILL.balanceOf(feeReceiver);
   const balanceBeforeRequestRedeemer = await mTBILL.balanceOf(
     await redemptionVault.requestRedeemer(),
+  );
+  const balanceBeforeContractPToken = await balanceOfBase18(
+    tokenContract,
+    redemptionVault.address,
   );
 
   const balanceBeforeTokenOut = await tokenContract.balanceOf(sender.address);
@@ -615,10 +597,13 @@ export const redeemRequestTest = async (
 
   const balanceAfterUser = await mTBILL.balanceOf(sender.address);
   const balanceAfterReceiver = await mTBILL.balanceOf(tokensReceiver);
-  const balanceAfterFeeReceiver = await mTBILL.balanceOf(feeReceiver);
   const balanceAfterContract = await mTBILL.balanceOf(redemptionVault.address);
   const balanceAfterRequestRedeemer = await mTBILL.balanceOf(
     await redemptionVault.requestRedeemer(),
+  );
+  const balanceAfterContractPToken = await balanceOfBase18(
+    tokenContract,
+    redemptionVault.address,
   );
 
   const balanceAfterTokenOut = await tokenContract.balanceOf(sender.address);
@@ -629,12 +614,12 @@ export const redeemRequestTest = async (
   expect(balanceAfterUser).eq(balanceBeforeUser.sub(amountIn));
   expect(balanceAfterContract).eq(balanceBeforeContract);
   expect(balanceAfterReceiver).eq(balanceBeforeReceiver);
-  expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver);
 
   // those checks is already made in redeemInstantTest
-  if (!amountMTokenInInstant.gt(0)) {
+  if (amountMTokenInInstant.eq(0)) {
     expect(supplyAfter).eq(supplyBefore);
     expect(balanceAfterTokenOut).eq(balanceBeforeTokenOut);
+    expect(balanceAfterContractPToken).eq(balanceBeforeContractPToken);
   }
 
   expect(balanceAfterRequestRedeemer).eq(
@@ -667,7 +652,6 @@ export const approveRedeemRequestTest = async (
   const sender = opt?.from ?? owner;
 
   const tokensReceiver = await redemptionVault.tokensReceiver();
-  const feeReceiver = await redemptionVault.feeReceiver();
 
   const callFn = isAvgRate
     ? isSafe
@@ -710,7 +694,6 @@ export const approveRedeemRequestTest = async (
   const balanceBeforeUser = await mTBILL.balanceOf(sender.address);
   const balanceBeforeContract = await mTBILL.balanceOf(redemptionVault.address);
   const balanceBeforeReceiver = await mTBILL.balanceOf(tokensReceiver);
-  const balanceBeforeFeeReceiver = await mTBILL.balanceOf(feeReceiver);
   const balanceBeforeRequestRedeemerMToken = await mTBILL.balanceOf(
     await redemptionVault.requestRedeemer(),
   );
@@ -760,7 +743,6 @@ export const approveRedeemRequestTest = async (
 
   const balanceAfterUser = await mTBILL.balanceOf(sender.address);
   const balanceAfterReceiver = await mTBILL.balanceOf(tokensReceiver);
-  const balanceAfterFeeReceiver = await mTBILL.balanceOf(feeReceiver);
   const balanceAfterRequestRedeemerMToken = await mTBILL.balanceOf(
     await redemptionVault.requestRedeemer(),
   );
@@ -825,10 +807,6 @@ export const approveRedeemRequestTest = async (
   expect(balanceAfterContract).eq(balanceBeforeContract);
 
   expect(balanceAfterReceiver).eq(balanceBeforeReceiver);
-  expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver);
-  if (waivedFee) {
-    expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver);
-  }
 };
 
 export const setLoanAprTest = async (
@@ -883,7 +861,6 @@ export const bulkRepayLpLoanRequestTest = async (
   }
 
   const loanRepaymentAddress = await redemptionVault.loanRepaymentAddress();
-  const loanLpFeeReceiver = await redemptionVault.loanLpFeeReceiver();
   const loanLp = await redemptionVault.loanLp();
 
   const requestDatasBefore = await Promise.all(
@@ -905,15 +882,6 @@ export const bulkRepayLpLoanRequestTest = async (
     ),
   );
 
-  const balancesFeeBefore = await Promise.all(
-    requestDatasBefore.map(({ tokenOut }) =>
-      balanceOfBase18(
-        ERC20__factory.connect(tokenOut, owner),
-        loanLpFeeReceiver,
-      ),
-    ),
-  );
-
   const totalSupplyBefore = await mTBILL.totalSupply();
 
   const expectedReceivedAmounts = await Promise.all(
@@ -929,7 +897,6 @@ export const bulkRepayLpLoanRequestTest = async (
       expectedReceivedAmount: expectedReceivedAmounts[index],
       expectedReceivedFeeAmount: BigNumber.from(0),
       balance: balancesBefore[index],
-      balanceFee: balancesFeeBefore[index],
       balanceLp: balancesLpBefore[index],
     };
   });
@@ -986,15 +953,6 @@ export const bulkRepayLpLoanRequestTest = async (
     ),
   );
 
-  const balancesFeeAfter = await Promise.all(
-    requestDatasAfter.map(({ tokenOut }) =>
-      balanceOfBase18(
-        ERC20__factory.connect(tokenOut, owner),
-        loanLpFeeReceiver,
-      ),
-    ),
-  );
-
   const balancesLpAfter = await Promise.all(
     requestDatasAfter.map(({ tokenOut }) =>
       balanceOfBase18(ERC20__factory.connect(tokenOut, owner), loanLp),
@@ -1008,7 +966,6 @@ export const bulkRepayLpLoanRequestTest = async (
       id,
       request: requestDatasAfter[index],
       balance: balancesAfter[index],
-      balanceFee: balancesFeeAfter[index],
       balanceLp: balancesLpAfter[index],
     };
   });
@@ -1022,11 +979,9 @@ export const bulkRepayLpLoanRequestTest = async (
     const requestDataAfter = dataAfter.request;
 
     const balanceAfter = dataAfter.balance;
-    const balanceFeeAfter = dataAfter.balanceFee;
     const balanceLpAfter = dataAfter.balanceLp;
 
     const balanceBefore = dataBefore.balance;
-    const balanceFeeBefore = dataBefore.balanceFee;
     const balanceLpBefore = dataBefore.balanceLp;
 
     expect(requestDataAfter.amountFee).eq(dataBefore.expectedReceivedFeeAmount);
@@ -1040,28 +995,18 @@ export const bulkRepayLpLoanRequestTest = async (
     const expectedReceivedAggregatedByUser = groupedDataBefore
       .filter((v) => v.request.tokenOut === requestDataBefore.tokenOut)
       .reduce((prev, curr) => {
-        return prev.add(curr.expectedReceivedAmount);
-      }, BigNumber.from(0));
-
-    const expectedReceivedFeeAggregatedByUser = groupedDataBefore
-      .filter((v) => v.request.tokenOut === requestDataBefore.tokenOut)
-      .reduce((prev, curr) => {
-        return prev.add(curr.expectedReceivedFeeAmount);
+        return prev
+          .add(curr.expectedReceivedAmount)
+          .add(curr.expectedReceivedFeeAmount);
       }, BigNumber.from(0));
 
     expect(logs.length).eq(1);
     expect(requestDataAfter.createdAt).eq(requestDataBefore.createdAt);
     expect(requestDataAfter.status).eq(2);
     expect(balanceAfter).eq(
-      balanceBefore.sub(
-        expectedReceivedAggregatedByUser.add(
-          expectedReceivedFeeAggregatedByUser,
-        ),
-      ),
+      balanceBefore.sub(expectedReceivedAggregatedByUser),
     );
-    expect(balanceFeeAfter).eq(
-      balanceFeeBefore.add(expectedReceivedFeeAggregatedByUser),
-    );
+
     expect(balanceLpAfter).eq(
       balanceLpBefore.add(expectedReceivedAggregatedByUser),
     );
@@ -1304,7 +1249,6 @@ export const rejectRedeemRequestTest = async (
   const sender = opt?.from ?? owner;
 
   const tokensReceiver = await redemptionVault.tokensReceiver();
-  const feeReceiver = await redemptionVault.feeReceiver();
 
   if (
     await handleRevert(
@@ -1321,12 +1265,15 @@ export const rejectRedeemRequestTest = async (
   const balanceBeforeUser = await mTBILL.balanceOf(sender.address);
   const balanceBeforeContract = await mTBILL.balanceOf(redemptionVault.address);
   const balanceBeforeReceiver = await mTBILL.balanceOf(tokensReceiver);
-  const balanceBeforeFeeReceiver = await mTBILL.balanceOf(feeReceiver);
   const reservedBefore = await redemptionVault.reservedToClaim(
     requestDataBefore.tokenOut,
   );
 
   const balanceVaultBefore = await balanceOfBase18(
+    requestDataBefore.tokenOut,
+    redemptionVault.address,
+  );
+  const balanceBeforeContractPToken = await balanceOfBase18(
     requestDataBefore.tokenOut,
     redemptionVault.address,
   );
@@ -1355,9 +1302,12 @@ export const rejectRedeemRequestTest = async (
 
   const balanceAfterUser = await mTBILL.balanceOf(sender.address);
   const balanceAfterReceiver = await mTBILL.balanceOf(tokensReceiver);
-  const balanceAfterFeeReceiver = await mTBILL.balanceOf(feeReceiver);
   const balanceAfterContract = await mTBILL.balanceOf(redemptionVault.address);
 
+  const balanceAfterContractPToken = await balanceOfBase18(
+    requestDataBefore.tokenOut,
+    redemptionVault.address,
+  );
   const supplyAfter = await mTBILL.totalSupply();
 
   if (requestDataBefore.status == 2) {
@@ -1373,7 +1323,7 @@ export const rejectRedeemRequestTest = async (
   expect(balanceAfterUser).eq(balanceBeforeUser);
   expect(balanceAfterContract).eq(balanceBeforeContract);
   expect(balanceAfterReceiver).eq(balanceBeforeReceiver);
-  expect(balanceAfterFeeReceiver).eq(balanceBeforeFeeReceiver);
+  expect(balanceAfterContractPToken).eq(balanceBeforeContractPToken);
 };
 
 export const claimRedeemRequestTest = async (
@@ -1447,7 +1397,6 @@ export const cancelLpLoanRequestTest = async (
   const sender = opt?.from ?? owner;
 
   const loanLp = await redemptionVault.loanLp();
-  const loanLpFeeReceiver = await redemptionVault.loanLpFeeReceiver();
   const loanRepaymentAddress = await redemptionVault.loanRepaymentAddress();
 
   if (
@@ -1467,7 +1416,6 @@ export const cancelLpLoanRequestTest = async (
   const balanceBeforeLpRepayment = await loanToken.balanceOf(
     loanRepaymentAddress,
   );
-  const balanceBeforeLpFee = await loanToken.balanceOf(loanLpFeeReceiver);
   const balanceBeforeLp = await loanToken.balanceOf(loanLp);
   const balanceBeforeSender = await loanToken.balanceOf(sender.address);
 
@@ -1486,7 +1434,6 @@ export const cancelLpLoanRequestTest = async (
   const balanceAfterLpRepayment = await loanToken.balanceOf(
     loanRepaymentAddress,
   );
-  const balanceAfterLpFee = await loanToken.balanceOf(loanLpFeeReceiver);
   const balanceAfterLp = await loanToken.balanceOf(loanLp);
   const balanceAfterSender = await loanToken.balanceOf(sender.address);
 
@@ -1498,7 +1445,6 @@ export const cancelLpLoanRequestTest = async (
 
   expect(supplyAfter).eq(supplyBefore);
   expect(balanceAfterLpRepayment).eq(balanceBeforeLpRepayment);
-  expect(balanceAfterLpFee).eq(balanceBeforeLpFee);
   expect(balanceAfterLp).eq(balanceBeforeLp);
   expect(balanceAfterSender).eq(balanceBeforeSender);
 };
@@ -1530,37 +1476,6 @@ export const setRequestRedeemerTest = async (
 
   const newRedeemer = await redemptionVault.requestRedeemer();
   expect(newRedeemer).eq(redeemer);
-};
-
-export const setLoanLpFeeReceiverTest = async (
-  { redemptionVault, owner }: CommonParams,
-  loanLpFeeReceiver: string,
-  opt?: OptionalCommonParams,
-) => {
-  if (
-    await handleRevert(
-      redemptionVault
-        .connect(opt?.from ?? owner)
-        .setLoanLpFeeReceiver.bind(this, loanLpFeeReceiver),
-      redemptionVault,
-      opt,
-    )
-  ) {
-    return;
-  }
-
-  await expect(
-    redemptionVault
-      .connect(opt?.from ?? owner)
-      .setLoanLpFeeReceiver(loanLpFeeReceiver),
-  ).to.emit(
-    redemptionVault,
-    redemptionVault.interface.events['SetLoanLpFeeReceiver(address,address)']
-      .name,
-  ).to.not.reverted;
-
-  const newLoanLpFeeReceiver = await redemptionVault.loanLpFeeReceiver();
-  expect(newLoanLpFeeReceiver).eq(loanLpFeeReceiver);
 };
 
 export const setLoanLpTest = async (

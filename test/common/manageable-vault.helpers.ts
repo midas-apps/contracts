@@ -423,32 +423,6 @@ export const removeInstantLimitConfigTest = async (
   expect(limitConfigsAfter.filter((w) => w.window.eq(window)).length).eq(0);
 };
 
-export const setFeeReceiverTest = async (
-  { vault, owner }: CommonParamsChangePaymentToken,
-  newReceiver: string,
-  opt?: OptionalCommonParams,
-) => {
-  if (
-    await handleRevert(
-      vault.connect(opt?.from ?? owner).setFeeReceiver.bind(this, newReceiver),
-      vault,
-      opt,
-    )
-  ) {
-    return;
-  }
-
-  await expect(vault.connect(opt?.from ?? owner).setFeeReceiver(newReceiver))
-    .to.emit(
-      vault,
-      vault.interface.events['SetFeeReceiver(address,address)'].name,
-    )
-    .withArgs((opt?.from ?? owner).address, newReceiver).to.not.reverted;
-
-  const feeReceiver = await vault.feeReceiver();
-  expect(feeReceiver).eq(newReceiver);
-};
-
 export const setMaxInstantShareTest = async (
   { vault, owner }: CommonParamsChangePaymentToken,
   maxInstantShare: number,

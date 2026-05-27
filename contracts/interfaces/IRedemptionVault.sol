@@ -39,8 +39,6 @@ struct RedemptionVaultInitParams {
     address requestRedeemer;
     /// @notice address of loan liquidity provider
     address loanLp;
-    /// @notice address of loan liquidity provider fee receiver
-    address loanLpFeeReceiver;
     /// @notice address of loan repayment address
     address loanRepaymentAddress;
     /// @notice address of loan swapper vault
@@ -70,7 +68,6 @@ struct LiquidityProviderLoanRequest {
  * @author RedDuck Software
  */
 interface IRedemptionVault is IManageableVault {
-    error InvalidLoanLpReceiver();
     error FeeExceedsAmount(uint256 fee, uint256 amount);
     error NotSelfCall();
 
@@ -163,15 +160,6 @@ interface IRedemptionVault is IManageableVault {
 
     /**
      * @param caller function caller (msg.sender)
-     * @param newLoanLpFeeReceiver new address of loan liquidity provider fee receiver
-     */
-    event SetLoanLpFeeReceiver(
-        address indexed caller,
-        address newLoanLpFeeReceiver
-    );
-
-    /**
-     * @param caller function caller (msg.sender)
      * @param newLoanLp new address of loan liquidity provider
      */
     event SetLoanLp(address indexed caller, address newLoanLp);
@@ -215,8 +203,13 @@ interface IRedemptionVault is IManageableVault {
     /**
      * @param caller function caller (msg.sender)
      * @param requestId request id
+     * @param amountFee amount of fee in tokenOut
      */
-    event RepayLpLoanRequest(address indexed caller, uint256 indexed requestId);
+    event RepayLpLoanRequest(
+        address indexed caller,
+        uint256 indexed requestId,
+        uint256 amountFee
+    );
 
     /**
      * @param caller function caller (msg.sender)
@@ -230,7 +223,6 @@ interface IRedemptionVault is IManageableVault {
     /**
      * @notice redeem mToken to tokenOut if daily limit and allowance not exceeded
      * Burns mToken from the user.
-     * Transfers fee in mToken to feeReceiver
      * Transfers tokenOut to user.
      * @param tokenOut stable coin token address to redeem to
      * @param amountMTokenIn amount of mToken to redeem (decimals 18)
@@ -259,7 +251,6 @@ interface IRedemptionVault is IManageableVault {
     /**
      * @notice creating redeem request
      * Transfers amount in mToken to contract
-     * Transfers fee in mToken to feeReceiver
      * @param tokenOut stable coin token address to redeem to
      * @param amountMTokenIn amount of mToken to redeem (decimals 18)
      * @return request id
@@ -425,7 +416,6 @@ interface IRedemptionVault is IManageableVault {
     /**
      * @notice repaying loan requests from the `requestIds` array
      * Transfers tokenOut to loan repayment address
-     * Transfers fee in tokenOut to loan lp fee receiver
      * Sets request flags to Processed.
      * @param requestIds request ids array
      */
@@ -443,12 +433,6 @@ interface IRedemptionVault is IManageableVault {
      * @param redeemer new address of request redeemer
      */
     function setRequestRedeemer(address redeemer) external;
-
-    /**
-     * @notice set address of loan liquidity provider fee receiver
-     * @param newLoanLpFeeReceiver new address of loan liquidity provider fee receiver
-     */
-    function setLoanLpFeeReceiver(address newLoanLpFeeReceiver) external;
 
     /**
      * @notice set address of loan liquidity provider

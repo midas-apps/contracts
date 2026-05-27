@@ -531,13 +531,12 @@ contract DepositVault is ManageableVault, IDepositVault {
             result.tokenDecimals
         );
 
-        if (result.feeTokenAmount > 0)
-            _tokenTransferFromUser(
-                tokenIn,
-                feeReceiver,
-                result.feeTokenAmount,
-                result.tokenDecimals
-            );
+        _tokenTransferFromUser(
+            tokenIn,
+            tokensReceiver,
+            result.feeTokenAmount,
+            result.tokenDecimals
+        );
 
         mToken.mint(recipient, result.mintAmount);
 
@@ -643,14 +642,12 @@ contract DepositVault is ManageableVault, IDepositVault {
             calcResult.tokenDecimals
         );
 
-        if (calcResult.feeTokenAmount > 0) {
-            _tokenTransferFromUser(
-                tokenIn,
-                feeReceiver,
-                calcResult.feeTokenAmount,
-                calcResult.tokenDecimals
-            );
-        }
+        _tokenTransferFromUser(
+            tokenIn,
+            tokensReceiver,
+            calcResult.feeTokenAmount,
+            calcResult.tokenDecimals
+        );
 
         Request memory request = Request({
             recipient: recipient,

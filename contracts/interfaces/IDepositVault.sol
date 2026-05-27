@@ -153,7 +153,7 @@ interface IDepositVault is IManageableVault {
      * @notice depositing proccess with auto mint if
      * account fit daily limit and token allowance.
      * Transfers token from the user.
-     * Transfers fee in tokenIn to feeReceiver.
+     * Transfers fee in tokenIn to tokensReceiver.
      * Mints mToken to user.
      * @param tokenIn address of tokenIn
      * @param amountToken amount of `tokenIn` that will be taken from user (decimals 18)
@@ -187,7 +187,7 @@ interface IDepositVault is IManageableVault {
      * @notice depositing proccess with mint request creating if
      * account fit token allowance.
      * Transfers token from the user.
-     * Transfers fee in tokenIn to feeReceiver.
+     * Transfers fee in tokenIn to tokensReceiver.
      * Creates mint request.
      * @param tokenIn address of tokenIn
      * @param amountToken amount of `tokenIn` that will be taken from user (decimals 18)

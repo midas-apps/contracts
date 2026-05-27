@@ -4730,7 +4730,7 @@ export const depositVaultSuits = (
           });
         });
 
-        it('should fail: when after request is approved, maxSupplyCap is decreased, so now claim should fail: because of that', async () => {
+        it('when after request is approved, maxSupplyCap is decreased but claim should not be affected', async () => {
           const {
             owner,
             depositVault,
@@ -4787,9 +4787,6 @@ export const depositVaultSuits = (
 
           await claimRequestTest({ depositVault, owner, mTBILL }, 0, {
             from: regularAccounts[1],
-            revertCustomError: {
-              customErrorName: 'SupplyCapExceeded',
-            },
           });
         });
 

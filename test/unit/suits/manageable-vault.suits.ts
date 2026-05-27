@@ -86,20 +86,14 @@ export const manageableVaultSuits = (
   describe('ManageableVault', function () {
     it('deployment', async () => {
       const fixture = await loadMvFixture();
-      const {
-        manageableVault,
-        mTBILL,
-        tokensReceiver,
-        feeReceiver,
-        mTokenToUsdDataFeed,
-      } = fixture;
+      const { manageableVault, mTBILL, tokensReceiver, mTokenToUsdDataFeed } =
+        fixture;
 
       expect(await manageableVault.mToken()).eq(mTBILL.address);
 
       expect(await manageableVault.ONE_HUNDRED_PERCENT()).eq('10000');
 
       expect(await manageableVault.tokensReceiver()).eq(tokensReceiver.address);
-      expect(await manageableVault.feeReceiver()).eq(feeReceiver.address);
 
       expect(await manageableVault.minAmount()).eq(1000);
 
@@ -140,7 +134,6 @@ export const manageableVaultSuits = (
                 mockedSanctionsList: constants.AddressZero,
                 mTBILL: constants.AddressZero,
                 mTokenToUsdDataFeed: constants.AddressZero,
-                feeReceiver: constants.AddressZero,
                 tokensReceiver: constants.AddressZero,
               }),
             ),
@@ -161,7 +154,6 @@ export const manageableVaultSuits = (
                 mockedSanctionsList: constants.AddressZero,
                 mTBILL: constants.AddressZero,
                 mTokenToUsdDataFeed: constants.AddressZero,
-                feeReceiver: constants.AddressZero,
                 tokensReceiver: constants.AddressZero,
               }),
             ),

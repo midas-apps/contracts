@@ -79,11 +79,6 @@ abstract contract ManageableVault is
     uint256 public instantFee;
 
     /**
-     * @notice address to which fees will be sent
-     */
-    address public feeReceiver;
-
-    /**
      * @notice variation tolerance of tokenOut rates for "safe" requests approve
      */
     uint256 public variationTolerance;
@@ -168,7 +163,6 @@ abstract contract ManageableVault is
         _validateAddress(_commonVaultInitParams.mToken, false);
         _validateAddress(_commonVaultInitParams.mTokenDataFeed, false);
         _validateAddress(_commonVaultInitParams.tokensReceiver, true);
-        _validateAddress(_commonVaultInitParams.feeReceiver, true);
         _validateFee(_commonVaultInitParams.variationTolerance, true);
         _validateFee(_commonVaultInitParams.instantFee, false);
         _validateFee(_commonVaultInitParams.maxInstantShare, false);
@@ -176,7 +170,6 @@ abstract contract ManageableVault is
         mToken = IMToken(_commonVaultInitParams.mToken);
 
         tokensReceiver = _commonVaultInitParams.tokensReceiver;
-        feeReceiver = _commonVaultInitParams.feeReceiver;
         instantFee = _commonVaultInitParams.instantFee;
         minAmount = _commonVaultInitParams.minAmount;
         variationTolerance = _commonVaultInitParams.variationTolerance;
@@ -312,18 +305,6 @@ abstract contract ManageableVault is
         require(waivedFeeRestriction[account], SameAddressValue(account));
         waivedFeeRestriction[account] = false;
         emit RemoveWaivedFeeAccount(account, msg.sender);
-    }
-
-    /**
-     * @inheritdoc IManageableVault
-     * @dev reverts address zero or equal address(this)
-     */
-    function setFeeReceiver(address receiver) external onlyContractAdmin {
-        _validateAddress(receiver, true);
-
-        feeReceiver = receiver;
-
-        emit SetFeeReceiver(msg.sender, receiver);
     }
 
     /**
