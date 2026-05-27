@@ -14,7 +14,10 @@ import {
   RateLimitLibraryTester__factory,
 } from '../../typechain-types';
 import { getCurrentBlockTimestamp } from '../common/common.helpers';
-import { calculateWindowRateLimitCapacity } from '../common/manageable-vault.helpers';
+import {
+  calculateWindowRateLimitCapacity,
+  mulDiv,
+} from '../common/manageable-vault.helpers';
 
 type WindowStatus = Awaited<
   ReturnType<RateLimitLibraryTester['getWindowStatusesPublic']>
@@ -35,6 +38,29 @@ describe('RateLimitLibrary', function () {
     statuses: WindowStatus[],
     window: BigNumberish,
   ): WindowStatus | undefined => statuses.find((s) => s.window.eq(window));
+
+  const findOneWeiMulDivSplitGap = (
+    limit: BigNumberish,
+    window: number,
+  ): { leftElapsed: number; rightElapsed: number } => {
+    for (let leftElapsed = 1; leftElapsed < window; leftElapsed++) {
+      for (
+        let rightElapsed = 1;
+        leftElapsed + rightElapsed < window;
+        rightElapsed++
+      ) {
+        const singleDecay = mulDiv(limit, leftElapsed + rightElapsed, window);
+        const splitDecay = mulDiv(limit, leftElapsed, window).add(
+          mulDiv(limit, rightElapsed, window),
+        );
+        if (singleDecay.sub(splitDecay).eq(1)) {
+          return { leftElapsed, rightElapsed };
+        }
+      }
+    }
+
+    throw new Error('Failed to find 1 wei mulDiv split gap');
+  };
 
   const expectStatusMatchesCapacity = async (
     tester: RateLimitLibraryTester,
@@ -505,6 +531,84 @@ describe('RateLimitLibrary', function () {
 
       expect(status!.limit).eq(limit);
       expect(status!.remaining).eq(0);
+    });
+
+    it('should show a 1 wei floor gap between split and single mulDiv', async () => {
+      const limit = parseUnits('1');
+      const window = MIN_WINDOW + 1;
+      const { leftElapsed, rightElapsed } = findOneWeiMulDivSplitGap(
+        limit,
+        window,
+      );
+
+      const singleDecay = mulDiv(limit, leftElapsed + rightElapsed, window);
+      const splitDecay = mulDiv(limit, leftElapsed, window).add(
+        mulDiv(limit, rightElapsed, window),
+      );
+
+      expect(singleDecay.sub(splitDecay)).eq(1);
+    });
+
+    it('should reproduce snapshot-based 1 wei drift while on-chain keeps exact stored-state math', async () => {
+      const { tester } = await loadFixture(rateLimitLibraryFixture);
+      const limit = parseUnits('1');
+      const window = MIN_WINDOW + 1;
+      const consumed = parseUnits('1');
+      const addedAmount = 0;
+      const { leftElapsed, rightElapsed } = findOneWeiMulDivSplitGap(
+        limit,
+        window,
+      );
+
+      await tester.setWindowLimitPublic(window, limit);
+      await tester.consumeLimitPublic(consumed);
+
+      const [, storedBefore, lastUpdatedStoredBefore] =
+        await tester.getWindowConfigPublic(window);
+
+      await time.increase(leftElapsed);
+      const t1 = await getCurrentBlockTimestamp();
+
+      const snapshotAtT1 = getStatusByWindow(
+        await tester.getWindowStatusesPublic(),
+        window,
+      )!;
+
+      await time.increase(rightElapsed);
+
+      await tester.consumeLimitPublic(addedAmount);
+
+      const [, storedAfter, lastUpdatedAfter] =
+        await tester.getWindowConfigPublic(window);
+
+      const correctAtCheckpoint = calculateWindowRateLimitCapacity({
+        amountInFlight: storedBefore,
+        lastUpdated: lastUpdatedStoredBefore,
+        limit,
+        window,
+        now: lastUpdatedAfter,
+      }).inFlight;
+      const expectedStoredAfter = correctAtCheckpoint.add(addedAmount);
+
+      const snapshotBasedAtCheckpoint = calculateWindowRateLimitCapacity({
+        amountInFlight: snapshotAtT1.inFlight,
+        lastUpdated: t1,
+        limit,
+        window,
+        now: lastUpdatedAfter,
+      }).inFlight;
+      const naiveExpectedStoredAfter =
+        snapshotBasedAtCheckpoint.add(addedAmount);
+
+      const driftAbs = expectedStoredAfter.gte(naiveExpectedStoredAfter)
+        ? expectedStoredAfter.sub(naiveExpectedStoredAfter)
+        : naiveExpectedStoredAfter.sub(expectedStoredAfter);
+      expect(driftAbs).eq(1);
+      expect(storedAfter).eq(expectedStoredAfter);
+      const onchainVsNaiveAbs = storedAfter.gte(naiveExpectedStoredAfter)
+        ? storedAfter.sub(naiveExpectedStoredAfter)
+        : naiveExpectedStoredAfter.sub(storedAfter);
+      expect(onchainVsNaiveAbs).eq(1);
     });
   });
 });
