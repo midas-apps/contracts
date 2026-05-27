@@ -40,6 +40,7 @@ import {
 import { setRoundData } from '../../common/data-feed.helpers';
 import {
   setMaxSupplyCapTest,
+  setMaxAmountPerRequestTest,
   approveRequestTest,
   claimRequestTest,
   depositInstantTest,
@@ -307,6 +308,84 @@ export const depositVaultSuits = (
           );
 
           await setMaxSupplyCapTest({ depositVault, owner }, 2.2, {
+            from: regularAccounts[0],
+          });
+        });
+      });
+
+      describe('setMaxAmountPerRequest()', () => {
+        it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
+          const { owner, depositVault, regularAccounts } =
+            await loadDvFixture();
+
+          await setMaxAmountPerRequestTest({ depositVault, owner }, 100, {
+            from: regularAccounts[0],
+            revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
+          });
+        });
+
+        it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
+          const { owner, depositVault } = await loadDvFixture();
+          await setMaxAmountPerRequestTest({ depositVault, owner }, 100);
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, depositVault } = await loadDvFixture();
+
+          await pauseVaultFn(
+            { pauseManager, owner },
+            depositVault,
+            encodeFnSelector('setMaxAmountPerRequest(uint256)'),
+          );
+
+          await setMaxAmountPerRequestTest({ depositVault, owner }, 100, {
+            revertCustomError: {
+              customErrorName: 'Paused',
+            },
+          });
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, depositVault, regularAccounts } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'setMaxAmountPerRequest(uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setMaxAmountPerRequestTest({ depositVault, owner }, 200, {
+            from: regularAccounts[0],
+          });
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const { accessControl, owner, depositVault, regularAccounts, roles } =
+            await loadDvFixture();
+
+          const vaultRole = await depositVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            depositVault.address,
+            'setMaxAmountPerRequest(uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setMaxAmountPerRequestTest({ depositVault, owner }, 200, {
             from: regularAccounts[0],
           });
         });
@@ -2661,6 +2740,45 @@ export const depositVaultSuits = (
               },
             );
           });
+        });
+
+        it('should fail: when estimated mint amount exceeds max amount per request', async () => {
+          const {
+            owner,
+            depositVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            mockedAggregator,
+            mockedAggregatorMToken,
+          } = await loadDvFixture();
+
+          await mintToken(stableCoins.dai, owner, 100);
+          await approveBase18(owner, stableCoins.dai, depositVault, 100);
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+          await setInstantFeeTest({ vault: depositVault, owner }, 0);
+          await setMinAmountTest({ vault: depositVault, owner }, 0);
+          await setMaxAmountPerRequestTest({ depositVault, owner }, 1);
+
+          await depositRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            100,
+            {
+              revertCustomError: {
+                customErrorName: 'MaxAmountPerRequestExceeded',
+              },
+            },
+          );
         });
 
         it('should fail: if mint exceed allowance', async () => {
