@@ -374,7 +374,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     function rejectRequest(uint256 requestId) external onlyContractAdmin {
         Request memory request = redeemRequests[requestId];
 
-        require(request.recipient != address(0), RequestNotExists(requestId));
+        _requireRequestExists(requestId, request.recipient);
         require(
             request.status == RequestStatus.Pending ||
                 request.status == RequestStatus.Approved,
@@ -403,7 +403,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 requestIds[i]
             ];
 
-            _validateRequest(requestIds[i], request.tokenOut, request.status);
+            _validateRequest(
+                requestIds[i],
+                request.tokenOut,
+                request.status,
+                RequestStatus.Pending
+            );
 
             uint256 decimals = _tokenDecimals(request.tokenOut);
             uint256 duration = block.timestamp - request.createdAt;
@@ -439,7 +444,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     function cancelLpLoanRequest(uint256 requestId) external onlyContractAdmin {
         LiquidityProviderLoanRequest memory request = loanRequests[requestId];
 
-        _validateRequest(requestId, request.tokenOut, request.status);
+        _validateRequest(
+            requestId,
+            request.tokenOut,
+            request.status,
+            RequestStatus.Pending
+        );
 
         loanRequests[requestId].status = RequestStatus.Canceled;
         emit CancelLpLoanRequest(msg.sender, requestId);
@@ -571,7 +581,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     {
         Request memory request = redeemRequests[requestId];
 
-        _validateRequest(requestId, request.recipient, request.status);
+        _validateRequest(
+            requestId,
+            request.recipient,
+            request.status,
+            RequestStatus.Pending
+        );
         _validateRequestAddressesAccess(request);
 
         if (isSafe) {
@@ -658,27 +673,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @notice validates request
      * if exist
-     * if status is pending
-     * @param requestId request id
-     * @param validateAddress address to check if not zero
-     * @param status actual request status
-     */
-    function _validateRequest(
-        uint256 requestId,
-        address validateAddress,
-        RequestStatus status
-    ) private pure {
-        _validateRequest(
-            requestId,
-            validateAddress,
-            status,
-            RequestStatus.Pending
-        );
-    }
-
-    /**
-     * @notice validates request
-     * if exist
      * if status is expected
      * @param requestId request id
      * @param validateAddress address to check if not zero
@@ -691,11 +685,23 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         RequestStatus status,
         RequestStatus expectedStatus
     ) private pure {
-        require(validateAddress != address(0), RequestNotExists(requestId));
+        _requireRequestExists(requestId, validateAddress);
         require(
             status == expectedStatus,
             UnexpectedRequestStatus(requestId, status)
         );
+    }
+
+    /**
+     * @dev validates request exists
+     * @param requestId request id
+     * @param validateAddress address to check if not zero
+     */
+    function _requireRequestExists(uint256 requestId, address validateAddress)
+        private
+        pure
+    {
+        require(validateAddress != address(0), RequestNotExists(requestId));
     }
 
     /**

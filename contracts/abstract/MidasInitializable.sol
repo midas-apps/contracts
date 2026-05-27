@@ -16,18 +16,17 @@ abstract contract MidasInitializable is Initializable {
         _disableInitializers();
     }
 
-    // TODO: uncomment it when we will have contract size buffer
-    // /**
-    //  * @dev returns the highest version that has been initialized
-    //  * @return value the highest version that has been initialized
-    //  */
-    // function getInitializedVersion()
-    //     external
-    //     view
-    //     returns (
-    //         uint8 /* value */
-    //     )
-    // {
-    //     return _getInitializedVersion();
-    // }
+    /**
+     * @dev returns the highest version that has been initialized
+     * @return value the highest version that has been initialized
+     */
+    function getInitializedVersion()
+        external
+        view
+        returns (
+            uint8 /* value */
+        )
+    {
+        return _getInitializedVersion();
+    }
 }

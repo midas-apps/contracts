@@ -27,9 +27,9 @@ abstract contract WithMidasAccessControl is
      */
     bytes32 internal constant _DEFAULT_ADMIN_ROLE = 0x00;
 
-    // TODO: put OZ natspec for type change
     /**
      * @notice MidasAccessControl contract address
+     * @custom:oz-retyped-from MidasAccessControl
      */
     IMidasAccessControl public accessControl;
 

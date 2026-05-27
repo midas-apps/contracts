@@ -23,13 +23,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
     error FeesNotWaivedOnTarget(address target);
 
     /**
-     * @dev Storage gap preserved from RedemptionVaultWithSwapper layout
-     */
-    uint256[50] private ___gap;
-
-    /**
      * @notice mToken RedemptionVault used for fallback redemptions
-     * @custom:oz-renamed-from mTbillRedemptionVault
      */
     IRedemptionVault public redemptionVault;
 

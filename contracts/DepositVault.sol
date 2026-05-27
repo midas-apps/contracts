@@ -365,8 +365,7 @@ contract DepositVault is ManageableVault, IDepositVault {
     function rejectRequest(uint256 requestId) external onlyContractAdmin {
         Request memory request = mintRequests[requestId];
 
-        // TODO: possible to move to utils function?
-        require(request.recipient != address(0), RequestNotExists(requestId));
+        _requireRequestExists(requestId, request.recipient);
         require(
             request.status == RequestStatus.Pending ||
                 request.status == RequestStatus.Approved,
@@ -720,7 +719,12 @@ contract DepositVault is ManageableVault, IDepositVault {
     {
         Request memory request = mintRequests[requestId];
 
-        _validateRequest(requestId, request.recipient, request.status);
+        _validateRequest(
+            requestId,
+            request.recipient,
+            request.status,
+            RequestStatus.Pending
+        );
         _validateRequestAddressesAccess(request);
 
         if (isSafe) {
@@ -826,27 +830,6 @@ contract DepositVault is ManageableVault, IDepositVault {
     /**
      * @notice validates request
      * if exist
-     * if not processed
-     * @param requestId request id
-     * @param validateAddress address to check if not zero
-     * @param status request status
-     */
-    function _validateRequest(
-        uint256 requestId,
-        address validateAddress,
-        RequestStatus status
-    ) internal pure {
-        _validateRequest(
-            requestId,
-            validateAddress,
-            status,
-            RequestStatus.Pending
-        );
-    }
-
-    /**
-     * @notice validates request
-     * if exist
      * if status is expected
      * @param requestId request id
      * @param validateAddress address to check if not zero
@@ -859,11 +842,23 @@ contract DepositVault is ManageableVault, IDepositVault {
         RequestStatus status,
         RequestStatus expectedStatus
     ) internal pure {
-        require(validateAddress != address(0), RequestNotExists(requestId));
+        _requireRequestExists(requestId, validateAddress);
         require(
             status == expectedStatus,
             UnexpectedRequestStatus(requestId, status)
         );
+    }
+
+    /**
+     * @dev validates request exists
+     * @param requestId request id
+     * @param validateAddress address to check if not zero
+     */
+    function _requireRequestExists(uint256 requestId, address validateAddress)
+        private
+        pure
+    {
+        require(validateAddress != address(0), RequestNotExists(requestId));
     }
 
     /**
