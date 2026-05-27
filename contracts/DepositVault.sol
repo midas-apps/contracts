@@ -61,6 +61,11 @@ contract DepositVault is ManageableVault, IDepositVault {
     uint256 public maxSupplyCap;
 
     /**
+     * @notice max amount per request in mToken
+     */
+    uint256 public maxAmountPerRequest;
+
+    /**
      * @notice pending supply in mToken that will be released
      * after the deposit request is processed
      */
@@ -96,6 +101,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         minMTokenAmountForFirstDeposit = _depositVaultInitParams
             .minMTokenAmountForFirstDeposit;
         maxSupplyCap = _depositVaultInitParams.maxSupplyCap;
+        maxAmountPerRequest = _depositVaultInitParams.maxAmountPerRequest;
     }
 
     /**
@@ -240,12 +246,14 @@ contract DepositVault is ManageableVault, IDepositVault {
             InvalidClaimer(requestId, msg.sender)
         );
 
-        upcomingSupply -= request.amountMToken;
         mintRequests[requestId].status = RequestStatus.Processed;
 
-        mToken.mint(msg.sender, request.amountMToken);
-
-        _validateMaxSupplyCap(true);
+        _tokenTransferToUser(
+            address(mToken),
+            msg.sender,
+            request.amountMToken,
+            18
+        );
 
         emit ClaimRequest(msg.sender, requestId);
     }
@@ -357,14 +365,15 @@ contract DepositVault is ManageableVault, IDepositVault {
     function rejectRequest(uint256 requestId) external onlyContractAdmin {
         Request memory request = mintRequests[requestId];
 
-        _validateRequest(requestId, request.recipient, request.status);
+        // TODO: possible to move to utils function?
+        require(request.recipient != address(0), RequestNotExists(requestId));
+        require(
+            request.status == RequestStatus.Pending ||
+                request.status == RequestStatus.Approved,
+            UnexpectedRequestStatus(requestId, request.status)
+        );
 
         mintRequests[requestId].status = RequestStatus.Canceled;
-
-        upcomingSupply -= _quoteMTokenFromRequest(
-            request,
-            request.tokenOutRate
-        );
 
         emit RejectRequest(requestId, request.recipient);
     }
@@ -388,6 +397,18 @@ contract DepositVault is ManageableVault, IDepositVault {
         maxSupplyCap = newValue;
 
         emit SetMaxSupplyCap(msg.sender, newValue);
+    }
+
+    /**
+     * @inheritdoc IDepositVault
+     */
+    function setMaxAmountPerRequest(uint256 newValue)
+        external
+        onlyContractAdmin
+    {
+        maxAmountPerRequest = newValue;
+
+        emit SetMaxAmountPerRequest(newValue);
     }
 
     /**
@@ -647,10 +668,20 @@ contract DepositVault is ManageableVault, IDepositVault {
 
         mintRequests[requestId] = request;
 
-        upcomingSupply += _quoteMTokenFromRequest(
-            request,
-            request.tokenOutRate
-        );
+        // prevents stack too deep error
+        {
+            uint256 estimatedMintAmount = _quoteMTokenFromRequest(
+                request,
+                request.tokenOutRate
+            );
+
+            require(
+                estimatedMintAmount <= maxAmountPerRequest,
+                MaxAmountPerRequestExceeded(estimatedMintAmount)
+            );
+
+            upcomingSupply += estimatedMintAmount;
+        }
 
         _validateMaxSupplyCap(true);
 
@@ -730,15 +761,20 @@ contract DepositVault is ManageableVault, IDepositVault {
         ) {
             return false;
         }
+
         upcomingSupply -= upcomingSupplyDecrease;
 
+        address mintTo;
+
         if (request.claimer == address(0)) {
-            mToken.mint(request.recipient, amountMToken);
             request.status = RequestStatus.Processed;
+            mintTo = request.recipient;
         } else {
-            upcomingSupply += amountMToken;
             request.status = RequestStatus.Approved;
+            mintTo = address(this);
         }
+
+        mToken.mint(mintTo, amountMToken);
 
         totalMinted[request.recipient] += amountMToken;
 

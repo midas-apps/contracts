@@ -37,6 +37,8 @@ struct DepositVaultInitParams {
     uint256 minMTokenAmountForFirstDeposit;
     /// @notice max supply cap value in mToken
     uint256 maxSupplyCap;
+    /// @notice max amount per request in mToken
+    uint256 maxAmountPerRequest;
 }
 
 /**
@@ -49,6 +51,7 @@ interface IDepositVault is IManageableVault {
         uint256 minAmount
     );
     error SupplyCapExceeded();
+    error MaxAmountPerRequestExceeded(uint256 estimatedMintAmount);
 
     /**
      * @param caller function caller (msg.sender)
@@ -64,6 +67,11 @@ interface IDepositVault is IManageableVault {
      * @param newValue new max supply cap value
      */
     event SetMaxSupplyCap(address indexed caller, uint256 newValue);
+
+    /**
+     * @param newValue new max amount per request
+     */
+    event SetMaxAmountPerRequest(uint256 newValue);
 
     /**
      * @param user function caller (msg.sender)
@@ -353,4 +361,11 @@ interface IDepositVault is IManageableVault {
      * @param newValue new max supply cap value
      */
     function setMaxSupplyCap(uint256 newValue) external;
+
+    /**
+     * @notice sets new max amount per request
+     * can be called only from vault`s admin
+     * @param newValue new max amount per request
+     */
+    function setMaxAmountPerRequest(uint256 newValue) external;
 }

@@ -122,6 +122,42 @@ export const getDeployParamsRv = <TExtraParams extends readonly [] = []>(
   ] as const;
 };
 
+export const getDeployParamsDv = ({
+  maxAmountPerRequest,
+  minMTokenAmountForFirstDeposit,
+  maxSupplyCap,
+  ...commonParams
+}: {
+  accessControl: AccountOrContract;
+  mockedSanctionsList: AccountOrContract;
+  mTBILL: AccountOrContract;
+  mTokenToUsdDataFeed: AccountOrContract;
+  feeReceiver: AccountOrContract;
+  tokensReceiver: AccountOrContract;
+  minAmount?: BigNumberish;
+  instantFee?: BigNumberish;
+  limitConfigs?: {
+    limit: BigNumberish;
+    window: BigNumberish;
+  }[];
+  minInstantFee?: BigNumberish;
+  maxInstantFee?: BigNumberish;
+  maxInstantShare?: BigNumberish;
+  variationTolerance?: BigNumberish;
+  maxAmountPerRequest?: BigNumberish;
+  minMTokenAmountForFirstDeposit?: BigNumberish;
+  maxSupplyCap?: BigNumberish;
+}) => {
+  return [
+    ...getDeployParamsMv(commonParams),
+    {
+      minMTokenAmountForFirstDeposit: minMTokenAmountForFirstDeposit ?? 0,
+      maxSupplyCap: maxSupplyCap ?? constants.MaxUint256,
+      maxAmountPerRequest: maxAmountPerRequest ?? constants.MaxUint256,
+    },
+  ] as const;
+};
+
 export const getDeployParamsMv = ({
   accessControl,
   mockedSanctionsList,
@@ -376,30 +412,14 @@ export const defaultDeploy = async () => {
   const depositVault = await new DepositVaultTest__factory(owner).deploy();
 
   await depositVault.initialize(
-    {
-      ac: accessControl.address,
-      sanctionsList: mockedSanctionsList.address,
-      variationTolerance: 1,
-      minAmount: 1000,
-      mToken: mTBILL.address,
-      mTokenDataFeed: mTokenToUsdDataFeed.address,
-      feeReceiver: feeReceiver.address,
-      tokensReceiver: tokensReceiver.address,
-      instantFee: 100,
-      minInstantFee: 0,
-      maxInstantFee: 10000,
-      limitConfigs: [
-        {
-          limit: parseUnits('100000'),
-          window: days(1),
-        },
-      ],
-      maxInstantShare: 100_00,
-    },
-    {
-      minMTokenAmountForFirstDeposit: 0,
-      maxSupplyCap: constants.MaxUint256,
-    },
+    ...getDeployParamsDv({
+      accessControl,
+      mockedSanctionsList,
+      mTBILL,
+      mTokenToUsdDataFeed,
+      feeReceiver,
+      tokensReceiver,
+    }),
   );
 
   await accessControl.grantRole(
@@ -498,32 +518,16 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithUSTB[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(uint256,uint256),address)'
+    'initialize((address,address,uint256,uint256,address,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(uint256,uint256,uint256),address)'
   ](
-    {
-      ac: accessControl.address,
-      sanctionsList: mockedSanctionsList.address,
-      variationTolerance: 1,
-      minAmount: 1000,
-      mToken: mTBILL.address,
-      mTokenDataFeed: mTokenToUsdDataFeed.address,
-      feeReceiver: feeReceiver.address,
-      tokensReceiver: tokensReceiver.address,
-      instantFee: 100,
-      limitConfigs: [
-        {
-          limit: parseUnits('100000'),
-          window: days(1),
-        },
-      ],
-      minInstantFee: 0,
-      maxInstantFee: 10000,
-      maxInstantShare: 100_00,
-    },
-    {
-      minMTokenAmountForFirstDeposit: 0,
-      maxSupplyCap: constants.MaxUint256,
-    },
+    ...getDeployParamsDv({
+      accessControl,
+      mockedSanctionsList,
+      mTBILL,
+      mTokenToUsdDataFeed,
+      feeReceiver,
+      tokensReceiver,
+    }),
     ustbToken.address,
   );
 
@@ -648,30 +652,14 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithAave.initialize(
-    {
-      ac: accessControl.address,
-      sanctionsList: mockedSanctionsList.address,
-      variationTolerance: 1,
-      minAmount: 1000,
-      mToken: mTBILL.address,
-      mTokenDataFeed: mTokenToUsdDataFeed.address,
-      feeReceiver: feeReceiver.address,
-      tokensReceiver: tokensReceiver.address,
-      instantFee: 100,
-      limitConfigs: [
-        {
-          limit: parseUnits('100000'),
-          window: days(1),
-        },
-      ],
-      minInstantFee: 0,
-      maxInstantFee: 10000,
-      maxInstantShare: 100_00,
-    },
-    {
-      minMTokenAmountForFirstDeposit: 0,
-      maxSupplyCap: constants.MaxUint256,
-    },
+    ...getDeployParamsDv({
+      accessControl,
+      mockedSanctionsList,
+      mTBILL,
+      mTokenToUsdDataFeed,
+      feeReceiver,
+      tokensReceiver,
+    }),
   );
   await depositVaultWithAave.setAavePool(
     stableCoins.usdc.address,
@@ -690,30 +678,14 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithMorpho.initialize(
-    {
-      ac: accessControl.address,
-      sanctionsList: mockedSanctionsList.address,
-      variationTolerance: 1,
-      minAmount: 1000,
-      mToken: mTBILL.address,
-      mTokenDataFeed: mTokenToUsdDataFeed.address,
-      feeReceiver: feeReceiver.address,
-      tokensReceiver: tokensReceiver.address,
-      instantFee: 100,
-      limitConfigs: [
-        {
-          limit: parseUnits('100000'),
-          window: days(1),
-        },
-      ],
-      minInstantFee: 0,
-      maxInstantFee: 10000,
-      maxInstantShare: 100_00,
-    },
-    {
-      minMTokenAmountForFirstDeposit: 0,
-      maxSupplyCap: constants.MaxUint256,
-    },
+    ...getDeployParamsDv({
+      accessControl,
+      mockedSanctionsList,
+      mTBILL,
+      mTokenToUsdDataFeed,
+      feeReceiver,
+      tokensReceiver,
+    }),
   );
 
   await accessControl.grantRole(
@@ -728,32 +700,16 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithMToken[
-    'initialize((address,address,uint256,uint256,address,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(uint256,uint256),address)'
+    'initialize((address,address,uint256,uint256,address,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(uint256,uint256,uint256),address)'
   ](
-    {
-      ac: accessControl.address,
-      sanctionsList: mockedSanctionsList.address,
-      variationTolerance: 1,
-      minAmount: 1000,
-      mToken: mTBILL.address,
-      mTokenDataFeed: mTokenToUsdDataFeed.address,
-      feeReceiver: feeReceiver.address,
-      tokensReceiver: tokensReceiver.address,
-      instantFee: 100,
-      limitConfigs: [
-        {
-          limit: parseUnits('100000'),
-          window: days(1),
-        },
-      ],
-      minInstantFee: 0,
-      maxInstantFee: 10000,
-      maxInstantShare: 100_00,
-    },
-    {
-      minMTokenAmountForFirstDeposit: 0,
-      maxSupplyCap: constants.MaxUint256,
-    },
+    ...getDeployParamsDv({
+      accessControl,
+      mockedSanctionsList,
+      mTBILL,
+      mTokenToUsdDataFeed,
+      feeReceiver,
+      tokensReceiver,
+    }),
     depositVault.address,
   );
 
@@ -1090,30 +1046,14 @@ export const mTokenPermissionedFixture = async (
     owner,
   ).deploy();
   await mTokenPermissionedDepositVault.initialize(
-    {
-      ac: accessControl.address,
-      sanctionsList: mockedSanctionsList.address,
-      variationTolerance: 1,
-      minAmount: 1000,
-      mToken: mTokenPermissioned.address,
-      mTokenDataFeed: mTokenToUsdDataFeed.address,
-      feeReceiver: feeReceiver.address,
-      tokensReceiver: tokensReceiver.address,
-      instantFee: 100,
-      limitConfigs: [
-        {
-          limit: parseUnits('100000'),
-          window: days(1),
-        },
-      ],
-      minInstantFee: 0,
-      maxInstantFee: 10000,
-      maxInstantShare: 100_00,
-    },
-    {
-      minMTokenAmountForFirstDeposit: 0,
-      maxSupplyCap: constants.MaxUint256,
-    },
+    ...getDeployParamsDv({
+      accessControl,
+      mockedSanctionsList,
+      mTBILL: mTokenPermissioned,
+      mTokenToUsdDataFeed,
+      feeReceiver,
+      tokensReceiver,
+    }),
   );
   await accessControl.grantRole(
     mintRole,

@@ -576,6 +576,12 @@ export const approveRequestTest = async (
     requestData.recipient,
   );
 
+  const balanceBeforeVaultMToken = await balanceOfBase18(
+    mTBILL,
+    depositVault.address,
+  );
+  const totalSupplyBefore = await mTBILL.totalSupply();
+
   const feePercent = await getFeePercent(
     requestData.recipient,
     requestData.tokenIn,
@@ -603,6 +609,13 @@ export const approveRequestTest = async (
     requestData.recipient,
   );
 
+  const totalSupplyAfter = await mTBILL.totalSupply();
+
+  const balanceAfterVaultMToken = await balanceOfBase18(
+    mTBILL,
+    depositVault.address,
+  );
+
   const estimatedMintAmountRequest = requestData.usdAmountWithoutFees
     .mul(constants.WeiPerEther)
     .div(requestData.tokenOutRate);
@@ -612,21 +625,23 @@ export const approveRequestTest = async (
     requestData.recipient,
   );
 
+  expect(upcomingSupplyAfter).eq(
+    upcomingSupplyBefore.sub(estimatedMintAmountRequest),
+  );
+
+  expect(totalSupplyAfter).eq(totalSupplyBefore.add(expectedMintAmount));
+
   if (requestData.claimer === constants.AddressZero) {
-    expect(upcomingSupplyAfter).eq(
-      upcomingSupplyBefore.sub(estimatedMintAmountRequest),
-    );
     expect(balanceMtBillAfterUser.sub(balanceMtBillBeforeUser)).eq(
       expectedMintAmount,
     );
+    expect(balanceAfterVaultMToken).eq(balanceBeforeVaultMToken);
     expect(requestDataAfter.status).eq(2);
   } else {
-    expect(upcomingSupplyAfter).eq(
-      upcomingSupplyBefore
-        .sub(estimatedMintAmountRequest)
-        .add(expectedMintAmount),
-    );
     expect(balanceMtBillAfterUser).eq(balanceMtBillBeforeUser);
+    expect(balanceAfterVaultMToken).eq(
+      balanceBeforeVaultMToken.add(requestDataAfter.amountMToken),
+    );
     expect(requestDataAfter.status).eq(1);
   }
 
@@ -675,6 +690,11 @@ export const claimRequestTest = async (
 
   const upcomingSupplyBefore = await depositVault.upcomingSupply();
 
+  const balanceBeforeVault = await balanceOfBase18(
+    mTBILL,
+    depositVault.address,
+  );
+
   await expect(depositVault.connect(sender).claimRequest(requestId))
     .to.emit(
       depositVault,
@@ -687,14 +707,17 @@ export const claimRequestTest = async (
   const requestDataAfter = await depositVault.mintRequests(requestId);
 
   const balanceMtBillAfterSender = await balanceOfBase18(mTBILL, sender);
-
-  expect(upcomingSupplyAfter).eq(
-    upcomingSupplyBefore.sub(requestDataBefore.amountMToken),
+  const balanceMtBillAfterVault = await balanceOfBase18(
+    mTBILL,
+    depositVault.address,
   );
 
-  expect(totalSupplyAfter).eq(
-    totalSupplyBefore.add(requestDataBefore.amountMToken),
+  expect(balanceMtBillAfterVault).eq(
+    balanceBeforeVault.sub(requestDataBefore.amountMToken),
   );
+  expect(upcomingSupplyAfter).eq(upcomingSupplyBefore);
+
+  expect(totalSupplyAfter).eq(totalSupplyBefore);
 
   expect(balanceMtBillAfterSender.sub(balanceMtBillBeforeSender)).eq(
     requestDataBefore.amountMToken,
@@ -1062,13 +1085,7 @@ export const rejectRequestTest = async (
 
   const balanceMtBillAfterUser = await balanceOfBase18(mTBILL, sender.address);
 
-  const estimatedMintAmountRequest = requestData.depositedUsdAmount
-    .mul(constants.WeiPerEther)
-    .div(requestData.tokenOutRate);
-
-  expect(upcomingSupplyAfter).eq(
-    upcomingSupplyBefore.sub(estimatedMintAmountRequest),
-  );
+  expect(upcomingSupplyAfter).eq(upcomingSupplyBefore);
 
   expect(balanceMtBillAfterUser).eq(balanceMtBillBeforeUser);
   expect(totalDepositedAfter).eq(totalDepositedBefore);
@@ -1114,6 +1131,40 @@ export const setMaxSupplyCapTest = async (
   ).to.not.reverted;
 
   const newMax = await depositVault.maxSupplyCap();
+  expect(newMax).eq(value);
+};
+
+export const setMaxAmountPerRequestTest = async (
+  {
+    depositVault,
+    owner,
+  }: {
+    depositVault: DepositVault | DepositVaultTest;
+    owner: SignerWithAddress;
+  },
+  value: number,
+  opt?: OptionalCommonParams,
+) => {
+  if (
+    await handleRevert(
+      depositVault
+        .connect(opt?.from ?? owner)
+        .setMaxAmountPerRequest.bind(this, value),
+      depositVault,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  await expect(
+    depositVault.connect(opt?.from ?? owner).setMaxAmountPerRequest(value),
+  ).to.emit(
+    depositVault,
+    depositVault.interface.events['SetMaxAmountPerRequest(uint256)'].name,
+  ).to.not.reverted;
+
+  const newMax = await depositVault.maxAmountPerRequest();
   expect(newMax).eq(value);
 };
 
