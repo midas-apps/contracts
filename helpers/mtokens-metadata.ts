@@ -302,4 +302,8 @@ export const mTokensMetadata: Record<
     name: 'Midas Everstake ETH',
     symbol: 'mEVETH',
   },
+  liquidRWA: {
+    name: 'Ether.fi Liquid RWA',
+    symbol: 'liquidRWA',
+  },
 };

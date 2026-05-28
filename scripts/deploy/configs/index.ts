@@ -22,6 +22,7 @@ import { kitUSDDeploymentConfig } from './kitUSD';
 import { kmiUSDDeploymentConfig } from './kmiUSD';
 import { liquidHYPEDeploymentConfig } from './liquidHYPE';
 import { liquidRESERVEDeploymentConfig } from './liquidRESERVE';
+import { liquidRWADeploymentConfig } from './liquidRWA';
 import { lstHYPEDeploymentConfig } from './lstHYPE';
 import { mAPOLLODeploymentConfig } from './mAPOLLO';
 import { mBASISDeploymentConfig } from './mBASIS';
@@ -151,4 +152,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   stockMarketTRBasisTrade: stockMarketTRBasisTradeDeploymentConfig,
   carryTradeUSDTRYLeverage: carryTradeUSDTRYLeverageDeploymentConfig,
   mEVETH: mEVETHDeploymentConfig,
+  liquidRWA: liquidRWADeploymentConfig,
 };

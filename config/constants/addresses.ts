@@ -1509,6 +1509,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         oft: '0x288E85a50B285238E1c248E1dC2918C721D4b54b',
       },
     },
+    liquidRWA: {
+      token: '0x17bC8Ffd82b8a36e737Ca1141C025089589B915e',
+      customFeed: '0xd5aaE6ac1a9ed4BE5DcC1fc172EDeFFd5B6d8080',
+      dataFeed: '0xD13ef04B9C55e549f9F1b1D89484E3eA23C14F20',
+      depositVault: '0x97b30c9D53A010009136b830f8A12f8d5624Bc43',
+      redemptionVaultSwapper: '0x12Ae90dCe5C2a4Ee5141FBfc408ff1022D051F42',
+    },
   },
   sepolia: {
     paymentTokens: {
