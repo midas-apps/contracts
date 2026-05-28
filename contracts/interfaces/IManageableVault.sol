@@ -32,7 +32,6 @@ struct LimitConfig {
 
 enum RequestStatus {
     Pending,
-    Approved,
     Processed,
     Canceled
 }
@@ -115,7 +114,10 @@ interface IManageableVault {
     error InstantShareTooHigh(uint256 instantShare, uint256 maxInstantShare);
     error InvalidAmount();
     error AmountLessThanMin(uint256 amount, uint256 minAmount);
-    error InvalidClaimer(uint256 requestId, address claimer);
+    error InvalidRequestSequence(
+        uint256 requestId,
+        uint256 highestProcessedRequestId
+    );
 
     /**
      * @param caller function caller (msg.sender)
@@ -266,6 +268,11 @@ interface IManageableVault {
     event FreeFromMinAmount(address indexed user, bool enable);
 
     /**
+     * @param enforce enforce sequential request processing flag
+     */
+    event SetSequentialRequestProcessing(bool enforce);
+
+    /**
      * @notice The mTokenDataFeed contract address.
      * @return The address of the mTokenDataFeed contract.
      */
@@ -404,6 +411,12 @@ interface IManageableVault {
      * @param user address of user
      */
     function freeFromMinAmount(address user, bool enable) external;
+
+    /**
+     * @notice set enforce sequential request processing flag
+     * @param enforce enforce sequential request processing flag
+     */
+    function setSequentialRequestProcessing(bool enforce) external;
 
     /**
      * @notice withdraws `amount` of a given `token` from the contract

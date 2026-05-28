@@ -268,7 +268,6 @@ export const depositRequestTest = async (
     instantShare,
     minReceiveAmountInstantShare,
     mTBILL,
-    customClaimer,
   }: CommonParamsDeposit & {
     waivedFee?: boolean;
     customRecipient?: AccountOrContract;
@@ -276,7 +275,6 @@ export const depositRequestTest = async (
     customRecipientInstant?: AccountOrContract;
     instantShare?: BigNumberish;
     minReceiveAmountInstantShare?: BigNumberish;
-    customClaimer?: AccountOrContract;
   },
   tokenIn: ERC20 | string,
   amountUsdIn: number,
@@ -286,9 +284,6 @@ export const depositRequestTest = async (
 
   const sender = opt?.from ?? owner;
 
-  const claimer = customClaimer
-    ? getAccount(customClaimer)
-    : constants.AddressZero;
   const tokenContract = ERC20__factory.connect(tokenIn, owner);
 
   const tokensReceiver = await depositVault.tokensReceiver();
@@ -304,41 +299,39 @@ export const depositRequestTest = async (
     ? getAccount(customRecipientInstant)
     : sender.address;
 
-  const callFn =
-    instantShare || customClaimer
-      ? depositVault
-          .connect(sender)
-          [
-            'depositRequest(address,uint256,bytes32,address,address,uint256,uint256,address)'
-          ].bind(
-            this,
-            tokenIn,
-            amountIn,
-            constants.HashZero,
-            recipient,
-            claimer,
-            instantShare ?? constants.Zero,
-            minReceiveAmountInstantShare ?? constants.Zero,
-            recipientInstant,
-          )
-      : withRecipient
-      ? depositVault
-          .connect(sender)
-          ['depositRequest(address,uint256,bytes32,address)'].bind(
-            this,
-            tokenIn,
-            amountIn,
-            constants.HashZero,
-            recipient,
-          )
-      : depositVault
-          .connect(sender)
-          ['depositRequest(address,uint256,bytes32)'].bind(
-            this,
-            tokenIn,
-            amountIn,
-            constants.HashZero,
-          );
+  const callFn = instantShare
+    ? depositVault
+        .connect(sender)
+        [
+          'depositRequest(address,uint256,bytes32,address,uint256,uint256,address)'
+        ].bind(
+          this,
+          tokenIn,
+          amountIn,
+          constants.HashZero,
+          recipient,
+          instantShare ?? constants.Zero,
+          minReceiveAmountInstantShare ?? constants.Zero,
+          recipientInstant,
+        )
+    : withRecipient
+    ? depositVault
+        .connect(sender)
+        ['depositRequest(address,uint256,bytes32,address)'].bind(
+          this,
+          tokenIn,
+          amountIn,
+          constants.HashZero,
+          recipient,
+        )
+    : depositVault
+        .connect(sender)
+        ['depositRequest(address,uint256,bytes32)'].bind(
+          this,
+          tokenIn,
+          amountIn,
+          constants.HashZero,
+        );
 
   if (await handleRevert(callFn, depositVault, opt)) {
     return {};
@@ -384,6 +377,9 @@ export const depositRequestTest = async (
     true,
   );
 
+  const highestProcessedRequestIdBefore =
+    await depositVault.highestProcessedRequestId();
+
   let callPromise: Awaited<ReturnType<typeof depositInstantTest>>;
 
   if (amountTokenInInstant.gt(0)) {
@@ -412,7 +408,7 @@ export const depositRequestTest = async (
     .to.emit(
       depositVault,
       depositVault.interface.events[
-        'DepositRequest(uint256,address,address,address,address,uint256,uint256,uint256,uint256,bytes32)'
+        'DepositRequest(uint256,address,address,address,uint256,uint256,uint256,uint256,bytes32)'
       ].name,
     )
     .withArgs(
@@ -428,6 +424,11 @@ export const depositRequestTest = async (
         constants.HashZero,
       ].filter((v) => v !== undefined),
     ).to.not.reverted;
+
+  const highestProcessedRequestIdAfter =
+    await depositVault.highestProcessedRequestId();
+
+  expect(highestProcessedRequestIdAfter).eq(highestProcessedRequestIdBefore);
 
   const latestRequestIdAfter = await depositVault.currentRequestId();
   const supplyAfter = await mTBILL.totalSupply();
@@ -446,7 +447,6 @@ export const depositRequestTest = async (
   );
   expect(request.tokenOutRate).eq(mTokenRate);
   expect(request.recipient).eq(recipient);
-  expect(request.claimer).eq(claimer);
   expect(request.status).eq(0);
   expect(request.tokenIn).eq(tokenContract.address);
 
@@ -572,6 +572,11 @@ export const approveRequestTest = async (
     )
     .withArgs(requestId, actualRate, isSafe, isAvgRate).to.not.reverted;
 
+  const highestProcessedRequestIdAfter =
+    await depositVault.highestProcessedRequestId();
+
+  expect(highestProcessedRequestIdAfter).eq(requestId);
+
   const upcomingSupplyAfter = await depositVault.upcomingSupply();
   const requestDataAfter = await depositVault.mintRequests(requestId);
 
@@ -601,20 +606,11 @@ export const approveRequestTest = async (
 
   expect(totalSupplyAfter).eq(totalSupplyBefore.add(expectedMintAmount));
 
-  if (requestData.claimer === constants.AddressZero) {
-    expect(balanceMtBillAfterUser.sub(balanceMtBillBeforeUser)).eq(
-      expectedMintAmount,
-    );
-    expect(balanceAfterVaultMToken).eq(balanceBeforeVaultMToken);
-    expect(requestDataAfter.status).eq(2);
-  } else {
-    expect(balanceMtBillAfterUser).eq(balanceMtBillBeforeUser);
-    expect(balanceAfterVaultMToken).eq(
-      balanceBeforeVaultMToken.add(requestDataAfter.amountMToken),
-    );
-    expect(requestDataAfter.status).eq(1);
-  }
-
+  expect(balanceMtBillAfterUser.sub(balanceMtBillBeforeUser)).eq(
+    expectedMintAmount,
+  );
+  expect(balanceAfterVaultMToken).eq(balanceBeforeVaultMToken);
+  expect(requestDataAfter.status).eq(1);
   expect(totalDepositedAfter).eq(totalDepositedBefore.add(expectedMintAmount));
 
   expect(requestDataAfter.amountMToken).eq(expectedMintAmount);
@@ -627,84 +623,6 @@ export const approveRequestTest = async (
   );
   expect(requestDataAfter.depositedInstantUsdAmount).eq(
     requestData.depositedInstantUsdAmount,
-  );
-};
-
-export const claimRequestTest = async (
-  {
-    depositVault,
-    owner,
-    mTBILL,
-  }: {
-    depositVault: DepositVault | DepositVaultTest;
-    owner: SignerWithAddress;
-    mTBILL: MToken;
-  },
-  requestId: BigNumberish,
-  opt?: OptionalCommonParams,
-) => {
-  const sender = opt?.from ?? owner;
-
-  const callFn = depositVault
-    .connect(sender)
-    .claimRequest.bind(this, requestId);
-
-  if (await handleRevert(callFn, depositVault, opt)) {
-    return;
-  }
-
-  const requestDataBefore = await depositVault.mintRequests(requestId);
-
-  const balanceMtBillBeforeSender = await balanceOfBase18(mTBILL, sender);
-  const totalSupplyBefore = await mTBILL.totalSupply();
-
-  const upcomingSupplyBefore = await depositVault.upcomingSupply();
-
-  const balanceBeforeVault = await balanceOfBase18(
-    mTBILL,
-    depositVault.address,
-  );
-
-  await expect(depositVault.connect(sender).claimRequest(requestId))
-    .to.emit(
-      depositVault,
-      depositVault.interface.events['ClaimRequest(address,uint256)'].name,
-    )
-    .withArgs(sender, requestId).to.not.reverted;
-
-  const upcomingSupplyAfter = await depositVault.upcomingSupply();
-  const totalSupplyAfter = await mTBILL.totalSupply();
-  const requestDataAfter = await depositVault.mintRequests(requestId);
-
-  const balanceMtBillAfterSender = await balanceOfBase18(mTBILL, sender);
-  const balanceMtBillAfterVault = await balanceOfBase18(
-    mTBILL,
-    depositVault.address,
-  );
-
-  expect(balanceMtBillAfterVault).eq(
-    balanceBeforeVault.sub(requestDataBefore.amountMToken),
-  );
-  expect(upcomingSupplyAfter).eq(upcomingSupplyBefore);
-
-  expect(totalSupplyAfter).eq(totalSupplyBefore);
-
-  expect(balanceMtBillAfterSender.sub(balanceMtBillBeforeSender)).eq(
-    requestDataBefore.amountMToken,
-  );
-
-  expect(requestDataAfter.recipient).eq(requestDataBefore.recipient);
-  expect(requestDataAfter.tokenIn).eq(requestDataBefore.tokenIn);
-  expect(requestDataAfter.tokenOutRate).eq(requestDataBefore.tokenOutRate);
-  expect(requestDataAfter.status).eq(2);
-  expect(requestDataAfter.approvedTokenOutRate).eq(
-    requestDataBefore.approvedTokenOutRate,
-  );
-  expect(requestDataAfter.depositedUsdAmount).eq(
-    requestDataBefore.depositedUsdAmount,
-  );
-  expect(requestDataAfter.depositedInstantUsdAmount).eq(
-    requestDataBefore.depositedInstantUsdAmount,
   );
 };
 
@@ -830,9 +748,25 @@ export const safeBulkApproveRequestTest = async (
 
   const upcomingSupplyBefore = await depositVault.upcomingSupply();
 
+  const highestProcessedRequestIdBefore =
+    await depositVault.highestProcessedRequestId();
+
   const txPromise = callFn();
-  await txPromise;
-  // await expect(txPromise).to.not.reverted;
+  await expect(txPromise).to.not.reverted;
+
+  const highestProcessedRequestIdAfter =
+    await depositVault.highestProcessedRequestId();
+
+  const expectedToExecuteRequests = requests.filter(
+    (v) => v.expectedToExecute ?? true,
+  );
+
+  const expectedHighestProcessedRequestId =
+    expectedToExecuteRequests.sort(
+      (a, b) => +b.id.toString() - +a.id.toString(),
+    )[0]?.id ?? highestProcessedRequestIdBefore;
+
+  expect(highestProcessedRequestIdAfter).eq(expectedHighestProcessedRequestId);
 
   const upcomingSupplyAfter = await depositVault.upcomingSupply();
 
@@ -953,11 +887,7 @@ export const safeBulkApproveRequestTest = async (
         (prev, curr) => {
           return {
             mTokenAmount: prev.mTokenAmount.add(curr.expectedMintAmount),
-            mintAmount: prev.mintAmount.add(
-              curr.request.claimer === constants.AddressZero
-                ? curr.expectedMintAmount
-                : 0,
-            ),
+            mintAmount: prev.mintAmount.add(curr.expectedMintAmount),
           };
         },
         { mTokenAmount: BigNumber.from(0), mintAmount: BigNumber.from(0) },
@@ -969,15 +899,6 @@ export const safeBulkApproveRequestTest = async (
         return prev.add(curr.estimatedMintAmount);
       }, BigNumber.from(0));
 
-    const upcomingSupplyExpectedIncrease = groupedDataBefore
-      .filter(
-        (v) =>
-          v.expectedToExecute && v.request.claimer !== constants.AddressZero,
-      )
-      .reduce((prev, curr) => {
-        return prev.add(curr.expectedMintAmount);
-      }, BigNumber.from(0));
-
     if (!expectedToExecute) {
       expect(logs.length).eq(0);
       expect(requestDataAfter.status).eq(0);
@@ -985,11 +906,7 @@ export const safeBulkApproveRequestTest = async (
     } else {
       expect(logs.length).eq(1);
 
-      if (requestDataBefore.claimer === constants.AddressZero) {
-        expect(requestDataAfter.status).eq(2);
-      } else {
-        expect(requestDataAfter.status).eq(1);
-      }
+      expect(requestDataAfter.status).eq(1);
 
       expect(totalDepositedAfter).eq(
         totalDepositedBefore.add(expectedMintedAggregatedByUser.mTokenAmount),
@@ -1007,9 +924,7 @@ export const safeBulkApproveRequestTest = async (
     );
 
     expect(upcomingSupplyAfter).eq(
-      upcomingSupplyBefore
-        .sub(upcomingSupplyExpectedDecrease)
-        .add(upcomingSupplyExpectedIncrease),
+      upcomingSupplyBefore.sub(upcomingSupplyExpectedDecrease),
     );
     expect(balanceAfter).eq(
       balanceBefore.add(expectedMintedAggregatedByUser.mintAmount),
@@ -1065,7 +980,7 @@ export const rejectRequestTest = async (
   expect(requestDataAfter.depositedUsdAmount).eq(
     requestData.depositedUsdAmount,
   );
-  expect(requestDataAfter.status).eq(3);
+  expect(requestDataAfter.status).eq(2);
 };
 
 export const setMaxSupplyCapTest = async (

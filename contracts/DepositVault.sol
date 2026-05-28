@@ -4,8 +4,6 @@ pragma solidity 0.8.34;
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
-
 import {IDepositVault, CommonVaultInitParams, DepositVaultInitParams, Request, RequestStatus} from "./interfaces/IDepositVault.sol";
 
 import {ManageableVault} from "./abstract/ManageableVault.sol";
@@ -17,7 +15,6 @@ import {Greenlistable} from "./access/Greenlistable.sol";
  * @author RedDuck Software
  */
 contract DepositVault is ManageableVault, IDepositVault {
-    using Counters for Counters.Counter;
     using SafeERC20 for IERC20;
 
     /**
@@ -162,7 +159,6 @@ contract DepositVault is ManageableVault, IDepositVault {
                 amountToken,
                 referrerId,
                 msg.sender,
-                address(0),
                 0,
                 0,
                 msg.sender
@@ -189,7 +185,6 @@ contract DepositVault is ManageableVault, IDepositVault {
                 amountToken,
                 referrerId,
                 recipient,
-                address(0),
                 0,
                 0,
                 recipient
@@ -204,7 +199,6 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 amountToken,
         bytes32 referrerId,
         address recipientRequest,
-        address claimerRequest,
         uint256 instantShare,
         uint256 minReceiveAmountInstantShare,
         address recipientInstant
@@ -220,42 +214,10 @@ contract DepositVault is ManageableVault, IDepositVault {
                 amountToken,
                 referrerId,
                 recipientRequest,
-                claimerRequest,
                 instantShare,
                 minReceiveAmountInstantShare,
                 recipientInstant
             );
-    }
-
-    /**
-     * @inheritdoc IDepositVault
-     */
-    function claimRequest(uint256 requestId)
-        external
-        validateUserAccess(msg.sender)
-    {
-        Request memory request = mintRequests[requestId];
-        _validateRequest(
-            requestId,
-            request.recipient,
-            request.status,
-            RequestStatus.Approved
-        );
-        require(
-            msg.sender == request.claimer || msg.sender == request.recipient,
-            InvalidClaimer(requestId, msg.sender)
-        );
-
-        mintRequests[requestId].status = RequestStatus.Processed;
-
-        _tokenTransferToUser(
-            address(mToken),
-            msg.sender,
-            request.amountMToken,
-            18
-        );
-
-        emit ClaimRequest(msg.sender, requestId);
     }
 
     /**
@@ -365,12 +327,8 @@ contract DepositVault is ManageableVault, IDepositVault {
     function rejectRequest(uint256 requestId) external onlyContractAdmin {
         Request memory request = mintRequests[requestId];
 
-        _requireRequestExists(requestId, request.recipient);
-        require(
-            request.status == RequestStatus.Pending ||
-                request.status == RequestStatus.Approved,
-            UnexpectedRequestStatus(requestId, request.status)
-        );
+        _validateRequest(requestId, request.recipient, request.status);
+        _validateAndUpdateHighestProcessedRequestId(requestId);
 
         mintRequests[requestId].status = RequestStatus.Canceled;
 
@@ -526,14 +484,7 @@ contract DepositVault is ManageableVault, IDepositVault {
 
         _instantTransferTokensToTokensReceiver(
             tokenIn,
-            result.amountTokenWithoutFee,
-            result.tokenDecimals
-        );
-
-        _tokenTransferFromUser(
-            tokenIn,
-            tokensReceiver,
-            result.feeTokenAmount,
+            result.amountTokenWithoutFee + result.feeTokenAmount,
             result.tokenDecimals
         );
 
@@ -548,7 +499,6 @@ contract DepositVault is ManageableVault, IDepositVault {
      * @param amountToken amount of tokenIn (decimals 18)
      * @param referrerId referrer id
      * @param recipientRequest recipient address for the request part
-     * @param claimerRequest claimer address for the request part
      * @param instantShare % amount of `amountToken` that will be deposited instantly
      * @param minReceiveAmountInstantShare min amount of mToken to receive for the instant share
      * @param recipientInstant recipient address for the instant part
@@ -559,7 +509,6 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 amountToken,
         bytes32 referrerId,
         address recipientRequest,
-        address claimerRequest,
         uint256 instantShare,
         uint256 minReceiveAmountInstantShare,
         address recipientInstant
@@ -570,10 +519,6 @@ contract DepositVault is ManageableVault, IDepositVault {
             uint256 /*requestId*/
         )
     {
-        if (claimerRequest != address(0)) {
-            _validateUserAccess(claimerRequest, false);
-        }
-
         uint256 amountTokenInstant = _truncate(
             (amountToken * instantShare) / ONE_HUNDRED_PERCENT,
             _tokenDecimals(tokenIn)
@@ -598,7 +543,6 @@ contract DepositVault is ManageableVault, IDepositVault {
                 tokenIn,
                 amountTokenRequest,
                 recipientRequest,
-                claimerRequest,
                 referrerId,
                 instantResult.tokenAmountInUsd
             );
@@ -618,14 +562,12 @@ contract DepositVault is ManageableVault, IDepositVault {
         address tokenIn,
         uint256 amountToken,
         address recipient,
-        address claimer,
         bytes32 referrerId,
         uint256 depositedInstantUsdAmount
     ) private returns (uint256 requestId) {
         address user = msg.sender;
 
-        requestId = currentRequestId.current();
-        currentRequestId.increment();
+        requestId = currentRequestId++;
 
         CalcAndValidateDepositResult
             memory calcResult = _calcAndValidateDeposit(
@@ -637,20 +579,12 @@ contract DepositVault is ManageableVault, IDepositVault {
 
         _requestTransferTokensToTokensReceiver(
             tokenIn,
-            calcResult.amountTokenWithoutFee,
-            calcResult.tokenDecimals
-        );
-
-        _tokenTransferFromUser(
-            tokenIn,
-            tokensReceiver,
-            calcResult.feeTokenAmount,
+            calcResult.amountTokenWithoutFee + calcResult.feeTokenAmount,
             calcResult.tokenDecimals
         );
 
         Request memory request = Request({
             recipient: recipient,
-            claimer: claimer,
             tokenIn: tokenIn,
             status: RequestStatus.Pending,
             depositedUsdAmount: calcResult.tokenAmountInUsd,
@@ -686,7 +620,6 @@ contract DepositVault is ManageableVault, IDepositVault {
             msg.sender,
             tokenIn,
             recipient,
-            claimer,
             amountToken,
             calcResult.tokenAmountInUsd,
             calcResult.feeTokenAmount,
@@ -719,13 +652,8 @@ contract DepositVault is ManageableVault, IDepositVault {
     {
         Request memory request = mintRequests[requestId];
 
-        _validateRequest(
-            requestId,
-            request.recipient,
-            request.status,
-            RequestStatus.Pending
-        );
-        _validateRequestAddressesAccess(request);
+        _validateRequest(requestId, request.recipient, request.status);
+        _validateUserAccess(request.recipient, false);
 
         if (isSafe) {
             require(
@@ -763,24 +691,17 @@ contract DepositVault is ManageableVault, IDepositVault {
             return false;
         }
 
+        _validateAndUpdateHighestProcessedRequestId(requestId);
+
         upcomingSupply -= upcomingSupplyDecrease;
 
-        address mintTo;
-
-        if (request.claimer == address(0)) {
-            request.status = RequestStatus.Processed;
-            mintTo = request.recipient;
-        } else {
-            request.status = RequestStatus.Approved;
-            mintTo = address(this);
-        }
-
-        mToken.mint(mintTo, amountMToken);
+        mToken.mint(request.recipient, amountMToken);
 
         totalMinted[request.recipient] += amountMToken;
 
         request.approvedTokenOutRate = newOutRate;
         request.amountMToken = amountMToken;
+        request.status = RequestStatus.Processed;
 
         mintRequests[requestId] = request;
 
@@ -834,45 +755,17 @@ contract DepositVault is ManageableVault, IDepositVault {
      * @param requestId request id
      * @param validateAddress address to check if not zero
      * @param status request status
-     * @param expectedStatus expected status
      */
     function _validateRequest(
         uint256 requestId,
         address validateAddress,
-        RequestStatus status,
-        RequestStatus expectedStatus
+        RequestStatus status
     ) internal pure {
-        _requireRequestExists(requestId, validateAddress);
+        require(validateAddress != address(0), RequestNotExists(requestId));
         require(
-            status == expectedStatus,
+            status == RequestStatus.Pending,
             UnexpectedRequestStatus(requestId, status)
         );
-    }
-
-    /**
-     * @dev validates request exists
-     * @param requestId request id
-     * @param validateAddress address to check if not zero
-     */
-    function _requireRequestExists(uint256 requestId, address validateAddress)
-        private
-        pure
-    {
-        require(validateAddress != address(0), RequestNotExists(requestId));
-    }
-
-    /**
-     * @dev validates request addresses access
-     * @param request request
-     */
-    function _validateRequestAddressesAccess(Request memory request)
-        private
-        view
-    {
-        _validateUserAccess(request.recipient, false);
-        if (request.claimer != address(0)) {
-            _validateUserAccess(request.claimer, false);
-        }
     }
 
     /**

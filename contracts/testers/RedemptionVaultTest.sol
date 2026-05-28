@@ -52,7 +52,6 @@ contract RedemptionVaultTest is RedemptionVault, ManageableVaultTester {
                     tokenOutRate: 0,
                     feePercent: 0,
                     recipient: address(0),
-                    claimer: address(0),
                     status: RequestStatus.Pending,
                     approvedMTokenRate: 0,
                     amountTokenOut: 0

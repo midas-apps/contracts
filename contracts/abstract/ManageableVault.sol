@@ -39,7 +39,6 @@ abstract contract ManageableVault is
     using EnumerableSet for EnumerableSet.UintSet;
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
-    using Counters for Counters.Counter;
     using RateLimitLibrary for RateLimitLibrary.WindowRateLimits;
 
     /**
@@ -50,7 +49,12 @@ abstract contract ManageableVault is
     /**
      * @notice last request id
      */
-    Counters.Counter public currentRequestId;
+    uint256 public currentRequestId;
+
+    /**
+     * @notice highest processed request id
+     */
+    uint256 public highestProcessedRequestId;
 
     /**
      * @notice 100 percent with base 100
@@ -127,6 +131,11 @@ abstract contract ManageableVault is
      * @notice max requestId that can be approved
      */
     uint256 public maxApproveRequestId;
+
+    /**
+     * @notice enforce sequential request processing flag
+     */
+    bool public sequentialRequestProcessing;
 
     /**
      * @notice instant rate limits state
@@ -399,6 +408,18 @@ abstract contract ManageableVault is
     /**
      * @inheritdoc IManageableVault
      */
+    function setSequentialRequestProcessing(bool enforce)
+        external
+        onlyContractAdmin
+    {
+        require(sequentialRequestProcessing != enforce, SameBoolValue(enforce));
+        sequentialRequestProcessing = enforce;
+        emit SetSequentialRequestProcessing(enforce);
+    }
+
+    /**
+     * @inheritdoc IManageableVault
+     */
     function withdrawToken(address token, uint256 amount)
         external
         onlyContractAdmin
@@ -553,6 +574,37 @@ abstract contract ManageableVault is
     }
 
     /**
+     * @dev check if operation exceed daily limit and update limit data
+     * @param amount operation amount (decimals 18)
+     */
+    function _requireAndUpdateLimit(uint256 amount) internal {
+        _instantRateLimits.consumeLimit(amount);
+    }
+
+    /**
+     * @dev check if request id is sequential and update highest processed request id
+     * @param requestId request id
+     */
+    function _validateAndUpdateHighestProcessedRequestId(uint256 requestId)
+        internal
+    {
+        uint256 _highestProcessedRequestId = highestProcessedRequestId;
+        if (sequentialRequestProcessing) {
+            if (_highestProcessedRequestId == 0 && requestId == 0) {
+                return;
+            }
+
+            require(
+                requestId == _highestProcessedRequestId + 1,
+                InvalidRequestSequence(requestId, _highestProcessedRequestId)
+            );
+        }
+        if (requestId > _highestProcessedRequestId) {
+            highestProcessedRequestId = requestId;
+        }
+    }
+
+    /**
      * @dev retreives decimals of a given `token`
      * @param token address of token
      * @return decimals decinmals value of a given `token`
@@ -567,14 +619,6 @@ abstract contract ManageableVault is
      */
     function _requireTokenExists(address token) internal view virtual {
         require(_paymentTokens.contains(token), UnknownPaymentToken(token));
-    }
-
-    /**
-     * @dev check if operation exceed daily limit and update limit data
-     * @param amount operation amount (decimals 18)
-     */
-    function _requireAndUpdateLimit(uint256 amount) internal {
-        _instantRateLimits.consumeLimit(amount);
     }
 
     /**

@@ -9,8 +9,6 @@ import "./IManageableVault.sol";
 struct Request {
     /// @notice user address which will receive the mTokens
     address recipient;
-    /// @notice user address which can claim the request if it is approved
-    address claimer;
     /// @notice tokenOut address
     address tokenOut;
     /// @notice request status
@@ -27,7 +25,7 @@ struct Request {
     uint256 amountMTokenInstant;
     /// @notice approved mToken rate
     uint256 approvedMTokenRate;
-    /// @notice amount of tokenOut that was redeemed/claimed
+    /// @notice amount of tokenOut that was redeeme
     uint256 amountTokenOut;
 }
 
@@ -92,7 +90,6 @@ interface IRedemptionVault is IManageableVault {
      * @param user function caller (msg.sender)
      * @param tokenOut address of tokenOut
      * @param recipient recipient address
-     * @param claimer claimer address
      * @param amountMTokenIn amount of mToken
      * @param amountMTokenInstant amount of mToken that was redeemed instantly
      * @param mTokenRate mToken rate
@@ -103,18 +100,11 @@ interface IRedemptionVault is IManageableVault {
         address indexed user,
         address indexed tokenOut,
         address recipient,
-        address claimer,
         uint256 amountMTokenIn,
         uint256 amountMTokenInstant,
         uint256 mTokenRate,
         uint256 feePercent
     );
-
-    /**
-     * @param caller function caller (msg.sender)
-     * @param requestId request id
-     */
-    event ClaimRequest(address indexed caller, uint256 indexed requestId);
 
     /**
      * @param loanId loan id
@@ -277,7 +267,6 @@ interface IRedemptionVault is IManageableVault {
      * @param tokenOut stable coin token address to redeem to
      * @param amountMTokenIn amount of mToken to redeem (decimals 18)
      * @param recipientRequest address that receives tokens for the request part
-     * @param claimerRequest address that can claim the request
      * @param instantShare % amount of `amountMTokenIn` that will be redeemed instantly
      * @param minReceiveAmountInstantShare min receive amount for the instant share
      * @param recipientInstant address that receives tokens for the instant part
@@ -287,18 +276,10 @@ interface IRedemptionVault is IManageableVault {
         address tokenOut,
         uint256 amountMTokenIn,
         address recipientRequest,
-        address claimerRequest,
         uint256 instantShare,
         uint256 minReceiveAmountInstantShare,
         address recipientInstant
     ) external returns (uint256);
-
-    /**
-     * @notice claiming of approved request where claimer is specified
-     * @dev can be called by claimer or original request recipient
-     * @param requestId request id
-     */
-    function claimRequest(uint256 requestId) external;
 
     /**
      * @notice approving requests from the `requestIds` array with the mToken rate

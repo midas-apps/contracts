@@ -502,6 +502,38 @@ export const addAccountWaivedFeeRestrictionTest = async (
     .withArgs(account, (opt?.from ?? owner).address).to.not.reverted;
 };
 
+export const setSequentialRequestProcessingTest = async (
+  { vault, owner }: CommonParamsChangePaymentToken,
+  value: boolean,
+  opt?: OptionalCommonParams,
+) => {
+  if (
+    await handleRevert(
+      vault
+        .connect(opt?.from ?? owner)
+        .setSequentialRequestProcessing.bind(this, value),
+      vault,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  await expect(
+    vault.connect(opt?.from ?? owner).setSequentialRequestProcessing(value),
+  )
+    .to.emit(
+      vault,
+      vault.interface.events['SetSequentialRequestProcessing(bool)'].name,
+    )
+    .withArgs(value).to.not.reverted;
+
+  const newSequentialRequestProcessing =
+    await vault.sequentialRequestProcessing();
+
+  expect(newSequentialRequestProcessing).eq(value);
+};
+
 export const setMinAmountToDepositTest = async (
   { depositVault, owner }: CommonParams,
   valueN: number,

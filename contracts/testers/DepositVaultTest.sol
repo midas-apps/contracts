@@ -53,7 +53,6 @@ contract DepositVaultTest is DepositVault, ManageableVaultTester {
                     depositedUsdAmount: depositedUsdAmount,
                     usdAmountWithoutFees: 0,
                     recipient: address(0),
-                    claimer: address(0),
                     tokenIn: address(0),
                     status: RequestStatus.Pending,
                     amountMToken: 0
