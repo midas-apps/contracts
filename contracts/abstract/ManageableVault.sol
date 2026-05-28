@@ -183,6 +183,8 @@ abstract contract ManageableVault is
         minAmount = _commonVaultInitParams.minAmount;
         variationTolerance = _commonVaultInitParams.variationTolerance;
         mTokenDataFeed = IDataFeed(_commonVaultInitParams.mTokenDataFeed);
+        sequentialRequestProcessing = _commonVaultInitParams
+            .sequentialRequestProcessing;
 
         for (
             uint256 i = 0;

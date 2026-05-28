@@ -16,6 +16,9 @@ contract MidasPauseManager is
     PausableUpgradeable,
     IMidasPauseManager
 {
+    /**
+     * @dev admin role for the pause manager
+     */
     bytes32 private constant _PAUSE_ADMIN_ROLE = keccak256("PAUSE_ADMIN_ROLE");
 
     /**

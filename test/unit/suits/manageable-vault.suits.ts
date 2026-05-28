@@ -35,6 +35,7 @@ import {
   setInstantFeeTest,
   setMinAmountTest,
   setMinMaxInstantFeeTest,
+  setSequentialRequestProcessingTest,
 } from '../../common/manageable-vault.helpers';
 
 let pauseManager: DefaultFixture['pauseManager'];
@@ -1163,6 +1164,109 @@ export const manageableVaultSuits = (
             { vault: manageableVault, owner },
             100,
             { from: regularAccounts[0] },
+          );
+        });
+      });
+
+      describe('setSequentialRequestProcessing()', () => {
+        it('should fail: call from address without VAULT_ADMIN_ROLE role', async () => {
+          const { owner, manageableVault, regularAccounts } =
+            await loadMvFixture();
+
+          await setSequentialRequestProcessingTest(
+            { vault: manageableVault, owner },
+            true,
+            {
+              from: regularAccounts[0],
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
+            },
+          );
+        });
+
+        it('call from address with VAULT_ADMIN_ROLE role', async () => {
+          const { owner, manageableVault } = await loadMvFixture();
+
+          await setSequentialRequestProcessingTest(
+            { vault: manageableVault, owner },
+            true,
+          );
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, manageableVault } = await loadMvFixture();
+
+          await pauseVaultFn(
+            { pauseManager, owner },
+            manageableVault,
+            encodeFnSelector('setSequentialRequestProcessing(bool)'),
+          );
+
+          await setSequentialRequestProcessingTest(
+            { vault: manageableVault, owner },
+            true,
+            {
+              revertCustomError: {
+                customErrorName: 'Paused',
+              },
+            },
+          );
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, manageableVault, regularAccounts } =
+            await loadMvFixture();
+
+          const vaultRole = await manageableVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            manageableVault.address,
+            'setSequentialRequestProcessing(bool)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setSequentialRequestProcessingTest(
+            { vault: manageableVault, owner },
+            true,
+            {
+              from: regularAccounts[0],
+            },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            manageableVault,
+            regularAccounts,
+            roles,
+          } = await loadMvFixture();
+
+          const vaultRole = await manageableVault.vaultRole();
+          await setupVaultScopedFunctionPermission(
+            { accessControl, owner },
+            vaultRole,
+            manageableVault.address,
+            'setSequentialRequestProcessing(bool)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl.grantRole(
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setSequentialRequestProcessingTest(
+            { vault: manageableVault, owner },
+            true,
+            {
+              from: regularAccounts[0],
+            },
           );
         });
       });

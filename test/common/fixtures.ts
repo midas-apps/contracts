@@ -78,31 +78,15 @@ export const getDeployParamsRv = <TExtraParams extends readonly [] = []>(
     loanLp,
     loanRepaymentAddress,
     redemptionVaultLoanSwapper,
-
     loanApr,
     ...commonParams
   }: {
-    accessControl: AccountOrContract;
-    mockedSanctionsList: AccountOrContract;
-    mTBILL: AccountOrContract;
-    mTokenToUsdDataFeed: AccountOrContract;
-    tokensReceiver: AccountOrContract;
     requestRedeemer: AccountOrContract;
     loanLp: AccountOrContract;
     loanRepaymentAddress: AccountOrContract;
     redemptionVaultLoanSwapper: AccountOrContract;
-    minAmount?: BigNumberish;
-    instantFee?: BigNumberish;
-    limitConfigs?: {
-      limit: BigNumberish;
-      window: BigNumberish;
-    }[];
-    minInstantFee?: BigNumberish;
-    maxInstantFee?: BigNumberish;
-    maxInstantShare?: BigNumberish;
-    variationTolerance?: BigNumberish;
     loanApr?: BigNumberish;
-  },
+  } & DeployParamsMv,
   extraParams?: TExtraParams,
 ) => {
   return [
@@ -124,6 +108,21 @@ export const getDeployParamsDv = ({
   maxSupplyCap,
   ...commonParams
 }: {
+  maxAmountPerRequest?: BigNumberish;
+  minMTokenAmountForFirstDeposit?: BigNumberish;
+  maxSupplyCap?: BigNumberish;
+} & DeployParamsMv) => {
+  return [
+    ...getDeployParamsMv(commonParams),
+    {
+      minMTokenAmountForFirstDeposit: minMTokenAmountForFirstDeposit ?? 0,
+      maxSupplyCap: maxSupplyCap ?? constants.MaxUint256,
+      maxAmountPerRequest: maxAmountPerRequest ?? constants.MaxUint256,
+    },
+  ] as const;
+};
+
+type DeployParamsMv = {
   accessControl: AccountOrContract;
   mockedSanctionsList: AccountOrContract;
   mTBILL: AccountOrContract;
@@ -139,18 +138,7 @@ export const getDeployParamsDv = ({
   maxInstantFee?: BigNumberish;
   maxInstantShare?: BigNumberish;
   variationTolerance?: BigNumberish;
-  maxAmountPerRequest?: BigNumberish;
-  minMTokenAmountForFirstDeposit?: BigNumberish;
-  maxSupplyCap?: BigNumberish;
-}) => {
-  return [
-    ...getDeployParamsMv(commonParams),
-    {
-      minMTokenAmountForFirstDeposit: minMTokenAmountForFirstDeposit ?? 0,
-      maxSupplyCap: maxSupplyCap ?? constants.MaxUint256,
-      maxAmountPerRequest: maxAmountPerRequest ?? constants.MaxUint256,
-    },
-  ] as const;
+  sequentialRequestProcessing?: boolean;
 };
 
 export const getDeployParamsMv = ({
@@ -166,23 +154,8 @@ export const getDeployParamsMv = ({
   maxInstantFee,
   maxInstantShare,
   variationTolerance,
-}: {
-  accessControl: AccountOrContract;
-  mockedSanctionsList: AccountOrContract;
-  mTBILL: AccountOrContract;
-  mTokenToUsdDataFeed: AccountOrContract;
-  tokensReceiver: AccountOrContract;
-  minAmount?: BigNumberish;
-  instantFee?: BigNumberish;
-  limitConfigs?: {
-    limit: BigNumberish;
-    window: BigNumberish;
-  }[];
-  minInstantFee?: BigNumberish;
-  maxInstantFee?: BigNumberish;
-  maxInstantShare?: BigNumberish;
-  variationTolerance?: BigNumberish;
-}) => {
+  sequentialRequestProcessing,
+}: DeployParamsMv) => {
   return [
     {
       ac: getAccount(accessControl),
@@ -202,6 +175,7 @@ export const getDeployParamsMv = ({
       minInstantFee: minInstantFee ?? 0,
       maxInstantFee: maxInstantFee ?? 10000,
       maxInstantShare: maxInstantShare ?? 100_00,
+      sequentialRequestProcessing: sequentialRequestProcessing ?? false,
     },
   ] as const;
 };
@@ -502,7 +476,7 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithUSTB[
-    'initialize((address,address,uint256,uint256,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(uint256,uint256,uint256),address)'
+    'initialize((uint256,uint256,uint256,address,address,address,address,address,uint64,uint64,uint64,bool,(uint256,uint256)[]),(uint256,uint256,uint256),address)'
   ](
     ...getDeployParamsDv({
       accessControl,
@@ -531,7 +505,7 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithUSTBTest__factory(owner).deploy();
 
   await redemptionVaultWithUSTB[
-    'initialize((address,address,uint256,uint256,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(address,address,address,address,uint64),address)'
+    'initialize((uint256,uint256,uint256,address,address,address,address,address,uint64,uint64,uint64,bool,(uint256,uint256)[]),(address,address,address,address,uint64),address)'
   ](
     ...getDeployParamsRv({
       accessControl,
@@ -675,7 +649,7 @@ export const defaultDeploy = async () => {
   ).deploy();
 
   await depositVaultWithMToken[
-    'initialize((address,address,uint256,uint256,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(uint256,uint256,uint256),address)'
+    'initialize((uint256,uint256,uint256,address,address,address,address,address,uint64,uint64,uint64,bool,(uint256,uint256)[]),(uint256,uint256,uint256),address)'
   ](
     ...getDeployParamsDv({
       accessControl,
@@ -718,7 +692,7 @@ export const defaultDeploy = async () => {
     await new RedemptionVaultWithMTokenTest__factory(owner).deploy();
 
   await redemptionVaultWithMToken[
-    'initialize((address,address,uint256,uint256,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(address,address,address,address,uint64),address)'
+    'initialize((uint256,uint256,uint256,address,address,address,address,address,uint64,uint64,uint64,bool,(uint256,uint256)[]),(address,address,address,address,uint64),address)'
   ](
     ...getDeployParamsRv({
       accessControl,

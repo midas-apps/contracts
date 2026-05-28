@@ -7,6 +7,11 @@ pragma solidity 0.8.34;
  * @author RedDuck Software
  */
 interface IPausable {
+    /**
+     * @notice error thrown when a function is paused
+     * @param contractAddr contract address
+     * @param fn function id
+     */
     error Paused(address contractAddr, bytes4 fn);
 
     /**

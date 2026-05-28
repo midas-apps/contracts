@@ -40,28 +40,30 @@ enum RequestStatus {
  * @notice Common vault init params
  */
 struct CommonVaultInitParams {
-    /// @notice address of the access control contract
-    address ac;
-    /// @notice address of the sanctions list contract
-    address sanctionsList;
     /// @notice variation tolerance of mToken rates for "safe" requests approve
     uint256 variationTolerance;
     /// @notice minimum amount for operations in mToken
     uint256 minAmount;
+    /// @notice fee for initial operations 1% = 100
+    uint256 instantFee;
+    /// @notice address of the access control contract
+    address ac;
+    /// @notice address of the sanctions list contract
+    address sanctionsList;
     /// @notice mToken address
     address mToken;
     /// @notice mToken data feed address
     address mTokenDataFeed;
     /// @notice address to which proceeds will be sent
     address tokensReceiver;
-    /// @notice fee for initial operations 1% = 100
-    uint256 instantFee;
     /// @notice minimum instant fee
     uint64 minInstantFee;
     /// @notice maximum instant fee
     uint64 maxInstantFee;
     /// @notice maximum instant share value in basis points (100 = 1%)
     uint64 maxInstantShare;
+    /// @notice enforce sequential request processing flag
+    bool sequentialRequestProcessing;
     /// @notice limit configs
     LimitConfigInitParams[] limitConfigs;
 }
