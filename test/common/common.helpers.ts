@@ -116,7 +116,7 @@ export const pauseGlobalTest = async (
 
   await expect(callFn()).not.reverted;
 
-  expect(await pauseManager.paused()).eq(true);
+  expect(await pauseManager.globalPaused()).eq(true);
 };
 
 export const unpauseGlobalTest = async (
@@ -137,7 +137,7 @@ export const unpauseGlobalTest = async (
 
   await expect(await pauseManager.connect(from).globalUnpause()).not.reverted;
 
-  expect(await pauseManager.paused()).eq(false);
+  expect(await pauseManager.globalPaused()).eq(false);
 };
 
 export const pauseVault = async (

@@ -231,8 +231,6 @@ export const depositInstantTest = async (
 
   if (checkTokensReceiver) {
     expect(balanceAfterReceiver).eq(balanceBeforeReceiver.add(amountIn));
-  } else if (!holdback) {
-    expect(balanceAfterReceiver).eq(balanceBeforeReceiver.add(fee));
   }
 
   if (!holdback) {

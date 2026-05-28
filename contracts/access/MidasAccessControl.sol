@@ -47,7 +47,7 @@ contract MidasAccessControl is
     /**
      * @dev leaving a storage gap for futures updates
      */
-    uint256[50] private __gap;
+    uint256[45] private __gap;
 
     /**
      * @notice upgradeable pattern contract`s initializer

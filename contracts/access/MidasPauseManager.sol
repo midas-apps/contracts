@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.34;
 
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {WithMidasAccessControl} from "./WithMidasAccessControl.sol";
 import {IPausable} from "../interfaces/IPausable.sol";
 import {IMidasPauseManager} from "../interfaces/IMidasPauseManager.sol";
@@ -11,25 +10,26 @@ import {IMidasPauseManager} from "../interfaces/IMidasPauseManager.sol";
  * @notice Global manager for pausing and unpausing functions
  * @author RedDuck Software
  */
-contract MidasPauseManager is
-    WithMidasAccessControl,
-    PausableUpgradeable,
-    IMidasPauseManager
-{
+contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
     /**
      * @dev admin role for the pause manager
      */
     bytes32 private constant _PAUSE_ADMIN_ROLE = keccak256("PAUSE_ADMIN_ROLE");
 
     /**
-     * @notice contract => function id => paused status
+     * @notice global paused status
      */
-    mapping(address => mapping(bytes4 => bool)) public contractFnPaused;
+    bool public globalPaused;
 
     /**
      * @notice contract => paused status
      */
     mapping(address => bool) public contractPaused;
+
+    /**
+     * @notice contract => function id => paused status
+     */
+    mapping(address => mapping(bytes4 => bool)) public contractFnPaused;
 
     /**
      * @dev validates that caller has access to the `contractAddr` contract admin role
@@ -46,7 +46,6 @@ contract MidasPauseManager is
      */
     function initialize(address _accessControl) external initializer {
         __WithMidasAccessControl_init(_accessControl);
-        __Pausable_init_unchained();
     }
 
     /**
@@ -58,7 +57,7 @@ contract MidasPauseManager is
     {
         require(!contractPaused[contractAddr], SameBoolValue(true));
         contractPaused[contractAddr] = true;
-        emit PauseFnStatusChange(msg.sender, contractAddr, msg.sig, true);
+        emit ContractPauseStatusChange(contractAddr, true);
     }
 
     /**
@@ -70,7 +69,7 @@ contract MidasPauseManager is
     {
         require(contractPaused[contractAddr], SameBoolValue(false));
         contractPaused[contractAddr] = false;
-        emit PauseFnStatusChange(msg.sender, contractAddr, msg.sig, false);
+        emit ContractPauseStatusChange(contractAddr, false);
     }
 
     /**
@@ -88,7 +87,7 @@ contract MidasPauseManager is
             );
 
             contractFnPaused[contractAddr][selector] = true;
-            emit PauseFnStatusChange(msg.sender, contractAddr, selector, true);
+            emit FnPauseStatusChange(contractAddr, selector, true);
         }
     }
 
@@ -106,7 +105,7 @@ contract MidasPauseManager is
                 SameBoolValue(false)
             );
             contractFnPaused[contractAddr][selector] = false;
-            emit PauseFnStatusChange(msg.sender, contractAddr, selector, false);
+            emit FnPauseStatusChange(contractAddr, selector, false);
         }
     }
 
@@ -114,14 +113,18 @@ contract MidasPauseManager is
      * @inheritdoc IMidasPauseManager
      */
     function globalPause() external onlyContractAdmin {
-        _pause();
+        require(!globalPaused, SameBoolValue(true));
+        globalPaused = true;
+        emit GlobalPauseStatusChange(true);
     }
 
     /**
      * @inheritdoc IMidasPauseManager
      */
     function globalUnpause() external onlyContractAdmin {
-        _unpause();
+        require(globalPaused, SameBoolValue(false));
+        globalPaused = false;
+        emit GlobalPauseStatusChange(false);
     }
 
     /**
@@ -133,7 +136,7 @@ contract MidasPauseManager is
         returns (bool)
     {
         return
-            paused() ||
+            globalPaused ||
             contractPaused[contractAddr] ||
             isFunctionPaused(contractAddr, selector);
     }

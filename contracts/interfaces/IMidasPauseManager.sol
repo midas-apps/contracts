@@ -8,17 +8,29 @@ pragma solidity 0.8.34;
  */
 interface IMidasPauseManager {
     /**
-     * @param caller caller address (msg.sender)
      * @param contractAddr contract address
      * @param fn function id
      * @param isPaused paused status
      */
-    event PauseFnStatusChange(
-        address indexed caller,
+    event FnPauseStatusChange(
         address indexed contractAddr,
         bytes4 indexed fn,
         bool isPaused
     );
+
+    /**
+     * @param contractAddr contract address
+     * @param isPaused paused status
+     */
+    event ContractPauseStatusChange(
+        address indexed contractAddr,
+        bool isPaused
+    );
+
+    /**
+     * @param isPaused paused status
+     */
+    event GlobalPauseStatusChange(bool isPaused);
 
     /**
      * @notice pauses a speific contract

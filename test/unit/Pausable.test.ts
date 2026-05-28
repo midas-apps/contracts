@@ -257,7 +257,10 @@ describe('MidasPauseManager', () => {
       await pauseGlobalTest(
         { pauseManager, owner },
         {
-          revertMessage: 'Pausable: paused',
+          revertCustomError: {
+            customErrorName: 'SameBoolValue',
+            args: [true],
+          },
         },
       );
     });
@@ -289,7 +292,10 @@ describe('MidasPauseManager', () => {
       await unpauseGlobalTest(
         { pauseManager, owner },
         {
-          revertMessage: 'Pausable: not paused',
+          revertCustomError: {
+            customErrorName: 'SameBoolValue',
+            args: [false],
+          },
         },
       );
     });
