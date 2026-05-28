@@ -5,9 +5,16 @@ import { ethers } from 'hardhat';
 
 import { depositVaultSuits } from './suits/deposit-vault.suits';
 
-import { DepositVaultWithAaveTest__factory } from '../../typechain-types';
+import {
+  DepositVaultWithAave__factory,
+  DepositVaultWithAaveTest__factory,
+} from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
-import { approveBase18, mintToken } from '../common/common.helpers';
+import {
+  approveBase18,
+  mintToken,
+  validateImplementation,
+} from '../common/common.helpers';
 import {
   depositInstantWithAaveTest,
   depositRequestWithAaveTest,
@@ -36,6 +43,7 @@ depositVaultSuits(
       aavePoolMock.address,
     );
     expect(await depositVaultWithAave.aaveDepositsEnabled()).eq(false);
+    await validateImplementation(DepositVaultWithAave__factory);
   },
   async (defaultDeploy) => {
     describe('DepositVaultWithAave', () => {

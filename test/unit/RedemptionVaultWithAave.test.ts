@@ -8,12 +8,16 @@ import { ethers } from 'hardhat';
 import { redemptionVaultSuits } from './suits/redemption-vault.suits';
 
 import { encodeFnSelector } from '../../helpers/utils';
-import { RedemptionVaultWithAaveTest__factory } from '../../typechain-types';
+import {
+  RedemptionVaultWithAave__factory,
+  RedemptionVaultWithAaveTest__factory,
+} from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
 import {
   approveBase18,
   mintToken,
   pauseVaultFn,
+  validateImplementation,
 } from '../common/common.helpers';
 import { setRoundData } from '../common/data-feed.helpers';
 import { defaultDeploy } from '../common/fixtures';
@@ -45,6 +49,7 @@ redemptionVaultSuits(
     expect(
       await redemptionVaultWithAave.aavePools(stableCoins.usdc.address),
     ).eq(aavePoolMock.address);
+    await validateImplementation(RedemptionVaultWithAave__factory);
   },
   (defaultDeploy) => {
     describe('RedemptionVaultWithAave', () => {

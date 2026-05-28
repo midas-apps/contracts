@@ -7,12 +7,16 @@ import { parseUnits } from 'ethers/lib/utils';
 import { redemptionVaultSuits } from './suits/redemption-vault.suits';
 
 import { encodeFnSelector } from '../../helpers/utils';
-import { RedemptionVaultWithMTokenTest__factory } from '../../typechain-types';
+import {
+  RedemptionVaultWithMToken__factory,
+  RedemptionVaultWithMTokenTest__factory,
+} from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
 import {
   approveBase18,
   mintToken,
   pauseVaultFn,
+  validateImplementation,
 } from '../common/common.helpers';
 import { setRoundData } from '../common/data-feed.helpers';
 import { defaultDeploy } from '../common/fixtures';
@@ -46,6 +50,7 @@ redemptionVaultSuits(
     expect(await redemptionVaultWithMToken.redemptionVault()).eq(
       redemptionVaultLoanSwapper.address,
     );
+    await validateImplementation(RedemptionVaultWithMToken__factory);
   },
   async (defaultDeploy) => {
     describe('RedemptionVaultWithMToken', () => {

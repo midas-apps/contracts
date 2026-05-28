@@ -7014,7 +7014,6 @@ export const redemptionVaultSuits = (
               owner,
               mTBILL,
               mTokenToUsdDataFeed,
-              customClaimer: regularAccounts[1],
               instantShare: 0,
             },
             stableCoins.dai,

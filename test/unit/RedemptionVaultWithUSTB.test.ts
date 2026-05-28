@@ -6,8 +6,15 @@ import { parseUnits } from 'ethers/lib/utils';
 
 import { redemptionVaultSuits } from './suits/redemption-vault.suits';
 
-import { RedemptionVaultWithUSTBTest__factory } from '../../typechain-types';
-import { approveBase18, mintToken } from '../common/common.helpers';
+import {
+  RedemptionVaultWithUSTB__factory,
+  RedemptionVaultWithUSTBTest__factory,
+} from '../../typechain-types';
+import {
+  approveBase18,
+  mintToken,
+  validateImplementation,
+} from '../common/common.helpers';
 import { setRoundData } from '../common/data-feed.helpers';
 import { defaultDeploy } from '../common/fixtures';
 import {
@@ -34,6 +41,7 @@ redemptionVaultSuits(
     expect(await redemptionVaultWithUSTB.ustbRedemption()).eq(
       ustbRedemption.address,
     );
+    await validateImplementation(RedemptionVaultWithUSTB__factory);
   },
   async (defaultDeploy) => {
     describe('RedemptionVaultWithUSTB', function () {

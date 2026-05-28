@@ -14,6 +14,7 @@ import {
   setFunctionPermissionTester,
   setupFunctionAccessGrantOperator,
 } from '../common/ac.helpers';
+import { validateImplementation } from '../common/common.helpers';
 import {
   setMaxGrowthApr,
   setMaxAnswerDeviationTest,
@@ -54,6 +55,9 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
     ).deploy();
 
     expect(await newFeed.feedAdminRole()).eq(ethers.constants.HashZero);
+    await validateImplementation(
+      CustomAggregatorV3CompatibleFeedGrowth__factory,
+    );
   });
 
   it('initialize', async () => {
@@ -684,6 +688,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
         { timelockManager, timelock, owner, accessControl },
         [customFeedGrowth.address],
         [calldata],
+        {},
         { from: proposer },
       );
 
@@ -779,6 +784,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
         { timelockManager, timelock, owner, accessControl },
         [customFeedGrowth.address],
         [calldata],
+        {},
         { from: proposer },
       );
 

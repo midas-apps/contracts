@@ -4,7 +4,11 @@ import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/
 import { expect } from 'chai';
 import { constants, ethers } from 'ethers';
 
-import { MidasTimelockManagerTest__factory } from '../../typechain-types';
+import {
+  MidasTimelockManager__factory,
+  MidasTimelockManagerTest__factory,
+} from '../../typechain-types';
+import { validateImplementation } from '../common/common.helpers';
 import { defaultDeploy } from '../common/fixtures';
 import {
   abortOperationTest,
@@ -43,6 +47,8 @@ describe('MidasTimelockManager', () => {
     expect(await timelockManager.SECURITY_COUNCIL_MAX_MEMBERS()).to.eq(15);
     expect(await timelockManager.SECURITY_COUNCIL_MIN_MEMBERS()).to.eq(5);
     expect(await timelockManager.maxPendingOperationsPerProposer()).to.eq(100);
+
+    await validateImplementation(MidasTimelockManager__factory);
   });
 
   describe('initializeTimelock()', () => {

@@ -3,8 +3,15 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
 import { redemptionVaultSuits } from './suits/redemption-vault.suits';
 
-import { RedemptionVaultTest__factory } from '../../typechain-types';
-import { approveBase18, mintToken } from '../common/common.helpers';
+import {
+  RedemptionVault__factory,
+  RedemptionVaultTest__factory,
+} from '../../typechain-types';
+import {
+  approveBase18,
+  mintToken,
+  validateImplementation,
+} from '../common/common.helpers';
 import { setRoundData } from '../common/data-feed.helpers';
 import { defaultDeploy, mTokenPermissionedFixture } from '../common/fixtures';
 import {
@@ -21,7 +28,9 @@ redemptionVaultSuits(
       new RedemptionVaultTest__factory(owner).deploy(),
     key: 'redemptionVault',
   },
-  async () => {},
+  async () => {
+    await validateImplementation(RedemptionVault__factory);
+  },
   () => {
     describe('RedemptionVault', () => {
       describe('redeemInstant() with permissioned mToken', () => {

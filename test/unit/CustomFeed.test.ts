@@ -16,6 +16,7 @@ import {
   setFunctionPermissionTester,
   setupFunctionAccessGrantOperator,
 } from '../common/ac.helpers';
+import { validateImplementation } from '../common/common.helpers';
 import {
   calculatePriceDiviation,
   setMaxAnswerDeviationTest,
@@ -51,6 +52,7 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
     ).deploy();
 
     expect(await newFeed.feedAdminRole()).eq(ethers.constants.HashZero);
+    await validateImplementation(CustomAggregatorV3CompatibleFeed__factory);
   });
 
   it('initialize', async () => {
@@ -306,6 +308,7 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
         { timelockManager, timelock, owner, accessControl },
         [customFeed.address],
         [calldata],
+        {},
         { from: proposer },
       );
 
@@ -399,6 +402,7 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
         { timelockManager, timelock, owner, accessControl },
         [customFeed.address],
         [calldata],
+        {},
         { from: proposer },
       );
 

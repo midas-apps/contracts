@@ -46,6 +46,7 @@ import {
   RedemptionVault,
   RedemptionVaultWithSwapper,
 } from '../../../typechain-types';
+import { validateImplementation } from '../../common/common.helpers';
 
 export const mTokenContractsSuits = (token: MTokenName) => {
   const contractNames = getTokenContractNames(token);
@@ -79,6 +80,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         : contractNames[contractKey]!,
     );
 
+    await validateImplementation(factory);
     const impl = await factory.deploy();
 
     const proxy = await (

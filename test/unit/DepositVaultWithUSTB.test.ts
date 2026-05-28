@@ -1,17 +1,23 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { constants } from 'ethers';
 
 import { depositVaultSuits } from './suits/deposit-vault.suits';
 
-import { DepositVaultWithUSTBTest__factory } from '../../typechain-types';
-import { acErrors } from '../common/ac.helpers';
-import { approveBase18, mintToken } from '../common/common.helpers';
 import {
-  depositInstantWithUstbTest,
+  DepositVaultWithUSTB__factory,
+  DepositVaultWithUSTBTest__factory,
+} from '../../typechain-types';
+import { acErrors } from '../common/ac.helpers';
+import {
+  approveBase18,
+  mintToken,
+  validateImplementation,
+} from '../common/common.helpers';
+import {
   setMockUstbStablecoinConfig,
   setUstbDepositsEnabledTest,
+  depositInstantWithUstbTest,
 } from '../common/deposit-vault-ustb.helpers';
 import { defaultDeploy } from '../common/fixtures';
 import {
@@ -30,42 +36,10 @@ depositVaultSuits(
   async (fixture) => {
     const { depositVaultWithUSTB, ustbToken } = fixture;
     expect(await depositVaultWithUSTB.ustb()).eq(ustbToken.address);
+    await validateImplementation(DepositVaultWithUSTB__factory);
   },
   async (defaultDeploy) => {
     describe('DepositVaultWithUSTB', function () {
-      describe('initialization', () => {
-        it('should fail: cal; initialize() when already initialized', async () => {
-          const { depositVaultWithUSTB } = await loadFixture(defaultDeploy);
-
-          await expect(
-            depositVaultWithUSTB[
-              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)'
-            ](
-              {
-                ac: constants.AddressZero,
-                sanctionsList: constants.AddressZero,
-                variationTolerance: 1,
-                minAmount: 0,
-                mToken: constants.AddressZero,
-                mTokenDataFeed: constants.AddressZero,
-                feeReceiver: constants.AddressZero,
-                tokensReceiver: constants.AddressZero,
-                instantFee: 0,
-              },
-              {
-                minInstantFee: 0,
-                maxInstantFee: 0,
-                limitConfigs: [],
-                maxInstantShare: 100_00,
-              },
-              0,
-              0,
-              constants.AddressZero,
-            ),
-          ).revertedWith('Initializable: contract is already initialized');
-        });
-      });
-
       describe('depositInstant()', async () => {
         it('should fail: when ustbDepositsEnabled is true and payment token is not set in USTB contract', async () => {
           const {

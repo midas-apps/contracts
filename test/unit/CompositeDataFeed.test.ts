@@ -3,8 +3,12 @@ import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import { CompositeDataFeedTest__factory } from '../../typechain-types';
+import {
+  CompositeDataFeed__factory,
+  CompositeDataFeedTest__factory,
+} from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
+import { validateImplementation } from '../common/common.helpers';
 import { setRoundData } from '../common/data-feed.helpers';
 import { defaultDeploy } from '../common/fixtures';
 
@@ -30,6 +34,7 @@ describe('CompositeDataFeed', function () {
     expect(await compositeDataFeed.maxExpectedAnswer()).eq(
       parseUnits('10000', 18),
     );
+    await validateImplementation(CompositeDataFeed__factory);
   });
 
   it('initialize', async () => {

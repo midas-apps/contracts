@@ -7,11 +7,16 @@ import { ethers } from 'hardhat';
 import { depositVaultSuits } from './suits/deposit-vault.suits';
 
 import {
+  DepositVaultWithMorpho__factory,
   DepositVaultWithMorphoTest__factory,
   MorphoVaultMock__factory,
 } from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
-import { approveBase18, mintToken } from '../common/common.helpers';
+import {
+  approveBase18,
+  mintToken,
+  validateImplementation,
+} from '../common/common.helpers';
 import {
   depositInstantWithMorphoTest,
   depositRequestWithMorphoTest,
@@ -37,6 +42,7 @@ depositVaultSuits(
   async (fixture) => {
     const { depositVaultWithMorpho } = fixture;
     expect(await depositVaultWithMorpho.morphoDepositsEnabled()).eq(false);
+    await validateImplementation(DepositVaultWithMorpho__factory);
   },
   async (defaultDeploy) => {
     describe('DepositVaultWithMorpho', function () {

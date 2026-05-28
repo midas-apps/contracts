@@ -3,9 +3,16 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
 import { depositVaultSuits } from './suits/deposit-vault.suits';
 
-import { DepositVaultTest__factory } from '../../typechain-types';
+import {
+  DepositVault__factory,
+  DepositVaultTest__factory,
+} from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
-import { approveBase18, mintToken } from '../common/common.helpers';
+import {
+  approveBase18,
+  mintToken,
+  validateImplementation,
+} from '../common/common.helpers';
 import { setRoundData } from '../common/data-feed.helpers';
 import { depositInstantTest } from '../common/deposit-vault.helpers';
 import { defaultDeploy, mTokenPermissionedFixture } from '../common/fixtures';
@@ -19,7 +26,9 @@ depositVaultSuits(
       new DepositVaultTest__factory(owner).deploy(),
     key: 'depositVault',
   },
-  async () => {},
+  async () => {
+    await validateImplementation(DepositVault__factory);
+  },
   (defaultDeploy) => {
     describe('DepositVault', function () {
       describe('depositInstant() with permissioned mToken', () => {

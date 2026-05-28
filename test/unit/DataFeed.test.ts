@@ -4,8 +4,12 @@ import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import { DataFeedTest__factory } from '../../typechain-types';
+import {
+  DataFeed__factory,
+  DataFeedTest__factory,
+} from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
+import { validateImplementation } from '../common/common.helpers';
 import {
   setMinGrowthApr,
   setRoundDataGrowth,
@@ -26,6 +30,7 @@ describe('DataFeed', function () {
     expect(await dataFeed.maxExpectedAnswer()).eq(
       parseUnits('10000', mockedAggregatorDecimals),
     );
+    await validateImplementation(DataFeed__factory);
   });
 
   it('initialize', async () => {

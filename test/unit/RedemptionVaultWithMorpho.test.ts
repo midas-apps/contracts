@@ -8,12 +8,16 @@ import { ethers } from 'hardhat';
 import { redemptionVaultSuits } from './suits/redemption-vault.suits';
 
 import { encodeFnSelector } from '../../helpers/utils';
-import { RedemptionVaultWithMorphoTest__factory } from '../../typechain-types';
+import {
+  RedemptionVaultWithMorpho__factory,
+  RedemptionVaultWithMorphoTest__factory,
+} from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
 import {
   approveBase18,
   mintToken,
   pauseVaultFn,
+  validateImplementation,
 } from '../common/common.helpers';
 import { setRoundData } from '../common/data-feed.helpers';
 import { defaultDeploy } from '../common/fixtures';
@@ -45,6 +49,7 @@ redemptionVaultSuits(
     expect(
       await redemptionVaultWithMorpho.morphoVaults(stableCoins.usdc.address),
     ).eq(morphoVaultMock.address);
+    await validateImplementation(RedemptionVaultWithMorpho__factory);
   },
   async (defaultDeploy) => {
     describe('RedemptionVaultWithMorpho', () => {

@@ -1,14 +1,20 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { constants } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { depositVaultSuits } from './suits/deposit-vault.suits';
 
-import { DepositVaultWithMTokenTest__factory } from '../../typechain-types';
+import {
+  DepositVaultWithMToken__factory,
+  DepositVaultWithMTokenTest__factory,
+} from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
-import { approveBase18, mintToken } from '../common/common.helpers';
+import {
+  approveBase18,
+  mintToken,
+  validateImplementation,
+} from '../common/common.helpers';
 import {
   depositInstantWithMTokenTest,
   depositRequestWithMTokenTest,
@@ -37,42 +43,10 @@ depositVaultSuits(
       depositVault.address,
     );
     expect(await depositVaultWithMToken.mTokenDepositsEnabled()).eq(false);
+    await validateImplementation(DepositVaultWithMToken__factory);
   },
   async (defaultDeploy) => {
     describe('DepositVaultWithMToken', function () {
-      describe('initialization', () => {
-        it('should fail: call initialize() when already initialized', async () => {
-          const { depositVaultWithMToken } = await loadFixture(defaultDeploy);
-
-          await expect(
-            depositVaultWithMToken[
-              'initialize((address,address,uint256,uint256,address,address,address,address,uint256),(uint64,uint64,uint64,(uint256,uint256)[]),uint256,uint256,address)'
-            ](
-              {
-                ac: constants.AddressZero,
-                sanctionsList: constants.AddressZero,
-                variationTolerance: 1,
-                minAmount: 0,
-                mToken: constants.AddressZero,
-                mTokenDataFeed: constants.AddressZero,
-                feeReceiver: constants.AddressZero,
-                tokensReceiver: constants.AddressZero,
-                instantFee: 0,
-              },
-              {
-                minInstantFee: 0,
-                maxInstantFee: 0,
-                limitConfigs: [],
-                maxInstantShare: 100_00,
-              },
-              0,
-              0,
-              constants.AddressZero,
-            ),
-          ).revertedWith('Initializable: contract is already initialized');
-        });
-      });
-
       describe('setMTokenDepositVault()', () => {
         it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
           const {

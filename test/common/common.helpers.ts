@@ -1,8 +1,14 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { BigNumber, BigNumberish, Contract, ContractTransaction } from 'ethers';
+import {
+  BigNumber,
+  BigNumberish,
+  Contract,
+  ContractFactory,
+  ContractTransaction,
+} from 'ethers';
 import { parseUnits, solidityKeccak256 } from 'ethers/lib/utils';
-import { ethers } from 'hardhat';
+import hre, { ethers } from 'hardhat';
 
 import {
   ERC20,
@@ -346,4 +352,18 @@ export const balanceOfBase18 = async (
 
 export const getCurrentBlockTimestamp = async () => {
   return (await ethers.provider.getBlock('latest')).timestamp;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Constructor<T = unknown> = new (...args: any[]) => T;
+
+export const validateImplementation = async (
+  implementationFactory: Constructor<ContractFactory> | ContractFactory,
+) => {
+  const factory =
+    typeof implementationFactory === 'function'
+      ? new implementationFactory()
+      : implementationFactory;
+
+  await hre.upgrades.validateImplementation(factory);
 };

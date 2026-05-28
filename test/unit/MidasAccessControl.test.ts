@@ -4,7 +4,10 @@ import { constants } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { encodeFnSelector } from '../../helpers/utils';
-import { WithMidasAccessControlTester__factory } from '../../typechain-types';
+import {
+  MidasAccessControl__factory,
+  WithMidasAccessControlTester__factory,
+} from '../../typechain-types';
 import {
   acErrors,
   setIsUserFacingRoleTester,
@@ -12,10 +15,11 @@ import {
   setFunctionPermissionTester,
   setupFunctionAccessGrantOperator,
 } from '../common/ac.helpers';
+import { validateImplementation } from '../common/common.helpers';
 import { defaultDeploy } from '../common/fixtures';
 
 describe('MidasAccessControl', function () {
-  it('deployment', async () => {
+  it.only('deployment', async () => {
     const { accessControl, roles, owner } = await loadFixture(defaultDeploy);
 
     const initGrantedRoles = [
@@ -43,6 +47,8 @@ describe('MidasAccessControl', function () {
     expect(await accessControl.isUserFacingRole(roles.common.greenlisted)).eq(
       true,
     );
+
+    await validateImplementation(MidasAccessControl__factory);
   });
 
   it('initialize', async () => {
