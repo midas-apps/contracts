@@ -38,8 +38,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     /**
      * @dev leaving a storage gap for futures updates
      */
-    // FIXME: update gap
-    uint256[50] private __gap;
+    uint256[46] private __gap;
 
     /**
      * @notice upgradeable pattern contract`s initializer

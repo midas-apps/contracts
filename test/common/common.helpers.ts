@@ -355,7 +355,7 @@ export const getCurrentBlockTimestamp = async () => {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Constructor<T = unknown> = new (...args: any[]) => T;
+export type Constructor<T = unknown> = new (...args: any[]) => T;
 
 export const validateImplementation = async (
   implementationFactory: Constructor<ContractFactory> | ContractFactory,

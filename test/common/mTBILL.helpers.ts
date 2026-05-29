@@ -139,8 +139,6 @@ export const mint = async (
 
   const timetsampBefore = await getCurrentBlockTimestamp();
 
-  const lastEpochesBefore = await tokenContract.getMintRateLimitStatuses();
-
   await expect(tokenContract.connect(owner).mint(to, amount)).to.emit(
     tokenContract,
     tokenContract.interface.events['Transfer(address,address,uint256)'].name,

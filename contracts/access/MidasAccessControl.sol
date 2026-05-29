@@ -43,11 +43,10 @@ contract MidasAccessControl is
      */
     address public pauseManager;
 
-    // TODO: adjust gap if needed?
     /**
      * @dev leaving a storage gap for futures updates
      */
-    uint256[45] private __gap;
+    uint256[50] private __gap;
 
     /**
      * @notice upgradeable pattern contract`s initializer

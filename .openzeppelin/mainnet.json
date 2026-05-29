@@ -1497,8 +1497,8 @@
       }
     },
     "8dcb1ee047f8720601ec56f8a96045de3d207b3cea6564105d3ee438a30d5802": {
-      "address": "0xefED40D1eb1577d1073e9C4F277463486D39b084",
-      "txHash": "0x4e820b8e15298d5b1fbe30e151e0a0b16c0c23948e28dc84ae9a52280104b5be",
+      "address": "0xD4998Cc1ba435298C521f250b81856B1F25C8455",
+      "txHash": "0xf51d10838d35cb2d97fd55f1c32c3399384133dd95ca2043125666c9245bb5de",
       "layout": {
         "solcVersion": "0.8.9",
         "storage": [
@@ -1608,20 +1608,36 @@
             "src": "contracts/access/WithMidasAccessControl.sol:24"
           },
           {
-            "label": "metadata",
+            "label": "__gap",
             "offset": 0,
             "slot": "202",
-            "type": "t_mapping(t_bytes32,t_bytes_storage)",
-            "contract": "mTBILL",
-            "src": "contracts/mTBILL.sol:29"
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:29"
           },
           {
             "label": "__gap",
             "offset": 0,
-            "slot": "203",
+            "slot": "252",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "Blacklistable",
+            "src": "contracts/access/Blacklistable.sol:16"
+          },
+          {
+            "label": "metadata",
+            "offset": 0,
+            "slot": "302",
+            "type": "t_mapping(t_bytes32,t_bytes_storage)",
+            "contract": "mTBILL",
+            "src": "contracts/mTBILL/mTBILL.sol:18"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "303",
             "type": "t_array(t_uint256)50_storage",
             "contract": "mTBILL",
-            "src": "contracts/mTBILL.sol:34"
+            "src": "contracts/mTBILL/mTBILL.sol:23"
           }
         ],
         "types": {

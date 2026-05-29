@@ -1,26 +1,53 @@
-import { mine } from '@nomicfoundation/hardhat-network-helpers';
-import { parseUnits } from 'ethers/lib/utils';
+import { mine, setBalance } from '@nomicfoundation/hardhat-network-helpers';
+import { ContractFactory } from 'ethers';
+import { parseUnits } from 'ethers/lib.esm/utils';
 import { ethers } from 'hardhat';
+import hre from 'hardhat';
 
 import { rpcUrls } from '../../../config';
-import { MToken } from '../../../typechain-types';
+import {
+  MGLOBAL,
+  MGlobalCustomAggregatorFeedGrowth,
+  MGlobalDataFeed,
+  MidasAccessControl,
+  MidasAccessControlTimelockController,
+  MidasPauseManager,
+  MidasTimelockManager,
+  MTBILL,
+  MTBillCustomAggregatorFeed,
+  MTBillDataFeed,
+  MGLOBAL__factory,
+  MGlobalCustomAggregatorFeedGrowth__factory,
+  MGlobalDataFeed__factory,
+  MidasAccessControl__factory,
+  MTBILL__factory,
+  MTBillCustomAggregatorFeed__factory,
+  MTBillDataFeed__factory,
+} from '../../../typechain-types';
+import { Constructor } from '../../common/common.helpers';
+import { deployProxyContract } from '../../common/deploy.helpers';
 import { impersonateAndFundAccount, resetFork } from '../helpers/fork.helpers';
 
-export async function hyperEvmUpgradeFixture() {
-  const dvProxyAddress = '0x48fb106Ef0c0C1a19EdDC9C5d27A945E66DA1C4E';
-  const rvSwapperProxyAddress = '0xD26bB9B45140D17eF14FbD4fCa8Cf0d610ac50E7';
+export async function mainnetUpgradeFixture() {
+  const acDefaultAdminAddress = '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227';
 
-  const newDvImplementationAddress =
-    '0x448897fEc88D145E22cA8594F1a928C72e1De8a6';
-  const newRvSwapperImplementationAddress =
-    '0x67581417D7AFe1E02d1Da4AbfD4fa6a2774e625f';
-
-  const tokenManagerAddress = '0x46a12DDCA8c92742251b2a2c33610BF8Ae090cd9';
-  const vaultsManagerAddress = '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12';
+  const acAddress = '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B';
   const proxyAdminAddress = '0xbf25b58cB8DfaD688F7BcB2b87D71C23A6600AaC';
 
-  const [customRecipient] = await ethers.getSigners();
-  await resetFork(rpcUrls.hyperevm, 9874404);
+  // mGLOBAL addresses
+  const mGlobalAddress = '0x7433806912Eae67919e66aea853d46Fa0aef98A8';
+  const mGlobalCustomFeedGrowthAddress =
+    '0x66Aa9fcD63DF74e1f67A9452E6E59Fbc67f75E38';
+  const mGlobalDataFeedAddress = '0x58476f452df10E6Bf17dc1fee418E98dE9e14868';
+
+  // mTBILL addresses
+  const mTbillDataFeedAddress = '0xfCEE9754E8C375e145303b7cE7BEca3201734A2B';
+  const mTbillCustomFeedAddress = '0x056339C044055819E8Db84E71f5f2E1F536b2E5b';
+  const mTbillAddress = '0xDD629E5241CbC5919847783e6C96B2De4754e438';
+
+  const signers = await ethers.getSigners();
+
+  await resetFork(rpcUrls.main, 25193577);
 
   await mine();
 
@@ -34,92 +61,144 @@ export async function hyperEvmUpgradeFixture() {
     proxyAdminOwnerAddress,
   );
 
-  const xaut0 = await ethers.getContractAt(
-    'ERC20',
-    '0xf4D9235269a96aaDaFc9aDAe454a0618eBE37949',
+  const acDefaultAdmin = await impersonateAndFundAccount(acDefaultAdminAddress);
+
+  await setBalance(proxyAdminOwner.address, parseUnits('1000', 18));
+  await setBalance(acDefaultAdmin.address, parseUnits('1000', 18));
+
+  const accessControl = (await ethers.getContractAt(
+    'MidasAccessControl',
+    acAddress,
+  )) as MidasAccessControl;
+
+  const addressesMap: Record<
+    string,
+    { proxy: string; implementation: Constructor<ContractFactory> }[]
+  > = {
+    mTbill: [
+      { proxy: mTbillAddress, implementation: MTBILL__factory },
+      { proxy: mTbillDataFeedAddress, implementation: MTBillDataFeed__factory },
+      {
+        proxy: mTbillCustomFeedAddress,
+        implementation: MTBillCustomAggregatorFeed__factory,
+      },
+    ],
+    ac: [{ proxy: acAddress, implementation: MidasAccessControl__factory }],
+    mGlobal: [
+      { proxy: mGlobalAddress, implementation: MGLOBAL__factory },
+      {
+        proxy: mGlobalDataFeedAddress,
+        implementation: MGlobalDataFeed__factory,
+      },
+      {
+        proxy: mGlobalCustomFeedGrowthAddress,
+        implementation: MGlobalCustomAggregatorFeedGrowth__factory,
+      },
+    ],
+  };
+
+  for (const [, values] of Object.entries(addressesMap)) {
+    for (const val of values) {
+      console.log(`Upgrading ${val.proxy}`);
+
+      await hre.upgrades.upgradeProxy(
+        val.proxy,
+        new val.implementation(proxyAdminOwner),
+      );
+    }
+  }
+
+  const securityCouncilMembers = [
+    signers[0],
+    signers[1],
+    signers[2],
+    signers[3],
+    signers[4],
+  ];
+
+  const pauseManager = await deployProxyContract<MidasPauseManager>(
+    'MidasPauseManager',
+    [acAddress],
   );
 
-  const xaut0Whale = await impersonateAndFundAccount(
-    '0xaF7FD67AE6B3E25F83291D5600fBe3B776EEa4d3',
+  const timelockManager = await deployProxyContract<MidasTimelockManager>(
+    'MidasTimelockManager',
+    [acAddress, 100, securityCouncilMembers.map((s) => s.address)],
   );
 
-  const vaultsManager = await impersonateAndFundAccount(vaultsManagerAddress);
+  const timelock =
+    await deployProxyContract<MidasAccessControlTimelockController>(
+      'MidasAccessControlTimelockController',
+      [timelockManager.address],
+    );
 
-  const tokenManager = await impersonateAndFundAccount(tokenManagerAddress);
+  await accessControl
+    .connect(acDefaultAdmin)
+    .initializeRelationships(timelockManager.address, pauseManager.address);
 
-  await proxyAdmin
-    .connect(proxyAdminOwner)
-    .upgrade(dvProxyAddress, newDvImplementationAddress);
+  await timelockManager
+    .connect(acDefaultAdmin)
+    .initializeTimelock(timelock.address);
 
-  await proxyAdmin
-    .connect(proxyAdminOwner)
-    .upgrade(rvSwapperProxyAddress, newRvSwapperImplementationAddress);
+  const mTbill = (await ethers.getContractAt(
+    'mTBILL',
+    mTbillAddress,
+  )) as MTBILL;
+  const mGlobal = (await ethers.getContractAt(
+    'mGLOBAL',
+    mGlobalAddress,
+  )) as MGLOBAL;
+  const mTbillDataFeed = (await ethers.getContractAt(
+    'MTBillDataFeed',
+    mTbillDataFeedAddress,
+  )) as MTBillDataFeed;
+  const mTbillCustomFeed = (await ethers.getContractAt(
+    'MTBillCustomAggregatorFeed',
+    mTbillCustomFeedAddress,
+  )) as MTBillCustomAggregatorFeed;
+  const mGlobalDataFeed = (await ethers.getContractAt(
+    'MGlobalDataFeed',
+    mGlobalDataFeedAddress,
+  )) as MGlobalDataFeed;
+  const mGlobalCustomFeedGrowth = (await ethers.getContractAt(
+    'MGlobalCustomAggregatorFeedGrowth',
+    mGlobalCustomFeedGrowthAddress,
+  )) as MGlobalCustomAggregatorFeedGrowth;
 
-  const depositVault = await ethers.getContractAt(
-    'HBXautDepositVault',
-    dvProxyAddress,
+  const mTbillHolders = await Promise.all(
+    [
+      '0x0461bD693caE49bE9d030E5c212e080F9c78B846',
+      '0xc0C4Ab1D389F9540A50D1188226D7384a68cE788',
+    ].map((address) => impersonateAndFundAccount(address)),
   );
 
-  const redemptionVaultSwapper = await ethers.getContractAt(
-    'HBXautRedemptionVaultWithSwapper',
-    rvSwapperProxyAddress,
+  const mGlobalHolders = await Promise.all(
+    [
+      '0x882C825405fBBE45DCc1ad52b639aFbC4592EDb7',
+      '0xaB05c0DB9D26e96A9dcEDCAFCA23341316F6fe6F',
+    ].map((address) => impersonateAndFundAccount(address)),
   );
-
-  const xbxautDataFeed = await ethers.getContractAt(
-    'HBXautDataFeed',
-    await depositVault.mTokenDataFeed(),
-  );
-
-  const xbxaut = (await ethers.getContractAt(
-    'hbXAUt',
-    await depositVault.mToken(),
-  )) as MToken;
-
-  const xaut0DataFeed = await ethers.getContractAt(
-    'DataFeed',
-    (
-      await depositVault.tokensConfig(xaut0.address)
-    ).dataFeed,
-  );
-
-  await xaut0
-    .connect(xaut0Whale)
-    .transfer(redemptionVaultSwapper.address, parseUnits('10', 6));
-
-  const requestRedeemerAddress = await redemptionVaultSwapper.requestRedeemer();
-
-  const requestRedeemer = await impersonateAndFundAccount(
-    requestRedeemerAddress,
-  );
-
-  await xaut0
-    .connect(requestRedeemer)
-    .approve(redemptionVaultSwapper.address, parseUnits('1000', 6));
-
-  await xaut0
-    .connect(xaut0Whale)
-    .transfer(requestRedeemerAddress, parseUnits('10', 6));
 
   return {
     proxyAdmin,
     proxyAdminOwner,
-    dvProxyAddress,
-    rvSwapperProxyAddress,
-    newDvImplementationAddress,
-    newRvSwapperImplementationAddress,
-    xaut0Whale,
-    xaut0,
-    vaultsManager,
-    redemptionVaultSwapper,
-    depositVault,
-    xbxautDataFeed,
-    xaut0DataFeed,
-    xbxaut,
-    tokenManager,
-    customRecipient,
+    acDefaultAdmin,
+    accessControl,
+    pauseManager,
+    timelockManager,
+    timelock,
+    securityCouncilMembers,
+    mTbill,
+    mGlobal,
+    mTbillDataFeed,
+    mTbillCustomFeed,
+    mGlobalDataFeed,
+    mGlobalCustomFeedGrowth,
+    mTbillHolders,
+    mGlobalHolders,
   };
 }
 
-export type DeployedContracts = Awaited<
-  ReturnType<typeof hyperEvmUpgradeFixture>
+export type MainnetUpgradeFixture = Awaited<
+  ReturnType<typeof mainnetUpgradeFixture>
 >;

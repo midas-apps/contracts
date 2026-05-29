@@ -44,8 +44,6 @@ library AccessControlUtilsLibrary {
         bool isTimelock = accountToCheck == timelockManager.timelock();
 
         if (isPreflight) {
-            address account = _getAppendedAddress(msg.data);
-
             revert IMidasTimelockManager.RolePreflightSucceeded(
                 contractAdminRole,
                 roleIsFunctionOperatorRole,

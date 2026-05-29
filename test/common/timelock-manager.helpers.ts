@@ -22,6 +22,7 @@ type CommonParamsTimelock = {
   owner: SignerWithAddress;
 };
 
+// TODO: remove this
 export const timelockManagerRevert = (
   timelockManager: MidasTimelockManager,
   customErrorName: string,
@@ -125,9 +126,7 @@ export const setRoleTimelocksAndExecute = async (
     { isSetCouncilOperation: false },
     { from },
   );
-
   await increase(delay.toNumber() + 1);
-
   await executeTimelockOperationTester(
     { timelockManager, timelock, owner, accessControl },
     timelockManager.address,

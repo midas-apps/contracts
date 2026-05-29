@@ -734,9 +734,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         bytes calldata data,
         address proposer
     ) private view returns (bytes32) {
-        (bool success, bytes memory err) = target.staticcall(
-            _appendAddressToData(data, proposer)
-        );
+        (bool success, bytes memory err) = target.staticcall(data);
 
         require(!success, PreflightCallUnexpectedSuccess());
 
@@ -757,7 +755,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             accessControl.validateFunctionAccess(
                 role,
                 roleIsFunctionOperator,
-                msg.sender,
+                proposer,
                 _getFunctionSelector(data),
                 validateFunctionRole
             );
@@ -842,19 +840,5 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             roleIsFunctionOperator := mload(add(err, 68))
             validateFunctionRole := mload(add(err, 100))
         }
-    }
-
-    /**
-     * @dev appends the address to the end of the data
-     * @param data data to append the caller to
-     * @param addr address to append
-     * @return data with the caller appended
-     */
-    function _appendAddressToData(bytes calldata data, address addr)
-        private
-        pure
-        returns (bytes memory)
-    {
-        return abi.encodePacked(data, addr);
     }
 }
