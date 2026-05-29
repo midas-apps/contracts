@@ -147,17 +147,4 @@ library AccessControlUtilsLibrary {
 
         hasPermission = accessControl.hasFunctionPermission(key, account);
     }
-
-    /**
-     * @dev gets the appended address from the data
-     * @param data data to get the appended address from
-     * @return appended address
-     */
-    function _getAppendedAddress(bytes calldata data)
-        private
-        pure
-        returns (address)
-    {
-        return address(bytes20(data[data.length - 20:]));
-    }
 }

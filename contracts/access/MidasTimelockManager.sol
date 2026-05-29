@@ -274,7 +274,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             HasntRole(TIMELOCK_CHALLENGER_ROLE, msg.sender)
         );
 
-        require(_isPrivateOperation(operationId), OperationNotPending());
+        require(_isPendingOperation(operationId), OperationNotPending());
 
         (
             TimelockOperationStatus status,
@@ -408,7 +408,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         TimelockController _timelock = TimelockController(payable(timelock));
         (bytes32 operationId, , ) = _getOperationId(_timelock, target, data);
 
-        if (!_isPrivateOperation(operationId) && delay == 0) {
+        if (!_isPendingOperation(operationId) && delay == 0) {
             return (true, false);
         }
 
@@ -574,6 +574,12 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         );
     }
 
+    /**
+     * @dev calculates and returns the actual status of an operation
+     * @param operationId operation id
+     * @return status actual operation status
+     * @return challenge operation challenge
+     */
     function _getOperationStatus(bytes32 operationId)
         private
         view
@@ -611,6 +617,11 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         return (status, challenge);
     }
 
+    /**
+     * @dev schedules a timelock operation
+     * @param target target contract
+     * @param data operation data
+     */
     function _scheduleTimelockOperation(address target, bytes calldata data)
         private
     {
@@ -675,10 +686,18 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         emit ScheduleTimelockOperation(proposer, operationId);
     }
 
+    /**
+     * @inheritdoc WithMidasAccessControl
+     */
     function _contractAdminRole() internal pure override returns (bytes32) {
         return _DEFAULT_ADMIN_ROLE;
     }
 
+    /**
+     * @dev sets security council under a specific version
+     * @param members council member addresses
+     * @param version council version
+     */
     function _setSecurityCouncil(address[] calldata members, uint256 version)
         private
     {
@@ -703,6 +722,10 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         emit SetSecurityCouncil(version, members);
     }
 
+    /**
+     * @dev sets max pending operations per proposer
+     * @param _maxPendingOperationsPerProposer max pending operations per proposer
+     */
     function _setMaxPendingOperationsPerProposer(
         uint256 _maxPendingOperationsPerProposer
     ) private {
@@ -719,6 +742,11 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         );
     }
 
+    /**
+     * @dev resets the pending set-council operation
+     * if the operation is a set-council operation
+     * @param challenge operation challenge
+     */
     function _resetPendingSetCouncilOperation(
         TimelockOperationChallenge storage challenge
     ) private {
@@ -729,6 +757,13 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         pendingSetCouncilOperationId = bytes32(0);
     }
 
+    /**
+     * @dev gets the target role for a given operation
+     * @param target target contract
+     * @param data operation data
+     * @param proposer operation proposer address
+     * @return target role
+     */
     function _getTargetRole(
         address target,
         bytes calldata data,
@@ -761,6 +796,15 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             );
     }
 
+    /**
+     * @dev gets the timelock operation id for a given target and data
+     * @param _timelock timelock controller
+     * @param target target contract
+     * @param data operation data
+     * @return operationId operation id
+     * @return dataHash data hash
+     * @return dataHashIndex data hash index
+     */
     function _getOperationId(
         TimelockController _timelock,
         address target,
@@ -786,7 +830,12 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         );
     }
 
-    function _isPrivateOperation(bytes32 operationId)
+    /**
+     * @dev checks if an operation is pending
+     * @param operationId operation id
+     * @return true if the operation is pending
+     */
+    function _isPendingOperation(bytes32 operationId)
         private
         view
         returns (bool)
@@ -794,6 +843,11 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         return _pendingOperations.contains(operationId);
     }
 
+    /**
+     * @dev gets the function selector from operation data
+     * @param data operation data
+     * @return function selector
+     */
     function _getFunctionSelector(bytes calldata data)
         private
         pure
@@ -802,6 +856,12 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         return bytes4(data);
     }
 
+    /**
+     * @dev gets the keccak256 hash of a given target and data
+     * @param target target contract
+     * @param data operation data
+     * @return data hash
+     */
     function _getDataHash(address target, bytes calldata data)
         private
         pure
@@ -811,6 +871,13 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         return keccak256(abi.encodePacked(target, uint256(0), data));
     }
 
+    /**
+     * @dev decodes a `RolePreflightSucceeded` error
+     * @param err error bytes
+     * @return role role
+     * @return roleIsFunctionOperator whether the role is a function operator role
+     * @return validateFunctionRole whether to validate the function role
+     */
     function _decodePreflightSucceededError(bytes memory err)
         private
         pure

@@ -5,10 +5,14 @@ import { expect } from 'chai';
 import { constants, ethers } from 'ethers';
 
 import {
+  MidasTimelockManager,
   MidasTimelockManager__factory,
   MidasTimelockManagerTest__factory,
 } from '../../typechain-types';
-import { validateImplementation } from '../common/common.helpers';
+import {
+  OptionalCommonParams,
+  validateImplementation,
+} from '../common/common.helpers';
 import { defaultDeploy } from '../common/fixtures';
 import {
   abortOperationTest,
@@ -18,10 +22,21 @@ import {
   setMaxPendingOperationsPerProposerTester,
   setRoleTimelocksTester,
   setSecurityCouncilTest,
-  timelockManagerRevert,
   voteForExecutionTest,
   voteForVetoTest,
 } from '../common/timelock-manager.helpers';
+
+export const timelockManagerRevert = (
+  timelockManager: MidasTimelockManager,
+  customErrorName: string,
+  args?: unknown[],
+): OptionalCommonParams => ({
+  revertCustomError: {
+    contract: timelockManager,
+    customErrorName,
+    args,
+  },
+});
 
 describe('MidasTimelockManager', () => {
   it('deployment', async () => {

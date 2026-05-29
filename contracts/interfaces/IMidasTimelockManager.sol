@@ -273,7 +273,7 @@ interface IMidasTimelockManager {
     /**
      * @notice Executes a scheduled timelock operation
      * @param target target contract
-     * @param data calldata with proposer appended
+     * @param data operation data
      */
     function executeTimelockOperation(address target, bytes calldata data)
         external;
@@ -308,7 +308,7 @@ interface IMidasTimelockManager {
      * @notice Whether the function is ready to execute
      * @param targetRole role used for delay lookup
      * @param target target contract
-     * @param data calldata with proposer appended
+     * @param data operation data
      * @return ready true if call can proceed
      * @return timelocked true if execution goes through timelock
      */
@@ -321,7 +321,7 @@ interface IMidasTimelockManager {
     /**
      * @notice Returns original proposer for a pending operation
      * @param target target contract
-     * @param data calldata with proposer appended
+     * @param data operation data
      * @return proposer address
      */
     function getOriginalProposer(address target, bytes calldata data)
@@ -420,7 +420,7 @@ interface IMidasTimelockManager {
     /**
      * @notice Returns operation id for target and data
      * @param target target contract
-     * @param data calldata with proposer appended
+     * @param data operation data
      * @return operationId operation id
      */
     function getOperationId(address target, bytes calldata data)
