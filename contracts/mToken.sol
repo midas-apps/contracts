@@ -111,6 +111,17 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         external
         onlyRole(_burnerRole(), false)
     {
+        _onlyNotBlacklisted(from);
+        _burn(from, amount);
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function forceBurn(address from, uint256 amount)
+        external
+        onlyRole(_burnerRole(), false)
+    {
         _burn(from, amount);
     }
 
