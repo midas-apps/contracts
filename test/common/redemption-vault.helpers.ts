@@ -550,8 +550,8 @@ export const redeemRequestTest = async (
     .div(100_00);
   const amountMTokenInRequest = amountIn.sub(amountMTokenInInstant);
 
-  const highestProcessedRequestIdBefore =
-    await redemptionVault.highestProcessedRequestId();
+  const nextExpectedRequestIdToProcessBefore =
+    await redemptionVault.nextExpectedRequestIdToProcess();
 
   let callPromise: Awaited<ReturnType<typeof redeemInstantTest>>;
 
@@ -596,14 +596,16 @@ export const redeemRequestTest = async (
 
   const latestRequestIdAfter = await redemptionVault.currentRequestId();
   const request = await redemptionVault.redeemRequests(latestRequestIdBefore);
-  const highestProcessedRequestIdAfter =
-    await redemptionVault.highestProcessedRequestId();
+  const nextExpectedRequestIdToProcessAfter =
+    await redemptionVault.nextExpectedRequestIdToProcess();
   expect(request.recipient).eq(recipientRequest);
   expect(request.tokenOut).eq(tokenOut);
   expect(request.amountMToken).eq(amountMTokenInRequest);
   expect(request.mTokenRate).eq(mTokenRate);
   expect(request.tokenOutRate).eq(currentStableRate);
-  expect(highestProcessedRequestIdAfter).eq(highestProcessedRequestIdBefore);
+  expect(nextExpectedRequestIdToProcessAfter).eq(
+    nextExpectedRequestIdToProcessBefore,
+  );
 
   if (waivedFee) {
     expect(request.feePercent).eq(feePercent).eq(constants.Zero);
@@ -740,6 +742,9 @@ export const approveRedeemRequestTest = async (
       false,
     );
 
+  const nextExpectedRequestIdToProcessBefore =
+    await redemptionVault.nextExpectedRequestIdToProcess();
+
   await expect(callFn())
     .to.emit(
       redemptionVault,
@@ -749,15 +754,23 @@ export const approveRedeemRequestTest = async (
     )
     .withArgs(requestId, actualRate, isSafe, isAvgRate).to.not.reverted;
 
-  const highestProcessedRequestIdAfter =
-    await redemptionVault.highestProcessedRequestId();
+  const nextExpectedRequestIdToProcessAfter =
+    await redemptionVault.nextExpectedRequestIdToProcess();
 
   const requestDataAfter = await redemptionVault.redeemRequests(requestId);
 
   expect(requestDataAfter.approvedMTokenRate).eq(actualRate);
   expect(requestDataAfter.mTokenRate).eq(requestDataBefore.mTokenRate);
 
-  expect(highestProcessedRequestIdAfter).eq(requestId);
+  if (nextExpectedRequestIdToProcessBefore.lte(requestId)) {
+    expect(nextExpectedRequestIdToProcessAfter).eq(
+      BigNumber.from(requestId).add(1),
+    );
+  } else {
+    expect(nextExpectedRequestIdToProcessAfter).eq(
+      nextExpectedRequestIdToProcessBefore,
+    );
+  }
 
   const balanceAfterUser = await mTBILL.balanceOf(sender.address);
   const balanceAfterReceiver = await mTBILL.balanceOf(tokensReceiver);
@@ -1089,27 +1102,37 @@ export const safeBulkApproveRequestTest = async (
     ),
   );
 
-  const highestProcessedRequestIdBefore =
-    await redemptionVault.highestProcessedRequestId();
+  const nextExpectedRequestIdToProcessBefore =
+    await redemptionVault.nextExpectedRequestIdToProcess();
 
   const txPromise = callFn();
   await expect(txPromise).to.not.reverted;
 
   const currentRate = await mTokenToUsdDataFeed.getDataInBase18();
 
-  const highestProcessedRequestIdAfter =
-    await redemptionVault.highestProcessedRequestId();
+  const nextExpectedRequestIdToProcessAfter =
+    await redemptionVault.nextExpectedRequestIdToProcess();
 
   const expectedToExecuteRequests = requests.filter(
     (v) => v.expectedToExecute ?? true,
   );
 
-  const expectedHighestProcessedRequestId =
-    expectedToExecuteRequests.sort(
-      (a, b) => +b.id.toString() - +a.id.toString(),
-    )[0]?.id ?? highestProcessedRequestIdBefore;
+  const expectedHighestProcessedRequestId = expectedToExecuteRequests.sort(
+    (a, b) => +b.id.toString() - +a.id.toString(),
+  )[0]?.id;
 
-  expect(highestProcessedRequestIdAfter).eq(expectedHighestProcessedRequestId);
+  if (
+    expectedHighestProcessedRequestId !== undefined &&
+    nextExpectedRequestIdToProcessBefore.lte(expectedHighestProcessedRequestId)
+  ) {
+    expect(nextExpectedRequestIdToProcessAfter).eq(
+      BigNumber.from(expectedHighestProcessedRequestId).add(1),
+    );
+  } else {
+    expect(nextExpectedRequestIdToProcessAfter).eq(
+      nextExpectedRequestIdToProcessBefore,
+    );
+  }
 
   const newExpectedRate = (
     requestData: (typeof requestDatasBefore)[number],
@@ -1289,12 +1312,28 @@ export const rejectRedeemRequestTest = async (
 
   const supplyBefore = await mTBILL.totalSupply();
 
+  const nextExpectedRequestIdToProcessBefore =
+    await redemptionVault.nextExpectedRequestIdToProcess();
+
   await expect(redemptionVault.connect(sender).rejectRequest(requestId))
     .to.emit(
       redemptionVault,
       redemptionVault.interface.events['RejectRequest(uint256,address)'].name,
     )
     .withArgs(requestId, sender).to.not.reverted;
+
+  const nextExpectedRequestIdToProcessAfter =
+    await redemptionVault.nextExpectedRequestIdToProcess();
+
+  if (nextExpectedRequestIdToProcessBefore.lte(requestId)) {
+    expect(nextExpectedRequestIdToProcessAfter).eq(
+      BigNumber.from(requestId).add(1),
+    );
+  } else {
+    expect(nextExpectedRequestIdToProcessAfter).eq(
+      nextExpectedRequestIdToProcessBefore,
+    );
+  }
 
   const balanceVaultAfter = await balanceOfBase18(
     requestDataBefore.tokenOut,

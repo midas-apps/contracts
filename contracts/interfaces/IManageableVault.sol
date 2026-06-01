@@ -118,7 +118,7 @@ interface IManageableVault {
     error AmountLessThanMin(uint256 amount, uint256 minAmount);
     error InvalidRequestSequence(
         uint256 requestId,
-        uint256 highestProcessedRequestId
+        uint256 nextExpectedRequestIdToProcess
     );
 
     /**

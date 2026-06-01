@@ -331,7 +331,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         Request memory request = redeemRequests[requestId];
 
         _validateRequest(requestId, request.recipient, request.status);
-        _validateAndUpdateHighestProcessedRequestId(requestId);
+        _validateAndUpdateNextRequestIdToProcess(requestId, true);
 
         redeemRequests[requestId].status = RequestStatus.Canceled;
 
@@ -498,18 +498,17 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @param requestId request id
      * @param newMTokenRate new mToken rate
      * @param isSafe new mToken rate
-     * @param safeValidateLiquidity if true, checks if there is enough liquidity
-     * and if its not sufficient, function wont fail
+     * @param safeValidateRequest if true, wont revert if there is not enough liquidity or request id is not sequential
      * @param isAvgRate if true, calculates holdback part rate from avg rate
      *
      * @return success true if success, false only in case if
-     * safeValidateLiquidity == true and there is not enough liquidity
+     * safeValidateRequest == true and there is not enough liquidity or request id is not sequential
      */
     function _approveRequest(
         uint256 requestId,
         uint256 newMTokenRate,
         bool isSafe,
-        bool safeValidateLiquidity,
+        bool safeValidateRequest,
         bool isAvgRate
     )
         private
@@ -553,17 +552,19 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         );
 
         if (
-            safeValidateLiquidity &&
-            !_validateLiquidity(
-                request.tokenOut,
-                calcResult.amountTokenOutWithoutFee + calcResult.feeAmount,
-                calcResult.tokenOutDecimals
+            (safeValidateRequest &&
+                !_validateLiquidity(
+                    request.tokenOut,
+                    calcResult.amountTokenOutWithoutFee + calcResult.feeAmount,
+                    calcResult.tokenOutDecimals
+                )) ||
+            !_validateAndUpdateNextRequestIdToProcess(
+                requestId,
+                !safeValidateRequest
             )
         ) {
             return false;
         }
-
-        _validateAndUpdateHighestProcessedRequestId(requestId);
 
         _tokenTransferFromTo(
             request.tokenOut,

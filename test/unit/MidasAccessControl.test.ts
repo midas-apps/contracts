@@ -19,7 +19,7 @@ import { validateImplementation } from '../common/common.helpers';
 import { defaultDeploy } from '../common/fixtures';
 
 describe('MidasAccessControl', function () {
-  it.only('deployment', async () => {
+  it('deployment', async () => {
     const { accessControl, roles, owner } = await loadFixture(defaultDeploy);
 
     const initGrantedRoles = [

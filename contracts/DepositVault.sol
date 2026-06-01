@@ -234,7 +234,7 @@ contract DepositVault is ManageableVault, IDepositVault {
                 rate,
                 true,
                 false,
-                false
+                true
             );
 
             if (!success) {
@@ -288,7 +288,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         external
         onlyContractAdmin
     {
-        _approveRequest(requestId, newOutRate, true, false, true);
+        _approveRequest(requestId, newOutRate, true, false, false);
     }
 
     /**
@@ -298,7 +298,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         external
         onlyContractAdmin
     {
-        _approveRequest(requestId, avgMTokenRate, true, true, true);
+        _approveRequest(requestId, avgMTokenRate, true, true, false);
     }
 
     /**
@@ -308,7 +308,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         external
         onlyContractAdmin
     {
-        _approveRequest(requestId, newOutRate, false, false, true);
+        _approveRequest(requestId, newOutRate, false, false, false);
     }
 
     /**
@@ -318,7 +318,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         external
         onlyContractAdmin
     {
-        _approveRequest(requestId, avgMTokenRate, false, true, true);
+        _approveRequest(requestId, avgMTokenRate, false, true, false);
     }
 
     /**
@@ -328,7 +328,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         Request memory request = mintRequests[requestId];
 
         _validateRequest(requestId, request.recipient, request.status);
-        _validateAndUpdateHighestProcessedRequestId(requestId);
+        _validateAndUpdateNextRequestIdToProcess(requestId, true);
 
         mintRequests[requestId].status = RequestStatus.Canceled;
 
@@ -400,7 +400,7 @@ contract DepositVault is ManageableVault, IDepositVault {
                 newOutRate,
                 true,
                 isAvgRate,
-                false
+                true
             );
 
             if (!success) {
@@ -636,14 +636,14 @@ contract DepositVault is ManageableVault, IDepositVault {
      * @param newOutRate mToken rate
      * @param isSafe if true, approval is safe
      * @param isAvgRate if true, newOutRate is avg rate
-     * @param revertAboveSupplyCap if true, will revert if supply is exceeded
+     * @param safeValidateRequest if true, wont revert if supply is exceeded or request id is not sequential
      */
     function _approveRequest(
         uint256 requestId,
         uint256 newOutRate,
         bool isSafe,
         bool isAvgRate,
-        bool revertAboveSupplyCap
+        bool safeValidateRequest
     )
         private
         returns (
@@ -685,13 +685,15 @@ contract DepositVault is ManageableVault, IDepositVault {
             !_validateMaxSupplyCap(
                 upcomingSupplyDecrease,
                 amountMToken,
-                revertAboveSupplyCap
+                !safeValidateRequest
+            ) ||
+            !_validateAndUpdateNextRequestIdToProcess(
+                requestId,
+                !safeValidateRequest
             )
         ) {
             return false;
         }
-
-        _validateAndUpdateHighestProcessedRequestId(requestId);
 
         upcomingSupply -= upcomingSupplyDecrease;
 

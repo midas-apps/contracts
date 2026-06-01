@@ -52,9 +52,9 @@ abstract contract ManageableVault is
     uint256 public currentRequestId;
 
     /**
-     * @notice highest processed request id
+     * @notice next expected request id to process
      */
-    uint256 public highestProcessedRequestId;
+    uint256 public nextExpectedRequestIdToProcess;
 
     /**
      * @notice 100 percent with base 100
@@ -584,25 +584,36 @@ abstract contract ManageableVault is
     }
 
     /**
-     * @dev check if request id is sequential and update highest processed request id
+     * @dev check if request id is sequential and update next expected request id to process
      * @param requestId request id
+     * @param revertIfInvalid if true, reverts if request id is not sequential, otherwise returns false
+     * @return isValid true if request id is sequential or sequentialRequestProcessing is disabled
      */
-    function _validateAndUpdateHighestProcessedRequestId(uint256 requestId)
-        internal
-    {
-        uint256 _highestProcessedRequestId = highestProcessedRequestId;
-        if (sequentialRequestProcessing) {
-            if (_highestProcessedRequestId == 0 && requestId == 0) {
-                return;
-            }
+    function _validateAndUpdateNextRequestIdToProcess(
+        uint256 requestId,
+        bool revertIfInvalid
+    ) internal returns (bool isValid) {
+        isValid = true;
+        uint256 _nextExpectedRequestIdToProcess = nextExpectedRequestIdToProcess;
 
-            require(
-                requestId == _highestProcessedRequestId + 1,
-                InvalidRequestSequence(requestId, _highestProcessedRequestId)
-            );
+        if (
+            sequentialRequestProcessing &&
+            requestId != _nextExpectedRequestIdToProcess
+        ) {
+            isValid = false;
         }
-        if (requestId > _highestProcessedRequestId) {
-            highestProcessedRequestId = requestId;
+
+        if (!revertIfInvalid && !isValid) {
+            return false;
+        }
+
+        require(
+            isValid,
+            InvalidRequestSequence(requestId, _nextExpectedRequestIdToProcess)
+        );
+
+        if (requestId >= _nextExpectedRequestIdToProcess) {
+            nextExpectedRequestIdToProcess = requestId + 1;
         }
     }
 

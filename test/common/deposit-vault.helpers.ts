@@ -375,8 +375,8 @@ export const depositRequestTest = async (
     true,
   );
 
-  const highestProcessedRequestIdBefore =
-    await depositVault.highestProcessedRequestId();
+  const nextExpectedRequestIdToProcessBefore =
+    await depositVault.nextExpectedRequestIdToProcess();
 
   let callPromise: Awaited<ReturnType<typeof depositInstantTest>>;
 
@@ -423,10 +423,12 @@ export const depositRequestTest = async (
       ].filter((v) => v !== undefined),
     ).to.not.reverted;
 
-  const highestProcessedRequestIdAfter =
-    await depositVault.highestProcessedRequestId();
+  const nextExpectedRequestIdToProcessAfter =
+    await depositVault.nextExpectedRequestIdToProcess();
 
-  expect(highestProcessedRequestIdAfter).eq(highestProcessedRequestIdBefore);
+  expect(nextExpectedRequestIdToProcessAfter).eq(
+    nextExpectedRequestIdToProcessBefore,
+  );
 
   const latestRequestIdAfter = await depositVault.currentRequestId();
   const supplyAfter = await mTBILL.totalSupply();
@@ -561,6 +563,9 @@ export const approveRequestTest = async (
     .mul(constants.WeiPerEther)
     .div(BigNumber.from(0).eq(actualRate) ? parseUnits('1') : actualRate);
 
+  const nextExpectedRequestIdToProcessBefore =
+    await depositVault.nextExpectedRequestIdToProcess();
+
   const upcomingSupplyBefore = await depositVault.upcomingSupply();
   await expect(callFn())
     .to.emit(
@@ -570,10 +575,18 @@ export const approveRequestTest = async (
     )
     .withArgs(requestId, actualRate, isSafe, isAvgRate).to.not.reverted;
 
-  const highestProcessedRequestIdAfter =
-    await depositVault.highestProcessedRequestId();
+  const nextExpectedRequestIdToProcessAfter =
+    await depositVault.nextExpectedRequestIdToProcess();
 
-  expect(highestProcessedRequestIdAfter).eq(requestId);
+  if (nextExpectedRequestIdToProcessBefore.lte(requestId)) {
+    expect(nextExpectedRequestIdToProcessAfter).eq(
+      BigNumber.from(requestId).add(1),
+    );
+  } else {
+    expect(nextExpectedRequestIdToProcessAfter).eq(
+      nextExpectedRequestIdToProcessBefore,
+    );
+  }
 
   const upcomingSupplyAfter = await depositVault.upcomingSupply();
   const requestDataAfter = await depositVault.mintRequests(requestId);
@@ -746,25 +759,35 @@ export const safeBulkApproveRequestTest = async (
 
   const upcomingSupplyBefore = await depositVault.upcomingSupply();
 
-  const highestProcessedRequestIdBefore =
-    await depositVault.highestProcessedRequestId();
+  const nextExpectedRequestIdToProcessBefore =
+    await depositVault.nextExpectedRequestIdToProcess();
 
   const txPromise = callFn();
   await expect(txPromise).to.not.reverted;
 
-  const highestProcessedRequestIdAfter =
-    await depositVault.highestProcessedRequestId();
+  const nextExpectedRequestIdToProcessAfter =
+    await depositVault.nextExpectedRequestIdToProcess();
 
   const expectedToExecuteRequests = requests.filter(
     (v) => v.expectedToExecute ?? true,
   );
 
-  const expectedHighestProcessedRequestId =
-    expectedToExecuteRequests.sort(
-      (a, b) => +b.id.toString() - +a.id.toString(),
-    )[0]?.id ?? highestProcessedRequestIdBefore;
+  const expectedHighestProcessedRequestId = expectedToExecuteRequests.sort(
+    (a, b) => +b.id.toString() - +a.id.toString(),
+  )[0]?.id;
 
-  expect(highestProcessedRequestIdAfter).eq(expectedHighestProcessedRequestId);
+  if (
+    expectedHighestProcessedRequestId !== undefined &&
+    nextExpectedRequestIdToProcessBefore.lte(expectedHighestProcessedRequestId)
+  ) {
+    expect(nextExpectedRequestIdToProcessAfter).eq(
+      BigNumber.from(expectedHighestProcessedRequestId).add(1),
+    );
+  } else {
+    expect(nextExpectedRequestIdToProcessAfter).eq(
+      nextExpectedRequestIdToProcessBefore,
+    );
+  }
 
   const upcomingSupplyAfter = await depositVault.upcomingSupply();
 
@@ -951,6 +974,8 @@ export const rejectRequestTest = async (
   const totalDepositedBefore = await depositVault.totalMinted(sender.address);
 
   const requestData = await depositVault.mintRequests(requestId);
+  const nextExpectedRequestIdToProcessBefore =
+    await depositVault.nextExpectedRequestIdToProcess();
 
   const upcomingSupplyBefore = await depositVault.upcomingSupply();
   await expect(depositVault.connect(sender).rejectRequest(requestId))
@@ -959,6 +984,19 @@ export const rejectRequestTest = async (
       depositVault.interface.events['RejectRequest(uint256,address)'].name,
     )
     .withArgs(requestId, requestData.recipient).to.not.reverted;
+
+  const nextExpectedRequestIdToProcessAfter =
+    await depositVault.nextExpectedRequestIdToProcess();
+
+  if (nextExpectedRequestIdToProcessBefore.lte(requestId)) {
+    expect(nextExpectedRequestIdToProcessAfter).eq(
+      BigNumber.from(requestId).add(1),
+    );
+  } else {
+    expect(nextExpectedRequestIdToProcessAfter).eq(
+      nextExpectedRequestIdToProcessBefore,
+    );
+  }
 
   const upcomingSupplyAfter = await depositVault.upcomingSupply();
 
