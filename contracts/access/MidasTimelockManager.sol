@@ -6,6 +6,7 @@ import {TimelockControllerUpgradeable as TimelockController} from "@openzeppelin
 import {IMidasTimelockManager, GetOperationStatusResult, TimelockOperationStatus} from "../interfaces/IMidasTimelockManager.sol";
 import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.sol";
 import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
+import {IMidasPauseManager} from "../interfaces/IMidasPauseManager.sol";
 import {EnumerableSetUpgradeable as EnumerableSet} from "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 
 // TODO: add natspec
@@ -403,7 +404,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         address target,
         bytes calldata data
     ) external view returns (bool ready, bool timelocked) {
-        (uint256 delay, ) = getRoleTimelockDelay(targetRole);
+        uint256 delay = _getTimelockDelay(target, data, targetRole);
 
         TimelockController _timelock = TimelockController(payable(timelock));
         (bytes32 operationId, , ) = _getOperationId(_timelock, target, data);
@@ -461,6 +462,35 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             : delay;
 
         return (actualDelay, delay == 0);
+    }
+
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
+    function getEnforcedDelay(address target, bytes4 selector)
+        public
+        view
+        returns (uint256 delay, bool enforced)
+    {
+        if (target != accessControl.pauseManager()) return (0, false);
+
+        // no delay for global pause, contract pause or function pause
+        if (
+            selector == IMidasPauseManager.globalPause.selector ||
+            selector == IMidasPauseManager.pauseContract.selector ||
+            selector == IMidasPauseManager.bulkPauseContractFn.selector
+        ) {
+            return (0, true);
+        }
+
+        // 1 hour delay for global unpause, contract unpause or function unpause
+        if (
+            selector == IMidasPauseManager.globalUnpause.selector ||
+            selector == IMidasPauseManager.unpauseContract.selector ||
+            selector == IMidasPauseManager.bulkUnpauseContractFn.selector
+        ) {
+            return (1 hours, true);
+        }
     }
 
     /**
@@ -631,7 +661,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
         bytes32 targetRole = _getTargetRole(target, data, proposer);
 
-        (uint256 delay, ) = getRoleTimelockDelay(targetRole);
+        uint256 delay = _getTimelockDelay(target, data, targetRole);
 
         require(delay != 0, NoTimelockDelayForRole());
 
@@ -854,6 +884,28 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         returns (bytes4)
     {
         return bytes4(data);
+    }
+
+    /**
+     * @dev gets the timelock delay for a given target and data
+     * @param target target contract
+     * @param data operation data
+     * @param targetRole target role
+     * @return delay timelock delay
+     */
+    function _getTimelockDelay(
+        address target,
+        bytes calldata data,
+        bytes32 targetRole
+    ) private view returns (uint256 delay) {
+        (uint256 enforcedDelay, bool enforced) = getEnforcedDelay(
+            target,
+            _getFunctionSelector(data)
+        );
+
+        (delay, ) = enforced
+            ? (enforcedDelay, true)
+            : getRoleTimelockDelay(targetRole);
     }
 
     /**

@@ -4,6 +4,7 @@ import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/
 import { expect } from 'chai';
 import { constants, ethers } from 'ethers';
 
+import { encodeFnSelector } from '../../helpers/utils';
 import {
   MidasTimelockManager,
   MidasTimelockManager__factory,
@@ -11,6 +12,9 @@ import {
 } from '../../typechain-types';
 import {
   OptionalCommonParams,
+  pauseGlobalTest,
+  pauseVault,
+  pauseVaultFn,
   validateImplementation,
 } from '../common/common.helpers';
 import { defaultDeploy } from '../common/fixtures';
@@ -142,6 +146,80 @@ describe('MidasTimelockManager', () => {
   });
 
   describe('scheduleTimelockOperation()', () => {
+    describe('pause manager', () => {
+      const noTimelockDelayRevert = (timelockManager: MidasTimelockManager) =>
+        timelockManagerRevert(timelockManager, 'NoTimelockDelayForRole');
+
+      it('should fail: trying to schedule globalPause on pause manager', async () => {
+        const {
+          timelockManager,
+          timelock,
+          owner,
+          accessControl,
+          pauseManager,
+        } = await loadFixture(defaultDeploy);
+
+        await scheduleTimelockOperationsTester(
+          { timelockManager, timelock, owner, accessControl },
+          [pauseManager.address],
+          [pauseManager.interface.encodeFunctionData('globalPause')],
+          {},
+          noTimelockDelayRevert(timelockManager),
+        );
+      });
+
+      it('should fail: trying to schedule contractPause on pause manager', async () => {
+        const {
+          timelockManager,
+          timelock,
+          owner,
+          accessControl,
+          pauseManager,
+          pausableTester,
+        } = await loadFixture(defaultDeploy);
+
+        await scheduleTimelockOperationsTester(
+          { timelockManager, timelock, owner, accessControl },
+          [pauseManager.address],
+          [
+            pauseManager.interface.encodeFunctionData('pauseContract', [
+              pausableTester.address,
+            ]),
+          ],
+          {},
+          noTimelockDelayRevert(timelockManager),
+        );
+      });
+
+      it('should fail: trying to schedule fnPause on pause manager', async () => {
+        const {
+          timelockManager,
+          timelock,
+          owner,
+          accessControl,
+          pauseManager,
+          pausableTester,
+        } = await loadFixture(defaultDeploy);
+
+        const fnSelector = encodeFnSelector(
+          'depositRequest(address,uint256,bytes32)',
+        );
+
+        await scheduleTimelockOperationsTester(
+          { timelockManager, timelock, owner, accessControl },
+          [pauseManager.address],
+          [
+            pauseManager.interface.encodeFunctionData('bulkPauseContractFn', [
+              pausableTester.address,
+              [fnSelector],
+            ]),
+          ],
+          {},
+          noTimelockDelayRevert(timelockManager),
+        );
+      });
+    });
+
     it('should schedule timelock operation', async () => {
       const {
         timelockManager,
@@ -483,6 +561,153 @@ describe('MidasTimelockManager', () => {
   });
 
   describe('executeTimelockOperation()', () => {
+    describe('pause manager', () => {
+      it('schedule and execute globalUnpause', async () => {
+        const {
+          timelockManager,
+          timelock,
+          owner,
+          accessControl,
+          pauseManager,
+          roles,
+        } = await loadFixture(defaultDeploy);
+
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [roles.common.pauseAdmin],
+          [3600],
+        );
+
+        await pauseGlobalTest({ pauseManager, owner });
+
+        const calldata =
+          pauseManager.interface.encodeFunctionData('globalUnpause');
+
+        await scheduleTimelockOperationsTester(
+          { timelockManager, timelock, owner, accessControl },
+          [pauseManager.address],
+          [calldata],
+        );
+
+        await executeTimelockOperationTester(
+          { timelockManager, timelock, owner, accessControl },
+          pauseManager.address,
+          calldata,
+          owner.address,
+          timelockManagerRevert(timelockManager, 'TimelockOperationNotReady'),
+        );
+
+        await increase(3600);
+
+        await executeTimelockOperationTester(
+          { timelockManager, timelock, owner, accessControl },
+          pauseManager.address,
+          calldata,
+          owner.address,
+        );
+      });
+
+      it('schedule and execute unpauseContract', async () => {
+        const {
+          timelockManager,
+          timelock,
+          owner,
+          accessControl,
+          pauseManager,
+          pausableTester,
+          roles,
+        } = await loadFixture(defaultDeploy);
+
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [roles.common.defaultAdmin],
+          [3600],
+        );
+
+        await pauseVault({ pauseManager, owner }, pausableTester);
+
+        const calldata = pauseManager.interface.encodeFunctionData(
+          'unpauseContract',
+          [pausableTester.address],
+        );
+
+        await scheduleTimelockOperationsTester(
+          { timelockManager, timelock, owner, accessControl },
+          [pauseManager.address],
+          [calldata],
+        );
+
+        await executeTimelockOperationTester(
+          { timelockManager, timelock, owner, accessControl },
+          pauseManager.address,
+          calldata,
+          owner.address,
+          timelockManagerRevert(timelockManager, 'TimelockOperationNotReady'),
+        );
+
+        await increase(3600);
+
+        await executeTimelockOperationTester(
+          { timelockManager, timelock, owner, accessControl },
+          pauseManager.address,
+          calldata,
+          owner.address,
+        );
+      });
+
+      it('schedule and execute bulkUnpauseContractFn', async () => {
+        const {
+          timelockManager,
+          timelock,
+          owner,
+          accessControl,
+          pauseManager,
+          pausableTester,
+          roles,
+        } = await loadFixture(defaultDeploy);
+
+        const fnSelector = encodeFnSelector(
+          'depositRequest(address,uint256,bytes32)',
+        );
+
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [roles.common.defaultAdmin],
+          [3600],
+        );
+
+        await pauseVaultFn({ pauseManager, owner }, pausableTester, fnSelector);
+
+        const calldata = pauseManager.interface.encodeFunctionData(
+          'bulkUnpauseContractFn',
+          [pausableTester.address, [fnSelector]],
+        );
+
+        await scheduleTimelockOperationsTester(
+          { timelockManager, timelock, owner, accessControl },
+          [pauseManager.address],
+          [calldata],
+        );
+
+        await executeTimelockOperationTester(
+          { timelockManager, timelock, owner, accessControl },
+          pauseManager.address,
+          calldata,
+          owner.address,
+          timelockManagerRevert(timelockManager, 'TimelockOperationNotReady'),
+        );
+
+        await increase(3600);
+
+        await executeTimelockOperationTester(
+          { timelockManager, timelock, owner, accessControl },
+          pauseManager.address,
+          calldata,
+          owner.address,
+        );
+      });
+    });
+
     it('should fail: when operation do not exist', async () => {
       const {
         timelockManager,
@@ -3884,6 +4109,110 @@ describe('MidasTimelockManager', () => {
       );
 
       expect(await timelockManager.dataHashIndexes(dataHash)).to.eq(0);
+    });
+  });
+
+  describe('getEnforcedDelay()', () => {
+    it('should return 0 when target is address zero', async () => {
+      const { timelockManager } = await loadFixture(defaultDeploy);
+
+      const [delay, enforced] = await timelockManager.getEnforcedDelay(
+        constants.AddressZero,
+        '0x00000000',
+      );
+      expect(delay).to.eq(0);
+      expect(enforced).to.eq(false);
+    });
+
+    it('should return 0 when target is not pause manager', async () => {
+      const { timelockManager, depositVault } = await loadFixture(
+        defaultDeploy,
+      );
+
+      const [delay, enforced] = await timelockManager.getEnforcedDelay(
+        depositVault.address,
+        encodeFnSelector('setMintFee(uint256)'),
+      );
+      expect(delay).to.eq(0);
+      expect(enforced).to.eq(false);
+    });
+
+    it('should return 0 when selector is global pause', async () => {
+      const { timelockManager, pauseManager } = await loadFixture(
+        defaultDeploy,
+      );
+
+      const [delay, enforced] = await timelockManager.getEnforcedDelay(
+        pauseManager.address,
+        encodeFnSelector('globalPause()'),
+      );
+      expect(delay).to.eq(0);
+      expect(enforced).to.eq(true);
+    });
+
+    it('should return 0 when selector is contract pause', async () => {
+      const { timelockManager, pauseManager } = await loadFixture(
+        defaultDeploy,
+      );
+
+      const [delay, enforced] = await timelockManager.getEnforcedDelay(
+        pauseManager.address,
+        encodeFnSelector('pauseContract(address)'),
+      );
+      expect(delay).to.eq(0);
+      expect(enforced).to.eq(true);
+    });
+
+    it('should return 0 when selector is function pause', async () => {
+      const { timelockManager, pauseManager } = await loadFixture(
+        defaultDeploy,
+      );
+
+      const [delay, enforced] = await timelockManager.getEnforcedDelay(
+        pauseManager.address,
+        encodeFnSelector('bulkPauseContractFn(address,bytes4[])'),
+      );
+      expect(delay).to.eq(0);
+      expect(enforced).to.eq(true);
+    });
+
+    it('should return 3600 when selector is global unpause', async () => {
+      const { timelockManager, pauseManager } = await loadFixture(
+        defaultDeploy,
+      );
+
+      const [delay, enforced] = await timelockManager.getEnforcedDelay(
+        pauseManager.address,
+        encodeFnSelector('globalUnpause()'),
+      );
+      expect(delay).to.eq(3600);
+      expect(enforced).to.eq(true);
+    });
+
+    it('should return 3600 when selector is contract unpause', async () => {
+      const { timelockManager, pauseManager } = await loadFixture(
+        defaultDeploy,
+      );
+
+      const [delay, enforced] = await timelockManager.getEnforcedDelay(
+        pauseManager.address,
+        encodeFnSelector('unpauseContract(address)'),
+      );
+      expect(delay).to.eq(3600);
+      expect(enforced).to.eq(true);
+    });
+
+    it('should return 3600 when selector is function unpause', async () => {
+      const { timelockManager, pauseManager } = await loadFixture(
+        defaultDeploy,
+      );
+
+      const [delay, enforced] = await timelockManager.getEnforcedDelay(
+        pauseManager.address,
+        encodeFnSelector('bulkUnpauseContractFn(address,bytes4[])'),
+      );
+      expect(delay).to.eq(3600);
+      expect(enforced).to.eq(true);
     });
   });
 });

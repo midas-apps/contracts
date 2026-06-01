@@ -347,6 +347,18 @@ interface IMidasTimelockManager {
     function defaultDelay() external view returns (uint256 delay);
 
     /**
+     * @notice Returns enforced timelock delay for a target and selector that overrides the role delay
+     * @param target target contract
+     * @param selector function selector
+     * @return delay delay in seconds
+     * @return enforced true if delay is enforced for this target and selector
+     */
+    function getEnforcedDelay(address target, bytes4 selector)
+        external
+        view
+        returns (uint256 delay, bool enforced);
+
+    /**
      * @notice Votes needed for council quorum at a version
      * @param version security council version
      * @return quorum required votes
