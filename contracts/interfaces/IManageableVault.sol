@@ -83,39 +83,143 @@ struct LimitConfigInitParams {
  * @author RedDuck Software
  */
 interface IManageableVault {
+    /**
+     * @notice Payment token is already added
+     * @param token token address
+     */
     error PaymentTokenAlreadyAdded(address token);
+
+    /**
+     * @notice Payment token is not in the list
+     * @param token token address
+     */
     error PaymentTokenNotExists(address token);
+
+    /**
+     * @notice Value is the same as the current one
+     * @param account account address
+     */
     error SameAddressValue(address account);
-    error InstantLimitWindowNotExists(uint256 window);
+
+    /**
+     * @notice Min instant fee is greater than max instant fee
+     * @param minFee minimum instant fee
+     * @param maxFee maximum instant fee
+     */
     error InvalidMinMaxInstantFee(uint256 minFee, uint256 maxFee);
+
+    /**
+     * @notice Amount does not match token decimals after rounding
+     * @param amount input amount
+     * @param requiredAmount amount after round-trip conversion
+     */
     error InvalidRounding(uint256 amount, uint256 requiredAmount);
+
+    /**
+     * @notice Payment token is not supported
+     * @param token token address
+     */
     error UnknownPaymentToken(address token);
-    error InstantLimitExceeded(
-        uint256 window,
-        uint256 limitUsed,
-        uint256 limit
-    );
+
+    /**
+     * @notice Operation amount exceeds token allowance
+     * @param prevAllowance current allowance
+     * @param amount requested amount
+     */
     error AllowanceExceeded(uint256 prevAllowance, uint256 amount);
+
+    /**
+     * @notice Instant fee is outside min/max range
+     * @param instantFee current instant fee
+     */
     error InstantFeeOutOfBounds(uint256 instantFee);
+
+    /**
+     * @notice Price change is too large
+     * @param difPercent actual price change percent (1% = 100)
+     * @param variationTolerance max allowed change percent (1% = 100)
+     */
     error PriceVariationExceeded(
         uint256 difPercent,
         uint256 variationTolerance
     );
+
+    /**
+     * @notice Fee is out of allowed range
+     * @param fee fee value (1% = 100)
+     */
     error InvalidFee(uint256 fee);
+
+    /**
+     * @notice Token rate is zero or invalid
+     * @param tokenRate token rate value
+     */
     error InvalidTokenRate(uint256 tokenRate);
 
+    /**
+     * @notice Received amount is below minimum
+     * @param minReceiveAmount minimum expected amount
+     * @param actualReceiveAmount actual received amount
+     */
     error SlippageExceeded(
         uint256 minReceiveAmount,
         uint256 actualReceiveAmount
     );
+
+    /**
+     * @notice Request id is above max approve id
+     * @param requestId request id
+     * @param maxApproveRequestId max request id that can be approved
+     */
     error RequestIdTooHigh(uint256 requestId, uint256 maxApproveRequestId);
+
+    /**
+     * @notice New mToken rate must be greater than zero
+     */
     error InvalidNewMTokenRate();
+
+    /**
+     * @notice Instant amount must be greater than zero
+     */
     error InvalidInstantAmount();
+
+    /**
+     * @notice Request does not exist
+     * @param requestId request id
+     */
     error RequestNotExists(uint256 requestId);
+
+    /**
+     * @notice Request has wrong status
+     * @param requestId request id
+     * @param status current request status
+     */
     error UnexpectedRequestStatus(uint256 requestId, RequestStatus status);
+
+    /**
+     * @notice Instant share is above max allowed
+     * @param instantShare instant share in basis points (100 = 1%)
+     * @param maxInstantShare max allowed instant share
+     */
     error InstantShareTooHigh(uint256 instantShare, uint256 maxInstantShare);
+
+    /**
+     * @notice Amount must be greater than zero
+     */
     error InvalidAmount();
+
+    /**
+     * @notice Amount is below minimum
+     * @param amount requested amount
+     * @param minAmount minimum allowed amount
+     */
     error AmountLessThanMin(uint256 amount, uint256 minAmount);
+
+    /**
+     * @notice Request id is not the next expected one
+     * @param requestId request id
+     * @param nextExpectedRequestIdToProcess next request id to process
+     */
     error InvalidRequestSequence(
         uint256 requestId,
         uint256 nextExpectedRequestIdToProcess

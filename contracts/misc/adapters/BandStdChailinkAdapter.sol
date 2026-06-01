@@ -59,24 +59,31 @@ contract BandStdChailinkAdapter is ChainlinkAdapterBase {
         view
         override
         returns (
-            uint80 roundId,
-            int256 answer,
-            uint256 startedAt,
-            uint256 updatedAt,
-            uint80 answeredInRound
+            uint80, /* roundId */
+            int256, /* answer */
+            uint256, /* startedAt */
+            uint256, /* updatedAt */
+            uint80 /* answeredInRound */
         )
     {
         IStdReference.ReferenceData memory value = _getBandReferenceData();
 
-        roundId = uint80(value.lastUpdatedBase);
+        uint256 timestamp = _getTimestamp(value);
+        uint80 roundId = uint80(timestamp);
 
-        return (
-            roundId,
-            int256(value.rate),
-            value.lastUpdatedBase,
-            value.lastUpdatedBase,
-            roundId
-        );
+        return (roundId, int256(value.rate), timestamp, timestamp, roundId);
+    }
+
+    function _getTimestamp(IStdReference.ReferenceData memory value)
+        private
+        view
+        returns (uint256)
+    {
+        // takes the minimum — stalest component determines freshness
+        return
+            value.lastUpdatedBase < value.lastUpdatedQuote
+                ? value.lastUpdatedBase
+                : value.lastUpdatedQuote;
     }
 
     function _getBandReferenceData()

@@ -523,10 +523,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         _validateUserAccess(request.recipient, false);
 
         if (isSafe) {
-            require(
-                requestId <= maxApproveRequestId,
-                RequestIdTooHigh(requestId, maxApproveRequestId)
-            );
+            _validateMaxApproveRequestId(requestId);
             _requireVariationTolerance(request.mTokenRate, newMTokenRate);
         }
 
@@ -731,12 +728,9 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         _requireAndUpdateLimit(amountMTokenIn);
 
-        require(
-            calcResult.amountTokenOutWithoutFee >= minReceiveAmount,
-            SlippageExceeded(
-                minReceiveAmount,
-                calcResult.amountTokenOutWithoutFee
-            )
+        _requireSlippageNotExceeded(
+            calcResult.amountTokenOutWithoutFee,
+            minReceiveAmount
         );
 
         _requireAndUpdateAllowance(tokenOut, calcResult.amountTokenOut);

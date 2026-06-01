@@ -473,10 +473,7 @@ contract DepositVault is ManageableVault, IDepositVault {
 
         result = _calcAndValidateDeposit(user, tokenIn, amountToken, true);
 
-        require(
-            result.mintAmount >= minReceiveAmount,
-            SlippageExceeded(minReceiveAmount, result.mintAmount)
-        );
+        _requireSlippageNotExceeded(result.mintAmount, minReceiveAmount);
 
         totalMinted[user] += result.mintAmount;
 
@@ -656,10 +653,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         _validateUserAccess(request.recipient, false);
 
         if (isSafe) {
-            require(
-                requestId <= maxApproveRequestId,
-                RequestIdTooHigh(requestId, maxApproveRequestId)
-            );
+            _validateMaxApproveRequestId(requestId);
             _requireVariationTolerance(request.tokenOutRate, newOutRate);
         }
 

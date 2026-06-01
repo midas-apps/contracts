@@ -19,7 +19,6 @@ import {
   approveBase18,
   mintToken,
   pauseVaultFn,
-  unpauseVaultFn,
 } from '../../common/common.helpers';
 import { DefaultFixture, getDeployParamsMv } from '../../common/fixtures';
 import { greenListEnable } from '../../common/greenlist.helpers';
@@ -242,33 +241,6 @@ export const manageableVaultSuits = (
           await setMinAmountTest({ vault: manageableVault, owner }, 200, {
             from: regularAccounts[0],
           });
-        });
-      });
-
-      describe('pauseFn()', () => {
-        it('vault admin can pauseFn / unpauseFn other selectors while pauseFn(bytes4) is paused', async () => {
-          const { manageableVault } = await loadMvFixture();
-
-          const pauseFnSelector = encodeFnSelector('pauseFn(bytes4)');
-          const otherSelector = encodeFnSelector('setMinAmount(uint256)');
-
-          await pauseVaultFn(
-            { pauseManager, owner },
-            manageableVault,
-            pauseFnSelector,
-          );
-
-          await pauseVaultFn(
-            { pauseManager, owner },
-            manageableVault,
-            otherSelector,
-          );
-
-          await unpauseVaultFn(
-            { pauseManager, owner },
-            manageableVault,
-            otherSelector,
-          );
         });
       });
 

@@ -764,6 +764,7 @@ abstract contract ManageableVault is
         onlyNotBlacklisted(user)
         onlyNotSanctioned(user)
     {
+        require(user != address(0), InvalidAddress(user));
         if (!validatePaused) return;
         _requireNotPaused(msg.sig);
     }
@@ -885,6 +886,32 @@ abstract contract ManageableVault is
         TokenConfig storage tokenConfig = tokensConfig[token];
         tokenRate = _getTokenRate(tokenConfig.dataFeed, tokenConfig.stable);
         _validateTokenRate(tokenRate);
+    }
+
+    /**
+     * @dev validates that actual receive amount is greater than or equal to minimum receive amount
+     * @param actualReceiveAmount actual receive amount
+     * @param minReceiveAmount minimum receive amount
+     */
+    function _requireSlippageNotExceeded(
+        uint256 actualReceiveAmount,
+        uint256 minReceiveAmount
+    ) internal pure {
+        require(
+            actualReceiveAmount >= minReceiveAmount,
+            SlippageExceeded(minReceiveAmount, actualReceiveAmount)
+        );
+    }
+
+    /**
+     * @dev validates that request id is less than or equal to max approve request id
+     * @param requestId request id
+     */
+    function _validateMaxApproveRequestId(uint256 requestId) internal view {
+        require(
+            requestId <= maxApproveRequestId,
+            RequestIdTooHigh(requestId, maxApproveRequestId)
+        );
     }
 
     /**
