@@ -119,35 +119,6 @@ export const unBlackList = async (
   ).eq(false);
 };
 
-export const greenListToggler = async (
-  { accessControl, owner, role }: CommonParamsGreenList & { role: string },
-  account: Account,
-  opt?: OptionalCommonParams,
-) => {
-  account = getAccount(account);
-
-  if (
-    await handleRevert(
-      accessControl
-        .connect(opt?.from ?? owner)
-        .grantRole.bind(this, role, account),
-      accessControl,
-      opt,
-    )
-  ) {
-    return;
-  }
-
-  await expect(
-    accessControl.connect(opt?.from ?? owner).grantRole(role, account),
-  ).to.emit(
-    accessControl,
-    accessControl.interface.events['RoleGranted(bytes32,address,address)'].name,
-  ).to.not.reverted;
-
-  expect(await accessControl.hasRole(role, account)).eq(true);
-};
-
 export const greenList = async (
   { greenlistable, accessControl, owner, role }: CommonParamsGreenList,
   account: Account,
@@ -228,6 +199,109 @@ export const unGreenList = async (
   ).eq(false);
 };
 
+export const grantRoleMultTester = async (
+  {
+    accessControl,
+    owner,
+  }: {
+    accessControl: MidasAccessControl;
+    owner: SignerWithAddress;
+  },
+  roles: string[],
+  accounts: string[],
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+
+  const callFn = accessControl
+    .connect(from)
+    .grantRoleMult.bind(this, roles, accounts);
+
+  if (await handleRevert(callFn, accessControl, opt)) {
+    return;
+  }
+
+  await expect(callFn()).to.not.reverted;
+
+  for (const [index, role] of roles.entries()) {
+    expect(await accessControl.hasRole(role, accounts[index])).eq(true);
+  }
+};
+
+export const revokeRoleMultTester = async (
+  {
+    accessControl,
+    owner,
+  }: { accessControl: MidasAccessControl; owner: SignerWithAddress },
+  roles: string[],
+  accounts: string[],
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+
+  const callFn = accessControl
+    .connect(from)
+    .revokeRoleMult.bind(this, roles, accounts);
+
+  if (await handleRevert(callFn, accessControl, opt)) {
+    return;
+  }
+
+  await expect(callFn()).to.not.reverted;
+
+  for (const [index, role] of roles.entries()) {
+    expect(await accessControl.hasRole(role, accounts[index])).eq(false);
+  }
+};
+
+export const grantRoleTester = async (
+  {
+    accessControl,
+    owner,
+  }: { accessControl: MidasAccessControl; owner: SignerWithAddress },
+  role: string,
+  account: string,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+
+  const callFn = accessControl
+    .connect(from)
+    .grantRole.bind(this, role, account);
+
+  if (await handleRevert(callFn, accessControl, opt)) {
+    return;
+  }
+
+  await expect(callFn()).to.not.reverted;
+
+  expect(await accessControl.hasRole(role, account)).eq(true);
+};
+
+export const revokeRoleTester = async (
+  {
+    accessControl,
+    owner,
+  }: { accessControl: MidasAccessControl; owner: SignerWithAddress },
+  role: string,
+  account: string,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+
+  const callFn = accessControl
+    .connect(from)
+    .revokeRole.bind(this, role, account);
+
+  if (await handleRevert(callFn, accessControl, opt)) {
+    return;
+  }
+
+  await expect(callFn()).to.not.reverted;
+
+  expect(await accessControl.hasRole(role, account)).eq(false);
+};
+
 export const setIsUserFacingRoleTester = async (
   {
     accessControl,
@@ -259,7 +333,7 @@ export const setIsUserFacingRoleTester = async (
   const logs = txReceipt.logs
     .filter((log) => log.address === accessControl.address)
     .map((log) => accessControl.interface.parseLog(log))
-    .filter((v) => v.name === 'IsUserFacingRoleSet')
+    .filter((v) => v.name === 'UserFacingRoleSet')
     .map((v) => v.args);
 
   for (const [index, stateBefore] of statesBefore.entries()) {

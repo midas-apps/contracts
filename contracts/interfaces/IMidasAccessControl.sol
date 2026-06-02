@@ -66,7 +66,7 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
      * @param role OZ role for the scope
      * @param enabled whether that role is user facing
      */
-    event IsUserFacingRoleSet(bytes32 indexed role, bool enabled);
+    event UserFacingRoleSet(bytes32 indexed role, bool enabled);
 
     /**
      * @param functionAccessAdminRole OZ role for the scope

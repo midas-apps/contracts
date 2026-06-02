@@ -27,7 +27,7 @@ contract MidasAccessControl is
     mapping(bytes32 => bool) public isUserFacingRole;
 
     /**
-     * @dev Grant operators may call `setFunctionPermission` for the corresponding permission key.
+     * @dev Grant operators may call `setFunctionPermissionMult` for the corresponding permission key.
      */
     mapping(bytes32 => mapping(address => bool))
         private _functionAccessGrantOperators;
@@ -99,12 +99,14 @@ contract MidasAccessControl is
         address _pauseManager
     ) external {
         _checkRole(DEFAULT_ADMIN_ROLE, _msgSender());
+
         require(timelockManager == address(0), InvalidAddress(timelockManager));
+        require(pauseManager == address(0), InvalidAddress(pauseManager));
+
         require(
             _timelockManager != address(0),
             InvalidAddress(_timelockManager)
         );
-        require(pauseManager == address(0), InvalidAddress(pauseManager));
         require(_pauseManager != address(0), InvalidAddress(_pauseManager));
 
         timelockManager = _timelockManager;
@@ -119,6 +121,8 @@ contract MidasAccessControl is
     ) external {
         _validateRoleAccess(DEFAULT_ADMIN_ROLE, _msgSender());
 
+        require(params.length > 0, EmptyArray());
+
         for (uint256 i = 0; i < params.length; ++i) {
             SetIsUserFacingRoleParams memory param = params[i];
 
@@ -128,7 +132,7 @@ contract MidasAccessControl is
             }
 
             isUserFacingRole[param.role] = param.enabled;
-            emit IsUserFacingRoleSet(param.role, param.enabled);
+            emit UserFacingRoleSet(param.role, param.enabled);
         }
     }
 
@@ -139,13 +143,16 @@ contract MidasAccessControl is
         bytes32 functionAccessAdminRole,
         SetFunctionAccessGrantOperatorParams[] calldata params
     ) external {
+        _validateRoleAccess(functionAccessAdminRole, _msgSender());
+
+        require(params.length > 0, EmptyArray());
+
         require(
             !isUserFacingRole[functionAccessAdminRole],
             AccessControlUtilsLibrary.UserFacingRoleNotAllowed(
                 functionAccessAdminRole
             )
         );
-        _validateRoleAccess(functionAccessAdminRole, _msgSender());
 
         for (uint256 i = 0; i < params.length; ++i) {
             SetFunctionAccessGrantOperatorParams memory param = params[i];
@@ -182,8 +189,6 @@ contract MidasAccessControl is
         bytes4 functionSelector,
         SetFunctionPermissionParams[] calldata params
     ) external {
-        require(params.length > 0, EmptyArray());
-
         bytes32 operatorRole = functionAccessGrantOperatorKey(
             functionAccessAdminRole,
             targetContract,
@@ -191,6 +196,8 @@ contract MidasAccessControl is
         );
 
         _validateOperatorRoleAccess(operatorRole, _msgSender());
+
+        require(params.length > 0, EmptyArray());
 
         bytes32 functionKey = functionPermissionKey(
             functionAccessAdminRole,
@@ -258,6 +265,7 @@ contract MidasAccessControl is
             roles.length == addresses.length,
             MismatchArrays(roles.length, addresses.length)
         );
+
         require(roles.length > 0, EmptyArray());
 
         bytes32 adminRole = getRoleAdmin(roles[0]);

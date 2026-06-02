@@ -4048,10 +4048,10 @@ struct SetFunctionPermissionParams {
 }
 ```
 
-### IsUserFacingRoleSet
+### UserFacingRoleSet
 
 ```solidity
-event IsUserFacingRoleSet(bytes32 functionAccessAdminRole, bool enabled)
+event UserFacingRoleSet(bytes32 functionAccessAdminRole, bool enabled)
 ```
 
 #### Parameters
