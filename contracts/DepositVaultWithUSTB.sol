@@ -18,7 +18,15 @@ contract DepositVaultWithUSTB is DepositVault {
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
 
+    /**
+     * @notice when USTB token is not supported
+     * @param token token address
+     */
     error UnsupportedUSTBToken(address token);
+    /**
+     * @notice when USTB fee is not zero
+     * @param fee fee
+     */
     error USTBFeeNotZero(uint256 fee);
 
     /**

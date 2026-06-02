@@ -9,19 +9,14 @@ import "./IRedemptionVault.sol";
  */
 interface IRedemptionVaultWithSwapper is IRedemptionVault {
     /**
-     * @param caller caller address (msg.sender)
      * @param provider new LP address
      */
-    event SetLiquidityProvider(
-        address indexed caller,
-        address indexed provider
-    );
+    event SetLiquidityProvider(address indexed provider);
 
     /**
-     * @param caller caller address (msg.sender)
      * @param vault new underlying vault for swapper
      */
-    event SetSwapperVault(address indexed caller, address indexed vault);
+    event SetSwapperVault(address indexed vault);
 
     /**
      * @notice sets new liquidity provider address

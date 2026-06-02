@@ -14,12 +14,28 @@ library RateLimitLibrary {
 
     uint256 private constant _MIN_WINDOW = 1 minutes;
 
+    /**
+     * @notice when window limit is exceeded
+     * @param window window duration in seconds
+     * @param remaining actual remaining amount
+     * @param requested requested amount
+     */
     error WindowLimitExceeded(
         uint256 window,
         uint256 remaining,
         uint256 requested
     );
+
+    /**
+     * @notice when window limit is unknown
+     * @param window window duration in seconds
+     */
     error UnknownWindowLimit(uint256 window);
+
+    /**
+     * @notice when window is too short
+     * @param window window duration in seconds
+     */
     error WindowTooShort(uint256 window);
 
     /**

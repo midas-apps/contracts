@@ -1455,7 +1455,7 @@ export const redemptionVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertCustomError: acErrors.WMAC_HAS_ROLE,
+              revertCustomError: acErrors.WMAC_BLACKLISTED,
             },
           );
         });
@@ -1606,7 +1606,7 @@ export const redemptionVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertCustomError: acErrors.WMAC_HAS_ROLE,
+              revertCustomError: acErrors.WMAC_BLACKLISTED,
             },
           );
         });
@@ -4119,7 +4119,7 @@ export const redemptionVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertCustomError: acErrors.WMAC_HAS_ROLE,
+              revertCustomError: acErrors.WMAC_BLACKLISTED,
             },
           );
         });
@@ -4270,7 +4270,7 @@ export const redemptionVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertCustomError: acErrors.WMAC_HAS_ROLE,
+              revertCustomError: acErrors.WMAC_BLACKLISTED,
             },
           );
         });
@@ -4963,7 +4963,7 @@ export const redemptionVaultSuits = (
               { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
               0,
               parseUnits('5'),
-              { revertCustomError: acErrors.WMAC_HAS_ROLE },
+              { revertCustomError: acErrors.WMAC_BLACKLISTED },
             );
           });
 

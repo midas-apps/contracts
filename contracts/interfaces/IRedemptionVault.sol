@@ -66,7 +66,16 @@ struct LiquidityProviderLoanRequest {
  * @author RedDuck Software
  */
 interface IRedemptionVault is IManageableVault {
+    /**
+     * @notice when fee exceeds amount
+     * @param fee fee
+     * @param amount amount
+     */
     error FeeExceedsAmount(uint256 fee, uint256 amount);
+
+    /**
+     * @notice when not self call
+     */
     error NotSelfCall();
 
     /**
@@ -143,72 +152,50 @@ interface IRedemptionVault is IManageableVault {
     event RejectRequest(uint256 indexed requestId, address indexed user);
 
     /**
-     * @param caller function caller (msg.sender)
      * @param redeemer new address of request redeemer
      */
-    event SetRequestRedeemer(address indexed caller, address redeemer);
+    event SetRequestRedeemer(address indexed redeemer);
 
     /**
-     * @param caller function caller (msg.sender)
      * @param newLoanLp new address of loan liquidity provider
      */
-    event SetLoanLp(address indexed caller, address newLoanLp);
+    event SetLoanLp(address indexed newLoanLp);
 
     /**
-     * @param caller function caller (msg.sender)
      * @param newLoanRepaymentAddress new address of loan repayment address
      */
-    event SetLoanRepaymentAddress(
-        address indexed caller,
-        address newLoanRepaymentAddress
-    );
+    event SetLoanRepaymentAddress(address newLoanRepaymentAddress);
 
     /**
-     * @param caller function caller (msg.sender)
      * @param newLoanSwapperVault new address of loan swapper vault
      */
-    event SetLoanSwapperVault(
-        address indexed caller,
-        address newLoanSwapperVault
-    );
+    event SetLoanSwapperVault(address newLoanSwapperVault);
 
     /**
-     * @param caller function caller (msg.sender)
      * @param newMaxLoanApr new maximum loan APR value in basis points (100 = 1%)
      */
-    event SetMaxLoanApr(address indexed caller, uint64 newMaxLoanApr);
+    event SetMaxLoanApr(uint64 newMaxLoanApr);
 
     /**
-     * @param caller function caller (msg.sender)
      * @param newLoanApr new loan APR value in basis points (100 = 1%)
      */
-    event SetLoanApr(address indexed caller, uint64 newLoanApr);
+    event SetLoanApr(uint64 newLoanApr);
 
     /**
-     * @param caller function caller (msg.sender)
      * @param newLoanLpFirst new flag to determine if the loan LP liquidity should be used first
      */
-    event SetPreferLoanLiquidity(address indexed caller, bool newLoanLpFirst);
+    event SetPreferLoanLiquidity(bool newLoanLpFirst);
 
     /**
-     * @param caller function caller (msg.sender)
      * @param requestId request id
      * @param amountFee amount of fee in tokenOut
      */
-    event RepayLpLoanRequest(
-        address indexed caller,
-        uint256 indexed requestId,
-        uint256 amountFee
-    );
+    event RepayLpLoanRequest(uint256 indexed requestId, uint256 amountFee);
 
     /**
-     * @param caller function caller (msg.sender)
      * @param requestId request id
      */
-    event CancelLpLoanRequest(
-        address indexed caller,
-        uint256 indexed requestId
-    );
+    event CancelLpLoanRequest(uint256 indexed requestId);
 
     /**
      * @notice redeem mToken to tokenOut if daily limit and allowance not exceeded

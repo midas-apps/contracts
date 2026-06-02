@@ -63,13 +63,9 @@ contract CustomAggregatorV3CompatibleFeed is
     );
 
     /**
-     * @param sender the address that updated the max answer deviation
      * @param maxAnswerDeviation the new max answer deviation
      */
-    event MaxAnswerDeviationUpdated(
-        address indexed sender,
-        uint256 indexed maxAnswerDeviation
-    );
+    event MaxAnswerDeviationUpdated(uint256 indexed maxAnswerDeviation);
 
     /**
      * @notice upgradeable pattern contract`s initializer
@@ -156,7 +152,7 @@ contract CustomAggregatorV3CompatibleFeed is
             "CA: !max deviation"
         );
         maxAnswerDeviation = _maxAnswerDeviation;
-        emit MaxAnswerDeviationUpdated(msg.sender, _maxAnswerDeviation);
+        emit MaxAnswerDeviationUpdated(_maxAnswerDeviation);
     }
 
     /**

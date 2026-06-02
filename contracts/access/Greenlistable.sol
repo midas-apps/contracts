@@ -20,7 +20,7 @@ abstract contract Greenlistable is WithMidasAccessControl {
      */
     uint256[50] private __gap;
 
-    event SetGreenlistEnable(address indexed sender, bool enable);
+    event SetGreenlistEnable(bool enable);
 
     /**
      * @dev checks that a given `account`
@@ -39,7 +39,7 @@ abstract contract Greenlistable is WithMidasAccessControl {
     function setGreenlistEnable(bool enable) external onlyContractAdmin {
         require(greenlistEnabled != enable, SameBoolValue(enable));
         greenlistEnabled = enable;
-        emit SetGreenlistEnable(msg.sender, enable);
+        emit SetGreenlistEnable(enable);
     }
 
     /**

@@ -1048,7 +1048,7 @@ export const setMaxSupplyCapTest = async (
     depositVault.connect(opt?.from ?? owner).setMaxSupplyCap(value),
   ).to.emit(
     depositVault,
-    depositVault.interface.events['SetMaxSupplyCap(address,uint256)'].name,
+    depositVault.interface.events['SetMaxSupplyCap(uint256)'].name,
   ).to.not.reverted;
 
   const newMax = await depositVault.maxSupplyCap();

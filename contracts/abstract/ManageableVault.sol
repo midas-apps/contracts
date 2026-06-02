@@ -9,7 +9,7 @@ import {EnumerableSetUpgradeable as EnumerableSet} from "@openzeppelin/contracts
 
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 
-import {IManageableVault, TokenConfig, CommonVaultInitParams, LimitConfig} from "../interfaces/IManageableVault.sol";
+import {IManageableVault, TokenConfig, CommonVaultInitParams} from "../interfaces/IManageableVault.sol";
 import {IMToken} from "../interfaces/IMToken.sol";
 import {IDataFeed} from "../interfaces/IDataFeed.sol";
 
@@ -225,14 +225,7 @@ abstract contract ManageableVault is
             allowance: allowance,
             stable: stable
         });
-        emit AddPaymentToken(
-            msg.sender,
-            token,
-            dataFeed,
-            tokenFee,
-            allowance,
-            stable
-        );
+        emit AddPaymentToken(token, dataFeed, tokenFee, allowance, stable);
     }
 
     /**
@@ -242,7 +235,7 @@ abstract contract ManageableVault is
     function removePaymentToken(address token) external onlyContractAdmin {
         require(_paymentTokens.remove(token), PaymentTokenNotExists(token));
         delete tokensConfig[token];
-        emit RemovePaymentToken(token, msg.sender);
+        emit RemovePaymentToken(token);
     }
 
     /**
@@ -255,7 +248,7 @@ abstract contract ManageableVault is
         _requireTokenExists(token);
 
         tokensConfig[token].allowance = allowance;
-        emit ChangeTokenAllowance(token, msg.sender, allowance);
+        emit ChangeTokenAllowance(token, allowance);
     }
 
     /**
@@ -270,7 +263,7 @@ abstract contract ManageableVault is
         _validateFee(fee, false);
 
         tokensConfig[token].fee = fee;
-        emit ChangeTokenFee(token, msg.sender, fee);
+        emit ChangeTokenFee(token, fee);
     }
 
     /**
@@ -284,7 +277,7 @@ abstract contract ManageableVault is
         _validateFee(tolerance, false);
 
         variationTolerance = tolerance;
-        emit SetVariationTolerance(msg.sender, tolerance);
+        emit SetVariationTolerance(tolerance);
     }
 
     /**
@@ -292,7 +285,7 @@ abstract contract ManageableVault is
      */
     function setMinAmount(uint256 newAmount) external onlyContractAdmin {
         minAmount = newAmount;
-        emit SetMinAmount(msg.sender, newAmount);
+        emit SetMinAmount(newAmount);
     }
 
     /**
@@ -302,7 +295,7 @@ abstract contract ManageableVault is
     function addWaivedFeeAccount(address account) external onlyContractAdmin {
         require(!waivedFeeRestriction[account], SameAddressValue(account));
         waivedFeeRestriction[account] = true;
-        emit AddWaivedFeeAccount(account, msg.sender);
+        emit AddWaivedFeeAccount(account);
     }
 
     /**
@@ -315,7 +308,7 @@ abstract contract ManageableVault is
     {
         require(waivedFeeRestriction[account], SameAddressValue(account));
         waivedFeeRestriction[account] = false;
-        emit RemoveWaivedFeeAccount(account, msg.sender);
+        emit RemoveWaivedFeeAccount(account);
     }
 
     /**
@@ -327,7 +320,7 @@ abstract contract ManageableVault is
 
         tokensReceiver = receiver;
 
-        emit SetTokensReceiver(msg.sender, receiver);
+        emit SetTokensReceiver(receiver);
     }
 
     /**
@@ -337,7 +330,7 @@ abstract contract ManageableVault is
         _validateFee(newInstantFee, false);
 
         instantFee = newInstantFee;
-        emit SetInstantFee(msg.sender, newInstantFee);
+        emit SetInstantFee(newInstantFee);
     }
 
     /**
@@ -359,7 +352,7 @@ abstract contract ManageableVault is
     {
         _validateFee(newMaxInstantShare, false);
         maxInstantShare = newMaxInstantShare;
-        emit SetMaxInstantShare(msg.sender, newMaxInstantShare);
+        emit SetMaxInstantShare(newMaxInstantShare);
     }
 
     /**
@@ -370,7 +363,7 @@ abstract contract ManageableVault is
         onlyContractAdmin
     {
         maxApproveRequestId = newMaxApproveRequestId;
-        emit SetMaxApproveRequestId(msg.sender, newMaxApproveRequestId);
+        emit SetMaxApproveRequestId(newMaxApproveRequestId);
     }
 
     /**
@@ -428,7 +421,7 @@ abstract contract ManageableVault is
     {
         address withdrawTo = tokensReceiver;
         IERC20(token).safeTransfer(withdrawTo, amount);
-        emit WithdrawToken(msg.sender, token, withdrawTo, amount);
+        emit WithdrawToken(token, withdrawTo, amount);
     }
 
     /**
@@ -484,11 +477,7 @@ abstract contract ManageableVault is
         );
         minInstantFee = newMinInstantFee;
         maxInstantFee = newMaxInstantFee;
-        emit SetMinMaxInstantFee(
-            msg.sender,
-            newMinInstantFee,
-            newMaxInstantFee
-        );
+        emit SetMinMaxInstantFee(newMinInstantFee, newMaxInstantFee);
     }
 
     /**

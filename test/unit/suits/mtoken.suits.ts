@@ -995,7 +995,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         );
 
         await clawbackTest({ tokenContract, owner }, amount, holder, {
-          revertCustomError: acErrors.WMAC_HAS_ROLE,
+          revertCustomError: acErrors.WMAC_BLACKLISTED,
         });
       });
 
@@ -1148,7 +1148,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           blacklisted,
         );
         await mint({ tokenContract, owner }, blacklisted, 1, {
-          revertCustomError: acErrors.WMAC_HAS_ROLE,
+          revertCustomError: acErrors.WMAC_BLACKLISTED,
         });
       });
 
@@ -1169,7 +1169,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           tokenContract.connect(blacklisted).transfer(to.address, 1),
         ).revertedWithCustomError(
           tokenContract,
-          acErrors.WMAC_HAS_ROLE().customErrorName,
+          acErrors.WMAC_BLACKLISTED().customErrorName,
         );
       });
 
@@ -1190,7 +1190,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           tokenContract.connect(from).transfer(blacklisted.address, 1),
         ).revertedWithCustomError(
           tokenContract,
-          acErrors.WMAC_HAS_ROLE().customErrorName,
+          acErrors.WMAC_BLACKLISTED().customErrorName,
         );
       });
 
@@ -1215,7 +1215,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
             .transferFrom(blacklisted.address, to.address, 1),
         ).revertedWithCustomError(
           tokenContract,
-          acErrors.WMAC_HAS_ROLE().customErrorName,
+          acErrors.WMAC_BLACKLISTED().customErrorName,
         );
       });
 
@@ -1241,7 +1241,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
             .transferFrom(from.address, blacklisted.address, 1),
         ).revertedWithCustomError(
           tokenContract,
-          acErrors.WMAC_HAS_ROLE().customErrorName,
+          acErrors.WMAC_BLACKLISTED().customErrorName,
         );
       });
 
@@ -1257,7 +1257,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           blacklisted,
         );
         await burn({ tokenContract, owner }, blacklisted, 1, {
-          revertCustomError: acErrors.WMAC_HAS_ROLE,
+          revertCustomError: acErrors.WMAC_BLACKLISTED,
         });
       });
 
@@ -1301,7 +1301,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           tokenContract.connect(blacklisted).transfer(to.address, 1),
         ).revertedWithCustomError(
           tokenContract,
-          acErrors.WMAC_HAS_ROLE().customErrorName,
+          acErrors.WMAC_BLACKLISTED().customErrorName,
         );
 
         await unBlackList(

@@ -11,6 +11,12 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
  * initialization of implementation contract
  */
 abstract contract MidasInitializable is Initializable {
+    /**
+     * @notice error when the address is invalid
+     * @param addr address
+     */
+    error InvalidAddress(address addr);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();

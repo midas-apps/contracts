@@ -167,7 +167,7 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     {
         require(_maxAnswerDeviation <= 100 * _ONE, "CAG: !max deviation");
         maxAnswerDeviation = _maxAnswerDeviation;
-        emit MaxAnswerDeviationUpdated(msg.sender, _maxAnswerDeviation);
+        emit MaxAnswerDeviationUpdated(_maxAnswerDeviation);
     }
 
     /**

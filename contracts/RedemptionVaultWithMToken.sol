@@ -20,6 +20,10 @@ contract RedemptionVaultWithMToken is RedemptionVault {
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
 
+    /**
+     * @notice linked redemption vault does not waive fees for this contract
+     * @param target linked redemption vault address
+     */
     error FeesNotWaivedOnTarget(address target);
 
     /**
@@ -34,10 +38,9 @@ contract RedemptionVaultWithMToken is RedemptionVault {
 
     /**
      * @notice Emitted when the redemption vault address is updated
-     * @param caller address of the caller
      * @param newVault new redemption vault address
      */
-    event SetRedemptionVault(address indexed caller, address indexed newVault);
+    event SetRedemptionVault(address indexed newVault);
 
     /**
      * @notice upgradeable pattern contract`s initializer
@@ -71,7 +74,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
 
         redemptionVault = IRedemptionVault(_redemptionVault);
 
-        emit SetRedemptionVault(msg.sender, _redemptionVault);
+        emit SetRedemptionVault(_redemptionVault);
     }
 
     /**

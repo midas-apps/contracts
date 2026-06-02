@@ -33,7 +33,7 @@ describe('Blacklistable', function () {
         ),
       ).revertedWithCustomError(
         blackListableTester,
-        acErrors.WMAC_HAS_ROLE().customErrorName,
+        acErrors.WMAC_BLACKLISTED().customErrorName,
       );
     });
 

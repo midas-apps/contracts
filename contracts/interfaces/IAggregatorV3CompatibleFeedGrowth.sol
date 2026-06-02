@@ -24,13 +24,9 @@ interface IAggregatorV3CompatibleFeedGrowth is AggregatorV3Interface {
     );
 
     /**
-     * @param sender the address that updated the max answer deviation
      * @param maxAnswerDeviation the new max answer deviation
      */
-    event MaxAnswerDeviationUpdated(
-        address indexed sender,
-        uint256 indexed maxAnswerDeviation
-    );
+    event MaxAnswerDeviationUpdated(uint256 indexed maxAnswerDeviation);
 
     /**
      * @notice emitted when max growth apr is updated

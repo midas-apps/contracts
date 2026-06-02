@@ -132,11 +132,8 @@ export const setInstantFeeTest = async (
   }
 
   await expect(vault.connect(opt?.from ?? owner).setInstantFee(newFee))
-    .to.emit(
-      vault,
-      vault.interface.events['SetInstantFee(address,uint256)'].name,
-    )
-    .withArgs((opt?.from ?? owner).address, newFee).to.not.reverted;
+    .to.emit(vault, vault.interface.events['SetInstantFee(uint256)'].name)
+    .withArgs(newFee).to.not.reverted;
 
   const fee = await vault.instantFee();
   expect(fee).eq(newFee);
@@ -167,10 +164,9 @@ export const setMinMaxInstantFeeTest = async (
   )
     .to.emit(
       vault,
-      vault.interface.events['SetMinMaxInstantFee(address,uint64,uint64)'].name,
+      vault.interface.events['SetMinMaxInstantFee(uint64,uint64)'].name,
     )
-    .withArgs((opt?.from ?? owner).address, newMinInstantFee, newMaxInstantFee)
-    .to.not.reverted;
+    .withArgs(newMinInstantFee, newMaxInstantFee).to.not.reverted;
 
   expect(await vault.minInstantFee()).eq(newMinInstantFee);
   expect(await vault.maxInstantFee()).eq(newMaxInstantFee);
@@ -198,9 +194,9 @@ export const setVariabilityToleranceTest = async (
   )
     .to.emit(
       vault,
-      vault.interface.events['SetVariationTolerance(address,uint256)'].name,
+      vault.interface.events['SetVariationTolerance(uint256)'].name,
     )
-    .withArgs((opt?.from ?? owner).address, newTolerance).to.not.reverted;
+    .withArgs(newTolerance).to.not.reverted;
 
   const tolerance = await vault.variationTolerance();
   expect(tolerance).eq(newTolerance);
@@ -222,11 +218,8 @@ export const addWaivedFeeAccountTest = async (
   }
 
   await expect(vault.connect(opt?.from ?? owner).addWaivedFeeAccount(account))
-    .to.emit(
-      vault,
-      vault.interface.events['AddWaivedFeeAccount(address,address)'].name,
-    )
-    .withArgs((opt?.from ?? owner).address, account).to.not.reverted;
+    .to.emit(vault, vault.interface.events['AddWaivedFeeAccount(address)'].name)
+    .withArgs(account).to.not.reverted;
 
   const isWaivedFee = await vault.waivedFeeRestriction(account);
   expect(isWaivedFee).eq(true);
@@ -255,10 +248,9 @@ export const changeTokenAllowanceTest = async (
   )
     .to.emit(
       vault,
-      vault.interface.events['ChangeTokenAllowance(address,address,uint256)']
-        .name,
+      vault.interface.events['ChangeTokenAllowance(address,uint256)'].name,
     )
-    .withArgs((opt?.from ?? owner).address, token).to.not.reverted;
+    .withArgs(token).to.not.reverted;
 
   const allowance = (await vault.tokensConfig(token)).allowance;
   expect(allowance).eq(newAllowance);
@@ -285,9 +277,9 @@ export const changeTokenFeeTest = async (
   await expect(vault.connect(opt?.from ?? owner).changeTokenFee(token, newFee))
     .to.emit(
       vault,
-      vault.interface.events['ChangeTokenFee(address,address,uint256)'].name,
+      vault.interface.events['ChangeTokenFee(address,uint256)'].name,
     )
-    .withArgs((opt?.from ?? owner).address, token, newFee).to.not.reverted;
+    .withArgs(token, newFee).to.not.reverted;
 
   const fee = (await vault.tokensConfig(token)).fee;
   expect(fee).eq(newFee);
@@ -315,9 +307,9 @@ export const removeWaivedFeeAccountTest = async (
   )
     .to.emit(
       vault,
-      vault.interface.events['RemoveWaivedFeeAccount(address,address)'].name,
+      vault.interface.events['RemoveWaivedFeeAccount(address)'].name,
     )
-    .withArgs((opt?.from ?? owner).address, account).to.not.reverted;
+    .withArgs(account).to.not.reverted;
 
   const isWaivedFee = await vault.waivedFeeRestriction(account);
   expect(isWaivedFee).eq(false);
@@ -442,10 +434,8 @@ export const setMaxInstantShareTest = async (
 
   await expect(
     vault.connect(opt?.from ?? owner).setMaxInstantShare(maxInstantShare),
-  ).to.emit(
-    vault,
-    vault.interface.events['SetMaxInstantShare(address,uint64)'].name,
-  ).to.not.reverted;
+  ).to.emit(vault, vault.interface.events['SetMaxInstantShare(uint64)'].name).to
+    .not.reverted;
 
   const newMaxInstantShare = await vault.maxInstantShare();
   expect(newMaxInstantShare).eq(maxInstantShare);
@@ -469,11 +459,8 @@ export const setTokensReceiverTest = async (
   }
 
   await expect(vault.connect(opt?.from ?? owner).setTokensReceiver(newReceiver))
-    .to.emit(
-      vault,
-      vault.interface.events['SetTokensReceiver(address,address)'].name,
-    )
-    .withArgs((opt?.from ?? owner).address, newReceiver).to.not.reverted;
+    .to.emit(vault, vault.interface.events['SetTokensReceiver(address)'].name)
+    .withArgs(newReceiver).to.not.reverted;
 
   const feeReceiver = await vault.tokensReceiver();
   expect(feeReceiver).eq(newReceiver);
@@ -495,11 +482,8 @@ export const addAccountWaivedFeeRestrictionTest = async (
   }
 
   await expect(vault.connect(opt?.from ?? owner).addWaivedFeeAccount(account))
-    .to.emit(
-      vault,
-      vault.interface.events['AddWaivedFeeAccount(address,address)'].name,
-    )
-    .withArgs(account, (opt?.from ?? owner).address).to.not.reverted;
+    .to.emit(vault, vault.interface.events['AddWaivedFeeAccount(address)'].name)
+    .withArgs(account).to.not.reverted;
 };
 
 export const setSequentialRequestProcessingTest = async (
@@ -559,9 +543,8 @@ export const setMinAmountToDepositTest = async (
       .setMinMTokenAmountForFirstDeposit(value),
   ).to.emit(
     depositVault,
-    depositVault.interface.events[
-      'SetMinMTokenAmountForFirstDeposit(address,uint256)'
-    ].name,
+    depositVault.interface.events['SetMinMTokenAmountForFirstDeposit(uint256)']
+      .name,
   ).to.not.reverted;
 
   const newMin = await depositVault.minMTokenAmountForFirstDeposit();
@@ -587,7 +570,7 @@ export const setMinAmountTest = async (
 
   await expect(vault.connect(opt?.from ?? owner).setMinAmount(value)).to.emit(
     vault,
-    vault.interface.events['SetMinAmount(address,uint256)'].name,
+    vault.interface.events['SetMinAmount(uint256)'].name,
   ).to.not.reverted;
 
   const newMin = await vault.minAmount();
@@ -624,7 +607,7 @@ export const addPaymentTokenTest = async (
   ).to.emit(
     vault,
     vault.interface.events[
-      'AddPaymentToken(address,address,address,uint256,uint256,bool)'
+      'AddPaymentToken(address,address,uint256,uint256,bool)'
     ].name,
   ).to.not.reverted;
 
@@ -655,10 +638,8 @@ export const removePaymentTokenTest = async (
 
   await expect(
     vault.connect(opt?.from ?? owner).removePaymentToken(token),
-  ).to.emit(
-    vault,
-    vault.interface.events['RemovePaymentToken(address,address)'].name,
-  ).to.not.reverted;
+  ).to.emit(vault, vault.interface.events['RemovePaymentToken(address)'].name)
+    .to.not.reverted;
 
   const paymentTokens = await vault.getPaymentTokens();
   expect(paymentTokens.find((v) => v === token)).eq(undefined);
@@ -693,8 +674,7 @@ export const withdrawTest = async (
     vault.connect(opt?.from ?? owner).withdrawToken(token, amount),
   ).to.emit(
     vault,
-    vault.interface.events['WithdrawToken(address,address,address,uint256)']
-      .name,
+    vault.interface.events['WithdrawToken(address,address,uint256)'].name,
   ).to.not.reverted;
 
   const balanceAfterContract = await tokenContract.balanceOf(vault.address);

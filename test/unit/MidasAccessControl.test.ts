@@ -65,7 +65,7 @@ describe('MidasAccessControl', function () {
 
       await expect(
         accessControl.renounceRole(constants.HashZero, constants.AddressZero),
-      ).revertedWith('MAC: Forbidden');
+      ).revertedWithCustomError(accessControl, 'Forbidden');
     });
   });
 
@@ -75,7 +75,7 @@ describe('MidasAccessControl', function () {
 
       await expect(
         accessControl.grantRoleMult([], [ethers.constants.AddressZero]),
-      ).revertedWith('MAC: mismatch arrays');
+      ).revertedWithCustomError(accessControl, 'MismatchArrays');
     });
 
     it('should fail: arrays length mismatch', async () => {
@@ -115,7 +115,7 @@ describe('MidasAccessControl', function () {
 
       await expect(
         accessControl.revokeRoleMult([], [ethers.constants.AddressZero]),
-      ).revertedWith('MAC: mismatch arrays');
+      ).revertedWithCustomError(accessControl, 'MismatchArrays');
     });
 
     it('should fail: arrays length mismatch', async () => {
@@ -168,8 +168,9 @@ describe('MidasAccessControl', function () {
             roles.common.blacklisted,
             roles.common.greenlistedOperator,
           ),
-      ).revertedWith(
-        `AccessControl: account ${regularAccounts[0].address.toLowerCase()} is missing role ${await accessControl.DEFAULT_ADMIN_ROLE()}`,
+      ).revertedWithCustomError(
+        accessControl,
+        acErrors.WMAC_HASNT_PERMISSION().customErrorName,
       );
     });
 
@@ -193,9 +194,14 @@ describe('MidasAccessControl', function () {
       ).reverted;
     });
 
-    it('should fail: caller has current role admin but not the DEFAULT_ADMIN_ROLE', async () => {
+    it('caller has current role admin but not the DEFAULT_ADMIN_ROLE', async () => {
       const { accessControl, roles, regularAccounts } = await loadFixture(
         defaultDeploy,
+      );
+
+      await accessControl.grantRole(
+        roles.common.blacklistedOperator,
+        regularAccounts[0].address,
       );
 
       await expect(
@@ -205,12 +211,10 @@ describe('MidasAccessControl', function () {
             roles.common.blacklisted,
             roles.common.greenlistedOperator,
           ),
-      ).revertedWith(
-        `AccessControl: account ${regularAccounts[0].address.toLowerCase()} is missing role ${await accessControl.DEFAULT_ADMIN_ROLE()}`,
-      );
+      ).not.reverted;
     });
 
-    it('caller has DEFAULT_ADMIN_ROLE but not current role admin', async () => {
+    it('should fail: caller has DEFAULT_ADMIN_ROLE but not current role admin', async () => {
       const { accessControl, owner, roles } = await loadFixture(defaultDeploy);
 
       await accessControl.revokeRole(
@@ -223,10 +227,9 @@ describe('MidasAccessControl', function () {
           roles.common.blacklisted,
           roles.common.greenlistedOperator,
         ),
-      ).not.reverted;
-
-      expect(await accessControl.getRoleAdmin(roles.common.blacklisted)).eq(
-        roles.common.greenlistedOperator,
+      ).revertedWithCustomError(
+        accessControl,
+        acErrors.WMAC_HASNT_PERMISSION().customErrorName,
       );
     });
 
@@ -254,8 +257,9 @@ describe('MidasAccessControl', function () {
         accessControl
           .connect(regularAccounts[0])
           .grantRole(TEST_ROLE, regularAccounts[2].address),
-      ).revertedWith(
-        `AccessControl: account ${regularAccounts[0].address.toLowerCase()} is missing role ${NEW_ADMIN_ROLE}`,
+      ).revertedWithCustomError(
+        accessControl,
+        acErrors.WMAC_HASNT_PERMISSION().customErrorName,
       );
 
       await expect(
@@ -289,7 +293,7 @@ describe('MidasAccessControl', function () {
             },
           ],
           {
-            revertMessage: `AccessControl: account ${regularAccounts[0].address.toLowerCase()} is missing role ${await accessControl.DEFAULT_ADMIN_ROLE()}`,
+            revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
           },
         );
       });
@@ -315,7 +319,7 @@ describe('MidasAccessControl', function () {
     });
 
     describe('setFunctionAccessGrantOperator()', () => {
-      it('should fail: reverts when FA admin role is disabled', async () => {
+      it('should fail: reverts when role is user facing role', async () => {
         const { accessControl, owner, roles } = await loadFixture(
           defaultDeploy,
         );
@@ -325,7 +329,7 @@ describe('MidasAccessControl', function () {
             accessControl,
             owner,
           },
-          roles.common.greenlistedOperator,
+          roles.common.greenlisted,
           [
             {
               targetContract: accessControl.address,
@@ -334,26 +338,17 @@ describe('MidasAccessControl', function () {
               enabled: true,
             },
           ],
-          { revertMessage: 'MAC: user facing role' },
+          {
+            revertCustomError: {
+              customErrorName: 'UserFacingRoleNotAllowed',
+            },
+          },
         );
       });
 
-      it('when FA admin role is enabled', async () => {
+      it('when role is not user facing role', async () => {
         const { accessControl, owner, roles } = await loadFixture(
           defaultDeploy,
-        );
-
-        await setIsUserFacingRoleTester(
-          {
-            accessControl,
-            owner,
-          },
-          [
-            {
-              role: roles.common.greenlistedOperator,
-              enabled: true,
-            },
-          ],
         );
 
         await setFunctionAccessGrantOperatorTester(
@@ -430,7 +425,7 @@ describe('MidasAccessControl', function () {
               enabled: true,
             },
           ],
-          { revertMessage: 'MAC: not FA grant operator' },
+          { revertCustomError: acErrors.WMAC_HASNT_PERMISSION() },
         );
       });
 
@@ -460,7 +455,7 @@ describe('MidasAccessControl', function () {
               enabled: true,
             },
           ],
-          { revertMessage: 'MAC: not FA grant operator' },
+          { revertCustomError: acErrors.WMAC_HASNT_PERMISSION() },
         );
       });
     });
@@ -497,7 +492,7 @@ describe('WithMidasAccessControl', function () {
           .withOnlyRole(roles.common.defaultAdmin, false),
       ).revertedWithCustomError(
         wAccessControlTester,
-        acErrors.WMAC_HASNT_ROLE().customErrorName,
+        acErrors.WMAC_HASNT_PERMISSION().customErrorName,
       );
     });
 

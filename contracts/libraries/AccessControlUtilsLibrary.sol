@@ -59,6 +59,7 @@ library AccessControlUtilsLibrary {
      * @param roleIsFunctionOperatorRole whether the role is a function operator
      * @param accountToCheck account to check
      * @param validateFunctionRole whether to validate the function role
+     * @return actualAccount actual account that has access to the function
      */
     function validateFunctionAccessWithTimelock(
         IMidasAccessControl accessControl,
@@ -67,7 +68,13 @@ library AccessControlUtilsLibrary {
         bool roleIsFunctionOperatorRole,
         address accountToCheck,
         bool validateFunctionRole
-    ) internal view {
+    )
+        internal
+        view
+        returns (
+            address /* actualAccount */
+        )
+    {
         IMidasTimelockManager timelockManager = IMidasTimelockManager(
             accessControl.timelockManager()
         );
@@ -112,6 +119,8 @@ library AccessControlUtilsLibrary {
                 SenderIsNotTimelock(roleUsed, msg.sig, accountToCheck)
             );
         }
+
+        return account;
     }
 
     /**

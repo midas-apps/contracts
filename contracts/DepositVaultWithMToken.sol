@@ -18,7 +18,16 @@ contract DepositVaultWithMToken is DepositVault {
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
 
+    /**
+     * @notice when zero mToken is received
+     * @param mTokenReceived mToken received
+     */
     error ZeroMTokenReceived(uint256 mTokenReceived);
+
+    /**
+     * @notice when auto-invest fails
+     * @param err error bytes
+     */
     error AutoInvestFailed(bytes err);
 
     /**
@@ -45,13 +54,9 @@ contract DepositVaultWithMToken is DepositVault {
 
     /**
      * @notice Emitted when the mToken DepositVault address is updated
-     * @param caller address of the caller
      * @param newVault new mToken DepositVault address
      */
-    event SetMTokenDepositVault(
-        address indexed caller,
-        address indexed newVault
-    );
+    event SetMTokenDepositVault(address indexed newVault);
 
     /**
      * @notice Emitted when `mTokenDepositsEnabled` flag is updated
@@ -96,7 +101,7 @@ contract DepositVaultWithMToken is DepositVault {
         );
         _validateAddress(_mTokenDepositVault, true);
         mTokenDepositVault = IDepositVault(_mTokenDepositVault);
-        emit SetMTokenDepositVault(msg.sender, _mTokenDepositVault);
+        emit SetMTokenDepositVault(_mTokenDepositVault);
     }
 
     /**

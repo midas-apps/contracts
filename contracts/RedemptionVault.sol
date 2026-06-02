@@ -377,7 +377,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             );
 
             loanRequests[requestIds[i]].status = RequestStatus.Processed;
-            emit RepayLpLoanRequest(msg.sender, requestIds[i], amountFee);
+            emit RepayLpLoanRequest(requestIds[i], amountFee);
         }
     }
 
@@ -390,7 +390,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         _validateRequest(requestId, request.tokenOut, request.status);
 
         loanRequests[requestId].status = RequestStatus.Canceled;
-        emit CancelLpLoanRequest(msg.sender, requestId);
+        emit CancelLpLoanRequest(requestId);
     }
 
     /**
@@ -401,7 +401,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         requestRedeemer = redeemer;
 
-        emit SetRequestRedeemer(msg.sender, redeemer);
+        emit SetRequestRedeemer(redeemer);
     }
 
     /**
@@ -410,7 +410,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     function setLoanLp(address newLoanLp) external onlyContractAdmin {
         loanLp = newLoanLp;
 
-        emit SetLoanLp(msg.sender, newLoanLp);
+        emit SetLoanLp(newLoanLp);
     }
 
     /**
@@ -422,7 +422,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     {
         loanRepaymentAddress = newLoanRepaymentAddress;
 
-        emit SetLoanRepaymentAddress(msg.sender, newLoanRepaymentAddress);
+        emit SetLoanRepaymentAddress(newLoanRepaymentAddress);
     }
 
     /**
@@ -434,7 +434,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     {
         loanSwapperVault = IRedemptionVault(newLoanSwapperVault);
 
-        emit SetLoanSwapperVault(msg.sender, newLoanSwapperVault);
+        emit SetLoanSwapperVault(newLoanSwapperVault);
     }
 
     /**
@@ -442,7 +442,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function setLoanApr(uint64 newLoanApr) external onlyContractAdmin {
         loanApr = newLoanApr;
-        emit SetLoanApr(msg.sender, newLoanApr);
+        emit SetLoanApr(newLoanApr);
     }
 
     /**
@@ -454,7 +454,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     {
         preferLoanLiquidity = newLoanLpFirst;
 
-        emit SetPreferLoanLiquidity(msg.sender, newLoanLpFirst);
+        emit SetPreferLoanLiquidity(newLoanLpFirst);
     }
 
     /**
@@ -972,7 +972,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             uint256 /* obtainedLiquidityBase18 */
         )
     {
-        require(msg.sender == address(this), NotSelfCall());
+        _requireSelfCall();
         return
             _obtainVaultLiquidity(
                 tokenOut,
@@ -1009,7 +1009,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             uint256 /* feePortionBase18 */
         )
     {
-        require(msg.sender == address(this), NotSelfCall());
+        _requireSelfCall();
+
         address _loanLp = loanLp;
         IRedemptionVault _loanSwapperVault = loanSwapperVault;
 
@@ -1326,6 +1327,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     {
         uint256 balance = IERC20(token).balanceOf(requestRedeemer);
         return balance >= requiredLiquidity.convertFromBase18(tokenDecimals);
+    }
+
+    function _requireSelfCall() private view {
+        require(msg.sender == address(this), NotSelfCall());
     }
 
     function _balanceOfVault(address tokenOut) private view returns (uint256) {

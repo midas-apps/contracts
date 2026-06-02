@@ -172,7 +172,7 @@ describe('LayerZero', function () {
           { amount: 100 },
           {
             from: blacklisted,
-            revertMessage: acErrors.WMAC_HAS_ROLE,
+            revertMessage: acErrors.WMAC_BLACKLISTED,
           },
         );
       });

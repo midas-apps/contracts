@@ -678,7 +678,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           mTbill.connect(from).transfer(to.address, amount),
         ).revertedWithCustomError(
           mTbill,
-          acErrors.WMAC_HAS_ROLE().customErrorName,
+          acErrors.WMAC_BLACKLISTED().customErrorName,
         );
       });
     });

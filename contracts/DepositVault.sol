@@ -344,7 +344,7 @@ contract DepositVault is ManageableVault, IDepositVault {
     {
         minMTokenAmountForFirstDeposit = newValue;
 
-        emit SetMinMTokenAmountForFirstDeposit(msg.sender, newValue);
+        emit SetMinMTokenAmountForFirstDeposit(newValue);
     }
 
     /**
@@ -353,7 +353,7 @@ contract DepositVault is ManageableVault, IDepositVault {
     function setMaxSupplyCap(uint256 newValue) external onlyContractAdmin {
         maxSupplyCap = newValue;
 
-        emit SetMaxSupplyCap(msg.sender, newValue);
+        emit SetMaxSupplyCap(newValue);
     }
 
     /**
@@ -819,7 +819,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         ) {
             require(
                 result.mintAmount >= minMTokenAmountForFirstDeposit,
-                MinAmountFirstDepositNotMet(
+                LessThanMinAmountFirstDeposit(
                     result.mintAmount,
                     minMTokenAmountForFirstDeposit
                 )

@@ -5,6 +5,30 @@ import {IAccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acc
 
 interface IMidasAccessControl is IAccessControlUpgradeable {
     /**
+     * @notice when the array is empty
+     */
+    error EmptyArray();
+
+    /**
+     * @notice when the arrays have different lengths
+     * @param length1 length of the first array
+     * @param length2 length of the second array
+     */
+    error MismatchArrays(uint256 length1, uint256 length2);
+
+    /**
+     * @notice error when the function is forbidden
+     */
+    error Forbidden();
+
+    /**
+     * @notice when the role is being revoked from the self
+     * @param role role to be revoked
+     * @param account account to be revoked
+     */
+    error CannotRevokeFromSelf(bytes32 role, address account);
+
+    /**
      * @notice Set user facing role params
      */
     struct SetIsUserFacingRoleParams {

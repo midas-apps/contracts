@@ -19,9 +19,26 @@ contract DepositVaultWithMorpho is DepositVault {
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
 
+    /**
+     * @notice when asset mismatch
+     * @param morphoVault Morpho Vault address
+     * @param token token address
+     */
     error AssetMismatch(address morphoVault, address token);
+    /**
+     * @notice when vault is not set
+     * @param token token address
+     */
     error VaultNotSet(address token);
+    /**
+     * @notice when zero shares are received
+     * @param shares shares
+     */
     error ZeroShares(uint256 shares);
+    /**
+     * @notice when auto-invest fails
+     * @param err error bytes
+     */
     error AutoInvestFailed(bytes err);
 
     /**
@@ -48,22 +65,16 @@ contract DepositVaultWithMorpho is DepositVault {
 
     /**
      * @notice Emitted when a Morpho Vault is configured for a payment token
-     * @param caller address of the caller
      * @param token payment token address
      * @param vault Morpho Vault address
      */
-    event SetMorphoVault(
-        address indexed caller,
-        address indexed token,
-        address indexed vault
-    );
+    event SetMorphoVault(address indexed token, address indexed vault);
 
     /**
      * @notice Emitted when a Morpho Vault is removed for a payment token
-     * @param caller address of the caller
      * @param token payment token address
      */
-    event RemoveMorphoVault(address indexed caller, address indexed token);
+    event RemoveMorphoVault(address indexed token);
 
     /**
      * @notice Emitted when `morphoDepositsEnabled` flag is updated
@@ -93,7 +104,7 @@ contract DepositVaultWithMorpho is DepositVault {
             AssetMismatch(_morphoVault, _token)
         );
         morphoVaults[_token] = IMorphoVault(_morphoVault);
-        emit SetMorphoVault(msg.sender, _token, _morphoVault);
+        emit SetMorphoVault(_token, _morphoVault);
     }
 
     /**
@@ -106,7 +117,7 @@ contract DepositVaultWithMorpho is DepositVault {
             VaultNotSet(_token)
         );
         delete morphoVaults[_token];
-        emit RemoveMorphoVault(msg.sender, _token);
+        emit RemoveMorphoVault(_token);
     }
 
     /**

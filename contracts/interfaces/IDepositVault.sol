@@ -44,27 +44,36 @@ struct DepositVaultInitParams {
  * @author RedDuck Software
  */
 interface IDepositVault is IManageableVault {
-    error MinAmountFirstDepositNotMet(
+    /**
+     * @notice first deposit mint amount is below minimum
+     * @param amountMTokenWithoutFee mint amount after fee (decimals 18)
+     * @param minAmount minimum first deposit mint amount
+     */
+    error LessThanMinAmountFirstDeposit(
         uint256 amountMTokenWithoutFee,
         uint256 minAmount
     );
+
+    /**
+     * @notice when token supply cap is exceeded
+     */
     error SupplyCapExceeded();
+
+    /**
+     * @notice when max amount per request is exceeded
+     * @param estimatedMintAmount estimated mint amount
+     */
     error MaxAmountPerRequestExceeded(uint256 estimatedMintAmount);
 
     /**
-     * @param caller function caller (msg.sender)
      * @param newValue new min amount to deposit value
      */
-    event SetMinMTokenAmountForFirstDeposit(
-        address indexed caller,
-        uint256 newValue
-    );
+    event SetMinMTokenAmountForFirstDeposit(uint256 newValue);
 
     /**
-     * @param caller function caller (msg.sender)
      * @param newValue new max supply cap value
      */
-    event SetMaxSupplyCap(address indexed caller, uint256 newValue);
+    event SetMaxSupplyCap(uint256 newValue);
 
     /**
      * @param newValue new max amount per request

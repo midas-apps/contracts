@@ -755,7 +755,7 @@ export const depositVaultSuits = (
             99_999,
             {
               revertCustomError: {
-                customErrorName: 'MinAmountFirstDepositNotMet',
+                customErrorName: 'LessThanMinAmountFirstDeposit',
               },
             },
           );
@@ -1460,7 +1460,7 @@ export const depositVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertCustomError: acErrors.WMAC_HAS_ROLE,
+              revertCustomError: acErrors.WMAC_BLACKLISTED,
             },
           );
         });
@@ -1559,7 +1559,7 @@ export const depositVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertCustomError: acErrors.WMAC_HAS_ROLE,
+              revertCustomError: acErrors.WMAC_BLACKLISTED,
             },
           );
         });
@@ -3236,7 +3236,7 @@ export const depositVaultSuits = (
             99_999,
             {
               revertCustomError: {
-                customErrorName: 'MinAmountFirstDepositNotMet',
+                customErrorName: 'LessThanMinAmountFirstDeposit',
               },
             },
           );
@@ -3356,7 +3356,7 @@ export const depositVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertCustomError: acErrors.WMAC_HAS_ROLE,
+              revertCustomError: acErrors.WMAC_BLACKLISTED,
             },
           );
         });
@@ -3454,7 +3454,7 @@ export const depositVaultSuits = (
             1,
             {
               from: regularAccounts[0],
-              revertCustomError: acErrors.WMAC_HAS_ROLE,
+              revertCustomError: acErrors.WMAC_BLACKLISTED,
             },
           );
         });
@@ -4216,7 +4216,7 @@ export const depositVaultSuits = (
               { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
               0,
               parseUnits('5'),
-              { revertCustomError: acErrors.WMAC_HAS_ROLE },
+              { revertCustomError: acErrors.WMAC_BLACKLISTED },
             );
           });
 

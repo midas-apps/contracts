@@ -31,7 +31,7 @@ export const greenListEnable = async (
     greenlistable.connect(opt?.from ?? owner).setGreenlistEnable(enable),
   ).to.emit(
     greenlistable,
-    greenlistable.interface.events['SetGreenlistEnable(address,bool)'].name,
+    greenlistable.interface.events['SetGreenlistEnable(bool)'].name,
   ).to.not.reverted;
 
   expect(await greenlistable.greenlistEnabled()).eq(enable);

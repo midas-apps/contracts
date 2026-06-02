@@ -18,22 +18,20 @@ struct TokenConfig {
     bool stable;
 }
 
-/**
- * @notice Rate limit configuration
- */
-struct LimitConfig {
-    /// @notice limit amount per window
-    uint256 limit;
-    /// @notice limitUsed amount used within the last epoch
-    uint256 limitUsed;
-    /// @notice last epoch id
-    uint256 lastEpoch;
-}
-
 enum RequestStatus {
     Pending,
     Processed,
     Canceled
+}
+
+/**
+ * @notice Limit config init params
+ */
+struct LimitConfigInitParams {
+    /// @notice window duration in seconds
+    uint256 window;
+    /// @notice limit amount per window
+    uint256 limit;
 }
 
 /**
@@ -66,16 +64,6 @@ struct CommonVaultInitParams {
     bool sequentialRequestProcessing;
     /// @notice limit configs
     LimitConfigInitParams[] limitConfigs;
-}
-
-/**
- * @notice Limit config init params
- */
-struct LimitConfigInitParams {
-    /// @notice window duration in seconds
-    uint256 window;
-    /// @notice limit amount per window
-    uint256 limit;
 }
 
 /**
@@ -226,20 +214,17 @@ interface IManageableVault {
     );
 
     /**
-     * @param caller function caller (msg.sender)
      * @param token token that was withdrawn
      * @param withdrawTo address to which tokens were withdrawn
      * @param amount `token` transfer amount
      */
     event WithdrawToken(
-        address indexed caller,
         address indexed token,
         address indexed withdrawTo,
         uint256 amount
     );
 
     /**
-     * @param caller function caller (msg.sender)
      * @param token address of token that
      * @param dataFeed token dataFeed address
      * @param fee fee 1% = 100
@@ -247,7 +232,6 @@ interface IManageableVault {
      * @param stable stablecoin flag
      */
     event AddPaymentToken(
-        address indexed caller,
         address indexed token,
         address indexed dataFeed,
         uint256 fee,
@@ -257,115 +241,65 @@ interface IManageableVault {
 
     /**
      * @param token address of token that
-     * @param caller function caller (msg.sender)
      * @param allowance new allowance
      */
-    event ChangeTokenAllowance(
-        address indexed token,
-        address indexed caller,
-        uint256 allowance
-    );
+    event ChangeTokenAllowance(address indexed token, uint256 allowance);
 
     /**
      * @param token address of token that
-     * @param caller function caller (msg.sender)
      * @param fee new fee
      */
-    event ChangeTokenFee(
-        address indexed token,
-        address indexed caller,
-        uint256 fee
-    );
+    event ChangeTokenFee(address indexed token, uint256 fee);
 
     /**
      * @param token address of token that
-     * @param caller function caller (msg.sender)
      */
-    event RemovePaymentToken(address indexed token, address indexed caller);
+    event RemovePaymentToken(address indexed token);
 
     /**
      * @param account address of account
-     * @param caller function caller (msg.sender)
      */
-    event AddWaivedFeeAccount(address indexed account, address indexed caller);
+    event AddWaivedFeeAccount(address indexed account);
 
     /**
      * @param account address of account
-     * @param caller function caller (msg.sender)
      */
-    event RemoveWaivedFeeAccount(
-        address indexed account,
-        address indexed caller
-    );
+    event RemoveWaivedFeeAccount(address indexed account);
 
     /**
-     * @param caller function caller (msg.sender)
      * @param newFee new operation fee value
      */
-    event SetInstantFee(address indexed caller, uint256 newFee);
+    event SetInstantFee(uint256 newFee);
 
     /**
-     * @param caller function caller (msg.sender)
      * @param newMinInstantFee new minimum instant fee
      * @param newMaxInstantFee new maximum instant fee
      */
-    event SetMinMaxInstantFee(
-        address indexed caller,
-        uint64 newMinInstantFee,
-        uint64 newMaxInstantFee
-    );
+    event SetMinMaxInstantFee(uint64 newMinInstantFee, uint64 newMaxInstantFee);
     /**
-     * @param caller function caller (msg.sender)
      * @param newAmount new min amount for operation
      */
-    event SetMinAmount(address indexed caller, uint256 newAmount);
+    event SetMinAmount(uint256 newAmount);
 
     /**
-     * @param caller function caller (msg.sender)
-     * @param window window duration in seconds
-     * @param limit limit amount per window
-     */
-    event SetInstantLimitConfig(
-        address indexed caller,
-        uint256 indexed window,
-        uint256 limit
-    );
-
-    /**
-     * @param caller function caller (msg.sender)
      * @param newMaxInstantShare new maximum instant share value in basis points (100 = 1%)
      */
-    event SetMaxInstantShare(address indexed caller, uint64 newMaxInstantShare);
+    event SetMaxInstantShare(uint64 newMaxInstantShare);
 
     /**
-     * @param caller function caller (msg.sender)
-     * @param window window duration in seconds
-     */
-    event RemoveInstantLimitConfig(
-        address indexed caller,
-        uint256 indexed window
-    );
-
-    /**
-     * @param caller function caller (msg.sender)
      * @param newTolerance percent of price diviation 1% = 100
      */
-    event SetVariationTolerance(address indexed caller, uint256 newTolerance);
+    event SetVariationTolerance(uint256 newTolerance);
 
     /**
-     * @param caller function caller (msg.sender)
-     * @param reciever new reciever address
+     * @param receiver new receiver address
      */
-    event SetTokensReceiver(address indexed caller, address indexed reciever);
+    event SetTokensReceiver(address indexed receiver);
 
     /**
-     * @param caller function caller (msg.sender)
      * @param newMaxApproveRequestId new max requestId that can be approved
      */
-    event SetMaxApproveRequestId(
-        address indexed caller,
-        uint256 newMaxApproveRequestId
-    );
+    event SetMaxApproveRequestId(uint256 newMaxApproveRequestId);
 
     /**
      * @param user user address
@@ -461,11 +395,11 @@ interface IManageableVault {
     function removeWaivedFeeAccount(address account) external;
 
     /**
-     * @notice set new reciever for tokens.
+     * @notice set new receiver for tokens.
      * can be called only from permissioned actor.
-     * @param reciever new token reciever address
+     * @param receiver new token receiver address
      */
-    function setTokensReceiver(address reciever) external;
+    function setTokensReceiver(address receiver) external;
 
     /**
      * @notice set operation fee percent.

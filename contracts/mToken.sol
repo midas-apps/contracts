@@ -95,7 +95,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
             InvalidAddress(_clawbackReceiver)
         );
         clawbackReceiver = _clawbackReceiver;
-        emit ClawbackReceiverSet(msg.sender, _clawbackReceiver);
+        emit ClawbackReceiverSet(_clawbackReceiver);
     }
 
     /**

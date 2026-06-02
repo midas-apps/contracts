@@ -26,11 +26,15 @@ contract MidasAccessControl is
      */
     mapping(bytes32 => bool) public isUserFacingRole;
 
-    /// @dev Grant operators may call `setFunctionPermission` for the corresponding permission key.
+    /**
+     * @dev Grant operators may call `setFunctionPermission` for the corresponding permission key.
+     */
     mapping(bytes32 => mapping(address => bool))
         private _functionAccessGrantOperators;
 
-    /// @dev Accounts allowed to call the scoped function on `targetContract`.
+    /**
+     * @dev Accounts allowed to call the scoped function on `targetContract`.
+     */
     mapping(bytes32 => mapping(address => bool)) private _functionPermissions;
 
     /**
@@ -95,16 +99,13 @@ contract MidasAccessControl is
         address _pauseManager
     ) external {
         _checkRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        require(
-            timelockManager == address(0),
-            "MAC: timelock manager already set"
-        );
+        require(timelockManager == address(0), InvalidAddress(timelockManager));
         require(
             _timelockManager != address(0),
-            "MAC: invalid timelock manager"
+            InvalidAddress(_timelockManager)
         );
-        require(pauseManager == address(0), "MAC: pause manager already set");
-        require(_pauseManager != address(0), "MAC: invalid pause manager");
+        require(pauseManager == address(0), InvalidAddress(pauseManager));
+        require(_pauseManager != address(0), InvalidAddress(_pauseManager));
 
         timelockManager = _timelockManager;
         pauseManager = _pauseManager;
@@ -116,7 +117,7 @@ contract MidasAccessControl is
     function setIsUserFacingRoleMult(
         SetIsUserFacingRoleParams[] calldata params
     ) external {
-        _validateRoleAccess(DEFAULT_ADMIN_ROLE, _msgSender(), true);
+        _validateRoleAccess(DEFAULT_ADMIN_ROLE, _msgSender());
 
         for (uint256 i = 0; i < params.length; ++i) {
             SetIsUserFacingRoleParams memory param = params[i];
@@ -140,9 +141,11 @@ contract MidasAccessControl is
     ) external {
         require(
             !isUserFacingRole[functionAccessAdminRole],
-            "MAC: user facing role"
+            AccessControlUtilsLibrary.UserFacingRoleNotAllowed(
+                functionAccessAdminRole
+            )
         );
-        _validateRoleAccess(functionAccessAdminRole, _msgSender(), false);
+        _validateRoleAccess(functionAccessAdminRole, _msgSender());
 
         for (uint256 i = 0; i < params.length; ++i) {
             SetFunctionAccessGrantOperatorParams memory param = params[i];
@@ -179,17 +182,12 @@ contract MidasAccessControl is
         bytes4 functionSelector,
         SetFunctionPermissionParams[] calldata params
     ) external {
-        require(params.length > 0, "MAC: no params");
+        require(params.length > 0, EmptyArray());
 
         bytes32 operatorRole = functionAccessGrantOperatorKey(
             functionAccessAdminRole,
             targetContract,
             functionSelector
-        );
-
-        require(
-            isFunctionAccessGrantOperator(operatorRole, _msgSender()),
-            "MAC: not FA grant operator"
         );
 
         _validateOperatorRoleAccess(operatorRole, _msgSender());
@@ -226,7 +224,7 @@ contract MidasAccessControl is
         public
         override(AccessControlUpgradeable, IAccessControlUpgradeable)
     {
-        _validateRoleAccess(getRoleAdmin(role), _msgSender(), false);
+        _validateRoleAccess(getRoleAdmin(role), _msgSender());
         _grantRole(role, account);
     }
 
@@ -237,7 +235,12 @@ contract MidasAccessControl is
         public
         override(AccessControlUpgradeable, IAccessControlUpgradeable)
     {
-        _validateRoleAccess(getRoleAdmin(role), _msgSender(), false);
+        address actualSender = _validateRoleAccess(
+            getRoleAdmin(role),
+            _msgSender()
+        );
+
+        _verifyRevokeRole(role, account, actualSender);
         _revokeRole(role, account);
     }
 
@@ -251,11 +254,14 @@ contract MidasAccessControl is
     function grantRoleMult(bytes32[] memory roles, address[] memory addresses)
         external
     {
-        require(roles.length == addresses.length, "MAC: mismatch arrays");
-        require(roles.length > 0, "MAC: no roles");
+        require(
+            roles.length == addresses.length,
+            MismatchArrays(roles.length, addresses.length)
+        );
+        require(roles.length > 0, EmptyArray());
 
         bytes32 adminRole = getRoleAdmin(roles[0]);
-        _validateRoleAccess(adminRole, _msgSender(), false);
+        _validateRoleAccess(adminRole, _msgSender());
 
         for (uint256 i = 0; i < roles.length; ++i) {
             require(
@@ -276,17 +282,21 @@ contract MidasAccessControl is
     function revokeRoleMult(bytes32[] memory roles, address[] memory addresses)
         external
     {
-        require(roles.length == addresses.length, "MAC: mismatch arrays");
-        require(roles.length > 0, "MAC: no roles");
+        require(
+            roles.length == addresses.length,
+            MismatchArrays(roles.length, addresses.length)
+        );
+        require(roles.length > 0, EmptyArray());
 
         bytes32 adminRole = getRoleAdmin(roles[0]);
-        _validateRoleAccess(adminRole, _msgSender(), false);
+        address actualSender = _validateRoleAccess(adminRole, _msgSender());
 
         for (uint256 i = 0; i < roles.length; ++i) {
             require(
                 getRoleAdmin(roles[i]) == adminRole,
                 "MAC: role admin mismatch"
             );
+            _verifyRevokeRole(roles[i], addresses[i], actualSender);
             _revokeRole(roles[i], addresses[i]);
         }
     }
@@ -295,17 +305,20 @@ contract MidasAccessControl is
      * @inheritdoc IMidasAccessControl
      */
     function setRoleAdmin(bytes32 role, bytes32 newAdminRole) external {
-        _validateRoleAccess(getRoleAdmin(role), _msgSender(), true);
+        _validateRoleAccess(getRoleAdmin(role), _msgSender());
         _setRoleAdmin(role, newAdminRole);
     }
 
     // solhint-disable-next-line
+    /**
+     * @notice renouce role is forbidden
+     */
     function renounceRole(bytes32, address)
         public
         pure
         override(AccessControlUpgradeable, IAccessControlUpgradeable)
     {
-        revert("MAC: Forbidden");
+        revert Forbidden();
     }
 
     /**
@@ -429,21 +442,51 @@ contract MidasAccessControl is
         _setRoleAdmin(GREENLISTED_ROLE, GREENLIST_OPERATOR_ROLE);
     }
 
-    function _validateRoleAccess(
+    /**
+     * @notice verifies that the role can be revoked
+     * @param role role to be revoked
+     * @param account account to be revoked
+     * @param actualSender account that actually verified for the function access
+     */
+    function _verifyRevokeRole(
         bytes32 role,
         address account,
-        bool validateFunctionRole
-    ) internal view {
-        AccessControlUtilsLibrary.validateFunctionAccessWithTimelock(
-            this,
-            role,
-            AccessControlUtilsLibrary.NULL_DELAY,
-            false,
-            account,
-            validateFunctionRole
-        );
+        address actualSender
+    ) private {
+        if (role == DEFAULT_ADMIN_ROLE && account == actualSender) {
+            revert CannotRevokeFromSelf(role, actualSender);
+        }
     }
 
+    /**
+     * @notice validates that the account with a role has access to the function
+     * @param role role to check access for
+     * @param account account to check access for
+     * @return actualAccount actual account that has access to the function
+     */
+    function _validateRoleAccess(bytes32 role, address account)
+        internal
+        view
+        returns (
+            address /* actualAccount */
+        )
+    {
+        return
+            AccessControlUtilsLibrary.validateFunctionAccessWithTimelock(
+                this,
+                role,
+                AccessControlUtilsLibrary.NULL_DELAY,
+                false,
+                account,
+                false
+            );
+    }
+
+    /**
+     * @notice validates that the account with a role has access to the function
+     * @param role role to check access for
+     * @param account account to check access for
+     */
     function _validateOperatorRoleAccess(bytes32 role, address account)
         internal
         view

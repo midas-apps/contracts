@@ -11,6 +11,10 @@ import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
  * @author RedDuck Software
  */
 abstract contract WithSanctionsList is WithMidasAccessControl {
+    /**
+     * @notice when user is sanctioned on sanctions list contract
+     * @param user user address
+     */
     error Sanctioned(address user);
 
     /**
@@ -24,13 +28,9 @@ abstract contract WithSanctionsList is WithMidasAccessControl {
     uint256[50] private __gap;
 
     /**
-     * @param caller function caller (msg.sender)
      * @param newSanctionsList new address of `sanctionsList`
      */
-    event SetSanctionsList(
-        address indexed caller,
-        address indexed newSanctionsList
-    );
+    event SetSanctionsList(address indexed newSanctionsList);
 
     /**
      * @dev checks that a given `user` is not sanctioned
@@ -68,6 +68,6 @@ abstract contract WithSanctionsList is WithMidasAccessControl {
         onlyContractAdmin
     {
         sanctionsList = newSanctionsList;
-        emit SetSanctionsList(msg.sender, newSanctionsList);
+        emit SetSanctionsList(newSanctionsList);
     }
 }

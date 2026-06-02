@@ -122,7 +122,7 @@ describe('Token contracts', () => {
           mTokenPermissioned.connect(from).transfer(to.address, 1),
         ).revertedWithCustomError(
           mTokenPermissioned,
-          acErrors.WMAC_HAS_ROLE().customErrorName,
+          acErrors.WMAC_BLACKLISTED().customErrorName,
         );
       });
 
@@ -415,7 +415,7 @@ describe('Token contracts', () => {
             .transferFrom(from.address, to.address, 1),
         ).revertedWithCustomError(
           mTokenPermissioned,
-          acErrors.WMAC_HAS_ROLE().customErrorName,
+          acErrors.WMAC_BLACKLISTED().customErrorName,
         );
       });
 
@@ -460,7 +460,7 @@ describe('Token contracts', () => {
             .transferFrom(from.address, to.address, 1),
         ).revertedWithCustomError(
           mTokenPermissioned,
-          acErrors.WMAC_HAS_ROLE().customErrorName,
+          acErrors.WMAC_BLACKLISTED().customErrorName,
         );
       });
     });

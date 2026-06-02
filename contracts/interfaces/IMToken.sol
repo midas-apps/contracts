@@ -4,32 +4,21 @@ pragma solidity 0.8.34;
 import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 /**
- * @notice mToken rate limit configuration
- */
-struct MTokenRateLimitConfig {
-    /// @notice limit amount per window
-    uint256 limit;
-    /// @notice limitUsed amount used within the last epoch
-    uint256 limitUsed;
-    /// @notice last epoch id
-    uint256 lastEpoch;
-}
-
-/**
  * @title IMToken
  * @author RedDuck Software
  */
 interface IMToken is IERC20Upgradeable {
+    /**
+     * @notice when new limit is invalid
+     * @param newLimit new limit
+     * @param existingLimit existing limit
+     */
     error InvalidNewLimit(uint256 newLimit, uint256 existingLimit);
 
     /**
-     * @param caller function caller (msg.sender)
      * @param clawbackReceiver address to which clawback tokens will be sent
      */
-    event ClawbackReceiverSet(
-        address indexed caller,
-        address indexed clawbackReceiver
-    );
+    event ClawbackReceiverSet(address indexed clawbackReceiver);
 
     /**
      * @notice mints mToken token `amount` to a given `to` address.

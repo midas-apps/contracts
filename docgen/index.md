@@ -1619,7 +1619,7 @@ _reverts if account is already removed_
 function setFeeReceiver(address receiver) external
 ```
 
-set new reciever for fees.
+set new receiver for fees.
 can be called only from permissioned actor.
 
 _reverts address zero or equal address(this)_
@@ -1636,7 +1636,7 @@ _reverts address zero or equal address(this)_
 function setTokensReceiver(address receiver) external
 ```
 
-set new reciever for tokens.
+set new receiver for tokens.
 can be called only from permissioned actor.
 
 _reverts address zero or equal address(this)_
@@ -3642,7 +3642,7 @@ event SetVariationTolerance(address caller, uint256 newTolerance)
 ### SetFeeReceiver
 
 ```solidity
-event SetFeeReceiver(address caller, address reciever)
+event SetFeeReceiver(address caller, address receiver)
 ```
 
 #### Parameters
@@ -3650,12 +3650,12 @@ event SetFeeReceiver(address caller, address reciever)
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | caller | address | function caller (msg.sender) |
-| reciever | address | new reciever address |
+| receiver | address | new receiver address |
 
 ### SetTokensReceiver
 
 ```solidity
-event SetTokensReceiver(address caller, address reciever)
+event SetTokensReceiver(address caller, address receiver)
 ```
 
 #### Parameters
@@ -3663,7 +3663,7 @@ event SetTokensReceiver(address caller, address reciever)
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | caller | address | function caller (msg.sender) |
-| reciever | address | new reciever address |
+| receiver | address | new receiver address |
 
 ### SetMaxApproveRequestId
 
@@ -3850,32 +3850,32 @@ can be called only from permissioned actor.
 ### setFeeReceiver
 
 ```solidity
-function setFeeReceiver(address reciever) external
+function setFeeReceiver(address receiver) external
 ```
 
-set new reciever for fees.
+set new receiver for fees.
 can be called only from permissioned actor.
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| reciever | address | new fee reciever address |
+| receiver | address | new fee receiver address |
 
 ### setTokensReceiver
 
 ```solidity
-function setTokensReceiver(address reciever) external
+function setTokensReceiver(address receiver) external
 ```
 
-set new reciever for tokens.
+set new receiver for tokens.
 can be called only from permissioned actor.
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| reciever | address | new token reciever address |
+| receiver | address | new token receiver address |
 
 ### setInstantFee
 

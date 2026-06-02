@@ -843,9 +843,9 @@ export const setLoanAprTest = async (
   await expect(callFn())
     .to.emit(
       redemptionVault,
-      redemptionVault.interface.events['SetLoanApr(address,uint64)'].name,
+      redemptionVault.interface.events['SetLoanApr(uint64)'].name,
     )
-    .withArgs(sender, loanApr).to.not.reverted;
+    .withArgs(loanApr).to.not.reverted;
 
   const newLoanApr = await redemptionVault.loanApr();
   expect(newLoanApr).eq(loanApr);
@@ -1401,10 +1401,9 @@ export const cancelLpLoanRequestTest = async (
   await expect(redemptionVault.connect(sender).cancelLpLoanRequest(requestId))
     .to.emit(
       redemptionVault,
-      redemptionVault.interface.events['CancelLpLoanRequest(address,uint256)']
-        .name,
+      redemptionVault.interface.events['CancelLpLoanRequest(uint256)'].name,
     )
-    .withArgs(requestId, sender).to.not.reverted;
+    .withArgs(requestId).to.not.reverted;
 
   const requestDataAfter = await redemptionVault.loanRequests(requestId);
 
@@ -1447,8 +1446,7 @@ export const setRequestRedeemerTest = async (
     redemptionVault.connect(opt?.from ?? owner).setRequestRedeemer(redeemer),
   ).to.emit(
     redemptionVault,
-    redemptionVault.interface.events['SetRequestRedeemer(address,address)']
-      .name,
+    redemptionVault.interface.events['SetRequestRedeemer(address)'].name,
   ).to.not.reverted;
 
   const newRedeemer = await redemptionVault.requestRedeemer();
@@ -1474,7 +1472,7 @@ export const setLoanLpTest = async (
     redemptionVault.connect(opt?.from ?? owner).setLoanLp(loanLp),
   ).to.emit(
     redemptionVault,
-    redemptionVault.interface.events['SetLoanLp(address,address)'].name,
+    redemptionVault.interface.events['SetLoanLp(address)'].name,
   ).to.not.reverted;
 
   const newLoanLp = await redemptionVault.loanLp();
@@ -1504,8 +1502,7 @@ export const setLoanRepaymentAddressTest = async (
       .setLoanRepaymentAddress(loanRepaymentAddress),
   ).to.emit(
     redemptionVault,
-    redemptionVault.interface.events['SetLoanRepaymentAddress(address,address)']
-      .name,
+    redemptionVault.interface.events['SetLoanRepaymentAddress(address)'].name,
   ).to.not.reverted;
 
   const newLoanRepaymentAddress = await redemptionVault.loanRepaymentAddress();
@@ -1535,8 +1532,7 @@ export const setLoanSwapperVaultTest = async (
       .setLoanSwapperVault(loanSwapperVault),
   ).to.emit(
     redemptionVault,
-    redemptionVault.interface.events['SetLoanSwapperVault(address,address)']
-      .name,
+    redemptionVault.interface.events['SetLoanSwapperVault(address)'].name,
   ).to.not.reverted;
 
   const newLoanSwapperVault = await redemptionVault.loanSwapperVault();
@@ -1566,8 +1562,7 @@ export const setMaxApproveRequestIdTest = async (
       .setMaxApproveRequestId(maxApproveRequestId),
   ).to.emit(
     redemptionVault,
-    redemptionVault.interface.events['SetMaxApproveRequestId(address,uint256)']
-      .name,
+    redemptionVault.interface.events['SetMaxApproveRequestId(uint256)'].name,
   ).to.not.reverted;
 
   const newMaxApproveRequestId = await redemptionVault.maxApproveRequestId();
@@ -1597,8 +1592,7 @@ export const setPreferLoanLiquidityTest = async (
       .setPreferLoanLiquidity(preferLoanLiquidity),
   ).to.emit(
     redemptionVault,
-    redemptionVault.interface.events['SetPreferLoanLiquidity(address,bool)']
-      .name,
+    redemptionVault.interface.events['SetPreferLoanLiquidity(bool)'].name,
   ).to.not.reverted;
 
   const newPreferLoanLiquidity = await redemptionVault.preferLoanLiquidity();

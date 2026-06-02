@@ -151,10 +151,9 @@ export const setMaxAnswerDeviationTest = async (
   )
     .to.emit(
       customFeed,
-      customFeed.interface.events['MaxAnswerDeviationUpdated(address,uint256)']
-        .name,
+      customFeed.interface.events['MaxAnswerDeviationUpdated(uint256)'].name,
     )
-    .withArgs(sender, maxAnswerDeviation).to.not.reverted;
+    .withArgs(maxAnswerDeviation).to.not.reverted;
 
   const maxAnswerDeviationAfter = await customFeed.maxAnswerDeviation();
   expect(maxAnswerDeviationAfter).eq(maxAnswerDeviation);

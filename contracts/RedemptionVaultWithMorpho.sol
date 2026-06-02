@@ -19,7 +19,16 @@ import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.s
 contract RedemptionVaultWithMorpho is RedemptionVault {
     using DecimalsCorrectionLibrary for uint256;
 
+    /**
+     * @notice when asset mismatch
+     * @param morphoVault Morpho Vault address
+     * @param token token address
+     */
     error AssetMismatch(address morphoVault, address token);
+    /**
+     * @notice when vault is not set
+     * @param token token address
+     */
     error VaultNotSet(address token);
 
     /**
@@ -34,22 +43,16 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
 
     /**
      * @notice Emitted when a Morpho Vault is configured for a payment token
-     * @param caller address of the caller
      * @param token payment token address
      * @param vault Morpho Vault address
      */
-    event SetMorphoVault(
-        address indexed caller,
-        address indexed token,
-        address indexed vault
-    );
+    event SetMorphoVault(address indexed token, address indexed vault);
 
     /**
      * @notice Emitted when a Morpho Vault is removed for a payment token
-     * @param caller address of the caller
      * @param token payment token address
      */
-    event RemoveMorphoVault(address indexed caller, address indexed token);
+    event RemoveMorphoVault(address indexed token);
 
     /**
      * @notice Sets the Morpho Vault for a specific payment token
@@ -67,7 +70,7 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
             AssetMismatch(_morphoVault, _token)
         );
         morphoVaults[_token] = IMorphoVault(_morphoVault);
-        emit SetMorphoVault(msg.sender, _token, _morphoVault);
+        emit SetMorphoVault(_token, _morphoVault);
     }
 
     /**
@@ -80,7 +83,7 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
             VaultNotSet(_token)
         );
         delete morphoVaults[_token];
-        emit RemoveMorphoVault(msg.sender, _token);
+        emit RemoveMorphoVault(_token);
     }
 
     /**

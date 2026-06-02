@@ -21,8 +21,23 @@ contract DepositVaultWithAave is DepositVault {
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
 
+    /**
+     * @notice when token is not in pool
+     * @param aavePool Aave V3 Pool address
+     * @param token token address
+     */
     error TokenNotInPool(address aavePool, address token);
+
+    /**
+     * @notice when pool is not set
+     * @param token token address
+     */
     error PoolNotSet(address token);
+
+    /**
+     * @notice when auto-invest fails
+     * @param err error bytes
+     */
     error AutoInvestFailed(bytes err);
 
     /**
@@ -49,22 +64,16 @@ contract DepositVaultWithAave is DepositVault {
 
     /**
      * @notice Emitted when an Aave V3 Pool is configured for a payment token
-     * @param caller address of the caller
      * @param token payment token address
      * @param pool Aave V3 Pool address
      */
-    event SetAavePool(
-        address indexed caller,
-        address indexed token,
-        address indexed pool
-    );
+    event SetAavePool(address indexed token, address indexed pool);
 
     /**
      * @notice Emitted when an Aave V3 Pool is removed for a payment token
-     * @param caller address of the caller
      * @param token payment token address
      */
-    event RemoveAavePool(address indexed caller, address indexed token);
+    event RemoveAavePool(address indexed token);
 
     /**
      * @notice Emitted when `aaveDepositsEnabled` flag is updated
@@ -94,7 +103,7 @@ contract DepositVaultWithAave is DepositVault {
             TokenNotInPool(_aavePool, _token)
         );
         aavePools[_token] = IAaveV3Pool(_aavePool);
-        emit SetAavePool(msg.sender, _token, _aavePool);
+        emit SetAavePool(_token, _aavePool);
     }
 
     /**
@@ -104,7 +113,7 @@ contract DepositVaultWithAave is DepositVault {
     function removeAavePool(address _token) external onlyContractAdmin {
         require(address(aavePools[_token]) != address(0), PoolNotSet(_token));
         delete aavePools[_token];
-        emit RemoveAavePool(msg.sender, _token);
+        emit RemoveAavePool(_token);
     }
 
     /**

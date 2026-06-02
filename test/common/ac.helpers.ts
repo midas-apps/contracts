@@ -35,9 +35,9 @@ export const acErrors = {
     customErrorName: 'HasntRole',
     args,
   }),
-  WMAC_HAS_ROLE: (args?: unknown[], contract?: Contract) => ({
+  WMAC_BLACKLISTED: (args?: unknown[], contract?: Contract) => ({
     contract,
-    customErrorName: 'HasRole',
+    customErrorName: 'Blacklisted',
     args,
   }),
   WMAC_HASNT_PERMISSION: (args?: unknown[], contract?: Contract) => ({

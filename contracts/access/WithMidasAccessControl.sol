@@ -24,12 +24,6 @@ abstract contract WithMidasAccessControl is
     error SameBoolValue(bool value);
 
     /**
-     * @notice error when the address is invalid
-     * @param addr address
-     */
-    error InvalidAddress(address addr);
-
-    /**
      * @notice error when the account does not have the role
      * @param role role
      * @param account account
