@@ -54,11 +54,13 @@ interface IMidasTimelockManager {
     /**
      * @notice Preflight call succeeded with role info
      * @param role role used for the call
+     * @param overrideDelay override delay for the invocation
      * @param roleIsFunctionOperator true if role is function operator
      * @param validateFunctionRole true if function role should be validated
      */
     error RolePreflightSucceeded(
         bytes32 role,
+        uint256 overrideDelay,
         bool roleIsFunctionOperator,
         bool validateFunctionRole
     );
@@ -307,6 +309,7 @@ interface IMidasTimelockManager {
     /**
      * @notice Whether the function is ready to execute
      * @param targetRole role used for delay lookup
+     * @param overrideDelay override delay for the invocation
      * @param target target contract
      * @param data operation data
      * @return ready true if call can proceed
@@ -314,6 +317,7 @@ interface IMidasTimelockManager {
      */
     function isFunctionReadyToExecute(
         bytes32 targetRole,
+        uint256 overrideDelay,
         address target,
         bytes calldata data
     ) external view returns (bool ready, bool timelocked);
@@ -332,10 +336,11 @@ interface IMidasTimelockManager {
     /**
      * @notice Returns timelock delay for a role
      * @param role role id
+     * @param overrideDelay override delay for the invocation
      * @return delay effective delay in seconds
      * @return isDefault true if role uses default delay
      */
-    function getRoleTimelockDelay(bytes32 role)
+    function getRoleTimelockDelay(bytes32 role, uint256 overrideDelay)
         external
         view
         returns (uint256 delay, bool isDefault);
@@ -345,18 +350,6 @@ interface IMidasTimelockManager {
      * @return delay delay in seconds
      */
     function defaultDelay() external view returns (uint256 delay);
-
-    /**
-     * @notice Returns enforced timelock delay for a target and selector that overrides the role delay
-     * @param target target contract
-     * @param selector function selector
-     * @return delay delay in seconds
-     * @return enforced true if delay is enforced for this target and selector
-     */
-    function getEnforcedDelay(address target, bytes4 selector)
-        external
-        view
-        returns (uint256 delay, bool enforced);
 
     /**
      * @notice Votes needed for council quorum at a version

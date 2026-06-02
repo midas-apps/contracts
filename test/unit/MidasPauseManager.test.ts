@@ -643,18 +643,35 @@ describe('MidasPauseManager', () => {
     });
 
     it('should fail: when role is user facing', async () => {
-      const { pausableTester, pauseManager, owner, roles } = await loadFixture(
-        defaultDeploy,
-      );
+      const {
+        pausableTester,
+        pauseManager,
+        owner,
+        roles,
+        timelockManager,
+        timelock,
+        accessControl,
+      } = await loadFixture(defaultDeploy);
 
       await pausableTester.setContractAdminRole(roles.common.greenlisted);
 
-      await unpauseVault({ pauseManager, owner }, pausableTester, {
-        revertCustomError: {
-          customErrorName: 'UserFacingRoleNotAllowed',
-          args: [roles.common.greenlisted],
+      const calldata = pauseManager.interface.encodeFunctionData(
+        'unpauseContract',
+        [pausableTester.address],
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseManager.address],
+        [calldata],
+        {},
+        {
+          revertCustomError: {
+            customErrorName: 'UserFacingRoleNotAllowed',
+            args: [roles.common.greenlisted],
+          },
         },
-      });
+      );
     });
 
     it('when paused and caller is admin', async () => {

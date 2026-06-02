@@ -22,27 +22,6 @@ type CommonParamsTimelock = {
   owner: SignerWithAddress;
 };
 
-// TODO: remove this
-export const timelockManagerRevert = (
-  timelockManager: MidasTimelockManager,
-  customErrorName: string,
-  args?: unknown[],
-): OptionalCommonParams =>
-  args !== undefined
-    ? {
-        revertCustomError: {
-          contract: timelockManager,
-          customErrorName,
-          args,
-        },
-      }
-    : {
-        revertCustomError: {
-          contract: timelockManager,
-          customErrorName,
-        },
-      };
-
 export const setRoleTimelocksTester = async (
   { timelockManager, owner }: CommonParamsTimelock,
   roles: string[],
@@ -63,7 +42,10 @@ export const setRoleTimelocksTester = async (
 
   for (const [index, role] of roles.entries()) {
     const delayParam = delays[index];
-    const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(role);
+    const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
+      role,
+      0,
+    );
     const expectedDelay = BigNumber.from(0).eq(delayParam)
       ? 3600
       : constants.MaxUint256.eq(delayParam)
@@ -110,6 +92,7 @@ export const setRoleTimelocksAndExecute = async (
 ) => {
   const [delay] = await timelockManager.getRoleTimelockDelay(
     constants.HashZero,
+    0,
   );
 
   const data = timelockManager.interface.encodeFunctionData('setRoleDelays', [

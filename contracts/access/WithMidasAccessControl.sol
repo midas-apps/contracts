@@ -17,10 +17,24 @@ abstract contract WithMidasAccessControl is
 {
     using AccessControlUtilsLibrary for IMidasAccessControl;
 
+    /**
+     * @notice error when the value is the same as the previous value
+     * @param value value
+     */
     error SameBoolValue(bool value);
+
+    /**
+     * @notice error when the address is invalid
+     * @param addr address
+     */
     error InvalidAddress(address addr);
+
+    /**
+     * @notice error when the account does not have the role
+     * @param role role
+     * @param account account
+     */
     error HasntRole(bytes32 role, address account);
-    error UserFacingRoleNotAllowed(bytes32 role);
 
     /**
      * @notice admin role
@@ -38,8 +52,28 @@ abstract contract WithMidasAccessControl is
      */
     uint256[50] private __gap;
 
+    /**
+     * @dev validates that the caller has the function role with timelock
+     * @param role base role to validate
+     * @param validateFunctionRole whether to validate the function role
+     */
     modifier onlyRole(bytes32 role, bool validateFunctionRole) {
         _validateFunctionAccessWithTimelock(
+            role,
+            AccessControlUtilsLibrary.NULL_DELAY,
+            false,
+            msg.sender,
+            validateFunctionRole
+        );
+        _;
+    }
+
+    /**
+     * @dev validates that the caller has the function role without timelock
+     * @param role base role to validate
+     */
+    modifier onlyRoleNoTimelock(bytes32 role, bool validateFunctionRole) {
+        _validateFunctionAccessWithoutTimelock(
             role,
             false,
             msg.sender,
@@ -48,9 +82,34 @@ abstract contract WithMidasAccessControl is
         _;
     }
 
+    /**
+     * @dev validates that the caller has the function role with timelock
+     * @param role base role to validate
+     * @param overrideDelay override delay for the invocation
+     * @param validateFunctionRole whether to validate the function role
+     */
+    modifier onlyRoleDelayOverride(
+        bytes32 role,
+        uint256 overrideDelay,
+        bool validateFunctionRole
+    ) {
+        _validateFunctionAccessWithTimelock(
+            role,
+            overrideDelay,
+            false,
+            msg.sender,
+            validateFunctionRole
+        );
+        _;
+    }
+
+    /**
+     * @dev validates that the caller has the contract admin role or function operator role
+     */
     modifier onlyContractAdmin() {
         _validateFunctionAccessWithTimelock(
             _contractAdminRole(),
+            AccessControlUtilsLibrary.NULL_DELAY,
             false,
             msg.sender,
             true
@@ -70,16 +129,48 @@ abstract contract WithMidasAccessControl is
         accessControl = IMidasAccessControl(_accessControl);
     }
 
+    /**
+     * @dev validates that the function access is valid with timelock
+     * @param role base role to validate
+     * @param overrideDelay override delay for the invocation
+     * @param roleIsFunctionOperator whether the role is a function operator
+     * @param account account to validate
+     * @param validateFunctionRole whether to validate the function role
+     */
     function _validateFunctionAccessWithTimelock(
         bytes32 role,
+        uint256 overrideDelay,
         bool roleIsFunctionOperator,
         address account,
         bool validateFunctionRole
     ) internal view virtual {
         accessControl.validateFunctionAccessWithTimelock(
             role,
+            overrideDelay,
             roleIsFunctionOperator,
             account,
+            validateFunctionRole
+        );
+    }
+
+    /**
+     * @dev validates that the function access is valid without timelock
+     * @param role base role to validate
+     * @param roleIsFunctionOperator whether the role is a function operator
+     * @param account account to validate
+     * @param validateFunctionRole whether to validate the function role
+     */
+    function _validateFunctionAccessWithoutTimelock(
+        bytes32 role,
+        bool roleIsFunctionOperator,
+        address account,
+        bool validateFunctionRole
+    ) internal view {
+        accessControl.validateFunctionAccess(
+            role,
+            roleIsFunctionOperator,
+            account,
+            msg.sig,
             validateFunctionRole
         );
     }

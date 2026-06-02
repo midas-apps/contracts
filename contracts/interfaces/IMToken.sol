@@ -34,6 +34,7 @@ interface IMToken is IERC20Upgradeable {
     /**
      * @notice mints mToken token `amount` to a given `to` address.
      * should be called only from permissioned actor
+     * bypasses the timelock entirely
      * @param to addres to mint tokens to
      * @param amount amount to mint
      */
@@ -42,19 +43,30 @@ interface IMToken is IERC20Upgradeable {
     /**
      * @notice burns mToken token `amount` from a given `from` address.
      * should be called only from permissioned actor
+     * bypasses the timelock entirely
      * @param from addres to burn tokens from
      * @param amount amount to burn
      */
     function burn(address from, uint256 amount) external;
 
     /**
+     * @notice mints mToken token `amount` to a given `to` address,
+     * requires the timelock to pass
+     * should be called only from permissioned actor
+     * @param to address to mint tokens to
+     * @param amount amount to mint
+     */
+    function mintGoverned(address to, uint256 amount) external;
+
+    /**
      * @notice burns mToken token `amount` from a given `from` address,
      * bypassing blacklist checks.
+     * requires the timelock to pass
      * should be called only from permissioned actor
      * @param from address to burn tokens from
      * @param amount amount to burn
      */
-    function forceBurn(address from, uint256 amount) external;
+    function burnGoverned(address from, uint256 amount) external;
 
     /**
      * @notice claws back tokens from a given address

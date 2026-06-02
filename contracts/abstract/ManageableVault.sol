@@ -797,6 +797,7 @@ abstract contract ManageableVault is
      */
     function _validateFunctionAccessWithTimelock(
         bytes32 role,
+        uint256 overrideDelay,
         bool roleIsFunctionOperator,
         address account,
         bool validateFunctionRole
@@ -805,6 +806,7 @@ abstract contract ManageableVault is
 
         super._validateFunctionAccessWithTimelock(
             role,
+            overrideDelay,
             roleIsFunctionOperator,
             account,
             validateFunctionRole

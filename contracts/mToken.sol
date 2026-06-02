@@ -4,6 +4,9 @@ pragma solidity 0.8.34;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 
 import {RateLimitLibrary} from "./libraries/RateLimitLibrary.sol";
+import {AccessControlUtilsLibrary} from "./libraries/AccessControlUtilsLibrary.sol";
+import {IMidasAccessControl} from "./interfaces/IMidasAccessControl.sol";
+
 import "./access/Blacklistable.sol";
 import "./interfaces/IMToken.sol";
 
@@ -14,6 +17,7 @@ import "./interfaces/IMToken.sol";
 //solhint-disable contract-name-camelcase
 abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     using RateLimitLibrary for RateLimitLibrary.WindowRateLimits;
+    using AccessControlUtilsLibrary for IMidasAccessControl;
 
     /**
      * @notice metadata key => metadata value
@@ -99,7 +103,17 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     function mint(address to, uint256 amount)
         external
-        onlyRole(_minterRole(), false)
+        onlyRoleNoTimelock(_minterRole(), false)
+    {
+        _mint(to, amount);
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function mintGoverned(address to, uint256 amount)
+        external
+        onlyContractAdmin // TODO: revise AC
     {
         _mint(to, amount);
     }
@@ -109,7 +123,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     function burn(address from, uint256 amount)
         external
-        onlyRole(_burnerRole(), false)
+        onlyRoleNoTimelock(_burnerRole(), false)
     {
         _onlyNotBlacklisted(from);
         _burn(from, amount);
@@ -118,9 +132,9 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     /**
      * @inheritdoc IMToken
      */
-    function forceBurn(address from, uint256 amount)
+    function burnGoverned(address from, uint256 amount)
         external
-        onlyRole(_burnerRole(), false)
+        onlyContractAdmin // TODO: revise AC
     {
         _burn(from, amount);
     }
@@ -137,14 +151,22 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     /**
      * @inheritdoc IMToken
      */
-    function pause() external override onlyRole(_pauserRole(), false) {
+    function pause()
+        external
+        override
+        onlyRoleNoTimelock(_pauserRole(), false)
+    {
         _pause();
     }
 
     /**
      * @inheritdoc IMToken
      */
-    function unpause() external override onlyRole(_pauserRole(), false) {
+    function unpause()
+        external
+        override
+        onlyRoleDelayOverride(_pauserRole(), 1 hours, false)
+    {
         _unpause();
     }
 

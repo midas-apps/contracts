@@ -24,6 +24,7 @@ import {
   pauseTimelockOperationTest,
   scheduleTimelockOperationsTester,
   setMaxPendingOperationsPerProposerTester,
+  setRoleTimelocksAndExecute,
   setRoleTimelocksTester,
   setSecurityCouncilTest,
   voteForExecutionTest,
@@ -187,7 +188,11 @@ describe('MidasTimelockManager', () => {
             ]),
           ],
           {},
-          noTimelockDelayRevert(timelockManager),
+          {
+            revertCustomError: {
+              customErrorName: 'InvalidPreflightError',
+            },
+          },
         );
       });
 
@@ -215,7 +220,11 @@ describe('MidasTimelockManager', () => {
             ]),
           ],
           {},
-          noTimelockDelayRevert(timelockManager),
+          {
+            revertCustomError: {
+              customErrorName: 'InvalidPreflightError',
+            },
+          },
         );
       });
     });
@@ -3094,10 +3103,74 @@ describe('MidasTimelockManager', () => {
 
       const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
         constants.HashZero,
+        0,
       );
 
       expect(delay).to.eq(3600);
       expect(isDefault).to.eq(true);
+    });
+
+    it('should return default delay when override delay is 0 and role delay is not set', async () => {
+      const { timelockManager } = await loadFixture(defaultDeploy);
+
+      await timelockManager.setDefaultDelay(3600);
+
+      const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
+        constants.HashZero,
+        0,
+      );
+
+      expect(delay).to.eq(3600);
+      expect(isDefault).to.eq(true);
+    });
+
+    it('should return override delay if its not zero if role delay is not set', async () => {
+      const { timelockManager } = await loadFixture(defaultDeploy);
+
+      await timelockManager.setDefaultDelay(3600);
+
+      const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
+        constants.HashZero,
+        1,
+      );
+
+      expect(delay).to.eq(1);
+      expect(isDefault).to.eq(false);
+    });
+
+    it('should return override delay if its not zero if role delay is set', async () => {
+      const { timelockManager, timelock, owner, accessControl } =
+        await loadFixture(defaultDeploy);
+
+      await timelockManager.setDefaultDelay(3600);
+
+      await setRoleTimelocksAndExecute(
+        { timelockManager, timelock, owner, accessControl },
+        [constants.HashZero],
+        [1],
+      );
+
+      const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
+        constants.HashZero,
+        2,
+      );
+
+      expect(delay).to.eq(2);
+      expect(isDefault).to.eq(false);
+    });
+
+    it('should return 0 if override delay is NO_DELAY (uint256.max)', async () => {
+      const { timelockManager } = await loadFixture(defaultDeploy);
+
+      await timelockManager.setDefaultDelay(3600);
+
+      const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
+        constants.HashZero,
+        constants.MaxUint256,
+      );
+
+      expect(delay).to.eq(0);
+      expect(isDefault).to.eq(false);
     });
 
     it('should return configured delay when role delay is set', async () => {
@@ -3112,6 +3185,7 @@ describe('MidasTimelockManager', () => {
 
       const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
         constants.HashZero,
+        0,
       );
 
       expect(delay).to.eq(7200);
@@ -3130,6 +3204,7 @@ describe('MidasTimelockManager', () => {
 
       const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
         constants.HashZero,
+        0,
       );
 
       expect(delay).to.eq(0);
@@ -3806,6 +3881,7 @@ describe('MidasTimelockManager', () => {
       const [ready, timelocked] =
         await timelockManager.isFunctionReadyToExecute(
           constants.HashZero,
+          0,
           wAccessControlTester.address,
           dataWithCaller,
         );
@@ -3846,6 +3922,7 @@ describe('MidasTimelockManager', () => {
       const [ready, timelocked] =
         await timelockManager.isFunctionReadyToExecute(
           constants.HashZero,
+          0,
           wAccessControlTester.address,
           dataWithCaller,
         );
@@ -3884,6 +3961,7 @@ describe('MidasTimelockManager', () => {
       const [ready, timelocked] =
         await timelockManager.isFunctionReadyToExecute(
           constants.HashZero,
+          0,
           wAccessControlTester.address,
           calldata,
         );
@@ -3928,6 +4006,7 @@ describe('MidasTimelockManager', () => {
       const [ready, timelocked] =
         await timelockManager.isFunctionReadyToExecute(
           constants.HashZero,
+          0,
           wAccessControlTester.address,
           calldata,
         );
@@ -3984,6 +4063,7 @@ describe('MidasTimelockManager', () => {
       const [ready, timelocked] =
         await timelockManager.isFunctionReadyToExecute(
           constants.HashZero,
+          0,
           wAccessControlTester.address,
           calldata,
         );
@@ -4109,110 +4189,6 @@ describe('MidasTimelockManager', () => {
       );
 
       expect(await timelockManager.dataHashIndexes(dataHash)).to.eq(0);
-    });
-  });
-
-  describe('getEnforcedDelay()', () => {
-    it('should return 0 when target is address zero', async () => {
-      const { timelockManager } = await loadFixture(defaultDeploy);
-
-      const [delay, enforced] = await timelockManager.getEnforcedDelay(
-        constants.AddressZero,
-        '0x00000000',
-      );
-      expect(delay).to.eq(0);
-      expect(enforced).to.eq(false);
-    });
-
-    it('should return 0 when target is not pause manager', async () => {
-      const { timelockManager, depositVault } = await loadFixture(
-        defaultDeploy,
-      );
-
-      const [delay, enforced] = await timelockManager.getEnforcedDelay(
-        depositVault.address,
-        encodeFnSelector('setMintFee(uint256)'),
-      );
-      expect(delay).to.eq(0);
-      expect(enforced).to.eq(false);
-    });
-
-    it('should return 0 when selector is global pause', async () => {
-      const { timelockManager, pauseManager } = await loadFixture(
-        defaultDeploy,
-      );
-
-      const [delay, enforced] = await timelockManager.getEnforcedDelay(
-        pauseManager.address,
-        encodeFnSelector('globalPause()'),
-      );
-      expect(delay).to.eq(0);
-      expect(enforced).to.eq(true);
-    });
-
-    it('should return 0 when selector is contract pause', async () => {
-      const { timelockManager, pauseManager } = await loadFixture(
-        defaultDeploy,
-      );
-
-      const [delay, enforced] = await timelockManager.getEnforcedDelay(
-        pauseManager.address,
-        encodeFnSelector('pauseContract(address)'),
-      );
-      expect(delay).to.eq(0);
-      expect(enforced).to.eq(true);
-    });
-
-    it('should return 0 when selector is function pause', async () => {
-      const { timelockManager, pauseManager } = await loadFixture(
-        defaultDeploy,
-      );
-
-      const [delay, enforced] = await timelockManager.getEnforcedDelay(
-        pauseManager.address,
-        encodeFnSelector('bulkPauseContractFn(address,bytes4[])'),
-      );
-      expect(delay).to.eq(0);
-      expect(enforced).to.eq(true);
-    });
-
-    it('should return 3600 when selector is global unpause', async () => {
-      const { timelockManager, pauseManager } = await loadFixture(
-        defaultDeploy,
-      );
-
-      const [delay, enforced] = await timelockManager.getEnforcedDelay(
-        pauseManager.address,
-        encodeFnSelector('globalUnpause()'),
-      );
-      expect(delay).to.eq(3600);
-      expect(enforced).to.eq(true);
-    });
-
-    it('should return 3600 when selector is contract unpause', async () => {
-      const { timelockManager, pauseManager } = await loadFixture(
-        defaultDeploy,
-      );
-
-      const [delay, enforced] = await timelockManager.getEnforcedDelay(
-        pauseManager.address,
-        encodeFnSelector('unpauseContract(address)'),
-      );
-      expect(delay).to.eq(3600);
-      expect(enforced).to.eq(true);
-    });
-
-    it('should return 3600 when selector is function unpause', async () => {
-      const { timelockManager, pauseManager } = await loadFixture(
-        defaultDeploy,
-      );
-
-      const [delay, enforced] = await timelockManager.getEnforcedDelay(
-        pauseManager.address,
-        encodeFnSelector('bulkUnpauseContractFn(address,bytes4[])'),
-      );
-      expect(delay).to.eq(3600);
-      expect(enforced).to.eq(true);
     });
   });
 });

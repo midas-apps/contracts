@@ -47,6 +47,10 @@ import {
   RedemptionVaultWithSwapper,
 } from '../../../typechain-types';
 import { validateImplementation } from '../../common/common.helpers';
+import {
+  executeTimelockOperationTester,
+  scheduleTimelockOperationsTester,
+} from '../../common/timelock-manager.helpers';
 
 export const mTokenContractsSuits = (token: MTokenName) => {
   const contractNames = getTokenContractNames(token);
@@ -436,24 +440,78 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       });
 
       it('should fail: call when already paused', async () => {
-        const { owner, tokenContract } = await deployMTokenWithFixture();
+        const {
+          owner,
+          tokenContract,
+          accessControl,
+          timelockManager,
+          timelock,
+        } = await deployMTokenWithFixture();
 
-        await expect(tokenContract.connect(owner).unpause()).revertedWith(
-          `Pausable: not paused`,
+        const calldata = tokenContract.interface.encodeFunctionData('unpause');
+
+        await scheduleTimelockOperationsTester(
+          { accessControl, timelockManager, timelock, owner },
+          [tokenContract.address],
+          [calldata],
+          {},
+        );
+
+        await increase(3600);
+        await executeTimelockOperationTester(
+          { accessControl, timelockManager, timelock, owner },
+          tokenContract.address,
+          calldata,
+          owner.address,
+          {
+            revertMessage:
+              'TimelockController: underlying transaction reverted',
+          },
         );
       });
 
-      it('call when paused', async () => {
+      it('should fail: call without timelock', async () => {
         const { owner, tokenContract } = await deployMTokenWithFixture();
 
         expect(await tokenContract.paused()).eq(false);
         await tokenContract.connect(owner).pause();
         expect(await tokenContract.paused()).eq(true);
 
-        await expect(tokenContract.connect(owner).unpause()).to.emit(
+        await expect(
+          tokenContract.connect(owner).unpause(),
+        ).revertedWithCustomError(tokenContract, 'FunctionNotReady');
+      });
+
+      it('call when paused via timelock', async () => {
+        const {
+          owner,
           tokenContract,
-          tokenContract.interface.events['Unpaused(address)'].name,
-        ).to.not.reverted;
+          accessControl,
+          timelockManager,
+          timelock,
+        } = await deployMTokenWithFixture();
+
+        expect(await tokenContract.paused()).eq(false);
+        await tokenContract.connect(owner).pause();
+        expect(await tokenContract.paused()).eq(true);
+
+        const calldata = tokenContract.interface.encodeFunctionData('unpause');
+
+        await scheduleTimelockOperationsTester(
+          { accessControl, timelockManager, timelock, owner },
+          [tokenContract.address],
+          [calldata],
+          {},
+        );
+
+        await increase(3600);
+        await executeTimelockOperationTester(
+          { accessControl, timelockManager, timelock, owner },
+          tokenContract.address,
+          calldata,
+          owner.address,
+          { from: owner },
+        );
 
         expect(await tokenContract.paused()).eq(false);
       });
@@ -1187,7 +1245,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         );
       });
 
-      it('burn(...) when address is blacklisted', async () => {
+      it('should fail: burn(...) when address is blacklisted', async () => {
         const { owner, regularAccounts, accessControl, tokenContract } =
           await deployMTokenWithFixture();
 
@@ -1198,7 +1256,9 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           { blacklistable: tokenContract, accessControl, owner },
           blacklisted,
         );
-        await burn({ tokenContract, owner }, blacklisted, 1);
+        await burn({ tokenContract, owner }, blacklisted, 1, {
+          revertCustomError: acErrors.WMAC_HAS_ROLE,
+        });
       });
 
       it('transferFrom(...) when caller address is blacklisted', async () => {

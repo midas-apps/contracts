@@ -437,6 +437,7 @@ contract MidasAccessControl is
         AccessControlUtilsLibrary.validateFunctionAccessWithTimelock(
             this,
             role,
+            AccessControlUtilsLibrary.NULL_DELAY,
             false,
             account,
             validateFunctionRole
@@ -450,6 +451,7 @@ contract MidasAccessControl is
         AccessControlUtilsLibrary.validateFunctionAccessWithTimelock(
             this,
             role,
+            AccessControlUtilsLibrary.NULL_DELAY,
             true,
             account,
             false

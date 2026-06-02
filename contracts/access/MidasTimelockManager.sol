@@ -401,10 +401,11 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
      */
     function isFunctionReadyToExecute(
         bytes32 targetRole,
+        uint256 overrideDelay,
         address target,
         bytes calldata data
     ) external view returns (bool ready, bool timelocked) {
-        uint256 delay = _getTimelockDelay(target, data, targetRole);
+        uint256 delay = _getTimelockDelay(targetRole, overrideDelay);
 
         TimelockController _timelock = TimelockController(payable(timelock));
         (bytes32 operationId, , ) = _getOperationId(_timelock, target, data);
@@ -446,7 +447,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     /**
      * @inheritdoc IMidasTimelockManager
      */
-    function getRoleTimelockDelay(bytes32 role)
+    function getRoleTimelockDelay(bytes32 role, uint256 overrideDelay)
         public
         view
         returns (
@@ -454,43 +455,16 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             bool /* isDefault */
         )
     {
-        uint256 delay = _roleTimelocks[role];
-        uint256 actualDelay = delay == 0
+        uint256 delay = overrideDelay != AccessControlUtilsLibrary.NULL_DELAY
+            ? overrideDelay
+            : _roleTimelocks[role];
+        uint256 actualDelay = delay == AccessControlUtilsLibrary.NULL_DELAY
             ? defaultDelay()
-            : delay == type(uint256).max
+            : delay == AccessControlUtilsLibrary.NO_DELAY
             ? 0
             : delay;
 
         return (actualDelay, delay == 0);
-    }
-
-    /**
-     * @inheritdoc IMidasTimelockManager
-     */
-    function getEnforcedDelay(address target, bytes4 selector)
-        public
-        view
-        returns (uint256 delay, bool enforced)
-    {
-        if (target != accessControl.pauseManager()) return (0, false);
-
-        // no delay for global pause, contract pause or function pause
-        if (
-            selector == IMidasPauseManager.globalPause.selector ||
-            selector == IMidasPauseManager.pauseContract.selector ||
-            selector == IMidasPauseManager.bulkPauseContractFn.selector
-        ) {
-            return (0, true);
-        }
-
-        // 1 hour delay for global unpause, contract unpause or function unpause
-        if (
-            selector == IMidasPauseManager.globalUnpause.selector ||
-            selector == IMidasPauseManager.unpauseContract.selector ||
-            selector == IMidasPauseManager.bulkUnpauseContractFn.selector
-        ) {
-            return (1 hours, true);
-        }
     }
 
     /**
@@ -659,9 +633,13 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
         address proposer = msg.sender;
 
-        bytes32 targetRole = _getTargetRole(target, data, proposer);
+        (bytes32 targetRole, uint256 overrideDelay) = _getTargetRole(
+            target,
+            data,
+            proposer
+        );
 
-        uint256 delay = _getTimelockDelay(target, data, targetRole);
+        uint256 delay = _getTimelockDelay(targetRole, overrideDelay);
 
         require(delay != 0, NoTimelockDelayForRole());
 
@@ -798,32 +776,35 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         address target,
         bytes calldata data,
         address proposer
-    ) private view returns (bytes32) {
+    )
+        private
+        view
+        returns (
+            bytes32, /* role */
+            uint256 /* overrideDelay */
+        )
+    {
         (bool success, bytes memory err) = target.staticcall(data);
 
         require(!success, PreflightCallUnexpectedSuccess());
 
         (
             bytes32 role,
+            uint256 overrideDelay,
             bool roleIsFunctionOperator,
             bool validateFunctionRole
         ) = _decodePreflightSucceededError(err);
 
-        if (!roleIsFunctionOperator) {
-            require(
-                !accessControl.isUserFacingRole(role),
-                UserFacingRoleNotAllowed(role)
-            );
-        }
-
-        return
+        return (
             accessControl.validateFunctionAccess(
                 role,
                 roleIsFunctionOperator,
                 proposer,
                 _getFunctionSelector(data),
                 validateFunctionRole
-            );
+            ),
+            overrideDelay
+        );
     }
 
     /**
@@ -888,24 +869,15 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
     /**
      * @dev gets the timelock delay for a given target and data
-     * @param target target contract
-     * @param data operation data
      * @param targetRole target role
      * @return delay timelock delay
      */
-    function _getTimelockDelay(
-        address target,
-        bytes calldata data,
-        bytes32 targetRole
-    ) private view returns (uint256 delay) {
-        (uint256 enforcedDelay, bool enforced) = getEnforcedDelay(
-            target,
-            _getFunctionSelector(data)
-        );
-
-        (delay, ) = enforced
-            ? (enforcedDelay, true)
-            : getRoleTimelockDelay(targetRole);
+    function _getTimelockDelay(bytes32 targetRole, uint256 overrideDelay)
+        private
+        view
+        returns (uint256 delay)
+    {
+        (delay, ) = getRoleTimelockDelay(targetRole, overrideDelay);
     }
 
     /**
@@ -927,6 +899,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
      * @dev decodes a `RolePreflightSucceeded` error
      * @param err error bytes
      * @return role role
+     * @return overrideDelay override delay for the invocation
      * @return roleIsFunctionOperator whether the role is a function operator role
      * @return validateFunctionRole whether to validate the function role
      */
@@ -935,11 +908,12 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         pure
         returns (
             bytes32 role,
+            uint256 overrideDelay,
             bool roleIsFunctionOperator,
             bool validateFunctionRole
         )
     {
-        require(err.length == 100, InvalidPreflightError(err));
+        require(err.length == 132, InvalidPreflightError(err));
 
         bytes4 selector;
 
@@ -956,8 +930,9 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
         assembly {
             role := mload(add(err, 36))
-            roleIsFunctionOperator := mload(add(err, 68))
-            validateFunctionRole := mload(add(err, 100))
+            overrideDelay := mload(add(err, 68))
+            roleIsFunctionOperator := mload(add(err, 100))
+            validateFunctionRole := mload(add(err, 132))
         }
     }
 }

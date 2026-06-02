@@ -10,17 +10,47 @@ import {IMidasTimelockManager} from "../interfaces/IMidasTimelockManager.sol";
  * @author RedDuck Software
  */
 library AccessControlUtilsLibrary {
+    /**
+     * @notice error when the function permission is not found
+     * @param roleUsed role used
+     * @param functionSelector function selector
+     * @param account account
+     */
     error NoFunctionPermission(
         bytes32 roleUsed,
         bytes4 functionSelector,
         address account
     );
+
+    /**
+     * @notice error when the function is not ready
+     * @param roleUsed role used
+     * @param functionSelector function selector
+     */
     error FunctionNotReady(bytes32 roleUsed, bytes4 functionSelector);
+
+    /**
+     * @notice error when the sender is not the timelock
+     * @param roleUsed role used
+     * @param functionSelector function selector
+     * @param sender sender
+     */
     error SenderIsNotTimelock(
         bytes32 roleUsed,
         bytes4 functionSelector,
         address sender
     );
+
+    /**
+     * @notice error when the user facing role is not allowed
+     * @param role role
+     */
+    error UserFacingRoleNotAllowed(bytes32 role);
+
+    // solhint-disable-next-line private-vars-leading-underscore
+    uint256 internal constant NO_DELAY = type(uint256).max;
+    // solhint-disable-next-line private-vars-leading-underscore
+    uint256 internal constant NULL_DELAY = 0;
 
     /**
      * @dev validates that the function access is valid with timelock
@@ -33,6 +63,7 @@ library AccessControlUtilsLibrary {
     function validateFunctionAccessWithTimelock(
         IMidasAccessControl accessControl,
         bytes32 contractAdminRole,
+        uint256 overrideDelay,
         bool roleIsFunctionOperatorRole,
         address accountToCheck,
         bool validateFunctionRole
@@ -46,6 +77,7 @@ library AccessControlUtilsLibrary {
         if (isPreflight) {
             revert IMidasTimelockManager.RolePreflightSucceeded(
                 contractAdminRole,
+                overrideDelay,
                 roleIsFunctionOperatorRole,
                 validateFunctionRole
             );
@@ -65,7 +97,12 @@ library AccessControlUtilsLibrary {
         );
 
         (bool ready, bool timelocked) = timelockManager
-            .isFunctionReadyToExecute(roleUsed, address(this), msg.data);
+            .isFunctionReadyToExecute(
+                roleUsed,
+                overrideDelay,
+                address(this),
+                msg.data
+            );
 
         require(ready, FunctionNotReady(roleUsed, msg.sig));
 
@@ -106,6 +143,11 @@ library AccessControlUtilsLibrary {
                 return role;
             }
         } else {
+            require(
+                !accessControl.isUserFacingRole(role),
+                UserFacingRoleNotAllowed(role)
+            );
+
             if (accessControl.hasRole(role, account)) {
                 return role;
             }
