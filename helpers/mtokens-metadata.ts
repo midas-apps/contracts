@@ -306,4 +306,8 @@ export const mTokensMetadata: Record<
     name: 'Ether.fi Liquid RWA',
     symbol: 'liquidRWA',
   },
+  mWIN: {
+    name: 'Midas Wellington Income Opportunities',
+    symbol: 'mWIN',
+  },
 };

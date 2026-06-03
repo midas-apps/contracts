@@ -74,6 +74,7 @@ export enum MTokenNameEnum {
   carryTradeUSDTRYLeverage = 'carryTradeUSDTRYLeverage',
   mEVETH = 'mEVETH',
   liquidRWA = 'liquidRWA',
+  mWIN = 'mWIN',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
@@ -81,6 +82,7 @@ export type MTokenName = keyof typeof MTokenNameEnum;
 export enum PaymentTokenNameEnum {
   usdc = 'usdc',
   usdt = 'usdt',
+  rlusd = 'rlusd',
   dai = 'dai',
   m = 'm',
   wbtc = 'wbtc',

@@ -54,6 +54,7 @@ import { mTBILLDeploymentConfig } from './mTBILL';
 import { mTESTDeploymentConfig } from './mTEST';
 import { mTUDeploymentConfig } from './mTU';
 import { mWildUSDDeploymentConfig } from './mWildUSD';
+import { mWINDeploymentConfig } from './mWIN';
 import { mXRPDeploymentConfig } from './mXRP';
 import { obeatUSDDeploymentConfig } from './obeatUSD';
 import { plUSDDeploymentConfig } from './plUSD';
@@ -153,4 +154,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   carryTradeUSDTRYLeverage: carryTradeUSDTRYLeverageDeploymentConfig,
   mEVETH: mEVETHDeploymentConfig,
   liquidRWA: liquidRWADeploymentConfig,
+  mWIN: mWINDeploymentConfig,
 };
