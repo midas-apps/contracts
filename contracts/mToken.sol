@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20Pausable
 import {RateLimitLibrary} from "./libraries/RateLimitLibrary.sol";
 import {AccessControlUtilsLibrary} from "./libraries/AccessControlUtilsLibrary.sol";
 import {IMidasAccessControl} from "./interfaces/IMidasAccessControl.sol";
+import {PauseUtilsLibrary} from "./libraries/PauseUtilsLibrary.sol";
 
 import "./access/Blacklistable.sol";
 import "./interfaces/IMToken.sol";
@@ -239,6 +240,8 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         address to,
         uint256 amount
     ) internal virtual override(ERC20PausableUpgradeable) {
+        PauseUtilsLibrary.requireNotPaused(accessControl, msg.sig);
+
         if (to != address(0)) {
             if (!_inClawback) {
                 _onlyNotBlacklisted(from);

@@ -1,28 +1,30 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.34;
 
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
-import {IPausable} from "../interfaces/IPausable.sol";
+import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
 import {IMidasPauseManager} from "../interfaces/IMidasPauseManager.sol";
 
 /**
- * @title Pausable
- * @notice Base contract that implements basic functions and modifiers
- * with pause functionality
+ * @title PauseUtilsLibrary
+ * @notice library for checking pause statuses
  * @author RedDuck Software
  */
-abstract contract Pausable is WithMidasAccessControl, IPausable {
+library PauseUtilsLibrary {
     /**
-     * @dev leaving a storage gap for futures updates
+     * @notice error thrown when a function is paused
+     * @param contractAddr contract address
+     * @param fn function id
      */
-    uint256[50] private __gap;
+    error Paused(address contractAddr, bytes4 fn);
 
     /**
      * @dev checks that a given `fn` is not paused
      * @param fn function id
      */
-    function _requireFnNotPaused(bytes4 fn) internal view {
+    function requireFnNotPaused(IMidasAccessControl accessControl, bytes4 fn)
+        internal
+        view
+    {
         require(
             !IMidasPauseManager(accessControl.pauseManager()).isFunctionPaused(
                 address(this),
@@ -36,7 +38,10 @@ abstract contract Pausable is WithMidasAccessControl, IPausable {
      * @dev checks that a given `fn` and contract/global are not paused
      * @param fn function id
      */
-    function _requireNotPaused(bytes4 fn) internal view {
+    function requireNotPaused(IMidasAccessControl accessControl, bytes4 fn)
+        internal
+        view
+    {
         require(
             !IMidasPauseManager(accessControl.pauseManager()).isPaused(
                 address(this),
