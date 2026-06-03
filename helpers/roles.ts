@@ -80,6 +80,7 @@ const prefixes: Record<MTokenName, string> = {
   carryTradeUSDTRYLeverage: 'CARRY_TRADE_USD_TRY_LEVERAGE',
   mEVETH: 'M_EV_ETH',
   liquidRWA: 'LIQUID_RWA',
+  mWIN: 'M_WIN',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {
