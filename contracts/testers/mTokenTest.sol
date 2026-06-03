@@ -14,6 +14,9 @@ contract mTokenTest is mToken {
     bytes32 public constant M_TOKEN_TEST_PAUSE_OPERATOR_ROLE =
         keccak256("M_TOKEN_TEST_PAUSE_OPERATOR_ROLE");
 
+    bytes32 public constant M_TOKEN_MANAGER_ROLE =
+        keccak256("M_TOKEN_MANAGER_ROLE");
+
     function _disableInitializers() internal override {}
 
     function _getNameSymbol()
@@ -35,5 +38,9 @@ contract mTokenTest is mToken {
 
     function _pauserRole() internal pure override returns (bytes32) {
         return M_TOKEN_TEST_PAUSE_OPERATOR_ROLE;
+    }
+
+    function _contractAdminRole() internal pure override returns (bytes32) {
+        return M_TOKEN_MANAGER_ROLE;
     }
 }

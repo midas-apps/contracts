@@ -113,7 +113,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     function mintGoverned(address to, uint256 amount)
         external
-        onlyContractAdmin // TODO: revise AC
+        onlyContractAdmin
     {
         _mint(to, amount);
     }
@@ -134,7 +134,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     function burnGoverned(address from, uint256 amount)
         external
-        onlyContractAdmin // TODO: revise AC
+        onlyContractAdmin
     {
         _burn(from, amount);
     }
@@ -154,7 +154,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     function pause()
         external
         override
-        onlyRoleNoTimelock(_pauserRole(), false)
+        onlyRoleNoTimelock(_contractAdminRole(), true)
     {
         _pause();
     }
@@ -165,7 +165,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     function unpause()
         external
         override
-        onlyRoleDelayOverride(_pauserRole(), 1 hours, false)
+        onlyRoleDelayOverride(_contractAdminRole(), 1 days, true)
     {
         _unpause();
     }
@@ -278,6 +278,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     function _burnerRole() internal pure virtual returns (bytes32);
 
+    // TODO: remove this function
     /**
      * @dev AC role, owner of which can pause mToken token
      */
@@ -286,7 +287,13 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     /**
      * @inheritdoc WithMidasAccessControl
      */
-    function _contractAdminRole() internal pure override returns (bytes32) {
+    function _contractAdminRole()
+        internal
+        pure
+        virtual
+        override
+        returns (bytes32)
+    {
         return _DEFAULT_ADMIN_ROLE;
     }
 }

@@ -69,11 +69,9 @@ export const setClawbackReceiverTest = async (
   await expect(tokenContract.connect(from).setClawbackReceiver(newReceiver))
     .to.emit(
       tokenContract,
-      tokenContract.interface.events['ClawbackReceiverSet(address,address)']
-        .name,
+      tokenContract.interface.events['ClawbackReceiverSet(address)'].name,
     )
-    .withArgs(from.address, newReceiver);
-
+    .withArgs(newReceiver);
   expect(await tokenContract.clawbackReceiver()).eq(newReceiver);
 };
 

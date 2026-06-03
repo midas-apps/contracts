@@ -405,7 +405,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         address target,
         bytes calldata data
     ) external view returns (bool ready, bool timelocked) {
-        uint256 delay = _getTimelockDelay(targetRole, overrideDelay);
+        (uint256 delay, ) = getRoleTimelockDelay(targetRole, overrideDelay);
 
         TimelockController _timelock = TimelockController(payable(timelock));
         (bytes32 operationId, , ) = _getOperationId(_timelock, target, data);
@@ -639,7 +639,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             proposer
         );
 
-        uint256 delay = _getTimelockDelay(targetRole, overrideDelay);
+        (uint256 delay, ) = getRoleTimelockDelay(targetRole, overrideDelay);
 
         require(delay != 0, NoTimelockDelayForRole());
 
@@ -785,8 +785,8 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         )
     {
         (bool success, bytes memory err) = target.staticcall(data);
-
         require(!success, PreflightCallUnexpectedSuccess());
+        bytes4 selector = _getFunctionSelector(data);
 
         (
             bytes32 role,
@@ -797,10 +797,12 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
         return (
             accessControl.validateFunctionAccess(
+                this,
                 role,
+                overrideDelay,
                 roleIsFunctionOperator,
                 proposer,
-                _getFunctionSelector(data),
+                selector,
                 validateFunctionRole
             ),
             overrideDelay
@@ -865,19 +867,6 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         returns (bytes4)
     {
         return bytes4(data);
-    }
-
-    /**
-     * @dev gets the timelock delay for a given target and data
-     * @param targetRole target role
-     * @return delay timelock delay
-     */
-    function _getTimelockDelay(bytes32 targetRole, uint256 overrideDelay)
-        private
-        view
-        returns (uint256 delay)
-    {
-        (delay, ) = getRoleTimelockDelay(targetRole, overrideDelay);
     }
 
     /**

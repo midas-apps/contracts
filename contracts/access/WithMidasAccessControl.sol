@@ -161,7 +161,9 @@ abstract contract WithMidasAccessControl is
         bool validateFunctionRole
     ) internal view {
         accessControl.validateFunctionAccess(
+            AccessControlUtilsLibrary.getTimlockManager(accessControl),
             role,
+            AccessControlUtilsLibrary.NO_DELAY,
             roleIsFunctionOperator,
             account,
             msg.sig,

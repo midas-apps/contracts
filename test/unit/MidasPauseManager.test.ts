@@ -103,7 +103,7 @@ const unpauseGlobalViaTimelock = async (
     {},
     { from },
   );
-  await increase(3600);
+  await increase(86400);
   await executeTimelockOperationTester(
     { ...params, owner: executeFrom },
     params.pauseManager.address,
@@ -131,7 +131,7 @@ const unpauseVaultViaTimelock = async (
     {},
     { from },
   );
-  await increase(3600);
+  await increase(86400);
   await executeTimelockOperationTester(
     { ...params, owner: executeFrom },
     params.pauseManager.address,
@@ -161,7 +161,7 @@ const unpauseVaultFnViaTimelock = async (
     {},
     { from },
   );
-  await increase(3600);
+  await increase(86400);
   await executeTimelockOperationTester(
     { ...params, owner: executeFrom },
     params.pauseManager.address,
@@ -299,7 +299,7 @@ describe('MidasPauseManager', () => {
         [pauseManager.address],
         [calldata],
       );
-      await increase(3600);
+      await increase(86400);
       await executeTimelockOperationTester(
         params,
         pauseManager.address,
@@ -632,7 +632,7 @@ describe('MidasPauseManager', () => {
         [pauseManager.address],
         [calldata],
       );
-      await increase(3600);
+      await increase(86400);
       await executeTimelockOperationTester(
         params,
         pauseManager.address,
@@ -1171,7 +1171,7 @@ describe('MidasPauseManager', () => {
         [pauseManager.address],
         [calldata],
       );
-      await increase(3600);
+      await increase(86400);
       await executeTimelockOperationTester(
         params,
         pauseManager.address,

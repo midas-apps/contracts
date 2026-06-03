@@ -18,7 +18,7 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
     /**
      * @notice default delay for pausing and unpausing contracts
      */
-    uint256 public constant UNPAUSE_DELAY = 3600;
+    uint256 public constant UNPAUSE_DELAY = 1 days;
 
     /**
      * @dev admin role for the pause manager

@@ -75,8 +75,8 @@ library AccessControlUtilsLibrary {
             address /* actualAccount */
         )
     {
-        IMidasTimelockManager timelockManager = IMidasTimelockManager(
-            accessControl.timelockManager()
+        IMidasTimelockManager timelockManager = getTimlockManager(
+            accessControl
         );
         bool isPreflight = accountToCheck == address(timelockManager);
         bool isTimelock = accountToCheck == timelockManager.timelock();
@@ -96,7 +96,9 @@ library AccessControlUtilsLibrary {
 
         bytes32 roleUsed = validateFunctionAccess(
             accessControl,
+            timelockManager,
             contractAdminRole,
+            overrideDelay,
             roleIsFunctionOperatorRole,
             account,
             msg.sig,
@@ -126,7 +128,9 @@ library AccessControlUtilsLibrary {
     /**
      * @dev validates that the function access is valid
      * @param accessControl access control contract
+     * @param timelockManager timelock manager contract
      * @param role admin role
+     * @param overrideDelay override delay for the invocation
      * @param roleIsFunctionOperatorRole whether the role is a function operator role
      * @param account account to check
      * @param functionSelector function selector
@@ -135,7 +139,9 @@ library AccessControlUtilsLibrary {
      */
     function validateFunctionAccess(
         IMidasAccessControl accessControl,
+        IMidasTimelockManager timelockManager,
         bytes32 role,
+        uint256 overrideDelay,
         bool roleIsFunctionOperatorRole,
         address account,
         bytes4 functionSelector,
@@ -151,30 +157,74 @@ library AccessControlUtilsLibrary {
             if (accessControl.isFunctionAccessGrantOperator(role, account)) {
                 return role;
             }
-        } else {
-            require(
-                !accessControl.isUserFacingRole(role),
-                UserFacingRoleNotAllowed(role)
-            );
-
-            if (accessControl.hasRole(role, account)) {
-                return role;
-            }
-
-            (bytes32 key, bool hasPermission) = validateFunctionRole
-                ? _hasFunctionPermission(
-                    accessControl,
-                    role,
-                    functionSelector,
-                    account
-                )
-                : (bytes32(0), false);
-
-            if (hasPermission) {
-                return key;
-            }
+            revert NoFunctionPermission(role, functionSelector, account);
         }
-        revert NoFunctionPermission(role, msg.sig, account);
+
+        require(
+            !accessControl.isUserFacingRole(role),
+            UserFacingRoleNotAllowed(role)
+        );
+
+        bool hasRootRole = accessControl.hasRole(role, account);
+
+        (bytes32 key, bool hasPermission) = validateFunctionRole
+            ? _hasFunctionPermission(
+                accessControl,
+                role,
+                functionSelector,
+                account
+            )
+            : (bytes32(0), false);
+
+        if (!hasPermission && !hasRootRole) {
+            revert NoFunctionPermission(role, functionSelector, account);
+        }
+
+        if (!hasRootRole) {
+            return key;
+        }
+
+        if (!hasPermission) {
+            return role;
+        }
+
+        return _resolveAccessRole(timelockManager, role, key, overrideDelay);
+    }
+
+    function getTimlockManager(IMidasAccessControl accessControl)
+        internal
+        view
+        returns (IMidasTimelockManager)
+    {
+        return IMidasTimelockManager(accessControl.timelockManager());
+    }
+
+    /**
+     * @dev resolves the access role based on the shortest delay
+     * @param timelockManager timelock manager contract
+     * @param rootRole root role
+     * @param functionKey function key
+     * @param overrideDelay override delay
+     * @return roleUsed role used to validate the function access
+     */
+    function _resolveAccessRole(
+        IMidasTimelockManager timelockManager,
+        bytes32 rootRole,
+        bytes32 functionKey,
+        uint256 overrideDelay
+    ) private view returns (bytes32 roleUsed) {
+        if (overrideDelay != NULL_DELAY) {
+            return rootRole;
+        }
+        (uint256 rootDelay, ) = timelockManager.getRoleTimelockDelay(
+            rootRole,
+            overrideDelay
+        );
+        (uint256 functionDelay, ) = timelockManager.getRoleTimelockDelay(
+            functionKey,
+            overrideDelay
+        );
+        return rootDelay <= functionDelay ? rootRole : functionKey;
     }
 
     /**

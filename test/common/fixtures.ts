@@ -977,13 +977,13 @@ export const mTokenPermissionedFixture = async (
 
   const mintRole = await mTokenPermissioned.M_TOKEN_TEST_MINT_OPERATOR_ROLE();
   const burnRole = await mTokenPermissioned.M_TOKEN_TEST_BURN_OPERATOR_ROLE();
-  const pauseRole = await mTokenPermissioned.M_TOKEN_TEST_PAUSE_OPERATOR_ROLE();
+  const tokenManagerRole = await mTokenPermissioned.M_TOKEN_TEST_MANAGER_ROLE();
   const mTokenPermissionedGreenlistedRole =
     await mTokenPermissioned.M_TOKEN_TEST_GREENLISTED_ROLE();
 
   await accessControl.grantRole(mintRole, owner.address);
   await accessControl.grantRole(burnRole, owner.address);
-  await accessControl.grantRole(pauseRole, owner.address);
+  await accessControl.grantRole(tokenManagerRole, owner.address);
 
   const mTokenPermissionedDepositVault = await new DepositVaultTest__factory(
     owner,
@@ -1031,7 +1031,7 @@ export const mTokenPermissionedFixture = async (
     mTokenPermissionedRoles: {
       mint: mintRole,
       burn: burnRole,
-      pause: pauseRole,
+      manager: tokenManagerRole,
       greenlisted: mTokenPermissionedGreenlistedRole,
     },
     mTokenPermissionedDepositVault,

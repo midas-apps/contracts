@@ -1,12 +1,16 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { constants } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { encodeFnSelector } from '../../helpers/utils';
 import {
+  MidasAccessControl,
   MidasAccessControl__factory,
+  MidasTimelockManager,
+  WithMidasAccessControlTester,
   WithMidasAccessControlTester__factory,
 } from '../../typechain-types';
 import {
@@ -27,6 +31,125 @@ import {
   scheduleTimelockOperationsTester,
   setRoleTimelocksTester,
 } from '../common/timelock-manager.helpers';
+
+const withOnlyRoleSelector = encodeFnSelector('withOnlyRole(bytes32,bool)');
+const withOnlyContractAdminSelector = encodeFnSelector(
+  'withOnlyContractAdmin()',
+);
+const withOnlyRoleNoTimelockSelector = encodeFnSelector(
+  'withOnlyRoleNoTimelock(bytes32,bool)',
+);
+const withOnlyRoleDelayOverrideSelector = encodeFnSelector(
+  'withOnlyRoleDelayOverride(bytes32,uint256,bool)',
+);
+
+const timelockManagerRevertOpts = (
+  timelockManager: MidasTimelockManager,
+  customErrorName: string,
+  args?: unknown[],
+) => ({
+  revertCustomError: {
+    contract: timelockManager,
+    customErrorName,
+    args,
+  },
+});
+
+const getScopedFunctionKeys = async (
+  accessControl: MidasAccessControl,
+  functionAccessAdminRole: string,
+  functionSelector: string,
+  wAccessControlTester: WithMidasAccessControlTester,
+  timelockManager: MidasTimelockManager,
+) => {
+  const wacFunctionKey = await accessControl.functionPermissionKey(
+    functionAccessAdminRole,
+    wAccessControlTester.address,
+    functionSelector,
+  );
+  const timelockManagerFunctionKey = await accessControl.functionPermissionKey(
+    functionAccessAdminRole,
+    timelockManager.address,
+    functionSelector,
+  );
+
+  return { wacFunctionKey, timelockManagerFunctionKey };
+};
+
+const setupScopedFunctionPermission = async (
+  accessControl: MidasAccessControl,
+  owner: SignerWithAddress,
+  wAccessControlTester: WithMidasAccessControlTester,
+  timelockManager: MidasTimelockManager,
+  functionAccessAdminRole: string,
+  functionSelector: string,
+  account: string,
+) => {
+  for (const targetContract of [
+    wAccessControlTester.address,
+    timelockManager.address,
+  ]) {
+    await setupFunctionAccessGrantOperator({
+      accessControl,
+      owner,
+      functionAccessAdminRole,
+      targetContract,
+      functionSelector,
+      grantOperator: owner,
+    });
+    await setFunctionPermissionTester(
+      { accessControl, owner },
+      functionAccessAdminRole,
+      targetContract,
+      functionSelector,
+      [{ account, enabled: true }],
+    );
+  }
+
+  return getScopedFunctionKeys(
+    accessControl,
+    functionAccessAdminRole,
+    functionSelector,
+    wAccessControlTester,
+    timelockManager,
+  );
+};
+
+const setupWithOnlyRoleFunctionPermission = async (
+  accessControl: MidasAccessControl,
+  owner: SignerWithAddress,
+  wAccessControlTester: WithMidasAccessControlTester,
+  timelockManager: MidasTimelockManager,
+  functionAccessAdminRole: string,
+  account: string,
+) =>
+  setupScopedFunctionPermission(
+    accessControl,
+    owner,
+    wAccessControlTester,
+    timelockManager,
+    functionAccessAdminRole,
+    withOnlyRoleSelector,
+    account,
+  );
+
+const setupWithOnlyContractAdminFunctionPermission = async (
+  accessControl: MidasAccessControl,
+  owner: SignerWithAddress,
+  wAccessControlTester: WithMidasAccessControlTester,
+  timelockManager: MidasTimelockManager,
+  functionAccessAdminRole: string,
+  account: string,
+) =>
+  setupScopedFunctionPermission(
+    accessControl,
+    owner,
+    wAccessControlTester,
+    timelockManager,
+    functionAccessAdminRole,
+    withOnlyContractAdminSelector,
+    account,
+  );
 
 describe('MidasAccessControl', function () {
   it('deployment', async () => {
@@ -1409,9 +1532,10 @@ describe('WithMidasAccessControl', function () {
   });
 
   describe('modifier onlyRole', () => {
-    it('should fail when call from non DEFAULT_ADMIN_ROLE address', async () => {
+    it('should fail: when call from address without role', async () => {
       const { wAccessControlTester, regularAccounts, roles } =
         await loadFixture(defaultDeploy);
+
       await expect(
         wAccessControlTester
           .connect(regularAccounts[1])
@@ -1422,10 +1546,1175 @@ describe('WithMidasAccessControl', function () {
       );
     });
 
-    it('call from DEFAULT_ADMIN_ROLE address', async () => {
+    it('when validateFunctionRole is false and caller has root admin role', async () => {
       const { wAccessControlTester, roles } = await loadFixture(defaultDeploy);
+
       await expect(
         wAccessControlTester.withOnlyRole(roles.common.defaultAdmin, false),
+      ).not.reverted;
+    });
+
+    it('should fail: when role is timelocked and trying to call the function directly', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+        timelock,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+
+      const { wacFunctionKey, timelockManagerFunctionKey } =
+        await setupWithOnlyRoleFunctionPermission(
+          accessControl,
+          owner,
+          wAccessControlTester,
+          timelockManager,
+          adminRole,
+          regularAccounts[0].address,
+        );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wacFunctionKey, timelockManagerFunctionKey],
+        [3600, 3600],
+      );
+
+      await expect(
+        wAccessControlTester
+          .connect(regularAccounts[0])
+          .withOnlyRole(adminRole, true),
+      ).revertedWithCustomError(accessControl, 'FunctionNotReady');
+    });
+
+    it('should fail: when validateFunctionRole is false but trying to call with function admin', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+
+      await setupWithOnlyRoleFunctionPermission(
+        accessControl,
+        owner,
+        wAccessControlTester,
+        timelockManager,
+        adminRole,
+        regularAccounts[0].address,
+      );
+
+      await expect(
+        wAccessControlTester
+          .connect(regularAccounts[0])
+          .withOnlyRole(adminRole, false),
+      ).revertedWithCustomError(
+        wAccessControlTester,
+        acErrors.WMAC_HASNT_PERMISSION().customErrorName,
+      );
+    });
+
+    it('when validateFunctionRole is true and trying to call with function admin and there is no timelock', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+
+      await setupWithOnlyRoleFunctionPermission(
+        accessControl,
+        owner,
+        wAccessControlTester,
+        timelockManager,
+        adminRole,
+        regularAccounts[0].address,
+      );
+
+      await expect(
+        wAccessControlTester
+          .connect(regularAccounts[0])
+          .withOnlyRole(adminRole, true),
+      ).not.reverted;
+    });
+
+    it('when validateFunctionRole is true and trying to call with function admin and there is timelock on function role', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+        timelock,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+
+      const { wacFunctionKey, timelockManagerFunctionKey } =
+        await setupWithOnlyRoleFunctionPermission(
+          accessControl,
+          owner,
+          wAccessControlTester,
+          timelockManager,
+          adminRole,
+          regularAccounts[0].address,
+        );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wacFunctionKey, timelockManagerFunctionKey],
+        [3600, 3600],
+      );
+
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withOnlyRole',
+        [adminRole, true],
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [calldata],
+        {},
+        { from: regularAccounts[0] },
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        regularAccounts[0].address,
+      );
+    });
+
+    it('when validateFunctionRole is true and trying to call with function admin and there is timelock on root role', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+        timelock,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+
+      await grantRoleTester(
+        { accessControl, owner },
+        adminRole,
+        regularAccounts[0].address,
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [adminRole],
+        [3600],
+      );
+
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withOnlyRole',
+        [adminRole, true],
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [calldata],
+        {},
+        { from: regularAccounts[0] },
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        regularAccounts[0].address,
+      );
+    });
+
+    it('when validateFunctionRole is true, caller has both function admin and root roles, delay is on both - it should select role with lower delay', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+        timelock,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+
+      await grantRoleTester(
+        { accessControl, owner },
+        adminRole,
+        regularAccounts[0].address,
+      );
+
+      const { wacFunctionKey, timelockManagerFunctionKey } =
+        await setupWithOnlyRoleFunctionPermission(
+          accessControl,
+          owner,
+          wAccessControlTester,
+          timelockManager,
+          adminRole,
+          regularAccounts[0].address,
+        );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [adminRole, wacFunctionKey, timelockManagerFunctionKey],
+        [7200, 3600, 3600],
+      );
+
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withOnlyRole',
+        [adminRole, true],
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [calldata],
+        {},
+        { from: regularAccounts[0] },
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        regularAccounts[0].address,
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [calldata],
+        {},
+        { from: regularAccounts[0] },
+      );
+
+      await increase(1);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        regularAccounts[0].address,
+        timelockManagerRevertOpts(timelockManager, 'TimelockOperationNotReady'),
+      );
+
+      await increase(3599);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        regularAccounts[0].address,
+      );
+    });
+  });
+
+  describe('modifier onlyContractAdmin', () => {
+    const setupContractAdminRole = async (
+      wAccessControlTester: WithMidasAccessControlTester,
+      adminRole: string,
+    ) => {
+      await wAccessControlTester.setContractAdminRole(adminRole);
+    };
+
+    it('should fail: when call from address without role', async () => {
+      const { wAccessControlTester, regularAccounts, roles } =
+        await loadFixture(defaultDeploy);
+
+      await setupContractAdminRole(
+        wAccessControlTester,
+        roles.common.defaultAdmin,
+      );
+
+      await expect(
+        wAccessControlTester
+          .connect(regularAccounts[1])
+          .withOnlyContractAdmin(),
+      ).revertedWithCustomError(
+        wAccessControlTester,
+        acErrors.WMAC_HASNT_PERMISSION().customErrorName,
+      );
+    });
+
+    it('when caller has root admin role', async () => {
+      const { wAccessControlTester, roles } = await loadFixture(defaultDeploy);
+
+      await setupContractAdminRole(
+        wAccessControlTester,
+        roles.common.defaultAdmin,
+      );
+
+      await expect(wAccessControlTester.withOnlyContractAdmin()).not.reverted;
+    });
+
+    it('should fail: when role is timelocked and trying to call the function directly', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+        timelock,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+      await setupContractAdminRole(wAccessControlTester, adminRole);
+
+      const { wacFunctionKey, timelockManagerFunctionKey } =
+        await setupWithOnlyContractAdminFunctionPermission(
+          accessControl,
+          owner,
+          wAccessControlTester,
+          timelockManager,
+          adminRole,
+          regularAccounts[0].address,
+        );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wacFunctionKey, timelockManagerFunctionKey],
+        [3600, 3600],
+      );
+
+      await expect(
+        wAccessControlTester
+          .connect(regularAccounts[0])
+          .withOnlyContractAdmin(),
+      ).revertedWithCustomError(accessControl, 'FunctionNotReady');
+    });
+
+    it('when trying to call with function admin and there is no timelock', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+      await setupContractAdminRole(wAccessControlTester, adminRole);
+
+      await setupWithOnlyContractAdminFunctionPermission(
+        accessControl,
+        owner,
+        wAccessControlTester,
+        timelockManager,
+        adminRole,
+        regularAccounts[0].address,
+      );
+
+      await expect(
+        wAccessControlTester
+          .connect(regularAccounts[0])
+          .withOnlyContractAdmin(),
+      ).not.reverted;
+    });
+
+    it('when trying to call with function admin and there is timelock on function role', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+        timelock,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+      await setupContractAdminRole(wAccessControlTester, adminRole);
+
+      const { wacFunctionKey, timelockManagerFunctionKey } =
+        await setupWithOnlyContractAdminFunctionPermission(
+          accessControl,
+          owner,
+          wAccessControlTester,
+          timelockManager,
+          adminRole,
+          regularAccounts[0].address,
+        );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wacFunctionKey, timelockManagerFunctionKey],
+        [3600, 3600],
+      );
+
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withOnlyContractAdmin',
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [calldata],
+        {},
+        { from: regularAccounts[0] },
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        regularAccounts[0].address,
+      );
+    });
+
+    it('when trying to call with function admin and there is timelock on root role', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+        timelock,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+      await setupContractAdminRole(wAccessControlTester, adminRole);
+
+      await grantRoleTester(
+        { accessControl, owner },
+        adminRole,
+        regularAccounts[0].address,
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [adminRole],
+        [3600],
+      );
+
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withOnlyContractAdmin',
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [calldata],
+        {},
+        { from: regularAccounts[0] },
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        regularAccounts[0].address,
+      );
+    });
+
+    it('when caller has both function admin and root roles, delay is on both - it should select role with lower delay', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+        timelock,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+      await setupContractAdminRole(wAccessControlTester, adminRole);
+
+      await grantRoleTester(
+        { accessControl, owner },
+        adminRole,
+        regularAccounts[0].address,
+      );
+
+      const { wacFunctionKey, timelockManagerFunctionKey } =
+        await setupWithOnlyContractAdminFunctionPermission(
+          accessControl,
+          owner,
+          wAccessControlTester,
+          timelockManager,
+          adminRole,
+          regularAccounts[0].address,
+        );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [adminRole, wacFunctionKey, timelockManagerFunctionKey],
+        [7200, 3600, 3600],
+      );
+
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withOnlyContractAdmin',
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [calldata],
+        {},
+        { from: regularAccounts[0] },
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        regularAccounts[0].address,
+      );
+    });
+  });
+
+  describe('modifier onlyRoleDelayOverride', () => {
+    it('should fail: when role is timelocked and trying to call the function directly', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+        timelock,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+      const { wacFunctionKey, timelockManagerFunctionKey } =
+        await setupScopedFunctionPermission(
+          accessControl,
+          owner,
+          wAccessControlTester,
+          timelockManager,
+          adminRole,
+          withOnlyRoleDelayOverrideSelector,
+          regularAccounts[0].address,
+        );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wacFunctionKey, timelockManagerFunctionKey],
+        [3600, 3600],
+      );
+
+      await expect(
+        wAccessControlTester
+          .connect(regularAccounts[0])
+          .withOnlyRoleDelayOverride(adminRole, 0, true),
+      )
+        .revertedWithCustomError(accessControl, 'FunctionNotReady')
+        .withArgs(wacFunctionKey, withOnlyRoleDelayOverrideSelector);
+    });
+
+    it('should fail: when trying to call with function admin only', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+
+      await setupScopedFunctionPermission(
+        accessControl,
+        owner,
+        wAccessControlTester,
+        timelockManager,
+        adminRole,
+        withOnlyRoleDelayOverrideSelector,
+        regularAccounts[0].address,
+      );
+
+      await expect(
+        wAccessControlTester
+          .connect(regularAccounts[0])
+          .withOnlyRoleDelayOverride(adminRole, 0, false),
+      ).revertedWithCustomError(
+        wAccessControlTester,
+        acErrors.WMAC_HASNT_PERMISSION().customErrorName,
+      );
+    });
+
+    it('when trying to call with function admin and there is no timelock', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+
+      await setupScopedFunctionPermission(
+        accessControl,
+        owner,
+        wAccessControlTester,
+        timelockManager,
+        adminRole,
+        withOnlyRoleDelayOverrideSelector,
+        regularAccounts[0].address,
+      );
+
+      await expect(
+        wAccessControlTester
+          .connect(regularAccounts[0])
+          .withOnlyRoleDelayOverride(adminRole, 0, true),
+      ).not.reverted;
+    });
+
+    it('when trying to call with function admin and there is timelock on function role', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+        timelock,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+      const { wacFunctionKey, timelockManagerFunctionKey } =
+        await setupScopedFunctionPermission(
+          accessControl,
+          owner,
+          wAccessControlTester,
+          timelockManager,
+          adminRole,
+          withOnlyRoleDelayOverrideSelector,
+          regularAccounts[0].address,
+        );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wacFunctionKey, timelockManagerFunctionKey],
+        [3600, 3600],
+      );
+
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withOnlyRoleDelayOverride',
+        [adminRole, 0, true],
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [calldata],
+        {},
+        { from: regularAccounts[0] },
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        regularAccounts[0].address,
+      );
+    });
+
+    it('when trying to call with function admin and there is timelock on root role', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+        timelock,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+
+      await grantRoleTester(
+        { accessControl, owner },
+        adminRole,
+        regularAccounts[0].address,
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [adminRole],
+        [3600],
+      );
+
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withOnlyRoleDelayOverride',
+        [adminRole, 0, true],
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [calldata],
+        {},
+        { from: regularAccounts[0] },
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        regularAccounts[0].address,
+      );
+    });
+
+    it('when caller has both function admin and root roles, delay is on both - it should select role with lower delay', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+        timelock,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+
+      await grantRoleTester(
+        { accessControl, owner },
+        adminRole,
+        regularAccounts[0].address,
+      );
+
+      const { wacFunctionKey, timelockManagerFunctionKey } =
+        await setupScopedFunctionPermission(
+          accessControl,
+          owner,
+          wAccessControlTester,
+          timelockManager,
+          adminRole,
+          withOnlyRoleDelayOverrideSelector,
+          regularAccounts[0].address,
+        );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [adminRole, wacFunctionKey, timelockManagerFunctionKey],
+        [7200, 3600, 3600],
+      );
+
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withOnlyRoleDelayOverride',
+        [adminRole, 0, true],
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [calldata],
+        {},
+        { from: regularAccounts[0] },
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        regularAccounts[0].address,
+      );
+    });
+
+    it('should fail: when both roles have a delay and overrideDelay is uint256 max and trying to schedule through timelock', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+        timelock,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+
+      await grantRoleTester(
+        { accessControl, owner },
+        adminRole,
+        regularAccounts[0].address,
+      );
+
+      const { wacFunctionKey, timelockManagerFunctionKey } =
+        await setupScopedFunctionPermission(
+          accessControl,
+          owner,
+          wAccessControlTester,
+          timelockManager,
+          adminRole,
+          withOnlyRoleDelayOverrideSelector,
+          regularAccounts[0].address,
+        );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [adminRole, wacFunctionKey, timelockManagerFunctionKey],
+        [3600, 3600, 3600],
+      );
+
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withOnlyRoleDelayOverride',
+        [adminRole, constants.MaxUint256, true],
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [calldata],
+        {},
+        {
+          from: regularAccounts[0],
+          ...timelockManagerRevertOpts(
+            timelockManager,
+            'NoTimelockDelayForRole',
+          ),
+        },
+      );
+    });
+
+    it('when both roles have a delay and overrideDelay is uint256 max and trying to call directly', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+        timelock,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+
+      await grantRoleTester(
+        { accessControl, owner },
+        adminRole,
+        regularAccounts[0].address,
+      );
+
+      const { wacFunctionKey, timelockManagerFunctionKey } =
+        await setupScopedFunctionPermission(
+          accessControl,
+          owner,
+          wAccessControlTester,
+          timelockManager,
+          adminRole,
+          withOnlyRoleDelayOverrideSelector,
+          regularAccounts[0].address,
+        );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [adminRole, wacFunctionKey, timelockManagerFunctionKey],
+        [3600, 3600, 3600],
+      );
+
+      await expect(
+        wAccessControlTester
+          .connect(regularAccounts[0])
+          .withOnlyRoleDelayOverride(adminRole, constants.MaxUint256, true),
+      ).not.reverted;
+    });
+
+    it('when override delay is not 0 and user only has root admin role', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+        timelock,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+
+      await grantRoleTester(
+        { accessControl, owner },
+        adminRole,
+        regularAccounts[0].address,
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [adminRole],
+        [3600],
+      );
+
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withOnlyRoleDelayOverride',
+        [adminRole, 3600, true],
+      );
+
+      await expect(
+        wAccessControlTester
+          .connect(regularAccounts[0])
+          .withOnlyRoleDelayOverride(adminRole, 3600, true),
+      )
+        .revertedWithCustomError(accessControl, 'FunctionNotReady')
+        .withArgs(adminRole, withOnlyRoleDelayOverrideSelector);
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [calldata],
+        {},
+        { from: regularAccounts[0] },
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        regularAccounts[0].address,
+      );
+    });
+
+    it('when override delay is not 0 and user only has function admin role', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+        timelock,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+
+      const { wacFunctionKey, timelockManagerFunctionKey } =
+        await setupScopedFunctionPermission(
+          accessControl,
+          owner,
+          wAccessControlTester,
+          timelockManager,
+          adminRole,
+          withOnlyRoleDelayOverrideSelector,
+          regularAccounts[0].address,
+        );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wacFunctionKey, timelockManagerFunctionKey],
+        [3600, 3600],
+      );
+
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withOnlyRoleDelayOverride',
+        [adminRole, 3600, true],
+      );
+
+      await expect(
+        wAccessControlTester
+          .connect(regularAccounts[0])
+          .withOnlyRoleDelayOverride(adminRole, 3600, true),
+      )
+        .revertedWithCustomError(accessControl, 'FunctionNotReady')
+        .withArgs(wacFunctionKey, withOnlyRoleDelayOverrideSelector);
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [calldata],
+        {},
+        { from: regularAccounts[0] },
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        regularAccounts[0].address,
+      );
+    });
+  });
+
+  describe('modifier onlyRoleNoTimelock', () => {
+    it('should fail: when trying to schedule through timelock', async () => {
+      const {
+        wAccessControlTester,
+        owner,
+        roles,
+        timelockManager,
+        timelock,
+        accessControl,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withOnlyRoleNoTimelock',
+        [adminRole, true],
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [calldata],
+        {},
+        timelockManagerRevertOpts(timelockManager, 'InvalidPreflightError'),
+      );
+    });
+
+    it('when validateFunctionRole is true and user has only root admin role', async () => {
+      const { wAccessControlTester, roles } = await loadFixture(defaultDeploy);
+
+      await expect(
+        wAccessControlTester.withOnlyRoleNoTimelock(
+          roles.common.defaultAdmin,
+          true,
+        ),
+      ).not.reverted;
+    });
+
+    it('when validateFunctionRole is false and user has only root admin role', async () => {
+      const { wAccessControlTester, roles } = await loadFixture(defaultDeploy);
+
+      await expect(
+        wAccessControlTester.withOnlyRoleNoTimelock(
+          roles.common.defaultAdmin,
+          false,
+        ),
+      ).not.reverted;
+    });
+
+    it('when validateFunctionRole is true and user has only function admin role', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+
+      await setupScopedFunctionPermission(
+        accessControl,
+        owner,
+        wAccessControlTester,
+        timelockManager,
+        adminRole,
+        withOnlyRoleNoTimelockSelector,
+        regularAccounts[0].address,
+      );
+
+      await expect(
+        wAccessControlTester
+          .connect(regularAccounts[0])
+          .withOnlyRoleNoTimelock(adminRole, true),
+      ).not.reverted;
+    });
+
+    it('should fail: when validateFunctionRole is false and user has only function admin role', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+
+      await setupScopedFunctionPermission(
+        accessControl,
+        owner,
+        wAccessControlTester,
+        timelockManager,
+        adminRole,
+        withOnlyRoleNoTimelockSelector,
+        regularAccounts[0].address,
+      );
+
+      await expect(
+        wAccessControlTester
+          .connect(regularAccounts[0])
+          .withOnlyRoleNoTimelock(adminRole, false),
+      ).revertedWithCustomError(
+        wAccessControlTester,
+        acErrors.WMAC_HASNT_PERMISSION().customErrorName,
+      );
+    });
+
+    it('when user has both roles', async () => {
+      const {
+        accessControl,
+        wAccessControlTester,
+        owner,
+        regularAccounts,
+        roles,
+        timelockManager,
+      } = await loadFixture(defaultDeploy);
+
+      const adminRole = roles.common.defaultAdmin;
+
+      await grantRoleTester(
+        { accessControl, owner },
+        adminRole,
+        regularAccounts[0].address,
+      );
+
+      await setupScopedFunctionPermission(
+        accessControl,
+        owner,
+        wAccessControlTester,
+        timelockManager,
+        adminRole,
+        withOnlyRoleNoTimelockSelector,
+        regularAccounts[0].address,
+      );
+
+      await expect(
+        wAccessControlTester
+          .connect(regularAccounts[0])
+          .withOnlyRoleNoTimelock(adminRole, true),
       ).not.reverted;
     });
   });

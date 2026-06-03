@@ -17,6 +17,9 @@ contract mTokenPermissionedTest is mTokenPermissioned {
     bytes32 public constant M_TOKEN_TEST_GREENLISTED_ROLE =
         keccak256("M_TOKEN_TEST_GREENLISTED_ROLE");
 
+    bytes32 public constant M_TOKEN_TEST_MANAGER_ROLE =
+        keccak256("M_TOKEN_TEST_MANAGER_ROLE");
+
     function _disableInitializers() internal override {}
 
     function _getNameSymbol()
@@ -42,5 +45,9 @@ contract mTokenPermissionedTest is mTokenPermissioned {
 
     function _greenlistedRole() internal pure override returns (bytes32) {
         return M_TOKEN_TEST_GREENLISTED_ROLE;
+    }
+
+    function _contractAdminRole() internal pure override returns (bytes32) {
+        return M_TOKEN_TEST_MANAGER_ROLE;
     }
 }

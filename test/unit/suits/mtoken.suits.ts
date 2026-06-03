@@ -360,6 +360,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       expect(await contract[tokenRoleNames.minter]()).eq(tokenRoles.minter);
       expect(await contract[tokenRoleNames.pauser]()).eq(tokenRoles.pauser);
 
+      // TODO: check the token manager role
       expect(await accessControl.DEFAULT_ADMIN_ROLE()).eq(
         allRoles.common.defaultAdmin,
       );
@@ -457,7 +458,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           {},
         );
 
-        await increase(3600);
+        await increase(86400);
         await executeTimelockOperationTester(
           { accessControl, timelockManager, timelock, owner },
           tokenContract.address,
@@ -504,7 +505,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           {},
         );
 
-        await increase(3600);
+        await increase(86400);
         await executeTimelockOperationTester(
           { accessControl, timelockManager, timelock, owner },
           tokenContract.address,
@@ -840,7 +841,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
     });
 
     describe('setMetadata()', () => {
-      it('should fail: call from address without DEFAULT_ADMIN_ROLE role', async () => {
+      it('should fail: call from address without token manager role', async () => {
         const { owner, tokenContract, regularAccounts } =
           await deployMTokenWithFixture();
 
@@ -852,7 +853,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         });
       });
 
-      it('call from address with DEFAULT_ADMIN_ROLE role', async () => {
+      it('call from address with token manager role', async () => {
         const { owner, tokenContract } = await deployMTokenWithFixture();
 
         await setMetadataTest(
@@ -865,7 +866,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
     });
 
     describe('setClawbackReceiver()', () => {
-      it('should fail: call from address without DEFAULT_ADMIN_ROLE nor function permission', async () => {
+      it('should fail: call from address without token manager role nor function permission', async () => {
         const { owner, tokenContract, regularAccounts } =
           await deployMTokenWithFixture();
 
@@ -891,7 +892,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         );
       });
 
-      it('call from address with DEFAULT_ADMIN_ROLE role', async () => {
+      it('call from address with token manager role', async () => {
         const { owner, tokenContract, regularAccounts } =
           await deployMTokenWithFixture();
 
@@ -941,7 +942,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
     });
 
     describe('clawback()', () => {
-      it('should fail: call from address without DEFAULT_ADMIN_ROLE nor function permission', async () => {
+      it('should fail: call from address without token manager role nor function permission', async () => {
         const { owner, tokenContract, regularAccounts } =
           await deployMTokenWithFixture();
 
@@ -999,7 +1000,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         });
       });
 
-      it('call from address with DEFAULT_ADMIN_ROLE role', async () => {
+      it('call from address with token manager role', async () => {
         const { owner, tokenContract, regularAccounts } =
           await deployMTokenWithFixture();
 
@@ -1052,7 +1053,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
     });
 
     describe('increaseMintRateLimit()', () => {
-      it('should fail: call from address without DEFAULT_ADMIN_ROLE role', async () => {
+      it('should fail: call from address without token manager role', async () => {
         const { owner, tokenContract, regularAccounts } =
           await deployMTokenWithFixture();
 
@@ -1077,7 +1078,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         });
       });
 
-      it('call from address with DEFAULT_ADMIN_ROLE role', async () => {
+      it('call from address with token manager role', async () => {
         const { owner, tokenContract } = await deployMTokenWithFixture();
         const window = days(1);
 
@@ -1103,7 +1104,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
     });
 
     describe('decreaseMintRateLimit()', () => {
-      it('should fail: call from address without DEFAULT_ADMIN_ROLE role', async () => {
+      it('should fail: call from address without token manager role', async () => {
         const { owner, tokenContract, regularAccounts } =
           await deployMTokenWithFixture();
 
@@ -1128,7 +1129,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         });
       });
 
-      it('call from address with DEFAULT_ADMIN_ROLE role', async () => {
+      it('call from address with token manager role', async () => {
         const { owner, tokenContract } = await deployMTokenWithFixture();
         const window = days(1);
 
