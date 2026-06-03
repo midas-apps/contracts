@@ -16,11 +16,6 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
     using AccessControlUtilsLibrary for IMidasAccessControl;
 
     /**
-     * @notice default delay for pausing and unpausing contracts
-     */
-    uint256 public constant UNPAUSE_DELAY = 1 days;
-
-    /**
      * @dev admin role for the pause manager
      */
     bytes32 private constant _PAUSE_ADMIN_ROLE = keccak256("PAUSE_ADMIN_ROLE");
@@ -44,8 +39,8 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
      * @dev validates that caller has access to the `contractAddr` contract admin role
      * @param contractAddr address of the contract
      */
-    modifier onlyPausableContractAdminWithDelay(address contractAddr) {
-        _validateContractAdminAccessWithDelay(contractAddr, UNPAUSE_DELAY);
+    modifier onlyPausableContractAdmin(address contractAddr) {
+        _validateContractAdminAccess(contractAddr);
         _;
     }
 
@@ -55,21 +50,6 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
      */
     modifier onlyPausableContractAdminNoDelay(address contractAddr) {
         _validateContractAdminAccessNoDelay(contractAddr);
-        _;
-    }
-
-    /**
-     * @dev validates that caller has access to the contract admin role with delay
-     * @param overrideDelay override delay for the invocation
-     */
-    modifier onlyContractAdminDelayOverride(uint256 overrideDelay) {
-        _validateFunctionAccessWithTimelock(
-            _contractAdminRole(),
-            overrideDelay,
-            false,
-            msg.sender,
-            true
-        );
         _;
     }
 
@@ -98,7 +78,7 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
      */
     function unpauseContract(address contractAddr)
         external
-        onlyPausableContractAdminWithDelay(contractAddr)
+        onlyPausableContractAdmin(contractAddr)
     {
         require(contractPaused[contractAddr], SameBoolValue(false));
         contractPaused[contractAddr] = false;
@@ -130,7 +110,7 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
     function bulkUnpauseContractFn(
         address contractAddr,
         bytes4[] calldata selectors
-    ) external onlyPausableContractAdminWithDelay(contractAddr) {
+    ) external onlyPausableContractAdmin(contractAddr) {
         for (uint256 i = 0; i < selectors.length; ++i) {
             bytes4 selector = selectors[i];
             require(
@@ -147,7 +127,7 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
      */
     function globalPause()
         external
-        onlyContractAdminDelayOverride(AccessControlUtilsLibrary.NO_DELAY)
+        onlyRoleNoTimelock(_contractAdminRole(), true)
     {
         require(!globalPaused, SameBoolValue(true));
         globalPaused = true;
@@ -157,10 +137,7 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
     /**
      * @inheritdoc IMidasPauseManager
      */
-    function globalUnpause()
-        external
-        onlyContractAdminDelayOverride(UNPAUSE_DELAY)
-    {
+    function globalUnpause() external onlyContractAdmin {
         require(globalPaused, SameBoolValue(false));
         globalPaused = false;
         emit GlobalPauseStatusChange(false);
@@ -209,17 +186,14 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
      * @dev validates that caller has access to the `contractAddr` contract admin role
      * @param contractAddr address of the contract
      */
-    function _validateContractAdminAccessWithDelay(
-        address contractAddr,
-        uint256 overrideDelay
-    ) private view {
+    function _validateContractAdminAccess(address contractAddr) private view {
         (bytes32 role, bool validateFunctionRole) = _getPausableRole(
             contractAddr
         );
 
         _validateFunctionAccessWithTimelock(
             role,
-            overrideDelay,
+            AccessControlUtilsLibrary.NULL_DELAY,
             false,
             msg.sender,
             validateFunctionRole

@@ -77,27 +77,6 @@ abstract contract WithMidasAccessControl is
     }
 
     /**
-     * @dev validates that the caller has the function role with timelock
-     * @param role base role to validate
-     * @param overrideDelay override delay for the invocation
-     * @param validateFunctionRole whether to validate the function role
-     */
-    modifier onlyRoleDelayOverride(
-        bytes32 role,
-        uint256 overrideDelay,
-        bool validateFunctionRole
-    ) {
-        _validateFunctionAccessWithTimelock(
-            role,
-            overrideDelay,
-            false,
-            msg.sender,
-            validateFunctionRole
-        );
-        _;
-    }
-
-    /**
      * @dev validates that the caller has the contract admin role or function operator role
      */
     modifier onlyContractAdmin() {

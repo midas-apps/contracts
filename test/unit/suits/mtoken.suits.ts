@@ -5,7 +5,7 @@ import {
   hours,
 } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { expect } from 'chai';
-import { Contract } from 'ethers';
+import { Contract, constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
@@ -50,6 +50,7 @@ import { validateImplementation } from '../../common/common.helpers';
 import {
   executeTimelockOperationTester,
   scheduleTimelockOperationsTester,
+  setRoleTimelocksTester,
 } from '../../common/timelock-manager.helpers';
 
 export const mTokenContractsSuits = (token: MTokenName) => {
@@ -425,22 +426,41 @@ export const mTokenContractsSuits = (token: MTokenName) => {
     });
 
     describe('unpause()', () => {
-      it('should fail: call from address without "token pauser" role', async () => {
-        const { owner, tokenContract, regularAccounts } =
-          await deployMTokenWithFixture();
+      const getManagerRole = () => allRoles.common.defaultAdmin;
 
-        const caller = regularAccounts[0];
+      it('should fail: call from address without "token pauser" role', async () => {
+        const {
+          owner,
+          tokenContract,
+          regularAccounts,
+          accessControl,
+          timelockManager,
+          timelock,
+        } = await deployMTokenWithFixture();
+
+        const managerRole = getManagerRole();
+        await setRoleTimelocksTester(
+          { accessControl, timelockManager, timelock, owner },
+          [managerRole],
+          [3600],
+        );
+
+        const calldata = tokenContract.interface.encodeFunctionData('unpause');
 
         await tokenContract.connect(owner).pause();
-        await expect(
-          tokenContract.connect(caller).unpause(),
-        ).revertedWithCustomError(
-          tokenContract,
-          acErrors.WMAC_HASNT_PERMISSION().customErrorName,
+        await scheduleTimelockOperationsTester(
+          { accessControl, timelockManager, timelock, owner },
+          [tokenContract.address],
+          [calldata],
+          {},
+          {
+            from: regularAccounts[0],
+            revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
+          },
         );
       });
 
-      it('should fail: call when already paused', async () => {
+      it('should fail: call when not paused', async () => {
         const {
           owner,
           tokenContract,
@@ -448,6 +468,13 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           timelockManager,
           timelock,
         } = await deployMTokenWithFixture();
+
+        const managerRole = getManagerRole();
+        await setRoleTimelocksTester(
+          { accessControl, timelockManager, timelock, owner },
+          [managerRole],
+          [3600],
+        );
 
         const calldata = tokenContract.interface.encodeFunctionData('unpause');
 
@@ -458,7 +485,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           {},
         );
 
-        await increase(86400);
+        await increase(3600);
         await executeTimelockOperationTester(
           { accessControl, timelockManager, timelock, owner },
           tokenContract.address,
@@ -471,19 +498,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         );
       });
 
-      it('should fail: call without timelock', async () => {
-        const { owner, tokenContract } = await deployMTokenWithFixture();
-
-        expect(await tokenContract.paused()).eq(false);
-        await tokenContract.connect(owner).pause();
-        expect(await tokenContract.paused()).eq(true);
-
-        await expect(
-          tokenContract.connect(owner).unpause(),
-        ).revertedWithCustomError(tokenContract, 'FunctionNotReady');
-      });
-
-      it('call when paused via timelock', async () => {
+      it('when role timelock is 0, unpause can be called directly', async () => {
         const {
           owner,
           tokenContract,
@@ -492,9 +507,69 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           timelock,
         } = await deployMTokenWithFixture();
 
-        expect(await tokenContract.paused()).eq(false);
+        const managerRole = getManagerRole();
+        await setRoleTimelocksTester(
+          { accessControl, timelockManager, timelock, owner },
+          [managerRole],
+          [constants.MaxUint256],
+        );
+
         await tokenContract.connect(owner).pause();
-        expect(await tokenContract.paused()).eq(true);
+        await expect(tokenContract.connect(owner).unpause()).not.reverted;
+        expect(await tokenContract.paused()).eq(false);
+      });
+
+      it('should fail: when role timelock is 0 and trying to schedule through timelock', async () => {
+        const {
+          owner,
+          tokenContract,
+          accessControl,
+          timelockManager,
+          timelock,
+        } = await deployMTokenWithFixture();
+
+        const managerRole = getManagerRole();
+        await setRoleTimelocksTester(
+          { accessControl, timelockManager, timelock, owner },
+          [managerRole],
+          [constants.MaxUint256],
+        );
+
+        await tokenContract.connect(owner).pause();
+
+        const calldata = tokenContract.interface.encodeFunctionData('unpause');
+
+        await scheduleTimelockOperationsTester(
+          { accessControl, timelockManager, timelock, owner },
+          [tokenContract.address],
+          [calldata],
+          {},
+          {
+            revertCustomError: {
+              contract: timelockManager,
+              customErrorName: 'NoTimelockDelayForRole',
+            },
+          },
+        );
+      });
+
+      it('when role timelock is not 0, unpause can be scheduled on timelock', async () => {
+        const {
+          owner,
+          tokenContract,
+          accessControl,
+          timelockManager,
+          timelock,
+        } = await deployMTokenWithFixture();
+
+        const managerRole = getManagerRole();
+        await setRoleTimelocksTester(
+          { accessControl, timelockManager, timelock, owner },
+          [managerRole],
+          [3600],
+        );
+
+        await tokenContract.connect(owner).pause();
 
         const calldata = tokenContract.interface.encodeFunctionData('unpause');
 
@@ -505,7 +580,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           {},
         );
 
-        await increase(86400);
+        await increase(3600);
         await executeTimelockOperationTester(
           { accessControl, timelockManager, timelock, owner },
           tokenContract.address,
@@ -515,6 +590,34 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         );
 
         expect(await tokenContract.paused()).eq(false);
+      });
+
+      it('should fail: when role timelock is not 0 and trying to call directly', async () => {
+        const {
+          owner,
+          tokenContract,
+          accessControl,
+          timelockManager,
+          timelock,
+        } = await deployMTokenWithFixture();
+
+        const managerRole = getManagerRole();
+        await setRoleTimelocksTester(
+          { accessControl, timelockManager, timelock, owner },
+          [managerRole],
+          [3600],
+        );
+
+        await tokenContract.connect(owner).pause();
+
+        await expect(
+          tokenContract.connect(owner).unpause(),
+        ).revertedWithCustomError(
+          accessControl,
+          'FunctionNotReady',
+          managerRole,
+          encodeFnSelector('unpause()'),
+        );
       });
     });
 

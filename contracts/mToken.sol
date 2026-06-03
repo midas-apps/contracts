@@ -162,11 +162,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     /**
      * @inheritdoc IMToken
      */
-    function unpause()
-        external
-        override
-        onlyRoleDelayOverride(_contractAdminRole(), 1 days, true)
-    {
+    function unpause() external override onlyContractAdmin {
         _unpause();
     }
 

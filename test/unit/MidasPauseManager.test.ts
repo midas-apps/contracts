@@ -1,17 +1,9 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { Contract } from 'ethers';
+import { constants } from 'ethers';
 
 import { encodeFnSelector } from '../../helpers/utils';
-import {
-  MidasAccessControl,
-  MidasAccessControlTimelockController,
-  MidasPauseManager,
-  MidasTimelockManager,
-  Pausable,
-} from '../../typechain-types';
 import {
   acErrors,
   setFunctionPermissionTester,
@@ -33,143 +25,11 @@ import {
   setRoleTimelocksTester,
 } from '../common/timelock-manager.helpers';
 
-type TimelockUnpauseParams = {
-  pauseManager: MidasPauseManager;
-  owner: SignerWithAddress;
-  timelockManager: MidasTimelockManager;
-  timelock: MidasAccessControlTimelockController;
-  accessControl: MidasAccessControl;
-};
+const NATIVE_ROLE_TIMELOCK_DELAY = 3600;
 
 const timelockUnderlyingRevert = (): OptionalCommonParams => ({
   revertMessage: 'TimelockController: underlying transaction reverted',
 });
-
-const functionNotReadyRevert = (
-  accessControl: MidasAccessControl,
-  role: string,
-  selector: string,
-): OptionalCommonParams => ({
-  revertCustomError: {
-    contract: accessControl as unknown as Contract,
-    customErrorName: 'FunctionNotReady',
-    args: [role, selector],
-  },
-});
-
-const setupScopedUnpauseTimelockPermissions = async (
-  accessControl: MidasAccessControl,
-  owner: SignerWithAddress,
-  pauseAdminRole: string,
-  pauseManager: MidasPauseManager,
-  timelockManager: MidasTimelockManager,
-  account: string,
-  unpauseSelector: string,
-) => {
-  for (const targetContract of [
-    pauseManager.address,
-    timelockManager.address,
-  ]) {
-    await setupFunctionAccessGrantOperator({
-      accessControl,
-      owner,
-      functionAccessAdminRole: pauseAdminRole,
-      targetContract,
-      functionSelector: unpauseSelector,
-      grantOperator: owner,
-    });
-    await setFunctionPermissionTester(
-      { accessControl, owner },
-      pauseAdminRole,
-      targetContract,
-      unpauseSelector,
-      [{ account, enabled: true }],
-    );
-  }
-};
-
-const unpauseGlobalViaTimelock = async (
-  params: TimelockUnpauseParams,
-  from: SignerWithAddress = params.owner,
-  executeFrom: SignerWithAddress = params.owner,
-) => {
-  const calldata =
-    params.pauseManager.interface.encodeFunctionData('globalUnpause');
-
-  await scheduleTimelockOperationsTester(
-    { ...params, owner: from },
-    [params.pauseManager.address],
-    [calldata],
-    {},
-    { from },
-  );
-  await increase(86400);
-  await executeTimelockOperationTester(
-    { ...params, owner: executeFrom },
-    params.pauseManager.address,
-    calldata,
-    from.address,
-    { from: executeFrom },
-  );
-};
-
-const unpauseVaultViaTimelock = async (
-  params: TimelockUnpauseParams,
-  vault: Pausable,
-  from: SignerWithAddress = params.owner,
-  executeFrom: SignerWithAddress = params.owner,
-) => {
-  const calldata = params.pauseManager.interface.encodeFunctionData(
-    'unpauseContract',
-    [vault.address],
-  );
-
-  await scheduleTimelockOperationsTester(
-    { ...params, owner: from },
-    [params.pauseManager.address],
-    [calldata],
-    {},
-    { from },
-  );
-  await increase(86400);
-  await executeTimelockOperationTester(
-    { ...params, owner: executeFrom },
-    params.pauseManager.address,
-    calldata,
-    from.address,
-    { from: executeFrom },
-  );
-};
-
-const unpauseVaultFnViaTimelock = async (
-  params: TimelockUnpauseParams,
-  vault: Pausable,
-  fnSelector: string | string[],
-  from: SignerWithAddress = params.owner,
-  executeFrom: SignerWithAddress = params.owner,
-) => {
-  const selectors = Array.isArray(fnSelector) ? fnSelector : [fnSelector];
-  const calldata = params.pauseManager.interface.encodeFunctionData(
-    'bulkUnpauseContractFn',
-    [vault.address, selectors],
-  );
-
-  await scheduleTimelockOperationsTester(
-    { ...params, owner: from },
-    [params.pauseManager.address],
-    [calldata],
-    {},
-    { from },
-  );
-  await increase(86400);
-  await executeTimelockOperationTester(
-    { ...params, owner: executeFrom },
-    params.pauseManager.address,
-    calldata,
-    from.address,
-    { from: executeFrom },
-  );
-};
 
 describe('MidasPauseManager', () => {
   describe('globalPause()', () => {
@@ -265,6 +125,13 @@ describe('MidasPauseManager', () => {
         accessControl,
       } = await loadFixture(defaultDeploy);
 
+      const pauseAdminRole = await pauseManager.pauseAdminRole();
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseAdminRole],
+        [NATIVE_ROLE_TIMELOCK_DELAY],
+      );
+
       const calldata =
         pauseManager.interface.encodeFunctionData('globalUnpause');
 
@@ -284,24 +151,24 @@ describe('MidasPauseManager', () => {
       const { pauseManager, owner, timelockManager, timelock, accessControl } =
         await loadFixture(defaultDeploy);
 
-      const params = {
-        pauseManager,
-        owner,
-        timelockManager,
-        timelock,
-        accessControl,
-      };
+      const pauseAdminRole = await pauseManager.pauseAdminRole();
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseAdminRole],
+        [NATIVE_ROLE_TIMELOCK_DELAY],
+      );
+
       const calldata =
         pauseManager.interface.encodeFunctionData('globalUnpause');
 
       await scheduleTimelockOperationsTester(
-        params,
+        { timelockManager, timelock, owner, accessControl },
         [pauseManager.address],
         [calldata],
       );
-      await increase(86400);
+      await increase(NATIVE_ROLE_TIMELOCK_DELAY);
       await executeTimelockOperationTester(
-        params,
+        { timelockManager, timelock, owner, accessControl },
         pauseManager.address,
         calldata,
         owner.address,
@@ -309,21 +176,82 @@ describe('MidasPauseManager', () => {
       );
     });
 
-    it('call from admin', async () => {
+    it('when role timelock is 0, unpause can be called directly', async () => {
       const { pauseManager, owner, timelockManager, timelock, accessControl } =
         await loadFixture(defaultDeploy);
 
+      const pauseAdminRole = await pauseManager.pauseAdminRole();
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseAdminRole],
+        [constants.MaxUint256],
+      );
+
       await pauseGlobalTest({ pauseManager, owner });
-      await unpauseGlobalViaTimelock({
-        pauseManager,
-        owner,
-        timelockManager,
-        timelock,
-        accessControl,
-      });
+      await unpauseGlobalTest({ pauseManager, owner });
     });
 
-    it('should fail: direct call', async () => {
+    it('should fail: when role timelock is 0 and trying to schedule through timelock', async () => {
+      const { pauseManager, owner, timelockManager, timelock, accessControl } =
+        await loadFixture(defaultDeploy);
+
+      const pauseAdminRole = await pauseManager.pauseAdminRole();
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseAdminRole],
+        [constants.MaxUint256],
+      );
+      await pauseGlobalTest({ pauseManager, owner });
+
+      const calldata =
+        pauseManager.interface.encodeFunctionData('globalUnpause');
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseManager.address],
+        [calldata],
+        {},
+        {
+          revertCustomError: {
+            contract: timelockManager,
+            customErrorName: 'NoTimelockDelayForRole',
+          },
+        },
+      );
+    });
+
+    it('when role timelock is not 0, unpause can be scheduled on timelock', async () => {
+      const { pauseManager, owner, timelockManager, timelock, accessControl } =
+        await loadFixture(defaultDeploy);
+
+      const pauseAdminRole = await pauseManager.pauseAdminRole();
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseAdminRole],
+        [NATIVE_ROLE_TIMELOCK_DELAY],
+      );
+
+      await pauseGlobalTest({ pauseManager, owner });
+
+      const calldata =
+        pauseManager.interface.encodeFunctionData('globalUnpause');
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseManager.address],
+        [calldata],
+        {},
+      );
+      await increase(NATIVE_ROLE_TIMELOCK_DELAY);
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        pauseManager.address,
+        calldata,
+        owner.address,
+      );
+    });
+
+    it('should fail: when role timelock is not 0 and trying to call directly', async () => {
       const {
         accessControl,
         pauseManager,
@@ -334,54 +262,22 @@ describe('MidasPauseManager', () => {
       } = await loadFixture(defaultDeploy);
 
       const pauseAdminRole = await pauseManager.pauseAdminRole();
-      const globalUnpauseSel = encodeFnSelector('globalUnpause()');
-
       await pauseGlobalTest({ pauseManager, owner });
-
-      await setupFunctionAccessGrantOperator({
-        accessControl,
-        owner,
-        functionAccessAdminRole: pauseAdminRole,
-        targetContract: pauseManager.address,
-        functionSelector: globalUnpauseSel,
-        grantOperator: owner,
-      });
-      await setFunctionPermissionTester(
-        { accessControl, owner },
-        pauseAdminRole,
-        pauseManager.address,
-        globalUnpauseSel,
-        [
-          {
-            account: regularAccounts[0].address,
-            enabled: true,
-          },
-        ],
-      );
-
       await setRoleTimelocksTester(
         { timelockManager, timelock, owner, accessControl },
         [pauseAdminRole],
-        [3600],
-      );
-
-      const roleUsed = await accessControl.functionPermissionKey(
-        pauseAdminRole,
-        pauseManager.address,
-        globalUnpauseSel,
+        [NATIVE_ROLE_TIMELOCK_DELAY],
       );
 
       await unpauseGlobalTest(
         { pauseManager, owner },
         {
-          from: regularAccounts[0],
-          ...functionNotReadyRevert(accessControl, roleUsed, globalUnpauseSel),
+          revertCustomError: {
+            contract: accessControl,
+            customErrorName: 'FunctionNotReady',
+            args: [pauseAdminRole, encodeFnSelector('globalUnpause()')],
+          },
         },
-      );
-
-      await unpauseGlobalTest(
-        { pauseManager, owner },
-        functionNotReadyRevert(accessControl, pauseAdminRole, globalUnpauseSel),
       );
     });
   });
@@ -588,6 +484,13 @@ describe('MidasPauseManager', () => {
         accessControl,
       } = await loadFixture(defaultDeploy);
 
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseAdminRole],
+        [NATIVE_ROLE_TIMELOCK_DELAY],
+      );
+
       const calldata = pauseManager.interface.encodeFunctionData(
         'unpauseContract',
         [pausableTester.address],
@@ -615,26 +518,26 @@ describe('MidasPauseManager', () => {
         accessControl,
       } = await loadFixture(defaultDeploy);
 
-      const params = {
-        pauseManager,
-        owner,
-        timelockManager,
-        timelock,
-        accessControl,
-      };
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseAdminRole],
+        [NATIVE_ROLE_TIMELOCK_DELAY],
+      );
+
       const calldata = pauseManager.interface.encodeFunctionData(
         'unpauseContract',
         [pausableTester.address],
       );
 
       await scheduleTimelockOperationsTester(
-        params,
+        { timelockManager, timelock, owner, accessControl },
         [pauseManager.address],
         [calldata],
       );
-      await increase(86400);
+      await increase(NATIVE_ROLE_TIMELOCK_DELAY);
       await executeTimelockOperationTester(
-        params,
+        { timelockManager, timelock, owner, accessControl },
         pauseManager.address,
         calldata,
         owner.address,
@@ -674,7 +577,7 @@ describe('MidasPauseManager', () => {
       );
     });
 
-    it('when paused and caller is admin', async () => {
+    it('when role timelock is 0, unpause can be called directly', async () => {
       const {
         pausableTester,
         pauseManager,
@@ -684,14 +587,93 @@ describe('MidasPauseManager', () => {
         accessControl,
       } = await loadFixture(defaultDeploy);
 
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseAdminRole],
+        [constants.MaxUint256],
+      );
+
       await pauseVault({ pauseManager, owner }, pausableTester);
-      await unpauseVaultViaTimelock(
-        { pauseManager, owner, timelockManager, timelock, accessControl },
+      await unpauseVault({ pauseManager, owner }, pausableTester);
+    });
+
+    it('should fail: when role timelock is 0 and trying to schedule through timelock', async () => {
+      const {
         pausableTester,
+        pauseManager,
+        owner,
+        timelockManager,
+        timelock,
+        accessControl,
+      } = await loadFixture(defaultDeploy);
+
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseAdminRole],
+        [constants.MaxUint256],
+      );
+      await pauseVault({ pauseManager, owner }, pausableTester);
+
+      const calldata = pauseManager.interface.encodeFunctionData(
+        'unpauseContract',
+        [pausableTester.address],
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseManager.address],
+        [calldata],
+        {},
+        {
+          revertCustomError: {
+            contract: timelockManager,
+            customErrorName: 'NoTimelockDelayForRole',
+          },
+        },
       );
     });
 
-    it('should fail: direct call', async () => {
+    it('when role timelock is not 0, unpause can be scheduled on timelock', async () => {
+      const {
+        pausableTester,
+        pauseManager,
+        owner,
+        timelockManager,
+        timelock,
+        accessControl,
+      } = await loadFixture(defaultDeploy);
+
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseAdminRole],
+        [NATIVE_ROLE_TIMELOCK_DELAY],
+      );
+
+      await pauseVault({ pauseManager, owner }, pausableTester);
+
+      const calldata = pauseManager.interface.encodeFunctionData(
+        'unpauseContract',
+        [pausableTester.address],
+      );
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseManager.address],
+        [calldata],
+        {},
+      );
+      await increase(NATIVE_ROLE_TIMELOCK_DELAY);
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        pauseManager.address,
+        calldata,
+        owner.address,
+      );
+    });
+
+    it('should fail: when role timelock is not 0 and trying to call directly', async () => {
       const {
         accessControl,
         pausableTester,
@@ -703,46 +685,19 @@ describe('MidasPauseManager', () => {
       } = await loadFixture(defaultDeploy);
 
       const pauseAdminRole = (await pausableTester.pauserRole())[0];
-      const unpauseSel = encodeFnSelector('unpauseContract(address)');
-
       await pauseVault({ pauseManager, owner }, pausableTester);
-
-      await setupFunctionAccessGrantOperator({
-        accessControl,
-        owner,
-        functionAccessAdminRole: pauseAdminRole,
-        targetContract: pauseManager.address,
-        functionSelector: unpauseSel,
-        grantOperator: owner,
-      });
-      await setFunctionPermissionTester(
-        { accessControl, owner },
-        pauseAdminRole,
-        pauseManager.address,
-        unpauseSel,
-        [
-          {
-            account: regularAccounts[0].address,
-            enabled: true,
-          },
-        ],
-      );
-
       await setRoleTimelocksTester(
         { timelockManager, timelock, owner, accessControl },
         [pauseAdminRole],
-        [3600],
-      );
-
-      const roleUsed = await accessControl.functionPermissionKey(
-        pauseAdminRole,
-        pauseManager.address,
-        unpauseSel,
+        [NATIVE_ROLE_TIMELOCK_DELAY],
       );
 
       await unpauseVault({ pauseManager, owner }, pausableTester, {
-        from: regularAccounts[0],
-        ...functionNotReadyRevert(accessControl, roleUsed, unpauseSel),
+        revertCustomError: {
+          contract: accessControl,
+          customErrorName: 'FunctionNotReady',
+          args: [pauseAdminRole, encodeFnSelector('unpauseContract(address)')],
+        },
       });
     });
 
@@ -759,8 +714,6 @@ describe('MidasPauseManager', () => {
 
       const pauseAdminRole = (await pausableTester.pauserRole())[0];
       const pauseSel = encodeFnSelector('pauseContract(address)');
-      const unpauseSel = encodeFnSelector('unpauseContract(address)');
-
       await setupFunctionAccessGrantOperator({
         accessControl,
         owner,
@@ -774,22 +727,49 @@ describe('MidasPauseManager', () => {
         pauseAdminRole,
         pauseManager.address,
         pauseSel,
-        [
-          {
-            account: regularAccounts[0].address,
-            enabled: true,
-          },
-        ],
+        [{ account: regularAccounts[0].address, enabled: true }],
       );
 
-      await setupScopedUnpauseTimelockPermissions(
-        accessControl,
-        owner,
-        pauseAdminRole,
-        pauseManager,
-        timelockManager,
-        regularAccounts[0].address,
-        unpauseSel,
+      const unpauseSel = encodeFnSelector('unpauseContract(address)');
+      for (const targetContract of [
+        pauseManager.address,
+        timelockManager.address,
+      ]) {
+        await setupFunctionAccessGrantOperator({
+          accessControl,
+          owner,
+          functionAccessAdminRole: pauseAdminRole,
+          targetContract,
+          functionSelector: unpauseSel,
+          grantOperator: owner,
+        });
+        await setFunctionPermissionTester(
+          { accessControl, owner },
+          pauseAdminRole,
+          targetContract,
+          unpauseSel,
+          [{ account: regularAccounts[0].address, enabled: true }],
+        );
+      }
+
+      const unpauseRoles = [pauseAdminRole];
+      const unpauseDelays = [NATIVE_ROLE_TIMELOCK_DELAY];
+      for (const targetContract of [
+        pauseManager.address,
+        timelockManager.address,
+      ]) {
+        const functionKey = await accessControl.functionPermissionKey(
+          pauseAdminRole,
+          targetContract,
+          unpauseSel,
+        );
+        unpauseRoles.push(functionKey);
+        unpauseDelays.push(NATIVE_ROLE_TIMELOCK_DELAY);
+      }
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        unpauseRoles,
+        unpauseDelays,
       );
 
       expect(
@@ -799,11 +779,25 @@ describe('MidasPauseManager', () => {
       await pauseVault({ pauseManager, owner }, pausableTester, {
         from: regularAccounts[0],
       });
-      await unpauseVaultViaTimelock(
-        { pauseManager, owner, timelockManager, timelock, accessControl },
-        pausableTester,
-        regularAccounts[0],
-        owner,
+
+      const calldata = pauseManager.interface.encodeFunctionData(
+        'unpauseContract',
+        [pausableTester.address],
+      );
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner: regularAccounts[0], accessControl },
+        [pauseManager.address],
+        [calldata],
+        {},
+        { from: regularAccounts[0] },
+      );
+      await increase(NATIVE_ROLE_TIMELOCK_DELAY);
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        pauseManager.address,
+        calldata,
+        regularAccounts[0].address,
+        { from: owner },
       );
     });
 
@@ -820,8 +814,6 @@ describe('MidasPauseManager', () => {
 
       const pauseAdminRole = (await pausableTester.pauserRole())[0];
       const pauseSel = encodeFnSelector('pauseContract(address)');
-      const unpauseSel = encodeFnSelector('unpauseContract(address)');
-
       await setupFunctionAccessGrantOperator({
         accessControl,
         owner,
@@ -835,34 +827,75 @@ describe('MidasPauseManager', () => {
         pauseAdminRole,
         pauseManager.address,
         pauseSel,
-        [
-          {
-            account: regularAccounts[0].address,
-            enabled: true,
-          },
-        ],
+        [{ account: regularAccounts[0].address, enabled: true }],
       );
 
-      await setupScopedUnpauseTimelockPermissions(
-        accessControl,
-        owner,
-        pauseAdminRole,
-        pauseManager,
-        timelockManager,
-        regularAccounts[0].address,
-        unpauseSel,
-      );
+      const unpauseSel = encodeFnSelector('unpauseContract(address)');
+      for (const targetContract of [
+        pauseManager.address,
+        timelockManager.address,
+      ]) {
+        await setupFunctionAccessGrantOperator({
+          accessControl,
+          owner,
+          functionAccessAdminRole: pauseAdminRole,
+          targetContract,
+          functionSelector: unpauseSel,
+          grantOperator: owner,
+        });
+        await setFunctionPermissionTester(
+          { accessControl, owner },
+          pauseAdminRole,
+          targetContract,
+          unpauseSel,
+          [{ account: regularAccounts[0].address, enabled: true }],
+        );
+      }
 
       await accessControl.grantRole(pauseAdminRole, regularAccounts[0].address);
+
+      const unpauseRoles = [pauseAdminRole];
+      const unpauseDelays = [NATIVE_ROLE_TIMELOCK_DELAY];
+      for (const targetContract of [
+        pauseManager.address,
+        timelockManager.address,
+      ]) {
+        const functionKey = await accessControl.functionPermissionKey(
+          pauseAdminRole,
+          targetContract,
+          unpauseSel,
+        );
+        unpauseRoles.push(functionKey);
+        unpauseDelays.push(NATIVE_ROLE_TIMELOCK_DELAY);
+      }
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        unpauseRoles,
+        unpauseDelays,
+      );
 
       await pauseVault({ pauseManager, owner }, pausableTester, {
         from: regularAccounts[0],
       });
-      await unpauseVaultViaTimelock(
-        { pauseManager, owner, timelockManager, timelock, accessControl },
-        pausableTester,
-        regularAccounts[0],
-        owner,
+
+      const calldata = pauseManager.interface.encodeFunctionData(
+        'unpauseContract',
+        [pausableTester.address],
+      );
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner: regularAccounts[0], accessControl },
+        [pauseManager.address],
+        [calldata],
+        {},
+        { from: regularAccounts[0] },
+      );
+      await increase(NATIVE_ROLE_TIMELOCK_DELAY);
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        pauseManager.address,
+        calldata,
+        regularAccounts[0].address,
+        { from: owner },
       );
     });
   });
@@ -1094,16 +1127,29 @@ describe('MidasPauseManager', () => {
         otherSelector,
       );
 
-      await unpauseVaultFnViaTimelock(
-        {
-          pauseManager,
-          owner,
-          timelockManager,
-          timelock,
-          accessControl,
-        },
-        pausableTester,
-        otherSelector,
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseAdminRole],
+        [NATIVE_ROLE_TIMELOCK_DELAY],
+      );
+
+      const calldata = pauseManager.interface.encodeFunctionData(
+        'bulkUnpauseContractFn',
+        [pausableTester.address, [otherSelector]],
+      );
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseManager.address],
+        [calldata],
+        {},
+      );
+      await increase(NATIVE_ROLE_TIMELOCK_DELAY);
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        pauseManager.address,
+        calldata,
+        owner.address,
       );
     });
   });
@@ -1122,6 +1168,12 @@ describe('MidasPauseManager', () => {
 
       const selector = encodeFnSelector(
         'depositRequest(address,uint256,bytes32)',
+      );
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseAdminRole],
+        [NATIVE_ROLE_TIMELOCK_DELAY],
       );
 
       const calldata = pauseManager.interface.encodeFunctionData(
@@ -1154,26 +1206,26 @@ describe('MidasPauseManager', () => {
       const selector = encodeFnSelector(
         'depositRequest(address,uint256,bytes32)',
       );
-      const params = {
-        pauseManager,
-        owner,
-        timelockManager,
-        timelock,
-        accessControl,
-      };
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseAdminRole],
+        [NATIVE_ROLE_TIMELOCK_DELAY],
+      );
+
       const calldata = pauseManager.interface.encodeFunctionData(
         'bulkUnpauseContractFn',
         [pausableTester.address, [selector]],
       );
 
       await scheduleTimelockOperationsTester(
-        params,
+        { timelockManager, timelock, owner, accessControl },
         [pauseManager.address],
         [calldata],
       );
-      await increase(86400);
+      await increase(NATIVE_ROLE_TIMELOCK_DELAY);
       await executeTimelockOperationTester(
-        params,
+        { timelockManager, timelock, owner, accessControl },
         pauseManager.address,
         calldata,
         owner.address,
@@ -1200,7 +1252,7 @@ describe('MidasPauseManager', () => {
       });
     });
 
-    it('when paused and caller is admin', async () => {
+    it('when role timelock is 0, unpause can be called directly', async () => {
       const {
         pausableTester,
         pauseManager,
@@ -1213,16 +1265,100 @@ describe('MidasPauseManager', () => {
       const selector = encodeFnSelector(
         'depositRequest(address,uint256,bytes32)',
       );
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseAdminRole],
+        [constants.MaxUint256],
+      );
 
       await pauseVaultFn({ pauseManager, owner }, pausableTester, selector);
-      await unpauseVaultFnViaTimelock(
-        { pauseManager, owner, timelockManager, timelock, accessControl },
+      await unpauseVaultFn({ pauseManager, owner }, pausableTester, selector);
+    });
+
+    it('should fail: when role timelock is 0 and trying to schedule through timelock', async () => {
+      const {
         pausableTester,
-        selector,
+        pauseManager,
+        owner,
+        timelockManager,
+        timelock,
+        accessControl,
+      } = await loadFixture(defaultDeploy);
+
+      const selector = encodeFnSelector(
+        'depositRequest(address,uint256,bytes32)',
+      );
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseAdminRole],
+        [constants.MaxUint256],
+      );
+
+      await pauseVaultFn({ pauseManager, owner }, pausableTester, selector);
+
+      const calldata = pauseManager.interface.encodeFunctionData(
+        'bulkUnpauseContractFn',
+        [pausableTester.address, [selector]],
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseManager.address],
+        [calldata],
+        {},
+        {
+          revertCustomError: {
+            contract: timelockManager,
+            customErrorName: 'NoTimelockDelayForRole',
+          },
+        },
       );
     });
 
-    it('should fail: direct call', async () => {
+    it('when role timelock is not 0, unpause can be scheduled on timelock', async () => {
+      const {
+        pausableTester,
+        pauseManager,
+        owner,
+        timelockManager,
+        timelock,
+        accessControl,
+      } = await loadFixture(defaultDeploy);
+
+      const selector = encodeFnSelector(
+        'depositRequest(address,uint256,bytes32)',
+      );
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseAdminRole],
+        [NATIVE_ROLE_TIMELOCK_DELAY],
+      );
+
+      await pauseVaultFn({ pauseManager, owner }, pausableTester, selector);
+
+      const calldata = pauseManager.interface.encodeFunctionData(
+        'bulkUnpauseContractFn',
+        [pausableTester.address, [selector]],
+      );
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseManager.address],
+        [calldata],
+        {},
+      );
+      await increase(NATIVE_ROLE_TIMELOCK_DELAY);
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        pauseManager.address,
+        calldata,
+        owner.address,
+      );
+    });
+
+    it('should fail: when role timelock is not 0 and trying to call directly', async () => {
       const {
         accessControl,
         pausableTester,
@@ -1235,48 +1371,22 @@ describe('MidasPauseManager', () => {
 
       const pauseAdminRole = (await pausableTester.pauserRole())[0];
       const fnSel = encodeFnSelector('depositRequest(address,uint256,bytes32)');
-      const unpauseFnSel = encodeFnSelector(
-        'bulkUnpauseContractFn(address,bytes4[])',
-      );
-
       await pauseVaultFn({ pauseManager, owner }, pausableTester, fnSel);
-
-      await setupFunctionAccessGrantOperator({
-        accessControl,
-        owner,
-        functionAccessAdminRole: pauseAdminRole,
-        targetContract: pauseManager.address,
-        functionSelector: unpauseFnSel,
-        grantOperator: owner,
-      });
-      await setFunctionPermissionTester(
-        { accessControl, owner },
-        pauseAdminRole,
-        pauseManager.address,
-        unpauseFnSel,
-        [
-          {
-            account: regularAccounts[0].address,
-            enabled: true,
-          },
-        ],
-      );
-
       await setRoleTimelocksTester(
         { timelockManager, timelock, owner, accessControl },
         [pauseAdminRole],
-        [3600],
-      );
-
-      const roleUsed = await accessControl.functionPermissionKey(
-        pauseAdminRole,
-        pauseManager.address,
-        unpauseFnSel,
+        [NATIVE_ROLE_TIMELOCK_DELAY],
       );
 
       await unpauseVaultFn({ pauseManager, owner }, pausableTester, fnSel, {
-        from: regularAccounts[0],
-        ...functionNotReadyRevert(accessControl, roleUsed, unpauseFnSel),
+        revertCustomError: {
+          contract: accessControl,
+          customErrorName: 'FunctionNotReady',
+          args: [
+            pauseAdminRole,
+            encodeFnSelector('bulkUnpauseContractFn(address,bytes4[])'),
+          ],
+        },
       });
     });
 
@@ -1293,32 +1403,74 @@ describe('MidasPauseManager', () => {
 
       const pauseAdminRole = (await pausableTester.pauserRole())[0];
       const fnSel = encodeFnSelector('depositRequest(address,uint256,bytes32)');
-      const unpauseFnSel = encodeFnSelector(
-        'bulkUnpauseContractFn(address,bytes4[])',
-      );
-
       await pauseVaultFn({ pauseManager, owner }, pausableTester, fnSel);
 
-      await setupScopedUnpauseTimelockPermissions(
-        accessControl,
-        owner,
-        pauseAdminRole,
-        pauseManager,
-        timelockManager,
-        regularAccounts[0].address,
-        unpauseFnSel,
+      const bulkUnpauseSel = encodeFnSelector(
+        'bulkUnpauseContractFn(address,bytes4[])',
+      );
+      for (const targetContract of [
+        pauseManager.address,
+        timelockManager.address,
+      ]) {
+        await setupFunctionAccessGrantOperator({
+          accessControl,
+          owner,
+          functionAccessAdminRole: pauseAdminRole,
+          targetContract,
+          functionSelector: bulkUnpauseSel,
+          grantOperator: owner,
+        });
+        await setFunctionPermissionTester(
+          { accessControl, owner },
+          pauseAdminRole,
+          targetContract,
+          bulkUnpauseSel,
+          [{ account: regularAccounts[0].address, enabled: true }],
+        );
+      }
+
+      const unpauseRoles = [pauseAdminRole];
+      const unpauseDelays = [NATIVE_ROLE_TIMELOCK_DELAY];
+      for (const targetContract of [
+        pauseManager.address,
+        timelockManager.address,
+      ]) {
+        const functionKey = await accessControl.functionPermissionKey(
+          pauseAdminRole,
+          targetContract,
+          bulkUnpauseSel,
+        );
+        unpauseRoles.push(functionKey);
+        unpauseDelays.push(NATIVE_ROLE_TIMELOCK_DELAY);
+      }
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        unpauseRoles,
+        unpauseDelays,
       );
 
       expect(
         await accessControl.hasRole(pauseAdminRole, regularAccounts[0].address),
       ).eq(false);
 
-      await unpauseVaultFnViaTimelock(
-        { pauseManager, owner, timelockManager, timelock, accessControl },
-        pausableTester,
-        fnSel,
-        regularAccounts[0],
-        owner,
+      const calldata = pauseManager.interface.encodeFunctionData(
+        'bulkUnpauseContractFn',
+        [pausableTester.address, [fnSel]],
+      );
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner: regularAccounts[0], accessControl },
+        [pauseManager.address],
+        [calldata],
+        {},
+        { from: regularAccounts[0] },
+      );
+      await increase(NATIVE_ROLE_TIMELOCK_DELAY);
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        pauseManager.address,
+        calldata,
+        regularAccounts[0].address,
+        { from: owner },
       );
     });
 
@@ -1335,30 +1487,72 @@ describe('MidasPauseManager', () => {
 
       const pauseAdminRole = (await pausableTester.pauserRole())[0];
       const fnSel = encodeFnSelector('depositRequest(address,uint256,bytes32)');
-      const unpauseFnSel = encodeFnSelector(
-        'bulkUnpauseContractFn(address,bytes4[])',
-      );
-
       await pauseVaultFn({ pauseManager, owner }, pausableTester, fnSel);
 
-      await setupScopedUnpauseTimelockPermissions(
-        accessControl,
-        owner,
-        pauseAdminRole,
-        pauseManager,
-        timelockManager,
-        regularAccounts[0].address,
-        unpauseFnSel,
+      const bulkUnpauseSel = encodeFnSelector(
+        'bulkUnpauseContractFn(address,bytes4[])',
       );
+      for (const targetContract of [
+        pauseManager.address,
+        timelockManager.address,
+      ]) {
+        await setupFunctionAccessGrantOperator({
+          accessControl,
+          owner,
+          functionAccessAdminRole: pauseAdminRole,
+          targetContract,
+          functionSelector: bulkUnpauseSel,
+          grantOperator: owner,
+        });
+        await setFunctionPermissionTester(
+          { accessControl, owner },
+          pauseAdminRole,
+          targetContract,
+          bulkUnpauseSel,
+          [{ account: regularAccounts[0].address, enabled: true }],
+        );
+      }
 
       await accessControl.grantRole(pauseAdminRole, regularAccounts[0].address);
 
-      await unpauseVaultFnViaTimelock(
-        { pauseManager, owner, timelockManager, timelock, accessControl },
-        pausableTester,
-        fnSel,
-        regularAccounts[0],
-        owner,
+      const unpauseRoles = [pauseAdminRole];
+      const unpauseDelays = [NATIVE_ROLE_TIMELOCK_DELAY];
+      for (const targetContract of [
+        pauseManager.address,
+        timelockManager.address,
+      ]) {
+        const functionKey = await accessControl.functionPermissionKey(
+          pauseAdminRole,
+          targetContract,
+          bulkUnpauseSel,
+        );
+        unpauseRoles.push(functionKey);
+        unpauseDelays.push(NATIVE_ROLE_TIMELOCK_DELAY);
+      }
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        unpauseRoles,
+        unpauseDelays,
+      );
+
+      const calldata = pauseManager.interface.encodeFunctionData(
+        'bulkUnpauseContractFn',
+        [pausableTester.address, [fnSel]],
+      );
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner: regularAccounts[0], accessControl },
+        [pauseManager.address],
+        [calldata],
+        {},
+        { from: regularAccounts[0] },
+      );
+      await increase(NATIVE_ROLE_TIMELOCK_DELAY);
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        pauseManager.address,
+        calldata,
+        regularAccounts[0].address,
+        { from: owner },
       );
     });
 
@@ -1376,6 +1570,12 @@ describe('MidasPauseManager', () => {
       const otherSelector = encodeFnSelector(
         'depositRequest(address,uint256,bytes32)',
       );
+      const pauseAdminRole = (await pausableTester.pauserRole())[0];
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseAdminRole],
+        [NATIVE_ROLE_TIMELOCK_DELAY],
+      );
 
       await pauseVaultFn(
         { pauseManager, owner },
@@ -1388,10 +1588,22 @@ describe('MidasPauseManager', () => {
         unpauseFnSelector,
       );
 
-      await unpauseVaultFnViaTimelock(
-        { pauseManager, owner, timelockManager, timelock, accessControl },
-        pausableTester,
-        otherSelector,
+      const calldata = pauseManager.interface.encodeFunctionData(
+        'bulkUnpauseContractFn',
+        [pausableTester.address, [otherSelector]],
+      );
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [pauseManager.address],
+        [calldata],
+        {},
+      );
+      await increase(NATIVE_ROLE_TIMELOCK_DELAY);
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        pauseManager.address,
+        calldata,
+        owner.address,
       );
     });
   });

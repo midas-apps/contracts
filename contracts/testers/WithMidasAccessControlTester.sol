@@ -28,15 +28,6 @@ contract WithMidasAccessControlTester is WithMidasAccessControl {
         onlyRoleNoTimelock(role, validateFunctionRole)
     {}
 
-    function withOnlyRoleDelayOverride(
-        bytes32 role,
-        uint256 overrideDelay,
-        bool validateFunctionRole
-    )
-        external
-        onlyRoleDelayOverride(role, overrideDelay, validateFunctionRole)
-    {}
-
     function withOnlyContractAdmin() external onlyContractAdmin {}
 
     function _contractAdminRole() internal view override returns (bytes32) {
