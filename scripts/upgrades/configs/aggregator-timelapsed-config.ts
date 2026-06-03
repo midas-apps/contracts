@@ -5,10 +5,41 @@ import { getCurrentAddresses } from '../../../config/constants/addresses';
 import { isMTokenName } from '../../../helpers/utils';
 
 /**
+ * mTokens skipped for aggregator-timelapsed-v1 on every chain.
+ * Merged with any per-chain `exclude` below.
+ */
+export const aggregatorTimelapsedExcludedMTokens: MTokenName[] = [
+  'cUSDO',
+  'JIV',
+  'kmiUSD',
+  'obeatUSD',
+  'wNLP',
+  'zeroGBTCV',
+  'zeroGETHV',
+  'zeroGUSDV',
+  'dnFART',
+  'dnHYPE',
+  'dnPUMP',
+  'hbUSDC',
+  'hbUSDT',
+  'hbXAUt',
+  'kitBTC',
+  'kitHYPE',
+  'kitUSD',
+  'liquidHYPE',
+  'lstHYPE',
+  'mWildUSD',
+  'wVLP',
+  'TACmMEV',
+  'TACmBTC',
+  'TACmEDGE',
+];
+
+/**
  * Targets for aggregator timelapsed batch upgrades per chain id.
  *
  * • `{ all: true }` — every mToken that has a regular customFeed address
- * • `{ all: true, exclude }` — `all`, minus excluded tokens (e.g. false in vault configs)
+ * • `{ all: true, exclude }` — `all`, minus global + per-chain excluded tokens
  * • `{ mTokens: [...] }` — explicit list only
  */
 export type AggregatorTimelapsedChainTargets =
@@ -33,12 +64,9 @@ export const aggregatorTimelapsedUpgradeConfigs: AggregatorTimelapsedUpgradeConf
     upgrades: {
       'aggregator-timelapsed-v1': {
         targets: {
-          [chainIds.main]: {
-            all: true,
-            exclude: ['TACmBTC', 'TACmEDGE', 'TACmMEV'],
-          },
+          [chainIds.main]: { all: true },
           // [chainIds.arbitrum]: { all: true },
-          [chainIds.base]: { all: true },
+          [chainIds.base]: { all: true, exclude: ['mTBILL'] },
           [chainIds.oasis]: { all: true },
           [chainIds.plume]: { all: true },
           [chainIds.rootstock]: { all: true },
@@ -99,8 +127,11 @@ export const resolveTimelapsedMTokens = (
         const tokenAddresses = addresses[mToken];
         return Boolean(tokenAddresses?.customFeed);
       });
-    if (targets.exclude?.length) {
-      const excluded = new Set(targets.exclude);
+    const excluded = new Set([
+      ...aggregatorTimelapsedExcludedMTokens,
+      ...(targets.exclude ?? []),
+    ]);
+    if (excluded.size > 0) {
       list = list.filter((m) => !excluded.has(m));
     }
   } else if ('mTokens' in targets) {
