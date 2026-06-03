@@ -28,6 +28,7 @@ import { mBASISDeploymentConfig } from './mBASIS';
 import { mBTCDeploymentConfig } from './mBTC';
 import { mEDGEDeploymentConfig } from './mEDGE';
 import { mevBTCDeploymentConfig } from './mevBTC';
+import { mEVETHDeploymentConfig } from './mEVETH';
 import { mEVUSDDeploymentConfig } from './mEVUSD';
 import { mFARMDeploymentConfig } from './mFARM';
 import { mFONEDeploymentConfig } from './mFONE';
@@ -149,4 +150,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mTEST: mTESTDeploymentConfig,
   stockMarketTRBasisTrade: stockMarketTRBasisTradeDeploymentConfig,
   carryTradeUSDTRYLeverage: carryTradeUSDTRYLeverageDeploymentConfig,
+  mEVETH: mEVETHDeploymentConfig,
 };
