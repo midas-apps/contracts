@@ -124,14 +124,15 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address tokenOut,
         uint256 amountMTokenIn,
         uint256 minReceiveAmount
-    ) external {
-        _redeemInstantWithCustomRecipient(
-            tokenOut,
-            amountMTokenIn,
-            minReceiveAmount,
-            msg.sender,
-            ONE_HUNDRED_PERCENT
-        );
+    ) external returns (uint256) {
+        return
+            _redeemInstantWithCustomRecipient(
+                tokenOut,
+                amountMTokenIn,
+                minReceiveAmount,
+                msg.sender,
+                ONE_HUNDRED_PERCENT
+            );
     }
 
     /**
@@ -142,14 +143,15 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 amountMTokenIn,
         uint256 minReceiveAmount,
         address recipient
-    ) external {
-        _redeemInstantWithCustomRecipient(
-            tokenOut,
-            amountMTokenIn,
-            minReceiveAmount,
-            recipient,
-            ONE_HUNDRED_PERCENT
-        );
+    ) external returns (uint256) {
+        return
+            _redeemInstantWithCustomRecipient(
+                tokenOut,
+                amountMTokenIn,
+                minReceiveAmount,
+                recipient,
+                ONE_HUNDRED_PERCENT
+            );
     }
 
     /**
@@ -157,43 +159,16 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function redeemRequest(address tokenOut, uint256 amountMTokenIn)
         external
-        returns (
-            uint256 /*requestId*/
-        )
+        returns (uint256 requestId)
     {
-        return
-            _redeemRequestWithCustomRecipient(
-                tokenOut,
-                amountMTokenIn,
-                msg.sender,
-                0,
-                0,
-                msg.sender
-            );
-    }
-
-    /**
-     * @inheritdoc IRedemptionVault
-     */
-    function redeemRequest(
-        address tokenOut,
-        uint256 amountMTokenIn,
-        address recipient
-    )
-        external
-        returns (
-            uint256 /*requestId*/
-        )
-    {
-        return
-            _redeemRequestWithCustomRecipient(
-                tokenOut,
-                amountMTokenIn,
-                recipient,
-                0,
-                0,
-                recipient
-            );
+        (requestId, ) = _redeemRequestWithCustomRecipient(
+            tokenOut,
+            amountMTokenIn,
+            msg.sender,
+            0,
+            0,
+            msg.sender
+        );
     }
 
     /**
@@ -209,7 +184,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     )
         external
         returns (
-            uint256 /*requestId*/
+            uint256, /*requestId*/
+            uint256 /* instantReceivedAmount */
         )
     {
         return
@@ -287,21 +263,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function approveRequest(uint256 requestId, uint256 newMTokenRate)
-        external
-        onlyContractAdmin
-    {
-        _approveRequest(requestId, newMTokenRate, false, false, false);
-    }
-
-    /**
-     * @inheritdoc IRedemptionVault
-     */
-    function approveRequestAvgRate(uint256 requestId, uint256 avgMTokenRate)
-        external
-        onlyContractAdmin
-    {
-        _approveRequest(requestId, avgMTokenRate, false, false, true);
+    function approveRequest(
+        uint256 requestId,
+        uint256 newMTokenRate,
+        bool isAvgRate
+    ) external onlyContractAdmin {
+        _approveRequest(requestId, newMTokenRate, false, false, isAvgRate);
     }
 
     /**
@@ -623,7 +590,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 minReceiveAmount,
         address recipient,
         uint256 instantShareToValidate
-    ) private validateUserAccess(recipient) {
+    ) private validateUserAccess(recipient) returns (uint256) {
         require(
             instantShareToValidate <= maxInstantShare,
             InstantShareTooHigh(instantShareToValidate, maxInstantShare)
@@ -647,6 +614,11 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         );
 
         _obtainLiquidityAndTransfer(tokenOut, recipient, calcResult);
+
+        return
+            calcResult.amountTokenOutWithoutFee.convertFromBase18(
+                calcResult.tokenOutDecimals
+            );
     }
 
     /**
@@ -670,14 +642,15 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         private
         validateUserAccess(recipientRequest)
         returns (
-            uint256 /* requestId */
+            uint256, /* requestId */
+            uint256 instantReceivedAmount
         )
     {
         uint256 amountMTokenInInstant = (amountMTokenIn * instantShare) /
             ONE_HUNDRED_PERCENT;
 
         if (amountMTokenInInstant > 0) {
-            _redeemInstantWithCustomRecipient(
+            instantReceivedAmount = _redeemInstantWithCustomRecipient(
                 tokenOut,
                 amountMTokenInInstant,
                 minReceiveAmountInstantShare,
@@ -688,13 +661,15 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         uint256 amountMTokenInRequest = amountMTokenIn - amountMTokenInInstant;
 
-        return
+        return (
             _redeemRequest(
                 tokenOut,
                 amountMTokenInRequest,
                 recipientRequest,
                 amountMTokenInInstant
-            );
+            ),
+            instantReceivedAmount
+        );
     }
 
     /**

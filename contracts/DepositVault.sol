@@ -109,15 +109,21 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 amountToken,
         uint256 minReceiveAmount,
         bytes32 referrerId
-    ) external {
-        _depositInstantWithCustomRecipient(
-            tokenIn,
-            amountToken,
-            minReceiveAmount,
-            referrerId,
-            msg.sender,
-            ONE_HUNDRED_PERCENT
-        );
+    )
+        external
+        returns (
+            uint256 /* mintAmount */
+        )
+    {
+        return
+            _depositInstantWithCustomRecipient(
+                tokenIn,
+                amountToken,
+                minReceiveAmount,
+                referrerId,
+                msg.sender,
+                ONE_HUNDRED_PERCENT
+            ).mintAmount;
     }
 
     /**
@@ -129,15 +135,21 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 minReceiveAmount,
         bytes32 referrerId,
         address recipient
-    ) external {
-        _depositInstantWithCustomRecipient(
-            tokenIn,
-            amountToken,
-            minReceiveAmount,
-            referrerId,
-            recipient,
-            ONE_HUNDRED_PERCENT
-        );
+    )
+        external
+        returns (
+            uint256 /* mintAmount */
+        )
+    {
+        return
+            _depositInstantWithCustomRecipient(
+                tokenIn,
+                amountToken,
+                minReceiveAmount,
+                referrerId,
+                recipient,
+                ONE_HUNDRED_PERCENT
+            ).mintAmount;
     }
 
     /**
@@ -147,48 +159,16 @@ contract DepositVault is ManageableVault, IDepositVault {
         address tokenIn,
         uint256 amountToken,
         bytes32 referrerId
-    )
-        external
-        returns (
-            uint256 /*requestId*/
-        )
-    {
-        return
-            _depositRequestWithCustomRecipient(
-                tokenIn,
-                amountToken,
-                referrerId,
-                msg.sender,
-                0,
-                0,
-                msg.sender
-            );
-    }
-
-    /**
-     * @inheritdoc IDepositVault
-     */
-    function depositRequest(
-        address tokenIn,
-        uint256 amountToken,
-        bytes32 referrerId,
-        address recipient
-    )
-        external
-        returns (
-            uint256 /*requestId*/
-        )
-    {
-        return
-            _depositRequestWithCustomRecipient(
-                tokenIn,
-                amountToken,
-                referrerId,
-                recipient,
-                0,
-                0,
-                recipient
-            );
+    ) external returns (uint256 requestId) {
+        (requestId, ) = _depositRequestWithCustomRecipient(
+            tokenIn,
+            amountToken,
+            referrerId,
+            msg.sender,
+            0,
+            0,
+            msg.sender
+        );
     }
 
     /**
@@ -205,7 +185,8 @@ contract DepositVault is ManageableVault, IDepositVault {
     )
         external
         returns (
-            uint256 /*requestId*/
+            uint256, /*requestId*/
+            uint256 /* instantMintAmount */
         )
     {
         return
@@ -304,21 +285,12 @@ contract DepositVault is ManageableVault, IDepositVault {
     /**
      * @inheritdoc IDepositVault
      */
-    function approveRequest(uint256 requestId, uint256 newOutRate)
-        external
-        onlyContractAdmin
-    {
-        _approveRequest(requestId, newOutRate, false, false, false);
-    }
-
-    /**
-     * @inheritdoc IDepositVault
-     */
-    function approveRequestAvgRate(uint256 requestId, uint256 avgMTokenRate)
-        external
-        onlyContractAdmin
-    {
-        _approveRequest(requestId, avgMTokenRate, false, true, false);
+    function approveRequest(
+        uint256 requestId,
+        uint256 newOutRate,
+        bool isAvgRate
+    ) external onlyContractAdmin {
+        _approveRequest(requestId, newOutRate, false, isAvgRate, false);
     }
 
     /**
@@ -513,7 +485,8 @@ contract DepositVault is ManageableVault, IDepositVault {
         private
         validateUserAccess(recipientRequest)
         returns (
-            uint256 /*requestId*/
+            uint256, /* requestId */
+            uint256 /* instantMintAmount */
         )
     {
         uint256 amountTokenInstant = _truncate(
@@ -535,14 +508,16 @@ contract DepositVault is ManageableVault, IDepositVault {
 
         uint256 amountTokenRequest = amountToken - amountTokenInstant;
 
-        return
+        return (
             _depositRequest(
                 tokenIn,
                 amountTokenRequest,
                 recipientRequest,
                 referrerId,
                 instantResult.tokenAmountInUsd
-            );
+            ),
+            instantResult.mintAmount
+        );
     }
 
     /**

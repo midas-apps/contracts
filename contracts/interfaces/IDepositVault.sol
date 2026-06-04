@@ -158,13 +158,14 @@ interface IDepositVault is IManageableVault {
      * @param amountToken amount of `tokenIn` that will be taken from user (decimals 18)
      * @param minReceiveAmount minimum expected amount of mToken to receive (decimals 18)
      * @param referrerId referrer id
+     * @return mintAmount amount of mToken that was minted
      */
     function depositInstant(
         address tokenIn,
         uint256 amountToken,
         uint256 minReceiveAmount,
         bytes32 referrerId
-    ) external;
+    ) external returns (uint256);
 
     /**
      * @notice Does the same as original `depositInstant` but allows specifying a custom tokensReceiver address.
@@ -173,6 +174,7 @@ interface IDepositVault is IManageableVault {
      * @param minReceiveAmount minimum expected amount of mToken to receive (decimals 18)
      * @param referrerId referrer id
      * @param tokensReceiver address to receive the tokens (instead of msg.sender)
+     * @return mintAmount amount of mToken that was minted
      */
     function depositInstant(
         address tokenIn,
@@ -180,7 +182,7 @@ interface IDepositVault is IManageableVault {
         uint256 minReceiveAmount,
         bytes32 referrerId,
         address tokensReceiver
-    ) external;
+    ) external returns (uint256);
 
     /**
      * @notice depositing proccess with mint request creating if
@@ -200,21 +202,6 @@ interface IDepositVault is IManageableVault {
     ) external returns (uint256);
 
     /**
-     * @notice Does the same as original `depositRequest` but allows specifying a custom tokensReceiver address.
-     * @param tokenIn address of tokenIn
-     * @param amountToken amount of `tokenIn` that will be taken from user (decimals 18)
-     * @param referrerId referrer id
-     * @param recipient address that receives the mTokens
-     * @return request id
-     */
-    function depositRequest(
-        address tokenIn,
-        uint256 amountToken,
-        bytes32 referrerId,
-        address recipient
-    ) external returns (uint256);
-
-    /**
      * @notice Instantly deposits `instantShare` amount of `amountMTokenIn` and creates a request for the remaining amount.
      * @param tokenIn address of tokenIn
      * @param amountToken amount of `tokenIn` that will be taken from user (decimals 18)
@@ -224,6 +211,7 @@ interface IDepositVault is IManageableVault {
      * @param minReceiveAmountInstantShare min receive amount for the instant share
      * @param recipientInstant address that receives the mTokens for the instant part
      * @return request id
+     * @return instantMintAmount amount of mToken that was minted instantly
      */
     function depositRequest(
         address tokenIn,
@@ -233,7 +221,7 @@ interface IDepositVault is IManageableVault {
         uint256 instantShare,
         uint256 minReceiveAmountInstantShare,
         address recipientInstant
-    ) external returns (uint256);
+    ) external returns (uint256, uint256);
 
     /**
      * @notice approving requests from the `requestIds` array
@@ -318,18 +306,13 @@ interface IDepositVault is IManageableVault {
      * Sets request flag to Processed.
      * @param requestId request id
      * @param newOutRate mToken rate inputted by vault admin
+     * @param isAvgRate if true, newOutRate is avg rate
      */
-    function approveRequest(uint256 requestId, uint256 newOutRate) external;
-
-    /**
-     * @notice approving request without price deviation check
-     * Mints mToken to user.
-     * Sets request flag to Processed.
-     * @param requestId request id
-     * @param avgMTokenRate avg mToken rate inputted by vault admin
-     */
-    function approveRequestAvgRate(uint256 requestId, uint256 avgMTokenRate)
-        external;
+    function approveRequest(
+        uint256 requestId,
+        uint256 newOutRate,
+        bool isAvgRate
+    ) external;
 
     /**
      * @notice rejecting request

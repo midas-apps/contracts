@@ -233,6 +233,12 @@ interface IMidasTimelockManager {
     function initializeTimelock(address _timelock) external;
 
     /**
+     * @notice Sets the default delay
+     * @param _defaultDelay default delay in seconds
+     */
+    function setDefaultDelay(uint256 _defaultDelay) external;
+
+    /**
      * @notice Sets max pending operations per proposer
      * @param _maxPendingOperationsPerProposer new limit
      */

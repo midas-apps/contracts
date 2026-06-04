@@ -136,7 +136,7 @@ interface IRedemptionVault is IManageableVault {
      * @param requestId mint request id
      * @param newMTokenRate new mToken rate
      * @param isSafe if true, approval is safe
-     * @param isAvgRate if true, newMtokenRate is avg rate
+     * @param isAvgRate if true, newMTokenRate is avg rate
      */
     event ApproveRequest(
         uint256 indexed requestId,
@@ -204,12 +204,13 @@ interface IRedemptionVault is IManageableVault {
      * @param tokenOut stable coin token address to redeem to
      * @param amountMTokenIn amount of mToken to redeem (decimals 18)
      * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
+     * @return amountTokenOut amount of tokenOut that was received in original decimals
      */
     function redeemInstant(
         address tokenOut,
         uint256 amountMTokenIn,
         uint256 minReceiveAmount
-    ) external;
+    ) external returns (uint256);
 
     /**
      * @notice Does the same as original `redeemInstant` but allows specifying a custom tokensReceiver address.
@@ -217,13 +218,14 @@ interface IRedemptionVault is IManageableVault {
      * @param amountMTokenIn amount of mToken to redeem (decimals 18)
      * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
      * @param recipient address that receives tokens
+     * @return amountTokenOut amount of tokenOut that was received in original decimals
      */
     function redeemInstant(
         address tokenOut,
         uint256 amountMTokenIn,
         uint256 minReceiveAmount,
         address recipient
-    ) external;
+    ) external returns (uint256);
 
     /**
      * @notice creating redeem request
@@ -237,19 +239,6 @@ interface IRedemptionVault is IManageableVault {
         returns (uint256);
 
     /**
-     * @notice Does the same as original `redeemRequest` but allows specifying a custom tokensReceiver address.
-     * @param tokenOut stable coin token address to redeem to
-     * @param amountMTokenIn amount of mToken to redeem (decimals 18)
-     * @param recipient address that receives tokens
-     * @return request id
-     */
-    function redeemRequest(
-        address tokenOut,
-        uint256 amountMTokenIn,
-        address recipient
-    ) external returns (uint256);
-
-    /**
      * @notice Instantly redeems `instantShare` amount of `amountMTokenIn` and creates a request for the remaining amount.
      * @param tokenOut stable coin token address to redeem to
      * @param amountMTokenIn amount of mToken to redeem (decimals 18)
@@ -258,6 +247,7 @@ interface IRedemptionVault is IManageableVault {
      * @param minReceiveAmountInstantShare min receive amount for the instant share
      * @param recipientInstant address that receives tokens for the instant part
      * @return request id
+     * @return instantReceivedAmount amount of tokenOut that was received instantly in original decimals
      */
     function redeemRequest(
         address tokenOut,
@@ -266,7 +256,7 @@ interface IRedemptionVault is IManageableVault {
         uint256 instantShare,
         uint256 minReceiveAmountInstantShare,
         address recipientInstant
-    ) external returns (uint256);
+    ) external returns (uint256, uint256);
 
     /**
      * @notice approving requests from the `requestIds` array with the mToken rate
@@ -338,19 +328,13 @@ interface IRedemptionVault is IManageableVault {
      * Sets flag Processed
      * @param requestId request id
      * @param newMTokenRate new mToken rate inputted by vault admin
+     * @param isAvgRate if true, newMTokenRate is avg rate
      */
-    function approveRequest(uint256 requestId, uint256 newMTokenRate) external;
-
-    /**
-     * @notice approving redeem request if not exceed tokenOut allowance
-     * Burns amount mToken from contract
-     * Transfers tokenOut to user
-     * Sets flag Processed
-     * @param requestId request id
-     * @param avgMTokenRate avg mToken rate inputted by vault admin
-     */
-    function approveRequestAvgRate(uint256 requestId, uint256 avgMTokenRate)
-        external;
+    function approveRequest(
+        uint256 requestId,
+        uint256 newMTokenRate,
+        bool isAvgRate
+    ) external;
 
     /**
      * @notice approving request if inputted token rate fit price diviation percent

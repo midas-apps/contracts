@@ -33,52 +33,82 @@ interface IMidasPauseManager {
     event GlobalPauseStatusChange(bool isPaused);
 
     /**
-     * @notice pauses a speific contract
-     * @dev can be called only by the admin of `contractAddr`
-     * @param contractAddr contract address
+     * @notice sets the pause delay
+     * @dev can be called only by the pause manager admin or function admin
+     * @param _pauseDelay pause delay
      */
-    function pauseContract(address contractAddr) external;
+    function setPauseDelay(uint256 _pauseDelay) external;
 
     /**
-     * @notice unpauses a speific contract
-     * @dev can be called only by the admin of `contractAddr`
-     * @param contractAddr contract address
+     * @notice sets the unpause delay
+     * @dev can be called only by the pause manager admin or function admin
+     * @param _unpauseDelay unpause delay
      */
-    function unpauseContract(address contractAddr) external;
-
-    /**
-     * @notice pauses functions of a contract
-     * @dev can be called only by the admin of `contractAddr`
-     * @param contractAddr contract address
-     * @param selectors function ids
-     */
-    function bulkPauseContractFn(
-        address contractAddr,
-        bytes4[] calldata selectors
-    ) external;
-
-    /**
-     * @notice unpauses functions of a contract
-     * @dev can be called only by the admin of `contractAddr`
-     * @param contractAddr contract address
-     * @param selectors function ids
-     */
-    function bulkUnpauseContractFn(
-        address contractAddr,
-        bytes4[] calldata selectors
-    ) external;
+    function setUnpauseDelay(uint256 _unpauseDelay) external;
 
     /**
      * @notice pauses the protocol
-     * @dev can be called only by the admin of the pause manager
+     * @dev can be called only by the pause manager admin
      */
     function globalPause() external;
 
     /**
      * @notice unpauses the protocol
-     * @dev can be called only by the admin of the pause manager
+     * @dev can be called only by the pause manager admin
      */
     function globalUnpause() external;
+
+    /**
+     * @notice pauses an array of contracts
+     * @dev can be called only by the pause manager admin or function admin
+     * @param contractAddrs array of contract addresses
+     */
+    function bulkPauseContract(address[] calldata contractAddrs) external;
+
+    /**
+     * @notice unpauses an array of contracts
+     * @dev can be called only by the pause manager admin or function admin
+     * @param contractAddrs array of contract addresses
+     */
+    function bulkUnpauseContract(address[] calldata contractAddrs) external;
+
+    /**
+     * @notice pauses functions on an array of contracts
+     * @dev can be called only by the pause manager admin or function admin
+     * @param contractAddrs array of contract addresses
+     * @param selectors function ids to pause on the contracts
+     */
+    function bulkPauseContractFn(
+        address[] calldata contractAddrs,
+        bytes4[] calldata selectors
+    ) external;
+
+    /**
+     * @notice unpauses functions on an array of contracts
+     * @dev can be called only by the pause manager admin or function admin
+     * @param contractAddrs array of contract addresses
+     * @param selectors function ids to unpause on the contracts
+     */
+    function bulkUnpauseContractFn(
+        address[] calldata contractAddrs,
+        bytes4[] calldata selectors
+    ) external;
+
+    /**
+     * @notice pauses a contract
+     * @dev can be called only by admin of a contract or function admin that
+     * is managed by the admin of the contract
+     * @param contractAddr address of the contract
+     */
+    function contractAdminPause(address contractAddr) external;
+
+    /**
+     * @notice unpauses a contract
+     * @dev can be called only by admin of a contract or function admin that
+     * is managed by the admin of the contract
+     * @param contractAddr address of the contract
+     */
+    function contractAdminUnpause(address contractAddr) external;
 
     /**
      * @notice checks if function of a contract is paused
@@ -106,4 +136,16 @@ interface IMidasPauseManager {
      * @return role admin role
      */
     function pauseAdminRole() external view returns (bytes32);
+
+    /**
+     * @notice returns the pause delay
+     * @return pause delay
+     */
+    function pauseDelay() external view returns (uint256);
+
+    /**
+     * @notice returns the unpause delay
+     * @return unpause delay
+     */
+    function unpauseDelay() external view returns (uint256);
 }

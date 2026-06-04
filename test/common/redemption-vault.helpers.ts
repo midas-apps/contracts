@@ -481,12 +481,13 @@ export const redeemRequestTest = async (
   const recipientRequest = customRecipient
     ? getAccount(customRecipient)
     : sender.address;
-  const recipientInstant = customRecipientInstant
-    ? getAccount(customRecipientInstant)
-    : sender.address;
+  const recipientInstant =
+    customRecipientInstant || customRecipient
+      ? getAccount(customRecipientInstant ?? customRecipient!)
+      : sender.address;
 
   const callFn =
-    instantShare !== undefined
+    instantShare !== undefined || withRecipient
       ? redemptionVault
           .connect(sender)
           [
@@ -499,15 +500,6 @@ export const redeemRequestTest = async (
             instantShare ?? constants.Zero,
             minReceiveAmountInstantShare ?? constants.Zero,
             recipientInstant,
-          )
-      : withRecipient
-      ? redemptionVault
-          .connect(sender)
-          ['redeemRequest(address,uint256,address)'].bind(
-            this,
-            tokenOut,
-            amountIn,
-            recipientRequest,
           )
       : redemptionVault
           .connect(sender)
@@ -678,14 +670,14 @@ export const approveRedeemRequestTest = async (
           .safeApproveRequestAvgRate.bind(this, requestId, rate)
       : redemptionVault
           .connect(sender)
-          .approveRequestAvgRate.bind(this, requestId, rate)
+          .approveRequest.bind(this, requestId, rate, true)
     : isSafe
     ? redemptionVault
         .connect(sender)
         .safeApproveRequest.bind(this, requestId, rate)
     : redemptionVault
         .connect(sender)
-        .approveRequest.bind(this, requestId, rate);
+        .approveRequest.bind(this, requestId, rate, false);
 
   if (await handleRevert(callFn, redemptionVault, opt)) {
     return;

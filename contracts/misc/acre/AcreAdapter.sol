@@ -109,9 +109,12 @@ contract AcreAdapter is IAcreAdapter {
 
         IERC20(share()).safeTransferFrom(msg.sender, address(this), shares);
 
-        requestId = IRedemptionVault(redemptionVault).redeemRequest(
+        (requestId, ) = IRedemptionVault(redemptionVault).redeemRequest(
             asset(),
             shares,
+            receiver,
+            0,
+            0,
             receiver
         );
 

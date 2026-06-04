@@ -230,7 +230,11 @@ export const defaultDeploy = async () => {
   await timelock.initialize(timelockManager.address);
 
   const pauseManager = await new MidasPauseManagerTest__factory(owner).deploy();
-  await pauseManager.initialize(accessControl.address);
+  await pauseManager.initialize(
+    accessControl.address,
+    constants.MaxUint256,
+    86400,
+  );
 
   await accessControl.initializeRelationships(
     timelockManager.address,

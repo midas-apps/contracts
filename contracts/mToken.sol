@@ -7,6 +7,7 @@ import {RateLimitLibrary} from "./libraries/RateLimitLibrary.sol";
 import {AccessControlUtilsLibrary} from "./libraries/AccessControlUtilsLibrary.sol";
 import {IMidasAccessControl} from "./interfaces/IMidasAccessControl.sol";
 import {PauseUtilsLibrary} from "./libraries/PauseUtilsLibrary.sol";
+import {IPausable} from "./interfaces/IPausable.sol";
 
 import "./access/Blacklistable.sol";
 import "./interfaces/IMToken.sol";
@@ -16,7 +17,12 @@ import "./interfaces/IMToken.sol";
  * @author RedDuck Software
  */
 //solhint-disable contract-name-camelcase
-abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
+abstract contract mToken is
+    ERC20PausableUpgradeable,
+    Blacklistable,
+    IMToken,
+    IPausable
+{
     using RateLimitLibrary for RateLimitLibrary.WindowRateLimits;
     using AccessControlUtilsLibrary for IMidasAccessControl;
 
@@ -155,7 +161,11 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     function pause()
         external
         override
-        onlyRoleNoTimelock(_contractAdminRole(), true)
+        onlyRoleDelayOverride(
+            _contractAdminRole(),
+            PauseUtilsLibrary.pauseDelay(accessControl),
+            true
+        )
     {
         _pause();
     }
@@ -163,7 +173,15 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     /**
      * @inheritdoc IMToken
      */
-    function unpause() external override onlyContractAdmin {
+    function unpause()
+        external
+        override
+        onlyRoleDelayOverride(
+            _contractAdminRole(),
+            PauseUtilsLibrary.unpauseDelay(accessControl),
+            true
+        )
+    {
         _unpause();
     }
 
@@ -209,6 +227,13 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         )
     {
         return _mintRateLimits.getWindowStatuses();
+    }
+
+    /**
+     * @inheritdoc IPausable
+     */
+    function pauserRole() external view override returns (bytes32, bool) {
+        return (_contractAdminRole(), true);
     }
 
     /**

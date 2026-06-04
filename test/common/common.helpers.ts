@@ -17,7 +17,6 @@ import {
   IERC20Metadata,
   MidasPauseManager,
   MTBILL,
-  Pausable,
   USTBMock,
 } from '../../typechain-types';
 
@@ -146,69 +145,22 @@ export const unpauseGlobalTest = async (
   expect(await pauseManager.globalPaused()).eq(false);
 };
 
+// TODO: rename to pauseContracts
 export const pauseVault = async (
   { pauseManager, owner }: PauseParams,
-  vault: Pausable,
+  contracts: Contract | Contract[],
   opt?: OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
 
-  if (
-    await handleRevert(
-      pauseManager.connect(from).pauseContract.bind(this, vault.address),
-      pauseManager,
-      opt,
-    )
-  ) {
-    return;
-  }
-
-  await expect(await pauseManager.connect(from).pauseContract(vault.address))
-    .not.reverted;
-
-  expect(await pauseManager.isPaused(vault.address, '0x00000000')).eq(true);
-  expect(await pauseManager.contractPaused(vault.address)).eq(true);
-};
-
-export const unpauseVault = async (
-  { owner, pauseManager }: PauseParams,
-  vault: Pausable,
-  opt?: OptionalCommonParams,
-) => {
-  const from = opt?.from ?? owner;
+  const contractsArr = Array.isArray(contracts) ? contracts : [contracts];
 
   if (
     await handleRevert(
-      pauseManager.connect(from).unpauseContract.bind(this, vault.address),
-      vault,
-      opt,
-    )
-  ) {
-    return;
-  }
-
-  await expect(await pauseManager.connect(from).unpauseContract(vault.address))
-    .not.reverted;
-
-  expect(await pauseManager.isPaused(vault.address, '0x00000000')).eq(false);
-  expect(await pauseManager.contractPaused(vault.address)).eq(false);
-};
-
-export const pauseVaultFn = async (
-  { pauseManager, owner }: PauseParams,
-  vault: Pausable,
-  fnSelector: string | string[],
-  opt?: OptionalCommonParams,
-) => {
-  const from = opt?.from ?? owner;
-
-  const selectors = Array.isArray(fnSelector) ? fnSelector : [fnSelector];
-
-  if (
-    await handleRevert(
-      pauseManager
-        .connect(from)
-        .bulkPauseContractFn.bind(this, vault.address, selectors),
+      pauseManager.connect(from).bulkPauseContract.bind(
+        this,
+        contractsArr.map((c) => c.address),
+      ),
       pauseManager,
       opt,
     )
@@ -219,32 +171,33 @@ export const pauseVaultFn = async (
   await expect(
     await pauseManager
       .connect(from)
-      .bulkPauseContractFn(vault.address, selectors),
+      .bulkPauseContract(contractsArr.map((c) => c.address)),
   ).not.reverted;
 
-  for (const fnSelector of selectors) {
-    expect(await pauseManager.isPaused(vault.address, fnSelector)).eq(true);
-    expect(await pauseManager.contractFnPaused(vault.address, fnSelector)).eq(
+  for (const contract of contractsArr) {
+    expect(await pauseManager.isPaused(contract.address, '0x00000000')).eq(
       true,
     );
+    expect(await pauseManager.contractPaused(contract.address)).eq(true);
   }
 };
 
-export const unpauseVaultFn = async (
-  { pauseManager, owner }: PauseParams,
-  vault: Pausable,
-  fnSelector: string | string[],
+// TODO: rename to unpauseContracts
+export const unpauseVault = async (
+  { owner, pauseManager }: PauseParams,
+  contracts: Contract | Contract[],
   opt?: OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
 
-  const selectors = Array.isArray(fnSelector) ? fnSelector : [fnSelector];
+  const contractsArr = Array.isArray(contracts) ? contracts : [contracts];
 
   if (
     await handleRevert(
-      pauseManager
-        .connect(from)
-        .bulkUnpauseContractFn.bind(this, vault.address, selectors),
+      pauseManager.connect(from).bulkUnpauseContract.bind(
+        this,
+        contractsArr.map((c) => c.address),
+      ),
       pauseManager,
       opt,
     )
@@ -255,15 +208,156 @@ export const unpauseVaultFn = async (
   await expect(
     await pauseManager
       .connect(from)
-      .bulkUnpauseContractFn(vault.address, selectors),
+      .bulkUnpauseContract(contractsArr.map((c) => c.address)),
   ).not.reverted;
 
-  for (const fnSelector of selectors) {
-    expect(await pauseManager.isPaused(vault.address, fnSelector)).eq(false);
-    expect(await pauseManager.contractFnPaused(vault.address, fnSelector)).eq(
+  for (const contract of contractsArr) {
+    expect(await pauseManager.isPaused(contract.address, '0x00000000')).eq(
       false,
     );
+    expect(await pauseManager.contractPaused(contract.address)).eq(false);
   }
+};
+
+// TODO: rename to pauseContractsFn
+export const pauseVaultFn = async (
+  { pauseManager, owner }: PauseParams,
+  contracts: Contract | Contract[],
+  fnSelector: string | string[],
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+
+  const selectors = Array.isArray(fnSelector) ? fnSelector : [fnSelector];
+
+  const contractsArr = Array.isArray(contracts) ? contracts : [contracts];
+
+  if (
+    await handleRevert(
+      pauseManager.connect(from).bulkPauseContractFn.bind(
+        this,
+        contractsArr.map((c) => c.address),
+        selectors,
+      ),
+      pauseManager,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  await expect(
+    await pauseManager.connect(from).bulkPauseContractFn(
+      contractsArr.map((c) => c.address),
+      selectors,
+    ),
+  ).not.reverted;
+
+  for (const contract of contractsArr) {
+    for (const fnSelector of selectors) {
+      expect(await pauseManager.isPaused(contract.address, fnSelector)).eq(
+        true,
+      );
+      expect(
+        await pauseManager.contractFnPaused(contract.address, fnSelector),
+      ).eq(true);
+    }
+  }
+};
+
+// TODO: rename to unpauseContractsFn
+export const unpauseVaultFn = async (
+  { pauseManager, owner }: PauseParams,
+  contracts: Contract | Contract[],
+  fnSelector: string | string[],
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+
+  const selectors = Array.isArray(fnSelector) ? fnSelector : [fnSelector];
+
+  const contractsArr = Array.isArray(contracts) ? contracts : [contracts];
+  if (
+    await handleRevert(
+      pauseManager.connect(from).bulkUnpauseContractFn.bind(
+        this,
+        contractsArr.map((c) => c.address),
+        selectors,
+      ),
+      pauseManager,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  await expect(
+    await pauseManager.connect(from).bulkUnpauseContractFn(
+      contractsArr.map((c) => c.address),
+      selectors,
+    ),
+  ).not.reverted;
+
+  for (const contract of contractsArr) {
+    for (const fnSelector of selectors) {
+      expect(await pauseManager.isPaused(contract.address, fnSelector)).eq(
+        false,
+      );
+      expect(
+        await pauseManager.contractFnPaused(contract.address, fnSelector),
+      ).eq(false);
+    }
+  }
+};
+
+export const adminPauseContractTest = async (
+  { pauseManager, owner }: PauseParams,
+  contract: Contract,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+
+  if (
+    await handleRevert(
+      pauseManager
+        .connect(from)
+        .contractAdminPause.bind(this, contract.address),
+      pauseManager,
+      opt,
+    )
+  ) {
+    return;
+  }
+  await expect(pauseManager.connect(from).contractAdminPause(contract.address))
+    .not.reverted;
+
+  expect(await pauseManager.contractPaused(contract.address)).eq(true);
+  expect(await pauseManager.isPaused(contract.address, '0x00000000')).eq(true);
+};
+
+export const adminUnpauseContractTest = async (
+  { pauseManager, owner }: PauseParams,
+  contract: Contract,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+  if (
+    await handleRevert(
+      pauseManager
+        .connect(from)
+        .contractAdminUnpause.bind(this, contract.address),
+      pauseManager,
+      opt,
+    )
+  ) {
+    return;
+  }
+  await expect(
+    pauseManager.connect(from).contractAdminUnpause(contract.address),
+  ).not.reverted;
+
+  expect(await pauseManager.contractPaused(contract.address)).eq(false);
+  expect(await pauseManager.isPaused(contract.address, '0x00000000')).eq(false);
 };
 
 export const mintToken = async (

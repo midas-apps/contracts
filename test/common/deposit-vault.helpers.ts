@@ -293,43 +293,35 @@ export const depositRequestTest = async (
     ? getAccount(customRecipient)
     : sender.address;
 
-  const recipientInstant = customRecipientInstant
-    ? getAccount(customRecipientInstant)
-    : sender.address;
+  const recipientInstant =
+    customRecipientInstant || customRecipient
+      ? getAccount(customRecipientInstant ?? customRecipient!)
+      : sender.address;
 
-  const callFn = instantShare
-    ? depositVault
-        .connect(sender)
-        [
-          'depositRequest(address,uint256,bytes32,address,uint256,uint256,address)'
-        ].bind(
-          this,
-          tokenIn,
-          amountIn,
-          constants.HashZero,
-          recipient,
-          instantShare ?? constants.Zero,
-          minReceiveAmountInstantShare ?? constants.Zero,
-          recipientInstant,
-        )
-    : withRecipient
-    ? depositVault
-        .connect(sender)
-        ['depositRequest(address,uint256,bytes32,address)'].bind(
-          this,
-          tokenIn,
-          amountIn,
-          constants.HashZero,
-          recipient,
-        )
-    : depositVault
-        .connect(sender)
-        ['depositRequest(address,uint256,bytes32)'].bind(
-          this,
-          tokenIn,
-          amountIn,
-          constants.HashZero,
-        );
+  const callFn =
+    instantShare || withRecipient
+      ? depositVault
+          .connect(sender)
+          [
+            'depositRequest(address,uint256,bytes32,address,uint256,uint256,address)'
+          ].bind(
+            this,
+            tokenIn,
+            amountIn,
+            constants.HashZero,
+            recipient,
+            instantShare ?? constants.Zero,
+            minReceiveAmountInstantShare ?? constants.Zero,
+            recipientInstant,
+          )
+      : depositVault
+          .connect(sender)
+          ['depositRequest(address,uint256,bytes32)'].bind(
+            this,
+            tokenIn,
+            amountIn,
+            constants.HashZero,
+          );
 
   if (await handleRevert(callFn, depositVault, opt)) {
     return {};
@@ -511,14 +503,14 @@ export const approveRequestTest = async (
           .safeApproveRequestAvgRate.bind(this, requestId, newRate)
       : depositVault
           .connect(sender)
-          .approveRequestAvgRate.bind(this, requestId, newRate)
+          .approveRequest.bind(this, requestId, newRate, true)
     : isSafe
     ? depositVault
         .connect(sender)
         .safeApproveRequest.bind(this, requestId, newRate)
     : depositVault
         .connect(sender)
-        .approveRequest.bind(this, requestId, newRate);
+        .approveRequest.bind(this, requestId, newRate, false);
 
   if (await handleRevert(callFn, depositVault, opt)) {
     return;

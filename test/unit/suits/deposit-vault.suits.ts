@@ -6,7 +6,7 @@ import {
 } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { constants } from 'ethers';
+import { constants, Contract } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import { manageableVaultSuits } from './manageable-vault.suits';
@@ -19,7 +19,6 @@ import {
   DepositVaultWithMTokenTest,
   DepositVaultWithUSTBTest,
   DepositVaultWithMorphoTest,
-  Pausable,
 } from '../../../typechain-types';
 import {
   acErrors,
@@ -67,9 +66,8 @@ import {
 import { sanctionUser } from '../../common/with-sanctions-list.helpers';
 
 const APPROVE_FN_SELECTORS = [
-  encodeFnSelector('approveRequest(uint256,uint256)'),
+  encodeFnSelector('approveRequest(uint256,uint256,bool)'),
   encodeFnSelector('safeApproveRequest(uint256,uint256)'),
-  encodeFnSelector('approveRequestAvgRate(uint256,uint256)'),
   encodeFnSelector('safeApproveRequestAvgRate(uint256,uint256)'),
   encodeFnSelector('safeBulkApproveRequestAtSavedRate(uint256[])'),
   encodeFnSelector('safeBulkApproveRequest(uint256[])'),
@@ -82,7 +80,7 @@ let pauseManager: DefaultFixture['pauseManager'];
 let owner: DefaultFixture['owner'];
 
 const pauseOtherDepositApproveFns = async (
-  depositVault: Pausable,
+  depositVault: Contract,
   exceptSelector: (typeof APPROVE_FN_SELECTORS)[number],
 ) => {
   for (const selector of APPROVE_FN_SELECTORS) {
@@ -3065,7 +3063,7 @@ export const depositVaultSuits = (
             true,
           );
           const selector = encodeFnSelector(
-            'depositRequest(address,uint256,bytes32,address)',
+            'depositRequest(address,uint256,bytes32,address,uint256,uint256,address)',
           );
           await pauseVaultFn({ pauseManager, owner }, depositVault, selector);
           await depositRequestTest(
@@ -3937,7 +3935,9 @@ export const depositVaultSuits = (
           await pauseVaultFn(
             { pauseManager, owner },
             depositVault,
-            encodeFnSelector('depositRequest(address,uint256,bytes32,address)'),
+            encodeFnSelector(
+              'depositRequest(address,uint256,bytes32,address,uint256,uint256,address)',
+            ),
           );
 
           await mintToken(stableCoins.dai, regularAccounts[0], 100);
@@ -4091,72 +4091,982 @@ export const depositVaultSuits = (
       });
 
       describe('approveRequest()', async () => {
-        it('should fail: call from address without vault admin role', async () => {
-          const { depositVault, regularAccounts, mTokenToUsdDataFeed, mTBILL } =
-            await loadDvFixture();
-          await approveRequestTest(
-            {
+        describe('isAvgRate=false', async () => {
+          it('should fail: call from address without vault admin role', async () => {
+            const {
               depositVault,
-              owner: regularAccounts[1],
-              mTBILL,
+              regularAccounts,
               mTokenToUsdDataFeed,
-            },
-            1,
-            parseUnits('5'),
-            {
-              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
-            },
-          );
-        });
-
-        it('should fail: request by id not exist', async () => {
-          const {
-            owner,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            1,
-            parseUnits('5'),
-            {
-              revertCustomError: {
-                customErrorName: 'RequestNotExists',
+              mTBILL,
+            } = await loadDvFixture();
+            await approveRequestTest(
+              {
+                depositVault,
+                owner: regularAccounts[1],
+                mTBILL,
+                mTokenToUsdDataFeed,
               },
-            },
-          );
-        });
+              1,
+              parseUnits('5'),
+              {
+                revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
+              },
+            );
+          });
 
-        describe('request addresses access', () => {
-          const setupPendingDepositRequest = async (
-            fixture: Awaited<ReturnType<typeof loadDvFixture>>,
-            opts?: {
-              customRecipient?: SignerWithAddress;
-              customClaimer?: SignerWithAddress;
-            },
-          ) => {
+          it('should fail: request by id not exist', async () => {
             const {
               owner,
               depositVault,
               stableCoins,
               mTBILL,
-              mTokenToUsdDataFeed,
-              regularAccounts,
               dataFeed,
+              mTokenToUsdDataFeed,
+            } = await loadDvFixture();
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              1,
+              parseUnits('5'),
+              {
+                revertCustomError: {
+                  customErrorName: 'RequestNotExists',
+                },
+              },
+            );
+          });
+
+          describe('request addresses access', () => {
+            const setupPendingDepositRequest = async (
+              fixture: Awaited<ReturnType<typeof loadDvFixture>>,
+              opts?: {
+                customRecipient?: SignerWithAddress;
+                customClaimer?: SignerWithAddress;
+              },
+            ) => {
+              const {
+                owner,
+                depositVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                regularAccounts,
+                dataFeed,
+                mockedAggregator,
+                mockedAggregatorMToken,
+              } = fixture;
+
+              await mintToken(stableCoins.dai, regularAccounts[0], 100);
+              await approveBase18(
+                regularAccounts[0],
+                stableCoins.dai,
+                depositVault,
+                100,
+              );
+              await addPaymentTokenTest(
+                { vault: depositVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+              await setRoundData({ mockedAggregator }, 1.03);
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMToken },
+                5,
+              );
+
+              await depositRequestTest(
+                {
+                  depositVault,
+                  owner,
+                  mTBILL,
+                  mTokenToUsdDataFeed,
+                  customRecipient: opts?.customRecipient ?? regularAccounts[0],
+                  ...(opts?.customClaimer
+                    ? {
+                        customClaimer: opts.customClaimer,
+                        instantShare: 0,
+                      }
+                    : {}),
+                },
+                stableCoins.dai,
+                100,
+                { from: regularAccounts[0] },
+              );
+            };
+
+            it('should fail approve request when recipient got blacklisted', async () => {
+              const fixture = await loadDvFixture();
+              const {
+                owner,
+                depositVault,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                blackListableTester,
+                accessControl,
+                regularAccounts,
+              } = fixture;
+              await setupPendingDepositRequest(fixture);
+
+              await blackList(
+                { blacklistable: blackListableTester, accessControl, owner },
+                regularAccounts[0],
+              );
+
+              await approveRequestTest(
+                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                0,
+                parseUnits('5'),
+                { revertCustomError: acErrors.WMAC_BLACKLISTED },
+              );
+            });
+
+            it('should fail approve request when recipient got ungreenlisted when greenlist enable flag is true', async () => {
+              const fixture = await loadDvFixture();
+              const { owner, depositVault, mTBILL, mTokenToUsdDataFeed } =
+                fixture;
+              await setupPendingDepositRequest(fixture);
+
+              await depositVault.setGreenlistEnable(true);
+
+              await approveRequestTest(
+                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                0,
+                parseUnits('5'),
+                { revertCustomError: acErrors.WMAC_HASNT_ROLE },
+              );
+            });
+
+            it('should fail approve request when recipient got sanction listed', async () => {
+              const fixture = await loadDvFixture();
+              const {
+                owner,
+                depositVault,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                regularAccounts,
+                mockedSanctionsList,
+              } = fixture;
+              await setupPendingDepositRequest(fixture);
+
+              await sanctionUser(
+                { sanctionsList: mockedSanctionsList },
+                regularAccounts[0],
+              );
+
+              await approveRequestTest(
+                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                0,
+                parseUnits('5'),
+                {
+                  revertCustomError: {
+                    customErrorName: 'Sanctioned',
+                  },
+                },
+              );
+            });
+          });
+
+          it('should fail: request already precessed', async () => {
+            const {
+              owner,
               mockedAggregator,
               mockedAggregatorMToken,
-            } = fixture;
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+            } = await loadDvFixture();
 
+            await mintToken(stableCoins.dai, owner, 100);
+            await approveBase18(owner, stableCoins.dai, depositVault, 100);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+            await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+            await depositRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              100,
+            );
+            const requestId = 0;
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              requestId,
+              parseUnits('5'),
+            );
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              requestId,
+              parseUnits('5'),
+              {
+                revertCustomError: {
+                  customErrorName: 'UnexpectedRequestStatus',
+                },
+              },
+            );
+          });
+
+          it('approve request from vaut admin account', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+            } = await loadDvFixture();
+
+            await mintToken(stableCoins.dai, owner, 100);
+            await approveBase18(owner, stableCoins.dai, depositVault, 100);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+            await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+            await depositRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              100,
+            );
+            const requestId = 0;
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              requestId,
+              parseUnits('5'),
+            );
+          });
+
+          it('approve request should decrease pending supply', async () => {
+            const {
+              owner,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = await loadDvFixture();
+
+            await mintToken(stableCoins.dai, owner, 100);
+            await approveBase18(owner, stableCoins.dai, depositVault, 100);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setMaxSupplyCapTest({ depositVault, owner }, 100);
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+            await depositRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              50,
+            );
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('1'),
+            );
+          });
+
+          it('should fail: when after approval supply exceeds max cap', async () => {
+            const {
+              owner,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = await loadDvFixture();
+
+            await mintToken(stableCoins.dai, owner, 100);
+            await approveBase18(owner, stableCoins.dai, depositVault, 100);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setMaxSupplyCapTest({ depositVault, owner }, 100);
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+            await depositInstantTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              90,
+            );
+
+            await depositRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              10,
+            );
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('0.99'),
+              {
+                revertCustomError: {
+                  customErrorName: 'SupplyCapExceeded',
+                },
+              },
+            );
+          });
+
+          it('should approve request in non sequential order when sequentialRequestProcessing is disabled', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+            } = await loadDvFixture();
+
+            await mintToken(stableCoins.dai, owner, 100);
+            await approveBase18(owner, stableCoins.dai, depositVault, 100);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+            await depositRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              50,
+            );
+
+            await depositRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              50,
+            );
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              1,
+              parseUnits('1'),
+            );
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('1'),
+            );
+          });
+
+          it('should fail: approve request in non sequential order when sequentialRequestProcessing is enabled', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+            } = await loadDvFixture();
+
+            await setSequentialRequestProcessingTest(
+              { vault: depositVault, owner },
+              true,
+            );
+
+            await mintToken(stableCoins.dai, owner, 200);
+            await approveBase18(owner, stableCoins.dai, depositVault, 200);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+            await depositRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              50,
+            );
+
+            await depositRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              50,
+            );
+
+            await depositRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              50,
+            );
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('1'),
+            );
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              2,
+              parseUnits('1'),
+              {
+                revertCustomError: {
+                  customErrorName: 'InvalidRequestSequence',
+                  args: [2, 1],
+                },
+              },
+            );
+          });
+
+          it('should approve request id 0 and then id 1 when sequentialRequestProcessing is enabled', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+            } = await loadDvFixture();
+
+            await setSequentialRequestProcessingTest(
+              { vault: depositVault, owner },
+              true,
+            );
+
+            await mintToken(stableCoins.dai, owner, 200);
+            await approveBase18(owner, stableCoins.dai, depositVault, 200);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+            await depositRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              50,
+            );
+
+            await depositRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              50,
+            );
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              0,
+              parseUnits('1'),
+            );
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              1,
+              parseUnits('1'),
+            );
+          });
+
+          it('should enforce fifo across separate transactions when sequentialRequestProcessing is enabled', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+            } = await loadDvFixture();
+
+            await setSequentialRequestProcessingTest(
+              { vault: depositVault, owner },
+              true,
+            );
+
+            await mintToken(stableCoins.dai, owner, 500);
+            await approveBase18(owner, stableCoins.dai, depositVault, 500);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+            for (let i = 0; i < 9; i++) {
+              await depositRequestTest(
+                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                50,
+              );
+            }
+
+            for (const requestId of [0, 1, 2]) {
+              await approveRequestTest(
+                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                requestId,
+                parseUnits('1'),
+              );
+            }
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              3,
+              parseUnits('1'),
+            );
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              5,
+              parseUnits('1'),
+              {
+                revertCustomError: {
+                  customErrorName: 'InvalidRequestSequence',
+                  args: [5, 4],
+                },
+              },
+            );
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              4,
+              parseUnits('1'),
+            );
+
+            for (const requestId of [6, 7, 8]) {
+              await approveRequestTest(
+                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                requestId,
+                parseUnits('1'),
+                {
+                  revertCustomError: {
+                    customErrorName: 'InvalidRequestSequence',
+                    args: [requestId, 5],
+                  },
+                },
+              );
+            }
+
+            for (const requestId of [5, 6, 7]) {
+              await approveRequestTest(
+                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                requestId,
+                parseUnits('1'),
+              );
+            }
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              8,
+              parseUnits('1'),
+            );
+          });
+        });
+
+        describe('isAvgRate=true', async () => {
+          it('should fail: call from address without vault admin role', async () => {
+            const {
+              depositVault,
+              regularAccounts,
+              mTokenToUsdDataFeed,
+              mTBILL,
+            } = await loadDvFixture();
+            await approveRequestTest(
+              {
+                depositVault,
+                owner: regularAccounts[1],
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+              },
+              1,
+              parseUnits('1'),
+              {
+                revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
+              },
+            );
+          });
+
+          it('should fail: request by id not exist', async () => {
+            const {
+              owner,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+            } = await loadDvFixture();
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await approveRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+              },
+              1,
+              parseUnits('1'),
+              {
+                revertCustomError: {
+                  customErrorName: 'RequestNotExists',
+                },
+              },
+            );
+          });
+
+          it('should fail: if new rate greater then variabilityTolerance', async () => {
+            const {
+              owner,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = await loadDvFixture();
+            await mintToken(stableCoins.dai, owner, 100);
+            await approveBase18(owner, stableCoins.dai, depositVault, 100);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+            await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+            await depositRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              100,
+            );
+            const requestId = 0;
+            await approveRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+              },
+              requestId,
+              parseUnits('6'),
+              {
+                revertCustomError: {
+                  customErrorName: 'PriceVariationExceeded',
+                },
+              },
+            );
+          });
+
+          it('should fail: if new rate lower then variabilityTolerance', async () => {
+            const {
+              owner,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = await loadDvFixture();
+            await mintToken(stableCoins.dai, owner, 100);
+            await approveBase18(owner, stableCoins.dai, depositVault, 100);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+            await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+            await depositRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              100,
+            );
+            const requestId = 0;
+            await approveRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+              },
+              requestId,
+              parseUnits('4'),
+              {
+                revertCustomError: {
+                  customErrorName: 'PriceVariationExceeded',
+                },
+              },
+            );
+          });
+
+          it('should fail: request already precessed', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+            } = await loadDvFixture();
+
+            await mintToken(stableCoins.dai, owner, 100);
+            await approveBase18(owner, stableCoins.dai, depositVault, 100);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+            await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+            await depositRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              100,
+            );
+            const requestId = 0;
+
+            await approveRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+              },
+              requestId,
+              parseUnits('5.000001'),
+            );
+            await approveRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+              },
+              requestId,
+              parseUnits('5.000001'),
+              {
+                revertCustomError: {
+                  customErrorName: 'UnexpectedRequestStatus',
+                },
+              },
+            );
+          });
+
+          it('approve request should decrease pending supply', async () => {
+            const {
+              owner,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = await loadDvFixture();
+
+            await mintToken(stableCoins.dai, owner, 100);
+            await approveBase18(owner, stableCoins.dai, depositVault, 100);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setVariabilityToleranceTest(
+              { vault: depositVault, owner },
+              1000,
+            );
+            await setMaxSupplyCapTest({ depositVault, owner }, 100);
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+            await depositRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              50,
+            );
+
+            await approveRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+              },
+              0,
+              parseUnits('1'),
+            );
+          });
+
+          it('should fail: when after approval supply exceeds max cap', async () => {
+            const {
+              owner,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = await loadDvFixture();
+
+            await mintToken(stableCoins.dai, owner, 100);
+            await approveBase18(owner, stableCoins.dai, depositVault, 100);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setVariabilityToleranceTest(
+              { vault: depositVault, owner },
+              1000,
+            );
+            await setMaxSupplyCapTest({ depositVault, owner }, 100);
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+            await depositInstantTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              90,
+            );
+
+            await depositRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              10,
+            );
+
+            await approveRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+              },
+              0,
+              parseUnits('0.99'),
+              {
+                revertCustomError: {
+                  customErrorName: 'SupplyCapExceeded',
+                },
+              },
+            );
+          });
+
+          it('should fail: when 0 supply cap is left', async () => {
+            const {
+              owner,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              customRecipient,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = await loadDvFixture();
             await mintToken(stableCoins.dai, regularAccounts[0], 100);
             await approveBase18(
               regularAccounts[0],
@@ -4171,8 +5081,31 @@ export const depositVaultSuits = (
               0,
               true,
             );
-            await setRoundData({ mockedAggregator }, 1.03);
-            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await setVariabilityToleranceTest(
+              { vault: depositVault, owner },
+              1000,
+            );
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMaxSupplyCapTest({ depositVault, owner }, 100);
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+            await depositInstantTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customRecipient,
+              },
+              stableCoins.dai,
+              99,
+              {
+                from: regularAccounts[0],
+              },
+            );
 
             await depositRequestTest(
               {
@@ -4180,2015 +5113,453 @@ export const depositVaultSuits = (
                 owner,
                 mTBILL,
                 mTokenToUsdDataFeed,
-                customRecipient: opts?.customRecipient ?? regularAccounts[0],
-                ...(opts?.customClaimer
-                  ? {
-                      customClaimer: opts.customClaimer,
-                      instantShare: 0,
-                    }
-                  : {}),
+                customRecipient,
               },
               stableCoins.dai,
-              100,
-              { from: regularAccounts[0] },
-            );
-          };
-
-          it('should fail approve request when recipient got blacklisted', async () => {
-            const fixture = await loadDvFixture();
-            const {
-              owner,
-              depositVault,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              blackListableTester,
-              accessControl,
-              regularAccounts,
-            } = fixture;
-            await setupPendingDepositRequest(fixture);
-
-            await blackList(
-              { blacklistable: blackListableTester, accessControl, owner },
-              regularAccounts[0],
+              1,
+              {
+                from: regularAccounts[0],
+              },
             );
 
             await approveRequestTest(
-              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+              },
               0,
-              parseUnits('5'),
-              { revertCustomError: acErrors.WMAC_BLACKLISTED },
-            );
-          });
-
-          it('should fail approve request when recipient got ungreenlisted when greenlist enable flag is true', async () => {
-            const fixture = await loadDvFixture();
-            const { owner, depositVault, mTBILL, mTokenToUsdDataFeed } =
-              fixture;
-            await setupPendingDepositRequest(fixture);
-
-            await depositVault.setGreenlistEnable(true);
-
-            await approveRequestTest(
-              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-              0,
-              parseUnits('5'),
-              { revertCustomError: acErrors.WMAC_HASNT_ROLE },
-            );
-          });
-
-          it('should fail approve request when recipient got sanction listed', async () => {
-            const fixture = await loadDvFixture();
-            const {
-              owner,
-              depositVault,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              regularAccounts,
-              mockedSanctionsList,
-            } = fixture;
-            await setupPendingDepositRequest(fixture);
-
-            await sanctionUser(
-              { sanctionsList: mockedSanctionsList },
-              regularAccounts[0],
-            );
-
-            await approveRequestTest(
-              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-              0,
-              parseUnits('5'),
+              parseUnits('0.99'),
               {
                 revertCustomError: {
-                  customErrorName: 'Sanctioned',
+                  customErrorName: 'SupplyCapExceeded',
                 },
               },
             );
           });
-        });
 
-        it('should fail: request already precessed', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
+          it('should fail: when 10 supply cap is left and try to mint more', async () => {
+            const {
+              owner,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              customRecipient,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = await loadDvFixture();
+            await mintToken(stableCoins.dai, regularAccounts[0], 101);
+            await approveBase18(
+              regularAccounts[0],
+              stableCoins.dai,
+              depositVault,
+              101,
+            );
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
 
-          await mintToken(stableCoins.dai, owner, 100);
-          await approveBase18(owner, stableCoins.dai, depositVault, 100);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1.03);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
-          await setMinAmountTest({ vault: depositVault, owner }, 10);
+            await setVariabilityToleranceTest(
+              { vault: depositVault, owner },
+              1000,
+            );
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMaxSupplyCapTest({ depositVault, owner }, 100);
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
 
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            100,
-          );
-          const requestId = 0;
-
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            requestId,
-            parseUnits('5'),
-          );
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            requestId,
-            parseUnits('5'),
-            {
-              revertCustomError: {
-                customErrorName: 'UnexpectedRequestStatus',
+            await depositInstantTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customRecipient,
               },
-            },
-          );
-        });
-
-        it('approve request from vaut admin account', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-
-          await mintToken(stableCoins.dai, owner, 100);
-          await approveBase18(owner, stableCoins.dai, depositVault, 100);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1.03);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
-          await setMinAmountTest({ vault: depositVault, owner }, 10);
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            100,
-          );
-          const requestId = 0;
-
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            requestId,
-            parseUnits('5'),
-          );
-        });
-
-        it('approve request should decrease pending supply', async () => {
-          const {
-            owner,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-            mockedAggregator,
-            mockedAggregatorMToken,
-          } = await loadDvFixture();
-
-          await mintToken(stableCoins.dai, owner, 100);
-          await approveBase18(owner, stableCoins.dai, depositVault, 100);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
-          await setRoundData({ mockedAggregator }, 1);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-          await setInstantFeeTest({ vault: depositVault, owner }, 0);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            50,
-          );
-
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            0,
-            parseUnits('1'),
-          );
-        });
-
-        it('should fail: when after approval supply exceeds max cap', async () => {
-          const {
-            owner,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-            mockedAggregator,
-            mockedAggregatorMToken,
-          } = await loadDvFixture();
-
-          await mintToken(stableCoins.dai, owner, 100);
-          await approveBase18(owner, stableCoins.dai, depositVault, 100);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
-          await setRoundData({ mockedAggregator }, 1);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-          await setInstantFeeTest({ vault: depositVault, owner }, 0);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await depositInstantTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            90,
-          );
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            10,
-          );
-
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            0,
-            parseUnits('0.99'),
-            {
-              revertCustomError: {
-                customErrorName: 'SupplyCapExceeded',
+              stableCoins.dai,
+              90,
+              {
+                from: regularAccounts[0],
               },
-            },
-          );
-        });
+            );
 
-        it('should approve request in non sequential order when sequentialRequestProcessing is disabled', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-
-          await mintToken(stableCoins.dai, owner, 100);
-          await approveBase18(owner, stableCoins.dai, depositVault, 100);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-          await setInstantFeeTest({ vault: depositVault, owner }, 0);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            50,
-          );
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            50,
-          );
-
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            1,
-            parseUnits('1'),
-          );
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            0,
-            parseUnits('1'),
-          );
-        });
-
-        it('should fail: approve request in non sequential order when sequentialRequestProcessing is enabled', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-
-          await setSequentialRequestProcessingTest(
-            { vault: depositVault, owner },
-            true,
-          );
-
-          await mintToken(stableCoins.dai, owner, 200);
-          await approveBase18(owner, stableCoins.dai, depositVault, 200);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-          await setInstantFeeTest({ vault: depositVault, owner }, 0);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            50,
-          );
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            50,
-          );
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            50,
-          );
-
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            0,
-            parseUnits('1'),
-          );
-
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            2,
-            parseUnits('1'),
-            {
-              revertCustomError: {
-                customErrorName: 'InvalidRequestSequence',
-                args: [2, 1],
+            await depositRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customRecipient,
               },
-            },
-          );
-        });
+              stableCoins.dai,
+              10,
+              {
+                from: regularAccounts[0],
+              },
+            );
 
-        it('should approve request id 0 and then id 1 when sequentialRequestProcessing is enabled', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
+            await approveRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+              },
+              0,
+              parseUnits('0.99'),
+              {
+                revertCustomError: {
+                  customErrorName: 'SupplyCapExceeded',
+                },
+              },
+            );
+          });
 
-          await setSequentialRequestProcessingTest(
-            { vault: depositVault, owner },
-            true,
-          );
+          it('when 10 supply cap is left and try to mint 10', async () => {
+            const {
+              owner,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              customRecipient,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = await loadDvFixture();
+            await mintToken(stableCoins.dai, regularAccounts[0], 100);
+            await approveBase18(
+              regularAccounts[0],
+              stableCoins.dai,
+              depositVault,
+              100,
+            );
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
 
-          await mintToken(stableCoins.dai, owner, 200);
-          await approveBase18(owner, stableCoins.dai, depositVault, 200);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-          await setInstantFeeTest({ vault: depositVault, owner }, 0);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
+            await setMaxSupplyCapTest({ depositVault, owner }, 100);
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
 
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            50,
-          );
+            await depositInstantTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customRecipient,
+              },
+              stableCoins.dai,
+              90,
+              {
+                from: regularAccounts[0],
+              },
+            );
 
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            50,
-          );
+            await depositRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                customRecipient,
+              },
+              stableCoins.dai,
+              10,
+              {
+                from: regularAccounts[0],
+              },
+            );
 
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            0,
-            parseUnits('1'),
-          );
+            await approveRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+              },
+              0,
+              parseUnits('1'),
+            );
+          });
 
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            1,
-            parseUnits('1'),
-          );
-        });
+          it('approve request from vaut admin account', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+            } = await loadDvFixture();
 
-        it('should enforce fifo across separate transactions when sequentialRequestProcessing is enabled', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
+            await mintToken(stableCoins.dai, owner, 100);
+            await approveBase18(owner, stableCoins.dai, depositVault, 100);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+            await setMinAmountTest({ vault: depositVault, owner }, 10);
 
-          await setSequentialRequestProcessingTest(
-            { vault: depositVault, owner },
-            true,
-          );
+            await depositRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              100,
+            );
+            const requestId = 0;
 
-          await mintToken(stableCoins.dai, owner, 500);
-          await approveBase18(owner, stableCoins.dai, depositVault, 500);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-          await setInstantFeeTest({ vault: depositVault, owner }, 0);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
+            await approveRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+              },
+              requestId,
+              parseUnits('5.000000001'),
+            );
+          });
 
-          for (let i = 0; i < 9; i++) {
+          it('should approve request in non sequential order when sequentialRequestProcessing is disabled', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+            } = await loadDvFixture();
+
+            await mintToken(stableCoins.dai, owner, 100);
+            await approveBase18(owner, stableCoins.dai, depositVault, 100);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setVariabilityToleranceTest(
+              { vault: depositVault, owner },
+              1000,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
+
             await depositRequestTest(
               { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
               stableCoins.dai,
               50,
             );
-          }
 
-          for (const requestId of [0, 1, 2]) {
-            await approveRequestTest(
+            await depositRequestTest(
               { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-              requestId,
+              stableCoins.dai,
+              50,
+            );
+
+            await approveRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+              },
+              1,
               parseUnits('1'),
             );
-          }
 
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            3,
-            parseUnits('1'),
-          );
-
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            5,
-            parseUnits('1'),
-            {
-              revertCustomError: {
-                customErrorName: 'InvalidRequestSequence',
-                args: [5, 4],
-              },
-            },
-          );
-
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            4,
-            parseUnits('1'),
-          );
-
-          for (const requestId of [6, 7, 8]) {
             await approveRequestTest(
-              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-              requestId,
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+              },
+              0,
+              parseUnits('1'),
+            );
+          });
+
+          it('should fail: approve request in non sequential order when sequentialRequestProcessing is enabled', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+            } = await loadDvFixture();
+
+            await setSequentialRequestProcessingTest(
+              { vault: depositVault, owner },
+              true,
+            );
+
+            await mintToken(stableCoins.dai, owner, 200);
+            await approveBase18(owner, stableCoins.dai, depositVault, 200);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setVariabilityToleranceTest(
+              { vault: depositVault, owner },
+              1000,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+            for (let i = 0; i < 3; i++) {
+              await depositRequestTest(
+                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                50,
+              );
+            }
+
+            await approveRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+              },
+              0,
+              parseUnits('1'),
+            );
+
+            await approveRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+              },
+              2,
               parseUnits('1'),
               {
                 revertCustomError: {
                   customErrorName: 'InvalidRequestSequence',
-                  args: [requestId, 5],
+                  args: [2, 1],
                 },
               },
             );
-          }
+          });
 
-          for (const requestId of [5, 6, 7]) {
-            await approveRequestTest(
-              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-              requestId,
-              parseUnits('1'),
+          it('should approve request id 0 and then id 1 when sequentialRequestProcessing is enabled', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+            } = await loadDvFixture();
+
+            await setSequentialRequestProcessingTest(
+              { vault: depositVault, owner },
+              true,
             );
-          }
 
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            8,
-            parseUnits('1'),
-          );
-        });
-      });
-
-      describe('approveRequestAvgRate()', async () => {
-        it('should fail: call from address without vault admin role', async () => {
-          const { depositVault, regularAccounts, mTokenToUsdDataFeed, mTBILL } =
-            await loadDvFixture();
-          await approveRequestTest(
-            {
-              depositVault,
-              owner: regularAccounts[1],
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isAvgRate: true,
-            },
-            1,
-            parseUnits('5'),
-            {
-              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
-            },
-          );
-        });
-
-        it('should fail: request by id not exist', async () => {
-          const {
-            owner,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isAvgRate: true,
-            },
-            1,
-            parseUnits('5'),
-            {
-              revertCustomError: {
-                customErrorName: 'RequestNotExists',
-              },
-            },
-          );
-        });
-
-        it('should fail: request already processed', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-
-          await mintToken(stableCoins.dai, owner, 100);
-          await approveBase18(owner, stableCoins.dai, depositVault, 100);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1.03);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
-          await setMinAmountTest({ vault: depositVault, owner }, 10);
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            100,
-          );
-          const requestId = 0;
-
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            requestId,
-            parseUnits('5'),
-          );
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isAvgRate: true,
-            },
-            requestId,
-            parseUnits('5'),
-            {
-              revertCustomError: {
-                customErrorName: 'UnexpectedRequestStatus',
-              },
-            },
-          );
-        });
-
-        it('should fail: when function is paused', async () => {
-          const { owner, depositVault, mTBILL, mTokenToUsdDataFeed } =
-            await loadDvFixture();
-
-          await pauseVaultFn(
-            { pauseManager, owner },
-            depositVault,
-            encodeFnSelector('approveRequestAvgRate(uint256,uint256)'),
-          );
-
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isAvgRate: true,
-            },
-            0,
-            parseUnits('5'),
-            {
-              revertCustomError: {
-                customErrorName: 'Paused',
-              },
-            },
-          );
-        });
-
-        it('should fail: when instant part is 0', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-
-          await mintToken(stableCoins.dai, owner, 100);
-          await approveBase18(owner, stableCoins.dai, depositVault, 100);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1.03);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            100,
-          );
-
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isAvgRate: true,
-            },
-            0,
-            parseUnits('5'),
-            {
-              revertCustomError: {
-                customErrorName: 'InvalidInstantAmount',
-              },
-            },
-          );
-        });
-
-        it('should fail: when calclulated holdback part rate is 0', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-
-          await mintToken(stableCoins.dai, owner, 100);
-          await approveBase18(owner, stableCoins.dai, depositVault, 100);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await depositRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              instantShare: 50_00,
-            },
-            stableCoins.dai,
-            100,
-          );
-
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isAvgRate: true,
-            },
-            0,
-            parseUnits('5'),
-            {
-              revertCustomError: {
-                customErrorName: 'InvalidNewMTokenRate',
-              },
-            },
-          );
-        });
-
-        it('when calclulated holdback part rate is < 1', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-
-          await mintToken(stableCoins.dai, owner, 100);
-          await approveBase18(owner, stableCoins.dai, depositVault, 100);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await depositRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              instantShare: 50_00,
-            },
-            stableCoins.dai,
-            100,
-          );
-
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isAvgRate: true,
-            },
-            0,
-            parseUnits('0.2'),
-          );
-        });
-
-        it('approve request from vaut admin account', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-
-          await mintToken(stableCoins.dai, owner, 100);
-          await approveBase18(owner, stableCoins.dai, depositVault, 100);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1.03);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await depositRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              instantShare: 50_00,
-            },
-            stableCoins.dai,
-            100,
-          );
-          const requestId = 0;
-
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isAvgRate: true,
-            },
-            requestId,
-            parseUnits('5'),
-          );
-        });
-
-        it('should not check for deviation toleranace', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-
-          await mintToken(stableCoins.dai, owner, 100);
-          await approveBase18(owner, stableCoins.dai, depositVault, 100);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await depositRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              instantShare: 50_00,
-            },
-            stableCoins.dai,
-            100,
-          );
-          const requestId = 0;
-
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isAvgRate: true,
-            },
-            requestId,
-            parseUnits('0.1'),
-          );
-        });
-
-        it('should succeed when other approve entrypoints are paused', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-
-          await mintToken(stableCoins.dai, owner, 100);
-          await approveBase18(owner, stableCoins.dai, depositVault, 100);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1.03);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await depositRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              instantShare: 50_00,
-            },
-            stableCoins.dai,
-            100,
-          );
-          const requestId = 0;
-          await pauseOtherDepositApproveFns(
-            depositVault,
-            encodeFnSelector('approveRequestAvgRate(uint256,uint256)'),
-          );
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isAvgRate: true,
-            },
-            requestId,
-            parseUnits('5'),
-          );
-        });
-
-        it('should approve request in non sequential order when sequentialRequestProcessing is disabled', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-
-          await mintToken(stableCoins.dai, owner, 200);
-          await approveBase18(owner, stableCoins.dai, depositVault, 200);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1.03);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
-          await setInstantFeeTest({ vault: depositVault, owner }, 0);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await depositRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              instantShare: 50_00,
-            },
-            stableCoins.dai,
-            100,
-          );
-
-          await depositRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              instantShare: 50_00,
-            },
-            stableCoins.dai,
-            100,
-          );
-
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isAvgRate: true,
-            },
-            1,
-            parseUnits('5'),
-          );
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isAvgRate: true,
-            },
-            0,
-            parseUnits('5'),
-          );
-        });
-
-        it('should fail: approve request in non sequential order when sequentialRequestProcessing is enabled', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-
-          await setSequentialRequestProcessingTest(
-            { vault: depositVault, owner },
-            true,
-          );
-
-          await mintToken(stableCoins.dai, owner, 400);
-          await approveBase18(owner, stableCoins.dai, depositVault, 400);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1.03);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
-          await setInstantFeeTest({ vault: depositVault, owner }, 0);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          for (let i = 0; i < 3; i++) {
-            await depositRequestTest(
-              {
-                depositVault,
-                owner,
-                mTBILL,
-                mTokenToUsdDataFeed,
-                instantShare: 50_00,
-              },
+            await mintToken(stableCoins.dai, owner, 200);
+            await approveBase18(owner, stableCoins.dai, depositVault, 200);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
               stableCoins.dai,
-              100,
+              dataFeed.address,
+              0,
+              true,
             );
-          }
+            await setVariabilityToleranceTest(
+              { vault: depositVault, owner },
+              1000,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
 
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isAvgRate: true,
-            },
-            0,
-            parseUnits('5'),
-          );
-
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isAvgRate: true,
-            },
-            2,
-            parseUnits('5'),
-            {
-              revertCustomError: {
-                customErrorName: 'InvalidRequestSequence',
-                args: [2, 1],
-              },
-            },
-          );
-        });
-
-        it('should approve request id 0 and then id 1 when sequentialRequestProcessing is enabled', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-
-          await setSequentialRequestProcessingTest(
-            { vault: depositVault, owner },
-            true,
-          );
-
-          await mintToken(stableCoins.dai, owner, 200);
-          await approveBase18(owner, stableCoins.dai, depositVault, 200);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1.03);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
-          await setInstantFeeTest({ vault: depositVault, owner }, 0);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await depositRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              instantShare: 50_00,
-            },
-            stableCoins.dai,
-            100,
-          );
-
-          await depositRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              instantShare: 50_00,
-            },
-            stableCoins.dai,
-            100,
-          );
-
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isAvgRate: true,
-            },
-            0,
-            parseUnits('5'),
-          );
-
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isAvgRate: true,
-            },
-            1,
-            parseUnits('5'),
-          );
-        });
-      });
-
-      describe('safeApproveRequest()', async () => {
-        it('should fail: call from address without vault admin role', async () => {
-          const { depositVault, regularAccounts, mTokenToUsdDataFeed, mTBILL } =
-            await loadDvFixture();
-          await approveRequestTest(
-            {
-              depositVault,
-              owner: regularAccounts[1],
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isSafe: true,
-            },
-            1,
-            parseUnits('1'),
-            {
-              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
-            },
-          );
-        });
-
-        it('should fail: request by id not exist', async () => {
-          const {
-            owner,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isSafe: true,
-            },
-            1,
-            parseUnits('1'),
-            {
-              revertCustomError: {
-                customErrorName: 'RequestNotExists',
-              },
-            },
-          );
-        });
-
-        it('should fail: if new rate greater then variabilityTolerance', async () => {
-          const {
-            owner,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-            mockedAggregator,
-            mockedAggregatorMToken,
-          } = await loadDvFixture();
-          await mintToken(stableCoins.dai, owner, 100);
-          await approveBase18(owner, stableCoins.dai, depositVault, 100);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1.03);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
-          await setMinAmountTest({ vault: depositVault, owner }, 10);
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            100,
-          );
-          const requestId = 0;
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isSafe: true,
-            },
-            requestId,
-            parseUnits('6'),
-            {
-              revertCustomError: {
-                customErrorName: 'PriceVariationExceeded',
-              },
-            },
-          );
-        });
-
-        it('should fail: if new rate lower then variabilityTolerance', async () => {
-          const {
-            owner,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-            mockedAggregator,
-            mockedAggregatorMToken,
-          } = await loadDvFixture();
-          await mintToken(stableCoins.dai, owner, 100);
-          await approveBase18(owner, stableCoins.dai, depositVault, 100);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1.03);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
-          await setMinAmountTest({ vault: depositVault, owner }, 10);
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            100,
-          );
-          const requestId = 0;
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isSafe: true,
-            },
-            requestId,
-            parseUnits('4'),
-            {
-              revertCustomError: {
-                customErrorName: 'PriceVariationExceeded',
-              },
-            },
-          );
-        });
-
-        it('should fail: request already precessed', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-
-          await mintToken(stableCoins.dai, owner, 100);
-          await approveBase18(owner, stableCoins.dai, depositVault, 100);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1.03);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
-          await setMinAmountTest({ vault: depositVault, owner }, 10);
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            100,
-          );
-          const requestId = 0;
-
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed, isSafe: true },
-            requestId,
-            parseUnits('5.000001'),
-          );
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed, isSafe: true },
-            requestId,
-            parseUnits('5.000001'),
-            {
-              revertCustomError: {
-                customErrorName: 'UnexpectedRequestStatus',
-              },
-            },
-          );
-        });
-
-        it('approve request should decrease pending supply', async () => {
-          const {
-            owner,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-            mockedAggregator,
-            mockedAggregatorMToken,
-          } = await loadDvFixture();
-
-          await mintToken(stableCoins.dai, owner, 100);
-          await approveBase18(owner, stableCoins.dai, depositVault, 100);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setVariabilityToleranceTest(
-            { vault: depositVault, owner },
-            1000,
-          );
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
-          await setRoundData({ mockedAggregator }, 1);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-          await setInstantFeeTest({ vault: depositVault, owner }, 0);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            50,
-          );
-
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isSafe: true,
-            },
-            0,
-            parseUnits('1'),
-          );
-        });
-
-        it('should fail: when after approval supply exceeds max cap', async () => {
-          const {
-            owner,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-            mockedAggregator,
-            mockedAggregatorMToken,
-          } = await loadDvFixture();
-
-          await mintToken(stableCoins.dai, owner, 100);
-          await approveBase18(owner, stableCoins.dai, depositVault, 100);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setVariabilityToleranceTest(
-            { vault: depositVault, owner },
-            1000,
-          );
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
-          await setRoundData({ mockedAggregator }, 1);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-          await setInstantFeeTest({ vault: depositVault, owner }, 0);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await depositInstantTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            90,
-          );
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            10,
-          );
-
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isSafe: true,
-            },
-            0,
-            parseUnits('0.99'),
-            {
-              revertCustomError: {
-                customErrorName: 'SupplyCapExceeded',
-              },
-            },
-          );
-        });
-
-        it('should fail: when 0 supply cap is left', async () => {
-          const {
-            owner,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-            regularAccounts,
-            customRecipient,
-            mockedAggregator,
-            mockedAggregatorMToken,
-          } = await loadDvFixture();
-          await mintToken(stableCoins.dai, regularAccounts[0], 100);
-          await approveBase18(
-            regularAccounts[0],
-            stableCoins.dai,
-            depositVault,
-            100,
-          );
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-
-          await setVariabilityToleranceTest(
-            { vault: depositVault, owner },
-            1000,
-          );
-          await setInstantFeeTest({ vault: depositVault, owner }, 0);
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
-          await setRoundData({ mockedAggregator }, 1);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await depositInstantTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              customRecipient,
-            },
-            stableCoins.dai,
-            99,
-            {
-              from: regularAccounts[0],
-            },
-          );
-
-          await depositRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              customRecipient,
-            },
-            stableCoins.dai,
-            1,
-            {
-              from: regularAccounts[0],
-            },
-          );
-
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed, isSafe: true },
-            0,
-            parseUnits('0.99'),
-            {
-              revertCustomError: {
-                customErrorName: 'SupplyCapExceeded',
-              },
-            },
-          );
-        });
-
-        it('should fail: when 10 supply cap is left and try to mint more', async () => {
-          const {
-            owner,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-            regularAccounts,
-            customRecipient,
-            mockedAggregator,
-            mockedAggregatorMToken,
-          } = await loadDvFixture();
-          await mintToken(stableCoins.dai, regularAccounts[0], 101);
-          await approveBase18(
-            regularAccounts[0],
-            stableCoins.dai,
-            depositVault,
-            101,
-          );
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-
-          await setVariabilityToleranceTest(
-            { vault: depositVault, owner },
-            1000,
-          );
-          await setInstantFeeTest({ vault: depositVault, owner }, 0);
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
-          await setRoundData({ mockedAggregator }, 1);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await depositInstantTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              customRecipient,
-            },
-            stableCoins.dai,
-            90,
-            {
-              from: regularAccounts[0],
-            },
-          );
-
-          await depositRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              customRecipient,
-            },
-            stableCoins.dai,
-            10,
-            {
-              from: regularAccounts[0],
-            },
-          );
-
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed, isSafe: true },
-            0,
-            parseUnits('0.99'),
-            {
-              revertCustomError: {
-                customErrorName: 'SupplyCapExceeded',
-              },
-            },
-          );
-        });
-
-        it('when 10 supply cap is left and try to mint 10', async () => {
-          const {
-            owner,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-            regularAccounts,
-            customRecipient,
-            mockedAggregator,
-            mockedAggregatorMToken,
-          } = await loadDvFixture();
-          await mintToken(stableCoins.dai, regularAccounts[0], 100);
-          await approveBase18(
-            regularAccounts[0],
-            stableCoins.dai,
-            depositVault,
-            100,
-          );
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
-          await setRoundData({ mockedAggregator }, 1);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-          await setInstantFeeTest({ vault: depositVault, owner }, 0);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await depositInstantTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              customRecipient,
-            },
-            stableCoins.dai,
-            90,
-            {
-              from: regularAccounts[0],
-            },
-          );
-
-          await depositRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              customRecipient,
-            },
-            stableCoins.dai,
-            10,
-            {
-              from: regularAccounts[0],
-            },
-          );
-
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed, isSafe: true },
-            0,
-            parseUnits('1'),
-          );
-        });
-
-        it('approve request from vaut admin account', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-
-          await mintToken(stableCoins.dai, owner, 100);
-          await approveBase18(owner, stableCoins.dai, depositVault, 100);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1.03);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
-          await setMinAmountTest({ vault: depositVault, owner }, 10);
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            100,
-          );
-          const requestId = 0;
-
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed, isSafe: true },
-            requestId,
-            parseUnits('5.000000001'),
-          );
-        });
-
-        it('should approve request in non sequential order when sequentialRequestProcessing is disabled', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-
-          await mintToken(stableCoins.dai, owner, 100);
-          await approveBase18(owner, stableCoins.dai, depositVault, 100);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setVariabilityToleranceTest(
-            { vault: depositVault, owner },
-            1000,
-          );
-          await setRoundData({ mockedAggregator }, 1);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-          await setInstantFeeTest({ vault: depositVault, owner }, 0);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            50,
-          );
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            50,
-          );
-
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isSafe: true,
-            },
-            1,
-            parseUnits('1'),
-          );
-
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isSafe: true,
-            },
-            0,
-            parseUnits('1'),
-          );
-        });
-
-        it('should fail: approve request in non sequential order when sequentialRequestProcessing is enabled', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-
-          await setSequentialRequestProcessingTest(
-            { vault: depositVault, owner },
-            true,
-          );
-
-          await mintToken(stableCoins.dai, owner, 200);
-          await approveBase18(owner, stableCoins.dai, depositVault, 200);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setVariabilityToleranceTest(
-            { vault: depositVault, owner },
-            1000,
-          );
-          await setRoundData({ mockedAggregator }, 1);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-          await setInstantFeeTest({ vault: depositVault, owner }, 0);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          for (let i = 0; i < 3; i++) {
             await depositRequestTest(
               { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
               stableCoins.dai,
               50,
             );
-          }
 
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isSafe: true,
-            },
-            0,
-            parseUnits('1'),
-          );
+            await depositRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              50,
+            );
 
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isSafe: true,
-            },
-            2,
-            parseUnits('1'),
-            {
-              revertCustomError: {
-                customErrorName: 'InvalidRequestSequence',
-                args: [2, 1],
+            await approveRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
               },
-            },
-          );
-        });
+              0,
+              parseUnits('1'),
+            );
 
-        it('should approve request id 0 and then id 1 when sequentialRequestProcessing is enabled', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-
-          await setSequentialRequestProcessingTest(
-            { vault: depositVault, owner },
-            true,
-          );
-
-          await mintToken(stableCoins.dai, owner, 200);
-          await approveBase18(owner, stableCoins.dai, depositVault, 200);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setVariabilityToleranceTest(
-            { vault: depositVault, owner },
-            1000,
-          );
-          await setRoundData({ mockedAggregator }, 1);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
-          await setInstantFeeTest({ vault: depositVault, owner }, 0);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            50,
-          );
-
-          await depositRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            stableCoins.dai,
-            50,
-          );
-
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isSafe: true,
-            },
-            0,
-            parseUnits('1'),
-          );
-
-          await approveRequestTest(
-            {
-              depositVault,
-              owner,
-              mTBILL,
-              mTokenToUsdDataFeed,
-              isSafe: true,
-            },
-            1,
-            parseUnits('1'),
-          );
+            await approveRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isSafe: true,
+              },
+              1,
+              parseUnits('1'),
+            );
+          });
         });
       });
 

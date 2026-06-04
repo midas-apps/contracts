@@ -159,6 +159,17 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     /**
      * @inheritdoc IMidasTimelockManager
      */
+    function setDefaultDelay(uint256 _defaultDelay)
+        external
+        virtual
+        onlyRole(_DEFAULT_ADMIN_ROLE, false)
+    {
+        _defaultDelay = _defaultDelay;
+    }
+
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
     function setMaxPendingOperationsPerProposer(
         uint256 _maxPendingOperationsPerProposer
     ) external onlyRole(_DEFAULT_ADMIN_ROLE, false) {

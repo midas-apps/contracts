@@ -8,7 +8,7 @@ contract MidasTimelockManagerTest is MidasTimelockManager {
 
     function _disableInitializers() internal override {}
 
-    function setDefaultDelay(uint256 delay) public {
+    function setDefaultDelay(uint256 delay) external override {
         _defaultDelay = delay;
     }
 

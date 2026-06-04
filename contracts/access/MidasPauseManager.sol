@@ -21,6 +21,21 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
     bytes32 private constant _PAUSE_ADMIN_ROLE = keccak256("PAUSE_ADMIN_ROLE");
 
     /**
+     * @notice static delay for setting pause delay
+     */
+    uint256 public constant DELAY_FOR_SET_DELAY = 2 days;
+
+    /**
+     * @notice pause delay
+     */
+    uint256 public pauseDelay;
+
+    /**
+     * @notice unpause delay
+     */
+    uint256 public unpauseDelay;
+
+    /**
      * @notice global paused status
      */
     bool public globalPaused;
@@ -37,99 +52,98 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
 
     /**
      * @dev validates that caller has access to the `contractAddr` contract admin role
+     * overrides delay for the invocation with pause delay
      * @param contractAddr address of the contract
      */
-    modifier onlyPausableContractAdmin(address contractAddr) {
-        _validateContractAdminAccess(contractAddr);
+    modifier onlyPausableContractAdminPause(address contractAddr) {
+        _validateContractAdminAccess(contractAddr, pauseDelay);
         _;
     }
 
     /**
      * @dev validates that caller has access to the `contractAddr` contract admin role
+     * overrides delay for the invocation with unpause delay
      * @param contractAddr address of the contract
      */
-    modifier onlyPausableContractAdminNoDelay(address contractAddr) {
-        _validateContractAdminAccessNoDelay(contractAddr);
+    modifier onlyPausableContractAdminUnpause(address contractAddr) {
+        _validateContractAdminAccess(contractAddr, unpauseDelay);
+        _;
+    }
+
+    /**
+     * @dev validates that caller has access to the pause admin role
+     * overrides delay for the invocation with pause delay
+     */
+    modifier onlyAdminPause() {
+        _validateFunctionAccessWithTimelock(
+            _contractAdminRole(),
+            pauseDelay,
+            false,
+            msg.sender,
+            true
+        );
+        _;
+    }
+
+    /**
+     * @dev validates that caller has access to the unpause admin role
+     * overrides delay for the invocation with unpause delay
+     */
+    modifier onlyAdminUnpause() {
+        _validateFunctionAccessWithTimelock(
+            _contractAdminRole(),
+            unpauseDelay,
+            false,
+            msg.sender,
+            true
+        );
         _;
     }
 
     /**
      * @notice upgradeable pattern contract`s initializer
      * @param _accessControl address of MidasAccessControl contract
+     * @param _pauseDelay pause delay
+     * @param _unpauseDelay unpause delay
      */
-    function initialize(address _accessControl) external initializer {
+    function initialize(
+        address _accessControl,
+        uint256 _pauseDelay,
+        uint256 _unpauseDelay
+    ) external initializer {
         __WithMidasAccessControl_init(_accessControl);
+        pauseDelay = _pauseDelay;
+        unpauseDelay = _unpauseDelay;
     }
 
     /**
      * @inheritdoc IMidasPauseManager
      */
-    function pauseContract(address contractAddr)
+    function setPauseDelay(uint256 _pauseDelay)
         external
-        onlyPausableContractAdminNoDelay(contractAddr)
+        onlyRoleDelayOverride(_contractAdminRole(), DELAY_FOR_SET_DELAY, true)
     {
-        require(!contractPaused[contractAddr], SameBoolValue(true));
-        contractPaused[contractAddr] = true;
-        emit ContractPauseStatusChange(contractAddr, true);
+        pauseDelay = _pauseDelay;
     }
 
     /**
      * @inheritdoc IMidasPauseManager
      */
-    function unpauseContract(address contractAddr)
+    function setUnpauseDelay(uint256 _unpauseDelay)
         external
-        onlyPausableContractAdmin(contractAddr)
+        onlyRoleDelayOverride(_contractAdminRole(), DELAY_FOR_SET_DELAY, true)
     {
-        require(contractPaused[contractAddr], SameBoolValue(false));
-        contractPaused[contractAddr] = false;
-        emit ContractPauseStatusChange(contractAddr, false);
+        unpauseDelay = _unpauseDelay;
     }
 
     /**
      * @inheritdoc IMidasPauseManager
      */
-    function bulkPauseContractFn(
-        address contractAddr,
-        bytes4[] calldata selectors
-    ) external onlyPausableContractAdminNoDelay(contractAddr) {
-        for (uint256 i = 0; i < selectors.length; ++i) {
-            bytes4 selector = selectors[i];
-            require(
-                !contractFnPaused[contractAddr][selector],
-                SameBoolValue(true)
-            );
-
-            contractFnPaused[contractAddr][selector] = true;
-            emit FnPauseStatusChange(contractAddr, selector, true);
+    function globalPause() external onlyAdminPause {
+        if (globalPaused) {
+            return;
         }
-    }
 
-    /**
-     * @inheritdoc IMidasPauseManager
-     */
-    function bulkUnpauseContractFn(
-        address contractAddr,
-        bytes4[] calldata selectors
-    ) external onlyPausableContractAdmin(contractAddr) {
-        for (uint256 i = 0; i < selectors.length; ++i) {
-            bytes4 selector = selectors[i];
-            require(
-                contractFnPaused[contractAddr][selector],
-                SameBoolValue(false)
-            );
-            contractFnPaused[contractAddr][selector] = false;
-            emit FnPauseStatusChange(contractAddr, selector, false);
-        }
-    }
-
-    /**
-     * @inheritdoc IMidasPauseManager
-     */
-    function globalPause()
-        external
-        onlyRoleNoTimelock(_contractAdminRole(), true)
-    {
-        require(!globalPaused, SameBoolValue(true));
         globalPaused = true;
         emit GlobalPauseStatusChange(true);
     }
@@ -137,10 +151,103 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
     /**
      * @inheritdoc IMidasPauseManager
      */
-    function globalUnpause() external onlyContractAdmin {
-        require(globalPaused, SameBoolValue(false));
+    function globalUnpause() external onlyAdminUnpause {
+        if (!globalPaused) {
+            return;
+        }
+
         globalPaused = false;
         emit GlobalPauseStatusChange(false);
+    }
+
+    /**
+     * @inheritdoc IMidasPauseManager
+     */
+    function bulkPauseContract(address[] calldata contractAddrs)
+        external
+        onlyAdminPause
+    {
+        for (uint256 i = 0; i < contractAddrs.length; ++i) {
+            _changeContratPauseStatus(contractAddrs[i], true);
+        }
+    }
+
+    /**
+     * @inheritdoc IMidasPauseManager
+     */
+    function bulkUnpauseContract(address[] calldata contractAddrs)
+        external
+        onlyAdminUnpause
+    {
+        for (uint256 i = 0; i < contractAddrs.length; ++i) {
+            _changeContratPauseStatus(contractAddrs[i], false);
+        }
+    }
+
+    /**
+     * @inheritdoc IMidasPauseManager
+     */
+    function bulkPauseContractFn(
+        address[] calldata contractAddrs,
+        bytes4[] calldata selectors
+    ) external onlyAdminPause {
+        for (uint256 i = 0; i < contractAddrs.length; ++i) {
+            address contractAddr = contractAddrs[i];
+
+            for (uint256 j = 0; j < selectors.length; ++j) {
+                bytes4 selector = selectors[j];
+
+                if (contractFnPaused[contractAddr][selector]) {
+                    continue;
+                }
+
+                contractFnPaused[contractAddr][selector] = true;
+                emit FnPauseStatusChange(contractAddr, selector, true);
+            }
+        }
+    }
+
+    /**
+     * @inheritdoc IMidasPauseManager
+     */
+    function bulkUnpauseContractFn(
+        address[] calldata contractAddrs,
+        bytes4[] calldata selectors
+    ) external onlyAdminUnpause {
+        for (uint256 i = 0; i < contractAddrs.length; ++i) {
+            address contractAddr = contractAddrs[i];
+
+            for (uint256 j = 0; j < selectors.length; ++j) {
+                bytes4 selector = selectors[j];
+
+                if (!contractFnPaused[contractAddr][selector]) {
+                    continue;
+                }
+
+                contractFnPaused[contractAddr][selector] = false;
+                emit FnPauseStatusChange(contractAddr, selector, false);
+            }
+        }
+    }
+
+    /**
+     * @inheritdoc IMidasPauseManager
+     */
+    function contractAdminPause(address contractAddr)
+        external
+        onlyPausableContractAdminPause(contractAddr)
+    {
+        _changeContratPauseStatus(contractAddr, true);
+    }
+
+    /**
+     * @inheritdoc IMidasPauseManager
+     */
+    function contractAdminUnpause(address contractAddr)
+        external
+        onlyPausableContractAdminUnpause(contractAddr)
+    {
+        _changeContratPauseStatus(contractAddr, false);
     }
 
     /**
@@ -183,37 +290,36 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
     }
 
     /**
-     * @dev validates that caller has access to the `contractAddr` contract admin role
+     * @dev changes the pause status of the `contractAddr` contract
      * @param contractAddr address of the contract
+     * @param paused paused status
      */
-    function _validateContractAdminAccess(address contractAddr) private view {
-        (bytes32 role, bool validateFunctionRole) = _getPausableRole(
-            contractAddr
-        );
+    function _changeContratPauseStatus(address contractAddr, bool paused)
+        private
+    {
+        if (contractPaused[contractAddr] == paused) {
+            return;
+        }
 
-        _validateFunctionAccessWithTimelock(
-            role,
-            AccessControlUtilsLibrary.NULL_DELAY,
-            false,
-            msg.sender,
-            validateFunctionRole
-        );
+        contractPaused[contractAddr] = paused;
+        emit ContractPauseStatusChange(contractAddr, paused);
     }
 
     /**
      * @dev validates that caller has access to the `contractAddr` contract admin role
      * @param contractAddr address of the contract
      */
-    function _validateContractAdminAccessNoDelay(address contractAddr)
-        private
-        view
-    {
+    function _validateContractAdminAccess(
+        address contractAddr,
+        uint256 overrideDelay
+    ) private view {
         (bytes32 role, bool validateFunctionRole) = _getPausableRole(
             contractAddr
         );
 
-        _validateFunctionAccessWithoutTimelock(
+        _validateFunctionAccessWithTimelock(
             role,
+            overrideDelay,
             false,
             msg.sender,
             validateFunctionRole

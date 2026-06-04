@@ -19,6 +19,8 @@ type CommonParams = {
   owner: SignerWithAddress;
 };
 
+// TODO: rename file to mToken.helpers.ts
+
 export const setMetadataTest = async (
   { tokenContract, owner }: CommonParams,
   key: string,
@@ -114,20 +116,24 @@ export const clawbackTest = async (
 };
 
 export const mint = async (
-  { tokenContract, owner }: CommonParams,
+  {
+    tokenContract,
+    owner,
+    isGoverned = false,
+  }: CommonParams & { isGoverned?: boolean },
   to: Account,
   amount: BigNumberish,
   opt?: OptionalCommonParams,
 ) => {
   to = getAccount(to);
 
-  if (
-    await handleRevert(
-      tokenContract.connect(opt?.from ?? owner).mint.bind(this, to, amount),
-      tokenContract,
-      opt,
-    )
-  ) {
+  const caller = opt?.from ?? owner;
+
+  const callFn = isGoverned
+    ? tokenContract.connect(caller).mintGoverned.bind(this, to, amount)
+    : tokenContract.connect(caller).mint.bind(this, to, amount);
+
+  if (await handleRevert(callFn, tokenContract, opt)) {
     return;
   }
 
@@ -137,7 +143,7 @@ export const mint = async (
 
   const timetsampBefore = await getCurrentBlockTimestamp();
 
-  await expect(tokenContract.connect(owner).mint(to, amount)).to.emit(
+  await expect(callFn()).to.emit(
     tokenContract,
     tokenContract.interface.events['Transfer(address,address,uint256)'].name,
   ).to.not.reverted;
@@ -185,20 +191,24 @@ export const mint = async (
 };
 
 export const burn = async (
-  { tokenContract, owner }: CommonParams,
+  {
+    tokenContract,
+    owner,
+    isGoverned = false,
+  }: CommonParams & { isGoverned?: boolean },
   from: Account,
   amount: BigNumberish,
   opt?: OptionalCommonParams,
 ) => {
   from = getAccount(from);
 
-  if (
-    await handleRevert(
-      tokenContract.connect(opt?.from ?? owner).burn.bind(this, from, amount),
-      tokenContract,
-      opt,
-    )
-  ) {
+  const caller = opt?.from ?? owner;
+
+  const callFn = isGoverned
+    ? tokenContract.connect(caller).burnGoverned.bind(this, from, amount)
+    : tokenContract.connect(caller).burn.bind(this, from, amount);
+
+  if (await handleRevert(callFn, tokenContract, opt)) {
     return;
   }
 
@@ -206,7 +216,7 @@ export const burn = async (
 
   const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses();
 
-  await expect(tokenContract.connect(owner).burn(from, amount)).to.emit(
+  await expect(callFn()).to.emit(
     tokenContract,
     tokenContract.interface.events['Transfer(address,address,uint256)'].name,
   ).to.not.reverted;
@@ -226,7 +236,7 @@ export const burn = async (
   expect(balanceBefore.sub(balanceAfter)).eq(amount);
 };
 
-export const increaseMintRateLimit = async (
+export const increaseMintRateLimitTest = async (
   { tokenContract, owner }: CommonParams,
   window: number,
   newLimit: BigNumberish,
@@ -285,7 +295,7 @@ export const increaseMintRateLimit = async (
   }
 };
 
-export const decreaseMintRateLimit = async (
+export const decreaseMintRateLimitTest = async (
   { tokenContract, owner }: CommonParams,
   window: number,
   newLimit: BigNumberish,

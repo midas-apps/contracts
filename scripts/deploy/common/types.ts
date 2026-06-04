@@ -37,6 +37,7 @@ import { PartialConfigPerNetwork, PaymentTokenName } from '../../../config';
 import { VaultType } from '../../../config/constants/addresses';
 import { RateLimiter } from '../../../typechain-types';
 
+// TODO: fix selectors
 export const VAULT_FUNCTION_SELECTORS = {
   // Deposit vault functions
   depositInstant: toFunctionSelector(
