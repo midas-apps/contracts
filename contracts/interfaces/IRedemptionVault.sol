@@ -262,7 +262,7 @@ interface IRedemptionVault is IManageableVault {
      * @notice approving requests from the `requestIds` array with the mToken rate
      * from the request. WONT fail even if there is not enough liquidity
      * to process all requests.
-     * Does same validation as `safeApproveRequest`.
+     * Validates that new mToken rate does not exceed variation tolerance
      * Transfers tokenOut to users
      * Sets request flags to Processed.
      * @param requestIds request ids array
@@ -274,7 +274,7 @@ interface IRedemptionVault is IManageableVault {
      * @notice approving requests from the `requestIds` array with the
      * current mToken rate. WONT fail even if there is not enough liquidity
      * to process all requests.
-     * Does same validation as `safeApproveRequest`.
+     * Validates that new mToken rate does not exceed variation tolerance
      * Transfers tokenOut to users
      * Sets request flags to Processed.
      * @param requestIds request ids array
@@ -285,7 +285,7 @@ interface IRedemptionVault is IManageableVault {
      * @notice approving requests from the `requestIds` array with the
      * current mToken rate as avg rate. WONT fail even if there is not enough liquidity
      * to process all requests.
-     * Does same validation as `safeApproveRequestAvgRate`.
+     * Validates that new mToken rate does not exceed variation tolerance
      * Transfers tokenOut to users
      * Sets request flags to Processed.
      * @param requestIds request ids array
@@ -296,7 +296,7 @@ interface IRedemptionVault is IManageableVault {
     /**
      * @notice approving requests from the `requestIds` array using the `newMTokenRate`.
      * WONT fail even if there is not enough liquidity to process all requests.
-     * Does same validation as `safeApproveRequest`.
+     * Validates that new mToken rate does not exceed variation tolerance
      * Transfers tokenOut to user
      * Sets request flags to Processed.
      * @param requestIds request ids array
@@ -310,7 +310,7 @@ interface IRedemptionVault is IManageableVault {
     /**
      * @notice approving requests from the `requestIds` array using the `avgMTokenRate`.
      * WONT fail even if there is not enough liquidity to process all requests.
-     * Does same validation as `safeApproveRequestAvgRate`.
+     * Validates that new mToken rate does not exceed variation tolerance
      * Transfers tokenOut to user
      * Sets request flags to Processed.
      * @param requestIds request ids array
@@ -335,28 +335,6 @@ interface IRedemptionVault is IManageableVault {
         uint256 newMTokenRate,
         bool isAvgRate
     ) external;
-
-    /**
-     * @notice approving request if inputted token rate fit price diviation percent
-     * Burns amount mToken from contract
-     * Transfers tokenOut to user
-     * Sets flag Processed
-     * @param requestId request id
-     * @param newMTokenRate new mToken rate inputted by vault admin
-     */
-    function safeApproveRequest(uint256 requestId, uint256 newMTokenRate)
-        external;
-
-    /**
-     * @notice approving request if inputted token rate fit price diviation percent
-     * Burns amount mToken from contract
-     * Transfers tokenOut to user
-     * Sets flag Processed
-     * @param requestId request id
-     * @param avgMTokenRate avg mToken rate inputted by vault admin
-     */
-    function safeApproveRequestAvgRate(uint256 requestId, uint256 avgMTokenRate)
-        external;
 
     /**
      * @notice rejecting request

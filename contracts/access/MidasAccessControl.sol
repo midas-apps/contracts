@@ -136,6 +136,8 @@ contract MidasAccessControl is
         }
     }
 
+    // TODO: rename functions to use easier names
+    // like setGrantOperatorRoleMult and setPermissionRoleMult
     /**
      * @inheritdoc IMidasAccessControl
      */

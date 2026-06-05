@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import {WithMidasAccessControl} from "./WithMidasAccessControl.sol";
+import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.sol";
 
 /**
  * @title Blacklistable
@@ -11,20 +12,12 @@ import {WithMidasAccessControl} from "./WithMidasAccessControl.sol";
  */
 abstract contract Blacklistable is WithMidasAccessControl {
     /**
-     * @notice when account is blacklisted
-     * @param role blacklisted role
-     * @param account account
-     */
-    error Blacklisted(bytes32 role, address account);
-
-    /**
      * @dev leaving a storage gap for futures updates
      */
     uint256[50] private __gap;
 
     /**
-     * @dev checks that a given `account` doesnt
-     * have BLACKLISTED_ROLE
+     * @dev checks that a given `account` doesnt have BLACKLISTED_ROLE
      */
     modifier onlyNotBlacklisted(address account) {
         _onlyNotBlacklisted(account);
@@ -32,13 +25,13 @@ abstract contract Blacklistable is WithMidasAccessControl {
     }
 
     /**
-     * @dev checks that a given `account` doesnt
-     * have BLACKLISTED_ROLE
+     * @dev checks that a given `account` doesnt have BLACKLISTED_ROLE
      */
     function _onlyNotBlacklisted(address account) internal view {
-        require(
-            !accessControl.hasRole(BLACKLISTED_ROLE, account),
-            Blacklisted(BLACKLISTED_ROLE, account)
+        AccessControlUtilsLibrary.requireNotBlacklisted(
+            accessControl,
+            account,
+            BLACKLISTED_ROLE
         );
     }
 }

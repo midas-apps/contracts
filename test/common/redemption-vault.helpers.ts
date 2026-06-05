@@ -648,11 +648,9 @@ export const approveRedeemRequestTest = async (
     owner,
     mTBILL,
     waivedFee,
-    isSafe,
     isAvgRate,
   }: CommonParamsRedeem & {
     waivedFee?: boolean;
-    isSafe?: boolean;
     isAvgRate?: boolean;
   },
   requestId: BigNumberish,
@@ -663,21 +661,9 @@ export const approveRedeemRequestTest = async (
 
   const tokensReceiver = await redemptionVault.tokensReceiver();
 
-  const callFn = isAvgRate
-    ? isSafe
-      ? redemptionVault
-          .connect(sender)
-          .safeApproveRequestAvgRate.bind(this, requestId, rate)
-      : redemptionVault
-          .connect(sender)
-          .approveRequest.bind(this, requestId, rate, true)
-    : isSafe
-    ? redemptionVault
-        .connect(sender)
-        .safeApproveRequest.bind(this, requestId, rate)
-    : redemptionVault
-        .connect(sender)
-        .approveRequest.bind(this, requestId, rate, false);
+  const callFn = redemptionVault
+    .connect(sender)
+    .approveRequest.bind(this, requestId, rate, isAvgRate ?? false);
 
   if (await handleRevert(callFn, redemptionVault, opt)) {
     return;
@@ -744,7 +730,7 @@ export const approveRedeemRequestTest = async (
         'ApproveRequest(uint256,uint256,bool,bool)'
       ].name,
     )
-    .withArgs(requestId, actualRate, isSafe, isAvgRate).to.not.reverted;
+    .withArgs(requestId, actualRate, false, isAvgRate).to.not.reverted;
 
   const nextExpectedRequestIdToProcessAfter =
     await redemptionVault.nextExpectedRequestIdToProcess();

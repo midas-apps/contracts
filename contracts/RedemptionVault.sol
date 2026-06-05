@@ -274,26 +274,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function safeApproveRequest(uint256 requestId, uint256 newMTokenRate)
-        external
-        onlyContractAdmin
-    {
-        _approveRequest(requestId, newMTokenRate, true, false, false);
-    }
-
-    /**
-     * @inheritdoc IRedemptionVault
-     */
-    function safeApproveRequestAvgRate(uint256 requestId, uint256 avgMTokenRate)
-        external
-        onlyContractAdmin
-    {
-        _approveRequest(requestId, avgMTokenRate, true, false, true);
-    }
-
-    /**
-     * @inheritdoc IRedemptionVault
-     */
     function rejectRequest(uint256 requestId) external onlyContractAdmin {
         Request memory request = redeemRequests[requestId];
 

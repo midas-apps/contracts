@@ -2,7 +2,11 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 
-import { mTokenContractsSuits } from './suits/mtoken.suits';
+import {
+  ERC20_PAUSED_MSG,
+  mTokenContractsSuits,
+  setErc20PausablePaused,
+} from './suits/mtoken.suits';
 
 import { MTokenName } from '../../config';
 import { acErrors, blackList } from '../common/ac.helpers';
@@ -50,10 +54,7 @@ describe('Token contracts', () => {
 
         await expect(
           mTokenPermissioned.connect(from).transfer(to.address, 1),
-        ).revertedWithCustomError(
-          mTokenPermissioned,
-          acErrors.WMAC_HASNT_ROLE().customErrorName,
-        );
+        ).revertedWithCustomError(mTokenPermissioned, 'NotGreenlisted');
       });
 
       it('should fail: transfer when recipient is not greenlisted', async () => {
@@ -79,10 +80,7 @@ describe('Token contracts', () => {
 
         await expect(
           mTokenPermissioned.connect(from).transfer(to.address, 1),
-        ).revertedWithCustomError(
-          mTokenPermissioned,
-          acErrors.WMAC_HASNT_ROLE().customErrorName,
-        );
+        ).revertedWithCustomError(mTokenPermissioned, 'NotGreenlisted');
       });
 
       it('should fail: transfer when from is blacklisted', async () => {
@@ -126,7 +124,7 @@ describe('Token contracts', () => {
         );
       });
 
-      it('should fail: transfer when token is paused', async () => {
+      it('should fail: transfer when ERC20Pausable is paused', async () => {
         const baseFixture = await defaultDeploy();
         const {
           owner,
@@ -151,11 +149,62 @@ describe('Token contracts', () => {
         );
         await mint({ tokenContract: mTokenPermissioned, owner }, from, 1);
 
-        await mTokenPermissioned.connect(owner).pause();
+        await setErc20PausablePaused(mTokenPermissioned);
 
         await expect(
           mTokenPermissioned.connect(from).transfer(to.address, 1),
-        ).revertedWith('ERC20Pausable: token transfer while paused');
+        ).revertedWith(ERC20_PAUSED_MSG);
+      });
+
+      it('should fail: mint when ERC20Pausable is paused', async () => {
+        const baseFixture = await defaultDeploy();
+        const {
+          owner,
+          accessControl,
+          regularAccounts,
+          mTokenPermissioned,
+          mTokenPermissionedRoles,
+        } = await loadFixture(
+          mTokenPermissionedFixture.bind(this, baseFixture),
+        );
+
+        const to = regularAccounts[0];
+
+        await accessControl.grantRole(
+          mTokenPermissionedRoles.greenlisted,
+          to.address,
+        );
+        await setErc20PausablePaused(mTokenPermissioned);
+
+        await mint({ tokenContract: mTokenPermissioned, owner }, to, 1, {
+          revertMessage: ERC20_PAUSED_MSG,
+        });
+      });
+
+      it('should fail: burn when ERC20Pausable is paused', async () => {
+        const baseFixture = await defaultDeploy();
+        const {
+          owner,
+          accessControl,
+          regularAccounts,
+          mTokenPermissioned,
+          mTokenPermissionedRoles,
+        } = await loadFixture(
+          mTokenPermissionedFixture.bind(this, baseFixture),
+        );
+
+        const holder = regularAccounts[0];
+
+        await accessControl.grantRole(
+          mTokenPermissionedRoles.greenlisted,
+          holder.address,
+        );
+        await mint({ tokenContract: mTokenPermissioned, owner }, holder, 1);
+        await setErc20PausablePaused(mTokenPermissioned);
+
+        await burn({ tokenContract: mTokenPermissioned, owner }, holder, 1, {
+          revertMessage: ERC20_PAUSED_MSG,
+        });
       });
 
       it('should fail: mint when receiver is not greenlisted', async () => {
@@ -167,7 +216,7 @@ describe('Token contracts', () => {
           { tokenContract: mTokenPermissioned, owner },
           regularAccounts[0],
           1,
-          { revertCustomError: acErrors.WMAC_HASNT_ROLE() },
+          { revertCustomError: { customErrorName: 'NotGreenlisted' } },
         );
       });
 
@@ -366,7 +415,7 @@ describe('Token contracts', () => {
               } else {
                 await expect(tx).revertedWithCustomError(
                   mTokenPermissioned,
-                  acErrors.WMAC_HASNT_ROLE().customErrorName,
+                  'NotGreenlisted',
                 );
               }
             },

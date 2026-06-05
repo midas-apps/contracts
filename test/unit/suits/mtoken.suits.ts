@@ -5,7 +5,7 @@ import {
   hours,
 } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { expect } from 'chai';
-import { BigNumberish, Contract, constants } from 'ethers';
+import { Contract } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
@@ -42,11 +42,13 @@ import {
   DataFeed,
   DepositVault,
   DepositVaultWithUSTB,
-  MTBILL,
+  MToken,
   RedemptionVault,
   RedemptionVaultWithSwapper,
 } from '../../../typechain-types';
 import {
+  adminPauseContractTest,
+  pauseGlobalTest,
   pauseVault,
   pauseVaultFn,
   validateImplementation,
@@ -57,9 +59,6 @@ import {
 } from '../../common/timelock-manager.helpers';
 
 const DEFAULT_UNPAUSE_DELAY = 86400;
-const DELAY_FOR_SET_DELAY = 2 * 24 * 3600;
-const NO_DELAY = constants.MaxUint256;
-const CUSTOM_DELAY = 3600;
 
 const MINT_SEL = encodeFnSelector('mint(address,uint256)');
 const BURN_SEL = encodeFnSelector('burn(address,uint256)');
@@ -69,9 +68,38 @@ const TRANSFER_SEL = encodeFnSelector('transfer(address,uint256)');
 const TRANSFER_FROM_SEL = encodeFnSelector(
   'transferFrom(address,address,uint256)',
 );
-const PAUSE_SEL = encodeFnSelector('pause()');
-const UNPAUSE_SEL = encodeFnSelector('unpause()');
+const CLAWBACK_SEL = encodeFnSelector('clawback(uint256,address)');
+const SET_METADATA_SEL = encodeFnSelector('setMetadata(bytes32,bytes)');
+const SET_CLAWBACK_RECEIVER_SEL = encodeFnSelector(
+  'setClawbackReceiver(address)',
+);
+const INCREASE_MINT_RATE_LIMIT_SEL = encodeFnSelector(
+  'increaseMintRateLimit(uint256,uint256)',
+);
+const DECREASE_MINT_RATE_LIMIT_SEL = encodeFnSelector(
+  'decreaseMintRateLimit(uint256,uint256)',
+);
+const ERC20_PAUSABLE_PAUSED_STORAGE_SLOT = 101;
+export const ERC20_PAUSED_MSG = 'ERC20Pausable: token transfer while paused';
 const PAUSE_TEST_AMOUNT = parseUnits('100');
+
+const toStorageSlotHex = (slot: number) =>
+  '0x' + slot.toString(16).padStart(64, '0');
+
+const toBoolWordHex = (value: boolean) =>
+  '0x' + (value ? '1' : '0').padStart(64, '0');
+
+export const setErc20PausablePaused = async (
+  tokenContract: Contract,
+  paused = true,
+) => {
+  await ethers.provider.send('hardhat_setStorageAt', [
+    tokenContract.address,
+    toStorageSlotHex(ERC20_PAUSABLE_PAUSED_STORAGE_SLOT),
+    toBoolWordHex(paused),
+  ]);
+  expect(await tokenContract.paused()).eq(paused);
+};
 
 export const mTokenContractsSuits = (token: MTokenName) => {
   const contractNames = getTokenContractNames(token);
@@ -156,12 +184,12 @@ export const mTokenContractsSuits = (token: MTokenName) => {
   const deployMTokenWithFixture = async () => {
     const fixture = await loadFixture(defaultDeploy);
 
-    const tokenContract = (await deployProxyContract(
+    const tokenContract = await deployProxyContract<MToken>(
       'token',
       undefined,
       fixture.accessControl.address,
       fixture.clawbackReceiver.address,
-    )) as MTBILL;
+    );
 
     if (mTokensMetadata[token]?.isPermissioned) {
       const greenlistedRole = tokenRoles.greenlisted;
@@ -175,106 +203,34 @@ export const mTokenContractsSuits = (token: MTokenName) => {
     return { tokenContract, ...fixture };
   };
 
-  const getTokenAdminRole = () => allRoles.common.defaultAdmin;
-
-  const pausedRevert = (tokenContract: MTBILL, selector: string) => ({
+  const pausedRevert = (tokenContract: MToken, selector: string) => ({
     revertCustomError: {
       customErrorName: 'Paused',
       args: [tokenContract.address, selector],
     },
   });
 
-  const setPauseDelayViaTimelock = async (
+  const adminUnpauseContractViaTimelock = async (
     fixture: Awaited<ReturnType<typeof deployMTokenWithFixture>>,
-    newDelay: number,
   ) => {
-    const calldata = fixture.pauseManager.interface.encodeFunctionData(
-      'setPauseDelay',
-      [newDelay],
-    );
-    await scheduleTimelockOperationsTester(
-      {
-        timelockManager: fixture.timelockManager,
-        timelock: fixture.timelock,
-        owner: fixture.owner,
-        accessControl: fixture.accessControl,
-      },
-      [fixture.pauseManager.address],
-      [calldata],
-    );
-    await increase(DELAY_FOR_SET_DELAY);
-    await executeTimelockOperationTester(
-      {
-        timelockManager: fixture.timelockManager,
-        timelock: fixture.timelock,
-        owner: fixture.owner,
-        accessControl: fixture.accessControl,
-      },
-      fixture.pauseManager.address,
-      calldata,
-      fixture.owner.address,
-    );
-  };
-
-  const setUnpauseDelayViaTimelock = async (
-    fixture: Awaited<ReturnType<typeof deployMTokenWithFixture>>,
-    newDelay: BigNumberish,
-  ) => {
-    const calldata = fixture.pauseManager.interface.encodeFunctionData(
-      'setUnpauseDelay',
-      [newDelay],
-    );
-    await scheduleTimelockOperationsTester(
-      {
-        timelockManager: fixture.timelockManager,
-        timelock: fixture.timelock,
-        owner: fixture.owner,
-        accessControl: fixture.accessControl,
-      },
-      [fixture.pauseManager.address],
-      [calldata],
-    );
-    await increase(DELAY_FOR_SET_DELAY);
-    await executeTimelockOperationTester(
-      {
-        timelockManager: fixture.timelockManager,
-        timelock: fixture.timelock,
-        owner: fixture.owner,
-        accessControl: fixture.accessControl,
-      },
-      fixture.pauseManager.address,
-      calldata,
-      fixture.owner.address,
-    );
-  };
-
-  const unpauseTokenViaTimelock = async (
-    fixture: Awaited<ReturnType<typeof deployMTokenWithFixture>>,
-    delay: number = DEFAULT_UNPAUSE_DELAY,
-  ) => {
-    const calldata =
-      fixture.tokenContract.interface.encodeFunctionData('unpause');
-    await scheduleTimelockOperationsTester(
-      {
-        timelockManager: fixture.timelockManager,
-        timelock: fixture.timelock,
-        owner: fixture.owner,
-        accessControl: fixture.accessControl,
-      },
+    const { pauseManager, timelockManager, timelock, owner, accessControl } =
+      fixture;
+    const calldata = pauseManager.interface.encodeFunctionData(
+      'contractAdminUnpause',
       [fixture.tokenContract.address],
+    );
+
+    await scheduleTimelockOperationsTester(
+      { timelockManager, timelock, owner, accessControl },
+      [pauseManager.address],
       [calldata],
     );
-    await increase(delay);
+    await increase(DEFAULT_UNPAUSE_DELAY);
     await executeTimelockOperationTester(
-      {
-        timelockManager: fixture.timelockManager,
-        timelock: fixture.timelock,
-        owner: fixture.owner,
-        accessControl: fixture.accessControl,
-      },
-      fixture.tokenContract.address,
+      { timelockManager, timelock, owner, accessControl },
+      pauseManager.address,
       calldata,
-      fixture.owner.address,
+      owner.address,
     );
   };
 
@@ -512,284 +468,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       ).to.revertedWith('Initializable: contract is already initialized');
     });
 
-    describe('pause()', () => {
-      it('should fail: call from address without contract admin role', async () => {
-        const { regularAccounts, tokenContract } =
-          await deployMTokenWithFixture();
-
-        await expect(
-          tokenContract.connect(regularAccounts[0]).pause(),
-        ).revertedWithCustomError(
-          tokenContract,
-          acErrors.WMAC_HASNT_PERMISSION().customErrorName,
-        );
-      });
-
-      it('should fail: call when already paused', async () => {
-        const { tokenContract, owner } = await deployMTokenWithFixture();
-
-        await tokenContract.connect(owner).pause();
-        await expect(tokenContract.connect(owner).pause()).revertedWith(
-          `Pausable: paused`,
-        );
-      });
-
-      it('call when unpaused with default pause delay (no_delay)', async () => {
-        const { owner, tokenContract } = await deployMTokenWithFixture();
-
-        expect(await tokenContract.paused()).eq(false);
-        await expect(tokenContract.connect(owner).pause()).to.emit(
-          tokenContract,
-          tokenContract.interface.events['Paused(address)'].name,
-        ).to.not.reverted;
-        expect(await tokenContract.paused()).eq(true);
-      });
-
-      it('should fail: when pause delay is no_delay and trying to schedule through timelock', async () => {
-        const {
-          owner,
-          tokenContract,
-          accessControl,
-          timelockManager,
-          timelock,
-        } = await deployMTokenWithFixture();
-
-        const calldata = tokenContract.interface.encodeFunctionData('pause');
-
-        await scheduleTimelockOperationsTester(
-          { accessControl, timelockManager, timelock, owner },
-          [tokenContract.address],
-          [calldata],
-          {},
-          {
-            revertCustomError: {
-              contract: timelockManager,
-              customErrorName: 'NoTimelockDelayForRole',
-            },
-          },
-        );
-      });
-
-      it('when pause delay is custom, pause can be scheduled on timelock', async () => {
-        const fixture = await deployMTokenWithFixture();
-        const {
-          owner,
-          tokenContract,
-          accessControl,
-          timelockManager,
-          timelock,
-        } = fixture;
-
-        await setPauseDelayViaTimelock(fixture, CUSTOM_DELAY);
-
-        const calldata = tokenContract.interface.encodeFunctionData('pause');
-
-        await scheduleTimelockOperationsTester(
-          { accessControl, timelockManager, timelock, owner },
-          [tokenContract.address],
-          [calldata],
-          {},
-        );
-        await increase(CUSTOM_DELAY);
-        await executeTimelockOperationTester(
-          { accessControl, timelockManager, timelock, owner },
-          tokenContract.address,
-          calldata,
-          owner.address,
-        );
-
-        expect(await tokenContract.paused()).eq(true);
-      });
-
-      it('should fail: when pause delay is custom and calling directly', async () => {
-        const fixture = await deployMTokenWithFixture();
-        const { owner, tokenContract, accessControl } = fixture;
-
-        await setPauseDelayViaTimelock(fixture, CUSTOM_DELAY);
-
-        await expect(tokenContract.connect(owner).pause())
-          .revertedWithCustomError(accessControl, 'FunctionNotReady')
-          .withArgs(getTokenAdminRole(), PAUSE_SEL);
-      });
-
-      it('when contract admin has function scoped access', async () => {
-        const fixture = await deployMTokenWithFixture();
-        const { accessControl, owner, tokenContract, regularAccounts } =
-          fixture;
-        const adminRole = getTokenAdminRole();
-
-        await setupFunctionAccessGrantOperator({
-          accessControl,
-          owner,
-          functionAccessAdminRole: adminRole,
-          targetContract: tokenContract.address,
-          functionSelector: PAUSE_SEL,
-          grantOperator: owner,
-        });
-        await setFunctionPermissionTester(
-          { accessControl, owner },
-          adminRole,
-          tokenContract.address,
-          PAUSE_SEL,
-          [{ account: regularAccounts[0].address, enabled: true }],
-        );
-
-        await expect(tokenContract.connect(regularAccounts[0]).pause()).to.emit(
-          tokenContract,
-          tokenContract.interface.events['Paused(address)'].name,
-        ).to.not.reverted;
-        expect(await tokenContract.paused()).eq(true);
-      });
-    });
-
-    describe('unpause()', () => {
-      it('should fail: call from address without contract admin role', async () => {
-        const { owner, tokenContract, regularAccounts } =
-          await deployMTokenWithFixture();
-
-        await tokenContract.connect(owner).pause();
-
-        await expect(
-          tokenContract.connect(regularAccounts[0]).unpause(),
-        ).revertedWithCustomError(
-          tokenContract,
-          acErrors.WMAC_HASNT_PERMISSION().customErrorName,
-        );
-      });
-
-      it('should fail: call when not paused', async () => {
-        const {
-          owner,
-          tokenContract,
-          accessControl,
-          timelockManager,
-          timelock,
-        } = await deployMTokenWithFixture();
-
-        const calldata = tokenContract.interface.encodeFunctionData('unpause');
-
-        await scheduleTimelockOperationsTester(
-          { accessControl, timelockManager, timelock, owner },
-          [tokenContract.address],
-          [calldata],
-          {},
-        );
-
-        await increase(DEFAULT_UNPAUSE_DELAY);
-        await executeTimelockOperationTester(
-          { accessControl, timelockManager, timelock, owner },
-          tokenContract.address,
-          calldata,
-          owner.address,
-          {
-            revertMessage:
-              'TimelockController: underlying transaction reverted',
-          },
-        );
-      });
-
-      it('when default unpause delay, unpause can be scheduled on timelock', async () => {
-        const fixture = await deployMTokenWithFixture();
-        const { owner, tokenContract } = fixture;
-
-        await tokenContract.connect(owner).pause();
-        await unpauseTokenViaTimelock(fixture, DEFAULT_UNPAUSE_DELAY);
-
-        expect(await tokenContract.paused()).eq(false);
-      });
-
-      it('should fail: when default unpause delay and calling directly', async () => {
-        const fixture = await deployMTokenWithFixture();
-        const { owner, tokenContract, accessControl } = fixture;
-
-        await tokenContract.connect(owner).pause();
-
-        await expect(tokenContract.connect(owner).unpause())
-          .revertedWithCustomError(accessControl, 'FunctionNotReady')
-          .withArgs(getTokenAdminRole(), UNPAUSE_SEL);
-      });
-
-      it('when unpause delay is no_delay, unpause can be called directly', async () => {
-        const fixture = await deployMTokenWithFixture();
-        const { owner, tokenContract } = fixture;
-
-        await setUnpauseDelayViaTimelock(fixture, NO_DELAY);
-        await tokenContract.connect(owner).pause();
-        await expect(tokenContract.connect(owner).unpause()).not.reverted;
-        expect(await tokenContract.paused()).eq(false);
-      });
-
-      it('should fail: when unpause delay is no_delay and trying to schedule through timelock', async () => {
-        const fixture = await deployMTokenWithFixture();
-        const {
-          owner,
-          tokenContract,
-          accessControl,
-          timelockManager,
-          timelock,
-        } = fixture;
-
-        await setUnpauseDelayViaTimelock(fixture, NO_DELAY);
-        await tokenContract.connect(owner).pause();
-
-        const calldata = tokenContract.interface.encodeFunctionData('unpause');
-
-        await scheduleTimelockOperationsTester(
-          { accessControl, timelockManager, timelock, owner },
-          [tokenContract.address],
-          [calldata],
-          {},
-          {
-            revertCustomError: {
-              contract: timelockManager,
-              customErrorName: 'NoTimelockDelayForRole',
-            },
-          },
-        );
-      });
-
-      it('when unpause delay is custom, unpause can be scheduled after custom delay', async () => {
-        const fixture = await deployMTokenWithFixture();
-        const { owner, tokenContract } = fixture;
-
-        await setUnpauseDelayViaTimelock(fixture, CUSTOM_DELAY);
-        await tokenContract.connect(owner).pause();
-        await unpauseTokenViaTimelock(fixture, CUSTOM_DELAY);
-
-        expect(await tokenContract.paused()).eq(false);
-      });
-
-      it('when contract admin has function scoped access for unpause', async () => {
-        const fixture = await deployMTokenWithFixture();
-        const { accessControl, owner, tokenContract, regularAccounts } =
-          fixture;
-        const adminRole = getTokenAdminRole();
-
-        await setupFunctionAccessGrantOperator({
-          accessControl,
-          owner,
-          functionAccessAdminRole: adminRole,
-          targetContract: tokenContract.address,
-          functionSelector: UNPAUSE_SEL,
-          grantOperator: owner,
-        });
-        await setFunctionPermissionTester(
-          { accessControl, owner },
-          adminRole,
-          tokenContract.address,
-          UNPAUSE_SEL,
-          [{ account: regularAccounts[0].address, enabled: true }],
-        );
-
-        await setUnpauseDelayViaTimelock(fixture, NO_DELAY);
-        await tokenContract.connect(owner).pause();
-
-        await expect(tokenContract.connect(regularAccounts[0]).unpause()).not
-          .reverted;
-        expect(await tokenContract.paused()).eq(false);
-      });
-    });
-
     describe('mint()', () => {
       it('should fail: call from address without "mint operator" role', async () => {
         const { owner, tokenContract, regularAccounts } =
@@ -848,7 +526,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         await mint({ tokenContract, owner }, to, amount);
       });
 
-      it('should fail: mint when amount exceeds mint rate limit', async () => {
+      it('should fail: amount exceeds mint rate limit', async () => {
         const { owner, tokenContract, regularAccounts } =
           await deployMTokenWithFixture();
         const to = regularAccounts[0];
@@ -864,7 +542,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         });
       });
 
-      it('should fail: mint when one of multiple mint rate limits is exceeded', async () => {
+      it('should fail: one of multiple mint rate limits is exceeded', async () => {
         const { owner, tokenContract, regularAccounts } =
           await deployMTokenWithFixture();
         const to = regularAccounts[0];
@@ -1064,7 +742,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         });
       });
 
-      it('should fail: mint when contract is paused by pause manager', async () => {
+      it('should fail: contract is paused by pause manager', async () => {
         const { pauseManager, owner, tokenContract, regularAccounts } =
           await deployMTokenWithFixture();
 
@@ -1077,7 +755,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         );
       });
 
-      it('should fail: mint when mint is paused by pause manager', async () => {
+      it('should fail: mint is paused by pause manager', async () => {
         const { pauseManager, owner, tokenContract, regularAccounts } =
           await deployMTokenWithFixture();
 
@@ -1087,6 +765,60 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           regularAccounts[0],
           PAUSE_TEST_AMOUNT,
           pausedRevert(tokenContract, MINT_SEL),
+        );
+      });
+
+      it('should fail: globally paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await pauseGlobalTest({ pauseManager, owner });
+        await mint(
+          { tokenContract, owner },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+          pausedRevert(tokenContract, MINT_SEL),
+        );
+      });
+
+      it('should fail: contract admin paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await adminPauseContractTest({ pauseManager, owner }, tokenContract);
+        await mint(
+          { tokenContract, owner },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+          pausedRevert(tokenContract, MINT_SEL),
+        );
+      });
+
+      it('should fail: mint when ERC20Pausable is paused', async () => {
+        const { owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await setErc20PausablePaused(tokenContract);
+        await mint(
+          { tokenContract, owner },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+          { revertMessage: ERC20_PAUSED_MSG },
+        );
+      });
+
+      it('mint after contract admin unpause by pause manager', async () => {
+        const fixture = await deployMTokenWithFixture();
+
+        await adminPauseContractTest(
+          { pauseManager: fixture.pauseManager, owner: fixture.owner },
+          fixture.tokenContract,
+        );
+        await adminUnpauseContractViaTimelock(fixture);
+        await mint(
+          { tokenContract: fixture.tokenContract, owner: fixture.owner },
+          fixture.regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
         );
       });
     });
@@ -1180,6 +912,60 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           pausedRevert(tokenContract, BURN_SEL),
         );
       });
+
+      it('should fail: burn when globally paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await mint(
+          { tokenContract, owner },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+        );
+        await pauseGlobalTest({ pauseManager, owner });
+        await burn(
+          { tokenContract, owner },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+          pausedRevert(tokenContract, BURN_SEL),
+        );
+      });
+
+      it('should fail: burn when contract admin paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await mint(
+          { tokenContract, owner },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+        );
+        await adminPauseContractTest({ pauseManager, owner }, tokenContract);
+        await burn(
+          { tokenContract, owner },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+          pausedRevert(tokenContract, BURN_SEL),
+        );
+      });
+
+      it('should fail: burn when ERC20Pausable is paused', async () => {
+        const { owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await mint(
+          { tokenContract, owner },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+        );
+        await setErc20PausablePaused(tokenContract);
+        await burn(
+          { tokenContract, owner },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+          { revertMessage: ERC20_PAUSED_MSG },
+        );
+      });
     });
 
     describe('mintGoverned()', () => {
@@ -1192,12 +978,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           { tokenContract, owner, isGoverned: true },
           regularAccounts[0],
           PAUSE_TEST_AMOUNT,
-          {
-            revertCustomError: {
-              customErrorName: 'Paused',
-              args: [tokenContract.address, MINT_GOVERNED_SEL],
-            },
-          },
+          pausedRevert(tokenContract, MINT_GOVERNED_SEL),
         );
       });
 
@@ -1215,12 +996,46 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           { tokenContract, owner, isGoverned: true },
           regularAccounts[0],
           PAUSE_TEST_AMOUNT,
-          {
-            revertCustomError: {
-              customErrorName: 'Paused',
-              args: [tokenContract.address, MINT_GOVERNED_SEL],
-            },
-          },
+          pausedRevert(tokenContract, MINT_GOVERNED_SEL),
+        );
+      });
+
+      it('should fail: mintGoverned when globally paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await pauseGlobalTest({ pauseManager, owner });
+        await mint(
+          { tokenContract, owner, isGoverned: true },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+          pausedRevert(tokenContract, MINT_GOVERNED_SEL),
+        );
+      });
+
+      it('should fail: mintGoverned when contract admin paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await adminPauseContractTest({ pauseManager, owner }, tokenContract);
+        await mint(
+          { tokenContract, owner, isGoverned: true },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+          pausedRevert(tokenContract, MINT_GOVERNED_SEL),
+        );
+      });
+
+      it('should fail: mintGoverned when ERC20Pausable is paused', async () => {
+        const { owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await setErc20PausablePaused(tokenContract);
+        await mint(
+          { tokenContract, owner, isGoverned: true },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+          { revertMessage: ERC20_PAUSED_MSG },
         );
       });
     });
@@ -1240,12 +1055,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           { tokenContract, owner, isGoverned: true },
           regularAccounts[0],
           PAUSE_TEST_AMOUNT,
-          {
-            revertCustomError: {
-              customErrorName: 'Paused',
-              args: [tokenContract.address, BURN_GOVERNED_SEL],
-            },
-          },
+          pausedRevert(tokenContract, BURN_GOVERNED_SEL),
         );
       });
 
@@ -1267,12 +1077,61 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           { tokenContract, owner, isGoverned: true },
           regularAccounts[0],
           PAUSE_TEST_AMOUNT,
-          {
-            revertCustomError: {
-              customErrorName: 'Paused',
-              args: [tokenContract.address, BURN_GOVERNED_SEL],
-            },
-          },
+          pausedRevert(tokenContract, BURN_GOVERNED_SEL),
+        );
+      });
+
+      it('should fail: burnGoverned when globally paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await mint(
+          { tokenContract, owner },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+        );
+        await pauseGlobalTest({ pauseManager, owner });
+        await burn(
+          { tokenContract, owner, isGoverned: true },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+          pausedRevert(tokenContract, BURN_GOVERNED_SEL),
+        );
+      });
+
+      it('should fail: burnGoverned when contract admin paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await mint(
+          { tokenContract, owner },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+        );
+        await adminPauseContractTest({ pauseManager, owner }, tokenContract);
+        await burn(
+          { tokenContract, owner, isGoverned: true },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+          pausedRevert(tokenContract, BURN_GOVERNED_SEL),
+        );
+      });
+
+      it('should fail: burnGoverned when ERC20Pausable is paused', async () => {
+        const { owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await mint(
+          { tokenContract, owner },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+        );
+        await setErc20PausablePaused(tokenContract);
+        await burn(
+          { tokenContract, owner, isGoverned: true },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+          { revertMessage: ERC20_PAUSED_MSG },
         );
       });
     });
@@ -1310,6 +1169,49 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         )
           .revertedWithCustomError(tokenContract, 'Paused')
           .withArgs(tokenContract.address, TRANSFER_SEL);
+      });
+
+      it('should fail: transfer when globally paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await mint({ tokenContract, owner }, owner, PAUSE_TEST_AMOUNT);
+        await pauseGlobalTest({ pauseManager, owner });
+        await expect(
+          tokenContract
+            .connect(owner)
+            .transfer(regularAccounts[0].address, PAUSE_TEST_AMOUNT),
+        )
+          .revertedWithCustomError(tokenContract, 'Paused')
+          .withArgs(tokenContract.address, TRANSFER_SEL);
+      });
+
+      it('should fail: transfer when contract admin paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await mint({ tokenContract, owner }, owner, PAUSE_TEST_AMOUNT);
+        await adminPauseContractTest({ pauseManager, owner }, tokenContract);
+        await expect(
+          tokenContract
+            .connect(owner)
+            .transfer(regularAccounts[0].address, PAUSE_TEST_AMOUNT),
+        )
+          .revertedWithCustomError(tokenContract, 'Paused')
+          .withArgs(tokenContract.address, TRANSFER_SEL);
+      });
+
+      it('should fail: transfer when ERC20Pausable is paused', async () => {
+        const { owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await mint({ tokenContract, owner }, owner, PAUSE_TEST_AMOUNT);
+        await setErc20PausablePaused(tokenContract);
+        await expect(
+          tokenContract
+            .connect(owner)
+            .transfer(regularAccounts[0].address, PAUSE_TEST_AMOUNT),
+        ).revertedWith(ERC20_PAUSED_MSG);
       });
     });
 
@@ -1369,6 +1271,82 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           .revertedWithCustomError(tokenContract, 'Paused')
           .withArgs(tokenContract.address, TRANSFER_FROM_SEL);
       });
+
+      it('should fail: transferFrom when globally paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await mint(
+          { tokenContract, owner },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+        );
+        await tokenContract
+          .connect(regularAccounts[0])
+          .approve(regularAccounts[1].address, PAUSE_TEST_AMOUNT);
+        await pauseGlobalTest({ pauseManager, owner });
+        await expect(
+          tokenContract
+            .connect(regularAccounts[1])
+            .transferFrom(
+              regularAccounts[0].address,
+              owner.address,
+              PAUSE_TEST_AMOUNT,
+            ),
+        )
+          .revertedWithCustomError(tokenContract, 'Paused')
+          .withArgs(tokenContract.address, TRANSFER_FROM_SEL);
+      });
+
+      it('should fail: transferFrom when contract admin paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await mint(
+          { tokenContract, owner },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+        );
+        await tokenContract
+          .connect(regularAccounts[0])
+          .approve(regularAccounts[1].address, PAUSE_TEST_AMOUNT);
+        await adminPauseContractTest({ pauseManager, owner }, tokenContract);
+        await expect(
+          tokenContract
+            .connect(regularAccounts[1])
+            .transferFrom(
+              regularAccounts[0].address,
+              owner.address,
+              PAUSE_TEST_AMOUNT,
+            ),
+        )
+          .revertedWithCustomError(tokenContract, 'Paused')
+          .withArgs(tokenContract.address, TRANSFER_FROM_SEL);
+      });
+
+      it('should fail: transferFrom when ERC20Pausable is paused', async () => {
+        const { owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await mint(
+          { tokenContract, owner },
+          regularAccounts[0],
+          PAUSE_TEST_AMOUNT,
+        );
+        await tokenContract
+          .connect(regularAccounts[0])
+          .approve(regularAccounts[1].address, PAUSE_TEST_AMOUNT);
+        await setErc20PausablePaused(tokenContract);
+        await expect(
+          tokenContract
+            .connect(regularAccounts[1])
+            .transferFrom(
+              regularAccounts[0].address,
+              owner.address,
+              PAUSE_TEST_AMOUNT,
+            ),
+        ).revertedWith(ERC20_PAUSED_MSG);
+      });
     });
 
     describe('setMetadata()', () => {
@@ -1387,6 +1365,49 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       it('call from address with token manager role', async () => {
         const { owner, tokenContract } = await deployMTokenWithFixture();
 
+        await setMetadataTest(
+          { tokenContract, owner },
+          'url',
+          'some value',
+          undefined,
+        );
+      });
+
+      it('call when globally paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract } =
+          await deployMTokenWithFixture();
+
+        await pauseGlobalTest({ pauseManager, owner });
+        await setMetadataTest(
+          { tokenContract, owner },
+          'url',
+          'some value',
+          undefined,
+        );
+      });
+
+      it('call when contract is paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract } =
+          await deployMTokenWithFixture();
+
+        await pauseVault({ pauseManager, owner }, tokenContract);
+        await setMetadataTest(
+          { tokenContract, owner },
+          'url',
+          'some value',
+          undefined,
+        );
+      });
+
+      it('call when setMetadata is paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract } =
+          await deployMTokenWithFixture();
+
+        await pauseVaultFn(
+          { pauseManager, owner },
+          tokenContract,
+          SET_METADATA_SEL,
+        );
         await setMetadataTest(
           { tokenContract, owner },
           'url',
@@ -1469,6 +1490,46 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         await setClawbackReceiverTest({ tokenContract, owner }, nextReceiver, {
           from: user,
         });
+      });
+
+      it('call when globally paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await pauseGlobalTest({ pauseManager, owner });
+        await setClawbackReceiverTest(
+          { tokenContract, owner },
+          regularAccounts[1].address,
+          undefined,
+        );
+      });
+
+      it('call when contract is paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await pauseVault({ pauseManager, owner }, tokenContract);
+        await setClawbackReceiverTest(
+          { tokenContract, owner },
+          regularAccounts[1].address,
+          undefined,
+        );
+      });
+
+      it('call when setClawbackReceiver is paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        await pauseVaultFn(
+          { pauseManager, owner },
+          tokenContract,
+          SET_CLAWBACK_RECEIVER_SEL,
+        );
+        await setClawbackReceiverTest(
+          { tokenContract, owner },
+          regularAccounts[1].address,
+          undefined,
+        );
       });
     });
 
@@ -1581,6 +1642,85 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           from: operator,
         });
       });
+
+      it('should fail: clawback when contract is paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        const holder = regularAccounts[0];
+        await mint({ tokenContract, owner }, holder, PAUSE_TEST_AMOUNT);
+        await pauseVault({ pauseManager, owner }, tokenContract);
+        await clawbackTest(
+          { tokenContract, owner },
+          PAUSE_TEST_AMOUNT,
+          holder,
+          pausedRevert(tokenContract, CLAWBACK_SEL),
+        );
+      });
+
+      it('should fail: clawback when clawback is paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        const holder = regularAccounts[0];
+        await mint({ tokenContract, owner }, holder, PAUSE_TEST_AMOUNT);
+        await pauseVaultFn(
+          { pauseManager, owner },
+          tokenContract,
+          CLAWBACK_SEL,
+        );
+        await clawbackTest(
+          { tokenContract, owner },
+          PAUSE_TEST_AMOUNT,
+          holder,
+          pausedRevert(tokenContract, CLAWBACK_SEL),
+        );
+      });
+
+      it('should fail: clawback when globally paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        const holder = regularAccounts[0];
+        await mint({ tokenContract, owner }, holder, PAUSE_TEST_AMOUNT);
+        await pauseGlobalTest({ pauseManager, owner });
+        await clawbackTest(
+          { tokenContract, owner },
+          PAUSE_TEST_AMOUNT,
+          holder,
+          pausedRevert(tokenContract, CLAWBACK_SEL),
+        );
+      });
+
+      it('should fail: clawback when contract admin paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        const holder = regularAccounts[0];
+        await mint({ tokenContract, owner }, holder, PAUSE_TEST_AMOUNT);
+        await adminPauseContractTest({ pauseManager, owner }, tokenContract);
+        await clawbackTest(
+          { tokenContract, owner },
+          PAUSE_TEST_AMOUNT,
+          holder,
+          pausedRevert(tokenContract, CLAWBACK_SEL),
+        );
+      });
+
+      it('should fail: clawback when ERC20Pausable is paused', async () => {
+        const { owner, tokenContract, regularAccounts } =
+          await deployMTokenWithFixture();
+
+        const holder = regularAccounts[0];
+        await mint({ tokenContract, owner }, holder, PAUSE_TEST_AMOUNT);
+        await setErc20PausablePaused(tokenContract);
+        await clawbackTest(
+          { tokenContract, owner },
+          PAUSE_TEST_AMOUNT,
+          holder,
+          { revertMessage: ERC20_PAUSED_MSG },
+        );
+      });
     });
 
     describe('increaseMintRateLimit()', () => {
@@ -1632,6 +1772,46 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           },
         );
       });
+
+      it('call when globally paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract } =
+          await deployMTokenWithFixture();
+
+        await pauseGlobalTest({ pauseManager, owner });
+        await increaseMintRateLimitTest(
+          { tokenContract, owner },
+          days(1),
+          parseUnits('1000'),
+        );
+      });
+
+      it('call when contract is paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract } =
+          await deployMTokenWithFixture();
+
+        await pauseVault({ pauseManager, owner }, tokenContract);
+        await increaseMintRateLimitTest(
+          { tokenContract, owner },
+          days(1),
+          parseUnits('1000'),
+        );
+      });
+
+      it('call when increaseMintRateLimit is paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract } =
+          await deployMTokenWithFixture();
+
+        await pauseVaultFn(
+          { pauseManager, owner },
+          tokenContract,
+          INCREASE_MINT_RATE_LIMIT_SEL,
+        );
+        await increaseMintRateLimitTest(
+          { tokenContract, owner },
+          days(1),
+          parseUnits('1000'),
+        );
+      });
     });
 
     describe('decreaseMintRateLimit()', () => {
@@ -1665,6 +1845,40 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         const window = days(1);
 
         await increaseMintRateLimitTest({ tokenContract, owner }, window, 200);
+        await decreaseMintRateLimitTest({ tokenContract, owner }, window, 100);
+      });
+
+      it('call when globally paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract } =
+          await deployMTokenWithFixture();
+        const window = days(1);
+
+        await increaseMintRateLimitTest({ tokenContract, owner }, window, 200);
+        await pauseGlobalTest({ pauseManager, owner });
+        await decreaseMintRateLimitTest({ tokenContract, owner }, window, 100);
+      });
+
+      it('call when contract is paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract } =
+          await deployMTokenWithFixture();
+        const window = days(1);
+
+        await increaseMintRateLimitTest({ tokenContract, owner }, window, 200);
+        await pauseVault({ pauseManager, owner }, tokenContract);
+        await decreaseMintRateLimitTest({ tokenContract, owner }, window, 100);
+      });
+
+      it('call when decreaseMintRateLimit is paused by pause manager', async () => {
+        const { pauseManager, owner, tokenContract } =
+          await deployMTokenWithFixture();
+        const window = days(1);
+
+        await increaseMintRateLimitTest({ tokenContract, owner }, window, 200);
+        await pauseVaultFn(
+          { pauseManager, owner },
+          tokenContract,
+          DECREASE_MINT_RATE_LIMIT_SEL,
+        );
         await decreaseMintRateLimitTest({ tokenContract, owner }, window, 100);
       });
     });

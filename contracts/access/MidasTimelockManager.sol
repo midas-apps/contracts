@@ -9,7 +9,6 @@ import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
 import {IMidasPauseManager} from "../interfaces/IMidasPauseManager.sol";
 import {EnumerableSetUpgradeable as EnumerableSet} from "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 
-// TODO: add natspec
 /**
  * @title MidasTimelockManager
  * @notice Manages timelock scheduling, security council votes, and operation challenges.
@@ -20,6 +19,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
+    // TODO: change the naming for struct and for storage variable, its not only stores challenge data anymore
     /**
      * @dev internal storage for a timelock operation challenge
      */
@@ -95,6 +95,11 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     uint256 public securityCouncilVersion;
 
     /**
+     * @notice default delay for all of the roles
+     */
+    uint256 public defaultDelay;
+
+    /**
      * @dev timelock delay for each role
      */
     mapping(bytes32 => uint256) private _roleTimelocks;
@@ -129,14 +134,21 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     uint256[50] private __gap;
 
     /**
-     * @inheritdoc IMidasTimelockManager
+     * @notice Initializes the contract
+     * @param _accessControl MidasAccessControl address
+     * @param _defaultDelay default delay
+     * @param _maxPendingOperationsPerProposer max pending ops per proposer
+     * @param _initSecurityCouncil initial security council members
      */
     function initialize(
         address _accessControl,
+        uint256 _defaultDelay,
         uint256 _maxPendingOperationsPerProposer,
         address[] calldata _initSecurityCouncil
     ) external initializer {
         __WithMidasAccessControl_init(_accessControl);
+
+        defaultDelay = _defaultDelay;
 
         _setMaxPendingOperationsPerProposer(_maxPendingOperationsPerProposer);
 
@@ -144,13 +156,13 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     }
 
     /**
-     * @inheritdoc IMidasTimelockManager
+     * @notice Initializes the timelock controller
+     * @param _timelock timelock controller address
      */
-    function initializeTimelock(address _timelock) external {
-        require(
-            accessControl.hasRole(_DEFAULT_ADMIN_ROLE, msg.sender),
-            HasntRole(_DEFAULT_ADMIN_ROLE, msg.sender)
-        );
+    function initializeTimelock(address _timelock)
+        external
+        onlyRoleNoTimelock(_DEFAULT_ADMIN_ROLE, false)
+    {
         require(timelock == address(0), TimelockAlreadySet());
         require(_timelock != address(0), InvalidAddress(_timelock));
         timelock = _timelock;
@@ -161,10 +173,10 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
      */
     function setDefaultDelay(uint256 _defaultDelay)
         external
-        virtual
-        onlyRole(_DEFAULT_ADMIN_ROLE, false)
+        onlyRoleDelayOverride(_DEFAULT_ADMIN_ROLE, 2 days, false)
     {
-        _defaultDelay = _defaultDelay;
+        defaultDelay = _defaultDelay;
+        emit SetDefaultDelay(_defaultDelay);
     }
 
     /**
@@ -280,12 +292,8 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
      */
     function pauseOperation(bytes32 operationId, uint8 pauseReasonCode)
         external
+        onlyRoleNoTimelock(TIMELOCK_CHALLENGER_ROLE, false)
     {
-        require(
-            accessControl.hasRole(TIMELOCK_CHALLENGER_ROLE, msg.sender),
-            HasntRole(TIMELOCK_CHALLENGER_ROLE, msg.sender)
-        );
-
         require(_isPendingOperation(operationId), OperationNotPending());
 
         (
@@ -469,20 +477,14 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         uint256 delay = overrideDelay != AccessControlUtilsLibrary.NULL_DELAY
             ? overrideDelay
             : _roleTimelocks[role];
+
         uint256 actualDelay = delay == AccessControlUtilsLibrary.NULL_DELAY
-            ? defaultDelay()
+            ? defaultDelay
             : delay == AccessControlUtilsLibrary.NO_DELAY
             ? 0
             : delay;
 
         return (actualDelay, delay == 0);
-    }
-
-    /**
-     * @inheritdoc IMidasTimelockManager
-     */
-    function defaultDelay() public view virtual returns (uint256) {
-        return 3600;
     }
 
     /**

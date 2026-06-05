@@ -23,6 +23,20 @@ library AccessControlUtilsLibrary {
     );
 
     /**
+     * @notice error when the account is not greenlisted
+     * @param account account
+     * @param greenlistedRole greenlisted role
+     */
+    error NotGreenlisted(address account, bytes32 greenlistedRole);
+
+    /**
+     * @notice error when the account is blacklisted
+     * @param blacklistedRole blacklisted role
+     * @param account account
+     */
+    error Blacklisted(bytes32 blacklistedRole, address account);
+
+    /**
      * @notice error when the function is not ready
      * @param roleUsed role used
      * @param functionSelector function selector
@@ -47,8 +61,15 @@ library AccessControlUtilsLibrary {
      */
     error UserFacingRoleNotAllowed(bytes32 role);
 
+    /**
+     * @notice timelock value that represents no delay
+     */
     // solhint-disable-next-line private-vars-leading-underscore
     uint256 internal constant NO_DELAY = type(uint256).max;
+
+    /**
+     * @notice timelock value that represents non-set delay
+     */
     // solhint-disable-next-line private-vars-leading-underscore
     uint256 internal constant NULL_DELAY = 0;
 
@@ -191,6 +212,45 @@ library AccessControlUtilsLibrary {
         return _resolveAccessRole(timelockManager, role, key, overrideDelay);
     }
 
+    /**
+     * @dev checks that a given `account` has `greenlistedRole`
+     * @param accessControl access control contract
+     * @param account account
+     * @param greenlistedRole greenlisted role
+     */
+    function requireGreenlisted(
+        IMidasAccessControl accessControl,
+        address account,
+        bytes32 greenlistedRole
+    ) internal view {
+        require(
+            accessControl.hasRole(greenlistedRole, account),
+            NotGreenlisted(account, greenlistedRole)
+        );
+    }
+
+    /**
+     * @dev checks that a given `account` doesnt have `blacklistedRole`
+     * @param accessControl access control contract
+     * @param account account
+     * @param blacklistedRole blacklisted role
+     */
+    function requireNotBlacklisted(
+        IMidasAccessControl accessControl,
+        address account,
+        bytes32 blacklistedRole
+    ) internal view {
+        require(
+            !accessControl.hasRole(blacklistedRole, account),
+            Blacklisted(blacklistedRole, account)
+        );
+    }
+
+    /**
+     * @dev gets the timelock manager contract
+     * @param accessControl access control contract
+     * @return timelock manager contract
+     */
     function getTimlockManager(IMidasAccessControl accessControl)
         internal
         view

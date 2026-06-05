@@ -11,10 +11,11 @@ import {
   MidasTimelockManagerTest__factory,
 } from '../../typechain-types';
 import {
+  setFunctionPermissionTester,
+  setupFunctionAccessGrantOperator,
+} from '../common/ac.helpers';
+import {
   OptionalCommonParams,
-  pauseGlobalTest,
-  pauseVault,
-  pauseVaultFn,
   validateImplementation,
 } from '../common/common.helpers';
 import { defaultDeploy } from '../common/fixtures';
@@ -23,6 +24,7 @@ import {
   executeTimelockOperationTester,
   pauseTimelockOperationTest,
   scheduleTimelockOperationsTester,
+  setDefaultDelayTest,
   setMaxPendingOperationsPerProposerTester,
   setRoleTimelocksAndExecute,
   setRoleTimelocksTester,
@@ -30,6 +32,9 @@ import {
   voteForExecutionTest,
   voteForVetoTest,
 } from '../common/timelock-manager.helpers';
+
+const DELAY_FOR_SET_DEFAULT_DELAY = 2 * 24 * 3600;
+const setDefaultDelaySelector = encodeFnSelector('setDefaultDelay(uint256)');
 
 export const timelockManagerRevert = (
   timelockManager: MidasTimelockManager,
@@ -82,6 +87,7 @@ describe('MidasTimelockManager', () => {
 
       await timelockManager.initialize(
         accessControl.address,
+        constants.MaxUint256,
         100,
         councilMembers.map((v) => v.address),
       );
@@ -89,6 +95,7 @@ describe('MidasTimelockManager', () => {
       await timelockManager.initializeTimelock(timelock.address);
 
       expect(await timelockManager.timelock()).to.eq(timelock.address);
+      expect(await timelockManager.defaultDelay()).to.eq(constants.MaxUint256);
     });
 
     it('should fail: when timelock is already set', async () => {
@@ -110,6 +117,7 @@ describe('MidasTimelockManager', () => {
 
       await timelockManager.initialize(
         accessControl.address,
+        constants.MaxUint256,
         100,
         councilMembers.map((v) => v.address),
       );
@@ -134,6 +142,7 @@ describe('MidasTimelockManager', () => {
 
       await timelockManager.initialize(
         accessControl.address,
+        constants.MaxUint256,
         100,
         councilMembers.map((v) => v.address),
       );
@@ -142,93 +151,11 @@ describe('MidasTimelockManager', () => {
         timelockManager
           .connect(regularAccounts[0])
           .initializeTimelock(timelock.address),
-      ).to.be.revertedWithCustomError(timelockManager, 'HasntRole');
+      ).to.be.revertedWithCustomError(timelockManager, 'NoFunctionPermission');
     });
   });
 
   describe('scheduleTimelockOperation()', () => {
-    describe('pause manager', () => {
-      const noTimelockDelayRevert = (timelockManager: MidasTimelockManager) =>
-        timelockManagerRevert(timelockManager, 'NoTimelockDelayForRole');
-
-      it('should fail: trying to schedule globalPause on pause manager', async () => {
-        const {
-          timelockManager,
-          timelock,
-          owner,
-          accessControl,
-          pauseManager,
-        } = await loadFixture(defaultDeploy);
-
-        await scheduleTimelockOperationsTester(
-          { timelockManager, timelock, owner, accessControl },
-          [pauseManager.address],
-          [pauseManager.interface.encodeFunctionData('globalPause')],
-          {},
-          noTimelockDelayRevert(timelockManager),
-        );
-      });
-
-      it('should fail: trying to schedule contractPause on pause manager', async () => {
-        const {
-          timelockManager,
-          timelock,
-          owner,
-          accessControl,
-          pauseManager,
-          pausableTester,
-        } = await loadFixture(defaultDeploy);
-
-        await scheduleTimelockOperationsTester(
-          { timelockManager, timelock, owner, accessControl },
-          [pauseManager.address],
-          [
-            pauseManager.interface.encodeFunctionData('pauseContract', [
-              pausableTester.address,
-            ]),
-          ],
-          {},
-          {
-            revertCustomError: {
-              customErrorName: 'InvalidPreflightError',
-            },
-          },
-        );
-      });
-
-      it('should fail: trying to schedule fnPause on pause manager', async () => {
-        const {
-          timelockManager,
-          timelock,
-          owner,
-          accessControl,
-          pauseManager,
-          pausableTester,
-        } = await loadFixture(defaultDeploy);
-
-        const fnSelector = encodeFnSelector(
-          'depositRequest(address,uint256,bytes32)',
-        );
-
-        await scheduleTimelockOperationsTester(
-          { timelockManager, timelock, owner, accessControl },
-          [pauseManager.address],
-          [
-            pauseManager.interface.encodeFunctionData('bulkPauseContractFn', [
-              pausableTester.address,
-              [fnSelector],
-            ]),
-          ],
-          {},
-          {
-            revertCustomError: {
-              customErrorName: 'InvalidPreflightError',
-            },
-          },
-        );
-      });
-    });
-
     it('should schedule timelock operation', async () => {
       const {
         timelockManager,
@@ -570,153 +497,6 @@ describe('MidasTimelockManager', () => {
   });
 
   describe('executeTimelockOperation()', () => {
-    describe('pause manager', () => {
-      it('schedule and execute globalUnpause', async () => {
-        const {
-          timelockManager,
-          timelock,
-          owner,
-          accessControl,
-          pauseManager,
-          roles,
-        } = await loadFixture(defaultDeploy);
-
-        await setRoleTimelocksTester(
-          { timelockManager, timelock, owner, accessControl },
-          [roles.common.pauseAdmin],
-          [3600],
-        );
-
-        await pauseGlobalTest({ pauseManager, owner });
-
-        const calldata =
-          pauseManager.interface.encodeFunctionData('globalUnpause');
-
-        await scheduleTimelockOperationsTester(
-          { timelockManager, timelock, owner, accessControl },
-          [pauseManager.address],
-          [calldata],
-        );
-
-        await executeTimelockOperationTester(
-          { timelockManager, timelock, owner, accessControl },
-          pauseManager.address,
-          calldata,
-          owner.address,
-          timelockManagerRevert(timelockManager, 'TimelockOperationNotReady'),
-        );
-
-        await increase(3600);
-
-        await executeTimelockOperationTester(
-          { timelockManager, timelock, owner, accessControl },
-          pauseManager.address,
-          calldata,
-          owner.address,
-        );
-      });
-
-      it('schedule and execute unpauseContract', async () => {
-        const {
-          timelockManager,
-          timelock,
-          owner,
-          accessControl,
-          pauseManager,
-          pausableTester,
-          roles,
-        } = await loadFixture(defaultDeploy);
-
-        await setRoleTimelocksTester(
-          { timelockManager, timelock, owner, accessControl },
-          [roles.common.defaultAdmin],
-          [3600],
-        );
-
-        await pauseVault({ pauseManager, owner }, pausableTester);
-
-        const calldata = pauseManager.interface.encodeFunctionData(
-          'unpauseContract',
-          [pausableTester.address],
-        );
-
-        await scheduleTimelockOperationsTester(
-          { timelockManager, timelock, owner, accessControl },
-          [pauseManager.address],
-          [calldata],
-        );
-
-        await executeTimelockOperationTester(
-          { timelockManager, timelock, owner, accessControl },
-          pauseManager.address,
-          calldata,
-          owner.address,
-          timelockManagerRevert(timelockManager, 'TimelockOperationNotReady'),
-        );
-
-        await increase(3600);
-
-        await executeTimelockOperationTester(
-          { timelockManager, timelock, owner, accessControl },
-          pauseManager.address,
-          calldata,
-          owner.address,
-        );
-      });
-
-      it('schedule and execute bulkUnpauseContractFn', async () => {
-        const {
-          timelockManager,
-          timelock,
-          owner,
-          accessControl,
-          pauseManager,
-          pausableTester,
-          roles,
-        } = await loadFixture(defaultDeploy);
-
-        const fnSelector = encodeFnSelector(
-          'depositRequest(address,uint256,bytes32)',
-        );
-
-        await setRoleTimelocksTester(
-          { timelockManager, timelock, owner, accessControl },
-          [roles.common.defaultAdmin],
-          [3600],
-        );
-
-        await pauseVaultFn({ pauseManager, owner }, pausableTester, fnSelector);
-
-        const calldata = pauseManager.interface.encodeFunctionData(
-          'bulkUnpauseContractFn',
-          [pausableTester.address, [fnSelector]],
-        );
-
-        await scheduleTimelockOperationsTester(
-          { timelockManager, timelock, owner, accessControl },
-          [pauseManager.address],
-          [calldata],
-        );
-
-        await executeTimelockOperationTester(
-          { timelockManager, timelock, owner, accessControl },
-          pauseManager.address,
-          calldata,
-          owner.address,
-          timelockManagerRevert(timelockManager, 'TimelockOperationNotReady'),
-        );
-
-        await increase(3600);
-
-        await executeTimelockOperationTester(
-          { timelockManager, timelock, owner, accessControl },
-          pauseManager.address,
-          calldata,
-          owner.address,
-        );
-      });
-    });
-
     it('should fail: when operation do not exist', async () => {
       const {
         timelockManager,
@@ -1455,7 +1235,7 @@ describe('MidasTimelockManager', () => {
         operationId,
         undefined,
         {
-          ...timelockManagerRevert(timelockManager, 'HasntRole'),
+          ...timelockManagerRevert(timelockManager, 'NoFunctionPermission'),
           from: regularAccounts[0],
         },
       );
@@ -1497,7 +1277,7 @@ describe('MidasTimelockManager', () => {
         operationId,
         undefined,
         {
-          ...timelockManagerRevert(timelockManager, 'HasntRole'),
+          ...timelockManagerRevert(timelockManager, 'NoFunctionPermission'),
           from: regularAccounts[0],
         },
       );
@@ -3085,11 +2865,120 @@ describe('MidasTimelockManager', () => {
     });
   });
 
+  describe('setDefaultDelay()', () => {
+    it('should require 2 days timelock, even if role timelock is different', async () => {
+      const { timelockManager, timelock, owner, accessControl, roles } =
+        await loadFixture(defaultDeploy);
+
+      const defaultAdminRole = roles.common.defaultAdmin;
+      const newDelay = 7200;
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [defaultAdminRole],
+        [3600],
+      );
+
+      const calldata = timelockManager.interface.encodeFunctionData(
+        'setDefaultDelay',
+        [newDelay],
+      );
+
+      await scheduleTimelockOperationsTester(
+        { timelockManager, timelock, owner, accessControl },
+        [timelockManager.address],
+        [calldata],
+      );
+      await increase(DELAY_FOR_SET_DEFAULT_DELAY);
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        timelockManager.address,
+        calldata,
+        owner.address,
+      );
+    });
+
+    it('should fail: when called from a wallet without default admin role', async () => {
+      const {
+        timelockManager,
+        timelock,
+        owner,
+        accessControl,
+        regularAccounts,
+      } = await loadFixture(defaultDeploy);
+
+      await setDefaultDelayTest(
+        { timelockManager, timelock, owner, accessControl },
+        7200,
+        {
+          ...timelockManagerRevert(timelockManager, 'NoFunctionPermission'),
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('should fail: when called from a function admin role', async () => {
+      const {
+        timelockManager,
+        timelock,
+        owner,
+        accessControl,
+        regularAccounts,
+        roles,
+      } = await loadFixture(defaultDeploy);
+
+      const defaultAdminRole = roles.common.defaultAdmin;
+
+      await setupFunctionAccessGrantOperator({
+        accessControl,
+        owner,
+        functionAccessAdminRole: defaultAdminRole,
+        targetContract: timelockManager.address,
+        functionSelector: setDefaultDelaySelector,
+        grantOperator: owner,
+      });
+
+      await setFunctionPermissionTester(
+        { accessControl, owner },
+        defaultAdminRole,
+        timelockManager.address,
+        setDefaultDelaySelector,
+        [{ account: regularAccounts[0].address, enabled: true }],
+      );
+
+      await setDefaultDelayTest(
+        { timelockManager, timelock, owner, accessControl },
+        7200,
+        {
+          ...timelockManagerRevert(timelockManager, 'NoFunctionPermission'),
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('should fail: when called directly without timelock', async () => {
+      const { timelockManager, timelock, owner, accessControl, roles } =
+        await loadFixture(defaultDeploy);
+
+      await setDefaultDelayTest(
+        { timelockManager, timelock, owner, accessControl },
+        7200,
+        {
+          revertCustomError: {
+            contract: accessControl,
+            customErrorName: 'FunctionNotReady',
+            args: [roles.common.defaultAdmin, setDefaultDelaySelector],
+          },
+        },
+      );
+    });
+  });
+
   describe('defaultDelay()', () => {
     it('should return default timelock delay', async () => {
       const { timelockManager } = await loadFixture(defaultDeploy);
 
-      await timelockManager.setDefaultDelay(3600);
+      await timelockManager.setDefaultDelayTest(3600);
 
       expect(await timelockManager.defaultDelay()).to.eq(3600);
     });
@@ -3099,7 +2988,7 @@ describe('MidasTimelockManager', () => {
     it('should return default delay when role delay is not set', async () => {
       const { timelockManager } = await loadFixture(defaultDeploy);
 
-      await timelockManager.setDefaultDelay(3600);
+      await timelockManager.setDefaultDelayTest(3600);
 
       const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
         constants.HashZero,
@@ -3113,7 +3002,7 @@ describe('MidasTimelockManager', () => {
     it('should return default delay when override delay is 0 and role delay is not set', async () => {
       const { timelockManager } = await loadFixture(defaultDeploy);
 
-      await timelockManager.setDefaultDelay(3600);
+      await timelockManager.setDefaultDelayTest(3600);
 
       const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
         constants.HashZero,
@@ -3127,7 +3016,7 @@ describe('MidasTimelockManager', () => {
     it('should return override delay if its not zero if role delay is not set', async () => {
       const { timelockManager } = await loadFixture(defaultDeploy);
 
-      await timelockManager.setDefaultDelay(3600);
+      await timelockManager.setDefaultDelayTest(3600);
 
       const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
         constants.HashZero,
@@ -3142,7 +3031,7 @@ describe('MidasTimelockManager', () => {
       const { timelockManager, timelock, owner, accessControl } =
         await loadFixture(defaultDeploy);
 
-      await timelockManager.setDefaultDelay(3600);
+      await timelockManager.setDefaultDelayTest(3600);
 
       await setRoleTimelocksAndExecute(
         { timelockManager, timelock, owner, accessControl },
@@ -3162,7 +3051,7 @@ describe('MidasTimelockManager', () => {
     it('should return 0 if override delay is NO_DELAY (uint256.max)', async () => {
       const { timelockManager } = await loadFixture(defaultDeploy);
 
-      await timelockManager.setDefaultDelay(3600);
+      await timelockManager.setDefaultDelayTest(3600);
 
       const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
         constants.HashZero,

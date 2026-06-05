@@ -265,26 +265,6 @@ contract DepositVault is ManageableVault, IDepositVault {
     /**
      * @inheritdoc IDepositVault
      */
-    function safeApproveRequest(uint256 requestId, uint256 newOutRate)
-        external
-        onlyContractAdmin
-    {
-        _approveRequest(requestId, newOutRate, true, false, false);
-    }
-
-    /**
-     * @inheritdoc IDepositVault
-     */
-    function safeApproveRequestAvgRate(uint256 requestId, uint256 avgMTokenRate)
-        external
-        onlyContractAdmin
-    {
-        _approveRequest(requestId, avgMTokenRate, true, true, false);
-    }
-
-    /**
-     * @inheritdoc IDepositVault
-     */
     function approveRequest(
         uint256 requestId,
         uint256 newOutRate,

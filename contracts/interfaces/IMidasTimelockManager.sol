@@ -143,6 +143,11 @@ interface IMidasTimelockManager {
     error InvalidPreflightError(bytes err);
 
     /**
+     * @param defaultDelay new default delay
+     */
+    event SetDefaultDelay(uint256 defaultDelay);
+
+    /**
      * @param roles role ids
      * @param delays delay values per role
      */
@@ -213,24 +218,6 @@ interface IMidasTimelockManager {
         bytes32 indexed operationId,
         TimelockOperationStatus status
     );
-
-    /**
-     * @notice Initializes the contract
-     * @param _accessControl MidasAccessControl address
-     * @param _maxPendingOperationsPerProposer max pending ops per proposer
-     * @param _initSecurityCouncil initial security council members
-     */
-    function initialize(
-        address _accessControl,
-        uint256 _maxPendingOperationsPerProposer,
-        address[] calldata _initSecurityCouncil
-    ) external;
-
-    /**
-     * @notice Sets the timelock controller address
-     * @param _timelock timelock controller address
-     */
-    function initializeTimelock(address _timelock) external;
 
     /**
      * @notice Sets the default delay

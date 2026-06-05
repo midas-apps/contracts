@@ -338,6 +338,25 @@ export const pauseTimelockOperationTest = async (
   expect(details.executionApprovedAt).to.be.equal(0);
 };
 
+export const setDefaultDelayTest = async (
+  { timelockManager, owner }: CommonParamsTimelock,
+  defaultDelay: BigNumberish,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+  const callFn = timelockManager
+    .connect(from)
+    .setDefaultDelay.bind(this, defaultDelay);
+
+  if (await handleRevert(callFn, timelockManager, opt)) {
+    return;
+  }
+
+  await expect(callFn()).to.not.reverted;
+
+  expect(await timelockManager.defaultDelay()).to.eq(defaultDelay);
+};
+
 export const voteForVetoTest = async (
   { timelockManager, owner }: CommonParamsTimelock,
   operationId: string,

@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import {WithMidasAccessControl} from "./WithMidasAccessControl.sol";
+import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.sol";
 
 /**
  * @title Greenlistable
@@ -20,14 +21,22 @@ abstract contract Greenlistable is WithMidasAccessControl {
      */
     uint256[50] private __gap;
 
+    /**
+     * @param enable enable
+     */
     event SetGreenlistEnable(bool enable);
 
     /**
-     * @dev checks that a given `account`
-     * have `greenlistedRole()`
+     * @dev checks that a given `account` has `greenlistedRole()`
      */
     modifier onlyGreenlisted(address account) {
-        if (greenlistEnabled) _onlyGreenlisted(account);
+        if (greenlistEnabled) {
+            AccessControlUtilsLibrary.requireGreenlisted(
+                accessControl,
+                account,
+                greenlistedRole()
+            );
+        }
         _;
     }
 
@@ -48,16 +57,5 @@ abstract contract Greenlistable is WithMidasAccessControl {
      */
     function greenlistedRole() public view virtual returns (bytes32) {
         return GREENLISTED_ROLE;
-    }
-
-    /**
-     * @dev checks that a given `account`
-     * have a `greenlistedRole()`
-     */
-    function _onlyGreenlisted(address account) private view {
-        require(
-            accessControl.hasRole(greenlistedRole(), account),
-            HasntRole(greenlistedRole(), account)
-        );
     }
 }

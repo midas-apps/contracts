@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.34;
 
+import {AccessControlUtilsLibrary} from "./libraries/AccessControlUtilsLibrary.sol";
 import "./mToken.sol";
 
 /**
@@ -41,13 +42,13 @@ abstract contract mTokenPermissioned is mToken {
     function _greenlistedRole() internal pure virtual returns (bytes32);
 
     /**
-     * @dev checks that a given `account`
-     * have `greenlistedRole()`
+     * @dev checks that a given `account` has `greenlistedRole()`
      */
     function _onlyGreenlisted(address account) private view {
-        require(
-            accessControl.hasRole(_greenlistedRole(), account),
-            HasntRole(_greenlistedRole(), account)
+        AccessControlUtilsLibrary.requireGreenlisted(
+            accessControl,
+            account,
+            _greenlistedRole()
         );
     }
 }

@@ -226,7 +226,7 @@ interface IDepositVault is IManageableVault {
     /**
      * @notice approving requests from the `requestIds` array
      * with the mToken rate from the request.
-     * Does same validation as `safeApproveRequest`.
+     * Validates that new mToken rate does not exceed variation tolerance
      * Mints mToken to request users.
      * Sets request flags to Processed.
      * @param requestIds request ids array
@@ -237,7 +237,7 @@ interface IDepositVault is IManageableVault {
     /**
      * @notice approving requests from the `requestIds` array
      * with the current mToken rate.
-     * Does same validation as `safeApproveRequest`.
+     * Validates that new mToken rate does not exceed variation tolerance
      * Mints mToken to request users.
      * Sets request flags to Processed.
      * @param requestIds request ids array
@@ -247,7 +247,7 @@ interface IDepositVault is IManageableVault {
     /**
      * @notice approving requests from the `requestIds` array
      * with the current mToken rate.
-     * Does same validation as `safeApproveRequestAvgRate`.
+     * Validates that new mToken rate does not exceed variation tolerance
      * Mints mToken to request users.
      * Sets request flags to Processed.
      * @param requestIds request ids array
@@ -257,7 +257,7 @@ interface IDepositVault is IManageableVault {
 
     /**
      * @notice approving requests from the `requestIds` array using the `newOutRate`.
-     * Does same validation as `safeApproveRequest`.
+     * Validates that new mToken rate does not exceed variation tolerance
      * Mints mToken to request users.
      * Sets request flags to Processed.
      * @param requestIds request ids array
@@ -270,7 +270,7 @@ interface IDepositVault is IManageableVault {
 
     /**
      * @notice approving requests from the `requestIds` array using the `newOutRate`.
-     * Does same validation as `safeApproveRequestAvgRate`.
+     * Validates that new mToken rate does not exceed variation tolerance
      * Mints mToken to request users.
      * Sets request flags to Processed.
      * @param requestIds request ids array
@@ -280,25 +280,6 @@ interface IDepositVault is IManageableVault {
         uint256[] calldata requestIds,
         uint256 avgMTokenRate
     ) external;
-
-    /**
-     * @notice approving request if inputted token rate fit price deviation percent
-     * Mints mToken to user.
-     * Sets request flag to Processed.
-     * @param requestId request id
-     * @param newOutRate mToken rate inputted by vault admin
-     */
-    function safeApproveRequest(uint256 requestId, uint256 newOutRate) external;
-
-    /**
-     * @notice approving request if inputted token rate fit price deviation percent
-     * Mints mToken to user.
-     * Sets request flag to Processed.
-     * @param requestId request id
-     * @param avgMTokenRate avg mToken rate inputted by vault admin
-     */
-    function safeApproveRequestAvgRate(uint256 requestId, uint256 avgMTokenRate)
-        external;
 
     /**
      * @notice approving request without price deviation check

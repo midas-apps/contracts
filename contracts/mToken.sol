@@ -158,36 +158,6 @@ abstract contract mToken is
     /**
      * @inheritdoc IMToken
      */
-    function pause()
-        external
-        override
-        onlyRoleDelayOverride(
-            _contractAdminRole(),
-            PauseUtilsLibrary.pauseDelay(accessControl),
-            true
-        )
-    {
-        _pause();
-    }
-
-    /**
-     * @inheritdoc IMToken
-     */
-    function unpause()
-        external
-        override
-        onlyRoleDelayOverride(
-            _contractAdminRole(),
-            PauseUtilsLibrary.unpauseDelay(accessControl),
-            true
-        )
-    {
-        _unpause();
-    }
-
-    /**
-     * @inheritdoc IMToken
-     */
     function setMetadata(bytes32 key, bytes memory data)
         external
         onlyContractAdmin

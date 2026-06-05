@@ -79,18 +79,6 @@ interface IMToken is IERC20Upgradeable {
     function setMetadata(bytes32 key, bytes memory data) external;
 
     /**
-     * @notice puts mToken token on pause.
-     * should be called only from permissioned actor
-     */
-    function pause() external;
-
-    /**
-     * @notice puts mToken token on pause.
-     * should be called only from permissioned actor
-     */
-    function unpause() external;
-
-    /**
      * @notice increases mint rate limit for a given window
      * @param window window duration in seconds
      * @param newLimit limit amount per window
