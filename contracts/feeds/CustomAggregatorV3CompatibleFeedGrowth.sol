@@ -6,6 +6,8 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "../access/WithMidasAccessControl.sol";
 import "../interfaces/IAggregatorV3CompatibleFeedGrowth.sol";
 
+import {MidasInitializable} from "../abstract/MidasInitializable.sol";
+
 /**
  * @title CustomAggregatorV3CompatibleFeedGrowth
  * @notice AggregatorV3 compatible feed, where price is submitted manually by feed admins
@@ -24,6 +26,12 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
         uint256 startedAt;
         uint256 updatedAt;
     }
+
+    /**
+     * @notice contract admin role
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _CONTRACT_ADMIN_ROLE;
 
     /**
      * @dev decimals of the aggregator
@@ -86,6 +94,14 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
      * @dev leaving a storage gap for futures updates
      */
     uint256[50] private __gap;
+
+    /**
+     * @notice constructor
+     * @param _contractAdminRole contract admin role
+     */
+    constructor(bytes32 _contractAdminRole) MidasInitializable() {
+        _CONTRACT_ADMIN_ROLE = _contractAdminRole;
+    }
 
     /**
      * @notice upgradeable pattern contract`s initializer
@@ -395,15 +411,10 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     }
 
     /**
-     * @dev describes a role, owner of which can update prices in this feed
-     * @return role descriptor
+     * @inheritdoc WithMidasAccessControl
      */
-    function feedAdminRole() public pure virtual returns (bytes32) {
-        return _DEFAULT_ADMIN_ROLE;
-    }
-
-    function _contractAdminRole() internal pure override returns (bytes32) {
-        return feedAdminRole();
+    function contractAdminRole() public view override returns (bytes32) {
+        return _CONTRACT_ADMIN_ROLE;
     }
 
     /**

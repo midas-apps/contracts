@@ -4,6 +4,8 @@ pragma solidity 0.8.34;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
+import {MidasInitializable} from "../abstract/MidasInitializable.sol";
+
 import "../access/WithMidasAccessControl.sol";
 import "../libraries/DecimalsCorrectionLibrary.sol";
 import "../interfaces/IDataFeed.sol";
@@ -24,6 +26,12 @@ contract CustomAggregatorV3CompatibleFeed is
         uint256 updatedAt;
         uint80 answeredInRound;
     }
+
+    /**
+     * @notice contract admin role
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _CONTRACT_ADMIN_ROLE;
 
     /**
      * @notice feed description
@@ -56,6 +64,11 @@ contract CustomAggregatorV3CompatibleFeed is
      */
     mapping(uint80 => RoundData) private _roundData;
 
+    /**
+     * @param data data value
+     * @param roundId round id
+     * @param timestamp timestamp
+     */
     event AnswerUpdated(
         int256 indexed data,
         uint256 indexed roundId,
@@ -66,6 +79,14 @@ contract CustomAggregatorV3CompatibleFeed is
      * @param maxAnswerDeviation the new max answer deviation
      */
     event MaxAnswerDeviationUpdated(uint256 indexed maxAnswerDeviation);
+
+    /**
+     * @notice constructor
+     * @param _contractAdminRole contract admin role
+     */
+    constructor(bytes32 _contractAdminRole) MidasInitializable() {
+        _CONTRACT_ADMIN_ROLE = _contractAdminRole;
+    }
 
     /**
      * @notice upgradeable pattern contract`s initializer
@@ -114,7 +135,7 @@ contract CustomAggregatorV3CompatibleFeed is
     /**
      * @notice sets the data for `latestRound` + 1 round id
      * @dev `_data` should be >= `minAnswer` and <= `maxAnswer`.
-     * Function should be called only from address with `feedAdminRole()`
+     * Function should be called only from address with `contractAdminRole()`
      * @param _data data value
      */
     function setRoundData(int256 _data) public onlyContractAdmin {
@@ -218,15 +239,10 @@ contract CustomAggregatorV3CompatibleFeed is
     }
 
     /**
-     * @dev describes a role, owner of which can update prices in this feed
-     * @return role descriptor
+     * @inheritdoc WithMidasAccessControl
      */
-    function feedAdminRole() public pure virtual returns (bytes32) {
-        return _DEFAULT_ADMIN_ROLE;
-    }
-
-    function _contractAdminRole() internal pure override returns (bytes32) {
-        return feedAdminRole();
+    function contractAdminRole() public view override returns (bytes32) {
+        return _CONTRACT_ADMIN_ROLE;
     }
 
     /**

@@ -3,15 +3,15 @@ pragma solidity 0.8.34;
 
 import "../abstract/ManageableVault.sol";
 
-contract ManageableVaultTester is ManageableVault {
-    bytes32 private _vaultRoleOverride;
+abstract contract ManageableVaultTesterBase is ManageableVault {
+    bytes32 private _contractAdminRoleOverride;
     bool private _overrideGetTokenRate;
     uint256 private _getTokenRateValue;
 
     function _disableInitializers() internal virtual override {}
 
     function setVaultRole(bytes32 role) external {
-        _vaultRoleOverride = role;
+        _contractAdminRoleOverride = role;
     }
 
     function setOverrideGetTokenRate(bool _override) external {
@@ -67,7 +67,26 @@ contract ManageableVaultTester is ManageableVault {
         __ManageableVault_init(_commonVaultInitParams);
     }
 
-    function vaultRole() public pure virtual override returns (bytes32) {
+    function contractAdminRole()
+        public
+        view
+        virtual
+        override
+        returns (bytes32)
+    {
+        if (_contractAdminRoleOverride != bytes32(0)) {
+            return _contractAdminRoleOverride;
+        }
+
         return keccak256("VAULT_ADMIN_ROLE");
     }
+}
+
+contract ManageableVaultTester is ManageableVaultTesterBase {
+    /**
+     * @notice constructor
+     */
+    constructor()
+        ManageableVault(keccak256("VAULT_ADMIN_ROLE"), GREENLISTED_ROLE)
+    {}
 }

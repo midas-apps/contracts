@@ -7,7 +7,6 @@ import {
   DepositVault__factory,
   DepositVaultTest__factory,
 } from '../../typechain-types';
-import { acErrors } from '../common/ac.helpers';
 import {
   approveBase18,
   mintToken,
@@ -122,7 +121,9 @@ depositVaultSuits(
             stableCoins.dai,
             1000,
             {
-              revertCustomError: acErrors.WMAC_HASNT_ROLE,
+              revertCustomError: {
+                customErrorName: 'NotGreenlisted',
+              },
             },
           );
         });

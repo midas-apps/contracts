@@ -484,10 +484,8 @@ export const approveRequestTest = async (
     depositVault,
     owner,
     mTBILL,
-    isSafe = false,
     isAvgRate = false,
   }: CommonParamsDeposit & {
-    isSafe?: boolean;
     isAvgRate?: boolean;
   },
   requestId: BigNumberish,
@@ -496,21 +494,9 @@ export const approveRequestTest = async (
 ) => {
   const sender = opt?.from ?? owner;
 
-  const callFn = isAvgRate
-    ? isSafe
-      ? depositVault
-          .connect(sender)
-          .safeApproveRequestAvgRate.bind(this, requestId, newRate)
-      : depositVault
-          .connect(sender)
-          .approveRequest.bind(this, requestId, newRate, true)
-    : isSafe
-    ? depositVault
-        .connect(sender)
-        .safeApproveRequest.bind(this, requestId, newRate)
-    : depositVault
-        .connect(sender)
-        .approveRequest.bind(this, requestId, newRate, false);
+  const callFn = depositVault
+    .connect(sender)
+    .approveRequest.bind(this, requestId, newRate, isAvgRate);
 
   if (await handleRevert(callFn, depositVault, opt)) {
     return;
@@ -565,7 +551,7 @@ export const approveRequestTest = async (
       depositVault.interface.events['ApproveRequest(uint256,uint256,bool,bool)']
         .name,
     )
-    .withArgs(requestId, actualRate, isSafe, isAvgRate).to.not.reverted;
+    .withArgs(requestId, actualRate, false, isAvgRate).to.not.reverted;
 
   const nextExpectedRequestIdToProcessAfter =
     await depositVault.nextExpectedRequestIdToProcess();

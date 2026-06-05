@@ -7,14 +7,21 @@ import "../DepositVaultWithMToken.sol";
 import "./DepositVaultTest.sol";
 
 contract DepositVaultWithMTokenTest is
-    DepositVaultTest,
+    DepositVaultTestBase,
     DepositVaultWithMToken
 {
+    constructor()
+        DepositVaultWithMToken(
+            keccak256("DEPOSIT_VAULT_ADMIN_ROLE"),
+            GREENLISTED_ROLE
+        )
+    {}
+
     function _disableInitializers()
         internal
-        override(Initializable, DepositVaultTest)
+        override(Initializable, DepositVaultTestBase)
     {
-        DepositVaultTest._disableInitializers();
+        DepositVaultTestBase._disableInitializers();
     }
 
     function _instantTransferTokensToTokensReceiver(
@@ -44,18 +51,18 @@ contract DepositVaultWithMTokenTest is
     function _getTokenRate(address dataFeed, bool stable)
         internal
         view
-        override(DepositVaultTest, ManageableVault)
+        override(DepositVaultTestBase, ManageableVault)
         returns (uint256)
     {
-        return DepositVaultTest._getTokenRate(dataFeed, stable);
+        return DepositVaultTestBase._getTokenRate(dataFeed, stable);
     }
 
-    function vaultRole()
+    function contractAdminRole()
         public
-        pure
-        override(DepositVaultTest, DepositVault)
+        view
+        override(DepositVaultTestBase, ManageableVault)
         returns (bytes32)
     {
-        return DepositVaultTest.vaultRole();
+        return DepositVaultTestBase.contractAdminRole();
     }
 }

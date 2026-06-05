@@ -4,6 +4,8 @@ pragma solidity 0.8.34;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
+import {MidasInitializable} from "../abstract/MidasInitializable.sol";
+
 import "../access/WithMidasAccessControl.sol";
 import "../libraries/DecimalsCorrectionLibrary.sol";
 import "../interfaces/IDataFeed.sol";
@@ -15,6 +17,12 @@ import "../interfaces/IDataFeed.sol";
  */
 contract DataFeed is WithMidasAccessControl, IDataFeed {
     using DecimalsCorrectionLibrary for uint256;
+
+    /**
+     * @notice contract admin role
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _CONTRACT_ADMIN_ROLE;
 
     /**
      * @notice AggregatorV3Interface contract address
@@ -40,6 +48,14 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
      * @dev leaving a storage gap for futures updates
      */
     uint256[50] private __gap;
+
+    /**
+     * @notice constructor
+     * @param _contractAdminRole contract admin role
+     */
+    constructor(bytes32 _contractAdminRole) MidasInitializable() {
+        _CONTRACT_ADMIN_ROLE = _contractAdminRole;
+    }
 
     /**
      * @notice upgradeable pattern contract`s initializer
@@ -135,14 +151,10 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
     }
 
     /**
-     * @inheritdoc IDataFeed
+     * @inheritdoc WithMidasAccessControl
      */
-    function feedAdminRole() public pure virtual override returns (bytes32) {
-        return _DEFAULT_ADMIN_ROLE;
-    }
-
-    function _contractAdminRole() internal pure override returns (bytes32) {
-        return feedAdminRole();
+    function contractAdminRole() public view override returns (bytes32) {
+        return _CONTRACT_ADMIN_ROLE;
     }
 
     /**

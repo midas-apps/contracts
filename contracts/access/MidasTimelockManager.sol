@@ -710,7 +710,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     /**
      * @inheritdoc WithMidasAccessControl
      */
-    function _contractAdminRole() internal pure override returns (bytes32) {
+    function contractAdminRole() public pure override returns (bytes32) {
         return _DEFAULT_ADMIN_ROLE;
     }
 

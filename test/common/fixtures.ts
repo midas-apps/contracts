@@ -11,6 +11,7 @@ import {
   approve,
   approveBase18,
   getAccount,
+  keccak256,
   mintToken,
 } from './common.helpers';
 import { deployProxyContract } from './deploy.helpers';
@@ -22,6 +23,7 @@ import {
 } from './manageable-vault.helpers';
 import { postDeploymentTest } from './post-deploy.helpers';
 
+import { mTokensMetadata } from '../../helpers/mtokens-metadata';
 import { getAllRoles, getRolesForToken } from '../../helpers/roles';
 import {
   AggregatorV3Mock__factory,
@@ -32,7 +34,6 @@ import {
   MidasAccessControlTest__factory,
   PausableTester__factory,
   RedemptionVaultTest__factory,
-  MTBILLTest__factory,
   WithMidasAccessControlTester__factory,
   DataFeedTest__factory,
   AggregatorV3DeprecatedMock__factory,
@@ -71,6 +72,7 @@ import {
   MidasPauseManagerTest__factory,
   ManageableVaultTester__factory,
 } from '../../typechain-types';
+import { MTBILLTest__factory } from '../../typechain-types/factories/contracts/testers/MTBILLTest__factory';
 
 export const getDeployParamsRv = <TExtraParams extends readonly [] = []>(
   {
@@ -256,20 +258,31 @@ export const defaultDeploy = async () => {
     mockedSanctionsList.address,
   );
 
-  const mTBILL = await new MTBILLTest__factory(owner).deploy();
-  await expect(
-    mTBILL.initialize(ethers.constants.AddressZero, clawbackReceiver.address),
-  ).to.be.reverted;
-  await mTBILL.initialize(accessControl.address, clawbackReceiver.address);
+  const mTBILL = await new MTokenTest__factory(owner).deploy(
+    allRoles.tokenRoles.mTBILL.tokenManager,
+    allRoles.tokenRoles.mTBILL.minter,
+    allRoles.tokenRoles.mTBILL.burner,
+  );
 
-  const mTokenLoan = await new MTokenTest__factory(owner).deploy();
-  await expect(
-    mTokenLoan.initialize(
-      ethers.constants.AddressZero,
-      clawbackReceiver.address,
-    ),
-  ).to.be.reverted;
-  await mTokenLoan.initialize(accessControl.address, clawbackReceiver.address);
+  await mTBILL.initialize(
+    accessControl.address,
+    clawbackReceiver.address,
+    mTokensMetadata.mTBILL.name,
+    mTokensMetadata.mTBILL.symbol,
+  );
+
+  const mTokenLoan = await new MTokenTest__factory(owner).deploy(
+    keccak256('M_TOKEN_MANAGER_ROLE'),
+    keccak256('M_TOKEN_TEST_MINT_OPERATOR_ROLE'),
+    keccak256('M_TOKEN_TEST_BURN_OPERATOR_ROLE'),
+  );
+
+  await mTokenLoan.initialize(
+    accessControl.address,
+    clawbackReceiver.address,
+    'mTokenLoan',
+    'mTokenLoan',
+  );
 
   // separate mTBILL instance for swapper testing
   const mBASIS = await new MTBILLTest__factory(owner).deploy();
@@ -390,10 +403,7 @@ export const defaultDeploy = async () => {
     }),
   );
 
-  await accessControl.grantRole(
-    mTBILL.M_TBILL_MINT_OPERATOR_ROLE(),
-    depositVault.address,
-  );
+  await accessControl.grantRole(mTBILL.minterRole(), depositVault.address);
 
   const redemptionVault = await new RedemptionVaultTest__factory(
     owner,
@@ -432,21 +442,15 @@ export const defaultDeploy = async () => {
   );
 
   await accessControl.grantRole(
-    mTokenLoan.M_TOKEN_TEST_BURN_OPERATOR_ROLE(),
+    mTokenLoan.burnerRole(),
     redemptionVaultLoanSwapper.address,
   );
 
-  await accessControl.grantRole(
-    mTokenLoan.M_TOKEN_TEST_MINT_OPERATOR_ROLE(),
-    owner.address,
-  );
+  await accessControl.grantRole(mTokenLoan.minterRole(), owner.address);
 
   await redemptionVaultLoanSwapper.addWaivedFeeAccount(redemptionVault.address);
 
-  await accessControl.grantRole(
-    mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
-    redemptionVault.address,
-  );
+  await accessControl.grantRole(mTBILL.burnerRole(), redemptionVault.address);
   const manageableVault = await new ManageableVaultTester__factory(
     owner,
   ).deploy();
@@ -494,7 +498,7 @@ export const defaultDeploy = async () => {
   );
 
   await accessControl.grantRole(
-    mTBILL.M_TBILL_MINT_OPERATOR_ROLE(),
+    mTBILL.minterRole(),
     depositVaultWithUSTB.address,
   );
 
@@ -526,7 +530,7 @@ export const defaultDeploy = async () => {
     ustbRedemption.address,
   );
   await accessControl.grantRole(
-    mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
+    mTBILL.burnerRole(),
     redemptionVaultWithUSTB.address,
   );
   await redemptionVaultLoanSwapper.addWaivedFeeAccount(
@@ -561,7 +565,7 @@ export const defaultDeploy = async () => {
     aavePoolMock.address,
   );
   await accessControl.grantRole(
-    mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
+    mTBILL.burnerRole(),
     redemptionVaultWithAave.address,
   );
   await redemptionVaultLoanSwapper.addWaivedFeeAccount(
@@ -595,7 +599,7 @@ export const defaultDeploy = async () => {
     morphoVaultMock.address,
   );
   await accessControl.grantRole(
-    mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
+    mTBILL.burnerRole(),
     redemptionVaultWithMorpho.address,
   );
   await redemptionVaultLoanSwapper.addWaivedFeeAccount(
@@ -622,7 +626,7 @@ export const defaultDeploy = async () => {
   );
 
   await accessControl.grantRole(
-    mTBILL.M_TBILL_MINT_OPERATOR_ROLE(),
+    mTBILL.minterRole(),
     depositVaultWithAave.address,
   );
 
@@ -643,7 +647,7 @@ export const defaultDeploy = async () => {
   );
 
   await accessControl.grantRole(
-    mTBILL.M_TBILL_MINT_OPERATOR_ROLE(),
+    mTBILL.minterRole(),
     depositVaultWithMorpho.address,
   );
 
@@ -667,7 +671,7 @@ export const defaultDeploy = async () => {
   );
 
   await accessControl.grantRole(
-    mTBILL.M_TBILL_MINT_OPERATOR_ROLE(),
+    mTBILL.minterRole(),
     depositVaultWithMToken.address,
   );
 
@@ -717,11 +721,11 @@ export const defaultDeploy = async () => {
     redemptionVaultWithMToken.address,
   );
   await accessControl.grantRole(
-    mTBILL.M_TBILL_BURN_OPERATOR_ROLE(),
+    mTBILL.burnerRole(),
     redemptionVaultWithMToken.address,
   );
   await accessControl.grantRole(
-    mTokenLoan.M_TOKEN_TEST_BURN_OPERATOR_ROLE(),
+    mTokenLoan.burnerRole(),
     redemptionVaultWithMToken.address,
   );
 
@@ -769,14 +773,9 @@ export const defaultDeploy = async () => {
 
   // role granting testers
   await accessControl.grantRole(
-    await customFeed.CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE(),
+    await customFeed.contractAdminRole(),
     owner.address,
   );
-
-  // await timelockManager.setRoleDelays(
-  //   [await customFeed.CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE()],
-  //   [constants.MaxUint256],
-  // );
 
   // testers
   const wAccessControlTester = await new WithMidasAccessControlTester__factory(
@@ -978,13 +977,15 @@ export const mTokenPermissionedFixture = async (
   await mTokenPermissioned.initialize(
     accessControl.address,
     fx.clawbackReceiver.address,
+    'mTokenPermissioned',
+    'mTokenPermissioned',
   );
 
-  const mintRole = await mTokenPermissioned.M_TOKEN_TEST_MINT_OPERATOR_ROLE();
-  const burnRole = await mTokenPermissioned.M_TOKEN_TEST_BURN_OPERATOR_ROLE();
-  const tokenManagerRole = await mTokenPermissioned.M_TOKEN_TEST_MANAGER_ROLE();
+  const mintRole = await mTokenPermissioned.minterRole();
+  const burnRole = await mTokenPermissioned.burnerRole();
+  const tokenManagerRole = await mTokenPermissioned.contractAdminRole();
   const mTokenPermissionedGreenlistedRole =
-    await mTokenPermissioned.M_TOKEN_TEST_GREENLISTED_ROLE();
+    await mTokenPermissioned.greenlistedRole();
 
   await accessControl.grantRole(mintRole, owner.address);
   await accessControl.grantRole(burnRole, owner.address);

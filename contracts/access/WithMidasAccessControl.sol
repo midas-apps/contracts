@@ -103,7 +103,7 @@ abstract contract WithMidasAccessControl is
      */
     modifier onlyContractAdmin() {
         _validateFunctionAccessWithTimelock(
-            _contractAdminRole(),
+            contractAdminRole(),
             AccessControlUtilsLibrary.NULL_DELAY,
             false,
             msg.sender,
@@ -175,5 +175,5 @@ abstract contract WithMidasAccessControl is
     /**
      * @dev main admin role for the contract
      */
-    function _contractAdminRole() internal view virtual returns (bytes32);
+    function contractAdminRole() public view virtual returns (bytes32);
 }

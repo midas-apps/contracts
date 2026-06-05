@@ -18,10 +18,4 @@ interface IDataFeed {
      * @return answer fetched aggregator answer
      */
     function getDataInBase18() external view returns (uint256 answer);
-
-    /**
-     * @dev describes a role, owner of which can manage this feed
-     * @return role descriptor
-     */
-    function feedAdminRole() external view returns (bytes32);
 }

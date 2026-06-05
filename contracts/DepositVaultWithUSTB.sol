@@ -52,6 +52,15 @@ contract DepositVaultWithUSTB is DepositVault {
     event SetUstbDepositsEnabled(bool indexed enabled);
 
     /**
+     * @notice Passes role identifiers to the base DepositVault constructor
+     * @param _contractAdminRole contract admin role identifier
+     * @param _greenlistedRole greenlisted role identifier
+     */
+    constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
+        DepositVault(_contractAdminRole, _greenlistedRole)
+    {}
+
+    /**
      * @notice upgradeable pattern contract`s initializer
      * @param _commonVaultInitParams init params for common vault
      * @param _depositVaultInitParams init params for deposit vault

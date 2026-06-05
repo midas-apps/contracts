@@ -10,12 +10,10 @@ import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
 import { MTokenName } from '../../../config';
-import { getTokenContractNames } from '../../../helpers/contracts';
 import { mTokensMetadata } from '../../../helpers/mtokens-metadata';
 import {
   getAllRoles,
   getRolesForToken,
-  getRolesNamesCommon,
   getRolesNamesForToken,
 } from '../../../helpers/roles';
 import { encodeFnSelector } from '../../../helpers/utils';
@@ -44,7 +42,6 @@ import {
   DepositVaultWithUSTB,
   MToken,
   RedemptionVault,
-  RedemptionVaultWithSwapper,
 } from '../../../typechain-types';
 import {
   adminPauseContractTest,
@@ -102,45 +99,42 @@ export const setErc20PausablePaused = async (
 };
 
 export const mTokenContractsSuits = (token: MTokenName) => {
-  const contractNames = getTokenContractNames(token);
   const allRoles = getAllRoles();
-  const allRoleNames = getRolesNamesCommon();
 
   const tokenRoles = getRolesForToken(token);
   const tokenRoleNames = getRolesNamesForToken(token);
 
   const isTac = token.startsWith('TAC');
-  const contractNamesForTac = getTokenContractNames(
-    token.replace('TAC', '') as MTokenName,
-  );
 
   const getContractFactory = async (contract: string) => {
     return await ethers.getContractFactory(contract);
   };
 
-  const deployProxyContract = async <TContract extends Contract = Contract>(
-    contractKey: keyof Omit<typeof contractNames, 'layerZero'>,
-    initializer = 'initialize',
-    ...initParams: unknown[]
-  ) => {
-    const shouldReplaceTacContracts =
-      isTac &&
-      (contractKey === 'customAggregator' || contractKey === 'dataFeed');
+  type ContractKey =
+    | 'DepositVault'
+    | 'DepositVaultWithUSTB'
+    | 'RedemptionVault'
+    | 'mToken'
+    | 'CustomAggregatorV3CompatibleFeed'
+    | 'CustomAggregatorV3CompatibleFeedGrowth'
+    | 'DataFeed';
 
-    const factory = await getContractFactory(
-      shouldReplaceTacContracts
-        ? contractNamesForTac[contractKey]!
-        : contractNames[contractKey]!,
-    );
+  const deployProxyContract = async <TContract extends Contract = Contract>(
+    contractKey: ContractKey,
+    initializer = 'initialize',
+    initParams?: unknown[],
+    constructorParams?: unknown[],
+  ) => {
+    const factory = await getContractFactory(contractKey);
 
     await validateImplementation(factory);
-    const impl = await factory.deploy();
+    const impl = await factory.deploy(...(constructorParams ?? []));
 
     const proxy = await (
       await getContractFactory('ERC1967Proxy')
     ).deploy(
       impl.address,
-      factory.interface.encodeFunctionData(initializer, initParams),
+      factory.interface.encodeFunctionData(initializer, initParams ?? []),
     );
 
     return factory.attach(proxy.address) as TContract;
@@ -149,19 +143,12 @@ export const mTokenContractsSuits = (token: MTokenName) => {
   const deployProxyContractIfExists = async <
     TContract extends Contract = Contract,
   >(
-    contractKey: keyof Omit<typeof contractNames, 'layerZero'>,
+    contractKey: ContractKey,
     initializer = 'initialize',
-    ...initParams: unknown[]
+    initParams?: unknown[],
+    constructorParams?: unknown[],
   ) => {
-    const shouldReplaceTacContracts =
-      isTac &&
-      (contractKey === 'customAggregator' || contractKey === 'dataFeed');
-
-    const factory = await getContractFactory(
-      shouldReplaceTacContracts
-        ? contractNamesForTac[contractKey]!
-        : contractNames[contractKey]!,
-    ).catch((_) => {
+    const factory = await getContractFactory(contractKey).catch((_) => {
       return null;
     });
 
@@ -169,13 +156,13 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       return null;
     }
 
-    const impl = await factory.deploy();
+    const impl = await factory.deploy(...(constructorParams ?? []));
 
     const proxy = await (
       await getContractFactory('ERC1967Proxy')
     ).deploy(
       impl.address,
-      factory.interface.encodeFunctionData(initializer, initParams),
+      factory.interface.encodeFunctionData(initializer, initParams ?? []),
     );
 
     return factory.attach(proxy.address) as TContract;
@@ -185,10 +172,15 @@ export const mTokenContractsSuits = (token: MTokenName) => {
     const fixture = await loadFixture(defaultDeploy);
 
     const tokenContract = await deployProxyContract<MToken>(
-      'token',
+      'mToken',
       undefined,
-      fixture.accessControl.address,
-      fixture.clawbackReceiver.address,
+      [
+        fixture.accessControl.address,
+        fixture.clawbackReceiver.address,
+        mTokensMetadata[token].name,
+        mTokensMetadata[token].symbol,
+      ],
+      [tokenRoles.tokenManager, tokenRoles.minter, tokenRoles.burner],
     );
 
     if (mTokensMetadata[token]?.isPermissioned) {
@@ -238,27 +230,33 @@ export const mTokenContractsSuits = (token: MTokenName) => {
     const { tokenContract, ...fixture } = await deployMTokenWithFixture();
     const customAggregatorFeed =
       await deployProxyContractIfExists<CustomAggregatorV3CompatibleFeed>(
-        'customAggregator',
+        'CustomAggregatorV3CompatibleFeed',
         undefined,
-        fixture.accessControl.address,
-        2,
-        parseUnits('10000', 8),
-        parseUnits('1', 8),
-        'Custom Data Feed',
+        [
+          fixture.accessControl.address,
+          2,
+          parseUnits('10000', 8),
+          parseUnits('1', 8),
+          'Custom Data Feed',
+        ],
+        [tokenRoles.customFeedAdmin],
       );
 
     const customAggregatorFeedGrowth =
       await deployProxyContractIfExists<CustomAggregatorV3CompatibleFeedGrowth>(
-        'customAggregatorGrowth',
+        'CustomAggregatorV3CompatibleFeedGrowth',
         undefined,
-        fixture.accessControl.address,
-        2,
-        parseUnits('10000', 8),
-        parseUnits('1', 8),
-        parseUnits('0', 8),
-        parseUnits('100', 8),
-        false,
-        'Custom Data Feed',
+        [
+          fixture.accessControl.address,
+          2,
+          parseUnits('10000', 8),
+          parseUnits('1', 8),
+          parseUnits('0', 8),
+          parseUnits('100', 8),
+          false,
+          'Custom Data Feed',
+        ],
+        [tokenRoles.customFeedAdmin],
       );
 
     await customAggregatorFeed?.setRoundData?.(parseUnits('1.01', 8));
@@ -269,47 +267,22 @@ export const mTokenContractsSuits = (token: MTokenName) => {
     );
 
     const dataFeed = await deployProxyContract<DataFeed>(
-      'dataFeed',
+      'DataFeed',
       undefined,
-      fixture.accessControl.address,
-      customAggregatorFeed?.address ?? customAggregatorFeedGrowth?.address,
-      3 * 24 * 3600,
-      parseUnits('0.1', 8),
-      parseUnits('10000', 8),
+      [
+        fixture.accessControl.address,
+        customAggregatorFeed?.address ?? customAggregatorFeedGrowth?.address,
+        3 * 24 * 3600,
+        parseUnits('0.1', 8),
+        parseUnits('10000', 8),
+      ],
+      [tokenRoles.customFeedAdmin],
     );
 
     const depositVault = await deployProxyContractIfExists<DepositVault>(
-      'dv',
+      'DepositVault',
       undefined,
-      {
-        ac: fixture.accessControl.address,
-        sanctionsList: fixture.mockedSanctionsList.address,
-        variationTolerance: 1,
-        minAmount: parseUnits('100'),
-        mToken: tokenContract.address,
-        mTokenDataFeed: dataFeed.address,
-        tokensReceiver: fixture.tokensReceiver.address,
-        instantFee: 100,
-        minInstantFee: 0,
-        maxInstantFee: 10000,
-        limitConfigs: [
-          {
-            limit: parseUnits('100000'),
-            window: days(1),
-          },
-        ],
-        maxInstantShare: 100_00,
-      },
-      {
-        minMTokenAmountForFirstDeposit: 0,
-        maxSupplyCap: 0,
-      },
-    );
-
-    const depositVaultUstb =
-      await deployProxyContractIfExists<DepositVaultWithUSTB>(
-        'dvUstb',
-        'initialize((address,address,uint256,uint256,address,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(uint256,uint256),address)',
+      [
         {
           ac: fixture.accessControl.address,
           sanctionsList: fixture.mockedSanctionsList.address,
@@ -333,44 +306,47 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           minMTokenAmountForFirstDeposit: 0,
           maxSupplyCap: 0,
         },
-        fixture.ustbToken.address,
+      ],
+      [tokenRoles.depositVaultAdmin, tokenRoles.greenlisted],
+    );
+
+    const depositVaultUstb =
+      await deployProxyContractIfExists<DepositVaultWithUSTB>(
+        'DepositVaultWithUSTB',
+        'initialize((address,address,uint256,uint256,address,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(uint256,uint256),address)',
+        [
+          {
+            ac: fixture.accessControl.address,
+            sanctionsList: fixture.mockedSanctionsList.address,
+            variationTolerance: 1,
+            minAmount: parseUnits('100'),
+            mToken: tokenContract.address,
+            mTokenDataFeed: dataFeed.address,
+            tokensReceiver: fixture.tokensReceiver.address,
+            instantFee: 100,
+            minInstantFee: 0,
+            maxInstantFee: 10000,
+            limitConfigs: [
+              {
+                limit: parseUnits('100000'),
+                window: days(1),
+              },
+            ],
+            maxInstantShare: 100_00,
+          },
+          {
+            minMTokenAmountForFirstDeposit: 0,
+            maxSupplyCap: 0,
+          },
+          fixture.ustbToken.address,
+        ],
+        [tokenRoles.depositVaultAdmin, tokenRoles.greenlisted],
       );
 
     const redemptionVault = await deployProxyContractIfExists<RedemptionVault>(
-      'rv',
+      'RedemptionVault',
       undefined,
-      {
-        ac: fixture.accessControl.address,
-        sanctionsList: fixture.mockedSanctionsList.address,
-        variationTolerance: 1,
-        minAmount: parseUnits('100'),
-        mToken: tokenContract.address,
-        mTokenDataFeed: dataFeed.address,
-        tokensReceiver: fixture.tokensReceiver.address,
-        instantFee: 100,
-        limitConfigs: [
-          {
-            limit: parseUnits('100000'),
-            window: days(1),
-          },
-        ],
-        minInstantFee: 0,
-        maxInstantFee: 10000,
-        maxInstantShare: 100_00,
-      },
-      {
-        requestRedeemer: fixture.requestRedeemer.address,
-        loanLp: fixture.loanLp.address,
-        loanRepaymentAddress: fixture.loanRepaymentAddress.address,
-        loanSwapperVault: fixture.redemptionVaultLoanSwapper.address,
-        maxLoanApr: 0,
-        loanApr: 0,
-      },
-    );
-    const redemptionVaultWithSwapper =
-      await deployProxyContractIfExists<RedemptionVaultWithSwapper>(
-        'rvSwapper',
-        undefined,
+      [
         {
           ac: fixture.accessControl.address,
           sanctionsList: fixture.mockedSanctionsList.address,
@@ -398,11 +374,10 @@ export const mTokenContractsSuits = (token: MTokenName) => {
           maxLoanApr: 0,
           loanApr: 0,
         },
-      );
-
-    await redemptionVaultWithSwapper?.addWaivedFeeAccount(
-      fixture.redemptionVault.address,
+      ],
+      [tokenRoles.redemptionVaultAdmin, tokenRoles.greenlisted],
     );
+
     return {
       ...fixture,
       tokenContract,
@@ -411,7 +386,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       tokenDepositVault: depositVault,
       tokenDepositVaultUstb: depositVaultUstb,
       tokenRedemptionVault: redemptionVault,
-      tokenRedemptionVaultWithSwapper: redemptionVaultWithSwapper,
       tokenCustomAggregatorFeedGrowth: customAggregatorFeedGrowth,
     };
   };
@@ -434,20 +408,23 @@ export const mTokenContractsSuits = (token: MTokenName) => {
     it('roles', async () => {
       const { tokenContract, accessControl } = await deployMTokenWithFixture();
 
-      const contract = tokenContract as Contract;
+      expect(await tokenContract.burnerRole()).eq(tokenRoles.burner);
+      expect(await tokenContract.minterRole()).eq(tokenRoles.minter);
+      const pauserRole = await tokenContract.pauserRole();
+      expect(pauserRole[0]).eq(tokenRoles.tokenManager);
+      expect(pauserRole[1]).eq(true);
 
-      expect(await contract[tokenRoleNames.burner]()).eq(tokenRoles.burner);
-      expect(await contract[tokenRoleNames.minter]()).eq(tokenRoles.minter);
-      expect(await contract[tokenRoleNames.pauser]()).eq(tokenRoles.pauser);
+      expect(await tokenContract.contractAdminRole()).eq(
+        tokenRoles.tokenManager,
+      );
 
-      // TODO: check the token manager role
       expect(await accessControl.DEFAULT_ADMIN_ROLE()).eq(
         allRoles.common.defaultAdmin,
       );
-      expect(await contract[allRoleNames.blacklistedOperator]()).eq(
+      expect(await tokenContract.BLACKLIST_OPERATOR_ROLE()).eq(
         allRoles.common.blacklistedOperator,
       );
-      expect(await contract[allRoleNames.greenlistedOperator]()).eq(
+      expect(await tokenContract.GREENLIST_OPERATOR_ROLE()).eq(
         allRoles.common.greenlistedOperator,
       );
     });
@@ -460,11 +437,17 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         tokenContract.initialize(
           ethers.constants.AddressZero,
           clawbackReceiver.address,
+          mTokensMetadata[token].name,
+          mTokensMetadata[token].symbol,
         ),
       ).revertedWith('Initializable: contract is already initialized');
 
       await expect(
-        tokenContract.initializeV2(clawbackReceiver.address),
+        tokenContract.initializeV2(
+          clawbackReceiver.address,
+          mTokensMetadata[token].name,
+          mTokensMetadata[token].symbol,
+        ),
       ).to.revertedWith('Initializable: contract is already initialized');
     });
 
@@ -1466,7 +1449,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         await setupFunctionAccessGrantOperator({
           accessControl,
           owner,
-          functionAccessAdminRole: allRoles.common.defaultAdmin,
+          functionAccessAdminRole: tokenRoles.tokenManager,
           targetContract: tokenContract.address,
           functionSelector: selector,
           grantOperator: owner,
@@ -1474,7 +1457,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         await setFunctionPermissionTester(
           { accessControl, owner },
-          allRoles.common.defaultAdmin,
+          tokenRoles.tokenManager,
           tokenContract.address,
           selector,
           [{ account: user.address, enabled: true }],
@@ -1617,7 +1600,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         await setupFunctionAccessGrantOperator({
           accessControl,
           owner,
-          functionAccessAdminRole: allRoles.common.defaultAdmin,
+          functionAccessAdminRole: tokenRoles.tokenManager,
           targetContract: tokenContract.address,
           functionSelector: selector,
           grantOperator: owner,
@@ -1625,7 +1608,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         await setFunctionPermissionTester(
           { accessControl, owner },
-          allRoles.common.defaultAdmin,
+          tokenRoles.tokenManager,
           tokenContract.address,
           selector,
           [{ account: operator.address, enabled: true }],
@@ -1633,7 +1616,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         expect(
           await accessControl.hasRole(
-            allRoles.common.defaultAdmin,
+            tokenRoles.tokenManager,
             operator.address,
           ),
         ).eq(false);
@@ -2106,93 +2089,62 @@ export const mTokenContractsSuits = (token: MTokenName) => {
     // 'DataFeed' contract checks
 
     const fixture = await deployMTokenVaultsWithFixture();
-    const dataFeed = fixture.tokenDataFeed as Contract;
+    const dataFeed = fixture.tokenDataFeed;
 
     if (dataFeed && tokenRoleNames.customFeedAdmin && !isTac) {
-      expect(await dataFeed.feedAdminRole()).eq(
-        await dataFeed[tokenRoleNames.customFeedAdmin](),
-      );
-      expect(await dataFeed.feedAdminRole()).eq(tokenRoles.customFeedAdmin);
+      expect(await dataFeed.contractAdminRole()).eq(tokenRoles.customFeedAdmin);
     }
 
     // 'CustomAggregator' contract checks
-    const customAggregator = fixture.tokenCustomAggregatorFeed as Contract;
+    const customAggregator = fixture.tokenCustomAggregatorFeed;
 
     if (customAggregator && tokenRoleNames.customFeedAdmin && !isTac) {
-      expect(await customAggregator.feedAdminRole()).eq(
-        await customAggregator[tokenRoleNames.customFeedAdmin](),
-      );
-      expect(await customAggregator.feedAdminRole()).eq(
+      expect(await customAggregator.contractAdminRole()).eq(
         tokenRoles.customFeedAdmin,
       );
     }
 
     // 'CustomAggregatorGrowth' contract checks
-    const customAggregatorGrowth =
-      fixture.tokenCustomAggregatorFeedGrowth as Contract;
+    const customAggregatorGrowth = fixture.tokenCustomAggregatorFeedGrowth;
 
     if (customAggregatorGrowth && tokenRoleNames.customFeedAdmin && !isTac) {
-      expect(await customAggregatorGrowth.feedAdminRole()).eq(
-        await customAggregatorGrowth[tokenRoleNames.customFeedAdmin](),
-      );
-      expect(await customAggregatorGrowth.feedAdminRole()).eq(
+      expect(await customAggregatorGrowth.contractAdminRole()).eq(
         tokenRoles.customFeedAdmin,
       );
     }
 
     // 'DepositVault' contract checks
-    const depositVault = fixture.tokenDepositVault as Contract;
+    const depositVault = fixture.tokenDepositVault;
 
     if (depositVault) {
-      expect(await depositVault.vaultRole()).eq(
-        token === 'mTBILL'
-          ? tokenRoles.depositVaultAdmin
-          : await depositVault[tokenRoleNames.depositVaultAdmin](),
+      const pauserRole = await depositVault.pauserRole();
+      expect(pauserRole[0]).eq(tokenRoles.depositVaultAdmin);
+      expect(pauserRole[1]).eq(true);
+      expect(await depositVault.contractAdminRole()).eq(
+        tokenRoles.depositVaultAdmin,
       );
-      expect(await depositVault.vaultRole()).eq(tokenRoles.depositVaultAdmin);
     }
 
     // 'DepositVaultWithUSTB' contract checks
-    const depositVaultUstb = fixture.tokenDepositVaultUstb as Contract;
+    const depositVaultUstb = fixture.tokenDepositVaultUstb;
 
     if (depositVaultUstb) {
-      expect(await depositVaultUstb.vaultRole()).eq(
-        token === 'mTBILL'
-          ? tokenRoles.depositVaultAdmin
-          : await depositVaultUstb[tokenRoleNames.depositVaultAdmin](),
-      );
-      expect(await depositVaultUstb.vaultRole()).eq(
+      const pauserRole = await depositVaultUstb.pauserRole();
+      expect(pauserRole[0]).eq(tokenRoles.depositVaultAdmin);
+      expect(pauserRole[1]).eq(true);
+      expect(await depositVaultUstb.contractAdminRole()).eq(
         tokenRoles.depositVaultAdmin,
       );
     }
 
     // 'RedemptionVault' contract checks
-    const redemptionVault = fixture.tokenRedemptionVault as Contract;
+    const redemptionVault = fixture.tokenRedemptionVault;
 
     if (redemptionVault) {
-      expect(await redemptionVault.vaultRole()).eq(
-        token === 'mTBILL'
-          ? tokenRoles.redemptionVaultAdmin
-          : await redemptionVault[tokenRoleNames.redemptionVaultAdmin](),
-      );
-      expect(await redemptionVault.vaultRole()).eq(
-        tokenRoles.redemptionVaultAdmin,
-      );
-    }
-
-    // 'RedemptionVaultWithSwapper' contract checks
-    const redemptionVaultWithSwapper =
-      fixture.tokenRedemptionVaultWithSwapper as Contract;
-
-    if (redemptionVaultWithSwapper) {
-      expect(await redemptionVaultWithSwapper.vaultRole()).eq(
-        token === 'mTBILL'
-          ? tokenRoles.redemptionVaultAdmin
-          : await redemptionVaultWithSwapper[
-              tokenRoleNames.redemptionVaultAdmin
-            ](),
-      );
-      expect(await redemptionVaultWithSwapper.vaultRole()).eq(
+      const pauserRole = await redemptionVault.pauserRole();
+      expect(pauserRole[0]).eq(tokenRoles.redemptionVaultAdmin);
+      expect(pauserRole[1]).eq(true);
+      expect(await redemptionVault.contractAdminRole()).eq(
         tokenRoles.redemptionVaultAdmin,
       );
     }

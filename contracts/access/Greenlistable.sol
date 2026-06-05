@@ -55,7 +55,5 @@ abstract contract Greenlistable is WithMidasAccessControl {
      * @notice AC role of a greenlist
      * @return role bytes32 role
      */
-    function greenlistedRole() public view virtual returns (bytes32) {
-        return GREENLISTED_ROLE;
-    }
+    function greenlistedRole() public view virtual returns (bytes32);
 }

@@ -6,15 +6,22 @@ import "../RedemptionVaultWithMToken.sol";
 import "./RedemptionVaultTest.sol";
 
 contract RedemptionVaultWithMTokenTest is
-    RedemptionVaultWithMToken,
-    RedemptionVaultTest
+    RedemptionVaultTestBase,
+    RedemptionVaultWithMToken
 {
+    constructor()
+        RedemptionVaultWithMToken(
+            keccak256("REDEMPTION_VAULT_ADMIN_ROLE"),
+            GREENLISTED_ROLE
+        )
+    {}
+
     function _disableInitializers()
         internal
         virtual
-        override(Initializable, RedemptionVaultTest)
+        override(Initializable, RedemptionVaultTestBase)
     {
-        RedemptionVaultTest._disableInitializers();
+        RedemptionVaultTestBase._disableInitializers();
     }
 
     function checkAndRedeemMToken(
@@ -76,18 +83,18 @@ contract RedemptionVaultWithMTokenTest is
     function _getTokenRate(address dataFeed, bool stable)
         internal
         view
-        override(RedemptionVaultTest, ManageableVault)
+        override(RedemptionVaultTestBase, ManageableVault)
         returns (uint256)
     {
-        return RedemptionVaultTest._getTokenRate(dataFeed, stable);
+        return RedemptionVaultTestBase._getTokenRate(dataFeed, stable);
     }
 
-    function vaultRole()
+    function contractAdminRole()
         public
-        pure
-        override(RedemptionVaultTest, RedemptionVault)
+        view
+        override(RedemptionVaultTestBase, ManageableVault)
         returns (bytes32)
     {
-        return RedemptionVaultTest.vaultRole();
+        return RedemptionVaultTestBase.contractAdminRole();
     }
 }

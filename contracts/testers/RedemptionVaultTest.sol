@@ -4,13 +4,16 @@ pragma solidity 0.8.34;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../RedemptionVault.sol";
-import {ManageableVaultTester} from "./ManageableVaultTester.sol";
+import {ManageableVaultTesterBase} from "./ManageableVaultTester.sol";
 
-contract RedemptionVaultTest is RedemptionVault, ManageableVaultTester {
+abstract contract RedemptionVaultTestBase is
+    RedemptionVault,
+    ManageableVaultTesterBase
+{
     function _disableInitializers()
         internal
         virtual
-        override(Initializable, ManageableVaultTester)
+        override(Initializable, ManageableVaultTesterBase)
     {}
 
     function calcAndValidateRedeemTest(
@@ -79,19 +82,28 @@ contract RedemptionVaultTest is RedemptionVault, ManageableVaultTester {
         internal
         view
         virtual
-        override(ManageableVaultTester, ManageableVault)
+        override(ManageableVaultTesterBase, ManageableVault)
         returns (uint256)
     {
-        return ManageableVaultTester._getTokenRate(dataFeed, stable);
+        return ManageableVaultTesterBase._getTokenRate(dataFeed, stable);
     }
 
-    function vaultRole()
+    function contractAdminRole()
         public
-        pure
+        view
         virtual
-        override(ManageableVaultTester, RedemptionVault)
+        override(ManageableVaultTesterBase, ManageableVault)
         returns (bytes32)
     {
-        return RedemptionVault.vaultRole();
+        return ManageableVault.contractAdminRole();
     }
+}
+
+contract RedemptionVaultTest is RedemptionVaultTestBase {
+    constructor()
+        RedemptionVault(
+            keccak256("REDEMPTION_VAULT_ADMIN_ROLE"),
+            GREENLISTED_ROLE
+        )
+    {}
 }

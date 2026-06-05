@@ -34,10 +34,10 @@ contract PausableTester is IPausable, WithMidasAccessControl {
         override
         returns (bytes32, bool)
     {
-        return (_contractAdminRole(), true);
+        return (contractAdminRole(), true);
     }
 
-    function _contractAdminRole() internal view override returns (bytes32) {
+    function contractAdminRole() public view override returns (bytes32) {
         return _contractAdminRoleOverride;
     }
 

@@ -19,7 +19,11 @@ contract GreenlistableTester is Greenlistable {
         return keccak256("GREENLIST_ADMIN_ROLE");
     }
 
-    function _contractAdminRole() internal pure override returns (bytes32) {
+    function contractAdminRole() public pure override returns (bytes32) {
         return _DEFAULT_ADMIN_ROLE;
+    }
+
+    function greenlistedRole() public view virtual override returns (bytes32) {
+        return GREENLISTED_ROLE;
     }
 }

@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import {AccessControlUtilsLibrary} from "./libraries/AccessControlUtilsLibrary.sol";
+
 import "./mToken.sol";
 
 /**
@@ -11,10 +12,36 @@ import "./mToken.sol";
  */
 //solhint-disable contract-name-camelcase
 abstract contract mTokenPermissioned is mToken {
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _GREENLISTED_ROLE;
     /**
      * @dev leaving a storage gap for futures updates
      */
     uint256[50] private __gap;
+
+    /**
+     * @notice constructor
+     * @param _contractAdminRole contract admin role
+     * @param _minterRole minter role
+     * @param _burnerRole burner role
+     * @param _greenlistedRole greenlisted role
+     */
+    constructor(
+        bytes32 _contractAdminRole,
+        bytes32 _minterRole,
+        bytes32 _burnerRole,
+        bytes32 _greenlistedRole
+    ) mToken(_contractAdminRole, _minterRole, _burnerRole) {
+        _GREENLISTED_ROLE = _greenlistedRole;
+    }
+
+    /**
+     * @notice AC role of a greenlist
+     * @return role bytes32 role
+     */
+    function greenlistedRole() public view virtual returns (bytes32) {
+        return _GREENLISTED_ROLE;
+    }
 
     /**
      * @dev overrides _beforeTokenTransfer function to allow
@@ -36,19 +63,13 @@ abstract contract mTokenPermissioned is mToken {
     }
 
     /**
-     * @notice AC role of a greenlist
-     * @return role bytes32 role
-     */
-    function _greenlistedRole() internal pure virtual returns (bytes32);
-
-    /**
      * @dev checks that a given `account` has `greenlistedRole()`
      */
     function _onlyGreenlisted(address account) private view {
         AccessControlUtilsLibrary.requireGreenlisted(
             accessControl,
             account,
-            _greenlistedRole()
+            greenlistedRole()
         );
     }
 }

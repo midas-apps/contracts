@@ -4,13 +4,16 @@ pragma solidity 0.8.34;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../DepositVault.sol";
-import {ManageableVaultTester} from "./ManageableVaultTester.sol";
+import {ManageableVaultTesterBase} from "./ManageableVaultTester.sol";
 
-contract DepositVaultTest is DepositVault, ManageableVaultTester {
+abstract contract DepositVaultTestBase is
+    DepositVault,
+    ManageableVaultTesterBase
+{
     function _disableInitializers()
         internal
         virtual
-        override(Initializable, ManageableVaultTester)
+        override(Initializable, ManageableVaultTesterBase)
     {}
 
     function convertTokenToUsdTest(address tokenIn, uint256 amount)
@@ -65,19 +68,25 @@ contract DepositVaultTest is DepositVault, ManageableVaultTester {
         internal
         view
         virtual
-        override(ManageableVaultTester, ManageableVault)
+        override(ManageableVaultTesterBase, ManageableVault)
         returns (uint256)
     {
-        return ManageableVaultTester._getTokenRate(dataFeed, stable);
+        return ManageableVaultTesterBase._getTokenRate(dataFeed, stable);
     }
 
-    function vaultRole()
+    function contractAdminRole()
         public
-        pure
+        view
         virtual
-        override(ManageableVaultTester, DepositVault)
+        override(ManageableVaultTesterBase, ManageableVault)
         returns (bytes32)
     {
-        return DepositVault.vaultRole();
+        return ManageableVault.contractAdminRole();
     }
+}
+
+contract DepositVaultTest is DepositVaultTestBase {
+    constructor()
+        DepositVault(keccak256("DEPOSIT_VAULT_ADMIN_ROLE"), GREENLISTED_ROLE)
+    {}
 }

@@ -27,7 +27,7 @@ contract WithSanctionsListTester is WithSanctionsList {
         return keccak256("TESTER_SANCTIONS_LIST_ADMIN_ROLE");
     }
 
-    function _contractAdminRole() internal pure override returns (bytes32) {
+    function contractAdminRole() public pure override returns (bytes32) {
         return _DEFAULT_ADMIN_ROLE;
     }
 

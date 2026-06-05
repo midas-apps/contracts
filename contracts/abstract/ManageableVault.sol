@@ -23,6 +23,7 @@ import {PauseUtilsLibrary} from "../libraries/PauseUtilsLibrary.sol";
 import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
 
 import {RateLimitLibrary} from "../libraries/RateLimitLibrary.sol";
+import {MidasInitializable} from "./MidasInitializable.sol";
 
 /**
  * @title ManageableVault
@@ -46,6 +47,18 @@ abstract contract ManageableVault is
      * @notice stable coin static rate 1:1 USD in 18 decimals
      */
     uint256 public constant STABLECOIN_RATE = 10**18;
+
+    /**
+     * @dev role that grants admin rights to the contract
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _CONTRACT_ADMIN_ROLE;
+
+    /**
+     * @dev role that grants greenlisted status to the contract
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _GREENLISTED_ROLE;
 
     /**
      * @notice last request id
@@ -155,6 +168,18 @@ abstract contract ManageableVault is
     modifier validateUserAccess(address recipient) {
         _validateUserAccess(msg.sender, recipient);
         _;
+    }
+
+    /**
+     * @notice constructor
+     * @param _contractAdminRole contract admin role
+     * @param _greenlistedRole greenlisted role
+     */
+    constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
+        MidasInitializable()
+    {
+        _CONTRACT_ADMIN_ROLE = _contractAdminRole;
+        _GREENLISTED_ROLE = _greenlistedRole;
     }
 
     /**
@@ -449,16 +474,17 @@ abstract contract ManageableVault is
     }
 
     /**
-     * @notice AC role of vault administrator
-     * @return role bytes32 role
-     */
-    function vaultRole() public view virtual returns (bytes32);
-
-    /**
      * @inheritdoc IPausable
      */
     function pauserRole() external view override returns (bytes32, bool) {
-        return (vaultRole(), true);
+        return (contractAdminRole(), true);
+    }
+
+    /**
+     * @inheritdoc Greenlistable
+     */
+    function greenlistedRole() public view virtual override returns (bytes32) {
+        return _GREENLISTED_ROLE;
     }
 
     /**
@@ -776,10 +802,16 @@ abstract contract ManageableVault is
     }
 
     /**
-     * @dev returns vault admin role
+     * @inheritdoc WithMidasAccessControl
      */
-    function _contractAdminRole() internal view override returns (bytes32) {
-        return vaultRole();
+    function contractAdminRole()
+        public
+        view
+        virtual
+        override
+        returns (bytes32)
+    {
+        return _CONTRACT_ADMIN_ROLE;
     }
 
     /**

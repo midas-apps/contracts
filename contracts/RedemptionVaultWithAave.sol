@@ -65,6 +65,15 @@ contract RedemptionVaultWithAave is RedemptionVault {
     event RemoveAavePool(address indexed token);
 
     /**
+     * @notice Passes role identifiers to the base RedemptionVault constructor
+     * @param _contractAdminRole contract admin role identifier
+     * @param _greenlistedRole greenlisted role identifier
+     */
+    constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
+        RedemptionVault(_contractAdminRole, _greenlistedRole)
+    {}
+
+    /**
      * @notice Sets the Aave V3 Pool for a specific payment token
      * @param _token payment token address
      * @param _aavePool Aave V3 Pool address for this token

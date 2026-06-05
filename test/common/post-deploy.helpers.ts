@@ -11,13 +11,13 @@ import {
   DataFeed,
   DepositVault,
   MidasAccessControl,
+  MToken,
   RedemptionVault,
-  MTBILL,
 } from '../../typechain-types';
 
 type Params = {
   accessControl: MidasAccessControl;
-  mTBILL: MTBILL;
+  mTBILL: MToken;
   dataFeed: DataFeed;
   dataFeedMToken: DataFeed;
   aggregator: AggregatorV3Interface;
@@ -75,7 +75,7 @@ export const postDeploymentTest = async (
   );
   expect(await depositVault.minAmount()).eq(minAmount);
 
-  expect(await depositVault.vaultRole()).eq(
+  expect(await depositVault.contractAdminRole()).eq(
     keccak256('DEPOSIT_VAULT_ADMIN_ROLE'),
   );
 
@@ -89,7 +89,7 @@ export const postDeploymentTest = async (
 
   expect(await redemptionVault.ONE_HUNDRED_PERCENT()).eq('10000');
 
-  expect(await redemptionVault.vaultRole()).eq(
+  expect(await redemptionVault.contractAdminRole()).eq(
     keccak256('REDEMPTION_VAULT_ADMIN_ROLE'),
   );
 

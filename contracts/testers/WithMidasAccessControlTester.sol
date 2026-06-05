@@ -30,7 +30,7 @@ contract WithMidasAccessControlTester is WithMidasAccessControl {
 
     function withOnlyContractAdmin() external onlyContractAdmin {}
 
-    function _contractAdminRole() internal view override returns (bytes32) {
+    function contractAdminRole() public view override returns (bytes32) {
         return _contractAdminRoleOverride;
     }
 

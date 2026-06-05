@@ -8,6 +8,7 @@ import {AccessControlUtilsLibrary} from "./libraries/AccessControlUtilsLibrary.s
 import {IMidasAccessControl} from "./interfaces/IMidasAccessControl.sol";
 import {PauseUtilsLibrary} from "./libraries/PauseUtilsLibrary.sol";
 import {IPausable} from "./interfaces/IPausable.sol";
+import {MidasInitializable} from "./abstract/MidasInitializable.sol";
 
 import "./access/Blacklistable.sol";
 import "./interfaces/IMToken.sol";
@@ -17,14 +18,25 @@ import "./interfaces/IMToken.sol";
  * @author RedDuck Software
  */
 //solhint-disable contract-name-camelcase
-abstract contract mToken is
-    ERC20PausableUpgradeable,
-    Blacklistable,
-    IMToken,
-    IPausable
-{
+contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken, IPausable {
     using RateLimitLibrary for RateLimitLibrary.WindowRateLimits;
     using AccessControlUtilsLibrary for IMidasAccessControl;
+
+    /**
+     * @dev role that grants contract admin rights to the contract
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _CONTRACT_ADMIN_ROLE;
+    /**
+     * @dev role that grants minter rights to the contract
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _MINTER_ROLE;
+    /**
+     * @dev role that grants burner rights to the contract
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _BURNER_ROLE;
 
     /**
      * @notice metadata key => metadata value
@@ -42,6 +54,15 @@ abstract contract mToken is
     bool private _inClawback;
 
     /**
+     * @notice name of the token
+     */
+    string private _name;
+    /**
+     * @notice symbol of the token
+     */
+    string private _symbol;
+
+    /**
      * @notice mint rate limits state
      */
     RateLimitLibrary.WindowRateLimits private _mintRateLimits;
@@ -49,18 +70,39 @@ abstract contract mToken is
     /**
      * @dev leaving a storage gap for futures updates
      */
-    uint256[46] private __gap;
+    uint256[44] private __gap;
+
+    /**
+     * @notice constructor
+     * @param _contractAdminRole contract admin role
+     * @param _minterRole minter role
+     * @param _burnerRole burner role
+     */
+    constructor(
+        bytes32 _contractAdminRole,
+        bytes32 _minterRole,
+        bytes32 _burnerRole
+    ) MidasInitializable() {
+        _CONTRACT_ADMIN_ROLE = _contractAdminRole;
+        _MINTER_ROLE = _minterRole;
+        _BURNER_ROLE = _burnerRole;
+    }
 
     /**
      * @notice upgradeable pattern contract`s initializer
      * @param _accessControl address of MidasAccessControll contract
      * @param _clawbackReceiver address to which clawback tokens will be sent
+     * @param name_ name of the token
+     * @param symbol_ symbol of the token
      */
-    function initialize(address _accessControl, address _clawbackReceiver)
-        external
-    {
+    function initialize(
+        address _accessControl,
+        address _clawbackReceiver,
+        string memory name_,
+        string memory symbol_
+    ) external {
         _initializeV1(_accessControl);
-        initializeV2(_clawbackReceiver);
+        initializeV2(_clawbackReceiver, name_, symbol_);
     }
 
     /**
@@ -69,25 +111,28 @@ abstract contract mToken is
      */
     function _initializeV1(address _accessControl) private initializer {
         __WithMidasAccessControl_init(_accessControl);
-        (string memory _name, string memory _symbol) = _getNameSymbol();
-        __ERC20_init(_name, _symbol);
     }
 
     /**
      * @dev v2 initializer
      * @param _clawbackReceiver address to which clawback tokens will be sent
+     * @param name_ name of the token
+     * @param symbol_ symbol of the token
      */
-    function initializeV2(address _clawbackReceiver)
-        public
-        virtual
-        reinitializer(2)
-    {
+    function initializeV2(
+        address _clawbackReceiver,
+        string memory name_,
+        string memory symbol_
+    ) public virtual reinitializer(2) {
         require(
             _clawbackReceiver != address(0),
             InvalidAddress(_clawbackReceiver)
         );
 
         clawbackReceiver = _clawbackReceiver;
+
+        _name = name_;
+        _symbol = symbol_;
     }
 
     /**
@@ -110,7 +155,7 @@ abstract contract mToken is
      */
     function mint(address to, uint256 amount)
         external
-        onlyRoleNoTimelock(_minterRole(), false)
+        onlyRoleNoTimelock(minterRole(), false)
     {
         _mint(to, amount);
     }
@@ -130,7 +175,7 @@ abstract contract mToken is
      */
     function burn(address from, uint256 amount)
         external
-        onlyRoleNoTimelock(_burnerRole(), false)
+        onlyRoleNoTimelock(burnerRole(), false)
     {
         _onlyNotBlacklisted(from);
         _burn(from, amount);
@@ -203,7 +248,48 @@ abstract contract mToken is
      * @inheritdoc IPausable
      */
     function pauserRole() external view override returns (bytes32, bool) {
-        return (_contractAdminRole(), true);
+        return (contractAdminRole(), true);
+    }
+
+    /**
+     * @notice AC role, owner of which can mint mToken token
+     */
+    function minterRole() public view virtual returns (bytes32) {
+        return _MINTER_ROLE;
+    }
+
+    /**
+     * @notice AC role, owner of which can burn mToken token
+     */
+    function burnerRole() public view virtual returns (bytes32) {
+        return _BURNER_ROLE;
+    }
+
+    /**
+     * @inheritdoc WithMidasAccessControl
+     */
+    function contractAdminRole()
+        public
+        view
+        virtual
+        override
+        returns (bytes32)
+    {
+        return _CONTRACT_ADMIN_ROLE;
+    }
+
+    /**
+     * @inheritdoc ERC20Upgradeable
+     */
+    function name() public view virtual override returns (string memory) {
+        return _name;
+    }
+
+    /**
+     * @inheritdoc ERC20Upgradeable
+     */
+    function symbol() public view virtual override returns (string memory) {
+        return _symbol;
     }
 
     /**
@@ -250,44 +336,5 @@ abstract contract mToken is
         }
 
         ERC20PausableUpgradeable._beforeTokenTransfer(from, to, amount);
-    }
-
-    /**
-     * @dev returns name and symbol of the token
-     * @return name of the token
-     * @return symbol of the token
-     */
-    function _getNameSymbol()
-        internal
-        virtual
-        returns (string memory, string memory);
-
-    /**
-     * @dev AC role, owner of which can mint mToken token
-     */
-    function _minterRole() internal pure virtual returns (bytes32);
-
-    /**
-     * @dev AC role, owner of which can burn mToken token
-     */
-    function _burnerRole() internal pure virtual returns (bytes32);
-
-    // TODO: remove this function
-    /**
-     * @dev AC role, owner of which can pause mToken token
-     */
-    function _pauserRole() internal pure virtual returns (bytes32);
-
-    /**
-     * @inheritdoc WithMidasAccessControl
-     */
-    function _contractAdminRole()
-        internal
-        pure
-        virtual
-        override
-        returns (bytes32)
-    {
-        return _DEFAULT_ADMIN_ROLE;
     }
 }

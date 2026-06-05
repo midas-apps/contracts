@@ -89,6 +89,15 @@ contract DepositVaultWithMorpho is DepositVault {
     event SetAutoInvestFallbackEnabled(bool indexed enabled);
 
     /**
+     * @notice Passes role identifiers to the base DepositVault constructor
+     * @param _contractAdminRole contract admin role identifier
+     * @param _greenlistedRole greenlisted role identifier
+     */
+    constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
+        DepositVault(_contractAdminRole, _greenlistedRole)
+    {}
+
+    /**
      * @notice Sets the Morpho Vault for a specific payment token
      * @param _token payment token address
      * @param _morphoVault Morpho Vault (ERC-4626) address for this token

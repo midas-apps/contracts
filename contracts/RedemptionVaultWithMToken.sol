@@ -43,6 +43,15 @@ contract RedemptionVaultWithMToken is RedemptionVault {
     event SetRedemptionVault(address indexed newVault);
 
     /**
+     * @notice Passes role identifiers to the base RedemptionVault constructor
+     * @param _contractAdminRole contract admin role identifier
+     * @param _greenlistedRole greenlisted role identifier
+     */
+    constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
+        RedemptionVault(_contractAdminRole, _greenlistedRole)
+    {}
+
+    /**
      * @notice upgradeable pattern contract`s initializer
      * @param _commonVaultInitParams init params for common vault
      * @param _redemptionInitParams init params for redemption vault state values

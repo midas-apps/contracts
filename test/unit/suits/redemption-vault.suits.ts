@@ -146,7 +146,7 @@ export const redemptionVaultSuits = (
   describe(rvName, function () {
     manageableVaultSuits(loadRvFixture, rvConfig, async (fixture) => {
       const { redemptionVault, roles } = fixture;
-      expect(await redemptionVault.vaultRole()).eq(
+      expect(await redemptionVault.contractAdminRole()).eq(
         roles.tokenRoles.mTBILL.redemptionVaultAdmin,
       );
     });
@@ -3156,17 +3156,20 @@ export const redemptionVaultSuits = (
           const { accessControl, owner, redemptionVault, regularAccounts } =
             await loadRvFixture();
 
-          const vaultRole = await redemptionVault.vaultRole();
+          const contractAdminRole = await redemptionVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
-            vaultRole,
+            contractAdminRole,
             redemptionVault.address,
             'setLoanLp(address)',
             regularAccounts[0].address,
           );
 
           expect(
-            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+            await accessControl.hasRole(
+              contractAdminRole,
+              regularAccounts[0].address,
+            ),
           ).eq(false);
 
           await setLoanLpTest(
@@ -3185,10 +3188,10 @@ export const redemptionVaultSuits = (
             roles,
           } = await loadRvFixture();
 
-          const vaultRole = await redemptionVault.vaultRole();
+          const contractAdminRole = await redemptionVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
-            vaultRole,
+            contractAdminRole,
             redemptionVault.address,
             'setLoanLp(address)',
             regularAccounts[0].address,
@@ -3256,17 +3259,20 @@ export const redemptionVaultSuits = (
           const { accessControl, owner, redemptionVault, regularAccounts } =
             await loadRvFixture();
 
-          const vaultRole = await redemptionVault.vaultRole();
+          const contractAdminRole = await redemptionVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
-            vaultRole,
+            contractAdminRole,
             redemptionVault.address,
             'setLoanRepaymentAddress(address)',
             regularAccounts[0].address,
           );
 
           expect(
-            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+            await accessControl.hasRole(
+              contractAdminRole,
+              regularAccounts[0].address,
+            ),
           ).eq(false);
 
           await setLoanRepaymentAddressTest(
@@ -3285,10 +3291,10 @@ export const redemptionVaultSuits = (
             roles,
           } = await loadRvFixture();
 
-          const vaultRole = await redemptionVault.vaultRole();
+          const contractAdminRole = await redemptionVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
-            vaultRole,
+            contractAdminRole,
             redemptionVault.address,
             'setLoanRepaymentAddress(address)',
             regularAccounts[0].address,
@@ -3356,17 +3362,20 @@ export const redemptionVaultSuits = (
           const { accessControl, owner, redemptionVault, regularAccounts } =
             await loadRvFixture();
 
-          const vaultRole = await redemptionVault.vaultRole();
+          const contractAdminRole = await redemptionVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
-            vaultRole,
+            contractAdminRole,
             redemptionVault.address,
             'setLoanSwapperVault(address)',
             regularAccounts[0].address,
           );
 
           expect(
-            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+            await accessControl.hasRole(
+              contractAdminRole,
+              regularAccounts[0].address,
+            ),
           ).eq(false);
 
           await setLoanSwapperVaultTest(
@@ -3385,10 +3394,10 @@ export const redemptionVaultSuits = (
             roles,
           } = await loadRvFixture();
 
-          const vaultRole = await redemptionVault.vaultRole();
+          const contractAdminRole = await redemptionVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
-            vaultRole,
+            contractAdminRole,
             redemptionVault.address,
             'setLoanSwapperVault(address)',
             regularAccounts[0].address,
@@ -3443,17 +3452,20 @@ export const redemptionVaultSuits = (
           const { accessControl, owner, redemptionVault, regularAccounts } =
             await loadRvFixture();
 
-          const vaultRole = await redemptionVault.vaultRole();
+          const contractAdminRole = await redemptionVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
-            vaultRole,
+            contractAdminRole,
             redemptionVault.address,
             'setPreferLoanLiquidity(bool)',
             regularAccounts[0].address,
           );
 
           expect(
-            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+            await accessControl.hasRole(
+              contractAdminRole,
+              regularAccounts[0].address,
+            ),
           ).eq(false);
 
           await setPreferLoanLiquidityTest({ redemptionVault, owner }, true, {
@@ -3470,10 +3482,10 @@ export const redemptionVaultSuits = (
             roles,
           } = await loadRvFixture();
 
-          const vaultRole = await redemptionVault.vaultRole();
+          const contractAdminRole = await redemptionVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
-            vaultRole,
+            contractAdminRole,
             redemptionVault.address,
             'setPreferLoanLiquidity(bool)',
             regularAccounts[0].address,

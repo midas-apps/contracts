@@ -197,7 +197,7 @@ export const manageableVaultSuits = (
           const { accessControl, owner, manageableVault, regularAccounts } =
             await loadMvFixture();
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -224,7 +224,7 @@ export const manageableVaultSuits = (
             roles,
           } = await loadMvFixture();
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -292,7 +292,7 @@ export const manageableVaultSuits = (
           const { accessControl, owner, manageableVault, regularAccounts } =
             await loadMvFixture();
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -323,7 +323,7 @@ export const manageableVaultSuits = (
             roles,
           } = await loadMvFixture();
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -509,7 +509,7 @@ export const manageableVaultSuits = (
             dataFeed,
           } = await loadMvFixture();
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -544,7 +544,7 @@ export const manageableVaultSuits = (
             dataFeed,
           } = await loadMvFixture();
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -632,7 +632,7 @@ export const manageableVaultSuits = (
           const { accessControl, owner, manageableVault, regularAccounts } =
             await loadMvFixture();
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -661,7 +661,7 @@ export const manageableVaultSuits = (
             roles,
           } = await loadMvFixture();
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -755,7 +755,7 @@ export const manageableVaultSuits = (
             regularAccounts[1].address,
           );
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -789,7 +789,7 @@ export const manageableVaultSuits = (
             regularAccounts[2].address,
           );
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -859,7 +859,7 @@ export const manageableVaultSuits = (
           const { accessControl, owner, manageableVault, regularAccounts } =
             await loadMvFixture();
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -886,7 +886,7 @@ export const manageableVaultSuits = (
             roles,
           } = await loadMvFixture();
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -983,7 +983,7 @@ export const manageableVaultSuits = (
           const { accessControl, owner, manageableVault, regularAccounts } =
             await loadMvFixture();
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -1013,7 +1013,7 @@ export const manageableVaultSuits = (
             roles,
           } = await loadMvFixture();
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -1089,7 +1089,7 @@ export const manageableVaultSuits = (
           const { accessControl, owner, manageableVault, regularAccounts } =
             await loadMvFixture();
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -1118,7 +1118,7 @@ export const manageableVaultSuits = (
             roles,
           } = await loadMvFixture();
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -1188,7 +1188,7 @@ export const manageableVaultSuits = (
           const { accessControl, owner, manageableVault, regularAccounts } =
             await loadMvFixture();
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -1219,7 +1219,7 @@ export const manageableVaultSuits = (
             roles,
           } = await loadMvFixture();
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -1383,7 +1383,7 @@ export const manageableVaultSuits = (
             true,
           );
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -1422,7 +1422,7 @@ export const manageableVaultSuits = (
             true,
           );
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -1511,7 +1511,7 @@ export const manageableVaultSuits = (
 
           await mintToken(stableCoins.dai, manageableVault, 1);
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -1544,7 +1544,7 @@ export const manageableVaultSuits = (
 
           await mintToken(stableCoins.dai, manageableVault, 1);
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -1626,7 +1626,7 @@ export const manageableVaultSuits = (
           const { accessControl, owner, manageableVault, regularAccounts } =
             await loadMvFixture();
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -1661,7 +1661,7 @@ export const manageableVaultSuits = (
             roles,
           } = await loadMvFixture();
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -1780,7 +1780,7 @@ export const manageableVaultSuits = (
             true,
           );
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -1820,7 +1820,7 @@ export const manageableVaultSuits = (
             true,
           );
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -1955,7 +1955,7 @@ export const manageableVaultSuits = (
             true,
           );
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,
@@ -1995,7 +1995,7 @@ export const manageableVaultSuits = (
             true,
           );
 
-          const vaultRole = await manageableVault.vaultRole();
+          const vaultRole = await manageableVault.contractAdminRole();
           await setupVaultScopedFunctionPermission(
             { accessControl, owner },
             vaultRole,

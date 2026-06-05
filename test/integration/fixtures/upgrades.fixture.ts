@@ -5,24 +5,22 @@ import { ethers } from 'hardhat';
 import hre from 'hardhat';
 
 import { rpcUrls } from '../../../config';
+import { mTokensMetadata } from '../../../helpers/mtokens-metadata';
+import { getAllRoles } from '../../../helpers/roles';
 import {
-  MGLOBAL,
-  MGlobalCustomAggregatorFeedGrowth,
-  MGlobalDataFeed,
   MidasAccessControl,
   MidasAccessControlTimelockController,
   MidasPauseManager,
   MidasTimelockManager,
-  MTBILL,
-  MTBillCustomAggregatorFeed,
-  MTBillDataFeed,
-  MGLOBAL__factory,
-  MGlobalCustomAggregatorFeedGrowth__factory,
-  MGlobalDataFeed__factory,
   MidasAccessControl__factory,
-  MTBILL__factory,
-  MTBillCustomAggregatorFeed__factory,
-  MTBillDataFeed__factory,
+  DataFeed__factory,
+  CustomAggregatorV3CompatibleFeedGrowth__factory,
+  MToken,
+  DataFeed,
+  CustomAggregatorV3CompatibleFeed,
+  CustomAggregatorV3CompatibleFeed__factory,
+  MToken__factory,
+  CustomAggregatorV3CompatibleFeedGrowth,
 } from '../../../typechain-types';
 import { Constructor } from '../../common/common.helpers';
 import { deployProxyContract } from '../../common/deploy.helpers';
@@ -71,28 +69,60 @@ export async function mainnetUpgradeFixture() {
     acAddress,
   )) as MidasAccessControl;
 
+  const allRoles = getAllRoles();
   const addressesMap: Record<
     string,
-    { proxy: string; implementation: Constructor<ContractFactory> }[]
+    {
+      proxy: string;
+      implementation: Constructor<ContractFactory>;
+      constructorArgs?: unknown[];
+    }[]
   > = {
     mTbill: [
-      { proxy: mTbillAddress, implementation: MTBILL__factory },
-      { proxy: mTbillDataFeedAddress, implementation: MTBillDataFeed__factory },
+      {
+        proxy: mTbillAddress,
+        implementation: MToken__factory,
+        constructorArgs: [
+          allRoles.tokenRoles.mTBILL.tokenManager,
+          allRoles.tokenRoles.mTBILL.minter,
+          allRoles.tokenRoles.mTBILL.burner,
+          mTokensMetadata.mTBILL.name,
+          mTokensMetadata.mTBILL.symbol,
+        ],
+      },
+      {
+        proxy: mTbillDataFeedAddress,
+        implementation: DataFeed__factory,
+        constructorArgs: [allRoles.tokenRoles.mTBILL.customFeedAdmin],
+      },
       {
         proxy: mTbillCustomFeedAddress,
-        implementation: MTBillCustomAggregatorFeed__factory,
+        implementation: CustomAggregatorV3CompatibleFeed__factory,
+        constructorArgs: [allRoles.tokenRoles.mTBILL.customFeedAdmin],
       },
     ],
     ac: [{ proxy: acAddress, implementation: MidasAccessControl__factory }],
     mGlobal: [
-      { proxy: mGlobalAddress, implementation: MGLOBAL__factory },
+      {
+        proxy: mGlobalAddress,
+        implementation: MToken__factory,
+        constructorArgs: [
+          allRoles.tokenRoles.mGLOBAL.tokenManager,
+          allRoles.tokenRoles.mGLOBAL.minter,
+          allRoles.tokenRoles.mGLOBAL.burner,
+          mTokensMetadata.mGLOBAL.name,
+          mTokensMetadata.mGLOBAL.symbol,
+        ],
+      },
       {
         proxy: mGlobalDataFeedAddress,
-        implementation: MGlobalDataFeed__factory,
+        implementation: DataFeed__factory,
+        constructorArgs: [allRoles.tokenRoles.mGLOBAL.customFeedAdmin],
       },
       {
         proxy: mGlobalCustomFeedGrowthAddress,
-        implementation: MGlobalCustomAggregatorFeedGrowth__factory,
+        implementation: CustomAggregatorV3CompatibleFeedGrowth__factory,
+        constructorArgs: [allRoles.tokenRoles.mGLOBAL.customFeedAdmin],
       },
     ],
   };
@@ -104,6 +134,7 @@ export async function mainnetUpgradeFixture() {
       await hre.upgrades.upgradeProxy(
         val.proxy,
         new val.implementation(proxyAdminOwner),
+        { constructorArgs: val.constructorArgs ?? [] },
       );
     }
   }
@@ -141,29 +172,29 @@ export async function mainnetUpgradeFixture() {
     .initializeTimelock(timelock.address);
 
   const mTbill = (await ethers.getContractAt(
-    'mTBILL',
+    'MToken',
     mTbillAddress,
-  )) as MTBILL;
+  )) as MToken;
   const mGlobal = (await ethers.getContractAt(
-    'mGLOBAL',
+    'MToken',
     mGlobalAddress,
-  )) as MGLOBAL;
+  )) as MToken;
   const mTbillDataFeed = (await ethers.getContractAt(
-    'MTBillDataFeed',
+    'DataFeed',
     mTbillDataFeedAddress,
-  )) as MTBillDataFeed;
+  )) as DataFeed;
   const mTbillCustomFeed = (await ethers.getContractAt(
-    'MTBillCustomAggregatorFeed',
+    'CustomAggregatorV3CompatibleFeed',
     mTbillCustomFeedAddress,
-  )) as MTBillCustomAggregatorFeed;
+  )) as CustomAggregatorV3CompatibleFeed;
   const mGlobalDataFeed = (await ethers.getContractAt(
-    'MGlobalDataFeed',
+    'DataFeed',
     mGlobalDataFeedAddress,
-  )) as MGlobalDataFeed;
+  )) as DataFeed;
   const mGlobalCustomFeedGrowth = (await ethers.getContractAt(
-    'MGlobalCustomAggregatorFeedGrowth',
+    'CustomAggregatorV3CompatibleFeedGrowth',
     mGlobalCustomFeedGrowthAddress,
-  )) as MGlobalCustomAggregatorFeedGrowth;
+  )) as CustomAggregatorV3CompatibleFeedGrowth;
 
   const mTbillHolders = await Promise.all(
     [

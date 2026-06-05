@@ -14,6 +14,14 @@ import "./CompositeDataFeed.sol";
  */
 contract CompositeDataFeedMultiply is CompositeDataFeed {
     /**
+     * @notice constructor
+     * @param _contractAdminRole contract admin role
+     */
+    constructor(bytes32 _contractAdminRole)
+        CompositeDataFeed(_contractAdminRole)
+    {}
+
+    /**
      * @dev computes the composite price by multiplying the two feed values
      * @param firstFeedValue value from the first feed
      * @param secondFeedValue value from the second feed

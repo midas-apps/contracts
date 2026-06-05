@@ -76,7 +76,7 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
      */
     modifier onlyAdminPause() {
         _validateFunctionAccessWithTimelock(
-            _contractAdminRole(),
+            contractAdminRole(),
             pauseDelay,
             false,
             msg.sender,
@@ -91,7 +91,7 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
      */
     modifier onlyAdminUnpause() {
         _validateFunctionAccessWithTimelock(
-            _contractAdminRole(),
+            contractAdminRole(),
             unpauseDelay,
             false,
             msg.sender,
@@ -121,7 +121,7 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
      */
     function setPauseDelay(uint256 _pauseDelay)
         external
-        onlyRoleDelayOverride(_contractAdminRole(), DELAY_FOR_SET_DELAY, true)
+        onlyRoleDelayOverride(contractAdminRole(), DELAY_FOR_SET_DELAY, true)
     {
         pauseDelay = _pauseDelay;
     }
@@ -131,7 +131,7 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
      */
     function setUnpauseDelay(uint256 _unpauseDelay)
         external
-        onlyRoleDelayOverride(_contractAdminRole(), DELAY_FOR_SET_DELAY, true)
+        onlyRoleDelayOverride(contractAdminRole(), DELAY_FOR_SET_DELAY, true)
     {
         unpauseDelay = _unpauseDelay;
     }
@@ -279,13 +279,13 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
      * @inheritdoc IMidasPauseManager
      */
     function pauseAdminRole() public view returns (bytes32) {
-        return _contractAdminRole();
+        return contractAdminRole();
     }
 
     /**
      * @inheritdoc WithMidasAccessControl
      */
-    function _contractAdminRole() internal pure override returns (bytes32) {
+    function contractAdminRole() public pure override returns (bytes32) {
         return _PAUSE_ADMIN_ROLE;
     }
 

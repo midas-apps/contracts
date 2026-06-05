@@ -12,10 +12,10 @@ import {
 } from './common.helpers';
 import { calculateWindowRateLimitCapacity } from './manageable-vault.helpers';
 
-import { MTBILL, MToken, MTokenPermissioned } from '../../typechain-types';
+import { MToken, MTokenPermissioned } from '../../typechain-types';
 
 type CommonParams = {
-  tokenContract: MToken | MTBILL | MTokenPermissioned;
+  tokenContract: MToken | MTokenPermissioned;
   owner: SignerWithAddress;
 };
 

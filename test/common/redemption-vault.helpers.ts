@@ -26,13 +26,11 @@ import {
   ERC20,
   ERC20__factory,
   IERC20,
-  MTBILL,
   MToken,
   RedemptionVault,
   RedemptionVaultWithAave,
   RedemptionVaultWithMorpho,
   RedemptionVaultWithMToken,
-  RedemptionVaultWithSwapper,
   RedemptionVaultWithUSTB,
   RedemptionVaultTest__factory,
 } from '../../typechain-types';
@@ -42,11 +40,10 @@ type RedemptionVaultType =
   | RedemptionVaultWithAave
   | RedemptionVaultWithMorpho
   | RedemptionVaultWithMToken
-  | RedemptionVaultWithUSTB
-  | RedemptionVaultWithSwapper;
+  | RedemptionVaultWithUSTB;
 
 type CommonParamsRedeem = {
-  mTBILL: MToken | MTBILL;
+  mTBILL: MToken;
 } & Pick<
   Awaited<ReturnType<typeof defaultDeploy>>,
   'owner' | 'mTokenToUsdDataFeed'
@@ -1580,13 +1577,7 @@ export const setPreferLoanLiquidityTest = async (
 export const getFeePercent = async (
   sender: string,
   token: string,
-  redemptionVault:
-    | RedemptionVault
-    | RedemptionVaultWithAave
-    | RedemptionVaultWithMorpho
-    | RedemptionVaultWithMToken
-    | RedemptionVaultWithSwapper
-    | RedemptionVaultWithUSTB,
+  redemptionVault: RedemptionVaultType,
   isInstant: boolean,
   overrideTokenFee?: BigNumber,
 ) => {
@@ -1606,13 +1597,7 @@ export const getFeePercent = async (
 export const calcExpectedTokenOutAmount = async (
   sender: SignerWithAddress,
   token: ERC20,
-  redemptionVault:
-    | RedemptionVault
-    | RedemptionVaultWithAave
-    | RedemptionVaultWithMorpho
-    | RedemptionVaultWithMToken
-    | RedemptionVaultWithSwapper
-    | RedemptionVaultWithUSTB,
+  redemptionVault: RedemptionVaultType,
   mTokenRate: BigNumber,
   amountIn: BigNumber,
   isInstant: boolean,

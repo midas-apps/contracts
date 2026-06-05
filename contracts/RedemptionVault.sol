@@ -38,13 +38,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     }
 
     /**
-     * @dev default role that grants admin rights to the contract
-     * keccak256("REDEMPTION_VAULT_ADMIN_ROLE")
-     */
-    bytes32 private constant _DEFAULT_REDEMPTION_VAULT_ADMIN_ROLE =
-        0x57df534b215589c7ade8c8abe0978debf2ea95cf1d442550f94eec78a69d238e;
-
-    /**
      * @notice mapping, requestId to request data
      */
     mapping(uint256 => Request) public redeemRequests;
@@ -93,6 +86,15 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @dev leaving a storage gap for futures updates
      */
     uint256[50] private __gap;
+
+    /**
+     * @notice Passes role identifiers to the base ManageableVault constructor
+     * @param _contractAdminRole contract admin role identifier
+     * @param _greenlistedRole greenlisted role identifier
+     */
+    constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
+        ManageableVault(_contractAdminRole, _greenlistedRole)
+    {}
 
     /**
      * @notice upgradeable pattern contract`s initializer
@@ -402,13 +404,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         preferLoanLiquidity = newLoanLpFirst;
 
         emit SetPreferLoanLiquidity(newLoanLpFirst);
-    }
-
-    /**
-     * @inheritdoc ManageableVault
-     */
-    function vaultRole() public pure virtual override returns (bytes32) {
-        return _DEFAULT_REDEMPTION_VAULT_ADMIN_ROLE;
     }
 
     /**
