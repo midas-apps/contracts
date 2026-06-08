@@ -189,10 +189,25 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
         },
       },
       susde: {
+        // Redeployed feed priced sUSDE/USDE (~1.00), replacing the old sUSDE/USD feed.
         dataFeed: {
-          healthyDiff: constants.MaxUint256,
-          minAnswer: parseUnits('1.17454296', 18),
-          maxAnswer: parseUnits('1.3', 18),
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+      usdg: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+      pyusd: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
         },
       },
       weeth: {

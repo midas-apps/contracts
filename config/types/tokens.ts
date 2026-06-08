@@ -75,6 +75,7 @@ export enum MTokenNameEnum {
   mEVETH = 'mEVETH',
   liquidRWA = 'liquidRWA',
   mWIN = 'mWIN',
+  qHVN = 'qHVN',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
@@ -131,6 +132,8 @@ export enum PaymentTokenNameEnum {
   winj = 'winj',
   yinj = 'yinj',
   eurc = 'eurc',
+  usdg = 'usdg',
+  pyusd = 'pyusd',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;
