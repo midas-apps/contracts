@@ -24,4 +24,11 @@ contract MWinRedemptionVaultWithSwapper is
     function vaultRole() public pure override returns (bytes32) {
         return M_WIN_REDEMPTION_VAULT_ADMIN_ROLE;
     }
+
+    /**
+     * @inheritdoc Greenlistable
+     */
+    function greenlistedRole() public pure override returns (bytes32) {
+        return M_WIN_GREENLISTED_ROLE;
+    }
 }

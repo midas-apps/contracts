@@ -24,4 +24,10 @@ abstract contract MWinMidasAccessControlRoles {
      */
     bytes32 public constant M_WIN_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE =
         keccak256("M_WIN_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE");
+
+    /**
+     * @notice greenlist role for mWIN
+     */
+    bytes32 public constant M_WIN_GREENLISTED_ROLE =
+        keccak256("M_WIN_GREENLISTED_ROLE");
 }
