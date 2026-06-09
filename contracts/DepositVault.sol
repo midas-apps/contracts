@@ -86,6 +86,7 @@ contract DepositVault is ManageableVault, IDepositVault {
      * @notice Passes role identifiers to the base ManageableVault constructor
      * @param _contractAdminRole contract admin role identifier
      * @param _greenlistedRole greenlisted role identifier
+     * @custom:oz-upgrades-unsafe-allow constructor
      */
     constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
         ManageableVault(_contractAdminRole, _greenlistedRole)

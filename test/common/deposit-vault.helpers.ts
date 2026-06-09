@@ -381,7 +381,7 @@ export const depositRequestTest = async (
         mTokenToUsdDataFeed,
         waivedFee,
         minAmount: minReceiveAmountInstantShare ?? constants.Zero,
-        customRecipient: customRecipientInstant,
+        customRecipient: recipientInstant,
         checkTokensReceiver: false,
         holdback: {
           callFunction: callFn,

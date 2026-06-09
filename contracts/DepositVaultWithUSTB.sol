@@ -55,6 +55,7 @@ contract DepositVaultWithUSTB is DepositVault {
      * @notice Passes role identifiers to the base DepositVault constructor
      * @param _contractAdminRole contract admin role identifier
      * @param _greenlistedRole greenlisted role identifier
+     * @custom:oz-upgrades-unsafe-allow constructor
      */
     constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
         DepositVault(_contractAdminRole, _greenlistedRole)

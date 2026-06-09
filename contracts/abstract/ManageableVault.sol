@@ -174,6 +174,7 @@ abstract contract ManageableVault is
      * @notice constructor
      * @param _contractAdminRole contract admin role
      * @param _greenlistedRole greenlisted role
+     * @custom:oz-upgrades-unsafe-allow constructor
      */
     constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
         MidasInitializable()

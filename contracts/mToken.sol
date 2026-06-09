@@ -24,16 +24,19 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken, IPausable {
 
     /**
      * @dev role that grants contract admin rights to the contract
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
      */
     // solhint-disable-next-line var-name-mixedcase
     bytes32 private immutable _CONTRACT_ADMIN_ROLE;
     /**
      * @dev role that grants minter rights to the contract
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
      */
     // solhint-disable-next-line var-name-mixedcase
     bytes32 private immutable _MINTER_ROLE;
     /**
      * @dev role that grants burner rights to the contract
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
      */
     // solhint-disable-next-line var-name-mixedcase
     bytes32 private immutable _BURNER_ROLE;
@@ -77,6 +80,7 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken, IPausable {
      * @param _contractAdminRole contract admin role
      * @param _minterRole minter role
      * @param _burnerRole burner role
+     * @custom:oz-upgrades-unsafe-allow constructor
      */
     constructor(
         bytes32 _contractAdminRole,
@@ -101,29 +105,34 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken, IPausable {
         string memory name_,
         string memory symbol_
     ) external {
-        _initializeV1(_accessControl);
-        initializeV2(_clawbackReceiver, name_, symbol_);
+        _initializeV1(_accessControl, name_, symbol_);
+        initializeV2(_clawbackReceiver);
     }
 
     /**
      * @dev v1 initializer
      * @param _accessControl address of MidasAccessControll contract
+     * @param name_ name of the token
+     * @param symbol_ symbol of the token
      */
-    function _initializeV1(address _accessControl) private initializer {
+    function _initializeV1(
+        address _accessControl,
+        string memory name_,
+        string memory symbol_
+    ) private initializer {
         __WithMidasAccessControl_init(_accessControl);
+        __ERC20_init(name_, symbol_);
     }
 
     /**
      * @dev v2 initializer
      * @param _clawbackReceiver address to which clawback tokens will be sent
-     * @param name_ name of the token
-     * @param symbol_ symbol of the token
      */
-    function initializeV2(
-        address _clawbackReceiver,
-        string memory name_,
-        string memory symbol_
-    ) public virtual reinitializer(2) {
+    function initializeV2(address _clawbackReceiver)
+        public
+        virtual
+        reinitializer(3)
+    {
         require(
             _clawbackReceiver != address(0),
             InvalidAddress(_clawbackReceiver)
@@ -131,8 +140,9 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken, IPausable {
 
         clawbackReceiver = _clawbackReceiver;
 
-        _name = name_;
-        _symbol = symbol_;
+        // to make upgrades safer, we sync the name and symbol from the ERC20Upgradeable
+        _name = ERC20Upgradeable.name();
+        _symbol = ERC20Upgradeable.symbol();
     }
 
     /**

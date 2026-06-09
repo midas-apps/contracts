@@ -101,7 +101,7 @@ type CommonRoles = {
   defaultAdmin: string;
   pauseAdmin: string;
   securityCouncilManager: string;
-  timelockChallenger: string;
+  timelockOperationPauser: string;
 };
 
 type IntegrationRoles = {
@@ -147,7 +147,7 @@ export const getRolesNamesCommon = (): CommonRoles => {
     blacklistedOperator: 'BLACKLIST_OPERATOR_ROLE',
     pauseAdmin: 'PAUSE_ADMIN_ROLE',
     securityCouncilManager: 'SECURITY_COUNCIL_MANAGER_ROLE',
-    timelockChallenger: 'TIMELOCK_CHALLENGER_ROLE',
+    timelockOperationPauser: 'TIMELOCK_OPERATION_PAUSER_ROLE',
   };
 };
 
@@ -195,7 +195,9 @@ export const getAllRoles = (): AllRoles => {
       securityCouncilManager: keccak256(
         rolesNamesCommon.securityCouncilManager,
       ),
-      timelockChallenger: keccak256(rolesNamesCommon.timelockChallenger),
+      timelockOperationPauser: keccak256(
+        rolesNamesCommon.timelockOperationPauser,
+      ),
     },
     tokenRoles: Object.fromEntries(
       Object.keys(prefixes).map((token) => [

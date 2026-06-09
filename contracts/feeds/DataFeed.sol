@@ -52,6 +52,7 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
     /**
      * @notice constructor
      * @param _contractAdminRole contract admin role
+     * @custom:oz-upgrades-unsafe-allow constructor
      */
     constructor(bytes32 _contractAdminRole) MidasInitializable() {
         _CONTRACT_ADMIN_ROLE = _contractAdminRole;

@@ -34,6 +34,7 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
      * @notice Passes role identifiers to the base RedemptionVault constructor
      * @param _contractAdminRole contract admin role identifier
      * @param _greenlistedRole greenlisted role identifier
+     * @custom:oz-upgrades-unsafe-allow constructor
      */
     constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
         RedemptionVault(_contractAdminRole, _greenlistedRole)

@@ -174,7 +174,7 @@ export const scheduleTimelockOperationsTester = async (
 
     const details = await timelockManager.getOperationDetails(operationId);
     expect(details.status).to.be.equal(1);
-    expect(details.challenger).to.be.equal(ethers.constants.AddressZero);
+    expect(details.pauser).to.be.equal(ethers.constants.AddressZero);
     expect(details.operationProposer).to.be.equal(from.address);
     expect(details.dataHash).to.be.equal(dataHash);
     expect(details.votesForExecution).to.be.equal(0);
@@ -237,7 +237,7 @@ export const executeTimelockOperationTester = async (
   const detailsAfter = await timelockManager.getOperationDetails(operationId);
 
   expect(detailsAfter.status).to.be.equal(8);
-  expect(detailsAfter.challenger).to.be.equal(detailsBefore.challenger);
+  expect(detailsAfter.pauser).to.be.equal(detailsBefore.pauser);
   expect(detailsAfter.operationProposer).to.be.equal(
     detailsBefore.operationProposer,
   );
@@ -322,7 +322,7 @@ export const pauseTimelockOperationTest = async (
   const details = await timelockManager.getOperationDetails(operationId);
 
   expect(details.status).to.be.equal(2);
-  expect(details.challenger).to.be.equal(from.address);
+  expect(details.pauser).to.be.equal(from.address);
   expect(details.pauseReasonCode).to.be.equal(pauseReasonCode);
   expect(details.councilVersion).to.be.equal(detailsBefore.councilVersion);
   expect(details.operationProposer).to.be.equal(
@@ -380,7 +380,7 @@ export const voteForVetoTest = async (
   );
 
   const details = await timelockManager.getOperationDetails(operationId);
-  expect(details.challenger).to.be.equal(detailsBefore.challenger);
+  expect(details.pauser).to.be.equal(detailsBefore.pauser);
   expect(details.pauseReasonCode).to.be.equal(detailsBefore.pauseReasonCode);
   expect(details.councilVersion).to.be.equal(detailsBefore.councilVersion);
   expect(details.operationProposer).to.be.equal(
@@ -422,7 +422,7 @@ export const voteForExecutionTest = async (
   );
 
   const details = await timelockManager.getOperationDetails(operationId);
-  expect(details.challenger).to.be.equal(detailsBefore.challenger);
+  expect(details.pauser).to.be.equal(detailsBefore.pauser);
   expect(details.pauseReasonCode).to.be.equal(detailsBefore.pauseReasonCode);
   expect(details.councilVersion).to.be.equal(detailsBefore.councilVersion);
   expect(details.operationProposer).to.be.equal(
@@ -501,7 +501,7 @@ export const abortOperationTest = async (
   const details = await timelockManager.getOperationDetails(operationId);
 
   expect(details.status).to.be.equal(7);
-  expect(details.challenger).to.be.equal(detailsBefore.challenger);
+  expect(details.pauser).to.be.equal(detailsBefore.pauser);
   expect(details.pauseReasonCode).to.be.equal(detailsBefore.pauseReasonCode);
   expect(details.councilVersion).to.be.equal(detailsBefore.councilVersion);
   expect(details.operationProposer).to.be.equal(

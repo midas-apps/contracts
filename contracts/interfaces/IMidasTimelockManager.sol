@@ -27,14 +27,14 @@ struct GetOperationStatusResult {
     uint32 createdAt;
     /// @notice block timestamp when execution was approved by council
     uint32 executionApprovedAt;
-    /// @notice pause reason code set by challenger
+    /// @notice pause reason code set by pauser
     uint8 pauseReasonCode;
     /// @notice security council version at pause time
     uint256 councilVersion;
     /// @notice address that scheduled the operation
     address operationProposer;
     /// @notice address that paused the operation
-    address challenger;
+    address pauser;
     /// @notice hash of target, value and data
     bytes32 dataHash;
     /// @notice number of council votes for execution
@@ -176,7 +176,7 @@ interface IMidasTimelockManager {
     );
 
     /**
-     * @param caller challenger address
+     * @param caller pauser address
      * @param operationId paused operation id
      * @param pauseReasonCode pause reason code
      * @param councilVersion security council version at pause
@@ -274,9 +274,9 @@ interface IMidasTimelockManager {
         external;
 
     /**
-     * @notice Pauses (challenges) a pending operation
+     * @notice Pauses a pending operation
      * @param operationId operation id
-     * @param pauseReasonCode reason code set by challenger
+     * @param pauseReasonCode reason code set by pauser
      */
     function pauseOperation(bytes32 operationId, uint8 pauseReasonCode)
         external;

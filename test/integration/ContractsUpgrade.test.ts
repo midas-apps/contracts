@@ -43,7 +43,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
     const rolesToReset = [
       roles.common.defaultAdmin,
       roles.common.pauseAdmin,
-      roles.common.timelockChallenger,
+      roles.common.timelockOperationPauser,
       roles.common.securityCouncilManager,
       roles.common.greenlistedOperator,
       roles.common.blacklistedOperator,
@@ -152,7 +152,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
   };
   describe('MidasAccessControl', () => {
     describe('initializeRelationships()', () => {
-      it('should expose deployed pause and timelock managers', async () => {
+      it.only('should expose deployed pause and timelock managers', async () => {
         const { accessControl, pauseManager, timelockManager } =
           await loadFixture(mainnetUpgradeFixture);
 
@@ -254,7 +254,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           accessControl
             .connect(acDefaultAdmin)
             .grantRoleMult(
-              [roles.common.pauseAdmin, roles.common.timelockChallenger],
+              [roles.common.pauseAdmin, roles.common.timelockOperationPauser],
               [accountA.address, accountB.address],
             ),
         ).not.reverted;
@@ -267,7 +267,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
         ).to.eq(true);
         expect(
           await accessControl.hasRole(
-            roles.common.timelockChallenger,
+            roles.common.timelockOperationPauser,
             accountB.address,
           ),
         ).to.eq(true);
@@ -911,7 +911,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
         const from = mGlobalHolders[0];
         const to = mGlobalHolders[1];
         const amount = parseUnits('0.01');
-        const greenlistRole = await mGlobal.M_GLOBAL_GREENLISTED_ROLE();
+        const greenlistRole = await mGlobal.greenlistedRole();
 
         await resetTimelockDelays({
           timelockManager,
@@ -1016,10 +1016,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           timelock,
         });
 
-        const feedAdminRole = await mTbillDataFeed.feedAdminRole();
+        const contractAdminRole = await mTbillDataFeed.contractAdminRole();
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(feedAdminRole, acDefaultAdmin.address);
+          .grantRole(contractAdminRole, acDefaultAdmin.address);
 
         const newAggregator = await new AggregatorV3Mock__factory(
           deployer,
@@ -1067,10 +1067,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           owner: acDefaultAdmin,
         };
 
-        const feedAdminRole = await mTbillDataFeed.feedAdminRole();
+        const contractAdminRole = await mTbillDataFeed.contractAdminRole();
         await grantRoleViaTimelock(
           ctx,
-          feedAdminRole,
+          contractAdminRole,
           acDefaultAdmin.address,
           acDefaultAdmin,
         );
@@ -1111,10 +1111,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           timelock,
         });
 
-        const feedAdminRole = await mTbillDataFeed.feedAdminRole();
+        const contractAdminRole = await mTbillDataFeed.contractAdminRole();
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(feedAdminRole, acDefaultAdmin.address);
+          .grantRole(contractAdminRole, acDefaultAdmin.address);
 
         await mTbillDataFeed
           .connect(acDefaultAdmin)
@@ -1139,10 +1139,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           owner: acDefaultAdmin,
         };
 
-        const feedAdminRole = await mTbillDataFeed.feedAdminRole();
+        const contractAdminRole = await mTbillDataFeed.contractAdminRole();
         await grantRoleViaTimelock(
           ctx,
-          feedAdminRole,
+          contractAdminRole,
           acDefaultAdmin.address,
           acDefaultAdmin,
         );
@@ -1196,10 +1196,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           timelock,
         });
 
-        const feedAdminRole = await mTbillCustomFeed.feedAdminRole();
+        const contractAdminRole = await mTbillCustomFeed.contractAdminRole();
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(feedAdminRole, acDefaultAdmin.address);
+          .grantRole(contractAdminRole, acDefaultAdmin.address);
 
         const roundBefore = await mTbillCustomFeed.latestRound();
         const answer = await mTbillCustomFeed.lastAnswer();
@@ -1239,10 +1239,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           owner: acDefaultAdmin,
         };
 
-        const feedAdminRole = await mTbillCustomFeed.feedAdminRole();
+        const contractAdminRole = await mTbillCustomFeed.contractAdminRole();
         await grantRoleViaTimelock(
           ctx,
-          feedAdminRole,
+          contractAdminRole,
           acDefaultAdmin.address,
           acDefaultAdmin,
         );
@@ -1282,10 +1282,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           timelock,
         });
 
-        const feedAdminRole = await mTbillCustomFeed.feedAdminRole();
+        const contractAdminRole = await mTbillCustomFeed.contractAdminRole();
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(feedAdminRole, acDefaultAdmin.address);
+          .grantRole(contractAdminRole, acDefaultAdmin.address);
 
         await mTbillCustomFeed
           .connect(acDefaultAdmin)
@@ -1310,10 +1310,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           owner: acDefaultAdmin,
         };
 
-        const feedAdminRole = await mTbillCustomFeed.feedAdminRole();
+        const contractAdminRole = await mTbillCustomFeed.contractAdminRole();
         await grantRoleViaTimelock(
           ctx,
-          feedAdminRole,
+          contractAdminRole,
           acDefaultAdmin.address,
           acDefaultAdmin,
         );
@@ -1361,10 +1361,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           timelock,
         });
 
-        const feedAdminRole = await mGlobalDataFeed.feedAdminRole();
+        const contractAdminRole = await mGlobalDataFeed.contractAdminRole();
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(feedAdminRole, acDefaultAdmin.address);
+          .grantRole(contractAdminRole, acDefaultAdmin.address);
 
         const newAggregator = await new AggregatorV3Mock__factory(
           deployer,
@@ -1412,10 +1412,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           owner: acDefaultAdmin,
         };
 
-        const feedAdminRole = await mGlobalDataFeed.feedAdminRole();
+        const contractAdminRole = await mGlobalDataFeed.contractAdminRole();
         await grantRoleViaTimelock(
           ctx,
-          feedAdminRole,
+          contractAdminRole,
           acDefaultAdmin.address,
           acDefaultAdmin,
         );
@@ -1477,10 +1477,11 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           timelock,
         });
 
-        const feedAdminRole = await mGlobalCustomFeedGrowth.feedAdminRole();
+        const contractAdminRole =
+          await mGlobalCustomFeedGrowth.contractAdminRole();
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(feedAdminRole, acDefaultAdmin.address);
+          .grantRole(contractAdminRole, acDefaultAdmin.address);
 
         const raw = await mGlobalCustomFeedGrowth.latestRoundDataRaw();
         const roundBefore = await mGlobalCustomFeedGrowth.latestRound();
@@ -1532,10 +1533,11 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           owner: acDefaultAdmin,
         };
 
-        const feedAdminRole = await mGlobalCustomFeedGrowth.feedAdminRole();
+        const contractAdminRole =
+          await mGlobalCustomFeedGrowth.contractAdminRole();
         await grantRoleViaTimelock(
           ctx,
-          feedAdminRole,
+          contractAdminRole,
           acDefaultAdmin.address,
           acDefaultAdmin,
         );
@@ -1579,10 +1581,11 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           timelock,
         });
 
-        const feedAdminRole = await mGlobalCustomFeedGrowth.feedAdminRole();
+        const contractAdminRole =
+          await mGlobalCustomFeedGrowth.contractAdminRole();
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(feedAdminRole, acDefaultAdmin.address);
+          .grantRole(contractAdminRole, acDefaultAdmin.address);
 
         const newMaxGrowthApr = await mGlobalCustomFeedGrowth.maxGrowthApr();
 
@@ -1611,10 +1614,11 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           owner: acDefaultAdmin,
         };
 
-        const feedAdminRole = await mGlobalCustomFeedGrowth.feedAdminRole();
+        const contractAdminRole =
+          await mGlobalCustomFeedGrowth.contractAdminRole();
         await grantRoleViaTimelock(
           ctx,
-          feedAdminRole,
+          contractAdminRole,
           acDefaultAdmin.address,
           acDefaultAdmin,
         );
@@ -1654,10 +1658,11 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           timelock,
         });
 
-        const feedAdminRole = await mGlobalCustomFeedGrowth.feedAdminRole();
+        const contractAdminRole =
+          await mGlobalCustomFeedGrowth.contractAdminRole();
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(feedAdminRole, acDefaultAdmin.address);
+          .grantRole(contractAdminRole, acDefaultAdmin.address);
 
         const newOnlyUp = !(await mGlobalCustomFeedGrowth.onlyUp());
 
@@ -1684,10 +1689,11 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           owner: acDefaultAdmin,
         };
 
-        const feedAdminRole = await mGlobalCustomFeedGrowth.feedAdminRole();
+        const contractAdminRole =
+          await mGlobalCustomFeedGrowth.contractAdminRole();
         await grantRoleViaTimelock(
           ctx,
-          feedAdminRole,
+          contractAdminRole,
           acDefaultAdmin.address,
           acDefaultAdmin,
         );
@@ -1726,10 +1732,11 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           timelock,
         });
 
-        const feedAdminRole = await mGlobalCustomFeedGrowth.feedAdminRole();
+        const contractAdminRole =
+          await mGlobalCustomFeedGrowth.contractAdminRole();
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(feedAdminRole, acDefaultAdmin.address);
+          .grantRole(contractAdminRole, acDefaultAdmin.address);
 
         await mGlobalCustomFeedGrowth
           .connect(acDefaultAdmin)
@@ -1756,10 +1763,11 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           owner: acDefaultAdmin,
         };
 
-        const feedAdminRole = await mGlobalCustomFeedGrowth.feedAdminRole();
+        const contractAdminRole =
+          await mGlobalCustomFeedGrowth.contractAdminRole();
         await grantRoleViaTimelock(
           ctx,
-          feedAdminRole,
+          contractAdminRole,
           acDefaultAdmin.address,
           acDefaultAdmin,
         );

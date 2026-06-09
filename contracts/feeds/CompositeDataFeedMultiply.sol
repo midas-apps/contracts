@@ -16,6 +16,7 @@ contract CompositeDataFeedMultiply is CompositeDataFeed {
     /**
      * @notice constructor
      * @param _contractAdminRole contract admin role
+     * @custom:oz-upgrades-unsafe-allow constructor
      */
     constructor(bytes32 _contractAdminRole)
         CompositeDataFeed(_contractAdminRole)

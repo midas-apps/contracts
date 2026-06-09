@@ -5,7 +5,6 @@ import { ethers } from 'hardhat';
 import hre from 'hardhat';
 
 import { rpcUrls } from '../../../config';
-import { mTokensMetadata } from '../../../helpers/mtokens-metadata';
 import { getAllRoles } from '../../../helpers/roles';
 import {
   MidasAccessControl,
@@ -21,6 +20,7 @@ import {
   CustomAggregatorV3CompatibleFeed__factory,
   MToken__factory,
   CustomAggregatorV3CompatibleFeedGrowth,
+  MTokenPermissioned,
 } from '../../../typechain-types';
 import { Constructor } from '../../common/common.helpers';
 import { deployProxyContract } from '../../common/deploy.helpers';
@@ -43,7 +43,7 @@ export async function mainnetUpgradeFixture() {
   const mTbillCustomFeedAddress = '0x056339C044055819E8Db84E71f5f2E1F536b2E5b';
   const mTbillAddress = '0xDD629E5241CbC5919847783e6C96B2De4754e438';
 
-  const signers = await ethers.getSigners();
+  const [clawbackReceiver, ...signers] = await ethers.getSigners();
 
   await resetFork(rpcUrls.main, 25193577);
 
@@ -76,6 +76,10 @@ export async function mainnetUpgradeFixture() {
       proxy: string;
       implementation: Constructor<ContractFactory>;
       constructorArgs?: unknown[];
+      reinitializerParams?: {
+        fn: string;
+        args: unknown[];
+      };
     }[]
   > = {
     mTbill: [
@@ -86,9 +90,11 @@ export async function mainnetUpgradeFixture() {
           allRoles.tokenRoles.mTBILL.tokenManager,
           allRoles.tokenRoles.mTBILL.minter,
           allRoles.tokenRoles.mTBILL.burner,
-          mTokensMetadata.mTBILL.name,
-          mTokensMetadata.mTBILL.symbol,
         ],
+        reinitializerParams: {
+          fn: 'initializeV2',
+          args: [clawbackReceiver.address],
+        },
       },
       {
         proxy: mTbillDataFeedAddress,
@@ -110,9 +116,12 @@ export async function mainnetUpgradeFixture() {
           allRoles.tokenRoles.mGLOBAL.tokenManager,
           allRoles.tokenRoles.mGLOBAL.minter,
           allRoles.tokenRoles.mGLOBAL.burner,
-          mTokensMetadata.mGLOBAL.name,
-          mTokensMetadata.mGLOBAL.symbol,
+          allRoles.tokenRoles.mGLOBAL.greenlisted,
         ],
+        reinitializerParams: {
+          fn: 'initializeV2',
+          args: [clawbackReceiver.address],
+        },
       },
       {
         proxy: mGlobalDataFeedAddress,
@@ -134,7 +143,16 @@ export async function mainnetUpgradeFixture() {
       await hre.upgrades.upgradeProxy(
         val.proxy,
         new val.implementation(proxyAdminOwner),
-        { constructorArgs: val.constructorArgs ?? [] },
+        {
+          unsafeAllow: ['constructor'],
+          constructorArgs: val.constructorArgs ?? [],
+          call: val.reinitializerParams
+            ? {
+                fn: val.reinitializerParams.fn,
+                args: val.reinitializerParams.args,
+              }
+            : undefined,
+        },
       );
     }
   }
@@ -176,9 +194,9 @@ export async function mainnetUpgradeFixture() {
     mTbillAddress,
   )) as MToken;
   const mGlobal = (await ethers.getContractAt(
-    'MToken',
+    'MTokenPermissioned',
     mGlobalAddress,
-  )) as MToken;
+  )) as MTokenPermissioned;
   const mTbillDataFeed = (await ethers.getContractAt(
     'DataFeed',
     mTbillDataFeedAddress,
@@ -227,6 +245,7 @@ export async function mainnetUpgradeFixture() {
     mGlobalCustomFeedGrowth,
     mTbillHolders,
     mGlobalHolders,
+    clawbackReceiver,
   };
 }
 

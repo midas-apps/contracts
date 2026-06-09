@@ -1438,7 +1438,7 @@ export const depositVaultSuits = (
             1,
             {
               revertCustomError: {
-                customErrorName: 'HasntRole',
+                customErrorName: 'NotGreenlisted',
               },
             },
           );
@@ -1532,7 +1532,7 @@ export const depositVaultSuits = (
             1,
             {
               revertCustomError: {
-                customErrorName: 'HasntRole',
+                customErrorName: 'NotGreenlisted',
               },
             },
           );
@@ -3338,7 +3338,7 @@ export const depositVaultSuits = (
             1,
             {
               revertCustomError: {
-                customErrorName: 'HasntRole',
+                customErrorName: 'NotGreenlisted',
               },
             },
           );

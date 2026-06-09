@@ -1204,7 +1204,7 @@ describe('MidasTimelockManager', () => {
       );
     });
 
-    it('should fail: when msg.sender do not have a challenger role', async () => {
+    it('should fail: when msg.sender do not have a pauser role', async () => {
       const {
         timelockManager,
         timelock,
@@ -1241,7 +1241,7 @@ describe('MidasTimelockManager', () => {
       );
     });
 
-    it('should fail: when msg.sender do not have challenger role but do have default admin', async () => {
+    it('should fail: when msg.sender do not have pauser role but do have default admin', async () => {
       const {
         timelockManager,
         timelock,
@@ -3532,7 +3532,7 @@ describe('MidasTimelockManager', () => {
 
       expect(details.status).to.eq(0);
       expect(details.operationProposer).to.eq(constants.AddressZero);
-      expect(details.challenger).to.eq(constants.AddressZero);
+      expect(details.pauser).to.eq(constants.AddressZero);
       expect(details.votesForExecution).to.eq(0);
       expect(details.votesForVeto).to.eq(0);
     });
@@ -3572,7 +3572,7 @@ describe('MidasTimelockManager', () => {
 
       expect(details.status).to.eq(2);
       expect(details.operationProposer).to.eq(owner.address);
-      expect(details.challenger).to.eq(owner.address);
+      expect(details.pauser).to.eq(owner.address);
       expect(details.pauseReasonCode).to.eq(7);
       expect(details.votesForExecution).to.eq(0);
       expect(details.votesForVeto).to.eq(0);

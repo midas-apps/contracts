@@ -12,6 +12,10 @@ import "./mToken.sol";
  */
 //solhint-disable contract-name-camelcase
 abstract contract mTokenPermissioned is mToken {
+    /**
+     * @dev role that grants greenlisted rights to the contract
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
+     */
     // solhint-disable-next-line var-name-mixedcase
     bytes32 private immutable _GREENLISTED_ROLE;
     /**
@@ -25,6 +29,7 @@ abstract contract mTokenPermissioned is mToken {
      * @param _minterRole minter role
      * @param _burnerRole burner role
      * @param _greenlistedRole greenlisted role
+     * @custom:oz-upgrades-unsafe-allow constructor
      */
     constructor(
         bytes32 _contractAdminRole,
