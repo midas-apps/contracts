@@ -95,9 +95,8 @@ export const setMorphoVaultTest = async (
       .setMorphoVault(token, vault),
   ).to.emit(
     depositVaultWithMorpho,
-    depositVaultWithMorpho.interface.events[
-      'SetMorphoVault(address,address,address)'
-    ].name,
+    depositVaultWithMorpho.interface.events['SetMorphoVault(address,address)']
+      .name,
   ).to.not.reverted;
 
   const vaultAfter = await depositVaultWithMorpho.morphoVaults(token);
@@ -125,9 +124,7 @@ export const removeMorphoVaultTest = async (
     depositVaultWithMorpho.connect(opt?.from ?? owner).removeMorphoVault(token),
   ).to.emit(
     depositVaultWithMorpho,
-    depositVaultWithMorpho.interface.events[
-      'RemoveMorphoVault(address,address)'
-    ].name,
+    depositVaultWithMorpho.interface.events['RemoveMorphoVault(address)'].name,
   ).to.not.reverted;
 
   const vaultAfter = await depositVaultWithMorpho.morphoVaults(token);

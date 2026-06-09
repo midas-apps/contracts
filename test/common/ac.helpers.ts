@@ -314,7 +314,7 @@ export const setIsUserFacingRoleTester = async (
 
   const callFn = accessControl
     .connect(from)
-    .setIsUserFacingRoleMult.bind(this, params);
+    .setUserFacingRoleMult.bind(this, params);
 
   if (await handleRevert(callFn, accessControl, opt)) {
     return;
@@ -333,7 +333,7 @@ export const setIsUserFacingRoleTester = async (
   const logs = txReceipt.logs
     .filter((log) => log.address === accessControl.address)
     .map((log) => accessControl.interface.parseLog(log))
-    .filter((v) => v.name === 'UserFacingRoleSet')
+    .filter((v) => v.name === 'SetUserFacingRole')
     .map((v) => v.args);
 
   for (const [index, stateBefore] of statesBefore.entries()) {
@@ -350,12 +350,12 @@ export const setIsUserFacingRoleTester = async (
   }
 };
 
-export const setFunctionAccessGrantOperatorTester = async (
+export const setGrantOperatorRoleTester = async (
   {
     accessControl,
     owner,
   }: { accessControl: MidasAccessControl; owner: SignerWithAddress },
-  functionAccessAdminRole: string,
+  masterRole: string,
   params: {
     targetContract: string;
     functionSelector: string;
@@ -368,18 +368,14 @@ export const setFunctionAccessGrantOperatorTester = async (
 
   const callFn = accessControl
     .connect(from)
-    .setFunctionAccessGrantOperatorMult.bind(
-      this,
-      functionAccessAdminRole,
-      params,
-    );
+    .setGrantOperatorRoleMult.bind(this, masterRole, params);
 
   const statesBefore = await Promise.all(
     params.map(async (param) => {
       return await accessControl[
         'isFunctionAccessGrantOperator(bytes32,address,bytes4,address)'
       ](
-        functionAccessAdminRole,
+        masterRole,
         param.targetContract,
         param.functionSelector,
         param.operator,
@@ -398,7 +394,7 @@ export const setFunctionAccessGrantOperatorTester = async (
   const logs = txReceipt.logs
     .filter((log) => log.address === accessControl.address)
     .map((log) => accessControl.interface.parseLog(log))
-    .filter((v) => v.name === 'FunctionAccessGrantOperatorUpdate')
+    .filter((v) => v.name === 'SetGrantOperatorRole')
     .map((v) => v.args);
 
   for (const [index, stateBefore] of statesBefore.entries()) {
@@ -407,7 +403,7 @@ export const setFunctionAccessGrantOperatorTester = async (
     if (stateBefore !== param.enabled) {
       const log = logs.filter(
         (log) =>
-          log.functionAccessAdminRole === functionAccessAdminRole &&
+          log.masterRole === masterRole &&
           log.targetContract === param.targetContract &&
           log.functionSelector === param.functionSelector &&
           log.operator === param.operator &&
@@ -421,7 +417,7 @@ export const setFunctionAccessGrantOperatorTester = async (
       await accessControl[
         'isFunctionAccessGrantOperator(bytes32,address,bytes4,address)'
       ](
-        functionAccessAdminRole,
+        masterRole,
         param.targetContract,
         param.functionSelector,
         param.operator,
@@ -430,12 +426,12 @@ export const setFunctionAccessGrantOperatorTester = async (
   }
 };
 
-export const setFunctionPermissionTester = async (
+export const setPermissionRoleTester = async (
   {
     accessControl,
     owner,
   }: { accessControl: MidasAccessControl; owner: SignerWithAddress },
-  functionAccessAdminRole: string,
+  masterRole: string,
   targetContract: string,
   functionSelector: string,
   params: {
@@ -448,9 +444,9 @@ export const setFunctionPermissionTester = async (
 
   const callFn = accessControl
     .connect(from)
-    .setFunctionPermissionMult.bind(
+    .setPermissionRoleMult.bind(
       this,
-      functionAccessAdminRole,
+      masterRole,
       targetContract,
       functionSelector,
       params,
@@ -464,12 +460,7 @@ export const setFunctionPermissionTester = async (
     params.map(async (param) => {
       return await accessControl[
         'hasFunctionPermission(bytes32,address,bytes4,address)'
-      ](
-        functionAccessAdminRole,
-        targetContract,
-        functionSelector,
-        param.account,
-      );
+      ](masterRole, targetContract, functionSelector, param.account);
     }),
   );
 
@@ -481,7 +472,7 @@ export const setFunctionPermissionTester = async (
   const logs = txReceipt.logs
     .filter((log) => log.address === accessControl.address)
     .map((log) => accessControl.interface.parseLog(log))
-    .filter((v) => v.name === 'FunctionPermissionUpdate')
+    .filter((v) => v.name === 'SetPermissionRole')
     .map((v) => v.args);
 
   for (const [index, stateBefore] of statesBefore.entries()) {
@@ -490,7 +481,7 @@ export const setFunctionPermissionTester = async (
     if (stateBefore !== param.enabled) {
       const log = logs.filter(
         (log) =>
-          log.functionAccessAdminRole === functionAccessAdminRole &&
+          log.masterRole === masterRole &&
           log.targetContract === targetContract &&
           log.functionSelector === functionSelector &&
           log.account === param.account &&
@@ -503,12 +494,7 @@ export const setFunctionPermissionTester = async (
     expect(
       await accessControl[
         'hasFunctionPermission(bytes32,address,bytes4,address)'
-      ](
-        functionAccessAdminRole,
-        targetContract,
-        functionSelector,
-        param.account,
-      ),
+      ](masterRole, targetContract, functionSelector, param.account),
     ).eq(param.enabled);
   }
 };
@@ -516,38 +502,31 @@ export const setFunctionPermissionTester = async (
 type SetupFunctionAccessGrantOperatorParams = {
   accessControl: MidasAccessControl;
   owner: SignerWithAddress;
-  functionAccessAdminRole: string;
+  masterRole: string;
   targetContract: string;
   functionSelector: string;
   grantOperator: SignerWithAddress;
 };
 
-export const setupFunctionAccessGrantOperator = async ({
+export const setupGrantOperatorRole = async ({
   accessControl,
   owner,
-  functionAccessAdminRole,
+  masterRole,
   targetContract,
   functionSelector,
   grantOperator,
 }: SetupFunctionAccessGrantOperatorParams) => {
-  // await setIsUserFacingRoleTester({ accessControl, owner }, [
-  //   { role: functionAccessAdminRole, enabled: true },
-  // ]);
-  await setFunctionAccessGrantOperatorTester(
-    { accessControl, owner },
-    functionAccessAdminRole,
-    [
-      {
-        targetContract,
-        functionSelector,
-        operator: grantOperator.address,
-        enabled: true,
-      },
-    ],
-  );
+  await setGrantOperatorRoleTester({ accessControl, owner }, masterRole, [
+    {
+      targetContract,
+      functionSelector,
+      operator: grantOperator.address,
+      enabled: true,
+    },
+  ]);
 };
 
-export const setupVaultScopedFunctionPermission = async (
+export const setupPermissionRole = async (
   {
     accessControl,
     owner,
@@ -558,15 +537,15 @@ export const setupVaultScopedFunctionPermission = async (
   account: string,
 ) => {
   const selector = encodeFnSelector(functionSignature);
-  await setupFunctionAccessGrantOperator({
+  await setupGrantOperatorRole({
     accessControl,
     owner,
-    functionAccessAdminRole: vaultRole,
+    masterRole: vaultRole,
     targetContract: vaultAddress,
     functionSelector: selector,
     grantOperator: owner,
   });
-  await setFunctionPermissionTester(
+  await setPermissionRoleTester(
     { accessControl, owner },
     vaultRole,
     vaultAddress,

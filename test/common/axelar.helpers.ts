@@ -1,9 +1,13 @@
 import { expect } from 'chai';
-import { BigNumberish, constants, Contract } from 'ethers';
+import { BigNumberish, constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import { OptionalCommonParams, tokenAmountToBase18 } from './common.helpers';
+import {
+  handleRevert,
+  OptionalCommonParams,
+  tokenAmountToBase18,
+} from './common.helpers';
 import { calcExpectedMintAmount } from './deposit-vault.helpers';
 import { axelarFixture } from './fixtures';
 import { calcExpectedTokenOutAmount } from './redemption-vault.helpers';
@@ -51,10 +55,6 @@ export const sendIts = async (
   },
   opt?: {
     revertOnDst?: boolean;
-    revertWithCustomError?: {
-      contract: Contract;
-      error: string;
-    };
   } & OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
@@ -73,27 +73,19 @@ export const sendIts = async (
 
   const itsFrom = direction === 'A_TO_B' ? axelarItsA : axelarItsB;
 
-  const params = [
-    mTokenId,
-    direction === 'A_TO_B' ? chainNameB : chainNameA,
-    recipient,
-    amountParsed,
-  ] as const;
-
-  if (opt?.revertMessage && !opt?.revertOnDst) {
-    await expect(
-      itsFrom.connect(opt?.from ?? owner).interchainTransfer(...params),
-    ).revertedWith(opt?.revertMessage);
-    return;
-  }
-
-  if (opt?.revertWithCustomError && !opt?.revertOnDst) {
-    await expect(
-      itsFrom.connect(opt?.from ?? owner).interchainTransfer(...params),
-    ).revertedWithCustomError(
-      opt?.revertWithCustomError.contract,
-      opt?.revertWithCustomError.error,
+  const callFn = itsFrom
+    .connect(opt?.from ?? owner)
+    .interchainTransfer.bind(
+      this,
+      mTokenId,
+      direction === 'A_TO_B' ? chainNameB : chainNameA,
+      recipient,
+      amountParsed,
+      [],
+      0,
     );
+
+  if (!opt?.revertOnDst && (await handleRevert(callFn, itsFrom, opt))) {
     return;
   }
 
@@ -101,8 +93,7 @@ export const sendIts = async (
   const balanceFromBefore = await mTBILL.balanceOf(from.address);
   const balanceToBefore = await mTBILL.balanceOf(recipient);
 
-  await expect(itsFrom.connect(from).interchainTransfer(...params)).not
-    .reverted;
+  await expect(callFn()).not.reverted;
 
   const totalSupplyAfter = await mTBILL.totalSupply();
   const balanceFromAfter = await mTBILL.balanceOf(from.address);
@@ -152,12 +143,7 @@ export const depositAndSend = async (
     referrerId?: string;
     minReceiveAmount?: BigNumberish;
   },
-  opt?: {
-    revertWithCustomError?: {
-      contract: Contract;
-      error: string;
-    };
-  } & OptionalCommonParams,
+  opt?: OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
   recipient ??= from.address;
@@ -200,20 +186,11 @@ export const depositAndSend = async (
   );
   const params = [amountParsed, encodedData] as const;
 
-  if (opt?.revertMessage) {
-    await expect(
-      executor.connect(opt?.from ?? owner).depositAndSend(...params),
-    ).revertedWith(opt?.revertMessage);
-    return;
-  }
+  const callFn = executor
+    .connect(opt?.from ?? owner)
+    .depositAndSend.bind(this, ...params);
 
-  if (opt?.revertWithCustomError) {
-    await expect(
-      executor.connect(opt?.from ?? owner).depositAndSend(...params),
-    ).revertedWithCustomError(
-      opt?.revertWithCustomError.contract,
-      opt?.revertWithCustomError.error,
-    );
+  if (await handleRevert(callFn, executor, opt)) {
     return;
   }
 
@@ -221,7 +198,7 @@ export const depositAndSend = async (
   const balanceFromBefore = await pToken.balanceOf(from.address);
   const balanceToBefore = await mTBILL.balanceOf(recipient);
 
-  await expect(executor.connect(from).depositAndSend(...params))
+  await expect(callFn())
     .to.emit(
       executor,
       executor.interface.events['Deposited(bytes,bytes,string,uint256,uint256)']
@@ -265,12 +242,7 @@ export const redeemAndSend = async (
     direction?: 'A_TO_A' | 'B_TO_B' | 'B_TO_A' | 'A_TO_B';
     minReceiveAmount?: BigNumberish;
   },
-  opt?: {
-    revertWithCustomError?: {
-      contract: Contract;
-      error: string;
-    };
-  } & OptionalCommonParams,
+  opt?: OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
   recipient ??= from.address;
@@ -306,18 +278,9 @@ export const redeemAndSend = async (
   );
   const params = [amountParsed, encodedData] as const;
 
-  const txFn = executor.connect(from).redeemAndSend.bind(this, ...params);
+  const callFn = executor.connect(from).redeemAndSend.bind(this, ...params);
 
-  if (opt?.revertMessage) {
-    await expect(txFn()).revertedWith(opt?.revertMessage);
-    return;
-  }
-
-  if (opt?.revertWithCustomError) {
-    await expect(txFn()).revertedWithCustomError(
-      opt?.revertWithCustomError.contract,
-      opt?.revertWithCustomError.error,
-    );
+  if (await handleRevert(callFn, executor, opt)) {
     return;
   }
 
@@ -325,7 +288,7 @@ export const redeemAndSend = async (
   const balanceFromBefore = await mTBILL.balanceOf(from.address);
   const balanceToBefore = await pToken.balanceOf(recipient);
 
-  await expect(txFn())
+  await expect(callFn())
     .to.emit(
       executor,
       executor.interface.events['Redeemed(bytes,bytes,string,uint256,uint256)']

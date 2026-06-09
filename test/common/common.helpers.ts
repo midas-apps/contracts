@@ -10,6 +10,8 @@ import {
 import { parseUnits, solidityKeccak256 } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
+import { DefaultFixture } from './fixtures';
+
 import {
   ERC20,
   ERC20__factory,
@@ -19,7 +21,6 @@ import {
   MToken,
   USTBMock,
 } from '../../typechain-types';
-
 type RevertCustomError = {
   contract?: Contract;
   customErrorName: string;
@@ -460,4 +461,56 @@ export const validateImplementation = async (
   //     ? new implementationFactory()
   //     : implementationFactory;
   // await hre.upgrades.validateImplementation(factory);
+};
+
+export type InitializeInvariant<TParams> =
+  | {
+      title: string;
+      params: Partial<TParams>;
+      revertCustomError: {
+        customErrorName: string;
+        args?: unknown[];
+      };
+    }
+  | {
+      title: string;
+      run: (fixture: DefaultFixture) => Promise<void>;
+    };
+
+const runInitializeInvariant = async <TParams>(
+  fixture: DefaultFixture,
+  invariant: InitializeInvariant<TParams>,
+  initializeFunction: (
+    fixture: DefaultFixture,
+    params: Partial<TParams>,
+    opt?: OptionalCommonParams,
+  ) => Promise<void>,
+) => {
+  if ('run' in invariant) {
+    await invariant.run(fixture);
+    return;
+  }
+
+  await initializeFunction(fixture, invariant.params, {
+    revertCustomError: invariant.revertCustomError,
+  });
+};
+
+export const initializeParamsSuits = <TParams>(
+  initializeInvariants: InitializeInvariant<TParams>[],
+  fixtureFn: () => Promise<DefaultFixture>,
+  initializeFunction: (
+    fixture: DefaultFixture,
+    params: Partial<TParams>,
+    opt?: OptionalCommonParams,
+  ) => Promise<void>,
+) => {
+  describe('initialization params', () => {
+    for (const invariant of initializeInvariants) {
+      it(`should fail: when ${invariant.title}`, async () => {
+        const fixture = await fixtureFn();
+        await runInitializeInvariant(fixture, invariant, initializeFunction);
+      });
+    }
+  });
 };

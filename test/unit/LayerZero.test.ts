@@ -29,7 +29,7 @@ import {
   setInstantFeeTest,
   setMinAmountTest,
 } from '../common/manageable-vault.helpers';
-import { mint } from '../common/mTBILL.helpers';
+import { mint } from '../common/mtoken.helpers';
 
 describe('LayerZero', function () {
   describe('MidasLzMintBurnOFTAdapter', () => {

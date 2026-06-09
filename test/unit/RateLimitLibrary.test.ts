@@ -385,7 +385,7 @@ describe('RateLimitLibrary', function () {
       expect(getStatusByWindow(statuses, WINDOW_2D)!.inFlight).eq(amount);
     });
 
-    it('should fail when any window lacks headroom', async () => {
+    it('should fail: when any window lacks headroom', async () => {
       const { tester } = await loadFixture(rateLimitLibraryFixture);
 
       await tester.setWindowLimitPublic(WINDOW_1D, parseUnits('100'));

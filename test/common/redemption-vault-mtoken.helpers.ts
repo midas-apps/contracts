@@ -146,10 +146,7 @@ export const setRedemptionVaultTest = async (
   }
 
   await expect(vault.connect(opt?.from ?? owner).setRedemptionVault(newVault))
-    .to.emit(
-      vault,
-      vault.interface.events['SetRedemptionVault(address,address)'].name,
-    )
+    .to.emit(vault, vault.interface.events['SetRedemptionVault(address)'].name)
     .withArgs((opt?.from ?? owner).address, newVault).to.not.reverted;
 
   const provider = await vault.redemptionVault();

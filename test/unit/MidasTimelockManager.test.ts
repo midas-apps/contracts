@@ -11,8 +11,8 @@ import {
   MidasTimelockManagerTest__factory,
 } from '../../typechain-types';
 import {
-  setFunctionPermissionTester,
-  setupFunctionAccessGrantOperator,
+  setPermissionRoleTester,
+  setupGrantOperatorRole,
 } from '../common/ac.helpers';
 import {
   OptionalCommonParams,
@@ -35,6 +35,9 @@ import {
 
 const DELAY_FOR_SET_DEFAULT_DELAY = 2 * 24 * 3600;
 const setDefaultDelaySelector = encodeFnSelector('setDefaultDelay(uint256)');
+const executeTimelockOperationSelector = encodeFnSelector(
+  'executeTimelockOperation(address,bytes)',
+);
 
 export const timelockManagerRevert = (
   timelockManager: MidasTimelockManager,
@@ -562,7 +565,7 @@ describe('MidasTimelockManager', () => {
       );
     });
 
-    it('should fail: when caller do not have EXECUTOR_ROLE or DEFAULT_ADMIN_ROLE roles', async () => {
+    it('should fail: when caller does not have contract admin role or function permission for executeTimelockOperation', async () => {
       const {
         timelockManager,
         timelock,
@@ -582,7 +585,7 @@ describe('MidasTimelockManager', () => {
         calldata,
         owner.address,
         {
-          ...timelockManagerRevert(timelockManager, 'HasntRole'),
+          ...timelockManagerRevert(timelockManager, 'NoFunctionPermission'),
           from: regularAccounts[0],
         },
       );
@@ -636,7 +639,7 @@ describe('MidasTimelockManager', () => {
       );
     });
 
-    it('when operation exist and timelock passed and caller has EXECUTOR_ROLE role', async () => {
+    it('when operation exist and timelock passed and caller has function permission for executeTimelockOperation', async () => {
       const {
         timelockManager,
         timelock,
@@ -644,11 +647,26 @@ describe('MidasTimelockManager', () => {
         accessControl,
         wAccessControlTester,
         regularAccounts,
+        roles,
       } = await loadFixture(defaultDeploy);
 
-      await accessControl.grantRole(
-        await timelockManager.EXECUTOR_ROLE(),
-        regularAccounts[0].address,
+      const defaultAdminRole = roles.common.defaultAdmin;
+
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole: defaultAdminRole,
+        targetContract: timelockManager.address,
+        functionSelector: executeTimelockOperationSelector,
+        grantOperator: owner,
+      });
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        defaultAdminRole,
+        timelockManager.address,
+        executeTimelockOperationSelector,
+        [{ account: regularAccounts[0].address, enabled: true }],
       );
 
       await setRoleTimelocksTester(
@@ -977,7 +995,10 @@ describe('MidasTimelockManager', () => {
 
       await setRoleTimelocksTester(
         { timelockManager, timelock, owner, accessControl },
-        [constants.HashZero, await timelockManager.EXECUTOR_ROLE()],
+        [
+          constants.HashZero,
+          await timelockManager.TIMELOCK_OPERATION_PAUSER_ROLE(),
+        ],
         [3600],
         timelockManagerRevert(timelockManager, 'MismatchingArrayLengths'),
       );
@@ -2929,16 +2950,16 @@ describe('MidasTimelockManager', () => {
 
       const defaultAdminRole = roles.common.defaultAdmin;
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: defaultAdminRole,
+        masterRole: defaultAdminRole,
         targetContract: timelockManager.address,
         functionSelector: setDefaultDelaySelector,
         grantOperator: owner,
       });
 
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         defaultAdminRole,
         timelockManager.address,

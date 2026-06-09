@@ -1,19 +1,9 @@
 import { Options } from '@layerzerolabs/lz-v2-utilities';
-import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
-import { expect } from 'chai';
-import { BigNumberish, constants } from 'ethers';
+import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
-import * as hre from 'hardhat';
 
-import {
-  AccountOrContract,
-  approve,
-  approveBase18,
-  getAccount,
-  keccak256,
-  mintToken,
-} from './common.helpers';
+import { approve, approveBase18, keccak256, mintToken } from './common.helpers';
 import { deployProxyContract } from './deploy.helpers';
 import {
   addPaymentTokenTest,
@@ -21,19 +11,48 @@ import {
   setInstantFeeTest,
   setMinAmountTest,
 } from './manageable-vault.helpers';
-import { postDeploymentTest } from './post-deploy.helpers';
+import {
+  initializeDv,
+  initializeDvWithAave,
+  initializeDvWithMToken,
+  initializeDvWithMorpho,
+  initializeDvWithUstb,
+  initializeMv,
+  initializeRv,
+  initializeRvWithAave,
+  initializeRvWithMToken,
+  initializeRvWithMorpho,
+  initializeRvWithUstb,
+} from './vault-initializer.helpers';
+
+export {
+  getInitializerParamsDv,
+  getInitializerParamsDvWithMToken,
+  getInitializerParamsDvWithUstb,
+  getInitializerParamsMv,
+  getInitializerParamsRv,
+  getInitializerParamsRvWithMToken,
+  getInitializerParamsRvWithUstb,
+} from './vault-initializer.helpers';
+export type {
+  InitializerParamsDv,
+  InitializerParamsDvWithMToken,
+  InitializerParamsDvWithUstb,
+  InitializerParamsMv,
+  InitializerParamsRv,
+  InitializerParamsRvWithMToken,
+  InitializerParamsRvWithUstb,
+} from './vault-initializer.helpers';
 
 import { mTokensMetadata } from '../../helpers/mtokens-metadata';
 import { getAllRoles, getRolesForToken } from '../../helpers/roles';
 import {
   AggregatorV3Mock__factory,
   BlacklistableTester__factory,
-  DepositVaultTest__factory,
   ERC20Mock__factory,
   GreenlistableTester__factory,
   MidasAccessControlTest__factory,
   PausableTester__factory,
-  RedemptionVaultTest__factory,
   WithMidasAccessControlTester__factory,
   DataFeedTest__factory,
   AggregatorV3DeprecatedMock__factory,
@@ -42,17 +61,9 @@ import {
   SanctionsListMock__factory,
   WithSanctionsListTester__factory,
   USTBRedemptionMock__factory,
-  RedemptionVaultWithUSTBTest__factory,
-  RedemptionVaultWithAaveTest__factory,
-  RedemptionVaultWithMorphoTest__factory,
-  RedemptionVaultWithMTokenTest__factory,
   AaveV3PoolMock__factory,
   MorphoVaultMock__factory,
   CustomAggregatorV3CompatibleFeedAdjustedTester__factory,
-  DepositVaultWithAaveTest__factory,
-  DepositVaultWithMorphoTest__factory,
-  DepositVaultWithMTokenTest__factory,
-  DepositVaultWithUSTBTest__factory,
   USTBMock__factory,
   CustomAggregatorV3CompatibleFeedGrowthTester__factory,
   AcreAdapter__factory,
@@ -70,117 +81,8 @@ import {
   MidasTimelockManagerTest__factory,
   MidasAccessControlTimelockControllerTest__factory,
   MidasPauseManagerTest__factory,
-  ManageableVaultTester__factory,
 } from '../../typechain-types';
 import { MTBILLTest__factory } from '../../typechain-types/factories/contracts/testers/MTBILLTest__factory';
-
-export const getDeployParamsRv = <TExtraParams extends readonly [] = []>(
-  {
-    requestRedeemer,
-    loanLp,
-    loanRepaymentAddress,
-    redemptionVaultLoanSwapper,
-    loanApr,
-    ...commonParams
-  }: {
-    requestRedeemer: AccountOrContract;
-    loanLp: AccountOrContract;
-    loanRepaymentAddress: AccountOrContract;
-    redemptionVaultLoanSwapper: AccountOrContract;
-    loanApr?: BigNumberish;
-  } & DeployParamsMv,
-  extraParams?: TExtraParams,
-) => {
-  return [
-    ...getDeployParamsMv(commonParams),
-    {
-      requestRedeemer: getAccount(requestRedeemer),
-      loanLp: getAccount(loanLp),
-      loanRepaymentAddress: getAccount(loanRepaymentAddress),
-      loanSwapperVault: getAccount(redemptionVaultLoanSwapper),
-      loanApr: loanApr ?? 0,
-    },
-    ...(extraParams ?? []),
-  ] as const;
-};
-
-export const getDeployParamsDv = ({
-  maxAmountPerRequest,
-  minMTokenAmountForFirstDeposit,
-  maxSupplyCap,
-  ...commonParams
-}: {
-  maxAmountPerRequest?: BigNumberish;
-  minMTokenAmountForFirstDeposit?: BigNumberish;
-  maxSupplyCap?: BigNumberish;
-} & DeployParamsMv) => {
-  return [
-    ...getDeployParamsMv(commonParams),
-    {
-      minMTokenAmountForFirstDeposit: minMTokenAmountForFirstDeposit ?? 0,
-      maxSupplyCap: maxSupplyCap ?? constants.MaxUint256,
-      maxAmountPerRequest: maxAmountPerRequest ?? constants.MaxUint256,
-    },
-  ] as const;
-};
-
-type DeployParamsMv = {
-  accessControl: AccountOrContract;
-  mockedSanctionsList: AccountOrContract;
-  mTBILL: AccountOrContract;
-  mTokenToUsdDataFeed: AccountOrContract;
-  tokensReceiver: AccountOrContract;
-  minAmount?: BigNumberish;
-  instantFee?: BigNumberish;
-  limitConfigs?: {
-    limit: BigNumberish;
-    window: BigNumberish;
-  }[];
-  minInstantFee?: BigNumberish;
-  maxInstantFee?: BigNumberish;
-  maxInstantShare?: BigNumberish;
-  variationTolerance?: BigNumberish;
-  sequentialRequestProcessing?: boolean;
-};
-
-export const getDeployParamsMv = ({
-  accessControl,
-  mockedSanctionsList,
-  mTBILL,
-  mTokenToUsdDataFeed,
-  tokensReceiver,
-  minAmount,
-  instantFee,
-  limitConfigs,
-  minInstantFee,
-  maxInstantFee,
-  maxInstantShare,
-  variationTolerance,
-  sequentialRequestProcessing,
-}: DeployParamsMv) => {
-  return [
-    {
-      ac: getAccount(accessControl),
-      sanctionsList: getAccount(mockedSanctionsList),
-      variationTolerance: variationTolerance ?? 1,
-      minAmount: minAmount ?? 1000,
-      mToken: getAccount(mTBILL),
-      mTokenDataFeed: getAccount(mTokenToUsdDataFeed),
-      tokensReceiver: getAccount(tokensReceiver),
-      instantFee: instantFee ?? 100,
-      limitConfigs: limitConfigs ?? [
-        {
-          limit: parseUnits('100000'),
-          window: days(1),
-        },
-      ],
-      minInstantFee: minInstantFee ?? 0,
-      maxInstantFee: maxInstantFee ?? 10000,
-      maxInstantShare: maxInstantShare ?? 100_00,
-      sequentialRequestProcessing: sequentialRequestProcessing ?? false,
-    },
-  ] as const;
-};
 
 export const defaultDeploy = async () => {
   const [
@@ -300,12 +202,10 @@ export const defaultDeploy = async () => {
     .flat(2)
     .filter((v) => v !== '-' && !!v && !excludedRoles.includes(v)) as string[];
 
-  await expect(
-    accessControl.grantRoleMult(
-      rolesFlat,
-      rolesFlat.map((_) => owner.address),
-    ),
-  ).not.reverted;
+  await accessControl.grantRoleMult(
+    rolesFlat,
+    rolesFlat.map((_) => owner.address),
+  );
 
   const mockedAggregator = await new AggregatorV3Mock__factory(owner).deploy();
   const mockedAggregatorDecimals = await mockedAggregator.decimals();
@@ -391,54 +291,43 @@ export const defaultDeploy = async () => {
     parseUnits('10000'),
   );
 
-  const depositVault = await new DepositVaultTest__factory(owner).deploy();
+  const commonVaultParams = {
+    accessControl,
+    mockedSanctionsList,
+    mTBILL,
+    mTokenToUsdDataFeed,
+    tokensReceiver,
+  };
 
-  await depositVault.initialize(
-    ...getDeployParamsDv({
-      accessControl,
-      mockedSanctionsList,
-      mTBILL,
-      mTokenToUsdDataFeed,
-      tokensReceiver,
-    }),
-  );
+  const depositVault = await initializeDv(commonVaultParams, undefined, {
+    from: owner,
+  });
 
   await accessControl.grantRole(mTBILL.minterRole(), depositVault.address);
 
-  const redemptionVault = await new RedemptionVaultTest__factory(
-    owner,
-  ).deploy();
-
-  const redemptionVaultLoanSwapper = await new RedemptionVaultTest__factory(
-    owner,
-  ).deploy();
-
-  await redemptionVault.initialize(
-    ...getDeployParamsRv({
-      accessControl,
-      mockedSanctionsList,
-      mTBILL,
-      mTokenToUsdDataFeed,
-      tokensReceiver,
-      requestRedeemer,
-      loanLp,
-      loanRepaymentAddress,
-      redemptionVaultLoanSwapper,
-    }),
-  );
-
-  await redemptionVaultLoanSwapper.initialize(
-    ...getDeployParamsRv({
+  const redemptionVaultLoanSwapper = await initializeRv(
+    {
       accessControl,
       mockedSanctionsList,
       mTBILL: mTokenLoan,
       mTokenToUsdDataFeed: mTokenLoanToUsdDataFeed,
       tokensReceiver,
       requestRedeemer,
-      loanLp: constants.AddressZero,
-      loanRepaymentAddress: constants.AddressZero,
-      redemptionVaultLoanSwapper: constants.AddressZero,
-    }),
+    },
+    undefined,
+    { from: owner },
+  );
+
+  const redemptionVault = await initializeRv(
+    {
+      ...commonVaultParams,
+      requestRedeemer,
+      loanLp,
+      loanRepaymentAddress,
+      redemptionVaultLoanSwapper,
+    },
+    undefined,
+    { from: owner },
   );
 
   await accessControl.grantRole(
@@ -451,19 +340,10 @@ export const defaultDeploy = async () => {
   await redemptionVaultLoanSwapper.addWaivedFeeAccount(redemptionVault.address);
 
   await accessControl.grantRole(mTBILL.burnerRole(), redemptionVault.address);
-  const manageableVault = await new ManageableVaultTester__factory(
-    owner,
-  ).deploy();
 
-  await manageableVault.initializeExternal(
-    ...getDeployParamsMv({
-      accessControl,
-      mockedSanctionsList,
-      mTBILL,
-      mTokenToUsdDataFeed,
-      tokensReceiver,
-    }),
-  );
+  const manageableVault = await initializeMv(commonVaultParams, undefined, {
+    from: owner,
+  });
 
   const stableCoins = {
     usdc: await new ERC20Mock__factory(owner).deploy(8),
@@ -480,21 +360,13 @@ export const defaultDeploy = async () => {
 
   /* Deposit Vault With USTB */
 
-  const depositVaultWithUSTB = await new DepositVaultWithUSTBTest__factory(
-    owner,
-  ).deploy();
-
-  await depositVaultWithUSTB[
-    'initialize((uint256,uint256,uint256,address,address,address,address,address,uint64,uint64,uint64,bool,(uint256,uint256)[]),(uint256,uint256,uint256),address)'
-  ](
-    ...getDeployParamsDv({
-      accessControl,
-      mockedSanctionsList,
-      mTBILL,
-      mTokenToUsdDataFeed,
-      tokensReceiver,
-    }),
-    ustbToken.address,
+  const depositVaultWithUSTB = await initializeDvWithUstb(
+    {
+      ...commonVaultParams,
+      ustbToken,
+    },
+    undefined,
+    { from: owner },
   );
 
   await accessControl.grantRole(
@@ -510,24 +382,17 @@ export const defaultDeploy = async () => {
   );
   await stableCoins.usdc.mint(ustbRedemption.address, parseUnits('1000000'));
 
-  const redemptionVaultWithUSTB =
-    await new RedemptionVaultWithUSTBTest__factory(owner).deploy();
-
-  await redemptionVaultWithUSTB[
-    'initialize((uint256,uint256,uint256,address,address,address,address,address,uint64,uint64,uint64,bool,(uint256,uint256)[]),(address,address,address,address,uint64),address)'
-  ](
-    ...getDeployParamsRv({
-      accessControl,
-      mockedSanctionsList,
-      mTBILL,
-      mTokenToUsdDataFeed,
-      tokensReceiver,
+  const redemptionVaultWithUSTB = await initializeRvWithUstb(
+    {
+      ...commonVaultParams,
       requestRedeemer,
       loanLp,
       loanRepaymentAddress,
       redemptionVaultLoanSwapper,
-    }),
-    ustbRedemption.address,
+      ustbRedemption,
+    },
+    undefined,
+    { from: owner },
   );
   await accessControl.grantRole(
     mTBILL.burnerRole(),
@@ -544,21 +409,16 @@ export const defaultDeploy = async () => {
   await aavePoolMock.setReserveAToken(stableCoins.usdc.address, aUSDC.address);
   await stableCoins.usdc.mint(aavePoolMock.address, parseUnits('1000000'));
 
-  const redemptionVaultWithAave =
-    await new RedemptionVaultWithAaveTest__factory(owner).deploy();
-
-  await redemptionVaultWithAave.initialize(
-    ...getDeployParamsRv({
-      accessControl,
-      mockedSanctionsList,
-      mTBILL,
-      mTokenToUsdDataFeed,
-      tokensReceiver,
+  const redemptionVaultWithAave = await initializeRvWithAave(
+    {
+      ...commonVaultParams,
       requestRedeemer,
       loanLp,
       loanRepaymentAddress,
       redemptionVaultLoanSwapper,
-    }),
+    },
+    undefined,
+    { from: owner },
   );
   await redemptionVaultWithAave.setAavePool(
     stableCoins.usdc.address,
@@ -578,21 +438,16 @@ export const defaultDeploy = async () => {
   );
   await stableCoins.usdc.mint(morphoVaultMock.address, parseUnits('1000000'));
 
-  const redemptionVaultWithMorpho =
-    await new RedemptionVaultWithMorphoTest__factory(owner).deploy();
-
-  await redemptionVaultWithMorpho.initialize(
-    ...getDeployParamsRv({
-      accessControl,
-      mockedSanctionsList,
-      mTBILL,
-      mTokenToUsdDataFeed,
-      tokensReceiver,
+  const redemptionVaultWithMorpho = await initializeRvWithMorpho(
+    {
+      ...commonVaultParams,
       requestRedeemer,
       loanLp,
       loanRepaymentAddress,
       redemptionVaultLoanSwapper,
-    }),
+    },
+    undefined,
+    { from: owner },
   );
   await redemptionVaultWithMorpho.setMorphoVault(
     stableCoins.usdc.address,
@@ -607,18 +462,10 @@ export const defaultDeploy = async () => {
   );
   /* Deposit Vault With Aave */
 
-  const depositVaultWithAave = await new DepositVaultWithAaveTest__factory(
-    owner,
-  ).deploy();
-
-  await depositVaultWithAave.initialize(
-    ...getDeployParamsDv({
-      accessControl,
-      mockedSanctionsList,
-      mTBILL,
-      mTokenToUsdDataFeed,
-      tokensReceiver,
-    }),
+  const depositVaultWithAave = await initializeDvWithAave(
+    commonVaultParams,
+    undefined,
+    { from: owner },
   );
   await depositVaultWithAave.setAavePool(
     stableCoins.usdc.address,
@@ -632,18 +479,10 @@ export const defaultDeploy = async () => {
 
   /* Deposit Vault With Morpho */
 
-  const depositVaultWithMorpho = await new DepositVaultWithMorphoTest__factory(
-    owner,
-  ).deploy();
-
-  await depositVaultWithMorpho.initialize(
-    ...getDeployParamsDv({
-      accessControl,
-      mockedSanctionsList,
-      mTBILL,
-      mTokenToUsdDataFeed,
-      tokensReceiver,
-    }),
+  const depositVaultWithMorpho = await initializeDvWithMorpho(
+    commonVaultParams,
+    undefined,
+    { from: owner },
   );
 
   await accessControl.grantRole(
@@ -653,21 +492,13 @@ export const defaultDeploy = async () => {
 
   /* Deposit Vault With MToken (deposits into mTBILL DV) */
 
-  const depositVaultWithMToken = await new DepositVaultWithMTokenTest__factory(
-    owner,
-  ).deploy();
-
-  await depositVaultWithMToken[
-    'initialize((uint256,uint256,uint256,address,address,address,address,address,uint64,uint64,uint64,bool,(uint256,uint256)[]),(uint256,uint256,uint256),address)'
-  ](
-    ...getDeployParamsDv({
-      accessControl,
-      mockedSanctionsList,
-      mTBILL,
-      mTokenToUsdDataFeed,
-      tokensReceiver,
-    }),
-    depositVault.address,
+  const depositVaultWithMToken = await initializeDvWithMToken(
+    {
+      ...commonVaultParams,
+      depositVault,
+    },
+    undefined,
+    { from: owner },
   );
 
   await accessControl.grantRole(
@@ -697,24 +528,17 @@ export const defaultDeploy = async () => {
     parseUnits('10000', mockedAggregatorDecimals),
   );
 
-  const redemptionVaultWithMToken =
-    await new RedemptionVaultWithMTokenTest__factory(owner).deploy();
-
-  await redemptionVaultWithMToken[
-    'initialize((uint256,uint256,uint256,address,address,address,address,address,uint64,uint64,uint64,bool,(uint256,uint256)[]),(address,address,address,address,uint64),address)'
-  ](
-    ...getDeployParamsRv({
-      accessControl,
-      mockedSanctionsList,
-      mTBILL,
-      mTokenToUsdDataFeed,
-      tokensReceiver,
+  const redemptionVaultWithMToken = await initializeRvWithMToken(
+    {
+      ...commonVaultParams,
       requestRedeemer,
       loanLp,
       loanRepaymentAddress,
       redemptionVaultLoanSwapper,
-    }),
-    redemptionVaultLoanSwapper.address,
+      redemptionVault: redemptionVaultLoanSwapper.address,
+    },
+    undefined,
+    { from: owner },
   );
 
   await redemptionVaultLoanSwapper.addWaivedFeeAccount(
@@ -810,75 +634,81 @@ export const defaultDeploy = async () => {
   const greenlistAdmin = await greenListableTester.greenlistAdminRole();
   await accessControl.grantRole(greenlistAdmin, owner.address);
 
-  await postDeploymentTest(hre, {
-    accessControl,
-    aggregator: mockedAggregator,
-    dataFeed,
-    depositVault,
-    owner,
+  const deployDeprecatedFeed = async () => {
+    const mockedDeprecatedAggregator =
+      await new AggregatorV3DeprecatedMock__factory(owner).deploy();
+    const mockedDeprecatedAggregatorDecimals =
+      await mockedDeprecatedAggregator.decimals();
+
+    await mockedDeprecatedAggregator.setRoundData(
+      parseUnits('5', mockedAggregatorDecimals),
+    );
+
+    await mockedDeprecatedAggregator.setRoundData(
+      parseUnits('1.07778', mockedAggregatorMTokenDecimals),
+    );
+    const dataFeedDeprecated = await new DataFeedTest__factory(owner).deploy();
+    await dataFeedDeprecated.initialize(
+      accessControl.address,
+      mockedDeprecatedAggregator.address,
+      3 * 24 * 3600,
+      parseUnits('0.1', mockedDeprecatedAggregatorDecimals),
+      parseUnits('10000', mockedDeprecatedAggregatorDecimals),
+    );
+
+    return {
+      dataFeedDeprecated,
+      mockedDeprecatedAggregator,
+      mockedDeprecatedAggregatorDecimals,
+    };
+  };
+
+  const deployUnhealthyFeed = async () => {
+    const mockedUnhealthyAggregator =
+      await new AggregatorV3UnhealthyMock__factory(owner).deploy();
+    const mockedUnhealthyAggregatorDecimals =
+      await mockedUnhealthyAggregator.decimals();
+
+    await mockedUnhealthyAggregator.setRoundData(
+      parseUnits('5', mockedAggregatorDecimals),
+    );
+
+    await mockedUnhealthyAggregator.setRoundData(
+      parseUnits('1.07778', mockedAggregatorMTokenDecimals),
+    );
+    const dataFeedUnhealthy = await new DataFeedTest__factory(owner).deploy();
+    await dataFeedUnhealthy.initialize(
+      accessControl.address,
+      mockedUnhealthyAggregator.address,
+      3 * 24 * 3600,
+      parseUnits('0.1', mockedUnhealthyAggregatorDecimals),
+      parseUnits('10000', mockedUnhealthyAggregatorDecimals),
+    );
+
+    return {
+      dataFeedUnhealthy,
+      mockedUnhealthyAggregator,
+      mockedUnhealthyAggregatorDecimals,
+    };
+  };
+
+  const allVaults = [
     redemptionVault,
-    aggregatorMToken: mockedAggregatorMToken,
-    dataFeedMToken: mTokenToUsdDataFeed,
-    mTBILL,
-    minMTokenAmountForFirstDeposit: '0',
-    minAmount: 1000,
-    tokensReceiver: tokensReceiver.address,
-  });
+    redemptionVaultLoanSwapper,
+    redemptionVaultWithUSTB,
+    redemptionVaultWithAave,
+    redemptionVaultWithMorpho,
+    redemptionVaultWithMToken,
+    depositVault,
+    depositVaultWithUSTB,
+    depositVaultWithAave,
+    depositVaultWithMorpho,
+    depositVaultWithMToken,
+  ];
 
-  const mockedDeprecatedAggregator =
-    await new AggregatorV3DeprecatedMock__factory(owner).deploy();
-  const mockedDeprecatedAggregatorDecimals =
-    await mockedDeprecatedAggregator.decimals();
-
-  await mockedDeprecatedAggregator.setRoundData(
-    parseUnits('5', mockedAggregatorDecimals),
-  );
-
-  await mockedDeprecatedAggregator.setRoundData(
-    parseUnits('1.07778', mockedAggregatorMTokenDecimals),
-  );
-  const dataFeedDeprecated = await new DataFeedTest__factory(owner).deploy();
-  await dataFeedDeprecated.initialize(
-    accessControl.address,
-    mockedDeprecatedAggregator.address,
-    3 * 24 * 3600,
-    parseUnits('0.1', mockedDeprecatedAggregatorDecimals),
-    parseUnits('10000', mockedDeprecatedAggregatorDecimals),
-  );
-
-  const mockedUnhealthyAggregator =
-    await new AggregatorV3UnhealthyMock__factory(owner).deploy();
-  const mockedUnhealthyAggregatorDecimals =
-    await mockedUnhealthyAggregator.decimals();
-
-  await mockedUnhealthyAggregator.setRoundData(
-    parseUnits('5', mockedAggregatorDecimals),
-  );
-
-  await mockedUnhealthyAggregator.setRoundData(
-    parseUnits('1.07778', mockedAggregatorMTokenDecimals),
-  );
-  const dataFeedUnhealthy = await new DataFeedTest__factory(owner).deploy();
-  await dataFeedUnhealthy.initialize(
-    accessControl.address,
-    mockedUnhealthyAggregator.address,
-    3 * 24 * 3600,
-    parseUnits('0.1', mockedUnhealthyAggregatorDecimals),
-    parseUnits('10000', mockedUnhealthyAggregatorDecimals),
-  );
-
-  await redemptionVault.setMaxApproveRequestId(100);
-  await redemptionVaultLoanSwapper.setMaxApproveRequestId(100);
-  await redemptionVaultWithUSTB.setMaxApproveRequestId(100);
-  await redemptionVaultWithAave.setMaxApproveRequestId(100);
-  await redemptionVaultWithMorpho.setMaxApproveRequestId(100);
-  await redemptionVaultWithMToken.setMaxApproveRequestId(100);
-
-  await depositVault.setMaxApproveRequestId(100);
-  await depositVaultWithUSTB.setMaxApproveRequestId(100);
-  await depositVaultWithAave.setMaxApproveRequestId(100);
-  await depositVaultWithMorpho.setMaxApproveRequestId(100);
-  await depositVaultWithMToken.setMaxApproveRequestId(100);
+  for (const vault of allVaults) {
+    await vault.setMaxApproveRequestId(100);
+  }
 
   return {
     customFeed,
@@ -907,8 +737,6 @@ export const defaultDeploy = async () => {
     offChainUsdToken,
     mockedAggregatorMTokenDecimals,
     tokensReceiver,
-    dataFeedDeprecated,
-    dataFeedUnhealthy,
     withSanctionsListTester,
     mockedSanctionsList,
     requestRedeemer,
@@ -945,6 +773,8 @@ export const defaultDeploy = async () => {
     councilMembers,
     clawbackReceiver,
     manageableVault,
+    deployDeprecatedFeed,
+    deployUnhealthyFeed,
   };
 };
 
@@ -991,37 +821,33 @@ export const mTokenPermissionedFixture = async (
   await accessControl.grantRole(burnRole, owner.address);
   await accessControl.grantRole(tokenManagerRole, owner.address);
 
-  const mTokenPermissionedDepositVault = await new DepositVaultTest__factory(
-    owner,
-  ).deploy();
-  await mTokenPermissionedDepositVault.initialize(
-    ...getDeployParamsDv({
+  const mTokenPermissionedDepositVault = await initializeDv(
+    {
       accessControl,
       mockedSanctionsList,
       mTBILL: mTokenPermissioned,
       mTokenToUsdDataFeed,
       tokensReceiver,
-    }),
+    },
+    undefined,
+    { from: owner },
   );
   await accessControl.grantRole(
     mintRole,
     mTokenPermissionedDepositVault.address,
   );
 
-  const mTokenPermissionedRedemptionVault =
-    await new RedemptionVaultTest__factory(owner).deploy();
-  await mTokenPermissionedRedemptionVault.initialize(
-    ...getDeployParamsRv({
+  const mTokenPermissionedRedemptionVault = await initializeRv(
+    {
       accessControl,
       mockedSanctionsList,
       mTBILL: mTokenPermissioned,
       mTokenToUsdDataFeed,
       tokensReceiver,
       requestRedeemer,
-      loanLp: constants.AddressZero,
-      loanRepaymentAddress: constants.AddressZero,
-      redemptionVaultLoanSwapper: constants.AddressZero,
-    }),
+    },
+    undefined,
+    { from: owner },
   );
 
   await mTokenPermissionedRedemptionVault.setMaxApproveRequestId(100);

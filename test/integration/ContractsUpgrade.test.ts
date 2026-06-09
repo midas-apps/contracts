@@ -17,7 +17,7 @@ import {
 } from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
 import { pauseGlobalTest } from '../common/common.helpers';
-import { burn, mint } from '../common/mTBILL.helpers';
+import { burn, mint } from '../common/mtoken.helpers';
 import {
   executeTimelockOperationTester,
   scheduleTimelockOperationsTester,
@@ -152,7 +152,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
   };
   describe('MidasAccessControl', () => {
     describe('initializeRelationships()', () => {
-      it.only('should expose deployed pause and timelock managers', async () => {
+      it('should expose deployed pause and timelock managers', async () => {
         const { accessControl, pauseManager, timelockManager } =
           await loadFixture(mainnetUpgradeFixture);
 

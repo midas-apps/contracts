@@ -165,8 +165,9 @@ describe('DataFeedToBandStdAdapter', function () {
       expect(referenceData.rate).eq(parseUnits(largePrice));
     });
 
-    it('should fail when underlying feed is unhealthy', async () => {
-      const { owner, dataFeedUnhealthy } = fixture;
+    it('should fail: when underlying feed is unhealthy', async () => {
+      const { owner, deployUnhealthyFeed } = fixture;
+      const { dataFeedUnhealthy } = await deployUnhealthyFeed();
 
       const dataFeedToBandStdAdapter =
         await new DataFeedToBandStdAdapter__factory(owner).deploy(
@@ -180,9 +181,10 @@ describe('DataFeedToBandStdAdapter', function () {
       ).to.be.reverted;
     });
 
-    it('should fail when underlying feed is deprecated', async () => {
-      const { owner, dataFeedDeprecated } = fixture;
+    it('should fail: when underlying feed is deprecated', async () => {
+      const { owner, deployDeprecatedFeed } = fixture;
 
+      const { dataFeedDeprecated } = await deployDeprecatedFeed();
       const dataFeedToBandStdAdapter =
         await new DataFeedToBandStdAdapter__factory(owner).deploy(
           dataFeedDeprecated.address,
@@ -368,7 +370,7 @@ describe('DataFeedToBandStdAdapter', function () {
   });
 
   describe('Error handling', () => {
-    it('should fail with proper error messages for invalid pairs', async () => {
+    it('should fail: with proper error messages for invalid pairs', async () => {
       const { dataFeedToBandStdAdapter } = fixture;
 
       // Test various invalid combinations
@@ -385,7 +387,7 @@ describe('DataFeedToBandStdAdapter', function () {
       ).revertedWith('DFBSA: unsupported pair');
     });
 
-    it('should fail with proper error messages for bulk operations', async () => {
+    it('should fail: with proper error messages for bulk operations', async () => {
       const { dataFeedToBandStdAdapter } = fixture;
 
       await expect(
@@ -638,7 +640,7 @@ describe('CompositeDataFeedToBandStdAdapter', function () {
       expect(referenceData.rate).eq(parseUnits(largeNumerator));
     });
 
-    it('should fail when underlying composite feed is unhealthy', async () => {
+    it('should fail: when underlying composite feed is unhealthy', async () => {
       const { owner, compositeDataFeed } = fixture;
 
       // Create a new composite feed with unhealthy settings
@@ -1006,7 +1008,7 @@ describe('CompositeDataFeedToBandStdAdapter', function () {
   });
 
   describe('Error handling', () => {
-    it('should fail with proper error messages for invalid pairs', async () => {
+    it('should fail: with proper error messages for invalid pairs', async () => {
       const { compositeDataFeedToBandStdAdapter } = fixture;
 
       // Test various invalid combinations
@@ -1029,7 +1031,7 @@ describe('CompositeDataFeedToBandStdAdapter', function () {
       ).revertedWith('DFBSA: unsupported pair');
     });
 
-    it('should fail with proper error messages for bulk operations', async () => {
+    it('should fail: with proper error messages for bulk operations', async () => {
       const { compositeDataFeedToBandStdAdapter } = fixture;
 
       await expect(

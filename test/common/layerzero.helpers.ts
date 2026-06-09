@@ -10,7 +10,11 @@ import {
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import { OptionalCommonParams, tokenAmountToBase18 } from './common.helpers';
+import {
+  handleRevert,
+  OptionalCommonParams,
+  tokenAmountToBase18,
+} from './common.helpers';
 import { calcExpectedMintAmount } from './deposit-vault.helpers';
 import { layerZeroFixture } from './fixtures';
 import { calcExpectedTokenOutAmount } from './redemption-vault.helpers';
@@ -60,10 +64,11 @@ export const setRateLimitConfig = async (
 ) => {
   const from = opt?.from ?? owner;
 
-  if (opt?.revertMessage) {
-    await expect(
-      oftAdapter.connect(from).setRateLimits([{ dstEid, limit, window }]),
-    ).revertedWith(opt?.revertMessage);
+  const callFn = oftAdapter
+    .connect(from)
+    .setRateLimits.bind(this, [{ dstEid, limit, window }]);
+
+  if (await handleRevert(callFn, oftAdapter, opt)) {
     return;
   }
 
@@ -130,20 +135,9 @@ export const sendOft = async (
     { value: nativeFee },
   ] as const;
 
-  if (opt?.revertMessage && !opt?.revertOnDst) {
-    await expect(
-      oftFrom.connect(opt?.from ?? owner).send(...params),
-    ).revertedWith(opt?.revertMessage);
-    return;
-  }
+  const callFn = oftFrom.connect(opt?.from ?? owner).send.bind(this, ...params);
 
-  if (opt?.revertWithCustomError && !opt?.revertOnDst) {
-    await expect(
-      oftFrom.connect(opt?.from ?? owner).send(...params),
-    ).revertedWithCustomError(
-      opt?.revertWithCustomError.contract,
-      opt?.revertWithCustomError.error,
-    );
+  if (!opt?.revertOnDst && (await handleRevert(callFn, oftFrom, opt))) {
     return;
   }
 
@@ -249,20 +243,9 @@ export const sendOftLockBox = async (
     { value: nativeFee },
   ] as const;
 
-  if (opt?.revertMessage && !opt?.revertOnDst) {
-    await expect(
-      oftFrom.connect(opt?.from ?? owner).send(...params),
-    ).revertedWith(opt?.revertMessage);
-    return;
-  }
+  const callFn = oftFrom.connect(opt?.from ?? owner).send.bind(this, ...params);
 
-  if (opt?.revertWithCustomError && !opt?.revertOnDst) {
-    await expect(
-      oftFrom.connect(opt?.from ?? owner).send(...params),
-    ).revertedWithCustomError(
-      opt?.revertWithCustomError.contract,
-      opt?.revertWithCustomError.error,
-    );
+  if (!opt?.revertOnDst && (await handleRevert(callFn, oftFrom, opt))) {
     return;
   }
 
@@ -491,16 +474,9 @@ export const depositAndSend = async (
     txFn = composer.connect(from).depositAndSend.bind(this, ...params);
   }
 
-  if (opt?.revertMessage && !opt?.revertOnDst) {
-    await expect(txFn()).revertedWith(opt?.revertMessage);
-    return;
-  }
+  const callFn = composer.connect(from).depositAndSend.bind(this, ...params);
 
-  if (opt?.revertWithCustomError && !opt?.revertOnDst) {
-    await expect(txFn()).revertedWithCustomError(
-      opt?.revertWithCustomError.contract,
-      opt?.revertWithCustomError.error,
-    );
+  if (!opt?.revertOnDst && (await handleRevert(callFn, composer, opt))) {
     return;
   }
 
@@ -525,7 +501,7 @@ export const depositAndSend = async (
       .to.emit(
         depositVault,
         depositVault.interface.events[
-          'DepositInstantWithCustomRecipient(address,address,address,uint256,uint256,uint256,uint256,bytes32)'
+          'DepositInstant(address,address,address,uint256,uint256,uint256,uint256,bytes32)'
         ].name,
       )
       .withArgs(
@@ -749,16 +725,9 @@ export const redeemAndSend = async (
     txFn = composer.connect(from).redeemAndSend.bind(this, ...params);
   }
 
-  if (opt?.revertMessage && !opt?.revertOnDst) {
-    await expect(txFn()).revertedWith(opt?.revertMessage);
-    return;
-  }
+  const callFn = composer.connect(from).redeemAndSend.bind(this, ...params);
 
-  if (opt?.revertWithCustomError && !opt?.revertOnDst) {
-    await expect(txFn()).revertedWithCustomError(
-      opt?.revertWithCustomError.contract,
-      opt?.revertWithCustomError.error,
-    );
+  if (!opt?.revertOnDst && (await handleRevert(callFn, composer, opt))) {
     return;
   }
 

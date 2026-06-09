@@ -92,9 +92,8 @@ export const setMTokenDepositVaultTest = async (
       .setMTokenDepositVault(newVault),
   ).to.emit(
     depositVaultWithMToken,
-    depositVaultWithMToken.interface.events[
-      'SetMTokenDepositVault(address,address)'
-    ].name,
+    depositVaultWithMToken.interface.events['SetMTokenDepositVault(address)']
+      .name,
   ).to.not.reverted;
 
   const vaultAfter = await depositVaultWithMToken.mTokenDepositVault();

@@ -12,8 +12,8 @@ import {
 } from '../../typechain-types';
 import {
   acErrors,
-  setFunctionPermissionTester,
-  setupFunctionAccessGrantOperator,
+  setPermissionRoleTester,
+  setupGrantOperatorRole,
 } from '../common/ac.helpers';
 import {
   adminPauseContractTest,
@@ -576,15 +576,15 @@ describe('MidasPauseManager', () => {
       const pauseAdminRole = await pauseManager.pauseAdminRole();
       const globalPauseSel = encodeFnSelector('globalPause()');
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: pauseAdminRole,
+        masterRole: pauseAdminRole,
         targetContract: pauseManager.address,
         functionSelector: globalPauseSel,
         grantOperator: owner,
       });
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         pauseAdminRole,
         pauseManager.address,
@@ -847,15 +847,15 @@ describe('MidasPauseManager', () => {
       const pauseAdminRole = await pauseManager.pauseAdminRole();
       const bulkPauseSel = encodeFnSelector('bulkPauseContract(address[])');
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: pauseAdminRole,
+        masterRole: pauseAdminRole,
         targetContract: pauseManager.address,
         functionSelector: bulkPauseSel,
         grantOperator: owner,
       });
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         pauseAdminRole,
         pauseManager.address,
@@ -1158,15 +1158,15 @@ describe('MidasPauseManager', () => {
         'bulkPauseContractFn(address[],bytes4[])',
       );
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: pauseAdminRole,
+        masterRole: pauseAdminRole,
         targetContract: pauseManager.address,
         functionSelector: bulkPauseFnSel,
         grantOperator: owner,
       });
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         pauseAdminRole,
         pauseManager.address,
@@ -1514,15 +1514,15 @@ describe('MidasPauseManager', () => {
       const contractPauserRole = (await pausableTester.pauserRole())[0];
       const pauseSel = encodeFnSelector('contractAdminPause(address)');
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: contractPauserRole,
+        masterRole: contractPauserRole,
         targetContract: pauseManager.address,
         functionSelector: pauseSel,
         grantOperator: owner,
       });
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         contractPauserRole,
         pauseManager.address,

@@ -341,9 +341,8 @@ export const setMaxAnswerDeviationTest = async (
   )
     .to.emit(
       customFeedGrowth,
-      customFeedGrowth.interface.events[
-        'MaxAnswerDeviationUpdated(address,uint256)'
-      ].name,
+      customFeedGrowth.interface.events['MaxAnswerDeviationUpdated(uint256)']
+        .name,
     )
     .withArgs(sender, maxAnswerDeviation).to.not.reverted;
 

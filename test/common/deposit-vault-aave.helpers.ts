@@ -91,9 +91,7 @@ export const setAavePoolTest = async (
     depositVaultWithAave.connect(opt?.from ?? owner).setAavePool(token, pool),
   ).to.emit(
     depositVaultWithAave,
-    depositVaultWithAave.interface.events[
-      'SetAavePool(address,address,address)'
-    ].name,
+    depositVaultWithAave.interface.events['SetAavePool(address,address)'].name,
   ).to.not.reverted;
 
   const poolAfter = await depositVaultWithAave.aavePools(token);
@@ -121,8 +119,7 @@ export const removeAavePoolTest = async (
     depositVaultWithAave.connect(opt?.from ?? owner).removeAavePool(token),
   ).to.emit(
     depositVaultWithAave,
-    depositVaultWithAave.interface.events['RemoveAavePool(address,address)']
-      .name,
+    depositVaultWithAave.interface.events['RemoveAavePool(address)'].name,
   ).to.not.reverted;
 
   const poolAfter = await depositVaultWithAave.aavePools(token);

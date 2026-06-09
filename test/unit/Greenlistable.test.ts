@@ -5,8 +5,8 @@ import { encodeFnSelector } from '../../helpers/utils';
 import {
   acErrors,
   greenList,
-  setFunctionPermissionTester,
-  setupFunctionAccessGrantOperator,
+  setPermissionRoleTester,
+  setupGrantOperatorRole,
   unGreenList,
 } from '../common/ac.helpers';
 import { defaultDeploy } from '../common/fixtures';
@@ -109,17 +109,17 @@ describe('Greenlistable', function () {
       const greenlistAdmin = await greenListableTester.greenlistAdminRole();
       const selector = encodeFnSelector('setGreenlistEnable(bool)');
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: greenlistAdmin,
+        masterRole: greenlistAdmin,
         targetContract: greenListableTester.address,
         functionSelector: selector,
         grantOperator: owner,
       });
 
       const user = regularAccounts[0];
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         greenlistAdmin,
         greenListableTester.address,
@@ -151,16 +151,16 @@ describe('Greenlistable', function () {
       const selector = encodeFnSelector('setGreenlistEnable(bool)');
       const user = regularAccounts[0];
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: greenlistAdmin,
+        masterRole: greenlistAdmin,
         targetContract: greenListableTester.address,
         functionSelector: selector,
         grantOperator: owner,
       });
 
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         greenlistAdmin,
         greenListableTester.address,

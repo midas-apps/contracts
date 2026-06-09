@@ -29,7 +29,7 @@ import {
   acErrors,
   blackList,
   greenList,
-  setupVaultScopedFunctionPermission,
+  setupPermissionRole,
 } from '../../common/ac.helpers';
 import {
   approveBase18,
@@ -3157,7 +3157,7 @@ export const redemptionVaultSuits = (
             await loadRvFixture();
 
           const contractAdminRole = await redemptionVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             contractAdminRole,
             redemptionVault.address,
@@ -3189,7 +3189,7 @@ export const redemptionVaultSuits = (
           } = await loadRvFixture();
 
           const contractAdminRole = await redemptionVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             contractAdminRole,
             redemptionVault.address,
@@ -3260,7 +3260,7 @@ export const redemptionVaultSuits = (
             await loadRvFixture();
 
           const contractAdminRole = await redemptionVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             contractAdminRole,
             redemptionVault.address,
@@ -3292,7 +3292,7 @@ export const redemptionVaultSuits = (
           } = await loadRvFixture();
 
           const contractAdminRole = await redemptionVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             contractAdminRole,
             redemptionVault.address,
@@ -3363,7 +3363,7 @@ export const redemptionVaultSuits = (
             await loadRvFixture();
 
           const contractAdminRole = await redemptionVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             contractAdminRole,
             redemptionVault.address,
@@ -3395,7 +3395,7 @@ export const redemptionVaultSuits = (
           } = await loadRvFixture();
 
           const contractAdminRole = await redemptionVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             contractAdminRole,
             redemptionVault.address,
@@ -3453,7 +3453,7 @@ export const redemptionVaultSuits = (
             await loadRvFixture();
 
           const contractAdminRole = await redemptionVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             contractAdminRole,
             redemptionVault.address,
@@ -3483,7 +3483,7 @@ export const redemptionVaultSuits = (
           } = await loadRvFixture();
 
           const contractAdminRole = await redemptionVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             contractAdminRole,
             redemptionVault.address,
@@ -4965,7 +4965,7 @@ export const redemptionVaultSuits = (
               );
             };
 
-            it('should fail approve request when recipient got blacklisted', async () => {
+            it('should fail: approve request when recipient got blacklisted', async () => {
               const fixture = await loadRvFixture();
               const {
                 owner,
@@ -4991,7 +4991,7 @@ export const redemptionVaultSuits = (
               );
             });
 
-            it('should fail approve request when recipient got ungreenlisted when greenlist enable flag is true', async () => {
+            it('should fail: approve request when recipient got ungreenlisted when greenlist enable flag is true', async () => {
               const fixture = await loadRvFixture();
               const { owner, redemptionVault, mTBILL, mTokenToUsdDataFeed } =
                 fixture;
@@ -5011,7 +5011,7 @@ export const redemptionVaultSuits = (
               );
             });
 
-            it('should fail approve request when recipient got sanction listed', async () => {
+            it('should fail: approve request when recipient got sanction listed', async () => {
               const fixture = await loadRvFixture();
               const {
                 owner,

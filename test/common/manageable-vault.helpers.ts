@@ -26,7 +26,6 @@ import {
   RedemptionVaultWithAave,
   RedemptionVaultWithMorpho,
   RedemptionVaultWithMToken,
-  RedemptionVaultWithSwapper,
   RedemptionVaultWithUSTB,
 } from '../../typechain-types';
 
@@ -41,7 +40,6 @@ type CommonParamsChangePaymentToken = {
     | RedemptionVaultWithAave
     | RedemptionVaultWithMorpho
     | RedemptionVaultWithMToken
-    | RedemptionVaultWithSwapper
     | RedemptionVaultWithUSTB
     | ManageableVault;
   owner: SignerWithAddress;

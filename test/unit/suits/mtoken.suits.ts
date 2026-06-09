@@ -20,20 +20,14 @@ import { encodeFnSelector } from '../../../helpers/utils';
 import {
   acErrors,
   blackList,
-  setupFunctionAccessGrantOperator,
-  setFunctionPermissionTester,
+  setupGrantOperatorRole,
+  setPermissionRoleTester,
   unBlackList,
 } from '../../../test/common/ac.helpers';
-import { defaultDeploy } from '../../../test/common/fixtures';
 import {
-  burn,
-  clawbackTest,
-  decreaseMintRateLimitTest,
-  increaseMintRateLimitTest,
-  mint,
-  setClawbackReceiverTest,
-  setMetadataTest,
-} from '../../../test/common/mTBILL.helpers';
+  defaultDeploy,
+  getInitializerParamsRv,
+} from '../../../test/common/fixtures';
 import {
   CustomAggregatorV3CompatibleFeed,
   CustomAggregatorV3CompatibleFeedGrowth,
@@ -50,6 +44,15 @@ import {
   pauseVaultFn,
   validateImplementation,
 } from '../../common/common.helpers';
+import {
+  burn,
+  clawbackTest,
+  decreaseMintRateLimitTest,
+  increaseMintRateLimitTest,
+  mint,
+  setClawbackReceiverTest,
+  setMetadataTest,
+} from '../../common/mtoken.helpers';
 import {
   executeTimelockOperationTester,
   scheduleTimelockOperationsTester,
@@ -347,33 +350,11 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       'RedemptionVault',
       undefined,
       [
-        {
-          ac: fixture.accessControl.address,
-          sanctionsList: fixture.mockedSanctionsList.address,
-          variationTolerance: 1,
-          minAmount: parseUnits('100'),
-          mToken: tokenContract.address,
-          mTokenDataFeed: dataFeed.address,
-          tokensReceiver: fixture.tokensReceiver.address,
-          instantFee: 100,
-          limitConfigs: [
-            {
-              limit: parseUnits('100000'),
-              window: days(1),
-            },
-          ],
-          minInstantFee: 0,
-          maxInstantFee: 10000,
-          maxInstantShare: 100_00,
-        },
-        {
-          requestRedeemer: fixture.requestRedeemer.address,
-          loanLp: fixture.loanLp.address,
-          loanRepaymentAddress: fixture.loanRepaymentAddress.address,
-          loanSwapperVault: fixture.redemptionVaultLoanSwapper.address,
-          maxLoanApr: 0,
-          loanApr: 0,
-        },
+        getInitializerParamsRv({
+          ...fixture,
+          mTBILL: tokenContract.address,
+          mTokenToUsdDataFeed: dataFeed.address,
+        }),
       ],
       [tokenRoles.redemptionVaultAdmin, tokenRoles.greenlisted],
     );
@@ -443,11 +424,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       ).revertedWith('Initializable: contract is already initialized');
 
       await expect(
-        tokenContract.initializeV2(
-          clawbackReceiver.address,
-          mTokensMetadata[token].name,
-          mTokensMetadata[token].symbol,
-        ),
+        tokenContract.initializeV2(clawbackReceiver.address),
       ).to.revertedWith('Initializable: contract is already initialized');
     });
 
@@ -1446,16 +1423,16 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         const nextReceiver = regularAccounts[3].address;
         const selector = encodeFnSelector('setClawbackReceiver(address)');
 
-        await setupFunctionAccessGrantOperator({
+        await setupGrantOperatorRole({
           accessControl,
           owner,
-          functionAccessAdminRole: tokenRoles.tokenManager,
+          masterRole: tokenRoles.tokenManager,
           targetContract: tokenContract.address,
           functionSelector: selector,
           grantOperator: owner,
         });
 
-        await setFunctionPermissionTester(
+        await setPermissionRoleTester(
           { accessControl, owner },
           tokenRoles.tokenManager,
           tokenContract.address,
@@ -1597,16 +1574,16 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         await mint({ tokenContract, owner }, holder, amount);
 
-        await setupFunctionAccessGrantOperator({
+        await setupGrantOperatorRole({
           accessControl,
           owner,
-          functionAccessAdminRole: tokenRoles.tokenManager,
+          masterRole: tokenRoles.tokenManager,
           targetContract: tokenContract.address,
           functionSelector: selector,
           grantOperator: owner,
         });
 
-        await setFunctionPermissionTester(
+        await setPermissionRoleTester(
           { accessControl, owner },
           tokenRoles.tokenManager,
           tokenContract.address,

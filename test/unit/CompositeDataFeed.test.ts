@@ -328,7 +328,7 @@ describe('CompositeDataFeed', function () {
       );
     });
 
-    it('should fail when: num. feed is unhealthy ', async () => {
+    it('should fail: when: num. feed is unhealthy ', async () => {
       const { compositeDataFeed, mockedAggregatorMToken } = await loadFixture(
         defaultDeploy,
       );
@@ -338,7 +338,7 @@ describe('CompositeDataFeed', function () {
       );
     });
 
-    it('should fail when: denom. feed is unhealthy', async () => {
+    it('should fail: when: denom. feed is unhealthy', async () => {
       const { compositeDataFeed, mockedAggregatorMBasis } = await loadFixture(
         defaultDeploy,
       );

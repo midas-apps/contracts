@@ -19,8 +19,6 @@ type CommonParams = {
   owner: SignerWithAddress;
 };
 
-// TODO: rename file to mToken.helpers.ts
-
 export const setMetadataTest = async (
   { tokenContract, owner }: CommonParams,
   key: string,

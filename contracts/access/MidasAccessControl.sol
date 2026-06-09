@@ -27,15 +27,14 @@ contract MidasAccessControl is
     mapping(bytes32 => bool) public isUserFacingRole;
 
     /**
-     * @dev Grant operators may call `setFunctionPermissionMult` for the corresponding permission key.
+     * @dev Grant operators may call `setPermissionRoleMult` for the corresponding permission key.
      */
-    mapping(bytes32 => mapping(address => bool))
-        private _functionAccessGrantOperators;
+    mapping(bytes32 => mapping(address => bool)) private _grantOperatorRoles;
 
     /**
      * @dev Accounts allowed to call the scoped function on `targetContract`.
      */
-    mapping(bytes32 => mapping(address => bool)) private _functionPermissions;
+    mapping(bytes32 => mapping(address => bool)) private _permissionRoles;
 
     /**
      * @notice address of MidasAccessControlTimelockController contract
@@ -51,6 +50,15 @@ contract MidasAccessControl is
      * @dev leaving a storage gap for futures updates
      */
     uint256[50] private __gap;
+
+    /**
+     * @dev validates that the msg.sender has the role
+     * @param role role to check access for
+     */
+    modifier onlyRoleWithTimelock(bytes32 role) {
+        _validateRoleAccess(role);
+        _;
+    }
 
     /**
      * @notice upgradeable pattern contract`s initializer
@@ -116,15 +124,14 @@ contract MidasAccessControl is
     /**
      * @inheritdoc IMidasAccessControl
      */
-    function setIsUserFacingRoleMult(
-        SetIsUserFacingRoleParams[] calldata params
-    ) external {
-        _validateRoleAccess(DEFAULT_ADMIN_ROLE, _msgSender());
-
+    function setUserFacingRoleMult(SetUserFacingRoleParams[] calldata params)
+        external
+        onlyRoleWithTimelock(DEFAULT_ADMIN_ROLE)
+    {
         require(params.length > 0, EmptyArray());
 
         for (uint256 i = 0; i < params.length; ++i) {
-            SetIsUserFacingRoleParams memory param = params[i];
+            SetUserFacingRoleParams memory param = params[i];
 
             // if already enabled, skip and do not emit event
             if (isUserFacingRole[param.role]) {
@@ -132,48 +139,41 @@ contract MidasAccessControl is
             }
 
             isUserFacingRole[param.role] = param.enabled;
-            emit UserFacingRoleSet(param.role, param.enabled);
+            emit SetUserFacingRole(param.role, param.enabled);
         }
     }
 
-    // TODO: rename functions to use easier names
-    // like setGrantOperatorRoleMult and setPermissionRoleMult
     /**
      * @inheritdoc IMidasAccessControl
      */
-    function setFunctionAccessGrantOperatorMult(
-        bytes32 functionAccessAdminRole,
-        SetFunctionAccessGrantOperatorParams[] calldata params
-    ) external {
-        _validateRoleAccess(functionAccessAdminRole, _msgSender());
-
+    function setGrantOperatorRoleMult(
+        bytes32 masterRole,
+        SetGrantOperatorRoleParams[] calldata params
+    ) external onlyRoleWithTimelock(masterRole) {
         require(params.length > 0, EmptyArray());
 
         require(
-            !isUserFacingRole[functionAccessAdminRole],
-            AccessControlUtilsLibrary.UserFacingRoleNotAllowed(
-                functionAccessAdminRole
-            )
+            !isUserFacingRole[masterRole],
+            AccessControlUtilsLibrary.UserFacingRoleNotAllowed(masterRole)
         );
 
         for (uint256 i = 0; i < params.length; ++i) {
-            SetFunctionAccessGrantOperatorParams memory param = params[i];
+            SetGrantOperatorRoleParams memory param = params[i];
 
-            bytes32 operatorKey = functionAccessGrantOperatorKey(
-                functionAccessAdminRole,
+            bytes32 operatorKey = grantOperatorRoleKey(
+                masterRole,
                 param.targetContract,
                 param.functionSelector
             );
 
             // if already enabled, skip and do not emit event
-            if (_functionAccessGrantOperators[operatorKey][param.operator]) {
+            if (_grantOperatorRoles[operatorKey][param.operator]) {
                 continue;
             }
 
-            _functionAccessGrantOperators[operatorKey][param.operator] = param
-                .enabled;
-            emit FunctionAccessGrantOperatorUpdate(
-                functionAccessAdminRole,
+            _grantOperatorRoles[operatorKey][param.operator] = param.enabled;
+            emit SetGrantOperatorRole(
+                masterRole,
                 param.targetContract,
                 param.operator,
                 param.functionSelector,
@@ -185,39 +185,39 @@ contract MidasAccessControl is
     /**
      * @inheritdoc IMidasAccessControl
      */
-    function setFunctionPermissionMult(
-        bytes32 functionAccessAdminRole,
+    function setPermissionRoleMult(
+        bytes32 masterRole,
         address targetContract,
         bytes4 functionSelector,
-        SetFunctionPermissionParams[] calldata params
+        SetPermissionRoleParams[] calldata params
     ) external {
-        bytes32 operatorRole = functionAccessGrantOperatorKey(
-            functionAccessAdminRole,
+        bytes32 operatorRoleKey = grantOperatorRoleKey(
+            masterRole,
             targetContract,
             functionSelector
         );
 
-        _validateOperatorRoleAccess(operatorRole, _msgSender());
+        _validateOperatorRoleAccess(operatorRoleKey, _msgSender());
 
         require(params.length > 0, EmptyArray());
 
-        bytes32 functionKey = functionPermissionKey(
-            functionAccessAdminRole,
+        bytes32 functionRoleKey = permissionRoleKey(
+            masterRole,
             targetContract,
             functionSelector
         );
 
         for (uint256 i = 0; i < params.length; ++i) {
-            SetFunctionPermissionParams memory param = params[i];
+            SetPermissionRoleParams memory param = params[i];
 
             // if already enabled, skip and do not emit event
-            if (_functionPermissions[functionKey][param.account]) {
+            if (_permissionRoles[functionRoleKey][param.account]) {
                 continue;
             }
 
-            _functionPermissions[functionKey][param.account] = param.enabled;
-            emit FunctionPermissionUpdate(
-                functionAccessAdminRole,
+            _permissionRoles[functionRoleKey][param.account] = param.enabled;
+            emit SetPermissionRole(
+                masterRole,
                 targetContract,
                 param.account,
                 functionSelector,
@@ -232,8 +232,8 @@ contract MidasAccessControl is
     function grantRole(bytes32 role, address account)
         public
         override(AccessControlUpgradeable, IAccessControlUpgradeable)
+        onlyRoleWithTimelock(getRoleAdmin(role))
     {
-        _validateRoleAccess(getRoleAdmin(role), _msgSender());
         _grantRole(role, account);
     }
 
@@ -244,10 +244,7 @@ contract MidasAccessControl is
         public
         override(AccessControlUpgradeable, IAccessControlUpgradeable)
     {
-        address actualSender = _validateRoleAccess(
-            getRoleAdmin(role),
-            _msgSender()
-        );
+        address actualSender = _validateRoleAccess(getRoleAdmin(role));
 
         _verifyRevokeRole(role, account, actualSender);
         _revokeRole(role, account);
@@ -271,7 +268,7 @@ contract MidasAccessControl is
         require(roles.length > 0, EmptyArray());
 
         bytes32 adminRole = getRoleAdmin(roles[0]);
-        _validateRoleAccess(adminRole, _msgSender());
+        _validateRoleAccess(adminRole);
 
         for (uint256 i = 0; i < roles.length; ++i) {
             require(
@@ -299,7 +296,7 @@ contract MidasAccessControl is
         require(roles.length > 0, EmptyArray());
 
         bytes32 adminRole = getRoleAdmin(roles[0]);
-        address actualSender = _validateRoleAccess(adminRole, _msgSender());
+        address actualSender = _validateRoleAccess(adminRole);
 
         for (uint256 i = 0; i < roles.length; ++i) {
             require(
@@ -314,8 +311,10 @@ contract MidasAccessControl is
     /**
      * @inheritdoc IMidasAccessControl
      */
-    function setRoleAdmin(bytes32 role, bytes32 newAdminRole) external {
-        _validateRoleAccess(getRoleAdmin(role), _msgSender());
+    function setRoleAdmin(bytes32 role, bytes32 newAdminRole)
+        external
+        onlyRoleWithTimelock(getRoleAdmin(role))
+    {
         _setRoleAdmin(role, newAdminRole);
     }
 
@@ -335,13 +334,13 @@ contract MidasAccessControl is
      * @inheritdoc IMidasAccessControl
      */
     function isFunctionAccessGrantOperator(
-        bytes32 functionAccessAdminRole,
+        bytes32 masterRole,
         address targetContract,
         bytes4 functionSelector,
         address operator
     ) external view returns (bool) {
-        bytes32 key = functionAccessGrantOperatorKey(
-            functionAccessAdminRole,
+        bytes32 key = grantOperatorRoleKey(
+            masterRole,
             targetContract,
             functionSelector
         );
@@ -356,24 +355,24 @@ contract MidasAccessControl is
         view
         returns (bool)
     {
-        return _functionAccessGrantOperators[key][operator];
+        return _grantOperatorRoles[key][operator];
     }
 
     /**
      * @inheritdoc IMidasAccessControl
      */
     function hasFunctionPermission(
-        bytes32 functionAccessAdminRole,
+        bytes32 masterRole,
         address targetContract,
         bytes4 functionSelector,
         address account
     ) external view returns (bool) {
-        bytes32 key = functionPermissionKey(
-            functionAccessAdminRole,
+        bytes32 key = permissionRoleKey(
+            masterRole,
             targetContract,
             functionSelector
         );
-        return _functionPermissions[key][account];
+        return _permissionRoles[key][account];
     }
 
     /**
@@ -384,20 +383,20 @@ contract MidasAccessControl is
         view
         returns (bool)
     {
-        return _functionPermissions[key][account];
+        return _permissionRoles[key][account];
     }
 
     /**
      * @inheritdoc IMidasAccessControl
      */
-    function functionPermissionKey(
-        bytes32 functionAccessAdminRole,
+    function permissionRoleKey(
+        bytes32 masterRole,
         address targetContract,
         bytes4 functionSelector
     ) public pure returns (bytes32) {
         return
             _functionPermissionKey(
-                functionAccessAdminRole,
+                masterRole,
                 targetContract,
                 functionSelector,
                 ""
@@ -407,14 +406,14 @@ contract MidasAccessControl is
     /**
      * @inheritdoc IMidasAccessControl
      */
-    function functionAccessGrantOperatorKey(
-        bytes32 functionAccessAdminRole,
+    function grantOperatorRoleKey(
+        bytes32 masterRole,
         address targetContract,
         bytes4 functionSelector
     ) public pure returns (bytes32) {
         return
             _functionPermissionKey(
-                functionAccessAdminRole,
+                masterRole,
                 targetContract,
                 functionSelector,
                 "operator"
@@ -423,10 +422,10 @@ contract MidasAccessControl is
 
     /**
      * @dev calculates the base key for function permission mappings
-     * @param functionAccessAdminRole OZ role for the scope
+     * @param masterRole OZ role for the scope
      */
     function _functionPermissionKey(
-        bytes32 functionAccessAdminRole,
+        bytes32 masterRole,
         address targetContract,
         bytes4 functionSelector,
         bytes memory additionalData
@@ -434,7 +433,7 @@ contract MidasAccessControl is
         return
             keccak256(
                 abi.encode(
-                    functionAccessAdminRole,
+                    masterRole,
                     targetContract,
                     functionSelector,
                     additionalData
@@ -469,12 +468,11 @@ contract MidasAccessControl is
     }
 
     /**
-     * @notice validates that the account with a role has access to the function
+     * @notice validates that the msg.sender with a role has access to the function
      * @param role role to check access for
-     * @param account account to check access for
      * @return actualAccount actual account that has access to the function
      */
-    function _validateRoleAccess(bytes32 role, address account)
+    function _validateRoleAccess(bytes32 role)
         internal
         view
         returns (
@@ -487,7 +485,7 @@ contract MidasAccessControl is
                 role,
                 AccessControlUtilsLibrary.NULL_DELAY,
                 false,
-                account,
+                _msgSender(),
                 false
             );
     }

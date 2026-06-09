@@ -20,9 +20,9 @@ import {
   revokeRoleMultTester,
   revokeRoleTester,
   setIsUserFacingRoleTester,
-  setFunctionAccessGrantOperatorTester,
-  setFunctionPermissionTester,
-  setupFunctionAccessGrantOperator,
+  setGrantOperatorRoleTester,
+  setPermissionRoleTester,
+  setupGrantOperatorRole,
 } from '../common/ac.helpers';
 import { handleRevert, validateImplementation } from '../common/common.helpers';
 import { defaultDeploy } from '../common/fixtures';
@@ -39,9 +39,6 @@ const withOnlyContractAdminSelector = encodeFnSelector(
 const withOnlyRoleNoTimelockSelector = encodeFnSelector(
   'withOnlyRoleNoTimelock(bytes32,bool)',
 );
-const withOnlyRoleDelayOverrideSelector = encodeFnSelector(
-  'withOnlyRoleDelayOverride(bytes32,uint256,bool)',
-);
 
 const timelockManagerRevertOpts = (
   timelockManager: MidasTimelockManager,
@@ -57,18 +54,18 @@ const timelockManagerRevertOpts = (
 
 const getScopedFunctionKeys = async (
   accessControl: MidasAccessControl,
-  functionAccessAdminRole: string,
+  masterRole: string,
   functionSelector: string,
   wAccessControlTester: WithMidasAccessControlTester,
   timelockManager: MidasTimelockManager,
 ) => {
-  const wacFunctionKey = await accessControl.functionPermissionKey(
-    functionAccessAdminRole,
+  const wacFunctionKey = await accessControl.permissionRoleKey(
+    masterRole,
     wAccessControlTester.address,
     functionSelector,
   );
-  const timelockManagerFunctionKey = await accessControl.functionPermissionKey(
-    functionAccessAdminRole,
+  const timelockManagerFunctionKey = await accessControl.permissionRoleKey(
+    masterRole,
     timelockManager.address,
     functionSelector,
   );
@@ -76,12 +73,12 @@ const getScopedFunctionKeys = async (
   return { wacFunctionKey, timelockManagerFunctionKey };
 };
 
-const setupScopedFunctionPermission = async (
+const setupFunctionPermissionRole = async (
   accessControl: MidasAccessControl,
   owner: SignerWithAddress,
   wAccessControlTester: WithMidasAccessControlTester,
   timelockManager: MidasTimelockManager,
-  functionAccessAdminRole: string,
+  masterRole: string,
   functionSelector: string,
   account: string,
 ) => {
@@ -89,17 +86,17 @@ const setupScopedFunctionPermission = async (
     wAccessControlTester.address,
     timelockManager.address,
   ]) {
-    await setupFunctionAccessGrantOperator({
+    await setupGrantOperatorRole({
       accessControl,
       owner,
-      functionAccessAdminRole,
+      masterRole,
       targetContract,
       functionSelector,
       grantOperator: owner,
     });
-    await setFunctionPermissionTester(
+    await setPermissionRoleTester(
       { accessControl, owner },
-      functionAccessAdminRole,
+      masterRole,
       targetContract,
       functionSelector,
       [{ account, enabled: true }],
@@ -108,45 +105,45 @@ const setupScopedFunctionPermission = async (
 
   return getScopedFunctionKeys(
     accessControl,
-    functionAccessAdminRole,
+    masterRole,
     functionSelector,
     wAccessControlTester,
     timelockManager,
   );
 };
 
-const setupWithOnlyRoleFunctionPermission = async (
+const setupWithOnlyRolePermission = async (
   accessControl: MidasAccessControl,
   owner: SignerWithAddress,
   wAccessControlTester: WithMidasAccessControlTester,
   timelockManager: MidasTimelockManager,
-  functionAccessAdminRole: string,
+  masterRole: string,
   account: string,
 ) =>
-  setupScopedFunctionPermission(
+  setupFunctionPermissionRole(
     accessControl,
     owner,
     wAccessControlTester,
     timelockManager,
-    functionAccessAdminRole,
+    masterRole,
     withOnlyRoleSelector,
     account,
   );
 
-const setupWithOnlyContractAdminFunctionPermission = async (
+const setupWithOnlyContractAdminPermission = async (
   accessControl: MidasAccessControl,
   owner: SignerWithAddress,
   wAccessControlTester: WithMidasAccessControlTester,
   timelockManager: MidasTimelockManager,
-  functionAccessAdminRole: string,
+  masterRole: string,
   account: string,
 ) =>
-  setupScopedFunctionPermission(
+  setupFunctionPermissionRole(
     accessControl,
     owner,
     wAccessControlTester,
     timelockManager,
-    functionAccessAdminRole,
+    masterRole,
     withOnlyContractAdminSelector,
     account,
   );
@@ -335,16 +332,16 @@ describe('MidasAccessControl', function () {
 
       const selector = encodeFnSelector('grantRoleMult(bytes32[],address[])');
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: roles.common.blacklistedOperator,
+        masterRole: roles.common.blacklistedOperator,
         targetContract: accessControl.address,
         functionSelector: selector,
         grantOperator: owner,
       });
 
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         roles.common.blacklistedOperator,
         accessControl.address,
@@ -547,16 +544,16 @@ describe('MidasAccessControl', function () {
 
       const selector = encodeFnSelector('revokeRoleMult(bytes32[],address[])');
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: roles.common.blacklistedOperator,
+        masterRole: roles.common.blacklistedOperator,
         targetContract: accessControl.address,
         functionSelector: selector,
         grantOperator: owner,
       });
 
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         roles.common.blacklistedOperator,
         accessControl.address,
@@ -742,16 +739,16 @@ describe('MidasAccessControl', function () {
 
       const selector = encodeFnSelector('setRoleAdmin(bytes32,bytes32)');
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: roles.common.blacklistedOperator,
+        masterRole: roles.common.blacklistedOperator,
         targetContract: accessControl.address,
         functionSelector: selector,
         grantOperator: owner,
       });
 
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         roles.common.blacklistedOperator,
         accessControl.address,
@@ -773,7 +770,7 @@ describe('MidasAccessControl', function () {
     });
   });
 
-  describe('setIsUserFacingRoleMult()', () => {
+  describe('setUserFacingRoleMult()', () => {
     it('should fail: non-DEFAULT_ADMIN reverts', async () => {
       const { accessControl, regularAccounts, roles } = await loadFixture(
         defaultDeploy,
@@ -840,7 +837,7 @@ describe('MidasAccessControl', function () {
       );
 
       const data = accessControl.interface.encodeFunctionData(
-        'setIsUserFacingRoleMult',
+        'setUserFacingRoleMult',
         [[{ role: roles.common.blacklistedOperator, enabled: true }]],
       );
 
@@ -868,19 +865,19 @@ describe('MidasAccessControl', function () {
         await loadFixture(defaultDeploy);
 
       const selector = encodeFnSelector(
-        'setIsUserFacingRoleMult((bytes32,bool)[])',
+        'setUserFacingRoleMult((bytes32,bool)[])',
       );
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: roles.common.defaultAdmin,
+        masterRole: roles.common.defaultAdmin,
         targetContract: accessControl.address,
         functionSelector: selector,
         grantOperator: owner,
       });
 
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         roles.common.defaultAdmin,
         accessControl.address,
@@ -904,11 +901,11 @@ describe('MidasAccessControl', function () {
     });
   });
 
-  describe('setFunctionAccessGrantOperatorMult()', () => {
+  describe('setGrantOperatorRoleMult()', () => {
     it('should fail: reverts when role is user facing role', async () => {
       const { accessControl, owner, roles } = await loadFixture(defaultDeploy);
 
-      await setFunctionAccessGrantOperatorTester(
+      await setGrantOperatorRoleTester(
         {
           accessControl,
           owner,
@@ -933,7 +930,7 @@ describe('MidasAccessControl', function () {
     it('when role is not user facing role', async () => {
       const { accessControl, owner, roles } = await loadFixture(defaultDeploy);
 
-      await setFunctionAccessGrantOperatorTester(
+      await setGrantOperatorRoleTester(
         {
           accessControl,
           owner,
@@ -962,13 +959,13 @@ describe('MidasAccessControl', function () {
         },
       ];
 
-      await setFunctionAccessGrantOperatorTester(
+      await setGrantOperatorRoleTester(
         { accessControl, owner },
         roles.common.greenlistedOperator,
         params,
       );
 
-      await setFunctionAccessGrantOperatorTester(
+      await setGrantOperatorRoleTester(
         { accessControl, owner },
         roles.common.greenlistedOperator,
         params,
@@ -986,7 +983,7 @@ describe('MidasAccessControl', function () {
       );
 
       const data = accessControl.interface.encodeFunctionData(
-        'setFunctionAccessGrantOperatorMult',
+        'setGrantOperatorRoleMult',
         [
           roles.common.greenlistedOperator,
           [
@@ -1019,24 +1016,24 @@ describe('MidasAccessControl', function () {
       );
     });
 
-    it('should fail: when user have function access role but do not have functionAccessAdminRole', async () => {
+    it('should fail: when user have function access role but do not have masterRole', async () => {
       const { accessControl, owner, regularAccounts, roles } =
         await loadFixture(defaultDeploy);
 
       const selector = encodeFnSelector(
-        'setFunctionAccessGrantOperatorMult(bytes32,(address,bytes4,address,bool)[])',
+        'setGrantOperatorRoleMult(bytes32,(address,bytes4,address,bool)[])',
       );
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: roles.common.greenlistedOperator,
+        masterRole: roles.common.greenlistedOperator,
         targetContract: accessControl.address,
         functionSelector: selector,
         grantOperator: owner,
       });
 
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         roles.common.greenlistedOperator,
         accessControl.address,
@@ -1044,7 +1041,7 @@ describe('MidasAccessControl', function () {
         [{ account: regularAccounts[0].address, enabled: true }],
       );
 
-      await setFunctionAccessGrantOperatorTester(
+      await setGrantOperatorRoleTester(
         { accessControl, owner: regularAccounts[0] },
         roles.common.greenlistedOperator,
         [
@@ -1062,7 +1059,7 @@ describe('MidasAccessControl', function () {
     it('should fail: when params lenght is 0', async () => {
       const { accessControl, owner, roles } = await loadFixture(defaultDeploy);
 
-      await setFunctionAccessGrantOperatorTester(
+      await setGrantOperatorRoleTester(
         { accessControl, owner },
         roles.common.greenlistedOperator,
         [],
@@ -1071,23 +1068,23 @@ describe('MidasAccessControl', function () {
     });
   });
 
-  describe('setFunctionPermissionMult()', () => {
+  describe('setPermissionRoleMult()', () => {
     it('when caller is function operator', async () => {
       const { accessControl, owner, regularAccounts, roles } =
         await loadFixture(defaultDeploy);
 
       const selector = encodeFnSelector('setGreenlistEnable(bool)');
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: roles.common.greenlistedOperator,
+        masterRole: roles.common.greenlistedOperator,
         targetContract: accessControl.address,
         functionSelector: selector,
         grantOperator: owner,
       });
 
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         roles.common.greenlistedOperator,
         accessControl.address,
@@ -1107,16 +1104,16 @@ describe('MidasAccessControl', function () {
 
       const selector = encodeFnSelector('setGreenlistEnable(bool)');
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: roles.common.greenlistedOperator,
+        masterRole: roles.common.greenlistedOperator,
         targetContract: accessControl.address,
         functionSelector: selector,
         grantOperator: owner,
       });
 
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner: regularAccounts[1] },
         roles.common.greenlistedOperator,
         accessControl.address,
@@ -1135,10 +1132,10 @@ describe('MidasAccessControl', function () {
       const { accessControl, owner, regularAccounts, roles } =
         await loadFixture(defaultDeploy);
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: roles.common.greenlistedOperator,
+        masterRole: roles.common.greenlistedOperator,
         targetContract: accessControl.address,
         functionSelector: encodeFnSelector('setGreenlistEnable1(bool)'),
         grantOperator: owner,
@@ -1146,7 +1143,7 @@ describe('MidasAccessControl', function () {
 
       const selector = encodeFnSelector('setGreenlistEnable(bool)');
 
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         roles.common.greenlistedOperator,
         accessControl.address,
@@ -1167,16 +1164,16 @@ describe('MidasAccessControl', function () {
 
       const selector = encodeFnSelector('setGreenlistEnable(bool)');
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: roles.common.greenlistedOperator,
+        masterRole: roles.common.greenlistedOperator,
         targetContract: accessControl.address,
         functionSelector: selector,
         grantOperator: owner,
       });
 
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         roles.common.greenlistedOperator,
         accessControl.address,
@@ -1184,7 +1181,7 @@ describe('MidasAccessControl', function () {
         [{ account: regularAccounts[0].address, enabled: true }],
       );
 
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         roles.common.greenlistedOperator,
         accessControl.address,
@@ -1198,16 +1195,16 @@ describe('MidasAccessControl', function () {
 
       const selector = encodeFnSelector('setGreenlistEnable(bool)');
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: roles.common.greenlistedOperator,
+        masterRole: roles.common.greenlistedOperator,
         targetContract: accessControl.address,
         functionSelector: selector,
         grantOperator: owner,
       });
 
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         roles.common.greenlistedOperator,
         accessControl.address,
@@ -1228,13 +1225,13 @@ describe('MidasAccessControl', function () {
       } = await loadFixture(defaultDeploy);
 
       const selector = encodeFnSelector('setGreenlistEnable(bool)');
-      const operatorRole = await accessControl.functionAccessGrantOperatorKey(
+      const operatorRoleKey = await accessControl.grantOperatorRoleKey(
         roles.common.greenlistedOperator,
         accessControl.address,
         selector,
       );
 
-      await setFunctionAccessGrantOperatorTester(
+      await setGrantOperatorRoleTester(
         { accessControl, owner },
         roles.common.greenlistedOperator,
         [
@@ -1249,12 +1246,12 @@ describe('MidasAccessControl', function () {
 
       await setRoleTimelocksTester(
         { timelockManager, timelock, owner, accessControl },
-        [operatorRole],
+        [operatorRoleKey],
         [3600],
       );
 
       const data = accessControl.interface.encodeFunctionData(
-        'setFunctionPermissionMult',
+        'setPermissionRoleMult',
         [
           roles.common.greenlistedOperator,
           accessControl.address,
@@ -1288,16 +1285,16 @@ describe('MidasAccessControl', function () {
 
       const selector = encodeFnSelector('setGreenlistEnable(bool)');
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: roles.common.greenlistedOperator,
+        masterRole: roles.common.greenlistedOperator,
         targetContract: accessControl.address,
         functionSelector: selector,
         grantOperator: owner,
       });
 
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner: regularAccounts[0] },
         roles.common.greenlistedOperator,
         accessControl.address,
@@ -1568,7 +1565,7 @@ describe('WithMidasAccessControl', function () {
       const adminRole = roles.common.defaultAdmin;
 
       const { wacFunctionKey, timelockManagerFunctionKey } =
-        await setupWithOnlyRoleFunctionPermission(
+        await setupWithOnlyRolePermission(
           accessControl,
           owner,
           wAccessControlTester,
@@ -1602,7 +1599,7 @@ describe('WithMidasAccessControl', function () {
 
       const adminRole = roles.common.defaultAdmin;
 
-      await setupWithOnlyRoleFunctionPermission(
+      await setupWithOnlyRolePermission(
         accessControl,
         owner,
         wAccessControlTester,
@@ -1633,7 +1630,7 @@ describe('WithMidasAccessControl', function () {
 
       const adminRole = roles.common.defaultAdmin;
 
-      await setupWithOnlyRoleFunctionPermission(
+      await setupWithOnlyRolePermission(
         accessControl,
         owner,
         wAccessControlTester,
@@ -1663,7 +1660,7 @@ describe('WithMidasAccessControl', function () {
       const adminRole = roles.common.defaultAdmin;
 
       const { wacFunctionKey, timelockManagerFunctionKey } =
-        await setupWithOnlyRoleFunctionPermission(
+        await setupWithOnlyRolePermission(
           accessControl,
           owner,
           wAccessControlTester,
@@ -1769,7 +1766,7 @@ describe('WithMidasAccessControl', function () {
       );
 
       const { wacFunctionKey, timelockManagerFunctionKey } =
-        await setupWithOnlyRoleFunctionPermission(
+        await setupWithOnlyRolePermission(
           accessControl,
           owner,
           wAccessControlTester,
@@ -1888,7 +1885,7 @@ describe('WithMidasAccessControl', function () {
       await setupContractAdminRole(wAccessControlTester, adminRole);
 
       const { wacFunctionKey, timelockManagerFunctionKey } =
-        await setupWithOnlyContractAdminFunctionPermission(
+        await setupWithOnlyContractAdminPermission(
           accessControl,
           owner,
           wAccessControlTester,
@@ -1923,7 +1920,7 @@ describe('WithMidasAccessControl', function () {
       const adminRole = roles.common.defaultAdmin;
       await setupContractAdminRole(wAccessControlTester, adminRole);
 
-      await setupWithOnlyContractAdminFunctionPermission(
+      await setupWithOnlyContractAdminPermission(
         accessControl,
         owner,
         wAccessControlTester,
@@ -1954,7 +1951,7 @@ describe('WithMidasAccessControl', function () {
       await setupContractAdminRole(wAccessControlTester, adminRole);
 
       const { wacFunctionKey, timelockManagerFunctionKey } =
-        await setupWithOnlyContractAdminFunctionPermission(
+        await setupWithOnlyContractAdminPermission(
           accessControl,
           owner,
           wAccessControlTester,
@@ -2060,7 +2057,7 @@ describe('WithMidasAccessControl', function () {
       );
 
       const { wacFunctionKey, timelockManagerFunctionKey } =
-        await setupWithOnlyContractAdminFunctionPermission(
+        await setupWithOnlyContractAdminPermission(
           accessControl,
           owner,
           wAccessControlTester,
@@ -2158,7 +2155,7 @@ describe('WithMidasAccessControl', function () {
 
       const adminRole = roles.common.defaultAdmin;
 
-      await setupScopedFunctionPermission(
+      await setupFunctionPermissionRole(
         accessControl,
         owner,
         wAccessControlTester,
@@ -2187,7 +2184,7 @@ describe('WithMidasAccessControl', function () {
 
       const adminRole = roles.common.defaultAdmin;
 
-      await setupScopedFunctionPermission(
+      await setupFunctionPermissionRole(
         accessControl,
         owner,
         wAccessControlTester,
@@ -2225,7 +2222,7 @@ describe('WithMidasAccessControl', function () {
         regularAccounts[0].address,
       );
 
-      await setupScopedFunctionPermission(
+      await setupFunctionPermissionRole(
         accessControl,
         owner,
         wAccessControlTester,

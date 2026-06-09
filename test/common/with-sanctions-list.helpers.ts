@@ -51,8 +51,7 @@ export const setSanctionsList = async (
       .setSanctionsList(newSanctionsList),
   ).to.emit(
     withSanctionsList,
-    withSanctionsList.interface.events['SetSanctionsList(address,address)']
-      .name,
+    withSanctionsList.interface.events['SetSanctionsList(address)'].name,
   ).to.not.reverted;
 
   expect(await withSanctionsList.sanctionsList()).eq(newSanctionsList);

@@ -24,7 +24,7 @@ import {
   acErrors,
   blackList,
   greenList,
-  setupVaultScopedFunctionPermission,
+  setupPermissionRole,
 } from '../../common/ac.helpers';
 import {
   approveBase18,
@@ -190,7 +190,7 @@ export const depositVaultSuits = (
             await loadDvFixture();
 
           const contractAdminRole = await depositVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             contractAdminRole,
             depositVault.address,
@@ -215,7 +215,7 @@ export const depositVaultSuits = (
             await loadDvFixture();
 
           const contractAdminRole = await depositVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             contractAdminRole,
             depositVault.address,
@@ -271,7 +271,7 @@ export const depositVaultSuits = (
             await loadDvFixture();
 
           const contractAdminRole = await depositVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             contractAdminRole,
             depositVault.address,
@@ -296,7 +296,7 @@ export const depositVaultSuits = (
             await loadDvFixture();
 
           const contractAdminRole = await depositVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             contractAdminRole,
             depositVault.address,
@@ -352,7 +352,7 @@ export const depositVaultSuits = (
             await loadDvFixture();
 
           const contractAdminRole = await depositVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             contractAdminRole,
             depositVault.address,
@@ -377,7 +377,7 @@ export const depositVaultSuits = (
             await loadDvFixture();
 
           const contractAdminRole = await depositVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             contractAdminRole,
             depositVault.address,
@@ -4217,7 +4217,7 @@ export const depositVaultSuits = (
               );
             };
 
-            it('should fail approve request when recipient got blacklisted', async () => {
+            it('should fail: approve request when recipient got blacklisted', async () => {
               const fixture = await loadDvFixture();
               const {
                 owner,
@@ -4263,7 +4263,7 @@ export const depositVaultSuits = (
               );
             });
 
-            it('should fail approve request when recipient got sanction listed', async () => {
+            it('should fail: approve request when recipient got sanction listed', async () => {
               const fixture = await loadDvFixture();
               const {
                 owner,

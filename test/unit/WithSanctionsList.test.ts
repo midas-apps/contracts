@@ -6,8 +6,8 @@ import { encodeFnSelector } from '../../helpers/utils';
 import { WithSanctionsListTester__factory } from '../../typechain-types';
 import {
   acErrors,
-  setFunctionPermissionTester,
-  setupFunctionAccessGrantOperator,
+  setPermissionRoleTester,
+  setupGrantOperatorRole,
 } from '../common/ac.helpers';
 import { defaultDeploy } from '../common/fixtures';
 import {
@@ -117,19 +117,19 @@ describe('WithSanctionsList', function () {
 
       await accessControl.grantRole(sanctionsListAdmin, owner.address);
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: sanctionsListAdmin,
+        masterRole: sanctionsListAdmin,
         targetContract: withSanctionsListTester.address,
         functionSelector: selector,
         grantOperator: owner,
       });
 
       const user = regularAccounts[0];
-      await setFunctionPermissionTester({ accessControl, owner }, [
+      await setPermissionRoleTester({ accessControl, owner }, [
         {
-          functionAccessAdminRole: sanctionsListAdmin,
+          masterRole: sanctionsListAdmin,
           targetContract: withSanctionsListTester.address,
           functionSelector: selector,
           account: user.address,
@@ -158,18 +158,18 @@ describe('WithSanctionsList', function () {
 
       await accessControl.grantRole(sanctionsListAdmin, owner.address);
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: sanctionsListAdmin,
+        masterRole: sanctionsListAdmin,
         targetContract: withSanctionsListTester.address,
         functionSelector: selector,
         grantOperator: owner,
       });
 
-      await setFunctionPermissionTester({ accessControl, owner }, [
+      await setPermissionRoleTester({ accessControl, owner }, [
         {
-          functionAccessAdminRole: sanctionsListAdmin,
+          masterRole: sanctionsListAdmin,
           targetContract: withSanctionsListTester.address,
           functionSelector: selector,
           account: user.address,

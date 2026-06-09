@@ -2389,7 +2389,7 @@ Smart contract that stores all roles for Midas project
 mapping(bytes32 => bool) functionAccessAdminRoleEnabled
 ```
 
-_Only when true may holders of `functionAccessAdminRole` manage grant operators for that role's scopes._
+_Only when true may holders of `masterRole` manage grant operators for that role's scopes._
 
 ### initialize
 
@@ -2399,10 +2399,10 @@ function initialize() external
 
 upgradeable pattern contract`s initializer
 
-### setIsUserFacingRoleMult
+### setUserFacingRoleMult
 
 ```solidity
-function setIsUserFacingRoleMult(struct IMidasAccessControl.SetIsUserFacingRoleParams[] params) external
+function setUserFacingRoleMult(struct IMidasAccessControl.SetUserFacingRoleParams[] params) external
 ```
 
 Enable or disable which OZ role may administer function-access scopes for that role.
@@ -2414,28 +2414,28 @@ Prevents unrelated role admins from spamming access mappings._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| params | struct IMidasAccessControl.SetIsUserFacingRoleParams[] | array of SetIsUserFacingRoleParams |
+| params | struct IMidasAccessControl.SetUserFacingRoleParams[] | array of SetUserFacingRoleParams |
 
-### setFunctionAccessGrantOperatorMult
+### setGrantOperatorRoleMult
 
 ```solidity
-function setFunctionAccessGrantOperatorMult(struct IMidasAccessControl.SetFunctionAccessGrantOperatorParams[] params) external
+function setGrantOperatorRoleMult(struct IMidasAccessControl.SetGrantOperatorRoleParams[] params) external
 ```
 
 Add or remove a grant operator for a specific contract function scope.
 
-_Caller must hold `functionAccessAdminRole`; role must be enabled via `setFunctionAccessAdminRoleEnabled`._
+_Caller must hold `masterRole`; role must be enabled via `setFunctionAccessAdminRoleEnabled`._
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| params | struct IMidasAccessControl.SetFunctionAccessGrantOperatorParams[] | array of SetFunctionAccessGrantOperatorParams |
+| params | struct IMidasAccessControl.SetGrantOperatorRoleParams[] | array of SetGrantOperatorRoleParams |
 
-### setFunctionPermissionMult
+### setPermissionRoleMult
 
 ```solidity
-function setFunctionPermissionMult(struct IMidasAccessControl.SetFunctionPermissionParams[] params) external
+function setPermissionRoleMult(struct IMidasAccessControl.SetPermissionRoleParams[] params) external
 ```
 
 Grant or revoke function access for an account
@@ -2446,7 +2446,7 @@ _caller must be a grant operator for the scope_
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| params | struct IMidasAccessControl.SetFunctionPermissionParams[] | array of SetFunctionPermissionParams |
+| params | struct IMidasAccessControl.SetPermissionRoleParams[] | array of SetPermissionRoleParams |
 
 ### grantRoleMult
 
@@ -2510,7 +2510,7 @@ function renounceRole(bytes32, address) public pure
 ### isFunctionAccessGrantOperator
 
 ```solidity
-function isFunctionAccessGrantOperator(bytes32 functionAccessAdminRole, address targetContract, bytes4 functionSelector, address operator) external view returns (bool)
+function isFunctionAccessGrantOperator(bytes32 masterRole, address targetContract, bytes4 functionSelector, address operator) external view returns (bool)
 ```
 
 Whether `operator` may call `setFunctionPermission` for the function scope
@@ -2519,7 +2519,7 @@ Whether `operator` may call `setFunctionPermission` for the function scope
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| functionAccessAdminRole | bytes32 | OZ role for the scope |
+| masterRole | bytes32 | OZ role for the scope |
 | targetContract | address | scoped contract |
 | functionSelector | bytes4 | scoped function |
 | operator | address | address checked for grant-operator status |
@@ -2533,7 +2533,7 @@ Whether `operator` may call `setFunctionPermission` for the function scope
 ### hasFunctionPermission
 
 ```solidity
-function hasFunctionPermission(bytes32 functionAccessAdminRole, address targetContract, bytes4 functionSelector, address account) external view returns (bool)
+function hasFunctionPermission(bytes32 masterRole, address targetContract, bytes4 functionSelector, address account) external view returns (bool)
 ```
 
 Whether `account` may call the scoped function on `targetContract`.
@@ -2542,7 +2542,7 @@ Whether `account` may call the scoped function on `targetContract`.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| functionAccessAdminRole | bytes32 | OZ role for the scope |
+| masterRole | bytes32 | OZ role for the scope |
 | targetContract | address | scoped contract |
 | functionSelector | bytes4 | scoped function |
 | account | address | address checked for permissio. |
@@ -2790,7 +2790,7 @@ _checks that given `address` do not have `role`_
 ### _hasFunctionPermission
 
 ```solidity
-function _hasFunctionPermission(bytes32 functionAccessAdminRole, bytes4 functionSelector, address account) internal view
+function _hasFunctionPermission(bytes32 masterRole, bytes4 functionSelector, address account) internal view
 ```
 
 _checks that given `account` has function permission for the given function selector_
@@ -2799,7 +2799,7 @@ _checks that given `account` has function permission for the given function sele
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| functionAccessAdminRole | bytes32 | OZ role for the scope |
+| masterRole | bytes32 | OZ role for the scope |
 | functionSelector | bytes4 | function selector |
 | account | address | address checked for permission |
 
@@ -4000,7 +4000,7 @@ to the `tokensReceiver` address
 
 ## IMidasAccessControl
 
-### SetIsUserFacingRoleParams
+### SetUserFacingRoleParams
 
 #### Parameters
 
@@ -4008,13 +4008,13 @@ to the `tokensReceiver` address
 | ---- | ---- | ----------- |
 
 ```solidity
-struct SetIsUserFacingRoleParams {
-  bytes32 functionAccessAdminRole;
+struct SetUserFacingRoleParams {
+  bytes32 masterRole;
   bool enabled;
 }
 ```
 
-### SetFunctionAccessGrantOperatorParams
+### SetGrantOperatorRoleParams
 
 #### Parameters
 
@@ -4022,8 +4022,8 @@ struct SetIsUserFacingRoleParams {
 | ---- | ---- | ----------- |
 
 ```solidity
-struct SetFunctionAccessGrantOperatorParams {
-  bytes32 functionAccessAdminRole;
+struct SetGrantOperatorRoleParams {
+  bytes32 masterRole;
   address targetContract;
   bytes4 functionSelector;
   address operator;
@@ -4031,7 +4031,7 @@ struct SetFunctionAccessGrantOperatorParams {
 }
 ```
 
-### SetFunctionPermissionParams
+### SetPermissionRoleParams
 
 #### Parameters
 
@@ -4039,8 +4039,8 @@ struct SetFunctionAccessGrantOperatorParams {
 | ---- | ---- | ----------- |
 
 ```solidity
-struct SetFunctionPermissionParams {
-  bytes32 functionAccessAdminRole;
+struct SetPermissionRoleParams {
+  bytes32 masterRole;
   address targetContract;
   bytes4 functionSelector;
   address account;
@@ -4048,55 +4048,55 @@ struct SetFunctionPermissionParams {
 }
 ```
 
-### UserFacingRoleSet
+### SetUserFacingRole
 
 ```solidity
-event UserFacingRoleSet(bytes32 functionAccessAdminRole, bool enabled)
+event SetUserFacingRole(bytes32 masterRole, bool enabled)
 ```
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| functionAccessAdminRole | bytes32 | OZ role for the scope |
+| masterRole | bytes32 | OZ role for the scope |
 | enabled | bool | whether that role may manage grant operators for the scope. |
 
-### FunctionAccessGrantOperatorUpdate
+### SetGrantOperatorRole
 
 ```solidity
-event FunctionAccessGrantOperatorUpdate(bytes32 functionAccessAdminRole, address targetContract, bytes4 functionSelector, address operator, bool enabled)
+event SetGrantOperatorRole(bytes32 masterRole, address targetContract, bytes4 functionSelector, address operator, bool enabled)
 ```
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| functionAccessAdminRole | bytes32 | OZ role for the scope |
+| masterRole | bytes32 | OZ role for the scope |
 | targetContract | address | contract whose function is scoped. |
 | functionSelector | bytes4 | selector of the scoped function. |
 | operator | address | address that may call `setFunctionPermission` for this scope. |
 | enabled | bool | grant or revoke grant-operator status. |
 
-### FunctionPermissionUpdate
+### SetPermissionRole
 
 ```solidity
-event FunctionPermissionUpdate(bytes32 functionAccessAdminRole, address targetContract, address account, bytes4 functionSelector, bool enabled)
+event SetPermissionRole(bytes32 masterRole, address targetContract, address account, bytes4 functionSelector, bool enabled)
 ```
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| functionAccessAdminRole | bytes32 | OZ role for the scope |
+| masterRole | bytes32 | OZ role for the scope |
 | targetContract | address | contract whose function is scoped. |
 | account | address | address receiving or losing permission |
 | functionSelector | bytes4 | selector of the scoped function. |
 | enabled | bool | grant or revoke |
 
-### setIsUserFacingRoleMult
+### setUserFacingRoleMult
 
 ```solidity
-function setIsUserFacingRoleMult(struct IMidasAccessControl.SetIsUserFacingRoleParams[] params) external
+function setUserFacingRoleMult(struct IMidasAccessControl.SetUserFacingRoleParams[] params) external
 ```
 
 Enable or disable which OZ role may administer function-access scopes for that role.
@@ -4108,28 +4108,28 @@ Prevents unrelated role admins from spamming access mappings._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| params | struct IMidasAccessControl.SetIsUserFacingRoleParams[] | array of SetIsUserFacingRoleParams |
+| params | struct IMidasAccessControl.SetUserFacingRoleParams[] | array of SetUserFacingRoleParams |
 
-### setFunctionAccessGrantOperatorMult
+### setGrantOperatorRoleMult
 
 ```solidity
-function setFunctionAccessGrantOperatorMult(struct IMidasAccessControl.SetFunctionAccessGrantOperatorParams[] params) external
+function setGrantOperatorRoleMult(struct IMidasAccessControl.SetGrantOperatorRoleParams[] params) external
 ```
 
 Add or remove a grant operator for a specific contract function scope.
 
-_Caller must hold `functionAccessAdminRole`; role must be enabled via `setFunctionAccessAdminRoleEnabled`._
+_Caller must hold `masterRole`; role must be enabled via `setFunctionAccessAdminRoleEnabled`._
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| params | struct IMidasAccessControl.SetFunctionAccessGrantOperatorParams[] | array of SetFunctionAccessGrantOperatorParams |
+| params | struct IMidasAccessControl.SetGrantOperatorRoleParams[] | array of SetGrantOperatorRoleParams |
 
-### setFunctionPermissionMult
+### setPermissionRoleMult
 
 ```solidity
-function setFunctionPermissionMult(struct IMidasAccessControl.SetFunctionPermissionParams[] params) external
+function setPermissionRoleMult(struct IMidasAccessControl.SetPermissionRoleParams[] params) external
 ```
 
 Grant or revoke function access for an account
@@ -4140,7 +4140,7 @@ _caller must be a grant operator for the scope_
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| params | struct IMidasAccessControl.SetFunctionPermissionParams[] | array of SetFunctionPermissionParams |
+| params | struct IMidasAccessControl.SetPermissionRoleParams[] | array of SetPermissionRoleParams |
 
 ### setRoleAdmin
 
@@ -4162,7 +4162,7 @@ _can be called only by the address that holds `DEFAULT_ADMIN_ROLE`_
 ### isFunctionAccessGrantOperator
 
 ```solidity
-function isFunctionAccessGrantOperator(bytes32 functionAccessAdminRole, address targetContract, bytes4 functionSelector, address operator) external view returns (bool)
+function isFunctionAccessGrantOperator(bytes32 masterRole, address targetContract, bytes4 functionSelector, address operator) external view returns (bool)
 ```
 
 Whether `operator` may call `setFunctionPermission` for the function scope
@@ -4171,7 +4171,7 @@ Whether `operator` may call `setFunctionPermission` for the function scope
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| functionAccessAdminRole | bytes32 | OZ role for the scope |
+| masterRole | bytes32 | OZ role for the scope |
 | targetContract | address | scoped contract |
 | functionSelector | bytes4 | scoped function |
 | operator | address | address checked for grant-operator status |
@@ -4185,7 +4185,7 @@ Whether `operator` may call `setFunctionPermission` for the function scope
 ### hasFunctionPermission
 
 ```solidity
-function hasFunctionPermission(bytes32 functionAccessAdminRole, address targetContract, bytes4 functionSelector, address account) external view returns (bool)
+function hasFunctionPermission(bytes32 masterRole, address targetContract, bytes4 functionSelector, address account) external view returns (bool)
 ```
 
 Whether `account` may call the scoped function on `targetContract`.
@@ -4194,7 +4194,7 @@ Whether `account` may call the scoped function on `targetContract`.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| functionAccessAdminRole | bytes32 | OZ role for the scope |
+| masterRole | bytes32 | OZ role for the scope |
 | targetContract | address | scoped contract |
 | functionSelector | bytes4 | scoped function |
 | account | address | address checked for permissio. |

@@ -13,8 +13,8 @@ import {
 } from '../../typechain-types';
 import {
   acErrors,
-  setFunctionPermissionTester,
-  setupFunctionAccessGrantOperator,
+  setPermissionRoleTester,
+  setupGrantOperatorRole,
 } from '../common/ac.helpers';
 import { validateImplementation } from '../common/common.helpers';
 import {
@@ -217,16 +217,16 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
       const user = regularAccounts[0];
       const feedAdminRole = await customFeed.feedAdminRole();
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: feedAdminRole,
+        masterRole: feedAdminRole,
         targetContract: customFeed.address,
         functionSelector: setMaxAnswerDeviationSelector,
         grantOperator: owner,
       });
 
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         feedAdminRole,
         customFeed.address,
@@ -252,16 +252,16 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
       const user = regularAccounts[0];
       const feedAdminRole = await customFeed.feedAdminRole();
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: feedAdminRole,
+        masterRole: feedAdminRole,
         targetContract: customFeed.address,
         functionSelector: setMaxAnswerDeviationSelector,
         grantOperator: owner,
       });
 
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         feedAdminRole,
         customFeed.address,
@@ -338,25 +338,25 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
       const proposer = regularAccounts[0];
       const feedAdminRole = await customFeed.feedAdminRole();
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: feedAdminRole,
+        masterRole: feedAdminRole,
         targetContract: customFeed.address,
         functionSelector: setMaxAnswerDeviationSelector,
         grantOperator: owner,
       });
 
-      await setupFunctionAccessGrantOperator({
+      await setupGrantOperatorRole({
         accessControl,
         owner,
-        functionAccessAdminRole: feedAdminRole,
+        masterRole: feedAdminRole,
         targetContract: timelockManager.address,
         functionSelector: setMaxAnswerDeviationSelector,
         grantOperator: owner,
       });
 
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         feedAdminRole,
         customFeed.address,
@@ -364,7 +364,7 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
         [{ account: proposer.address, enabled: true }],
       );
 
-      await setFunctionPermissionTester(
+      await setPermissionRoleTester(
         { accessControl, owner },
         feedAdminRole,
         timelockManager.address,
@@ -376,12 +376,12 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
         false,
       );
 
-      const feedPermissionKey = await accessControl.functionPermissionKey(
+      const feedPermissionKey = await accessControl.permissionRoleKey(
         feedAdminRole,
         customFeed.address,
         setMaxAnswerDeviationSelector,
       );
-      const timelockPermissionKey = await accessControl.functionPermissionKey(
+      const timelockPermissionKey = await accessControl.permissionRoleKey(
         feedAdminRole,
         timelockManager.address,
         setMaxAnswerDeviationSelector,

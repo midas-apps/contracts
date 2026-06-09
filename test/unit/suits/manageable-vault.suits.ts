@@ -11,16 +11,19 @@ import {
   ManageableVaultTester,
   ManageableVaultTester__factory,
 } from '../../../typechain-types';
+import { acErrors, setupPermissionRole } from '../../common/ac.helpers';
 import {
-  acErrors,
-  setupVaultScopedFunctionPermission,
-} from '../../common/ac.helpers';
-import {
-  approveBase18,
   mintToken,
   pauseVaultFn,
+  approveBase18,
+  InitializeInvariant,
+  initializeParamsSuits,
 } from '../../common/common.helpers';
-import { DefaultFixture, getDeployParamsMv } from '../../common/fixtures';
+import {
+  DefaultFixture,
+  getInitializerParamsMv,
+  InitializerParamsMv,
+} from '../../common/fixtures';
 import { greenListEnable } from '../../common/greenlist.helpers';
 import {
   addPaymentTokenTest,
@@ -36,9 +39,118 @@ import {
   setMinMaxInstantFeeTest,
   setSequentialRequestProcessingTest,
 } from '../../common/manageable-vault.helpers';
+import { initializeMv } from '../../common/vault-initializer.helpers';
 
 let pauseManager: DefaultFixture['pauseManager'];
 let owner: DefaultFixture['owner'];
+
+const baseInitParams = (fixture: DefaultFixture): InitializerParamsMv => ({
+  accessControl: fixture.accessControl,
+  mockedSanctionsList: fixture.mockedSanctionsList,
+  mTBILL: fixture.mTBILL,
+  mTokenToUsdDataFeed: fixture.mTokenToUsdDataFeed,
+  tokensReceiver: fixture.tokensReceiver,
+});
+
+const initializeInvariants: InitializeInvariant<InitializerParamsMv>[] = [
+  {
+    title: 'accessControl is zero address',
+    params: { accessControl: constants.AddressZero },
+    revertCustomError: {
+      customErrorName: 'InvalidAddress',
+      args: [constants.AddressZero],
+    },
+  },
+  {
+    title: 'mTBILL is zero address',
+    params: { mTBILL: constants.AddressZero },
+    revertCustomError: {
+      customErrorName: 'InvalidAddress',
+      args: [constants.AddressZero],
+    },
+  },
+  {
+    title: 'mTokenToUsdDataFeed is zero address',
+    params: { mTokenToUsdDataFeed: constants.AddressZero },
+    revertCustomError: {
+      customErrorName: 'InvalidAddress',
+      args: [constants.AddressZero],
+    },
+  },
+  {
+    title: 'tokensReceiver is zero address',
+    params: { tokensReceiver: constants.AddressZero },
+    revertCustomError: {
+      customErrorName: 'InvalidAddress',
+      args: [constants.AddressZero],
+    },
+  },
+  {
+    title: 'tokensReceiver is address(this)',
+    run: async (fixture) => {
+      const vault = await new ManageableVaultTester__factory(
+        fixture.owner,
+      ).deploy();
+
+      await initializeMv(
+        {
+          ...baseInitParams(fixture),
+          tokensReceiver: vault.address,
+        },
+        vault,
+        {
+          revertCustomError: {
+            customErrorName: 'InvalidAddress',
+            args: [vault.address],
+          },
+        },
+      );
+    },
+  },
+  {
+    title: 'variationTolerance is zero',
+    params: { variationTolerance: 0 },
+    revertCustomError: { customErrorName: 'InvalidFee', args: [0] },
+  },
+  {
+    title: 'variationTolerance is greater than 100%',
+    params: { variationTolerance: 10001 },
+    revertCustomError: { customErrorName: 'InvalidFee', args: [10001] },
+  },
+  {
+    title: 'instantFee is greater than 100%',
+    params: { instantFee: 10001 },
+    revertCustomError: { customErrorName: 'InvalidFee', args: [10001] },
+  },
+  {
+    title: 'maxInstantShare is greater than 100%',
+    params: { maxInstantShare: 10001 },
+    revertCustomError: { customErrorName: 'InvalidFee', args: [10001] },
+  },
+  {
+    title: 'minInstantFee is greater than 100%',
+    params: { minInstantFee: 10001 },
+    revertCustomError: { customErrorName: 'InvalidFee', args: [10001] },
+  },
+  {
+    title: 'maxInstantFee is greater than 100%',
+    params: { maxInstantFee: 10001 },
+    revertCustomError: { customErrorName: 'InvalidFee', args: [10001] },
+  },
+  {
+    title: 'minInstantFee is greater than maxInstantFee',
+    params: { minInstantFee: 500, maxInstantFee: 100 },
+    revertCustomError: {
+      customErrorName: 'InvalidMinMaxInstantFee',
+      args: [500, 100],
+    },
+  },
+  {
+    title: 'limitConfigs window is shorter than 1 minute',
+    params: { limitConfigs: [{ window: 59, limit: parseUnits('100000') }] },
+    revertCustomError: { customErrorName: 'WindowTooShort', args: [59] },
+  },
+];
 
 export const manageableVaultSuits = (
   mvFixture: () => Promise<DefaultFixture>,
@@ -122,45 +234,58 @@ export const manageableVaultSuits = (
       });
     });
 
-    describe('common', () => {
-      describe('initialization', () => {
-        it('should fail: cal; initialize() when already initialized', async () => {
-          const { manageableVault } = await loadMvFixture();
+    describe('initialization', () => {
+      it('should fail: cal; initialize() when already initialized', async () => {
+        const { manageableVault } = await loadMvFixture();
 
-          await expect(
-            manageableVault.initializeExternal(
-              ...getDeployParamsMv({
-                accessControl: constants.AddressZero,
-                mockedSanctionsList: constants.AddressZero,
-                mTBILL: constants.AddressZero,
-                mTokenToUsdDataFeed: constants.AddressZero,
-                tokensReceiver: constants.AddressZero,
-              }),
-            ),
-          ).revertedWith('Initializable: contract is already initialized');
-        });
-
-        it('should fail: call with initializing == false', async () => {
-          const { owner } = await loadMvFixture();
-
-          const vault = await new ManageableVaultTester__factory(
-            owner,
-          ).deploy();
-
-          await expect(
-            vault.initializeWithoutInitializer(
-              ...getDeployParamsMv({
-                accessControl: constants.AddressZero,
-                mockedSanctionsList: constants.AddressZero,
-                mTBILL: constants.AddressZero,
-                mTokenToUsdDataFeed: constants.AddressZero,
-                tokensReceiver: constants.AddressZero,
-              }),
-            ),
-          ).revertedWith('Initializable: contract is not initializing');
-        });
+        await expect(
+          manageableVault.initializeExternal(
+            ...getInitializerParamsMv({
+              accessControl: constants.AddressZero,
+              mockedSanctionsList: constants.AddressZero,
+              mTBILL: constants.AddressZero,
+              mTokenToUsdDataFeed: constants.AddressZero,
+              tokensReceiver: constants.AddressZero,
+            }),
+          ),
+        ).revertedWith('Initializable: contract is already initialized');
       });
 
+      it('should fail: call with initializing == false', async () => {
+        const { owner } = await loadMvFixture();
+
+        const vault = await new ManageableVaultTester__factory(owner).deploy();
+
+        await expect(
+          vault.initializeWithoutInitializer(
+            ...getInitializerParamsMv({
+              accessControl: constants.AddressZero,
+              mockedSanctionsList: constants.AddressZero,
+              mTBILL: constants.AddressZero,
+              mTokenToUsdDataFeed: constants.AddressZero,
+              tokensReceiver: constants.AddressZero,
+            }),
+          ),
+        ).revertedWith('Initializable: contract is not initializing');
+      });
+
+      initializeParamsSuits(
+        initializeInvariants,
+        loadMvFixture,
+        async (fixture, params, opt) => {
+          await initializeMv(
+            {
+              ...baseInitParams(fixture),
+              ...params,
+            },
+            undefined,
+            opt,
+          );
+        },
+      );
+    });
+
+    describe('common', () => {
       describe('setMinAmount()', () => {
         it('should fail: call from address without VAULT_ADMIN_ROLE role', async () => {
           const { owner, manageableVault, regularAccounts } =
@@ -198,7 +323,7 @@ export const manageableVaultSuits = (
             await loadMvFixture();
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -225,7 +350,7 @@ export const manageableVaultSuits = (
           } = await loadMvFixture();
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -293,7 +418,7 @@ export const manageableVaultSuits = (
             await loadMvFixture();
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -324,7 +449,7 @@ export const manageableVaultSuits = (
           } = await loadMvFixture();
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -510,7 +635,7 @@ export const manageableVaultSuits = (
           } = await loadMvFixture();
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -545,7 +670,7 @@ export const manageableVaultSuits = (
           } = await loadMvFixture();
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -633,7 +758,7 @@ export const manageableVaultSuits = (
             await loadMvFixture();
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -662,7 +787,7 @@ export const manageableVaultSuits = (
           } = await loadMvFixture();
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -756,7 +881,7 @@ export const manageableVaultSuits = (
           );
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -790,7 +915,7 @@ export const manageableVaultSuits = (
           );
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -860,7 +985,7 @@ export const manageableVaultSuits = (
             await loadMvFixture();
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -887,7 +1012,7 @@ export const manageableVaultSuits = (
           } = await loadMvFixture();
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -984,7 +1109,7 @@ export const manageableVaultSuits = (
             await loadMvFixture();
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -1014,7 +1139,7 @@ export const manageableVaultSuits = (
           } = await loadMvFixture();
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -1090,7 +1215,7 @@ export const manageableVaultSuits = (
             await loadMvFixture();
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -1119,7 +1244,7 @@ export const manageableVaultSuits = (
           } = await loadMvFixture();
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -1189,7 +1314,7 @@ export const manageableVaultSuits = (
             await loadMvFixture();
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -1220,7 +1345,7 @@ export const manageableVaultSuits = (
           } = await loadMvFixture();
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -1384,7 +1509,7 @@ export const manageableVaultSuits = (
           );
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -1423,7 +1548,7 @@ export const manageableVaultSuits = (
           );
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -1512,7 +1637,7 @@ export const manageableVaultSuits = (
           await mintToken(stableCoins.dai, manageableVault, 1);
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -1545,7 +1670,7 @@ export const manageableVaultSuits = (
           await mintToken(stableCoins.dai, manageableVault, 1);
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -1627,7 +1752,7 @@ export const manageableVaultSuits = (
             await loadMvFixture();
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -1662,7 +1787,7 @@ export const manageableVaultSuits = (
           } = await loadMvFixture();
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -1781,7 +1906,7 @@ export const manageableVaultSuits = (
           );
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -1821,7 +1946,7 @@ export const manageableVaultSuits = (
           );
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -1956,7 +2081,7 @@ export const manageableVaultSuits = (
           );
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
@@ -1996,7 +2121,7 @@ export const manageableVaultSuits = (
           );
 
           const vaultRole = await manageableVault.contractAdminRole();
-          await setupVaultScopedFunctionPermission(
+          await setupPermissionRole(
             { accessControl, owner },
             vaultRole,
             manageableVault.address,

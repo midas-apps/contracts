@@ -662,7 +662,7 @@ redemptionVaultSuits(
             true,
           );
 
-          // Try to redeem - should fail because USTB redemption has no USDC
+          // Try to redeem - should fail: because USTB redemption has no USDC
           await expect(
             redemptionVaultWithUSTB['redeemInstant(address,uint256,uint256)'](
               stableCoins.usdc.address,

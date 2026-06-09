@@ -13,8 +13,8 @@ import { redeemInstantTest } from './redemption-vault.helpers';
 import {
   IERC20,
   RedemptionVaultWithAave,
-  MTBILLTest,
   DataFeedTest,
+  MToken,
 } from '../../typechain-types';
 
 type CommonParamsSetAavePool = {
@@ -25,7 +25,7 @@ type CommonParamsSetAavePool = {
 type RedemptionWithAaveParams = {
   redemptionVault: RedemptionVaultWithAave;
   owner: SignerWithAddress;
-  mTBILL: MTBILLTest;
+  mTBILL: MToken;
   mTokenToUsdDataFeed: DataFeedTest;
   usdc: IERC20;
   aToken: IERC20;
@@ -58,8 +58,7 @@ export const setAavePoolTest = async (
     redemptionVault.connect(opt?.from ?? owner).setAavePool(token, pool),
   ).to.emit(
     redemptionVault,
-    redemptionVault.interface.events['SetAavePool(address,address,address)']
-      .name,
+    redemptionVault.interface.events['SetAavePool(address,address)'].name,
   ).to.not.reverted;
 
   const poolAfter = await redemptionVault.aavePools(token);
@@ -87,7 +86,7 @@ export const removeAavePoolTest = async (
     redemptionVault.connect(opt?.from ?? owner).removeAavePool(token),
   ).to.emit(
     redemptionVault,
-    redemptionVault.interface.events['RemoveAavePool(address,address)'].name,
+    redemptionVault.interface.events['RemoveAavePool(address)'].name,
   ).to.not.reverted;
 
   const poolAfter = await redemptionVault.aavePools(token);

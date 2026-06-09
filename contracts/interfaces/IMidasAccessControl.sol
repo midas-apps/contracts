@@ -31,7 +31,7 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
     /**
      * @notice Set user facing role params
      */
-    struct SetIsUserFacingRoleParams {
+    struct SetUserFacingRoleParams {
         /// @notice OZ role for the scope
         bytes32 role;
         /// @notice whether that role is user facing
@@ -41,7 +41,7 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
     /**
      * @notice Set function access grant operator params
      */
-    struct SetFunctionAccessGrantOperatorParams {
+    struct SetGrantOperatorRoleParams {
         /// @notice contract whose function is scoped.
         address targetContract;
         /// @notice selector of the scoped function.
@@ -55,7 +55,7 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
     /**
      * @notice Set function permission params
      */
-    struct SetFunctionPermissionParams {
+    struct SetPermissionRoleParams {
         /// @notice address receiving or losing permission
         address account;
         /// @notice grant or revoke permission
@@ -66,17 +66,17 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
      * @param role OZ role for the scope
      * @param enabled whether that role is user facing
      */
-    event UserFacingRoleSet(bytes32 indexed role, bool enabled);
+    event SetUserFacingRole(bytes32 indexed role, bool enabled);
 
     /**
-     * @param functionAccessAdminRole OZ role for the scope
+     * @param masterRole OZ role for the scope
      * @param targetContract contract whose function is scoped.
      * @param functionSelector selector of the scoped function.
      * @param operator address that may call `setFunctionPermission` for this scope.
      * @param enabled grant or revoke grant-operator status.
      */
-    event FunctionAccessGrantOperatorUpdate(
-        bytes32 indexed functionAccessAdminRole,
+    event SetGrantOperatorRole(
+        bytes32 indexed masterRole,
         address indexed targetContract,
         address indexed operator,
         bytes4 functionSelector,
@@ -84,14 +84,14 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
     );
 
     /**
-     * @param functionAccessAdminRole OZ role for the scope
+     * @param masterRole OZ role for the scope
      * @param targetContract contract whose function is scoped.
      * @param account address receiving or losing permission
      * @param functionSelector selector of the scoped function.
      * @param enabled grant or revoke
      */
-    event FunctionPermissionUpdate(
-        bytes32 indexed functionAccessAdminRole,
+    event SetPermissionRole(
+        bytes32 indexed masterRole,
         address indexed targetContract,
         address indexed account,
         bytes4 functionSelector,
@@ -102,36 +102,35 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
      * @notice Enable or disable which OZ role may administer function-access scopes for that role.
      * @dev Only `DEFAULT_ADMIN_ROLE` can call this function.
      * Prevents unrelated role admins from spamming access mappings.
-     * @param params array of SetIsUserFacingRoleParams
+     * @param params array of SetUserFacingRoleParams
      */
-    function setIsUserFacingRoleMult(
-        SetIsUserFacingRoleParams[] calldata params
-    ) external;
+    function setUserFacingRoleMult(SetUserFacingRoleParams[] calldata params)
+        external;
 
     /**
      * @notice Add or remove a grant operator for a specific contract function scope.
-     * @dev Caller must hold `functionAccessAdminRole`; role must be enabled via `setFunctionAccessAdminRoleEnabled`.
-     * @param functionAccessAdminRole OZ role for the scope
-     * @param params array of SetFunctionAccessGrantOperatorParams
+     * @dev Caller must hold `masterRole`; role must be enabled via `setFunctionAccessAdminRoleEnabled`.
+     * @param masterRole OZ role for the scope
+     * @param params array of SetGrantOperatorRoleParams
      */
-    function setFunctionAccessGrantOperatorMult(
-        bytes32 functionAccessAdminRole,
-        SetFunctionAccessGrantOperatorParams[] calldata params
+    function setGrantOperatorRoleMult(
+        bytes32 masterRole,
+        SetGrantOperatorRoleParams[] calldata params
     ) external;
 
     /**
      * @notice Grant or revoke function access for an account
      * @dev caller must be a grant operator for the scope
-     * @param functionAccessAdminRole OZ role for the scope
+     * @param masterRole OZ role for the scope
      * @param targetContract scoped contract
      * @param functionSelector scoped function
-     * @param params array of SetFunctionPermissionParams
+     * @param params array of SetPermissionRoleParams
      */
-    function setFunctionPermissionMult(
-        bytes32 functionAccessAdminRole,
+    function setPermissionRoleMult(
+        bytes32 masterRole,
         address targetContract,
         bytes4 functionSelector,
-        SetFunctionPermissionParams[] calldata params
+        SetPermissionRoleParams[] calldata params
     ) external;
 
     /**
@@ -151,14 +150,14 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
 
     /**
      * @notice Whether `operator` may call `setFunctionPermission` for the function scope
-     * @param functionAccessAdminRole OZ role for the scope
+     * @param masterRole OZ role for the scope
      * @param targetContract scoped contract
      * @param functionSelector scoped function
      * @param operator address checked for grant-operator status
      * @return allowed whether `operator` is a grant operator for the scope
      */
     function isFunctionAccessGrantOperator(
-        bytes32 functionAccessAdminRole,
+        bytes32 masterRole,
         address targetContract,
         bytes4 functionSelector,
         address operator
@@ -177,14 +176,14 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
 
     /**
      * @notice Whether `account` may call the scoped function on `targetContract`.
-     * @param functionAccessAdminRole OZ role for the scope
+     * @param masterRole OZ role for the scope
      * @param targetContract scoped contract
      * @param functionSelector scoped function
      * @param account address checked for permissio.
      * @return allowed whether `account` has function access for the scope
      */
     function hasFunctionPermission(
-        bytes32 functionAccessAdminRole,
+        bytes32 masterRole,
         address targetContract,
         bytes4 functionSelector,
         address account
@@ -203,26 +202,26 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
 
     /**
      * @notice calculates the base key for function permission mappings
-     * @param functionAccessAdminRole OZ role
+     * @param masterRole OZ role
      * @param targetContract scoped contract
      * @param functionSelector scoped function of a `targetContract`
      * @return key the base key for function permission mappings
      */
-    function functionPermissionKey(
-        bytes32 functionAccessAdminRole,
+    function permissionRoleKey(
+        bytes32 masterRole,
         address targetContract,
         bytes4 functionSelector
     ) external pure returns (bytes32);
 
     /**
      * @notice calculates the base key for function permission mappings
-     * @param functionAccessAdminRole OZ role
+     * @param masterRole OZ role
      * @param targetContract scoped contract
      * @param functionSelector scoped function of a `targetContract`
      * @return key the base key for function permission mappings
      */
-    function functionAccessGrantOperatorKey(
-        bytes32 functionAccessAdminRole,
+    function grantOperatorRoleKey(
+        bytes32 masterRole,
         address targetContract,
         bytes4 functionSelector
     ) external pure returns (bytes32);

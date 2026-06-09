@@ -12,14 +12,14 @@ import { redeemInstantTest } from './redemption-vault.helpers';
 import {
   IERC20,
   RedemptionVaultWithUSTB,
-  MTBILLTest,
   DataFeedTest,
+  MToken,
 } from '../../typechain-types';
 
 type RedemptionWithUSTBParams = {
   redemptionVault: RedemptionVaultWithUSTB;
   owner: SignerWithAddress;
-  mTBILL: MTBILLTest;
+  mTBILL: MToken;
   mTokenToUsdDataFeed: DataFeedTest;
   usdc: IERC20;
   ustbToken: IERC20;

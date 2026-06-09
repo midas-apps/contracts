@@ -263,14 +263,14 @@ library AccessControlUtilsLibrary {
      * @dev resolves the access role based on the shortest delay
      * @param timelockManager timelock manager contract
      * @param rootRole root role
-     * @param functionKey function key
+     * @param functionRoleKey function key
      * @param overrideDelay override delay
      * @return roleUsed role used to validate the function access
      */
     function _resolveAccessRole(
         IMidasTimelockManager timelockManager,
         bytes32 rootRole,
-        bytes32 functionKey,
+        bytes32 functionRoleKey,
         uint256 overrideDelay
     ) private view returns (bytes32 roleUsed) {
         if (overrideDelay != NULL_DELAY) {
@@ -281,10 +281,10 @@ library AccessControlUtilsLibrary {
             overrideDelay
         );
         (uint256 functionDelay, ) = timelockManager.getRoleTimelockDelay(
-            functionKey,
+            functionRoleKey,
             overrideDelay
         );
-        return rootDelay <= functionDelay ? rootRole : functionKey;
+        return rootDelay <= functionDelay ? rootRole : functionRoleKey;
     }
 
     /**
@@ -300,7 +300,7 @@ library AccessControlUtilsLibrary {
         bytes4 functionSelector,
         address account
     ) private view returns (bytes32 key, bool hasPermission) {
-        key = accessControl.functionPermissionKey(
+        key = accessControl.permissionRoleKey(
             role,
             address(this),
             functionSelector

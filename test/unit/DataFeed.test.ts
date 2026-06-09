@@ -154,14 +154,15 @@ describe('DataFeed', function () {
 });
 
 describe('DataFeed Deprecated', function () {
-  it('should fail when: feed is deprecated', async () => {
-    const { dataFeedDeprecated } = await loadFixture(defaultDeploy);
+  it('should fail: when: feed is deprecated', async () => {
+    const { deployDeprecatedFeed } = await loadFixture(defaultDeploy);
+    const { dataFeedDeprecated } = await deployDeprecatedFeed();
     await expect(dataFeedDeprecated.getDataInBase18()).to.be.reverted;
   });
 });
 
 describe('DataFeed Deprecated with growth', function () {
-  it('should fail when: feed is deprecated (price < 0)', async () => {
+  it('should fail: when: feed is deprecated (price < 0)', async () => {
     const { dataFeedGrowth, ...fixture } = await loadFixture(defaultDeploy);
     await setMinGrowthApr(fixture, -1000000);
     await setRoundDataGrowth(fixture, 0.001, -1000000, -1000000);
@@ -172,11 +173,12 @@ describe('DataFeed Deprecated with growth', function () {
 });
 
 describe('DataFeed Unhealthy', function () {
-  it('should fail when: feed is unhealthy (by time)', async () => {
-    const { dataFeedUnhealthy } = await loadFixture(defaultDeploy);
+  it('should fail: when: feed is unhealthy (by time)', async () => {
+    const { deployUnhealthyFeed } = await loadFixture(defaultDeploy);
+    const { dataFeedUnhealthy } = await deployUnhealthyFeed();
     await expect(dataFeedUnhealthy.getDataInBase18()).to.be.reverted;
   });
-  it('should fail when: feed is unhealthy (by min answer)', async () => {
+  it('should fail: when: feed is unhealthy (by min answer)', async () => {
     const { dataFeed, mockedAggregator } = await loadFixture(defaultDeploy);
     await setRoundData({ mockedAggregator }, 0.1);
     await expect(dataFeed.getDataInBase18()).to.be.not.reverted;
@@ -184,7 +186,7 @@ describe('DataFeed Unhealthy', function () {
     await expect(dataFeed.getDataInBase18()).to.be.reverted;
   });
 
-  it('should fail when: feed is unhealthy (by max answer)', async () => {
+  it('should fail: when: feed is unhealthy (by max answer)', async () => {
     const { dataFeed, mockedAggregator } = await loadFixture(defaultDeploy);
     await setRoundData({ mockedAggregator }, 10000);
     await expect(dataFeed.getDataInBase18()).to.be.not.reverted;
@@ -194,7 +196,7 @@ describe('DataFeed Unhealthy', function () {
 });
 
 describe('DataFeed Unhealthy with growth', function () {
-  it('should fail when: feed is unhealthy (by time)', async () => {
+  it('should fail: when: feed is unhealthy (by time)', async () => {
     const { dataFeedGrowth, ...fixture } = await loadFixture(defaultDeploy);
     await setRoundDataGrowth(fixture, 0.1, -10, 0);
 
@@ -203,7 +205,7 @@ describe('DataFeed Unhealthy with growth', function () {
       'DF: feed is unhealthy',
     );
   });
-  it('should fail when: feed is unhealthy (by min answer)', async () => {
+  it('should fail: when: feed is unhealthy (by min answer)', async () => {
     const { dataFeedGrowth, ...fixture } = await loadFixture(defaultDeploy);
     await setRoundDataGrowth(fixture, 0.1, -100, 0);
     await expect(dataFeedGrowth.getDataInBase18()).to.be.not.reverted;
@@ -213,7 +215,7 @@ describe('DataFeed Unhealthy with growth', function () {
     );
   });
 
-  it('should fail when: feed is unhealthy (by max answer)', async () => {
+  it('should fail: when: feed is unhealthy (by max answer)', async () => {
     const { dataFeedGrowth, ...fixture } = await loadFixture(defaultDeploy);
 
     await dataFeedGrowth.setMinExpectedAnswer(parseUnits('10', 8));

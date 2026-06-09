@@ -11,7 +11,7 @@ import {
 import { MTokenName } from '../../config';
 import { acErrors, blackList } from '../common/ac.helpers';
 import { defaultDeploy, mTokenPermissionedFixture } from '../common/fixtures';
-import { burn, mint } from '../common/mTBILL.helpers';
+import { burn, mint } from '../common/mtoken.helpers';
 
 const mProducts = ['mTBILL'] as MTokenName[]; // Object.values(MTokenNameEnum);
 

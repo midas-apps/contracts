@@ -13,8 +13,8 @@ import { redeemInstantTest } from './redemption-vault.helpers';
 import {
   IERC20,
   RedemptionVaultWithMorpho,
-  MTBILLTest,
   DataFeedTest,
+  MToken,
 } from '../../typechain-types';
 
 type CommonParamsSetMorphoVault = {
@@ -25,7 +25,7 @@ type CommonParamsSetMorphoVault = {
 type RedemptionWithMorphoParams = {
   redemptionVault: RedemptionVaultWithMorpho;
   owner: SignerWithAddress;
-  mTBILL: MTBILLTest;
+  mTBILL: MToken;
   mTokenToUsdDataFeed: DataFeedTest;
   usdc: IERC20;
   morphoVault: IERC20;
@@ -58,8 +58,7 @@ export const setMorphoVaultTest = async (
     redemptionVault.connect(opt?.from ?? owner).setMorphoVault(token, vault),
   ).to.emit(
     redemptionVault,
-    redemptionVault.interface.events['SetMorphoVault(address,address,address)']
-      .name,
+    redemptionVault.interface.events['SetMorphoVault(address,address)'].name,
   ).to.not.reverted;
 
   const vaultAfter = await redemptionVault.morphoVaults(token);
@@ -87,7 +86,7 @@ export const removeMorphoVaultTest = async (
     redemptionVault.connect(opt?.from ?? owner).removeMorphoVault(token),
   ).to.emit(
     redemptionVault,
-    redemptionVault.interface.events['RemoveMorphoVault(address,address)'].name,
+    redemptionVault.interface.events['RemoveMorphoVault(address)'].name,
   ).to.not.reverted;
 
   const vaultAfter = await redemptionVault.morphoVaults(token);
