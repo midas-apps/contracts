@@ -101,7 +101,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
         uint256 missingAmountBase18,
         uint256 tokenOutRate,
         uint256, /* currentTokenOutBalanceBase18 */
-        uint256 /* tokenOutDecimals */
+        uint256 tokenOutDecimals
     )
         internal
         virtual
@@ -138,14 +138,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
             FeesNotWaivedOnTarget(address(_redemptionVault))
         );
 
-        uint256 actualTokenOutAmount = Math.mulDiv(
-            mTokenAAmount,
-            mTokenARate,
-            tokenOutRate,
-            Math.Rounding.Down
-        );
-
-        if (actualTokenOutAmount == 0) {
+        if (mTokenAAmount == 0) {
             return 0;
         }
 
@@ -154,12 +147,9 @@ contract RedemptionVaultWithMToken is RedemptionVault {
             mTokenAAmount
         );
 
-        _redemptionVault.redeemInstant(
-            tokenOut,
-            mTokenAAmount,
-            actualTokenOutAmount
-        );
-
-        return actualTokenOutAmount;
+        return
+            _redemptionVault
+                .redeemInstant(tokenOut, mTokenAAmount, 0)
+                .convertToBase18(tokenOutDecimals);
     }
 }

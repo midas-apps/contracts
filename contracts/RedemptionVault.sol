@@ -472,10 +472,14 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         if (isAvgRate) {
             require(request.amountMTokenInstant > 0, InvalidInstantAmount());
-            newMTokenRate = _calculateHoldbackPartRateFromAvg(
+            uint256 avgRate = _calculateHoldbackPartRateFromAvg(
                 request,
                 newMTokenRate
             );
+
+            if (avgRate != 0) {
+                newMTokenRate = avgRate;
+            }
         }
 
         require(newMTokenRate > 0, InvalidNewMTokenRate());
@@ -698,7 +702,9 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address tokenOut,
         CalcAndValidateRedeemResult memory calcResult
     ) private returns (uint256 usedLpLiquidity, uint256 lpFeePortion) {
-        uint256 tokenOutBalanceBase18 = _balanceOfVault(tokenOut);
+        uint256 tokenOutBalanceBase18 = IERC20(tokenOut)
+            .balanceOf(address(this))
+            .convertToBase18(_tokenDecimals(tokenOut));
 
         uint256 totalAmount = calcResult.amountTokenOutWithoutFee +
             calcResult.feeAmount;
@@ -710,8 +716,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 totalAmount,
                 calcResult.tokenOutRate,
                 calcResult.feeAmount,
-                calcResult.tokenOutDecimals,
-                false
+                calcResult.tokenOutDecimals
             );
 
             uint256 newBalance = tokenOutBalanceBase18 + usedLpLiquidity;
@@ -722,8 +727,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                     totalAmount - newBalance,
                     calcResult.tokenOutRate,
                     newBalance,
-                    calcResult.tokenOutDecimals,
-                    true
+                    calcResult.tokenOutDecimals
                 );
             }
         } else if (tokenOutBalanceBase18 < totalAmount) {
@@ -732,8 +736,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 totalAmount - tokenOutBalanceBase18,
                 calcResult.tokenOutRate,
                 tokenOutBalanceBase18,
-                calcResult.tokenOutDecimals,
-                false
+                calcResult.tokenOutDecimals
             );
 
             uint256 newBalance = tokenOutBalanceBase18 + obtainedVaultLiquidity;
@@ -745,8 +748,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                     totalAmount,
                     calcResult.tokenOutRate,
                     calcResult.feeAmount,
-                    calcResult.tokenOutDecimals,
-                    true
+                    calcResult.tokenOutDecimals
                 );
             }
         }
@@ -805,8 +807,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     }
 
     /**
-     * @dev wraps _obtainVaultLiquidityExternal with try/catch and reverts
-     * with original error if revertOnError is true
+     * @dev wraps _obtainVaultLiquidityExternal with try/catch
      * @param tokenOut tokenOut address
      * @param missingAmountBase18 amount of tokenOut needed in base 18
      * @param tokenOutRate tokenOut rate
@@ -818,8 +819,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 missingAmountBase18,
         uint256 tokenOutRate,
         uint256 currentTokenOutBalanceBase18,
-        uint256 tokenOutDecimals,
-        bool revertOnError
+        uint256 tokenOutDecimals
     ) private returns (uint256 obtainedLiquidityBase18) {
         try
             this._obtainVaultLiquidityExternal(
@@ -831,16 +831,13 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             )
         returns (uint256 _obtainedLiquidityBase18) {
             obtainedLiquidityBase18 = _obtainedLiquidityBase18;
-        } catch (bytes memory errorData) {
-            if (revertOnError) {
-                _revertWithOriginalError(errorData);
-            }
+        } catch {
+            // do nothing
         }
     }
 
     /**
-     * @dev wraps _obtainLoanLpLiquidityExternal with try/catch and reverts
-     * with original error if revertOnError is true
+     * @dev wraps _obtainLoanLpLiquidityExternal with try/catch
      * @param tokenOut tokenOut address
      * @param missingAmountBase18 amount of tokenOut needed in base 18
      * @param totalAmount total amount of tokenOut needed in base 18
@@ -854,8 +851,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 totalAmount,
         uint256 tokenOutRate,
         uint256 totalFee,
-        uint256 tokenOutDecimals,
-        bool revertOnError
+        uint256 tokenOutDecimals
     ) private returns (uint256 obtainedLiquidityBase18, uint256 lpFeePortion) {
         try
             this._obtainLoanLpLiquidityExternal(
@@ -871,10 +867,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 _obtainedLiquidityBase18,
                 _lpFeePortion
             );
-        } catch (bytes memory errorData) {
-            if (revertOnError) {
-                _revertWithOriginalError(errorData);
-            }
+        } catch {
+            // do nothing
         }
     }
 
@@ -1024,13 +1018,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             mTokenAAmount
         );
 
-        _loanSwapperVault.redeemInstant(
-            _tokenOut,
-            mTokenAAmount,
-            tokenOutAmountToRedeem
+        return (
+            _loanSwapperVault
+                .redeemInstant(_tokenOut, mTokenAAmount, 0)
+                .convertToBase18(tokenOutDecimals),
+            lpFeePortion
         );
-
-        return (tokenOutAmountToRedeem, lpFeePortion);
     }
 
     /**
@@ -1207,20 +1200,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     }
 
     /**
-     * @dev reverts with the original error data
-     * @param errorData error data
-     */
-    function _revertWithOriginalError(bytes memory errorData) private {
-        if (errorData.length > 0) {
-            assembly {
-                revert(add(32, errorData), mload(errorData))
-            }
-        }
-        // bare revert if no data
-        revert();
-    }
-
-    /**
      * @dev converts mToken to tokenOut amount
      * @param amountMTokenIn amount of mToken
      * @param overrideMTokenRate override mToken rate if not zero
@@ -1280,15 +1259,11 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         return balance >= requiredLiquidity.convertFromBase18(tokenDecimals);
     }
 
+    /**
+     * @dev reverts if the caller is not the contract itself
+     */
     function _requireSelfCall() private view {
         require(msg.sender == address(this), NotSelfCall());
-    }
-
-    function _balanceOfVault(address tokenOut) private view returns (uint256) {
-        return
-            IERC20(tokenOut).balanceOf(address(this)).convertToBase18(
-                _tokenDecimals(tokenOut)
-            );
     }
 
     /**

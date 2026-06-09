@@ -208,7 +208,6 @@ contract DepositVaultWithMToken is DepositVault {
         );
 
         IERC20 targetMToken = IERC20(address(mTokenDepositVault.mToken()));
-        uint256 balanceBefore = targetMToken.balanceOf(address(this));
 
         try
             mTokenDepositVault.depositInstant(
@@ -217,9 +216,7 @@ contract DepositVaultWithMToken is DepositVault {
                 0,
                 bytes32(0)
             )
-        {
-            uint256 mTokenReceived = targetMToken.balanceOf(address(this)) -
-                balanceBefore;
+        returns (uint256 mTokenReceived) {
             require(mTokenReceived > 0, ZeroMTokenReceived(mTokenReceived));
             targetMToken.safeTransfer(tokensReceiver, mTokenReceived);
         } catch (bytes memory err) {

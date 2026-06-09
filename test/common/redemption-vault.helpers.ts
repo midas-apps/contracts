@@ -668,7 +668,7 @@ export const approveRedeemRequestTest = async (
 
   const requestDataBefore = await redemptionVault.redeemRequests(requestId);
 
-  const actualRate = !isAvgRate
+  let actualRate = !isAvgRate
     ? rate
     : BigNumber.from(
         expectedHoldbackPartRateFromAvg(
@@ -678,6 +678,10 @@ export const approveRedeemRequestTest = async (
           rate,
         ),
       );
+
+  if (actualRate.eq(0)) {
+    actualRate = rate;
+  }
 
   const tokenContract = ERC20__factory.connect(
     requestDataBefore.tokenOut,

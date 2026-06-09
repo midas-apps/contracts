@@ -2092,9 +2092,7 @@ export const redemptionVaultSuits = (
                 stableCoins.dai,
                 100,
                 {
-                  revertCustomError: {
-                    customErrorName: 'SlippageExceeded',
-                  },
+                  revertMessage: 'ERC20: transfer amount exceeds balance',
                 },
               );
             });
@@ -5689,7 +5687,7 @@ export const redemptionVaultSuits = (
             );
           });
 
-          it('should fail: when calclulated holdback part rate is 0', async () => {
+          it('when calclulated holdback part rate is 0 should use the price passed as newMTokenRate', async () => {
             const {
               owner,
               mockedAggregator,
@@ -5746,11 +5744,6 @@ export const redemptionVaultSuits = (
               },
               +requestId,
               parseUnits('1'),
-              {
-                revertCustomError: {
-                  customErrorName: 'InvalidNewMTokenRate',
-                },
-              },
             );
           });
 
