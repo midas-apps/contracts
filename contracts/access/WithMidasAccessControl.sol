@@ -5,6 +5,7 @@ import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
 import {MidasAccessControlRoles} from "./MidasAccessControlRoles.sol";
 import {MidasInitializable} from "../abstract/MidasInitializable.sol";
 import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.sol";
+import {IMidasAccessControlManaged} from "../interfaces/IMidasAccessControlManaged.sol";
 
 /**
  * @title WithMidasAccessControl
@@ -13,7 +14,8 @@ import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.
  */
 abstract contract WithMidasAccessControl is
     MidasInitializable,
-    MidasAccessControlRoles
+    MidasAccessControlRoles,
+    IMidasAccessControlManaged
 {
     using AccessControlUtilsLibrary for IMidasAccessControl;
 
@@ -162,7 +164,6 @@ abstract contract WithMidasAccessControl is
         bool validateFunctionRole
     ) internal view {
         accessControl.validateFunctionAccess(
-            AccessControlUtilsLibrary.getTimlockManager(accessControl),
             role,
             AccessControlUtilsLibrary.NO_DELAY,
             roleIsFunctionOperator,

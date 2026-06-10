@@ -116,7 +116,7 @@ export const defaultDeploy = async () => {
   const accessControl = await new MidasAccessControlTest__factory(
     owner,
   ).deploy();
-  await accessControl.initialize();
+  await accessControl.initialize(0, []);
 
   const timelockManager = await new MidasTimelockManagerTest__factory(
     owner,
@@ -124,7 +124,6 @@ export const defaultDeploy = async () => {
 
   await timelockManager.initialize(
     accessControl.address,
-    0,
     100,
     councilMembers.map((v) => v.address),
   );

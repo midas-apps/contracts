@@ -117,7 +117,6 @@ library AccessControlUtilsLibrary {
 
         bytes32 roleUsed = validateFunctionAccess(
             accessControl,
-            timelockManager,
             contractAdminRole,
             overrideDelay,
             roleIsFunctionOperatorRole,
@@ -149,7 +148,6 @@ library AccessControlUtilsLibrary {
     /**
      * @dev validates that the function access is valid
      * @param accessControl access control contract
-     * @param timelockManager timelock manager contract
      * @param role admin role
      * @param overrideDelay override delay for the invocation
      * @param roleIsFunctionOperatorRole whether the role is a function operator role
@@ -160,7 +158,6 @@ library AccessControlUtilsLibrary {
      */
     function validateFunctionAccess(
         IMidasAccessControl accessControl,
-        IMidasTimelockManager timelockManager,
         bytes32 role,
         uint256 overrideDelay,
         bool roleIsFunctionOperatorRole,
@@ -209,7 +206,7 @@ library AccessControlUtilsLibrary {
             return role;
         }
 
-        return _resolveAccessRole(timelockManager, role, key, overrideDelay);
+        return _resolveAccessRole(accessControl, role, key, overrideDelay);
     }
 
     /**
@@ -261,14 +258,14 @@ library AccessControlUtilsLibrary {
 
     /**
      * @dev resolves the access role based on the shortest delay
-     * @param timelockManager timelock manager contract
+     * @param accessControl access control contract
      * @param rootRole root role
      * @param functionRoleKey function key
      * @param overrideDelay override delay
      * @return roleUsed role used to validate the function access
      */
     function _resolveAccessRole(
-        IMidasTimelockManager timelockManager,
+        IMidasAccessControl accessControl,
         bytes32 rootRole,
         bytes32 functionRoleKey,
         uint256 overrideDelay
@@ -276,11 +273,11 @@ library AccessControlUtilsLibrary {
         if (overrideDelay != NULL_DELAY) {
             return rootRole;
         }
-        (uint256 rootDelay, ) = timelockManager.getRoleTimelockDelay(
+        (uint256 rootDelay, ) = accessControl.getRoleTimelockDelay(
             rootRole,
             overrideDelay
         );
-        (uint256 functionDelay, ) = timelockManager.getRoleTimelockDelay(
+        (uint256 functionDelay, ) = accessControl.getRoleTimelockDelay(
             functionRoleKey,
             overrideDelay
         );

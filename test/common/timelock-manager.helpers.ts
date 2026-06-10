@@ -1,7 +1,6 @@
-import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { BigNumber, BigNumberish, constants, ethers } from 'ethers';
+import { BigNumber, BigNumberish, ethers } from 'ethers';
 
 import {
   OptionalCommonParams,
@@ -20,41 +19,6 @@ type CommonParamsTimelock = {
   accessControl: MidasAccessControl;
   timelock: MidasAccessControlTimelockController;
   owner: SignerWithAddress;
-};
-
-export const setRoleTimelocksTester = async (
-  { timelockManager, owner }: CommonParamsTimelock,
-  roles: string[],
-  delays: BigNumberish[],
-  opt?: OptionalCommonParams,
-) => {
-  const from = opt?.from ?? owner;
-
-  const callFn = timelockManager
-    .connect(from)
-    .setRoleDelays.bind(this, roles, delays);
-
-  if (await handleRevert(callFn, timelockManager, opt)) {
-    return;
-  }
-
-  await expect(callFn()).to.not.reverted;
-
-  for (const [index, role] of roles.entries()) {
-    const delayParam = delays[index];
-    const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
-      role,
-      0,
-    );
-    const expectedDelay = BigNumber.from(0).eq(delayParam)
-      ? 3600
-      : constants.MaxUint256.eq(delayParam)
-      ? 0
-      : delayParam;
-
-    expect(delay).eq(expectedDelay);
-    expect(isDefault).eq(BigNumber.from(0).eq(delayParam));
-  }
 };
 
 export const setMaxPendingOperationsPerProposerTester = async (
@@ -81,41 +45,6 @@ export const setMaxPendingOperationsPerProposerTester = async (
 
   expect(actualMaxPendingOperationsPerProposer).eq(
     maxPendingOperationsPerProposer,
-  );
-};
-
-export const setRoleTimelocksAndExecute = async (
-  { timelockManager, owner, accessControl, timelock }: CommonParamsTimelock,
-  roles: string[],
-  delays: BigNumberish[],
-  opt?: OptionalCommonParams,
-) => {
-  const [delay] = await timelockManager.getRoleTimelockDelay(
-    constants.HashZero,
-    0,
-  );
-
-  const data = timelockManager.interface.encodeFunctionData('setRoleDelays', [
-    roles,
-    delays,
-  ]);
-
-  const from = opt?.from ?? owner;
-
-  await scheduleTimelockOperationsTester(
-    { timelockManager, timelock, owner, accessControl },
-    [timelockManager.address],
-    [data],
-    { isSetCouncilOperation: false },
-    { from },
-  );
-  await increase(delay.toNumber() + 1);
-  await executeTimelockOperationTester(
-    { timelockManager, timelock, owner, accessControl },
-    timelockManager.address,
-    data,
-    from.address,
-    { from },
   );
 };
 
@@ -336,25 +265,6 @@ export const pauseTimelockOperationTest = async (
   );
   expect(details.createdAt).to.be.equal(detailsBefore.createdAt);
   expect(details.executionApprovedAt).to.be.equal(0);
-};
-
-export const setDefaultDelayTest = async (
-  { timelockManager, owner }: CommonParamsTimelock,
-  defaultDelay: BigNumberish,
-  opt?: OptionalCommonParams,
-) => {
-  const from = opt?.from ?? owner;
-  const callFn = timelockManager
-    .connect(from)
-    .setDefaultDelay.bind(this, defaultDelay);
-
-  if (await handleRevert(callFn, timelockManager, opt)) {
-    return;
-  }
-
-  await expect(callFn()).to.not.reverted;
-
-  expect(await timelockManager.defaultDelay()).to.eq(defaultDelay);
 };
 
 export const voteForVetoTest = async (

@@ -7,7 +7,6 @@ import {RateLimitLibrary} from "./libraries/RateLimitLibrary.sol";
 import {AccessControlUtilsLibrary} from "./libraries/AccessControlUtilsLibrary.sol";
 import {IMidasAccessControl} from "./interfaces/IMidasAccessControl.sol";
 import {PauseUtilsLibrary} from "./libraries/PauseUtilsLibrary.sol";
-import {IPausable} from "./interfaces/IPausable.sol";
 import {MidasInitializable} from "./abstract/MidasInitializable.sol";
 
 import "./access/Blacklistable.sol";
@@ -18,7 +17,7 @@ import "./interfaces/IMToken.sol";
  * @author RedDuck Software
  */
 //solhint-disable contract-name-camelcase
-contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken, IPausable {
+contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     using RateLimitLibrary for RateLimitLibrary.WindowRateLimits;
     using AccessControlUtilsLibrary for IMidasAccessControl;
 
@@ -252,13 +251,6 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken, IPausable {
         )
     {
         return _mintRateLimits.getWindowStatuses();
-    }
-
-    /**
-     * @inheritdoc IPausable
-     */
-    function pauserRole() external view override returns (bytes32, bool) {
-        return (contractAdminRole(), true);
     }
 
     /**

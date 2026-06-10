@@ -13,6 +13,7 @@ import {
 import {
   acErrors,
   setPermissionRoleTester,
+  setRoleTimelocksTester,
   setupGrantOperatorRole,
 } from '../common/ac.helpers';
 import {
@@ -29,7 +30,6 @@ import { defaultDeploy } from '../common/fixtures';
 import {
   executeTimelockOperationTester,
   scheduleTimelockOperationsTester,
-  setRoleTimelocksTester,
 } from '../common/timelock-manager.helpers';
 
 const DEFAULT_UNPAUSE_DELAY = 86400;
@@ -155,7 +155,7 @@ const grantContractPauser = async (
   pausableTester: Contract,
   account: SignerWithAddress,
 ) => {
-  const role = (await pausableTester.pauserRole())[0];
+  const role = await pausableTester.contractAdminRole();
   await accessControl.grantRole(role, account.address);
 };
 
@@ -248,7 +248,7 @@ const setContractPauserRoleTimelock = async (
   fixture: Awaited<ReturnType<typeof defaultDeploy>>,
   delay: number = ROLE_TIMELOCK_DELAY,
 ) => {
-  const contractPauserRole = (await fixture.pausableTester.pauserRole())[0];
+  const contractPauserRole = await fixture.pausableTester.contractAdminRole();
   await setRoleTimelocksTester(
     {
       timelockManager: fixture.timelockManager,
@@ -310,7 +310,7 @@ const contractPauserFunctionNotReady = async (
   revertCustomError: {
     contract: fixture.accessControl,
     customErrorName: 'FunctionNotReady',
-    args: [(await fixture.pausableTester.pauserRole())[0], selector],
+    args: [await fixture.pausableTester.contractAdminRole(), selector],
   },
 });
 
@@ -1511,7 +1511,7 @@ describe('MidasPauseManager', () => {
         timelock,
       } = await loadFixture(defaultDeploy);
 
-      const contractPauserRole = (await pausableTester.pauserRole())[0];
+      const contractPauserRole = await pausableTester.contractAdminRole();
       const pauseSel = encodeFnSelector('contractAdminPause(address)');
 
       await setupGrantOperatorRole({

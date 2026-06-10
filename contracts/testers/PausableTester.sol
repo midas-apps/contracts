@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSEDI
 pragma solidity 0.8.34;
 
-import {IPausable} from "../interfaces/IPausable.sol";
+import {IMidasAccessControlManaged} from "../interfaces/IMidasAccessControlManaged.sol";
 import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
 import {PauseUtilsLibrary} from "../libraries/PauseUtilsLibrary.sol";
 
-contract PausableTester is IPausable, WithMidasAccessControl {
+contract PausableTester is WithMidasAccessControl {
     bytes32 private _contractAdminRoleOverride;
 
     function setContractAdminRole(bytes32 role) external {
@@ -22,19 +22,6 @@ contract PausableTester is IPausable, WithMidasAccessControl {
 
     function requireNotPaused(bytes4 fn) external {
         PauseUtilsLibrary.requireNotPaused(accessControl, fn);
-    }
-
-    /**
-     * @inheritdoc IPausable
-     */
-    function pauserRole()
-        external
-        view
-        virtual
-        override
-        returns (bytes32, bool)
-    {
-        return (contractAdminRole(), true);
     }
 
     function contractAdminRole() public view override returns (bytes32) {

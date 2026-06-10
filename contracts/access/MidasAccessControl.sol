@@ -9,6 +9,7 @@ import {MidasInitializable} from "../abstract/MidasInitializable.sol";
 import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
 import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.sol";
 import {TimelockControllerUpgradeable as TimelockController} from "@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol";
+import {IMidasAccessControlManaged} from "../interfaces/IMidasAccessControlManaged.sol";
 
 /**
  * @title MidasAccessControl
@@ -17,6 +18,7 @@ import {TimelockControllerUpgradeable as TimelockController} from "@openzeppelin
  */
 contract MidasAccessControl is
     IMidasAccessControl,
+    IMidasAccessControlManaged,
     AccessControlUpgradeable,
     MidasInitializable,
     MidasAccessControlRoles
@@ -37,6 +39,11 @@ contract MidasAccessControl is
     mapping(bytes32 => mapping(address => bool)) private _permissionRoles;
 
     /**
+     * @dev timelock delay for each role
+     */
+    mapping(bytes32 => uint256) private _roleTimelocks;
+
+    /**
      * @notice address of MidasAccessControlTimelockController contract
      */
     address public timelockManager;
@@ -45,6 +52,11 @@ contract MidasAccessControl is
      * @notice address of MidasAccessControlTimelockController contract
      */
     address public pauseManager;
+
+    /**
+     * @notice default delay for all of the roles
+     */
+    uint256 public defaultDelay;
 
     /**
      * @dev leaving a storage gap for futures updates
@@ -61,17 +73,26 @@ contract MidasAccessControl is
     }
 
     /**
-     * @notice upgradeable pattern contract`s initializer
+     * @dev validates that the caller has the function role with timelock
+     * @param role base role to validate
+     * @param overrideDelay override delay for the invocation
      */
-    function initialize() external {
+    modifier onlyRoleDelayOverride(bytes32 role, uint256 overrideDelay) {
+        _validateRoleAccess(role, overrideDelay);
+        _;
+    }
+
+    /**
+     * @notice upgradeable pattern contract`s initializer
+     * @param _defaultDelay default delay
+     * @param userFacingRoles array of additional user facing roles
+     */
+    function initialize(uint256 _defaultDelay, bytes32[] memory userFacingRoles)
+        external
+    {
         _initializeV1();
 
-        bytes32[] memory userFacingRoles = new bytes32[](2);
-
-        userFacingRoles[0] = BLACKLISTED_ROLE;
-        userFacingRoles[1] = GREENLISTED_ROLE;
-
-        initializeV2(userFacingRoles);
+        initializeV2(_defaultDelay, userFacingRoles);
     }
 
     /**
@@ -84,12 +105,17 @@ contract MidasAccessControl is
 
     /**
      * @notice initializerV2. Initializes user facing roles
-     * @param userFacingRoles array of user facing roles
+     * @param userFacingRoles array of additional user facing roles
      */
-    function initializeV2(bytes32[] memory userFacingRoles)
-        public
-        reinitializer(2)
-    {
+    function initializeV2(
+        uint256 _defaultDelay,
+        bytes32[] memory userFacingRoles
+    ) public reinitializer(2) {
+        defaultDelay = _defaultDelay;
+
+        isUserFacingRole[BLACKLISTED_ROLE] = true;
+        isUserFacingRole[GREENLISTED_ROLE] = true;
+
         for (uint256 i = 0; i < userFacingRoles.length; ++i) {
             isUserFacingRole[userFacingRoles[i]] = true;
         }
@@ -124,6 +150,33 @@ contract MidasAccessControl is
     /**
      * @inheritdoc IMidasAccessControl
      */
+    function setDefaultDelay(uint256 _defaultDelay)
+        external
+        onlyRoleDelayOverride(DEFAULT_ADMIN_ROLE, 2 days)
+    {
+        defaultDelay = _defaultDelay;
+        emit SetDefaultDelay(_defaultDelay);
+    }
+
+    /**
+     * @inheritdoc IMidasAccessControl
+     */
+    function setRoleDelays(bytes32[] memory roles, uint256[] memory delays)
+        external
+        onlyRoleWithTimelock(DEFAULT_ADMIN_ROLE)
+    {
+        require(roles.length == delays.length, MismatchingArrayLengths());
+
+        for (uint256 i = 0; i < roles.length; ++i) {
+            _roleTimelocks[roles[i]] = delays[i];
+        }
+
+        emit SetRoleDelays(roles, delays);
+    }
+
+    /**
+     * @inheritdoc IMidasAccessControl
+     */
     function setUserFacingRoleMult(SetUserFacingRoleParams[] calldata params)
         external
         onlyRoleWithTimelock(DEFAULT_ADMIN_ROLE)
@@ -147,10 +200,12 @@ contract MidasAccessControl is
      * @inheritdoc IMidasAccessControl
      */
     function setGrantOperatorRoleMult(
-        bytes32 masterRole,
         SetGrantOperatorRoleParams[] calldata params
-    ) external onlyRoleWithTimelock(masterRole) {
+    ) external {
         require(params.length > 0, EmptyArray());
+
+        bytes32 masterRole = _getContractAdminRole(params[0].targetContract);
+        _validateRoleAccess(masterRole);
 
         require(
             !isUserFacingRole[masterRole],
@@ -159,6 +214,15 @@ contract MidasAccessControl is
 
         for (uint256 i = 0; i < params.length; ++i) {
             SetGrantOperatorRoleParams memory param = params[i];
+
+            bytes32 contractMasterRole = _getContractAdminRole(
+                params[0].targetContract
+            );
+
+            require(
+                masterRole == contractMasterRole,
+                "MAC: master role mismatch"
+            );
 
             bytes32 operatorKey = grantOperatorRoleKey(
                 masterRole,
@@ -186,11 +250,11 @@ contract MidasAccessControl is
      * @inheritdoc IMidasAccessControl
      */
     function setPermissionRoleMult(
-        bytes32 masterRole,
         address targetContract,
         bytes4 functionSelector,
         SetPermissionRoleParams[] calldata params
     ) external {
+        bytes32 masterRole = _getContractAdminRole(targetContract);
         bytes32 operatorRoleKey = grantOperatorRoleKey(
             masterRole,
             targetContract,
@@ -236,6 +300,17 @@ contract MidasAccessControl is
     {
         _grantRole(role, account);
     }
+
+    // /**
+    //  * @inheritdoc IMidasAccessControl
+    //  */
+    // function grantRole(
+    //     bytes32 role,
+    //     address account,
+    //     uint256 delay
+    // ) public {
+    //     grantRole(role, account);
+    // }
 
     /**
      * @inheritdoc AccessControlUpgradeable
@@ -421,6 +496,37 @@ contract MidasAccessControl is
     }
 
     /**
+     * @inheritdoc IMidasAccessControl
+     */
+    function getRoleTimelockDelay(bytes32 role, uint256 overrideDelay)
+        public
+        view
+        returns (
+            uint256, /* delay */
+            bool /* isDefault */
+        )
+    {
+        uint256 delay = overrideDelay != AccessControlUtilsLibrary.NULL_DELAY
+            ? overrideDelay
+            : _roleTimelocks[role];
+
+        uint256 actualDelay = delay == AccessControlUtilsLibrary.NULL_DELAY
+            ? defaultDelay
+            : delay == AccessControlUtilsLibrary.NO_DELAY
+            ? 0
+            : delay;
+
+        return (actualDelay, delay == 0);
+    }
+
+    /**
+     * @inheritdoc IMidasAccessControlManaged
+     */
+    function contractAdminRole() public view override returns (bytes32) {
+        return DEFAULT_ADMIN_ROLE;
+    }
+
+    /**
      * @dev calculates the base key for function permission mappings
      * @param masterRole OZ role for the scope
      */
@@ -470,6 +576,30 @@ contract MidasAccessControl is
     /**
      * @notice validates that the msg.sender with a role has access to the function
      * @param role role to check access for
+     * @param overrideDelay override delay for the invocation
+     * @return actualAccount actual account that has access to the function
+     */
+    function _validateRoleAccess(bytes32 role, uint256 overrideDelay)
+        internal
+        view
+        returns (
+            address /* actualAccount */
+        )
+    {
+        return
+            AccessControlUtilsLibrary.validateFunctionAccessWithTimelock(
+                this,
+                role,
+                overrideDelay,
+                false,
+                _msgSender(),
+                false
+            );
+    }
+
+    /**
+     * @notice validates that the msg.sender with a role has access to the function
+     * @param role role to check access for
      * @return actualAccount actual account that has access to the function
      */
     function _validateRoleAccess(bytes32 role)
@@ -507,5 +637,18 @@ contract MidasAccessControl is
             account,
             false
         );
+    }
+
+    /**
+     * @notice gets the contract admin role for the target contract
+     * @param targetContract address of the target contract
+     * @return contractAdminRole contract admin role
+     */
+    function _getContractAdminRole(address targetContract)
+        private
+        view
+        returns (bytes32)
+    {
+        return IMidasAccessControlManaged(targetContract).contractAdminRole();
     }
 }

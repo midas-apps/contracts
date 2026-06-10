@@ -15,13 +15,12 @@ import {
   MidasAccessControlTimelockController,
   MidasTimelockManager,
 } from '../../typechain-types';
-import { acErrors } from '../common/ac.helpers';
+import { acErrors, setRoleTimelocksAndExecute } from '../common/ac.helpers';
 import { pauseGlobalTest } from '../common/common.helpers';
 import { burn, mint } from '../common/mtoken.helpers';
 import {
   executeTimelockOperationTester,
   scheduleTimelockOperationsTester,
-  setRoleTimelocksAndExecute,
 } from '../common/timelock-manager.helpers';
 
 describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {

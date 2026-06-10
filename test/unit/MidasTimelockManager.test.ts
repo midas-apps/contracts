@@ -12,6 +12,7 @@ import {
 } from '../../typechain-types';
 import {
   setPermissionRoleTester,
+  setRoleTimelocksTester,
   setupGrantOperatorRole,
 } from '../common/ac.helpers';
 import {
@@ -24,17 +25,12 @@ import {
   executeTimelockOperationTester,
   pauseTimelockOperationTest,
   scheduleTimelockOperationsTester,
-  setDefaultDelayTest,
   setMaxPendingOperationsPerProposerTester,
-  setRoleTimelocksAndExecute,
-  setRoleTimelocksTester,
   setSecurityCouncilTest,
   voteForExecutionTest,
   voteForVetoTest,
 } from '../common/timelock-manager.helpers';
 
-const DELAY_FOR_SET_DEFAULT_DELAY = 2 * 24 * 3600;
-const setDefaultDelaySelector = encodeFnSelector('setDefaultDelay(uint256)');
 const executeTimelockOperationSelector = encodeFnSelector(
   'executeTimelockOperation(address,bytes)',
 );
@@ -90,7 +86,6 @@ describe('MidasTimelockManager', () => {
 
       await timelockManager.initialize(
         accessControl.address,
-        constants.MaxUint256,
         100,
         councilMembers.map((v) => v.address),
       );
@@ -98,7 +93,6 @@ describe('MidasTimelockManager', () => {
       await timelockManager.initializeTimelock(timelock.address);
 
       expect(await timelockManager.timelock()).to.eq(timelock.address);
-      expect(await timelockManager.defaultDelay()).to.eq(constants.MaxUint256);
     });
 
     it('should fail: when timelock is already set', async () => {
@@ -120,7 +114,6 @@ describe('MidasTimelockManager', () => {
 
       await timelockManager.initialize(
         accessControl.address,
-        constants.MaxUint256,
         100,
         councilMembers.map((v) => v.address),
       );
@@ -145,7 +138,6 @@ describe('MidasTimelockManager', () => {
 
       await timelockManager.initialize(
         accessControl.address,
-        constants.MaxUint256,
         100,
         councilMembers.map((v) => v.address),
       );
@@ -969,54 +961,6 @@ describe('MidasTimelockManager', () => {
       await setSecurityCouncilTest(
         { timelockManager, timelock, owner, accessControl },
         councilMembers.map((v) => v.address),
-        {
-          ...timelockManagerRevert(timelockManager, 'NoFunctionPermission'),
-          from: regularAccounts[0],
-        },
-      );
-    });
-  });
-
-  describe('setRoleDelays()', () => {
-    it('should set role delays', async () => {
-      const { timelockManager, timelock, owner, accessControl } =
-        await loadFixture(defaultDeploy);
-
-      await setRoleTimelocksTester(
-        { timelockManager, timelock, owner, accessControl },
-        [constants.HashZero],
-        [7200],
-      );
-    });
-
-    it('should fail: when roles and delays array lengths do not match', async () => {
-      const { timelockManager, timelock, owner, accessControl } =
-        await loadFixture(defaultDeploy);
-
-      await setRoleTimelocksTester(
-        { timelockManager, timelock, owner, accessControl },
-        [
-          constants.HashZero,
-          await timelockManager.TIMELOCK_OPERATION_PAUSER_ROLE(),
-        ],
-        [3600],
-        timelockManagerRevert(timelockManager, 'MismatchingArrayLengths'),
-      );
-    });
-
-    it('should fail: when caller do not have DEFAULT_ADMIN_ROLE', async () => {
-      const {
-        timelockManager,
-        timelock,
-        owner,
-        accessControl,
-        regularAccounts,
-      } = await loadFixture(defaultDeploy);
-
-      await setRoleTimelocksTester(
-        { timelockManager, timelock, owner, accessControl },
-        [constants.HashZero],
-        [3600],
         {
           ...timelockManagerRevert(timelockManager, 'NoFunctionPermission'),
           from: regularAccounts[0],
@@ -2883,242 +2827,6 @@ describe('MidasTimelockManager', () => {
           'PendingSetCouncilOperationExists',
         ),
       );
-    });
-  });
-
-  describe('setDefaultDelay()', () => {
-    it('should require 2 days timelock, even if role timelock is different', async () => {
-      const { timelockManager, timelock, owner, accessControl, roles } =
-        await loadFixture(defaultDeploy);
-
-      const defaultAdminRole = roles.common.defaultAdmin;
-      const newDelay = 7200;
-
-      await setRoleTimelocksTester(
-        { timelockManager, timelock, owner, accessControl },
-        [defaultAdminRole],
-        [3600],
-      );
-
-      const calldata = timelockManager.interface.encodeFunctionData(
-        'setDefaultDelay',
-        [newDelay],
-      );
-
-      await scheduleTimelockOperationsTester(
-        { timelockManager, timelock, owner, accessControl },
-        [timelockManager.address],
-        [calldata],
-      );
-      await increase(DELAY_FOR_SET_DEFAULT_DELAY);
-      await executeTimelockOperationTester(
-        { timelockManager, timelock, owner, accessControl },
-        timelockManager.address,
-        calldata,
-        owner.address,
-      );
-    });
-
-    it('should fail: when called from a wallet without default admin role', async () => {
-      const {
-        timelockManager,
-        timelock,
-        owner,
-        accessControl,
-        regularAccounts,
-      } = await loadFixture(defaultDeploy);
-
-      await setDefaultDelayTest(
-        { timelockManager, timelock, owner, accessControl },
-        7200,
-        {
-          ...timelockManagerRevert(timelockManager, 'NoFunctionPermission'),
-          from: regularAccounts[0],
-        },
-      );
-    });
-
-    it('should fail: when called from a function admin role', async () => {
-      const {
-        timelockManager,
-        timelock,
-        owner,
-        accessControl,
-        regularAccounts,
-        roles,
-      } = await loadFixture(defaultDeploy);
-
-      const defaultAdminRole = roles.common.defaultAdmin;
-
-      await setupGrantOperatorRole({
-        accessControl,
-        owner,
-        masterRole: defaultAdminRole,
-        targetContract: timelockManager.address,
-        functionSelector: setDefaultDelaySelector,
-        grantOperator: owner,
-      });
-
-      await setPermissionRoleTester(
-        { accessControl, owner },
-        defaultAdminRole,
-        timelockManager.address,
-        setDefaultDelaySelector,
-        [{ account: regularAccounts[0].address, enabled: true }],
-      );
-
-      await setDefaultDelayTest(
-        { timelockManager, timelock, owner, accessControl },
-        7200,
-        {
-          ...timelockManagerRevert(timelockManager, 'NoFunctionPermission'),
-          from: regularAccounts[0],
-        },
-      );
-    });
-
-    it('should fail: when called directly without timelock', async () => {
-      const { timelockManager, timelock, owner, accessControl, roles } =
-        await loadFixture(defaultDeploy);
-
-      await setDefaultDelayTest(
-        { timelockManager, timelock, owner, accessControl },
-        7200,
-        {
-          revertCustomError: {
-            contract: accessControl,
-            customErrorName: 'FunctionNotReady',
-            args: [roles.common.defaultAdmin, setDefaultDelaySelector],
-          },
-        },
-      );
-    });
-  });
-
-  describe('defaultDelay()', () => {
-    it('should return default timelock delay', async () => {
-      const { timelockManager } = await loadFixture(defaultDeploy);
-
-      await timelockManager.setDefaultDelayTest(3600);
-
-      expect(await timelockManager.defaultDelay()).to.eq(3600);
-    });
-  });
-
-  describe('getRoleTimelockDelay()', () => {
-    it('should return default delay when role delay is not set', async () => {
-      const { timelockManager } = await loadFixture(defaultDeploy);
-
-      await timelockManager.setDefaultDelayTest(3600);
-
-      const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
-        constants.HashZero,
-        0,
-      );
-
-      expect(delay).to.eq(3600);
-      expect(isDefault).to.eq(true);
-    });
-
-    it('should return default delay when override delay is 0 and role delay is not set', async () => {
-      const { timelockManager } = await loadFixture(defaultDeploy);
-
-      await timelockManager.setDefaultDelayTest(3600);
-
-      const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
-        constants.HashZero,
-        0,
-      );
-
-      expect(delay).to.eq(3600);
-      expect(isDefault).to.eq(true);
-    });
-
-    it('should return override delay if its not zero if role delay is not set', async () => {
-      const { timelockManager } = await loadFixture(defaultDeploy);
-
-      await timelockManager.setDefaultDelayTest(3600);
-
-      const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
-        constants.HashZero,
-        1,
-      );
-
-      expect(delay).to.eq(1);
-      expect(isDefault).to.eq(false);
-    });
-
-    it('should return override delay if its not zero if role delay is set', async () => {
-      const { timelockManager, timelock, owner, accessControl } =
-        await loadFixture(defaultDeploy);
-
-      await timelockManager.setDefaultDelayTest(3600);
-
-      await setRoleTimelocksAndExecute(
-        { timelockManager, timelock, owner, accessControl },
-        [constants.HashZero],
-        [1],
-      );
-
-      const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
-        constants.HashZero,
-        2,
-      );
-
-      expect(delay).to.eq(2);
-      expect(isDefault).to.eq(false);
-    });
-
-    it('should return 0 if override delay is NO_DELAY (uint256.max)', async () => {
-      const { timelockManager } = await loadFixture(defaultDeploy);
-
-      await timelockManager.setDefaultDelayTest(3600);
-
-      const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
-        constants.HashZero,
-        constants.MaxUint256,
-      );
-
-      expect(delay).to.eq(0);
-      expect(isDefault).to.eq(false);
-    });
-
-    it('should return configured delay when role delay is set', async () => {
-      const { timelockManager, timelock, owner, accessControl } =
-        await loadFixture(defaultDeploy);
-
-      await setRoleTimelocksTester(
-        { timelockManager, timelock, owner, accessControl },
-        [constants.HashZero],
-        [7200],
-      );
-
-      const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
-        constants.HashZero,
-        0,
-      );
-
-      expect(delay).to.eq(7200);
-      expect(isDefault).to.eq(false);
-    });
-
-    it('should return zero delay when role delay is max uint256', async () => {
-      const { timelockManager, timelock, owner, accessControl } =
-        await loadFixture(defaultDeploy);
-
-      await setRoleTimelocksTester(
-        { timelockManager, timelock, owner, accessControl },
-        [constants.HashZero],
-        [constants.MaxUint256],
-      );
-
-      const [delay, isDefault] = await timelockManager.getRoleTimelockDelay(
-        constants.HashZero,
-        0,
-      );
-
-      expect(delay).to.eq(0);
-      expect(isDefault).to.eq(false);
     });
   });
 

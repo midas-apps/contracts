@@ -2,7 +2,7 @@
 pragma solidity 0.8.34;
 
 import {WithMidasAccessControl} from "./WithMidasAccessControl.sol";
-import {IPausable} from "../interfaces/IPausable.sol";
+import {IMidasAccessControlManaged} from "../interfaces/IMidasAccessControlManaged.sol";
 import {IMidasPauseManager} from "../interfaces/IMidasPauseManager.sol";
 import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.sol";
 import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
@@ -313,16 +313,14 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
         address contractAddr,
         uint256 overrideDelay
     ) private view {
-        (bytes32 role, bool validateFunctionRole) = _getPausableRole(
-            contractAddr
-        );
+        bytes32 role = _getPausableRole(contractAddr);
 
         _validateFunctionAccessWithTimelock(
             role,
             overrideDelay,
             false,
             msg.sender,
-            validateFunctionRole
+            true
         );
     }
 
@@ -330,13 +328,12 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
      * @dev gets the pauser role and validate function role for the `contractAddr` contract
      * @param contractAddr address of the contract
      * @return role pauser role
-     * @return validateFunctionRole whether to validate function role
      */
     function _getPausableRole(address contractAddr)
         private
         view
-        returns (bytes32, bool)
+        returns (bytes32)
     {
-        return IPausable(contractAddr).pauserRole();
+        return IMidasAccessControlManaged(contractAddr).contractAdminRole();
     }
 }

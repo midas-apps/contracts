@@ -5,8 +5,4 @@ import "../access/MidasTimelockManager.sol";
 
 contract MidasTimelockManagerTest is MidasTimelockManager {
     function _disableInitializers() internal override {}
-
-    function setDefaultDelayTest(uint256 delay) external {
-        defaultDelay = delay;
-    }
 }

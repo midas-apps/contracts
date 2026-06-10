@@ -71,11 +71,6 @@ interface IMidasTimelockManager {
     error TimelockAlreadySet();
 
     /**
-     * @notice Array arguments have different lengths
-     */
-    error MismatchingArrayLengths();
-
-    /**
      * @notice Operation status is not valid for this action
      * @param actualStatus current operation status
      */
@@ -141,17 +136,6 @@ interface IMidasTimelockManager {
      * @param err revert bytes
      */
     error InvalidPreflightError(bytes err);
-
-    /**
-     * @param defaultDelay new default delay
-     */
-    event SetDefaultDelay(uint256 defaultDelay);
-
-    /**
-     * @param roles role ids
-     * @param delays delay values per role
-     */
-    event SetRoleDelays(bytes32[] roles, uint256[] delays);
 
     /**
      * @param maxPendingOperationsPerProposer new limit
@@ -220,26 +204,12 @@ interface IMidasTimelockManager {
     );
 
     /**
-     * @notice Sets the default delay
-     * @param _defaultDelay default delay in seconds
-     */
-    function setDefaultDelay(uint256 _defaultDelay) external;
-
-    /**
      * @notice Sets max pending operations per proposer
      * @param _maxPendingOperationsPerProposer new limit
      */
     function setMaxPendingOperationsPerProposer(
         uint256 _maxPendingOperationsPerProposer
     ) external;
-
-    /**
-     * @notice Sets timelock delay per role
-     * @param roles role ids
-     * @param delays delay values (0 = default, max uint = no delay)
-     */
-    function setRoleDelays(bytes32[] memory roles, uint256[] memory delays)
-        external;
 
     /**
      * @notice Sets a new security council version
@@ -325,24 +295,6 @@ interface IMidasTimelockManager {
         external
         view
         returns (address);
-
-    /**
-     * @notice Returns timelock delay for a role
-     * @param role role id
-     * @param overrideDelay override delay for the invocation
-     * @return delay effective delay in seconds
-     * @return isDefault true if role uses default delay
-     */
-    function getRoleTimelockDelay(bytes32 role, uint256 overrideDelay)
-        external
-        view
-        returns (uint256 delay, bool isDefault);
-
-    /**
-     * @notice Default timelock delay when role delay is not set
-     * @return delay delay in seconds
-     */
-    function defaultDelay() external view returns (uint256 delay);
 
     /**
      * @notice Votes needed for council quorum at a version

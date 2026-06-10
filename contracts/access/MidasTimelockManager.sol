@@ -89,16 +89,6 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     uint256 public securityCouncilVersion;
 
     /**
-     * @notice default delay for all of the roles
-     */
-    uint256 public defaultDelay;
-
-    /**
-     * @dev timelock delay for each role
-     */
-    mapping(bytes32 => uint256) private _roleTimelocks;
-
-    /**
      * @dev set of security council addresses by version
      */
     mapping(uint256 => EnumerableSet.AddressSet) private _securityCouncils;
@@ -158,19 +148,15 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     /**
      * @notice Initializes the contract
      * @param _accessControl MidasAccessControl address
-     * @param _defaultDelay default delay
      * @param _maxPendingOperationsPerProposer max pending ops per proposer
      * @param _initSecurityCouncil initial security council members
      */
     function initialize(
         address _accessControl,
-        uint256 _defaultDelay,
         uint256 _maxPendingOperationsPerProposer,
         address[] calldata _initSecurityCouncil
     ) external initializer {
         __WithMidasAccessControl_init(_accessControl);
-
-        defaultDelay = _defaultDelay;
 
         _setMaxPendingOperationsPerProposer(_maxPendingOperationsPerProposer);
 
@@ -193,37 +179,10 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     /**
      * @inheritdoc IMidasTimelockManager
      */
-    function setDefaultDelay(uint256 _defaultDelay)
-        external
-        onlyRoleDelayOverride(contractAdminRole(), 2 days, false)
-    {
-        defaultDelay = _defaultDelay;
-        emit SetDefaultDelay(_defaultDelay);
-    }
-
-    /**
-     * @inheritdoc IMidasTimelockManager
-     */
     function setMaxPendingOperationsPerProposer(
         uint256 _maxPendingOperationsPerProposer
     ) external onlyContractAdminNoFunctionRole {
         _setMaxPendingOperationsPerProposer(_maxPendingOperationsPerProposer);
-    }
-
-    /**
-     * @inheritdoc IMidasTimelockManager
-     */
-    function setRoleDelays(bytes32[] memory roles, uint256[] memory delays)
-        external
-        onlyContractAdminNoFunctionRole
-    {
-        require(roles.length == delays.length, MismatchingArrayLengths());
-
-        for (uint256 i = 0; i < roles.length; ++i) {
-            _roleTimelocks[roles[i]] = delays[i];
-        }
-
-        emit SetRoleDelays(roles, delays);
     }
 
     /**
@@ -441,7 +400,10 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         address target,
         bytes calldata data
     ) external view returns (bool ready, bool timelocked) {
-        (uint256 delay, ) = getRoleTimelockDelay(targetRole, overrideDelay);
+        (uint256 delay, ) = accessControl.getRoleTimelockDelay(
+            targetRole,
+            overrideDelay
+        );
 
         TimelockController _timelock = TimelockController(payable(timelock));
         (bytes32 operationId, , ) = _getOperationId(_timelock, target, data);
@@ -476,30 +438,6 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         TimelockController _timelock = TimelockController(payable(timelock));
         (bytes32 operationId, , ) = _getOperationId(_timelock, target, data);
         return _operationDetails[operationId].operationProposer;
-    }
-
-    /**
-     * @inheritdoc IMidasTimelockManager
-     */
-    function getRoleTimelockDelay(bytes32 role, uint256 overrideDelay)
-        public
-        view
-        returns (
-            uint256, /* delay */
-            bool /* isDefault */
-        )
-    {
-        uint256 delay = overrideDelay != AccessControlUtilsLibrary.NULL_DELAY
-            ? overrideDelay
-            : _roleTimelocks[role];
-
-        uint256 actualDelay = delay == AccessControlUtilsLibrary.NULL_DELAY
-            ? defaultDelay
-            : delay == AccessControlUtilsLibrary.NO_DELAY
-            ? 0
-            : delay;
-
-        return (actualDelay, delay == 0);
     }
 
     /**
@@ -667,7 +605,10 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
             proposer
         );
 
-        (uint256 delay, ) = getRoleTimelockDelay(targetRole, overrideDelay);
+        (uint256 delay, ) = accessControl.getRoleTimelockDelay(
+            targetRole,
+            overrideDelay
+        );
 
         require(delay != 0, NoTimelockDelayForRole());
 
@@ -825,7 +766,6 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
         return (
             accessControl.validateFunctionAccess(
-                this,
                 role,
                 overrideDelay,
                 roleIsFunctionOperator,

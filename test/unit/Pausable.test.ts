@@ -16,7 +16,7 @@ describe('Pausable', () => {
       defaultDeploy,
     );
 
-    expect((await pausableTester.pauserRole())[0]).eq(
+    expect(await pausableTester.contractAdminRole()).eq(
       roles.common.defaultAdmin,
     );
 

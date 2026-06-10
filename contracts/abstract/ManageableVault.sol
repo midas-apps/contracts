@@ -18,7 +18,7 @@ import {Blacklistable} from "../access/Blacklistable.sol";
 import {WithSanctionsList} from "../abstract/WithSanctionsList.sol";
 
 import {DecimalsCorrectionLibrary} from "../libraries/DecimalsCorrectionLibrary.sol";
-import {IPausable} from "../interfaces/IPausable.sol";
+import {IMidasAccessControlManaged} from "../interfaces/IMidasAccessControlManaged.sol";
 import {PauseUtilsLibrary} from "../libraries/PauseUtilsLibrary.sol";
 import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
 
@@ -32,7 +32,6 @@ import {MidasInitializable} from "./MidasInitializable.sol";
  */
 abstract contract ManageableVault is
     IManageableVault,
-    IPausable,
     Blacklistable,
     Greenlistable,
     WithSanctionsList
@@ -472,13 +471,6 @@ abstract contract ManageableVault is
         )
     {
         return _instantRateLimits.getWindowStatuses();
-    }
-
-    /**
-     * @inheritdoc IPausable
-     */
-    function pauserRole() external view override returns (bytes32, bool) {
-        return (contractAdminRole(), true);
     }
 
     /**

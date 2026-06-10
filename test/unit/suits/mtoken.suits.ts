@@ -391,9 +391,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
       expect(await tokenContract.burnerRole()).eq(tokenRoles.burner);
       expect(await tokenContract.minterRole()).eq(tokenRoles.minter);
-      const pauserRole = await tokenContract.pauserRole();
-      expect(pauserRole[0]).eq(tokenRoles.tokenManager);
-      expect(pauserRole[1]).eq(true);
 
       expect(await tokenContract.contractAdminRole()).eq(
         tokenRoles.tokenManager,
@@ -2094,9 +2091,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
     const depositVault = fixture.tokenDepositVault;
 
     if (depositVault) {
-      const pauserRole = await depositVault.pauserRole();
-      expect(pauserRole[0]).eq(tokenRoles.depositVaultAdmin);
-      expect(pauserRole[1]).eq(true);
       expect(await depositVault.contractAdminRole()).eq(
         tokenRoles.depositVaultAdmin,
       );
@@ -2106,9 +2100,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
     const depositVaultUstb = fixture.tokenDepositVaultUstb;
 
     if (depositVaultUstb) {
-      const pauserRole = await depositVaultUstb.pauserRole();
-      expect(pauserRole[0]).eq(tokenRoles.depositVaultAdmin);
-      expect(pauserRole[1]).eq(true);
       expect(await depositVaultUstb.contractAdminRole()).eq(
         tokenRoles.depositVaultAdmin,
       );
@@ -2118,9 +2109,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
     const redemptionVault = fixture.tokenRedemptionVault;
 
     if (redemptionVault) {
-      const pauserRole = await redemptionVault.pauserRole();
-      expect(pauserRole[0]).eq(tokenRoles.redemptionVaultAdmin);
-      expect(pauserRole[1]).eq(true);
       expect(await redemptionVault.contractAdminRole()).eq(
         tokenRoles.redemptionVaultAdmin,
       );

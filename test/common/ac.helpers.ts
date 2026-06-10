@@ -1,6 +1,7 @@
+import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { Contract } from 'ethers';
+import { BigNumber, BigNumberish, constants, Contract } from 'ethers';
 
 import {
   Account,
@@ -8,12 +9,19 @@ import {
   getAccount,
   handleRevert,
 } from './common.helpers';
+import {
+  executeTimelockOperationTester,
+  scheduleTimelockOperationsTester,
+} from './timelock-manager.helpers';
 
 import { encodeFnSelector } from '../../helpers/utils';
 import {
   Blacklistable,
   Greenlistable,
+  IMidasAccessControlManaged__factory,
   MidasAccessControl,
+  MidasAccessControlTimelockController,
+  MidasTimelockManager,
 } from '../../typechain-types';
 
 type CommonParamsBlackList = {
@@ -355,7 +363,6 @@ export const setGrantOperatorRoleTester = async (
     accessControl,
     owner,
   }: { accessControl: MidasAccessControl; owner: SignerWithAddress },
-  masterRole: string,
   params: {
     targetContract: string;
     functionSelector: string;
@@ -368,7 +375,18 @@ export const setGrantOperatorRoleTester = async (
 
   const callFn = accessControl
     .connect(from)
-    .setGrantOperatorRoleMult.bind(this, masterRole, params);
+    .setGrantOperatorRoleMult.bind(this, params);
+
+  const masterRole = params.length
+    ? await IMidasAccessControlManaged__factory.connect(
+        params[0].targetContract,
+        accessControl.provider,
+      ).contractAdminRole()
+    : constants.HashZero;
+
+  if (await handleRevert(callFn, accessControl, opt)) {
+    return;
+  }
 
   const statesBefore = await Promise.all(
     params.map(async (param) => {
@@ -382,10 +400,6 @@ export const setGrantOperatorRoleTester = async (
       );
     }),
   );
-
-  if (await handleRevert(callFn, accessControl, opt)) {
-    return;
-  }
 
   const txPromise = callFn();
   await expect(txPromise).to.not.reverted;
@@ -431,7 +445,7 @@ export const setPermissionRoleTester = async (
     accessControl,
     owner,
   }: { accessControl: MidasAccessControl; owner: SignerWithAddress },
-  masterRole: string,
+  _masterRole: string,
   targetContract: string,
   functionSelector: string,
   params: {
@@ -444,17 +458,16 @@ export const setPermissionRoleTester = async (
 
   const callFn = accessControl
     .connect(from)
-    .setPermissionRoleMult.bind(
-      this,
-      masterRole,
-      targetContract,
-      functionSelector,
-      params,
-    );
+    .setPermissionRoleMult.bind(this, targetContract, functionSelector, params);
 
   if (await handleRevert(callFn, accessControl, opt)) {
     return;
   }
+
+  const masterRole = await IMidasAccessControlManaged__factory.connect(
+    targetContract,
+    accessControl.provider,
+  ).contractAdminRole();
 
   const statesBefore = await Promise.all(
     params.map(async (param) => {
@@ -502,6 +515,7 @@ export const setPermissionRoleTester = async (
 type SetupFunctionAccessGrantOperatorParams = {
   accessControl: MidasAccessControl;
   owner: SignerWithAddress;
+  // TODO: remove it
   masterRole: string;
   targetContract: string;
   functionSelector: string;
@@ -511,12 +525,11 @@ type SetupFunctionAccessGrantOperatorParams = {
 export const setupGrantOperatorRole = async ({
   accessControl,
   owner,
-  masterRole,
   targetContract,
   functionSelector,
   grantOperator,
 }: SetupFunctionAccessGrantOperatorParams) => {
-  await setGrantOperatorRoleTester({ accessControl, owner }, masterRole, [
+  await setGrantOperatorRoleTester({ accessControl, owner }, [
     {
       targetContract,
       functionSelector,
@@ -557,4 +570,103 @@ export const setupPermissionRole = async (
       },
     ],
   );
+};
+type CommonParamsAccessControl = {
+  timelockManager: MidasTimelockManager;
+  accessControl: MidasAccessControl;
+  owner: SignerWithAddress;
+  timelock: MidasAccessControlTimelockController;
+};
+export const setRoleTimelocksTester = async (
+  { accessControl, owner }: CommonParamsAccessControl,
+  roles: string[],
+  delays: BigNumberish[],
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+
+  const callFn = accessControl
+    .connect(from)
+    .setRoleDelays.bind(this, roles, delays);
+
+  if (await handleRevert(callFn, accessControl, opt)) {
+    return;
+  }
+
+  await expect(callFn()).to.not.reverted;
+
+  for (const [index, role] of roles.entries()) {
+    const delayParam = delays[index];
+    const [delay, isDefault] = await accessControl.getRoleTimelockDelay(
+      role,
+      0,
+    );
+    const expectedDelay = BigNumber.from(0).eq(delayParam)
+      ? 3600
+      : constants.MaxUint256.eq(delayParam)
+      ? 0
+      : delayParam;
+
+    expect(delay).eq(expectedDelay);
+    expect(isDefault).eq(BigNumber.from(0).eq(delayParam));
+  }
+};
+
+export const setRoleTimelocksAndExecute = async (
+  {
+    owner,
+    accessControl,
+    timelock,
+    timelockManager,
+  }: CommonParamsAccessControl,
+  roles: string[],
+  delays: BigNumberish[],
+  opt?: OptionalCommonParams,
+) => {
+  const [delay] = await accessControl.getRoleTimelockDelay(
+    constants.HashZero,
+    0,
+  );
+
+  const data = accessControl.interface.encodeFunctionData('setRoleDelays', [
+    roles,
+    delays,
+  ]);
+
+  const from = opt?.from ?? owner;
+
+  await scheduleTimelockOperationsTester(
+    { timelockManager, timelock, owner, accessControl },
+    [accessControl.address],
+    [data],
+    { isSetCouncilOperation: false },
+    { from },
+  );
+  await increase(delay.toNumber() + 1);
+  await executeTimelockOperationTester(
+    { timelockManager, timelock, owner, accessControl },
+    accessControl.address,
+    data,
+    from.address,
+    { from },
+  );
+};
+
+export const setDefaultDelayTest = async (
+  { accessControl, owner }: CommonParamsAccessControl,
+  defaultDelay: BigNumberish,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+  const callFn = accessControl
+    .connect(from)
+    .setDefaultDelay.bind(this, defaultDelay);
+
+  if (await handleRevert(callFn, accessControl, opt)) {
+    return;
+  }
+
+  await expect(callFn()).to.not.reverted;
+
+  expect(await accessControl.defaultDelay()).to.eq(defaultDelay);
 };
