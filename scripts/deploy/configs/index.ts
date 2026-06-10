@@ -58,6 +58,7 @@ import { mWINDeploymentConfig } from './mWIN';
 import { mXRPDeploymentConfig } from './mXRP';
 import { obeatUSDDeploymentConfig } from './obeatUSD';
 import { plUSDDeploymentConfig } from './plUSD';
+import { qHVNUSDDeploymentConfig } from './qHVNUSD';
 import { sLINJDeploymentConfig } from './sLINJ';
 import { splUSDDeploymentConfig } from './splUSD';
 import { stockMarketTRBasisTradeDeploymentConfig } from './stockMarketTRBasisTrade';
@@ -155,4 +156,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mEVETH: mEVETHDeploymentConfig,
   liquidRWA: liquidRWADeploymentConfig,
   mWIN: mWINDeploymentConfig,
+  qHVNUSD: qHVNUSDDeploymentConfig,
 };

@@ -19,6 +19,7 @@ import {
   DeployDvRegularConfig,
   DeployDvUstbConfig,
 } from './dv';
+import type { GreenlistConfig } from './greenlist';
 import {
   GrantAllTokenRolesConfig,
   GrantDefaultAdminRoleToAcAdminConfig,
@@ -90,6 +91,7 @@ export type PostDeployConfig = {
   grantRoles?: GrantAllTokenRolesConfig;
   setRoundData?: SetRoundDataConfig;
   addFeeWaived?: AddFeeWaivedConfig;
+  greenlist?: GreenlistConfig;
   pauseFunctions?: PauseFunctionsConfig;
   layerZero?: LayerZeroConfig;
   axelarIts?: AxelarItsConfig;

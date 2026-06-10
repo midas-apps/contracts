@@ -152,13 +152,25 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
       susde: {
         token: '0x9D39A5DE30e57443BfF2A8307A4256c8797A3497',
-        aggregator: '0xcE2326260C168525A3E905391E8bFEE00EBd0CEa',
-        dataFeed: '0x6D233Cd3912FAFa6aDB872775Bf00C0D54cfF437',
+        // Redeployed feed priced sUSDE/USDE (not sUSDE/USD).
+        // Old (deprecated) sUSDE/USD: aggregator 0xcE2326260C168525A3E905391E8bFEE00EBd0CEa, dataFeed 0x6D233Cd3912FAFa6aDB872775Bf00C0D54cfF437
+        aggregator: '0xFF3BC18cCBd5999CE63E788A1c250a88626aD099',
+        dataFeed: '0xF58d6244AF21d851668B86f16979BD3E6d6B8A84',
       },
       usde: {
         token: '0x4c9edd5852cd905f086c759e8383e09bff1e68b3',
         aggregator: '0xa569d910839Ae8865Da8F8e70FfFb0cBA869F961',
         dataFeed: '0xe7eCe9331f9B03638D17791bC46b8386960ad2D6',
+      },
+      usdg: {
+        token: '0xe343167631d89B6Ffc58B88d6b7fB0228795491D',
+        aggregator: '0x14f0737d6b705259e521EA6E9E3506AC78dBd311',
+        dataFeed: '0x7Fa2aa27D332073c0cFA294230288080Aa904977',
+      },
+      pyusd: {
+        token: '0x6c3ea9036406852006290770BEdFcAbA0e23A0e8',
+        aggregator: '0x8f1dF6D7F2db73eECE86a18b4381F4707b918FB1',
+        dataFeed: '0x30f7ea8499557D77A9A6974AA3cAd2E64fBD61b8',
       },
       rseth: {
         token: '0xa1290d69c65a6fe4df752f95823fae25cb99e5a7',
@@ -587,6 +599,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xa27c1658730e4FAFb7fB8B257a64BbB6A0ea4077',
       depositVault: '0xF7F1b944FCDe7805F6Ef3088817145d2eB667db4',
       redemptionVaultSwapper: '0x605704d7b36d1677a8d242ded68eD505523c7924',
+    },
+    qHVNUSD: {
+      token: '0xE68f4e819aD09F2E0e668297cC1a905994808D38',
+      customFeed: '0x7023625CBc91e752FdD49b9233252B8F6b731c8B',
+      dataFeed: '0x60606001F168Cf6F0069564199AEa99b188734d1',
+      depositVault: '0x52816bCCcF7286aa2B0b5ba3c386677ABa1045B6',
+      redemptionVaultSwapper: '0xC35d61F68B48555b71034098c3955EdE764d1Cb1',
     },
   },
   arbitrum: {

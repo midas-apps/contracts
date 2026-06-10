@@ -64,7 +64,15 @@ export const aggregatorTimelapsedUpgradeConfigs: AggregatorTimelapsedUpgradeConf
     upgrades: {
       'aggregator-timelapsed-v1': {
         targets: {
-          [chainIds.main]: { all: true },
+          [chainIds.main]: {
+            all: true,
+            exclude: [
+              'mEVETH',
+              'carryTradeUSDTRYLeverage',
+              'stockMarketTRBasisTrade',
+              'mWIN',
+            ],
+          },
           // [chainIds.arbitrum]: { all: true },
           [chainIds.base]: { all: true, exclude: ['mTBILL'] },
           [chainIds.oasis]: { all: true },
