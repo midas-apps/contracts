@@ -11,25 +11,25 @@ import hre from 'hardhat';
 import {
   MidasLzOFTAdapter__factory,
   MidasLzVaultComposerSyncTester,
-} from '../../typechain-types';
-import { acErrors, blackList } from '../common/ac.helpers';
-import { approveBase18, mintToken } from '../common/common.helpers';
-import { setRoundData } from '../common/data-feed.helpers';
-import { deployProxyContract } from '../common/deploy.helpers';
-import { layerZeroFixture } from '../common/fixtures';
+} from '../../../typechain-types';
+import { acErrors, blackList } from '../../common/ac.helpers';
+import { approveBase18, mintToken } from '../../common/common.helpers';
+import { setRoundData } from '../../common/data-feed.helpers';
+import { deployProxyContract } from '../../common/deploy.helpers';
+import { layerZeroFixture } from '../../common/fixtures';
 import {
   depositAndSend,
   redeemAndSend,
   sendOft,
   sendOftLockBox,
   setRateLimitConfig,
-} from '../common/layerzero.helpers';
+} from '../../common/layerzero.helpers';
 import {
   addPaymentTokenTest,
   setInstantFeeTest,
   setMinAmountTest,
-} from '../common/manageable-vault.helpers';
-import { mint } from '../common/mtoken.helpers';
+} from '../../common/manageable-vault.helpers';
+import { mint } from '../../common/mtoken.helpers';
 
 describe('LayerZero', function () {
   describe('MidasLzMintBurnOFTAdapter', () => {
@@ -172,7 +172,7 @@ describe('LayerZero', function () {
           { amount: 100 },
           {
             from: blacklisted,
-            revertMessage: acErrors.WMAC_BLACKLISTED,
+            revertCustomError: acErrors.WMAC_BLACKLISTED(undefined, mTBILL),
           },
         );
       });

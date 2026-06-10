@@ -39,10 +39,7 @@ describe('Greenlistable', function () {
 
       await expect(
         greenListableTester.onlyGreenlistedTester(regularAccounts[0].address),
-      ).revertedWithCustomError(
-        greenListableTester,
-        acErrors.WMAC_HASNT_ROLE().customErrorName,
-      );
+      ).revertedWithCustomError(greenListableTester, 'NotGreenlisted');
     });
 
     it('call from not greenlisted user', async () => {
@@ -207,7 +204,7 @@ describe('Greenlistable', function () {
         regularAccounts[0],
         {
           from: regularAccounts[0],
-          revertMessage: `AccessControl: account ${regularAccounts[0].address.toLowerCase()} is missing role ${await accessControl.GREENLIST_OPERATOR_ROLE()}`,
+          revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
         },
       );
     });
@@ -242,7 +239,7 @@ describe('Greenlistable', function () {
         regularAccounts[0],
         {
           from: regularAccounts[0],
-          revertMessage: `AccessControl: account ${regularAccounts[0].address.toLowerCase()} is missing role ${await accessControl.GREENLIST_OPERATOR_ROLE()}`,
+          revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
         },
       );
     });

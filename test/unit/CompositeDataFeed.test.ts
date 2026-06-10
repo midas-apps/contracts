@@ -97,7 +97,7 @@ describe('CompositeDataFeed', function () {
           .changeNumeratorFeed(ethers.constants.AddressZero),
       ).revertedWithCustomError(
         compositeDataFeed,
-        acErrors.WMAC_HASNT_ROLE().customErrorName,
+        acErrors.WMAC_HASNT_PERMISSION().customErrorName,
       );
     });
 
@@ -132,7 +132,7 @@ describe('CompositeDataFeed', function () {
           .changeDenominatorFeed(ethers.constants.AddressZero),
       ).revertedWithCustomError(
         compositeDataFeed,
-        acErrors.WMAC_HASNT_ROLE().customErrorName,
+        acErrors.WMAC_HASNT_PERMISSION().customErrorName,
       );
     });
 
@@ -167,7 +167,7 @@ describe('CompositeDataFeed', function () {
           .setMinExpectedAnswer(parseUnits('1')),
       ).revertedWithCustomError(
         compositeDataFeed,
-        acErrors.WMAC_HASNT_ROLE().customErrorName,
+        acErrors.WMAC_HASNT_PERMISSION().customErrorName,
       );
     });
 
@@ -211,7 +211,7 @@ describe('CompositeDataFeed', function () {
           .setMaxExpectedAnswer(parseUnits('1')),
       ).revertedWithCustomError(
         compositeDataFeed,
-        acErrors.WMAC_HASNT_ROLE().customErrorName,
+        acErrors.WMAC_HASNT_PERMISSION().customErrorName,
       );
     });
 

@@ -39,11 +39,6 @@ type CommonParamsGreenList = {
 };
 
 export const acErrors = {
-  WMAC_HASNT_ROLE: (args?: unknown[], contract?: Contract) => ({
-    contract,
-    customErrorName: 'HasntRole',
-    args,
-  }),
   WMAC_BLACKLISTED: (args?: unknown[], contract?: Contract) => ({
     contract,
     customErrorName: 'Blacklisted',

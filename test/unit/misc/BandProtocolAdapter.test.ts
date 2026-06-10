@@ -7,9 +7,9 @@ import {
   DataFeedToBandStdAdapter__factory,
   CompositeDataFeedToBandStdAdapter__factory,
   CompositeDataFeedTest__factory,
-} from '../../typechain-types';
-import { setRoundData } from '../common/data-feed.helpers';
-import { defaultDeploy } from '../common/fixtures';
+} from '../../../typechain-types';
+import { setRoundData } from '../../common/data-feed.helpers';
+import { defaultDeploy } from '../../common/fixtures';
 
 describe('DataFeedToBandStdAdapter', function () {
   const baseSymbol = 'mTBILL';

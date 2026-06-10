@@ -8,15 +8,14 @@ import { encodeFnSelector } from '../../helpers/utils';
 import {
   CustomAggregatorV3CompatibleFeed__factory,
   CustomAggregatorV3CompatibleFeedTester__factory,
-  MBasisCustomAggregatorFeed__factory,
-  MTBillCustomAggregatorFeed__factory,
 } from '../../typechain-types';
 import {
   acErrors,
   setPermissionRoleTester,
+  setRoleTimelocksTester,
   setupGrantOperatorRole,
 } from '../common/ac.helpers';
-import { validateImplementation } from '../common/common.helpers';
+import { keccak256, validateImplementation } from '../common/common.helpers';
 import {
   calculatePriceDiviation,
   setMaxAnswerDeviationTest,
@@ -27,12 +26,11 @@ import { defaultDeploy } from '../common/fixtures';
 import {
   executeTimelockOperationTester,
   scheduleTimelockOperationsTester,
-  setRoleTimelocksTester,
 } from '../common/timelock-manager.helpers';
 
 describe('CustomAggregatorV3CompatibleFeed', function () {
   it('deployment', async () => {
-    const { customFeed, owner } = await loadFixture(defaultDeploy);
+    const { customFeed, owner, roles } = await loadFixture(defaultDeploy);
 
     expect(await customFeed.maxAnswer()).eq(parseUnits('10000', 8));
     expect(await customFeed.minAnswer()).eq(2);
@@ -43,15 +41,10 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
     expect(await customFeed.latestRound()).eq(0);
     expect(await customFeed.lastAnswer()).eq(0);
     expect(await customFeed.lastTimestamp()).eq(0);
-    expect(await customFeed.feedAdminRole()).eq(
-      await customFeed.CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE(),
+    expect(await customFeed.contractAdminRole()).eq(
+      keccak256('CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE'),
     );
 
-    const newFeed = await new CustomAggregatorV3CompatibleFeed__factory(
-      owner,
-    ).deploy();
-
-    expect(await newFeed.feedAdminRole()).eq(ethers.constants.HashZero);
     await validateImplementation(CustomAggregatorV3CompatibleFeed__factory);
   });
 
@@ -81,30 +74,6 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
     ).revertedWith('CA: !max deviation');
   });
 
-  it('MBasisCustomAggregatorFeed', async () => {
-    const fixture = await loadFixture(defaultDeploy);
-
-    const tester = await new MBasisCustomAggregatorFeed__factory(
-      fixture.owner,
-    ).deploy();
-
-    expect(await tester.feedAdminRole()).eq(
-      await tester.M_BASIS_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE(),
-    );
-  });
-
-  it('MTBillCustomAggregatorFeed', async () => {
-    const fixture = await loadFixture(defaultDeploy);
-
-    const tester = await new MTBillCustomAggregatorFeed__factory(
-      fixture.owner,
-    ).deploy();
-
-    expect(await tester.feedAdminRole()).eq(
-      await tester.M_TBILL_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE(),
-    );
-  });
-
   describe('setRoundData', async () => {
     it('call from owner', async () => {
       const fixture = await loadFixture(defaultDeploy);
@@ -114,7 +83,7 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
       const fixture = await loadFixture(defaultDeploy);
       await setRoundData(fixture, 10, {
         from: fixture.regularAccounts[0],
-        revertCustomError: acErrors.WMAC_HASNT_ROLE(),
+        revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
       });
     });
 
@@ -147,7 +116,7 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
       const fixture = await loadFixture(defaultDeploy);
       await setRoundDataSafe(fixture, 10, {
         from: fixture.regularAccounts[0],
-        revertCustomError: acErrors.WMAC_HASNT_ROLE(),
+        revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
       });
     });
 
@@ -215,7 +184,7 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
         await loadFixture(defaultDeploy);
 
       const user = regularAccounts[0];
-      const feedAdminRole = await customFeed.feedAdminRole();
+      const feedAdminRole = await customFeed.contractAdminRole();
 
       await setupGrantOperatorRole({
         accessControl,
@@ -250,7 +219,7 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
         await loadFixture(defaultDeploy);
 
       const user = regularAccounts[0];
-      const feedAdminRole = await customFeed.feedAdminRole();
+      const feedAdminRole = await customFeed.contractAdminRole();
 
       await setupGrantOperatorRole({
         accessControl,
@@ -292,7 +261,7 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
       } = await loadFixture(defaultDeploy);
 
       const proposer = regularAccounts[0];
-      const feedAdminRole = await customFeed.feedAdminRole();
+      const feedAdminRole = await customFeed.contractAdminRole();
 
       await accessControl['grantRole(bytes32,address)'](
         feedAdminRole,
@@ -342,7 +311,7 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
       } = await loadFixture(defaultDeploy);
 
       const proposer = regularAccounts[0];
-      const feedAdminRole = await customFeed.feedAdminRole();
+      const feedAdminRole = await customFeed.contractAdminRole();
 
       await setupGrantOperatorRole({
         accessControl,

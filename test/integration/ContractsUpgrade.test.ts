@@ -1013,7 +1013,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           mGlobal.connect(from).transfer(to.address, amount),
         ).revertedWithCustomError(
           mGlobal,
-          acErrors.WMAC_HASNT_ROLE().customErrorName,
+          acErrors.WMAC_HASNT_PERMISSION().customErrorName,
         );
       });
     });

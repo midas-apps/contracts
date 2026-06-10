@@ -7,17 +7,17 @@ import { constants, ethers } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import hre from 'hardhat';
 
-import { MidasAxelarVaultExecutableTester } from '../../typechain-types';
-import { depositAndSend, redeemAndSend } from '../common/axelar.helpers';
-import { approveBase18, mintToken } from '../common/common.helpers';
-import { setRoundData } from '../common/data-feed.helpers';
-import { deployProxyContract } from '../common/deploy.helpers';
-import { axelarFixture } from '../common/fixtures';
+import { MidasAxelarVaultExecutableTester } from '../../../typechain-types';
+import { depositAndSend, redeemAndSend } from '../../common/axelar.helpers';
+import { approveBase18, mintToken } from '../../common/common.helpers';
+import { setRoundData } from '../../common/data-feed.helpers';
+import { deployProxyContract } from '../../common/deploy.helpers';
+import { axelarFixture } from '../../common/fixtures';
 import {
   addPaymentTokenTest,
   setInstantFeeTest,
   setMinAmountTest,
-} from '../common/manageable-vault.helpers';
+} from '../../common/manageable-vault.helpers';
 
 describe('Axelar', function () {
   describe('MidasAxelarVaultExecutable', () => {
@@ -29,7 +29,6 @@ describe('Axelar', function () {
         mTBILL,
         chainNameHashA,
         axelarItsA,
-        mTokenToUsdDataFeed,
         depositVault,
         redemptionVault,
         paymentTokenId,
@@ -909,7 +908,7 @@ describe('Axelar', function () {
           .emit(
             depositVault,
             depositVault.interface.events[
-              'DepositInstantWithCustomRecipient(address,address,address,uint256,uint256,uint256,uint256,bytes32)'
+              'DepositInstant(address,address,address,uint256,uint256,uint256,uint256,bytes32)'
             ].name,
           )
           .withArgs(

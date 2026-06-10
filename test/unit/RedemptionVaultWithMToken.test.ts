@@ -124,7 +124,7 @@ redemptionVaultSuits(
 
           await expect(redemptionVaultWithMToken.setRedemptionVault(newVault))
             .to.emit(redemptionVaultWithMToken, 'SetRedemptionVault')
-            .withArgs(owner.address, newVault);
+            .withArgs(newVault);
 
           expect(await redemptionVaultWithMToken.redemptionVault()).eq(
             newVault,

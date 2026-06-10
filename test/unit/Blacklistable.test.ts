@@ -59,7 +59,7 @@ describe('Blacklistable', function () {
         regularAccounts[0],
         {
           from: regularAccounts[0],
-          revertMessage: `AccessControl: account ${regularAccounts[0].address.toLowerCase()} is missing role ${await accessControl.BLACKLIST_OPERATOR_ROLE()}`,
+          revertCustomError: acErrors.WMAC_BLACKLISTED,
         },
       );
     });
@@ -84,7 +84,7 @@ describe('Blacklistable', function () {
         regularAccounts[0],
         {
           from: regularAccounts[0],
-          revertMessage: `AccessControl: account ${regularAccounts[0].address.toLowerCase()} is missing role ${await accessControl.BLACKLIST_OPERATOR_ROLE()}`,
+          revertCustomError: acErrors.WMAC_BLACKLISTED,
         },
       );
     });

@@ -1,13 +1,8 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { expect } from 'chai';
-import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
-import {
-  AcreAdapter__factory,
-  DepositVaultTest__factory,
-} from '../../../typechain-types';
+import { AcreAdapter__factory } from '../../../typechain-types';
 import { acreAdapterFixture } from '../../common/fixtures';
 import {
   addPaymentTokenTest,
@@ -21,6 +16,7 @@ import {
   acreWrapperDepositTest,
   acreWrapperRequestRedeemTest,
 } from '../../common/misc/acre.helpers';
+import { initializeDv } from '../../common/vault-initializer.helpers';
 
 describe('AcreAdapter', () => {
   it('initialize', async () => {
@@ -43,35 +39,9 @@ describe('AcreAdapter', () => {
       fixture.mTokenToUsdDataFeed.address,
     );
 
-    const dvWithDifferentDataFeed = await new DepositVaultTest__factory(
-      fixture.owner,
-    ).deploy();
-
-    await dvWithDifferentDataFeed.initialize(
-      {
-        ac: fixture.accessControl.address,
-        sanctionsList: fixture.mockedSanctionsList.address,
-        variationTolerance: 1,
-        minAmount: parseUnits('100'),
-        mToken: fixture.mTBILL.address,
-        mTokenDataFeed: fixture.dataFeed.address,
-        feeReceiver: fixture.feeReceiver.address,
-        tokensReceiver: fixture.tokensReceiver.address,
-        instantFee: 100,
-      },
-      {
-        minInstantFee: 0,
-        maxInstantFee: 10000,
-        limitConfigs: [
-          {
-            limit: parseUnits('100000'),
-            window: days(1),
-          },
-        ],
-      },
-      0,
-      constants.MaxUint256,
-    );
+    const dvWithDifferentDataFeed = await initializeDv({
+      ...fixture,
+    });
 
     await expect(
       fixture.owner.sendTransaction(
@@ -160,7 +130,10 @@ describe('AcreAdapter', () => {
       );
 
       await acreWrapperDepositTest(fixture, 100, undefined, {
-        revertMessage: 'DV: minReceiveAmount > actual',
+        revertCustomError: {
+          contract: fixture.depositVault,
+          customErrorName: 'SlippageExceeded',
+        },
       });
     });
 
@@ -174,7 +147,10 @@ describe('AcreAdapter', () => {
       );
 
       await acreWrapperDepositTest(fixture, 100, undefined, {
-        revertMessage: 'DV: minReceiveAmount > actual',
+        revertCustomError: {
+          contract: fixture.depositVault,
+          customErrorName: 'SlippageExceeded',
+        },
       });
     });
   });

@@ -85,7 +85,7 @@ describe('DataFeed', function () {
           .changeAggregator(ethers.constants.AddressZero),
       ).revertedWithCustomError(
         dataFeed,
-        acErrors.WMAC_HASNT_ROLE().customErrorName,
+        acErrors.WMAC_HASNT_PERMISSION().customErrorName,
       );
     });
 

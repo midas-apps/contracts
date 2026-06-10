@@ -122,11 +122,7 @@ redemptionVaultSuits(
             ),
           )
             .to.emit(redemptionVaultWithAave, 'SetAavePool')
-            .withArgs(
-              owner.address,
-              stableCoins.usdc.address,
-              aavePoolMock.address,
-            );
+            .withArgs(stableCoins.usdc.address, aavePoolMock.address);
 
           expect(
             await redemptionVaultWithAave.aavePools(stableCoins.usdc.address),
@@ -187,7 +183,7 @@ redemptionVaultSuits(
             redemptionVaultWithAave.removeAavePool(stableCoins.usdc.address),
           )
             .to.emit(redemptionVaultWithAave, 'RemoveAavePool')
-            .withArgs(owner.address, stableCoins.usdc.address);
+            .withArgs(stableCoins.usdc.address);
 
           expect(
             await redemptionVaultWithAave.aavePools(stableCoins.usdc.address),
@@ -1160,10 +1156,7 @@ redemptionVaultSuits(
               parseUnits('1000'),
               0,
             ),
-          ).to.be.revertedWithCustomError(
-            redemptionVaultWithAave,
-            'ERC20: transfer amount exceeds balance',
-          );
+          ).to.be.revertedWith('ERC20: transfer amount exceeds balance');
         });
       });
     });

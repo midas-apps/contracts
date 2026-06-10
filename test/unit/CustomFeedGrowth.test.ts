@@ -12,9 +12,10 @@ import {
 import {
   acErrors,
   setPermissionRoleTester,
+  setRoleTimelocksTester,
   setupGrantOperatorRole,
 } from '../common/ac.helpers';
-import { validateImplementation } from '../common/common.helpers';
+import { keccak256, validateImplementation } from '../common/common.helpers';
 import {
   setMaxGrowthApr,
   setMaxAnswerDeviationTest,
@@ -28,7 +29,6 @@ import { defaultDeploy } from '../common/fixtures';
 import {
   executeTimelockOperationTester,
   scheduleTimelockOperationsTester,
-  setRoleTimelocksTester,
 } from '../common/timelock-manager.helpers';
 
 describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
@@ -46,15 +46,10 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
     expect(await customFeedGrowth.latestRound()).eq(0);
     expect(await customFeedGrowth.lastAnswer()).eq(0);
     expect(await customFeedGrowth.lastTimestamp()).eq(0);
-    expect(await customFeedGrowth.feedAdminRole()).eq(
-      await customFeedGrowth.CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE(),
+    expect(await customFeedGrowth.contractAdminRole()).eq(
+      keccak256('CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE'),
     );
 
-    const newFeed = await new CustomAggregatorV3CompatibleFeedGrowth__factory(
-      owner,
-    ).deploy();
-
-    expect(await newFeed.feedAdminRole()).eq(ethers.constants.HashZero);
     await validateImplementation(
       CustomAggregatorV3CompatibleFeedGrowth__factory,
     );
@@ -196,7 +191,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       const fixture = await loadFixture(defaultDeploy);
       await setRoundDataGrowth(fixture, 10, -100, 0, {
         from: fixture.regularAccounts[0],
-        revertCustomError: acErrors.WMAC_HASNT_ROLE(),
+        revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
       });
     });
 
@@ -370,7 +365,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       const fixture = await loadFixture(defaultDeploy);
       await setRoundDataSafeGrowth(fixture, 10, -100, 0, {
         from: fixture.regularAccounts[0],
-        revertCustomError: acErrors.WMAC_HASNT_ROLE(),
+        revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
       });
     });
 
@@ -478,7 +473,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       const fixture = await loadFixture(defaultDeploy);
       await setMinGrowthApr(fixture, 10, {
         from: fixture.regularAccounts[0],
-        revertCustomError: acErrors.WMAC_HASNT_ROLE(),
+        revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
       });
     });
 
@@ -511,7 +506,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       const fixture = await loadFixture(defaultDeploy);
       await setMaxGrowthApr(fixture, 10, {
         from: fixture.regularAccounts[0],
-        revertCustomError: acErrors.WMAC_HASNT_ROLE(),
+        revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
       });
     });
 
@@ -555,7 +550,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       const fixture = await loadFixture(defaultDeploy);
       await setOnlyUp(fixture, true, {
         from: fixture.regularAccounts[0],
-        revertCustomError: acErrors.WMAC_HASNT_ROLE(),
+        revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
       });
     });
   });
@@ -595,7 +590,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
         await loadFixture(defaultDeploy);
 
       const user = regularAccounts[0];
-      const feedAdminRole = await customFeedGrowth.feedAdminRole();
+      const feedAdminRole = await customFeedGrowth.contractAdminRole();
 
       await setupGrantOperatorRole({
         accessControl,
@@ -630,7 +625,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
         await loadFixture(defaultDeploy);
 
       const user = regularAccounts[0];
-      const feedAdminRole = await customFeedGrowth.feedAdminRole();
+      const feedAdminRole = await customFeedGrowth.contractAdminRole();
 
       await setupGrantOperatorRole({
         accessControl,
@@ -672,7 +667,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       } = await loadFixture(defaultDeploy);
 
       const proposer = regularAccounts[0];
-      const feedAdminRole = await customFeedGrowth.feedAdminRole();
+      const feedAdminRole = await customFeedGrowth.contractAdminRole();
 
       await accessControl['grantRole(bytes32,address)'](
         feedAdminRole,
@@ -724,38 +719,12 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       } = await loadFixture(defaultDeploy);
 
       const proposer = regularAccounts[0];
-      const feedAdminRole = await customFeedGrowth.feedAdminRole();
-
-      await setupGrantOperatorRole({
-        accessControl,
-        owner,
-        masterRole: feedAdminRole,
-        targetContract: customFeedGrowth.address,
-        functionSelector: setMaxAnswerDeviationSelector,
-        grantOperator: owner,
-      });
-
-      await setupGrantOperatorRole({
-        accessControl,
-        owner,
-        masterRole: feedAdminRole,
-        targetContract: timelockManager.address,
-        functionSelector: setMaxAnswerDeviationSelector,
-        grantOperator: owner,
-      });
+      const feedAdminRole = await customFeedGrowth.contractAdminRole();
 
       await setPermissionRoleTester(
         { accessControl, owner },
         feedAdminRole,
         customFeedGrowth.address,
-        setMaxAnswerDeviationSelector,
-        [{ account: proposer.address, enabled: true }],
-      );
-
-      await setPermissionRoleTester(
-        { accessControl, owner },
-        feedAdminRole,
-        timelockManager.address,
         setMaxAnswerDeviationSelector,
         [{ account: proposer.address, enabled: true }],
       );
@@ -769,16 +738,11 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
         customFeedGrowth.address,
         setMaxAnswerDeviationSelector,
       );
-      const timelockPermissionKey = await accessControl.permissionRoleKey(
-        feedAdminRole,
-        timelockManager.address,
-        setMaxAnswerDeviationSelector,
-      );
 
       await setRoleTimelocksTester(
         { timelockManager, timelock, owner, accessControl },
-        [feedPermissionKey, timelockPermissionKey],
-        [3600, 3600],
+        [feedPermissionKey],
+        [3600],
       );
 
       const calldata = customFeedGrowth.interface.encodeFunctionData(

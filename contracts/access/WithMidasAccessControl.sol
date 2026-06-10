@@ -26,13 +26,6 @@ abstract contract WithMidasAccessControl is
     error SameBoolValue(bool value);
 
     /**
-     * @notice error when the account does not have the role
-     * @param role role
-     * @param account account
-     */
-    error HasntRole(bytes32 role, address account);
-
-    /**
      * @notice admin role
      */
     bytes32 internal constant _DEFAULT_ADMIN_ROLE = 0x00;

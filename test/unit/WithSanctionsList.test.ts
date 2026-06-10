@@ -34,8 +34,7 @@ describe('WithSanctionsList', function () {
     ).deploy();
 
     await expect(
-      withSanctionsList.initializeWithoutInitializer(
-        constants.AddressZero,
+      withSanctionsList.initializeUnchainedWithoutInitializer(
         constants.AddressZero,
       ),
     ).revertedWith('Initializable: contract is not initializing');
@@ -130,15 +129,18 @@ describe('WithSanctionsList', function () {
       });
 
       const user = regularAccounts[0];
-      await setPermissionRoleTester({ accessControl, owner }, [
-        {
-          masterRole: sanctionsListAdmin,
-          targetContract: withSanctionsListTester.address,
-          functionSelector: selector,
-          account: user.address,
-          enabled: true,
-        },
-      ]);
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        sanctionsListAdmin,
+        withSanctionsListTester.address,
+        selector,
+        [
+          {
+            account: user.address,
+            enabled: true,
+          },
+        ],
+      );
       expect(await accessControl.hasRole(sanctionsListAdmin, user.address)).eq(
         false,
       );
@@ -173,15 +175,18 @@ describe('WithSanctionsList', function () {
         grantOperator: owner,
       });
 
-      await setPermissionRoleTester({ accessControl, owner }, [
-        {
-          masterRole: sanctionsListAdmin,
-          targetContract: withSanctionsListTester.address,
-          functionSelector: selector,
-          account: user.address,
-          enabled: true,
-        },
-      ]);
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        sanctionsListAdmin,
+        withSanctionsListTester.address,
+        selector,
+        [
+          {
+            account: user.address,
+            enabled: true,
+          },
+        ],
+      );
 
       await accessControl['grantRole(bytes32,address)'](
         sanctionsListAdmin,

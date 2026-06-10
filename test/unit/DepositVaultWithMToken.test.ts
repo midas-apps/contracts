@@ -91,7 +91,7 @@ depositVaultSuits(
             depositVault.address,
             {
               revertCustomError: {
-                customErrorName: 'SameVaultValue',
+                customErrorName: 'SameAddressValue',
               },
             },
           );
