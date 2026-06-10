@@ -269,7 +269,10 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
         [{ account: user.address, enabled: true }],
       );
 
-      await accessControl.grantRole(feedAdminRole, user.address);
+      await accessControl['grantRole(bytes32,address)'](
+        feedAdminRole,
+        user.address,
+      );
 
       await setMaxAnswerDeviationTest(
         { customFeed, owner },
@@ -291,7 +294,10 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
       const proposer = regularAccounts[0];
       const feedAdminRole = await customFeed.feedAdminRole();
 
-      await accessControl.grantRole(feedAdminRole, proposer.address);
+      await accessControl['grantRole(bytes32,address)'](
+        feedAdminRole,
+        proposer.address,
+      );
 
       await setRoleTimelocksTester(
         { timelockManager, timelock, owner, accessControl },

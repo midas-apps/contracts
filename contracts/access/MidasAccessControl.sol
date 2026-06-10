@@ -87,9 +87,10 @@ contract MidasAccessControl is
      * @param _defaultDelay default delay
      * @param userFacingRoles array of additional user facing roles
      */
-    function initialize(uint256 _defaultDelay, bytes32[] memory userFacingRoles)
-        external
-    {
+    function initialize(
+        uint256 _defaultDelay,
+        bytes32[] calldata userFacingRoles
+    ) external {
         _initializeV1();
 
         initializeV2(_defaultDelay, userFacingRoles);
@@ -109,7 +110,7 @@ contract MidasAccessControl is
      */
     function initializeV2(
         uint256 _defaultDelay,
-        bytes32[] memory userFacingRoles
+        bytes32[] calldata userFacingRoles
     ) public reinitializer(2) {
         defaultDelay = _defaultDelay;
 
@@ -161,7 +162,7 @@ contract MidasAccessControl is
     /**
      * @inheritdoc IMidasAccessControl
      */
-    function setRoleDelays(bytes32[] memory roles, uint256[] memory delays)
+    function setRoleDelays(bytes32[] calldata roles, uint256[] calldata delays)
         external
         onlyRoleWithTimelock(DEFAULT_ADMIN_ROLE)
     {
@@ -184,7 +185,7 @@ contract MidasAccessControl is
         require(params.length > 0, EmptyArray());
 
         for (uint256 i = 0; i < params.length; ++i) {
-            SetUserFacingRoleParams memory param = params[i];
+            SetUserFacingRoleParams calldata param = params[i];
 
             // if already enabled, skip and do not emit event
             if (isUserFacingRole[param.role]) {
@@ -200,35 +201,29 @@ contract MidasAccessControl is
      * @inheritdoc IMidasAccessControl
      */
     function setGrantOperatorRoleMult(
+        address targetContract,
         SetGrantOperatorRoleParams[] calldata params
     ) external {
         require(params.length > 0, EmptyArray());
 
-        bytes32 masterRole = _getContractAdminRole(params[0].targetContract);
+        bytes32 masterRole = _getContractAdminRole(targetContract);
         _validateRoleAccess(masterRole);
 
-        require(
-            !isUserFacingRole[masterRole],
-            AccessControlUtilsLibrary.UserFacingRoleNotAllowed(masterRole)
-        );
+        AccessControlUtilsLibrary.requireNotUserFacingRole(this, masterRole);
 
         for (uint256 i = 0; i < params.length; ++i) {
-            SetGrantOperatorRoleParams memory param = params[i];
-
-            bytes32 contractMasterRole = _getContractAdminRole(
-                params[0].targetContract
-            );
-
-            require(
-                masterRole == contractMasterRole,
-                "MAC: master role mismatch"
-            );
+            SetGrantOperatorRoleParams calldata param = params[i];
 
             bytes32 operatorKey = grantOperatorRoleKey(
                 masterRole,
-                param.targetContract,
+                targetContract,
                 param.functionSelector
             );
+
+            if (param.delay != AccessControlUtilsLibrary.NULL_DELAY) {
+                _requireNullDelay(operatorKey);
+                _setRoleDelay(operatorKey, param.delay);
+            }
 
             // if already enabled, skip and do not emit event
             if (_grantOperatorRoles[operatorKey][param.operator]) {
@@ -238,7 +233,7 @@ contract MidasAccessControl is
             _grantOperatorRoles[operatorKey][param.operator] = param.enabled;
             emit SetGrantOperatorRole(
                 masterRole,
-                param.targetContract,
+                targetContract,
                 param.operator,
                 param.functionSelector,
                 param.enabled
@@ -252,6 +247,7 @@ contract MidasAccessControl is
     function setPermissionRoleMult(
         address targetContract,
         bytes4 functionSelector,
+        uint256 delay,
         SetPermissionRoleParams[] calldata params
     ) external {
         bytes32 masterRole = _getContractAdminRole(targetContract);
@@ -261,7 +257,7 @@ contract MidasAccessControl is
             functionSelector
         );
 
-        _validateOperatorRoleAccess(operatorRoleKey, _msgSender());
+        _validateOperatorRoleAccess(masterRole, operatorRoleKey, _msgSender());
 
         require(params.length > 0, EmptyArray());
 
@@ -271,8 +267,13 @@ contract MidasAccessControl is
             functionSelector
         );
 
+        if (delay != AccessControlUtilsLibrary.NULL_DELAY) {
+            _requireNullDelay(functionRoleKey);
+            _setRoleDelay(functionRoleKey, delay);
+        }
+
         for (uint256 i = 0; i < params.length; ++i) {
-            SetPermissionRoleParams memory param = params[i];
+            SetPermissionRoleParams calldata param = params[i];
 
             // if already enabled, skip and do not emit event
             if (_permissionRoles[functionRoleKey][param.account]) {
@@ -301,16 +302,32 @@ contract MidasAccessControl is
         _grantRole(role, account);
     }
 
-    // /**
-    //  * @inheritdoc IMidasAccessControl
-    //  */
-    // function grantRole(
-    //     bytes32 role,
-    //     address account,
-    //     uint256 delay
-    // ) public {
-    //     grantRole(role, account);
-    // }
+    /**
+     * @inheritdoc IMidasAccessControl
+     */
+    function grantRole(
+        bytes32 role,
+        address account,
+        uint256 delay
+    ) public {
+        grantRole(role, account);
+
+        if (delay != AccessControlUtilsLibrary.NULL_DELAY) {
+            _requireNullDelay(role);
+            _setRoleDelay(role, delay);
+        }
+    }
+
+    /**
+     * @dev validates that the delay is null
+     * @param role role id
+     */
+    function _requireNullDelay(bytes32 role) private {
+        require(
+            _roleTimelocks[role] == AccessControlUtilsLibrary.NULL_DELAY,
+            InvalidTimelockDelay()
+        );
+    }
 
     /**
      * @inheritdoc AccessControlUpgradeable
@@ -332,9 +349,10 @@ contract MidasAccessControl is
      * @param roles array of bytes32 roles
      * @param addresses array of user addresses
      */
-    function grantRoleMult(bytes32[] memory roles, address[] memory addresses)
-        external
-    {
+    function grantRoleMult(
+        bytes32[] calldata roles,
+        address[] calldata addresses
+    ) external {
         require(
             roles.length == addresses.length,
             MismatchArrays(roles.length, addresses.length)
@@ -361,9 +379,10 @@ contract MidasAccessControl is
      * @param roles array of bytes32 roles
      * @param addresses array of user addresses
      */
-    function revokeRoleMult(bytes32[] memory roles, address[] memory addresses)
-        external
-    {
+    function revokeRoleMult(
+        bytes32[] calldata roles,
+        address[] calldata addresses
+    ) external {
         require(
             roles.length == addresses.length,
             MismatchArrays(roles.length, addresses.length)
@@ -548,6 +567,16 @@ contract MidasAccessControl is
     }
 
     /**
+     * @dev sets the delay for a role
+     * @param role role id
+     * @param delay delay value
+     */
+    function _setRoleDelay(bytes32 role, uint256 delay) private {
+        _roleTimelocks[role] = delay;
+        emit SetRoleDelay(role, delay);
+    }
+
+    /**
      * @dev setup roles during the contracts initialization
      */
     function _setupRoles(address admin) private {
@@ -621,22 +650,63 @@ contract MidasAccessControl is
     }
 
     /**
-     * @notice validates that the account with a role has access to the function
-     * @param role role to check access for
+     * @dev validates that the account with a master or operator role has access to the function
+     * selects a role with a shortest delay in case if has both roles
+     * @param masterRole master role
+     * @param operatorRole operator role
      * @param account account to check access for
      */
-    function _validateOperatorRoleAccess(bytes32 role, address account)
-        internal
-        view
-    {
+    function _validateOperatorRoleAccess(
+        bytes32 masterRole,
+        bytes32 operatorRole,
+        address account
+    ) internal view {
+        bytes32 role = _resolveOperatorRole(masterRole, operatorRole, account);
+        bool isOperatorRole = role == operatorRole;
+
         AccessControlUtilsLibrary.validateFunctionAccessWithTimelock(
             this,
             role,
             AccessControlUtilsLibrary.NULL_DELAY,
-            true,
+            isOperatorRole,
             account,
             false
         );
+    }
+
+    /**
+     * @dev validates that the account has either operator or master role and uses the role with a shortest delay
+     * @param masterRole master role
+     * @param operatorRole operator role
+     * @param account account to check access for
+     */
+    function _resolveOperatorRole(
+        bytes32 masterRole,
+        bytes32 operatorRole,
+        address account
+    ) internal view returns (bytes32) {
+        bool isOperator = isFunctionAccessGrantOperator(operatorRole, account);
+        bool hasMasterRole = hasRole(masterRole, account);
+
+        if (!isOperator && !hasMasterRole) {
+            return operatorRole;
+        }
+
+        if (!hasMasterRole) {
+            return operatorRole;
+        }
+
+        if (!isOperator) {
+            return masterRole;
+        }
+
+        return
+            AccessControlUtilsLibrary.resolveAccessRole(
+                this,
+                masterRole,
+                operatorRole,
+                AccessControlUtilsLibrary.NULL_DELAY
+            );
     }
 
     /**

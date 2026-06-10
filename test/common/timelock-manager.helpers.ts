@@ -74,7 +74,8 @@ export const scheduleTimelockOperationsTester = async (
   const councilVersionBefore = await timelockManager.securityCouncilVersion();
 
   const txPromise = callFn();
-  await expect(txPromise).to.not.reverted;
+  await txPromise;
+  // await expect(txPromise).to.not.reverted;
   const councilVersionAfter = await timelockManager.securityCouncilVersion();
 
   expect(councilVersionAfter).to.be.equal(councilVersionBefore);

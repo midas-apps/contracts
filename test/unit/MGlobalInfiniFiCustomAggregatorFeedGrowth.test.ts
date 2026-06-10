@@ -94,7 +94,7 @@ describe('MGlobalInfiniFiCustomAggregatorFeedGrowth', () => {
 
     await accessControl
       .connect(owner)
-      .grantRole(EXPECTED_ROLE, infinifiAdmin.address);
+      ['grantRole(bytes32,address)'](EXPECTED_ROLE, infinifiAdmin.address);
 
     const ts = (await ethers.provider.getBlock('latest')).timestamp - 1;
 
@@ -116,7 +116,7 @@ describe('MGlobalInfiniFiCustomAggregatorFeedGrowth', () => {
 
     await accessControl
       .connect(owner)
-      .grantRole(EXPECTED_ROLE, infinifiAdmin.address);
+      ['grantRole(bytes32,address)'](EXPECTED_ROLE, infinifiAdmin.address);
 
     const ts = (await ethers.provider.getBlock('latest')).timestamp - 1;
 
@@ -134,7 +134,7 @@ describe('MGlobalInfiniFiCustomAggregatorFeedGrowth', () => {
 
     await accessControl
       .connect(owner)
-      .grantRole(EXPECTED_ROLE, infinifiAdmin.address);
+      ['grantRole(bytes32,address)'](EXPECTED_ROLE, infinifiAdmin.address);
 
     const ts = (await ethers.provider.getBlock('latest')).timestamp - 1;
 

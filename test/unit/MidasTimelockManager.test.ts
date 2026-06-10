@@ -226,7 +226,7 @@ describe('MidasTimelockManager', () => {
         regularAccounts,
       } = await loadFixture(defaultDeploy);
 
-      await accessControl.grantRole(
+      await accessControl['grantRole(bytes32,address)'](
         constants.HashZero,
         regularAccounts[0].address,
       );
@@ -256,10 +256,10 @@ describe('MidasTimelockManager', () => {
         { timelockManager, timelock, owner, accessControl },
         [accessControl.address],
         [
-          accessControl.interface.encodeFunctionData('grantRole', [
-            constants.HashZero,
-            wAccessControlTester.address,
-          ]),
+          accessControl.interface.encodeFunctionData(
+            'grantRole(bytes32,address)',
+            [constants.HashZero, wAccessControlTester.address],
+          ),
         ],
         {},
         {
@@ -312,7 +312,7 @@ describe('MidasTimelockManager', () => {
         regularAccounts,
       } = await loadFixture(defaultDeploy);
 
-      await accessControl.grantRole(
+      await accessControl['grantRole(bytes32,address)'](
         constants.HashZero,
         regularAccounts[0].address,
       );
@@ -400,10 +400,10 @@ describe('MidasTimelockManager', () => {
         { timelockManager, timelock, owner, accessControl },
         [accessControl.address],
         [
-          accessControl.interface.encodeFunctionData('grantRole', [
-            constants.HashZero,
-            wAccessControlTester.address,
-          ]),
+          accessControl.interface.encodeFunctionData(
+            'grantRole(bytes32,address)',
+            [constants.HashZero, wAccessControlTester.address],
+          ),
         ],
         {},
         timelockManagerRevert(timelockManager, 'TooManyPendingOperations'),
@@ -456,7 +456,7 @@ describe('MidasTimelockManager', () => {
         'withOnlyContractAdmin',
       );
       const grantRoleCalldata = accessControl.interface.encodeFunctionData(
-        'grantRole',
+        'grantRole(bytes32,address)',
         [constants.HashZero, wAccessControlTester.address],
       );
 
@@ -593,7 +593,7 @@ describe('MidasTimelockManager', () => {
         regularAccounts,
       } = await loadFixture(defaultDeploy);
 
-      await accessControl.grantRole(
+      await accessControl['grantRole(bytes32,address)'](
         constants.HashZero,
         regularAccounts[0].address,
       );
@@ -1216,7 +1216,7 @@ describe('MidasTimelockManager', () => {
         regularAccounts,
       } = await loadFixture(defaultDeploy);
 
-      await accessControl.grantRole(
+      await accessControl['grantRole(bytes32,address)'](
         constants.HashZero,
         regularAccounts[0].address,
       );

@@ -34,6 +34,11 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
     error CannotRevokeFromSelf(bytes32 role, address account);
 
     /**
+     * @notice when the delay is invalid
+     */
+    error InvalidTimelockDelay();
+
+    /**
      * @notice Set user facing role params
      */
     struct SetUserFacingRoleParams {
@@ -47,8 +52,8 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
      * @notice Set function access grant operator params
      */
     struct SetGrantOperatorRoleParams {
-        /// @notice contract whose function is scoped.
-        address targetContract;
+        /// @notice delay value
+        uint256 delay;
         /// @notice selector of the scoped function.
         bytes4 functionSelector;
         /// @notice address that may call `setFunctionPermission` for this scope.
@@ -115,6 +120,12 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
     event SetRoleDelays(bytes32[] roles, uint256[] delays);
 
     /**
+     * @param role role id
+     * @param delay delay value
+     */
+    event SetRoleDelay(bytes32 role, uint256 delay);
+
+    /**
      * @notice Enable or disable which OZ role may administer function-access scopes for that role.
      * @dev Only `DEFAULT_ADMIN_ROLE` can call this function.
      * Prevents unrelated role admins from spamming access mappings.
@@ -125,26 +136,42 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
 
     /**
      * @notice Add or remove a grant operator for a specific contract function scope.
-     * @dev target contract must implement `IMidasAccessControlManaged` interface;
+     * @dev `targetContract` must implement `IMidasAccessControlManaged` interface;
      * Caller must hold `contractAdminRole` of a target contract;
+     * @param targetContract scoped contract
      * @param params array of SetGrantOperatorRoleParams
      */
     function setGrantOperatorRoleMult(
+        address targetContract,
         SetGrantOperatorRoleParams[] calldata params
     ) external;
 
     /**
      * @notice Grant or revoke function access for an account
-     * @dev caller must be a grant operator for the scope
+     * @dev caller must be a grant operator for the scope or have the master role
      * target contract must implement `IMidasAccessControlManaged` interface;
      * @param targetContract scoped contract
      * @param functionSelector scoped function
+     * @param delay delay value
      * @param params array of SetPermissionRoleParams
      */
     function setPermissionRoleMult(
         address targetContract,
         bytes4 functionSelector,
+        uint256 delay,
         SetPermissionRoleParams[] calldata params
+    ) external;
+
+    /**
+     * @notice Grant a role to an account with a delay
+     * @param role role id
+     * @param account account to grant the role to
+     * @param delay delay value
+     */
+    function grantRole(
+        bytes32 role,
+        address account,
+        uint256 delay
     ) external;
 
     /**

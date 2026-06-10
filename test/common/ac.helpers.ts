@@ -5,6 +5,7 @@ import { BigNumber, BigNumberish, constants, Contract } from 'ethers';
 
 import {
   Account,
+  AccountOrContract,
   OptionalCommonParams,
   getAccount,
   handleRevert,
@@ -57,38 +58,16 @@ export const acErrors = {
 
 export const blackList = async (
   { blacklistable, accessControl, owner }: CommonParamsBlackList,
-  account: Account,
+  account: AccountOrContract,
   opt?: OptionalCommonParams,
 ) => {
-  account = getAccount(account);
-
-  if (
-    await handleRevert(
-      accessControl
-        .connect(opt?.from ?? owner)
-        .grantRole.bind(this, await blacklistable.BLACKLISTED_ROLE(), account),
-      accessControl,
-      opt,
-    )
-  ) {
-    return;
-  }
-
-  await expect(
-    accessControl
-      .connect(opt?.from ?? owner)
-      .grantRole(await blacklistable.BLACKLISTED_ROLE(), account),
-  ).to.emit(
-    accessControl,
-    accessControl.interface.events['RoleGranted(bytes32,address,address)'].name,
-  ).to.not.reverted;
-
-  expect(
-    await accessControl.hasRole(
-      await accessControl.BLACKLISTED_ROLE(),
-      account,
-    ),
-  ).eq(true);
+  await grantRoleTester(
+    { accessControl, owner },
+    await blacklistable.BLACKLISTED_ROLE(),
+    account,
+    0,
+    opt,
+  );
 };
 
 export const unBlackList = async (
@@ -129,42 +108,16 @@ export const unBlackList = async (
 
 export const greenList = async (
   { greenlistable, accessControl, owner, role }: CommonParamsGreenList,
-  account: Account,
+  account: AccountOrContract,
   opt?: OptionalCommonParams,
 ) => {
-  account = getAccount(account);
-
-  if (
-    await handleRevert(
-      accessControl
-        .connect(opt?.from ?? owner)
-        .revokeRole.bind(
-          this,
-          role ?? (await greenlistable.GREENLISTED_ROLE()),
-          account,
-        ),
-      accessControl,
-      opt,
-    )
-  ) {
-    return;
-  }
-
-  await expect(
-    accessControl
-      .connect(opt?.from ?? owner)
-      .grantRole(role ?? (await greenlistable.GREENLISTED_ROLE()), account),
-  ).to.emit(
-    accessControl,
-    accessControl.interface.events['RoleGranted(bytes32,address,address)'].name,
-  ).to.not.reverted;
-
-  expect(
-    await accessControl.hasRole(
-      role ?? (await accessControl.GREENLISTED_ROLE()),
-      account,
-    ),
-  ).eq(true);
+  await grantRoleTester(
+    { accessControl, owner },
+    role ?? (await greenlistable.GREENLISTED_ROLE()),
+    account,
+    0,
+    opt,
+  );
 };
 
 export const unGreenList = async (
@@ -268,14 +221,27 @@ export const grantRoleTester = async (
     owner,
   }: { accessControl: MidasAccessControl; owner: SignerWithAddress },
   role: string,
-  account: string,
+  account: AccountOrContract,
+  delay?: BigNumberish,
   opt?: OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
 
-  const callFn = accessControl
-    .connect(from)
-    .grantRole.bind(this, role, account);
+  account = getAccount(account);
+
+  const callFn =
+    delay === undefined
+      ? accessControl
+          .connect(from)
+          ['grantRole(bytes32,address)'].bind(this, role, account)
+      : accessControl
+          .connect(from)
+          ['grantRole(bytes32,address,uint256)'].bind(
+            this,
+            role,
+            account,
+            delay,
+          );
 
   if (await handleRevert(callFn, accessControl, opt)) {
     return;
@@ -284,6 +250,10 @@ export const grantRoleTester = async (
   await expect(callFn()).to.not.reverted;
 
   expect(await accessControl.hasRole(role, account)).eq(true);
+
+  if (delay !== undefined && BigNumber.from(delay).gt(0)) {
+    expect(await accessControl.getRoleTimelockDelay(role, 0)).eq(delay);
+  }
 };
 
 export const revokeRoleTester = async (
@@ -292,11 +262,12 @@ export const revokeRoleTester = async (
     owner,
   }: { accessControl: MidasAccessControl; owner: SignerWithAddress },
   role: string,
-  account: string,
+  account: AccountOrContract,
   opt?: OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
 
+  account = getAccount(account);
   const callFn = accessControl
     .connect(from)
     .revokeRole.bind(this, role, account);
@@ -363,23 +334,29 @@ export const setGrantOperatorRoleTester = async (
     accessControl,
     owner,
   }: { accessControl: MidasAccessControl; owner: SignerWithAddress },
+  targetContract: string,
   params: {
-    targetContract: string;
     functionSelector: string;
     operator: string;
     enabled: boolean;
+    delay?: BigNumberish;
   }[],
   opt?: OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
 
-  const callFn = accessControl
-    .connect(from)
-    .setGrantOperatorRoleMult.bind(this, params);
+  const callFn = accessControl.connect(from).setGrantOperatorRoleMult.bind(
+    this,
+    targetContract,
+    params.map((param) => ({
+      ...param,
+      delay: param.delay ?? 0,
+    })),
+  );
 
   const masterRole = params.length
     ? await IMidasAccessControlManaged__factory.connect(
-        params[0].targetContract,
+        targetContract,
         accessControl.provider,
       ).contractAdminRole()
     : constants.HashZero;
@@ -392,12 +369,7 @@ export const setGrantOperatorRoleTester = async (
     params.map(async (param) => {
       return await accessControl[
         'isFunctionAccessGrantOperator(bytes32,address,bytes4,address)'
-      ](
-        masterRole,
-        param.targetContract,
-        param.functionSelector,
-        param.operator,
-      );
+      ](masterRole, targetContract, param.functionSelector, param.operator);
     }),
   );
 
@@ -418,7 +390,7 @@ export const setGrantOperatorRoleTester = async (
       const log = logs.filter(
         (log) =>
           log.masterRole === masterRole &&
-          log.targetContract === param.targetContract &&
+          log.targetContract === targetContract &&
           log.functionSelector === param.functionSelector &&
           log.operator === param.operator &&
           log.enabled === param.enabled,
@@ -430,13 +402,14 @@ export const setGrantOperatorRoleTester = async (
     expect(
       await accessControl[
         'isFunctionAccessGrantOperator(bytes32,address,bytes4,address)'
-      ](
-        masterRole,
-        param.targetContract,
-        param.functionSelector,
-        param.operator,
-      ),
+      ](masterRole, targetContract, param.functionSelector, param.operator),
     ).eq(param.enabled);
+
+    if (param.delay !== undefined && BigNumber.from(param.delay).gt(0)) {
+      expect(await accessControl.getRoleTimelockDelay(masterRole, 0)).eq(
+        param.delay,
+      );
+    }
   }
 };
 
@@ -445,6 +418,7 @@ export const setPermissionRoleTester = async (
     accessControl,
     owner,
   }: { accessControl: MidasAccessControl; owner: SignerWithAddress },
+  // TODO: remove it
   _masterRole: string,
   targetContract: string,
   functionSelector: string,
@@ -452,13 +426,20 @@ export const setPermissionRoleTester = async (
     account: string;
     enabled: boolean;
   }[],
+  delay?: BigNumberish,
   opt?: OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
 
   const callFn = accessControl
     .connect(from)
-    .setPermissionRoleMult.bind(this, targetContract, functionSelector, params);
+    .setPermissionRoleMult.bind(
+      this,
+      targetContract,
+      functionSelector,
+      delay ?? 0,
+      params,
+    );
 
   if (await handleRevert(callFn, accessControl, opt)) {
     return;
@@ -478,8 +459,7 @@ export const setPermissionRoleTester = async (
   );
 
   const txPromise = callFn();
-  await txPromise;
-  // await expect(txPromise).to.not.reverted;
+  await expect(txPromise).to.not.reverted;
 
   const txReceipt = await (await txPromise).wait();
   const logs = txReceipt.logs
@@ -487,6 +467,16 @@ export const setPermissionRoleTester = async (
     .map((log) => accessControl.interface.parseLog(log))
     .filter((v) => v.name === 'SetPermissionRole')
     .map((v) => v.args);
+
+  const key = await accessControl.permissionRoleKey(
+    masterRole,
+    targetContract,
+    functionSelector,
+  );
+
+  if (delay !== undefined && BigNumber.from(delay).gt(0)) {
+    expect(await accessControl.getRoleTimelockDelay(key, 0)).eq(delay);
+  }
 
   for (const [index, stateBefore] of statesBefore.entries()) {
     const param = params[index];
@@ -529,9 +519,8 @@ export const setupGrantOperatorRole = async ({
   functionSelector,
   grantOperator,
 }: SetupFunctionAccessGrantOperatorParams) => {
-  await setGrantOperatorRoleTester({ accessControl, owner }, [
+  await setGrantOperatorRoleTester({ accessControl, owner }, targetContract, [
     {
-      targetContract,
       functionSelector,
       operator: grantOperator.address,
       enabled: true,

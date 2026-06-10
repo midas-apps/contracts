@@ -44,7 +44,7 @@ export async function pythAdapterFixture(
   );
 
   // Grant default admin role to deployer
-  await midasAccessControl.grantRole(
+  await midasAccessControl['grantRole(bytes32,address)'](
     allRoles.common.defaultAdmin,
     deployer.address,
   );

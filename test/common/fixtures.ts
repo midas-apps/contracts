@@ -302,7 +302,10 @@ export const defaultDeploy = async () => {
     from: owner,
   });
 
-  await accessControl.grantRole(mTBILL.minterRole(), depositVault.address);
+  await accessControl['grantRole(bytes32,address)'](
+    mTBILL.minterRole(),
+    depositVault.address,
+  );
 
   const redemptionVaultLoanSwapper = await initializeRv(
     {
@@ -329,16 +332,22 @@ export const defaultDeploy = async () => {
     { from: owner },
   );
 
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     mTokenLoan.burnerRole(),
     redemptionVaultLoanSwapper.address,
   );
 
-  await accessControl.grantRole(mTokenLoan.minterRole(), owner.address);
+  await accessControl['grantRole(bytes32,address)'](
+    mTokenLoan.minterRole(),
+    owner.address,
+  );
 
   await redemptionVaultLoanSwapper.addWaivedFeeAccount(redemptionVault.address);
 
-  await accessControl.grantRole(mTBILL.burnerRole(), redemptionVault.address);
+  await accessControl['grantRole(bytes32,address)'](
+    mTBILL.burnerRole(),
+    redemptionVault.address,
+  );
 
   const manageableVault = await initializeMv(commonVaultParams, undefined, {
     from: owner,
@@ -368,7 +377,7 @@ export const defaultDeploy = async () => {
     { from: owner },
   );
 
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     mTBILL.minterRole(),
     depositVaultWithUSTB.address,
   );
@@ -393,7 +402,7 @@ export const defaultDeploy = async () => {
     undefined,
     { from: owner },
   );
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     mTBILL.burnerRole(),
     redemptionVaultWithUSTB.address,
   );
@@ -423,7 +432,7 @@ export const defaultDeploy = async () => {
     stableCoins.usdc.address,
     aavePoolMock.address,
   );
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     mTBILL.burnerRole(),
     redemptionVaultWithAave.address,
   );
@@ -452,7 +461,7 @@ export const defaultDeploy = async () => {
     stableCoins.usdc.address,
     morphoVaultMock.address,
   );
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     mTBILL.burnerRole(),
     redemptionVaultWithMorpho.address,
   );
@@ -471,7 +480,7 @@ export const defaultDeploy = async () => {
     aavePoolMock.address,
   );
 
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     mTBILL.minterRole(),
     depositVaultWithAave.address,
   );
@@ -484,7 +493,7 @@ export const defaultDeploy = async () => {
     { from: owner },
   );
 
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     mTBILL.minterRole(),
     depositVaultWithMorpho.address,
   );
@@ -500,7 +509,7 @@ export const defaultDeploy = async () => {
     { from: owner },
   );
 
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     mTBILL.minterRole(),
     depositVaultWithMToken.address,
   );
@@ -543,11 +552,11 @@ export const defaultDeploy = async () => {
   await redemptionVaultLoanSwapper.addWaivedFeeAccount(
     redemptionVaultWithMToken.address,
   );
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     mTBILL.burnerRole(),
     redemptionVaultWithMToken.address,
   );
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     mTokenLoan.burnerRole(),
     redemptionVaultWithMToken.address,
   );
@@ -595,7 +604,7 @@ export const defaultDeploy = async () => {
     ).deploy(customFeed.address, parseUnits('10', 8));
 
   // role granting testers
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     await customFeed.contractAdminRole(),
     owner.address,
   );
@@ -622,16 +631,19 @@ export const defaultDeploy = async () => {
   const offChainUsdToken = constants.AddressZero;
 
   // role granting testers
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     allRoles.common.blacklistedOperator,
     blackListableTester.address,
   );
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     allRoles.common.greenlistedOperator,
     greenListableTester.address,
   );
   const greenlistAdmin = await greenListableTester.greenlistAdminRole();
-  await accessControl.grantRole(greenlistAdmin, owner.address);
+  await accessControl['grantRole(bytes32,address)'](
+    greenlistAdmin,
+    owner.address,
+  );
 
   const deployDeprecatedFeed = async () => {
     const mockedDeprecatedAggregator =
@@ -816,9 +828,12 @@ export const mTokenPermissionedFixture = async (
   const mTokenPermissionedGreenlistedRole =
     await mTokenPermissioned.greenlistedRole();
 
-  await accessControl.grantRole(mintRole, owner.address);
-  await accessControl.grantRole(burnRole, owner.address);
-  await accessControl.grantRole(tokenManagerRole, owner.address);
+  await accessControl['grantRole(bytes32,address)'](mintRole, owner.address);
+  await accessControl['grantRole(bytes32,address)'](burnRole, owner.address);
+  await accessControl['grantRole(bytes32,address)'](
+    tokenManagerRole,
+    owner.address,
+  );
 
   const mTokenPermissionedDepositVault = await initializeDv(
     {
@@ -831,7 +846,7 @@ export const mTokenPermissionedFixture = async (
     undefined,
     { from: owner },
   );
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     mintRole,
     mTokenPermissionedDepositVault.address,
   );
@@ -851,7 +866,7 @@ export const mTokenPermissionedFixture = async (
 
   await mTokenPermissionedRedemptionVault.setMaxApproveRequestId(100);
 
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     burnRole,
     mTokenPermissionedRedemptionVault.address,
   );

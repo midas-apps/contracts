@@ -38,7 +38,7 @@ describe('Token contracts', () => {
         const from = regularAccounts[0];
         const to = regularAccounts[1];
 
-        await accessControl.grantRole(
+        await accessControl['grantRole(bytes32,address)'](
           mTokenPermissionedRoles.greenlisted,
           from.address,
         );
@@ -47,7 +47,7 @@ describe('Token contracts', () => {
           mTokenPermissionedRoles.greenlisted,
           from.address,
         );
-        await accessControl.grantRole(
+        await accessControl['grantRole(bytes32,address)'](
           mTokenPermissionedRoles.greenlisted,
           to.address,
         );
@@ -72,7 +72,7 @@ describe('Token contracts', () => {
         const from = regularAccounts[0];
         const to = regularAccounts[1];
 
-        await accessControl.grantRole(
+        await accessControl['grantRole(bytes32,address)'](
           mTokenPermissionedRoles.greenlisted,
           from.address,
         );
@@ -98,11 +98,11 @@ describe('Token contracts', () => {
         const from = regularAccounts[0];
         const to = regularAccounts[1];
 
-        await accessControl.grantRole(
+        await accessControl['grantRole(bytes32,address)'](
           mTokenPermissionedRoles.greenlisted,
           from.address,
         );
-        await accessControl.grantRole(
+        await accessControl['grantRole(bytes32,address)'](
           mTokenPermissionedRoles.greenlisted,
           to.address,
         );
@@ -139,11 +139,11 @@ describe('Token contracts', () => {
         const from = regularAccounts[0];
         const to = regularAccounts[1];
 
-        await accessControl.grantRole(
+        await accessControl['grantRole(bytes32,address)'](
           mTokenPermissionedRoles.greenlisted,
           from.address,
         );
-        await accessControl.grantRole(
+        await accessControl['grantRole(bytes32,address)'](
           mTokenPermissionedRoles.greenlisted,
           to.address,
         );
@@ -170,7 +170,7 @@ describe('Token contracts', () => {
 
         const to = regularAccounts[0];
 
-        await accessControl.grantRole(
+        await accessControl['grantRole(bytes32,address)'](
           mTokenPermissionedRoles.greenlisted,
           to.address,
         );
@@ -195,7 +195,7 @@ describe('Token contracts', () => {
 
         const holder = regularAccounts[0];
 
-        await accessControl.grantRole(
+        await accessControl['grantRole(bytes32,address)'](
           mTokenPermissionedRoles.greenlisted,
           holder.address,
         );
@@ -235,11 +235,11 @@ describe('Token contracts', () => {
         const from = regularAccounts[0];
         const to = regularAccounts[1];
 
-        await accessControl.grantRole(
+        await accessControl['grantRole(bytes32,address)'](
           mTokenPermissionedRoles.greenlisted,
           from.address,
         );
-        await accessControl.grantRole(
+        await accessControl['grantRole(bytes32,address)'](
           mTokenPermissionedRoles.greenlisted,
           to.address,
         );
@@ -263,7 +263,7 @@ describe('Token contracts', () => {
         );
 
         const to = regularAccounts[0];
-        await accessControl.grantRole(
+        await accessControl['grantRole(bytes32,address)'](
           mTokenPermissionedRoles.greenlisted,
           to.address,
         );
@@ -288,7 +288,7 @@ describe('Token contracts', () => {
         );
 
         const holder = regularAccounts[0];
-        await accessControl.grantRole(
+        await accessControl['grantRole(bytes32,address)'](
           mTokenPermissionedRoles.greenlisted,
           holder.address,
         );
@@ -391,7 +391,10 @@ describe('Token contracts', () => {
               const to = regularAccounts[2];
               const { greenlisted } = mTokenPermissionedRoles;
 
-              await accessControl.grantRole(greenlisted, from.address);
+              await accessControl['grantRole(bytes32,address)'](
+                greenlisted,
+                from.address,
+              );
               await mint({ tokenContract: mTokenPermissioned, owner }, from, 1);
               await mTokenPermissioned.connect(from).approve(caller.address, 1);
 
@@ -399,10 +402,16 @@ describe('Token contracts', () => {
                 await accessControl.revokeRole(greenlisted, from.address);
               }
               if (toGreenlisted) {
-                await accessControl.grantRole(greenlisted, to.address);
+                await accessControl['grantRole(bytes32,address)'](
+                  greenlisted,
+                  to.address,
+                );
               }
               if (callerGreenlisted) {
-                await accessControl.grantRole(greenlisted, caller.address);
+                await accessControl['grantRole(bytes32,address)'](
+                  greenlisted,
+                  caller.address,
+                );
               }
 
               const tx = mTokenPermissioned
@@ -439,11 +448,11 @@ describe('Token contracts', () => {
         const spender = regularAccounts[1];
         const to = regularAccounts[2];
 
-        await accessControl.grantRole(
+        await accessControl['grantRole(bytes32,address)'](
           mTokenPermissionedRoles.greenlisted,
           from.address,
         );
-        await accessControl.grantRole(
+        await accessControl['grantRole(bytes32,address)'](
           mTokenPermissionedRoles.greenlisted,
           to.address,
         );
@@ -484,11 +493,11 @@ describe('Token contracts', () => {
         const spender = regularAccounts[1];
         const to = regularAccounts[2];
 
-        await accessControl.grantRole(
+        await accessControl['grantRole(bytes32,address)'](
           mTokenPermissionedRoles.greenlisted,
           from.address,
         );
-        await accessControl.grantRole(
+        await accessControl['grantRole(bytes32,address)'](
           mTokenPermissionedRoles.greenlisted,
           to.address,
         );

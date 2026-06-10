@@ -59,20 +59,23 @@ async function setupMTokenBase() {
   ];
 
   for (const role of rolesArray) {
-    await accessControl.grantRole(role, owner.address);
+    await accessControl['grantRole(bytes32,address)'](role, owner.address);
   }
 
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     allRoles.tokenRoles.mTBILL.depositVaultAdmin,
     vaultAdmin.address,
   );
 
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     allRoles.tokenRoles.mTBILL.redemptionVaultAdmin,
     vaultAdmin.address,
   );
 
-  await accessControl.grantRole(allRoles.common.greenlisted, testUser.address);
+  await accessControl['grantRole(bytes32,address)'](
+    allRoles.common.greenlisted,
+    testUser.address,
+  );
 
   // USDC data feed
   const usdcAggregator = (await (
@@ -194,7 +197,7 @@ export async function mTokenDepositFixture() {
   );
 
   // Grant minter to target DV (so it can mint mTBILL)
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     roles.tokenRoles.mTBILL.minter,
     targetDepositVault.address,
   );
@@ -239,13 +242,13 @@ export async function mTokenDepositFixture() {
     );
 
   // Grant minter to product DV (so it can mint mFONE)
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     roles.tokenRoles.mTBILL.minter,
     depositVaultWithMToken.address,
   );
 
   // Greenlist the product DV so it can call depositInstant on target DV
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     roles.common.greenlisted,
     depositVaultWithMToken.address,
   );
@@ -307,7 +310,7 @@ export async function mTokenRedemptionFixture() {
   );
 
   // Grant BURN_ROLE to target RV (so it can burn mTBILL)
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     roles.tokenRoles.mTBILL.burner,
     targetRedemptionVault.address,
   );
@@ -361,7 +364,7 @@ export async function mTokenRedemptionFixture() {
     );
 
   // Grant BURN_ROLE to product RV (so it can burn mFONE)
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     roles.tokenRoles.mTBILL.burner,
     redemptionVaultWithMToken.address,
   );
@@ -378,7 +381,7 @@ export async function mTokenRedemptionFixture() {
     );
 
   // Greenlist the product RV on access control (target RV requires greenlist)
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     roles.common.greenlisted,
     redemptionVaultWithMToken.address,
   );
@@ -389,7 +392,10 @@ export async function mTokenRedemptionFixture() {
     .addWaivedFeeAccount(redemptionVaultWithMToken.address);
 
   // Mint mTBILL to product RV (simulating Fordefi deposit)
-  await accessControl.grantRole(roles.tokenRoles.mTBILL.minter, owner.address);
+  await accessControl['grantRole(bytes32,address)'](
+    roles.tokenRoles.mTBILL.minter,
+    owner.address,
+  );
   await mTBILL.mint(redemptionVaultWithMToken.address, parseUnits('50000'));
 
   return {

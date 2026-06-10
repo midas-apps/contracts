@@ -48,7 +48,7 @@ redemptionVaultSuits(
             mTokenPermissionedRedemptionVault,
           } = await loadFixture(mTokenPermissionedFixture);
 
-          await accessControl.grantRole(
+          await accessControl['grantRole(bytes32,address)'](
             mTokenPermissionedRoles.greenlisted,
             owner.address,
           );
@@ -107,7 +107,7 @@ redemptionVaultSuits(
             mTokenPermissionedRedemptionVault,
           } = await loadFixture(mTokenPermissionedFixture);
 
-          await accessControl.grantRole(
+          await accessControl['grantRole(bytes32,address)'](
             mTokenPermissionedRoles.greenlisted,
             owner.address,
           );
@@ -169,7 +169,7 @@ redemptionVaultSuits(
             accessControl,
           } = await loadFixture(mTokenPermissionedFixture);
 
-          await accessControl.grantRole(
+          await accessControl['grantRole(bytes32,address)'](
             mTokenPermissionedRoles.greenlisted,
             owner.address,
           );

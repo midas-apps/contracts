@@ -47,7 +47,7 @@ depositVaultSuits(
             mTokenPermissionedFixture.bind(this, baseFixture),
           );
 
-          await accessControl.grantRole(
+          await accessControl['grantRole(bytes32,address)'](
             mTokenPermissionedRoles.greenlisted,
             owner.address,
           );

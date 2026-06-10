@@ -191,7 +191,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       for (const account of fixture.regularAccounts) {
         await fixture.accessControl
           .connect(fixture.owner)
-          .grantRole(greenlistedRole, account.address);
+          ['grantRole(bytes32,address)'](greenlistedRole, account.address);
       }
     }
 

@@ -51,20 +51,23 @@ async function setupMorphoBase() {
   ];
 
   for (const role of rolesArray) {
-    await accessControl.grantRole(role, owner.address);
+    await accessControl['grantRole(bytes32,address)'](role, owner.address);
   }
 
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     allRoles.tokenRoles.mTBILL.depositVaultAdmin,
     vaultAdmin.address,
   );
 
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     allRoles.tokenRoles.mTBILL.redemptionVaultAdmin,
     vaultAdmin.address,
   );
 
-  await accessControl.grantRole(allRoles.common.greenlisted, testUser.address);
+  await accessControl['grantRole(bytes32,address)'](
+    allRoles.common.greenlisted,
+    testUser.address,
+  );
 
   const usdcAggregator = (await (
     await ethers.getContractFactory('AggregatorV3Mock')
@@ -203,7 +206,7 @@ export async function morphoDepositFixture() {
     );
 
   // Grant MINTER_ROLE to deposit vault
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     roles.tokenRoles.mTBILL.minter,
     depositVaultWithMorpho.address,
   );
@@ -283,7 +286,7 @@ export async function morphoRedemptionFixture() {
     );
 
   // Grant BURN_ROLE to redemption vault
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     roles.tokenRoles.mTBILL.burner,
     redemptionVaultWithMorpho.address,
   );

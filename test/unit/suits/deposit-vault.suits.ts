@@ -223,7 +223,7 @@ export const depositVaultSuits = (
             regularAccounts[0].address,
           );
 
-          await accessControl.grantRole(
+          await accessControl['grantRole(bytes32,address)'](
             roles.tokenRoles.mTBILL.depositVaultAdmin,
             regularAccounts[0].address,
           );
@@ -304,7 +304,7 @@ export const depositVaultSuits = (
             regularAccounts[0].address,
           );
 
-          await accessControl.grantRole(
+          await accessControl['grantRole(bytes32,address)'](
             roles.tokenRoles.mTBILL.depositVaultAdmin,
             regularAccounts[0].address,
           );
@@ -385,7 +385,7 @@ export const depositVaultSuits = (
             regularAccounts[0].address,
           );
 
-          await accessControl.grantRole(
+          await accessControl['grantRole(bytes32,address)'](
             roles.tokenRoles.mTBILL.depositVaultAdmin,
             regularAccounts[0].address,
           );

@@ -156,7 +156,7 @@ const grantContractPauser = async (
   account: SignerWithAddress,
 ) => {
   const role = await pausableTester.contractAdminRole();
-  await accessControl.grantRole(role, account.address);
+  await accessControl['grantRole(bytes32,address)'](role, account.address);
 };
 
 const toTimelockCtx = (
@@ -1460,7 +1460,10 @@ describe('MidasPauseManager', () => {
       } = await loadFixture(defaultDeploy);
 
       const pauseAdminRole = await pauseManager.pauseAdminRole();
-      await accessControl.grantRole(pauseAdminRole, regularAccounts[0].address);
+      await accessControl['grantRole(bytes32,address)'](
+        pauseAdminRole,
+        regularAccounts[0].address,
+      );
 
       await adminPauseContractTest({ pauseManager, owner }, pausableTester, {
         from: regularAccounts[0],
@@ -1624,7 +1627,10 @@ describe('MidasPauseManager', () => {
       } = await loadFixture(defaultDeploy);
 
       const pauseAdminRole = await pauseManager.pauseAdminRole();
-      await accessControl.grantRole(pauseAdminRole, regularAccounts[0].address);
+      await accessControl['grantRole(bytes32,address)'](
+        pauseAdminRole,
+        regularAccounts[0].address,
+      );
 
       const calldata = pauseManager.interface.encodeFunctionData(
         'contractAdminUnpause',

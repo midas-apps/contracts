@@ -178,10 +178,7 @@ library AccessControlUtilsLibrary {
             revert NoFunctionPermission(role, functionSelector, account);
         }
 
-        require(
-            !accessControl.isUserFacingRole(role),
-            UserFacingRoleNotAllowed(role)
-        );
+        requireNotUserFacingRole(accessControl, role);
 
         bool hasRootRole = accessControl.hasRole(role, account);
 
@@ -206,7 +203,22 @@ library AccessControlUtilsLibrary {
             return role;
         }
 
-        return _resolveAccessRole(accessControl, role, key, overrideDelay);
+        return resolveAccessRole(accessControl, role, key, overrideDelay);
+    }
+
+    /**
+     * @dev validates that the role is not a user facing role
+     * @param accessControl access control contract
+     * @param role role
+     */
+    function requireNotUserFacingRole(
+        IMidasAccessControl accessControl,
+        bytes32 role
+    ) internal view {
+        require(
+            !accessControl.isUserFacingRole(role),
+            UserFacingRoleNotAllowed(role)
+        );
     }
 
     /**
@@ -264,12 +276,12 @@ library AccessControlUtilsLibrary {
      * @param overrideDelay override delay
      * @return roleUsed role used to validate the function access
      */
-    function _resolveAccessRole(
+    function resolveAccessRole(
         IMidasAccessControl accessControl,
         bytes32 rootRole,
         bytes32 functionRoleKey,
         uint256 overrideDelay
-    ) private view returns (bytes32 roleUsed) {
+    ) internal view returns (bytes32 roleUsed) {
         if (overrideDelay != NULL_DELAY) {
             return rootRole;
         }

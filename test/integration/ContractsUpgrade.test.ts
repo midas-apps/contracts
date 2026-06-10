@@ -122,10 +122,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
     await executeWriteViaTimelock(
       ctx,
       ctx.accessControl.address,
-      ctx.accessControl.interface.encodeFunctionData('grantRole', [
-        role,
-        account,
-      ]),
+      ctx.accessControl.interface.encodeFunctionData(
+        'grantRole(bytes32,address)',
+        [role, account],
+      ),
       proposer,
     );
   };
@@ -179,7 +179,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
         await expect(
           accessControl
             .connect(acDefaultAdmin)
-            .grantRole(roles.common.pauseAdmin, recipient.address),
+            ['grantRole(bytes32,address)'](
+              roles.common.pauseAdmin,
+              recipient.address,
+            ),
         ).not.reverted;
 
         expect(
@@ -206,7 +209,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
         await expect(
           accessControl
             .connect(unauthorized)
-            .grantRole(roles.common.pauseAdmin, recipient.address),
+            ['grantRole(bytes32,address)'](
+              roles.common.pauseAdmin,
+              recipient.address,
+            ),
         ).revertedWithCustomError(
           accessControl,
           acErrors.WMAC_HASNT_PERMISSION().customErrorName,
@@ -313,7 +319,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
 
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(roles.common.pauseAdmin, acDefaultAdmin.address);
+          ['grantRole(bytes32,address)'](
+            roles.common.pauseAdmin,
+            acDefaultAdmin.address,
+          );
 
         await pauseGlobalTest({
           pauseManager,
@@ -429,7 +438,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
 
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(mTbillRoles.minter, acDefaultAdmin.address);
+          ['grantRole(bytes32,address)'](
+            mTbillRoles.minter,
+            acDefaultAdmin.address,
+          );
 
         await mint(
           { tokenContract: mTbill, owner: acDefaultAdmin },
@@ -529,10 +541,16 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
 
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(mTbillRoles.minter, acDefaultAdmin.address);
+          ['grantRole(bytes32,address)'](
+            mTbillRoles.minter,
+            acDefaultAdmin.address,
+          );
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(mTbillRoles.burner, acDefaultAdmin.address);
+          ['grantRole(bytes32,address)'](
+            mTbillRoles.burner,
+            acDefaultAdmin.address,
+          );
 
         await mint(
           { tokenContract: mTbill, owner: acDefaultAdmin },
@@ -671,7 +689,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
 
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(await mTbill.BLACKLISTED_ROLE(), from.address);
+          ['grantRole(bytes32,address)'](
+            await mTbill.BLACKLISTED_ROLE(),
+            from.address,
+          );
 
         await expect(
           mTbill.connect(from).transfer(to.address, amount),
@@ -707,10 +728,16 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
 
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(mGlobalRoles.minter, acDefaultAdmin.address);
+          ['grantRole(bytes32,address)'](
+            mGlobalRoles.minter,
+            acDefaultAdmin.address,
+          );
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(mGlobalRoles.greenlisted, recipient.address);
+          ['grantRole(bytes32,address)'](
+            mGlobalRoles.greenlisted,
+            recipient.address,
+          );
 
         await mint(
           { tokenContract: mGlobal, owner: acDefaultAdmin },
@@ -814,13 +841,22 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
 
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(mGlobalRoles.minter, acDefaultAdmin.address);
+          ['grantRole(bytes32,address)'](
+            mGlobalRoles.minter,
+            acDefaultAdmin.address,
+          );
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(mGlobalRoles.burner, acDefaultAdmin.address);
+          ['grantRole(bytes32,address)'](
+            mGlobalRoles.burner,
+            acDefaultAdmin.address,
+          );
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(mGlobalRoles.greenlisted, holder.address);
+          ['grantRole(bytes32,address)'](
+            mGlobalRoles.greenlisted,
+            holder.address,
+          );
 
         await mint(
           { tokenContract: mGlobal, owner: acDefaultAdmin },
@@ -921,10 +957,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
 
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(greenlistRole, from.address);
+          ['grantRole(bytes32,address)'](greenlistRole, from.address);
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(greenlistRole, to.address);
+          ['grantRole(bytes32,address)'](greenlistRole, to.address);
 
         await expect(mGlobal.connect(from).transfer(to.address, amount)).not
           .reverted;
@@ -949,13 +985,19 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
 
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(mGlobalRoles.minter, acDefaultAdmin.address);
+          ['grantRole(bytes32,address)'](
+            mGlobalRoles.minter,
+            acDefaultAdmin.address,
+          );
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(mGlobalRoles.greenlisted, to.address);
+          ['grantRole(bytes32,address)'](mGlobalRoles.greenlisted, to.address);
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(mGlobalRoles.greenlisted, from.address);
+          ['grantRole(bytes32,address)'](
+            mGlobalRoles.greenlisted,
+            from.address,
+          );
 
         await mint(
           { tokenContract: mGlobal, owner: acDefaultAdmin },
@@ -1018,7 +1060,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
         const contractAdminRole = await mTbillDataFeed.contractAdminRole();
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(contractAdminRole, acDefaultAdmin.address);
+          ['grantRole(bytes32,address)'](
+            contractAdminRole,
+            acDefaultAdmin.address,
+          );
 
         const newAggregator = await new AggregatorV3Mock__factory(
           deployer,
@@ -1113,7 +1158,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
         const contractAdminRole = await mTbillDataFeed.contractAdminRole();
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(contractAdminRole, acDefaultAdmin.address);
+          ['grantRole(bytes32,address)'](
+            contractAdminRole,
+            acDefaultAdmin.address,
+          );
 
         await mTbillDataFeed
           .connect(acDefaultAdmin)
@@ -1198,7 +1246,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
         const contractAdminRole = await mTbillCustomFeed.contractAdminRole();
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(contractAdminRole, acDefaultAdmin.address);
+          ['grantRole(bytes32,address)'](
+            contractAdminRole,
+            acDefaultAdmin.address,
+          );
 
         const roundBefore = await mTbillCustomFeed.latestRound();
         const answer = await mTbillCustomFeed.lastAnswer();
@@ -1284,7 +1335,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
         const contractAdminRole = await mTbillCustomFeed.contractAdminRole();
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(contractAdminRole, acDefaultAdmin.address);
+          ['grantRole(bytes32,address)'](
+            contractAdminRole,
+            acDefaultAdmin.address,
+          );
 
         await mTbillCustomFeed
           .connect(acDefaultAdmin)
@@ -1363,7 +1417,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
         const contractAdminRole = await mGlobalDataFeed.contractAdminRole();
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(contractAdminRole, acDefaultAdmin.address);
+          ['grantRole(bytes32,address)'](
+            contractAdminRole,
+            acDefaultAdmin.address,
+          );
 
         const newAggregator = await new AggregatorV3Mock__factory(
           deployer,
@@ -1480,7 +1537,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           await mGlobalCustomFeedGrowth.contractAdminRole();
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(contractAdminRole, acDefaultAdmin.address);
+          ['grantRole(bytes32,address)'](
+            contractAdminRole,
+            acDefaultAdmin.address,
+          );
 
         const raw = await mGlobalCustomFeedGrowth.latestRoundDataRaw();
         const roundBefore = await mGlobalCustomFeedGrowth.latestRound();
@@ -1584,7 +1644,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           await mGlobalCustomFeedGrowth.contractAdminRole();
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(contractAdminRole, acDefaultAdmin.address);
+          ['grantRole(bytes32,address)'](
+            contractAdminRole,
+            acDefaultAdmin.address,
+          );
 
         const newMaxGrowthApr = await mGlobalCustomFeedGrowth.maxGrowthApr();
 
@@ -1661,7 +1724,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           await mGlobalCustomFeedGrowth.contractAdminRole();
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(contractAdminRole, acDefaultAdmin.address);
+          ['grantRole(bytes32,address)'](
+            contractAdminRole,
+            acDefaultAdmin.address,
+          );
 
         const newOnlyUp = !(await mGlobalCustomFeedGrowth.onlyUp());
 
@@ -1735,7 +1801,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           await mGlobalCustomFeedGrowth.contractAdminRole();
         await accessControl
           .connect(acDefaultAdmin)
-          .grantRole(contractAdminRole, acDefaultAdmin.address);
+          ['grantRole(bytes32,address)'](
+            contractAdminRole,
+            acDefaultAdmin.address,
+          );
 
         await mGlobalCustomFeedGrowth
           .connect(acDefaultAdmin)

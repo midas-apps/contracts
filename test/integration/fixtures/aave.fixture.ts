@@ -5,11 +5,11 @@ import { rpcUrls } from '../../../config';
 import { getAllRoles } from '../../../helpers/roles';
 import {
   MidasAccessControlTest,
-  MTBILLTest,
   DepositVaultWithAaveTest,
   RedemptionVaultWithAaveTest,
   DataFeedTest,
   AggregatorV3Mock,
+  MToken,
 } from '../../../typechain-types';
 import { deployProxyContract } from '../../common/deploy.helpers';
 import { impersonateAndFundAccount, resetFork } from '../helpers/fork.helpers';
@@ -35,7 +35,8 @@ async function setupAaveBase() {
     [],
   );
 
-  const mTBILL = await deployProxyContract<MTBILLTest>('mTBILLTest', [
+  // FIXME:
+  const mTBILL = await deployProxyContract<MToken>('mTBILLTest', [
     accessControl.address,
   ]);
 
@@ -50,20 +51,23 @@ async function setupAaveBase() {
   ];
 
   for (const role of rolesArray) {
-    await accessControl.grantRole(role, owner.address);
+    await accessControl['grantRole(bytes32,address)'](role, owner.address);
   }
 
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     allRoles.tokenRoles.mTBILL.depositVaultAdmin,
     vaultAdmin.address,
   );
 
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     allRoles.tokenRoles.mTBILL.redemptionVaultAdmin,
     vaultAdmin.address,
   );
 
-  await accessControl.grantRole(allRoles.common.greenlisted, testUser.address);
+  await accessControl['grantRole(bytes32,address)'](
+    allRoles.common.greenlisted,
+    testUser.address,
+  );
 
   const usdcAggregator = (await (
     await ethers.getContractFactory('AggregatorV3Mock')
@@ -201,7 +205,7 @@ export async function aaveDepositFixture() {
     );
 
   // Grant MINTER_ROLE to deposit vault
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     roles.tokenRoles.mTBILL.minter,
     depositVaultWithAave.address,
   );
@@ -275,7 +279,7 @@ export async function aaveRedemptionFixture() {
     );
 
   // Grant BURN_ROLE to redemption vault
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     roles.tokenRoles.mTBILL.burner,
     redemptionVaultWithAave.address,
   );

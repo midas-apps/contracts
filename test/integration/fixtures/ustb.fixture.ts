@@ -52,20 +52,23 @@ async function setupUstbBase() {
   ];
 
   for (const role of rolesArray) {
-    await accessControl.grantRole(role, owner.address);
+    await accessControl['grantRole(bytes32,address)'](role, owner.address);
   }
 
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     allRoles.tokenRoles.mTBILL.redemptionVaultAdmin,
     vaultAdmin.address,
   );
 
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     allRoles.tokenRoles.mTBILL.depositVaultAdmin,
     vaultAdmin.address,
   );
 
-  await accessControl.grantRole(allRoles.common.greenlisted, testUser.address);
+  await accessControl['grantRole(bytes32,address)'](
+    allRoles.common.greenlisted,
+    testUser.address,
+  );
 
   const usdcAggregator = (await (
     await ethers.getContractFactory('AggregatorV3Mock')
@@ -187,7 +190,7 @@ export async function ustbDepositFixture() {
     );
 
   // Grant MINTER_ROLE to vault
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     roles.tokenRoles.mTBILL.minter,
     depositVaultWithUSTB.address,
   );
@@ -247,7 +250,7 @@ export async function ustbRedemptionFixture() {
     );
 
   // Grant BURN_ROLE to vault
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     roles.tokenRoles.mTBILL.burner,
     redemptionVaultWithUSTB.address,
   );

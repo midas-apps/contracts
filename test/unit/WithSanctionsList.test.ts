@@ -96,7 +96,7 @@ describe('WithSanctionsList', function () {
       const { accessControl, withSanctionsListTester, owner } =
         await loadFixture(defaultDeploy);
 
-      await accessControl.grantRole(
+      await accessControl['grantRole(bytes32,address)'](
         await withSanctionsListTester.sanctionsListAdminRole(),
         owner.address,
       );
@@ -115,7 +115,10 @@ describe('WithSanctionsList', function () {
         await withSanctionsListTester.sanctionsListAdminRole();
       const selector = encodeFnSelector('setSanctionsList(address)');
 
-      await accessControl.grantRole(sanctionsListAdmin, owner.address);
+      await accessControl['grantRole(bytes32,address)'](
+        sanctionsListAdmin,
+        owner.address,
+      );
 
       await setupGrantOperatorRole({
         accessControl,
@@ -156,7 +159,10 @@ describe('WithSanctionsList', function () {
       const selector = encodeFnSelector('setSanctionsList(address)');
       const user = regularAccounts[0];
 
-      await accessControl.grantRole(sanctionsListAdmin, owner.address);
+      await accessControl['grantRole(bytes32,address)'](
+        sanctionsListAdmin,
+        owner.address,
+      );
 
       await setupGrantOperatorRole({
         accessControl,
@@ -177,7 +183,10 @@ describe('WithSanctionsList', function () {
         },
       ]);
 
-      await accessControl.grantRole(sanctionsListAdmin, user.address);
+      await accessControl['grantRole(bytes32,address)'](
+        sanctionsListAdmin,
+        user.address,
+      );
 
       await setSanctionsList(
         { withSanctionsList: withSanctionsListTester, owner },
@@ -197,7 +206,7 @@ describe('WithSanctionsList', function () {
         regularAccounts,
       } = await loadFixture(defaultDeploy);
 
-      await accessControl.grantRole(
+      await accessControl['grantRole(bytes32,address)'](
         await withSanctionsListTester.sanctionsListAdminRole(),
         owner.address,
       );

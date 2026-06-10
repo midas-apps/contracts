@@ -173,7 +173,10 @@ describe('Greenlistable', function () {
         ],
       );
 
-      await accessControl.grantRole(greenlistAdmin, user.address);
+      await accessControl['grantRole(bytes32,address)'](
+        greenlistAdmin,
+        user.address,
+      );
 
       expect(await accessControl.hasRole(greenlistAdmin, user.address)).eq(
         true,
