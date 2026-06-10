@@ -252,7 +252,8 @@ export const grantRoleTester = async (
   expect(await accessControl.hasRole(role, account)).eq(true);
 
   if (delay !== undefined && BigNumber.from(delay).gt(0)) {
-    expect(await accessControl.getRoleTimelockDelay(role, 0)).eq(delay);
+    const [actualDelay] = await accessControl.getRoleTimelockDelay(role, 0);
+    expect(actualDelay).eq(delay);
   }
 };
 
@@ -406,9 +407,16 @@ export const setGrantOperatorRoleTester = async (
     ).eq(param.enabled);
 
     if (param.delay !== undefined && BigNumber.from(param.delay).gt(0)) {
-      expect(await accessControl.getRoleTimelockDelay(masterRole, 0)).eq(
-        param.delay,
+      const operatorKey = await accessControl.grantOperatorRoleKey(
+        masterRole,
+        targetContract,
+        param.functionSelector,
       );
+      const [actualDelay] = await accessControl.getRoleTimelockDelay(
+        operatorKey,
+        0,
+      );
+      expect(actualDelay).eq(param.delay);
     }
   }
 };
@@ -475,7 +483,8 @@ export const setPermissionRoleTester = async (
   );
 
   if (delay !== undefined && BigNumber.from(delay).gt(0)) {
-    expect(await accessControl.getRoleTimelockDelay(key, 0)).eq(delay);
+    const [actualDelay] = await accessControl.getRoleTimelockDelay(key, 0);
+    expect(actualDelay).eq(delay);
   }
 
   for (const [index, stateBefore] of statesBefore.entries()) {

@@ -925,6 +925,18 @@ describe('MidasAccessControl', function () {
         revertCustomError: { customErrorName: 'EmptyArray' },
       });
     });
+
+    it('when switching enabled to disabled', async () => {
+      const { accessControl, owner, roles } = await loadFixture(defaultDeploy);
+
+      await setIsUserFacingRoleTester({ accessControl, owner }, [
+        { role: roles.common.greenlistedOperator, enabled: true },
+      ]);
+
+      await setIsUserFacingRoleTester({ accessControl, owner }, [
+        { role: roles.common.greenlistedOperator, enabled: false },
+      ]);
+    });
   });
 
   describe('setGrantOperatorRoleMult()', () => {
@@ -1119,6 +1131,104 @@ describe('MidasAccessControl', function () {
         {
           revertCustomError: { customErrorName: 'EmptyArray' },
         },
+      );
+    });
+
+    it('when switching enabled to disabled', async () => {
+      const { accessControl, owner, roles, wAccessControlTester } =
+        await loadFixture(defaultDeploy);
+
+      const selector = encodeFnSelector('setGreenlistEnable(bool)');
+
+      await wAccessControlTester.setContractAdminRole(
+        roles.common.greenlistedOperator,
+      );
+
+      const params = [
+        {
+          functionSelector: selector,
+          operator: owner.address,
+          enabled: true,
+        },
+      ];
+
+      await setGrantOperatorRoleTester(
+        { accessControl, owner },
+        wAccessControlTester.address,
+        params,
+      );
+
+      await setGrantOperatorRoleTester(
+        { accessControl, owner },
+        wAccessControlTester.address,
+        [{ ...params[0], enabled: false }],
+      );
+    });
+
+    it('when delay is not NULL_DELAY but actual delay is NULL_DELAY - should set the delay', async () => {
+      const { accessControl, owner, roles, wAccessControlTester } =
+        await loadFixture(defaultDeploy);
+
+      const selector = encodeFnSelector('setGreenlistEnable(bool)');
+
+      await wAccessControlTester.setContractAdminRole(
+        roles.common.greenlistedOperator,
+      );
+
+      await setGrantOperatorRoleTester(
+        { accessControl, owner },
+        wAccessControlTester.address,
+        [
+          {
+            functionSelector: selector,
+            operator: owner.address,
+            enabled: true,
+            delay: 3600,
+          },
+        ],
+      );
+    });
+
+    it('should fail: when delay is not NULL_DELAY but actual delay is also not null', async () => {
+      const {
+        accessControl,
+        owner,
+        roles,
+        timelock,
+        timelockManager,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      const selector = encodeFnSelector('setGreenlistEnable(bool)');
+
+      await wAccessControlTester.setContractAdminRole(
+        roles.common.greenlistedOperator,
+      );
+
+      const operatorRoleKey = await accessControl.grantOperatorRoleKey(
+        roles.common.greenlistedOperator,
+        wAccessControlTester.address,
+        selector,
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [operatorRoleKey],
+        [3600],
+      );
+
+      await setGrantOperatorRoleTester(
+        { accessControl, owner },
+        wAccessControlTester.address,
+        [
+          {
+            functionSelector: selector,
+            operator: owner.address,
+            enabled: true,
+            delay: 7200,
+          },
+        ],
+        { revertCustomError: { customErrorName: 'InvalidTimelockDelay' } },
       );
     });
   });
@@ -1422,6 +1532,228 @@ describe('MidasAccessControl', function () {
         { revertCustomError: acErrors.WMAC_HASNT_PERMISSION() },
       );
     });
+
+    it('when switching enabled to disabled', async () => {
+      const {
+        accessControl,
+        owner,
+        regularAccounts,
+        roles,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      const selector = encodeFnSelector('setGreenlistEnable(bool)');
+
+      await wAccessControlTester.setContractAdminRole(
+        roles.common.greenlistedOperator,
+      );
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole: roles.common.greenlistedOperator,
+        targetContract: wAccessControlTester.address,
+        functionSelector: selector,
+        grantOperator: owner,
+      });
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        roles.common.greenlistedOperator,
+        wAccessControlTester.address,
+        selector,
+        [{ account: regularAccounts[0].address, enabled: true }],
+      );
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        roles.common.greenlistedOperator,
+        wAccessControlTester.address,
+        selector,
+        [{ account: regularAccounts[0].address, enabled: false }],
+      );
+    });
+
+    it('when delay is not NULL_DELAY but actual delay is NULL_DELAY - should set the delay', async () => {
+      const {
+        accessControl,
+        owner,
+        regularAccounts,
+        roles,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      const selector = encodeFnSelector('setGreenlistEnable(bool)');
+
+      await wAccessControlTester.setContractAdminRole(
+        roles.common.greenlistedOperator,
+      );
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole: roles.common.greenlistedOperator,
+        targetContract: wAccessControlTester.address,
+        functionSelector: selector,
+        grantOperator: owner,
+      });
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        roles.common.greenlistedOperator,
+        wAccessControlTester.address,
+        selector,
+        [{ account: regularAccounts[0].address, enabled: true }],
+        3600,
+      );
+    });
+
+    it('should fail: when delay is not NULL_DELAY but actual delay is also not null', async () => {
+      const {
+        accessControl,
+        owner,
+        regularAccounts,
+        roles,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      const selector = encodeFnSelector('setGreenlistEnable(bool)');
+
+      await wAccessControlTester.setContractAdminRole(
+        roles.common.greenlistedOperator,
+      );
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole: roles.common.greenlistedOperator,
+        targetContract: wAccessControlTester.address,
+        functionSelector: selector,
+        grantOperator: owner,
+      });
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        roles.common.greenlistedOperator,
+        wAccessControlTester.address,
+        selector,
+        [{ account: regularAccounts[0].address, enabled: true }],
+        3600,
+      );
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        roles.common.greenlistedOperator,
+        wAccessControlTester.address,
+        selector,
+        [{ account: regularAccounts[1].address, enabled: true }],
+        7200,
+        { revertCustomError: { customErrorName: 'InvalidTimelockDelay' } },
+      );
+    });
+
+    it('when have both operator and master roles, and master role does not have a delay but operator do - should use master role', async () => {
+      const {
+        accessControl,
+        owner,
+        regularAccounts,
+        roles,
+        timelock,
+        timelockManager,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      const selector = encodeFnSelector('setGreenlistEnable(bool)');
+
+      await wAccessControlTester.setContractAdminRole(
+        roles.common.greenlistedOperator,
+      );
+
+      const operatorRoleKey = await accessControl.grantOperatorRoleKey(
+        roles.common.greenlistedOperator,
+        wAccessControlTester.address,
+        selector,
+      );
+
+      await setGrantOperatorRoleTester(
+        { accessControl, owner },
+        wAccessControlTester.address,
+        [
+          {
+            functionSelector: selector,
+            operator: owner.address,
+            enabled: true,
+          },
+        ],
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [operatorRoleKey],
+        [3600],
+      );
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        roles.common.greenlistedOperator,
+        wAccessControlTester.address,
+        selector,
+        [{ account: regularAccounts[0].address, enabled: true }],
+      );
+    });
+
+    it('when have both operator and master roles, and operator role does not have a delay but master do - should use operator role', async () => {
+      const {
+        accessControl,
+        owner,
+        regularAccounts,
+        roles,
+        timelock,
+        timelockManager,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      const selector = encodeFnSelector('setGreenlistEnable(bool)');
+
+      await wAccessControlTester.setContractAdminRole(
+        roles.common.greenlistedOperator,
+      );
+
+      const operatorRoleKey = await accessControl.grantOperatorRoleKey(
+        roles.common.greenlistedOperator,
+        wAccessControlTester.address,
+        selector,
+      );
+
+      await setGrantOperatorRoleTester(
+        { accessControl, owner },
+        wAccessControlTester.address,
+        [
+          {
+            functionSelector: selector,
+            operator: owner.address,
+            enabled: true,
+          },
+        ],
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [roles.common.greenlistedOperator],
+        [3600],
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [operatorRoleKey],
+        [constants.MaxUint256],
+      );
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        roles.common.greenlistedOperator,
+        wAccessControlTester.address,
+        selector,
+        [{ account: regularAccounts[0].address, enabled: true }],
+      );
+    });
   });
 
   describe('grantRole()', () => {
@@ -1493,6 +1825,38 @@ describe('MidasAccessControl', function () {
         { accessControl, owner },
         roles.common.blacklisted,
         regularAccounts[0].address,
+      );
+    });
+
+    it('when delay is not NULL_DELAY but actual delay is NULL_DELAY - should set the delay', async () => {
+      const { accessControl, owner, regularAccounts, roles } =
+        await loadFixture(defaultDeploy);
+
+      await grantRoleTester(
+        { accessControl, owner },
+        roles.common.blacklisted,
+        regularAccounts[0].address,
+        3600,
+      );
+    });
+
+    it('should fail: when delay is not NULL_DELAY but actual delay is also not null', async () => {
+      const { accessControl, owner, regularAccounts, roles } =
+        await loadFixture(defaultDeploy);
+
+      await grantRoleTester(
+        { accessControl, owner },
+        roles.common.blacklisted,
+        regularAccounts[0].address,
+        3600,
+      );
+
+      await grantRoleTester(
+        { accessControl, owner },
+        roles.common.blacklisted,
+        regularAccounts[1].address,
+        7200,
+        { revertCustomError: { customErrorName: 'InvalidTimelockDelay' } },
       );
     });
   });

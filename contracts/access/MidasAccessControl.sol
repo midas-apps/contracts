@@ -187,8 +187,8 @@ contract MidasAccessControl is
         for (uint256 i = 0; i < params.length; ++i) {
             SetUserFacingRoleParams calldata param = params[i];
 
-            // if already enabled, skip and do not emit event
-            if (isUserFacingRole[param.role]) {
+            // if value already set, skip and do not emit event
+            if (isUserFacingRole[param.role] == param.enabled) {
                 continue;
             }
 
@@ -225,8 +225,11 @@ contract MidasAccessControl is
                 _setRoleDelay(operatorKey, param.delay);
             }
 
-            // if already enabled, skip and do not emit event
-            if (_grantOperatorRoles[operatorKey][param.operator]) {
+            // if value already set, skip and do not emit event
+            if (
+                _grantOperatorRoles[operatorKey][param.operator] ==
+                param.enabled
+            ) {
                 continue;
             }
 
@@ -275,8 +278,11 @@ contract MidasAccessControl is
         for (uint256 i = 0; i < params.length; ++i) {
             SetPermissionRoleParams calldata param = params[i];
 
-            // if already enabled, skip and do not emit event
-            if (_permissionRoles[functionRoleKey][param.account]) {
+            // if value already set, skip and do not emit event
+            if (
+                _permissionRoles[functionRoleKey][param.account] ==
+                param.enabled
+            ) {
                 continue;
             }
 
