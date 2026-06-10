@@ -202,8 +202,7 @@ export const defaultDeploy = async () => {
     .filter((v) => v !== '-' && !!v && !excludedRoles.includes(v)) as string[];
 
   await accessControl.grantRoleMult(
-    rolesFlat,
-    rolesFlat.map((_) => owner.address),
+    rolesFlat.map((role) => ({ role, account: owner.address, delay: 0 })),
   );
 
   const mockedAggregator = await new AggregatorV3Mock__factory(owner).deploy();
@@ -1009,15 +1008,12 @@ export const layerZeroFixture = async () => {
     },
   ]);
 
-  await accessControl.grantRoleMult(
-    [roles.minter, roles.burner, roles.minter, roles.burner],
-    [
-      oftAdapterA.address,
-      oftAdapterA.address,
-      oftAdapterB.address,
-      oftAdapterB.address,
-    ],
-  );
+  await accessControl.grantRoleMult([
+    { role: roles.minter, account: oftAdapterA.address, delay: 0 },
+    { role: roles.burner, account: oftAdapterA.address, delay: 0 },
+    { role: roles.minter, account: oftAdapterB.address, delay: 0 },
+    { role: roles.burner, account: oftAdapterB.address, delay: 0 },
+  ]);
 
   await mockEndpointA.setDestLzEndpoint(
     oftAdapterB.address,
@@ -1213,15 +1209,12 @@ export const axelarFixture = async () => {
 
   const roles = getRolesForToken('mTBILL');
 
-  await accessControl.grantRoleMult(
-    [roles.minter, roles.burner, roles.minter, roles.burner],
-    [
-      axelarItsA.address,
-      axelarItsA.address,
-      axelarItsB.address,
-      axelarItsB.address,
-    ],
-  );
+  await accessControl.grantRoleMult([
+    { role: roles.minter, account: axelarItsA.address, delay: 0 },
+    { role: roles.burner, account: axelarItsA.address, delay: 0 },
+    { role: roles.minter, account: axelarItsB.address, delay: 0 },
+    { role: roles.burner, account: axelarItsB.address, delay: 0 },
+  ]);
 
   const executor = await deployProxyContract<MidasAxelarVaultExecutableTester>(
     'MidasAxelarVaultExecutableTester',

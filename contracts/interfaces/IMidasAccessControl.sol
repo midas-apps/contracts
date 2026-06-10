@@ -22,11 +22,6 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
     error Forbidden();
 
     /**
-     * @notice Array arguments have different lengths
-     */
-    error MismatchingArrayLengths();
-
-    /**
      * @notice when the role is being revoked from the self
      * @param role role to be revoked
      * @param account account to be revoked
@@ -37,6 +32,13 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
      * @notice when the delay is invalid
      */
     error InvalidTimelockDelay();
+
+    /**
+     * @notice when the role admin mismatch
+     * @param role role to be revoked
+     * @param adminRole admin role
+     */
+    error RoleAdminMismatch(bytes32 role, bytes32 adminRole);
 
     /**
      * @notice Set user facing role params
@@ -70,6 +72,38 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
         address account;
         /// @notice grant or revoke permission
         bool enabled;
+    }
+
+    /**
+     * @notice Grant role params
+     */
+    struct GrantRoleMultParams {
+        /// @notice role to be granted
+        bytes32 role;
+        /// @notice account to be granted the role
+        address account;
+        /// @notice delay value
+        uint256 delay;
+    }
+
+    /**
+     * @notice Revoke role params
+     */
+    struct RevokeRoleMultParams {
+        /// @notice role to be revoked
+        bytes32 role;
+        /// @notice account to be revoked the role
+        address account;
+    }
+
+    /**
+     * @notice Set role delay params
+     */
+    struct SetRoleDelayParams {
+        /// @notice role to be set the delay for
+        bytes32 role;
+        /// @notice delay value
+        uint256 delay;
     }
 
     /**
@@ -114,10 +148,9 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
     event SetDefaultDelay(uint256 defaultDelay);
 
     /**
-     * @param roles role ids
-     * @param delays delay values per role
+     * @param params array of SetRoleDelayParams
      */
-    event SetRoleDelays(bytes32[] roles, uint256[] delays);
+    event SetRoleDelays(SetRoleDelayParams[] params);
 
     /**
      * @param role role id
@@ -175,6 +208,18 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
     ) external;
 
     /**
+     * @notice grant multiple roles to multiple users in one transaction
+     * @param params array of GrantRoleMultParams
+     */
+    function grantRoleMult(GrantRoleMultParams[] calldata params) external;
+
+    /**
+     * @notice revoke multiple roles from multiple users in one transaction
+     * @param params array of RevokeRoleMultParams
+     */
+    function revokeRoleMult(RevokeRoleMultParams[] calldata params) external;
+
+    /**
      * @notice Sets the default delay
      * @param _defaultDelay default delay in seconds
      */
@@ -182,11 +227,9 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
 
     /**
      * @notice Sets timelock delay per role
-     * @param roles role ids
-     * @param delays delay values (0 = default, max uint = no delay)
+     * @param params array of SetRoleDelayParams
      */
-    function setRoleDelays(bytes32[] memory roles, uint256[] memory delays)
-        external;
+    function setRoleDelayMult(SetRoleDelayParams[] calldata params) external;
 
     /**
      * @notice set the admin role for a specific role

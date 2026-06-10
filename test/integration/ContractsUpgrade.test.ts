@@ -15,7 +15,11 @@ import {
   MidasAccessControlTimelockController,
   MidasTimelockManager,
 } from '../../typechain-types';
-import { acErrors, setRoleTimelocksAndExecute } from '../common/ac.helpers';
+import {
+  acErrors,
+  grantRoleMultTester,
+  setRoleTimelocksAndExecute,
+} from '../common/ac.helpers';
 import { pauseGlobalTest } from '../common/common.helpers';
 import { burn, mint } from '../common/mtoken.helpers';
 import {
@@ -65,8 +69,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
         timelock,
         owner: acDefaultAdmin,
       },
-      rolesToReset,
-      rolesToReset.map(() => constants.MaxUint256),
+      rolesToReset.map((role) => ({
+        role,
+        delay: constants.MaxUint256,
+      })),
     );
   };
 
@@ -139,13 +145,15 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
     accounts: string[],
     proposer: SignerWithAddress,
   ) => {
+    const params = roles.map((role, index) => ({
+      role,
+      account: accounts[index],
+      delay: 0,
+    }));
     await executeWriteViaTimelock(
       ctx,
       ctx.accessControl.address,
-      ctx.accessControl.interface.encodeFunctionData('grantRoleMult', [
-        roles,
-        accounts,
-      ]),
+      ctx.accessControl.interface.encodeFunctionData('grantRoleMult', [params]),
       proposer,
     );
   };
@@ -255,30 +263,27 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           timelock,
         });
 
-        await expect(
-          accessControl
-            .connect(acDefaultAdmin)
-            .grantRoleMult(
-              [roles.common.pauseAdmin, roles.common.timelockOperationPauser],
-              [accountA.address, accountB.address],
-            ),
-        ).not.reverted;
-
-        expect(
-          await accessControl.hasRole(
-            roles.common.pauseAdmin,
-            accountA.address,
-          ),
-        ).to.eq(true);
-        expect(
-          await accessControl.hasRole(
-            roles.common.timelockOperationPauser,
-            accountB.address,
-          ),
-        ).to.eq(true);
+        await grantRoleMultTester(
+          { accessControl, owner: acDefaultAdmin },
+          [
+            {
+              role: roles.common.pauseAdmin,
+              account: accountA.address,
+              delay: 0,
+            },
+            {
+              role: roles.common.timelockOperationPauser,
+              account: accountB.address,
+              delay: 0,
+            },
+          ],
+          {
+            from: acDefaultAdmin,
+          },
+        );
       });
 
-      it('should fail: arrays length mismatch', async () => {
+      it('should fail: array is empty', async () => {
         const { accessControl, acDefaultAdmin, timelockManager, timelock } =
           await loadFixture(mainnetUpgradeFixture);
 
@@ -289,11 +294,14 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           timelock,
         });
 
-        await expect(
-          accessControl
-            .connect(acDefaultAdmin)
-            .grantRoleMult([], [constants.AddressZero]),
-        ).revertedWith('MAC: mismatch arrays');
+        await grantRoleMultTester(
+          { accessControl, owner: acDefaultAdmin },
+          [],
+          {
+            from: acDefaultAdmin,
+            revertCustomError: { customErrorName: 'EmptyArray' },
+          },
+        );
       });
     });
   });
@@ -674,12 +682,22 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
         });
 
         const allRoles = await getAllRoles();
-        await accessControl
-          .connect(acDefaultAdmin)
-          .grantRoleMult(
-            [mTbillRoles.minter, allRoles.common.blacklistedOperator],
-            [acDefaultAdmin.address, acDefaultAdmin.address],
-          );
+        await grantRoleMultTester(
+          { accessControl, owner: acDefaultAdmin },
+          [
+            {
+              role: mTbillRoles.minter,
+              account: acDefaultAdmin.address,
+              delay: 0,
+            },
+            {
+              role: allRoles.common.blacklistedOperator,
+              account: acDefaultAdmin.address,
+              delay: 0,
+            },
+          ],
+          { from: acDefaultAdmin },
+        );
 
         await mint(
           { tokenContract: mTbill, owner: acDefaultAdmin },

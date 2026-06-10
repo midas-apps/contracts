@@ -162,17 +162,17 @@ contract MidasAccessControl is
     /**
      * @inheritdoc IMidasAccessControl
      */
-    function setRoleDelays(bytes32[] calldata roles, uint256[] calldata delays)
+    function setRoleDelayMult(SetRoleDelayParams[] calldata params)
         external
         onlyRoleWithTimelock(DEFAULT_ADMIN_ROLE)
     {
-        require(roles.length == delays.length, MismatchingArrayLengths());
+        require(params.length > 0, EmptyArray());
 
-        for (uint256 i = 0; i < roles.length; ++i) {
-            _roleTimelocks[roles[i]] = delays[i];
+        for (uint256 i = 0; i < params.length; ++i) {
+            _roleTimelocks[params[i].role] = params[i].delay;
         }
 
-        emit SetRoleDelays(roles, delays);
+        emit SetRoleDelays(params);
     }
 
     /**
@@ -220,10 +220,7 @@ contract MidasAccessControl is
                 param.functionSelector
             );
 
-            if (param.delay != AccessControlUtilsLibrary.NULL_DELAY) {
-                _requireNullDelay(operatorKey);
-                _setRoleDelay(operatorKey, param.delay);
-            }
+            _validateAndUpdateDelay(operatorKey, param.delay);
 
             // if value already set, skip and do not emit event
             if (
@@ -270,10 +267,7 @@ contract MidasAccessControl is
             functionSelector
         );
 
-        if (delay != AccessControlUtilsLibrary.NULL_DELAY) {
-            _requireNullDelay(functionRoleKey);
-            _setRoleDelay(functionRoleKey, delay);
-        }
+        _validateAndUpdateDelay(functionRoleKey, delay);
 
         for (uint256 i = 0; i < params.length; ++i) {
             SetPermissionRoleParams calldata param = params[i];
@@ -298,6 +292,48 @@ contract MidasAccessControl is
     }
 
     /**
+     * @inheritdoc IMidasAccessControl
+     */
+    function grantRoleMult(GrantRoleMultParams[] calldata params) external {
+        require(params.length > 0, EmptyArray());
+
+        bytes32 adminRole = getRoleAdmin(params[0].role);
+        _validateRoleAccess(adminRole);
+
+        for (uint256 i = 0; i < params.length; ++i) {
+            GrantRoleMultParams calldata param = params[i];
+
+            require(
+                getRoleAdmin(param.role) == adminRole,
+                RoleAdminMismatch(param.role, adminRole)
+            );
+            _grantRole(param.role, param.account);
+            _validateAndUpdateDelay(param.role, param.delay);
+        }
+    }
+
+    /**
+     * @inheritdoc IMidasAccessControl
+     */
+    function revokeRoleMult(RevokeRoleMultParams[] calldata params) external {
+        require(params.length > 0, EmptyArray());
+
+        bytes32 adminRole = getRoleAdmin(params[0].role);
+        address actualSender = _validateRoleAccess(adminRole);
+
+        for (uint256 i = 0; i < params.length; ++i) {
+            RevokeRoleMultParams calldata param = params[i];
+
+            require(
+                getRoleAdmin(param.role) == adminRole,
+                RoleAdminMismatch(param.role, adminRole)
+            );
+            _verifyRevokeRole(param.role, param.account, actualSender);
+            _revokeRole(param.role, param.account);
+        }
+    }
+
+    /**
      * @inheritdoc AccessControlUpgradeable
      */
     function grantRole(bytes32 role, address account)
@@ -317,22 +353,7 @@ contract MidasAccessControl is
         uint256 delay
     ) public {
         grantRole(role, account);
-
-        if (delay != AccessControlUtilsLibrary.NULL_DELAY) {
-            _requireNullDelay(role);
-            _setRoleDelay(role, delay);
-        }
-    }
-
-    /**
-     * @dev validates that the delay is null
-     * @param role role id
-     */
-    function _requireNullDelay(bytes32 role) private {
-        require(
-            _roleTimelocks[role] == AccessControlUtilsLibrary.NULL_DELAY,
-            InvalidTimelockDelay()
-        );
+        _validateAndUpdateDelay(role, delay);
     }
 
     /**
@@ -346,66 +367,6 @@ contract MidasAccessControl is
 
         _verifyRevokeRole(role, account, actualSender);
         _revokeRole(role, account);
-    }
-
-    /**
-     * @notice grant multiple roles to multiple users
-     * in one transaction
-     * @dev length`s of 2 arays should match. All the roles should have the same admin role.
-     * @param roles array of bytes32 roles
-     * @param addresses array of user addresses
-     */
-    function grantRoleMult(
-        bytes32[] calldata roles,
-        address[] calldata addresses
-    ) external {
-        require(
-            roles.length == addresses.length,
-            MismatchArrays(roles.length, addresses.length)
-        );
-
-        require(roles.length > 0, EmptyArray());
-
-        bytes32 adminRole = getRoleAdmin(roles[0]);
-        _validateRoleAccess(adminRole);
-
-        for (uint256 i = 0; i < roles.length; ++i) {
-            require(
-                getRoleAdmin(roles[i]) == adminRole,
-                "MAC: role admin mismatch"
-            );
-            _grantRole(roles[i], addresses[i]);
-        }
-    }
-
-    /**
-     * @notice revoke multiple roles from multiple users
-     * in one transaction
-     * @dev length`s of 2 arays should match. All the roles should have the same admin role.
-     * @param roles array of bytes32 roles
-     * @param addresses array of user addresses
-     */
-    function revokeRoleMult(
-        bytes32[] calldata roles,
-        address[] calldata addresses
-    ) external {
-        require(
-            roles.length == addresses.length,
-            MismatchArrays(roles.length, addresses.length)
-        );
-        require(roles.length > 0, EmptyArray());
-
-        bytes32 adminRole = getRoleAdmin(roles[0]);
-        address actualSender = _validateRoleAccess(adminRole);
-
-        for (uint256 i = 0; i < roles.length; ++i) {
-            require(
-                getRoleAdmin(roles[i]) == adminRole,
-                "MAC: role admin mismatch"
-            );
-            _verifyRevokeRole(roles[i], addresses[i], actualSender);
-            _revokeRole(roles[i], addresses[i]);
-        }
     }
 
     /**
@@ -549,6 +510,22 @@ contract MidasAccessControl is
      */
     function contractAdminRole() public view override returns (bytes32) {
         return DEFAULT_ADMIN_ROLE;
+    }
+
+    /**
+     * @dev validates and updates the delay for a role
+     * @param role role id
+     */
+    function _validateAndUpdateDelay(bytes32 role, uint256 delay) private {
+        if (delay == AccessControlUtilsLibrary.NULL_DELAY) {
+            return;
+        }
+
+        require(
+            _roleTimelocks[role] == AccessControlUtilsLibrary.NULL_DELAY,
+            InvalidTimelockDelay()
+        );
+        _setRoleDelay(role, delay);
     }
 
     /**

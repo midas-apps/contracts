@@ -5,8 +5,6 @@ import { expect } from 'chai';
 import { constants } from 'ethers';
 import { ethers } from 'hardhat';
 
-import { timelockManagerRevert } from './MidasTimelockManager.test';
-
 import { encodeFnSelector } from '../../helpers/utils';
 import {
   MidasAccessControl,
@@ -207,42 +205,12 @@ describe('MidasAccessControl', function () {
   });
 
   describe('grantRoleMult()', () => {
-    it('should fail: arrays length mismatch', async () => {
-      const { accessControl } = await loadFixture(defaultDeploy);
+    it('should fail: array is empty', async () => {
+      const { accessControl, owner, roles } = await loadFixture(defaultDeploy);
 
-      await expect(
-        accessControl.grantRoleMult([], [ethers.constants.AddressZero]),
-      ).revertedWithCustomError(accessControl, 'MismatchArrays');
-    });
-
-    it('should fail: arrays length mismatch', async () => {
-      const { accessControl, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
-
-      const arr = [
-        {
-          role: await accessControl.BLACKLIST_OPERATOR_ROLE(),
-          user: regularAccounts[0].address,
-        },
-        {
-          role: await accessControl.GREENLIST_OPERATOR_ROLE(),
-          user: regularAccounts[0].address,
-        },
-      ];
-
-      await expect(
-        accessControl.grantRoleMult(
-          arr.map((v) => v.role),
-          arr.map((v) => v.user),
-        ),
-      ).not.reverted;
-
-      for (const setRoles of arr) {
-        expect(await accessControl.hasRole(setRoles.role, setRoles.user)).eq(
-          true,
-        );
-      }
+      await grantRoleMultTester({ accessControl, owner }, [], {
+        revertCustomError: { customErrorName: 'EmptyArray' },
+      });
     });
 
     it('should fail: when user does not have admin role for roles[0]', async () => {
@@ -252,8 +220,13 @@ describe('MidasAccessControl', function () {
 
       await grantRoleMultTester(
         { accessControl, owner: regularAccounts[0] },
-        [roles.common.blacklisted],
-        [regularAccounts[1].address],
+        [
+          {
+            role: roles.common.blacklisted,
+            account: regularAccounts[1].address,
+            delay: 0,
+          },
+        ],
         { revertCustomError: acErrors.WMAC_HASNT_PERMISSION() },
       );
     });
@@ -270,9 +243,19 @@ describe('MidasAccessControl', function () {
 
       await grantRoleMultTester(
         { accessControl, owner: regularAccounts[0] },
-        [roles.common.blacklisted, roles.common.greenlisted],
-        [regularAccounts[1].address, regularAccounts[2].address],
-        { revertMessage: 'MAC: role admin mismatch' },
+        [
+          {
+            role: roles.common.blacklisted,
+            account: regularAccounts[1].address,
+            delay: 0,
+          },
+          {
+            role: roles.common.greenlisted,
+            account: regularAccounts[2].address,
+            delay: 0,
+          },
+        ],
+        { revertCustomError: { customErrorName: 'RoleAdminMismatch' } },
       );
     });
 
@@ -293,8 +276,13 @@ describe('MidasAccessControl', function () {
       );
 
       const data = accessControl.interface.encodeFunctionData('grantRoleMult', [
-        [roles.common.blacklisted],
-        [regularAccounts[0].address],
+        [
+          {
+            role: roles.common.blacklisted,
+            account: regularAccounts[0].address,
+            delay: 0,
+          },
+        ],
       ]);
 
       await scheduleTimelockOperationsTester(
@@ -320,17 +308,21 @@ describe('MidasAccessControl', function () {
       const { accessControl, owner, regularAccounts, roles } =
         await loadFixture(defaultDeploy);
 
-      await grantRoleMultTester(
-        { accessControl, owner },
-        [roles.common.blacklisted],
-        [regularAccounts[0].address],
-      );
+      await grantRoleMultTester({ accessControl, owner }, [
+        {
+          role: roles.common.blacklisted,
+          account: regularAccounts[0].address,
+          delay: 0,
+        },
+      ]);
 
-      await grantRoleMultTester(
-        { accessControl, owner },
-        [roles.common.blacklisted],
-        [regularAccounts[0].address],
-      );
+      await grantRoleMultTester({ accessControl, owner }, [
+        {
+          role: roles.common.blacklisted,
+          account: regularAccounts[0].address,
+          delay: 0,
+        },
+      ]);
     });
 
     it('should fail: when user have function access role but do not have role admin role', async () => {
@@ -358,56 +350,25 @@ describe('MidasAccessControl', function () {
 
       await grantRoleMultTester(
         { accessControl, owner: regularAccounts[0] },
-        [roles.common.blacklisted],
-        [regularAccounts[1].address],
+        [
+          {
+            role: roles.common.blacklisted,
+            account: regularAccounts[1].address,
+            delay: 0,
+          },
+        ],
         { revertCustomError: acErrors.WMAC_HASNT_PERMISSION() },
       );
     });
   });
 
   describe('revokeRoleMult()', () => {
-    it('should fail: arrays length mismatch', async () => {
-      const { accessControl } = await loadFixture(defaultDeploy);
+    it('should fail: array is empty', async () => {
+      const { accessControl, owner } = await loadFixture(defaultDeploy);
 
-      await expect(
-        accessControl.revokeRoleMult([], [ethers.constants.AddressZero]),
-      ).revertedWithCustomError(accessControl, 'MismatchArrays');
-    });
-
-    it('should fail: arrays length mismatch', async () => {
-      const { accessControl, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
-
-      const arr = [
-        {
-          role: await accessControl.BLACKLIST_OPERATOR_ROLE(),
-          user: regularAccounts[0].address,
-        },
-        {
-          role: await accessControl.GREENLIST_OPERATOR_ROLE(),
-          user: regularAccounts[0].address,
-        },
-      ];
-
-      await expect(
-        accessControl.grantRoleMult(
-          arr.map((v) => v.role),
-          arr.map((v) => v.user),
-        ),
-      ).not.reverted;
-      await expect(
-        accessControl.revokeRoleMult(
-          arr.map((v) => v.role),
-          arr.map((v) => v.user),
-        ),
-      ).not.reverted;
-
-      for (const setRoles of arr) {
-        expect(await accessControl.hasRole(setRoles.role, setRoles.user)).eq(
-          false,
-        );
-      }
+      await revokeRoleMultTester({ accessControl, owner }, [], {
+        revertCustomError: { customErrorName: 'EmptyArray' },
+      });
     });
 
     it('should fail: when user does not have admin role for roles[0]', async () => {
@@ -417,8 +378,12 @@ describe('MidasAccessControl', function () {
 
       await revokeRoleMultTester(
         { accessControl, owner: regularAccounts[0] },
-        [roles.common.blacklisted],
-        [regularAccounts[1].address],
+        [
+          {
+            role: roles.common.blacklisted,
+            account: regularAccounts[1].address,
+          },
+        ],
         { revertCustomError: acErrors.WMAC_HASNT_PERMISSION() },
       );
     });
@@ -435,9 +400,17 @@ describe('MidasAccessControl', function () {
 
       await revokeRoleMultTester(
         { accessControl, owner: regularAccounts[0] },
-        [roles.common.blacklisted, roles.common.greenlisted],
-        [regularAccounts[1].address, regularAccounts[2].address],
-        { revertMessage: 'MAC: role admin mismatch' },
+        [
+          {
+            role: roles.common.blacklisted,
+            account: regularAccounts[1].address,
+          },
+          {
+            role: roles.common.greenlisted,
+            account: regularAccounts[2].address,
+          },
+        ],
+        { revertCustomError: { customErrorName: 'RoleAdminMismatch' } },
       );
     });
 
@@ -446,8 +419,7 @@ describe('MidasAccessControl', function () {
 
       await revokeRoleMultTester(
         { accessControl, owner },
-        [roles.common.defaultAdmin],
-        [owner.address],
+        [{ role: roles.common.defaultAdmin, account: owner.address }],
         { revertCustomError: { customErrorName: 'CannotRevokeFromSelf' } },
       );
     });
@@ -455,11 +427,9 @@ describe('MidasAccessControl', function () {
     it('when revoking role from self but its not DEFAULT_ADMIN_ROLE (should not fail)', async () => {
       const { accessControl, owner, roles } = await loadFixture(defaultDeploy);
 
-      await revokeRoleMultTester(
-        { accessControl, owner },
-        [roles.common.blacklistedOperator],
-        [owner.address],
-      );
+      await revokeRoleMultTester({ accessControl, owner }, [
+        { role: roles.common.blacklistedOperator, account: owner.address },
+      ]);
     });
 
     it('should fail: when revoking DEFAULT_ADMIN_ROLE from self and timelock delay is not 0', async () => {
@@ -474,7 +444,7 @@ describe('MidasAccessControl', function () {
 
       const data = accessControl.interface.encodeFunctionData(
         'revokeRoleMult',
-        [[roles.common.defaultAdmin], [owner.address]],
+        [[{ role: roles.common.defaultAdmin, account: owner.address }]],
       );
 
       await scheduleTimelockOperationsTester(
@@ -509,11 +479,9 @@ describe('MidasAccessControl', function () {
         timelockManager,
       } = await loadFixture(defaultDeploy);
 
-      await grantRoleMultTester(
-        { accessControl, owner },
-        [roles.common.blacklisted],
-        [regularAccounts[0].address],
-      );
+      await grantRoleMultTester({ accessControl, owner }, [
+        { role: roles.common.blacklisted, account: regularAccounts[0].address },
+      ]);
 
       await setRoleTimelocksTester(
         { timelockManager, timelock, owner, accessControl },
@@ -523,7 +491,14 @@ describe('MidasAccessControl', function () {
 
       const data = accessControl.interface.encodeFunctionData(
         'revokeRoleMult',
-        [[roles.common.blacklisted], [regularAccounts[0].address]],
+        [
+          [
+            {
+              role: roles.common.blacklisted,
+              account: regularAccounts[0].address,
+            },
+          ],
+        ],
       );
 
       await scheduleTimelockOperationsTester(
@@ -570,8 +545,12 @@ describe('MidasAccessControl', function () {
 
       await revokeRoleMultTester(
         { accessControl, owner: regularAccounts[0] },
-        [roles.common.blacklisted],
-        [regularAccounts[1].address],
+        [
+          {
+            role: roles.common.blacklisted,
+            account: regularAccounts[1].address,
+          },
+        ],
         { revertCustomError: acErrors.WMAC_HASNT_PERMISSION() },
       );
     });
@@ -580,11 +559,9 @@ describe('MidasAccessControl', function () {
       const { accessControl, owner, regularAccounts, roles } =
         await loadFixture(defaultDeploy);
 
-      await revokeRoleMultTester(
-        { accessControl, owner },
-        [roles.common.blacklisted],
-        [regularAccounts[0].address],
-      );
+      await revokeRoleMultTester({ accessControl, owner }, [
+        { role: roles.common.blacklisted, account: regularAccounts[0].address },
+      ]);
     });
   });
 
@@ -1991,7 +1968,7 @@ describe('MidasAccessControl', function () {
     });
   });
 
-  describe('setRoleDelays()', () => {
+  describe('setRoleDelayMult()', () => {
     it('should set role delays', async () => {
       const { timelockManager, timelock, owner, accessControl } =
         await loadFixture(defaultDeploy);
@@ -2003,20 +1980,17 @@ describe('MidasAccessControl', function () {
       );
     });
 
-    it('should fail: when roles and delays array lengths do not match', async () => {
+    it('should fail: when params array is empty', async () => {
       const { timelockManager, timelock, owner, accessControl } =
         await loadFixture(defaultDeploy);
 
       await setRoleTimelocksTester(
         { timelockManager, timelock, owner, accessControl },
-        [
-          constants.HashZero,
-          await timelockManager.TIMELOCK_OPERATION_PAUSER_ROLE(),
-        ],
-        [3600],
+        [],
+        [],
         {
           revertCustomError: {
-            customErrorName: 'MismatchingArrayLengths',
+            customErrorName: 'EmptyArray',
           },
         },
       );
@@ -2036,7 +2010,10 @@ describe('MidasAccessControl', function () {
         [constants.HashZero],
         [3600],
         {
-          ...timelockManagerRevert(timelockManager, 'NoFunctionPermission'),
+          revertCustomError: acErrors.WMAC_HASNT_PERMISSION(
+            undefined,
+            timelockManager,
+          ),
           from: regularAccounts[0],
         },
       );
@@ -2217,8 +2194,7 @@ describe('MidasAccessControl', function () {
 
       await setRoleTimelocksAndExecute(
         { timelockManager, timelock, owner, accessControl },
-        [constants.HashZero],
-        [1],
+        [{ role: constants.HashZero, delay: 1 }],
       );
 
       const [delay, isDefault] = await accessControl.getRoleTimelockDelay(

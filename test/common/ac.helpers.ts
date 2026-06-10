@@ -163,15 +163,22 @@ export const grantRoleMultTester = async (
     accessControl: MidasAccessControl;
     owner: SignerWithAddress;
   },
-  roles: string[],
-  accounts: string[],
+  params: {
+    role: string;
+    account: string;
+    delay?: BigNumberish;
+  }[],
   opt?: OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
 
-  const callFn = accessControl
-    .connect(from)
-    .grantRoleMult.bind(this, roles, accounts);
+  const callFn = accessControl.connect(from).grantRoleMult.bind(
+    this,
+    params.map((param) => ({
+      ...param,
+      delay: param.delay ?? 0,
+    })),
+  );
 
   if (await handleRevert(callFn, accessControl, opt)) {
     return;
@@ -179,8 +186,12 @@ export const grantRoleMultTester = async (
 
   await expect(callFn()).to.not.reverted;
 
-  for (const [index, role] of roles.entries()) {
-    expect(await accessControl.hasRole(role, accounts[index])).eq(true);
+  for (const [index, { account, role, delay }] of params.entries()) {
+    expect(await accessControl.hasRole(role, account)).eq(true);
+    if (delay !== undefined && BigNumber.from(delay).gt(0)) {
+      const [actualDelay] = await accessControl.getRoleTimelockDelay(role, 0);
+      expect(actualDelay).eq(delay);
+    }
   }
 };
 
@@ -189,15 +200,15 @@ export const revokeRoleMultTester = async (
     accessControl,
     owner,
   }: { accessControl: MidasAccessControl; owner: SignerWithAddress },
-  roles: string[],
-  accounts: string[],
+  params: {
+    role: string;
+    account: string;
+  }[],
   opt?: OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
 
-  const callFn = accessControl
-    .connect(from)
-    .revokeRoleMult.bind(this, roles, accounts);
+  const callFn = accessControl.connect(from).revokeRoleMult.bind(this, params);
 
   if (await handleRevert(callFn, accessControl, opt)) {
     return;
@@ -205,8 +216,8 @@ export const revokeRoleMultTester = async (
 
   await expect(callFn()).to.not.reverted;
 
-  for (const [index, role] of roles.entries()) {
-    expect(await accessControl.hasRole(role, accounts[index])).eq(false);
+  for (const [, { role, account }] of params.entries()) {
+    expect(await accessControl.hasRole(role, account)).eq(false);
   }
 };
 
@@ -570,6 +581,8 @@ type CommonParamsAccessControl = {
   owner: SignerWithAddress;
   timelock: MidasAccessControlTimelockController;
 };
+
+// TODO: refactor, role and delays should be an array of objects
 export const setRoleTimelocksTester = async (
   { accessControl, owner }: CommonParamsAccessControl,
   roles: string[],
@@ -578,9 +591,16 @@ export const setRoleTimelocksTester = async (
 ) => {
   const from = opt?.from ?? owner;
 
+  const params = roles.map((role, index) => ({
+    role,
+    delay: delays[index],
+  }));
+
   const callFn = accessControl
     .connect(from)
-    .setRoleDelays.bind(this, roles, delays);
+
+    .connect(from)
+    .setRoleDelayMult.bind(this, params);
 
   if (await handleRevert(callFn, accessControl, opt)) {
     return;
@@ -612,8 +632,10 @@ export const setRoleTimelocksAndExecute = async (
     timelock,
     timelockManager,
   }: CommonParamsAccessControl,
-  roles: string[],
-  delays: BigNumberish[],
+  params: {
+    role: string;
+    delay: BigNumberish;
+  }[],
   opt?: OptionalCommonParams,
 ) => {
   const [delay] = await accessControl.getRoleTimelockDelay(
@@ -621,9 +643,8 @@ export const setRoleTimelocksAndExecute = async (
     0,
   );
 
-  const data = accessControl.interface.encodeFunctionData('setRoleDelays', [
-    roles,
-    delays,
+  const data = accessControl.interface.encodeFunctionData('setRoleDelayMult', [
+    params,
   ]);
 
   const from = opt?.from ?? owner;
