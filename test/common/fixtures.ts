@@ -3,6 +3,7 @@ import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
+import { NO_DELAY } from './ac.helpers';
 import { approve, approveBase18, keccak256, mintToken } from './common.helpers';
 import { deployProxyContract } from './deploy.helpers';
 import {
@@ -134,11 +135,7 @@ export const defaultDeploy = async () => {
   await timelock.initialize(timelockManager.address);
 
   const pauseManager = await new MidasPauseManagerTest__factory(owner).deploy();
-  await pauseManager.initialize(
-    accessControl.address,
-    constants.MaxUint256,
-    86400,
-  );
+  await pauseManager.initialize(accessControl.address, NO_DELAY, 86400);
 
   await accessControl.initializeRelationships(
     timelockManager.address,

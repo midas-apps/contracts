@@ -65,7 +65,7 @@ abstract contract WithMidasAccessControl is
      */
     modifier onlyRoleDelayOverride(
         bytes32 role,
-        uint256 overrideDelay,
+        uint32 overrideDelay,
         bool validateFunctionRole
     ) {
         _validateFunctionAccessWithTimelock(
@@ -129,7 +129,7 @@ abstract contract WithMidasAccessControl is
      */
     function _validateFunctionAccessWithTimelock(
         bytes32 role,
-        uint256 overrideDelay,
+        uint32 overrideDelay,
         bool roleIsFunctionOperator,
         address account,
         bool validateFunctionRole

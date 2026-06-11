@@ -11,6 +11,7 @@ import {
   MidasTimelockManagerTest__factory,
 } from '../../typechain-types';
 import {
+  NO_DELAY,
   setPermissionRoleTester,
   setRoleTimelocksTester,
   setupGrantOperatorRole,
@@ -3485,7 +3486,7 @@ describe('MidasTimelockManager', () => {
       await setRoleTimelocksTester(
         { timelockManager, timelock, owner, accessControl },
         [constants.HashZero],
-        [constants.MaxUint256],
+        [NO_DELAY],
       );
 
       const calldata = wAccessControlTester.interface.encodeFunctionData(

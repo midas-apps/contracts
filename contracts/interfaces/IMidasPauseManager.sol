@@ -33,18 +33,28 @@ interface IMidasPauseManager {
     event GlobalPauseStatusChange(bool isPaused);
 
     /**
+     * @param pauseDelay pause delay
+     */
+    event SetPauseDelay(uint32 pauseDelay);
+
+    /**
+     * @param unpauseDelay unpause delay
+     */
+    event SetUnpauseDelay(uint32 unpauseDelay);
+
+    /**
      * @notice sets the pause delay
      * @dev can be called only by the pause manager admin or function admin
      * @param _pauseDelay pause delay
      */
-    function setPauseDelay(uint256 _pauseDelay) external;
+    function setPauseDelay(uint32 _pauseDelay) external;
 
     /**
      * @notice sets the unpause delay
      * @dev can be called only by the pause manager admin or function admin
      * @param _unpauseDelay unpause delay
      */
-    function setUnpauseDelay(uint256 _unpauseDelay) external;
+    function setUnpauseDelay(uint32 _unpauseDelay) external;
 
     /**
      * @notice pauses the protocol
@@ -141,11 +151,11 @@ interface IMidasPauseManager {
      * @notice returns the pause delay
      * @return pause delay
      */
-    function pauseDelay() external view returns (uint256);
+    function pauseDelay() external view returns (uint32);
 
     /**
      * @notice returns the unpause delay
      * @return unpause delay
      */
-    function unpauseDelay() external view returns (uint256);
+    function unpauseDelay() external view returns (uint32);
 }

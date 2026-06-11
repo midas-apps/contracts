@@ -23,17 +23,17 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
     /**
      * @notice static delay for setting pause delay
      */
-    uint256 public constant DELAY_FOR_SET_DELAY = 2 days;
+    uint32 public constant DELAY_FOR_SET_DELAY = 2 days;
 
     /**
      * @notice pause delay
      */
-    uint256 public pauseDelay;
+    uint32 public pauseDelay;
 
     /**
      * @notice unpause delay
      */
-    uint256 public unpauseDelay;
+    uint32 public unpauseDelay;
 
     /**
      * @notice global paused status
@@ -108,10 +108,14 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
      */
     function initialize(
         address _accessControl,
-        uint256 _pauseDelay,
-        uint256 _unpauseDelay
+        uint32 _pauseDelay,
+        uint32 _unpauseDelay
     ) external initializer {
         __WithMidasAccessControl_init(_accessControl);
+
+        _validateDelay(_pauseDelay);
+        _validateDelay(_unpauseDelay);
+
         pauseDelay = _pauseDelay;
         unpauseDelay = _unpauseDelay;
     }
@@ -119,21 +123,25 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
     /**
      * @inheritdoc IMidasPauseManager
      */
-    function setPauseDelay(uint256 _pauseDelay)
+    function setPauseDelay(uint32 _pauseDelay)
         external
         onlyRoleDelayOverride(contractAdminRole(), DELAY_FOR_SET_DELAY, true)
     {
+        _validateDelay(_pauseDelay);
         pauseDelay = _pauseDelay;
+        emit SetPauseDelay(_pauseDelay);
     }
 
     /**
      * @inheritdoc IMidasPauseManager
      */
-    function setUnpauseDelay(uint256 _unpauseDelay)
+    function setUnpauseDelay(uint32 _unpauseDelay)
         external
         onlyRoleDelayOverride(contractAdminRole(), DELAY_FOR_SET_DELAY, true)
     {
+        _validateDelay(_unpauseDelay);
         unpauseDelay = _unpauseDelay;
+        emit SetUnpauseDelay(_unpauseDelay);
     }
 
     /**
@@ -311,7 +319,7 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
      */
     function _validateContractAdminAccess(
         address contractAddr,
-        uint256 overrideDelay
+        uint32 overrideDelay
     ) private view {
         bytes32 role = _getPausableRole(contractAddr);
 
@@ -322,6 +330,14 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
             msg.sender,
             true
         );
+    }
+
+    /**
+     * @dev validates that the delay is within the maximum delay
+     * @param delay delay to validate
+     */
+    function _validateDelay(uint32 delay) private view {
+        AccessControlUtilsLibrary.validateTimelockDelay(delay);
     }
 
     /**

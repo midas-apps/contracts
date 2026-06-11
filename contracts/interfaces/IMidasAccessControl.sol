@@ -55,7 +55,7 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
      */
     struct SetGrantOperatorRoleParams {
         /// @notice delay value
-        uint256 delay;
+        uint32 delay;
         /// @notice selector of the scoped function.
         bytes4 functionSelector;
         /// @notice address that may call `setFunctionPermission` for this scope.
@@ -83,7 +83,7 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
         /// @notice account to be granted the role
         address account;
         /// @notice delay value
-        uint256 delay;
+        uint32 delay;
     }
 
     /**
@@ -103,7 +103,7 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
         /// @notice role to be set the delay for
         bytes32 role;
         /// @notice delay value
-        uint256 delay;
+        uint32 delay;
     }
 
     /**
@@ -145,7 +145,7 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
     /**
      * @param defaultDelay new default delay
      */
-    event SetDefaultDelay(uint256 defaultDelay);
+    event SetDefaultDelay(uint32 defaultDelay);
 
     /**
      * @param params array of SetRoleDelayParams
@@ -156,7 +156,7 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
      * @param role role id
      * @param delay delay value
      */
-    event SetRoleDelay(bytes32 role, uint256 delay);
+    event SetRoleDelay(bytes32 role, uint32 delay);
 
     /**
      * @notice Enable or disable which OZ role may administer function-access scopes for that role.
@@ -191,7 +191,7 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
     function setPermissionRoleMult(
         address targetContract,
         bytes4 functionSelector,
-        uint256 delay,
+        uint32 delay,
         SetPermissionRoleParams[] calldata params
     ) external;
 
@@ -204,7 +204,7 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
     function grantRole(
         bytes32 role,
         address account,
-        uint256 delay
+        uint32 delay
     ) external;
 
     /**
@@ -223,7 +223,7 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
      * @notice Sets the default delay
      * @param _defaultDelay default delay in seconds
      */
-    function setDefaultDelay(uint256 _defaultDelay) external;
+    function setDefaultDelay(uint32 _defaultDelay) external;
 
     /**
      * @notice Sets timelock delay per role
@@ -331,16 +331,16 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
      * @return delay effective delay in seconds
      * @return isDefault true if role uses default delay
      */
-    function getRoleTimelockDelay(bytes32 role, uint256 overrideDelay)
+    function getRoleTimelockDelay(bytes32 role, uint32 overrideDelay)
         external
         view
-        returns (uint256 delay, bool isDefault);
+        returns (uint32 delay, bool isDefault);
 
     /**
      * @notice Default timelock delay when role delay is not set
      * @return delay delay in seconds
      */
-    function defaultDelay() external view returns (uint256 delay);
+    function defaultDelay() external view returns (uint32 delay);
 
     /**
      * @notice address of the timelock manager

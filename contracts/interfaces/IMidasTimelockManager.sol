@@ -60,7 +60,7 @@ interface IMidasTimelockManager {
      */
     error RolePreflightSucceeded(
         bytes32 role,
-        uint256 overrideDelay,
+        uint32 overrideDelay,
         bool roleIsFunctionOperator,
         bool validateFunctionRole
     );
@@ -280,7 +280,7 @@ interface IMidasTimelockManager {
      */
     function isFunctionReadyToExecute(
         bytes32 targetRole,
-        uint256 overrideDelay,
+        uint32 overrideDelay,
         address target,
         bytes calldata data
     ) external view returns (bool ready, bool timelocked);

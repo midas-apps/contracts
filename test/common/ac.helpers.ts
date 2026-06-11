@@ -38,6 +38,10 @@ type CommonParamsGreenList = {
   owner: SignerWithAddress;
 };
 
+export const NULL_DELAY = 0;
+// uint32 max value
+export const NO_DELAY = BigNumber.from('0xFFFFFFFF');
+
 export const acErrors = {
   WMAC_BLACKLISTED: (args?: unknown[], contract?: Contract) => ({
     contract,
@@ -242,7 +246,7 @@ export const grantRoleTester = async (
           ['grantRole(bytes32,address)'].bind(this, role, account)
       : accessControl
           .connect(from)
-          ['grantRole(bytes32,address,uint256)'].bind(
+          ['grantRole(bytes32,address,uint32)'].bind(
             this,
             role,
             account,
@@ -616,7 +620,7 @@ export const setRoleTimelocksTester = async (
     );
     const expectedDelay = BigNumber.from(0).eq(delayParam)
       ? 3600
-      : constants.MaxUint256.eq(delayParam)
+      : NO_DELAY.eq(delayParam)
       ? 0
       : delayParam;
 
@@ -656,7 +660,7 @@ export const setRoleTimelocksAndExecute = async (
     { isSetCouncilOperation: false },
     { from },
   );
-  await increase(delay.toNumber() + 1);
+  await increase(delay + 1);
   await executeTimelockOperationTester(
     { timelockManager, timelock, owner, accessControl },
     accessControl.address,

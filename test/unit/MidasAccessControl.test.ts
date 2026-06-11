@@ -26,6 +26,7 @@ import {
   setDefaultDelayTest,
   setRoleTimelocksAndExecute,
   setRoleTimelocksTester,
+  NO_DELAY,
 } from '../common/ac.helpers';
 import { handleRevert, validateImplementation } from '../common/common.helpers';
 import { defaultDeploy } from '../common/fixtures';
@@ -189,9 +190,9 @@ describe('MidasAccessControl', function () {
   it('initialize', async () => {
     const { accessControl } = await loadFixture(defaultDeploy);
 
-    await expect(
-      accessControl.initialize(constants.MaxUint256, []),
-    ).revertedWith('Initializable: contract is already initialized');
+    await expect(accessControl.initialize(NO_DELAY, [])).revertedWith(
+      'Initializable: contract is already initialized',
+    );
   });
 
   describe('renounceRole()', () => {
@@ -358,6 +359,66 @@ describe('MidasAccessControl', function () {
           },
         ],
         { revertCustomError: acErrors.WMAC_HASNT_PERMISSION() },
+      );
+    });
+
+    it('when delay is not NULL_DELAY but actual delay is NULL_DELAY - should set the delay', async () => {
+      const { accessControl, owner, regularAccounts, roles } =
+        await loadFixture(defaultDeploy);
+
+      await grantRoleMultTester({ accessControl, owner }, [
+        {
+          role: roles.common.blacklisted,
+          account: regularAccounts[0].address,
+          delay: 3600,
+        },
+      ]);
+    });
+
+    it('should fail: when delay is not NULL_DELAY but actual delay is also not null', async () => {
+      const { accessControl, owner, regularAccounts, roles } =
+        await loadFixture(defaultDeploy);
+
+      await grantRoleMultTester({ accessControl, owner }, [
+        {
+          role: roles.common.blacklisted,
+          account: regularAccounts[0].address,
+          delay: 3600,
+        },
+      ]);
+
+      await grantRoleMultTester(
+        { accessControl, owner },
+        [
+          {
+            role: roles.common.blacklisted,
+            account: regularAccounts[1].address,
+            delay: 7200,
+          },
+        ],
+        { revertCustomError: { customErrorName: 'InvalidTimelockDelay' } },
+      );
+    });
+
+    it('should fail: when array contains 2 identical roles and both tries to update the delay, and actual delay is NULL_DELAY', async () => {
+      const { accessControl, owner, regularAccounts, roles } =
+        await loadFixture(defaultDeploy);
+
+      await grantRoleMultTester(
+        { accessControl, owner },
+        [
+          {
+            role: roles.common.blacklisted,
+            account: regularAccounts[0].address,
+            delay: 3600,
+          },
+          {
+            role: roles.common.blacklisted,
+            account: regularAccounts[1].address,
+            delay: 3600,
+          },
+        ],
+        { revertCustomError: { customErrorName: 'InvalidTimelockDelay' } },
       );
     });
   });
@@ -1720,7 +1781,7 @@ describe('MidasAccessControl', function () {
       await setRoleTimelocksTester(
         { timelockManager, timelock, owner, accessControl },
         [operatorRoleKey],
-        [constants.MaxUint256],
+        [NO_DELAY],
       );
 
       await setPermissionRoleTester(
@@ -2213,7 +2274,7 @@ describe('MidasAccessControl', function () {
 
       const [delay, isDefault] = await accessControl.getRoleTimelockDelay(
         constants.HashZero,
-        constants.MaxUint256,
+        NO_DELAY,
       );
 
       expect(delay).to.eq(0);
@@ -2246,7 +2307,7 @@ describe('MidasAccessControl', function () {
       await setRoleTimelocksTester(
         { timelockManager, timelock, owner, accessControl },
         [constants.HashZero],
-        [constants.MaxUint256],
+        [NO_DELAY],
       );
 
       const [delay, isDefault] = await accessControl.getRoleTimelockDelay(

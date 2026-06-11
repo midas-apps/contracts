@@ -2,7 +2,7 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { BigNumberish, Contract, constants } from 'ethers';
+import { BigNumberish, Contract } from 'ethers';
 
 import { encodeFnSelector } from '../../helpers/utils';
 import {
@@ -12,6 +12,8 @@ import {
 } from '../../typechain-types';
 import {
   acErrors,
+  NO_DELAY,
+  NULL_DELAY,
   setPermissionRoleTester,
   setRoleTimelocksTester,
   setupGrantOperatorRole,
@@ -34,8 +36,6 @@ import {
 
 const DEFAULT_UNPAUSE_DELAY = 86400;
 const DELAY_FOR_SET_DELAY = 2 * 24 * 3600;
-const NO_DELAY = constants.MaxUint256;
-const NULL_DELAY = 0;
 const ROLE_TIMELOCK_DELAY = 3600;
 const CUSTOM_DELAY = 3600;
 
@@ -1744,7 +1744,7 @@ describe('MidasPauseManager', () => {
 
       const calldata = pauseManager.interface.encodeFunctionData(
         'setPauseDelay',
-        [constants.MaxUint256],
+        [NO_DELAY],
       );
 
       await scheduleTimelockOperationsTester(

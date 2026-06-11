@@ -29,6 +29,7 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
 
     /**
      * @notice contract admin role
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
      */
     // solhint-disable-next-line var-name-mixedcase
     bytes32 private immutable _CONTRACT_ADMIN_ROLE;
@@ -94,6 +95,11 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
      * @dev leaving a storage gap for futures updates
      */
     uint256[50] private __gap;
+
+    /**
+     * @dev having a second gap here to match with the gap of previous implementations
+     */
+    uint256[50] private ___gap;
 
     /**
      * @notice constructor

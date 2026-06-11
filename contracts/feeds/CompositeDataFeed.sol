@@ -16,6 +16,7 @@ import "../interfaces/IDataFeed.sol";
 contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
     /**
      * @notice contract admin role
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
      */
     // solhint-disable-next-line var-name-mixedcase
     bytes32 private immutable _CONTRACT_ADMIN_ROLE;

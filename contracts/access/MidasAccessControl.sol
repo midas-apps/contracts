@@ -41,7 +41,7 @@ contract MidasAccessControl is
     /**
      * @dev timelock delay for each role
      */
-    mapping(bytes32 => uint256) private _roleTimelocks;
+    mapping(bytes32 => uint32) private _roleTimelockDelays;
 
     /**
      * @notice address of MidasAccessControlTimelockController contract
@@ -56,7 +56,7 @@ contract MidasAccessControl is
     /**
      * @notice default delay for all of the roles
      */
-    uint256 public defaultDelay;
+    uint32 public defaultDelay;
 
     /**
      * @dev leaving a storage gap for futures updates
@@ -77,7 +77,7 @@ contract MidasAccessControl is
      * @param role base role to validate
      * @param overrideDelay override delay for the invocation
      */
-    modifier onlyRoleDelayOverride(bytes32 role, uint256 overrideDelay) {
+    modifier onlyRoleDelayOverride(bytes32 role, uint32 overrideDelay) {
         _validateRoleAccess(role, overrideDelay);
         _;
     }
@@ -85,15 +85,14 @@ contract MidasAccessControl is
     /**
      * @notice upgradeable pattern contract`s initializer
      * @param _defaultDelay default delay
-     * @param userFacingRoles array of additional user facing roles
+     * @param _userFacingRoles array of additional user facing roles
      */
     function initialize(
-        uint256 _defaultDelay,
-        bytes32[] calldata userFacingRoles
+        uint32 _defaultDelay,
+        bytes32[] calldata _userFacingRoles
     ) external {
         _initializeV1();
-
-        initializeV2(_defaultDelay, userFacingRoles);
+        initializeV2(_defaultDelay, _userFacingRoles);
     }
 
     /**
@@ -106,19 +105,21 @@ contract MidasAccessControl is
 
     /**
      * @notice initializerV2. Initializes user facing roles
-     * @param userFacingRoles array of additional user facing roles
+     * @param _userFacingRoles array of additional user facing roles
      */
     function initializeV2(
-        uint256 _defaultDelay,
-        bytes32[] calldata userFacingRoles
+        uint32 _defaultDelay,
+        bytes32[] calldata _userFacingRoles
     ) public reinitializer(2) {
+        _validateDelay(_defaultDelay);
+
         defaultDelay = _defaultDelay;
 
         isUserFacingRole[BLACKLISTED_ROLE] = true;
         isUserFacingRole[GREENLISTED_ROLE] = true;
 
-        for (uint256 i = 0; i < userFacingRoles.length; ++i) {
-            isUserFacingRole[userFacingRoles[i]] = true;
+        for (uint256 i = 0; i < _userFacingRoles.length; ++i) {
+            isUserFacingRole[_userFacingRoles[i]] = true;
         }
     }
 
@@ -151,10 +152,11 @@ contract MidasAccessControl is
     /**
      * @inheritdoc IMidasAccessControl
      */
-    function setDefaultDelay(uint256 _defaultDelay)
+    function setDefaultDelay(uint32 _defaultDelay)
         external
         onlyRoleDelayOverride(DEFAULT_ADMIN_ROLE, 2 days)
     {
+        _validateDelay(_defaultDelay);
         defaultDelay = _defaultDelay;
         emit SetDefaultDelay(_defaultDelay);
     }
@@ -169,7 +171,8 @@ contract MidasAccessControl is
         require(params.length > 0, EmptyArray());
 
         for (uint256 i = 0; i < params.length; ++i) {
-            _roleTimelocks[params[i].role] = params[i].delay;
+            _validateDelay(params[i].delay);
+            _roleTimelockDelays[params[i].role] = params[i].delay;
         }
 
         emit SetRoleDelays(params);
@@ -247,7 +250,7 @@ contract MidasAccessControl is
     function setPermissionRoleMult(
         address targetContract,
         bytes4 functionSelector,
-        uint256 delay,
+        uint32 delay,
         SetPermissionRoleParams[] calldata params
     ) external {
         bytes32 masterRole = _getContractAdminRole(targetContract);
@@ -328,7 +331,7 @@ contract MidasAccessControl is
                 getRoleAdmin(param.role) == adminRole,
                 RoleAdminMismatch(param.role, adminRole)
             );
-            _verifyRevokeRole(param.role, param.account, actualSender);
+            _validateRevokeRole(param.role, param.account, actualSender);
             _revokeRole(param.role, param.account);
         }
     }
@@ -350,7 +353,7 @@ contract MidasAccessControl is
     function grantRole(
         bytes32 role,
         address account,
-        uint256 delay
+        uint32 delay
     ) public {
         grantRole(role, account);
         _validateAndUpdateDelay(role, delay);
@@ -365,7 +368,7 @@ contract MidasAccessControl is
     {
         address actualSender = _validateRoleAccess(getRoleAdmin(role));
 
-        _verifyRevokeRole(role, account, actualSender);
+        _validateRevokeRole(role, account, actualSender);
         _revokeRole(role, account);
     }
 
@@ -484,19 +487,19 @@ contract MidasAccessControl is
     /**
      * @inheritdoc IMidasAccessControl
      */
-    function getRoleTimelockDelay(bytes32 role, uint256 overrideDelay)
+    function getRoleTimelockDelay(bytes32 role, uint32 overrideDelay)
         public
         view
         returns (
-            uint256, /* delay */
+            uint32, /* delay */
             bool /* isDefault */
         )
     {
-        uint256 delay = overrideDelay != AccessControlUtilsLibrary.NULL_DELAY
+        uint32 delay = overrideDelay != AccessControlUtilsLibrary.NULL_DELAY
             ? overrideDelay
-            : _roleTimelocks[role];
+            : _roleTimelockDelays[role];
 
-        uint256 actualDelay = delay == AccessControlUtilsLibrary.NULL_DELAY
+        uint32 actualDelay = delay == AccessControlUtilsLibrary.NULL_DELAY
             ? defaultDelay
             : delay == AccessControlUtilsLibrary.NO_DELAY
             ? 0
@@ -516,15 +519,11 @@ contract MidasAccessControl is
      * @dev validates and updates the delay for a role
      * @param role role id
      */
-    function _validateAndUpdateDelay(bytes32 role, uint256 delay) private {
+    function _validateAndUpdateDelay(bytes32 role, uint32 delay) private {
         if (delay == AccessControlUtilsLibrary.NULL_DELAY) {
             return;
         }
 
-        require(
-            _roleTimelocks[role] == AccessControlUtilsLibrary.NULL_DELAY,
-            InvalidTimelockDelay()
-        );
         _setRoleDelay(role, delay);
     }
 
@@ -554,8 +553,9 @@ contract MidasAccessControl is
      * @param role role id
      * @param delay delay value
      */
-    function _setRoleDelay(bytes32 role, uint256 delay) private {
-        _roleTimelocks[role] = delay;
+    function _setRoleDelay(bytes32 role, uint32 delay) private {
+        _validateDelay(delay);
+        _roleTimelockDelays[role] = delay;
         emit SetRoleDelay(role, delay);
     }
 
@@ -570,12 +570,20 @@ contract MidasAccessControl is
     }
 
     /**
+     * @dev validates that the delay is within the maximum delay
+     * @param delay delay to validate
+     */
+    function _validateDelay(uint32 delay) private view {
+        AccessControlUtilsLibrary.validateTimelockDelay(delay);
+    }
+
+    /**
      * @notice verifies that the role can be revoked
      * @param role role to be revoked
      * @param account account to be revoked
      * @param actualSender account that actually verified for the function access
      */
-    function _verifyRevokeRole(
+    function _validateRevokeRole(
         bytes32 role,
         address account,
         address actualSender
@@ -591,7 +599,7 @@ contract MidasAccessControl is
      * @param overrideDelay override delay for the invocation
      * @return actualAccount actual account that has access to the function
      */
-    function _validateRoleAccess(bytes32 role, uint256 overrideDelay)
+    function _validateRoleAccess(bytes32 role, uint32 overrideDelay)
         internal
         view
         returns (

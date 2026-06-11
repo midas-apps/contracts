@@ -396,11 +396,11 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
      */
     function isFunctionReadyToExecute(
         bytes32 targetRole,
-        uint256 overrideDelay,
+        uint32 overrideDelay,
         address target,
         bytes calldata data
     ) external view returns (bool ready, bool timelocked) {
-        (uint256 delay, ) = accessControl.getRoleTimelockDelay(
+        (uint32 delay, ) = accessControl.getRoleTimelockDelay(
             targetRole,
             overrideDelay
         );
@@ -599,13 +599,13 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
         address proposer = msg.sender;
 
-        (bytes32 targetRole, uint256 overrideDelay) = _getTargetRole(
+        (bytes32 targetRole, uint32 overrideDelay) = _getTargetRole(
             target,
             data,
             proposer
         );
 
-        (uint256 delay, ) = accessControl.getRoleTimelockDelay(
+        (uint32 delay, ) = accessControl.getRoleTimelockDelay(
             targetRole,
             overrideDelay
         );
@@ -750,7 +750,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         view
         returns (
             bytes32, /* role */
-            uint256 /* overrideDelay */
+            uint32 /* overrideDelay */
         )
     {
         (bool success, bytes memory err) = target.staticcall(data);
@@ -759,7 +759,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
         (
             bytes32 role,
-            uint256 overrideDelay,
+            uint32 overrideDelay,
             bool roleIsFunctionOperator,
             bool validateFunctionRole
         ) = _decodePreflightSucceededError(err);
@@ -865,7 +865,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         pure
         returns (
             bytes32 role,
-            uint256 overrideDelay,
+            uint32 overrideDelay,
             bool roleIsFunctionOperator,
             bool validateFunctionRole
         )

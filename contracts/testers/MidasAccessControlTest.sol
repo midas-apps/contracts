@@ -6,7 +6,7 @@ import "../access/MidasAccessControl.sol";
 contract MidasAccessControlTest is MidasAccessControl {
     function _disableInitializers() internal override {}
 
-    function setDefaultDelayTest(uint256 delay) external {
+    function setDefaultDelayTest(uint32 delay) external {
         defaultDelay = delay;
     }
 }

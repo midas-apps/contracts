@@ -29,6 +29,7 @@ contract CustomAggregatorV3CompatibleFeed is
 
     /**
      * @notice contract admin role
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
      */
     // solhint-disable-next-line var-name-mixedcase
     bytes32 private immutable _CONTRACT_ADMIN_ROLE;
@@ -63,6 +64,11 @@ contract CustomAggregatorV3CompatibleFeed is
      * @dev holds round information
      */
     mapping(uint80 => RoundData) private _roundData;
+
+    /**
+     * @dev leaving a storage gap for futures updates
+     */
+    uint256[50] private __gap;
 
     /**
      * @param data data value

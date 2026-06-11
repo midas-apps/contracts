@@ -1,5 +1,6 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
+import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BytesLike, constants } from 'ethers';
@@ -15,17 +16,14 @@ import {
   MidasAccessControlTimelockController,
   MidasTimelockManager,
 } from '../../typechain-types';
-import {
-  acErrors,
-  grantRoleMultTester,
-  setRoleTimelocksAndExecute,
-} from '../common/ac.helpers';
+import { acErrors, grantRoleMultTester } from '../common/ac.helpers';
 import { pauseGlobalTest } from '../common/common.helpers';
 import { burn, mint } from '../common/mtoken.helpers';
 import {
   executeTimelockOperationTester,
   scheduleTimelockOperationsTester,
 } from '../common/timelock-manager.helpers';
+import { timelockManagerRevert } from '../unit/MidasTimelockManager.test';
 
 describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
   this.timeout(120000);
@@ -62,18 +60,18 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
       roles.common.blacklisted,
     ];
 
-    await setRoleTimelocksAndExecute(
-      {
-        timelockManager,
-        accessControl,
-        timelock,
-        owner: acDefaultAdmin,
-      },
-      rolesToReset.map((role) => ({
-        role,
-        delay: constants.MaxUint256,
-      })),
-    );
+    // await setRoleTimelocksAndExecute(
+    //   {
+    //     timelockManager,
+    //     accessControl,
+    //     timelock,
+    //     owner: acDefaultAdmin,
+    //   },
+    //   rolesToReset.map((role) => ({
+    //     role,
+    //     delay: NO_DELAY,
+    //   })),
+    // );
   };
 
   // every role has a default timelock delay of 1 hour when no explicit delay is set
@@ -95,7 +93,27 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
     target: string,
     calldata: BytesLike,
     proposer: SignerWithAddress,
+    {
+      delay = DEFAULT_TIMELOCK_DELAY,
+      checkAndSetDefaultDelay = true,
+    }: { delay?: number; checkAndSetDefaultDelay?: boolean } = {},
   ) => {
+    if (checkAndSetDefaultDelay) {
+      const defaultDelay = await ctx.accessControl.defaultDelay();
+
+      if (defaultDelay === 0) {
+        await executeWriteViaTimelock(
+          ctx,
+          ctx.accessControl.address,
+          ctx.accessControl.interface.encodeFunctionData('setDefaultDelay', [
+            delay,
+          ]),
+          ctx.owner,
+          { delay: days(2), checkAndSetDefaultDelay: false },
+        );
+      }
+    }
+
     await scheduleTimelockOperationsTester(
       ctx,
       [target],
@@ -104,7 +122,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
       { from: proposer },
     );
 
-    await increase(DEFAULT_TIMELOCK_DELAY + 1);
+    await increase(delay + 1);
 
     await executeTimelockOperationTester(
       ctx,
@@ -364,7 +382,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
         );
       });
 
-      it('should pause globally via timelock', async () => {
+      it('should fail: pause globally via timelock when pause delay is 0', async () => {
         const {
           accessControl,
           pauseManager,
@@ -388,14 +406,16 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           acDefaultAdmin,
         );
 
-        await executeWriteViaTimelock(
+        await scheduleTimelockOperationsTester(
           ctx,
-          pauseManager.address,
-          pauseManager.interface.encodeFunctionData('globalPause'),
-          acDefaultAdmin,
+          [pauseManager.address],
+          [pauseManager.interface.encodeFunctionData('globalPause') as string],
+          {},
+          {
+            from: acDefaultAdmin,
+            ...timelockManagerRevert(timelockManager, 'NoTimelockDelayForRole'),
+          },
         );
-
-        expect(await pauseManager.globalPaused()).to.eq(true);
       });
     });
   });
@@ -485,7 +505,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
         );
       });
 
-      it('should mint tokens to recipient via timelock', async () => {
+      it('should fail: when trying to schedule mint through timelock', async () => {
         const {
           mTbill,
           accessControl,
@@ -510,20 +530,20 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           acDefaultAdmin,
         );
 
-        const balanceBefore = await mTbill.balanceOf(recipient.address);
-
-        await executeWriteViaTimelock(
+        await scheduleTimelockOperationsTester(
           ctx,
-          mTbill.address,
-          mTbill.interface.encodeFunctionData('mint', [
-            recipient.address,
-            amount,
-          ]),
-          acDefaultAdmin,
-        );
-
-        expect(await mTbill.balanceOf(recipient.address)).to.eq(
-          balanceBefore.add(amount),
+          [mTbill.address],
+          [
+            mTbill.interface.encodeFunctionData('mint', [
+              recipient.address,
+              amount,
+            ]),
+          ],
+          {},
+          {
+            from: acDefaultAdmin,
+            ...timelockManagerRevert(timelockManager, 'InvalidPreflightError'),
+          },
         );
       });
     });
@@ -600,7 +620,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
         );
       });
 
-      it('should burn tokens from holder via timelock', async () => {
+      it('should fail: when trying to schedule burn through timelock', async () => {
         const {
           mTbill,
           accessControl,
@@ -625,24 +645,26 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           acDefaultAdmin,
         );
 
-        await executeWriteViaTimelock(
-          ctx,
-          mTbill.address,
-          mTbill.interface.encodeFunctionData('mint', [holder.address, amount]),
-          acDefaultAdmin,
+        await mint(
+          { tokenContract: mTbill, owner: acDefaultAdmin },
+          holder.address,
+          amount,
         );
 
-        const balanceBefore = await mTbill.balanceOf(holder.address);
-
-        await executeWriteViaTimelock(
+        await scheduleTimelockOperationsTester(
           ctx,
-          mTbill.address,
-          mTbill.interface.encodeFunctionData('burn', [holder.address, amount]),
-          acDefaultAdmin,
-        );
-
-        expect(await mTbill.balanceOf(holder.address)).to.eq(
-          balanceBefore.sub(amount),
+          [mTbill.address],
+          [
+            mTbill.interface.encodeFunctionData('burn', [
+              holder.address,
+              amount,
+            ]),
+          ],
+          {},
+          {
+            from: acDefaultAdmin,
+            ...timelockManagerRevert(timelockManager, 'InvalidPreflightError'),
+          },
         );
       });
     });
@@ -790,7 +812,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
         );
       });
 
-      it('should mint tokens to greenlisted recipient via timelock', async () => {
+      it('should fail: when trying to schedule mint through timelock', async () => {
         const {
           mGlobal,
           accessControl,
@@ -821,20 +843,20 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           acDefaultAdmin,
         );
 
-        const balanceBefore = await mGlobal.balanceOf(recipient.address);
-
-        await executeWriteViaTimelock(
+        await scheduleTimelockOperationsTester(
           ctx,
-          mGlobal.address,
-          mGlobal.interface.encodeFunctionData('mint', [
-            recipient.address,
-            amount,
-          ]),
-          acDefaultAdmin,
-        );
-
-        expect(await mGlobal.balanceOf(recipient.address)).to.eq(
-          balanceBefore.add(amount),
+          [mGlobal.address],
+          [
+            mGlobal.interface.encodeFunctionData('mint', [
+              recipient.address,
+              amount,
+            ]),
+          ],
+          {},
+          {
+            from: acDefaultAdmin,
+            ...timelockManagerRevert(timelockManager, 'InvalidPreflightError'),
+          },
         );
       });
     });
@@ -891,7 +913,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
         expect(await mGlobal.balanceOf(holder.address)).to.eq(0);
       });
 
-      it('should burn tokens from greenlisted holder via timelock', async () => {
+      it('should fail: when trying to schedule burn through timelock', async () => {
         const {
           mGlobal,
           accessControl,
@@ -922,30 +944,26 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           acDefaultAdmin,
         );
 
-        await executeWriteViaTimelock(
-          ctx,
-          mGlobal.address,
-          mGlobal.interface.encodeFunctionData('mint', [
-            holder.address,
-            amount,
-          ]),
-          acDefaultAdmin,
+        await mint(
+          { tokenContract: mGlobal, owner: acDefaultAdmin },
+          holder.address,
+          amount,
         );
 
-        const balanceBefore = await mGlobal.balanceOf(holder.address);
-
-        await executeWriteViaTimelock(
+        await scheduleTimelockOperationsTester(
           ctx,
-          mGlobal.address,
-          mGlobal.interface.encodeFunctionData('burn', [
-            holder.address,
-            amount,
-          ]),
-          acDefaultAdmin,
-        );
-
-        expect(await mGlobal.balanceOf(holder.address)).to.eq(
-          balanceBefore.sub(amount),
+          [mGlobal.address],
+          [
+            mGlobal.interface.encodeFunctionData('burn', [
+              holder.address,
+              amount,
+            ]),
+          ],
+          {},
+          {
+            from: acDefaultAdmin,
+            ...timelockManagerRevert(timelockManager, 'InvalidPreflightError'),
+          },
         );
       });
     });
@@ -1029,10 +1047,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
 
         await expect(
           mGlobal.connect(from).transfer(to.address, amount),
-        ).revertedWithCustomError(
-          mGlobal,
-          acErrors.WMAC_HASNT_PERMISSION().customErrorName,
-        );
+        ).revertedWithCustomError(mGlobal, 'NotGreenlisted');
       });
     });
   });

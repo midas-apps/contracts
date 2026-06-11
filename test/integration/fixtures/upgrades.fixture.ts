@@ -21,7 +21,9 @@ import {
   MToken__factory,
   CustomAggregatorV3CompatibleFeedGrowth,
   MTokenPermissioned,
+  MTokenPermissioned__factory,
 } from '../../../typechain-types';
+import { NO_DELAY, NULL_DELAY } from '../../common/ac.helpers';
 import { Constructor } from '../../common/common.helpers';
 import { deployProxyContract } from '../../common/deploy.helpers';
 import { impersonateAndFundAccount, resetFork } from '../helpers/fork.helpers';
@@ -107,11 +109,20 @@ export async function mainnetUpgradeFixture() {
         constructorArgs: [allRoles.tokenRoles.mTBILL.customFeedAdmin],
       },
     ],
-    ac: [{ proxy: acAddress, implementation: MidasAccessControl__factory }],
+    ac: [
+      {
+        proxy: acAddress,
+        implementation: MidasAccessControl__factory,
+        reinitializerParams: {
+          fn: 'initializeV2',
+          args: [NULL_DELAY, [allRoles.tokenRoles.mGLOBAL.greenlisted]],
+        },
+      },
+    ],
     mGlobal: [
       {
         proxy: mGlobalAddress,
-        implementation: MToken__factory,
+        implementation: MTokenPermissioned__factory,
         constructorArgs: [
           allRoles.tokenRoles.mGLOBAL.tokenManager,
           allRoles.tokenRoles.mGLOBAL.minter,
@@ -167,7 +178,7 @@ export async function mainnetUpgradeFixture() {
 
   const pauseManager = await deployProxyContract<MidasPauseManager>(
     'MidasPauseManager',
-    [acAddress],
+    [acAddress, NO_DELAY, 3600],
   );
 
   const timelockManager = await deployProxyContract<MidasTimelockManager>(
@@ -190,11 +201,11 @@ export async function mainnetUpgradeFixture() {
     .initializeTimelock(timelock.address);
 
   const mTbill = (await ethers.getContractAt(
-    'MToken',
+    'mToken',
     mTbillAddress,
   )) as MToken;
   const mGlobal = (await ethers.getContractAt(
-    'MTokenPermissioned',
+    'mTokenPermissioned',
     mGlobalAddress,
   )) as MTokenPermissioned;
   const mTbillDataFeed = (await ethers.getContractAt(

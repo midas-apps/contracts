@@ -49,6 +49,7 @@ abstract contract ManageableVault is
 
     /**
      * @dev role that grants admin rights to the contract
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
      */
     // solhint-disable-next-line var-name-mixedcase
     bytes32 private immutable _CONTRACT_ADMIN_ROLE;
@@ -812,7 +813,7 @@ abstract contract ManageableVault is
      */
     function _validateFunctionAccessWithTimelock(
         bytes32 role,
-        uint256 overrideDelay,
+        uint32 overrideDelay,
         bool roleIsFunctionOperator,
         address account,
         bool validateFunctionRole

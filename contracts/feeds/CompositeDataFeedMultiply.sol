@@ -14,6 +14,11 @@ import "./CompositeDataFeed.sol";
  */
 contract CompositeDataFeedMultiply is CompositeDataFeed {
     /**
+     * @dev leaving a storage gap for futures updates
+     */
+    uint256[50] private __gap;
+
+    /**
      * @notice constructor
      * @param _contractAdminRole contract admin role
      * @custom:oz-upgrades-unsafe-allow constructor

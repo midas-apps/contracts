@@ -62,16 +62,27 @@ library AccessControlUtilsLibrary {
     error UserFacingRoleNotAllowed(bytes32 role);
 
     /**
+     * @notice error when the delay is invalid
+     */
+    error InvalidDelay();
+
+    /**
      * @notice timelock value that represents no delay
      */
     // solhint-disable-next-line private-vars-leading-underscore
-    uint256 internal constant NO_DELAY = type(uint256).max;
+    uint32 internal constant NO_DELAY = type(uint32).max;
 
     /**
      * @notice timelock value that represents non-set delay
      */
     // solhint-disable-next-line private-vars-leading-underscore
-    uint256 internal constant NULL_DELAY = 0;
+    uint32 internal constant NULL_DELAY = 0;
+
+    /**
+     * @notice maximum delay for a role
+     */
+    // solhint-disable-next-line private-vars-leading-underscore
+    uint32 internal constant MAX_DELAY = 7 days;
 
     /**
      * @dev validates that the function access is valid with timelock
@@ -85,7 +96,7 @@ library AccessControlUtilsLibrary {
     function validateFunctionAccessWithTimelock(
         IMidasAccessControl accessControl,
         bytes32 contractAdminRole,
-        uint256 overrideDelay,
+        uint32 overrideDelay,
         bool roleIsFunctionOperatorRole,
         address accountToCheck,
         bool validateFunctionRole
@@ -96,9 +107,10 @@ library AccessControlUtilsLibrary {
             address /* actualAccount */
         )
     {
-        IMidasTimelockManager timelockManager = getTimlockManager(
-            accessControl
+        IMidasTimelockManager timelockManager = IMidasTimelockManager(
+            accessControl.timelockManager()
         );
+
         bool isPreflight = accountToCheck == address(timelockManager);
         bool isTimelock = accountToCheck == timelockManager.timelock();
 
@@ -159,7 +171,7 @@ library AccessControlUtilsLibrary {
     function validateFunctionAccess(
         IMidasAccessControl accessControl,
         bytes32 role,
-        uint256 overrideDelay,
+        uint32 overrideDelay,
         bool roleIsFunctionOperatorRole,
         address account,
         bytes4 functionSelector,
@@ -171,6 +183,8 @@ library AccessControlUtilsLibrary {
             bytes32 /* roleUsed */
         )
     {
+        validateTimelockDelay(overrideDelay);
+
         if (roleIsFunctionOperatorRole) {
             if (accessControl.isFunctionAccessGrantOperator(role, account)) {
                 return role;
@@ -256,19 +270,6 @@ library AccessControlUtilsLibrary {
     }
 
     /**
-     * @dev gets the timelock manager contract
-     * @param accessControl access control contract
-     * @return timelock manager contract
-     */
-    function getTimlockManager(IMidasAccessControl accessControl)
-        internal
-        view
-        returns (IMidasTimelockManager)
-    {
-        return IMidasTimelockManager(accessControl.timelockManager());
-    }
-
-    /**
      * @dev resolves the access role based on the shortest delay
      * @param accessControl access control contract
      * @param rootRole root role
@@ -280,20 +281,30 @@ library AccessControlUtilsLibrary {
         IMidasAccessControl accessControl,
         bytes32 rootRole,
         bytes32 functionRoleKey,
-        uint256 overrideDelay
+        uint32 overrideDelay
     ) internal view returns (bytes32 roleUsed) {
         if (overrideDelay != NULL_DELAY) {
             return rootRole;
         }
-        (uint256 rootDelay, ) = accessControl.getRoleTimelockDelay(
+        (uint32 rootDelay, ) = accessControl.getRoleTimelockDelay(
             rootRole,
             overrideDelay
         );
-        (uint256 functionDelay, ) = accessControl.getRoleTimelockDelay(
+        (uint32 functionDelay, ) = accessControl.getRoleTimelockDelay(
             functionRoleKey,
             overrideDelay
         );
         return rootDelay <= functionDelay ? rootRole : functionRoleKey;
+    }
+
+    /**
+     * @notice validates that the delay is within the maximum delay
+     * @param delay delay to validate
+     */
+    function validateTimelockDelay(uint32 delay) internal view {
+        if (delay != NO_DELAY) {
+            require(delay <= MAX_DELAY, InvalidDelay());
+        }
     }
 
     /**
