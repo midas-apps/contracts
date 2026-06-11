@@ -984,7 +984,13 @@ export const rejectRequestTest = async (
 
   const balanceMtBillAfterUser = await balanceOfBase18(mTBILL, sender.address);
 
-  expect(upcomingSupplyAfter).eq(upcomingSupplyBefore);
+  const estimatedMintAmountRequest = requestData.usdAmountWithoutFees
+    .mul(constants.WeiPerEther)
+    .div(requestData.tokenOutRate);
+
+  expect(upcomingSupplyAfter).eq(
+    upcomingSupplyBefore.sub(estimatedMintAmountRequest),
+  );
 
   expect(balanceMtBillAfterUser).eq(balanceMtBillBeforeUser);
   expect(totalDepositedAfter).eq(totalDepositedBefore);

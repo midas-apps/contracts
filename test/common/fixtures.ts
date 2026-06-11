@@ -83,7 +83,6 @@ import {
   MidasAccessControlTimelockControllerTest__factory,
   MidasPauseManagerTest__factory,
 } from '../../typechain-types';
-import { MTBILLTest__factory } from '../../typechain-types/factories/contracts/testers/MTBILLTest__factory';
 
 export const defaultDeploy = async () => {
   const [
@@ -181,10 +180,6 @@ export const defaultDeploy = async () => {
     'mTokenLoan',
     'mTokenLoan',
   );
-
-  // separate mTBILL instance for swapper testing
-  const mBASIS = await new MTBILLTest__factory(owner).deploy();
-  await mBASIS.initialize(accessControl.address, clawbackReceiver.address);
 
   const excludedRoles = [
     allRoles.common.blacklisted,
@@ -514,9 +509,6 @@ export const defaultDeploy = async () => {
 
   /* Redemption Vault With MToken (mFONE -> mTBILL) */
 
-  const mFONE = await new MTBILLTest__factory(owner).deploy();
-  await mFONE.initialize(accessControl.address, clawbackReceiver.address);
-
   const mockedAggregatorMFone = await new AggregatorV3Mock__factory(
     owner,
   ).deploy();
@@ -722,7 +714,6 @@ export const defaultDeploy = async () => {
     customFeedAdjusted,
     customFeedGrowth,
     mTBILL,
-    mBASIS,
     mBasisToUsdDataFeed,
     accessControl,
     wAccessControlTester,
@@ -754,7 +745,6 @@ export const defaultDeploy = async () => {
     redemptionVaultWithMorpho,
     morphoVaultMock,
     liquidityProvider,
-    mFONE,
     mockedAggregatorMFone,
     mFoneToUsdDataFeed,
     redemptionVaultWithMToken,

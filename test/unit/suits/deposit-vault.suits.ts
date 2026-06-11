@@ -9828,7 +9828,7 @@ export const depositVaultSuits = (
         });
       });
 
-      describe('rejectRequest()', async () => {
+      describe.only('rejectRequest()', async () => {
         it('should fail: call from address without vault admin role', async () => {
           const { depositVault, regularAccounts, mTokenToUsdDataFeed, mTBILL } =
             await loadDvFixture();

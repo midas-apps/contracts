@@ -292,6 +292,11 @@ contract DepositVault is ManageableVault, IDepositVault {
 
         mintRequests[requestId].status = RequestStatus.Canceled;
 
+        upcomingSupply -= _quoteMTokenFromRequest(
+            request,
+            request.tokenOutRate
+        );
+
         emit RejectRequest(requestId, request.recipient);
     }
 
