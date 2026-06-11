@@ -25,7 +25,7 @@ import {
 import { defaultDeploy } from '../common/fixtures';
 import {
   executeTimelockOperationTester,
-  scheduleTimelockOperationsTester,
+  bulkScheduleTimelockOperationTester,
 } from '../common/timelock-manager.helpers';
 
 describe('CustomAggregatorV3CompatibleFeed', function () {
@@ -279,7 +279,7 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
         [validMaxAnswerDeviation],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [customFeed.address],
         [calldata],
@@ -373,7 +373,7 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
         [validMaxAnswerDeviation],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [customFeed.address],
         [calldata],

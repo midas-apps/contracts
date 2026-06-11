@@ -149,13 +149,10 @@ export async function mainnetUpgradeFixture() {
 
   for (const [, values] of Object.entries(addressesMap)) {
     for (const val of values) {
-      console.log(`Upgrading ${val.proxy}`);
-
       await hre.upgrades.upgradeProxy(
         val.proxy,
         new val.implementation(proxyAdminOwner),
         {
-          unsafeAllow: ['constructor'],
           constructorArgs: val.constructorArgs ?? [],
           call: val.reinitializerParams
             ? {

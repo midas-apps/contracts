@@ -48,7 +48,7 @@ export const setMaxPendingOperationsPerProposerTester = async (
   );
 };
 
-export const scheduleTimelockOperationsTester = async (
+export const bulkScheduleTimelockOperationTester = async (
   { timelockManager, timelock, owner }: CommonParamsTimelock,
   target: string[],
   data: string[],
@@ -58,14 +58,14 @@ export const scheduleTimelockOperationsTester = async (
   const from = opt?.from ?? owner;
   isSetCouncilOperation ??= false;
 
-  const callFn =
-    target.length > 1 || data.length > 1
-      ? timelockManager
-          .connect(from)
-          .scheduleTimelockOperations.bind(this, target, data)
-      : timelockManager
-          .connect(from)
-          .scheduleTimelockOperation.bind(this, target[0], data[0]);
+  const params = target.map((target, index) => ({
+    target,
+    data: data[index],
+  }));
+
+  const callFn = timelockManager
+    .connect(from)
+    .bulkScheduleTimelockOperation.bind(this, params);
 
   if (await handleRevert(callFn, timelockManager, opt)) {
     return [];
@@ -79,46 +79,118 @@ export const scheduleTimelockOperationsTester = async (
   const councilVersionAfter = await timelockManager.securityCouncilVersion();
 
   expect(councilVersionAfter).to.be.equal(councilVersionBefore);
-  const blockTimestamp = await getCurrentBlockTimestamp();
 
   const operationIds: string[] = [];
   for (const [index, operationTarget] of target.entries()) {
     const operationData = data[index];
-
-    const dataHash = getDataHash(operationTarget, operationData);
-
-    const dataHashIndex = await timelockManager.dataHashIndexes(dataHash);
-
-    const operationId = await timelock.hashOperation(
-      operationTarget,
-      0,
-      operationData,
-      ethers.constants.HashZero,
-      getTimelockSalt(dataHashIndex),
+    operationIds.push(
+      await validateOperationDetails({
+        timelockManager,
+        timelock,
+        from,
+        operationTarget,
+        operationData,
+        isSetCouncilOperation,
+        councilVersionBefore,
+      }),
     );
-
-    expect(await timelock.isOperation(operationId)).to.be.true;
-    expect(await timelock.isOperationReady(operationId)).to.be.false;
-    expect(await timelock.isOperationDone(operationId)).to.be.false;
-    expect(await timelock.isOperationPending(operationId)).to.be.true;
-
-    const details = await timelockManager.getOperationDetails(operationId);
-    expect(details.status).to.be.equal(1);
-    expect(details.pauser).to.be.equal(ethers.constants.AddressZero);
-    expect(details.operationProposer).to.be.equal(from.address);
-    expect(details.dataHash).to.be.equal(dataHash);
-    expect(details.votesForExecution).to.be.equal(0);
-    expect(details.votesForVeto).to.be.equal(0);
-    expect(details.createdAt).to.be.equal(blockTimestamp);
-    expect(details.executionApprovedAt).to.be.equal(0);
-    expect(details.pauseReasonCode).to.be.equal(0);
-    expect(details.councilVersion).to.be.equal(councilVersionBefore);
-    expect(details.isSetCouncilOperation).to.be.equal(isSetCouncilOperation);
-
-    operationIds.push(operationId);
   }
 
   return operationIds;
+};
+
+export const scheduleTimelockOperationTester = async (
+  { timelockManager, timelock, owner }: CommonParamsTimelock,
+  target: string,
+  data: string,
+  { isSetCouncilOperation }: { isSetCouncilOperation?: boolean } = {},
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+  isSetCouncilOperation ??= false;
+
+  const callFn = timelockManager
+    .connect(from)
+    .scheduleTimelockOperation.bind(this, { target, data });
+
+  if (await handleRevert(callFn, timelockManager, opt)) {
+    return [];
+  }
+
+  const councilVersionBefore = await timelockManager.securityCouncilVersion();
+
+  const txPromise = callFn();
+  await txPromise;
+  // await expect(txPromise).to.not.reverted;
+  const councilVersionAfter = await timelockManager.securityCouncilVersion();
+
+  expect(councilVersionAfter).to.be.equal(councilVersionBefore);
+
+  const operationIds: string[] = [];
+
+  return [
+    await validateOperationDetails({
+      timelockManager,
+      timelock,
+      from,
+      operationTarget: target,
+      operationData: data,
+      isSetCouncilOperation,
+      councilVersionBefore,
+    }),
+  ];
+};
+
+const validateOperationDetails = async ({
+  timelockManager,
+  timelock,
+  from,
+  operationTarget,
+  operationData,
+  isSetCouncilOperation,
+  councilVersionBefore,
+}: {
+  operationTarget: string;
+  operationData: string;
+  timelockManager: MidasTimelockManager;
+  timelock: MidasAccessControlTimelockController;
+  from: SignerWithAddress;
+  isSetCouncilOperation: boolean;
+  councilVersionBefore: BigNumber;
+}) => {
+  const blockTimestamp = await getCurrentBlockTimestamp();
+
+  const dataHash = getDataHash(operationTarget, operationData);
+
+  const dataHashIndex = await timelockManager.dataHashIndexes(dataHash);
+
+  const operationId = await timelock.hashOperation(
+    operationTarget,
+    0,
+    operationData,
+    ethers.constants.HashZero,
+    getTimelockSalt(dataHashIndex),
+  );
+
+  expect(await timelock.isOperation(operationId)).to.be.true;
+  expect(await timelock.isOperationReady(operationId)).to.be.false;
+  expect(await timelock.isOperationDone(operationId)).to.be.false;
+  expect(await timelock.isOperationPending(operationId)).to.be.true;
+
+  const details = await timelockManager.getOperationDetails(operationId);
+  expect(details.status).to.be.equal(1);
+  expect(details.pauser).to.be.equal(ethers.constants.AddressZero);
+  expect(details.operationProposer).to.be.equal(from.address);
+  expect(details.dataHash).to.be.equal(dataHash);
+  expect(details.votesForExecution).to.be.equal(0);
+  expect(details.votesForVeto).to.be.equal(0);
+  expect(details.createdAt).to.be.equal(blockTimestamp);
+  expect(details.executionApprovedAt).to.be.equal(0);
+  expect(details.pauseReasonCode).to.be.equal(0);
+  expect(details.councilVersion).to.be.equal(councilVersionBefore);
+  expect(details.isSetCouncilOperation).to.be.equal(isSetCouncilOperation);
+
+  return operationId;
 };
 
 export const executeTimelockOperationTester = async (

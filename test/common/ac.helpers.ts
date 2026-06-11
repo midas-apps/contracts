@@ -12,7 +12,7 @@ import {
 } from './common.helpers';
 import {
   executeTimelockOperationTester,
-  scheduleTimelockOperationsTester,
+  bulkScheduleTimelockOperationTester,
 } from './timelock-manager.helpers';
 
 import { encodeFnSelector } from '../../helpers/utils';
@@ -653,7 +653,7 @@ export const setRoleTimelocksAndExecute = async (
 
   const from = opt?.from ?? owner;
 
-  await scheduleTimelockOperationsTester(
+  await bulkScheduleTimelockOperationTester(
     { timelockManager, timelock, owner, accessControl },
     [accessControl.address],
     [data],

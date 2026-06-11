@@ -78,7 +78,6 @@ abstract contract WithMidasAccessControl is
         _;
     }
 
-    // TODO: remove it and just merge with onlyRoleOverrideDelay
     /**
      * @dev validates that the caller has the function role without timelock
      * @param role base role to validate

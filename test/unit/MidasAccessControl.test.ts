@@ -32,7 +32,7 @@ import { handleRevert, validateImplementation } from '../common/common.helpers';
 import { defaultDeploy } from '../common/fixtures';
 import {
   executeTimelockOperationTester,
-  scheduleTimelockOperationsTester,
+  bulkScheduleTimelockOperationTester,
 } from '../common/timelock-manager.helpers';
 
 const withOnlyRoleSelector = encodeFnSelector('withOnlyRole(bytes32,bool)');
@@ -286,7 +286,7 @@ describe('MidasAccessControl', function () {
         ],
       ]);
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [accessControl.address],
         [data],
@@ -508,7 +508,7 @@ describe('MidasAccessControl', function () {
         [[{ role: roles.common.defaultAdmin, account: owner.address }]],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [accessControl.address],
         [data],
@@ -562,7 +562,7 @@ describe('MidasAccessControl', function () {
         ],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [accessControl.address],
         [data],
@@ -770,7 +770,7 @@ describe('MidasAccessControl', function () {
         roles.common.greenlistedOperator,
       ]);
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [accessControl.address],
         [data],
@@ -905,7 +905,7 @@ describe('MidasAccessControl', function () {
         [[{ role: roles.common.blacklistedOperator, enabled: true }]],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [accessControl.address],
         [data],
@@ -1091,7 +1091,7 @@ describe('MidasAccessControl', function () {
         ],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [accessControl.address],
         [data],
@@ -1526,7 +1526,7 @@ describe('MidasAccessControl', function () {
         ],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [accessControl.address],
         [data],
@@ -1830,7 +1830,7 @@ describe('MidasAccessControl', function () {
         [roles.common.blacklisted, regularAccounts[0].address],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [accessControl.address],
         [data],
@@ -1940,7 +1940,7 @@ describe('MidasAccessControl', function () {
         regularAccounts[0].address,
       ]);
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [accessControl.address],
         [data],
@@ -2006,7 +2006,7 @@ describe('MidasAccessControl', function () {
         owner.address,
       ]);
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [accessControl.address],
         [data],
@@ -2100,7 +2100,7 @@ describe('MidasAccessControl', function () {
         [newDelay],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [accessControl.address],
         [calldata],
@@ -2493,7 +2493,7 @@ describe('WithMidasAccessControl', function () {
         [adminRole, true],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [wAccessControlTester.address],
         [calldata],
@@ -2541,7 +2541,7 @@ describe('WithMidasAccessControl', function () {
         [adminRole, true],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [wAccessControlTester.address],
         [calldata],
@@ -2599,7 +2599,7 @@ describe('WithMidasAccessControl', function () {
         [adminRole, true],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [wAccessControlTester.address],
         [calldata],
@@ -2616,7 +2616,7 @@ describe('WithMidasAccessControl', function () {
         regularAccounts[0].address,
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [wAccessControlTester.address],
         [calldata],
@@ -2783,7 +2783,7 @@ describe('WithMidasAccessControl', function () {
         'withOnlyContractAdmin',
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [wAccessControlTester.address],
         [calldata],
@@ -2831,7 +2831,7 @@ describe('WithMidasAccessControl', function () {
         'withOnlyContractAdmin',
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [wAccessControlTester.address],
         [calldata],
@@ -2889,7 +2889,7 @@ describe('WithMidasAccessControl', function () {
         'withOnlyContractAdmin',
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [wAccessControlTester.address],
         [calldata],
@@ -2925,7 +2925,7 @@ describe('WithMidasAccessControl', function () {
         [adminRole, true],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [wAccessControlTester.address],
         [calldata],

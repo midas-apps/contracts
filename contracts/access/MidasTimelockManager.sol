@@ -200,22 +200,22 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     /**
      * @inheritdoc IMidasTimelockManager
      */
-    function scheduleTimelockOperations(
-        address[] calldata targets,
-        bytes[] calldata datas
+    function bulkScheduleTimelockOperation(
+        ScheduleTimelockOperationParams[] calldata params
     ) external {
-        for (uint256 i = 0; i < targets.length; ++i) {
-            _scheduleTimelockOperation(targets[i], datas[i]);
+        for (uint256 i = 0; i < params.length; ++i) {
+            ScheduleTimelockOperationParams calldata param = params[i];
+            _scheduleTimelockOperation(param.target, param.data);
         }
     }
 
     /**
      * @inheritdoc IMidasTimelockManager
      */
-    function scheduleTimelockOperation(address target, bytes calldata data)
-        external
-    {
-        _scheduleTimelockOperation(target, data);
+    function scheduleTimelockOperation(
+        ScheduleTimelockOperationParams calldata params
+    ) external {
+        _scheduleTimelockOperation(params.target, params.data);
     }
 
     /**

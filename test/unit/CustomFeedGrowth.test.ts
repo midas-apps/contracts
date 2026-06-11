@@ -28,7 +28,7 @@ import { calculatePriceDiviation } from '../common/custom-feed.helpers';
 import { defaultDeploy } from '../common/fixtures';
 import {
   executeTimelockOperationTester,
-  scheduleTimelockOperationsTester,
+  bulkScheduleTimelockOperationTester,
 } from '../common/timelock-manager.helpers';
 
 describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
@@ -685,7 +685,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
         [validMaxAnswerDeviation],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [customFeedGrowth.address],
         [calldata],
@@ -750,7 +750,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
         [validMaxAnswerDeviation],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         [customFeedGrowth.address],
         [calldata],

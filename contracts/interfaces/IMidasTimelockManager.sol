@@ -52,6 +52,17 @@ struct GetOperationStatusResult {
  */
 interface IMidasTimelockManager {
     /**
+     * @notice Parameters for scheduling a timelock operation
+     * @param target target contract
+     * @param data calldata
+     */
+    struct ScheduleTimelockOperationParams {
+        /// @notice target contract
+        address target;
+        /// @notice calldata
+        bytes data;
+    }
+    /**
      * @notice Preflight call succeeded with role info
      * @param role role used for the call
      * @param overrideDelay override delay for the invocation
@@ -219,21 +230,19 @@ interface IMidasTimelockManager {
 
     /**
      * @notice Schedules multiple timelock operations
-     * @param targets target contracts
-     * @param datas calldata for each target
+     * @param params array of schedule timelock operation parameters
      */
-    function scheduleTimelockOperations(
-        address[] calldata targets,
-        bytes[] calldata datas
+    function bulkScheduleTimelockOperation(
+        ScheduleTimelockOperationParams[] calldata params
     ) external;
 
     /**
      * @notice Schedules one timelock operation
-     * @param target target contract
-     * @param data calldata
+     * @param params schedule timelock operation parameters
      */
-    function scheduleTimelockOperation(address target, bytes calldata data)
-        external;
+    function scheduleTimelockOperation(
+        ScheduleTimelockOperationParams calldata params
+    ) external;
 
     /**
      * @notice Executes a scheduled timelock operation

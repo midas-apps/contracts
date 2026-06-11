@@ -21,7 +21,7 @@ import { pauseGlobalTest } from '../common/common.helpers';
 import { burn, mint } from '../common/mtoken.helpers';
 import {
   executeTimelockOperationTester,
-  scheduleTimelockOperationsTester,
+  bulkScheduleTimelockOperationTester,
 } from '../common/timelock-manager.helpers';
 
 describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
@@ -113,7 +113,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
       }
     }
 
-    await scheduleTimelockOperationsTester(
+    await bulkScheduleTimelockOperationTester(
       ctx,
       [target],
       [calldata as string],
@@ -405,7 +405,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           acDefaultAdmin,
         );
 
-        await scheduleTimelockOperationsTester(
+        await bulkScheduleTimelockOperationTester(
           ctx,
           [pauseManager.address],
           [pauseManager.interface.encodeFunctionData('globalPause') as string],
@@ -532,7 +532,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           acDefaultAdmin,
         );
 
-        await scheduleTimelockOperationsTester(
+        await bulkScheduleTimelockOperationTester(
           ctx,
           [mTbill.address],
           [
@@ -656,7 +656,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           amount,
         );
 
-        await scheduleTimelockOperationsTester(
+        await bulkScheduleTimelockOperationTester(
           ctx,
           [mTbill.address],
           [
@@ -851,7 +851,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           acDefaultAdmin,
         );
 
-        await scheduleTimelockOperationsTester(
+        await bulkScheduleTimelockOperationTester(
           ctx,
           [mGlobal.address],
           [
@@ -961,7 +961,7 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           amount,
         );
 
-        await scheduleTimelockOperationsTester(
+        await bulkScheduleTimelockOperationTester(
           ctx,
           [mGlobal.address],
           [

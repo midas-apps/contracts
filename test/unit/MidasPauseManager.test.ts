@@ -31,7 +31,7 @@ import {
 import { defaultDeploy } from '../common/fixtures';
 import {
   executeTimelockOperationTester,
-  scheduleTimelockOperationsTester,
+  bulkScheduleTimelockOperationTester,
 } from '../common/timelock-manager.helpers';
 
 const DEFAULT_UNPAUSE_DELAY = 86400;
@@ -63,7 +63,7 @@ const scheduleAndExecute = async (
 ) => {
   const timelockCtx = timelockParams(ctx);
 
-  await scheduleTimelockOperationsTester(
+  await bulkScheduleTimelockOperationTester(
     timelockCtx,
     [ctx.pauseManager.address],
     [calldata],
@@ -171,10 +171,10 @@ const toTimelockCtx = (
 
 const scheduleGlobalPause = async (
   ctx: TimelockCtx,
-  opt?: Parameters<typeof scheduleTimelockOperationsTester>[4],
+  opt?: Parameters<typeof bulkScheduleTimelockOperationTester>[4],
 ) => {
   const calldata = ctx.pauseManager.interface.encodeFunctionData('globalPause');
-  await scheduleTimelockOperationsTester(
+  await bulkScheduleTimelockOperationTester(
     timelockParams(ctx),
     [ctx.pauseManager.address],
     [calldata],
@@ -185,11 +185,11 @@ const scheduleGlobalPause = async (
 
 const scheduleGlobalUnpause = async (
   ctx: TimelockCtx,
-  opt?: Parameters<typeof scheduleTimelockOperationsTester>[4],
+  opt?: Parameters<typeof bulkScheduleTimelockOperationTester>[4],
 ) => {
   const calldata =
     ctx.pauseManager.interface.encodeFunctionData('globalUnpause');
-  await scheduleTimelockOperationsTester(
+  await bulkScheduleTimelockOperationTester(
     timelockParams(ctx),
     [ctx.pauseManager.address],
     [calldata],
@@ -317,13 +317,13 @@ const contractPauserFunctionNotReady = async (
 const scheduleBulkPauseContract = async (
   ctx: TimelockCtx,
   addresses: string[],
-  opt?: Parameters<typeof scheduleTimelockOperationsTester>[4],
+  opt?: Parameters<typeof bulkScheduleTimelockOperationTester>[4],
 ) => {
   const calldata = ctx.pauseManager.interface.encodeFunctionData(
     'bulkPauseContract',
     [addresses],
   );
-  await scheduleTimelockOperationsTester(
+  await bulkScheduleTimelockOperationTester(
     timelockParams(ctx),
     [ctx.pauseManager.address],
     [calldata],
@@ -353,13 +353,13 @@ const executeBulkPauseContract = async (
 const scheduleBulkUnpauseContract = async (
   ctx: TimelockCtx,
   addresses: string[],
-  opt?: Parameters<typeof scheduleTimelockOperationsTester>[4],
+  opt?: Parameters<typeof bulkScheduleTimelockOperationTester>[4],
 ) => {
   const calldata = ctx.pauseManager.interface.encodeFunctionData(
     'bulkUnpauseContract',
     [addresses],
   );
-  await scheduleTimelockOperationsTester(
+  await bulkScheduleTimelockOperationTester(
     timelockParams(ctx),
     [ctx.pauseManager.address],
     [calldata],
@@ -390,13 +390,13 @@ const scheduleBulkPauseContractFn = async (
   ctx: TimelockCtx,
   addresses: string[],
   selectors: string[],
-  opt?: Parameters<typeof scheduleTimelockOperationsTester>[4],
+  opt?: Parameters<typeof bulkScheduleTimelockOperationTester>[4],
 ) => {
   const calldata = ctx.pauseManager.interface.encodeFunctionData(
     'bulkPauseContractFn',
     [addresses, selectors],
   );
-  await scheduleTimelockOperationsTester(
+  await bulkScheduleTimelockOperationTester(
     timelockParams(ctx),
     [ctx.pauseManager.address],
     [calldata],
@@ -428,13 +428,13 @@ const scheduleBulkUnpauseContractFn = async (
   ctx: TimelockCtx,
   addresses: string[],
   selectors: string[],
-  opt?: Parameters<typeof scheduleTimelockOperationsTester>[4],
+  opt?: Parameters<typeof bulkScheduleTimelockOperationTester>[4],
 ) => {
   const calldata = ctx.pauseManager.interface.encodeFunctionData(
     'bulkUnpauseContractFn',
     [addresses, selectors],
   );
-  await scheduleTimelockOperationsTester(
+  await bulkScheduleTimelockOperationTester(
     timelockParams(ctx),
     [ctx.pauseManager.address],
     [calldata],
@@ -465,13 +465,13 @@ const executeBulkUnpauseContractFn = async (
 const scheduleContractAdminPause = async (
   ctx: TimelockCtx,
   contractAddr: string,
-  opt?: Parameters<typeof scheduleTimelockOperationsTester>[4],
+  opt?: Parameters<typeof bulkScheduleTimelockOperationTester>[4],
 ) => {
   const calldata = ctx.pauseManager.interface.encodeFunctionData(
     'contractAdminPause',
     [contractAddr],
   );
-  await scheduleTimelockOperationsTester(
+  await bulkScheduleTimelockOperationTester(
     timelockParams(ctx),
     [ctx.pauseManager.address],
     [calldata],
@@ -501,13 +501,13 @@ const executeContractAdminPause = async (
 const scheduleContractAdminUnpause = async (
   ctx: TimelockCtx,
   contractAddr: string,
-  opt?: Parameters<typeof scheduleTimelockOperationsTester>[4],
+  opt?: Parameters<typeof bulkScheduleTimelockOperationTester>[4],
 ) => {
   const calldata = ctx.pauseManager.interface.encodeFunctionData(
     'contractAdminUnpause',
     [contractAddr],
   );
-  await scheduleTimelockOperationsTester(
+  await bulkScheduleTimelockOperationTester(
     timelockParams(ctx),
     [ctx.pauseManager.address],
     [calldata],
@@ -664,7 +664,7 @@ describe('MidasPauseManager', () => {
       const calldata =
         pauseManager.interface.encodeFunctionData('globalUnpause');
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         timelockFixture,
         [pauseManager.address],
         [calldata],
@@ -930,7 +930,7 @@ describe('MidasPauseManager', () => {
         [[pausableTester.address]],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         timelockFixture,
         [pauseManager.address],
         [calldata],
@@ -962,7 +962,7 @@ describe('MidasPauseManager', () => {
         [[pausableTester.address]],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { ...timelockFixture, accessControl },
         [pauseManager.address],
         [calldata],
@@ -1268,7 +1268,7 @@ describe('MidasPauseManager', () => {
         [[pausableTester.address], [depositRequestSel]],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         timelockFixture,
         [pauseManager.address],
         [calldata],
@@ -1300,7 +1300,7 @@ describe('MidasPauseManager', () => {
         [[pausableTester.address], [depositRequestSel]],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { ...timelockFixture, accessControl },
         [pauseManager.address],
         [calldata],
@@ -1605,7 +1605,7 @@ describe('MidasPauseManager', () => {
         [pausableTester.address],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         timelockFixture,
         [pauseManager.address],
         [calldata],
@@ -1637,7 +1637,7 @@ describe('MidasPauseManager', () => {
         [pausableTester.address],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         { ...timelockFixture, accessControl },
         [pauseManager.address],
         [calldata],
@@ -1747,7 +1747,7 @@ describe('MidasPauseManager', () => {
         [NO_DELAY],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         timelockFixture,
         [pauseManager.address],
         [calldata],
@@ -1789,7 +1789,7 @@ describe('MidasPauseManager', () => {
         [DEFAULT_UNPAUSE_DELAY],
       );
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         timelockFixture,
         [pauseManager.address],
         [calldata],
@@ -1832,7 +1832,7 @@ describe('MidasPauseManager', () => {
       const calldata =
         fixture.pauseManager.interface.encodeFunctionData('globalUnpause');
 
-      await scheduleTimelockOperationsTester(
+      await bulkScheduleTimelockOperationTester(
         fixture,
         [fixture.pauseManager.address],
         [calldata],

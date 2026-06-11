@@ -55,7 +55,7 @@ import {
 } from '../../common/mtoken.helpers';
 import {
   executeTimelockOperationTester,
-  scheduleTimelockOperationsTester,
+  bulkScheduleTimelockOperationTester,
 } from '../../common/timelock-manager.helpers';
 
 const DEFAULT_UNPAUSE_DELAY = 86400;
@@ -215,7 +215,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       [fixture.tokenContract.address],
     );
 
-    await scheduleTimelockOperationsTester(
+    await bulkScheduleTimelockOperationTester(
       { timelockManager, timelock, owner, accessControl },
       [pauseManager.address],
       [calldata],
