@@ -2,16 +2,16 @@
 pragma solidity 0.8.9;
 
 import "../../RedemptionVaultWithSwapper.sol";
-import "./MWinMidasAccessControlRoles.sol";
+import "./QHVNUsdMidasAccessControlRoles.sol";
 
 /**
- * @title MWinRedemptionVaultWithSwapper
- * @notice Smart contract that handles mWIN redemptions
+ * @title QHVNUsdRedemptionVaultWithSwapper
+ * @notice Smart contract that handles qHVNUSD redemptions
  * @author RedDuck Software
  */
-contract MWinRedemptionVaultWithSwapper is
+contract QHVNUsdRedemptionVaultWithSwapper is
     RedemptionVaultWithSwapper,
-    MWinMidasAccessControlRoles
+    QHVNUsdMidasAccessControlRoles
 {
     /**
      * @dev leaving a storage gap for futures updates
@@ -22,13 +22,13 @@ contract MWinRedemptionVaultWithSwapper is
      * @inheritdoc ManageableVault
      */
     function vaultRole() public pure override returns (bytes32) {
-        return M_WIN_REDEMPTION_VAULT_ADMIN_ROLE;
+        return Q_HVN_USD_REDEMPTION_VAULT_ADMIN_ROLE;
     }
 
     /**
      * @inheritdoc Greenlistable
      */
     function greenlistedRole() public pure override returns (bytes32) {
-        return M_WIN_GREENLISTED_ROLE;
+        return Q_HVN_USD_GREENLISTED_ROLE;
     }
 }

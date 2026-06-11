@@ -274,6 +274,7 @@ export const sendAndWaitForCustomTxSign = async (
       | 'set-round-data'
       | 'timelock-call-upgrade'
       | 'pause-function'
+      | 'set-greenlist-enabled'
       | 'set-lz-rate-limit-configs'
       | 'set-aave-pool'
       | 'set-aave-deposits-enabled'

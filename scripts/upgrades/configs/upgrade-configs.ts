@@ -5,6 +5,20 @@ import { UpgradeConfig } from '../common/types';
 
 export const upgradeConfigs: UpgradeConfig = {
   upgrades: {
+    'mwin-separate-whitelist': {
+      vaults: {
+        [chainIds.main]: {
+          overrides: {
+            mWIN: {
+              overrides: {
+                depositVault: true,
+                redemptionVaultSwapper: true,
+              },
+            },
+          },
+        },
+      },
+    },
     'batch-upgrade-scope-w-supply-cap': {
       initializers: {
         depositVault: {

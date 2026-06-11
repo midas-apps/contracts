@@ -310,4 +310,9 @@ export const mTokensMetadata: Record<
     name: 'Midas Wellington Income Opportunities',
     symbol: 'mWIN',
   },
+  qHVNUSD: {
+    name: 'Qapture Safe Haven',
+    symbol: 'QHVN-USD',
+    isPermissioned: true,
+  },
 };

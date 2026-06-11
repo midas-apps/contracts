@@ -81,6 +81,7 @@ const prefixes: Record<MTokenName, string> = {
   mEVETH: 'M_EV_ETH',
   liquidRWA: 'LIQUID_RWA',
   mWIN: 'M_WIN',
+  qHVNUSD: 'Q_HVN_USD',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {
