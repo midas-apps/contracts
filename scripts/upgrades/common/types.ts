@@ -32,22 +32,23 @@ export type UpgradeConfig = {
           overrides?: Partial<
             Record<
               MTokenName,
-              {
-                // default - false
-                all?: boolean;
-                overrides?: Partial<
-                  Record<
-                    VaultType,
-                    | {
-                        vaultTypeTo?: VaultType;
-                        overrideImplementation?: string;
-                        initializer?: string;
-                        initializerArgs?: unknown[];
-                      }
-                    | boolean // if true - the {} config will be used
-                  >
-                >;
-              }
+              | {
+                  // default - false
+                  all?: boolean;
+                  overrides?: Partial<
+                    Record<
+                      VaultType,
+                      | {
+                          vaultTypeTo?: VaultType;
+                          overrideImplementation?: string;
+                          initializer?: string;
+                          initializerArgs?: unknown[];
+                        }
+                      | boolean // if true - the {} config will be used
+                    >
+                  >;
+                }
+              | false
             >
           >;
         }

@@ -2,6 +2,7 @@ import { acremBTC1DeploymentConfig } from './acremBTC1';
 import { bondBTCDeploymentConfig } from './bondBTC';
 import { bondETHDeploymentConfig } from './bondETH';
 import { bondUSDDeploymentConfig } from './bondUSD';
+import { carryTradeUSDTRYLeverageDeploymentConfig } from './carryTradeUSDTRYLeverage';
 import { cUSDODeploymentConfig } from './cUSDO';
 import { dnETHDeploymentConfig } from './dnETH';
 import { dnFARTDeploymentConfig } from './dnFART';
@@ -21,12 +22,14 @@ import { kitUSDDeploymentConfig } from './kitUSD';
 import { kmiUSDDeploymentConfig } from './kmiUSD';
 import { liquidHYPEDeploymentConfig } from './liquidHYPE';
 import { liquidRESERVEDeploymentConfig } from './liquidRESERVE';
+import { liquidRWADeploymentConfig } from './liquidRWA';
 import { lstHYPEDeploymentConfig } from './lstHYPE';
 import { mAPOLLODeploymentConfig } from './mAPOLLO';
 import { mBASISDeploymentConfig } from './mBASIS';
 import { mBTCDeploymentConfig } from './mBTC';
 import { mEDGEDeploymentConfig } from './mEDGE';
 import { mevBTCDeploymentConfig } from './mevBTC';
+import { mEVETHDeploymentConfig } from './mEVETH';
 import { mEVUSDDeploymentConfig } from './mEVUSD';
 import { mFARMDeploymentConfig } from './mFARM';
 import { mFONEDeploymentConfig } from './mFONE';
@@ -51,11 +54,14 @@ import { mTBILLDeploymentConfig } from './mTBILL';
 import { mTESTDeploymentConfig } from './mTEST';
 import { mTUDeploymentConfig } from './mTU';
 import { mWildUSDDeploymentConfig } from './mWildUSD';
+import { mWINDeploymentConfig } from './mWIN';
 import { mXRPDeploymentConfig } from './mXRP';
 import { obeatUSDDeploymentConfig } from './obeatUSD';
 import { plUSDDeploymentConfig } from './plUSD';
+import { qHVNUSDDeploymentConfig } from './qHVNUSD';
 import { sLINJDeploymentConfig } from './sLINJ';
 import { splUSDDeploymentConfig } from './splUSD';
+import { stockMarketTRBasisTradeDeploymentConfig } from './stockMarketTRBasisTrade';
 import { TACmBTCDeploymentConfig } from './tac/TACmBTC';
 import { TACmEDGEDeploymentConfig } from './tac/TACmEDGE';
 import { TACmMEVDeploymentConfig } from './tac/TACmMEV';
@@ -145,4 +151,10 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   bondETH: bondETHDeploymentConfig,
   bondBTC: bondBTCDeploymentConfig,
   mTEST: mTESTDeploymentConfig,
+  stockMarketTRBasisTrade: stockMarketTRBasisTradeDeploymentConfig,
+  carryTradeUSDTRYLeverage: carryTradeUSDTRYLeverageDeploymentConfig,
+  mEVETH: mEVETHDeploymentConfig,
+  liquidRWA: liquidRWADeploymentConfig,
+  mWIN: mWINDeploymentConfig,
+  qHVNUSD: qHVNUSDDeploymentConfig,
 };

@@ -873,3 +873,75 @@ All the roles for the Midas protocol smart contracts are listed below.
 | **_depositVaultAdmin_**    | `0xdf22d0766c576aa653934e9dbd118179366c13863b84dfde15be21854404f3ad` |
 | **_redemptionVaultAdmin_** | `0x0dd95668472ae52905a312d993d2ad881b95371af4f5258756954992589fe911` |
 | **_greenlisted_**          | `0x19bb2578851ca88871a53ed29cbea343d0c7845746be7720066fb0fa8ce707ac` |
+
+### stockMarketTRBasisTrade Roles
+
+| Role Name                  | Role                                                                 |
+| -------------------------- | -------------------------------------------------------------------- |
+| **_minter_**               | `0xb9dc40afdfa13c4eeb7d2fc0b224108f82d33d96509b6ea277516392419b0f51` |
+| **_burner_**               | `0x9345cdce9e94e58bef2272d8d00b33b1ba2d562564aa453e5f108f3fbe529f94` |
+| **_pauser_**               | `0xf5a80cc733b10e6ca39947e795cd258707b36002a486c45430bace46d32c51a7` |
+| **_customFeedAdmin_**      | `0x76ac1b959747e70ca826cd465b43b357c391aaffd53689633190dfa287a6556f` |
+| **_depositVaultAdmin_**    | `0xf7fa32fbd543d58ed4e2e39f18d1fba187fa6fd0c86eaad8ab28bdbfc28a36c4` |
+| **_redemptionVaultAdmin_** | `0xd294959c156ca614e934f6a8814f3277f6c8bb8d1974e59f8e6bdb69031e0a12` |
+| **_greenlisted_**          | `0x81b949d1730762952193b7aa2ebf48c6095914573e9c2b9df1aee424977ce367` |
+
+### carryTradeUSDTRYLeverage Roles
+
+| Role Name                  | Role                                                                 |
+| -------------------------- | -------------------------------------------------------------------- |
+| **_minter_**               | `0x422e15547d0d7b7651b85c6f350e7fc95ed24b31e7a0dd60bcd0ef85395c15ba` |
+| **_burner_**               | `0x143b55265c4d173aaa08ef937309ca59a6697ecf8cc2adb70abdb36b520be840` |
+| **_pauser_**               | `0x643a4ad9b1aa74dc5179024c52ea14300f56431fc1c8a9aa158cf544f424d6a5` |
+| **_customFeedAdmin_**      | `0x13d379c00afaf685dc6f5ef2d2f4f65b40e83d344750bdcfddba7fd1b77cc816` |
+| **_depositVaultAdmin_**    | `0xa5ff6076b4cdfe57840bc6f69fdcbddfd690739ed0745071ac07f6fa922e7041` |
+| **_redemptionVaultAdmin_** | `0x376c2cc42dd52720749dccd6d8ba29231f38e9dbb4f36ebcbad9aeaa2407ba16` |
+| **_greenlisted_**          | `0x358cc724b5a4e2e60667a580ddb2715c9ef96533f1d9c18ee590b0ab01159332` |
+
+### mEVETH Roles
+
+| Role Name                  | Role                                                                 |
+| -------------------------- | -------------------------------------------------------------------- |
+| **_minter_**               | `0x58488e9461b8dcba2eaea098e70eccc384667c89fb73a7677211c852a7556552` |
+| **_burner_**               | `0x68af08ae9d29a0cf1b015019b2110935ec66a8814ffb9528f36ef3d4339fc90f` |
+| **_pauser_**               | `0xd522ec46e3f063bbb5e65e0f173f330dc3e7747bf9a07e659feba4a781427e24` |
+| **_customFeedAdmin_**      | `0x856da0426e5f0880c976b7ba5798c804ff42a62b84515dd50afe682ba5dbb47f` |
+| **_depositVaultAdmin_**    | `0x033c9ea283dfb8830a26d49b3a072f37173c375b6ca98e121b65adbf08141410` |
+| **_redemptionVaultAdmin_** | `0x98c5f85e7722d5a2989d82034a3f7599ba7d83d793466e452ba3064736578def` |
+| **_greenlisted_**          | `0x0747505a39499f3936f81d62252c5a91a5ed2b65d950f9c6376de79ee48d04e9` |
+
+### liquidRWA Roles
+
+| Role Name                  | Role                                                                 |
+| -------------------------- | -------------------------------------------------------------------- |
+| **_minter_**               | `0x1f61d52949a60d8c34e11b90ed91ad778cdd3342bce743dd9d5c4143e4c144e1` |
+| **_burner_**               | `0x212df2868cf10c0bfffa2f351e017497120c4faa64e72bd5e6bb38196fa7e5d2` |
+| **_pauser_**               | `0x8d0f69f3895470d42e833ea1ac4376e988c983fc45dba3e0d450f8f2ad75ca82` |
+| **_customFeedAdmin_**      | `0x0c87c0f71e249f090ccb201523a29302c94d854e4adacb95a80ba37312f9eaac` |
+| **_depositVaultAdmin_**    | `0x7e49d67625acc8604252c009563a02cb3fbaedc1b14d5010f4fb25d40cb8c5ea` |
+| **_redemptionVaultAdmin_** | `0x39c7f15fd2ef5600ac3d09a1864b9d29d035a20ea7fcfa47b033c59eeb73921a` |
+| **_greenlisted_**          | `0x44757f13ce834d76ebbc089a88babd8220dc58df5c754a56456972996631ec58` |
+
+### mWIN Roles
+
+| Role Name                  | Role                                                                 |
+| -------------------------- | -------------------------------------------------------------------- |
+| **_minter_**               | `0x226b7f9e4c18e87b8002c236d6d8eba8e3a76f5b10033d1d84bf4a084bd8b422` |
+| **_burner_**               | `0xf7ab34f0378353f7692b914b534ef99880252f87993c6a5d232ff0107e7d20bd` |
+| **_pauser_**               | `0x774057df10a9815793e43daf25e762aed0ad761f84e0f8ecbf30a7c35459f2ea` |
+| **_customFeedAdmin_**      | `0x6989ff27a71951af85f5a9d9a72606358a057abc9e1305b5986b338da72927b4` |
+| **_depositVaultAdmin_**    | `0x5e436b58093eec5c9bb0bf88a6e66765dc4e9b5fd9716a7da608c87d5f7b02bf` |
+| **_redemptionVaultAdmin_** | `0xf1f308589835b1481efea09554e2f72656725481c02aa4aaadab93e7045e5a53` |
+| **_greenlisted_**          | `0xc7021654dd5cc2dc098b5f088ed0c6a046d28f5eaf2f8d0008903e2b8520acb2` |
+
+### qHVNUSD Roles
+
+| Role Name                  | Role                                                                 |
+| -------------------------- | -------------------------------------------------------------------- |
+| **_minter_**               | `0x192ea16b988b957ed7be5c3552ae960c4519b3b837fbdb04bce7184f21453c4e` |
+| **_burner_**               | `0x209193d682bf8f53382ab3a43e78c9bf7db61abdfac8d5dd6df225ef99afb446` |
+| **_pauser_**               | `0x9d2679faf05e5820ee20abbf07a0cbe845b85df4090242e7883dec44122c09d1` |
+| **_customFeedAdmin_**      | `0x5c4a4d934cd063ab961162e94b2a954945675f7ed4bb6429d76ba28aafafea4d` |
+| **_depositVaultAdmin_**    | `0x2f01a87ff8264c3829f59fc88a501fd141329d07660e65c8587f87990eadc47a` |
+| **_redemptionVaultAdmin_** | `0x4cf72cc591f98d5ff2c7bb152e07e9962176f347c5a834215c70649911bea884` |
+| **_greenlisted_**          | `0x091dbd315424a25fef7e3b544ca86e342f06857bcb56258337cb4eafdf3bacad` |

@@ -233,7 +233,7 @@ const upgradeAllContracts = async (
 Proxy: ${deployment.proxyAddress}
 Implementation: ${deployment.implementationAddress}`,
       );
-      await callBack(
+      const result = await callBack(
         hre,
         {
           proxyAddress: deployment.proxyAddress,
@@ -243,6 +243,10 @@ Implementation: ${deployment.implementationAddress}`,
         },
         upgradeId,
       );
+
+      if (result === false) {
+        throw new Error('Upgrade was not finished successfully');
+      }
     } catch (e) {
       console.error(`Upgrade failed with error ${e}`);
 
@@ -256,6 +260,7 @@ Implementation: ${deployment.implementationAddress}`,
 
   if (failedUpgrades.length > 0) {
     console.log('Failed upgrades', failedUpgrades);
+    throw new Error(`Failed to execute ${failedUpgrades.length} upgrade(s)`);
   } else {
     console.log('All upgrades successful');
   }

@@ -290,4 +290,29 @@ export const mTokensMetadata: Record<
     symbol: 'mTEST',
     isPermissioned: true,
   },
+  stockMarketTRBasisTrade: {
+    name: 'Morini StockMarketTRBasisTrade Vault',
+    symbol: 'StockMarketTRBasisTrade',
+  },
+  carryTradeUSDTRYLeverage: {
+    name: 'Morini CarryTradeUSDTRYLeverage Vault',
+    symbol: 'CarryTradeUSDTRYLeverage',
+  },
+  mEVETH: {
+    name: 'Midas Everstake ETH',
+    symbol: 'mEVETH',
+  },
+  liquidRWA: {
+    name: 'Ether.fi Liquid RWA',
+    symbol: 'liquidRWA',
+  },
+  mWIN: {
+    name: 'Midas Wellington Income Opportunities',
+    symbol: 'mWIN',
+  },
+  qHVNUSD: {
+    name: 'Qapture Safe Haven',
+    symbol: 'QHVN-USD',
+    isPermissioned: true,
+  },
 };

@@ -41,12 +41,21 @@ export const verifyConfig: VerifyConfigPerNetwork = {
     type: 'etherscan',
     browserUrl: 'https://basescan.org',
   },
+  arbitrum: {
+    type: 'etherscan',
+    browserUrl: 'https://arbiscan.io',
+  },
+  arbitrumSepolia: {
+    type: 'etherscan',
+    browserUrl: 'https://sepolia.arbiscan.io',
+  },
   hyperevm: {
     type: 'etherscan',
     browserUrl: 'https://hyperevmscan.io',
   },
   scroll: {
-    type: 'etherscan',
+    type: 'custom',
+    apiUrl: 'https://scrollscan.com/api',
     browserUrl: 'https://scrollscan.com',
   },
   monad: [
@@ -56,14 +65,17 @@ export const verifyConfig: VerifyConfigPerNetwork = {
     },
     {
       type: 'sourcify',
-      browserUrl: 'https://monadvision.com',
       overrideApiUrl: 'https://sourcify-api-monad.blockvision.org',
+      browserUrl: 'https://repo.sourcify.dev',
     },
   ],
   oasis: {
-    type: 'custom',
-    apiUrl: '',
-    browserUrl: '',
+    // Oasis Sapphire does not expose an Etherscan-compatible API.
+    // Official docs (docs.oasis.io) mandate Sourcify for contract verification.
+    // browserUrl uses repo.sourcify.dev — see xrplevm comment for reasoning.
+    type: 'sourcify',
+    overrideApiUrl: 'https://sourcify.dev/server',
+    browserUrl: 'https://repo.sourcify.dev',
   },
   plume: {
     type: 'custom',
@@ -77,8 +89,8 @@ export const verifyConfig: VerifyConfigPerNetwork = {
   },
   rootstock: {
     type: 'custom',
-    apiUrl: 'https://rootstock.custom.com/api/',
-    browserUrl: 'https://rootstock.custom.com/',
+    apiUrl: 'https://rootstock.blockscout.com/api',
+    browserUrl: 'https://rootstock.blockscout.com',
   },
   tacTestnet: {
     type: 'custom',
@@ -86,14 +98,23 @@ export const verifyConfig: VerifyConfigPerNetwork = {
     browserUrl: 'https://turin.explorer.tac.build',
   },
   katana: {
-    type: 'custom',
-    apiUrl: 'https://explorer.katanarpc.com/api',
+    type: 'etherscan',
     browserUrl: 'https://explorer.katanarpc.com',
   },
   xrplevm: {
-    type: 'custom',
-    apiUrl: 'https://explorer.xrplevm.org/api',
-    browserUrl: 'https://explorer.xrplevm.org',
+    // explorer.xrplevm.org is Blockscout-based.
+    // Using Sourcify avoids the hardhat-verify v2 bug where object-style apiKey
+    // causes customChains apiURL to be overridden by the hardcoded Etherscan v2
+    // endpoint, causing verification to fail for non-Etherscan chains.
+    // overrideApiUrl pins to the standard Sourcify server and prevents
+    // SOURCIFY_API_URL from the .env (currently the Monad-specific instance)
+    // from being used here.
+    // browserUrl uses repo.sourcify.dev because hardhat-verify appends
+    // /contracts/full_match/{chainId}/{address}/ — that path is only served
+    // by the Sourcify repo, not by the Blockscout explorer.
+    type: 'sourcify',
+    overrideApiUrl: 'https://sourcify.dev/server',
+    browserUrl: 'https://repo.sourcify.dev',
   },
   tac: {
     type: 'custom',
@@ -106,20 +127,17 @@ export const verifyConfig: VerifyConfigPerNetwork = {
     browserUrl: 'https://chainscan.0g.ai',
   },
   plasma: {
-    type: 'custom',
-    apiUrl:
-      'https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api',
+    type: 'etherscan',
     browserUrl: 'https://plasmascan.to',
   },
   bsc: {
-    type: 'custom',
-    apiUrl: 'https://api.bscscan.com/api',
+    type: 'etherscan',
     browserUrl: 'https://bscscan.com',
   },
   injective: {
     type: 'custom',
-    apiUrl: 'https://custom-api.injective.network/api',
-    browserUrl: 'https://custom.injective.network',
+    apiUrl: 'https://blockscout-api.injective.network/api',
+    browserUrl: 'https://blockscout.injective.network',
   },
   optimism: {
     type: 'etherscan',

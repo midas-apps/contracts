@@ -140,6 +140,13 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           maxAnswer: parseUnits('1.003', 8),
         },
       },
+      rlusd: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
       wbtc: {
         dataFeed: {
           healthyDiff: 12 * 60 * 60,
@@ -183,9 +190,23 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
       },
       susde: {
         dataFeed: {
-          healthyDiff: constants.MaxUint256,
-          minAnswer: parseUnits('1.17454296', 18),
-          maxAnswer: parseUnits('1.3', 18),
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('1', 8),
+          maxAnswer: parseUnits('2', 8),
+        },
+      },
+      usdg: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+      pyusd: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
         },
       },
       weeth: {

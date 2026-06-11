@@ -110,6 +110,7 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
     it('call from owner when prev data is set', async () => {
       const fixture = await loadFixture(defaultDeploy);
       await setRoundDataSafe(fixture, 10);
+      await increase(3600);
       await setRoundDataSafe(fixture, 10.1);
     });
     it('should fail: call from non owner', async () => {
@@ -137,6 +138,7 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
     it('should fail: when deviation is > 1%', async () => {
       const fixture = await loadFixture(defaultDeploy);
       await setRoundDataSafe(fixture, 100);
+      await increase(3600);
       await setRoundDataSafe(fixture, 102, {
         revertMessage: 'CA: !deviation',
       });
@@ -145,7 +147,24 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
     it('when deviation is < 1%', async () => {
       const fixture = await loadFixture(defaultDeploy);
       await setRoundDataSafe(fixture, 100);
+      await increase(3600);
       await setRoundDataSafe(fixture, 100.9);
+    });
+
+    it('should fail: when 2 updates happens within 1 hour', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setRoundDataSafe(fixture, 10);
+      await setRoundDataSafe(fixture, 10.05, {
+        revertMessage: 'CA: not enough time passed',
+      });
+    });
+
+    it('should fail: when previous unsafe update happened within 1 hour', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+      await setRoundData(fixture, 10);
+      await setRoundDataSafe(fixture, 10.05, {
+        revertMessage: 'CA: not enough time passed',
+      });
     });
   });
 
