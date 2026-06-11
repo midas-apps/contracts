@@ -23,7 +23,6 @@ import {
   executeTimelockOperationTester,
   scheduleTimelockOperationsTester,
 } from '../common/timelock-manager.helpers';
-import { timelockManagerRevert } from '../unit/MidasTimelockManager.test';
 
 describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
   this.timeout(120000);
@@ -413,7 +412,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           {},
           {
             from: acDefaultAdmin,
-            ...timelockManagerRevert(timelockManager, 'NoTimelockDelayForRole'),
+            revertCustomError: {
+              contract: timelockManager,
+              customErrorName: 'NoTimelockDelayForRole',
+            },
           },
         );
       });
@@ -542,7 +544,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           {},
           {
             from: acDefaultAdmin,
-            ...timelockManagerRevert(timelockManager, 'InvalidPreflightError'),
+            revertCustomError: {
+              contract: timelockManager,
+              customErrorName: 'InvalidPreflightError',
+            },
           },
         );
       });
@@ -663,7 +668,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           {},
           {
             from: acDefaultAdmin,
-            ...timelockManagerRevert(timelockManager, 'InvalidPreflightError'),
+            revertCustomError: {
+              contract: timelockManager,
+              customErrorName: 'InvalidPreflightError',
+            },
           },
         );
       });
@@ -855,7 +863,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           {},
           {
             from: acDefaultAdmin,
-            ...timelockManagerRevert(timelockManager, 'InvalidPreflightError'),
+            revertCustomError: {
+              contract: timelockManager,
+              customErrorName: 'InvalidPreflightError',
+            },
           },
         );
       });
@@ -962,7 +973,10 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           {},
           {
             from: acDefaultAdmin,
-            ...timelockManagerRevert(timelockManager, 'InvalidPreflightError'),
+            revertCustomError: {
+              contract: timelockManager,
+              customErrorName: 'InvalidPreflightError',
+            },
           },
         );
       });

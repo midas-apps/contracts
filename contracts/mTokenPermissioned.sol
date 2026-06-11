@@ -3,7 +3,7 @@ pragma solidity 0.8.34;
 
 import {AccessControlUtilsLibrary} from "./libraries/AccessControlUtilsLibrary.sol";
 
-import {mTokenBase} from "./abstract/mTokenBase.sol";
+import {mToken} from "./mToken.sol";
 
 /**
  * @title mTokenPermissioned
@@ -11,7 +11,7 @@ import {mTokenBase} from "./abstract/mTokenBase.sol";
  * @author RedDuck Software
  */
 //solhint-disable contract-name-camelcase
-contract mTokenPermissioned is mTokenBase {
+contract mTokenPermissioned is mToken {
     /**
      * @dev role that grants greenlisted rights to the contract
      * @custom:oz-upgrades-unsafe-allow state-variable-immutable
@@ -22,11 +22,6 @@ contract mTokenPermissioned is mTokenBase {
      * @dev leaving a storage gap for futures updates
      */
     uint256[50] private __gap;
-
-    /**
-     * @dev having a second gap here to match with the gap of previous implementations
-     */
-    uint256[50] private ___gap;
 
     /**
      * @notice constructor
@@ -41,7 +36,7 @@ contract mTokenPermissioned is mTokenBase {
         bytes32 _minterRole,
         bytes32 _burnerRole,
         bytes32 _greenlistedRole
-    ) mTokenBase(_contractAdminRole, _minterRole, _burnerRole) {
+    ) mToken(_contractAdminRole, _minterRole, _burnerRole) {
         _GREENLISTED_ROLE = _greenlistedRole;
     }
 
@@ -61,7 +56,7 @@ contract mTokenPermissioned is mTokenBase {
         address from,
         address to,
         uint256 amount
-    ) internal virtual override(mTokenBase) {
+    ) internal virtual override(mToken) {
         if (to != address(0)) {
             if (from != address(0)) {
                 _onlyGreenlisted(from);
@@ -69,7 +64,7 @@ contract mTokenPermissioned is mTokenBase {
             _onlyGreenlisted(to);
         }
 
-        mTokenBase._beforeTokenTransfer(from, to, amount);
+        mToken._beforeTokenTransfer(from, to, amount);
     }
 
     /**

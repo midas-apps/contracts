@@ -81,6 +81,11 @@ abstract contract mTokenBase is
     uint256[44] private __gap;
 
     /**
+     * @dev having a second gap here to match with the gap of previous implementations
+     */
+    uint256[50] private ___gap;
+
+    /**
      * @notice constructor
      * @param _contractAdminRole contract admin role
      * @param _minterRole minter role
