@@ -62,6 +62,73 @@ interface IMidasTimelockManager {
         /// @notice calldata
         bytes data;
     }
+
+    /**
+     * @param maxPendingOperationsPerProposer new limit
+     */
+    event SetMaxPendingOperationsPerProposer(
+        uint256 maxPendingOperationsPerProposer
+    );
+
+    /**
+     * @param version new security council version
+     * @param members council member addresses
+     */
+    event SetSecurityCouncil(uint256 indexed version, address[] members);
+
+    /**
+     * @param caller operation proposer
+     * @param operationId scheduled operation id
+     */
+    event ScheduleTimelockOperation(
+        address indexed caller,
+        bytes32 indexed operationId
+    );
+
+    /**
+     * @param caller pauser address
+     * @param operationId paused operation id
+     * @param pauseReasonCode pause reason code
+     * @param councilVersion security council version at pause
+     */
+    event PauseTimelockOperation(
+        address indexed caller,
+        bytes32 indexed operationId,
+        uint8 indexed pauseReasonCode,
+        uint256 councilVersion
+    );
+
+    /**
+     * @param caller executor address
+     * @param operationId executed operation id
+     */
+    event ExecuteTimelockOperation(
+        address indexed caller,
+        bytes32 indexed operationId
+    );
+
+    /**
+     * @param caller council member address
+     * @param operationId operation id
+     * @param votedForExecution true for execution vote, false for veto vote
+     */
+    event PausedProposalVoteCast(
+        address indexed caller,
+        bytes32 indexed operationId,
+        bool indexed votedForExecution
+    );
+
+    /**
+     * @param caller address that aborted the operation
+     * @param operationId aborted operation id
+     * @param status status before abort
+     */
+    event AbortTimelockOperation(
+        address indexed caller,
+        bytes32 indexed operationId,
+        TimelockOperationStatus status
+    );
+
     /**
      * @notice Preflight call succeeded with role info
      * @param role role used for the call
@@ -147,72 +214,6 @@ interface IMidasTimelockManager {
      * @param err revert bytes
      */
     error InvalidPreflightError(bytes err);
-
-    /**
-     * @param maxPendingOperationsPerProposer new limit
-     */
-    event SetMaxPendingOperationsPerProposer(
-        uint256 maxPendingOperationsPerProposer
-    );
-
-    /**
-     * @param version new security council version
-     * @param members council member addresses
-     */
-    event SetSecurityCouncil(uint256 indexed version, address[] members);
-
-    /**
-     * @param caller operation proposer
-     * @param operationId scheduled operation id
-     */
-    event ScheduleTimelockOperation(
-        address indexed caller,
-        bytes32 indexed operationId
-    );
-
-    /**
-     * @param caller pauser address
-     * @param operationId paused operation id
-     * @param pauseReasonCode pause reason code
-     * @param councilVersion security council version at pause
-     */
-    event PauseTimelockOperation(
-        address indexed caller,
-        bytes32 indexed operationId,
-        uint8 indexed pauseReasonCode,
-        uint256 councilVersion
-    );
-
-    /**
-     * @param caller executor address
-     * @param operationId executed operation id
-     */
-    event ExecuteTimelockOperation(
-        address indexed caller,
-        bytes32 indexed operationId
-    );
-
-    /**
-     * @param caller council member address
-     * @param operationId operation id
-     * @param votedForExecution true for execution vote, false for veto vote
-     */
-    event PausedProposalVoteCast(
-        address indexed caller,
-        bytes32 indexed operationId,
-        bool indexed votedForExecution
-    );
-
-    /**
-     * @param caller address that aborted the operation
-     * @param operationId aborted operation id
-     * @param status status before abort
-     */
-    event AbortTimelockOperation(
-        address indexed caller,
-        bytes32 indexed operationId,
-        TimelockOperationStatus status
-    );
 
     /**
      * @notice Sets max pending operations per proposer

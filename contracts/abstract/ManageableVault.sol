@@ -48,6 +48,12 @@ abstract contract ManageableVault is
     uint256 public constant STABLECOIN_RATE = 10**18;
 
     /**
+     * @notice 100 percent with base 100
+     * @dev for example, 10% will be (10 * 100)%
+     */
+    uint256 public constant ONE_HUNDRED_PERCENT = 100 * 100;
+
+    /**
      * @dev role that grants admin rights to the contract
      * @custom:oz-upgrades-unsafe-allow state-variable-immutable
      */
@@ -61,6 +67,31 @@ abstract contract ManageableVault is
     bytes32 private immutable _GREENLISTED_ROLE;
 
     /**
+     * @notice mapping, token address to token config
+     */
+    mapping(address => TokenConfig) public tokensConfig;
+
+    /**
+     * @notice mapping, user address => is free frmo min amounts
+     */
+    mapping(address => bool) public isFreeFromMinAmount;
+
+    /**
+     * @notice address restriction with zero fees
+     */
+    mapping(address => bool) public waivedFeeRestriction;
+
+    /**
+     * @dev tokens that can be used as USD representation
+     */
+    EnumerableSet.AddressSet internal _paymentTokens;
+
+    /**
+     * @notice instant rate limits state
+     */
+    RateLimitLibrary.WindowRateLimits private _instantRateLimits;
+
+    /**
      * @notice last request id
      */
     uint256 public currentRequestId;
@@ -71,10 +102,9 @@ abstract contract ManageableVault is
     uint256 public nextExpectedRequestIdToProcess;
 
     /**
-     * @notice 100 percent with base 100
-     * @dev for example, 10% will be (10 * 100)%
+     * @notice max requestId that can be approved
      */
-    uint256 public constant ONE_HUNDRED_PERCENT = 100 * 100;
+    uint256 public maxApproveRequestId;
 
     /**
      * @notice mToken token
@@ -92,29 +122,9 @@ abstract contract ManageableVault is
     address public tokensReceiver;
 
     /**
-     * @dev fee for initial operations 1% = 100
-     */
-    uint256 public instantFee;
-
-    /**
      * @notice variation tolerance of tokenOut rates for "safe" requests approve
      */
     uint256 public variationTolerance;
-
-    /**
-     * @notice address restriction with zero fees
-     */
-    mapping(address => bool) public waivedFeeRestriction;
-
-    /**
-     * @dev tokens that can be used as USD representation
-     */
-    EnumerableSet.AddressSet internal _paymentTokens;
-
-    /**
-     * @notice mapping, token address to token config
-     */
-    mapping(address => TokenConfig) public tokensConfig;
 
     /**
      * @notice basic min operations amount
@@ -122,9 +132,9 @@ abstract contract ManageableVault is
     uint256 public minAmount;
 
     /**
-     * @notice mapping, user address => is free frmo min amounts
+     * @dev fee for initial operations 1% = 100
      */
-    mapping(address => bool) public isFreeFromMinAmount;
+    uint256 public instantFee;
 
     /**
      * @notice minimum instant fee
@@ -142,19 +152,9 @@ abstract contract ManageableVault is
     uint64 public maxInstantShare;
 
     /**
-     * @notice max requestId that can be approved
-     */
-    uint256 public maxApproveRequestId;
-
-    /**
      * @notice enforce sequential request processing flag
      */
     bool public sequentialRequestProcessing;
-
-    /**
-     * @notice instant rate limits state
-     */
-    RateLimitLibrary.WindowRateLimits private _instantRateLimits;
 
     /**
      * @dev leaving a storage gap for futures updates

@@ -20,18 +20,6 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
     using DecimalsCorrectionLibrary for uint256;
 
     /**
-     * @notice when asset mismatch
-     * @param morphoVault Morpho Vault address
-     * @param token token address
-     */
-    error AssetMismatch(address morphoVault, address token);
-    /**
-     * @notice when vault is not set
-     * @param token token address
-     */
-    error VaultNotSet(address token);
-
-    /**
      * @notice mapping payment token to Morpho Vault
      */
     mapping(address => IMorphoVault) public morphoVaults;
@@ -53,6 +41,19 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
      * @param token payment token address
      */
     event RemoveMorphoVault(address indexed token);
+
+    /**
+     * @notice when asset mismatch
+     * @param morphoVault Morpho Vault address
+     * @param token token address
+     */
+    error AssetMismatch(address morphoVault, address token);
+
+    /**
+     * @notice when vault is not set
+     * @param token token address
+     */
+    error VaultNotSet(address token);
 
     /**
      * @notice Passes role identifiers to the base RedemptionVault constructor

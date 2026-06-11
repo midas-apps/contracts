@@ -18,6 +18,7 @@ contract mTokenPermissioned is mToken {
      */
     // solhint-disable-next-line var-name-mixedcase
     bytes32 private immutable _GREENLISTED_ROLE;
+
     /**
      * @dev leaving a storage gap for futures updates
      */

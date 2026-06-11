@@ -20,28 +20,6 @@ contract DepositVaultWithMorpho is DepositVault {
     using SafeERC20 for IERC20;
 
     /**
-     * @notice when asset mismatch
-     * @param morphoVault Morpho Vault address
-     * @param token token address
-     */
-    error AssetMismatch(address morphoVault, address token);
-    /**
-     * @notice when vault is not set
-     * @param token token address
-     */
-    error VaultNotSet(address token);
-    /**
-     * @notice when zero shares are received
-     * @param shares shares
-     */
-    error ZeroShares(uint256 shares);
-    /**
-     * @notice when auto-invest fails
-     * @param err error bytes
-     */
-    error AutoInvestFailed(bytes err);
-
-    /**
      * @notice mapping payment token to Morpho Vault
      */
     mapping(address => IMorphoVault) public morphoVaults;
@@ -87,6 +65,31 @@ contract DepositVaultWithMorpho is DepositVault {
      * @param enabled Whether fallback to raw transfer is enabled
      */
     event SetAutoInvestFallbackEnabled(bool indexed enabled);
+
+    /**
+     * @notice when asset mismatch
+     * @param morphoVault Morpho Vault address
+     * @param token token address
+     */
+    error AssetMismatch(address morphoVault, address token);
+
+    /**
+     * @notice when vault is not set
+     * @param token token address
+     */
+    error VaultNotSet(address token);
+
+    /**
+     * @notice when zero shares are received
+     * @param shares shares
+     */
+    error ZeroShares(uint256 shares);
+
+    /**
+     * @notice when auto-invest fails
+     * @param err error bytes
+     */
+    error AutoInvestFailed(bytes err);
 
     /**
      * @notice Passes role identifiers to the base DepositVault constructor

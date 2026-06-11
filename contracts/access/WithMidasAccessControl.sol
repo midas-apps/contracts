@@ -20,12 +20,6 @@ abstract contract WithMidasAccessControl is
     using AccessControlUtilsLibrary for IMidasAccessControl;
 
     /**
-     * @notice error when the value is the same as the previous value
-     * @param value value
-     */
-    error SameBoolValue(bool value);
-
-    /**
      * @notice admin role
      */
     bytes32 internal constant _DEFAULT_ADMIN_ROLE = 0x00;
@@ -40,6 +34,12 @@ abstract contract WithMidasAccessControl is
      * @dev leaving a storage gap for futures updates
      */
     uint256[50] private __gap;
+
+    /**
+     * @notice error when the value is the same as the previous value
+     * @param value value
+     */
+    error SameBoolValue(bool value);
 
     /**
      * @dev validates that the caller has the function role with timelock

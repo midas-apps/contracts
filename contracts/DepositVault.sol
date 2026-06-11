@@ -39,9 +39,15 @@ contract DepositVault is ManageableVault, IDepositVault {
     }
 
     /**
-     * @dev default role that grants admin rights to the contract
-     * keccak256("DEPOSIT_VAULT_ADMIN_ROLE");
+     * @notice request data storage
      */
+    mapping(uint256 => Request) public mintRequests;
+
+    /**
+     * @dev how much mTokens were minted by the depositor
+     * @dev depositor address => amount minted
+     */
+    mapping(address => uint256) public totalMinted;
 
     /**
      * @notice minimal USD amount for first user`s deposit
@@ -65,17 +71,6 @@ contract DepositVault is ManageableVault, IDepositVault {
      * after the deposit request is processed
      */
     uint256 public upcomingSupply;
-
-    /**
-     * @notice request data storage
-     */
-    mapping(uint256 => Request) public mintRequests;
-
-    /**
-     * @dev how much mTokens were minted by the depositor
-     * @dev depositor address => amount minted
-     */
-    mapping(address => uint256) public totalMinted;
 
     /**
      * @dev leaving a storage gap for futures updates

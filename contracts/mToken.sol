@@ -27,12 +27,14 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     // solhint-disable-next-line var-name-mixedcase
     bytes32 private immutable _CONTRACT_ADMIN_ROLE;
+
     /**
      * @dev role that grants minter rights to the contract
      * @custom:oz-upgrades-unsafe-allow state-variable-immutable
      */
     // solhint-disable-next-line var-name-mixedcase
     bytes32 private immutable _MINTER_ROLE;
+
     /**
      * @dev role that grants burner rights to the contract
      * @custom:oz-upgrades-unsafe-allow state-variable-immutable
@@ -44,6 +46,11 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      * @notice metadata key => metadata value
      */
     mapping(bytes32 => bytes) public metadata;
+
+    /**
+     * @notice mint rate limits state
+     */
+    RateLimitLibrary.WindowRateLimits private _mintRateLimits;
 
     /**
      * @notice address to which clawback tokens will be sent
@@ -59,15 +66,11 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      * @notice name of the token
      */
     string private _name;
+
     /**
      * @notice symbol of the token
      */
     string private _symbol;
-
-    /**
-     * @notice mint rate limits state
-     */
-    RateLimitLibrary.WindowRateLimits private _mintRateLimits;
 
     /**
      * @dev leaving a storage gap for futures updates

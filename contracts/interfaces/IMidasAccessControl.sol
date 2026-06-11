@@ -5,42 +5,6 @@ import {IAccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acc
 
 interface IMidasAccessControl is IAccessControlUpgradeable {
     /**
-     * @notice when the array is empty
-     */
-    error EmptyArray();
-
-    /**
-     * @notice when the arrays have different lengths
-     * @param length1 length of the first array
-     * @param length2 length of the second array
-     */
-    error MismatchArrays(uint256 length1, uint256 length2);
-
-    /**
-     * @notice error when the function is forbidden
-     */
-    error Forbidden();
-
-    /**
-     * @notice when the role is being revoked from the self
-     * @param role role to be revoked
-     * @param account account to be revoked
-     */
-    error CannotRevokeFromSelf(bytes32 role, address account);
-
-    /**
-     * @notice when the delay is invalid
-     */
-    error InvalidTimelockDelay();
-
-    /**
-     * @notice when the role admin mismatch
-     * @param role role to be revoked
-     * @param adminRole admin role
-     */
-    error RoleAdminMismatch(bytes32 role, bytes32 adminRole);
-
-    /**
      * @notice Set user facing role params
      */
     struct SetUserFacingRoleParams {
@@ -157,6 +121,42 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
      * @param delay delay value
      */
     event SetRoleDelay(bytes32 role, uint32 delay);
+
+    /**
+     * @notice when the array is empty
+     */
+    error EmptyArray();
+
+    /**
+     * @notice when the arrays have different lengths
+     * @param length1 length of the first array
+     * @param length2 length of the second array
+     */
+    error MismatchArrays(uint256 length1, uint256 length2);
+
+    /**
+     * @notice error when the function is forbidden
+     */
+    error Forbidden();
+
+    /**
+     * @notice when the role is being revoked from the self
+     * @param role role to be revoked
+     * @param account account to be revoked
+     */
+    error CannotRevokeFromSelf(bytes32 role, address account);
+
+    /**
+     * @notice when the delay is invalid
+     */
+    error InvalidTimelockDelay();
+
+    /**
+     * @notice when the role admin mismatch
+     * @param role role to be revoked
+     * @param adminRole admin role
+     */
+    error RoleAdminMismatch(bytes32 role, bytes32 adminRole);
 
     /**
      * @notice Enable or disable which OZ role may administer function-access scopes for that role.

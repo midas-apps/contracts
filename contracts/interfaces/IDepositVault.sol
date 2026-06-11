@@ -45,27 +45,6 @@ struct DepositVaultInitParams {
  */
 interface IDepositVault is IManageableVault {
     /**
-     * @notice first deposit mint amount is below minimum
-     * @param amountMTokenWithoutFee mint amount after fee (decimals 18)
-     * @param minAmount minimum first deposit mint amount
-     */
-    error LessThanMinAmountFirstDeposit(
-        uint256 amountMTokenWithoutFee,
-        uint256 minAmount
-    );
-
-    /**
-     * @notice when token supply cap is exceeded
-     */
-    error SupplyCapExceeded();
-
-    /**
-     * @notice when max amount per request is exceeded
-     * @param estimatedMintAmount estimated mint amount
-     */
-    error MaxAmountPerRequestExceeded(uint256 estimatedMintAmount);
-
-    /**
      * @param newValue new min amount to deposit value
      */
     event SetMinMTokenAmountForFirstDeposit(uint256 newValue);
@@ -147,6 +126,27 @@ interface IDepositVault is IManageableVault {
      * @param user address that was freed from min deposit check
      */
     event FreeFromMinDeposit(address indexed user);
+
+    /**
+     * @notice first deposit mint amount is below minimum
+     * @param amountMTokenWithoutFee mint amount after fee (decimals 18)
+     * @param minAmount minimum first deposit mint amount
+     */
+    error LessThanMinAmountFirstDeposit(
+        uint256 amountMTokenWithoutFee,
+        uint256 minAmount
+    );
+
+    /**
+     * @notice when token supply cap is exceeded
+     */
+    error SupplyCapExceeded();
+
+    /**
+     * @notice when max amount per request is exceeded
+     * @param estimatedMintAmount estimated mint amount
+     */
+    error MaxAmountPerRequestExceeded(uint256 estimatedMintAmount);
 
     /**
      * @notice depositing proccess with auto mint if

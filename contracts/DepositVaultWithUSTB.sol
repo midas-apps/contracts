@@ -19,17 +19,6 @@ contract DepositVaultWithUSTB is DepositVault {
     using SafeERC20 for IERC20;
 
     /**
-     * @notice when USTB token is not supported
-     * @param token token address
-     */
-    error UnsupportedUSTBToken(address token);
-    /**
-     * @notice when USTB fee is not zero
-     * @param fee fee
-     */
-    error USTBFeeNotZero(uint256 fee);
-
-    /**
      * @notice USTB token address
      */
     address public ustb;
@@ -50,6 +39,18 @@ contract DepositVaultWithUSTB is DepositVault {
      * @param enabled Whether USTB deposits are enabled
      */
     event SetUstbDepositsEnabled(bool indexed enabled);
+
+    /**
+     * @notice when USTB token is not supported
+     * @param token token address
+     */
+    error UnsupportedUSTBToken(address token);
+
+    /**
+     * @notice when USTB fee is not zero
+     * @param fee fee
+     */
+    error USTBFeeNotZero(uint256 fee);
 
     /**
      * @notice Passes role identifiers to the base DepositVault constructor

@@ -13,14 +13,14 @@ struct Request {
     address tokenOut;
     /// @notice request status
     RequestStatus status;
+    /// @notice fixed fee percent that was calculated at request creation time
+    uint256 feePercent;
     /// @notice amount of mToken
     uint256 amountMToken;
     /// @notice rate of mToken at request creation time
     uint256 mTokenRate;
     /// @notice rate of tokenOut at request creation time
     uint256 tokenOutRate;
-    /// @notice fixed fee percent that was calculated at request creation time
-    uint256 feePercent;
     /// @notice amount of mToken that was redeemed instantly
     uint256 amountMTokenInstant;
     /// @notice approved mToken rate
@@ -66,18 +66,6 @@ struct LiquidityProviderLoanRequest {
  * @author RedDuck Software
  */
 interface IRedemptionVault is IManageableVault {
-    /**
-     * @notice when fee exceeds amount
-     * @param fee fee
-     * @param amount amount
-     */
-    error FeeExceedsAmount(uint256 fee, uint256 amount);
-
-    /**
-     * @notice when not self call
-     */
-    error NotSelfCall();
-
     /**
      * @param user function caller (msg.sender)
      * @param tokenOut address of tokenOut
@@ -196,6 +184,18 @@ interface IRedemptionVault is IManageableVault {
      * @param requestId request id
      */
     event CancelLpLoanRequest(uint256 indexed requestId);
+
+    /**
+     * @notice when fee exceeds amount
+     * @param fee fee
+     * @param amount amount
+     */
+    error FeeExceedsAmount(uint256 fee, uint256 amount);
+
+    /**
+     * @notice when not self call
+     */
+    error NotSelfCall();
 
     /**
      * @notice redeem mToken to tokenOut if daily limit and allowance not exceeded

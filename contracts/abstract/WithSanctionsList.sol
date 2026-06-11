@@ -12,12 +12,6 @@ import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
  */
 abstract contract WithSanctionsList is WithMidasAccessControl {
     /**
-     * @notice when user is sanctioned on sanctions list contract
-     * @param user user address
-     */
-    error Sanctioned(address user);
-
-    /**
      * @notice address of Chainalysis sanctions oracle
      */
     address public sanctionsList;
@@ -31,6 +25,12 @@ abstract contract WithSanctionsList is WithMidasAccessControl {
      * @param newSanctionsList new address of `sanctionsList`
      */
     event SetSanctionsList(address indexed newSanctionsList);
+
+    /**
+     * @notice when user is sanctioned on sanctions list contract
+     * @param user user address
+     */
+    error Sanctioned(address user);
 
     /**
      * @dev checks that a given `user` is not sanctioned

@@ -21,12 +21,6 @@ contract RedemptionVaultWithMToken is RedemptionVault {
     using SafeERC20 for IERC20;
 
     /**
-     * @notice linked redemption vault does not waive fees for this contract
-     * @param target linked redemption vault address
-     */
-    error FeesNotWaivedOnTarget(address target);
-
-    /**
      * @notice mToken RedemptionVault used for fallback redemptions
      */
     IRedemptionVault public redemptionVault;
@@ -41,6 +35,12 @@ contract RedemptionVaultWithMToken is RedemptionVault {
      * @param newVault new redemption vault address
      */
     event SetRedemptionVault(address indexed newVault);
+
+    /**
+     * @notice linked redemption vault does not waive fees for this contract
+     * @param target linked redemption vault address
+     */
+    error FeesNotWaivedOnTarget(address target);
 
     /**
      * @notice Passes role identifiers to the base RedemptionVault constructor

@@ -72,6 +72,106 @@ struct CommonVaultInitParams {
  */
 interface IManageableVault {
     /**
+     * @param token token that was withdrawn
+     * @param withdrawTo address to which tokens were withdrawn
+     * @param amount `token` transfer amount
+     */
+    event WithdrawToken(
+        address indexed token,
+        address indexed withdrawTo,
+        uint256 amount
+    );
+
+    /**
+     * @param token address of token that
+     * @param dataFeed token dataFeed address
+     * @param fee fee 1% = 100
+     * @param allowance token allowance (decimals 18)
+     * @param stable stablecoin flag
+     */
+    event AddPaymentToken(
+        address indexed token,
+        address indexed dataFeed,
+        uint256 fee,
+        uint256 allowance,
+        bool stable
+    );
+
+    /**
+     * @param token address of token that
+     * @param allowance new allowance
+     */
+    event ChangeTokenAllowance(address indexed token, uint256 allowance);
+
+    /**
+     * @param token address of token that
+     * @param fee new fee
+     */
+    event ChangeTokenFee(address indexed token, uint256 fee);
+
+    /**
+     * @param token address of token that
+     */
+    event RemovePaymentToken(address indexed token);
+
+    /**
+     * @param account address of account
+     */
+    event AddWaivedFeeAccount(address indexed account);
+
+    /**
+     * @param account address of account
+     */
+    event RemoveWaivedFeeAccount(address indexed account);
+
+    /**
+     * @param newFee new operation fee value
+     */
+    event SetInstantFee(uint256 newFee);
+
+    /**
+     * @param newMinInstantFee new minimum instant fee
+     * @param newMaxInstantFee new maximum instant fee
+     */
+    event SetMinMaxInstantFee(uint64 newMinInstantFee, uint64 newMaxInstantFee);
+
+    /**
+     * @param newAmount new min amount for operation
+     */
+    event SetMinAmount(uint256 newAmount);
+
+    /**
+     * @param newMaxInstantShare new maximum instant share value in basis points (100 = 1%)
+     */
+    event SetMaxInstantShare(uint64 newMaxInstantShare);
+
+    /**
+     * @param newTolerance percent of price diviation 1% = 100
+     */
+    event SetVariationTolerance(uint256 newTolerance);
+
+    /**
+     * @param receiver new receiver address
+     */
+    event SetTokensReceiver(address indexed receiver);
+
+    /**
+     * @param newMaxApproveRequestId new max requestId that can be approved
+     */
+    event SetMaxApproveRequestId(uint256 newMaxApproveRequestId);
+
+    /**
+     * @param user user address
+     * @param enable is enabled
+     */
+    event FreeFromMinAmount(address indexed user, bool enable);
+
+    /**
+     * @param enforce enforce sequential request processing flag
+     */
+    event SetSequentialRequestProcessing(bool enforce);
+
+    /**
      * @notice Payment token is already added
      * @param token token address
      */
@@ -212,105 +312,6 @@ interface IManageableVault {
         uint256 requestId,
         uint256 nextExpectedRequestIdToProcess
     );
-
-    /**
-     * @param token token that was withdrawn
-     * @param withdrawTo address to which tokens were withdrawn
-     * @param amount `token` transfer amount
-     */
-    event WithdrawToken(
-        address indexed token,
-        address indexed withdrawTo,
-        uint256 amount
-    );
-
-    /**
-     * @param token address of token that
-     * @param dataFeed token dataFeed address
-     * @param fee fee 1% = 100
-     * @param allowance token allowance (decimals 18)
-     * @param stable stablecoin flag
-     */
-    event AddPaymentToken(
-        address indexed token,
-        address indexed dataFeed,
-        uint256 fee,
-        uint256 allowance,
-        bool stable
-    );
-
-    /**
-     * @param token address of token that
-     * @param allowance new allowance
-     */
-    event ChangeTokenAllowance(address indexed token, uint256 allowance);
-
-    /**
-     * @param token address of token that
-     * @param fee new fee
-     */
-    event ChangeTokenFee(address indexed token, uint256 fee);
-
-    /**
-     * @param token address of token that
-     */
-    event RemovePaymentToken(address indexed token);
-
-    /**
-     * @param account address of account
-     */
-    event AddWaivedFeeAccount(address indexed account);
-
-    /**
-     * @param account address of account
-     */
-    event RemoveWaivedFeeAccount(address indexed account);
-
-    /**
-     * @param newFee new operation fee value
-     */
-    event SetInstantFee(uint256 newFee);
-
-    /**
-     * @param newMinInstantFee new minimum instant fee
-     * @param newMaxInstantFee new maximum instant fee
-     */
-    event SetMinMaxInstantFee(uint64 newMinInstantFee, uint64 newMaxInstantFee);
-    /**
-     * @param newAmount new min amount for operation
-     */
-    event SetMinAmount(uint256 newAmount);
-
-    /**
-     * @param newMaxInstantShare new maximum instant share value in basis points (100 = 1%)
-     */
-    event SetMaxInstantShare(uint64 newMaxInstantShare);
-
-    /**
-     * @param newTolerance percent of price diviation 1% = 100
-     */
-    event SetVariationTolerance(uint256 newTolerance);
-
-    /**
-     * @param receiver new receiver address
-     */
-    event SetTokensReceiver(address indexed receiver);
-
-    /**
-     * @param newMaxApproveRequestId new max requestId that can be approved
-     */
-    event SetMaxApproveRequestId(uint256 newMaxApproveRequestId);
-
-    /**
-     * @param user user address
-     * @param enable is enabled
-     */
-    event FreeFromMinAmount(address indexed user, bool enable);
-
-    /**
-     * @param enforce enforce sequential request processing flag
-     */
-    event SetSequentialRequestProcessing(bool enforce);
 
     /**
      * @notice The mTokenDataFeed contract address.

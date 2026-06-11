@@ -19,18 +19,6 @@ contract DepositVaultWithMToken is DepositVault {
     using SafeERC20 for IERC20;
 
     /**
-     * @notice when zero mToken is received
-     * @param mTokenReceived mToken received
-     */
-    error ZeroMTokenReceived(uint256 mTokenReceived);
-
-    /**
-     * @notice when auto-invest fails
-     * @param err error bytes
-     */
-    error AutoInvestFailed(bytes err);
-
-    /**
      * @notice Target mToken DepositVault for auto-invest
      */
     IDepositVault public mTokenDepositVault;
@@ -69,6 +57,18 @@ contract DepositVaultWithMToken is DepositVault {
      * @param enabled Whether fallback to raw transfer is enabled
      */
     event SetAutoInvestFallbackEnabled(bool indexed enabled);
+
+    /**
+     * @notice when zero mToken is received
+     * @param mTokenReceived mToken received
+     */
+    error ZeroMTokenReceived(uint256 mTokenReceived);
+
+    /**
+     * @notice when auto-invest fails
+     * @param err error bytes
+     */
+    error AutoInvestFailed(bytes err);
 
     /**
      * @notice Passes role identifiers to the base DepositVault constructor

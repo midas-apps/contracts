@@ -21,27 +21,6 @@ contract RedemptionVaultWithAave is RedemptionVault {
     using DecimalsCorrectionLibrary for uint256;
 
     /**
-     * @notice when token is not in aave pool
-     * @param aavePool Aave V3 Pool address
-     * @param token token address
-     */
-    error TokenNotInPool(address aavePool, address token);
-    /**
-     * @notice when pool is not set
-     * @param token token address
-     */
-    error PoolNotSet(address token);
-    /**
-     * @notice when insufficient withdrawn amount
-     * @param withdrawnAmount withdrawn amount
-     * @param toWithdraw amount to withdraw
-     */
-    error InsufficientWithdrawnAmount(
-        uint256 withdrawnAmount,
-        uint256 toWithdraw
-    );
-
-    /**
      * @notice mapping payment token to Aave V3 Pool
      */
     mapping(address => IAaveV3Pool) public aavePools;
@@ -63,6 +42,29 @@ contract RedemptionVaultWithAave is RedemptionVault {
      * @param token payment token address
      */
     event RemoveAavePool(address indexed token);
+
+    /**
+     * @notice when token is not in aave pool
+     * @param aavePool Aave V3 Pool address
+     * @param token token address
+     */
+    error TokenNotInPool(address aavePool, address token);
+
+    /**
+     * @notice when pool is not set
+     * @param token token address
+     */
+    error PoolNotSet(address token);
+
+    /**
+     * @notice when insufficient withdrawn amount
+     * @param withdrawnAmount withdrawn amount
+     * @param toWithdraw amount to withdraw
+     */
+    error InsufficientWithdrawnAmount(
+        uint256 withdrawnAmount,
+        uint256 toWithdraw
+    );
 
     /**
      * @notice Passes role identifiers to the base RedemptionVault constructor

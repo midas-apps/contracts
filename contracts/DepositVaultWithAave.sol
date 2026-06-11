@@ -22,25 +22,6 @@ contract DepositVaultWithAave is DepositVault {
     using SafeERC20 for IERC20;
 
     /**
-     * @notice when token is not in pool
-     * @param aavePool Aave V3 Pool address
-     * @param token token address
-     */
-    error TokenNotInPool(address aavePool, address token);
-
-    /**
-     * @notice when pool is not set
-     * @param token token address
-     */
-    error PoolNotSet(address token);
-
-    /**
-     * @notice when auto-invest fails
-     * @param err error bytes
-     */
-    error AutoInvestFailed(bytes err);
-
-    /**
      * @notice mapping payment token to Aave V3 Pool
      */
     mapping(address => IAaveV3Pool) public aavePools;
@@ -86,6 +67,25 @@ contract DepositVaultWithAave is DepositVault {
      * @param enabled Whether fallback to raw transfer is enabled
      */
     event SetAutoInvestFallbackEnabled(bool indexed enabled);
+
+    /**
+     * @notice when token is not in pool
+     * @param aavePool Aave V3 Pool address
+     * @param token token address
+     */
+    error TokenNotInPool(address aavePool, address token);
+
+    /**
+     * @notice when pool is not set
+     * @param token token address
+     */
+    error PoolNotSet(address token);
+
+    /**
+     * @notice when auto-invest fails
+     * @param err error bytes
+     */
+    error AutoInvestFailed(bytes err);
 
     /**
      * @notice Passes role identifiers to the base DepositVault constructor

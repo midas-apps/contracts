@@ -43,6 +43,11 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     mapping(uint256 => Request) public redeemRequests;
 
     /**
+     * @notice mapping, loanRequestId to loan request data
+     */
+    mapping(uint256 => LiquidityProviderLoanRequest) public loanRequests;
+
+    /**
      * @notice address is designated for standard redemptions, allowing tokens to be pulled from this address
      */
     address public requestRedeemer;
@@ -76,11 +81,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @notice last loan request id
      */
     uint256 public currentLoanRequestId;
-
-    /**
-     * @notice mapping, loanRequestId to loan request data
-     */
-    mapping(uint256 => LiquidityProviderLoanRequest) public loanRequests;
 
     /**
      * @dev leaving a storage gap for futures updates

@@ -23,17 +23,17 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
      * @dev internal storage for a timelock operation details
      */
     struct TimelockOperationDetails {
-        TimelockOperationStatus status;
-        uint256 councilVersion;
-        address operationProposer;
-        address pauser;
-        uint32 createdAt;
-        uint32 executionApprovedAt;
-        uint8 pauseReasonCode;
-        bool isSetCouncilOperation;
-        bytes32 dataHash;
         EnumerableSet.AddressSet votersForExecution;
         EnumerableSet.AddressSet votersForVeto;
+        uint256 councilVersion;
+        bytes32 dataHash;
+        TimelockOperationStatus status;
+        uint8 pauseReasonCode;
+        bool isSetCouncilOperation;
+        uint32 createdAt;
+        uint32 executionApprovedAt;
+        address operationProposer;
+        address pauser;
     }
 
     /**
@@ -76,6 +76,31 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     /**
      * @inheritdoc IMidasTimelockManager
      */
+    mapping(bytes32 => uint256) public dataHashIndexes;
+
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
+    mapping(address => uint256) public proposerPendingOperationsCount;
+
+    /**
+     * @dev set of security council addresses by version
+     */
+    mapping(uint256 => EnumerableSet.AddressSet) private _securityCouncils;
+
+    /**
+     * @dev mapping, operationId to operation details
+     */
+    mapping(bytes32 => TimelockOperationDetails) private _operationDetails;
+
+    /**
+     * @dev set of pending operation ids
+     */
+    EnumerableSet.Bytes32Set private _pendingOperations;
+
+    /**
+     * @inheritdoc IMidasTimelockManager
+     */
     address public timelock;
 
     /**
@@ -87,25 +112,6 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
      * @inheritdoc IMidasTimelockManager
      */
     uint256 public securityCouncilVersion;
-
-    /**
-     * @dev set of security council addresses by version
-     */
-    mapping(uint256 => EnumerableSet.AddressSet) private _securityCouncils;
-
-    mapping(bytes32 => TimelockOperationDetails) private _operationDetails;
-
-    /**
-     * @inheritdoc IMidasTimelockManager
-     */
-    mapping(bytes32 => uint256) public dataHashIndexes;
-
-    /**
-     * @inheritdoc IMidasTimelockManager
-     */
-    mapping(address => uint256) public proposerPendingOperationsCount;
-
-    EnumerableSet.Bytes32Set private _pendingOperations;
 
     /**
      * @inheritdoc IMidasTimelockManager

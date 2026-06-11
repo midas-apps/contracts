@@ -9,16 +9,16 @@ import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20
  */
 interface IMToken is IERC20Upgradeable {
     /**
+     * @param clawbackReceiver address to which clawback tokens will be sent
+     */
+    event ClawbackReceiverSet(address indexed clawbackReceiver);
+
+    /**
      * @notice when new limit is invalid
      * @param newLimit new limit
      * @param existingLimit existing limit
      */
     error InvalidNewLimit(uint256 newLimit, uint256 existingLimit);
-
-    /**
-     * @param clawbackReceiver address to which clawback tokens will be sent
-     */
-    event ClawbackReceiverSet(address indexed clawbackReceiver);
 
     /**
      * @notice mints mToken token `amount` to a given `to` address.

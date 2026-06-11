@@ -16,14 +16,24 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
     using AccessControlUtilsLibrary for IMidasAccessControl;
 
     /**
+     * @notice static delay for setting pause delay
+     */
+    uint32 public constant DELAY_FOR_SET_DELAY = 2 days;
+
+    /**
      * @dev admin role for the pause manager
      */
     bytes32 private constant _PAUSE_ADMIN_ROLE = keccak256("PAUSE_ADMIN_ROLE");
 
     /**
-     * @notice static delay for setting pause delay
+     * @notice contract => paused status
      */
-    uint32 public constant DELAY_FOR_SET_DELAY = 2 days;
+    mapping(address => bool) public contractPaused;
+
+    /**
+     * @notice contract => function id => paused status
+     */
+    mapping(address => mapping(bytes4 => bool)) public contractFnPaused;
 
     /**
      * @notice pause delay
@@ -39,16 +49,6 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
      * @notice global paused status
      */
     bool public globalPaused;
-
-    /**
-     * @notice contract => paused status
-     */
-    mapping(address => bool) public contractPaused;
-
-    /**
-     * @notice contract => function id => paused status
-     */
-    mapping(address => mapping(bytes4 => bool)) public contractFnPaused;
 
     /**
      * @dev validates that caller has access to the `contractAddr` contract admin role
