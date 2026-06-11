@@ -5,7 +5,10 @@ import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import { redemptionVaultSuits } from './suits/redemption-vault.suits';
+import {
+  baseInitParamsRv,
+  redemptionVaultSuits,
+} from './suits/redemption-vault.suits';
 
 import { encodeFnSelector } from '../../helpers/utils';
 import {
@@ -35,6 +38,7 @@ import {
   setPreferLoanLiquidityTest,
   setLoanLpTest,
 } from '../common/redemption-vault.helpers';
+import { initializeRvWithMorpho } from '../common/vault-initializer.helpers';
 
 redemptionVaultSuits(
   'RedemptionVaultWithMorpho',
@@ -50,6 +54,17 @@ redemptionVaultSuits(
       await redemptionVaultWithMorpho.morphoVaults(stableCoins.usdc.address),
     ).eq(morphoVaultMock.address);
     await validateImplementation(RedemptionVaultWithMorpho__factory);
+  },
+  {
+    deployUninitialized: (fixture) =>
+      new RedemptionVaultWithMorphoTest__factory(fixture.owner).deploy(),
+    initialize: async (fixture, params, opt) => {
+      await initializeRvWithMorpho(
+        { ...baseInitParamsRv(fixture), ...params },
+        opt?.contract,
+        opt,
+      );
+    },
   },
   async (defaultDeploy) => {
     describe('RedemptionVaultWithMorpho', () => {

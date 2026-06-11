@@ -3,7 +3,10 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
-import { depositVaultSuits } from './suits/deposit-vault.suits';
+import {
+  baseInitParamsDv,
+  depositVaultSuits,
+} from './suits/deposit-vault.suits';
 
 import {
   DepositVaultWithAave__factory,
@@ -28,6 +31,7 @@ import {
   addPaymentTokenTest,
   setMinAmountTest,
 } from '../common/manageable-vault.helpers';
+import { initializeDvWithAave } from '../common/vault-initializer.helpers';
 
 depositVaultSuits(
   'DepositVaultWithAave',
@@ -44,6 +48,17 @@ depositVaultSuits(
     );
     expect(await depositVaultWithAave.aaveDepositsEnabled()).eq(false);
     await validateImplementation(DepositVaultWithAave__factory);
+  },
+  {
+    deployUninitialized: (fixture) =>
+      new DepositVaultWithAaveTest__factory(fixture.owner).deploy(),
+    initialize: async (fixture, params, opt) => {
+      await initializeDvWithAave(
+        { ...baseInitParamsDv(fixture), ...params },
+        opt?.contract,
+        opt,
+      );
+    },
   },
   async (defaultDeploy) => {
     describe('DepositVaultWithAave', () => {

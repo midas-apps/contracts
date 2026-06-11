@@ -1,9 +1,13 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
+import { constants } from 'ethers';
 import { ethers } from 'hardhat';
 
-import { depositVaultSuits } from './suits/deposit-vault.suits';
+import {
+  baseInitParamsDv,
+  depositVaultSuits,
+} from './suits/deposit-vault.suits';
 
 import {
   DepositVaultWithMToken__factory,
@@ -12,6 +16,7 @@ import {
 import { acErrors } from '../common/ac.helpers';
 import {
   approveBase18,
+  InitializeParamCase,
   mintToken,
   validateImplementation,
 } from '../common/common.helpers';
@@ -28,6 +33,29 @@ import {
   addWaivedFeeAccountTest,
   setMinAmountTest,
 } from '../common/manageable-vault.helpers';
+import {
+  initializeDvWithMToken,
+  InitializerParamsDvWithMToken,
+} from '../common/vault-initializer.helpers';
+
+const baseInitParamsDvWithMToken = (
+  fixture: Parameters<typeof baseInitParamsDv>[0],
+): InitializerParamsDvWithMToken => ({
+  ...baseInitParamsDv(fixture),
+  depositVault: fixture.depositVault,
+});
+
+const dvWithMTokenInitializeParamCases: InitializeParamCase<InitializerParamsDvWithMToken>[] =
+  [
+    {
+      title: 'depositVault is zero address',
+      params: { depositVault: constants.AddressZero },
+      revertCustomError: {
+        customErrorName: 'InvalidAddress',
+        args: [constants.AddressZero],
+      },
+    },
+  ];
 
 depositVaultSuits(
   'DepositVaultWithMToken',
@@ -44,6 +72,18 @@ depositVaultSuits(
     );
     expect(await depositVaultWithMToken.mTokenDepositsEnabled()).eq(false);
     await validateImplementation(DepositVaultWithMToken__factory);
+  },
+  {
+    deployUninitialized: (fixture) =>
+      new DepositVaultWithMTokenTest__factory(fixture.owner).deploy(),
+    initialize: async (fixture, params, opt) => {
+      await initializeDvWithMToken(
+        { ...baseInitParamsDvWithMToken(fixture), ...params },
+        opt?.contract,
+        opt,
+      );
+    },
+    extraParamCases: dvWithMTokenInitializeParamCases,
   },
   async (defaultDeploy) => {
     describe('DepositVaultWithMToken', function () {

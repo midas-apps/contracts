@@ -13,7 +13,11 @@ import { constants, Contract } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import { manageableVaultSuits } from './manageable-vault.suits';
+import {
+  baseInitParamsMv,
+  manageableVaultSuits,
+  mvInitializeParamCases,
+} from './manageable-vault.suits';
 
 import { encodeFnSelector } from '../../../helpers/utils';
 import {
@@ -33,6 +37,9 @@ import {
 } from '../../common/ac.helpers';
 import {
   approveBase18,
+  InitializeParamCase,
+  initializeParamsSuits,
+  InitializeParamsOpt,
   mintToken,
   pauseVault,
   pauseVaultFn,
@@ -74,6 +81,7 @@ import {
   setPreferLoanLiquidityTest,
   setLoanAprTest,
 } from '../../common/redemption-vault.helpers';
+import { InitializerParamsRv } from '../../common/vault-initializer.helpers';
 import { sanctionUser } from '../../common/with-sanctions-list.helpers';
 
 const REDEMPTION_APPROVE_FN_SELECTORS = [
@@ -89,6 +97,56 @@ const REDEMPTION_APPROVE_FN_SELECTORS = [
 
 let pauseManager: DefaultFixture['pauseManager'];
 let owner: DefaultFixture['owner'];
+
+export const baseInitParamsRv = (
+  fixture: DefaultFixture,
+): InitializerParamsRv => ({
+  ...baseInitParamsMv(fixture),
+  requestRedeemer: fixture.requestRedeemer,
+  loanLp: fixture.loanLp,
+  loanRepaymentAddress: fixture.loanRepaymentAddress,
+  redemptionVaultLoanSwapper: fixture.redemptionVaultLoanSwapper,
+});
+
+export const rvInitializeParamCases: InitializeParamCase<InitializerParamsRv>[] =
+  [
+    {
+      title: 'requestRedeemer is zero address',
+      params: { requestRedeemer: constants.AddressZero },
+      revertCustomError: {
+        customErrorName: 'InvalidAddress',
+        args: [constants.AddressZero],
+      },
+    },
+  ];
+
+export const tokensReceiverSelfParamCase = <
+  TParams extends InitializerParamsRv,
+>(
+  deployUninitialized: RedemptionVaultInitConfig<TParams>['deployUninitialized'],
+): InitializeParamCase<TParams> => ({
+  title: 'tokensReceiver is address(this)',
+  contract: deployUninitialized,
+  params: (_, contract) => ({ tokensReceiver: contract!.address }),
+  revertCustomError: {
+    customErrorName: 'InvalidAddress',
+    args: (_, contract) => [contract!.address],
+  },
+});
+
+export type RedemptionVaultInitConfig<
+  TParams extends InitializerParamsRv = InitializerParamsRv,
+> = {
+  deployUninitialized: (
+    fixture: DefaultFixture,
+  ) => Contract | Promise<Contract>;
+  initialize: (
+    fixture: DefaultFixture,
+    params: Partial<TParams>,
+    opt?: InitializeParamsOpt,
+  ) => Promise<void>;
+  extraParamCases?: InitializeParamCase<TParams>[];
+};
 
 const pauseOtherRedemptionApproveFns = async (
   redemptionVault: Contract,
@@ -123,6 +181,7 @@ export const redemptionVaultSuits = (
       | 'redemptionVaultWithMorpho';
   },
   deploymentAdditionalChecks: (fixtureRes: DefaultFixture) => Promise<void>,
+  initConfig: RedemptionVaultInitConfig,
   otherTests: (fixture: () => Promise<DefaultFixture>) => void,
 ) => {
   const loadRvFixture = async () => {
@@ -171,6 +230,19 @@ export const redemptionVaultSuits = (
       );
 
       await deploymentAdditionalChecks(fixture);
+    });
+
+    describe('initialization', () => {
+      initializeParamsSuits(
+        [
+          ...mvInitializeParamCases,
+          ...rvInitializeParamCases,
+          tokensReceiverSelfParamCase(initConfig.deployUninitialized),
+          ...(initConfig.extraParamCases ?? []),
+        ],
+        loadRvFixture,
+        initConfig.initialize,
+      );
     });
 
     describe('common', () => {

@@ -4,7 +4,10 @@ import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import { depositVaultSuits } from './suits/deposit-vault.suits';
+import {
+  baseInitParamsDv,
+  depositVaultSuits,
+} from './suits/deposit-vault.suits';
 
 import {
   DepositVaultWithMorpho__factory,
@@ -30,6 +33,7 @@ import {
   addPaymentTokenTest,
   setMinAmountTest,
 } from '../common/manageable-vault.helpers';
+import { initializeDvWithMorpho } from '../common/vault-initializer.helpers';
 
 depositVaultSuits(
   'DepositVaultWithMorpho',
@@ -43,6 +47,17 @@ depositVaultSuits(
     const { depositVaultWithMorpho } = fixture;
     expect(await depositVaultWithMorpho.morphoDepositsEnabled()).eq(false);
     await validateImplementation(DepositVaultWithMorpho__factory);
+  },
+  {
+    deployUninitialized: (fixture) =>
+      new DepositVaultWithMorphoTest__factory(fixture.owner).deploy(),
+    initialize: async (fixture, params, opt) => {
+      await initializeDvWithMorpho(
+        { ...baseInitParamsDv(fixture), ...params },
+        opt?.contract,
+        opt,
+      );
+    },
   },
   async (defaultDeploy) => {
     describe('DepositVaultWithMorpho', function () {

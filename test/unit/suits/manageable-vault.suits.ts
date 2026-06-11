@@ -16,8 +16,7 @@ import {
   mintToken,
   pauseVaultFn,
   approveBase18,
-  InitializeInvariant,
-  initializeParamsSuits,
+  InitializeParamCase,
 } from '../../common/common.helpers';
 import {
   DefaultFixture,
@@ -39,12 +38,12 @@ import {
   setMinMaxInstantFeeTest,
   setSequentialRequestProcessingTest,
 } from '../../common/manageable-vault.helpers';
-import { initializeMv } from '../../common/vault-initializer.helpers';
-
 let pauseManager: DefaultFixture['pauseManager'];
 let owner: DefaultFixture['owner'];
 
-const baseInitParams = (fixture: DefaultFixture): InitializerParamsMv => ({
+export const baseInitParamsMv = (
+  fixture: DefaultFixture,
+): InitializerParamsMv => ({
   accessControl: fixture.accessControl,
   mockedSanctionsList: fixture.mockedSanctionsList,
   mTBILL: fixture.mTBILL,
@@ -52,105 +51,84 @@ const baseInitParams = (fixture: DefaultFixture): InitializerParamsMv => ({
   tokensReceiver: fixture.tokensReceiver,
 });
 
-const initializeInvariants: InitializeInvariant<InitializerParamsMv>[] = [
-  {
-    title: 'accessControl is zero address',
-    params: { accessControl: constants.AddressZero },
-    revertCustomError: {
-      customErrorName: 'InvalidAddress',
-      args: [constants.AddressZero],
+export const mvInitializeParamCases: InitializeParamCase<InitializerParamsMv>[] =
+  [
+    {
+      title: 'accessControl is zero address',
+      params: { accessControl: constants.AddressZero },
+      revertCustomError: {
+        customErrorName: 'InvalidAddress',
+        args: [constants.AddressZero],
+      },
     },
-  },
-  {
-    title: 'mTBILL is zero address',
-    params: { mTBILL: constants.AddressZero },
-    revertCustomError: {
-      customErrorName: 'InvalidAddress',
-      args: [constants.AddressZero],
+    {
+      title: 'mTBILL is zero address',
+      params: { mTBILL: constants.AddressZero },
+      revertCustomError: {
+        customErrorName: 'InvalidAddress',
+        args: [constants.AddressZero],
+      },
     },
-  },
-  {
-    title: 'mTokenToUsdDataFeed is zero address',
-    params: { mTokenToUsdDataFeed: constants.AddressZero },
-    revertCustomError: {
-      customErrorName: 'InvalidAddress',
-      args: [constants.AddressZero],
+    {
+      title: 'mTokenToUsdDataFeed is zero address',
+      params: { mTokenToUsdDataFeed: constants.AddressZero },
+      revertCustomError: {
+        customErrorName: 'InvalidAddress',
+        args: [constants.AddressZero],
+      },
     },
-  },
-  {
-    title: 'tokensReceiver is zero address',
-    params: { tokensReceiver: constants.AddressZero },
-    revertCustomError: {
-      customErrorName: 'InvalidAddress',
-      args: [constants.AddressZero],
+    {
+      title: 'tokensReceiver is zero address',
+      params: { tokensReceiver: constants.AddressZero },
+      revertCustomError: {
+        customErrorName: 'InvalidAddress',
+        args: [constants.AddressZero],
+      },
     },
-  },
-  {
-    title: 'tokensReceiver is address(this)',
-    run: async (fixture) => {
-      const vault = await new ManageableVaultTester__factory(
-        fixture.owner,
-      ).deploy();
-
-      await initializeMv(
-        {
-          ...baseInitParams(fixture),
-          tokensReceiver: vault.address,
-        },
-        vault,
-        {
-          revertCustomError: {
-            customErrorName: 'InvalidAddress',
-            args: [vault.address],
-          },
-        },
-      );
+    {
+      title: 'variationTolerance is zero',
+      params: { variationTolerance: 0 },
+      revertCustomError: { customErrorName: 'InvalidFee', args: [0] },
     },
-  },
-  {
-    title: 'variationTolerance is zero',
-    params: { variationTolerance: 0 },
-    revertCustomError: { customErrorName: 'InvalidFee', args: [0] },
-  },
-  {
-    title: 'variationTolerance is greater than 100%',
-    params: { variationTolerance: 10001 },
-    revertCustomError: { customErrorName: 'InvalidFee', args: [10001] },
-  },
-  {
-    title: 'instantFee is greater than 100%',
-    params: { instantFee: 10001 },
-    revertCustomError: { customErrorName: 'InvalidFee', args: [10001] },
-  },
-  {
-    title: 'maxInstantShare is greater than 100%',
-    params: { maxInstantShare: 10001 },
-    revertCustomError: { customErrorName: 'InvalidFee', args: [10001] },
-  },
-  {
-    title: 'minInstantFee is greater than 100%',
-    params: { minInstantFee: 10001 },
-    revertCustomError: { customErrorName: 'InvalidFee', args: [10001] },
-  },
-  {
-    title: 'maxInstantFee is greater than 100%',
-    params: { maxInstantFee: 10001 },
-    revertCustomError: { customErrorName: 'InvalidFee', args: [10001] },
-  },
-  {
-    title: 'minInstantFee is greater than maxInstantFee',
-    params: { minInstantFee: 500, maxInstantFee: 100 },
-    revertCustomError: {
-      customErrorName: 'InvalidMinMaxInstantFee',
-      args: [500, 100],
+    {
+      title: 'variationTolerance is greater than 100%',
+      params: { variationTolerance: 10001 },
+      revertCustomError: { customErrorName: 'InvalidFee', args: [10001] },
     },
-  },
-  {
-    title: 'limitConfigs window is shorter than 1 minute',
-    params: { limitConfigs: [{ window: 59, limit: parseUnits('100000') }] },
-    revertCustomError: { customErrorName: 'WindowTooShort', args: [59] },
-  },
-];
+    {
+      title: 'instantFee is greater than 100%',
+      params: { instantFee: 10001 },
+      revertCustomError: { customErrorName: 'InvalidFee', args: [10001] },
+    },
+    {
+      title: 'maxInstantShare is greater than 100%',
+      params: { maxInstantShare: 10001 },
+      revertCustomError: { customErrorName: 'InvalidFee', args: [10001] },
+    },
+    {
+      title: 'minInstantFee is greater than 100%',
+      params: { minInstantFee: 10001 },
+      revertCustomError: { customErrorName: 'InvalidFee', args: [10001] },
+    },
+    {
+      title: 'maxInstantFee is greater than 100%',
+      params: { maxInstantFee: 10001 },
+      revertCustomError: { customErrorName: 'InvalidFee', args: [10001] },
+    },
+    {
+      title: 'minInstantFee is greater than maxInstantFee',
+      params: { minInstantFee: 500, maxInstantFee: 100 },
+      revertCustomError: {
+        customErrorName: 'InvalidMinMaxInstantFee',
+        args: [500, 100],
+      },
+    },
+    {
+      title: 'limitConfigs window is shorter than 1 minute',
+      params: { limitConfigs: [{ window: 59, limit: parseUnits('100000') }] },
+      revertCustomError: { customErrorName: 'WindowTooShort', args: [59] },
+    },
+  ];
 
 export const manageableVaultSuits = (
   mvFixture: () => Promise<DefaultFixture>,
@@ -268,21 +246,6 @@ export const manageableVaultSuits = (
           ),
         ).revertedWith('Initializable: contract is not initializing');
       });
-
-      initializeParamsSuits(
-        initializeInvariants,
-        loadMvFixture,
-        async (fixture, params, opt) => {
-          await initializeMv(
-            {
-              ...baseInitParams(fixture),
-              ...params,
-            },
-            undefined,
-            opt,
-          );
-        },
-      );
     });
 
     describe('common', () => {

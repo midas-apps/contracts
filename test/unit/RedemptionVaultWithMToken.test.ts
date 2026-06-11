@@ -4,7 +4,10 @@ import { expect } from 'chai';
 import { BigNumber, constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
-import { redemptionVaultSuits } from './suits/redemption-vault.suits';
+import {
+  baseInitParamsRv,
+  redemptionVaultSuits,
+} from './suits/redemption-vault.suits';
 
 import { encodeFnSelector } from '../../helpers/utils';
 import {
@@ -14,6 +17,7 @@ import {
 import { acErrors } from '../common/ac.helpers';
 import {
   approveBase18,
+  InitializeParamCase,
   mintToken,
   pauseVaultFn,
   validateImplementation,
@@ -36,6 +40,29 @@ import {
   redeemInstantTest,
   setPreferLoanLiquidityTest,
 } from '../common/redemption-vault.helpers';
+import {
+  initializeRvWithMToken,
+  InitializerParamsRvWithMToken,
+} from '../common/vault-initializer.helpers';
+
+const baseInitParamsRvWithMToken = (
+  fixture: Parameters<typeof baseInitParamsRv>[0],
+): InitializerParamsRvWithMToken => ({
+  ...baseInitParamsRv(fixture),
+  redemptionVault: fixture.redemptionVaultLoanSwapper,
+});
+
+const rvWithMTokenInitializeParamCases: InitializeParamCase<InitializerParamsRvWithMToken>[] =
+  [
+    {
+      title: 'redemptionVault is zero address',
+      params: { redemptionVault: constants.AddressZero },
+      revertCustomError: {
+        customErrorName: 'InvalidAddress',
+        args: [constants.AddressZero],
+      },
+    },
+  ];
 
 redemptionVaultSuits(
   'RedemptionVaultWithMToken',
@@ -51,6 +78,18 @@ redemptionVaultSuits(
       redemptionVaultLoanSwapper.address,
     );
     await validateImplementation(RedemptionVaultWithMToken__factory);
+  },
+  {
+    deployUninitialized: (fixture) =>
+      new RedemptionVaultWithMTokenTest__factory(fixture.owner).deploy(),
+    initialize: async (fixture, params, opt) => {
+      await initializeRvWithMToken(
+        { ...baseInitParamsRvWithMToken(fixture), ...params },
+        opt?.contract,
+        opt,
+      );
+    },
+    extraParamCases: rvWithMTokenInitializeParamCases,
   },
   async (defaultDeploy) => {
     describe('RedemptionVaultWithMToken', () => {

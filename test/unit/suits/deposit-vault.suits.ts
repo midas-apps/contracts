@@ -9,7 +9,11 @@ import { expect } from 'chai';
 import { constants, Contract } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
-import { manageableVaultSuits } from './manageable-vault.suits';
+import {
+  baseInitParamsMv,
+  manageableVaultSuits,
+  mvInitializeParamCases,
+} from './manageable-vault.suits';
 
 import { encodeFnSelector } from '../../../helpers/utils';
 import {
@@ -28,6 +32,9 @@ import {
 } from '../../common/ac.helpers';
 import {
   approveBase18,
+  InitializeParamCase,
+  initializeParamsSuits,
+  InitializeParamsOpt,
   mintToken,
   pauseVault,
   pauseVaultFn,
@@ -63,6 +70,7 @@ import {
   setMaxInstantShareTest,
   setSequentialRequestProcessingTest,
 } from '../../common/manageable-vault.helpers';
+import { InitializerParamsDv } from '../../common/vault-initializer.helpers';
 import { sanctionUser } from '../../common/with-sanctions-list.helpers';
 
 const APPROVE_FN_SELECTORS = [
@@ -76,6 +84,40 @@ const APPROVE_FN_SELECTORS = [
 
 let pauseManager: DefaultFixture['pauseManager'];
 let owner: DefaultFixture['owner'];
+
+export const baseInitParamsDv = (
+  fixture: DefaultFixture,
+): InitializerParamsDv => ({
+  ...baseInitParamsMv(fixture),
+});
+
+export const tokensReceiverSelfParamCase = <
+  TParams extends InitializerParamsDv,
+>(
+  deployUninitialized: DepositVaultInitConfig<TParams>['deployUninitialized'],
+): InitializeParamCase<TParams> => ({
+  title: 'tokensReceiver is address(this)',
+  contract: deployUninitialized,
+  params: (_, contract) => ({ tokensReceiver: contract!.address }),
+  revertCustomError: {
+    customErrorName: 'InvalidAddress',
+    args: (_, contract) => [contract!.address],
+  },
+});
+
+export type DepositVaultInitConfig<
+  TParams extends InitializerParamsDv = InitializerParamsDv,
+> = {
+  deployUninitialized: (
+    fixture: DefaultFixture,
+  ) => Contract | Promise<Contract>;
+  initialize: (
+    fixture: DefaultFixture,
+    params: Partial<TParams>,
+    opt?: InitializeParamsOpt,
+  ) => Promise<void>;
+  extraParamCases?: InitializeParamCase<TParams>[];
+};
 
 const pauseOtherDepositApproveFns = async (
   depositVault: Contract,
@@ -109,6 +151,7 @@ export const depositVaultSuits = (
       | 'depositVaultWithMorpho';
   },
   deploymentAdditionalChecks: (fixtureRes: DefaultFixture) => Promise<void>,
+  initConfig: DepositVaultInitConfig,
   otherTests: (fixture: () => Promise<DefaultFixture>) => void,
 ) => {
   const loadDvFixture = async () => {
@@ -150,6 +193,18 @@ export const depositVaultSuits = (
         ...fixture,
         depositVault: fixture.originalDepositVault as DepositVaultTest,
       });
+    });
+
+    describe('initialization', () => {
+      initializeParamsSuits(
+        [
+          ...mvInitializeParamCases,
+          tokensReceiverSelfParamCase(initConfig.deployUninitialized),
+          ...(initConfig.extraParamCases ?? []),
+        ],
+        loadDvFixture,
+        initConfig.initialize,
+      );
     });
 
     describe('common', () => {
@@ -4381,6 +4436,50 @@ export const depositVaultSuits = (
             );
           });
 
+          it('should succeed when other approve entrypoints are paused', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+            } = await loadDvFixture();
+
+            await mintToken(stableCoins.dai, owner, 100);
+            await approveBase18(owner, stableCoins.dai, depositVault, 100);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+            await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+            await depositRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              stableCoins.dai,
+              100,
+            );
+            const requestId = 0;
+
+            await pauseOtherDepositApproveFns(
+              depositVault,
+              encodeFnSelector('approveRequest(uint256,uint256,bool)'),
+            );
+
+            await approveRequestTest(
+              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+              requestId,
+              parseUnits('5'),
+            );
+          });
+
           it('approve request should decrease pending supply', async () => {
             const {
               owner,
@@ -5345,6 +5444,62 @@ export const depositVaultSuits = (
             );
           });
 
+          it('should succeed when other approve entrypoints are paused', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+            } = await loadDvFixture();
+
+            await mintToken(stableCoins.dai, owner, 100);
+            await approveBase18(owner, stableCoins.dai, depositVault, 100);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+            await depositRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 50_00,
+              },
+              stableCoins.dai,
+              100,
+            );
+            const requestId = 0;
+
+            await pauseOtherDepositApproveFns(
+              depositVault,
+              encodeFnSelector('approveRequest(uint256,uint256,bool)'),
+            );
+
+            await approveRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isAvgRate: true,
+              },
+              requestId,
+              parseUnits('5'),
+            );
+          });
+
           it('should approve request in non sequential order when sequentialRequestProcessing is disabled', async () => {
             const {
               owner,
@@ -5929,6 +6084,50 @@ export const depositVaultSuits = (
           await safeBulkApproveRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             Array.from({ length: 10 }, (_, i) => ({ id: i })),
+            'request-rate',
+          );
+        });
+
+        it('should succeed when other approve entrypoints are paused', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            depositVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadDvFixture();
+
+          await mintToken(stableCoins.dai, owner, 100);
+          await approveBase18(owner, stableCoins.dai, depositVault, 100);
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+          await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+          await depositRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await pauseOtherDepositApproveFns(
+            depositVault,
+            encodeFnSelector('safeBulkApproveRequestAtSavedRate(uint256[])'),
+          );
+
+          await safeBulkApproveRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            [{ id: requestId }],
             'request-rate',
           );
         });
@@ -6607,6 +6806,50 @@ export const depositVaultSuits = (
           await safeBulkApproveRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             Array.from({ length: 10 }, (_, i) => ({ id: i })),
+            parseUnits('5.000000001'),
+          );
+        });
+
+        it('should succeed when other approve entrypoints are paused', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            depositVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadDvFixture();
+
+          await mintToken(stableCoins.dai, owner, 100);
+          await approveBase18(owner, stableCoins.dai, depositVault, 100);
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+          await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+          await depositRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await pauseOtherDepositApproveFns(
+            depositVault,
+            encodeFnSelector('safeBulkApproveRequest(uint256[],uint256)'),
+          );
+
+          await safeBulkApproveRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            [{ id: requestId }],
             parseUnits('5.000000001'),
           );
         });
@@ -7416,6 +7659,64 @@ export const depositVaultSuits = (
               isAvgRate: true,
             },
             Array.from({ length: 10 }, (_, i) => ({ id: i })),
+            parseUnits('5.000000001'),
+          );
+        });
+
+        it('should succeed when other approve entrypoints are paused', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            depositVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadDvFixture();
+
+          await mintToken(stableCoins.dai, owner, 100);
+          await approveBase18(owner, stableCoins.dai, depositVault, 100);
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+          await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+          await depositRequestTest(
+            {
+              depositVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await pauseOtherDepositApproveFns(
+            depositVault,
+            encodeFnSelector(
+              'safeBulkApproveRequestAvgRate(uint256[],uint256)',
+            ),
+          );
+
+          await safeBulkApproveRequestTest(
+            {
+              depositVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: requestId }],
             parseUnits('5.000000001'),
           );
         });
@@ -8272,6 +8573,50 @@ export const depositVaultSuits = (
           await safeBulkApproveRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             [{ id: 0 }, { id: 1 }],
+            undefined,
+          );
+        });
+
+        it('should succeed when other approve entrypoints are paused', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            depositVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadDvFixture();
+
+          await mintToken(stableCoins.dai, owner, 100);
+          await approveBase18(owner, stableCoins.dai, depositVault, 100);
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+          await setMinAmountTest({ vault: depositVault, owner }, 10);
+
+          await depositRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await pauseOtherDepositApproveFns(
+            depositVault,
+            encodeFnSelector('safeBulkApproveRequest(uint256[])'),
+          );
+
+          await safeBulkApproveRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            [{ id: requestId }],
             undefined,
           );
         });
@@ -9218,6 +9563,62 @@ export const depositVaultSuits = (
               isAvgRate: true,
             },
             [{ id: 0 }, { id: 1 }],
+            undefined,
+          );
+        });
+
+        it('should succeed when other approve entrypoints are paused', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            depositVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadDvFixture();
+
+          await mintToken(stableCoins.dai, owner, 100);
+          await approveBase18(owner, stableCoins.dai, depositVault, 100);
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+          await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+          await depositRequestTest(
+            {
+              depositVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+          );
+          const requestId = 0;
+
+          await pauseOtherDepositApproveFns(
+            depositVault,
+            encodeFnSelector('safeBulkApproveRequestAvgRate(uint256[])'),
+          );
+
+          await safeBulkApproveRequestTest(
+            {
+              depositVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              isAvgRate: true,
+            },
+            [{ id: requestId }],
             undefined,
           );
         });

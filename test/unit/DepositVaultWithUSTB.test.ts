@@ -1,8 +1,12 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
+import { constants } from 'ethers';
 
-import { depositVaultSuits } from './suits/deposit-vault.suits';
+import {
+  baseInitParamsDv,
+  depositVaultSuits,
+} from './suits/deposit-vault.suits';
 
 import {
   DepositVaultWithUSTB__factory,
@@ -11,6 +15,7 @@ import {
 import { acErrors } from '../common/ac.helpers';
 import {
   approveBase18,
+  InitializeParamCase,
   mintToken,
   validateImplementation,
 } from '../common/common.helpers';
@@ -24,6 +29,29 @@ import {
   addPaymentTokenTest,
   setMinAmountTest,
 } from '../common/manageable-vault.helpers';
+import {
+  initializeDvWithUstb,
+  InitializerParamsDvWithUstb,
+} from '../common/vault-initializer.helpers';
+
+const baseInitParamsDvWithUstb = (
+  fixture: Parameters<typeof baseInitParamsDv>[0],
+): InitializerParamsDvWithUstb => ({
+  ...baseInitParamsDv(fixture),
+  ustbToken: fixture.ustbToken,
+});
+
+const dvWithUstbInitializeParamCases: InitializeParamCase<InitializerParamsDvWithUstb>[] =
+  [
+    {
+      title: 'ustbToken is zero address',
+      params: { ustbToken: constants.AddressZero },
+      revertCustomError: {
+        customErrorName: 'InvalidAddress',
+        args: [constants.AddressZero],
+      },
+    },
+  ];
 
 depositVaultSuits(
   'DepositVaultWithUSTB',
@@ -37,6 +65,18 @@ depositVaultSuits(
     const { depositVaultWithUSTB, ustbToken } = fixture;
     expect(await depositVaultWithUSTB.ustb()).eq(ustbToken.address);
     await validateImplementation(DepositVaultWithUSTB__factory);
+  },
+  {
+    deployUninitialized: (fixture) =>
+      new DepositVaultWithUSTBTest__factory(fixture.owner).deploy(),
+    initialize: async (fixture, params, opt) => {
+      await initializeDvWithUstb(
+        { ...baseInitParamsDvWithUstb(fixture), ...params },
+        opt?.contract,
+        opt,
+      );
+    },
+    extraParamCases: dvWithUstbInitializeParamCases,
   },
   async (defaultDeploy) => {
     describe('DepositVaultWithUSTB', function () {

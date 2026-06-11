@@ -5,7 +5,10 @@ import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import { redemptionVaultSuits } from './suits/redemption-vault.suits';
+import {
+  baseInitParamsRv,
+  redemptionVaultSuits,
+} from './suits/redemption-vault.suits';
 
 import { encodeFnSelector } from '../../helpers/utils';
 import {
@@ -35,6 +38,7 @@ import {
   setPreferLoanLiquidityTest,
   setLoanLpTest,
 } from '../common/redemption-vault.helpers';
+import { initializeRvWithAave } from '../common/vault-initializer.helpers';
 
 redemptionVaultSuits(
   'RedemptionVaultWithAave',
@@ -50,6 +54,17 @@ redemptionVaultSuits(
       await redemptionVaultWithAave.aavePools(stableCoins.usdc.address),
     ).eq(aavePoolMock.address);
     await validateImplementation(RedemptionVaultWithAave__factory);
+  },
+  {
+    deployUninitialized: (fixture) =>
+      new RedemptionVaultWithAaveTest__factory(fixture.owner).deploy(),
+    initialize: async (fixture, params, opt) => {
+      await initializeRvWithAave(
+        { ...baseInitParamsRv(fixture), ...params },
+        opt?.contract,
+        opt,
+      );
+    },
   },
   (defaultDeploy) => {
     describe('RedemptionVaultWithAave', () => {

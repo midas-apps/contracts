@@ -463,53 +463,78 @@ export const validateImplementation = async (
   // await hre.upgrades.validateImplementation(factory);
 };
 
-export type InitializeInvariant<TParams> =
-  | {
-      title: string;
-      params: Partial<TParams>;
-      revertCustomError: {
-        customErrorName: string;
-        args?: unknown[];
-      };
-    }
-  | {
-      title: string;
-      run: (fixture: DefaultFixture) => Promise<void>;
-    };
+export type InitializeParamCase<TParams> = {
+  title: string;
+  params:
+    | Partial<TParams>
+    | ((
+        fixture: DefaultFixture,
+        contract?: Contract,
+      ) => Partial<TParams> | Promise<Partial<TParams>>);
+  contract?:
+    | Contract
+    | ((fixture: DefaultFixture) => Contract | Promise<Contract>);
+  revertCustomError: {
+    customErrorName: string;
+    args?:
+      | unknown[]
+      | ((fixture: DefaultFixture, contract?: Contract) => unknown[]);
+  };
+};
 
-const runInitializeInvariant = async <TParams>(
+export type InitializeParamsOpt = OptionalCommonParams & {
+  contract?: Contract;
+};
+
+const runInitializeParamCase = async <TParams>(
   fixture: DefaultFixture,
-  invariant: InitializeInvariant<TParams>,
+  paramCase: InitializeParamCase<TParams>,
   initializeFunction: (
     fixture: DefaultFixture,
     params: Partial<TParams>,
-    opt?: OptionalCommonParams,
+    opt?: InitializeParamsOpt,
   ) => Promise<void>,
 ) => {
-  if ('run' in invariant) {
-    await invariant.run(fixture);
-    return;
-  }
+  const contract =
+    paramCase.contract === undefined
+      ? undefined
+      : typeof paramCase.contract === 'function'
+      ? await paramCase.contract(fixture)
+      : paramCase.contract;
 
-  await initializeFunction(fixture, invariant.params, {
-    revertCustomError: invariant.revertCustomError,
+  const params =
+    typeof paramCase.params === 'function'
+      ? await paramCase.params(fixture, contract)
+      : paramCase.params;
+
+  const args =
+    typeof paramCase.revertCustomError.args === 'function'
+      ? paramCase.revertCustomError.args(fixture, contract)
+      : paramCase.revertCustomError.args;
+
+  await initializeFunction(fixture, params, {
+    contract,
+    revertCustomError: {
+      customErrorName: paramCase.revertCustomError.customErrorName,
+      args,
+    },
   });
 };
 
 export const initializeParamsSuits = <TParams>(
-  initializeInvariants: InitializeInvariant<TParams>[],
+  paramCases: InitializeParamCase<TParams>[],
   fixtureFn: () => Promise<DefaultFixture>,
   initializeFunction: (
     fixture: DefaultFixture,
     params: Partial<TParams>,
-    opt?: OptionalCommonParams,
+    opt?: InitializeParamsOpt,
   ) => Promise<void>,
 ) => {
   describe('initialization params', () => {
-    for (const invariant of initializeInvariants) {
-      it(`should fail: when ${invariant.title}`, async () => {
+    for (const paramCase of paramCases) {
+      it(`should fail: when ${paramCase.title}`, async () => {
         const fixture = await fixtureFn();
-        await runInitializeInvariant(fixture, invariant, initializeFunction);
+        await runInitializeParamCase(fixture, paramCase, initializeFunction);
       });
     }
   });

@@ -1,7 +1,10 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
-import { depositVaultSuits } from './suits/deposit-vault.suits';
+import {
+  baseInitParamsDv,
+  depositVaultSuits,
+} from './suits/deposit-vault.suits';
 
 import {
   DepositVault__factory,
@@ -16,6 +19,7 @@ import { setRoundData } from '../common/data-feed.helpers';
 import { depositInstantTest } from '../common/deposit-vault.helpers';
 import { defaultDeploy, mTokenPermissionedFixture } from '../common/fixtures';
 import { addPaymentTokenTest } from '../common/manageable-vault.helpers';
+import { initializeDv } from '../common/vault-initializer.helpers';
 
 depositVaultSuits(
   'DepositVault',
@@ -27,6 +31,17 @@ depositVaultSuits(
   },
   async () => {
     await validateImplementation(DepositVault__factory);
+  },
+  {
+    deployUninitialized: (fixture) =>
+      new DepositVaultTest__factory(fixture.owner).deploy(),
+    initialize: async (fixture, params, opt) => {
+      await initializeDv(
+        { ...baseInitParamsDv(fixture), ...params },
+        opt?.contract,
+        opt,
+      );
+    },
   },
   (defaultDeploy) => {
     describe('DepositVault', function () {

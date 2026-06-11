@@ -4,7 +4,10 @@ import { expect } from 'chai';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
-import { redemptionVaultSuits } from './suits/redemption-vault.suits';
+import {
+  baseInitParamsRv,
+  redemptionVaultSuits,
+} from './suits/redemption-vault.suits';
 
 import {
   RedemptionVaultWithUSTB__factory,
@@ -12,6 +15,7 @@ import {
 } from '../../typechain-types';
 import {
   approveBase18,
+  InitializeParamCase,
   mintToken,
   validateImplementation,
 } from '../common/common.helpers';
@@ -27,6 +31,29 @@ import {
   setLoanLpTest,
   setPreferLoanLiquidityTest,
 } from '../common/redemption-vault.helpers';
+import {
+  initializeRvWithUstb,
+  InitializerParamsRvWithUstb,
+} from '../common/vault-initializer.helpers';
+
+const baseInitParamsRvWithUstb = (
+  fixture: Parameters<typeof baseInitParamsRv>[0],
+): InitializerParamsRvWithUstb => ({
+  ...baseInitParamsRv(fixture),
+  ustbRedemption: fixture.ustbRedemption,
+});
+
+const rvWithUstbInitializeParamCases: InitializeParamCase<InitializerParamsRvWithUstb>[] =
+  [
+    {
+      title: 'ustbRedemption is zero address',
+      params: { ustbRedemption: constants.AddressZero },
+      revertCustomError: {
+        customErrorName: 'InvalidAddress',
+        args: [constants.AddressZero],
+      },
+    },
+  ];
 
 redemptionVaultSuits(
   'RedemptionVaultWithUSTB',
@@ -42,6 +69,18 @@ redemptionVaultSuits(
       ustbRedemption.address,
     );
     await validateImplementation(RedemptionVaultWithUSTB__factory);
+  },
+  {
+    deployUninitialized: (fixture) =>
+      new RedemptionVaultWithUSTBTest__factory(fixture.owner).deploy(),
+    initialize: async (fixture, params, opt) => {
+      await initializeRvWithUstb(
+        { ...baseInitParamsRvWithUstb(fixture), ...params },
+        opt?.contract,
+        opt,
+      );
+    },
+    extraParamCases: rvWithUstbInitializeParamCases,
   },
   async (defaultDeploy) => {
     describe('RedemptionVaultWithUSTB', function () {

@@ -1,7 +1,10 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
-import { redemptionVaultSuits } from './suits/redemption-vault.suits';
+import {
+  baseInitParamsRv,
+  redemptionVaultSuits,
+} from './suits/redemption-vault.suits';
 
 import {
   RedemptionVault__factory,
@@ -19,6 +22,7 @@ import {
   setInstantFeeTest,
 } from '../common/manageable-vault.helpers';
 import { redeemInstantTest } from '../common/redemption-vault.helpers';
+import { initializeRv } from '../common/vault-initializer.helpers';
 
 redemptionVaultSuits(
   'RedemptionVault',
@@ -30,6 +34,17 @@ redemptionVaultSuits(
   },
   async () => {
     await validateImplementation(RedemptionVault__factory);
+  },
+  {
+    deployUninitialized: (fixture) =>
+      new RedemptionVaultTest__factory(fixture.owner).deploy(),
+    initialize: async (fixture, params, opt) => {
+      await initializeRv(
+        { ...baseInitParamsRv(fixture), ...params },
+        opt?.contract,
+        opt,
+      );
+    },
   },
   () => {
     describe('RedemptionVault', () => {
