@@ -7,8 +7,6 @@ import {RedemptionVault} from "./RedemptionVault.sol";
 
 import {IAaveV3Pool} from "./interfaces/aave/IAaveV3Pool.sol";
 import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
-import {Greenlistable} from "./access/Greenlistable.sol";
-import {ManageableVault} from "./abstract/ManageableVault.sol";
 
 /**
  * @title RedemptionVaultWithAave

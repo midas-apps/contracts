@@ -12,6 +12,7 @@ import {
 import { encodeFnSelector } from '../../helpers/utils';
 import {
   RedemptionVaultWithMToken__factory,
+  RedemptionVaultWithMTokenTest,
   RedemptionVaultWithMTokenTest__factory,
 } from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
@@ -28,7 +29,7 @@ import {
   addPaymentTokenTest,
   setInstantFeeTest,
   setMinAmountTest,
-  addWaivedFeeAccountTest,
+  setWaivedFeeAccountTest,
 } from '../common/manageable-vault.helpers';
 import {
   redeemInstantWithMTokenTest,
@@ -85,7 +86,7 @@ redemptionVaultSuits(
     initialize: async (fixture, params, opt) => {
       await initializeRvWithMToken(
         { ...baseInitParamsRvWithMToken(fixture), ...params },
-        opt?.contract,
+        opt?.contract as RedemptionVaultWithMTokenTest,
         opt,
       );
     },
@@ -714,8 +715,9 @@ redemptionVaultSuits(
               redemptionVault.address,
             );
 
-            await redemptionVault.addWaivedFeeAccount(
+            await redemptionVault.setWaivedFeeAccount(
               redemptionVaultWithMToken.address,
+              true,
             );
 
             await redeemInstantTest(
@@ -784,8 +786,9 @@ redemptionVaultSuits(
           );
 
           // Remove the waived fee — inner vault will charge fee on this contract
-          await redemptionVaultLoanSwapper.removeWaivedFeeAccount(
+          await redemptionVaultLoanSwapper.setWaivedFeeAccount(
             redemptionVaultWithMToken.address,
+            false,
           );
 
           await mintToken(mTBILL, owner, 100_000);
@@ -1124,9 +1127,10 @@ redemptionVaultSuits(
             mockedAggregatorMTokenLoan,
           } = await loadFixture(defaultDeploy);
 
-          await addWaivedFeeAccountTest(
+          await setWaivedFeeAccountTest(
             { vault: redemptionVaultWithMToken, owner },
             redemptionVaultLoanSwapper.address,
+            true,
           );
 
           await addPaymentTokenTest(
@@ -1205,9 +1209,10 @@ redemptionVaultSuits(
             0,
             true,
           );
-          await addWaivedFeeAccountTest(
+          await setWaivedFeeAccountTest(
             { vault: redemptionVaultWithMToken, owner },
             owner.address,
+            true,
           );
 
           await setRoundData({ mockedAggregator }, 1);
@@ -1802,8 +1807,9 @@ redemptionVaultSuits(
                   true,
                 );
 
-                await redemptionVaultWithAave.addWaivedFeeAccount(
+                await redemptionVaultWithAave.setWaivedFeeAccount(
                   redemptionVaultWithMToken.address,
+                  true,
                 );
 
                 if (tokenKey === 'usdc6') {
@@ -2022,8 +2028,9 @@ redemptionVaultSuits(
                   true,
                 );
 
-                await redemptionVaultWithMorpho.addWaivedFeeAccount(
+                await redemptionVaultWithMorpho.setWaivedFeeAccount(
                   redemptionVaultWithMToken.address,
+                  true,
                 );
 
                 if (tokenKey === 'usdc6') {
@@ -2239,8 +2246,9 @@ redemptionVaultSuits(
                 true,
               );
 
-              await redemptionVaultWithUSTB.addWaivedFeeAccount(
+              await redemptionVaultWithUSTB.setWaivedFeeAccount(
                 redemptionVaultWithMToken.address,
+                true,
               );
 
               await ustbToken.mint(

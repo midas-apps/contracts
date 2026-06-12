@@ -551,6 +551,52 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     }
 
     /**
+     * @inheritdoc IMidasTimelockManager
+     */
+    function getTargetRole(
+        address target,
+        bytes calldata data,
+        address proposer
+    )
+        public
+        view
+        returns (
+            bytes32, /* role */
+            uint32 /* overrideDelay */
+        )
+    {
+        (bool success, bytes memory err) = target.staticcall(data);
+        require(!success, PreflightCallUnexpectedSuccess());
+        bytes4 selector = _getFunctionSelector(data);
+
+        (
+            bytes32 role,
+            uint32 overrideDelay,
+            bool roleIsFunctionOperator,
+            bool validateFunctionRole
+        ) = _decodePreflightSucceededError(err);
+
+        return (
+            accessControl.validateFunctionAccess(
+                role,
+                overrideDelay,
+                roleIsFunctionOperator,
+                proposer,
+                selector,
+                validateFunctionRole
+            ),
+            overrideDelay
+        );
+    }
+
+    /**
+     * @inheritdoc WithMidasAccessControl
+     */
+    function contractAdminRole() public pure override returns (bytes32) {
+        return _DEFAULT_ADMIN_ROLE;
+    }
+
+    /**
      * @dev calculates and returns the actual status of an operation
      * @param operationId operation id
      * @return status actual operation status
@@ -605,7 +651,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
         address proposer = msg.sender;
 
-        (bytes32 targetRole, uint32 overrideDelay) = _getTargetRole(
+        (bytes32 targetRole, uint32 overrideDelay) = getTargetRole(
             target,
             data,
             proposer
@@ -670,13 +716,6 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
     }
 
     /**
-     * @inheritdoc WithMidasAccessControl
-     */
-    function contractAdminRole() public pure override returns (bytes32) {
-        return _DEFAULT_ADMIN_ROLE;
-    }
-
-    /**
      * @dev sets security council under a specific version
      * @param members council member addresses
      * @param version council version
@@ -738,49 +777,6 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         }
 
         pendingSetCouncilOperationId = bytes32(0);
-    }
-
-    /**
-     * @dev gets the target role for a given operation
-     * @param target target contract
-     * @param data operation data
-     * @param proposer operation proposer address
-     * @return target role
-     */
-    function _getTargetRole(
-        address target,
-        bytes calldata data,
-        address proposer
-    )
-        private
-        view
-        returns (
-            bytes32, /* role */
-            uint32 /* overrideDelay */
-        )
-    {
-        (bool success, bytes memory err) = target.staticcall(data);
-        require(!success, PreflightCallUnexpectedSuccess());
-        bytes4 selector = _getFunctionSelector(data);
-
-        (
-            bytes32 role,
-            uint32 overrideDelay,
-            bool roleIsFunctionOperator,
-            bool validateFunctionRole
-        ) = _decodePreflightSucceededError(err);
-
-        return (
-            accessControl.validateFunctionAccess(
-                role,
-                overrideDelay,
-                roleIsFunctionOperator,
-                proposer,
-                selector,
-                validateFunctionRole
-            ),
-            overrideDelay
-        );
     }
 
     /**

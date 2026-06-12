@@ -60,7 +60,6 @@ import {
   addPaymentTokenTest,
   removePaymentTokenTest,
   setVariabilityToleranceTest,
-  addWaivedFeeAccountTest,
   changeTokenAllowanceTest,
   setInstantFeeTest,
   setInstantLimitConfigTest,
@@ -69,6 +68,7 @@ import {
   setMinAmountToDepositTest,
   setMaxInstantShareTest,
   setSequentialRequestProcessingTest,
+  setWaivedFeeAccountTest,
 } from '../../common/manageable-vault.helpers';
 import { InitializerParamsDv } from '../../common/vault-initializer.helpers';
 import { sanctionUser } from '../../common/with-sanctions-list.helpers';
@@ -2235,9 +2235,10 @@ export const depositVaultSuits = (
           );
           await setRoundData({ mockedAggregator }, 1.03);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
-          await addWaivedFeeAccountTest(
+          await setWaivedFeeAccountTest(
             { vault: depositVault, owner },
             owner.address,
+            true,
           );
           await setMinAmountTest({ vault: depositVault, owner }, 10);
           await depositInstantTest(
@@ -3837,9 +3838,10 @@ export const depositVaultSuits = (
           await setMinAmountTest({ vault: depositVault, owner }, 10);
           await setRoundData({ mockedAggregator }, 1.03);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
-          await addWaivedFeeAccountTest(
+          await setWaivedFeeAccountTest(
             { vault: depositVault, owner },
             owner.address,
+            true,
           );
           await depositRequestTest(
             {

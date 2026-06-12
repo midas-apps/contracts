@@ -42,7 +42,7 @@ struct RedemptionVaultInitParams {
     /// @notice address of loan swapper vault
     address loanSwapperVault;
     /// @notice loan APR value in basis points (100 = 1%)
-    uint64 loanApr;
+    uint256 loanApr;
 }
 
 /**
@@ -162,12 +162,12 @@ interface IRedemptionVault is IManageableVault {
     /**
      * @param newMaxLoanApr new maximum loan APR value in basis points (100 = 1%)
      */
-    event SetMaxLoanApr(uint64 newMaxLoanApr);
+    event SetMaxLoanApr(uint256 newMaxLoanApr);
 
     /**
      * @param newLoanApr new loan APR value in basis points (100 = 1%)
      */
-    event SetLoanApr(uint64 newLoanApr);
+    event SetLoanApr(uint256 newLoanApr);
 
     /**
      * @param newLoanLpFirst new flag to determine if the loan LP liquidity should be used first
@@ -386,7 +386,7 @@ interface IRedemptionVault is IManageableVault {
      * @notice set loan APR value in basis points (100 = 1%)
      * @param newLoanApr new loan APR value in basis points (100 = 1%)
      */
-    function setLoanApr(uint64 newLoanApr) external;
+    function setLoanApr(uint256 newLoanApr) external;
 
     /**
      * @notice set flag to determine if the loan LP liquidity should be used first

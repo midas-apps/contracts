@@ -139,17 +139,17 @@ abstract contract ManageableVault is
     /**
      * @notice minimum instant fee
      */
-    uint64 public minInstantFee;
+    uint256 public minInstantFee;
 
     /**
      * @notice maximum instant fee
      */
-    uint64 public maxInstantFee;
+    uint256 public maxInstantFee;
 
     /**
      * @notice maximum instant share value in basis points (100 = 1%)
      */
-    uint64 public maxInstantShare;
+    uint256 public maxInstantShare;
 
     /**
      * @notice enforce sequential request processing flag
@@ -212,17 +212,6 @@ abstract contract ManageableVault is
         mTokenDataFeed = IDataFeed(_commonVaultInitParams.mTokenDataFeed);
         sequentialRequestProcessing = _commonVaultInitParams
             .sequentialRequestProcessing;
-
-        for (
-            uint256 i = 0;
-            i < _commonVaultInitParams.limitConfigs.length;
-            ++i
-        ) {
-            _setInstantLimitConfig(
-                _commonVaultInitParams.limitConfigs[i].window,
-                _commonVaultInitParams.limitConfigs[i].limit
-            );
-        }
 
         maxInstantShare = _commonVaultInitParams.maxInstantShare;
 
@@ -317,25 +306,14 @@ abstract contract ManageableVault is
 
     /**
      * @inheritdoc IManageableVault
-     * @dev reverts if account is already added
      */
-    function addWaivedFeeAccount(address account) external onlyContractAdmin {
-        require(!waivedFeeRestriction[account], SameAddressValue(account));
-        waivedFeeRestriction[account] = true;
-        emit AddWaivedFeeAccount(account);
-    }
-
-    /**
-     * @inheritdoc IManageableVault
-     * @dev reverts if account is already removed
-     */
-    function removeWaivedFeeAccount(address account)
+    function setWaivedFeeAccount(address account, bool enable)
         external
         onlyContractAdmin
     {
-        require(waivedFeeRestriction[account], SameAddressValue(account));
-        waivedFeeRestriction[account] = false;
-        emit RemoveWaivedFeeAccount(account);
+        require(waivedFeeRestriction[account] != enable, SameBoolValue(enable));
+        waivedFeeRestriction[account] = enable;
+        emit SetWaivedFeeAccount(account, enable);
     }
 
     /**
@@ -364,8 +342,8 @@ abstract contract ManageableVault is
      * @inheritdoc IManageableVault
      */
     function setMinMaxInstantFee(
-        uint64 newMinInstantFee,
-        uint64 newMaxInstantFee
+        uint256 newMinInstantFee,
+        uint256 newMaxInstantFee
     ) external onlyContractAdmin {
         _setMinMaxInstantFee(newMinInstantFee, newMaxInstantFee);
     }
@@ -373,7 +351,7 @@ abstract contract ManageableVault is
     /**
      * @inheritdoc IManageableVault
      */
-    function setMaxInstantShare(uint64 newMaxInstantShare)
+    function setMaxInstantShare(uint256 newMaxInstantShare)
         external
         onlyContractAdmin
     {
@@ -400,7 +378,7 @@ abstract contract ManageableVault is
         external
         onlyContractAdmin
     {
-        _setInstantLimitConfig(window, limit);
+        _instantRateLimits.setWindowLimit(window, limit);
     }
 
     /**
@@ -487,8 +465,8 @@ abstract contract ManageableVault is
      * @param newMaxInstantFee new maximum instant fee
      */
     function _setMinMaxInstantFee(
-        uint64 newMinInstantFee,
-        uint64 newMaxInstantFee
+        uint256 newMinInstantFee,
+        uint256 newMaxInstantFee
     ) private {
         _validateFee(newMinInstantFee, false);
         _validateFee(newMaxInstantFee, false);
@@ -499,15 +477,6 @@ abstract contract ManageableVault is
         minInstantFee = newMinInstantFee;
         maxInstantFee = newMaxInstantFee;
         emit SetMinMaxInstantFee(newMinInstantFee, newMaxInstantFee);
-    }
-
-    /**
-     * @dev set instant limit config
-     * @param window window duration in seconds
-     * @param limit limit amount per window
-     */
-    function _setInstantLimitConfig(uint256 window, uint256 limit) private {
-        _instantRateLimits.setWindowLimit(window, limit);
     }
 
     /**
@@ -531,25 +500,6 @@ abstract contract ManageableVault is
     }
 
     /**
-     * @dev do safeTransfer on a given token
-     * and converts `amount` from base18
-     * to amount with a correct precision. Sends tokens
-     * from `contract` to `user`
-     * @param token address of token
-     * @param to address of user
-     * @param amount amount of `token` to transfer from `user` (decimals 18)
-     * @param tokenDecimals token decimals
-     */
-    function _tokenTransferToUser(
-        address token,
-        address to,
-        uint256 amount,
-        uint256 tokenDecimals
-    ) internal {
-        _tokenTransferFromTo(token, address(this), to, amount, tokenDecimals);
-    }
-
-    /**
      * @dev do safeTransfer or safeTransferFrom on a given token
      * and converts `amount` from base18
      * to amount with a correct precision.
@@ -569,13 +519,11 @@ abstract contract ManageableVault is
     ) internal returns (uint256 transferAmount) {
         if (amount == 0) return 0;
         transferAmount = amount.convertFromBase18(tokenDecimals);
+        uint256 truncatedAmount = transferAmount.convertToBase18(tokenDecimals);
 
         require(
-            amount == transferAmount.convertToBase18(tokenDecimals),
-            InvalidRounding(
-                amount,
-                transferAmount.convertToBase18(tokenDecimals)
-            )
+            amount == truncatedAmount,
+            InvalidRounding(amount, truncatedAmount)
         );
 
         if (from == address(this)) {
@@ -693,8 +641,7 @@ abstract contract ManageableVault is
     ) internal view returns (uint256 feePercent) {
         if (waivedFeeRestriction[sender]) return 0;
 
-        TokenConfig storage tokenConfig = tokensConfig[token];
-        feePercent = tokenConfig.fee;
+        feePercent = tokensConfig[token].fee;
 
         if (isInstant) feePercent += instantFee;
 

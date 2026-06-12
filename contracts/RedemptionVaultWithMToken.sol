@@ -9,6 +9,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {RedemptionVault, ManageableVault} from "./RedemptionVault.sol";
 import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
 import {CommonVaultInitParams, RedemptionVaultInitParams, IRedemptionVault} from "./interfaces/IRedemptionVault.sol";
+import {RedemptionVaultUtils} from "./libraries/RedemptionVaultUtils.sol";
 
 /**
  * @title RedemptionVaultWithMToken
@@ -35,12 +36,6 @@ contract RedemptionVaultWithMToken is RedemptionVault {
      * @param newVault new redemption vault address
      */
     event SetRedemptionVault(address indexed newVault);
-
-    /**
-     * @notice linked redemption vault does not waive fees for this contract
-     * @param target linked redemption vault address
-     */
-    error FeesNotWaivedOnTarget(address target);
 
     /**
      * @notice Passes role identifiers to the base RedemptionVault constructor
@@ -112,9 +107,14 @@ contract RedemptionVaultWithMToken is RedemptionVault {
     {
         IRedemptionVault _redemptionVault = redemptionVault;
 
-        uint256 mTokenARate = _redemptionVault
-            .mTokenDataFeed()
-            .getDataInBase18();
+        (
+            uint256 mTokenARate,
+            IERC20 mTokenA,
+            uint256 mTokenABalance
+        ) = RedemptionVaultUtils.getSwapperDetails(
+                _redemptionVault,
+                address(this)
+            );
 
         // Ceil so the inner vault's floored output is still >= missingAmountBase18.
         uint256 mTokenAAmount = Math.mulDiv(
@@ -124,32 +124,30 @@ contract RedemptionVaultWithMToken is RedemptionVault {
             Math.Rounding.Up
         );
 
-        address mTokenA = address(_redemptionVault.mToken());
-        uint256 mTokenABalance = IERC20(mTokenA).balanceOf(address(this));
-
         mTokenAAmount = mTokenABalance >= mTokenAAmount
             ? mTokenAAmount
             : mTokenABalance;
 
-        require(
-            ManageableVault(address(_redemptionVault)).waivedFeeRestriction(
+        if (
+            !ManageableVault(address(_redemptionVault)).waivedFeeRestriction(
                 address(this)
-            ),
-            FeesNotWaivedOnTarget(address(_redemptionVault))
-        );
+            )
+        ) {
+            return 0;
+        }
 
         if (mTokenAAmount == 0) {
             return 0;
         }
 
-        IERC20(mTokenA).safeIncreaseAllowance(
-            address(_redemptionVault),
-            mTokenAAmount
-        );
-
         return
-            _redemptionVault
-                .redeemInstant(tokenOut, mTokenAAmount, 0)
-                .convertToBase18(tokenOutDecimals);
+            RedemptionVaultUtils.redeemInstantSwapper(
+                _redemptionVault,
+                mTokenA,
+                address(this),
+                tokenOut,
+                mTokenAAmount,
+                tokenOutDecimals
+            );
     }
 }

@@ -7,7 +7,7 @@ import {
   constants,
   ContractTransaction,
 } from 'ethers';
-import { formatUnits, parseUnits, solidityKeccak256 } from 'ethers/lib/utils';
+import { formatUnits, parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
 import {
@@ -53,104 +53,6 @@ type CommonParamsRedeem = {
 
 type CommonParams = Pick<Awaited<ReturnType<typeof defaultDeploy>>, 'owner'> & {
   redemptionVault: RedemptionVaultType;
-};
-
-/**
- * Writes a legacy v1 `Request` into the current `redeemRequests` mapping storage.
- *
- * The current contract stores `RequestV2` at `redeemRequests`, but all approve entry points
- * validate `request.version == 1` (v2) and reject v1 (version != 1).
- *
- * Used by unit tests to ensure backward compatibility behavior:
- * - `redeemRequests()` getter must not revert when v1 data exists
- * - approve-style entry points must revert with `RV: not v2 request`
- */
-export const setV1RedeemRequestInStorage = async (
-  vault: { address: string },
-  requestId: number,
-  params: {
-    sender: string;
-    tokenOut: string;
-    amountMToken: bigint;
-    mTokenRate: bigint;
-    tokenOutRate: bigint;
-    status?: number; // RequestStatus enum: 0=Pending
-  },
-) => {
-  const REDEMPTION_REQUESTS_SLOT = 422;
-  const STATUS_OFFSET_IN_TOKENOUT_SLOT = 20n; // tokenOut is 20 bytes; status is the next byte
-
-  const toWordHex = (value: bigint) => {
-    return `0x${value.toString(16).padStart(64, '0')}`;
-  };
-
-  const { sender, tokenOut, amountMToken, mTokenRate, tokenOutRate } = params;
-  const status = params.status ?? 0;
-
-  // mappingSlot = keccak256(abi.encode(key, mappingSlotBase))
-  const mappingSlotHex = solidityKeccak256(
-    ['uint256', 'uint256'],
-    [requestId, REDEMPTION_REQUESTS_SLOT],
-  );
-  const mappingSlot = BigInt(mappingSlotHex);
-
-  const slotAt = (offset: number) => {
-    return `0x${(mappingSlot + BigInt(offset)).toString(16)}`;
-  };
-
-  // v1 legacy struct layout inside RequestV2 mapping:
-  // sender @ slot + 0
-  // tokenOut + status packed @ slot + 1
-  // amountMToken @ slot + 2
-  // mTokenRate @ slot + 3
-  // tokenOutRate @ slot + 4
-  //
-  // v2 getter will still read feePercent @ slot + 5 and version @ slot + 6.
-  const senderWord = BigInt(sender);
-  const tokenOutWord =
-    BigInt(tokenOut) +
-    BigInt(status) * (1n << (8n * STATUS_OFFSET_IN_TOKENOUT_SLOT));
-  const amountMTokenWord = amountMToken;
-  const mTokenRateWord = mTokenRate;
-  const tokenOutRateWord = tokenOutRate;
-
-  await ethers.provider.send('hardhat_setStorageAt', [
-    vault.address,
-    slotAt(0),
-    toWordHex(senderWord),
-  ]);
-  await ethers.provider.send('hardhat_setStorageAt', [
-    vault.address,
-    slotAt(1),
-    toWordHex(tokenOutWord),
-  ]);
-  await ethers.provider.send('hardhat_setStorageAt', [
-    vault.address,
-    slotAt(2),
-    toWordHex(amountMTokenWord),
-  ]);
-  await ethers.provider.send('hardhat_setStorageAt', [
-    vault.address,
-    slotAt(3),
-    toWordHex(mTokenRateWord),
-  ]);
-  await ethers.provider.send('hardhat_setStorageAt', [
-    vault.address,
-    slotAt(4),
-    toWordHex(tokenOutRateWord),
-  ]);
-
-  // feePercent (slot + 5) and version (slot + 6) must decode as 0 for v1 data.
-  await ethers.provider.send('hardhat_setStorageAt', [
-    vault.address,
-    slotAt(5),
-    toWordHex(0n),
-  ]);
-  await ethers.provider.send('hardhat_setStorageAt', [
-    vault.address,
-    slotAt(6),
-    toWordHex(0n),
-  ]);
 };
 
 const getTotalFromInstantShare = (
@@ -822,7 +724,7 @@ export const setLoanAprTest = async (
   await expect(callFn())
     .to.emit(
       redemptionVault,
-      redemptionVault.interface.events['SetLoanApr(uint64)'].name,
+      redemptionVault.interface.events['SetLoanApr(uint256)'].name,
     )
     .withArgs(loanApr).to.not.reverted;
 

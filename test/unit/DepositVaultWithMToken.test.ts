@@ -11,6 +11,7 @@ import {
 
 import {
   DepositVaultWithMToken__factory,
+  DepositVaultWithMTokenTest,
   DepositVaultWithMTokenTest__factory,
 } from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
@@ -30,8 +31,8 @@ import {
 import { defaultDeploy } from '../common/fixtures';
 import {
   addPaymentTokenTest,
-  addWaivedFeeAccountTest,
   setMinAmountTest,
+  setWaivedFeeAccountTest,
 } from '../common/manageable-vault.helpers';
 import {
   initializeDvWithMToken,
@@ -79,7 +80,7 @@ depositVaultSuits(
     initialize: async (fixture, params, opt) => {
       await initializeDvWithMToken(
         { ...baseInitParamsDvWithMToken(fixture), ...params },
-        opt?.contract,
+        opt?.contract as DepositVaultWithMTokenTest,
         opt,
       );
     },
@@ -351,9 +352,10 @@ depositVaultSuits(
             true,
           );
 
-          await addWaivedFeeAccountTest(
+          await setWaivedFeeAccountTest(
             { vault: depositVaultWithMToken, owner },
             regularAccounts[0].address,
+            true,
           );
 
           await mintToken(stableCoins.usdc, regularAccounts[0], 100);

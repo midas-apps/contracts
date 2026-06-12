@@ -27,7 +27,7 @@ import { defaultDeploy } from '../common/fixtures';
 import {
   addPaymentTokenTest,
   setInstantFeeTest,
-  addWaivedFeeAccountTest,
+  setWaivedFeeAccountTest,
 } from '../common/manageable-vault.helpers';
 import {
   removeAavePoolTest,
@@ -929,9 +929,10 @@ redemptionVaultSuits(
           await setRoundData({ mockedAggregator }, 1.03);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
 
-          await addWaivedFeeAccountTest(
+          await setWaivedFeeAccountTest(
             { vault: redemptionVaultWithAave, owner },
             owner.address,
+            true,
           );
 
           await redeemInstantTest(

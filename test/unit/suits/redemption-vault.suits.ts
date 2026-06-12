@@ -52,11 +52,10 @@ import { setRoundData } from '../../common/data-feed.helpers';
 import { DefaultFixture } from '../../common/fixtures';
 import {
   addPaymentTokenTest,
-  addWaivedFeeAccountTest,
   changeTokenAllowanceTest,
   removePaymentTokenTest,
   removeInstantLimitConfigTest,
-  removeWaivedFeeAccountTest,
+  setWaivedFeeAccountTest,
   setInstantFeeTest,
   setInstantLimitConfigTest,
   setMinMaxInstantFeeTest,
@@ -2132,9 +2131,10 @@ export const redemptionVaultSuits = (
               await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 100);
               await approveBase18(loanLp, mTokenLoan, redemptionVault, 100);
 
-              await removeWaivedFeeAccountTest(
+              await setWaivedFeeAccountTest(
                 { vault: redemptionVaultLoanSwapper, owner },
                 redemptionVault.address,
+                false,
               );
 
               await addPaymentTokenTest(
@@ -2584,9 +2584,10 @@ export const redemptionVaultSuits = (
               await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 100);
               await approveBase18(loanLp, mTokenLoan, redemptionVault, 100);
 
-              await removeWaivedFeeAccountTest(
+              await setWaivedFeeAccountTest(
                 { vault: redemptionVaultLoanSwapper, owner },
                 redemptionVault.address,
+                false,
               );
 
               await addPaymentTokenTest(
@@ -2648,9 +2649,10 @@ export const redemptionVaultSuits = (
               await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 100);
               await approveBase18(loanLp, mTokenLoan, redemptionVault, 100);
 
-              await removeWaivedFeeAccountTest(
+              await setWaivedFeeAccountTest(
                 { vault: redemptionVaultLoanSwapper, owner },
                 redemptionVault.address,
+                falsez,
               );
 
               await addPaymentTokenTest(
@@ -2968,9 +2970,10 @@ export const redemptionVaultSuits = (
           );
           await setRoundData({ mockedAggregator }, 1.03);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
-          await addWaivedFeeAccountTest(
+          await setWaivedFeeAccountTest(
             { vault: redemptionVault, owner },
             owner.address,
+            true,
           );
           await redeemInstantTest(
             {
@@ -4674,9 +4677,10 @@ export const redemptionVaultSuits = (
           );
           await setRoundData({ mockedAggregator }, 1.03);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
-          await addWaivedFeeAccountTest(
+          await setWaivedFeeAccountTest(
             { vault: redemptionVault, owner },
             owner.address,
+            true,
           );
           await redeemRequestTest(
             {

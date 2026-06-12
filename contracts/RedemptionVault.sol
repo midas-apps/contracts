@@ -8,6 +8,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
 import {IRedemptionVault, CommonVaultInitParams, LiquidityProviderLoanRequest, Request, RequestStatus, RedemptionVaultInitParams} from "./interfaces/IRedemptionVault.sol";
 import {ManageableVault} from "./abstract/ManageableVault.sol";
+import {RedemptionVaultUtils} from "./libraries/RedemptionVaultUtils.sol";
 
 /**
  * @title RedemptionVault
@@ -65,7 +66,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @notice loan APR value in basis points (100 = 1%)
      */
-    uint64 public loanApr;
+    uint256 public loanApr;
 
     /**
      * @notice flag to determine if the loan LP liquidity should be used first
@@ -73,14 +74,14 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     bool public preferLoanLiquidity;
 
     /**
-     * @notice address of loan RedemptionVault-compatible vault
-     */
-    IRedemptionVault public loanSwapperVault;
-
-    /**
      * @notice last loan request id
      */
     uint256 public currentLoanRequestId;
+
+    /**
+     * @notice address of loan RedemptionVault-compatible vault
+     */
+    IRedemptionVault public loanSwapperVault;
 
     /**
      * @dev leaving a storage gap for futures updates
@@ -209,28 +210,14 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         external
         onlyContractAdmin
     {
-        for (uint256 i = 0; i < requestIds.length; ++i) {
-            uint256 rate = redeemRequests[requestIds[i]].mTokenRate;
-            bool success = _approveRequest(
-                requestIds[i],
-                rate,
-                true,
-                true,
-                false
-            );
-
-            if (!success) {
-                continue;
-            }
-        }
+        _safeBulkApproveRequest(requestIds, 0, true, false);
     }
 
     /**
      * @inheritdoc IRedemptionVault
      */
     function safeBulkApproveRequest(uint256[] calldata requestIds) external {
-        uint256 currentMTokenRate = _getMTokenRate();
-        _safeBulkApproveRequest(requestIds, currentMTokenRate, false);
+        _safeBulkApproveRequest(requestIds, _getMTokenRate(), false, false);
     }
 
     /**
@@ -239,8 +226,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     function safeBulkApproveRequestAvgRate(uint256[] calldata requestIds)
         external
     {
-        uint256 currentMTokenRate = _getMTokenRate();
-        _safeBulkApproveRequest(requestIds, currentMTokenRate, true);
+        _safeBulkApproveRequest(requestIds, _getMTokenRate(), false, true);
     }
 
     /**
@@ -250,7 +236,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256[] calldata requestIds,
         uint256 newOutRate
     ) external {
-        _safeBulkApproveRequest(requestIds, newOutRate, false);
+        _safeBulkApproveRequest(requestIds, newOutRate, false, false);
     }
 
     /**
@@ -260,7 +246,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256[] calldata requestIds,
         uint256 avgMTokenRate
     ) external {
-        _safeBulkApproveRequest(requestIds, avgMTokenRate, true);
+        _safeBulkApproveRequest(requestIds, avgMTokenRate, false, true);
     }
 
     /**
@@ -295,7 +281,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         external
         onlyContractAdmin
     {
-        uint64 _loanApr = loanApr;
+        uint256 _loanApr = loanApr;
         for (uint256 i = 0; i < requestIds.length; ++i) {
             LiquidityProviderLoanRequest memory request = loanRequests[
                 requestIds[i]
@@ -303,7 +289,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
             _validateRequest(requestIds[i], request.tokenOut, request.status);
 
-            uint256 decimals = _tokenDecimals(request.tokenOut);
             uint256 duration = block.timestamp - request.createdAt;
             uint256 accruedInterest = (request.amountTokenOut *
                 _loanApr *
@@ -323,7 +308,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 loanRepaymentAddress,
                 loanLp,
                 request.amountTokenOut + amountFee,
-                decimals
+                _tokenDecimals(request.tokenOut)
             );
 
             loanRequests[requestIds[i]].status = RequestStatus.Processed;
@@ -390,8 +375,9 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @inheritdoc IRedemptionVault
      */
-    function setLoanApr(uint64 newLoanApr) external onlyContractAdmin {
+    function setLoanApr(uint256 newLoanApr) external onlyContractAdmin {
         loanApr = newLoanApr;
+
         emit SetLoanApr(newLoanApr);
     }
 
@@ -411,14 +397,20 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @dev internal function to approve requests
      * @param requestIds request ids
      * @param newOutRate new out rate
+     * @param isRequestRate if true, newOutRate will be ignored and request rate will be used
      * @param isAvgRate if true, newOutRate is avg rate
      */
     function _safeBulkApproveRequest(
         uint256[] calldata requestIds,
         uint256 newOutRate,
+        bool isRequestRate,
         bool isAvgRate
     ) private onlyContractAdmin {
         for (uint256 i = 0; i < requestIds.length; ++i) {
+            if (isRequestRate) {
+                newOutRate = redeemRequests[requestIds[i]].mTokenRate;
+            }
+
             bool success = _approveRequest(
                 requestIds[i],
                 newOutRate,
@@ -497,11 +489,9 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         if (
             (safeValidateRequest &&
-                !_validateLiquidity(
-                    request.tokenOut,
-                    calcResult.amountTokenOutWithoutFee + calcResult.feeAmount,
-                    calcResult.tokenOutDecimals
-                )) ||
+                IERC20(request.tokenOut).balanceOf(requestRedeemer) <
+                (calcResult.amountTokenOutWithoutFee + calcResult.feeAmount)
+                    .convertFromBase18(calcResult.tokenOutDecimals)) ||
             !_validateAndUpdateNextRequestIdToProcess(
                 requestId,
                 !safeValidateRequest
@@ -518,10 +508,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             calcResult.tokenOutDecimals
         );
 
-        _requireAndUpdateAllowance(
-            request.tokenOut,
-            calcResult.amountTokenOutWithoutFee
-        );
+        _requireAndUpdateAllowance(request.tokenOut, calcResult.amountTokenOut);
 
         mToken.burn(requestRedeemer, request.amountMToken);
 
@@ -775,8 +762,9 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         );
 
         // transfer from vault liquidity to user
-        _tokenTransferToUser(
+        _tokenTransferFromTo(
             tokenOut,
+            address(this),
             recipient,
             calcResult.amountTokenOutWithoutFee,
             calcResult.tokenOutDecimals
@@ -968,18 +956,24 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             return (0, 0);
         }
 
-        uint256 mTokenARate = _loanSwapperVault
-            .mTokenDataFeed()
-            .getDataInBase18();
+        uint256 mTokenARate;
+        IERC20 mTokenA;
+        uint256 grossTokenOutAmount;
 
-        IERC20 mTokenA = IERC20(address(_loanSwapperVault.mToken()));
+        // prevent stack too deep errors
+        {
+            uint256 mTokenABalance;
 
-        uint256 grossTokenOutAmount = Math.mulDiv(
-            mTokenA.balanceOf(_loanLp),
-            mTokenARate,
-            tokenOutRate,
-            Math.Rounding.Up
-        );
+            (mTokenARate, mTokenA, mTokenABalance) = RedemptionVaultUtils
+                .getSwapperDetails(_loanSwapperVault, _loanLp);
+
+            grossTokenOutAmount = Math.mulDiv(
+                mTokenABalance,
+                mTokenARate,
+                tokenOutRate,
+                Math.Rounding.Up
+            );
+        }
 
         if (grossTokenOutAmount > missingAmountBase18) {
             grossTokenOutAmount = missingAmountBase18;
@@ -999,29 +993,26 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         }
 
         address _tokenOut = tokenOut;
-
-        uint256 tokenOutAmountToRedeem = grossTokenOutAmount - lpFeePortion;
+        uint256 _tokenOutDecimals = tokenOutDecimals;
 
         // Ceil so the inner vault's floored output is still >= net token out amount.
         // Requires address(this) to have waivedFeeRestriction on the inner vault.
         uint256 mTokenAAmount = Math.mulDiv(
-            tokenOutAmountToRedeem,
+            grossTokenOutAmount - lpFeePortion,
             tokenOutRate,
             mTokenARate,
             Math.Rounding.Up
         );
 
-        mTokenA.transferFrom(_loanLp, address(this), mTokenAAmount);
-
-        mTokenA.safeIncreaseAllowance(
-            address(_loanSwapperVault),
-            mTokenAAmount
-        );
-
         return (
-            _loanSwapperVault
-                .redeemInstant(_tokenOut, mTokenAAmount, 0)
-                .convertToBase18(tokenOutDecimals),
+            RedemptionVaultUtils.redeemInstantSwapper(
+                _loanSwapperVault,
+                mTokenA,
+                _loanLp,
+                _tokenOut,
+                mTokenAAmount,
+                _tokenOutDecimals
+            ),
             lpFeePortion
         );
     }
@@ -1234,29 +1225,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             overrideTokenOutRate
         );
         return (amountTokenOut, mTokenRate, tokenOutRate);
-    }
-
-    /*
-     * @dev validates that liquidity of provided token on `requestRedeemer` is enough
-     * @param token token address
-     * @param requiredLiquidity minimum required liquidity of `requestRedeemer`
-     * @param tokenDecimals `token` decimals
-     *
-     * @return false if not enough liquidity, otherwise true
-     */
-    function _validateLiquidity(
-        address token,
-        uint256 requiredLiquidity,
-        uint256 tokenDecimals
-    )
-        private
-        view
-        returns (
-            bool /* success */
-        )
-    {
-        uint256 balance = IERC20(token).balanceOf(requestRedeemer);
-        return balance >= requiredLiquidity.convertFromBase18(tokenDecimals);
     }
 
     /**

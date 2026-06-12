@@ -8,9 +8,9 @@ import { approve, approveBase18, keccak256, mintToken } from './common.helpers';
 import { deployProxyContract } from './deploy.helpers';
 import {
   addPaymentTokenTest,
-  addWaivedFeeAccountTest,
   setInstantFeeTest,
   setMinAmountTest,
+  setWaivedFeeAccountTest,
 } from './manageable-vault.helpers';
 import {
   initializeDv,
@@ -333,7 +333,10 @@ export const defaultDeploy = async () => {
     owner.address,
   );
 
-  await redemptionVaultLoanSwapper.addWaivedFeeAccount(redemptionVault.address);
+  await redemptionVaultLoanSwapper.setWaivedFeeAccount(
+    redemptionVault.address,
+    true,
+  );
 
   await accessControl['grantRole(bytes32,address)'](
     mTBILL.burnerRole(),
@@ -397,8 +400,9 @@ export const defaultDeploy = async () => {
     mTBILL.burnerRole(),
     redemptionVaultWithUSTB.address,
   );
-  await redemptionVaultLoanSwapper.addWaivedFeeAccount(
+  await redemptionVaultLoanSwapper.setWaivedFeeAccount(
     redemptionVaultWithUSTB.address,
+    true,
   );
 
   /* Redemption Vault With Aave */
@@ -427,8 +431,9 @@ export const defaultDeploy = async () => {
     mTBILL.burnerRole(),
     redemptionVaultWithAave.address,
   );
-  await redemptionVaultLoanSwapper.addWaivedFeeAccount(
+  await redemptionVaultLoanSwapper.setWaivedFeeAccount(
     redemptionVaultWithAave.address,
+    true,
   );
   /* Redemption Vault With Morpho */
 
@@ -456,8 +461,9 @@ export const defaultDeploy = async () => {
     mTBILL.burnerRole(),
     redemptionVaultWithMorpho.address,
   );
-  await redemptionVaultLoanSwapper.addWaivedFeeAccount(
+  await redemptionVaultLoanSwapper.setWaivedFeeAccount(
     redemptionVaultWithMorpho.address,
+    true,
   );
   /* Deposit Vault With Aave */
 
@@ -505,7 +511,7 @@ export const defaultDeploy = async () => {
     depositVaultWithMToken.address,
   );
 
-  await depositVault.addWaivedFeeAccount(depositVaultWithMToken.address);
+  await depositVault.setWaivedFeeAccount(depositVaultWithMToken.address, true);
 
   /* Redemption Vault With MToken (mFONE -> mTBILL) */
 
@@ -537,8 +543,9 @@ export const defaultDeploy = async () => {
     { from: owner },
   );
 
-  await redemptionVaultLoanSwapper.addWaivedFeeAccount(
+  await redemptionVaultLoanSwapper.setWaivedFeeAccount(
     redemptionVaultWithMToken.address,
+    true,
   );
   await accessControl['grantRole(bytes32,address)'](
     mTBILL.burnerRole(),
@@ -901,9 +908,10 @@ export const acreAdapterFixture = async () => {
     0,
   );
 
-  await addWaivedFeeAccountTest(
+  await setWaivedFeeAccountTest(
     { vault: defaultFixture.redemptionVault, owner: defaultFixture.owner },
     acreUsdcMTbillAdapter.address,
+    true,
   );
 
   await addPaymentTokenTest(

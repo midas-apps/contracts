@@ -1,5 +1,4 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { constants } from 'ethers';
@@ -29,10 +28,9 @@ import {
   removePaymentTokenTest,
   setVariabilityToleranceTest,
   withdrawTest,
-  addWaivedFeeAccountTest,
   changeTokenAllowanceTest,
   changeTokenFeeTest,
-  removeWaivedFeeAccountTest,
+  setWaivedFeeAccountTest,
   setInstantFeeTest,
   setMinAmountTest,
   setMinMaxInstantFeeTest,
@@ -123,11 +121,6 @@ export const mvInitializeParamCases: InitializeParamCase<InitializerParamsMv>[] 
         args: [500, 100],
       },
     },
-    {
-      title: 'limitConfigs window is shorter than 1 minute',
-      params: { limitConfigs: [{ window: 59, limit: parseUnits('100000') }] },
-      revertCustomError: { customErrorName: 'WindowTooShort', args: [59] },
-    },
   ];
 
 export const manageableVaultSuits = (
@@ -196,15 +189,7 @@ export const manageableVaultSuits = (
 
       expect(await manageableVault.minInstantFee()).eq(0);
       expect(await manageableVault.maxInstantFee()).eq(10000);
-      expect((await manageableVault.getInstantLimitStatuses()).length).eq(1);
-      expect((await manageableVault.getInstantLimitStatuses()).length).eq(1);
-      const limitConfigs = await manageableVault.getInstantLimitStatuses();
-      const limitConfig = limitConfigs[0];
-
-      expect(limitConfig.limit).eq(parseUnits('100000'));
-      expect(limitConfig.lastUpdated).not.eq(0);
-      expect(limitConfig.remaining).eq(parseUnits('100000'));
-      expect(limitConfig.window).eq(days(1));
+      expect((await manageableVault.getInstantLimitStatuses()).length).eq(0);
 
       await deploymentAdditionalChecks({
         ...fixture,
@@ -658,244 +643,269 @@ export const manageableVaultSuits = (
         });
       });
 
-      describe('addWaivedFeeAccount()', () => {
-        it('should fail: call from address without VAULT_ADMIN_ROLE role', async () => {
-          const { manageableVault, regularAccounts, owner } =
-            await loadMvFixture();
-          await addWaivedFeeAccountTest(
-            { vault: manageableVault, owner },
-            ethers.constants.AddressZero,
-            {
-              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
-              from: regularAccounts[0],
-            },
-          );
-        });
-        it('should fail: if account fee already waived', async () => {
-          const { manageableVault, owner } = await loadMvFixture();
-          await addWaivedFeeAccountTest(
-            { vault: manageableVault, owner },
-            owner.address,
-          );
-          await addWaivedFeeAccountTest(
-            { vault: manageableVault, owner },
-            owner.address,
-            {
-              revertCustomError: {
-                customErrorName: 'SameAddressValue',
+      describe('setWaivedFeeAccount()', () => {
+        describe('enabled=true', () => {
+          it('should fail: call from address without VAULT_ADMIN_ROLE role', async () => {
+            const { manageableVault, regularAccounts, owner } =
+              await loadMvFixture();
+            await setWaivedFeeAccountTest(
+              { vault: manageableVault, owner },
+              ethers.constants.AddressZero,
+              true,
+              {
+                revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
+                from: regularAccounts[0],
               },
-            },
-          );
-        });
-
-        it('call from address with VAULT_ADMIN_ROLE role', async () => {
-          const { manageableVault, owner } = await loadMvFixture();
-          await addWaivedFeeAccountTest(
-            { vault: manageableVault, owner },
-            owner.address,
-          );
-        });
-
-        it('should fail: when function is paused', async () => {
-          const { manageableVault, owner } = await loadMvFixture();
-
-          await pauseVaultFn(
-            { pauseManager, owner },
-            manageableVault,
-            encodeFnSelector('addWaivedFeeAccount(address)'),
-          );
-
-          await addWaivedFeeAccountTest(
-            { vault: manageableVault, owner },
-            owner.address,
-            {
-              revertCustomError: {
-                customErrorName: 'Paused',
+            );
+          });
+          it('should fail: if account fee already waived', async () => {
+            const { manageableVault, owner } = await loadMvFixture();
+            await setWaivedFeeAccountTest(
+              { vault: manageableVault, owner },
+              owner.address,
+              true,
+            );
+            await setWaivedFeeAccountTest(
+              { vault: manageableVault, owner },
+              owner.address,
+              true,
+              {
+                revertCustomError: {
+                  customErrorName: 'SameBoolValue',
+                },
               },
-            },
-          );
-        });
+            );
+          });
 
-        it('succeeds with only scoped function permission', async () => {
-          const { accessControl, owner, manageableVault, regularAccounts } =
-            await loadMvFixture();
+          it('call from address with VAULT_ADMIN_ROLE role', async () => {
+            const { manageableVault, owner } = await loadMvFixture();
+            await setWaivedFeeAccountTest(
+              { vault: manageableVault, owner },
+              owner.address,
+              true,
+            );
+          });
 
-          const vaultRole = await manageableVault.contractAdminRole();
-          await setupPermissionRole(
-            { accessControl, owner },
-            vaultRole,
-            manageableVault.address,
-            'addWaivedFeeAccount(address)',
-            regularAccounts[0].address,
-          );
+          it('should fail: when function is paused', async () => {
+            const { manageableVault, owner } = await loadMvFixture();
 
-          expect(
-            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
-          ).eq(false);
+            await pauseVaultFn(
+              { pauseManager, owner },
+              manageableVault,
+              encodeFnSelector('setWaivedFeeAccount(address,bool)'),
+            );
 
-          await addWaivedFeeAccountTest(
-            { vault: manageableVault, owner },
-            regularAccounts[1].address,
-            { from: regularAccounts[0] },
-          );
-        });
-
-        it('succeeds with scoped permission and vault admin role', async () => {
-          const {
-            accessControl,
-            owner,
-            manageableVault,
-            regularAccounts,
-            roles,
-          } = await loadMvFixture();
-
-          const vaultRole = await manageableVault.contractAdminRole();
-          await setupPermissionRole(
-            { accessControl, owner },
-            vaultRole,
-            manageableVault.address,
-            'addWaivedFeeAccount(address)',
-            regularAccounts[0].address,
-          );
-
-          await accessControl['grantRole(bytes32,address)'](
-            roles.tokenRoles.mTBILL.depositVaultAdmin,
-            regularAccounts[0].address,
-          );
-
-          await addWaivedFeeAccountTest(
-            { vault: manageableVault, owner },
-            regularAccounts[2].address,
-            { from: regularAccounts[0] },
-          );
-        });
-      });
-
-      describe('removeWaivedFeeAccount()', () => {
-        it('should fail: call from address without VAULT_ADMIN_ROLE role', async () => {
-          const { manageableVault, regularAccounts, owner } =
-            await loadMvFixture();
-          await removeWaivedFeeAccountTest(
-            { vault: manageableVault, owner },
-            ethers.constants.AddressZero,
-            {
-              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
-              from: regularAccounts[0],
-            },
-          );
-        });
-        it('should fail: if account not found in restriction', async () => {
-          const { manageableVault, owner } = await loadMvFixture();
-          await removeWaivedFeeAccountTest(
-            { vault: manageableVault, owner },
-            owner.address,
-            {
-              revertCustomError: {
-                customErrorName: 'SameAddressValue',
+            await setWaivedFeeAccountTest(
+              { vault: manageableVault, owner },
+              owner.address,
+              true,
+              {
+                revertCustomError: {
+                  customErrorName: 'Paused',
+                },
               },
-            },
-          );
+            );
+          });
+
+          it('succeeds with only scoped function permission', async () => {
+            const { accessControl, owner, manageableVault, regularAccounts } =
+              await loadMvFixture();
+
+            const vaultRole = await manageableVault.contractAdminRole();
+            await setupPermissionRole(
+              { accessControl, owner },
+              vaultRole,
+              manageableVault.address,
+              'setWaivedFeeAccount(address,bool)',
+              regularAccounts[0].address,
+            );
+
+            expect(
+              await accessControl.hasRole(
+                vaultRole,
+                regularAccounts[0].address,
+              ),
+            ).eq(false);
+
+            await setWaivedFeeAccountTest(
+              { vault: manageableVault, owner },
+              regularAccounts[1].address,
+              true,
+              { from: regularAccounts[0] },
+            );
+          });
+
+          it('succeeds with scoped permission and vault admin role', async () => {
+            const {
+              accessControl,
+              owner,
+              manageableVault,
+              regularAccounts,
+              roles,
+            } = await loadMvFixture();
+
+            const vaultRole = await manageableVault.contractAdminRole();
+            await setupPermissionRole(
+              { accessControl, owner },
+              vaultRole,
+              manageableVault.address,
+              'setWaivedFeeAccount(address,bool)',
+              regularAccounts[0].address,
+            );
+
+            await accessControl['grantRole(bytes32,address)'](
+              roles.tokenRoles.mTBILL.depositVaultAdmin,
+              regularAccounts[0].address,
+            );
+
+            await setWaivedFeeAccountTest(
+              { vault: manageableVault, owner },
+              regularAccounts[2].address,
+              true,
+              { from: regularAccounts[0] },
+            );
+          });
         });
 
-        it('call from address with VAULT_ADMIN_ROLE role', async () => {
-          const { manageableVault, owner } = await loadMvFixture();
-          await addWaivedFeeAccountTest(
-            { vault: manageableVault, owner },
-            owner.address,
-          );
-          await removeWaivedFeeAccountTest(
-            { vault: manageableVault, owner },
-            owner.address,
-          );
-        });
-
-        it('should fail: when function is paused', async () => {
-          const { manageableVault, owner } = await loadMvFixture();
-
-          await addWaivedFeeAccountTest(
-            { vault: manageableVault, owner },
-            owner.address,
-          );
-
-          await pauseVaultFn(
-            { pauseManager, owner },
-            manageableVault,
-            encodeFnSelector('removeWaivedFeeAccount(address)'),
-          );
-
-          await removeWaivedFeeAccountTest(
-            { vault: manageableVault, owner },
-            owner.address,
-            {
-              revertCustomError: {
-                customErrorName: 'Paused',
+        describe('enabled=false', () => {
+          it('should fail: call from address without VAULT_ADMIN_ROLE role', async () => {
+            const { manageableVault, regularAccounts, owner } =
+              await loadMvFixture();
+            await setWaivedFeeAccountTest(
+              { vault: manageableVault, owner },
+              ethers.constants.AddressZero,
+              false,
+              {
+                revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
+                from: regularAccounts[0],
               },
-            },
-          );
-        });
+            );
+          });
+          it('should fail: if account not found in restriction', async () => {
+            const { manageableVault, owner } = await loadMvFixture();
+            await setWaivedFeeAccountTest(
+              { vault: manageableVault, owner },
+              owner.address,
+              false,
+              {
+                revertCustomError: {
+                  customErrorName: 'SameBoolValue',
+                },
+              },
+            );
+          });
 
-        it('succeeds with only scoped function permission', async () => {
-          const { accessControl, owner, manageableVault, regularAccounts } =
-            await loadMvFixture();
+          it('call from address with VAULT_ADMIN_ROLE role', async () => {
+            const { manageableVault, owner } = await loadMvFixture();
+            await setWaivedFeeAccountTest(
+              { vault: manageableVault, owner },
+              owner.address,
+              true,
+            );
+            await setWaivedFeeAccountTest(
+              { vault: manageableVault, owner },
+              owner.address,
+              false,
+            );
+          });
 
-          await addWaivedFeeAccountTest(
-            { vault: manageableVault, owner },
-            regularAccounts[1].address,
-          );
+          it('should fail: when function is paused', async () => {
+            const { manageableVault, owner } = await loadMvFixture();
 
-          const vaultRole = await manageableVault.contractAdminRole();
-          await setupPermissionRole(
-            { accessControl, owner },
-            vaultRole,
-            manageableVault.address,
-            'removeWaivedFeeAccount(address)',
-            regularAccounts[0].address,
-          );
+            await setWaivedFeeAccountTest(
+              { vault: manageableVault, owner },
+              owner.address,
+              true,
+            );
 
-          expect(
-            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
-          ).eq(false);
+            await pauseVaultFn(
+              { pauseManager, owner },
+              manageableVault,
+              encodeFnSelector('setWaivedFeeAccount(address,bool)'),
+            );
 
-          await removeWaivedFeeAccountTest(
-            { vault: manageableVault, owner },
-            regularAccounts[1].address,
-            { from: regularAccounts[0] },
-          );
-        });
+            await setWaivedFeeAccountTest(
+              { vault: manageableVault, owner },
+              owner.address,
+              false,
+              {
+                revertCustomError: {
+                  customErrorName: 'Paused',
+                },
+              },
+            );
+          });
 
-        it('succeeds with scoped permission and vault admin role', async () => {
-          const {
-            accessControl,
-            owner,
-            manageableVault,
-            regularAccounts,
-            roles,
-          } = await loadMvFixture();
+          it('succeeds with only scoped function permission', async () => {
+            const { accessControl, owner, manageableVault, regularAccounts } =
+              await loadMvFixture();
 
-          await addWaivedFeeAccountTest(
-            { vault: manageableVault, owner },
-            regularAccounts[2].address,
-          );
+            await setWaivedFeeAccountTest(
+              { vault: manageableVault, owner },
+              regularAccounts[1].address,
+              true,
+            );
 
-          const vaultRole = await manageableVault.contractAdminRole();
-          await setupPermissionRole(
-            { accessControl, owner },
-            vaultRole,
-            manageableVault.address,
-            'removeWaivedFeeAccount(address)',
-            regularAccounts[0].address,
-          );
+            const vaultRole = await manageableVault.contractAdminRole();
+            await setupPermissionRole(
+              { accessControl, owner },
+              vaultRole,
+              manageableVault.address,
+              'setWaivedFeeAccount(address,bool)',
+              regularAccounts[0].address,
+            );
 
-          await accessControl['grantRole(bytes32,address)'](
-            roles.tokenRoles.mTBILL.depositVaultAdmin,
-            regularAccounts[0].address,
-          );
+            expect(
+              await accessControl.hasRole(
+                vaultRole,
+                regularAccounts[0].address,
+              ),
+            ).eq(false);
 
-          await removeWaivedFeeAccountTest(
-            { vault: manageableVault, owner },
-            regularAccounts[2].address,
-            { from: regularAccounts[0] },
-          );
+            await setWaivedFeeAccountTest(
+              { vault: manageableVault, owner },
+              regularAccounts[1].address,
+              false,
+              { from: regularAccounts[0] },
+            );
+          });
+
+          it('succeeds with scoped permission and vault admin role', async () => {
+            const {
+              accessControl,
+              owner,
+              manageableVault,
+              regularAccounts,
+              roles,
+            } = await loadMvFixture();
+
+            await setWaivedFeeAccountTest(
+              { vault: manageableVault, owner },
+              regularAccounts[2].address,
+              true,
+            );
+
+            const vaultRole = await manageableVault.contractAdminRole();
+            await setupPermissionRole(
+              { accessControl, owner },
+              vaultRole,
+              manageableVault.address,
+              'setWaivedFeeAccount(address,bool)',
+              regularAccounts[0].address,
+            );
+
+            await accessControl['grantRole(bytes32,address)'](
+              roles.tokenRoles.mTBILL.depositVaultAdmin,
+              regularAccounts[0].address,
+            );
+
+            await setWaivedFeeAccountTest(
+              { vault: manageableVault, owner },
+              regularAccounts[2].address,
+              false,
+              { from: regularAccounts[0] },
+            );
+          });
         });
       });
 
@@ -1052,7 +1062,7 @@ export const manageableVaultSuits = (
           await pauseVaultFn(
             { pauseManager, owner },
             manageableVault,
-            encodeFnSelector('setMinMaxInstantFee(uint64,uint64)'),
+            encodeFnSelector('setMinMaxInstantFee(uint256,uint256)'),
           );
 
           await setMinMaxInstantFeeTest(
@@ -1076,7 +1086,7 @@ export const manageableVaultSuits = (
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
-            'setMinMaxInstantFee(uint64,uint64)',
+            'setMinMaxInstantFee(uint256,uint256)',
             regularAccounts[0].address,
           );
 
@@ -1106,7 +1116,7 @@ export const manageableVaultSuits = (
             { accessControl, owner },
             vaultRole,
             manageableVault.address,
-            'setMinMaxInstantFee(uint64,uint64)',
+            'setMinMaxInstantFee(uint256,uint256)',
             regularAccounts[0].address,
           );
 
@@ -2119,21 +2129,6 @@ export const manageableVaultSuits = (
               stableCoins.usdc.address,
               owner.address,
               manageableVault.address,
-              parseUnits('999.999999999'),
-              8,
-            ),
-          ).to.be.revertedWithCustomError(manageableVault, 'InvalidRounding');
-        });
-
-        it('should fail: invalid rounding tokenTransferToUserTester()', async () => {
-          const { manageableVault, stableCoins, owner } = await loadMvFixture();
-
-          await mintToken(stableCoins.usdc, manageableVault, 1000);
-
-          await expect(
-            manageableVault.tokenTransferToUserTester(
-              stableCoins.usdc.address,
-              owner.address,
               parseUnits('999.999999999'),
               8,
             ),

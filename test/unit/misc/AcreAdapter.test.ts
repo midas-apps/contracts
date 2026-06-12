@@ -6,10 +6,9 @@ import { AcreAdapter__factory } from '../../../typechain-types';
 import { acreAdapterFixture } from '../../common/fixtures';
 import {
   addPaymentTokenTest,
-  addWaivedFeeAccountTest,
   changeTokenFeeTest,
   removePaymentTokenTest,
-  removeWaivedFeeAccountTest,
+  setWaivedFeeAccountTest,
   setInstantFeeTest,
 } from '../../common/manageable-vault.helpers';
 import {
@@ -95,9 +94,10 @@ describe('AcreAdapter', () => {
         10,
       );
 
-      await addWaivedFeeAccountTest(
+      await setWaivedFeeAccountTest(
         { vault: fixture.depositVault, owner: fixture.owner },
         fixture.acreUsdcMTbillAdapter.address,
+        true,
       );
       await acreWrapperDepositTest(fixture, 100);
     });
@@ -228,7 +228,7 @@ describe('AcreAdapter', () => {
     it('should fail: when not fee waived', async () => {
       const fixture = await loadFixture(acreAdapterFixture);
 
-      await removeWaivedFeeAccountTest(
+      await setWaivedFeeAccountTest(
         { vault: fixture.redemptionVault, owner: fixture.owner },
         fixture.acreUsdcMTbillAdapter.address,
       );
@@ -278,7 +278,7 @@ describe('AcreAdapter', () => {
     it('should not account any fees', async () => {
       const fixture = await loadFixture(acreAdapterFixture);
 
-      await removeWaivedFeeAccountTest(
+      await setWaivedFeeAccountTest(
         { vault: fixture.redemptionVault, owner: fixture.owner },
         fixture.acreUsdcMTbillAdapter.address,
       );

@@ -25,16 +25,6 @@ enum RequestStatus {
 }
 
 /**
- * @notice Limit config init params
- */
-struct LimitConfigInitParams {
-    /// @notice window duration in seconds
-    uint256 window;
-    /// @notice limit amount per window
-    uint256 limit;
-}
-
-/**
  * @notice Common vault init params
  */
 struct CommonVaultInitParams {
@@ -55,15 +45,13 @@ struct CommonVaultInitParams {
     /// @notice address to which proceeds will be sent
     address tokensReceiver;
     /// @notice minimum instant fee
-    uint64 minInstantFee;
+    uint256 minInstantFee;
     /// @notice maximum instant fee
-    uint64 maxInstantFee;
+    uint256 maxInstantFee;
     /// @notice maximum instant share value in basis points (100 = 1%)
-    uint64 maxInstantShare;
+    uint256 maxInstantShare;
     /// @notice enforce sequential request processing flag
     bool sequentialRequestProcessing;
-    /// @notice limit configs
-    LimitConfigInitParams[] limitConfigs;
 }
 
 /**
@@ -116,8 +104,9 @@ interface IManageableVault {
 
     /**
      * @param account address of account
+     * @param enable is enabled
      */
-    event AddWaivedFeeAccount(address indexed account);
+    event SetWaivedFeeAccount(address indexed account, bool enable);
 
     /**
      * @param account address of account
@@ -133,7 +122,10 @@ interface IManageableVault {
      * @param newMinInstantFee new minimum instant fee
      * @param newMaxInstantFee new maximum instant fee
      */
-    event SetMinMaxInstantFee(uint64 newMinInstantFee, uint64 newMaxInstantFee);
+    event SetMinMaxInstantFee(
+        uint256 newMinInstantFee,
+        uint256 newMaxInstantFee
+    );
 
     /**
      * @param newAmount new min amount for operation
@@ -143,7 +135,7 @@ interface IManageableVault {
     /**
      * @param newMaxInstantShare new maximum instant share value in basis points (100 = 1%)
      */
-    event SetMaxInstantShare(uint64 newMaxInstantShare);
+    event SetMaxInstantShare(uint256 newMaxInstantShare);
 
     /**
      * @param newTolerance percent of price diviation 1% = 100
@@ -382,18 +374,12 @@ interface IManageableVault {
     function setMinAmount(uint256 newAmount) external;
 
     /**
-     * @notice adds a account to waived fee restriction.
+     * @notice sets a account to waived fee restriction.
      * can be called only from permissioned actor.
      * @param account user address
+     * @param enable is enabled
      */
-    function addWaivedFeeAccount(address account) external;
-
-    /**
-     * @notice removes a account from waived fee restriction.
-     * can be called only from permissioned actor.
-     * @param account user address
-     */
-    function removeWaivedFeeAccount(address account) external;
+    function setWaivedFeeAccount(address account, bool enable) external;
 
     /**
      * @notice set new receiver for tokens.
@@ -415,8 +401,8 @@ interface IManageableVault {
      * @param newMaxInstantFee new maximum instant fee
      */
     function setMinMaxInstantFee(
-        uint64 newMinInstantFee,
-        uint64 newMaxInstantFee
+        uint256 newMinInstantFee,
+        uint256 newMaxInstantFee
     ) external;
 
     /**
@@ -431,7 +417,7 @@ interface IManageableVault {
      * @notice set maximum instant share value in basis points (100 = 1%)
      * @param newMaxInstantShare new maximum instant share value in basis points (100 = 1%)
      */
-    function setMaxInstantShare(uint64 newMaxInstantShare) external;
+    function setMaxInstantShare(uint256 newMaxInstantShare) external;
 
     /**
      * @notice sets max requestId that can be approved

@@ -38,10 +38,10 @@ import {
 } from '../../typechain-types';
 
 const DV_WITH_EXTRA_INIT =
-  'initialize((uint256,uint256,uint256,address,address,address,address,address,uint64,uint64,uint64,bool,(uint256,uint256)[]),(uint256,uint256,uint256),address)';
+  'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,bool),(uint256,uint256,uint256),address)';
 
 const RV_WITH_EXTRA_INIT =
-  'initialize((uint256,uint256,uint256,address,address,address,address,address,uint64,uint64,uint64,bool,(uint256,uint256)[]),(address,address,address,address,uint64),address)';
+  'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,bool),(address,address,address,address,uint256),address)';
 
 export type InitializerParamsMv = {
   accessControl: AccountOrContract;

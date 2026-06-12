@@ -389,6 +389,20 @@ interface IMidasTimelockManager {
         returns (bytes32 operationId);
 
     /**
+     * @dev gets the target role for a given operation
+     * @param target target contract
+     * @param data operation data
+     * @param proposer operation proposer address
+     * @return role target role
+     * @return overrideDelay override delay for the invocation
+     */
+    function getTargetRole(
+        address target,
+        bytes calldata data,
+        address proposer
+    ) external view returns (bytes32 role, uint32 overrideDelay);
+
+    /**
      * @notice Timelock controller address
      * @return timelockAddress timelock controller
      */

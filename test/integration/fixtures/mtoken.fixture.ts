@@ -256,7 +256,7 @@ export async function mTokenDepositFixture() {
   // Waive fees on target DV for the product DV (required for _autoInvest)
   await targetDepositVault
     .connect(owner)
-    .addWaivedFeeAccount(depositVaultWithMToken.address);
+    .setWaivedFeeAccount(depositVaultWithMToken.address, true);
 
   // Add USDC as payment token on product DV
   await depositVaultWithMToken
@@ -389,7 +389,7 @@ export async function mTokenRedemptionFixture() {
   // Waive fees on target RV for the product RV address
   await targetRedemptionVault
     .connect(owner)
-    .addWaivedFeeAccount(redemptionVaultWithMToken.address);
+    .setWaivedFeeAccount(redemptionVaultWithMToken.address, true);
 
   // Mint mTBILL to product RV (simulating Fordefi deposit)
   await accessControl['grantRole(bytes32,address)'](

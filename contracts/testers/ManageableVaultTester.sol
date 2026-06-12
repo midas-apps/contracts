@@ -28,15 +28,6 @@ abstract contract ManageableVaultTesterBase is ManageableVault {
         _tokenTransferFromTo(token, from, to, amount, tokenDecimals);
     }
 
-    function tokenTransferToUserTester(
-        address token,
-        address to,
-        uint256 amount,
-        uint256 tokenDecimals
-    ) external {
-        _tokenTransferToUser(token, to, amount, tokenDecimals);
-    }
-
     function setGetTokenRateValue(uint256 val) external {
         _getTokenRateValue = val;
     }

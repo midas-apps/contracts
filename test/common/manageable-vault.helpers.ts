@@ -162,7 +162,7 @@ export const setMinMaxInstantFeeTest = async (
   )
     .to.emit(
       vault,
-      vault.interface.events['SetMinMaxInstantFee(uint64,uint64)'].name,
+      vault.interface.events['SetMinMaxInstantFee(uint256,uint256)'].name,
     )
     .withArgs(newMinInstantFee, newMaxInstantFee).to.not.reverted;
 
@@ -198,29 +198,6 @@ export const setVariabilityToleranceTest = async (
 
   const tolerance = await vault.variationTolerance();
   expect(tolerance).eq(newTolerance);
-};
-
-export const addWaivedFeeAccountTest = async (
-  { vault, owner }: CommonParamsChangePaymentToken,
-  account: string,
-  opt?: OptionalCommonParams,
-) => {
-  if (
-    await handleRevert(
-      vault.connect(opt?.from ?? owner).addWaivedFeeAccount.bind(this, account),
-      vault,
-      opt,
-    )
-  ) {
-    return;
-  }
-
-  await expect(vault.connect(opt?.from ?? owner).addWaivedFeeAccount(account))
-    .to.emit(vault, vault.interface.events['AddWaivedFeeAccount(address)'].name)
-    .withArgs(account).to.not.reverted;
-
-  const isWaivedFee = await vault.waivedFeeRestriction(account);
-  expect(isWaivedFee).eq(true);
 };
 
 export const changeTokenAllowanceTest = async (
@@ -283,16 +260,17 @@ export const changeTokenFeeTest = async (
   expect(fee).eq(newFee);
 };
 
-export const removeWaivedFeeAccountTest = async (
+export const setWaivedFeeAccountTest = async (
   { vault, owner }: CommonParamsChangePaymentToken,
   account: string,
+  enable: boolean,
   opt?: OptionalCommonParams,
 ) => {
   if (
     await handleRevert(
       vault
         .connect(opt?.from ?? owner)
-        .removeWaivedFeeAccount.bind(this, account),
+        .setWaivedFeeAccount.bind(this, account, enable),
       vault,
       opt,
     )
@@ -301,16 +279,16 @@ export const removeWaivedFeeAccountTest = async (
   }
 
   await expect(
-    vault.connect(opt?.from ?? owner).removeWaivedFeeAccount(account),
+    vault.connect(opt?.from ?? owner).setWaivedFeeAccount(account, enable),
   )
     .to.emit(
       vault,
-      vault.interface.events['RemoveWaivedFeeAccount(address)'].name,
+      vault.interface.events['SetWaivedFeeAccount(address,bool)'].name,
     )
-    .withArgs(account).to.not.reverted;
+    .withArgs(account, enable).to.not.reverted;
 
   const isWaivedFee = await vault.waivedFeeRestriction(account);
-  expect(isWaivedFee).eq(false);
+  expect(isWaivedFee).eq(enable);
 };
 
 export const setInstantLimitConfigTest = async (
@@ -432,8 +410,8 @@ export const setMaxInstantShareTest = async (
 
   await expect(
     vault.connect(opt?.from ?? owner).setMaxInstantShare(maxInstantShare),
-  ).to.emit(vault, vault.interface.events['SetMaxInstantShare(uint64)'].name).to
-    .not.reverted;
+  ).to.emit(vault, vault.interface.events['SetMaxInstantShare(uint256)'].name)
+    .to.not.reverted;
 
   const newMaxInstantShare = await vault.maxInstantShare();
   expect(newMaxInstantShare).eq(maxInstantShare);
@@ -462,26 +440,6 @@ export const setTokensReceiverTest = async (
 
   const feeReceiver = await vault.tokensReceiver();
   expect(feeReceiver).eq(newReceiver);
-};
-
-export const addAccountWaivedFeeRestrictionTest = async (
-  { vault, owner }: CommonParamsChangePaymentToken,
-  account: string,
-  opt?: OptionalCommonParams,
-) => {
-  if (
-    await handleRevert(
-      vault.connect(opt?.from ?? owner).addWaivedFeeAccount.bind(this, account),
-      vault,
-      opt,
-    )
-  ) {
-    return;
-  }
-
-  await expect(vault.connect(opt?.from ?? owner).addWaivedFeeAccount(account))
-    .to.emit(vault, vault.interface.events['AddWaivedFeeAccount(address)'].name)
-    .withArgs(account).to.not.reverted;
 };
 
 export const setSequentialRequestProcessingTest = async (
