@@ -710,7 +710,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       customFeed: '0x1c56b73e0f22055dA155D7a73731AE62906302eD',
       dataFeed: '0x544af5fd877974F99623cC56A8d98f983072a0E3',
       depositVault: '0xEa22F8C1624c17C1B58727235292684831A08d56',
+      depositVaultMorpho: '0x171c7Dd8192f39d47189E180EcB13eDe4E1B6368',
       redemptionVault: '0x86811aD3430DbA37e1641538729bF346c20A5412',
+      redemptionVaultMorpho: '0xcBA0831826827c1B2DCc66aB1e24F4C7e7808C36',
     },
     mEVUSD: {
       token: '0xccbad2823328BCcAEa6476Df3Aa529316aB7474A',

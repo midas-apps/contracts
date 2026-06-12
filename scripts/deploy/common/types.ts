@@ -5,6 +5,7 @@ import {
   AddFeeWaivedConfig,
   AddPaymentTokensConfig,
   SetAaveConfigConfig,
+  SetMorphoConfigConfig,
 } from './common-vault';
 import {
   DeployCustomAggregatorAdjustedConfig,
@@ -96,6 +97,7 @@ export type PostDeployConfig = {
   layerZero?: LayerZeroConfig;
   axelarIts?: AxelarItsConfig;
   setAaveConfig?: SetAaveConfigConfig;
+  setMorphoConfig?: SetMorphoConfigConfig;
 };
 
 export type DeploymentConfig = {

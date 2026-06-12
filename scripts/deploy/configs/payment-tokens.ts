@@ -807,8 +807,8 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
       yinj: {
         dataFeed: {
           healthyDiff: constants.MaxUint256,
-          minAnswer: parseUnits('1', 8),
-          maxAnswer: parseUnits('1.02', 8),
+          minAnswer: parseUnits('1', 18),
+          maxAnswer: parseUnits('1.1', 18),
         },
       },
     },
