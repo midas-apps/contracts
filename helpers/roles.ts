@@ -3,7 +3,7 @@ import { solidityKeccak256 } from 'ethers/lib/utils';
 
 import { MTokenName } from '../config';
 
-const prefixes: Record<MTokenName, string> = {
+export const prefixes: Record<MTokenName, string> = {
   mTBILL: 'M_TBILL',
   mBASIS: 'M_BASIS',
   mBTC: 'M_BTC',

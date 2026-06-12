@@ -1,5 +1,5 @@
 import { Provider } from '@ethersproject/providers';
-import { BigNumberish, PopulatedTransaction, Signer } from 'ethers';
+import { BigNumber, BigNumberish, PopulatedTransaction, Signer } from 'ethers';
 import { formatUnits, parseUnits } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
@@ -25,6 +25,7 @@ import {
 import {
   CustomAggregatorV3CompatibleFeed,
   CustomAggregatorV3CompatibleFeedGrowth,
+  DataFeed,
 } from '../../../typechain-types';
 import { paymentTokenDeploymentConfigs } from '../configs/payment-tokens';
 
@@ -227,6 +228,186 @@ const setRoundData = async (
   });
 
   console.log(log, txRes);
+};
+
+export const updateExpectedAnswersPaymentToken = async (
+  hre: HardhatRuntimeEnvironment,
+  token: PaymentTokenName,
+) => {
+  const networkConfig =
+    paymentTokenDeploymentConfigs.networkConfigs[hre.network.config.chainId!]?.[
+      token
+    ]?.dataFeed;
+
+  if (!networkConfig) {
+    throw new Error('Network config is not found');
+  }
+
+  if (isCompositeDataFeedConfig(networkConfig)) {
+    throw new Error('Composite config is not supported');
+  }
+
+  const addresses = getCurrentAddresses(hre);
+  const tokenAddresses = addresses?.paymentTokens?.[token];
+
+  if (!tokenAddresses || isCompositeDataFeedAddresses(tokenAddresses)) {
+    throw new Error('Token config is not found or is composite');
+  }
+
+  if (!tokenAddresses.dataFeed) {
+    throw new Error('Data feed address is not set');
+  }
+
+  await updateExpectedAnswers(hre, {
+    isMToken: false,
+    token,
+    dataFeedAddress: tokenAddresses.dataFeed,
+    networkConfig,
+  });
+};
+
+export const updateExpectedAnswersMToken = async (
+  hre: HardhatRuntimeEnvironment,
+  token: MTokenName,
+) => {
+  const networkConfig = getDeploymentGenericConfig(hre, token, 'dataFeed');
+
+  const addresses = getCurrentAddresses(hre);
+  const dataFeedAddress = addresses?.[token]?.dataFeed;
+
+  if (!dataFeedAddress) {
+    throw new Error('Token config is not found or dataFeed is not set');
+  }
+
+  await updateExpectedAnswers(hre, {
+    isMToken: true,
+    token,
+    dataFeedAddress,
+    networkConfig,
+  });
+};
+
+const updateExpectedAnswers = async (
+  hre: HardhatRuntimeEnvironment,
+  {
+    isMToken,
+    token,
+    dataFeedAddress,
+    networkConfig,
+  }: {
+    isMToken: boolean;
+    token: string;
+    dataFeedAddress: string;
+    networkConfig: DeployDataFeedConfigRegular;
+  },
+) => {
+  if (
+    networkConfig.minAnswer === undefined ||
+    networkConfig.maxAnswer === undefined
+  ) {
+    throw new Error(
+      'minAnswer and maxAnswer must be explicitly set in the config',
+    );
+  }
+
+  const dataFeed = (
+    await hre.ethers.getContractAt('DataFeed', dataFeedAddress)
+  ).connect(hre.ethers.provider) as DataFeed;
+
+  const aggregator = await hre.ethers.getContractAt(
+    'AggregatorV3Interface',
+    await dataFeed.aggregator(),
+  );
+  const aggregatorDecimals = await aggregator.decimals();
+
+  const currentMin = await dataFeed.minExpectedAnswer();
+  const currentMax = await dataFeed.maxExpectedAnswer();
+
+  const newMin = BigNumber.from(networkConfig.minAnswer);
+  const newMax = BigNumber.from(networkConfig.maxAnswer);
+
+  if (!newMax.gt(newMin)) {
+    throw new Error(
+      `maxAnswer (${newMax.toString()}) must be greater than minAnswer (${newMin.toString()})`,
+    );
+  }
+
+  const { answer } = await aggregator.latestRoundData();
+
+  if (answer.lt(newMin) || answer.gt(newMax)) {
+    throw new Error(
+      `current aggregator answer ${formatUnits(
+        answer,
+        aggregatorDecimals,
+      )} is outside the new expected range [${formatUnits(
+        newMin,
+        aggregatorDecimals,
+      )}, ${formatUnits(
+        newMax,
+        aggregatorDecimals,
+      )}] — check the config decimals`,
+    );
+  }
+
+  console.log(
+    `${token} dataFeed ${dataFeedAddress} (aggregator decimals: ${aggregatorDecimals})`,
+  );
+  console.log(
+    `min: ${formatUnits(currentMin, aggregatorDecimals)} -> ${formatUnits(
+      newMin,
+      aggregatorDecimals,
+    )}, max: ${formatUnits(currentMax, aggregatorDecimals)} -> ${formatUnits(
+      newMax,
+      aggregatorDecimals,
+    )}`,
+  );
+
+  const action = isMToken ? 'update-feed-mtoken' : 'update-feed-ptoken';
+
+  const setMax = async () => {
+    if (newMax.eq(currentMax)) {
+      console.log('maxExpectedAnswer is already up to date, skipping');
+      return;
+    }
+    const tx = await dataFeed.populateTransaction.setMaxExpectedAnswer(newMax);
+    const log = `${token} set maxExpectedAnswer to ${formatUnits(
+      newMax,
+      aggregatorDecimals,
+    )}`;
+    const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
+      action,
+      comment: log,
+    });
+    console.log(log, txRes);
+  };
+
+  const setMin = async () => {
+    if (newMin.eq(currentMin)) {
+      console.log('minExpectedAnswer is already up to date, skipping');
+      return;
+    }
+    const tx = await dataFeed.populateTransaction.setMinExpectedAnswer(newMin);
+    const log = `${token} set minExpectedAnswer to ${formatUnits(
+      newMin,
+      aggregatorDecimals,
+    )}`;
+    const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
+      action,
+      comment: log,
+    });
+    console.log(log, txRes);
+  };
+
+  // ordering matters: the contract enforces max > min on every update.
+  // when raising the range (e.g. 8 -> 18 decimals migration), max must
+  // be raised first; when lowering the range, min must be lowered first.
+  if (newMax.gt(currentMin)) {
+    await setMax();
+    await setMin();
+  } else {
+    await setMin();
+    await setMax();
+  }
 };
 
 const getAggregatorContract = async (

@@ -1,4 +1,11 @@
-import { cancel, confirm, isCancel, stream, tasks } from '@clack/prompts';
+import {
+  cancel,
+  confirm,
+  isCancel,
+  select,
+  stream,
+  tasks,
+} from '@clack/prompts';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
   ObjectLiteralExpression,
@@ -36,15 +43,21 @@ import {
 import {
   getConfigFromUser,
   getContractsToGenerateFromUser,
+  getGenerationModeFromUser,
   getShouldUseTokenLevelGreenListFromUser,
   getShouldUseTokenPermissionedFromUser,
+  getTokenContractNameFromUser,
 } from './ui/deployment-contracts';
 
 import { MTokenName } from '../../../../config';
 import {
+  contractNamesPrefixes,
   contractNameToVaultType,
+  getTokenContractNames,
   TokenContractNames,
 } from '../../../../helpers/contracts';
+import { mTokensMetadata } from '../../../../helpers/mtokens-metadata';
+import { prefixes as rolesPrefixes } from '../../../../helpers/roles';
 import { PostDeployConfig } from '../../common/types';
 
 export const EXPR = Symbol('expr');
@@ -309,8 +322,10 @@ export const generateDeploymentConfig = async (
     .then(() => true)
     .catch(() => false);
 
-  let overrideNetworkConfig = false;
-  let hasNetworkConfig = false;
+  type NetworkConfigMode = 'create' | 'add' | 'override' | 'skip';
+
+  let networkConfigMode: NetworkConfigMode = 'create';
+  let existingVaultConfigKeys: string[] = [];
 
   const getDeploymentConfigFile = () => {
     return project.addSourceFileAtPath(deploymentConfigPath);
@@ -327,22 +342,50 @@ export const generateDeploymentConfig = async (
     const property = networkConfigObj.getProperty(
       `[chainIds.${hre.network.name}]`,
     );
-    hasNetworkConfig = !!property;
 
     if (property) {
-      overrideNetworkConfig = await confirm({
-        message: `Deployment config for ${hre.network.name} already exists. Override?`,
-        initialValue: false,
+      networkConfigMode = await select<NetworkConfigMode>({
+        message: `Deployment config for ${hre.network.name} already exists. How should we proceed?`,
+        options: [
+          {
+            value: 'add',
+            label: 'Add missing configs',
+            hint: 'Keep existing entries, only add new vault/postDeploy configs',
+          },
+          {
+            value: 'override',
+            label: 'Override network config',
+            hint: 'Replace the whole network entry',
+          },
+          {
+            value: 'skip',
+            label: 'Skip network config',
+            hint: 'Leave the network entry untouched',
+          },
+        ],
+        initialValue: 'add' as NetworkConfigMode,
       }).then(requireNotCancelled);
 
-      if (overrideNetworkConfig) {
+      if (networkConfigMode === 'override') {
         property.remove();
+      }
+
+      if (networkConfigMode === 'add') {
+        existingVaultConfigKeys = property
+          .asKindOrThrow(SyntaxKind.PropertyAssignment)
+          .getInitializerIfKindOrThrow(SyntaxKind.ObjectLiteralExpression)
+          .getProperties()
+          .map((p) => p.asKind(SyntaxKind.PropertyAssignment)?.getName())
+          .filter((name): name is string => !!name);
       }
     }
   }
 
   const { deploymentConfigs, postDeployConfigs } =
-    await getDeploymentConfigFromUser(overrideNetworkConfig);
+    await getDeploymentConfigFromUser(
+      networkConfigMode,
+      existingVaultConfigKeys,
+    );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const deploymentConfig: Record<string, any> = {
@@ -360,23 +403,35 @@ export const generateDeploymentConfig = async (
     deploymentConfig.genericConfig = genericConfig;
   }
 
-  if (
-    !deploymentConfigFileExists ||
-    overrideNetworkConfig ||
-    !hasNetworkConfig
-  ) {
+  if (networkConfigMode !== 'skip') {
     for (const configKey of deploymentConfigs) {
       const config = await configsPerNetworkConfig[configKey](hre);
       deploymentConfig.networkConfig[configKey] = config;
     }
   } else {
     await stream.warn(
-      `No-override is selected and network config exists, skipping network config...`,
+      `Skip is selected, network vault configs are left untouched...`,
     );
   }
 
+  const postDeployPromptOrder: (keyof PostDeployConfig)[] = [
+    'addPaymentTokens',
+    'grantRoles',
+    'addFeeWaived',
+    'pauseFunctions',
+    'setAaveConfig',
+    'setMorphoConfig',
+  ];
+
   if (postDeployConfigs) {
-    for (const configKey of postDeployConfigs as (keyof PostDeployConfig)[]) {
+    const orderedConfigKeys = (postDeployConfigs as (keyof PostDeployConfig)[])
+      .slice()
+      .sort(
+        (a, b) =>
+          postDeployPromptOrder.indexOf(a) - postDeployPromptOrder.indexOf(b),
+      );
+
+    for (const configKey of orderedConfigKeys) {
       const postDeployConfig = await configsPerNetworkConfig.postDeploy?.[
         configKey as keyof typeof configsPerNetworkConfig.postDeploy
       ](
@@ -390,6 +445,8 @@ export const generateDeploymentConfig = async (
 
           return vaultType;
         }),
+        mToken,
+        deploymentConfig.postDeploy,
       );
       deploymentConfig.postDeploy[configKey] = postDeployConfig;
     }
@@ -431,19 +488,34 @@ export const ${deploymentConfigVarName}: DeploymentConfig = {
     });
   }
 
-  if (
-    overrideNetworkConfig ||
-    !deploymentConfigFileExists ||
-    !hasNetworkConfig
-  ) {
+  const existingNetworkProperty = networkConfigsObj.getProperty(
+    `[chainIds.${hre.network.name}]`,
+  );
+
+  if (!existingNetworkProperty) {
     networkConfigProperty = networkConfigsObj.addPropertyAssignment({
       name: `[chainIds.${hre.network.name}]`,
       initializer: objectToCode(deploymentConfig.networkConfig),
     });
   } else {
-    networkConfigProperty = networkConfigsObj
-      .getPropertyOrThrow(`[chainIds.${hre.network.name}]`)
-      .asKindOrThrow(SyntaxKind.PropertyAssignment);
+    networkConfigProperty = existingNetworkProperty.asKindOrThrow(
+      SyntaxKind.PropertyAssignment,
+    );
+
+    if (networkConfigMode === 'add') {
+      const networkObj = networkConfigProperty.getInitializerIfKindOrThrow(
+        SyntaxKind.ObjectLiteralExpression,
+      );
+
+      for (const [key, value] of Object.entries(
+        deploymentConfig.networkConfig,
+      )) {
+        networkObj.addPropertyAssignment({
+          name: key,
+          initializer: objectToCode(value, 4),
+        });
+      }
+    }
   }
 
   if (postDeployConfigs) {
@@ -455,27 +527,106 @@ export const ${deploymentConfigVarName}: DeploymentConfig = {
     const postDeployProperty =
       networkConfigPropertyInit.getProperty('postDeploy');
 
-    if (postDeployProperty) {
-      postDeployProperty.remove();
-    }
+    if (networkConfigMode !== 'add' || !postDeployProperty) {
+      // setRoundData is not auto-added in add mode — re-setting the price of
+      // a live product must be an explicit decision
+      if (networkConfigMode !== 'add') {
+        postDeployProperty?.remove();
+      }
 
-    const setRoundData: Record<string, unknown> = isGrowthAggregator
-      ? {
-          type: expr("'GROWTH'"),
-          data: expr('parseUnits("1", 8)'),
-          apr: expr('parseUnits("0", 8)'),
+      const setRoundData: Record<string, unknown> = isGrowthAggregator
+        ? {
+            type: expr("'GROWTH'"),
+            data: expr('parseUnits("1", 8)'),
+            apr: expr('parseUnits("0", 8)'),
+          }
+        : {
+            data: expr('parseUnits("1", 8)'),
+          };
+
+      networkConfigPropertyInit.addPropertyAssignment({
+        name: 'postDeploy',
+        initializer: objectToCode({
+          ...deploymentConfig.postDeploy,
+          ...(networkConfigMode === 'add' ? {} : { setRoundData }),
+        }),
+      });
+    } else {
+      const postDeployObj = postDeployProperty
+        .asKindOrThrow(SyntaxKind.PropertyAssignment)
+        .getInitializerIfKindOrThrow(SyntaxKind.ObjectLiteralExpression);
+
+      for (const [key, value] of Object.entries(deploymentConfig.postDeploy)) {
+        const existing = postDeployObj.getProperty(key);
+
+        if (!existing) {
+          postDeployObj.addPropertyAssignment({
+            name: key,
+            initializer: objectToCode(value, 6),
+          });
+          continue;
         }
-      : {
-          data: expr('parseUnits("1", 8)'),
-        };
 
-    networkConfigPropertyInit.addPropertyAssignment({
-      name: 'postDeploy',
-      initializer: objectToCode({
-        ...deploymentConfig.postDeploy,
-        setRoundData,
-      }),
-    });
+        if (key === 'addPaymentTokens') {
+          const vaultsArray = existing
+            .asKindOrThrow(SyntaxKind.PropertyAssignment)
+            .getInitializerIfKindOrThrow(SyntaxKind.ObjectLiteralExpression)
+            .getPropertyOrThrow('vaults')
+            .asKindOrThrow(SyntaxKind.PropertyAssignment)
+            .getInitializerIfKindOrThrow(SyntaxKind.ArrayLiteralExpression);
+
+          for (const entry of (value as { vaults: { type: string }[] })
+            .vaults) {
+            if (vaultsArray.getText().includes(`'${entry.type}'`)) {
+              const appendEntry = await confirm({
+                message: `addPaymentTokens already has an entry for ${entry.type}. Append anyway?`,
+                initialValue: false,
+              }).then(requireNotCancelled);
+
+              if (!appendEntry) continue;
+            }
+            vaultsArray.addElement(objectToCode(entry, 8));
+          }
+        } else if (
+          key === 'addFeeWaived' ||
+          key === 'setAaveConfig' ||
+          key === 'setMorphoConfig'
+        ) {
+          const arr = existing
+            .asKindOrThrow(SyntaxKind.PropertyAssignment)
+            .getInitializerIfKindOrThrow(SyntaxKind.ArrayLiteralExpression);
+
+          for (const entry of value as {
+            type?: string;
+            fromVault?: { type?: string };
+          }[]) {
+            const entryType = entry.type ?? entry.fromVault?.type;
+            if (entryType && arr.getText().includes(`'${entryType}'`)) {
+              const appendEntry = await confirm({
+                message: `${key} already has an entry for ${entryType}. Append anyway?`,
+                initialValue: false,
+              }).then(requireNotCancelled);
+
+              if (!appendEntry) continue;
+            }
+            arr.addElement(objectToCode(entry, 8));
+          }
+        } else {
+          const replace = await confirm({
+            message: `postDeploy.${key} already exists. Replace?`,
+            initialValue: false,
+          }).then(requireNotCancelled);
+
+          if (replace) {
+            existing.remove();
+            postDeployObj.addPropertyAssignment({
+              name: key,
+              initializer: objectToCode(value, 6),
+            });
+          }
+        }
+      }
+    }
   }
 
   // Add import and export to index.ts
@@ -539,31 +690,101 @@ export const ${deploymentConfigVarName}: DeploymentConfig = {
 };
 
 export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
-  const config = await getConfigFromUser();
-
-  const contractsToGenerate = await getContractsToGenerateFromUser();
-
-  let shouldUseTokenLevelGreenList = false;
-  let shouldUseTokenPermissioned = false;
-
-  if (
-    contractsToGenerate.find((v) => v.startsWith('dv') || v.startsWith('rv'))
-  ) {
-    shouldUseTokenLevelGreenList =
-      await getShouldUseTokenLevelGreenListFromUser();
-  }
-
-  if (contractsToGenerate.includes('token')) {
-    shouldUseTokenPermissioned = await getShouldUseTokenPermissionedFromUser();
-  }
-
-  const mToken = config.tokenContractName;
+  const mToken = (await getTokenContractNameFromUser()) as MTokenName;
 
   const folder = path.join(
     hre.config.paths.root,
     'contracts/products',
     `${mToken}`,
   );
+
+  const folderExists = await fs
+    .access(folder)
+    .then(() => true)
+    .catch(() => false);
+  const isRegistered = !!contractNamesPrefixes[mToken];
+
+  let mode: 'create' | 'add' | 'regenerate' = 'create';
+
+  if (folderExists || isRegistered) {
+    mode = await getGenerationModeFromUser(mToken);
+
+    if (mode === 'regenerate') {
+      const confirmed = await confirm({
+        message: `This will DELETE contracts/products/${mToken} and regenerate it. Continue?`,
+        initialValue: false,
+      }).then(requireNotCancelled);
+
+      if (!confirmed) {
+        cancel('Operation cancelled.');
+        process.exit(0);
+      }
+    }
+  }
+
+  let config: {
+    tokenContractName: string;
+    tokenName: string;
+    tokenSymbol: string;
+    contractNamePrefix: string;
+    rolesPrefix: string;
+  };
+  let isPermissionedFromMetadata = false;
+
+  if (mode === 'create') {
+    config = await getConfigFromUser(mToken);
+  } else {
+    const metadata = mTokensMetadata[mToken];
+    const contractNamePrefix = contractNamesPrefixes[mToken];
+    const rolesPrefix = rolesPrefixes[mToken];
+
+    if (!metadata || !contractNamePrefix || !rolesPrefix) {
+      cancel(
+        `Token ${mToken} is not fully registered (metadata/prefixes missing). ` +
+          `Fix the registries or use a new token name.`,
+      );
+      process.exit(0);
+      return;
+    }
+
+    config = {
+      tokenContractName: mToken,
+      tokenName: metadata.name,
+      tokenSymbol: metadata.symbol,
+      contractNamePrefix,
+      rolesPrefix,
+    };
+    isPermissionedFromMetadata = !!metadata.isPermissioned;
+  }
+
+  const contractsToGenerate = await getContractsToGenerateFromUser();
+
+  let shouldUseTokenLevelGreenList = false;
+  let shouldUseTokenPermissioned = isPermissionedFromMetadata;
+
+  if (
+    contractsToGenerate.find((v) => v.startsWith('dv') || v.startsWith('rv'))
+  ) {
+    let greenlistDefault = false;
+
+    if (mode !== 'create' && folderExists) {
+      const files = await fs.readdir(folder);
+      for (const file of files.filter((f) => f.endsWith('.sol'))) {
+        const content = await fs.readFile(path.join(folder, file), 'utf-8');
+        if (content.includes('function greenlistedRole()')) {
+          greenlistDefault = true;
+          break;
+        }
+      }
+    }
+
+    shouldUseTokenLevelGreenList =
+      await getShouldUseTokenLevelGreenListFromUser(greenlistDefault);
+  }
+
+  if (contractsToGenerate.includes('token') && mode === 'create') {
+    shouldUseTokenPermissioned = await getShouldUseTokenPermissionedFromUser();
+  }
 
   await tasks([
     {
@@ -574,56 +795,79 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
           rolesPrefix: config.rolesPrefix,
           name: config.tokenName,
           symbol: config.tokenSymbol,
-          mToken,
+          mToken: config.tokenContractName,
           isPermissioned: shouldUseTokenPermissioned ? true : undefined,
         });
       },
     },
-    {
-      title: 'Generating files',
-      task: async () => {
-        const isFolderExists = await fs
-          .access(folder)
-          .then(() => true)
-          .catch(() => false);
-        if (isFolderExists) {
-          await fs.rm(folder, { recursive: true });
+  ]);
+
+  if (folderExists && mode === 'regenerate') {
+    await fs.rm(folder, { recursive: true });
+  }
+
+  await fs.mkdir(folder, { recursive: true });
+
+  const rolesFileExists =
+    mode === 'add' &&
+    (await fs
+      .access(path.join(folder, `${getTokenContractNames(mToken).roles}.sol`))
+      .then(() => true)
+      .catch(() => false));
+
+  const generators = [
+    ...(rolesFileExists
+      ? []
+      : [{ name: 'roles', generator: getTokenRolesContractFromTemplate }]),
+    ...contractsToGenerate.flatMap((contract) => {
+      const generator = generatorPerContract[contract];
+      return generator ? [{ name: contract, generator }] : [];
+    }),
+  ];
+
+  const generatedContracts = await Promise.all(
+    generators.map(({ generator }) =>
+      generator(mToken, {
+        vaultUseTokenLevelGreenList: shouldUseTokenLevelGreenList,
+        isPermissionedMToken: shouldUseTokenPermissioned,
+      }),
+    ),
+  );
+
+  for (const [index, contract] of generatedContracts.entries()) {
+    if (!contract) {
+      cancel(
+        `Contract ${generators[index].name} is not available for a provided mToken`,
+      );
+      process.exit(0);
+      return;
+    }
+
+    const filePath = path.join(folder, `${contract.name}.sol`);
+
+    if (mode === 'add') {
+      const fileExists = await fs
+        .access(filePath)
+        .then(() => true)
+        .catch(() => false);
+
+      if (fileExists) {
+        const overwrite = await confirm({
+          message: `${contract.name}.sol already exists. Overwrite?`,
+          initialValue: false,
+        }).then(requireNotCancelled);
+
+        if (!overwrite) {
+          await stream.warn(`Skipping ${contract.name}.sol...`);
+          continue;
         }
+      }
+    }
 
-        await fs.mkdir(folder, { recursive: true });
+    await fs.writeFile(filePath, contract.content, 'utf-8');
+  }
 
-        const generators = [
-          getTokenRolesContractFromTemplate,
-          ...contractsToGenerate.map(
-            (contract) => generatorPerContract[contract],
-          ),
-        ].filter((v) => v !== undefined);
-
-        const generatedContracts = await Promise.all(
-          generators.map((generator) =>
-            generator(mToken as MTokenName, {
-              vaultUseTokenLevelGreenList: shouldUseTokenLevelGreenList,
-              isPermissionedMToken: shouldUseTokenPermissioned,
-            }),
-          ),
-        );
-
-        for (const contract of generatedContracts) {
-          if (!contract) {
-            cancel(
-              `Contract ${contract} is not available for a provided mToken`,
-            );
-            process.exit(0);
-          }
-
-          await fs.writeFile(
-            path.join(folder, `${contract.name}.sol`),
-            contract.content,
-            'utf-8',
-          );
-        }
-      },
-    },
+  await tasks([
     {
       title: 'Linting and formatting',
       task: async () => {
