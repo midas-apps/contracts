@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";

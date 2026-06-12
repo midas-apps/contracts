@@ -11,7 +11,7 @@ import {
 import { MTokenName } from '../../config';
 import { acErrors, blackList } from '../common/ac.helpers';
 import { defaultDeploy, mTokenPermissionedFixture } from '../common/fixtures';
-import { burn, mint } from '../common/mtoken.helpers';
+import { burn, clawbackTest, mint } from '../common/mtoken.helpers';
 
 const mProducts = ['mTBILL'] as MTokenName[]; // Object.values(MTokenNameEnum);
 
@@ -519,6 +519,91 @@ describe('Token contracts', () => {
         ).revertedWithCustomError(
           mTokenPermissioned,
           acErrors.WMAC_BLACKLISTED().customErrorName,
+        );
+      });
+    });
+
+    describe('clawback()', () => {
+      it('should not fail when from address is not greenlisted', async () => {
+        const baseFixture = await defaultDeploy();
+        const {
+          owner,
+          accessControl,
+          regularAccounts,
+          clawbackReceiver,
+          mTokenPermissioned,
+          mTokenPermissionedRoles,
+        } = await loadFixture(
+          mTokenPermissionedFixture.bind(this, baseFixture),
+        );
+
+        const holder = regularAccounts[0];
+        const amount = parseUnits('1');
+
+        await accessControl['grantRole(bytes32,address)'](
+          mTokenPermissionedRoles.greenlisted,
+          holder.address,
+        );
+        await accessControl['grantRole(bytes32,address)'](
+          mTokenPermissionedRoles.greenlisted,
+          clawbackReceiver.address,
+        );
+        await mint(
+          { tokenContract: mTokenPermissioned, owner },
+          holder,
+          amount,
+        );
+        await accessControl.revokeRole(
+          mTokenPermissionedRoles.greenlisted,
+          holder.address,
+        );
+
+        await clawbackTest(
+          { tokenContract: mTokenPermissioned, owner },
+          amount,
+          holder,
+        );
+      });
+
+      it('should fail: when clawbackReceiver is not greenlisted', async () => {
+        const baseFixture = await defaultDeploy();
+        const {
+          owner,
+          accessControl,
+          regularAccounts,
+          clawbackReceiver,
+          mTokenPermissioned,
+          mTokenPermissionedRoles,
+        } = await loadFixture(
+          mTokenPermissionedFixture.bind(this, baseFixture),
+        );
+
+        const holder = regularAccounts[0];
+        const amount = parseUnits('1');
+
+        await accessControl['grantRole(bytes32,address)'](
+          mTokenPermissionedRoles.greenlisted,
+          holder.address,
+        );
+        await mint(
+          { tokenContract: mTokenPermissioned, owner },
+          holder,
+          amount,
+        );
+        await accessControl.revokeRole(
+          mTokenPermissionedRoles.greenlisted,
+          holder.address,
+        );
+        await accessControl.revokeRole(
+          mTokenPermissionedRoles.greenlisted,
+          clawbackReceiver.address,
+        );
+
+        await clawbackTest(
+          { tokenContract: mTokenPermissioned, owner },
+          amount,
+          holder,
+          { revertCustomError: { customErrorName: 'NotGreenlisted' } },
         );
       });
     });

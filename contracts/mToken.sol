@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
@@ -60,7 +60,7 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     /**
      * @notice if true then current transfer is clawback operation
      */
-    bool private _inClawback;
+    bool internal _inClawback;
 
     /**
      * @notice name of the token

@@ -21,7 +21,7 @@ export const getRvContractFromTemplate = async (
   return {
     name: contractNames.rv,
     content: `
-  // SPDX-License-Identifier: MIT
+  // SPDX-License-Identifier: BUSL-1.1
   pragma solidity 0.8.34;
 
   import "../../RedemptionVault.sol";

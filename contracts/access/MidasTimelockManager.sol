@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
 import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
@@ -198,8 +198,15 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         external
         onlyRole(SECURITY_COUNCIL_MANAGER_ROLE, false)
     {
+        if (
+            msg.sender != timelock && pendingSetCouncilOperationId != bytes32(0)
+        ) {
+            revert PendingSetCouncilOperationExists();
+        }
+
         uint256 version = securityCouncilVersion + 1;
         securityCouncilVersion = version;
+
         _setSecurityCouncil(members, version);
     }
 

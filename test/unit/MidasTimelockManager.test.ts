@@ -968,6 +968,60 @@ describe('MidasTimelockManager', () => {
         },
       );
     });
+
+    it('should fail: when pending set council operation exists', async () => {
+      const {
+        timelockManager,
+        timelock,
+        owner,
+        accessControl,
+        councilMembers,
+        regularAccounts,
+      } = await loadFixture(defaultDeploy);
+
+      const securityCouncilManagerRole =
+        await timelockManager.SECURITY_COUNCIL_MANAGER_ROLE();
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [securityCouncilManagerRole],
+        [3600],
+      );
+
+      const scheduledCouncilMembers = councilMembers.map((v) => v.address);
+      const setCouncilCalldata = timelockManager.interface.encodeFunctionData(
+        'setSecurityCouncil',
+        [scheduledCouncilMembers],
+      );
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [timelockManager.address],
+        [setCouncilCalldata],
+        { isSetCouncilOperation: true },
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [securityCouncilManagerRole],
+        [NO_DELAY],
+      );
+
+      await setSecurityCouncilTest(
+        { timelockManager, timelock, owner, accessControl },
+        [
+          councilMembers[0].address,
+          councilMembers[1].address,
+          councilMembers[2].address,
+          councilMembers[3].address,
+          regularAccounts[0].address,
+        ],
+        timelockManagerRevert(
+          timelockManager,
+          'PendingSetCouncilOperationExists',
+        ),
+      );
+    });
   });
 
   describe('setMaxPendingOperationsPerProposer()', () => {

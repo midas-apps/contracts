@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
 import {AccessControlUtilsLibrary} from "./libraries/AccessControlUtilsLibrary.sol";
@@ -59,9 +59,10 @@ contract mTokenPermissioned is mToken {
         uint256 amount
     ) internal virtual override(mToken) {
         if (to != address(0)) {
-            if (from != address(0)) {
+            if (!_inClawback && from != address(0)) {
                 _onlyGreenlisted(from);
             }
+
             _onlyGreenlisted(to);
         }
 

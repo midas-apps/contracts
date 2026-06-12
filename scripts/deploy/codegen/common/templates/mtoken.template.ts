@@ -26,7 +26,7 @@ export const getTokenContractFromTemplate = async (
   return {
     name: contractNames.token,
     content: `
-  // SPDX-License-Identifier: MIT
+  // SPDX-License-Identifier: BUSL-1.1
   pragma solidity 0.8.34;
 
   import "../../mToken${isPermissionedMToken ? 'Permissioned' : ''}.sol";

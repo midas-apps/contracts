@@ -2,7 +2,7 @@
   "name": "midas-contracts",
   "version": "2.0.0",
   "description": "",
-  "license": "AGPL-3.0",
+  "license": "BUSL-1.1",
   "author": "RedDuck Software",
   "engines": {
     "node": ">=22 <23"
