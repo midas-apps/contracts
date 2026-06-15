@@ -59,8 +59,6 @@ abstract contract WithSanctionsList is WithMidasAccessControl {
 
     /**
      * @notice updates `sanctionsList` address.
-     * can be called only from permissioned actor that have
-     * `sanctionsListAdminRole()` role
      * @param newSanctionsList new sanctions list address
      */
     function setSanctionsList(address newSanctionsList)

@@ -343,7 +343,7 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        roles.common.blacklistedOperator,
+        undefined,
         accessControl.address,
         selector,
         [{ account: regularAccounts[0].address, enabled: true }],
@@ -396,7 +396,7 @@ describe('MidasAccessControl', function () {
             delay: 7200,
           },
         ],
-        { revertCustomError: { customErrorName: 'InvalidTimelockDelay' } },
+        { revertCustomError: { customErrorName: 'DelayIsAlreadySet' } },
       );
     });
 
@@ -418,7 +418,7 @@ describe('MidasAccessControl', function () {
             delay: 3600,
           },
         ],
-        { revertCustomError: { customErrorName: 'InvalidTimelockDelay' } },
+        { revertCustomError: { customErrorName: 'DelayIsAlreadySet' } },
       );
     });
   });
@@ -598,7 +598,7 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        roles.common.blacklistedOperator,
+        undefined,
         accessControl.address,
         selector,
         [{ account: regularAccounts[0].address, enabled: true }],
@@ -943,7 +943,7 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        roles.common.defaultAdmin,
+        undefined,
         accessControl.address,
         selector,
         [{ account: regularAccounts[0].address, enabled: true }],
@@ -1137,7 +1137,7 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        roles.common.greenlistedOperator,
+        undefined,
         wAccessControlTester.address,
         selector,
         [{ account: regularAccounts[0].address, enabled: true }],
@@ -1266,7 +1266,7 @@ describe('MidasAccessControl', function () {
             delay: 7200,
           },
         ],
-        { revertCustomError: { customErrorName: 'InvalidTimelockDelay' } },
+        { revertCustomError: { customErrorName: 'DelayIsAlreadySet' } },
       );
     });
   });
@@ -1296,7 +1296,7 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        roles.common.greenlistedOperator,
+        undefined,
         wAccessControlTester.address,
         selector,
         [
@@ -1306,6 +1306,58 @@ describe('MidasAccessControl', function () {
           },
         ],
       );
+    });
+
+    it('extracts master role from target contract when not provided', async () => {
+      const {
+        accessControl,
+        owner,
+        regularAccounts,
+        roles,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      const selector = encodeFnSelector('setGreenlistEnable(bool)');
+      const contractAdminRole = roles.common.greenlistedOperator;
+
+      await wAccessControlTester.setContractAdminRole(contractAdminRole);
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole: contractAdminRole,
+        targetContract: wAccessControlTester.address,
+        functionSelector: selector,
+        grantOperator: owner,
+      });
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        undefined,
+        wAccessControlTester.address,
+        selector,
+        [{ account: regularAccounts[0].address, enabled: true }],
+      );
+
+      expect(
+        await accessControl[
+          'hasFunctionPermission(bytes32,address,bytes4,address)'
+        ](
+          contractAdminRole,
+          wAccessControlTester.address,
+          selector,
+          regularAccounts[0].address,
+        ),
+      ).eq(true);
+      expect(
+        await accessControl[
+          'hasFunctionPermission(bytes32,address,bytes4,address)'
+        ](
+          roles.common.defaultAdmin,
+          wAccessControlTester.address,
+          selector,
+          regularAccounts[0].address,
+        ),
+      ).eq(false);
     });
 
     it('should fail: caller is not a grant operator', async () => {
@@ -1325,7 +1377,7 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner: regularAccounts[1] },
-        roles.common.greenlistedOperator,
+        undefined,
         accessControl.address,
         selector,
         [
@@ -1371,7 +1423,7 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        roles.common.greenlistedOperator,
+        undefined,
         accessControl.address,
         selector,
         [
@@ -1393,7 +1445,7 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        roles.common.greenlistedOperator,
+        undefined,
         accessControl.address,
         selector,
         [
@@ -1431,7 +1483,7 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        roles.common.greenlistedOperator,
+        undefined,
         wAccessControlTester.address,
         selector,
         [{ account: regularAccounts[0].address, enabled: true }],
@@ -1439,7 +1491,7 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        roles.common.greenlistedOperator,
+        undefined,
         wAccessControlTester.address,
         selector,
         [{ account: regularAccounts[0].address, enabled: true }],
@@ -1462,7 +1514,7 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        roles.common.greenlistedOperator,
+        undefined,
         accessControl.address,
         selector,
         [],
@@ -1517,7 +1569,7 @@ describe('MidasAccessControl', function () {
       );
 
       const data = accessControl.interface.encodeFunctionData(
-        'setPermissionRoleMult',
+        'setPermissionRoleMult(address,bytes4,uint32,(address,bool)[])',
         [
           wAccessControlTester.address,
           selector,
@@ -1545,6 +1597,84 @@ describe('MidasAccessControl', function () {
       );
     });
 
+    it('when caller has operator role but not master role and operator role has no delay - uses operator role', async () => {
+      const {
+        accessControl,
+        owner,
+        regularAccounts,
+        roles,
+        timelock,
+        timelockManager,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      const selector = encodeFnSelector('setGreenlistEnable(bool)');
+      const masterRole = roles.common.greenlistedOperator;
+      const operator = regularAccounts[0];
+
+      await wAccessControlTester.setContractAdminRole(masterRole);
+
+      await setGrantOperatorRoleTester(
+        { accessControl, owner },
+        wAccessControlTester.address,
+        [
+          {
+            functionSelector: selector,
+            operator: operator.address,
+            enabled: true,
+          },
+        ],
+      );
+
+      const operatorRoleKey = await accessControl.grantOperatorRoleKey(
+        masterRole,
+        wAccessControlTester.address,
+        selector,
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [operatorRoleKey],
+        [NO_DELAY],
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [masterRole],
+        [3600],
+      );
+
+      expect(await accessControl.hasRole(masterRole, operator.address)).eq(
+        false,
+      );
+      expect(
+        await accessControl[
+          'isFunctionAccessGrantOperator(bytes32,address,bytes4,address)'
+        ](masterRole, wAccessControlTester.address, selector, operator.address),
+      ).eq(true);
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        undefined,
+        wAccessControlTester.address,
+        selector,
+        [{ account: regularAccounts[1].address, enabled: true }],
+        undefined,
+        { from: operator },
+      );
+
+      expect(
+        await accessControl[
+          'hasFunctionPermission(bytes32,address,bytes4,address)'
+        ](
+          masterRole,
+          wAccessControlTester.address,
+          selector,
+          regularAccounts[1].address,
+        ),
+      ).eq(true);
+    });
+
     it('should fail: when user do not have grant operator role', async () => {
       const { accessControl, owner, regularAccounts, roles } =
         await loadFixture(defaultDeploy);
@@ -1562,7 +1692,7 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner: regularAccounts[0] },
-        roles.common.greenlistedOperator,
+        undefined,
         accessControl.address,
         selector,
         [{ account: regularAccounts[1].address, enabled: true }],
@@ -1596,7 +1726,7 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        roles.common.greenlistedOperator,
+        undefined,
         wAccessControlTester.address,
         selector,
         [{ account: regularAccounts[0].address, enabled: true }],
@@ -1604,7 +1734,7 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        roles.common.greenlistedOperator,
+        undefined,
         wAccessControlTester.address,
         selector,
         [{ account: regularAccounts[0].address, enabled: false }],
@@ -1636,7 +1766,7 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        roles.common.greenlistedOperator,
+        undefined,
         wAccessControlTester.address,
         selector,
         [{ account: regularAccounts[0].address, enabled: true }],
@@ -1669,7 +1799,7 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        roles.common.greenlistedOperator,
+        undefined,
         wAccessControlTester.address,
         selector,
         [{ account: regularAccounts[0].address, enabled: true }],
@@ -1678,12 +1808,12 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        roles.common.greenlistedOperator,
+        undefined,
         wAccessControlTester.address,
         selector,
         [{ account: regularAccounts[1].address, enabled: true }],
         7200,
-        { revertCustomError: { customErrorName: 'InvalidTimelockDelay' } },
+        { revertCustomError: { customErrorName: 'DelayIsAlreadySet' } },
       );
     });
 
@@ -1730,7 +1860,7 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        roles.common.greenlistedOperator,
+        undefined,
         wAccessControlTester.address,
         selector,
         [{ account: regularAccounts[0].address, enabled: true }],
@@ -1786,7 +1916,7 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        roles.common.greenlistedOperator,
+        undefined,
         wAccessControlTester.address,
         selector,
         [{ account: regularAccounts[0].address, enabled: true }],
@@ -1894,7 +2024,7 @@ describe('MidasAccessControl', function () {
         roles.common.blacklisted,
         regularAccounts[1].address,
         7200,
-        { revertCustomError: { customErrorName: 'InvalidTimelockDelay' } },
+        { revertCustomError: { customErrorName: 'DelayIsAlreadySet' } },
       );
     });
   });
@@ -2158,7 +2288,7 @@ describe('MidasAccessControl', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        defaultAdminRole,
+        undefined,
         accessControl.address,
         setDefaultDelaySelector,
         [{ account: regularAccounts[0].address, enabled: true }],
@@ -2187,7 +2317,6 @@ describe('MidasAccessControl', function () {
           revertCustomError: {
             contract: accessControl,
             customErrorName: 'FunctionNotReady',
-            args: [roles.common.defaultAdmin, setDefaultDelaySelector],
           },
         },
       );

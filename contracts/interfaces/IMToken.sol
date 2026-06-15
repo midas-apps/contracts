@@ -71,6 +71,13 @@ interface IMToken is IERC20Upgradeable {
     function setClawbackReceiver(address clawbackReceiver) external;
 
     /**
+     * @notice sets the name and symbol of the token
+     * @param name_ new name
+     * @param symbol_ new symbol
+     */
+    function setNameSymbol(string memory name_, string memory symbol_) external;
+
+    /**
      * @notice updates contract`s metadata.
      * should be called only from permissioned actor
      * @param key metadata map. key

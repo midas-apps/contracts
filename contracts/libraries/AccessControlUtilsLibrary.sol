@@ -129,6 +129,7 @@ library AccessControlUtilsLibrary {
 
         bytes32 roleUsed = validateFunctionAccess(
             accessControl,
+            address(this),
             contractAdminRole,
             overrideDelay,
             roleIsFunctionOperatorRole,
@@ -170,6 +171,7 @@ library AccessControlUtilsLibrary {
      */
     function validateFunctionAccess(
         IMidasAccessControl accessControl,
+        address targetContract,
         bytes32 role,
         uint32 overrideDelay,
         bool roleIsFunctionOperatorRole,
@@ -199,6 +201,7 @@ library AccessControlUtilsLibrary {
         (bytes32 key, bool hasPermission) = validateFunctionRole
             ? _hasFunctionPermission(
                 accessControl,
+                targetContract,
                 role,
                 functionSelector,
                 account
@@ -311,18 +314,20 @@ library AccessControlUtilsLibrary {
      * @dev checks that given `account` has function permission for the given function selector
      * @param accessControl access control contract
      * @param role OZ role for the scope
+     * @param targetContract scoped contract
      * @param functionSelector function selector
      * @param account address checked for permission
      */
     function _hasFunctionPermission(
         IMidasAccessControl accessControl,
+        address targetContract,
         bytes32 role,
         bytes4 functionSelector,
         address account
     ) private view returns (bytes32 key, bool hasPermission) {
         key = accessControl.permissionRoleKey(
             role,
-            address(this),
+            targetContract,
             functionSelector
         );
 

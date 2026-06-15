@@ -147,9 +147,9 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
     error CannotRevokeFromSelf(bytes32 role, address account);
 
     /**
-     * @notice when the delay is invalid
+     * @notice when the delay is already set
      */
-    error InvalidTimelockDelay();
+    error DelayIsAlreadySet();
 
     /**
      * @notice when the role admin mismatch
@@ -189,6 +189,23 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
      * @param params array of SetPermissionRoleParams
      */
     function setPermissionRoleMult(
+        address targetContract,
+        bytes4 functionSelector,
+        uint32 delay,
+        SetPermissionRoleParams[] calldata params
+    ) external;
+
+    /**
+     * @notice Grant or revoke function access for an account
+     * @dev caller must be a grant operator for the scope or have the master role
+     * @param masterRole OZ role for the scope
+     * @param targetContract scoped contract
+     * @param functionSelector scoped function
+     * @param delay delay value
+     * @param params array of SetPermissionRoleParams
+     */
+    function setPermissionRoleMult(
+        bytes32 masterRole,
         address targetContract,
         bytes4 functionSelector,
         uint32 delay,

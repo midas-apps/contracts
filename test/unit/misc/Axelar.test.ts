@@ -244,7 +244,10 @@ describe('Axelar', function () {
             minReceiveAmount: parseUnits('101'),
           },
           {
-            revertMessage: 'DV: minReceiveAmount > actual',
+            revertCustomError: {
+              contract: depositVault,
+              customErrorName: 'SlippageExceeded',
+            },
           },
         );
       });
@@ -428,7 +431,10 @@ describe('Axelar', function () {
             minReceiveAmount: parseUnits('1000'),
           },
           {
-            revertMessage: 'RV: minReceiveAmount > actual',
+            revertCustomError: {
+              contract: redemptionVault,
+              customErrorName: 'SlippageExceeded',
+            },
           },
         );
       });

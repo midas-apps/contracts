@@ -4,18 +4,28 @@ import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
+import { encodeFnSelector } from '../../helpers/utils';
 import {
   DataFeed__factory,
   DataFeedTest__factory,
 } from '../../typechain-types';
-import { acErrors } from '../common/ac.helpers';
+import {
+  acErrors,
+  setPermissionRoleTester,
+  setRoleTimelocksTester,
+  setupGrantOperatorRole,
+} from '../common/ac.helpers';
 import { validateImplementation } from '../common/common.helpers';
 import {
   setMinGrowthApr,
   setRoundDataGrowth,
 } from '../common/custom-feed-growth.helpers';
-import { setRoundData } from '../common/data-feed.helpers';
+import { setHealthyDiffTest, setRoundData } from '../common/data-feed.helpers';
 import { defaultDeploy } from '../common/fixtures';
+import {
+  bulkScheduleTimelockOperationTester,
+  executeTimelockOperationTester,
+} from '../common/timelock-manager.helpers';
 
 describe('DataFeed', function () {
   it('deployment', async () => {
@@ -102,6 +112,244 @@ describe('DataFeed', function () {
 
       await expect(dataFeed.changeAggregator(mockedAggregator.address)).not
         .reverted;
+    });
+  });
+
+  describe('setHealthyDiff()', () => {
+    const validHealthyDiff = 2 * 24 * 3600;
+    const invalidHealthyDiff = 0;
+    const setHealthyDiffSelector = encodeFnSelector('setHealthyDiff(uint256)');
+
+    it('call from owner', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      await setHealthyDiffTest(fixture, validHealthyDiff);
+    });
+
+    it('should fail: call from non owner', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      await setHealthyDiffTest(fixture, validHealthyDiff, {
+        from: fixture.regularAccounts[0],
+        revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
+      });
+    });
+
+    it('should fail: when healthy diff is 0', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      await setHealthyDiffTest(fixture, invalidHealthyDiff, {
+        revertMessage: 'DF: invalid diff',
+      });
+    });
+
+    it('succeeds with only scoped function permission', async () => {
+      const { accessControl, dataFeed, owner, regularAccounts } =
+        await loadFixture(defaultDeploy);
+
+      const user = regularAccounts[0];
+      const feedAdminRole = await dataFeed.contractAdminRole();
+
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole: feedAdminRole,
+        targetContract: dataFeed.address,
+        functionSelector: setHealthyDiffSelector,
+        grantOperator: owner,
+      });
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        undefined,
+        dataFeed.address,
+        setHealthyDiffSelector,
+        [{ account: user.address, enabled: true }],
+      );
+
+      expect(await accessControl.hasRole(feedAdminRole, user.address)).eq(
+        false,
+      );
+
+      await setHealthyDiffTest({ dataFeed, owner }, validHealthyDiff, {
+        from: user,
+      });
+    });
+
+    it('succeeds with scoped permission and feed admin role', async () => {
+      const { accessControl, dataFeed, owner, regularAccounts } =
+        await loadFixture(defaultDeploy);
+
+      const user = regularAccounts[0];
+      const feedAdminRole = await dataFeed.contractAdminRole();
+
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole: feedAdminRole,
+        targetContract: dataFeed.address,
+        functionSelector: setHealthyDiffSelector,
+        grantOperator: owner,
+      });
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        undefined,
+        dataFeed.address,
+        setHealthyDiffSelector,
+        [{ account: user.address, enabled: true }],
+      );
+
+      await accessControl['grantRole(bytes32,address)'](
+        feedAdminRole,
+        user.address,
+      );
+
+      await setHealthyDiffTest({ dataFeed, owner }, validHealthyDiff, {
+        from: user,
+      });
+    });
+
+    it('when called through timelock with contract admin role', async () => {
+      const {
+        accessControl,
+        dataFeed,
+        owner,
+        regularAccounts,
+        timelock,
+        timelockManager,
+      } = await loadFixture(defaultDeploy);
+
+      const proposer = regularAccounts[0];
+      const feedAdminRole = await dataFeed.contractAdminRole();
+
+      await accessControl['grantRole(bytes32,address)'](
+        feedAdminRole,
+        proposer.address,
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [feedAdminRole],
+        [3600],
+      );
+
+      const calldata = dataFeed.interface.encodeFunctionData('setHealthyDiff', [
+        validHealthyDiff,
+      ]);
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [dataFeed.address],
+        [calldata],
+        {},
+        { from: proposer },
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        dataFeed.address,
+        calldata,
+        proposer.address,
+        { from: owner },
+      );
+
+      expect(await dataFeed.healthyDiff()).eq(validHealthyDiff);
+    });
+
+    it('when called through timelock with function admin role', async () => {
+      const {
+        accessControl,
+        dataFeed,
+        owner,
+        regularAccounts,
+        timelock,
+        timelockManager,
+      } = await loadFixture(defaultDeploy);
+
+      const proposer = regularAccounts[0];
+      const feedAdminRole = await dataFeed.contractAdminRole();
+
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole: feedAdminRole,
+        targetContract: dataFeed.address,
+        functionSelector: setHealthyDiffSelector,
+        grantOperator: owner,
+      });
+
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole: feedAdminRole,
+        targetContract: timelockManager.address,
+        functionSelector: setHealthyDiffSelector,
+        grantOperator: owner,
+      });
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        feedAdminRole,
+        dataFeed.address,
+        setHealthyDiffSelector,
+        [{ account: proposer.address, enabled: true }],
+      );
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        feedAdminRole,
+        timelockManager.address,
+        setHealthyDiffSelector,
+        [{ account: proposer.address, enabled: true }],
+      );
+
+      expect(await accessControl.hasRole(feedAdminRole, proposer.address)).eq(
+        false,
+      );
+
+      const feedPermissionKey = await accessControl.permissionRoleKey(
+        feedAdminRole,
+        dataFeed.address,
+        setHealthyDiffSelector,
+      );
+      const timelockPermissionKey = await accessControl.permissionRoleKey(
+        feedAdminRole,
+        timelockManager.address,
+        setHealthyDiffSelector,
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [feedPermissionKey, timelockPermissionKey],
+        [3600, 3600],
+      );
+
+      const calldata = dataFeed.interface.encodeFunctionData('setHealthyDiff', [
+        validHealthyDiff,
+      ]);
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [dataFeed.address],
+        [calldata],
+        {},
+        { from: proposer },
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        dataFeed.address,
+        calldata,
+        proposer.address,
+        { from: owner },
+      );
+
+      expect(await dataFeed.healthyDiff()).eq(validHealthyDiff);
     });
   });
 

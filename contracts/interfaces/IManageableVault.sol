@@ -50,6 +50,8 @@ struct CommonVaultInitParams {
     uint256 maxInstantFee;
     /// @notice maximum instant share value in basis points (100 = 1%)
     uint256 maxInstantShare;
+    /// @notice max requestId that can be approved
+    uint256 maxApproveRequestId;
     /// @notice enforce sequential request processing flag
     bool sequentialRequestProcessing;
 }
@@ -257,11 +259,6 @@ interface IManageableVault {
      * @notice New mToken rate must be greater than zero
      */
     error InvalidNewMTokenRate();
-
-    /**
-     * @notice Instant amount must be greater than zero
-     */
-    error InvalidInstantAmount();
 
     /**
      * @notice Request does not exist

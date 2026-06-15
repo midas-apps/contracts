@@ -26,6 +26,7 @@ import {
   executeTimelockOperationTester,
   pauseTimelockOperationTest,
   bulkScheduleTimelockOperationTester,
+  scheduleTimelockOperationTester,
   setMaxPendingOperationsPerProposerTester,
   setSecurityCouncilTest,
   voteForExecutionTest,
@@ -34,6 +35,9 @@ import {
 
 const executeTimelockOperationSelector = encodeFnSelector(
   'executeTimelockOperation(address,bytes)',
+);
+const withOnlyContractAdminSelector = encodeFnSelector(
+  'withOnlyContractAdmin()',
 );
 
 export const timelockManagerRevert = (
@@ -152,6 +156,361 @@ describe('MidasTimelockManager', () => {
   });
 
   describe('scheduleTimelockOperation()', () => {
+    it('should schedule timelock operation', async () => {
+      const {
+        timelockManager,
+        timelock,
+        owner,
+        accessControl,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [constants.HashZero],
+        [3600],
+      );
+
+      await scheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        wAccessControlTester.interface.encodeFunctionData(
+          'withOnlyContractAdmin',
+        ),
+      );
+    });
+
+    it('when same target and calldata was executed it can be scheduled again', async () => {
+      const {
+        timelockManager,
+        timelock,
+        owner,
+        accessControl,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [constants.HashZero],
+        [3600],
+      );
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withOnlyContractAdmin',
+      );
+      await scheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        owner.address,
+      );
+
+      await scheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+      );
+    });
+
+    it('when too many pending operations for a signle proposer but should affect different proposer', async () => {
+      const {
+        timelockManager,
+        timelock,
+        owner,
+        accessControl,
+        wAccessControlTester,
+        regularAccounts,
+      } = await loadFixture(defaultDeploy);
+
+      await accessControl['grantRole(bytes32,address)'](
+        constants.HashZero,
+        regularAccounts[0].address,
+      );
+
+      await setMaxPendingOperationsPerProposerTester(
+        { timelockManager, owner, accessControl, timelock },
+        1,
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [constants.HashZero],
+        [3600],
+      );
+
+      await scheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        wAccessControlTester.interface.encodeFunctionData(
+          'withOnlyContractAdmin',
+        ),
+      );
+
+      await scheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        accessControl.address,
+        accessControl.interface.encodeFunctionData(
+          'grantRole(bytes32,address)',
+          [constants.HashZero, wAccessControlTester.address],
+        ),
+        {},
+        {
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('should fail: when same target and calldata is pending and not yet executed', async () => {
+      const {
+        timelockManager,
+        timelock,
+        owner,
+        accessControl,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [constants.HashZero],
+        [3600],
+      );
+
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withOnlyContractAdmin',
+      );
+
+      await scheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+      );
+
+      await scheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        {},
+        timelockManagerRevert(timelockManager, 'OperationAlreadyPending'),
+      );
+    });
+
+    it('should fail: when same target and calldata is pending from another proposer', async () => {
+      const {
+        timelockManager,
+        timelock,
+        owner,
+        accessControl,
+        wAccessControlTester,
+        regularAccounts,
+      } = await loadFixture(defaultDeploy);
+
+      await accessControl['grantRole(bytes32,address)'](
+        constants.HashZero,
+        regularAccounts[0].address,
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [constants.HashZero],
+        [3600],
+      );
+
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withOnlyContractAdmin',
+      );
+
+      await scheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+      );
+
+      await scheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        {},
+        {
+          ...timelockManagerRevert(timelockManager, 'OperationAlreadyPending'),
+          from: regularAccounts[0],
+        },
+      );
+    });
+
+    it('should fail: when role do not have timelock delay', async () => {
+      const {
+        timelockManager,
+        timelock,
+        owner,
+        accessControl,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      await scheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        wAccessControlTester.interface.encodeFunctionData(
+          'withOnlyContractAdmin',
+        ),
+        {},
+        timelockManagerRevert(timelockManager, 'NoTimelockDelayForRole'),
+      );
+    });
+
+    it('should fail: when too many pending operations for a signle proposer', async () => {
+      const {
+        timelockManager,
+        timelock,
+        owner,
+        accessControl,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      await setMaxPendingOperationsPerProposerTester(
+        { timelockManager, owner, accessControl, timelock },
+        1,
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [constants.HashZero],
+        [3600],
+      );
+      await scheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        wAccessControlTester.interface.encodeFunctionData(
+          'withOnlyContractAdmin',
+        ),
+      );
+
+      await scheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        accessControl.address,
+        accessControl.interface.encodeFunctionData(
+          'grantRole(bytes32,address)',
+          [constants.HashZero, wAccessControlTester.address],
+        ),
+        {},
+        timelockManagerRevert(timelockManager, 'TooManyPendingOperations'),
+      );
+    });
+
+    it('should fail: when required role is user facing', async () => {
+      const {
+        timelockManager,
+        timelock,
+        owner,
+        accessControl,
+        wAccessControlTester,
+        roles,
+      } = await loadFixture(defaultDeploy);
+
+      await wAccessControlTester.setContractAdminRole(roles.common.greenlisted);
+
+      await scheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        wAccessControlTester.interface.encodeFunctionData(
+          'withOnlyContractAdmin',
+        ),
+        {},
+        timelockManagerRevert(timelockManager, 'UserFacingRoleNotAllowed', [
+          roles.common.greenlisted,
+        ]),
+      );
+    });
+
+    it('should fail: when target is timelock address', async () => {
+      const { timelockManager, timelock, owner, accessControl } =
+        await loadFixture(defaultDeploy);
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [constants.HashZero],
+        [3600],
+      );
+
+      await scheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        timelock.address,
+        '0x',
+        {},
+        timelockManagerRevert(timelockManager, 'InvalidAddress', [
+          timelock.address,
+        ]),
+      );
+    });
+
+    it('should fail: when trying to schedule on function that is not protected with onlyRole', async () => {
+      const {
+        timelockManager,
+        timelock,
+        owner,
+        accessControl,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [constants.HashZero],
+        [3600],
+      );
+
+      const calldata =
+        wAccessControlTester.interface.encodeFunctionData('withUnprotected');
+
+      await scheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        {},
+        timelockManagerRevert(
+          timelockManager,
+          'PreflightCallUnexpectedSuccess',
+        ),
+      );
+    });
+
+    it('should fail: when preflight reverted with invalid error', async () => {
+      const {
+        timelockManager,
+        timelock,
+        owner,
+        accessControl,
+        wAccessControlTester,
+        roles,
+      } = await loadFixture(defaultDeploy);
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [constants.HashZero],
+        [3600],
+      );
+
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withWrongRolePreflight(bytes32,uint32,bool,bool)',
+        [roles.common.defaultAdmin, 0, false, true],
+      );
+
+      await scheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        {},
+        timelockManagerRevert(timelockManager, 'InvalidPreflightError'),
+      );
+    });
+  });
+
+  describe('bulkScheduleTimelockOperation()', () => {
     it('should schedule timelock operation', async () => {
       const {
         timelockManager,
@@ -438,6 +797,27 @@ describe('MidasTimelockManager', () => {
       );
     });
 
+    it('should fail: when target is timelock address', async () => {
+      const { timelockManager, timelock, owner, accessControl } =
+        await loadFixture(defaultDeploy);
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [constants.HashZero],
+        [3600],
+      );
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [timelock.address],
+        ['0x'],
+        {},
+        timelockManagerRevert(timelockManager, 'InvalidAddress', [
+          timelock.address,
+        ]),
+      );
+    });
+
     it('should schedule multiple timelock operations in one transaction', async () => {
       const {
         timelockManager,
@@ -468,27 +848,6 @@ describe('MidasTimelockManager', () => {
       );
 
       expect(operationIds.length).to.eq(2);
-    });
-
-    it('should fail: when target is timelock address', async () => {
-      const { timelockManager, timelock, owner, accessControl } =
-        await loadFixture(defaultDeploy);
-
-      await setRoleTimelocksTester(
-        { timelockManager, timelock, owner, accessControl },
-        [constants.HashZero],
-        [3600],
-      );
-
-      await bulkScheduleTimelockOperationTester(
-        { timelockManager, timelock, owner, accessControl },
-        [timelock.address],
-        ['0x'],
-        {},
-        timelockManagerRevert(timelockManager, 'InvalidAddress', [
-          timelock.address,
-        ]),
-      );
     });
   });
 
@@ -656,7 +1015,7 @@ describe('MidasTimelockManager', () => {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        defaultAdminRole,
+        undefined,
         timelockManager.address,
         executeTimelockOperationSelector,
         [{ account: regularAccounts[0].address, enabled: true }],
@@ -689,6 +1048,42 @@ describe('MidasTimelockManager', () => {
           from: regularAccounts[0],
         },
       );
+    });
+
+    it('should fail: with SenderIsNotTimelock when calling target directly after delay passed', async () => {
+      const {
+        timelockManager,
+        timelock,
+        owner,
+        accessControl,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [constants.HashZero],
+        [3600],
+      );
+
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withOnlyContractAdmin',
+      );
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [calldata],
+      );
+
+      await increase(3600);
+
+      await expect(wAccessControlTester.withOnlyContractAdmin())
+        .revertedWithCustomError(accessControl, 'SenderIsNotTimelock')
+        .withArgs(
+          constants.HashZero,
+          withOnlyContractAdminSelector,
+          owner.address,
+        );
     });
 
     it('when same target and calldata was executed and scheduled again it can be executed again', async () => {

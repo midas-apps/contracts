@@ -1,4 +1,6 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
+import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { constants } from 'ethers';
@@ -10,7 +12,13 @@ import {
   ManageableVaultTester,
   ManageableVaultTester__factory,
 } from '../../../typechain-types';
-import { acErrors, setupPermissionRole } from '../../common/ac.helpers';
+import {
+  acErrors,
+  setPermissionRoleTester,
+  setRoleTimelocksTester,
+  setupGrantOperatorRole,
+  setupPermissionRole,
+} from '../../common/ac.helpers';
 import {
   mintToken,
   pauseVaultFn,
@@ -35,7 +43,35 @@ import {
   setMinAmountTest,
   setMinMaxInstantFeeTest,
   setSequentialRequestProcessingTest,
+  setTokensReceiverTest,
+  setInstantLimitConfigTest,
+  removeInstantLimitConfigTest,
+  setMaxInstantShareTest,
+  setMaxApproveRequestIdTest,
 } from '../../common/manageable-vault.helpers';
+import {
+  bulkScheduleTimelockOperationTester,
+  executeTimelockOperationTester,
+} from '../../common/timelock-manager.helpers';
+
+const setTokensReceiverSelector = encodeFnSelector(
+  'setTokensReceiver(address)',
+);
+const setInstantLimitConfigSelector = encodeFnSelector(
+  'setInstantLimitConfig(uint256,uint256)',
+);
+const removeInstantLimitConfigSelector = encodeFnSelector(
+  'removeInstantLimitConfig(uint256)',
+);
+const setMaxApproveRequestIdSelector = encodeFnSelector(
+  'setMaxApproveRequestId(uint256)',
+);
+const setMaxInstantShareSelector = encodeFnSelector(
+  'setMaxInstantShare(uint256)',
+);
+const setSequentialRequestProcessingSelector = encodeFnSelector(
+  'setSequentialRequestProcessing(bool)',
+);
 let pauseManager: DefaultFixture['pauseManager'];
 let owner: DefaultFixture['owner'];
 
@@ -234,6 +270,574 @@ export const manageableVaultSuits = (
     });
 
     describe('common', () => {
+      describe('setInstantLimitConfig()', () => {
+        const instantLimitWindow = days(2);
+
+        it('should fail: call from address without VAULT_ADMIN_ROLE role', async () => {
+          const { owner, manageableVault, regularAccounts } =
+            await loadMvFixture();
+
+          await setInstantLimitConfigTest(
+            { vault: manageableVault, owner },
+            { window: instantLimitWindow, limit: parseUnits('1000') },
+            {
+              from: regularAccounts[0],
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
+            },
+          );
+        });
+
+        it('call from address with VAULT_ADMIN_ROLE role', async () => {
+          const { owner, manageableVault } = await loadMvFixture();
+          await setInstantLimitConfigTest(
+            { vault: manageableVault, owner },
+            { window: instantLimitWindow, limit: parseUnits('1000') },
+          );
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, manageableVault } = await loadMvFixture();
+
+          await pauseVaultFn(
+            { pauseManager, owner },
+            manageableVault,
+            setInstantLimitConfigSelector,
+          );
+
+          await setInstantLimitConfigTest(
+            { vault: manageableVault, owner },
+            { window: instantLimitWindow, limit: parseUnits('1000') },
+            {
+              revertCustomError: {
+                customErrorName: 'Paused',
+              },
+            },
+          );
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, manageableVault, regularAccounts } =
+            await loadMvFixture();
+
+          const vaultRole = await manageableVault.contractAdminRole();
+          await setupPermissionRole(
+            { accessControl, owner },
+            vaultRole,
+            manageableVault.address,
+            'setInstantLimitConfig(uint256,uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setInstantLimitConfigTest(
+            { vault: manageableVault, owner },
+            { window: instantLimitWindow, limit: parseUnits('1000') },
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            manageableVault,
+            regularAccounts,
+            roles,
+          } = await loadMvFixture();
+
+          const vaultRole = await manageableVault.contractAdminRole();
+          await setupPermissionRole(
+            { accessControl, owner },
+            vaultRole,
+            manageableVault.address,
+            'setInstantLimitConfig(uint256,uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl['grantRole(bytes32,address)'](
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setInstantLimitConfigTest(
+            { vault: manageableVault, owner },
+            { window: instantLimitWindow, limit: parseUnits('1000') },
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('when updating existing window limit config', async () => {
+          const { manageableVault, owner } = await loadMvFixture();
+
+          await setInstantLimitConfigTest(
+            { vault: manageableVault, owner },
+            { window: days(1), limit: parseUnits('500') },
+          );
+          await setInstantLimitConfigTest(
+            { vault: manageableVault, owner },
+            { window: days(1), limit: parseUnits('1500') },
+          );
+        });
+      });
+
+      describe('removeInstantLimitConfig()', () => {
+        const removeWindow = days(3);
+
+        it('should fail: call from address without VAULT_ADMIN_ROLE role', async () => {
+          const { owner, manageableVault, regularAccounts } =
+            await loadMvFixture();
+
+          await removeInstantLimitConfigTest(
+            { vault: manageableVault, owner },
+            removeWindow,
+            {
+              from: regularAccounts[0],
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
+            },
+          );
+        });
+
+        it('call from address with VAULT_ADMIN_ROLE role', async () => {
+          const { owner, manageableVault } = await loadMvFixture();
+
+          await setInstantLimitConfigTest(
+            { vault: manageableVault, owner },
+            { window: removeWindow, limit: parseUnits('1000') },
+          );
+          await removeInstantLimitConfigTest(
+            { vault: manageableVault, owner },
+            removeWindow,
+          );
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, manageableVault } = await loadMvFixture();
+
+          await setInstantLimitConfigTest(
+            { vault: manageableVault, owner },
+            { window: removeWindow, limit: parseUnits('1000') },
+          );
+
+          await pauseVaultFn(
+            { pauseManager, owner },
+            manageableVault,
+            removeInstantLimitConfigSelector,
+          );
+
+          await removeInstantLimitConfigTest(
+            { vault: manageableVault, owner },
+            removeWindow,
+            {
+              revertCustomError: {
+                customErrorName: 'Paused',
+              },
+            },
+          );
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, manageableVault, regularAccounts } =
+            await loadMvFixture();
+
+          await setInstantLimitConfigTest(
+            { vault: manageableVault, owner },
+            { window: removeWindow, limit: parseUnits('1000') },
+          );
+
+          const vaultRole = await manageableVault.contractAdminRole();
+          await setupPermissionRole(
+            { accessControl, owner },
+            vaultRole,
+            manageableVault.address,
+            'removeInstantLimitConfig(uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await removeInstantLimitConfigTest(
+            { vault: manageableVault, owner },
+            removeWindow,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            manageableVault,
+            regularAccounts,
+            roles,
+          } = await loadMvFixture();
+
+          await setInstantLimitConfigTest(
+            { vault: manageableVault, owner },
+            { window: removeWindow, limit: parseUnits('1000') },
+          );
+
+          const vaultRole = await manageableVault.contractAdminRole();
+          await setupPermissionRole(
+            { accessControl, owner },
+            vaultRole,
+            manageableVault.address,
+            'removeInstantLimitConfig(uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl['grantRole(bytes32,address)'](
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await removeInstantLimitConfigTest(
+            { vault: manageableVault, owner },
+            removeWindow,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('should fail: when window does not exist', async () => {
+          const { manageableVault, owner } = await loadMvFixture();
+          await removeInstantLimitConfigTest(
+            { vault: manageableVault, owner },
+            days(99),
+            {
+              revertCustomError: {
+                customErrorName: 'UnknownWindowLimit',
+              },
+            },
+          );
+        });
+      });
+
+      describe('setMaxApproveRequestId()', () => {
+        it('should fail: call from address without VAULT_ADMIN_ROLE role', async () => {
+          const { owner, manageableVault, regularAccounts } =
+            await loadMvFixture();
+
+          await setMaxApproveRequestIdTest(
+            { vault: manageableVault, owner },
+            250,
+            {
+              from: regularAccounts[0],
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
+            },
+          );
+        });
+
+        it('call from address with VAULT_ADMIN_ROLE role', async () => {
+          const { owner, manageableVault } = await loadMvFixture();
+          await setMaxApproveRequestIdTest(
+            { vault: manageableVault, owner },
+            250,
+          );
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, manageableVault } = await loadMvFixture();
+
+          await pauseVaultFn(
+            { pauseManager, owner },
+            manageableVault,
+            setMaxApproveRequestIdSelector,
+          );
+
+          await setMaxApproveRequestIdTest(
+            { vault: manageableVault, owner },
+            250,
+            {
+              revertCustomError: {
+                customErrorName: 'Paused',
+              },
+            },
+          );
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, manageableVault, regularAccounts } =
+            await loadMvFixture();
+
+          const vaultRole = await manageableVault.contractAdminRole();
+          await setupPermissionRole(
+            { accessControl, owner },
+            vaultRole,
+            manageableVault.address,
+            'setMaxApproveRequestId(uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setMaxApproveRequestIdTest(
+            { vault: manageableVault, owner },
+            250,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            manageableVault,
+            regularAccounts,
+            roles,
+          } = await loadMvFixture();
+
+          const vaultRole = await manageableVault.contractAdminRole();
+          await setupPermissionRole(
+            { accessControl, owner },
+            vaultRole,
+            manageableVault.address,
+            'setMaxApproveRequestId(uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl['grantRole(bytes32,address)'](
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setMaxApproveRequestIdTest(
+            { vault: manageableVault, owner },
+            250,
+            { from: regularAccounts[0] },
+          );
+        });
+      });
+
+      describe('setMaxInstantShare()', () => {
+        it('should fail: call from address without VAULT_ADMIN_ROLE role', async () => {
+          const { owner, manageableVault, regularAccounts } =
+            await loadMvFixture();
+
+          await setMaxInstantShareTest(
+            { vault: manageableVault, owner },
+            5000,
+            {
+              from: regularAccounts[0],
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
+            },
+          );
+        });
+
+        it('call from address with VAULT_ADMIN_ROLE role', async () => {
+          const { owner, manageableVault } = await loadMvFixture();
+          await setMaxInstantShareTest({ vault: manageableVault, owner }, 5000);
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, manageableVault } = await loadMvFixture();
+
+          await pauseVaultFn(
+            { pauseManager, owner },
+            manageableVault,
+            setMaxInstantShareSelector,
+          );
+
+          await setMaxInstantShareTest(
+            { vault: manageableVault, owner },
+            5000,
+            {
+              revertCustomError: {
+                customErrorName: 'Paused',
+              },
+            },
+          );
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, manageableVault, regularAccounts } =
+            await loadMvFixture();
+
+          const vaultRole = await manageableVault.contractAdminRole();
+          await setupPermissionRole(
+            { accessControl, owner },
+            vaultRole,
+            manageableVault.address,
+            'setMaxInstantShare(uint256)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setMaxInstantShareTest(
+            { vault: manageableVault, owner },
+            5000,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            manageableVault,
+            regularAccounts,
+            roles,
+          } = await loadMvFixture();
+
+          const vaultRole = await manageableVault.contractAdminRole();
+          await setupPermissionRole(
+            { accessControl, owner },
+            vaultRole,
+            manageableVault.address,
+            'setMaxInstantShare(uint256)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl['grantRole(bytes32,address)'](
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setMaxInstantShareTest(
+            { vault: manageableVault, owner },
+            5000,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('should fail: if new value greater than 100%', async () => {
+          const { manageableVault, owner } = await loadMvFixture();
+          await setMaxInstantShareTest(
+            { vault: manageableVault, owner },
+            10001,
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidFee',
+              },
+            },
+          );
+        });
+      });
+
+      describe('setSequentialRequestProcessing()', () => {
+        it('should fail: call from address without VAULT_ADMIN_ROLE role', async () => {
+          const { owner, manageableVault, regularAccounts } =
+            await loadMvFixture();
+
+          await setSequentialRequestProcessingTest(
+            { vault: manageableVault, owner },
+            true,
+            {
+              from: regularAccounts[0],
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
+            },
+          );
+        });
+
+        it('call from address with VAULT_ADMIN_ROLE role', async () => {
+          const { owner, manageableVault } = await loadMvFixture();
+          await setSequentialRequestProcessingTest(
+            { vault: manageableVault, owner },
+            true,
+          );
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, manageableVault } = await loadMvFixture();
+
+          await pauseVaultFn(
+            { pauseManager, owner },
+            manageableVault,
+            setSequentialRequestProcessingSelector,
+          );
+
+          await setSequentialRequestProcessingTest(
+            { vault: manageableVault, owner },
+            true,
+            {
+              revertCustomError: {
+                customErrorName: 'Paused',
+              },
+            },
+          );
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, manageableVault, regularAccounts } =
+            await loadMvFixture();
+
+          const vaultRole = await manageableVault.contractAdminRole();
+          await setupPermissionRole(
+            { accessControl, owner },
+            vaultRole,
+            manageableVault.address,
+            'setSequentialRequestProcessing(bool)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setSequentialRequestProcessingTest(
+            { vault: manageableVault, owner },
+            true,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            manageableVault,
+            regularAccounts,
+            roles,
+          } = await loadMvFixture();
+
+          const vaultRole = await manageableVault.contractAdminRole();
+          await setupPermissionRole(
+            { accessControl, owner },
+            vaultRole,
+            manageableVault.address,
+            'setSequentialRequestProcessing(bool)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl['grantRole(bytes32,address)'](
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setSequentialRequestProcessingTest(
+            { vault: manageableVault, owner },
+            true,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('should fail: if value is already set', async () => {
+          const { manageableVault, owner } = await loadMvFixture();
+          await setSequentialRequestProcessingTest(
+            { vault: manageableVault, owner },
+            true,
+          );
+          await setSequentialRequestProcessingTest(
+            { vault: manageableVault, owner },
+            true,
+            {
+              revertCustomError: {
+                customErrorName: 'SameBoolValue',
+                args: [true],
+              },
+            },
+          );
+        });
+      });
+
       describe('setMinAmount()', () => {
         it('should fail: call from address without VAULT_ADMIN_ROLE role', async () => {
           const { owner, manageableVault, regularAccounts } =
@@ -314,6 +918,283 @@ export const manageableVaultSuits = (
           await setMinAmountTest({ vault: manageableVault, owner }, 200, {
             from: regularAccounts[0],
           });
+        });
+      });
+
+      describe('setTokensReceiver()', () => {
+        it('should fail: call from address without VAULT_ADMIN_ROLE role', async () => {
+          const { owner, manageableVault, regularAccounts, tokensReceiver } =
+            await loadMvFixture();
+
+          await setTokensReceiverTest(
+            { vault: manageableVault, owner },
+            tokensReceiver.address,
+            {
+              from: regularAccounts[0],
+              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
+            },
+          );
+        });
+
+        it('should fail: if receiver is zero address', async () => {
+          const { owner, manageableVault } = await loadMvFixture();
+
+          await setTokensReceiverTest(
+            { vault: manageableVault, owner },
+            constants.AddressZero,
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidAddress',
+                args: [constants.AddressZero],
+              },
+            },
+          );
+        });
+
+        it('should fail: if receiver is vault address', async () => {
+          const { owner, manageableVault } = await loadMvFixture();
+
+          await setTokensReceiverTest(
+            { vault: manageableVault, owner },
+            manageableVault.address,
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidAddress',
+                args: [manageableVault.address],
+              },
+            },
+          );
+        });
+
+        it('call from address with VAULT_ADMIN_ROLE role', async () => {
+          const { owner, manageableVault, regularAccounts } =
+            await loadMvFixture();
+
+          await setTokensReceiverTest(
+            { vault: manageableVault, owner },
+            regularAccounts[1].address,
+          );
+        });
+
+        it('should fail: when function is paused', async () => {
+          const { owner, manageableVault, regularAccounts } =
+            await loadMvFixture();
+
+          await pauseVaultFn(
+            { pauseManager, owner },
+            manageableVault,
+            setTokensReceiverSelector,
+          );
+
+          await setTokensReceiverTest(
+            { vault: manageableVault, owner },
+            regularAccounts[1].address,
+            {
+              revertCustomError: {
+                customErrorName: 'Paused',
+              },
+            },
+          );
+        });
+
+        it('succeeds with only scoped function permission', async () => {
+          const { accessControl, owner, manageableVault, regularAccounts } =
+            await loadMvFixture();
+
+          const vaultRole = await manageableVault.contractAdminRole();
+          await setupPermissionRole(
+            { accessControl, owner },
+            vaultRole,
+            manageableVault.address,
+            'setTokensReceiver(address)',
+            regularAccounts[0].address,
+          );
+
+          expect(
+            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
+          ).eq(false);
+
+          await setTokensReceiverTest(
+            { vault: manageableVault, owner },
+            regularAccounts[1].address,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('succeeds with scoped permission and vault admin role', async () => {
+          const {
+            accessControl,
+            owner,
+            manageableVault,
+            regularAccounts,
+            roles,
+          } = await loadMvFixture();
+
+          const vaultRole = await manageableVault.contractAdminRole();
+          await setupPermissionRole(
+            { accessControl, owner },
+            vaultRole,
+            manageableVault.address,
+            'setTokensReceiver(address)',
+            regularAccounts[0].address,
+          );
+
+          await accessControl['grantRole(bytes32,address)'](
+            roles.tokenRoles.mTBILL.depositVaultAdmin,
+            regularAccounts[0].address,
+          );
+
+          await setTokensReceiverTest(
+            { vault: manageableVault, owner },
+            regularAccounts[1].address,
+            { from: regularAccounts[0] },
+          );
+        });
+
+        it('when called through timelock with contract admin role', async () => {
+          const {
+            accessControl,
+            manageableVault,
+            owner,
+            regularAccounts,
+            timelock,
+            timelockManager,
+          } = await loadMvFixture();
+
+          const proposer = regularAccounts[0];
+          const newReceiver = regularAccounts[1].address;
+          const vaultRole = await manageableVault.contractAdminRole();
+
+          await accessControl['grantRole(bytes32,address)'](
+            vaultRole,
+            proposer.address,
+          );
+
+          await setRoleTimelocksTester(
+            { timelockManager, timelock, owner, accessControl },
+            [vaultRole],
+            [3600],
+          );
+
+          const calldata = manageableVault.interface.encodeFunctionData(
+            'setTokensReceiver',
+            [newReceiver],
+          );
+
+          await bulkScheduleTimelockOperationTester(
+            { timelockManager, timelock, owner, accessControl },
+            [manageableVault.address],
+            [calldata],
+            {},
+            { from: proposer },
+          );
+
+          await increase(3600);
+
+          await executeTimelockOperationTester(
+            { timelockManager, timelock, owner, accessControl },
+            manageableVault.address,
+            calldata,
+            proposer.address,
+            { from: owner },
+          );
+
+          expect(await manageableVault.tokensReceiver()).eq(newReceiver);
+        });
+
+        it('when called through timelock with function admin role', async () => {
+          const {
+            accessControl,
+            manageableVault,
+            owner,
+            regularAccounts,
+            timelock,
+            timelockManager,
+          } = await loadMvFixture();
+
+          const proposer = regularAccounts[0];
+          const newReceiver = regularAccounts[1].address;
+          const vaultRole = await manageableVault.contractAdminRole();
+
+          await setupGrantOperatorRole({
+            accessControl,
+            owner,
+            masterRole: vaultRole,
+            targetContract: manageableVault.address,
+            functionSelector: setTokensReceiverSelector,
+            grantOperator: owner,
+          });
+
+          await setupGrantOperatorRole({
+            accessControl,
+            owner,
+            masterRole: vaultRole,
+            targetContract: timelockManager.address,
+            functionSelector: setTokensReceiverSelector,
+            grantOperator: owner,
+          });
+
+          await setPermissionRoleTester(
+            { accessControl, owner },
+            vaultRole,
+            manageableVault.address,
+            setTokensReceiverSelector,
+            [{ account: proposer.address, enabled: true }],
+          );
+
+          await setPermissionRoleTester(
+            { accessControl, owner },
+            vaultRole,
+            timelockManager.address,
+            setTokensReceiverSelector,
+            [{ account: proposer.address, enabled: true }],
+          );
+
+          expect(await accessControl.hasRole(vaultRole, proposer.address)).eq(
+            false,
+          );
+
+          const vaultPermissionKey = await accessControl.permissionRoleKey(
+            vaultRole,
+            manageableVault.address,
+            setTokensReceiverSelector,
+          );
+          const timelockPermissionKey = await accessControl.permissionRoleKey(
+            vaultRole,
+            timelockManager.address,
+            setTokensReceiverSelector,
+          );
+
+          await setRoleTimelocksTester(
+            { timelockManager, timelock, owner, accessControl },
+            [vaultPermissionKey, timelockPermissionKey],
+            [3600, 3600],
+          );
+
+          const calldata = manageableVault.interface.encodeFunctionData(
+            'setTokensReceiver',
+            [newReceiver],
+          );
+
+          await bulkScheduleTimelockOperationTester(
+            { timelockManager, timelock, owner, accessControl },
+            [manageableVault.address],
+            [calldata],
+            {},
+            { from: proposer },
+          );
+
+          await increase(3600);
+
+          await executeTimelockOperationTester(
+            { timelockManager, timelock, owner, accessControl },
+            manageableVault.address,
+            calldata,
+            proposer.address,
+            { from: owner },
+          );
+
+          expect(await manageableVault.tokensReceiver()).eq(newReceiver);
         });
       });
 
@@ -1234,109 +2115,6 @@ export const manageableVaultSuits = (
             { vault: manageableVault, owner },
             100,
             { from: regularAccounts[0] },
-          );
-        });
-      });
-
-      describe('setSequentialRequestProcessing()', () => {
-        it('should fail: call from address without VAULT_ADMIN_ROLE role', async () => {
-          const { owner, manageableVault, regularAccounts } =
-            await loadMvFixture();
-
-          await setSequentialRequestProcessingTest(
-            { vault: manageableVault, owner },
-            true,
-            {
-              from: regularAccounts[0],
-              revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
-            },
-          );
-        });
-
-        it('call from address with VAULT_ADMIN_ROLE role', async () => {
-          const { owner, manageableVault } = await loadMvFixture();
-
-          await setSequentialRequestProcessingTest(
-            { vault: manageableVault, owner },
-            true,
-          );
-        });
-
-        it('should fail: when function is paused', async () => {
-          const { owner, manageableVault } = await loadMvFixture();
-
-          await pauseVaultFn(
-            { pauseManager, owner },
-            manageableVault,
-            encodeFnSelector('setSequentialRequestProcessing(bool)'),
-          );
-
-          await setSequentialRequestProcessingTest(
-            { vault: manageableVault, owner },
-            true,
-            {
-              revertCustomError: {
-                customErrorName: 'Paused',
-              },
-            },
-          );
-        });
-
-        it('succeeds with only scoped function permission', async () => {
-          const { accessControl, owner, manageableVault, regularAccounts } =
-            await loadMvFixture();
-
-          const vaultRole = await manageableVault.contractAdminRole();
-          await setupPermissionRole(
-            { accessControl, owner },
-            vaultRole,
-            manageableVault.address,
-            'setSequentialRequestProcessing(bool)',
-            regularAccounts[0].address,
-          );
-
-          expect(
-            await accessControl.hasRole(vaultRole, regularAccounts[0].address),
-          ).eq(false);
-
-          await setSequentialRequestProcessingTest(
-            { vault: manageableVault, owner },
-            true,
-            {
-              from: regularAccounts[0],
-            },
-          );
-        });
-
-        it('succeeds with scoped permission and vault admin role', async () => {
-          const {
-            accessControl,
-            owner,
-            manageableVault,
-            regularAccounts,
-            roles,
-          } = await loadMvFixture();
-
-          const vaultRole = await manageableVault.contractAdminRole();
-          await setupPermissionRole(
-            { accessControl, owner },
-            vaultRole,
-            manageableVault.address,
-            'setSequentialRequestProcessing(bool)',
-            regularAccounts[0].address,
-          );
-
-          await accessControl['grantRole(bytes32,address)'](
-            roles.tokenRoles.mTBILL.depositVaultAdmin,
-            regularAccounts[0].address,
-          );
-
-          await setSequentialRequestProcessingTest(
-            { vault: manageableVault, owner },
-            true,
-            {
-              from: regularAccounts[0],
-            },
           );
         });
       });

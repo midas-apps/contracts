@@ -214,6 +214,7 @@ abstract contract ManageableVault is
             .sequentialRequestProcessing;
 
         maxInstantShare = _commonVaultInitParams.maxInstantShare;
+        maxApproveRequestId = _commonVaultInitParams.maxApproveRequestId;
 
         _setMinMaxInstantFee(
             _commonVaultInitParams.minInstantFee,
@@ -552,6 +553,11 @@ abstract contract ManageableVault is
         bool revertIfInvalid
     ) internal returns (bool isValid) {
         isValid = true;
+
+        if (!_validateMaxApproveRequestId(requestId, revertIfInvalid)) {
+            return false;
+        }
+
         uint256 _nextExpectedRequestIdToProcess = nextExpectedRequestIdToProcess;
 
         if (
@@ -872,11 +878,15 @@ abstract contract ManageableVault is
      * @dev validates that request id is less than or equal to max approve request id
      * @param requestId request id
      */
-    function _validateMaxApproveRequestId(uint256 requestId) internal view {
-        require(
-            requestId <= maxApproveRequestId,
-            RequestIdTooHigh(requestId, maxApproveRequestId)
-        );
+    function _validateMaxApproveRequestId(
+        uint256 requestId,
+        bool revertIfInvalid
+    ) internal view returns (bool isValid) {
+        isValid = requestId <= maxApproveRequestId;
+
+        if (revertIfInvalid) {
+            require(isValid, RequestIdTooHigh(requestId, maxApproveRequestId));
+        }
     }
 
     /**

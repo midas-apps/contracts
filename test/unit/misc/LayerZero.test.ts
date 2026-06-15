@@ -127,7 +127,12 @@ describe('LayerZero', function () {
         await sendOft(
           fixture,
           { amount: 1000000 },
-          { revertMessage: 'WMAC: hasnt role' },
+          {
+            revertCustomError: acErrors.WMAC_HASNT_PERMISSION(
+              undefined,
+              fixture.mTBILL,
+            ),
+          },
         );
       });
 
@@ -196,9 +201,9 @@ describe('LayerZero', function () {
           fixture,
           { amount: 101 },
           {
-            revertWithCustomError: {
+            revertCustomError: {
               contract: oftAdapterA,
-              error: 'RateLimitExceeded',
+              customErrorName: 'RateLimitExceeded',
             },
           },
         );
@@ -795,9 +800,9 @@ describe('LayerZero', function () {
           },
           {
             overrideValue: '1',
-            revertWithCustomError: {
+            revertCustomError: {
               contract: composer,
-              error: 'NoMsgValueExpected',
+              customErrorName: 'NoMsgValueExpected',
             },
           },
         );
@@ -905,9 +910,9 @@ describe('LayerZero', function () {
             minAmountLD: parseUnits('19.6264444441', 18),
           },
           {
-            revertWithCustomError: {
+            revertCustomError: {
               contract: oftAdapterA,
-              error: 'SlippageExceeded',
+              customErrorName: 'SlippageExceeded',
             },
           },
         );
@@ -1152,9 +1157,9 @@ describe('LayerZero', function () {
           },
           {
             overrideValue: '1',
-            revertWithCustomError: {
+            revertCustomError: {
               contract: composer,
-              error: 'NoMsgValueExpected',
+              customErrorName: 'NoMsgValueExpected',
             },
           },
         );

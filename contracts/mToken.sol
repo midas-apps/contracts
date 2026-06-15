@@ -155,6 +155,17 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     /**
      * @inheritdoc IMToken
      */
+    function setNameSymbol(string memory name_, string memory symbol_)
+        external
+        onlyRoleDelayOverride(contractAdminRole(), 2 days, false)
+    {
+        _name = name_;
+        _symbol = symbol_;
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
     function setClawbackReceiver(address _clawbackReceiver)
         external
         onlyContractAdmin

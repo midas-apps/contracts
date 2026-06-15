@@ -1,7 +1,6 @@
-// SPDX-License-Identifier: UNLICENSEDI
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import {IMidasAccessControlManaged} from "../interfaces/IMidasAccessControlManaged.sol";
 import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
 import {PauseUtilsLibrary} from "../libraries/PauseUtilsLibrary.sol";
 

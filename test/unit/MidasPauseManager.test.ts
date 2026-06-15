@@ -1503,7 +1503,7 @@ describe('MidasPauseManager', () => {
       await adminPauseContractTest({ pauseManager, owner }, pausableTester);
     });
 
-    it('when contract pauser has function scoped timelock', async () => {
+    it('when contract pauser has function scoped access with timelock', async () => {
       const {
         accessControl,
         pausableTester,
@@ -1512,8 +1512,12 @@ describe('MidasPauseManager', () => {
         pauseManager,
         timelockManager,
         timelock,
+        roles,
       } = await loadFixture(defaultDeploy);
 
+      await pausableTester.setContractAdminRole(
+        roles.common.blacklistedOperator,
+      );
       const contractPauserRole = await pausableTester.contractAdminRole();
       const pauseSel = encodeFnSelector('contractAdminPause(address)');
 
@@ -1760,15 +1764,13 @@ describe('MidasPauseManager', () => {
     });
 
     it('should fail: when trying to call directly before delay', async () => {
-      const { pauseManager, owner, accessControl } = await loadFixture(
-        defaultDeploy,
-      );
+      const { pauseManager, owner } = await loadFixture(defaultDeploy);
 
       await expect(pauseManager.connect(owner).setPauseDelay(3600))
-        .revertedWithCustomError(accessControl, 'FunctionNotReady')
+        .revertedWithCustomError(pauseManager, 'FunctionNotReady')
         .withArgs(
           await pauseManager.pauseAdminRole(),
-          encodeFnSelector('setPauseDelay(uint256)'),
+          encodeFnSelector('setPauseDelay(uint32)'),
         );
     });
 
@@ -1802,17 +1804,15 @@ describe('MidasPauseManager', () => {
     });
 
     it('should fail: when trying to call directly before delay', async () => {
-      const { pauseManager, owner, accessControl } = await loadFixture(
-        defaultDeploy,
-      );
+      const { pauseManager, owner } = await loadFixture(defaultDeploy);
 
       await expect(
         pauseManager.connect(owner).setUnpauseDelay(DEFAULT_UNPAUSE_DELAY * 2),
       )
-        .revertedWithCustomError(accessControl, 'FunctionNotReady')
+        .revertedWithCustomError(pauseManager, 'FunctionNotReady')
         .withArgs(
           await pauseManager.pauseAdminRole(),
-          encodeFnSelector('setUnpauseDelay(uint256)'),
+          encodeFnSelector('setUnpauseDelay(uint32)'),
         );
     });
 

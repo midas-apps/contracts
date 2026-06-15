@@ -40,6 +40,7 @@ describe('AcreAdapter', () => {
 
     const dvWithDifferentDataFeed = await initializeDv({
       ...fixture,
+      mTokenToUsdDataFeed: fixture.dataFeedGrowth,
     });
 
     await expect(
@@ -231,6 +232,7 @@ describe('AcreAdapter', () => {
       await setWaivedFeeAccountTest(
         { vault: fixture.redemptionVault, owner: fixture.owner },
         fixture.acreUsdcMTbillAdapter.address,
+        false,
       );
 
       await acreWrapperRequestRedeemTest(fixture, 20, undefined, {
@@ -281,6 +283,7 @@ describe('AcreAdapter', () => {
       await setWaivedFeeAccountTest(
         { vault: fixture.redemptionVault, owner: fixture.owner },
         fixture.acreUsdcMTbillAdapter.address,
+        false,
       );
 
       await setInstantFeeTest(

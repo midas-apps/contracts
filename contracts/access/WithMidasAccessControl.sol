@@ -156,6 +156,7 @@ abstract contract WithMidasAccessControl is
         bool validateFunctionRole
     ) internal view {
         accessControl.validateFunctionAccess(
+            address(this),
             role,
             AccessControlUtilsLibrary.NO_DELAY,
             roleIsFunctionOperator,

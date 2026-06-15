@@ -391,6 +391,38 @@ export const removeInstantLimitConfigTest = async (
   expect(limitConfigsAfter.filter((w) => w.window.eq(window)).length).eq(0);
 };
 
+export const setMaxApproveRequestIdTest = async (
+  { vault, owner }: CommonParamsChangePaymentToken,
+  maxApproveRequestId: BigNumberish,
+  opt?: OptionalCommonParams,
+) => {
+  if (
+    await handleRevert(
+      vault
+        .connect(opt?.from ?? owner)
+        .setMaxApproveRequestId.bind(this, maxApproveRequestId),
+      vault,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  await expect(
+    vault
+      .connect(opt?.from ?? owner)
+      .setMaxApproveRequestId(maxApproveRequestId),
+  )
+    .to.emit(
+      vault,
+      vault.interface.events['SetMaxApproveRequestId(uint256)'].name,
+    )
+    .withArgs(maxApproveRequestId).to.not.reverted;
+
+  const newMaxApproveRequestId = await vault.maxApproveRequestId();
+  expect(newMaxApproveRequestId).eq(maxApproveRequestId);
+};
+
 export const setMaxInstantShareTest = async (
   { vault, owner }: CommonParamsChangePaymentToken,
   maxInstantShare: number,
@@ -438,8 +470,8 @@ export const setTokensReceiverTest = async (
     .to.emit(vault, vault.interface.events['SetTokensReceiver(address)'].name)
     .withArgs(newReceiver).to.not.reverted;
 
-  const feeReceiver = await vault.tokensReceiver();
-  expect(feeReceiver).eq(newReceiver);
+  const tokensReceiver = await vault.tokensReceiver();
+  expect(tokensReceiver).eq(newReceiver);
 };
 
 export const setSequentialRequestProcessingTest = async (

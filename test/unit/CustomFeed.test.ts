@@ -216,7 +216,7 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        feedAdminRole,
+        undefined,
         customFeed.address,
         setMaxAnswerDeviationSelector,
         [{ account: user.address, enabled: true }],
@@ -251,7 +251,7 @@ describe('CustomAggregatorV3CompatibleFeed', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        feedAdminRole,
+        undefined,
         customFeed.address,
         setMaxAnswerDeviationSelector,
         [{ account: user.address, enabled: true }],

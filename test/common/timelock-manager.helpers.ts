@@ -74,8 +74,7 @@ export const bulkScheduleTimelockOperationTester = async (
   const councilVersionBefore = await timelockManager.securityCouncilVersion();
 
   const txPromise = callFn();
-  await txPromise;
-  // await expect(txPromise).to.not.reverted;
+  await expect(txPromise).to.not.reverted;
   const councilVersionAfter = await timelockManager.securityCouncilVersion();
 
   expect(councilVersionAfter).to.be.equal(councilVersionBefore);
@@ -120,8 +119,7 @@ export const scheduleTimelockOperationTester = async (
   const councilVersionBefore = await timelockManager.securityCouncilVersion();
 
   const txPromise = callFn();
-  await txPromise;
-  // await expect(txPromise).to.not.reverted;
+  await expect(txPromise).to.not.reverted;
   const councilVersionAfter = await timelockManager.securityCouncilVersion();
 
   expect(councilVersionAfter).to.be.equal(councilVersionBefore);

@@ -4,7 +4,6 @@ import {
   BigNumber,
   BigNumberish,
   constants,
-  Contract,
   ContractTransaction,
 } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
@@ -89,10 +88,6 @@ export const sendOft = async (
   },
   opt?: {
     revertOnDst?: boolean;
-    revertWithCustomError?: {
-      contract: Contract;
-      error: string;
-    };
   } & OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
@@ -197,10 +192,6 @@ export const sendOftLockBox = async (
   },
   opt?: {
     revertOnDst?: boolean;
-    revertWithCustomError?: {
-      contract: Contract;
-      error: string;
-    };
   } & OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
@@ -316,10 +307,6 @@ export const depositAndSend = async (
   opt?: {
     revertOnDst?: boolean;
     refundOnDst?: boolean;
-    revertWithCustomError?: {
-      contract: Contract;
-      error: string;
-    };
     overrideValue?: BigNumberish;
     expectedMintAmountWoDust?: BigNumberish;
   } & OptionalCommonParams,
@@ -581,10 +568,7 @@ export const redeemAndSend = async (
     refundOnDst?: boolean;
     expectedReceiveAmountWoDust?: BigNumberish;
     revertOnDst?: boolean;
-    revertWithCustomError?: {
-      contract: Contract;
-      error: string;
-    };
+
     overrideValue?: BigNumberish;
   } & OptionalCommonParams,
 ) => {

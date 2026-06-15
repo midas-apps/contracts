@@ -8,13 +8,18 @@ import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.
 import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
 import {IMidasPauseManager} from "../interfaces/IMidasPauseManager.sol";
 import {EnumerableSetUpgradeable as EnumerableSet} from "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
+import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 /**
  * @title MidasTimelockManager
  * @notice Manages timelock scheduling, security council votes and operation details
  * @author RedDuck Software
  */
-contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
+contract MidasTimelockManager is
+    IMidasTimelockManager,
+    WithMidasAccessControl,
+    ReentrancyGuard
+{
     using AccessControlUtilsLibrary for IMidasAccessControl;
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.Bytes32Set;
@@ -236,6 +241,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
      */
     function executeTimelockOperation(address target, bytes calldata data)
         external
+        nonReentrant
         onlyContractAdminNoTimelock(true)
     {
         TimelockController _timelock = TimelockController(payable(timelock));
@@ -352,6 +358,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
         ) = _getOperationStatus(operationId);
 
         require(
+            // TODO: move to function
             _securityCouncils[opDetails.councilVersion].contains(msg.sender),
             NotInSecurityCouncil()
         );
@@ -585,6 +592,7 @@ contract MidasTimelockManager is IMidasTimelockManager, WithMidasAccessControl {
 
         return (
             accessControl.validateFunctionAccess(
+                target,
                 role,
                 overrideDelay,
                 roleIsFunctionOperator,

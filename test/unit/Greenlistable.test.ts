@@ -118,7 +118,7 @@ describe('Greenlistable', function () {
       const user = regularAccounts[0];
       await setPermissionRoleTester(
         { accessControl, owner },
-        greenlistAdmin,
+        undefined,
         greenListableTester.address,
         selector,
         [
@@ -159,7 +159,7 @@ describe('Greenlistable', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        greenlistAdmin,
+        undefined,
         greenListableTester.address,
         selector,
         [

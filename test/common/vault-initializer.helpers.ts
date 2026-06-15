@@ -1,8 +1,6 @@
-import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumberish, constants, Contract, ContractTransaction } from 'ethers';
-import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
 import {
@@ -37,11 +35,15 @@ import {
   RedemptionVaultWithUSTBTest__factory,
 } from '../../typechain-types';
 
-const DV_WITH_EXTRA_INIT =
-  'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,bool),(uint256,uint256,uint256),address)';
+export const DV_USTB_INIT_FN =
+  'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(uint256,uint256,uint256),address)';
 
-const RV_WITH_EXTRA_INIT =
-  'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,bool),(address,address,address,address,uint256),address)';
+export const DV_MTOKEN_INIT_FN = DV_USTB_INIT_FN;
+
+export const RV_USTB_INIT_FN =
+  'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(address,address,address,address,uint256),address)';
+
+export const RV_MTOKEN_INIT_FN = RV_USTB_INIT_FN;
 
 export type InitializerParamsMv = {
   accessControl: AccountOrContract;
@@ -51,15 +53,12 @@ export type InitializerParamsMv = {
   tokensReceiver: AccountOrContract;
   minAmount?: BigNumberish;
   instantFee?: BigNumberish;
-  limitConfigs?: {
-    limit: BigNumberish;
-    window: BigNumberish;
-  }[];
   minInstantFee?: BigNumberish;
   maxInstantFee?: BigNumberish;
   maxInstantShare?: BigNumberish;
   variationTolerance?: BigNumberish;
   sequentialRequestProcessing?: boolean;
+  maxApproveRequestId?: BigNumberish;
 };
 
 export type InitializerParamsDv = {
@@ -139,12 +138,12 @@ export const getInitializerParamsMv = ({
   tokensReceiver,
   minAmount,
   instantFee,
-  limitConfigs,
   minInstantFee,
   maxInstantFee,
   maxInstantShare,
   variationTolerance,
   sequentialRequestProcessing,
+  maxApproveRequestId,
 }: InitializerParamsMv) => {
   return [
     {
@@ -156,16 +155,11 @@ export const getInitializerParamsMv = ({
       mTokenDataFeed: getAccount(mTokenToUsdDataFeed),
       tokensReceiver: getAccount(tokensReceiver),
       instantFee: instantFee ?? 100,
-      limitConfigs: limitConfigs ?? [
-        {
-          limit: parseUnits('100000'),
-          window: days(1),
-        },
-      ],
       minInstantFee: minInstantFee ?? 0,
       maxInstantFee: maxInstantFee ?? 10000,
       maxInstantShare: maxInstantShare ?? 100_00,
       sequentialRequestProcessing: sequentialRequestProcessing ?? false,
+      maxApproveRequestId: maxApproveRequestId ?? 100,
     },
   ] as const;
 };
@@ -351,7 +345,7 @@ export const initializeDvWithUstb = async (
 
   return initializeContract(
     vault,
-    () => vault.connect(from)[DV_WITH_EXTRA_INIT](...initParams),
+    () => vault.connect(from)[DV_USTB_INIT_FN](...initParams),
     opt,
   );
 };
@@ -371,7 +365,7 @@ export const initializeDvWithMToken = async (
 
   return initializeContract(
     vault,
-    () => vault.connect(from)[DV_WITH_EXTRA_INIT](...initParams),
+    () => vault.connect(from)[DV_MTOKEN_INIT_FN](...initParams),
     opt,
   );
 };
@@ -453,7 +447,7 @@ export const initializeRvWithUstb = async (
 
   return initializeContract(
     vault,
-    () => vault.connect(from)[RV_WITH_EXTRA_INIT](...initParams),
+    () => vault.connect(from)[RV_USTB_INIT_FN](...initParams),
     opt,
   );
 };
@@ -473,7 +467,7 @@ export const initializeRvWithMToken = async (
 
   return initializeContract(
     vault,
-    () => vault.connect(from)[RV_WITH_EXTRA_INIT](...initParams),
+    () => vault.connect(from)[RV_MTOKEN_INIT_FN](...initParams),
     opt,
   );
 };

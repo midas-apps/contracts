@@ -50,30 +50,4 @@ library PauseUtilsLibrary {
             Paused(address(this), fn)
         );
     }
-
-    /**
-     * @notice returns the pause delay
-     * @param accessControl access control contract
-     * @return pause delay
-     */
-    function pauseDelay(IMidasAccessControl accessControl)
-        internal
-        view
-        returns (uint256)
-    {
-        return IMidasPauseManager(accessControl.pauseManager()).pauseDelay();
-    }
-
-    /**
-     * @notice returns the unpause delay
-     * @param accessControl access control contract
-     * @return unpause delay
-     */
-    function unpauseDelay(IMidasAccessControl accessControl)
-        internal
-        view
-        returns (uint256)
-    {
-        return IMidasPauseManager(accessControl.pauseManager()).unpauseDelay();
-    }
 }

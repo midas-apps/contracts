@@ -435,9 +435,11 @@ export const setPermissionRoleTester = async (
   {
     accessControl,
     owner,
-  }: { accessControl: MidasAccessControl; owner: SignerWithAddress },
-  // TODO: remove it
-  _masterRole: string,
+  }: {
+    accessControl: MidasAccessControl;
+    owner: SignerWithAddress;
+  },
+  masterRole: string | undefined,
   targetContract: string,
   functionSelector: string,
   params: {
@@ -449,24 +451,39 @@ export const setPermissionRoleTester = async (
 ) => {
   const from = opt?.from ?? owner;
 
-  const callFn = accessControl
-    .connect(from)
-    .setPermissionRoleMult.bind(
-      this,
-      targetContract,
-      functionSelector,
-      delay ?? 0,
-      params,
-    );
+  const callFn = masterRole
+    ? accessControl
+        .connect(from)
+        [
+          'setPermissionRoleMult(bytes32,address,bytes4,uint32,(address,bool)[])'
+        ].bind(
+          this,
+          masterRole,
+          targetContract,
+          functionSelector,
+          delay ?? 0,
+          params,
+        )
+    : accessControl
+        .connect(from)
+        ['setPermissionRoleMult(address,bytes4,uint32,(address,bool)[])'].bind(
+          this,
+          targetContract,
+          functionSelector,
+          delay ?? 0,
+          params,
+        );
 
   if (await handleRevert(callFn, accessControl, opt)) {
     return;
   }
 
-  const masterRole = await IMidasAccessControlManaged__factory.connect(
-    targetContract,
-    accessControl.provider,
-  ).contractAdminRole();
+  masterRole =
+    masterRole ??
+    (await IMidasAccessControlManaged__factory.connect(
+      targetContract,
+      accessControl.provider,
+    ).contractAdminRole());
 
   const statesBefore = await Promise.all(
     params.map(async (param) => {
@@ -601,8 +618,6 @@ export const setRoleTimelocksTester = async (
   }));
 
   const callFn = accessControl
-    .connect(from)
-
     .connect(from)
     .setRoleDelayMult.bind(this, params);
 

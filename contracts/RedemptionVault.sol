@@ -257,7 +257,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 newMTokenRate,
         bool isAvgRate
     ) external onlyContractAdmin {
-        _approveRequest(requestId, newMTokenRate, false, false, isAvgRate);
+        _approveRequest(requestId, newMTokenRate, false, isAvgRate);
     }
 
     /**
@@ -415,7 +415,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 requestIds[i],
                 newOutRate,
                 true,
-                true,
                 isAvgRate
             );
 
@@ -432,18 +431,20 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * sets flag Processed
      * @param requestId request id
      * @param newMTokenRate new mToken rate
-     * @param isSafe new mToken rate
-     * @param safeValidateRequest if true, wont revert if there is not enough liquidity or request id is not sequential
+     * @param isSafe if true:
+     * - safely validates max approve request id
+     * - safely validates if request id is sequential
+     * - safely validates if there is enough liquidity
+     * - requires variation tolerance
      * @param isAvgRate if true, calculates holdback part rate from avg rate
      *
-     * @return success true if success, false only in case if
-     * safeValidateRequest == true and there is not enough liquidity or request id is not sequential
+     * @return success true if success, otherwise false if isSafe flag is true,
+     * or revert if isSafe flag is false
      */
     function _approveRequest(
         uint256 requestId,
         uint256 newMTokenRate,
         bool isSafe,
-        bool safeValidateRequest,
         bool isAvgRate
     )
         private
@@ -458,12 +459,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         _validateUserAccess(request.recipient, false);
 
         if (isSafe) {
-            _validateMaxApproveRequestId(requestId);
             _requireVariationTolerance(request.mTokenRate, newMTokenRate);
         }
 
         if (isAvgRate) {
-            require(request.amountMTokenInstant > 0, InvalidInstantAmount());
             uint256 avgRate = _calculateHoldbackPartRateFromAvg(
                 request,
                 newMTokenRate
@@ -488,14 +487,11 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         );
 
         if (
-            (safeValidateRequest &&
+            (isSafe &&
                 IERC20(request.tokenOut).balanceOf(requestRedeemer) <
                 (calcResult.amountTokenOutWithoutFee + calcResult.feeAmount)
                     .convertFromBase18(calcResult.tokenOutDecimals)) ||
-            !_validateAndUpdateNextRequestIdToProcess(
-                requestId,
-                !safeValidateRequest
-            )
+            !_validateAndUpdateNextRequestIdToProcess(requestId, !isSafe)
         ) {
             return false;
         }
@@ -1244,6 +1240,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         Request memory request,
         uint256 avgMTokenRate
     ) internal pure returns (uint256) {
+        if (request.amountMTokenInstant == 0) {
+            return 0;
+        }
+
         uint256 targetTotalValue = ((request.amountMToken +
             request.amountMTokenInstant) * avgMTokenRate) / (10**18);
         uint256 instantPartValue = ((request.amountMTokenInstant *

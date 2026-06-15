@@ -211,20 +211,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         external
         onlyContractAdmin
     {
-        for (uint256 i = 0; i < requestIds.length; ++i) {
-            uint256 rate = mintRequests[requestIds[i]].tokenOutRate;
-            bool success = _approveRequest(
-                requestIds[i],
-                rate,
-                true,
-                false,
-                true
-            );
-
-            if (!success) {
-                continue;
-            }
-        }
+        _safeBulkApproveRequest(requestIds, 0, true, false);
     }
 
     /**
@@ -232,7 +219,7 @@ contract DepositVault is ManageableVault, IDepositVault {
      */
     function safeBulkApproveRequest(uint256[] calldata requestIds) external {
         uint256 currentMTokenRate = _getMTokenRate();
-        _safeBulkApproveRequest(requestIds, currentMTokenRate, false);
+        _safeBulkApproveRequest(requestIds, currentMTokenRate, false, false);
     }
 
     /**
@@ -242,7 +229,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         external
     {
         uint256 currentMTokenRate = _getMTokenRate();
-        _safeBulkApproveRequest(requestIds, currentMTokenRate, true);
+        _safeBulkApproveRequest(requestIds, currentMTokenRate, false, true);
     }
 
     /**
@@ -252,7 +239,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256[] calldata requestIds,
         uint256 newOutRate
     ) external {
-        _safeBulkApproveRequest(requestIds, newOutRate, false);
+        _safeBulkApproveRequest(requestIds, newOutRate, false, false);
     }
 
     /**
@@ -262,7 +249,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256[] calldata requestIds,
         uint256 avgMTokenRate
     ) external {
-        _safeBulkApproveRequest(requestIds, avgMTokenRate, true);
+        _safeBulkApproveRequest(requestIds, avgMTokenRate, false, true);
     }
 
     /**
@@ -273,7 +260,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 newOutRate,
         bool isAvgRate
     ) external onlyContractAdmin {
-        _approveRequest(requestId, newOutRate, false, isAvgRate, false);
+        _approveRequest(requestId, newOutRate, false, isAvgRate);
     }
 
     /**
@@ -340,20 +327,24 @@ contract DepositVault is ManageableVault, IDepositVault {
      * @dev internal function to approve requests
      * @param requestIds request ids
      * @param newOutRate new out rate
+     * @param isRequestRate if true, newOutRate will be ignored and request rate will be used
      * @param isAvgRate if true, newOutRate is avg rate
      */
     function _safeBulkApproveRequest(
         uint256[] calldata requestIds,
         uint256 newOutRate,
+        bool isRequestRate,
         bool isAvgRate
-    ) internal onlyContractAdmin {
+    ) private onlyContractAdmin {
         for (uint256 i = 0; i < requestIds.length; ++i) {
+            if (isRequestRate) {
+                newOutRate = mintRequests[requestIds[i]].tokenOutRate;
+            }
             bool success = _approveRequest(
                 requestIds[i],
                 newOutRate,
                 true,
-                isAvgRate,
-                true
+                isAvgRate
             );
 
             if (!success) {
@@ -587,16 +578,21 @@ contract DepositVault is ManageableVault, IDepositVault {
      * Mints mTokens to user
      * @param requestId request id
      * @param newOutRate mToken rate
-     * @param isSafe if true, approval is safe
+     * @param isSafe if true:
+     * - safely validates max approve request id
+     * - safely validates if request id is sequential
+     * - safely validates max supply cap
+     * - requires variation tolerance
      * @param isAvgRate if true, newOutRate is avg rate
-     * @param safeValidateRequest if true, wont revert if supply is exceeded or request id is not sequential
+     *
+     * @return success true if success, otherwise false if isSafe flag is true,
+     * or revert if isSafe flag is false
      */
     function _approveRequest(
         uint256 requestId,
         uint256 newOutRate,
         bool isSafe,
-        bool isAvgRate,
-        bool safeValidateRequest
+        bool isAvgRate
     )
         private
         returns (
@@ -609,17 +605,18 @@ contract DepositVault is ManageableVault, IDepositVault {
         _validateUserAccess(request.recipient, false);
 
         if (isSafe) {
-            _validateMaxApproveRequestId(requestId);
             _requireVariationTolerance(request.tokenOutRate, newOutRate);
         }
 
         if (isAvgRate) {
-            require(
-                request.depositedInstantUsdAmount > 0,
-                InvalidInstantAmount()
+            uint256 avgRate = _calculateHoldbackPartRateFromAvg(
+                request,
+                newOutRate
             );
 
-            newOutRate = _calculateHoldbackPartRateFromAvg(request, newOutRate);
+            if (avgRate != 0) {
+                newOutRate = avgRate;
+            }
         }
 
         require(newOutRate > 0, InvalidNewMTokenRate());
@@ -635,12 +632,8 @@ contract DepositVault is ManageableVault, IDepositVault {
             !_validateMaxSupplyCap(
                 upcomingSupplyDecrease,
                 amountMToken,
-                !safeValidateRequest
-            ) ||
-            !_validateAndUpdateNextRequestIdToProcess(
-                requestId,
-                !safeValidateRequest
-            )
+                !isSafe
+            ) || !_validateAndUpdateNextRequestIdToProcess(requestId, !isSafe)
         ) {
             return false;
         }
@@ -875,7 +868,11 @@ contract DepositVault is ManageableVault, IDepositVault {
         Request memory request,
         uint256 avgMTokenRate
     ) internal pure returns (uint256) {
-        if (avgMTokenRate == 0 || request.tokenOutRate == 0) {
+        if (
+            avgMTokenRate == 0 ||
+            request.tokenOutRate == 0 ||
+            request.depositedInstantUsdAmount == 0
+        ) {
             return 0;
         }
 

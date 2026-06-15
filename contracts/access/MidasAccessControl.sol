@@ -248,12 +248,12 @@ contract MidasAccessControl is
      * @inheritdoc IMidasAccessControl
      */
     function setPermissionRoleMult(
+        bytes32 masterRole,
         address targetContract,
         bytes4 functionSelector,
         uint32 delay,
         SetPermissionRoleParams[] calldata params
-    ) external {
-        bytes32 masterRole = _getContractAdminRole(targetContract);
+    ) public {
         bytes32 operatorRoleKey = grantOperatorRoleKey(
             masterRole,
             targetContract,
@@ -292,6 +292,25 @@ contract MidasAccessControl is
                 param.enabled
             );
         }
+    }
+
+    /**
+     * @inheritdoc IMidasAccessControl
+     */
+    function setPermissionRoleMult(
+        address targetContract,
+        bytes4 functionSelector,
+        uint32 delay,
+        SetPermissionRoleParams[] calldata params
+    ) external {
+        bytes32 masterRole = _getContractAdminRole(targetContract);
+        setPermissionRoleMult(
+            masterRole,
+            targetContract,
+            functionSelector,
+            delay,
+            params
+        );
     }
 
     /**
@@ -516,7 +535,7 @@ contract MidasAccessControl is
     }
 
     /**
-     * @dev validates and updates the delay for a role
+     * @dev validates and sets the delay for a role during the role granting
      * @param role role id
      */
     function _validateAndUpdateDelay(bytes32 role, uint32 delay) private {
@@ -524,7 +543,12 @@ contract MidasAccessControl is
             return;
         }
 
-        _setRoleDelay(role, delay);
+        _validateDelay(delay);
+
+        require(_roleTimelockDelays[role] == 0, DelayIsAlreadySet());
+
+        _roleTimelockDelays[role] = delay;
+        emit SetRoleDelay(role, delay);
     }
 
     /**
@@ -546,17 +570,6 @@ contract MidasAccessControl is
                     additionalData
                 )
             );
-    }
-
-    /**
-     * @dev sets the delay for a role
-     * @param role role id
-     * @param delay delay value
-     */
-    function _setRoleDelay(bytes32 role, uint32 delay) private {
-        _validateDelay(delay);
-        _roleTimelockDelays[role] = delay;
-        emit SetRoleDelay(role, delay);
     }
 
     /**

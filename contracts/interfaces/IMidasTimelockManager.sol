@@ -7,7 +7,7 @@ pragma solidity 0.8.34;
  */
 enum TimelockOperationStatus {
     NotExist,
-    NotPaused,
+    NotPaused, // TODO: rename to Pending
     Paused,
     ApprovedExecution,
     ReadyToExecute,

@@ -350,13 +350,11 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       await setMinGrowthApr(fixture, -10);
       await setOnlyUp(fixture, true);
 
-      await fixture.customFeedGrowth.setMaxAnswerDeviation(
-        parseUnits('1000', 8),
-      );
+      await setMaxAnswerDeviationTest(fixture, parseUnits('100', 8));
 
       await setRoundDataSafeGrowth({ ...fixture }, 10, -3600, 0);
 
-      await setRoundDataSafeGrowth({ ...fixture }, 100, -1600, -1, {
+      await setRoundDataSafeGrowth({ ...fixture }, 11, -1600, -1, {
         revertMessage: 'CAG: negative apr',
       });
     });
@@ -603,7 +601,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        feedAdminRole,
+        undefined,
         customFeedGrowth.address,
         setMaxAnswerDeviationSelector,
         [{ account: user.address, enabled: true }],
@@ -638,7 +636,7 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        feedAdminRole,
+        undefined,
         customFeedGrowth.address,
         setMaxAnswerDeviationSelector,
         [{ account: user.address, enabled: true }],
@@ -721,9 +719,18 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       const proposer = regularAccounts[0];
       const feedAdminRole = await customFeedGrowth.contractAdminRole();
 
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole: feedAdminRole,
+        targetContract: customFeedGrowth.address,
+        functionSelector: setMaxAnswerDeviationSelector,
+        grantOperator: owner,
+      });
+
       await setPermissionRoleTester(
         { accessControl, owner },
-        feedAdminRole,
+        undefined,
         customFeedGrowth.address,
         setMaxAnswerDeviationSelector,
         [{ account: proposer.address, enabled: true }],

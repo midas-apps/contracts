@@ -51,7 +51,7 @@ contract BandStdChailinkAdapter is ChainlinkAdapterBase {
     }
 
     function latestTimestamp() public view override returns (uint256) {
-        return _getBandReferenceData().lastUpdatedBase;
+        return _getTimestamp(_getBandReferenceData());
     }
 
     function latestRoundData()

@@ -7,7 +7,7 @@ import {MathUpgradeable as Math} from "@openzeppelin/contracts-upgradeable/utils
 /**
  * @title RateLimitLibrary
  * @author RedDuck Software
- * @notice Multi-window sliding rate limits (vault instant flows, mToken mint, etc.).
+ * @notice Multi-window linear-decay rate limiting (vault instant flows, mToken mint, etc.).
  */
 library RateLimitLibrary {
     using EnumerableSet for EnumerableSet.UintSet;
@@ -114,6 +114,7 @@ library RateLimitLibrary {
      * @param limit max amount per window
      * @return previousLimit previous limit
      */
+    // TODO: rename to setMintLimit
     function setWindowLimit(
         WindowRateLimits storage limits,
         uint256 window,
@@ -140,6 +141,7 @@ library RateLimitLibrary {
      * @param limits aggregated window state
      * @param window window duration in seconds
      */
+    // TODO: rename to removeMintLimit
     function removeWindowLimit(WindowRateLimits storage limits, uint256 window)
         internal
     {

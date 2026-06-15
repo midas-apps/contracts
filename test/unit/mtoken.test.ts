@@ -13,6 +13,7 @@ import { acErrors, blackList } from '../common/ac.helpers';
 import { defaultDeploy, mTokenPermissionedFixture } from '../common/fixtures';
 import { burn, clawbackTest, mint } from '../common/mtoken.helpers';
 
+// FIXME:
 const mProducts = ['mTBILL'] as MTokenName[]; // Object.values(MTokenNameEnum);
 
 describe('Token contracts', () => {
@@ -21,7 +22,7 @@ describe('Token contracts', () => {
       mTokenContractsSuits(product);
     });
   });
-  describe('mTokenPermissioned (mTokenPermissionedTest)', () => {
+  describe('mTokenPermissioned', () => {
     describe('transfer()', () => {
       it('should fail: transfer when sender is not greenlisted', async () => {
         const baseFixture = await defaultDeploy();

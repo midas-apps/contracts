@@ -1,7 +1,7 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 
-import { acErrors, blackList, unBlackList } from '../common/ac.helpers';
+import { acErrors, blackList } from '../common/ac.helpers';
 import { defaultDeploy } from '../common/fixtures';
 
 describe('Blacklistable', function () {
@@ -46,56 +46,6 @@ describe('Blacklistable', function () {
           regularAccounts[0].address,
         ),
       ).not.reverted;
-    });
-  });
-
-  describe('addToBlackList', () => {
-    it('should fail: call from user without BLACKLIST_OPERATOR_ROLE role', async () => {
-      const { accessControl, blackListableTester, owner, regularAccounts } =
-        await loadFixture(defaultDeploy);
-
-      await blackList(
-        { blacklistable: blackListableTester, accessControl, owner },
-        regularAccounts[0],
-        {
-          from: regularAccounts[0],
-          revertCustomError: acErrors.WMAC_BLACKLISTED,
-        },
-      );
-    });
-
-    it('call from user with BLACKLIST_OPERATOR_ROLE role', async () => {
-      const { accessControl, blackListableTester, owner, regularAccounts } =
-        await loadFixture(defaultDeploy);
-      await blackList(
-        { blacklistable: blackListableTester, accessControl, owner },
-        regularAccounts[0],
-      );
-    });
-  });
-
-  describe('removeFromBlackList', () => {
-    it('should fail: call from user without BLACKLIST_OPERATOR_ROLE role', async () => {
-      const { accessControl, blackListableTester, owner, regularAccounts } =
-        await loadFixture(defaultDeploy);
-
-      await unBlackList(
-        { blacklistable: blackListableTester, accessControl, owner },
-        regularAccounts[0],
-        {
-          from: regularAccounts[0],
-          revertCustomError: acErrors.WMAC_BLACKLISTED,
-        },
-      );
-    });
-
-    it('call from user with BLACKLIST_OPERATOR_ROLE role', async () => {
-      const { accessControl, blackListableTester, owner, regularAccounts } =
-        await loadFixture(defaultDeploy);
-      await unBlackList(
-        { blacklistable: blackListableTester, accessControl, owner },
-        regularAccounts[0],
-      );
     });
   });
 });

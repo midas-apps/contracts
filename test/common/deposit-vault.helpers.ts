@@ -504,8 +504,8 @@ export const approveRequestTest = async (
 
   const requestData = await depositVault.mintRequests(requestId);
 
-  const actualRate = !isAvgRate
-    ? newRate
+  let actualRate = !isAvgRate
+    ? BigNumber.from(newRate)
     : BigNumber.from(
         expectedDepositHoldbackPartRateFromAvg(
           requestData.depositedUsdAmount,
@@ -514,6 +514,10 @@ export const approveRequestTest = async (
           newRate,
         ),
       );
+
+  if (actualRate.eq(0)) {
+    actualRate = BigNumber.from(newRate);
+  }
 
   const balanceMtBillBeforeUser = await balanceOfBase18(
     mTBILL,
@@ -626,7 +630,11 @@ export const expectedDepositHoldbackPartRateFromAvg = (
   tokenOutRate = BigInt(tokenOutRate.toString());
   avgMTokenRate = BigInt(avgMTokenRate.toString());
 
-  if (avgMTokenRate === 0n || tokenOutRate === 0n) {
+  if (
+    avgMTokenRate === 0n ||
+    tokenOutRate === 0n ||
+    depositedInstantUsdAmount === 0n
+  ) {
     return 0n;
   }
 
@@ -780,12 +788,13 @@ export const safeBulkApproveRequestTest = async (
         : newRate ?? currentRate;
 
     if (isAvgRate) {
-      rate = expectedDepositHoldbackPartRateFromAvg(
+      const holdbackRate = expectedDepositHoldbackPartRateFromAvg(
         requestData.depositedUsdAmount,
         requestData.depositedInstantUsdAmount,
         requestData.tokenOutRate,
         rate,
       );
+      rate = holdbackRate === 0n ? rate : holdbackRate;
     }
     return BigNumber.from(rate);
   };

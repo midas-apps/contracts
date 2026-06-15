@@ -698,24 +698,6 @@ export const defaultDeploy = async () => {
     };
   };
 
-  const allVaults = [
-    redemptionVault,
-    redemptionVaultLoanSwapper,
-    redemptionVaultWithUSTB,
-    redemptionVaultWithAave,
-    redemptionVaultWithMorpho,
-    redemptionVaultWithMToken,
-    depositVault,
-    depositVaultWithUSTB,
-    depositVaultWithAave,
-    depositVaultWithMorpho,
-    depositVaultWithMToken,
-  ];
-
-  for (const vault of allVaults) {
-    await vault.setMaxApproveRequestId(100);
-  }
-
   return {
     customFeed,
     customFeedAdjusted,

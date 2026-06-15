@@ -131,7 +131,7 @@ describe('WithSanctionsList', function () {
       const user = regularAccounts[0];
       await setPermissionRoleTester(
         { accessControl, owner },
-        sanctionsListAdmin,
+        undefined,
         withSanctionsListTester.address,
         selector,
         [
@@ -177,7 +177,7 @@ describe('WithSanctionsList', function () {
 
       await setPermissionRoleTester(
         { accessControl, owner },
-        sanctionsListAdmin,
+        undefined,
         withSanctionsListTester.address,
         selector,
         [

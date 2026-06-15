@@ -23,9 +23,13 @@ import {
   setupGrantOperatorRole,
   setPermissionRoleTester,
   unBlackList,
+  NO_DELAY,
+  setRoleTimelocksTester,
 } from '../../../test/common/ac.helpers';
 import {
   defaultDeploy,
+  getInitializerParamsDv,
+  getInitializerParamsDvWithUstb,
   getInitializerParamsRv,
 } from '../../../test/common/fixtures';
 import {
@@ -57,6 +61,7 @@ import {
   executeTimelockOperationTester,
   bulkScheduleTimelockOperationTester,
 } from '../../common/timelock-manager.helpers';
+import { DV_USTB_INIT_FN } from '../../common/vault-initializer.helpers';
 
 const DEFAULT_UNPAUSE_DELAY = 86400;
 
@@ -82,6 +87,9 @@ const DECREASE_MINT_RATE_LIMIT_SEL = encodeFnSelector(
 const ERC20_PAUSABLE_PAUSED_STORAGE_SLOT = 101;
 export const ERC20_PAUSED_MSG = 'ERC20Pausable: token transfer while paused';
 const PAUSE_TEST_AMOUNT = parseUnits('100');
+
+const SET_NAME_SYMBOL_DELAY = 2 * 24 * 3600;
+const SET_NAME_SYMBOL_SEL = encodeFnSelector('setNameSymbol(string,string)');
 
 const toStorageSlotHex = (slot: number) =>
   '0x' + slot.toString(16).padStart(64, '0');
@@ -148,7 +156,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
   >(
     contractKey: ContractKey,
     initializer = 'initialize',
-    initParams?: unknown[],
+    initParams?: unknown[] | readonly unknown[],
     constructorParams?: unknown[],
   ) => {
     const factory = await getContractFactory(contractKey).catch((_) => {
@@ -285,77 +293,34 @@ export const mTokenContractsSuits = (token: MTokenName) => {
     const depositVault = await deployProxyContractIfExists<DepositVault>(
       'DepositVault',
       undefined,
-      [
-        {
-          ac: fixture.accessControl.address,
-          sanctionsList: fixture.mockedSanctionsList.address,
-          variationTolerance: 1,
-          minAmount: parseUnits('100'),
-          mToken: tokenContract.address,
-          mTokenDataFeed: dataFeed.address,
-          tokensReceiver: fixture.tokensReceiver.address,
-          instantFee: 100,
-          minInstantFee: 0,
-          maxInstantFee: 10000,
-          limitConfigs: [
-            {
-              limit: parseUnits('100000'),
-              window: days(1),
-            },
-          ],
-          maxInstantShare: 100_00,
-        },
-        {
-          minMTokenAmountForFirstDeposit: 0,
-          maxSupplyCap: 0,
-        },
-      ],
+      getInitializerParamsDv({
+        ...fixture,
+        mTBILL: tokenContract.address,
+        mTokenToUsdDataFeed: dataFeed.address,
+      }),
       [tokenRoles.depositVaultAdmin, tokenRoles.greenlisted],
     );
 
     const depositVaultUstb =
       await deployProxyContractIfExists<DepositVaultWithUSTB>(
         'DepositVaultWithUSTB',
-        'initialize((address,address,uint256,uint256,address,address,address,address,uint256,uint64,uint64,uint64,(uint256,uint256)[]),(uint256,uint256),address)',
-        [
-          {
-            ac: fixture.accessControl.address,
-            sanctionsList: fixture.mockedSanctionsList.address,
-            variationTolerance: 1,
-            minAmount: parseUnits('100'),
-            mToken: tokenContract.address,
-            mTokenDataFeed: dataFeed.address,
-            tokensReceiver: fixture.tokensReceiver.address,
-            instantFee: 100,
-            minInstantFee: 0,
-            maxInstantFee: 10000,
-            limitConfigs: [
-              {
-                limit: parseUnits('100000'),
-                window: days(1),
-              },
-            ],
-            maxInstantShare: 100_00,
-          },
-          {
-            minMTokenAmountForFirstDeposit: 0,
-            maxSupplyCap: 0,
-          },
-          fixture.ustbToken.address,
-        ],
+        DV_USTB_INIT_FN,
+        getInitializerParamsDvWithUstb({
+          ...fixture,
+          mTBILL: tokenContract.address,
+          mTokenToUsdDataFeed: dataFeed.address,
+        }),
         [tokenRoles.depositVaultAdmin, tokenRoles.greenlisted],
       );
 
     const redemptionVault = await deployProxyContractIfExists<RedemptionVault>(
       'RedemptionVault',
       undefined,
-      [
-        getInitializerParamsRv({
-          ...fixture,
-          mTBILL: tokenContract.address,
-          mTokenToUsdDataFeed: dataFeed.address,
-        }),
-      ],
+      getInitializerParamsRv({
+        ...fixture,
+        mTBILL: tokenContract.address,
+        mTokenToUsdDataFeed: dataFeed.address,
+      }),
       [tokenRoles.redemptionVaultAdmin, tokenRoles.greenlisted],
     );
 
@@ -387,7 +352,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
     });
 
     it('roles', async () => {
-      const { tokenContract, accessControl } = await deployMTokenWithFixture();
+      const { tokenContract } = await deployMTokenWithFixture();
 
       expect(await tokenContract.burnerRole()).eq(tokenRoles.burner);
       expect(await tokenContract.minterRole()).eq(tokenRoles.minter);
@@ -396,9 +361,6 @@ export const mTokenContractsSuits = (token: MTokenName) => {
         tokenRoles.tokenManager,
       );
 
-      expect(await accessControl.DEFAULT_ADMIN_ROLE()).eq(
-        allRoles.common.defaultAdmin,
-      );
       expect(await tokenContract.BLACKLIST_OPERATOR_ROLE()).eq(
         allRoles.common.blacklistedOperator,
       );
@@ -423,6 +385,112 @@ export const mTokenContractsSuits = (token: MTokenName) => {
       await expect(
         tokenContract.initializeV2(clawbackReceiver.address),
       ).to.revertedWith('Initializable: contract is already initialized');
+    });
+
+    describe('setNameSymbol()', () => {
+      it('should fail: when called directly', async () => {
+        const { mTBILL, accessControl, owner } = await loadFixture(
+          defaultDeploy,
+        );
+
+        const tokenManagerRole = await mTBILL.contractAdminRole();
+        const newName = 'Updated Token Name';
+        const newSymbol = 'UPD';
+
+        await expect(mTBILL.connect(owner).setNameSymbol(newName, newSymbol))
+          .revertedWithCustomError(accessControl, 'FunctionNotReady')
+          .withArgs(tokenManagerRole, SET_NAME_SYMBOL_SEL);
+      });
+
+      it('should always require 2 days timelock even if contract admin/function admin role delay is different (no timelock for example)', async () => {
+        const { mTBILL, accessControl, owner, timelock, timelockManager } =
+          await loadFixture(defaultDeploy);
+
+        const tokenManagerRole = await mTBILL.contractAdminRole();
+        const functionRoleKey = await accessControl.permissionRoleKey(
+          tokenManagerRole,
+          mTBILL.address,
+          SET_NAME_SYMBOL_SEL,
+        );
+        const newName = 'No Delay Override Name';
+        const newSymbol = 'NDO';
+
+        await setRoleTimelocksTester(
+          { accessControl, owner, timelock, timelockManager },
+          [tokenManagerRole, functionRoleKey],
+          [NO_DELAY, NO_DELAY],
+        );
+
+        await expect(mTBILL.connect(owner).setNameSymbol(newName, newSymbol))
+          .revertedWithCustomError(accessControl, 'FunctionNotReady')
+          .withArgs(tokenManagerRole, SET_NAME_SYMBOL_SEL);
+
+        const calldata = mTBILL.interface.encodeFunctionData('setNameSymbol', [
+          newName,
+          newSymbol,
+        ]);
+
+        await bulkScheduleTimelockOperationTester(
+          { timelockManager, timelock, owner, accessControl },
+          [mTBILL.address],
+          [calldata],
+        );
+
+        await executeTimelockOperationTester(
+          { timelockManager, timelock, owner, accessControl },
+          mTBILL.address,
+          calldata,
+          owner.address,
+          {
+            revertCustomError: {
+              contract: timelockManager,
+              customErrorName: 'TimelockOperationNotReady',
+            },
+          },
+        );
+
+        await increase(SET_NAME_SYMBOL_DELAY);
+
+        await executeTimelockOperationTester(
+          { timelockManager, timelock, owner, accessControl },
+          mTBILL.address,
+          calldata,
+          owner.address,
+        );
+
+        expect(await mTBILL.name()).eq(newName);
+        expect(await mTBILL.symbol()).eq(newSymbol);
+      });
+
+      it('when called through timelock manager with 2 days delay', async () => {
+        const { mTBILL, accessControl, owner, timelock, timelockManager } =
+          await loadFixture(defaultDeploy);
+
+        const newName = 'Timelock Updated Name';
+        const newSymbol = 'TLUPD';
+        const calldata = mTBILL.interface.encodeFunctionData('setNameSymbol', [
+          newName,
+          newSymbol,
+        ]);
+
+        await bulkScheduleTimelockOperationTester(
+          { timelockManager, timelock, owner, accessControl },
+          [mTBILL.address],
+          [calldata],
+        );
+
+        await increase(SET_NAME_SYMBOL_DELAY);
+
+        await executeTimelockOperationTester(
+          { timelockManager, timelock, owner, accessControl },
+          mTBILL.address,
+          calldata,
+          owner.address,
+        );
+
+        expect(await mTBILL.name()).eq(newName);
+        expect(await mTBILL.symbol()).eq(newSymbol);
+      });
     });
 
     describe('mint()', () => {
@@ -1431,7 +1499,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         await setPermissionRoleTester(
           { accessControl, owner },
-          tokenRoles.tokenManager,
+          undefined,
           tokenContract.address,
           selector,
           [{ account: user.address, enabled: true }],
@@ -1582,7 +1650,7 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
         await setPermissionRoleTester(
           { accessControl, owner },
-          tokenRoles.tokenManager,
+          undefined,
           tokenContract.address,
           selector,
           [{ account: operator.address, enabled: true }],

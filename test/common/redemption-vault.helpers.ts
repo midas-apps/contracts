@@ -1024,12 +1024,13 @@ export const safeBulkApproveRequestTest = async (
         : newRate ?? currentRate;
 
     if (isAvgRate) {
-      rate = expectedHoldbackPartRateFromAvg(
+      const holdbackRate = expectedHoldbackPartRateFromAvg(
         requestData.amountMToken,
         requestData.amountMTokenInstant,
         requestData.mTokenRate,
         rate,
       );
+      rate = holdbackRate === 0n ? rate : holdbackRate;
     }
     return BigNumber.from(rate);
   };
@@ -1778,6 +1779,10 @@ export const expectedHoldbackPartRateFromAvg = (
   amountMTokenInstant = BigNumber.from(amountMTokenInstant).toBigInt();
   mTokenRate = BigNumber.from(mTokenRate).toBigInt();
   avgMTokenRate = BigNumber.from(avgMTokenRate).toBigInt();
+
+  if (amountMTokenInstant === 0n) {
+    return 0n;
+  }
 
   const targetTotalValue =
     ((amountMToken + amountMTokenInstant) * avgMTokenRate) / 10n ** 18n;
