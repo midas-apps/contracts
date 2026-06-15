@@ -44,6 +44,7 @@ import {
   getConfigFromUser,
   getContractsToGenerateFromUser,
   getGenerationModeFromUser,
+  getGreenlistRoleSourceFromUser,
   getShouldUseTokenLevelGreenListFromUser,
   getShouldUseTokenPermissionedFromUser,
   getTokenContractNameFromUser,
@@ -109,6 +110,8 @@ export const updateConfigFiles = (
     symbol,
     mToken,
     isPermissioned,
+    useTokenLevelGreenList,
+    greenlistRoleSource,
   }: {
     contractNamePrefix: string;
     rolesPrefix: string;
@@ -116,6 +119,8 @@ export const updateConfigFiles = (
     symbol: string;
     mToken: string;
     isPermissioned?: true;
+    useTokenLevelGreenList?: boolean;
+    greenlistRoleSource?: string;
   },
 ) => {
   const project = new Project();
@@ -142,6 +147,14 @@ export const updateConfigFiles = (
     contractPrefixesFile.getVariableDeclarationOrThrow('contractNamesPrefixes');
 
   const rolesVar = rolesFile.getVariableDeclarationOrThrow('prefixes');
+
+  const greenlistTokensVar = rolesFile.getVariableDeclarationOrThrow(
+    'tokenLevelGreenlistTokens',
+  );
+
+  const sharedGreenlistVar = rolesFile.getVariableDeclarationOrThrow(
+    'sharedGreenlistRoleSource',
+  );
 
   const contractNameVar =
     contractNameFile.getVariableDeclarationOrThrow('mTokensMetadata');
@@ -177,6 +190,38 @@ export const updateConfigFiles = (
       objLiteral.addPropertyAssignment({
         name: mToken,
         initializer: (writer) => writer.write(`'${rolesPrefix}'`),
+      });
+    }
+  }
+
+  // Register the token in the separated-greenlist registry so the off-chain
+  // role helper, codegen templates and tests all agree with the on-chain
+  // greenlistedRole() override.
+  if (useTokenLevelGreenList) {
+    const arrLiteral = greenlistTokensVar
+      .getInitializerOrThrow()
+      .asKindOrThrow(SyntaxKind.ArrayLiteralExpression);
+
+    const alreadyListed = arrLiteral
+      .getElements()
+      .some((el) => el.getText().replace(/['"]/g, '') === mToken);
+
+    if (!alreadyListed) {
+      arrLiteral.addElement(`'${mToken}'`);
+    }
+  }
+
+  // If the token reuses another product's greenlist role (e.g. mGLO -> mGLOBAL),
+  // record it so getRolesNamesForToken() derives the shared role name.
+  if (greenlistRoleSource) {
+    const objLiteral = sharedGreenlistVar
+      .getInitializerOrThrow()
+      .asKindOrThrow(SyntaxKind.ObjectLiteralExpression);
+
+    if (!objLiteral.getProperty(mToken)) {
+      objLiteral.addPropertyAssignment({
+        name: mToken,
+        initializer: (writer) => writer.write(`'${greenlistRoleSource}'`),
       });
     }
   }
@@ -761,6 +806,7 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
 
   let shouldUseTokenLevelGreenList = false;
   let shouldUseTokenPermissioned = isPermissionedFromMetadata;
+  let greenlistRoleSource: string | undefined;
 
   if (
     contractsToGenerate.find((v) => v.startsWith('dv') || v.startsWith('rv'))
@@ -780,6 +826,11 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
 
     shouldUseTokenLevelGreenList =
       await getShouldUseTokenLevelGreenListFromUser(greenlistDefault);
+
+    if (shouldUseTokenLevelGreenList) {
+      // Optionally reuse another product's greenlist role (e.g. mGLO -> mGLOBAL).
+      greenlistRoleSource = await getGreenlistRoleSourceFromUser(mToken);
+    }
   }
 
   if (contractsToGenerate.includes('token') && mode === 'create') {
@@ -797,6 +848,8 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
           symbol: config.tokenSymbol,
           mToken: config.tokenContractName,
           isPermissioned: shouldUseTokenPermissioned ? true : undefined,
+          useTokenLevelGreenList: shouldUseTokenLevelGreenList,
+          greenlistRoleSource,
         });
       },
     },
@@ -875,4 +928,23 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
       },
     },
   ]);
+
+  if (shouldUseTokenLevelGreenList) {
+    if (greenlistRoleSource) {
+      await stream.info(
+        `${mToken} reuses ${greenlistRoleSource}'s greenlist role. ` +
+          `Registered in helpers/roles.ts (tokenLevelGreenlistTokens + ` +
+          `sharedGreenlistRoleSource), so getRolesNamesForToken('${mToken}')` +
+          `.greenlisted, the generated greenlistedRole() override and the ` +
+          `token tests all resolve to ${greenlistRoleSource}'s ` +
+          `GREENLISTED_ROLE. Review the generated vaults to confirm.`,
+      );
+    } else {
+      await stream.info(
+        `${mToken} uses its own token-level greenlist role. Registered in ` +
+          `helpers/roles.ts (tokenLevelGreenlistTokens). To instead share an ` +
+          `existing product's role, add an entry to sharedGreenlistRoleSource.`,
+      );
+    }
+  }
 };

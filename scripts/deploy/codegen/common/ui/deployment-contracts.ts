@@ -2,6 +2,7 @@ import { group, multiselect, text, confirm, select } from '@clack/prompts';
 
 import { requireNotCancelled } from '..';
 import { TokenContractNames } from '../../../../../helpers/contracts';
+import { tokenLevelGreenlistTokens } from '../../../../../helpers/roles';
 
 export const getTokenContractNameFromUser = async () => {
   return text({
@@ -170,5 +171,38 @@ export const getShouldUseTokenPermissionedFromUser = async () => {
   return confirm({
     message: 'Should use permissioned mToken variant?',
     initialValue: false,
+  }).then(requireNotCancelled);
+};
+
+/**
+ * Optionally reuse an existing product's greenlist role instead of minting a
+ * token-specific one (e.g. mGLO reuses mGLOBAL's M_GLOBAL_GREENLISTED_ROLE).
+ * Returns the source mToken name, or undefined to use this token's own role.
+ */
+export const getGreenlistRoleSourceFromUser = async (currentToken: string) => {
+  const options = tokenLevelGreenlistTokens.filter((t) => t !== currentToken);
+
+  if (options.length === 0) {
+    return undefined;
+  }
+
+  const share = await confirm({
+    message:
+      "Reuse another product's greenlist role? " +
+      "(No = mint this token's own <PREFIX>_GREENLISTED_ROLE)",
+    initialValue: false,
+  }).then(requireNotCancelled);
+
+  if (!share) {
+    return undefined;
+  }
+
+  return select<string>({
+    message: "Which product's greenlist role should be reused?",
+    options: options.map((token) => ({
+      value: token,
+      label: token,
+      hint: `use ${token}'s GREENLISTED_ROLE`,
+    })),
   }).then(requireNotCancelled);
 };

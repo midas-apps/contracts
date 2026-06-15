@@ -76,6 +76,7 @@ export enum MTokenNameEnum {
   liquidRWA = 'liquidRWA',
   mWIN = 'mWIN',
   qHVNUSD = 'qHVNUSD',
+  mGLO = 'mGLO',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;

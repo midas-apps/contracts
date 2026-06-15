@@ -16,6 +16,7 @@ import {
   getRolesForToken,
   getRolesNamesCommon,
   getRolesNamesForToken,
+  tokenLevelGreenlistTokens,
 } from '../../helpers/roles';
 import {
   CustomAggregatorV3CompatibleFeed,
@@ -820,6 +821,38 @@ export const tokenContractsTests = (token: MTokenName) => {
       expect(await redemptionVaultWithBuidl.vaultRole()).eq(
         tokenRoles.redemptionVaultAdmin,
       );
+    });
+
+    it('vaults greenlistedRole()', async function () {
+      const fixture = await deployMTokenVaultsWithFixture();
+
+      const vaults = (
+        [
+          fixture.tokenDepositVault,
+          fixture.tokenDepositVaultUstb,
+          fixture.tokenRedemptionVault,
+          fixture.tokenRedemptionVaultWithSwapper,
+          fixture.tokenRedemptionVaultWithBuidl,
+        ] as (Contract | null)[]
+      ).filter((v): v is Contract => !!v);
+
+      if (vaults.length === 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (this as any).skip();
+        return;
+      }
+
+      // Token-level (separated) greenlist products override greenlistedRole()
+      // to return their configured role (mGLO reuses mGLOBAL's
+      // M_GLOBAL_GREENLISTED_ROLE via sharedGreenlistRoleSource); every other
+      // product inherits the shared common GREENLISTED_ROLE.
+      const expectedGreenlistedRole = tokenLevelGreenlistTokens.includes(token)
+        ? tokenRoles.greenlisted
+        : allRoles.common.greenlisted;
+
+      for (const vault of vaults) {
+        expect(await vault.greenlistedRole()).eq(expectedGreenlistedRole);
+      }
     });
   });
 };

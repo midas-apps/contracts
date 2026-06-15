@@ -3,6 +3,7 @@ import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 
 import { MTokenNameEnum } from '../../config';
+import { getRolesForToken, getRolesNamesForToken } from '../../helpers/roles';
 import { acErrors, blackList } from '../common/ac.helpers';
 import { defaultDeploy, mTokenPermissionedFixture } from '../common/fixtures';
 import { burn, mint } from '../common/mTBILL.helpers';
@@ -445,5 +446,32 @@ describe('Token contracts', () => {
         ).revertedWith(acErrors.WMAC_HAS_ROLE);
       });
     });
+  });
+});
+
+describe('Shared greenlist role (mGLO -> mGLOBAL)', () => {
+  it('mGLO greenlist role name is M_GLOBAL_GREENLISTED_ROLE', () => {
+    expect(getRolesNamesForToken('mGLO').greenlisted).eq(
+      'M_GLOBAL_GREENLISTED_ROLE',
+    );
+  });
+
+  it('mGLO greenlist role hash equals mGLOBAL greenlist role hash', () => {
+    expect(getRolesForToken('mGLO').greenlisted).eq(
+      getRolesForToken('mGLOBAL').greenlisted,
+    );
+  });
+
+  it('mGLO keeps its own (separated) operational roles', () => {
+    const mGloRoles = getRolesNamesForToken('mGLO');
+    expect(mGloRoles.minter).eq('M_GLO_MINT_OPERATOR_ROLE');
+    expect(mGloRoles.burner).eq('M_GLO_BURN_OPERATOR_ROLE');
+    expect(mGloRoles.depositVaultAdmin).eq('M_GLO_DEPOSIT_VAULT_ADMIN_ROLE');
+    expect(mGloRoles.redemptionVaultAdmin).eq(
+      'M_GLO_REDEMPTION_VAULT_ADMIN_ROLE',
+    );
+    expect(mGloRoles.customFeedAdmin).eq(
+      'M_GLO_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE',
+    );
   });
 });
