@@ -497,7 +497,7 @@ describe('MidasTimelockManager', () => {
       );
 
       const calldata = wAccessControlTester.interface.encodeFunctionData(
-        'withWrongRolePreflight(bytes32,uint32,bool,bool)',
+        'withWrongRolePreflight',
         [roles.common.defaultAdmin, 0, false, true],
       );
 

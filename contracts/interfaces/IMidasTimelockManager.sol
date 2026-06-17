@@ -263,12 +263,14 @@ interface IMidasTimelockManager {
 
     /**
      * @notice Security council votes to abort the operation
+     * @dev can vote even if member is already voted for execution
      * @param operationId operation id
      */
     function voteForVeto(bytes32 operationId) external;
 
     /**
      * @notice Security council votes to allow execution
+     * @dev cannot vote if member is already voted for veto
      * @param operationId operation id
      */
     function voteForExecution(bytes32 operationId) external;

@@ -14,7 +14,6 @@ import 'hardhat-deploy';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
 import 'hardhat-tracer';
-import 'hardhat-storage-layout';
 import './tasks';
 
 import {

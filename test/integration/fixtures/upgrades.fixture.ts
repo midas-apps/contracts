@@ -45,6 +45,14 @@ export async function mainnetUpgradeFixture() {
   const mTbillCustomFeedAddress = '0x056339C044055819E8Db84E71f5f2E1F536b2E5b';
   const mTbillAddress = '0xDD629E5241CbC5919847783e6C96B2De4754e438';
 
+  // mBTC addresses
+  const mBtcDataFeedAddress = '0x9987BE0c1dc5Cd284a4D766f4B5feB4F3cb3E28e';
+  const mBtcCustomFeedAddress = '0xA537EF0343e83761ED42B8E017a1e495c9a189Ee';
+  const mBtcAddress = '0x007115416AB6c266329a03B09a8aa39aC2eF7d9d';
+
+  // mROX addresses
+  const mRoxAddress = '0x67E1F506B148d0Fc95a4E3fFb49068ceB6855c05';
+
   const [clawbackReceiver, ...signers] = await ethers.getSigners();
 
   await resetFork(rpcUrls.main, 25193577);
@@ -84,7 +92,18 @@ export async function mainnetUpgradeFixture() {
       };
     }[]
   > = {
+    ac: [
+      {
+        proxy: acAddress,
+        implementation: MidasAccessControl__factory,
+        reinitializerParams: {
+          fn: 'initializeV2',
+          args: [NULL_DELAY, [allRoles.tokenRoles.mGLOBAL.greenlisted]],
+        },
+      },
+    ],
     mTbill: [
+      // 1 gap on the token level (mTBILL), missing gaps in Blacklistable and WithMidasAccessControl
       {
         proxy: mTbillAddress,
         implementation: MToken__factory,
@@ -98,28 +117,49 @@ export async function mainnetUpgradeFixture() {
           args: [clawbackReceiver.address],
         },
       },
+      // no gap in the product contract (MBtcDataFeed), has gap in DataFeed
       {
         proxy: mTbillDataFeedAddress,
         implementation: DataFeed__factory,
         constructorArgs: [allRoles.tokenRoles.mTBILL.customFeedAdmin],
       },
+      // has gap in the product contract (MBtcCustomAggregatorFeed) and no gap in CustomAggregatorV3CompatibleFeed
       {
         proxy: mTbillCustomFeedAddress,
         implementation: CustomAggregatorV3CompatibleFeed__factory,
         constructorArgs: [allRoles.tokenRoles.mTBILL.customFeedAdmin],
       },
     ],
-    ac: [
+    mBtc: [
+      // inherits mTBILL, has 2 __gap on token level (mToken, mBTC)
       {
-        proxy: acAddress,
-        implementation: MidasAccessControl__factory,
+        proxy: mBtcAddress,
+        implementation: MToken__factory,
+        constructorArgs: [
+          allRoles.tokenRoles.mBTC.tokenManager,
+          allRoles.tokenRoles.mBTC.minter,
+          allRoles.tokenRoles.mBTC.burner,
+        ],
         reinitializerParams: {
           fn: 'initializeV2',
-          args: [NULL_DELAY, [allRoles.tokenRoles.mGLOBAL.greenlisted]],
+          args: [clawbackReceiver.address],
         },
+      },
+      // no gap in the product contract (MBtcDataFeed), has gap in DataFeed
+      {
+        proxy: mBtcDataFeedAddress,
+        implementation: DataFeed__factory,
+        constructorArgs: [allRoles.tokenRoles.mBTC.customFeedAdmin],
+      },
+      // no gap in the product contract (MBtcCustomAggregatorFeed) and no gap in CustomAggregatorV3CompatibleFeed
+      {
+        proxy: mBtcCustomFeedAddress,
+        implementation: CustomAggregatorV3CompatibleFeed__factory,
+        constructorArgs: [allRoles.tokenRoles.mBTC.customFeedAdmin],
       },
     ],
     mGlobal: [
+      // inherits mTokenPermissioned, has 3 __gap on the token level (mToken, mTokenPermissioned, mGLOBAL)
       {
         proxy: mGlobalAddress,
         implementation: MTokenPermissioned__factory,
@@ -135,34 +175,56 @@ export async function mainnetUpgradeFixture() {
         },
       },
       {
+        // has gap in the product contract (MGlobalDataFeed), has gap in DataFeed
         proxy: mGlobalDataFeedAddress,
         implementation: DataFeed__factory,
         constructorArgs: [allRoles.tokenRoles.mGLOBAL.customFeedAdmin],
       },
+      // has gap in the product contract (MGlobalCustomFeedGrowth), has gap in CustomAggregatorV3CompatibleFeedGrowth
       {
         proxy: mGlobalCustomFeedGrowthAddress,
         implementation: CustomAggregatorV3CompatibleFeedGrowth__factory,
         constructorArgs: [allRoles.tokenRoles.mGLOBAL.customFeedAdmin],
       },
     ],
+    mRox: [
+      // inherits mToken, has 2 __gap on the token level (mToken, mROX)
+      {
+        proxy: mRoxAddress,
+        implementation: MToken__factory,
+        constructorArgs: [
+          allRoles.tokenRoles.mROX.tokenManager,
+          allRoles.tokenRoles.mROX.minter,
+          allRoles.tokenRoles.mROX.burner,
+        ],
+        reinitializerParams: {
+          fn: 'initializeV2',
+          args: [clawbackReceiver.address],
+        },
+      },
+    ],
   };
 
   await asyncForEach(Object.entries(addressesMap), async ([, values]) => {
-    await asyncForEach(values, async (val) => {
-      await hre.upgrades.upgradeProxy(
-        val.proxy,
-        new val.implementation(proxyAdminOwner),
-        {
-          constructorArgs: val.constructorArgs ?? [],
-          call: val.reinitializerParams
-            ? {
-                fn: val.reinitializerParams.fn,
-                args: val.reinitializerParams.args,
-              }
-            : undefined,
-        },
-      );
-    });
+    await asyncForEach(
+      values,
+      async (val) => {
+        await hre.upgrades.upgradeProxy(
+          val.proxy,
+          new val.implementation(proxyAdminOwner),
+          {
+            constructorArgs: val.constructorArgs ?? [],
+            call: val.reinitializerParams
+              ? {
+                  fn: val.reinitializerParams.fn,
+                  args: val.reinitializerParams.args,
+                }
+              : undefined,
+          },
+        );
+      },
+      true,
+    );
   });
 
   const securityCouncilMembers = [
