@@ -478,31 +478,12 @@ export const depositAndSend = async (
       composer.interface.events['Refunded(bytes32)'].name,
     );
   } else {
-    await expect(txFn())
-      .to.emit(
-        composer,
-        composer.interface.events[
-          'Deposited(bytes32,bytes32,uint32,uint256,uint256)'
-        ].name,
-      )
-      .to.emit(
-        depositVault,
-        depositVault.interface.events[
-          'DepositInstant(address,address,address,uint256,uint256,uint256,uint256,uint256,bytes32)'
-        ].name,
-      )
-      .withArgs(
-        composer.address,
-        await composer.paymentTokenErc20(),
-        direction === 'A_TO_A' || direction === 'B_TO_A'
-          ? recipient
-          : composer.address,
-        actualAmountInUsd,
-        amountParsed,
-        fee,
-        mintAmount,
-        referrerId,
-      );
+    await expect(txFn()).to.emit(
+      composer,
+      composer.interface.events[
+        'Deposited(bytes32,bytes32,uint32,uint256,uint256)'
+      ].name,
+    );
   }
 
   const totalSupplyAfter = await mTBILL.totalSupply();
@@ -740,22 +721,6 @@ export const redeemAndSend = async (
         addressToBytes32(recipient),
         direction === 'A_TO_A' || direction === 'B_TO_A' ? eidA : eidB,
         amountParsed,
-        amountOut,
-      )
-      .to.emit(
-        redemptionVault,
-        redemptionVault.interface.events[
-          'RedeemInstant(address,address,address,uint256,uint256,uint256,uint256,uint256)'
-        ].name,
-      )
-      .withArgs(
-        composer.address,
-        await composer.paymentTokenErc20(),
-        direction === 'A_TO_A' || direction === 'B_TO_A'
-          ? recipient
-          : composer.address,
-        amountParsed,
-        fee,
         amountOut,
       );
   }

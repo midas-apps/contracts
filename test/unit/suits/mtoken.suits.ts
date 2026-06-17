@@ -47,6 +47,7 @@ import {
   pauseVault,
   pauseVaultFn,
   validateImplementation,
+  asyncForEach,
 } from '../../common/common.helpers';
 import {
   burn,
@@ -196,11 +197,11 @@ export const mTokenContractsSuits = (token: MTokenName) => {
 
     if (mTokensMetadata[token]?.isPermissioned) {
       const greenlistedRole = tokenRoles.greenlisted;
-      for (const account of fixture.regularAccounts) {
+      await asyncForEach(fixture.regularAccounts, async (account) => {
         await fixture.accessControl
           .connect(fixture.owner)
           ['grantRole(bytes32,address)'](greenlistedRole, account.address);
-      }
+      });
     }
 
     return { tokenContract, ...fixture };

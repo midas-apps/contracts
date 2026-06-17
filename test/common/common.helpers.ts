@@ -221,12 +221,12 @@ export const pauseVault = async (
     await tx;
   }
 
-  for (const contract of contractsArr) {
+  await asyncForEach(contractsArr, async (contract) => {
     expect(await pauseManager.isPaused(contract.address, '0x00000000')).eq(
       true,
     );
     expect(await pauseManager.contractPaused(contract.address)).eq(true);
-  }
+  });
 };
 
 // TODO: rename to unpauseContracts
@@ -282,12 +282,12 @@ export const unpauseVault = async (
     await tx;
   }
 
-  for (const contract of contractsArr) {
+  await asyncForEach(contractsArr, async (contract) => {
     expect(await pauseManager.isPaused(contract.address, '0x00000000')).eq(
       false,
     );
     expect(await pauseManager.contractPaused(contract.address)).eq(false);
-  }
+  });
 };
 
 // TODO: rename to pauseContractsFn
@@ -350,16 +350,16 @@ export const pauseVaultFn = async (
     await tx;
   }
 
-  for (const contract of contractsArr) {
-    for (const fnSelector of selectors) {
+  await asyncForEach(contractsArr, async (contract) => {
+    await asyncForEach(selectors, async (fnSelector) => {
       expect(await pauseManager.isPaused(contract.address, fnSelector)).eq(
         true,
       );
       expect(
         await pauseManager.contractFnPaused(contract.address, fnSelector),
       ).eq(true);
-    }
-  }
+    });
+  });
 };
 
 // TODO: rename to unpauseContractsFn
@@ -421,16 +421,16 @@ export const unpauseVaultFn = async (
     await tx;
   }
 
-  for (const contract of contractsArr) {
-    for (const fnSelector of selectors) {
+  await asyncForEach(contractsArr, async (contract) => {
+    await asyncForEach(selectors, async (fnSelector) => {
       expect(await pauseManager.isPaused(contract.address, fnSelector)).eq(
         false,
       );
       expect(
         await pauseManager.contractFnPaused(contract.address, fnSelector),
       ).eq(false);
-    }
-  }
+    });
+  });
 };
 
 export const adminPauseContractTest = async (
@@ -676,6 +676,7 @@ export const initializeParamsSuits = <TParams>(
   ) => Promise<void>,
 ) => {
   describe('initialization params', () => {
+    // TODO: should replace with async?
     for (const paramCase of paramCases) {
       it(`should fail: when ${paramCase.title}`, async () => {
         const fixture = await fixtureFn();
@@ -683,4 +684,18 @@ export const initializeParamsSuits = <TParams>(
       });
     }
   });
+};
+
+export const asyncForEach = async <T>(
+  array: Iterable<T>,
+  callback: (item: T) => Promise<void>,
+  sync = false,
+) => {
+  if (sync) {
+    for (const item of array) {
+      await callback(item);
+    }
+  } else {
+    return await Promise.all(Array.from(array).map(callback));
+  }
 };

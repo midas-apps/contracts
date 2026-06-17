@@ -11,6 +11,7 @@ import {
   AggregatorV3Mock,
   DepositVaultWithUSTBTest,
 } from '../../../typechain-types';
+import { asyncForEach } from '../../common/common.helpers';
 import { deployProxyContract } from '../../common/deploy.helpers';
 import { impersonateAndFundAccount, resetFork } from '../helpers/fork.helpers';
 import { MAINNET_ADDRESSES } from '../helpers/mainnet-addresses';
@@ -51,9 +52,9 @@ async function setupUstbBase() {
     allRoles.common.greenlistedOperator,
   ];
 
-  for (const role of rolesArray) {
+  await asyncForEach(rolesArray, async (role) => {
     await accessControl['grantRole(bytes32,address)'](role, owner.address);
-  }
+  });
 
   await accessControl['grantRole(bytes32,address)'](
     allRoles.tokenRoles.mTBILL.redemptionVaultAdmin,

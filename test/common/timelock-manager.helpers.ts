@@ -4,6 +4,7 @@ import { BigNumber, BigNumberish, ethers } from 'ethers';
 
 import {
   OptionalCommonParams,
+  asyncForEach,
   getCurrentBlockTimestamp,
   handleRevert,
 } from './common.helpers';
@@ -109,7 +110,7 @@ export const bulkScheduleTimelockOperationTester = async (
   expect(councilVersionAfter).to.be.equal(councilVersionBefore);
 
   const operationIds: string[] = [];
-  for (const [index, operationTarget] of target.entries()) {
+  await asyncForEach(target.entries(), async ([index, operationTarget]) => {
     const operationData = data[index];
     operationIds.push(
       await validateOperationDetails({
@@ -122,7 +123,7 @@ export const bulkScheduleTimelockOperationTester = async (
         councilVersionBefore,
       }),
     );
-  }
+  });
 
   return operationIds;
 };

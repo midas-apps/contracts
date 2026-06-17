@@ -225,7 +225,7 @@ export const changeTokenAllowanceTest = async (
       vault,
       vault.interface.events['ChangeTokenAllowance(address,uint256)'].name,
     )
-    .withArgs(token);
+    .withArgs(token, newAllowance);
 
   const allowance = (await vault.tokensConfig(token)).allowance;
   expect(allowance).eq(newAllowance);

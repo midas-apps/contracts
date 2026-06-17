@@ -28,7 +28,11 @@ import {
   setRoleTimelocksTester,
   NO_DELAY,
 } from '../common/ac.helpers';
-import { handleRevert, validateImplementation } from '../common/common.helpers';
+import {
+  handleRevert,
+  validateImplementation,
+  asyncForEach,
+} from '../common/common.helpers';
 import { defaultDeploy } from '../common/fixtures';
 import {
   executeTimelockOperationTester,
@@ -88,26 +92,27 @@ const setupFunctionPermissionRole = async (
   functionSelector: string,
   account: string,
 ) => {
-  for (const targetContract of [
-    wAccessControlTester.address,
-    timelockManager.address,
-  ]) {
-    await setupGrantOperatorRole({
-      accessControl,
-      owner,
-      masterRole,
-      targetContract,
-      functionSelector,
-      grantOperator: owner,
-    });
-    await setPermissionRoleTester(
-      { accessControl, owner },
-      masterRole,
-      targetContract,
-      functionSelector,
-      [{ account, enabled: true }],
-    );
-  }
+  await asyncForEach(
+    [wAccessControlTester.address, timelockManager.address],
+    async (targetContract) => {
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole,
+        targetContract,
+        functionSelector,
+        grantOperator: owner,
+      });
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        masterRole,
+        targetContract,
+        functionSelector,
+        [{ account, enabled: true }],
+      );
+    },
+    true,
+  );
 
   return getScopedFunctionKeys(
     accessControl,
@@ -164,9 +169,9 @@ describe('MidasAccessControl', function () {
       roles.common.defaultAdmin,
     ];
 
-    for (const role of initGrantedRoles) {
+    await asyncForEach(initGrantedRoles, async (role) => {
       expect(await accessControl.hasRole(role, owner.address)).to.eq(true);
-    }
+    });
 
     expect(await accessControl.getRoleAdmin(roles.common.blacklisted)).eq(
       roles.common.blacklistedOperator,

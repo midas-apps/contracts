@@ -43,6 +43,7 @@ import {
   mintToken,
   pauseVault,
   pauseVaultFn,
+  asyncForEach,
 } from '../../common/common.helpers';
 import {
   setMinGrowthApr,
@@ -153,12 +154,16 @@ const pauseOtherRedemptionApproveFns = async (
   redemptionVault: Contract,
   exceptSelector: (typeof REDEMPTION_APPROVE_FN_SELECTORS)[number],
 ) => {
-  for (const selector of REDEMPTION_APPROVE_FN_SELECTORS) {
-    if (selector === exceptSelector) {
-      continue;
-    }
-    await pauseVaultFn({ pauseManager, owner }, redemptionVault, selector);
-  }
+  await asyncForEach(
+    REDEMPTION_APPROVE_FN_SELECTORS,
+    async (selector) => {
+      if (selector === exceptSelector) {
+        return;
+      }
+      await pauseVaultFn({ pauseManager, owner }, redemptionVault, selector);
+    },
+    true,
+  );
 };
 
 export const redemptionVaultSuits = (
@@ -5628,13 +5633,17 @@ export const redemptionVaultSuits = (
             await setRoundData({ mockedAggregator }, 1.03);
             await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
 
-            for (let i = 0; i < 3; i++) {
-              await redeemRequestTest(
-                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-                stableCoins.dai,
-                100,
-              );
-            }
+            await asyncForEach(
+              Array.from({ length: 3 }, (_, i) => i),
+              async (i) => {
+                await redeemRequestTest(
+                  { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                  stableCoins.dai,
+                  100,
+                );
+              },
+              true,
+            );
 
             await approveRedeemRequestTest(
               { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -5754,21 +5763,29 @@ export const redemptionVaultSuits = (
             await setRoundData({ mockedAggregator }, 1.03);
             await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
 
-            for (let i = 0; i < 9; i++) {
-              await redeemRequestTest(
-                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-                stableCoins.dai,
-                100,
-              );
-            }
+            await asyncForEach(
+              Array.from({ length: 9 }, (_, i) => i),
+              async (i) => {
+                await redeemRequestTest(
+                  { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                  stableCoins.dai,
+                  100,
+                );
+              },
+              true,
+            );
 
-            for (const requestId of [0, 1, 2]) {
-              await approveRedeemRequestTest(
-                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-                requestId,
-                parseUnits('1'),
-              );
-            }
+            await asyncForEach(
+              [0, 1, 2],
+              async (requestId) => {
+                await approveRedeemRequestTest(
+                  { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                  requestId,
+                  parseUnits('1'),
+                );
+              },
+              true,
+            );
 
             await approveRedeemRequestTest(
               { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -5794,27 +5811,35 @@ export const redemptionVaultSuits = (
               parseUnits('1'),
             );
 
-            for (const requestId of [6, 7, 8]) {
-              await approveRedeemRequestTest(
-                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-                requestId,
-                parseUnits('1'),
-                {
-                  revertCustomError: {
-                    customErrorName: 'InvalidRequestSequence',
-                    args: [requestId, 5],
+            await asyncForEach(
+              [6, 7, 8],
+              async (requestId) => {
+                await approveRedeemRequestTest(
+                  { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                  requestId,
+                  parseUnits('1'),
+                  {
+                    revertCustomError: {
+                      customErrorName: 'InvalidRequestSequence',
+                      args: [requestId, 5],
+                    },
                   },
-                },
-              );
-            }
+                );
+              },
+              true,
+            );
 
-            for (const requestId of [5, 6, 7]) {
-              await approveRedeemRequestTest(
-                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-                requestId,
-                parseUnits('1'),
-              );
-            }
+            await asyncForEach(
+              [5, 6, 7],
+              async (requestId) => {
+                await approveRedeemRequestTest(
+                  { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                  requestId,
+                  parseUnits('1'),
+                );
+              },
+              true,
+            );
 
             await approveRedeemRequestTest(
               { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -6397,19 +6422,23 @@ export const redemptionVaultSuits = (
             await setRoundData({ mockedAggregator }, 1.03);
             await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
 
-            for (let i = 0; i < 3; i++) {
-              await redeemRequestTest(
-                {
-                  redemptionVault,
-                  owner,
-                  mTBILL,
-                  mTokenToUsdDataFeed,
-                  instantShare: 50_00,
-                },
-                stableCoins.dai,
-                100,
-              );
-            }
+            await asyncForEach(
+              Array.from({ length: 3 }, (_, i) => i),
+              async (i) => {
+                await redeemRequestTest(
+                  {
+                    redemptionVault,
+                    owner,
+                    mTBILL,
+                    mTokenToUsdDataFeed,
+                    instantShare: 50_00,
+                  },
+                  stableCoins.dai,
+                  100,
+                );
+              },
+              true,
+            );
 
             await approveRedeemRequestTest(
               {
@@ -6978,19 +7007,23 @@ export const redemptionVaultSuits = (
           await setRoundData({ mockedAggregator }, 1.03);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
 
-          for (let i = 0; i < 10; i++) {
-            await redeemRequestTest(
-              {
-                redemptionVault,
-                owner,
-                mTBILL,
-                mTokenToUsdDataFeed,
-                customRecipient: regularAccounts[i],
-              },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 10 }, (_, i) => i),
+            async (i) => {
+              await redeemRequestTest(
+                {
+                  redemptionVault,
+                  owner,
+                  mTBILL,
+                  mTokenToUsdDataFeed,
+                  customRecipient: regularAccounts[i],
+                },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -7466,13 +7499,17 @@ export const redemptionVaultSuits = (
           await setRoundData({ mockedAggregator }, 1.03);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
 
-          for (let i = 0; i < 3; i++) {
-            await redeemRequestTest(
-              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 3 }, (_, i) => i),
+            async () => {
+              await redeemRequestTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -8088,19 +8125,23 @@ export const redemptionVaultSuits = (
           await setRoundData({ mockedAggregator }, 1.03);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
 
-          for (let i = 0; i < 10; i++) {
-            await redeemRequestTest(
-              {
-                redemptionVault,
-                owner,
-                mTBILL,
-                mTokenToUsdDataFeed,
-                customRecipient: regularAccounts[i],
-              },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 10 }, (_, i) => i),
+            async (i) => {
+              await redeemRequestTest(
+                {
+                  redemptionVault,
+                  owner,
+                  mTBILL,
+                  mTokenToUsdDataFeed,
+                  customRecipient: regularAccounts[i],
+                },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -8532,13 +8573,17 @@ export const redemptionVaultSuits = (
           await setRoundData({ mockedAggregator }, 1.03);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
 
-          for (let i = 0; i < 3; i++) {
-            await redeemRequestTest(
-              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 3 }, (_, i) => i),
+            async (i) => {
+              await redeemRequestTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -9261,19 +9306,23 @@ export const redemptionVaultSuits = (
           await setRoundData({ mockedAggregator }, 1.03);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
 
-          for (let i = 0; i < 10; i++) {
-            await redeemRequestTest(
-              {
-                redemptionVault,
-                owner,
-                mTBILL,
-                mTokenToUsdDataFeed,
-                customRecipient: regularAccounts[i],
-              },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 10 }, (_, i) => i),
+            async (i) => {
+              await redeemRequestTest(
+                {
+                  redemptionVault,
+                  owner,
+                  mTBILL,
+                  mTokenToUsdDataFeed,
+                  customRecipient: regularAccounts[i],
+                },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -9705,13 +9754,17 @@ export const redemptionVaultSuits = (
           await setRoundData({ mockedAggregator }, 1.03);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
 
-          for (let i = 0; i < 3; i++) {
-            await redeemRequestTest(
-              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 3 }, (_, i) => i),
+            async (i) => {
+              await redeemRequestTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -10508,20 +10561,24 @@ export const redemptionVaultSuits = (
           await setRoundData({ mockedAggregator }, 1.03);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
 
-          for (let i = 0; i < 10; i++) {
-            await redeemRequestTest(
-              {
-                redemptionVault,
-                owner,
-                mTBILL,
-                mTokenToUsdDataFeed,
-                customRecipient: regularAccounts[i],
-                instantShare: 50_00,
-              },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 10 }, (_, i) => i),
+            async (i) => {
+              await redeemRequestTest(
+                {
+                  redemptionVault,
+                  owner,
+                  mTBILL,
+                  mTokenToUsdDataFeed,
+                  customRecipient: regularAccounts[i],
+                  instantShare: 50_00,
+                },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             {
@@ -11085,19 +11142,23 @@ export const redemptionVaultSuits = (
           await setRoundData({ mockedAggregator }, 1.03);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
 
-          for (let i = 0; i < 3; i++) {
-            await redeemRequestTest(
-              {
-                redemptionVault,
-                owner,
-                mTBILL,
-                mTokenToUsdDataFeed,
-                instantShare: 50_00,
-              },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 3 }, (_, i) => i),
+            async (i) => {
+              await redeemRequestTest(
+                {
+                  redemptionVault,
+                  owner,
+                  mTBILL,
+                  mTokenToUsdDataFeed,
+                  instantShare: 50_00,
+                },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             {
@@ -12077,20 +12138,24 @@ export const redemptionVaultSuits = (
           await setRoundData({ mockedAggregator }, 1.03);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
 
-          for (let i = 0; i < 10; i++) {
-            await redeemRequestTest(
-              {
-                redemptionVault,
-                owner,
-                mTBILL,
-                mTokenToUsdDataFeed,
-                customRecipient: regularAccounts[i],
-                instantShare: 50_00,
-              },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 10 }, (_, i) => i),
+            async (i) => {
+              await redeemRequestTest(
+                {
+                  redemptionVault,
+                  owner,
+                  mTBILL,
+                  mTokenToUsdDataFeed,
+                  customRecipient: regularAccounts[i],
+                  instantShare: 50_00,
+                },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             {
@@ -12651,19 +12716,23 @@ export const redemptionVaultSuits = (
           await setRoundData({ mockedAggregator }, 1.03);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
 
-          for (let i = 0; i < 3; i++) {
-            await redeemRequestTest(
-              {
-                redemptionVault,
-                owner,
-                mTBILL,
-                mTokenToUsdDataFeed,
-                instantShare: 50_00,
-              },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 3 }, (_, i) => i),
+            async (i) => {
+              await redeemRequestTest(
+                {
+                  redemptionVault,
+                  owner,
+                  mTBILL,
+                  mTokenToUsdDataFeed,
+                  instantShare: 50_00,
+                },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             {
@@ -12994,13 +13063,17 @@ export const redemptionVaultSuits = (
           await setRoundData({ mockedAggregator }, 1.03);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
 
-          for (let i = 0; i < 3; i++) {
-            await redeemRequestTest(
-              { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 3 }, (_, i) => i),
+            async (i) => {
+              await redeemRequestTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await rejectRedeemRequestTest(
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },

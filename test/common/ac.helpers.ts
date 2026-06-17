@@ -7,6 +7,7 @@ import {
   Account,
   AccountOrContract,
   OptionalCommonParams,
+  asyncForEach,
   getAccount,
   handleRevert,
 } from './common.helpers';
@@ -224,13 +225,16 @@ export const grantRoleMultTester = async (
     await txPromise;
   }
 
-  for (const [index, { account, role, delay }] of params.entries()) {
-    expect(await accessControl.hasRole(role, account)).eq(true);
-    if (delay !== undefined && BigNumber.from(delay).gt(0)) {
-      const [actualDelay] = await accessControl.getRoleTimelockDelay(role, 0);
-      expect(actualDelay).eq(delay);
-    }
-  }
+  await asyncForEach(
+    params.entries(),
+    async ([index, { account, role, delay }]) => {
+      expect(await accessControl.hasRole(role, account)).eq(true);
+      if (delay !== undefined && BigNumber.from(delay).gt(0)) {
+        const [actualDelay] = await accessControl.getRoleTimelockDelay(role, 0);
+        expect(actualDelay).eq(delay);
+      }
+    },
+  );
 };
 
 export const revokeRoleMultTester = async (
@@ -288,9 +292,9 @@ export const revokeRoleMultTester = async (
     await txPromise;
   }
 
-  for (const [, { role, account }] of params.entries()) {
+  await asyncForEach(params, async ({ role, account }) => {
     expect(await accessControl.hasRole(role, account)).eq(false);
-  }
+  });
 };
 
 export const grantRoleTester = async (
@@ -438,9 +442,9 @@ export const setIsUserFacingRoleTester = async (
     await txPromise;
   }
 
-  for (const param of params) {
+  await asyncForEach(params, async (param) => {
     expect(await accessControl.isUserFacingRole(param.role)).eq(param.enabled);
-  }
+  });
 };
 
 export const setGrantOperatorRoleTester = async (
@@ -532,7 +536,7 @@ export const setGrantOperatorRoleTester = async (
     await txPromise;
   }
 
-  for (const [index, stateBefore] of statesBefore.entries()) {
+  await asyncForEach(statesBefore.entries(), async ([index, stateBefore]) => {
     const param = params[index];
 
     expect(
@@ -553,7 +557,7 @@ export const setGrantOperatorRoleTester = async (
       );
       expect(actualDelay).eq(param.delay);
     }
-  }
+  });
 };
 
 export const setPermissionRoleTester = async (
@@ -674,7 +678,7 @@ export const setPermissionRoleTester = async (
     expect(actualDelay).eq(delay);
   }
 
-  for (const [index, stateBefore] of statesBefore.entries()) {
+  await asyncForEach(statesBefore.entries(), async ([index, stateBefore]) => {
     const param = params[index];
 
     expect(
@@ -682,7 +686,7 @@ export const setPermissionRoleTester = async (
         'hasFunctionPermission(bytes32,address,bytes4,address)'
       ](masterRole, targetContract, functionSelector, param.account),
     ).eq(param.enabled);
-  }
+  });
 };
 
 type SetupFunctionAccessGrantOperatorParams = {
@@ -783,7 +787,7 @@ export const setRoleTimelocksTester = async (
       return true;
     });
 
-  for (const [index, role] of roles.entries()) {
+  await asyncForEach(roles.entries(), async ([index, role]) => {
     const delayParam = delays[index];
     const [delay, isDefault] = await accessControl.getRoleTimelockDelay(
       role,
@@ -797,7 +801,7 @@ export const setRoleTimelocksTester = async (
 
     expect(delay).eq(expectedDelay);
     expect(isDefault).eq(BigNumber.from(0).eq(delayParam));
-  }
+  });
 };
 
 export const setRoleTimelocksAndExecute = async (

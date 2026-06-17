@@ -24,7 +24,7 @@ import {
   MTokenPermissioned__factory,
 } from '../../../typechain-types';
 import { NO_DELAY, NULL_DELAY } from '../../common/ac.helpers';
-import { Constructor } from '../../common/common.helpers';
+import { asyncForEach, Constructor } from '../../common/common.helpers';
 import { deployProxyContract } from '../../common/deploy.helpers';
 import { impersonateAndFundAccount, resetFork } from '../helpers/fork.helpers';
 
@@ -147,8 +147,8 @@ export async function mainnetUpgradeFixture() {
     ],
   };
 
-  for (const [, values] of Object.entries(addressesMap)) {
-    for (const val of values) {
+  await asyncForEach(Object.entries(addressesMap), async ([, values]) => {
+    await asyncForEach(values, async (val) => {
       await hre.upgrades.upgradeProxy(
         val.proxy,
         new val.implementation(proxyAdminOwner),
@@ -162,8 +162,8 @@ export async function mainnetUpgradeFixture() {
             : undefined,
         },
       );
-    }
-  }
+    });
+  });
 
   const securityCouncilMembers = [
     signers[0],

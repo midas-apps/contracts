@@ -38,6 +38,7 @@ import {
   mintToken,
   pauseVault,
   pauseVaultFn,
+  asyncForEach,
 } from '../../common/common.helpers';
 import {
   setMinGrowthApr,
@@ -124,12 +125,16 @@ const pauseOtherDepositApproveFns = async (
   depositVault: Contract,
   exceptSelector: (typeof APPROVE_FN_SELECTORS)[number],
 ) => {
-  for (const selector of APPROVE_FN_SELECTORS) {
-    if (selector === exceptSelector) {
-      continue;
-    }
-    await pauseVaultFn({ pauseManager, owner }, depositVault, selector);
-  }
+  await asyncForEach(
+    APPROVE_FN_SELECTORS,
+    async (selector) => {
+      if (selector === exceptSelector) {
+        return;
+      }
+      await pauseVaultFn({ pauseManager, owner }, depositVault, selector);
+    },
+    true,
+  );
 };
 export const depositVaultSuits = (
   dvName: string,
@@ -4897,21 +4902,29 @@ export const depositVaultSuits = (
             await setInstantFeeTest({ vault: depositVault, owner }, 0);
             await setMinAmountTest({ vault: depositVault, owner }, 0);
 
-            for (let i = 0; i < 9; i++) {
-              await depositRequestTest(
-                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-                stableCoins.dai,
-                50,
-              );
-            }
+            await asyncForEach(
+              Array.from({ length: 9 }, (_, i) => i),
+              async (i) => {
+                await depositRequestTest(
+                  { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                  stableCoins.dai,
+                  50,
+                );
+              },
+              true,
+            );
 
-            for (const requestId of [0, 1, 2]) {
-              await approveRequestTest(
-                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-                requestId,
-                parseUnits('1'),
-              );
-            }
+            await asyncForEach(
+              [0, 1, 2],
+              async (requestId) => {
+                await approveRequestTest(
+                  { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                  requestId,
+                  parseUnits('1'),
+                );
+              },
+              true,
+            );
 
             await approveRequestTest(
               { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -4937,27 +4950,35 @@ export const depositVaultSuits = (
               parseUnits('1'),
             );
 
-            for (const requestId of [6, 7, 8]) {
-              await approveRequestTest(
-                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-                requestId,
-                parseUnits('1'),
-                {
-                  revertCustomError: {
-                    customErrorName: 'InvalidRequestSequence',
-                    args: [requestId, 5],
+            await asyncForEach(
+              [6, 7, 8],
+              async (requestId) => {
+                await approveRequestTest(
+                  { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                  requestId,
+                  parseUnits('1'),
+                  {
+                    revertCustomError: {
+                      customErrorName: 'InvalidRequestSequence',
+                      args: [requestId, 5],
+                    },
                   },
-                },
-              );
-            }
+                );
+              },
+              true,
+            );
 
-            for (const requestId of [5, 6, 7]) {
-              await approveRequestTest(
-                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-                requestId,
-                parseUnits('1'),
-              );
-            }
+            await asyncForEach(
+              [5, 6, 7],
+              async (requestId) => {
+                await approveRequestTest(
+                  { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                  requestId,
+                  parseUnits('1'),
+                );
+              },
+              true,
+            );
 
             await approveRequestTest(
               { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -5765,13 +5786,17 @@ export const depositVaultSuits = (
             await setInstantFeeTest({ vault: depositVault, owner }, 0);
             await setMinAmountTest({ vault: depositVault, owner }, 0);
 
-            for (let i = 0; i < 3; i++) {
-              await depositRequestTest(
-                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-                stableCoins.dai,
-                50,
-              );
-            }
+            await asyncForEach(
+              Array.from({ length: 3 }, (_, i) => i),
+              async (i) => {
+                await depositRequestTest(
+                  { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                  stableCoins.dai,
+                  50,
+                );
+              },
+              true,
+            );
 
             await approveRequestTest(
               {
@@ -6283,13 +6308,17 @@ export const depositVaultSuits = (
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
           await setMinAmountTest({ vault: depositVault, owner }, 10);
 
-          for (let i = 0; i < 10; i++) {
-            await depositRequestTest(
-              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 10 }, (_, i) => i),
+            async (i) => {
+              await depositRequestTest(
+                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -6471,13 +6500,17 @@ export const depositVaultSuits = (
           await setInstantFeeTest({ vault: depositVault, owner }, 0);
           await setMinAmountTest({ vault: depositVault, owner }, 0);
 
-          for (let i = 0; i < 3; i++) {
-            await depositRequestTest(
-              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-              stableCoins.dai,
-              50,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 3 }, (_, i) => i),
+            async (i) => {
+              await depositRequestTest(
+                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                50,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -7050,13 +7083,17 @@ export const depositVaultSuits = (
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
           await setMinAmountTest({ vault: depositVault, owner }, 10);
 
-          for (let i = 0; i < 10; i++) {
-            await depositRequestTest(
-              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 10 }, (_, i) => i),
+            async (i) => {
+              await depositRequestTest(
+                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -7250,13 +7287,17 @@ export const depositVaultSuits = (
           await setInstantFeeTest({ vault: depositVault, owner }, 0);
           await setMinAmountTest({ vault: depositVault, owner }, 0);
 
-          for (let i = 0; i < 3; i++) {
-            await depositRequestTest(
-              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-              stableCoins.dai,
-              50,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 3 }, (_, i) => i),
+            async (i) => {
+              await depositRequestTest(
+                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                50,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -7998,19 +8039,23 @@ export const depositVaultSuits = (
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
           await setMinAmountTest({ vault: depositVault, owner }, 0);
 
-          for (let i = 0; i < 10; i++) {
-            await depositRequestTest(
-              {
-                depositVault,
-                owner,
-                mTBILL,
-                mTokenToUsdDataFeed,
-                instantShare: 50_00,
-              },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 10 }, (_, i) => i),
+            async (i) => {
+              await depositRequestTest(
+                {
+                  depositVault,
+                  owner,
+                  mTBILL,
+                  mTokenToUsdDataFeed,
+                  instantShare: 50_00,
+                },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             {
@@ -8260,19 +8305,23 @@ export const depositVaultSuits = (
           await setInstantFeeTest({ vault: depositVault, owner }, 0);
           await setMinAmountTest({ vault: depositVault, owner }, 0);
 
-          for (let i = 0; i < 3; i++) {
-            await depositRequestTest(
-              {
-                depositVault,
-                owner,
-                mTBILL,
-                mTokenToUsdDataFeed,
-                instantShare: 50_00,
-              },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 3 }, (_, i) => i),
+            async (i) => {
+              await depositRequestTest(
+                {
+                  depositVault,
+                  owner,
+                  mTBILL,
+                  mTokenToUsdDataFeed,
+                  instantShare: 50_00,
+                },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             {
@@ -8869,13 +8918,17 @@ export const depositVaultSuits = (
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
           await setMinAmountTest({ vault: depositVault, owner }, 10);
 
-          for (let i = 0; i < 10; i++) {
-            await depositRequestTest(
-              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 10 }, (_, i) => i),
+            async (i) => {
+              await depositRequestTest(
+                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -8910,19 +8963,23 @@ export const depositVaultSuits = (
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
           await setMinAmountTest({ vault: depositVault, owner }, 10);
 
-          for (let i = 0; i < 10; i++) {
-            await depositRequestTest(
-              {
-                depositVault,
-                owner,
-                mTBILL,
-                mTokenToUsdDataFeed,
-                customRecipient: regularAccounts[i],
-              },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 10 }, (_, i) => i),
+            async (i) => {
+              await depositRequestTest(
+                {
+                  depositVault,
+                  owner,
+                  mTBILL,
+                  mTokenToUsdDataFeed,
+                  customRecipient: regularAccounts[i],
+                },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -9169,13 +9226,17 @@ export const depositVaultSuits = (
           await setInstantFeeTest({ vault: depositVault, owner }, 0);
           await setMinAmountTest({ vault: depositVault, owner }, 0);
 
-          for (let i = 0; i < 3; i++) {
-            await depositRequestTest(
-              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-              stableCoins.dai,
-              50,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 3 }, (_, i) => i),
+            async (i) => {
+              await depositRequestTest(
+                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                50,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -9929,19 +9990,23 @@ export const depositVaultSuits = (
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
           await setMinAmountTest({ vault: depositVault, owner }, 0);
 
-          for (let i = 0; i < 10; i++) {
-            await depositRequestTest(
-              {
-                depositVault,
-                owner,
-                mTBILL,
-                mTokenToUsdDataFeed,
-                instantShare: 50_00,
-              },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 10 }, (_, i) => i),
+            async (i) => {
+              await depositRequestTest(
+                {
+                  depositVault,
+                  owner,
+                  mTBILL,
+                  mTokenToUsdDataFeed,
+                  instantShare: 50_00,
+                },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             {
@@ -9982,20 +10047,24 @@ export const depositVaultSuits = (
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
           await setMinAmountTest({ vault: depositVault, owner }, 0);
 
-          for (let i = 0; i < 10; i++) {
-            await depositRequestTest(
-              {
-                depositVault,
-                owner,
-                mTBILL,
-                mTokenToUsdDataFeed,
-                customRecipient: regularAccounts[i],
-                instantShare: 50_00,
-              },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 10 }, (_, i) => i),
+            async (i) => {
+              await depositRequestTest(
+                {
+                  depositVault,
+                  owner,
+                  mTBILL,
+                  mTokenToUsdDataFeed,
+                  customRecipient: regularAccounts[i],
+                  instantShare: 50_00,
+                },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             {
@@ -10314,19 +10383,23 @@ export const depositVaultSuits = (
           await setInstantFeeTest({ vault: depositVault, owner }, 0);
           await setMinAmountTest({ vault: depositVault, owner }, 0);
 
-          for (let i = 0; i < 3; i++) {
-            await depositRequestTest(
-              {
-                depositVault,
-                owner,
-                mTBILL,
-                mTokenToUsdDataFeed,
-                instantShare: 50_00,
-              },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 3 }, (_, i) => i),
+            async (i) => {
+              await depositRequestTest(
+                {
+                  depositVault,
+                  owner,
+                  mTBILL,
+                  mTokenToUsdDataFeed,
+                  instantShare: 50_00,
+                },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await safeBulkApproveRequestTest(
             {
@@ -10595,13 +10668,17 @@ export const depositVaultSuits = (
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
           await setMinAmountTest({ vault: depositVault, owner }, 10);
 
-          for (let i = 0; i < 3; i++) {
-            await depositRequestTest(
-              { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-              stableCoins.dai,
-              100,
-            );
-          }
+          await asyncForEach(
+            Array.from({ length: 3 }, (_, i) => i),
+            async (i) => {
+              await depositRequestTest(
+                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+            },
+            true,
+          );
 
           await rejectRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },

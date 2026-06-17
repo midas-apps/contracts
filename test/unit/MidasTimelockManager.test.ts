@@ -17,6 +17,7 @@ import {
   setupGrantOperatorRole,
 } from '../common/ac.helpers';
 import {
+  asyncForEach,
   OptionalCommonParams,
   validateImplementation,
 } from '../common/common.helpers';
@@ -1770,15 +1771,19 @@ describe('MidasTimelockManager', () => {
         undefined,
       );
 
-      for (let i = 0; i < 3; i++) {
-        await voteForExecutionTest(
-          { timelockManager, timelock, owner, accessControl },
-          operationId,
-          {
-            from: councilMembers[i],
-          },
-        );
-      }
+      await asyncForEach(
+        councilMembers.slice(0, 3),
+        async (member) => {
+          await voteForExecutionTest(
+            { timelockManager, timelock, owner, accessControl },
+            operationId,
+            {
+              from: member,
+            },
+          );
+        },
+        true,
+      );
 
       await pauseTimelockOperationTest(
         { timelockManager, timelock, owner, accessControl },
@@ -1825,15 +1830,19 @@ describe('MidasTimelockManager', () => {
         undefined,
       );
 
-      for (let i = 0; i < 3; i++) {
-        await voteForVetoTest(
-          { timelockManager, timelock, owner, accessControl },
-          operationId,
-          {
-            from: councilMembers[i],
-          },
-        );
-      }
+      await asyncForEach(
+        councilMembers.slice(0, 3),
+        async (member) => {
+          await voteForVetoTest(
+            { timelockManager, timelock, owner, accessControl },
+            operationId,
+            {
+              from: member,
+            },
+          );
+        },
+        true,
+      );
 
       await pauseTimelockOperationTest(
         { timelockManager, timelock, owner, accessControl },
@@ -2135,15 +2144,19 @@ describe('MidasTimelockManager', () => {
         undefined,
       );
 
-      for (let i = 0; i < 3; i++) {
-        await voteForVetoTest(
-          { timelockManager, timelock, owner, accessControl },
-          operationId,
-          {
-            from: councilMembers[i],
-          },
-        );
-      }
+      await asyncForEach(
+        councilMembers.slice(0, 3),
+        async (member) => {
+          await voteForVetoTest(
+            { timelockManager, timelock, owner, accessControl },
+            operationId,
+            {
+              from: member,
+            },
+          );
+        },
+        true,
+      );
 
       await abortOperationTest(
         { timelockManager, timelock, owner, accessControl },
@@ -2183,25 +2196,33 @@ describe('MidasTimelockManager', () => {
         undefined,
       );
 
-      for (let i = 0; i < 3; i++) {
-        await voteForExecutionTest(
-          { timelockManager, timelock, owner, accessControl },
-          operationId,
-          {
-            from: councilMembers[i],
-          },
-        );
-      }
+      await asyncForEach(
+        councilMembers.slice(0, 3),
+        async (member) => {
+          await voteForExecutionTest(
+            { timelockManager, timelock, owner, accessControl },
+            operationId,
+            {
+              from: member,
+            },
+          );
+        },
+        true,
+      );
 
-      for (let i = 0; i < 3; i++) {
-        await voteForVetoTest(
-          { timelockManager, timelock, owner, accessControl },
-          operationId,
-          {
-            from: councilMembers[i],
-          },
-        );
-      }
+      await asyncForEach(
+        councilMembers.slice(0, 3),
+        async (member) => {
+          await voteForVetoTest(
+            { timelockManager, timelock, owner, accessControl },
+            operationId,
+            {
+              from: member,
+            },
+          );
+        },
+        true,
+      );
 
       await abortOperationTest(
         { timelockManager, timelock, owner, accessControl },
@@ -2241,27 +2262,35 @@ describe('MidasTimelockManager', () => {
         undefined,
       );
 
-      for (let i = 0; i < 3; i++) {
-        await voteForExecutionTest(
-          { timelockManager, timelock, owner, accessControl },
-          operationId,
-          {
-            from: councilMembers[i],
-          },
-        );
-      }
+      await asyncForEach(
+        councilMembers.slice(0, 3),
+        async (member) => {
+          await voteForExecutionTest(
+            { timelockManager, timelock, owner, accessControl },
+            operationId,
+            {
+              from: member,
+            },
+          );
+        },
+        true,
+      );
 
       await increase(days(3));
 
-      for (let i = 0; i < 3; i++) {
-        await voteForVetoTest(
-          { timelockManager, timelock, owner, accessControl },
-          operationId,
-          {
-            from: councilMembers[i],
-          },
-        );
-      }
+      await asyncForEach(
+        councilMembers.slice(0, 3),
+        async (member) => {
+          await voteForVetoTest(
+            { timelockManager, timelock, owner, accessControl },
+            operationId,
+            {
+              from: member,
+            },
+          );
+        },
+        true,
+      );
 
       await abortOperationTest(
         { timelockManager, timelock, owner, accessControl },
@@ -2342,15 +2371,19 @@ describe('MidasTimelockManager', () => {
         undefined,
       );
 
-      for (let i = 0; i < 3; i++) {
-        await voteForExecutionTest(
-          { timelockManager, timelock, owner, accessControl },
-          operationId,
-          {
-            from: councilMembers[i],
-          },
-        );
-      }
+      await asyncForEach(
+        councilMembers.slice(0, 3),
+        async (member) => {
+          await voteForExecutionTest(
+            { timelockManager, timelock, owner, accessControl },
+            operationId,
+            {
+              from: member,
+            },
+          );
+        },
+        true,
+      );
 
       await voteForVetoTest(
         { timelockManager, timelock, owner, accessControl },
@@ -2393,15 +2426,19 @@ describe('MidasTimelockManager', () => {
         undefined,
       );
 
-      for (let i = 0; i < 3; i++) {
-        await voteForVetoTest(
-          { timelockManager, timelock, owner, accessControl },
-          operationId,
-          {
-            from: councilMembers[i],
-          },
-        );
-      }
+      await asyncForEach(
+        councilMembers.slice(0, 3),
+        async (member) => {
+          await voteForVetoTest(
+            { timelockManager, timelock, owner, accessControl },
+            operationId,
+            {
+              from: member,
+            },
+          );
+        },
+        true,
+      );
 
       await voteForVetoTest(
         { timelockManager, timelock, owner, accessControl },
@@ -2802,16 +2839,20 @@ describe('MidasTimelockManager', () => {
         undefined,
       );
 
-      for (let i = 0; i < 3; i++) {
-        await voteForExecutionTest(
-          { timelockManager, timelock, owner, accessControl },
-          operationId,
+      await asyncForEach(
+        councilMembers.slice(0, 3),
+        async (member) => {
+          await voteForExecutionTest(
+            { timelockManager, timelock, owner, accessControl },
+            operationId,
 
-          {
-            from: councilMembers[i],
-          },
-        );
-      }
+            {
+              from: member,
+            },
+          );
+        },
+        true,
+      );
 
       await increase(3600);
 
@@ -2861,15 +2902,19 @@ describe('MidasTimelockManager', () => {
         undefined,
       );
 
-      for (let i = 0; i < 3; i++) {
-        await voteForExecutionTest(
-          { timelockManager, timelock, owner, accessControl },
-          operationId,
-          {
-            from: councilMembers[i],
-          },
-        );
-      }
+      await asyncForEach(
+        councilMembers.slice(0, 3),
+        async (member) => {
+          await voteForExecutionTest(
+            { timelockManager, timelock, owner, accessControl },
+            operationId,
+            {
+              from: member,
+            },
+          );
+        },
+        true,
+      );
 
       await increase(3600);
       await increase(days(3));
@@ -2914,28 +2959,36 @@ describe('MidasTimelockManager', () => {
         undefined,
       );
 
-      for (let i = 0; i < 3; i++) {
-        await voteForExecutionTest(
-          { timelockManager, timelock, owner, accessControl },
-          operationId,
-          {
-            from: councilMembers[i],
-          },
-        );
-      }
+      await asyncForEach(
+        councilMembers.slice(0, 3),
+        async (member) => {
+          await voteForExecutionTest(
+            { timelockManager, timelock, owner, accessControl },
+            operationId,
+            {
+              from: member,
+            },
+          );
+        },
+        true,
+      );
 
       await increase(3600);
       await increase(days(3));
 
-      for (let i = 0; i < 3; i++) {
-        await voteForVetoTest(
-          { timelockManager, timelock, owner, accessControl },
-          operationId,
-          {
-            from: councilMembers[i],
-          },
-        );
-      }
+      await asyncForEach(
+        councilMembers.slice(0, 3),
+        async (member) => {
+          await voteForVetoTest(
+            { timelockManager, timelock, owner, accessControl },
+            operationId,
+            {
+              from: member,
+            },
+          );
+        },
+        true,
+      );
 
       await executeTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
@@ -3181,15 +3234,19 @@ describe('MidasTimelockManager', () => {
         undefined,
       );
 
-      for (let i = 0; i < 3; i++) {
-        await voteForExecutionTest(
-          { timelockManager, timelock, owner, accessControl },
-          operationId,
-          {
-            from: councilMembers[i],
-          },
-        );
-      }
+      await asyncForEach(
+        councilMembers.slice(0, 3),
+        async (member) => {
+          await voteForExecutionTest(
+            { timelockManager, timelock, owner, accessControl },
+            operationId,
+            {
+              from: member,
+            },
+          );
+        },
+        true,
+      );
 
       await abortOperationTest(
         { timelockManager, timelock, owner, accessControl },
@@ -3566,15 +3623,19 @@ describe('MidasTimelockManager', () => {
         undefined,
       );
 
-      for (let i = 0; i < 3; i++) {
-        await voteForExecutionTest(
-          { timelockManager, timelock, owner, accessControl },
-          operationId,
-          {
-            from: councilMembers[i],
-          },
-        );
-      }
+      await asyncForEach(
+        councilMembers.slice(0, 3),
+        async (member) => {
+          await voteForExecutionTest(
+            { timelockManager, timelock, owner, accessControl },
+            operationId,
+            {
+              from: member,
+            },
+          );
+        },
+        true,
+      );
 
       await increase(days(3));
 
@@ -3684,15 +3745,19 @@ describe('MidasTimelockManager', () => {
         undefined,
       );
 
-      for (let i = 0; i < 3; i++) {
-        await voteForExecutionTest(
-          { timelockManager, timelock, owner, accessControl },
-          operationId,
-          {
-            from: councilMembers[i],
-          },
-        );
-      }
+      await asyncForEach(
+        councilMembers.slice(0, 3),
+        async (member) => {
+          await voteForExecutionTest(
+            { timelockManager, timelock, owner, accessControl },
+            operationId,
+            {
+              from: member,
+            },
+          );
+        },
+        true,
+      );
 
       await increase(days(3));
 
@@ -4115,15 +4180,19 @@ describe('MidasTimelockManager', () => {
         undefined,
       );
 
-      for (let i = 0; i < 3; i++) {
-        await voteForExecutionTest(
-          { timelockManager, timelock, owner, accessControl },
-          operationId,
-          {
-            from: councilMembers[i],
-          },
-        );
-      }
+      await asyncForEach(
+        councilMembers.slice(0, 3),
+        async (member) => {
+          await voteForExecutionTest(
+            { timelockManager, timelock, owner, accessControl },
+            operationId,
+            {
+              from: member,
+            },
+          );
+        },
+        true,
+      );
 
       await increase(3600);
       await increase(days(3));
