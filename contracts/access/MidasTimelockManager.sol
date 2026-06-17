@@ -258,7 +258,7 @@ contract MidasTimelockManager is
         ) = _getOperationStatus(operationId);
 
         require(
-            status == TimelockOperationStatus.NotPaused ||
+            status == TimelockOperationStatus.Pending ||
                 status == TimelockOperationStatus.ReadyToExecute,
             UnexpectedOperationStatus(status)
         );
@@ -297,7 +297,7 @@ contract MidasTimelockManager is
         ) = _getOperationStatus(operationId);
 
         require(
-            status == TimelockOperationStatus.NotPaused,
+            status == TimelockOperationStatus.Pending,
             UnexpectedOperationStatus(status)
         );
 
@@ -325,7 +325,7 @@ contract MidasTimelockManager is
         ) = _getOperationStatus(operationId);
 
         require(
-            _securityCouncils[opDetails.councilVersion].contains(msg.sender),
+            isInSecurityCouncil(opDetails.councilVersion, msg.sender),
             NotInSecurityCouncil()
         );
 
@@ -358,8 +358,7 @@ contract MidasTimelockManager is
         ) = _getOperationStatus(operationId);
 
         require(
-            // TODO: move to function
-            _securityCouncils[opDetails.councilVersion].contains(msg.sender),
+            isInSecurityCouncil(opDetails.councilVersion, msg.sender),
             NotInSecurityCouncil()
         );
 
@@ -605,6 +604,17 @@ contract MidasTimelockManager is
     }
 
     /**
+     * @inheritdoc IMidasTimelockManager
+     */
+    function isInSecurityCouncil(uint256 version, address account)
+        public
+        view
+        returns (bool)
+    {
+        return _securityCouncils[version].contains(account);
+    }
+
+    /**
      * @inheritdoc WithMidasAccessControl
      */
     function contractAdminRole() public pure override returns (bytes32) {
@@ -629,7 +639,7 @@ contract MidasTimelockManager is
         status = opDetails.status;
 
         if (
-            status != TimelockOperationStatus.NotPaused &&
+            status != TimelockOperationStatus.Pending &&
             status != TimelockOperationStatus.Paused &&
             status != TimelockOperationStatus.ApprovedExecution
         ) {
@@ -714,7 +724,7 @@ contract MidasTimelockManager is
         opDetails.dataHash = dataHash;
         opDetails.operationProposer = proposer;
         opDetails.createdAt = uint32(block.timestamp);
-        opDetails.status = TimelockOperationStatus.NotPaused;
+        opDetails.status = TimelockOperationStatus.Pending;
 
         require(_pendingOperations.add(operationId), OperationAlreadyPending());
 

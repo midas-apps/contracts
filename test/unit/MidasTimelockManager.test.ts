@@ -1992,7 +1992,7 @@ describe('MidasTimelockManager', () => {
       );
     });
 
-    it('should fail: when status is NotPaused', async () => {
+    it('should fail: when status is Pending', async () => {
       const {
         timelockManager,
         timelock,
@@ -2561,7 +2561,7 @@ describe('MidasTimelockManager', () => {
       );
     });
 
-    it('should fail: when status is NotPaused', async () => {
+    it('should fail: when status is Pending', async () => {
       const {
         timelockManager,
         timelock,
@@ -3115,7 +3115,7 @@ describe('MidasTimelockManager', () => {
       );
     });
 
-    it('should fail: when status is NotPaused', async () => {
+    it('should fail: when status is Pending', async () => {
       const {
         timelockManager,
         timelock,
@@ -3472,7 +3472,7 @@ describe('MidasTimelockManager', () => {
       ).to.eq(0);
     });
 
-    it('should return NotPaused for scheduled operation', async () => {
+    it('should return Pending for scheduled operation', async () => {
       const {
         timelockManager,
         timelock,

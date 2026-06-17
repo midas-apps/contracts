@@ -38,7 +38,14 @@ export const setMaxPendingOperationsPerProposerTester = async (
     return;
   }
 
-  await expect(callFn()).to.not.reverted;
+  await expect(callFn())
+    .to.emit(
+      timelockManager,
+      timelockManager.interface.events[
+        'SetMaxPendingOperationsPerProposer(uint256)'
+      ].name,
+    )
+    .withArgs(maxPendingOperationsPerProposer);
 
   const actualMaxPendingOperationsPerProposer =
     await timelockManager.maxPendingOperationsPerProposer();
@@ -73,8 +80,30 @@ export const bulkScheduleTimelockOperationTester = async (
 
   const councilVersionBefore = await timelockManager.securityCouncilVersion();
 
+  const expectedOperationIds = await Promise.all(
+    target.map((operationTarget, index) =>
+      getExpectedOperationId(
+        timelockManager,
+        timelock,
+        operationTarget,
+        data[index],
+      ),
+    ),
+  );
+
   const txPromise = callFn();
-  await expect(txPromise).to.not.reverted;
+  let bulkScheduleExpect = expect(txPromise);
+  for (const [index] of target.entries()) {
+    bulkScheduleExpect = bulkScheduleExpect.to
+      .emit(
+        timelockManager,
+        timelockManager.interface.events[
+          'ScheduleTimelockOperation(address,bytes32)'
+        ].name,
+      )
+      .withArgs(from.address, expectedOperationIds[index]);
+  }
+  await bulkScheduleExpect;
   const councilVersionAfter = await timelockManager.securityCouncilVersion();
 
   expect(councilVersionAfter).to.be.equal(councilVersionBefore);
@@ -118,13 +147,25 @@ export const scheduleTimelockOperationTester = async (
 
   const councilVersionBefore = await timelockManager.securityCouncilVersion();
 
+  const expectedOperationId = await getExpectedOperationId(
+    timelockManager,
+    timelock,
+    target,
+    data,
+  );
+
   const txPromise = callFn();
-  await expect(txPromise).to.not.reverted;
+  await expect(txPromise)
+    .to.emit(
+      timelockManager,
+      timelockManager.interface.events[
+        'ScheduleTimelockOperation(address,bytes32)'
+      ].name,
+    )
+    .withArgs(from.address, expectedOperationId);
   const councilVersionAfter = await timelockManager.securityCouncilVersion();
 
   expect(councilVersionAfter).to.be.equal(councilVersionBefore);
-
-  const operationIds: string[] = [];
 
   return [
     await validateOperationDetails({
@@ -137,6 +178,24 @@ export const scheduleTimelockOperationTester = async (
       councilVersionBefore,
     }),
   ];
+};
+
+const getExpectedOperationId = async (
+  timelockManager: MidasTimelockManager,
+  timelock: MidasAccessControlTimelockController,
+  operationTarget: string,
+  operationData: string,
+) => {
+  const dataHash = getDataHash(operationTarget, operationData);
+  const dataHashIndex = await timelockManager.dataHashIndexes(dataHash);
+
+  return timelock.hashOperation(
+    operationTarget,
+    0,
+    operationData,
+    ethers.constants.HashZero,
+    getTimelockSalt(dataHashIndex),
+  );
 };
 
 const validateOperationDetails = async ({
@@ -223,7 +282,14 @@ export const executeTimelockOperationTester = async (
   const detailsBefore = await timelockManager.getOperationDetails(operationId);
 
   const txPromise = callFn();
-  await expect(txPromise).to.not.reverted;
+  await expect(txPromise)
+    .to.emit(
+      timelockManager,
+      timelockManager.interface.events[
+        'ExecuteTimelockOperation(address,bytes32)'
+      ].name,
+    )
+    .withArgs(from.address, operationId);
 
   const dataHashIndexAfter = await timelockManager.dataHashIndexes(dataHash);
 
@@ -278,7 +344,13 @@ export const setSecurityCouncilTest = async (
     councilVersionBefore,
   );
 
-  await expect(callFn()).to.not.reverted;
+  await expect(callFn())
+    .to.emit(
+      timelockManager,
+      timelockManager.interface.events['SetSecurityCouncil(uint256,address[])']
+        .name,
+    )
+    .withArgs(councilVersionBefore.add(1), members);
   const oldCouncilAfter = await timelockManager.getSecurityCouncilMembers(
     councilVersionBefore,
   );
@@ -317,7 +389,19 @@ export const pauseTimelockOperationTest = async (
 
   const detailsBefore = await timelockManager.getOperationDetails(operationId);
 
-  await expect(callFn()).to.not.reverted;
+  await expect(callFn())
+    .to.emit(
+      timelockManager,
+      timelockManager.interface.events[
+        'PauseTimelockOperation(address,bytes32,uint8,uint256)'
+      ].name,
+    )
+    .withArgs(
+      from.address,
+      operationId,
+      pauseReasonCode,
+      detailsBefore.councilVersion,
+    );
 
   const details = await timelockManager.getOperationDetails(operationId);
 
@@ -354,7 +438,14 @@ export const voteForVetoTest = async (
 
   const detailsBefore = await timelockManager.getOperationDetails(operationId);
 
-  await expect(callFn()).to.not.reverted;
+  await expect(callFn())
+    .to.emit(
+      timelockManager,
+      timelockManager.interface.events[
+        'PausedProposalVoteCast(address,bytes32,bool)'
+      ].name,
+    )
+    .withArgs(from.address, operationId, false);
 
   const quorum = await timelockManager.councilQuorum(
     detailsBefore.councilVersion,
@@ -396,7 +487,14 @@ export const voteForExecutionTest = async (
 
   const detailsBefore = await timelockManager.getOperationDetails(operationId);
 
-  await expect(callFn()).to.not.reverted;
+  await expect(callFn())
+    .to.emit(
+      timelockManager,
+      timelockManager.interface.events[
+        'PausedProposalVoteCast(address,bytes32,bool)'
+      ].name,
+    )
+    .withArgs(from.address, operationId, true);
 
   const quorum = await timelockManager.councilQuorum(
     detailsBefore.councilVersion,
@@ -453,7 +551,14 @@ export const abortOperationTest = async (
     await timelockManager.proposerPendingOperationsCount(
       detailsBefore.operationProposer,
     );
-  await expect(callFn()).to.not.reverted;
+  await expect(callFn())
+    .to.emit(
+      timelockManager,
+      timelockManager.interface.events[
+        'AbortTimelockOperation(address,bytes32,uint8)'
+      ].name,
+    )
+    .withArgs(from.address, operationId, detailsBefore.status);
 
   const pendingOperationsPerProposerAfter =
     await timelockManager.proposerPendingOperationsCount(

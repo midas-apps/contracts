@@ -63,20 +63,22 @@ interface IDepositVault is IManageableVault {
      * @param user function caller (msg.sender)
      * @param tokenIn address of tokenIn
      * @param recipient address that receives the mTokens
-     * @param amountUsd amount of tokenIn converted to USD
-     * @param amountToken amount of tokenIn
-     * @param fee fee amount in tokenIn
-     * @param minted amount of minted mTokens
+     * @param amountTokenIn amount of tokenIn
+     * @param feeAmount fee amount in tokenIn
+     * @param amountMToken amount of minted mTokens
+     * @param mTokenRate mToken rate
+     * @param tokenInRate tokenIn rate
      * @param referrerId referrer id
      */
     event DepositInstant(
         address indexed user,
         address indexed tokenIn,
-        address recipient,
-        uint256 amountUsd,
-        uint256 amountToken,
-        uint256 fee,
-        uint256 minted,
+        address indexed recipient,
+        uint256 amountTokenIn,
+        uint256 feeAmount,
+        uint256 amountMToken,
+        uint256 mTokenRate,
+        uint256 tokenInRate,
         bytes32 referrerId
     );
 
@@ -85,10 +87,11 @@ interface IDepositVault is IManageableVault {
      * @param user function caller (msg.sender)
      * @param recipient address that receives the mTokens
      * @param tokenIn address of tokenIn
-     * @param amountToken amount of tokenIn
-     * @param amountUsd amount of tokenIn converted to USD
-     * @param fee fee amount in tokenIn
-     * @param tokenOutRate mToken rate
+     * @param amountTokenIn amount of tokenIn
+     * @param amountTokenInInstant amount of tokenIn that was deposited instantly
+     * @param feeAmount fee amount in tokenIn
+     * @param mTokenRate mToken rate
+     * @param tokenInRate tokenIn rate
      * @param referrerId referrer id
      */
     event DepositRequest(
@@ -96,10 +99,11 @@ interface IDepositVault is IManageableVault {
         address indexed user,
         address indexed tokenIn,
         address recipient,
-        uint256 amountToken,
-        uint256 amountUsd,
-        uint256 fee,
-        uint256 tokenOutRate,
+        uint256 amountTokenIn,
+        uint256 amountTokenInInstant,
+        uint256 feeAmount,
+        uint256 mTokenRate,
+        uint256 tokenInRate,
         bytes32 referrerId
     );
 
@@ -118,14 +122,8 @@ interface IDepositVault is IManageableVault {
 
     /**
      * @param requestId mint request id
-     * @param user address of user
      */
-    event RejectRequest(uint256 indexed requestId, address indexed user);
-
-    /**
-     * @param user address that was freed from min deposit check
-     */
-    event FreeFromMinDeposit(address indexed user);
+    event RejectRequest(uint256 indexed requestId);
 
     /**
      * @notice first deposit mint amount is below minimum

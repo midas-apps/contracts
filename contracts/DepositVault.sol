@@ -279,7 +279,7 @@ contract DepositVault is ManageableVault, IDepositVault {
             request.tokenOutRate
         );
 
-        emit RejectRequest(requestId, request.recipient);
+        emit RejectRequest(requestId);
     }
 
     /**
@@ -390,10 +390,11 @@ contract DepositVault is ManageableVault, IDepositVault {
             msg.sender,
             tokenIn,
             recipient,
-            result.tokenAmountInUsd,
             amountToken,
             result.feeTokenAmount,
             result.mintAmount,
+            result.tokenOutRate,
+            result.tokenInRate,
             referrerId
         );
     }
@@ -486,6 +487,7 @@ contract DepositVault is ManageableVault, IDepositVault {
                 amountTokenRequest,
                 recipientRequest,
                 referrerId,
+                amountTokenInstant,
                 instantResult.tokenAmountInUsd
             ),
             instantResult.mintAmount
@@ -498,6 +500,7 @@ contract DepositVault is ManageableVault, IDepositVault {
      * @param amountToken amount of tokenIn (decimals 18)
      * @param recipient recipient address
      * @param referrerId referrer id
+     * @param depositedInstantAmount amount of tokenIn that was deposited instantly (decimals 18)
      * @param depositedInstantUsdAmount amount of tokenIn that was deposited instantly in USD
 
      * @return requestId request id
@@ -507,6 +510,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 amountToken,
         address recipient,
         bytes32 referrerId,
+        uint256 depositedInstantAmount,
         uint256 depositedInstantUsdAmount
     ) private returns (uint256 requestId) {
         address user = msg.sender;
@@ -527,23 +531,23 @@ contract DepositVault is ManageableVault, IDepositVault {
             calcResult.tokenDecimals
         );
 
-        Request memory request = Request({
-            recipient: recipient,
-            tokenIn: tokenIn,
-            status: RequestStatus.Pending,
-            depositedUsdAmount: calcResult.tokenAmountInUsd,
-            usdAmountWithoutFees: (calcResult.amountTokenWithoutFee *
-                calcResult.tokenInRate) / 10**18,
-            tokenOutRate: calcResult.tokenOutRate,
-            depositedInstantUsdAmount: depositedInstantUsdAmount,
-            approvedTokenOutRate: 0,
-            amountMToken: 0
-        });
-
-        mintRequests[requestId] = request;
-
         // prevents stack too deep error
         {
+            Request memory request = Request({
+                recipient: recipient,
+                tokenIn: tokenIn,
+                status: RequestStatus.Pending,
+                depositedUsdAmount: calcResult.tokenAmountInUsd,
+                usdAmountWithoutFees: (calcResult.amountTokenWithoutFee *
+                    calcResult.tokenInRate) / 10**18,
+                tokenOutRate: calcResult.tokenOutRate,
+                depositedInstantUsdAmount: depositedInstantUsdAmount,
+                approvedTokenOutRate: 0,
+                amountMToken: 0
+            });
+
+            mintRequests[requestId] = request;
+
             uint256 estimatedMintAmount = _quoteMTokenFromRequest(
                 request,
                 request.tokenOutRate
@@ -565,9 +569,10 @@ contract DepositVault is ManageableVault, IDepositVault {
             tokenIn,
             recipient,
             amountToken,
-            calcResult.tokenAmountInUsd,
+            depositedInstantAmount,
             calcResult.feeTokenAmount,
             calcResult.tokenOutRate,
+            calcResult.tokenInRate,
             referrerId
         );
     }

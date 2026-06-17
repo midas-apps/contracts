@@ -131,7 +131,7 @@ export const setInstantFeeTest = async (
 
   await expect(vault.connect(opt?.from ?? owner).setInstantFee(newFee))
     .to.emit(vault, vault.interface.events['SetInstantFee(uint256)'].name)
-    .withArgs(newFee).to.not.reverted;
+    .withArgs(newFee);
 
   const fee = await vault.instantFee();
   expect(fee).eq(newFee);
@@ -164,7 +164,7 @@ export const setMinMaxInstantFeeTest = async (
       vault,
       vault.interface.events['SetMinMaxInstantFee(uint256,uint256)'].name,
     )
-    .withArgs(newMinInstantFee, newMaxInstantFee).to.not.reverted;
+    .withArgs(newMinInstantFee, newMaxInstantFee);
 
   expect(await vault.minInstantFee()).eq(newMinInstantFee);
   expect(await vault.maxInstantFee()).eq(newMaxInstantFee);
@@ -194,7 +194,7 @@ export const setVariabilityToleranceTest = async (
       vault,
       vault.interface.events['SetVariationTolerance(uint256)'].name,
     )
-    .withArgs(newTolerance).to.not.reverted;
+    .withArgs(newTolerance);
 
   const tolerance = await vault.variationTolerance();
   expect(tolerance).eq(newTolerance);
@@ -225,7 +225,7 @@ export const changeTokenAllowanceTest = async (
       vault,
       vault.interface.events['ChangeTokenAllowance(address,uint256)'].name,
     )
-    .withArgs(token).to.not.reverted;
+    .withArgs(token);
 
   const allowance = (await vault.tokensConfig(token)).allowance;
   expect(allowance).eq(newAllowance);
@@ -254,7 +254,7 @@ export const changeTokenFeeTest = async (
       vault,
       vault.interface.events['ChangeTokenFee(address,uint256)'].name,
     )
-    .withArgs(token, newFee).to.not.reverted;
+    .withArgs(token, newFee);
 
   const fee = (await vault.tokensConfig(token)).fee;
   expect(fee).eq(newFee);
@@ -285,7 +285,7 @@ export const setWaivedFeeAccountTest = async (
       vault,
       vault.interface.events['SetWaivedFeeAccount(address,bool)'].name,
     )
-    .withArgs(account, enable).to.not.reverted;
+    .withArgs(account, enable);
 
   const isWaivedFee = await vault.waivedFeeRestriction(account);
   expect(isWaivedFee).eq(enable);
@@ -315,12 +315,13 @@ export const setInstantLimitConfigTest = async (
 
   const limitConfigsBefore = await vault.getInstantLimitStatuses();
 
-  // TODO: check events
   await expect(
     vault
       .connect(opt?.from ?? owner)
       .setInstantLimitConfig(window, newLimitValue),
-  ).not.reverted;
+  )
+    .to.emit(vault, 'WindowLimitSet')
+    .withArgs(window, newLimitValue);
 
   const limitConfigsAfter = await vault.getInstantLimitStatuses();
 
@@ -381,10 +382,11 @@ export const removeInstantLimitConfigTest = async (
     'removeInstantLimitConfigTest: window must exist before removal',
   );
 
-  // TODO: check events
   await expect(
     vault.connect(opt?.from ?? owner).removeInstantLimitConfig(window),
-  ).to.not.reverted;
+  )
+    .to.emit(vault, 'WindowLimitRemoved')
+    .withArgs(window);
 
   const limitConfigsAfter = await vault.getInstantLimitStatuses();
   expect(limitConfigsAfter.length).eq(limitConfigsBefore.length - 1);
@@ -417,7 +419,7 @@ export const setMaxApproveRequestIdTest = async (
       vault,
       vault.interface.events['SetMaxApproveRequestId(uint256)'].name,
     )
-    .withArgs(maxApproveRequestId).to.not.reverted;
+    .withArgs(maxApproveRequestId);
 
   const newMaxApproveRequestId = await vault.maxApproveRequestId();
   expect(newMaxApproveRequestId).eq(maxApproveRequestId);
@@ -442,8 +444,7 @@ export const setMaxInstantShareTest = async (
 
   await expect(
     vault.connect(opt?.from ?? owner).setMaxInstantShare(maxInstantShare),
-  ).to.emit(vault, vault.interface.events['SetMaxInstantShare(uint256)'].name)
-    .to.not.reverted;
+  ).to.emit(vault, vault.interface.events['SetMaxInstantShare(uint256)'].name);
 
   const newMaxInstantShare = await vault.maxInstantShare();
   expect(newMaxInstantShare).eq(maxInstantShare);
@@ -468,7 +469,7 @@ export const setTokensReceiverTest = async (
 
   await expect(vault.connect(opt?.from ?? owner).setTokensReceiver(newReceiver))
     .to.emit(vault, vault.interface.events['SetTokensReceiver(address)'].name)
-    .withArgs(newReceiver).to.not.reverted;
+    .withArgs(newReceiver);
 
   const tokensReceiver = await vault.tokensReceiver();
   expect(tokensReceiver).eq(newReceiver);
@@ -498,7 +499,7 @@ export const setSequentialRequestProcessingTest = async (
       vault,
       vault.interface.events['SetSequentialRequestProcessing(bool)'].name,
     )
-    .withArgs(value).to.not.reverted;
+    .withArgs(value);
 
   const newSequentialRequestProcessing =
     await vault.sequentialRequestProcessing();
@@ -533,7 +534,7 @@ export const setMinAmountToDepositTest = async (
     depositVault,
     depositVault.interface.events['SetMinMTokenAmountForFirstDeposit(uint256)']
       .name,
-  ).to.not.reverted;
+  );
 
   const newMin = await depositVault.minMTokenAmountForFirstDeposit();
   expect(newMin).eq(value);
@@ -559,7 +560,7 @@ export const setMinAmountTest = async (
   await expect(vault.connect(opt?.from ?? owner).setMinAmount(value)).to.emit(
     vault,
     vault.interface.events['SetMinAmount(uint256)'].name,
-  ).to.not.reverted;
+  );
 
   const newMin = await vault.minAmount();
   expect(newMin).eq(value);
@@ -597,7 +598,7 @@ export const addPaymentTokenTest = async (
     vault.interface.events[
       'AddPaymentToken(address,address,uint256,uint256,bool)'
     ].name,
-  ).to.not.reverted;
+  );
 
   const paymentTokens = await vault.getPaymentTokens();
   expect(paymentTokens.find((v) => v === token)).not.eq(undefined);
@@ -626,8 +627,7 @@ export const removePaymentTokenTest = async (
 
   await expect(
     vault.connect(opt?.from ?? owner).removePaymentToken(token),
-  ).to.emit(vault, vault.interface.events['RemovePaymentToken(address)'].name)
-    .to.not.reverted;
+  ).to.emit(vault, vault.interface.events['RemovePaymentToken(address)'].name);
 
   const paymentTokens = await vault.getPaymentTokens();
   expect(paymentTokens.find((v) => v === token)).eq(undefined);
@@ -663,7 +663,7 @@ export const withdrawTest = async (
   ).to.emit(
     vault,
     vault.interface.events['WithdrawToken(address,address,uint256)'].name,
-  ).to.not.reverted;
+  );
 
   const balanceAfterContract = await tokenContract.balanceOf(vault.address);
   const balanceAfterTo = await tokenContract.balanceOf(withdrawTo);

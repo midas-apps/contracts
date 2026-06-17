@@ -40,11 +40,9 @@ export const setMetadataTest = async (
     return;
   }
 
-  await expect(
-    tokenContract
-      .connect(opt?.from ?? owner)
-      .setMetadata(keyBytes32, valueBytes),
-  ).not.reverted;
+  await tokenContract
+    .connect(opt?.from ?? owner)
+    .setMetadata(keyBytes32, valueBytes);
 
   expect(await tokenContract.metadata(keyBytes32)).eq(valueBytes);
 };
@@ -103,7 +101,7 @@ export const clawbackTest = async (
   ).to.emit(
     tokenContract,
     tokenContract.interface.events['Transfer(address,address,uint256)'].name,
-  ).to.not.reverted;
+  );
 
   expect(await tokenContract.balanceOf(fromAddr)).eq(
     balanceFromBefore.sub(amount),
@@ -144,7 +142,7 @@ export const mint = async (
   await expect(callFn()).to.emit(
     tokenContract,
     tokenContract.interface.events['Transfer(address,address,uint256)'].name,
-  ).to.not.reverted;
+  );
 
   const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses();
   const timestampAfter = await getCurrentBlockTimestamp();
@@ -217,7 +215,7 @@ export const burn = async (
   await expect(callFn()).to.emit(
     tokenContract,
     tokenContract.interface.events['Transfer(address,address,uint256)'].name,
-  ).to.not.reverted;
+  );
 
   const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses();
 
@@ -254,10 +252,11 @@ export const increaseMintRateLimitTest = async (
 
   const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses();
 
-  // TODO: check events
   await expect(
     tokenContract.connect(owner).increaseMintRateLimit(window, newLimit),
-  ).to.not.reverted;
+  )
+    .to.emit(tokenContract, 'WindowLimitSet')
+    .withArgs(window, newLimit);
   const currentTimestamp = await getCurrentBlockTimestamp();
   const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses();
 
@@ -313,10 +312,11 @@ export const decreaseMintRateLimitTest = async (
 
   const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses();
 
-  // TODO: check events
   await expect(
     tokenContract.connect(owner).decreaseMintRateLimit(window, newLimit),
-  ).to.not.reverted;
+  )
+    .to.emit(tokenContract, 'WindowLimitSet')
+    .withArgs(window, newLimit);
 
   const currentTimestamp = await getCurrentBlockTimestamp();
   const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses();

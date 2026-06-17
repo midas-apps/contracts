@@ -1706,7 +1706,7 @@ describe('LayerZero', function () {
           .emit(
             redemptionVault,
             redemptionVault.interface.events[
-              'RedeemInstant(address,address,address,uint256,uint256,uint256)'
+              'RedeemInstant(address,address,address,uint256,uint256,uint256,uint256,uint256)'
             ].name,
           )
           .withArgs(
@@ -1906,7 +1906,7 @@ describe('LayerZero', function () {
           .emit(
             depositVault,
             depositVault.interface.events[
-              'DepositInstant(address,address,address,uint256,uint256,uint256,uint256,bytes32)'
+              'DepositInstant(address,address,address,uint256,uint256,uint256,uint256,uint256,bytes32)'
             ].name,
           )
           .withArgs(

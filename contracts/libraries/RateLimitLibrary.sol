@@ -114,7 +114,6 @@ library RateLimitLibrary {
      * @param limit max amount per window
      * @return previousLimit previous limit
      */
-    // TODO: rename to setMintLimit
     function setWindowLimit(
         WindowRateLimits storage limits,
         uint256 window,
@@ -141,7 +140,6 @@ library RateLimitLibrary {
      * @param limits aggregated window state
      * @param window window duration in seconds
      */
-    // TODO: rename to removeMintLimit
     function removeWindowLimit(WindowRateLimits storage limits, uint256 window)
         internal
     {

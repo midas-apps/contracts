@@ -95,7 +95,7 @@ export const unBlackList = async (
   ).to.emit(
     accessControl,
     accessControl.interface.events['RoleRevoked(bytes32,address,address)'].name,
-  ).to.not.reverted;
+  );
 
   expect(
     await accessControl.hasRole(
@@ -149,7 +149,7 @@ export const unGreenList = async (
   ).to.emit(
     accessControl,
     accessControl.interface.events['RoleRevoked(bytes32,address,address)'].name,
-  ).to.not.reverted;
+  );
 
   expect(
     await accessControl.hasRole(
@@ -188,7 +188,41 @@ export const grantRoleMultTester = async (
     return;
   }
 
-  await expect(callFn()).to.not.reverted;
+  const hadRoles = await Promise.all(
+    params.map(({ role, account }) => accessControl.hasRole(role, account)),
+  );
+
+  const txPromise = callFn();
+  let grantMultExpect: ReturnType<typeof expect> | undefined;
+  for (const [index, { role, account }] of params.entries()) {
+    if (hadRoles[index]) {
+      continue;
+    }
+
+    if (grantMultExpect === undefined) {
+      grantMultExpect = expect(txPromise)
+        .to.emit(
+          accessControl,
+          accessControl.interface.events['RoleGranted(bytes32,address,address)']
+            .name,
+        )
+        .withArgs(role, account, from.address);
+    } else {
+      grantMultExpect = grantMultExpect.to
+        .emit(
+          accessControl,
+          accessControl.interface.events['RoleGranted(bytes32,address,address)']
+            .name,
+        )
+        .withArgs(role, account, from.address);
+    }
+  }
+
+  if (grantMultExpect !== undefined) {
+    await grantMultExpect;
+  } else {
+    await txPromise;
+  }
 
   for (const [index, { account, role, delay }] of params.entries()) {
     expect(await accessControl.hasRole(role, account)).eq(true);
@@ -218,7 +252,41 @@ export const revokeRoleMultTester = async (
     return;
   }
 
-  await expect(callFn()).to.not.reverted;
+  const hadRoles = await Promise.all(
+    params.map(({ role, account }) => accessControl.hasRole(role, account)),
+  );
+
+  const txPromise = callFn();
+  let revokeMultExpect: ReturnType<typeof expect> | undefined;
+  for (const [index, { role, account }] of params.entries()) {
+    if (!hadRoles[index]) {
+      continue;
+    }
+
+    if (revokeMultExpect === undefined) {
+      revokeMultExpect = expect(txPromise)
+        .to.emit(
+          accessControl,
+          accessControl.interface.events['RoleRevoked(bytes32,address,address)']
+            .name,
+        )
+        .withArgs(role, account, from.address);
+    } else {
+      revokeMultExpect = revokeMultExpect.to
+        .emit(
+          accessControl,
+          accessControl.interface.events['RoleRevoked(bytes32,address,address)']
+            .name,
+        )
+        .withArgs(role, account, from.address);
+    }
+  }
+
+  if (revokeMultExpect !== undefined) {
+    await revokeMultExpect;
+  } else {
+    await txPromise;
+  }
 
   for (const [, { role, account }] of params.entries()) {
     expect(await accessControl.hasRole(role, account)).eq(false);
@@ -257,7 +325,19 @@ export const grantRoleTester = async (
     return;
   }
 
-  await expect(callFn()).to.not.reverted;
+  const hadRole = await accessControl.hasRole(role, account);
+
+  if (hadRole) {
+    await callFn();
+  } else {
+    await expect(callFn())
+      .to.emit(
+        accessControl,
+        accessControl.interface.events['RoleGranted(bytes32,address,address)']
+          .name,
+      )
+      .withArgs(role, account, from.address);
+  }
 
   expect(await accessControl.hasRole(role, account)).eq(true);
 
@@ -287,7 +367,19 @@ export const revokeRoleTester = async (
     return;
   }
 
-  await expect(callFn()).to.not.reverted;
+  const hadRole = await accessControl.hasRole(role, account);
+
+  if (!hadRole) {
+    await callFn();
+  } else {
+    await expect(callFn())
+      .to.emit(
+        accessControl,
+        accessControl.interface.events['RoleRevoked(bytes32,address,address)']
+          .name,
+      )
+      .withArgs(role, account, from.address);
+  }
 
   expect(await accessControl.hasRole(role, account)).eq(false);
 };
@@ -317,25 +409,36 @@ export const setIsUserFacingRoleTester = async (
   );
 
   const txPromise = callFn();
-  await expect(txPromise).to.not.reverted;
-
-  const txReceipt = await (await txPromise).wait();
-  const logs = txReceipt.logs
-    .filter((log) => log.address === accessControl.address)
-    .map((log) => accessControl.interface.parseLog(log))
-    .filter((v) => v.name === 'SetUserFacingRole')
-    .map((v) => v.args);
-
+  let userFacingExpect: ReturnType<typeof expect> | undefined;
   for (const [index, stateBefore] of statesBefore.entries()) {
     const param = params[index];
-
     if (stateBefore !== param.enabled) {
-      const log = logs.filter(
-        (log) => log.role === param.role && log.enabled === param.enabled,
-      );
-      expect(log.length).eq(1);
+      if (userFacingExpect === undefined) {
+        userFacingExpect = expect(txPromise)
+          .to.emit(
+            accessControl,
+            accessControl.interface.events['SetUserFacingRole(bytes32,bool)']
+              .name,
+          )
+          .withArgs(param.role, param.enabled);
+      } else {
+        userFacingExpect = userFacingExpect.to
+          .emit(
+            accessControl,
+            accessControl.interface.events['SetUserFacingRole(bytes32,bool)']
+              .name,
+          )
+          .withArgs(param.role, param.enabled);
+      }
     }
+  }
+  if (userFacingExpect !== undefined) {
+    await userFacingExpect;
+  } else {
+    await txPromise;
+  }
 
+  for (const param of params) {
     expect(await accessControl.isUserFacingRole(param.role)).eq(param.enabled);
   }
 };
@@ -385,30 +488,52 @@ export const setGrantOperatorRoleTester = async (
   );
 
   const txPromise = callFn();
-  await expect(txPromise).to.not.reverted;
-
-  const txReceipt = await (await txPromise).wait();
-  const logs = txReceipt.logs
-    .filter((log) => log.address === accessControl.address)
-    .map((log) => accessControl.interface.parseLog(log))
-    .filter((v) => v.name === 'SetGrantOperatorRole')
-    .map((v) => v.args);
-
+  let grantOperatorExpect: ReturnType<typeof expect> | undefined;
   for (const [index, stateBefore] of statesBefore.entries()) {
     const param = params[index];
 
     if (stateBefore !== param.enabled) {
-      const log = logs.filter(
-        (log) =>
-          log.masterRole === masterRole &&
-          log.targetContract === targetContract &&
-          log.functionSelector === param.functionSelector &&
-          log.operator === param.operator &&
-          log.enabled === param.enabled,
-      );
-      expect(log.length).eq(1);
-      expect(log[0].enabled).eq(param.enabled);
+      if (grantOperatorExpect === undefined) {
+        grantOperatorExpect = expect(txPromise)
+          .to.emit(
+            accessControl,
+            accessControl.interface.events[
+              'SetGrantOperatorRole(bytes32,address,address,bytes4,bool)'
+            ].name,
+          )
+          .withArgs(
+            masterRole,
+            targetContract,
+            param.operator,
+            param.functionSelector,
+            param.enabled,
+          );
+      } else {
+        grantOperatorExpect = grantOperatorExpect.to
+          .emit(
+            accessControl,
+            accessControl.interface.events[
+              'SetGrantOperatorRole(bytes32,address,address,bytes4,bool)'
+            ].name,
+          )
+          .withArgs(
+            masterRole,
+            targetContract,
+            param.operator,
+            param.functionSelector,
+            param.enabled,
+          );
+      }
     }
+  }
+  if (grantOperatorExpect !== undefined) {
+    await grantOperatorExpect;
+  } else {
+    await txPromise;
+  }
+
+  for (const [index, stateBefore] of statesBefore.entries()) {
+    const param = params[index];
 
     expect(
       await accessControl[
@@ -494,14 +619,49 @@ export const setPermissionRoleTester = async (
   );
 
   const txPromise = callFn();
-  await expect(txPromise).to.not.reverted;
+  let permissionExpect: ReturnType<typeof expect> | undefined;
+  for (const [index, stateBefore] of statesBefore.entries()) {
+    const param = params[index];
 
-  const txReceipt = await (await txPromise).wait();
-  const logs = txReceipt.logs
-    .filter((log) => log.address === accessControl.address)
-    .map((log) => accessControl.interface.parseLog(log))
-    .filter((v) => v.name === 'SetPermissionRole')
-    .map((v) => v.args);
+    if (stateBefore !== param.enabled) {
+      if (permissionExpect === undefined) {
+        permissionExpect = expect(txPromise)
+          .to.emit(
+            accessControl,
+            accessControl.interface.events[
+              'SetPermissionRole(bytes32,address,address,bytes4,bool)'
+            ].name,
+          )
+          .withArgs(
+            masterRole,
+            targetContract,
+            param.account,
+            functionSelector,
+            param.enabled,
+          );
+      } else {
+        permissionExpect = permissionExpect.to
+          .emit(
+            accessControl,
+            accessControl.interface.events[
+              'SetPermissionRole(bytes32,address,address,bytes4,bool)'
+            ].name,
+          )
+          .withArgs(
+            masterRole,
+            targetContract,
+            param.account,
+            functionSelector,
+            param.enabled,
+          );
+      }
+    }
+  }
+  if (permissionExpect !== undefined) {
+    await permissionExpect;
+  } else {
+    await txPromise;
+  }
 
   const key = await accessControl.permissionRoleKey(
     masterRole,
@@ -516,19 +676,6 @@ export const setPermissionRoleTester = async (
 
   for (const [index, stateBefore] of statesBefore.entries()) {
     const param = params[index];
-
-    if (stateBefore !== param.enabled) {
-      const log = logs.filter(
-        (log) =>
-          log.masterRole === masterRole &&
-          log.targetContract === targetContract &&
-          log.functionSelector === functionSelector &&
-          log.account === param.account &&
-          log.enabled === param.enabled,
-      );
-      expect(log.length).eq(1);
-      expect(log[0].enabled).eq(param.enabled);
-    }
 
     expect(
       await accessControl[
@@ -625,7 +772,16 @@ export const setRoleTimelocksTester = async (
     return;
   }
 
-  await expect(callFn()).to.not.reverted;
+  await expect(callFn())
+    .to.emit(accessControl, 'SetRoleDelays')
+    .withArgs((actualParams: { role: string; delay: BigNumberish }[]) => {
+      expect(actualParams.length).eq(params.length);
+      params.forEach((param, index) => {
+        expect(actualParams[index].role).eq(param.role);
+        expect(actualParams[index].delay).eq(param.delay);
+      });
+      return true;
+    });
 
   for (const [index, role] of roles.entries()) {
     const delayParam = delays[index];
@@ -699,7 +855,12 @@ export const setDefaultDelayTest = async (
     return;
   }
 
-  await expect(callFn()).to.not.reverted;
+  await expect(callFn())
+    .to.emit(
+      accessControl,
+      accessControl.interface.events['SetDefaultDelay(uint32)'].name,
+    )
+    .withArgs(defaultDelay);
 
   expect(await accessControl.defaultDelay()).to.eq(defaultDelay);
 };

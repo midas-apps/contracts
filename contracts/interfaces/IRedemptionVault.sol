@@ -69,17 +69,22 @@ interface IRedemptionVault is IManageableVault {
     /**
      * @param user function caller (msg.sender)
      * @param tokenOut address of tokenOut
-     * @param amount amount of mToken
+     * @param recipient recipient address
+     * @param amountMToken amount of mToken
      * @param feeAmount fee amount in tokenOut
      * @param amountTokenOut amount of tokenOut
+     * @param mTokenRate mToken rate
+     * @param tokenOutRate tokenOut rate
      */
     event RedeemInstant(
         address indexed user,
         address indexed tokenOut,
         address recipient,
-        uint256 amount,
+        uint256 amountMToken,
         uint256 feeAmount,
-        uint256 amountTokenOut
+        uint256 amountTokenOut,
+        uint256 mTokenRate,
+        uint256 tokenOutRate
     );
 
     /**
@@ -87,20 +92,22 @@ interface IRedemptionVault is IManageableVault {
      * @param user function caller (msg.sender)
      * @param tokenOut address of tokenOut
      * @param recipient recipient address
-     * @param amountMTokenIn amount of mToken
+     * @param amountMToken amount of mToken
      * @param amountMTokenInstant amount of mToken that was redeemed instantly
-     * @param mTokenRate mToken rate
      * @param feePercent fee percent
+     * @param mTokenRate mToken rate
+     * @param tokenOutRate tokenOut rate
      */
     event RedeemRequest(
         uint256 indexed requestId,
         address indexed user,
         address indexed tokenOut,
         address recipient,
-        uint256 amountMTokenIn,
+        uint256 amountMToken,
         uint256 amountMTokenInstant,
+        uint256 feePercent,
         uint256 mTokenRate,
-        uint256 feePercent
+        uint256 tokenOutRate
     );
 
     /**
@@ -135,9 +142,8 @@ interface IRedemptionVault is IManageableVault {
 
     /**
      * @param requestId mint request id
-     * @param user address of user
      */
-    event RejectRequest(uint256 indexed requestId, address indexed user);
+    event RejectRequest(uint256 indexed requestId);
 
     /**
      * @param redeemer new address of request redeemer
@@ -158,11 +164,6 @@ interface IRedemptionVault is IManageableVault {
      * @param newLoanSwapperVault new address of loan swapper vault
      */
     event SetLoanSwapperVault(address newLoanSwapperVault);
-
-    /**
-     * @param newMaxLoanApr new maximum loan APR value in basis points (100 = 1%)
-     */
-    event SetMaxLoanApr(uint256 newMaxLoanApr);
 
     /**
      * @param newLoanApr new loan APR value in basis points (100 = 1%)

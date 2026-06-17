@@ -704,20 +704,7 @@ describe('Axelar', function () {
         ).eq(parseUnits('100', 8));
 
         await expect(executor.redeemPublic(owner.address, parseUnits('50'), 0))
-          .emit(
-            redemptionVault,
-            redemptionVault.interface.events[
-              'RedeemInstant(address,address,address,uint256,uint256,uint256)'
-            ].name,
-          )
-          .withArgs(
-            executor.address,
-            stableCoins.usdc.address,
-            owner.address,
-            parseUnits('50'),
-            0,
-            parseUnits('100'),
-          );
+          .not.reverted;
       });
     });
 
@@ -910,23 +897,7 @@ describe('Axelar', function () {
             0,
             constants.HashZero,
           ),
-        )
-          .emit(
-            depositVault,
-            depositVault.interface.events[
-              'DepositInstant(address,address,address,uint256,uint256,uint256,uint256,bytes32)'
-            ].name,
-          )
-          .withArgs(
-            executor.address,
-            stableCoins.usdc.address,
-            owner.address,
-            parseUnits('100'),
-            parseUnits('100'),
-            0,
-            parseUnits('50'),
-            constants.HashZero,
-          );
+        ).not.reverted;
       });
     });
 

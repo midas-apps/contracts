@@ -111,11 +111,6 @@ interface IManageableVault {
     event SetWaivedFeeAccount(address indexed account, bool enable);
 
     /**
-     * @param account address of account
-     */
-    event RemoveWaivedFeeAccount(address indexed account);
-
-    /**
      * @param newFee new operation fee value
      */
     event SetInstantFee(uint256 newFee);

@@ -7,7 +7,7 @@ pragma solidity 0.8.34;
  */
 enum TimelockOperationStatus {
     NotExist,
-    NotPaused, // TODO: rename to Pending
+    Pending,
     Paused,
     ApprovedExecution,
     ReadyToExecute,
@@ -401,6 +401,17 @@ interface IMidasTimelockManager {
         bytes calldata data,
         address proposer
     ) external view returns (bytes32 role, uint32 overrideDelay);
+
+    /**
+     * @notice Checks if an account is in the security council for a given version
+     * @param version security council version
+     * @param account account to check
+     * @return true if the account is in the security council
+     */
+    function isInSecurityCouncil(uint256 version, address account)
+        external
+        view
+        returns (bool);
 
     /**
      * @notice Timelock controller address

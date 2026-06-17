@@ -144,7 +144,7 @@ export const sendOft = async (
     oftFrom,
     oftFrom.interface.events['OFTSent(bytes32,uint32,address,uint256,uint256)']
       .name,
-  ).not.reverted;
+  );
 
   const totalSupplyAfter = await mTBILL.totalSupply();
   const balanceFromAfter = await mTBILL.balanceOf(from.address);
@@ -251,7 +251,7 @@ export const sendOftLockBox = async (
     oftFrom,
     oftFrom.interface.events['OFTSent(bytes32,uint32,address,uint256,uint256)']
       .name,
-  ).not.reverted;
+  );
 
   const totalSupplyAfter = await pToken.totalSupply();
   const totalSupplyOftAfter = await pTokenLzOft.totalSupply();
@@ -488,7 +488,7 @@ export const depositAndSend = async (
       .to.emit(
         depositVault,
         depositVault.interface.events[
-          'DepositInstant(address,address,address,uint256,uint256,uint256,uint256,bytes32)'
+          'DepositInstant(address,address,address,uint256,uint256,uint256,uint256,uint256,bytes32)'
         ].name,
       )
       .withArgs(
@@ -745,7 +745,7 @@ export const redeemAndSend = async (
       .to.emit(
         redemptionVault,
         redemptionVault.interface.events[
-          'RedeemInstant(address,address,address,uint256,uint256,uint256)'
+          'RedeemInstant(address,address,address,uint256,uint256,uint256,uint256,uint256)'
         ].name,
       )
       .withArgs(

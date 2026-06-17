@@ -120,7 +120,18 @@ export const pauseGlobalTest = async (
     return;
   }
 
-  await expect(callFn()).not.reverted;
+  const wasPaused = await pauseManager.globalPaused();
+
+  if (wasPaused) {
+    await callFn();
+  } else {
+    await expect(callFn())
+      .to.emit(
+        pauseManager,
+        pauseManager.interface.events['GlobalPauseStatusChange(bool)'].name,
+      )
+      .withArgs(true);
+  }
 
   expect(await pauseManager.globalPaused()).eq(true);
 };
@@ -141,7 +152,18 @@ export const unpauseGlobalTest = async (
     return;
   }
 
-  await expect(await pauseManager.connect(from).globalUnpause()).not.reverted;
+  const wasPaused = await pauseManager.globalPaused();
+
+  if (!wasPaused) {
+    await pauseManager.connect(from).globalUnpause();
+  } else {
+    await expect(pauseManager.connect(from).globalUnpause())
+      .to.emit(
+        pauseManager,
+        pauseManager.interface.events['GlobalPauseStatusChange(bool)'].name,
+      )
+      .withArgs(false);
+  }
 
   expect(await pauseManager.globalPaused()).eq(false);
 };
@@ -169,11 +191,35 @@ export const pauseVault = async (
     return;
   }
 
-  await expect(
-    await pauseManager
-      .connect(from)
-      .bulkPauseContract(contractsArr.map((c) => c.address)),
-  ).not.reverted;
+  const contractAddresses = contractsArr.map((c) => c.address);
+  const addressesToPause = (
+    await Promise.all(
+      contractAddresses.map(async (contractAddr) => ({
+        contractAddr,
+        paused: await pauseManager.contractPaused(contractAddr),
+      })),
+    )
+  )
+    .filter(({ paused }) => !paused)
+    .map(({ contractAddr }) => contractAddr);
+
+  const tx = pauseManager.connect(from).bulkPauseContract(contractAddresses);
+  if (addressesToPause.length > 0) {
+    let pauseExpect = expect(tx);
+    for (const contractAddr of addressesToPause) {
+      pauseExpect = pauseExpect.to
+        .emit(
+          pauseManager,
+          pauseManager.interface.events[
+            'ContractPauseStatusChange(address,bool)'
+          ].name,
+        )
+        .withArgs(contractAddr, true);
+    }
+    await pauseExpect;
+  } else {
+    await tx;
+  }
 
   for (const contract of contractsArr) {
     expect(await pauseManager.isPaused(contract.address, '0x00000000')).eq(
@@ -206,11 +252,35 @@ export const unpauseVault = async (
     return;
   }
 
-  await expect(
-    await pauseManager
-      .connect(from)
-      .bulkUnpauseContract(contractsArr.map((c) => c.address)),
-  ).not.reverted;
+  const contractAddresses = contractsArr.map((c) => c.address);
+  const addressesToUnpause = (
+    await Promise.all(
+      contractAddresses.map(async (contractAddr) => ({
+        contractAddr,
+        paused: await pauseManager.contractPaused(contractAddr),
+      })),
+    )
+  )
+    .filter(({ paused }) => paused)
+    .map(({ contractAddr }) => contractAddr);
+
+  const tx = pauseManager.connect(from).bulkUnpauseContract(contractAddresses);
+  if (addressesToUnpause.length > 0) {
+    let unpauseExpect = expect(tx);
+    for (const contractAddr of addressesToUnpause) {
+      unpauseExpect = unpauseExpect.to
+        .emit(
+          pauseManager,
+          pauseManager.interface.events[
+            'ContractPauseStatusChange(address,bool)'
+          ].name,
+        )
+        .withArgs(contractAddr, false);
+    }
+    await unpauseExpect;
+  } else {
+    await tx;
+  }
 
   for (const contract of contractsArr) {
     expect(await pauseManager.isPaused(contract.address, '0x00000000')).eq(
@@ -247,12 +317,38 @@ export const pauseVaultFn = async (
     return;
   }
 
-  await expect(
-    await pauseManager.connect(from).bulkPauseContractFn(
-      contractsArr.map((c) => c.address),
-      selectors,
-    ),
-  ).not.reverted;
+  const contractAddresses = contractsArr.map((c) => c.address);
+  const fnPauseTargets = (
+    await Promise.all(
+      contractAddresses.flatMap((contractAddr) =>
+        selectors.map(async (fnSelector) => ({
+          contractAddr,
+          fnSelector,
+          paused: await pauseManager.isFunctionPaused(contractAddr, fnSelector),
+        })),
+      ),
+    )
+  ).filter(({ paused }) => !paused);
+
+  const tx = pauseManager
+    .connect(from)
+    .bulkPauseContractFn(contractAddresses, selectors);
+  if (fnPauseTargets.length > 0) {
+    let pauseFnExpect = expect(tx);
+    for (const { contractAddr, fnSelector } of fnPauseTargets) {
+      pauseFnExpect = pauseFnExpect.to
+        .emit(
+          pauseManager,
+          pauseManager.interface.events[
+            'FnPauseStatusChange(address,bytes4,bool)'
+          ].name,
+        )
+        .withArgs(contractAddr, fnSelector, true);
+    }
+    await pauseFnExpect;
+  } else {
+    await tx;
+  }
 
   for (const contract of contractsArr) {
     for (const fnSelector of selectors) {
@@ -292,12 +388,38 @@ export const unpauseVaultFn = async (
     return;
   }
 
-  await expect(
-    await pauseManager.connect(from).bulkUnpauseContractFn(
-      contractsArr.map((c) => c.address),
-      selectors,
-    ),
-  ).not.reverted;
+  const contractAddresses = contractsArr.map((c) => c.address);
+  const fnUnpauseTargets = (
+    await Promise.all(
+      contractAddresses.flatMap((contractAddr) =>
+        selectors.map(async (fnSelector) => ({
+          contractAddr,
+          fnSelector,
+          paused: await pauseManager.isFunctionPaused(contractAddr, fnSelector),
+        })),
+      ),
+    )
+  ).filter(({ paused }) => paused);
+
+  const tx = pauseManager
+    .connect(from)
+    .bulkUnpauseContractFn(contractAddresses, selectors);
+  if (fnUnpauseTargets.length > 0) {
+    let unpauseFnExpect = expect(tx);
+    for (const { contractAddr, fnSelector } of fnUnpauseTargets) {
+      unpauseFnExpect = unpauseFnExpect.to
+        .emit(
+          pauseManager,
+          pauseManager.interface.events[
+            'FnPauseStatusChange(address,bytes4,bool)'
+          ].name,
+        )
+        .withArgs(contractAddr, fnSelector, false);
+    }
+    await unpauseFnExpect;
+  } else {
+    await tx;
+  }
 
   for (const contract of contractsArr) {
     for (const fnSelector of selectors) {
@@ -329,8 +451,20 @@ export const adminPauseContractTest = async (
   ) {
     return;
   }
-  await expect(pauseManager.connect(from).contractAdminPause(contract.address))
-    .not.reverted;
+  const alreadyPaused = await pauseManager.contractPaused(contract.address);
+  const tx = pauseManager.connect(from).contractAdminPause(contract.address);
+
+  if (alreadyPaused) {
+    await tx;
+  } else {
+    await expect(tx)
+      .to.emit(
+        pauseManager,
+        pauseManager.interface.events['ContractPauseStatusChange(address,bool)']
+          .name,
+      )
+      .withArgs(contract.address, true);
+  }
 
   expect(await pauseManager.contractPaused(contract.address)).eq(true);
   expect(await pauseManager.isPaused(contract.address, '0x00000000')).eq(true);
@@ -353,9 +487,20 @@ export const adminUnpauseContractTest = async (
   ) {
     return;
   }
-  await expect(
-    pauseManager.connect(from).contractAdminUnpause(contract.address),
-  ).not.reverted;
+  const alreadyPaused = await pauseManager.contractPaused(contract.address);
+  const tx = pauseManager.connect(from).contractAdminUnpause(contract.address);
+
+  if (!alreadyPaused) {
+    await tx;
+  } else {
+    await expect(tx)
+      .to.emit(
+        pauseManager,
+        pauseManager.interface.events['ContractPauseStatusChange(address,bool)']
+          .name,
+      )
+      .withArgs(contract.address, false);
+  }
 
   expect(await pauseManager.contractPaused(contract.address)).eq(false);
   expect(await pauseManager.isPaused(contract.address, '0x00000000')).eq(false);

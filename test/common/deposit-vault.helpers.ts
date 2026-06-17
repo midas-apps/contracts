@@ -69,11 +69,11 @@ export const depositInstantTest = async (
     owner,
     mTBILL,
     mTokenToUsdDataFeed,
-    waivedFee,
     minAmount,
     customRecipient,
     checkTokensReceiver = true,
     expectedMintAmount,
+    referrerId,
     holdback,
   }: CommonParamsDeposit & {
     waivedFee?: boolean;
@@ -81,6 +81,7 @@ export const depositInstantTest = async (
     customRecipient?: AccountOrContract;
     checkTokensReceiver?: boolean;
     expectedMintAmount?: BigNumberish;
+    referrerId?: string;
     holdback?: {
       callFunction: () => Promise<ContractTransaction>;
       instantShare: BigNumberish;
@@ -105,6 +106,8 @@ export const depositInstantTest = async (
     ? getAccount(customRecipient)
     : sender.address;
 
+  referrerId = referrerId ?? constants.HashZero;
+
   const callFn =
     holdback?.callFunction ??
     (withRecipient
@@ -115,7 +118,7 @@ export const depositInstantTest = async (
             tokenIn,
             amountIn,
             minAmount ?? constants.Zero,
-            constants.HashZero,
+            referrerId,
             recipient,
           )
       : depositVault
@@ -125,7 +128,7 @@ export const depositInstantTest = async (
             tokenIn,
             amountIn,
             minAmount ?? constants.Zero,
-            constants.HashZero,
+            referrerId,
           ));
 
   if (await handleRevert(callFn, depositVault, opt)) {
@@ -149,7 +152,7 @@ export const depositInstantTest = async (
 
   const mTokenRate = await mTokenToUsdDataFeed.getDataInBase18();
 
-  const { fee, mintAmount, actualAmountInUsd } = await calcExpectedMintAmount(
+  const { fee, mintAmount, tokenInRate } = await calcExpectedMintAmount(
     sender,
     tokenIn,
     depositVault,
@@ -167,20 +170,18 @@ export const depositInstantTest = async (
     .to.emit(
       depositVault,
       depositVault.interface.events[
-        'DepositInstant(address,address,address,uint256,uint256,uint256,uint256,bytes32)'
+        'DepositInstant(address,address,address,uint256,uint256,uint256,uint256,uint256,bytes32)'
       ].name,
     )
     .withArgs(
-      ...[
-        sender.address,
-        tokenContract.address,
-        withRecipient ? recipient : undefined,
-        actualAmountInUsd,
-        amountUsdIn,
-        fee,
-        0,
-        constants.HashZero,
-      ].filter((v) => v !== undefined),
+      sender.address,
+      tokenContract.address,
+      recipient,
+      fee,
+      mintAmount,
+      mTokenRate,
+      tokenInRate,
+      referrerId,
     ).to.not.reverted;
 
   const instantLimitsAfter = await depositVault.getInstantLimitStatuses();
@@ -266,7 +267,9 @@ export const depositRequestTest = async (
     instantShare,
     minReceiveAmountInstantShare,
     mTBILL,
+    referrerId,
   }: CommonParamsDeposit & {
+    referrerId?: string;
     waivedFee?: boolean;
     customRecipient?: AccountOrContract;
     checkTokensReceiver?: boolean;
@@ -298,6 +301,8 @@ export const depositRequestTest = async (
       ? getAccount(customRecipientInstant ?? customRecipient!)
       : sender.address;
 
+  referrerId = referrerId ?? constants.HashZero;
+
   const callFn =
     instantShare || withRecipient
       ? depositVault
@@ -308,7 +313,7 @@ export const depositRequestTest = async (
             this,
             tokenIn,
             amountIn,
-            constants.HashZero,
+            referrerId,
             recipient,
             instantShare ?? constants.Zero,
             minReceiveAmountInstantShare ?? constants.Zero,
@@ -320,7 +325,7 @@ export const depositRequestTest = async (
             this,
             tokenIn,
             amountIn,
-            constants.HashZero,
+            referrerId,
           );
 
   if (await handleRevert(callFn, depositVault, opt)) {
@@ -398,21 +403,20 @@ export const depositRequestTest = async (
     .to.emit(
       depositVault,
       depositVault.interface.events[
-        'DepositRequest(uint256,address,address,address,uint256,uint256,uint256,uint256,bytes32)'
+        'DepositRequest(uint256,address,address,address,uint256,uint256,uint256,uint256,uint256,bytes32)'
       ].name,
     )
     .withArgs(
-      ...[
-        latestRequestIdBefore.add(1),
-        sender.address,
-        tokenContract.address,
-        withRecipient ? recipient : undefined,
-        amountTokenInRequest,
-        calcMintAmountRequest.actualAmountInUsd,
-        calcMintAmountRequest.fee,
-        calcMintAmountRequest.mintAmount,
-        constants.HashZero,
-      ].filter((v) => v !== undefined),
+      latestRequestIdBefore,
+      sender.address,
+      tokenContract.address,
+      recipient,
+      amountTokenInRequest,
+      amountTokenInInstant,
+      calcMintAmountRequest.fee,
+      mTokenRate,
+      calcMintAmountRequest.tokenInRate,
+      referrerId,
     ).to.not.reverted;
 
   const nextExpectedRequestIdToProcessAfter =
@@ -968,9 +972,9 @@ export const rejectRequestTest = async (
   await expect(depositVault.connect(sender).rejectRequest(requestId))
     .to.emit(
       depositVault,
-      depositVault.interface.events['RejectRequest(uint256,address)'].name,
+      depositVault.interface.events['RejectRequest(uint256)'].name,
     )
-    .withArgs(requestId, requestData.recipient).to.not.reverted;
+    .withArgs(requestId).to.not.reverted;
 
   const nextExpectedRequestIdToProcessAfter =
     await depositVault.nextExpectedRequestIdToProcess();
@@ -1127,16 +1131,17 @@ export const calcExpectedMintAmount = async (
     tokenConfig.dataFeed,
     sender,
   );
-  const currentTokenIn = tokenConfig.stable
+  const tokenInRate = tokenConfig.stable
     ? constants.WeiPerEther
     : await dataFeedContract.getDataInBase18();
-  if (currentTokenIn.isZero())
+  if (tokenInRate.isZero())
     return {
       mintAmount: constants.Zero,
       amountInWithoutFee: constants.Zero,
       actualAmountInUsd: constants.Zero,
       fee: constants.Zero,
       usdForMintConvertion: constants.Zero,
+      tokenInRate: constants.Zero,
     };
 
   const feePercent = await getFeePercent(
@@ -1151,10 +1156,10 @@ export const calcExpectedMintAmount = async (
 
   const amountInWithoutFee = amountIn.sub(fee);
 
-  const feeInUsd = fee.mul(currentTokenIn).div(constants.WeiPerEther);
+  const feeInUsd = fee.mul(tokenInRate).div(constants.WeiPerEther);
 
   const actualAmountInUsd = amountIn
-    .mul(currentTokenIn)
+    .mul(tokenInRate)
     .div(constants.WeiPerEther);
 
   const usdForMintConvertion = actualAmountInUsd.sub(feeInUsd);
@@ -1165,5 +1170,6 @@ export const calcExpectedMintAmount = async (
     usdForMintConvertion,
     amountInWithoutFee,
     fee,
+    tokenInRate,
   };
 };

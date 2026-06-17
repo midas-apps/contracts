@@ -21,19 +21,4 @@ abstract contract MidasInitializable is Initializable {
     constructor() {
         _disableInitializers();
     }
-
-    // TODO: uncomment when vaults are optimized
-    // /**
-    //  * @dev returns the highest version that has been initialized
-    //  * @return value the highest version that has been initialized
-    //  */
-    // function getInitializedVersion()
-    //     external
-    //     view
-    //     returns (
-    //         uint8 /* value */
-    //     )
-    // {
-    //     return _getInitializedVersion();
-    // }
 }

@@ -229,18 +229,18 @@ export const redeemInstantTest = async (
     .to.emit(
       redemptionVault,
       redemptionVault.interface.events[
-        'RedeemInstant(address,address,address,uint256,uint256,uint256)'
+        'RedeemInstant(address,address,address,uint256,uint256,uint256,uint256,uint256)'
       ].name,
     )
     .withArgs(
-      ...[
-        sender,
-        tokenOut,
-        withRecipient ? recipient : undefined,
-        amountTBillIn,
-        fee,
-        amountOut,
-      ].filter((v) => v !== undefined),
+      sender,
+      tokenOut,
+      recipient,
+      amountTBillIn,
+      feeBase18,
+      amountOutWithoutFeeBase18,
+      mTokenRate,
+      tokenOutRate,
     ).to.not.reverted;
 
   const instantLimitsAfter = await redemptionVault.getInstantLimitStatuses();
@@ -426,7 +426,7 @@ export const redeemRequestTest = async (
   const latestRequestIdBefore = await redemptionVault.currentRequestId();
   const mTokenRate = await mTokenToUsdDataFeed.getDataInBase18();
 
-  const { currentStableRate, feeBase18, feePercent } =
+  const { currentStableRate, tokenOutRate, feePercent } =
     await calcExpectedTokenOutAmount(
       sender,
       tokenContract,
@@ -471,19 +471,20 @@ export const redeemRequestTest = async (
     .to.emit(
       redemptionVault,
       redemptionVault.interface.events[
-        'RedeemRequest(uint256,address,address,address,uint256,uint256,uint256,uint256)'
+        'RedeemRequest(uint256,address,address,address,uint256,uint256,uint256,uint256,uint256)'
       ].name,
     )
     .withArgs(
-      ...[
-        latestRequestIdBefore.add(1),
-        sender,
-        tokenOut,
-        withRecipient ? recipientRequest : undefined,
-        amountMTokenInRequest,
-        feeBase18,
-      ].filter((v) => v !== undefined),
-    ).to.not.reverted;
+      latestRequestIdBefore,
+      sender.address,
+      tokenOut,
+      recipientRequest,
+      amountMTokenInRequest,
+      amountMTokenInInstant,
+      feePercent,
+      mTokenRate,
+      tokenOutRate,
+    );
 
   const latestRequestIdAfter = await redemptionVault.currentRequestId();
   const request = await redemptionVault.redeemRequests(latestRequestIdBefore);
@@ -1200,9 +1201,9 @@ export const rejectRedeemRequestTest = async (
   await expect(redemptionVault.connect(sender).rejectRequest(requestId))
     .to.emit(
       redemptionVault,
-      redemptionVault.interface.events['RejectRequest(uint256,address)'].name,
+      redemptionVault.interface.events['RejectRequest(uint256)'].name,
     )
-    .withArgs(requestId, sender).to.not.reverted;
+    .withArgs(requestId).to.not.reverted;
 
   const nextExpectedRequestIdToProcessAfter =
     await redemptionVault.nextExpectedRequestIdToProcess();
@@ -1529,6 +1530,7 @@ export const calcExpectedTokenOutAmount = async (
       fee: constants.Zero,
       currentStableRate: constants.Zero,
       tokenOutRate: constants.Zero,
+      feePercent: constants.Zero,
     };
 
   const tokenDecimals = await token.decimals();

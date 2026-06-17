@@ -271,7 +271,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         redeemRequests[requestId].status = RequestStatus.Canceled;
 
-        emit RejectRequest(requestId, request.recipient);
+        emit RejectRequest(requestId);
     }
 
     /**
@@ -573,7 +573,9 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             recipient,
             amountMTokenIn,
             calcResult.feeAmount,
-            calcResult.amountTokenOutWithoutFee
+            calcResult.amountTokenOutWithoutFee,
+            calcResult.mTokenRate,
+            calcResult.tokenOutRate
         );
 
         _obtainLiquidityAndTransfer(tokenOut, recipient, calcResult);
@@ -1074,8 +1076,9 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             recipient,
             amountMTokenIn,
             amountMTokenInstant,
+            feePercent,
             mTokenRate,
-            feePercent
+            tokenOutRate
         );
     }
 

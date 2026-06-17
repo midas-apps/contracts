@@ -93,7 +93,10 @@ export const sendIts = async (
   const balanceFromBefore = await mTBILL.balanceOf(from.address);
   const balanceToBefore = await mTBILL.balanceOf(recipient);
 
-  await expect(callFn()).not.reverted;
+  await expect(callFn()).to.emit(
+    mTBILL,
+    mTBILL.interface.events['Transfer(address,address,uint256)'].name,
+  );
 
   const totalSupplyAfter = await mTBILL.totalSupply();
   const balanceFromAfter = await mTBILL.balanceOf(from.address);
