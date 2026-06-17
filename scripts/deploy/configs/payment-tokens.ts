@@ -385,6 +385,24 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
         },
       },
     },
+    [chainIds.robinhood]: {
+      usdg: {
+        customAggregator: {
+          description: 'USDG/USD',
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+          maxAnswerDeviation: parseUnits('1', 8),
+        },
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+        postDeploy: {
+          setRoundData: { data: parseUnits('1', 8) },
+        },
+      },
+    },
     [chainIds.oasis]: {
       usdc: {
         dataFeed: {
