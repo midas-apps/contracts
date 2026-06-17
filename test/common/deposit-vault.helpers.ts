@@ -263,6 +263,7 @@ export const depositRequestTest = async (
     waivedFee,
     customRecipient,
     checkTokensReceiver = true,
+    checkMTokenSupplyUnchanged = true,
     customRecipientInstant,
     instantShare,
     minReceiveAmountInstantShare,
@@ -273,6 +274,7 @@ export const depositRequestTest = async (
     waivedFee?: boolean;
     customRecipient?: AccountOrContract;
     checkTokensReceiver?: boolean;
+    checkMTokenSupplyUnchanged?: boolean;
     customRecipientInstant?: AccountOrContract;
     instantShare?: BigNumberish;
     minReceiveAmountInstantShare?: BigNumberish;
@@ -473,7 +475,7 @@ export const depositRequestTest = async (
   );
 
   // those checks is already made in redeemInstantTest
-  if (!amountTokenInInstant.gt(0)) {
+  if (checkMTokenSupplyUnchanged && !amountTokenInInstant.gt(0)) {
     expect(supplyAfter).eq(supplyBefore);
   }
 

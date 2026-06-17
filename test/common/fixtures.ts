@@ -759,6 +759,7 @@ export const defaultDeploy = async () => {
     councilMembers,
     clawbackReceiver,
     manageableVault,
+    tokenContract: mTBILL,
     deployDeprecatedFeed,
     deployUnhealthyFeed,
   };

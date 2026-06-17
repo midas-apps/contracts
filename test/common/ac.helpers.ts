@@ -125,39 +125,12 @@ export const unGreenList = async (
   account: Account,
   opt?: OptionalCommonParams,
 ) => {
-  account = getAccount(account);
-
-  if (
-    await handleRevert(
-      accessControl
-        .connect(opt?.from ?? owner)
-        .revokeRole.bind(
-          this,
-          role ?? (await greenlistable.GREENLISTED_ROLE()),
-          account,
-        ),
-      accessControl,
-      opt,
-    )
-  ) {
-    return;
-  }
-
-  await expect(
-    accessControl
-      .connect(opt?.from ?? owner)
-      .revokeRole(role ?? (await greenlistable.GREENLISTED_ROLE()), account),
-  ).to.emit(
-    accessControl,
-    accessControl.interface.events['RoleRevoked(bytes32,address,address)'].name,
+  await revokeRoleTester(
+    { accessControl, owner },
+    role ?? (await greenlistable.GREENLISTED_ROLE()),
+    account,
+    opt,
   );
-
-  expect(
-    await accessControl.hasRole(
-      role ?? (await accessControl.GREENLISTED_ROLE()),
-      account,
-    ),
-  ).eq(false);
 };
 
 export const grantRoleMultTester = async (
