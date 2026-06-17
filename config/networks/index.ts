@@ -33,7 +33,9 @@ const defaultRpcUrls: ConfigPerNetwork<RpcUrl> = {
   etherlink: 'https://node.mainnet.etherlink.com',
   hardhat: 'http://localhost:8545',
   localhost: 'http://localhost:8545',
-  base: INFURA_KEY
+  base: ALCHEMY_KEY
+    ? `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
+    : INFURA_KEY
     ? `https://base-mainnet.infura.io/v3/${INFURA_KEY}`
     : 'https://mainnet.base.org',
   oasis: 'https://sapphire.oasis.io',

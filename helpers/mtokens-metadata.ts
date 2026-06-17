@@ -315,4 +315,8 @@ export const mTokensMetadata: Record<
     symbol: 'QHVN-USD',
     isPermissioned: true,
   },
+  mGLO: {
+    name: 'Midas Fasanara Global Open',
+    symbol: 'mGLO',
+  },
 };

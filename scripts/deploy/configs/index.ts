@@ -33,6 +33,7 @@ import { mEVETHDeploymentConfig } from './mEVETH';
 import { mEVUSDDeploymentConfig } from './mEVUSD';
 import { mFARMDeploymentConfig } from './mFARM';
 import { mFONEDeploymentConfig } from './mFONE';
+import { mGLODeploymentConfig } from './mGLO';
 import { mGLOBALDeploymentConfig } from './mGLOBAL';
 import { mHYPERDeploymentConfig } from './mHYPER';
 import { mHyperBTCDeploymentConfig } from './mHyperBTC';
@@ -157,4 +158,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   liquidRWA: liquidRWADeploymentConfig,
   mWIN: mWINDeploymentConfig,
   qHVNUSD: qHVNUSDDeploymentConfig,
+  mGLO: mGLODeploymentConfig,
 };

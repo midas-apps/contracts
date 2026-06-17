@@ -733,6 +733,16 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x3fB56075dacC9188931Dc7f05b2Cb9D3222f7dd3',
       redemptionVaultSwapper: '0x3e1703720C276F47343Dc0C6939eB149E5412e51',
     },
+    mGLO: {
+      token: '0xFCc9Cc1209651Ed8867332d6F664CF82743A2584',
+      customFeed: '0x6B593a5FAbb90F36e125562Db833f761d274fcBC',
+      customFeedDv: '0x5289F0E8F4F26186989799E7A588E45445c5e486',
+      customFeedRv: '0xe6f59314F93234bBB0E5aaCd0E174DD525D139d0',
+      dataFeedDv: '0x2095e2B0eA00aed8aA2CC7A9567a1Dad44C094F6',
+      dataFeedRv: '0x0405eBd7C553cF1F4174BaF0199A840d6E562f62',
+      depositVault: '0x2B7e9c9a72a31e4299F735D6e13445B320701Df1',
+      redemptionVaultSwapper: '0xA80F9BfFff91CBC13314fEfD05560032aF018F18',
+    },
   },
   oasis: {
     paymentTokens: {
