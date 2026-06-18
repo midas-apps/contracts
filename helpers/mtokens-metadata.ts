@@ -319,4 +319,8 @@ export const mTokensMetadata: Record<
     name: 'Midas Fasanara Global Open',
     symbol: 'mGLO',
   },
+  sGold: {
+    name: 'Suissequant Gold Yield',
+    symbol: 'sGold',
+  },
 };

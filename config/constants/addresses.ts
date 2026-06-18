@@ -607,6 +607,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x52816bCCcF7286aa2B0b5ba3c386677ABa1045B6',
       redemptionVaultSwapper: '0xC35d61F68B48555b71034098c3955EdE764d1Cb1',
     },
+    sGold: {
+      token: '0x5C9e1c4D60dbA50a68cBe3b0c1b5731a6fD08Af6',
+      customFeed: '0x4402D9E2A00E22E1708A66b72eCEc662046E0b35',
+      dataFeed: '0xf90D70ec39641d71Bc591f7aa6bC901c08422197',
+      depositVault: '0x6956FD317F571BE752F0A3BD3D16D09214228488',
+      redemptionVaultSwapper: '0xeF9CBc37bAB198c903CDDBf939E2CeF6DB434Af7',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
@@ -1566,8 +1573,8 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     paymentTokens: {
       usdg: {
         token: '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168',
-        aggregator: '0x6b28589C0Da3f27CC92f4A1BcC50d9D0184a2302',
-        dataFeed: '0x9198019d0734DD8927c835C98426055b9A31e39E',
+        aggregator: '0x61B7e5650328764B076A108EFF5fa7282a1B9aD2',
+        dataFeed: '0x65FC2E532882804A6ef306230850F0e7A0DBc6Eb',
       },
     },
     mGLO: {
