@@ -3,7 +3,7 @@ import { solidityKeccak256 } from 'ethers/lib/utils';
 
 import { MTokenName } from '../config';
 
-const prefixes: Record<MTokenName, string> = {
+export const prefixes: Record<MTokenName, string> = {
   mTBILL: 'M_TBILL',
   mBASIS: 'M_BASIS',
   mBTC: 'M_BTC',
@@ -82,10 +82,46 @@ const prefixes: Record<MTokenName, string> = {
   liquidRWA: 'LIQUID_RWA',
   mWIN: 'M_WIN',
   qHVNUSD: 'Q_HVN_USD',
+  mGLO: 'M_GLO',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {
   mFONE: 'mF-ONE',
+};
+
+/**
+ * Products whose vaults use a product-specific (a.k.a. "separated")
+ * greenlist role, i.e. they override `Greenlistable.greenlistedRole()` to
+ * return `<PREFIX>_GREENLISTED_ROLE` instead of the shared common
+ * `GREENLISTED_ROLE`. Keep this in sync with the on-chain
+ * `greenlistedRole()` overrides under `contracts/products/*`.
+ */
+export const tokenLevelGreenlistTokens: MTokenName[] = [
+  'mGLOBAL',
+  'mTEST',
+  'mWIN',
+  'qHVNUSD',
+  'mGLO',
+];
+
+/**
+ * Products that intentionally REUSE another product's greenlist role rather
+ * than minting their own. The greenlist role name is derived from the source
+ * token's prefix, while every other role stays on the token's own prefix.
+ *
+ * mGLO shares mGLOBAL's greenlist (`M_GLOBAL_GREENLISTED_ROLE`).
+ */
+export const sharedGreenlistRoleSource: Partial<
+  Record<MTokenName, MTokenName>
+> = {
+  mGLO: 'mGLOBAL',
+};
+
+const getGreenlistRoleName = (token: MTokenName): string => {
+  const greenlistToken = sharedGreenlistRoleSource[token] ?? token;
+  const restPrefix =
+    greenlistToken === 'mTBILL' ? '' : prefixes[greenlistToken] + '_';
+  return `${restPrefix}GREENLISTED_ROLE`;
 };
 
 type TokenRoles = {
@@ -141,7 +177,7 @@ export const getRolesNamesForToken = (token: MTokenName): TokenRoles => {
       : `${tokenPrefix}_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE`,
     depositVaultAdmin: `${restPrefix}DEPOSIT_VAULT_ADMIN_ROLE`,
     redemptionVaultAdmin: `${restPrefix}REDEMPTION_VAULT_ADMIN_ROLE`,
-    greenlisted: `${restPrefix}GREENLISTED_ROLE`,
+    greenlisted: getGreenlistRoleName(token),
   };
 };
 export const getRolesNamesCommon = (): CommonRoles => {

@@ -1,66 +1,84 @@
-import { group, multiselect, text, confirm } from '@clack/prompts';
+import { group, multiselect, text, confirm, select } from '@clack/prompts';
 
 import { requireNotCancelled } from '..';
 import { TokenContractNames } from '../../../../../helpers/contracts';
+import { tokenLevelGreenlistTokens } from '../../../../../helpers/roles';
 
-export const getConfigFromUser = async () => {
-  const {
-    tokenContractName,
-    tokenName,
-    tokenSymbol,
-    contractNamePrefix,
-    rolesPrefix,
-  } = await group({
-    tokenContractName: () =>
-      text({
-        message: 'What is the token contract name?',
-        placeholder: 'mRe7SOL',
-        initialValue: undefined,
-        validate(value) {
-          if (!value || value.length === 0) return `Value is required!`;
-        },
-      }),
+export const getTokenContractNameFromUser = async () => {
+  return text({
+    message: 'What is the token contract name?',
+    placeholder: 'mRe7SOL',
+    initialValue: undefined,
+    validate(value) {
+      if (!value || value.length === 0) return `Value is required!`;
+    },
+  }).then(requireNotCancelled);
+};
 
-    tokenName: () =>
-      text({
-        message: 'What is the token name?',
-        placeholder: 'Midas Re7SOL',
-        initialValue: undefined,
-        validate(value) {
-          if (!value || value.length === 0) return `Value is required!`;
-        },
-      }),
+export type ContractsGenerationMode = 'add' | 'regenerate';
 
-    tokenSymbol: ({ results: { tokenContractName } }) =>
-      text({
-        message: 'What is the token symbol?',
-        placeholder: 'mRe7SOL',
-        initialValue: tokenContractName!,
-        validate(value) {
-          if (!value || value.length === 0) return `Value is required!`;
-        },
-      }),
+export const getGenerationModeFromUser = async (mToken: string) => {
+  return select<ContractsGenerationMode>({
+    message: `Product ${mToken} already exists. How should we proceed?`,
+    options: [
+      {
+        value: 'add',
+        label: 'Add contracts to existing product',
+        hint: 'Keeps existing files, generates only selected contracts',
+      },
+      {
+        value: 'regenerate',
+        label: 'Regenerate from scratch',
+        hint: `DELETES contracts/products/${mToken} and regenerates everything`,
+      },
+    ],
+    initialValue: 'add' as ContractsGenerationMode,
+  }).then(requireNotCancelled);
+};
 
-    contractNamePrefix: () =>
-      text({
-        message: 'What is the contract name prefix?',
-        placeholder: 'MRe7Sol',
-        initialValue: undefined,
-        validate(value) {
-          if (!value || value.length === 0) return `Value is required!`;
-        },
-      }),
+export const getConfigFromUser = async (tokenContractName: string) => {
+  const { tokenName, tokenSymbol, contractNamePrefix, rolesPrefix } =
+    await group({
+      tokenName: () =>
+        text({
+          message: 'What is the token name?',
+          placeholder: 'Midas Re7SOL',
+          initialValue: undefined,
+          validate(value) {
+            if (!value || value.length === 0) return `Value is required!`;
+          },
+        }),
 
-    rolesPrefix: () =>
-      text({
-        message: 'What is the roles prefix?',
-        placeholder: 'M_RE7SOL',
-        initialValue: undefined,
-        validate(value) {
-          if (!value || value.length === 0) return `Value is required!`;
-        },
-      }),
-  });
+      tokenSymbol: () =>
+        text({
+          message: 'What is the token symbol?',
+          placeholder: 'mRe7SOL',
+          initialValue: tokenContractName,
+          validate(value) {
+            if (!value || value.length === 0) return `Value is required!`;
+          },
+        }),
+
+      contractNamePrefix: () =>
+        text({
+          message: 'What is the contract name prefix?',
+          placeholder: 'MRe7Sol',
+          initialValue: undefined,
+          validate(value) {
+            if (!value || value.length === 0) return `Value is required!`;
+          },
+        }),
+
+      rolesPrefix: () =>
+        text({
+          message: 'What is the roles prefix?',
+          placeholder: 'M_RE7SOL',
+          initialValue: undefined,
+          validate(value) {
+            if (!value || value.length === 0) return `Value is required!`;
+          },
+        }),
+    });
 
   return {
     tokenName,
@@ -140,10 +158,12 @@ export const getContractsToGenerateFromUser = async () => {
   }).then(requireNotCancelled);
 };
 
-export const getShouldUseTokenLevelGreenListFromUser = async () => {
+export const getShouldUseTokenLevelGreenListFromUser = async (
+  initialValue = false,
+) => {
   return confirm({
     message: 'Should use token level green list for vaults?',
-    initialValue: false,
+    initialValue,
   }).then(requireNotCancelled);
 };
 
@@ -151,5 +171,38 @@ export const getShouldUseTokenPermissionedFromUser = async () => {
   return confirm({
     message: 'Should use permissioned mToken variant?',
     initialValue: false,
+  }).then(requireNotCancelled);
+};
+
+/**
+ * Optionally reuse an existing product's greenlist role instead of minting a
+ * token-specific one (e.g. mGLO reuses mGLOBAL's M_GLOBAL_GREENLISTED_ROLE).
+ * Returns the source mToken name, or undefined to use this token's own role.
+ */
+export const getGreenlistRoleSourceFromUser = async (currentToken: string) => {
+  const options = tokenLevelGreenlistTokens.filter((t) => t !== currentToken);
+
+  if (options.length === 0) {
+    return undefined;
+  }
+
+  const share = await confirm({
+    message:
+      "Reuse another product's greenlist role? " +
+      "(No = mint this token's own <PREFIX>_GREENLISTED_ROLE)",
+    initialValue: false,
+  }).then(requireNotCancelled);
+
+  if (!share) {
+    return undefined;
+  }
+
+  return select<string>({
+    message: "Which product's greenlist role should be reused?",
+    options: options.map((token) => ({
+      value: token,
+      label: token,
+      hint: `use ${token}'s GREENLISTED_ROLE`,
+    })),
   }).then(requireNotCancelled);
 };

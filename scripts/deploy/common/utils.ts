@@ -278,6 +278,8 @@ export const sendAndWaitForCustomTxSign = async (
       | 'set-lz-rate-limit-configs'
       | 'set-aave-pool'
       | 'set-aave-deposits-enabled'
+      | 'set-morpho-vault'
+      | 'set-morpho-deposits-enabled'
       | 'set-auto-invest-fallback-enabled';
   },
   safeMiddlewareWallet?: string,

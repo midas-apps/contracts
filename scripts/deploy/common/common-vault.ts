@@ -16,8 +16,10 @@ import {
 } from '../../../config/constants/addresses';
 import {
   DepositVaultWithAave,
+  DepositVaultWithMorpho,
   ManageableVault,
   RedemptionVaultWithAave,
+  RedemptionVaultWithMorpho,
 } from '../../../typechain-types';
 
 export type AddPaymentTokensConfig = {
@@ -278,10 +280,28 @@ const getVaultContract = async (
   ).connect(provider) as ManageableVault;
 };
 
+const resolvePaymentTokenAddress = (
+  hre: HardhatRuntimeEnvironment,
+  token: PaymentTokenName,
+) => {
+  const addresses = getCurrentAddresses(hre);
+  const tokenAddress = addresses?.paymentTokens?.[token]?.token;
+
+  if (!tokenAddress) {
+    throw new Error(
+      `Payment token address is not found for ${token} on ${hre.network.name}`,
+    );
+  }
+
+  return tokenAddress;
+};
+
 export type SetAaveConfigEntry = {
   type: 'depositVaultAave' | 'redemptionVaultAave';
-  aavePool: string;
-  token: string;
+  pools: {
+    token: PaymentTokenName;
+    aavePool: string;
+  }[];
   /**
    * Only applies to depositVaultAave.
    * @default false
@@ -325,92 +345,211 @@ export const setAaveConfig = async (
       continue;
     }
 
-    if (entry.type === 'depositVaultAave') {
-      const vault = (await hre.ethers.getContractAt(
-        'DepositVaultWithAave',
-        vaultAddress,
-      )) as DepositVaultWithAave;
+    const vault = (await hre.ethers.getContractAt(
+      entry.type === 'depositVaultAave'
+        ? 'DepositVaultWithAave'
+        : 'RedemptionVaultWithAave',
+      vaultAddress,
+    )) as DepositVaultWithAave | RedemptionVaultWithAave;
 
-      const currentPool = await vault.aavePools(entry.token);
-      if (currentPool.toLowerCase() !== entry.aavePool.toLowerCase()) {
+    for (const { token, aavePool } of entry.pools) {
+      const tokenAddress = resolvePaymentTokenAddress(hre, token);
+
+      const currentPool = await vault.aavePools(tokenAddress);
+      if (currentPool.toLowerCase() !== aavePool.toLowerCase()) {
         const tx = await vault.populateTransaction.setAavePool(
-          entry.token,
-          entry.aavePool,
+          tokenAddress,
+          aavePool,
         );
         await sendAndWaitForCustomTxSign(hre, tx, {
           action: 'update-vault',
           subAction: 'set-aave-pool',
-          comment: `Set Aave pool for ${mToken} depositVaultAave`,
+          comment: `Set Aave pool of ${token} for ${mToken} ${entry.type}`,
           mToken,
         });
-        console.log(`Set Aave pool for ${mToken} depositVaultAave`);
+        console.log(`Set Aave pool of ${token} for ${mToken} ${entry.type}`);
       } else {
-        console.log(`Aave pool already set for ${mToken} depositVaultAave`);
+        console.log(
+          `Aave pool of ${token} already set for ${mToken} ${entry.type}`,
+        );
       }
+    }
 
-      const targetDepositsEnabled = entry.depositsEnabled ?? false;
-      const depositsEnabled = await vault.aaveDepositsEnabled();
-      if (depositsEnabled !== targetDepositsEnabled) {
-        const tx = await vault.populateTransaction.setAaveDepositsEnabled(
-          targetDepositsEnabled,
-        );
-        await sendAndWaitForCustomTxSign(hre, tx, {
-          action: 'update-vault',
-          subAction: 'set-aave-deposits-enabled',
-          comment: `Set aaveDepositsEnabled=${targetDepositsEnabled} for ${mToken} depositVaultAave`,
-          mToken,
-        });
-        console.log(
-          `Set aaveDepositsEnabled=${targetDepositsEnabled} for ${mToken} depositVaultAave`,
-        );
-      } else {
-        console.log(
-          `aaveDepositsEnabled already correct for ${mToken} depositVaultAave`,
-        );
-      }
+    if (entry.type !== 'depositVaultAave') {
+      continue;
+    }
 
-      const targetFallbackEnabled = entry.autoInvestFallbackEnabled ?? false;
-      const fallbackEnabled = await vault.autoInvestFallbackEnabled();
-      if (fallbackEnabled !== targetFallbackEnabled) {
-        const tx = await vault.populateTransaction.setAutoInvestFallbackEnabled(
-          targetFallbackEnabled,
-        );
-        await sendAndWaitForCustomTxSign(hre, tx, {
-          action: 'update-vault',
-          subAction: 'set-auto-invest-fallback-enabled',
-          comment: `Set autoInvestFallbackEnabled=${targetFallbackEnabled} for ${mToken} depositVaultAave`,
-          mToken,
-        });
-        console.log(
-          `Set autoInvestFallbackEnabled=${targetFallbackEnabled} for ${mToken} depositVaultAave`,
-        );
-      } else {
-        console.log(
-          `autoInvestFallbackEnabled already correct for ${mToken} depositVaultAave`,
-        );
-      }
+    const dv = vault as DepositVaultWithAave;
+
+    const targetDepositsEnabled = entry.depositsEnabled ?? false;
+    const depositsEnabled = await dv.aaveDepositsEnabled();
+    if (depositsEnabled !== targetDepositsEnabled) {
+      const tx = await dv.populateTransaction.setAaveDepositsEnabled(
+        targetDepositsEnabled,
+      );
+      await sendAndWaitForCustomTxSign(hre, tx, {
+        action: 'update-vault',
+        subAction: 'set-aave-deposits-enabled',
+        comment: `Set aaveDepositsEnabled=${targetDepositsEnabled} for ${mToken} depositVaultAave`,
+        mToken,
+      });
+      console.log(
+        `Set aaveDepositsEnabled=${targetDepositsEnabled} for ${mToken} depositVaultAave`,
+      );
     } else {
-      const vault = (await hre.ethers.getContractAt(
-        'RedemptionVaultWithAave',
-        vaultAddress,
-      )) as RedemptionVaultWithAave;
+      console.log(
+        `aaveDepositsEnabled already correct for ${mToken} depositVaultAave`,
+      );
+    }
 
-      const currentPool = await vault.aavePools(entry.token);
-      if (currentPool.toLowerCase() !== entry.aavePool.toLowerCase()) {
-        const tx = await vault.populateTransaction.setAavePool(
-          entry.token,
-          entry.aavePool,
+    const targetFallbackEnabled = entry.autoInvestFallbackEnabled ?? false;
+    const fallbackEnabled = await dv.autoInvestFallbackEnabled();
+    if (fallbackEnabled !== targetFallbackEnabled) {
+      const tx = await dv.populateTransaction.setAutoInvestFallbackEnabled(
+        targetFallbackEnabled,
+      );
+      await sendAndWaitForCustomTxSign(hre, tx, {
+        action: 'update-vault',
+        subAction: 'set-auto-invest-fallback-enabled',
+        comment: `Set autoInvestFallbackEnabled=${targetFallbackEnabled} for ${mToken} depositVaultAave`,
+        mToken,
+      });
+      console.log(
+        `Set autoInvestFallbackEnabled=${targetFallbackEnabled} for ${mToken} depositVaultAave`,
+      );
+    } else {
+      console.log(
+        `autoInvestFallbackEnabled already correct for ${mToken} depositVaultAave`,
+      );
+    }
+  }
+};
+
+export type SetMorphoConfigEntry = {
+  type: 'depositVaultMorpho' | 'redemptionVaultMorpho';
+  vaults: {
+    token: PaymentTokenName;
+    morphoVault: string;
+  }[];
+  /**
+   * Only applies to depositVaultMorpho.
+   * @default false
+   */
+  depositsEnabled?: boolean;
+  /**
+   * Only applies to depositVaultMorpho.
+   * @default false
+   */
+  autoInvestFallbackEnabled?: boolean;
+};
+
+export type SetMorphoConfigConfig = SetMorphoConfigEntry[];
+
+export const setMorphoConfig = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+) => {
+  const { setMorphoConfig: networkConfig } = getNetworkConfig(
+    hre,
+    mToken,
+    'postDeploy',
+  );
+
+  if (!networkConfig) {
+    throw new Error('Network config is not found');
+  }
+
+  const addresses = getCurrentAddresses(hre);
+  const tokenAddresses = addresses?.[mToken];
+
+  if (!tokenAddresses) {
+    throw new Error(`Token addresses are not found for ${mToken}`);
+  }
+
+  for (const entry of networkConfig) {
+    const vaultAddress = tokenAddresses[entry.type];
+
+    if (!vaultAddress) {
+      console.log(`No ${entry.type} found for ${mToken}, skipping`);
+      continue;
+    }
+
+    const vault = (await hre.ethers.getContractAt(
+      entry.type === 'depositVaultMorpho'
+        ? 'DepositVaultWithMorpho'
+        : 'RedemptionVaultWithMorpho',
+      vaultAddress,
+    )) as DepositVaultWithMorpho | RedemptionVaultWithMorpho;
+
+    for (const { token, morphoVault } of entry.vaults) {
+      const tokenAddress = resolvePaymentTokenAddress(hre, token);
+
+      const currentVault = await vault.morphoVaults(tokenAddress);
+      if (currentVault.toLowerCase() !== morphoVault.toLowerCase()) {
+        const tx = await vault.populateTransaction.setMorphoVault(
+          tokenAddress,
+          morphoVault,
         );
         await sendAndWaitForCustomTxSign(hre, tx, {
           action: 'update-vault',
-          subAction: 'set-aave-pool',
-          comment: `Set Aave pool for ${mToken} redemptionVaultAave`,
+          subAction: 'set-morpho-vault',
+          comment: `Set Morpho vault of ${token} for ${mToken} ${entry.type}`,
           mToken,
         });
-        console.log(`Set Aave pool for ${mToken} redemptionVaultAave`);
+        console.log(`Set Morpho vault of ${token} for ${mToken} ${entry.type}`);
       } else {
-        console.log(`Aave pool already set for ${mToken} redemptionVaultAave`);
+        console.log(
+          `Morpho vault of ${token} already set for ${mToken} ${entry.type}`,
+        );
       }
+    }
+
+    if (entry.type !== 'depositVaultMorpho') {
+      continue;
+    }
+
+    const dv = vault as DepositVaultWithMorpho;
+
+    const targetDepositsEnabled = entry.depositsEnabled ?? false;
+    const depositsEnabled = await dv.morphoDepositsEnabled();
+    if (depositsEnabled !== targetDepositsEnabled) {
+      const tx = await dv.populateTransaction.setMorphoDepositsEnabled(
+        targetDepositsEnabled,
+      );
+      await sendAndWaitForCustomTxSign(hre, tx, {
+        action: 'update-vault',
+        subAction: 'set-morpho-deposits-enabled',
+        comment: `Set morphoDepositsEnabled=${targetDepositsEnabled} for ${mToken} depositVaultMorpho`,
+        mToken,
+      });
+      console.log(
+        `Set morphoDepositsEnabled=${targetDepositsEnabled} for ${mToken} depositVaultMorpho`,
+      );
+    } else {
+      console.log(
+        `morphoDepositsEnabled already correct for ${mToken} depositVaultMorpho`,
+      );
+    }
+
+    const targetFallbackEnabled = entry.autoInvestFallbackEnabled ?? false;
+    const fallbackEnabled = await dv.autoInvestFallbackEnabled();
+    if (fallbackEnabled !== targetFallbackEnabled) {
+      const tx = await dv.populateTransaction.setAutoInvestFallbackEnabled(
+        targetFallbackEnabled,
+      );
+      await sendAndWaitForCustomTxSign(hre, tx, {
+        action: 'update-vault',
+        subAction: 'set-auto-invest-fallback-enabled',
+        comment: `Set autoInvestFallbackEnabled=${targetFallbackEnabled} for ${mToken} depositVaultMorpho`,
+        mToken,
+      });
+      console.log(
+        `Set autoInvestFallbackEnabled=${targetFallbackEnabled} for ${mToken} depositVaultMorpho`,
+      );
+    } else {
+      console.log(
+        `autoInvestFallbackEnabled already correct for ${mToken} depositVaultMorpho`,
+      );
     }
   }
 };
