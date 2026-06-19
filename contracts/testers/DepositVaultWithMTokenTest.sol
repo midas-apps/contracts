@@ -13,7 +13,7 @@ contract DepositVaultWithMTokenTest is
     constructor()
         DepositVaultWithMToken(
             keccak256("DEPOSIT_VAULT_ADMIN_ROLE"),
-            GREENLISTED_ROLE
+            AccessControlUtilsLibrary.DEFAULT_GREENLISTED_ROLE
         )
     {}
 

@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../RedemptionVault.sol";
+import "../libraries/AccessControlUtilsLibrary.sol";
 import {ManageableVaultTesterBase} from "./ManageableVaultTester.sol";
 
 abstract contract RedemptionVaultTestBase is
@@ -103,7 +104,7 @@ contract RedemptionVaultTest is RedemptionVaultTestBase {
     constructor()
         RedemptionVault(
             keccak256("REDEMPTION_VAULT_ADMIN_ROLE"),
-            GREENLISTED_ROLE
+            AccessControlUtilsLibrary.DEFAULT_GREENLISTED_ROLE
         )
     {}
 }

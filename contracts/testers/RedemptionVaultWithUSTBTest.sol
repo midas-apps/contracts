@@ -12,7 +12,7 @@ contract RedemptionVaultWithUSTBTest is
     constructor()
         RedemptionVaultWithUSTB(
             keccak256("REDEMPTION_VAULT_ADMIN_ROLE"),
-            GREENLISTED_ROLE
+            AccessControlUtilsLibrary.DEFAULT_GREENLISTED_ROLE
         )
     {}
 

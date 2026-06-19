@@ -4,7 +4,6 @@ pragma solidity 0.8.34;
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {IAccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
 
-import {MidasAccessControlRoles} from "./MidasAccessControlRoles.sol";
 import {MidasInitializable} from "../abstract/MidasInitializable.sol";
 import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
 import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.sol";
@@ -20,9 +19,20 @@ contract MidasAccessControl is
     IMidasAccessControl,
     IMidasAccessControlManaged,
     AccessControlUpgradeable,
-    MidasInitializable,
-    MidasAccessControlRoles
+    MidasInitializable
 {
+    /**
+     * @notice actor that can change green list statuses of addresses
+     */
+    bytes32 public constant GREENLIST_OPERATOR_ROLE =
+        keccak256("GREENLIST_OPERATOR_ROLE");
+
+    /**
+     * @notice actor that can change black list statuses of addresses
+     */
+    bytes32 public constant BLACKLIST_OPERATOR_ROLE =
+        keccak256("BLACKLIST_OPERATOR_ROLE");
+
     /**
      * @notice roles that are held by users
      */
@@ -115,8 +125,12 @@ contract MidasAccessControl is
 
         defaultDelay = _defaultDelay;
 
-        isUserFacingRole[BLACKLISTED_ROLE] = true;
-        isUserFacingRole[GREENLISTED_ROLE] = true;
+        isUserFacingRole[
+            AccessControlUtilsLibrary.DEFAULT_BLACKLISTED_ROLE
+        ] = true;
+        isUserFacingRole[
+            AccessControlUtilsLibrary.DEFAULT_GREENLISTED_ROLE
+        ] = true;
 
         for (uint256 i = 0; i < _userFacingRoles.length; ++i) {
             isUserFacingRole[_userFacingRoles[i]] = true;
@@ -578,8 +592,14 @@ contract MidasAccessControl is
     function _setupRoles(address admin) private {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
-        _setRoleAdmin(BLACKLISTED_ROLE, BLACKLIST_OPERATOR_ROLE);
-        _setRoleAdmin(GREENLISTED_ROLE, GREENLIST_OPERATOR_ROLE);
+        _setRoleAdmin(
+            AccessControlUtilsLibrary.DEFAULT_BLACKLISTED_ROLE,
+            BLACKLIST_OPERATOR_ROLE
+        );
+        _setRoleAdmin(
+            AccessControlUtilsLibrary.DEFAULT_GREENLISTED_ROLE,
+            GREENLIST_OPERATOR_ROLE
+        );
     }
 
     /**

@@ -24,6 +24,6 @@ contract GreenlistableTester is Greenlistable {
     }
 
     function greenlistedRole() public view virtual override returns (bytes32) {
-        return GREENLISTED_ROLE;
+        return AccessControlUtilsLibrary.DEFAULT_GREENLISTED_ROLE;
     }
 }

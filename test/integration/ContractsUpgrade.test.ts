@@ -735,10 +735,11 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
           amount,
         );
 
+        const roles = getAllRoles();
         await accessControl
           .connect(acDefaultAdmin)
           ['grantRole(bytes32,address)'](
-            await mTbill.BLACKLISTED_ROLE(),
+            roles.common.blacklisted,
             from.address,
           );
 

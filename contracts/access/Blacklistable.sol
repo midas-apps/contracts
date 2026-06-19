@@ -17,7 +17,7 @@ abstract contract Blacklistable is WithMidasAccessControl {
     uint256[50] private __gap;
 
     /**
-     * @dev checks that a given `account` doesnt have BLACKLISTED_ROLE
+     * @dev checks that a given `account` doesnt have blacklisted role
      */
     modifier onlyNotBlacklisted(address account) {
         _onlyNotBlacklisted(account);
@@ -25,13 +25,13 @@ abstract contract Blacklistable is WithMidasAccessControl {
     }
 
     /**
-     * @dev checks that a given `account` doesnt have BLACKLISTED_ROLE
+     * @dev checks that a given `account` doesnt have blacklisted role
      */
     function _onlyNotBlacklisted(address account) internal view {
         AccessControlUtilsLibrary.requireNotBlacklisted(
             accessControl,
             account,
-            BLACKLISTED_ROLE
+            AccessControlUtilsLibrary.DEFAULT_BLACKLISTED_ROLE
         );
     }
 }

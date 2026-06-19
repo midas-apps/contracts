@@ -2,7 +2,6 @@
 pragma solidity 0.8.34;
 
 import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
-import {MidasAccessControlRoles} from "./MidasAccessControlRoles.sol";
 import {MidasInitializable} from "../abstract/MidasInitializable.sol";
 import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.sol";
 import {IMidasAccessControlManaged} from "../interfaces/IMidasAccessControlManaged.sol";
@@ -14,7 +13,6 @@ import {IMidasAccessControlManaged} from "../interfaces/IMidasAccessControlManag
  */
 abstract contract WithMidasAccessControl is
     MidasInitializable,
-    MidasAccessControlRoles,
     IMidasAccessControlManaged
 {
     using AccessControlUtilsLibrary for IMidasAccessControl;

@@ -67,6 +67,20 @@ library AccessControlUtilsLibrary {
     error InvalidDelay();
 
     /**
+     * @notice default role for greenlisted actor
+     */
+    // solhint-disable-next-line private-vars-leading-underscore
+    bytes32 internal constant DEFAULT_GREENLISTED_ROLE =
+        keccak256("GREENLISTED_ROLE");
+
+    /**
+     * @notice default role for blacklisted actor
+     */
+    // solhint-disable-next-line private-vars-leading-underscore
+    bytes32 internal constant DEFAULT_BLACKLISTED_ROLE =
+        keccak256("BLACKLISTED_ROLE");
+
+    /**
      * @notice timelock value that represents no delay
      */
     // solhint-disable-next-line private-vars-leading-underscore

@@ -16,6 +16,7 @@ import {
   bulkScheduleTimelockOperationTester,
 } from './timelock-manager.helpers';
 
+import { getAllRoles } from '../../helpers/roles';
 import { encodeFnSelector } from '../../helpers/utils';
 import {
   Blacklistable,
@@ -61,9 +62,10 @@ export const blackList = async (
   account: AccountOrContract,
   opt?: OptionalCommonParams,
 ) => {
+  const allRoles = getAllRoles();
   await grantRoleTester(
     { accessControl, owner },
-    await blacklistable.BLACKLISTED_ROLE(),
+    allRoles.common.blacklisted,
     account,
     0,
     opt,
@@ -76,12 +78,13 @@ export const unBlackList = async (
   opt?: OptionalCommonParams,
 ) => {
   account = getAccount(account);
+  const allRoles = getAllRoles();
 
   if (
     await handleRevert(
       accessControl
         .connect(opt?.from ?? owner)
-        .revokeRole.bind(this, await blacklistable.BLACKLISTED_ROLE(), account),
+        .revokeRole.bind(this, allRoles.common.blacklisted, account),
       accessControl,
       opt,
     )
@@ -92,18 +95,15 @@ export const unBlackList = async (
   await expect(
     accessControl
       .connect(opt?.from ?? owner)
-      .revokeRole(await blacklistable.BLACKLISTED_ROLE(), account),
+      .revokeRole(allRoles.common.blacklisted, account),
   ).to.emit(
     accessControl,
     accessControl.interface.events['RoleRevoked(bytes32,address,address)'].name,
   );
 
-  expect(
-    await accessControl.hasRole(
-      await accessControl.BLACKLISTED_ROLE(),
-      account,
-    ),
-  ).eq(false);
+  expect(await accessControl.hasRole(allRoles.common.blacklisted, account)).eq(
+    false,
+  );
 };
 
 export const greenList = async (
@@ -113,7 +113,7 @@ export const greenList = async (
 ) => {
   await grantRoleTester(
     { accessControl, owner },
-    role ?? (await greenlistable.GREENLISTED_ROLE()),
+    role ?? (await greenlistable.greenlistedRole()),
     account,
     0,
     opt,
@@ -127,7 +127,7 @@ export const unGreenList = async (
 ) => {
   await revokeRoleTester(
     { accessControl, owner },
-    role ?? (await greenlistable.GREENLISTED_ROLE()),
+    role ?? (await greenlistable.greenlistedRole()),
     account,
     opt,
   );
