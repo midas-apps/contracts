@@ -22,29 +22,64 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
   networkConfigs: {
     [chainIds.sepolia]: {
       dv: {
-        feeReceiver: undefined,
-        tokensReceiver: undefined,
-        instantDailyLimit: constants.MaxUint256,
+        version: 'v2',
         instantFee: parseUnits('1', 2),
-        minMTokenAmountForFirstDeposit: parseUnits('100'),
-        minAmount: parseUnits('0.01'),
         variationTolerance: parseUnits('0.1', 2),
       },
       rv: {
+        version: 'v2',
         type: 'REGULAR',
-        feeReceiver: undefined,
-        tokensReceiver: undefined,
-        instantDailyLimit: constants.MaxUint256,
         instantFee: parseUnits('1', 2),
-        minAmount: parseUnits('0.01'),
         variationTolerance: parseUnits('0.1', 2),
-        fiatAdditionalFee: parseUnits('0.1', 2),
-        fiatFlatFee: parseUnits('0.1', 18),
-        minFiatRedeemAmount: parseUnits('1', 18),
-        requestRedeemer: undefined,
+        loanConfig: {
+          loanApr: parseUnits('0.1', 2),
+          loanSwapperVault: {
+            mToken: 'mSL',
+            redemptionVaultType: 'redemptionVault',
+          },
+        },
       },
       postDeploy: {
-        grantRoles: {},
+        setRoundData: {
+          type: 'GROWTH',
+          data: parseUnits('1', 8),
+          apr: parseUnits('0.1', 8),
+        },
+        grantRoles: {
+          tokenManagerAddress: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          oracleManagerAddress: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          vaultsManagerAddress: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+        },
+        addPaymentTokens: {
+          vaults: [
+            {
+              type: 'depositVault',
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                },
+              ],
+            },
+            {
+              type: 'redemptionVault',
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                },
+              ],
+            },
+          ],
+        },
+        addFeeWaived: [
+          {
+            fromVault: {
+              mToken: 'mSL',
+              type: 'redemptionVault',
+            },
+            toWaive: [{ mToken: 'mTBILL', type: 'redemptionVault' }],
+            value: true,
+          },
+        ],
         axelarIts: {
           operator: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
         },
@@ -146,9 +181,7 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
         requestRedeemer: '0x1Bd4d8D25Ec7EBA10e94BE71Fd9c6BF672e31E06',
         enableSanctionsList: true,
       },
-      postDeploy: {
-        grantRoles: {},
-      },
+      postDeploy: {},
     },
     [chainIds.base]: {
       dv: {

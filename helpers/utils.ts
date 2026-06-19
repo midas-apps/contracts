@@ -15,6 +15,37 @@ import {
 
 export const DAY = 86400;
 
+const contractNameToPath = {
+  access: [
+    'MidasAccessControl',
+    'MidasPauseManager',
+    'MidasTimelockManager',
+    'MidasAccessControlTimelockController',
+  ],
+  feeds: [
+    'CompositeDataFeed',
+    'CompositeDataFeedMultiply',
+    'CustomAggregatorV3CompatibleFeed',
+    'CustomAggregatorV3CompatibleFeedAdjusted',
+    'CustomAggregatorV3CompatibleFeedGrowth',
+    'DataFeed',
+  ],
+  root: ['mToken', 'mTokenPermissioned'],
+};
+
+const getContractPath = (contractName: string) => {
+  for (const [key, value] of Object.entries(contractNameToPath)) {
+    if (value.includes(contractName)) {
+      const path = `contracts/${
+        key === 'root' ? '' : key + '/'
+      }${contractName}.sol:${contractName}`;
+      return path;
+    }
+  }
+
+  return undefined;
+};
+
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -87,10 +118,18 @@ export const getPaymentTokenOrThrow = (hre: HardhatRuntimeEnvironment) => {
   return paymentToken;
 };
 
-export const getActionOrThrow = (hre: HardhatRuntimeEnvironment) => {
+export const upgradeActions = ['propose', 'execute'] as const;
+
+export const getActionOrThrow = (
+  hre: HardhatRuntimeEnvironment,
+  validActions?: string[] | readonly string[],
+) => {
   const action = hre.action;
   if (!action) {
     throw new Error('Action parameter not found');
+  }
+  if (validActions?.length && !validActions.includes(action)) {
+    throw new Error(`Invalid action: ${action}`);
   }
   return action;
 };
@@ -138,20 +177,27 @@ export const logDeploy = (
 export const etherscanVerify = async (
   hre: HardhatRuntimeEnvironment,
   contractAddress: string,
+  contractName: string,
   ...constructorArguments: unknown[]
 ) => {
   const network = hre.network.name;
   if (network === 'localhost' || network === 'hardhat') return;
-  await verify(hre, contractAddress, ...constructorArguments);
+  await verify(hre, contractAddress, contractName, ...constructorArguments);
 };
 
 export const etherscanVerifyImplementation = async (
   hre: HardhatRuntimeEnvironment,
   proxyAddress: string,
+  contractName: string,
   ...constructorArguments: unknown[]
 ) => {
   const contractAddress = await getImplAddressFromProxy(hre, proxyAddress);
-  return etherscanVerify(hre, contractAddress, ...constructorArguments);
+  return etherscanVerify(
+    hre,
+    contractAddress,
+    contractName,
+    ...constructorArguments,
+  );
 };
 
 export const logDeployProxy = async (
@@ -175,11 +221,13 @@ export const logDeployProxy = async (
 export const tryEtherscanVerifyImplementation = async (
   hre: HardhatRuntimeEnvironment,
   proxyAddress: string,
+  contractName: string,
   ...constructorArguments: unknown[]
 ) => {
   return await etherscanVerifyImplementation(
     hre,
     proxyAddress,
+    contractName,
     ...constructorArguments,
   )
     .catch((err) => {
@@ -194,12 +242,14 @@ export const tryEtherscanVerifyImplementation = async (
 export const verify = async (
   hre: HardhatRuntimeEnvironment,
   contractAddress: string,
+  contractName: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ...constructorArguments: any[]
 ) => {
   await hre.run('verify:verify', {
     address: contractAddress,
     constructorArguments,
+    contract: getContractPath(contractName),
   });
 };
 

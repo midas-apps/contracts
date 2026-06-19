@@ -42,6 +42,7 @@ export type AddFeeWaivedConfig = {
     mToken: MTokenName;
     type: VaultType;
   };
+  value?: boolean;
   toWaive: (
     | {
         // default: hre.mtoken
@@ -52,7 +53,7 @@ export type AddFeeWaivedConfig = {
   )[];
 }[];
 
-export const addFeeWaived = async (
+export const setFeeWaivedAccounts = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
 ) => {
@@ -93,16 +94,21 @@ export const addFeeWaived = async (
       vaultContract,
       feeWaiveAddress,
       feeWaiveLabel,
+      value,
     ) => {
       const waived = await vaultContract.waivedFeeRestriction(feeWaiveAddress!);
 
-      if (waived) {
-        console.log('Fee is already waived, skipping...', feeWaiveAddress);
+      if (waived === value) {
+        console.log(
+          `Fee is already ${value ? 'waived' : 'not waived'}, skipping...`,
+          feeWaiveAddress,
+        );
         return;
       }
 
-      const tx = await vaultContract.populateTransaction.addWaivedFeeAccount(
+      const tx = await vaultContract.populateTransaction.setWaivedFeeAccount(
         feeWaiveAddress!,
+        value,
       );
 
       const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
@@ -192,6 +198,7 @@ const foreachFeeWaiveAddress = async (
     vaultContract: ManageableVault,
     feeWaiveAddress: string,
     feeWaiveLabel: string,
+    value: boolean,
   ) => Promise<void>,
 ) => {
   const addresses = getCurrentAddresses(hre);
@@ -222,6 +229,7 @@ const foreachFeeWaiveAddress = async (
         typeof toWaive === 'string'
           ? toWaive
           : `${toWaive.mToken ?? token} ${toWaive.type}`,
+        vault.value ?? true,
       );
     }
   }

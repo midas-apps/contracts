@@ -289,10 +289,13 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
             _validateRequest(requestIds[i], request.tokenOut, request.status);
 
+            uint8 decimals = _tokenDecimals(request.tokenOut);
             uint256 duration = block.timestamp - request.createdAt;
-            uint256 accruedInterest = (request.amountTokenOut *
-                _loanApr *
-                duration) / (10_000 * 365 days);
+            uint256 accruedInterest = _truncate(
+                (request.amountTokenOut * _loanApr * duration) /
+                    (10_000 * 365 days),
+                decimals
+            );
 
             uint256 amountFee;
 
@@ -308,7 +311,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 loanRepaymentAddress,
                 loanLp,
                 request.amountTokenOut + amountFee,
-                _tokenDecimals(request.tokenOut)
+                decimals
             );
 
             loanRequests[requestIds[i]].status = RequestStatus.Processed;

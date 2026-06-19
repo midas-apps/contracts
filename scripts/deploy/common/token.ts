@@ -4,7 +4,8 @@ import { deployAndVerifyProxy } from './utils';
 
 import { MTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
-import { getTokenContractNames } from '../../../helpers/contracts';
+import { getCommonContractNames } from '../../../helpers/contracts';
+import { getAllRoles } from '../../../helpers/roles';
 
 export const deployMToken = async (
   hre: HardhatRuntimeEnvironment,
@@ -15,7 +16,19 @@ export const deployMToken = async (
   if (!addresses?.accessControl)
     throw new Error('Access control address is not set');
 
-  const tokenContractName = getTokenContractNames(token).token;
+  const allRoles = getAllRoles();
 
-  await deployAndVerifyProxy(hre, tokenContractName, [addresses.accessControl]);
+  await deployAndVerifyProxy(
+    hre,
+    getCommonContractNames().mToken,
+    [addresses.accessControl],
+    undefined,
+    {
+      constructorArgs: [
+        allRoles.tokenRoles[token].tokenManager,
+        allRoles.tokenRoles[token].minter,
+        allRoles.tokenRoles[token].burner,
+      ],
+    },
+  );
 };

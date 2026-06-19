@@ -19,9 +19,19 @@ import {
 import { getDeployer } from '../../deploy/common/utils';
 
 // TODO: refactor this whole file and make upgrades more generic
-type ContractType = 'customAggregator' | 'customAggregatorGrowth' | 'token';
+type ContractType =
+  | 'dataFeed'
+  | 'dataFeedComposite'
+  | 'dataFeedMultiply'
+  | 'customAggregator'
+  | 'customAggregatorGrowth'
+  | 'token';
 
-type ContractTypeToUpgrade = 'customFeed' | 'customFeedGrowth' | 'token';
+type ContractTypeToUpgrade =
+  | 'dataFeed'
+  | 'customFeed'
+  | 'customFeedGrowth'
+  | 'token';
 
 type MTokenContractsToUpgrade = {
   mToken: MTokenName;
@@ -30,9 +40,52 @@ type MTokenContractsToUpgrade = {
     contractType: ContractType;
     contractTypeTo?: ContractType;
     overrideImplementation?: string;
+    constructorArgs?: unknown[];
     initializer?: string;
     initializerArgs?: unknown[];
   }[];
+};
+
+type ContractToUpgrade = {
+  mToken?: MTokenName;
+  contractType: string;
+  contractTypeTo?: string;
+  contractName: string;
+  proxyAddress: string;
+  overrideImplementation?: string;
+  initializer?: string;
+  initializerArgs?: unknown[];
+  constructorArgs?: unknown[];
+};
+
+export const proposeUpgradeContractsRaw = async (
+  hre: HardhatRuntimeEnvironment,
+  upgradeId: string,
+  contractsToUpgrade: ContractToUpgrade[],
+) => {
+  return upgradeAllContractsRaw(
+    hre,
+    upgradeId,
+    contractsToUpgrade,
+    async (hre, params, salt) => {
+      return await proposeTimeLockUpgradeTx(hre, params, salt);
+    },
+  );
+};
+
+export const executeUpgradeContractsRaw = async (
+  hre: HardhatRuntimeEnvironment,
+  upgradeId: string,
+  contractsToUpgrade: ContractToUpgrade[],
+) => {
+  return upgradeAllContractsRaw(
+    hre,
+    upgradeId,
+    contractsToUpgrade,
+    async (hre, params, salt) => {
+      return await executeTimeLockUpgradeTx(hre, params, salt);
+    },
+  );
 };
 
 export const proposeUpgradeContracts = async (
@@ -56,7 +109,6 @@ export const executeUpgradeContracts = async (
   hre: HardhatRuntimeEnvironment,
   upgradeId: string,
   contractType: ContractTypeToUpgrade,
-
   mTokenContractsToUpgrade: MTokenContractsToUpgrade[],
 ) => {
   return upgradeAllContracts(
@@ -112,16 +164,7 @@ const upgradeAllContracts = async (
 
   console.log('mTokensToUpgrade', mTokenContractsToUpgrade);
 
-  const upgradeContracts: {
-    mToken: MTokenName;
-    contractType: ContractType;
-    contractTypeTo?: ContractType;
-    contractName: string;
-    proxyAddress: string;
-    overrideImplementation?: string;
-    initializer?: string;
-    initializerCalldata?: string;
-  }[] = [];
+  const contractsToUpgrade: ContractToUpgrade[] = [];
 
   for (const { mToken, contracts, addresses } of mTokenContractsToUpgrade) {
     for (const {
@@ -130,6 +173,7 @@ const upgradeAllContracts = async (
       overrideImplementation,
       initializer,
       initializerArgs,
+      constructorArgs,
     } of contracts) {
       const type = contractTypeTo ?? contractType;
       const contractName =
@@ -139,12 +183,7 @@ const upgradeAllContracts = async (
         throw new Error(`Contract name not found for ${mToken} ${type}`);
       }
 
-      const contract = await hre.ethers.getContractAt(
-        contractName,
-        addresses[contractTypeToUpgrade]!,
-      );
-
-      upgradeContracts.push({
+      contractsToUpgrade.push({
         mToken,
         contractType: type,
         contractTypeTo,
@@ -152,19 +191,38 @@ const upgradeAllContracts = async (
         proxyAddress: addresses[contractTypeToUpgrade]!,
         overrideImplementation,
         initializer,
-        initializerCalldata: initializer
-          ? contract.interface.encodeFunctionData(
-              initializer,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (initializerArgs ?? []) as readonly any[],
-            )
-          : undefined,
+        initializerArgs: initializerArgs,
+        constructorArgs,
       });
     }
   }
 
+  return await upgradeAllContractsRaw(
+    hre,
+    upgradeId,
+    contractsToUpgrade,
+    callBack,
+  );
+};
+
+const upgradeAllContractsRaw = async (
+  hre: HardhatRuntimeEnvironment,
+  upgradeId: string,
+  upgradeContracts: ContractToUpgrade[],
+  callBack: (
+    hre: HardhatRuntimeEnvironment,
+    params: GetUpgradeTxParams,
+    salt: string,
+  ) => Promise<unknown>,
+) => {
   upgradeContracts.sort((a, b) => {
-    return a.mToken.localeCompare(b.mToken, 'en', { sensitivity: 'base' });
+    return (a.mToken ?? a.contractName).localeCompare(
+      b.mToken ?? b.contractName,
+      'en',
+      {
+        sensitivity: 'base',
+      },
+    );
   });
 
   console.log('upgradeContracts', upgradeContracts);
@@ -182,11 +240,14 @@ const upgradeAllContracts = async (
       contractType,
       contractName,
       proxyAddress,
+      constructorArgs,
     } = upgradeContract;
 
     if (overrideImplementation) {
       console.log(
-        `Using override implementation (${overrideImplementation}) for ${mToken}`,
+        `Using override implementation (${overrideImplementation}) for ${
+          mToken ? `${mToken} ${contractType}` : contractName
+        }`,
       );
       continue;
     }
@@ -199,13 +260,19 @@ const upgradeAllContracts = async (
           {
             redeployImplementation: 'onchange',
             getTxResponse: true,
+            constructorArgs,
           },
         ),
       );
 
     if (deployedNew) {
       logDeploy(contractName, contractType, implementationAddress);
-      await etherscanVerify(hre, implementationAddress).catch((e) => {
+      await etherscanVerify(
+        hre,
+        implementationAddress,
+        contractName,
+        ...(constructorArgs ?? []),
+      ).catch((e) => {
         console.error('Verification failed', e);
       });
     } else {
@@ -221,8 +288,9 @@ const upgradeAllContracts = async (
   }
 
   const failedUpgrades: {
-    mToken: MTokenName;
-    contractType: ContractType;
+    mToken?: MTokenName;
+    contractName: string;
+    contractType: string;
     error: string;
   }[] = [];
 
@@ -233,13 +301,27 @@ const upgradeAllContracts = async (
 Proxy: ${deployment.proxyAddress}
 Implementation: ${deployment.implementationAddress}`,
       );
+
+      const contract = await hre.ethers.getContractAt(
+        deployment.contractName,
+        deployment.proxyAddress,
+      );
+
+      const initializerCalldata =
+        deployment.initializerArgs && deployment.initializer
+          ? contract.interface.encodeFunctionData(
+              deployment.initializer,
+              deployment.initializerArgs,
+            )
+          : undefined;
+
       const result = await callBack(
         hre,
         {
           proxyAddress: deployment.proxyAddress,
           newImplementation: deployment.implementationAddress,
           initializer: deployment.initializer,
-          initializerCalldata: deployment.initializerCalldata,
+          initializerCalldata,
         },
         upgradeId,
       );
@@ -252,6 +334,7 @@ Implementation: ${deployment.implementationAddress}`,
 
       failedUpgrades.push({
         mToken: deployment.mToken,
+        contractName: deployment.contractName,
         contractType: deployment.contractType,
         error: e instanceof Error ? e.message : (e as string),
       });

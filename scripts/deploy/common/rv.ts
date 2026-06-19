@@ -9,15 +9,17 @@ import {
   getCurrentAddresses,
   RedemptionVaultType,
   sanctionListContracts,
+  TokenAddresses,
 } from '../../../config/constants/addresses';
-import { getTokenContractNames } from '../../../helpers/contracts';
+import { getCommonContractNames } from '../../../helpers/contracts';
+import { getAllRoles } from '../../../helpers/roles';
 import {
-  MBasisRedemptionVaultWithSwapper,
   RedemptionVault,
   RedemptionVaultWithMToken,
 } from '../../../typechain-types';
 
-export type DeployRvConfigCommon = {
+export type DeployRvConfigCommonLegacy = {
+  version?: 'v1';
   feeReceiver?: string;
   tokensReceiver?: string;
   instantDailyLimit: BigNumberish;
@@ -43,9 +45,19 @@ export type DeployRvConfigCommon = {
   minFiatRedeemAmount?: BigNumberish;
 };
 
-export type DeployRvRegularConfig = {
-  type: 'REGULAR';
-} & DeployRvConfigCommon;
+type DeployVaultConfigCommon = {
+  version: 'v2';
+  variationTolerance: BigNumberish;
+  minAmount?: BigNumberish;
+  instantFee: BigNumberish;
+  enableSanctionsList?: boolean;
+  tokensReceiver?: string;
+  minInstantFee?: BigNumberish;
+  maxInstantFee?: BigNumberish;
+  maxInstantShare?: BigNumberish;
+  maxApproveRequestId?: BigNumberish;
+  sequentialRequestProcessing?: boolean;
+};
 
 type SwapperVault =
   | {
@@ -54,6 +66,25 @@ type SwapperVault =
     }
   | 'dummy';
 
+type DeployRvConfigCommonNew = DeployVaultConfigCommon & {
+  requestRedeemer?: string;
+  loanConfig?: {
+    loanLp?: string;
+    loanRepaymentAddress?: string;
+    loanApr: BigNumberish;
+    loanSwapperVault: Exclude<SwapperVault, 'dummy'>;
+  };
+};
+
+export type DeployRvConfigCommon =
+  | DeployRvConfigCommonLegacy
+  | DeployRvConfigCommonNew;
+
+export type DeployRvRegularConfig = {
+  type: 'REGULAR';
+} & DeployRvConfigCommon;
+
+// TODO: remove
 export type DeployRvSwapperConfig = {
   type: 'SWAPPER';
   swapperVault: SwapperVault;
@@ -82,11 +113,48 @@ export type DeployRvConfig =
 
 const DUMMY_ADDRESS = '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF';
 
+const resolveLoanAddresses = async (
+  hre: HardhatRuntimeEnvironment,
+  networkConfig: DeployRvConfigCommonNew,
+  addresses: Record<MTokenName, TokenAddresses>,
+) => {
+  if (!networkConfig.loanConfig) {
+    return {
+      loanLp: constants.AddressZero,
+      loanRepaymentAddress: constants.AddressZero,
+      loanSwapperVault: constants.AddressZero,
+      loanApr: constants.AddressZero,
+    };
+  }
+  const swapperVault = networkConfig.loanConfig.loanSwapperVault;
+
+  const swapperVaultAddress =
+    addresses[swapperVault.mToken]?.[swapperVault.redemptionVaultType];
+
+  if (!swapperVaultAddress) {
+    throw new Error('Swapper vault address is not found');
+  }
+
+  const deployer = await getDeployer(hre);
+
+  return {
+    loanLp: networkConfig.loanConfig.loanLp ?? deployer.address,
+    loanRepaymentAddress:
+      networkConfig.loanConfig.loanRepaymentAddress ?? deployer.address,
+    loanSwapperVault: swapperVaultAddress,
+    loanApr: networkConfig.loanConfig.loanApr,
+  };
+};
+
 export const deployRedemptionVault = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
   type: 'rv' | 'rvSwapper' | 'rvAave' | 'rvMorpho' | 'rvMToken',
 ) => {
+  if (token.startsWith('TAC')) {
+    throw new Error('TAC tokens are not supported anymore');
+  }
+
   const addresses = getCurrentAddresses(hre);
   const deployer = await getDeployer(hre);
   const tokenAddresses = addresses?.[token];
@@ -97,56 +165,23 @@ export const deployRedemptionVault = async (
     throw new Error('Token config is not found');
   }
 
-  const contractName = getTokenContractNames(token)[type];
-
-  if (!contractName) {
-    throw new Error('Unsupported token/type combination');
+  if (networkConfig.version !== 'v2') {
+    throw new Error('v1 configs are not supported anymore');
   }
+
+  if (networkConfig.type === 'SWAPPER') {
+    throw new Error('Swapper configs are not supported anymore');
+  }
+
+  const allRoles = getAllRoles();
 
   const extraParams: unknown[] = [];
 
   if (networkConfig.type === 'MTOKEN') {
     extraParams.push(networkConfig.redemptionVault);
-  } else if (networkConfig.type === 'SWAPPER') {
-    const swapperVault = networkConfig.swapperVault;
-
-    let swapperVaultAddress: string | undefined;
-
-    if (swapperVault === 'dummy') {
-      swapperVaultAddress = DUMMY_ADDRESS;
-    } else {
-      swapperVaultAddress =
-        addresses[swapperVault.mToken]?.[swapperVault.redemptionVaultType];
-    }
-
-    if (!swapperVaultAddress) {
-      throw new Error('Swapper vault address is not found');
-    }
-
-    if (swapperVaultAddress === DUMMY_ADDRESS) {
-      console.log('Using dummy swapper vault address');
-    }
-
-    const liquidityProvider =
-      networkConfig.liquidityProvider === 'dummy'
-        ? DUMMY_ADDRESS
-        : networkConfig.liquidityProvider ?? deployer.address;
-
-    extraParams.push(swapperVaultAddress);
-    extraParams.push(liquidityProvider);
   }
 
-  let dataFeed: string | undefined;
-
-  if (token.startsWith('TAC')) {
-    const originalTokenName = token.replace('TAC', '');
-    dataFeed = addresses?.[originalTokenName as MTokenName]?.dataFeed;
-    console.log(
-      `Detected TAC wrapper, will be used data feed from ${originalTokenName}: ${dataFeed}`,
-    );
-  } else {
-    dataFeed = tokenAddresses?.dataFeedRv ?? tokenAddresses?.dataFeed;
-  }
+  const dataFeed = tokenAddresses?.dataFeedRv ?? tokenAddresses?.dataFeed;
 
   const sanctionsList = networkConfig.enableSanctionsList
     ? sanctionListContracts[hre.network.config.chainId!]
@@ -158,46 +193,53 @@ export const deployRedemptionVault = async (
 
   // FIXME: fix according to new initialize params
   const params = [
-    addresses?.accessControl,
     {
+      variationTolerance: networkConfig.variationTolerance,
+      minAmount: networkConfig.minAmount ?? parseUnits('0', 18),
+      instantFee: networkConfig.instantFee,
+      ac: addresses?.accessControl,
+      sanctionsList,
       mToken: tokenAddresses?.token,
       mTokenDataFeed: dataFeed,
-    },
-    {
-      feeReceiver: networkConfig.feeReceiver ?? deployer.address,
       tokensReceiver: networkConfig.tokensReceiver ?? deployer.address,
+      minInstantFee: networkConfig.minInstantFee ?? 0,
+      maxInstantFee: networkConfig.maxInstantFee ?? 100_00,
+      maxInstantShare: networkConfig.maxInstantShare ?? 100_00,
+      maxApproveRequestId: networkConfig.maxApproveRequestId ?? 100,
+      sequentialRequestProcessing:
+        networkConfig.sequentialRequestProcessing ?? false,
     },
     {
-      instantDailyLimit: networkConfig.instantDailyLimit,
-      instantFee: networkConfig.instantFee,
+      requestRedeemer: networkConfig.requestRedeemer ?? deployer.address,
+      ...(await resolveLoanAddresses(
+        hre,
+        networkConfig,
+        addresses as Record<MTokenName, TokenAddresses>,
+      )),
     },
-    sanctionsList,
-    networkConfig.variationTolerance,
-    networkConfig.minAmount ?? parseUnits('0', 18),
-    {
-      fiatAdditionalFee:
-        networkConfig.fiatAdditionalFee ?? parseUnits('0.1', 2),
-      fiatFlatFee: networkConfig.fiatFlatFee ?? parseUnits('30', 18),
-      minFiatRedeemAmount:
-        networkConfig.minFiatRedeemAmount ?? parseUnits('1000', 18),
-    },
-    networkConfig.requestRedeemer ?? deployer.address,
     ...extraParams,
   ] as
     | Parameters<RedemptionVault['initialize']>
     | Parameters<
-        MBasisRedemptionVaultWithSwapper['initialize((address,address,uint256,uint256),(address,address),(address,address),(uint256,uint256),(uint256,uint256,uint256,address,address,address,address,address),address,address)']
-      >
-    | Parameters<
-        RedemptionVaultWithMToken['initialize((address,address,uint256,uint256),(address,address),(address,address),(uint256,uint256),(uint256,uint256,uint256,address,address,address,address,address),address)']
+        RedemptionVaultWithMToken['initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(address,address,address,address,uint256),address)']
       >;
 
-  await deployAndVerifyProxy(hre, contractName, params, undefined, {
-    initializer:
-      networkConfig.type === 'SWAPPER'
-        ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)'
-        : networkConfig.type === 'MTOKEN'
-        ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
-        : 'initialize',
-  });
+  const constructorParams = [
+    allRoles.tokenRoles[token].redemptionVaultAdmin,
+    allRoles.tokenRoles[token].greenlisted,
+  ];
+
+  await deployAndVerifyProxy(
+    hre,
+    getCommonContractNames()[type],
+    params,
+    undefined,
+    {
+      constructorArgs: constructorParams,
+      initializer:
+        networkConfig.type === 'MTOKEN'
+          ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
+          : 'initialize',
+    },
+  );
 };

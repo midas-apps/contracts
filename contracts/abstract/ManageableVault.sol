@@ -62,6 +62,7 @@ abstract contract ManageableVault is
 
     /**
      * @dev role that grants greenlisted status to the contract
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
      */
     // solhint-disable-next-line var-name-mixedcase
     bytes32 private immutable _GREENLISTED_ROLE;

@@ -1,4 +1,3 @@
-import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import { chainIds } from '../../../config';
@@ -21,30 +20,45 @@ export const mSLDeploymentConfig: DeploymentConfig = {
   networkConfigs: {
     [chainIds.sepolia]: {
       dv: {
-        feeReceiver: undefined,
-        tokensReceiver: undefined,
-        instantDailyLimit: constants.MaxUint256,
+        version: 'v2',
         instantFee: parseUnits('1', 2),
-        minMTokenAmountForFirstDeposit: parseUnits('100'),
-        minAmount: parseUnits('0.01'),
         variationTolerance: parseUnits('0.1', 2),
       },
-      rvSwapper: {
-        type: 'SWAPPER',
-        feeReceiver: undefined,
-        tokensReceiver: undefined,
-        instantDailyLimit: constants.MaxUint256,
+      rv: {
+        type: 'REGULAR',
+        version: 'v2',
         instantFee: parseUnits('1', 2),
-        minAmount: parseUnits('0.01'),
         variationTolerance: parseUnits('0.1', 2),
-        fiatAdditionalFee: parseUnits('0.1', 2),
-        fiatFlatFee: parseUnits('0.1', 18),
-        minFiatRedeemAmount: parseUnits('1', 18),
-        requestRedeemer: undefined,
-        liquidityProvider: undefined,
-        swapperVault: {
-          mToken: 'mTBILL',
-          redemptionVaultType: 'redemptionVaultUstb',
+      },
+      postDeploy: {
+        grantRoles: {
+          tokenManagerAddress: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          oracleManagerAddress: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          vaultsManagerAddress: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+        },
+        addPaymentTokens: {
+          vaults: [
+            {
+              type: 'depositVault',
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                },
+              ],
+            },
+            {
+              type: 'redemptionVault',
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                },
+              ],
+            },
+          ],
+        },
+        setRoundData: {
+          type: 'REGULAR',
+          data: parseUnits('1', 8),
         },
       },
     },

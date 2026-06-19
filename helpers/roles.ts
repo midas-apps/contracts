@@ -127,11 +127,10 @@ const getGreenlistRoleName = (token: MTokenName): string => {
 type TokenRoles = {
   minter: string;
   burner: string;
-  pauser: string;
   tokenManager: string;
   depositVaultAdmin: string;
   redemptionVaultAdmin: string;
-  customFeedAdmin: string | null;
+  customFeedAdmin: string;
   greenlisted: string;
 };
 
@@ -170,11 +169,8 @@ export const getRolesNamesForToken = (token: MTokenName): TokenRoles => {
   return {
     minter: `${tokenPrefix}_MINT_OPERATOR_ROLE`,
     burner: `${tokenPrefix}_BURN_OPERATOR_ROLE`,
-    pauser: `${tokenPrefix}_PAUSE_OPERATOR_ROLE`,
     tokenManager: `${tokenPrefix}_TOKEN_MANAGER_ROLE`,
-    customFeedAdmin: isTAC
-      ? null
-      : `${tokenPrefix}_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE`,
+    customFeedAdmin: `${tokenPrefix}_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE`,
     depositVaultAdmin: `${restPrefix}DEPOSIT_VAULT_ADMIN_ROLE`,
     redemptionVaultAdmin: `${restPrefix}REDEMPTION_VAULT_ADMIN_ROLE`,
     greenlisted: getGreenlistRoleName(token),

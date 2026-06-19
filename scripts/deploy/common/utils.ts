@@ -175,6 +175,7 @@ export const deployAndVerifyProxy = async (
   await tryEtherscanVerifyImplementation(
     hre,
     deployment.address,
+    contractName,
     ...(opts?.constructorArgs ?? []),
   );
 

@@ -63,7 +63,7 @@ export const grantAllProductRoles = async (
     allRoles.common.greenlistedOperator,
     tokenRoles.burner,
     tokenRoles.minter,
-    tokenRoles.pauser,
+    tokenRoles.tokenManager,
   ];
 
   const vaultManagerRoles = [
@@ -132,8 +132,11 @@ export const grantAllProductRoles = async (
   await sendAndWaitForCustomTxSign(
     hre,
     await accessControl.populateTransaction.grantRoleMult(
-      rolesToGrant,
-      addressesToGrant,
+      rolesToGrant.map((role, index) => ({
+        role,
+        account: addressesToGrant[index],
+        delay: 0, // TODO: add default delay?
+      })),
     ),
     {
       action: 'update-ac',
@@ -156,8 +159,7 @@ export const revokeDefaultRolesFromDeployer = async (
   await sendAndWaitForCustomTxSign(
     hre,
     await accessControl.populateTransaction.revokeRoleMult(
-      roles,
-      roles.map(() => deployer.address),
+      roles.map((role) => ({ role, account: deployer.address })),
     ),
     {
       action: 'deployer',
@@ -188,7 +190,7 @@ export const grantDefaultAdminRoleToAcAdmin = async (
 
   await sendAndWaitForCustomTxSign(
     hre,
-    await accessControl.populateTransaction.grantRole(
+    await accessControl.populateTransaction['grantRole(bytes32,address)'](
       allRoles.common.defaultAdmin,
       networkConfig?.acAdminAddress ?? acAdminAddress,
     ),

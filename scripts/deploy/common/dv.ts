@@ -10,14 +10,16 @@ import {
   sanctionListContracts,
   ustbContracts,
 } from '../../../config/constants/addresses';
-import { getTokenContractNames } from '../../../helpers/contracts';
+import { getCommonContractNames } from '../../../helpers/contracts';
+import { getAllRoles } from '../../../helpers/roles';
 import {
   DepositVault,
   DepositVaultWithMToken,
   DepositVaultWithUSTB,
 } from '../../../typechain-types';
 
-export type DeployDvConfigCommon = {
+export type DeployDvConfigCommonLegacy = {
+  version?: 'v1';
   feeReceiver?: string;
   tokensReceiver?: `0x${string}` | RedemptionVaultType;
   instantDailyLimit: BigNumberish;
@@ -37,6 +39,30 @@ export type DeployDvConfigCommon = {
    */
   maxSupplyCap?: BigNumberish;
 };
+
+type DeployVaultConfigCommon = {
+  version: 'v2';
+  variationTolerance: BigNumberish;
+  minAmount?: BigNumberish;
+  instantFee: BigNumberish;
+  enableSanctionsList?: boolean;
+  tokensReceiver?: `0x${string}` | RedemptionVaultType;
+  minInstantFee?: BigNumberish;
+  maxInstantFee?: BigNumberish;
+  maxInstantShare?: BigNumberish;
+  maxApproveRequestId?: BigNumberish;
+  sequentialRequestProcessing?: boolean;
+};
+
+type DeployDvConfigCommonNew = DeployVaultConfigCommon & {
+  minMTokenAmountForFirstDeposit?: BigNumberish;
+  maxSupplyCap?: BigNumberish;
+  maxAmountPerRequest?: BigNumberish;
+};
+
+export type DeployDvConfigCommon =
+  | DeployDvConfigCommonLegacy
+  | DeployDvConfigCommonNew;
 
 export type DeployDvRegularConfig = DeployDvConfigCommon & {
   type?: 'REGULAR';
@@ -75,33 +101,25 @@ export const deployDepositVault = async (
   token: MTokenName,
   type: 'dv' | 'dvUstb' | 'dvAave' | 'dvMorpho' | 'dvMToken',
 ) => {
+  if (token.startsWith('TAC')) {
+    throw new Error('TAC tokens are not supported anymore');
+  }
+
   const addresses = getCurrentAddresses(hre);
   const deployer = await getDeployer(hre);
   const tokenAddresses = addresses?.[token];
 
   const networkConfig = getNetworkConfig(hre, token, type);
 
+  if (networkConfig.version !== 'v2') {
+    throw new Error('v1 configs are not supported anymore');
+  }
+
   if (!tokenAddresses) {
     throw new Error('Token config is not found');
   }
 
-  let dataFeed: string | undefined;
-
-  if (token.startsWith('TAC')) {
-    const originalTokenName = token.replace('TAC', '');
-    dataFeed = addresses?.[originalTokenName as MTokenName]?.dataFeed;
-    console.log(
-      `Detected TAC wrapper, will be used data feed from ${originalTokenName}: ${dataFeed}`,
-    );
-  } else {
-    dataFeed = tokenAddresses?.dataFeedDv ?? tokenAddresses?.dataFeed;
-  }
-
-  const dvContractName = getTokenContractNames(token)[type];
-
-  if (!dvContractName) {
-    throw new Error('DV contract name is not found');
-  }
+  const dataFeed = tokenAddresses?.dataFeedDv ?? tokenAddresses?.dataFeed;
 
   const sanctionsList = networkConfig.enableSanctionsList
     ? sanctionListContracts[hre.network.config.chainId!]
@@ -142,39 +160,55 @@ export const deployDepositVault = async (
     extraParams.push(networkConfig.mTokenDepositVault);
   }
 
+  const ustbMTokenInitializer =
+    'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(uint256,uint256,uint256),address)' as const;
   const params = [
-    addresses?.accessControl,
     {
+      variationTolerance: networkConfig.variationTolerance,
+      minAmount: networkConfig.minAmount ?? 0,
+      instantFee: networkConfig.instantFee,
+      ac: addresses?.accessControl,
+      sanctionsList,
       mToken: tokenAddresses?.token,
       mTokenDataFeed: dataFeed,
+      tokensReceiver: networkConfig.tokensReceiver ?? deployer.address,
+      minInstantFee: networkConfig.minInstantFee ?? 0,
+      maxInstantFee: networkConfig.maxInstantFee ?? 100_00,
+      maxInstantShare: networkConfig.maxInstantShare ?? 100_00,
+      maxApproveRequestId: networkConfig.maxApproveRequestId ?? 100,
+      sequentialRequestProcessing:
+        networkConfig.sequentialRequestProcessing ?? false,
     },
     {
-      feeReceiver: networkConfig.feeReceiver ?? deployer.address,
-      tokensReceiver,
+      minMTokenAmountForFirstDeposit:
+        networkConfig.minMTokenAmountForFirstDeposit ?? 0,
+      maxSupplyCap: networkConfig.maxSupplyCap ?? constants.MaxUint256,
+      maxAmountPerRequest:
+        networkConfig.maxAmountPerRequest ?? constants.MaxUint256,
     },
-    {
-      instantDailyLimit: networkConfig.instantDailyLimit,
-      instantFee: networkConfig.instantFee,
-    },
-    sanctionsList,
-    networkConfig.variationTolerance,
-    networkConfig.minAmount ?? 0,
-    networkConfig.minMTokenAmountForFirstDeposit ?? 0,
-    networkConfig.maxSupplyCap ?? constants.MaxUint256,
     ...extraParams,
   ] as
     | Parameters<DepositVault['initialize']>
-    | Parameters<
-        DepositVaultWithUSTB['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)']
-      >
-    | Parameters<
-        DepositVaultWithMToken['initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)']
-      >;
+    | Parameters<DepositVaultWithUSTB[typeof ustbMTokenInitializer]>
+    | Parameters<DepositVaultWithMToken[typeof ustbMTokenInitializer]>;
 
-  await deployAndVerifyProxy(hre, dvContractName, params, undefined, {
-    initializer:
-      networkConfig.type === 'USTB' || networkConfig.type === 'MTOKEN'
-        ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)'
-        : 'initialize',
-  });
+  const allRoles = getAllRoles();
+  const constructorParams = [
+    allRoles.tokenRoles[token].depositVaultAdmin,
+    allRoles.tokenRoles[token].greenlisted,
+  ];
+
+  await deployAndVerifyProxy(
+    hre,
+    getCommonContractNames()[type],
+    params,
+    undefined,
+    {
+      constructorArgs: constructorParams,
+      initializer:
+        networkConfig.type === 'USTB' || networkConfig.type === 'MTOKEN'
+          ? ustbMTokenInitializer
+          : 'initialize',
+    },
+  );
 };
