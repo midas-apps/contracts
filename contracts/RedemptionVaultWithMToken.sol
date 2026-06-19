@@ -128,11 +128,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
             ? mTokenAAmount
             : mTokenABalance;
 
-        if (
-            !ManageableVault(address(_redemptionVault)).waivedFeeRestriction(
-                address(this)
-            )
-        ) {
+        if (!_redemptionVault.waivedFeeRestriction(address(this))) {
             return 0;
         }
 

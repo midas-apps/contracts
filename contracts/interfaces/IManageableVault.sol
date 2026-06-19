@@ -444,4 +444,11 @@ interface IManageableVault {
      * @param amount token amount
      */
     function withdrawToken(address token, uint256 amount) external;
+
+    /**
+     * @notice check if the account is waived from fee restriction
+     * @param account account address
+     * @return true if the account is waived from fee restriction, false otherwise
+     */
+    function waivedFeeRestriction(address account) external view returns (bool);
 }

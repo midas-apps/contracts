@@ -2116,7 +2116,7 @@ export const redemptionVaultSuits = (
               );
             });
 
-            it('should fail: when rv not fee waived on lp swapper', async () => {
+            it('should fail: when not fee waived and vault does not have enough liquidity', async () => {
               const {
                 owner,
                 redemptionVault,
@@ -2569,7 +2569,70 @@ export const redemptionVaultSuits = (
               );
             });
 
-            it('should fail: when rv not fee waived on lp swapper', async () => {
+            it('should skip loan liquidity and fallback to vault liquidity when not fee waived', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mTokenLoan,
+                redemptionVaultLoanSwapper,
+              } = await loadRvFixture();
+
+              await mintToken(mTBILL, owner, 100);
+              await mintToken(mTokenLoan, loanLp, 1000);
+              await mintToken(stableCoins.dai, redemptionVault, 1000);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 1000);
+              await mintToken(
+                stableCoins.dai,
+                redemptionVaultLoanSwapper,
+                1000,
+              );
+
+              await setWaivedFeeAccountTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                redemptionVault.address,
+                false,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              await setPreferLoanLiquidityTest(
+                { redemptionVault, owner },
+                true,
+              );
+
+              await redeemInstantTest(
+                {
+                  redemptionVault,
+                  owner,
+                  mTBILL,
+                  mTokenToUsdDataFeed,
+                  loanLiquidityExpectToFail: true,
+                },
+                stableCoins.dai,
+                100,
+              );
+            });
+
+            it('should fail: when not fee waived and vault does not have enough liquidity', async () => {
               const {
                 owner,
                 redemptionVault,

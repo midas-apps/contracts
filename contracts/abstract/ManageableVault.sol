@@ -80,7 +80,7 @@ abstract contract ManageableVault is
     /**
      * @notice address restriction with zero fees
      */
-    mapping(address => bool) public waivedFeeRestriction;
+    mapping(address => bool) public override waivedFeeRestriction;
 
     /**
      * @dev tokens that can be used as USD representation

@@ -957,6 +957,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             return (0, 0);
         }
 
+        if (!_loanSwapperVault.waivedFeeRestriction(address(this))) {
+            return (0, 0);
+        }
+
         uint256 mTokenARate;
         IERC20 mTokenA;
         uint256 grossTokenOutAmount;
