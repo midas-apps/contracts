@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-
-import "../access/WithMidasAccessControl.sol";
-import "../interfaces/IAggregatorV3CompatibleFeedGrowth.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 import {MidasInitializable} from "../abstract/MidasInitializable.sol";
+import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
+import {IAggregatorV3CompatibleFeedGrowth} from "../interfaces/IAggregatorV3CompatibleFeedGrowth.sol";
 
 /**
  * @title CustomAggregatorV3CompatibleFeedGrowth

@@ -4,7 +4,8 @@ pragma solidity 0.8.34;
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import {IDepositVault, CommonVaultInitParams, DepositVaultInitParams, Request, RequestStatus} from "./interfaces/IDepositVault.sol";
+import {IDepositVault, DepositVaultInitParams, Request} from "./interfaces/IDepositVault.sol";
+import {CommonVaultInitParams, RequestStatus} from "./interfaces/IManageableVault.sol";
 
 import {ManageableVault} from "./abstract/ManageableVault.sol";
 import {Greenlistable} from "./access/Greenlistable.sol";

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.34;
 
-import "./IMToken.sol";
-import "./IDataFeed.sol";
+import {IMToken} from "./IMToken.sol";
+import {IDataFeed} from "./IDataFeed.sol";
 
 /**
  * @notice Payment token config

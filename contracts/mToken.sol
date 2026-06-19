@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
+import {ERC20PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 import {RateLimitLibrary} from "./libraries/RateLimitLibrary.sol";
 import {AccessControlUtilsLibrary} from "./libraries/AccessControlUtilsLibrary.sol";
 import {IMidasAccessControl} from "./interfaces/IMidasAccessControl.sol";
 import {PauseUtilsLibrary} from "./libraries/PauseUtilsLibrary.sol";
 import {MidasInitializable} from "./abstract/MidasInitializable.sol";
-
-import "./access/Blacklistable.sol";
-import "./interfaces/IMToken.sol";
+import {WithMidasAccessControl} from "./access/WithMidasAccessControl.sol";
+import {Blacklistable} from "./access/Blacklistable.sol";
+import {IMToken} from "./interfaces/IMToken.sol";
 
 /**
  * @title mToken

@@ -703,6 +703,15 @@ export const approveRedeemRequestTest = async (
   expect(balanceAfterReceiver).eq(balanceBeforeReceiver);
 };
 
+export const truncateToTokenDecimals = (
+  amount: BigNumber,
+  decimals: number,
+) => {
+  const precision = BigNumber.from(10).pow(18 - decimals);
+
+  return amount.div(precision).mul(precision);
+};
+
 export const setLoanAprTest = async (
   {
     redemptionVault,
@@ -806,15 +815,25 @@ export const bulkRepayLpLoanRequestTest = async (
   const loanApr = await redemptionVault.loanApr();
 
   const feePercents = await Promise.all(
-    requestDatasBefore.map((requestData) => {
+    requestDatasBefore.map(async (requestData) => {
       const duration = BigNumber.from(currentTimestamp).sub(
         requestData.createdAt,
       );
 
-      const accruedInterest = requestData.amountTokenOut
+      const tokenDecimals = await ERC20__factory.connect(
+        requestData.tokenOut,
+        owner,
+      ).decimals();
+
+      const accruedInterestRaw = requestData.amountTokenOut
         .mul(loanApr)
         .mul(duration)
         .div(BigNumber.from(10_000).mul(365).mul(86400));
+
+      const accruedInterest = truncateToTokenDecimals(
+        accruedInterestRaw,
+        tokenDecimals,
+      );
 
       const amountFee = accruedInterest.gt(requestData.amountFee)
         ? accruedInterest

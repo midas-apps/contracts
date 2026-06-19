@@ -9,7 +9,7 @@ import {
 } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { constants, Contract } from 'ethers';
+import { BigNumber, constants, Contract } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
@@ -44,6 +44,7 @@ import {
   pauseVault,
   pauseVaultFn,
   asyncForEach,
+  getCurrentBlockTimestamp,
 } from '../../common/common.helpers';
 import {
   setMinGrowthApr,
@@ -82,6 +83,7 @@ import {
   setLoanAprTest,
   setRequestRedeemerTest,
   setMaxApproveRequestIdTest,
+  truncateToTokenDecimals,
 } from '../../common/redemption-vault.helpers';
 import { InitializerParamsRv } from '../../common/vault-initializer.helpers';
 import { sanctionUser } from '../../common/with-sanctions-list.helpers';
@@ -13954,6 +13956,114 @@ export const redemptionVaultSuits = (
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }, { id: 1 }, { id: 2 }],
             );
+          });
+
+          it('approve 1 request when loanApr accrued interest is truncated to token decimals', async () => {
+            const fixture = await loadRvFixture();
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
+
+            await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+            await prepareTest(fixture, stableCoins.usdc6);
+            await increase(days(1));
+
+            const request = await redemptionVault.loanRequests(0);
+            const tokenDecimals = await stableCoins.usdc6.decimals();
+            const loanApr = BigNumber.from(3333);
+            const currentTimestamp = await getCurrentBlockTimestamp();
+            const duration = BigNumber.from(currentTimestamp).sub(
+              request.createdAt,
+            );
+
+            const accruedInterestRaw = request.amountTokenOut
+              .mul(loanApr)
+              .mul(duration)
+              .div(BigNumber.from(10_000).mul(365).mul(86400));
+
+            const accruedInterestTruncated = truncateToTokenDecimals(
+              accruedInterestRaw,
+              tokenDecimals,
+            );
+
+            expect(accruedInterestRaw).gt(accruedInterestTruncated);
+            expect(accruedInterestTruncated).gt(request.amountFee);
+
+            await mintToken(stableCoins.usdc6, loanRepaymentAddress, 1000);
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.usdc6,
+              redemptionVault,
+              1000,
+            );
+
+            await setLoanAprTest({ redemptionVault, owner }, loanApr);
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+            );
+          });
+
+          it('approve 1 request when untruncated accrued interest exceeds instant fee but truncated does not', async () => {
+            const fixture = await loadRvFixture();
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
+
+            await setInstantFeeTest({ vault: redemptionVault, owner }, 100);
+            await prepareTest(fixture, stableCoins.usdc6);
+
+            const request = await redemptionVault.loanRequests(0);
+            const tokenDecimals = await stableCoins.usdc6.decimals();
+            const loanApr = BigNumber.from(133);
+            const durationSeconds = 23_950_800;
+
+            await ethers.provider.send('evm_setNextBlockTimestamp', [
+              request.createdAt.toNumber() + durationSeconds,
+            ]);
+            await ethers.provider.send('evm_mine', []);
+
+            const duration = BigNumber.from(durationSeconds);
+            const accruedInterestRaw = request.amountTokenOut
+              .mul(loanApr)
+              .mul(duration)
+              .div(BigNumber.from(10_000).mul(365).mul(86400));
+
+            const accruedInterestTruncated = truncateToTokenDecimals(
+              accruedInterestRaw,
+              tokenDecimals,
+            );
+
+            expect(accruedInterestRaw).gt(request.amountFee);
+            expect(accruedInterestTruncated).lte(request.amountFee);
+            expect(accruedInterestRaw).gt(accruedInterestTruncated);
+
+            await mintToken(stableCoins.usdc6, loanRepaymentAddress, 100);
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.usdc6,
+              redemptionVault,
+              100,
+            );
+
+            await setLoanAprTest({ redemptionVault, owner }, loanApr);
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+            );
+
+            const requestAfter = await redemptionVault.loanRequests(0);
+            expect(requestAfter.amountFee).eq(request.amountFee);
           });
         });
 

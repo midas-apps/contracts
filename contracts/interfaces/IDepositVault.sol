@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.34;
 
-import "./IManageableVault.sol";
+import {IManageableVault, RequestStatus} from "./IManageableVault.sol";
 
 /**
  * @notice Mint request scruct

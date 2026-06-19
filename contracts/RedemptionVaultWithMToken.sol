@@ -6,9 +6,11 @@ import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgrade
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import {RedemptionVault, ManageableVault} from "./RedemptionVault.sol";
+import {RedemptionVault} from "./RedemptionVault.sol";
+import {ManageableVault} from "./abstract/ManageableVault.sol";
 import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
-import {CommonVaultInitParams, RedemptionVaultInitParams, IRedemptionVault} from "./interfaces/IRedemptionVault.sol";
+import {IRedemptionVault, RedemptionVaultInitParams} from "./interfaces/IRedemptionVault.sol";
+import {CommonVaultInitParams} from "./interfaces/IManageableVault.sol";
 import {RedemptionVaultUtils} from "./libraries/RedemptionVaultUtils.sol";
 
 /**

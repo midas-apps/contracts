@@ -5,7 +5,8 @@ import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgrade
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {ISuperstateToken} from "./interfaces/ustb/ISuperstateToken.sol";
 import {CommonVaultInitParams} from "./interfaces/IManageableVault.sol";
-import {DepositVault, DepositVaultInitParams} from "./DepositVault.sol";
+import {DepositVault} from "./DepositVault.sol";
+import {DepositVaultInitParams} from "./interfaces/IDepositVault.sol";
 import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
 
 /**

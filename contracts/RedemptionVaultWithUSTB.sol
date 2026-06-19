@@ -5,7 +5,8 @@ import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/t
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import {RedemptionVault} from "./RedemptionVault.sol";
-import {CommonVaultInitParams, RedemptionVaultInitParams} from "./interfaces/IRedemptionVault.sol";
+import {RedemptionVaultInitParams} from "./interfaces/IRedemptionVault.sol";
+import {CommonVaultInitParams} from "./interfaces/IManageableVault.sol";
 
 import {IUSTBRedemption} from "./interfaces/ustb/IUSTBRedemption.sol";
 import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";

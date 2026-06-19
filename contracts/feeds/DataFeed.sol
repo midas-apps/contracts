@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 import {MidasInitializable} from "../abstract/MidasInitializable.sol";
-
-import "../access/WithMidasAccessControl.sol";
-import "../libraries/DecimalsCorrectionLibrary.sol";
-import "../interfaces/IDataFeed.sol";
+import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
+import {DecimalsCorrectionLibrary} from "../libraries/DecimalsCorrectionLibrary.sol";
+import {IDataFeed} from "../interfaces/IDataFeed.sol";
 
 /**
  * @title DataFeed
