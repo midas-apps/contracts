@@ -51125,6 +51125,461 @@
           }
         }
       }
+    },
+    "66b47cbe6d29772f8f04362972f20aaa003fae06fcb09071059795b4f94cb61f": {
+      "address": "0xEcD9cCBC0eaC2377ea44606487E4235Cb256f658",
+      "txHash": "0x78c6778f00719c3db56b749120c9127f23d7758981acda838a93ed09d727e22a",
+      "layout": {
+        "solcVersion": "0.8.34",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "accessControl",
+            "offset": 2,
+            "slot": "0",
+            "type": "t_contract(IMidasAccessControl)22015",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:29",
+            "retypedFrom": "MidasAccessControl"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:34"
+          },
+          {
+            "label": "_status",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_uint256",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:88"
+          },
+          {
+            "label": "dataHashIndexes",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_mapping(t_bytes32,t_uint256)",
+            "contract": "MidasTimelockManager",
+            "src": "contracts/access/MidasTimelockManager.sol:84"
+          },
+          {
+            "label": "proposerPendingOperationsCount",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "MidasTimelockManager",
+            "src": "contracts/access/MidasTimelockManager.sol:89"
+          },
+          {
+            "label": "_securityCouncils",
+            "offset": 0,
+            "slot": "103",
+            "type": "t_mapping(t_uint256,t_struct(AddressSet)5013_storage)",
+            "contract": "MidasTimelockManager",
+            "src": "contracts/access/MidasTimelockManager.sol:94"
+          },
+          {
+            "label": "_operationDetails",
+            "offset": 0,
+            "slot": "104",
+            "type": "t_mapping(t_bytes32,t_struct(TimelockOperationDetails)16856_storage)",
+            "contract": "MidasTimelockManager",
+            "src": "contracts/access/MidasTimelockManager.sol:99"
+          },
+          {
+            "label": "_pendingOperations",
+            "offset": 0,
+            "slot": "105",
+            "type": "t_struct(Bytes32Set)4892_storage",
+            "contract": "MidasTimelockManager",
+            "src": "contracts/access/MidasTimelockManager.sol:104"
+          },
+          {
+            "label": "timelock",
+            "offset": 0,
+            "slot": "107",
+            "type": "t_address",
+            "contract": "MidasTimelockManager",
+            "src": "contracts/access/MidasTimelockManager.sol:109"
+          },
+          {
+            "label": "maxPendingOperationsPerProposer",
+            "offset": 0,
+            "slot": "108",
+            "type": "t_uint256",
+            "contract": "MidasTimelockManager",
+            "src": "contracts/access/MidasTimelockManager.sol:114"
+          },
+          {
+            "label": "securityCouncilVersion",
+            "offset": 0,
+            "slot": "109",
+            "type": "t_uint256",
+            "contract": "MidasTimelockManager",
+            "src": "contracts/access/MidasTimelockManager.sol:119"
+          },
+          {
+            "label": "pendingSetCouncilOperationId",
+            "offset": 0,
+            "slot": "110",
+            "type": "t_bytes32",
+            "contract": "MidasTimelockManager",
+            "src": "contracts/access/MidasTimelockManager.sol:124"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "111",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "MidasTimelockManager",
+            "src": "contracts/access/MidasTimelockManager.sol:129"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_bytes32)dyn_storage": {
+            "label": "bytes32[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IMidasAccessControl)22015": {
+            "label": "contract IMidasAccessControl",
+            "numberOfBytes": "20"
+          },
+          "t_enum(TimelockOperationStatus)22177": {
+            "label": "enum TimelockOperationStatus",
+            "members": [
+              "NotExist",
+              "Pending",
+              "Paused",
+              "ApprovedExecution",
+              "ReadyToExecute",
+              "ReadyToAbort",
+              "Expired",
+              "Aborted",
+              "Executed"
+            ],
+            "numberOfBytes": "1"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(TimelockOperationDetails)16856_storage)": {
+            "label": "mapping(bytes32 => struct MidasTimelockManager.TimelockOperationDetails)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_uint256)": {
+            "label": "mapping(bytes32 => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(AddressSet)5013_storage)": {
+            "label": "mapping(uint256 => struct EnumerableSetUpgradeable.AddressSet)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(AddressSet)5013_storage": {
+            "label": "struct EnumerableSetUpgradeable.AddressSet",
+            "members": [
+              {
+                "label": "_inner",
+                "type": "t_struct(Set)4698_storage",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(Bytes32Set)4892_storage": {
+            "label": "struct EnumerableSetUpgradeable.Bytes32Set",
+            "members": [
+              {
+                "label": "_inner",
+                "type": "t_struct(Set)4698_storage",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(Set)4698_storage": {
+            "label": "struct EnumerableSetUpgradeable.Set",
+            "members": [
+              {
+                "label": "_values",
+                "type": "t_array(t_bytes32)dyn_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_indexes",
+                "type": "t_mapping(t_bytes32,t_uint256)",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(TimelockOperationDetails)16856_storage": {
+            "label": "struct MidasTimelockManager.TimelockOperationDetails",
+            "members": [
+              {
+                "label": "votersForExecution",
+                "type": "t_struct(AddressSet)5013_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "votersForVeto",
+                "type": "t_struct(AddressSet)5013_storage",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "councilVersion",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "dataHash",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "status",
+                "type": "t_enum(TimelockOperationStatus)22177",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "pauseReasonCode",
+                "type": "t_uint8",
+                "offset": 1,
+                "slot": "6"
+              },
+              {
+                "label": "isSetCouncilOperation",
+                "type": "t_bool",
+                "offset": 2,
+                "slot": "6"
+              },
+              {
+                "label": "createdAt",
+                "type": "t_uint32",
+                "offset": 3,
+                "slot": "6"
+              },
+              {
+                "label": "executionApprovedAt",
+                "type": "t_uint32",
+                "offset": 7,
+                "slot": "6"
+              },
+              {
+                "label": "operationProposer",
+                "type": "t_address",
+                "offset": 11,
+                "slot": "6"
+              },
+              {
+                "label": "pauser",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "7"
+              }
+            ],
+            "numberOfBytes": "256"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint32": {
+            "label": "uint32",
+            "numberOfBytes": "4"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "dd58e5cb4bfe6ab8fe1683a1ab110d099190acb166ae597a147b812398a642e0": {
+      "address": "0xc9d7Ee788f941905C86AB055C8366615af866837",
+      "txHash": "0x9ecc59e5995abaed70345e446e02dd082b61afdfb03372b118603acf37859f7b",
+      "layout": {
+        "solcVersion": "0.8.34",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "accessControl",
+            "offset": 2,
+            "slot": "0",
+            "type": "t_contract(IMidasAccessControl)22015",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:29",
+            "retypedFrom": "MidasAccessControl"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:34"
+          },
+          {
+            "label": "contractPaused",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_mapping(t_address,t_bool)",
+            "contract": "MidasPauseManager",
+            "src": "contracts/access/MidasPauseManager.sol:31"
+          },
+          {
+            "label": "contractFnPaused",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_mapping(t_address,t_mapping(t_bytes4,t_bool))",
+            "contract": "MidasPauseManager",
+            "src": "contracts/access/MidasPauseManager.sol:36"
+          },
+          {
+            "label": "pauseDelay",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_uint32",
+            "contract": "MidasPauseManager",
+            "src": "contracts/access/MidasPauseManager.sol:41"
+          },
+          {
+            "label": "unpauseDelay",
+            "offset": 4,
+            "slot": "53",
+            "type": "t_uint32",
+            "contract": "MidasPauseManager",
+            "src": "contracts/access/MidasPauseManager.sol:46"
+          },
+          {
+            "label": "globalPaused",
+            "offset": 8,
+            "slot": "53",
+            "type": "t_bool",
+            "contract": "MidasPauseManager",
+            "src": "contracts/access/MidasPauseManager.sol:51"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes4": {
+            "label": "bytes4",
+            "numberOfBytes": "4"
+          },
+          "t_contract(IMidasAccessControl)22015": {
+            "label": "contract IMidasAccessControl",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_mapping(t_bytes4,t_bool))": {
+            "label": "mapping(address => mapping(bytes4 => bool))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes4,t_bool)": {
+            "label": "mapping(bytes4 => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint32": {
+            "label": "uint32",
+            "numberOfBytes": "4"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
     }
   }
 }
