@@ -1,3 +1,8 @@
+// Side-effect import: installs the eth_estimateGas interceptor before any test
+// sends a transaction (see ./fast-evm). Every test loads this module via the
+// fixtures, so it engages in both serial and parallel runs. Keep this first.
+import './fast-evm';
+
 import { Options } from '@layerzerolabs/lz-v2-utilities';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';

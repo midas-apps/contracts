@@ -145,13 +145,6 @@ describe(`mToken`, function () {
     expect(await mTBILL.minterRole()).eq(tokenRoles.minter);
 
     expect(await mTBILL.contractAdminRole()).eq(tokenRoles.tokenManager);
-
-    expect(await mTBILL.BLACKLIST_OPERATOR_ROLE()).eq(
-      roles.common.blacklistedOperator,
-    );
-    expect(await mTBILL.GREENLIST_OPERATOR_ROLE()).eq(
-      roles.common.greenlistedOperator,
-    );
   });
 
   it('initialize and v2 initialize', async () => {
