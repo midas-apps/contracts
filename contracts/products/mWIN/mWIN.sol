@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import "../../mToken.sol";
+import "../../mTokenPermissioned.sol";
+import "./MWinMidasAccessControlRoles.sol";
 
 /**
  * @title mWIN
  * @author RedDuck Software
  */
 //solhint-disable contract-name-camelcase
-contract mWIN is mToken {
+contract mWIN is mTokenPermissioned, MWinMidasAccessControlRoles {
     /**
      * @notice actor that can mint mWIN
      */
@@ -63,5 +64,12 @@ contract mWIN is mToken {
      */
     function _pauserRole() internal pure override returns (bytes32) {
         return M_WIN_PAUSE_OPERATOR_ROLE;
+    }
+
+    /**
+     * @inheritdoc mTokenPermissioned
+     */
+    function _greenlistedRole() internal pure override returns (bytes32) {
+        return M_WIN_GREENLISTED_ROLE;
     }
 }

@@ -1,4 +1,8 @@
 import { LibraryToAddress } from '@nomicfoundation/hardhat-verify/internal/solc/artifacts';
+import {
+  resolveConstructorArguments,
+  resolveLibraries,
+} from '@nomicfoundation/hardhat-verify/internal/utilities';
 import { task } from 'hardhat/config';
 
 import { chainIds, ENV, Network, verifyConfig } from '../config';
@@ -72,7 +76,19 @@ task('verify').setAction(
       return;
     }
 
-    await hre.run('verify:verify', args);
+    const constructorArguments = await resolveConstructorArguments(
+      args.constructorArgsParams,
+      args.constructorArgs,
+    );
+    const libraries = await resolveLibraries(args.libraries);
+
+    await hre.run('verify:verify', {
+      address: args.address,
+      constructorArguments,
+      libraries,
+      contract: args.contract,
+      force: args.force,
+    });
   },
 );
 

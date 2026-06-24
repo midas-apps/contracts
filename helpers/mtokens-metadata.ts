@@ -309,6 +309,7 @@ export const mTokensMetadata: Record<
   mWIN: {
     name: 'Midas Wellington Income Opportunities',
     symbol: 'mWIN',
+    isPermissioned: true,
   },
   qHVNUSD: {
     name: 'Qapture Safe Haven',
@@ -318,5 +319,9 @@ export const mTokensMetadata: Record<
   mGLO: {
     name: 'Midas Fasanara Global Open',
     symbol: 'mGLO',
+  },
+  sGold: {
+    name: 'Suissequant Gold Yield',
+    symbol: 'sGold',
   },
 };
