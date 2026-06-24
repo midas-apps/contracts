@@ -614,6 +614,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x6956FD317F571BE752F0A3BD3D16D09214228488',
       redemptionVaultSwapper: '0xeF9CBc37bAB198c903CDDBf939E2CeF6DB434Af7',
     },
+    turtlePST: {
+      token: '0xc462F87F78aBdD27b1e41c9EdE862275d2C7F36b',
+      customFeed: '0xF64c653Cb1B0E454Aa6Eb4a45a87A81d1dE89970',
+      dataFeed: '0xbd5BaeD1424EC9EF76b7924bFB9342078f5817E6',
+      depositVault: '0x95EF0179867545bEA9DbdAB27955551C0802307e',
+      redemptionVaultSwapper: '0xAB09Be3d1E02dFe1f0dbDa460Ff362BF1A5792Fb',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',

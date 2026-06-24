@@ -70,6 +70,7 @@ import { TACmMEVDeploymentConfig } from './tac/TACmMEV';
 import { tacTONDeploymentConfig } from './tacTON';
 import { tBTCDeploymentConfig } from './tBTC';
 import { tETHDeploymentConfig } from './tETH';
+import { turtlePSTDeploymentConfig } from './turtlePST';
 import { tUSDeDeploymentConfig } from './tUSDe';
 import { weEURDeploymentConfig } from './weEUR';
 import { wNLPDeploymentConfig } from './wNLP';
@@ -161,4 +162,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   qHVNUSD: qHVNUSDDeploymentConfig,
   mGLO: mGLODeploymentConfig,
   sGold: sGoldDeploymentConfig,
+  turtlePST: turtlePSTDeploymentConfig,
 };
