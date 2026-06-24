@@ -36,7 +36,7 @@ export const mGLODeploymentConfig: DeploymentConfig = {
         instantFee: parseUnits('0', 2),
         variationTolerance: parseUnits('2', 2),
         minAmount: parseUnits('0', 18),
-        minMTokenAmountForFirstDeposit: parseUnits('0', 18),
+        minMTokenAmountForFirstDeposit: parseUnits('114000', 18),
         maxSupplyCap: constants.MaxUint256,
       },
       rvSwapper: {
@@ -93,6 +93,10 @@ export const mGLODeploymentConfig: DeploymentConfig = {
             toWaive: [{ mToken: 'mGLO', type: 'redemptionVaultSwapper' }],
           },
         ],
+        greenlist: {
+          depositVault: true,
+          redemptionVaultSwapper: true,
+        },
         pauseFunctions: {
           depositVault: ['depositRequest', 'depositRequestWithCustomRecipient'],
           redemptionVaultSwapper: ['redeemFiatRequest'],
@@ -157,6 +161,10 @@ export const mGLODeploymentConfig: DeploymentConfig = {
           tokenManagerAddress: '0xA13f82F679E24ad08E014F8af6EcE32023b14F07',
           vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
           oracleManagerAddress: '0x83b573AA8C4b567c0466c9d5e32D6513676d795b',
+        },
+        greenlist: {
+          depositVault: true,
+          redemptionVaultSwapper: true,
         },
         pauseFunctions: {
           depositVault: ['depositRequest', 'depositRequestWithCustomRecipient'],
