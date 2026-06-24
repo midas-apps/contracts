@@ -969,3 +969,15 @@ All the roles for the Midas protocol smart contracts are listed below.
 | **_depositVaultAdmin_**    | `0xf3b97f54ad8c42a767386851bf0b7abea3099dc1397963814bf535139406335f` |
 | **_redemptionVaultAdmin_** | `0x2691528cb6afc6df87b787b33254a0b7370f88cec80716408fe2d524ec5ca798` |
 | **_greenlisted_**          | `0xe22cc8668ef402f2ec5670dab9554850d5ec8e7bccf801a0846c92499682c8e2` |
+
+### turtlePST Roles
+
+| Role Name                  | Role                                                                 |
+| -------------------------- | -------------------------------------------------------------------- |
+| **_minter_**               | `0x47d6a6a052279e818b7b75b2efba405a030d3c1284f3728fbc5a75fad0baaf08` |
+| **_burner_**               | `0x6acd9dfb3f3c3e632ff5116222549d00c70777f674ba9055c7d20aa0d9ec755e` |
+| **_pauser_**               | `0xfa19ed34ba1b195c5a198421fe2fed99ce868cc26eb71e3c1edbc74cd9108642` |
+| **_customFeedAdmin_**      | `0x707e6be3eb0a444a7cbf0438da9f6af48abeafdacc9b8266145b1c8d2d2292c4` |
+| **_depositVaultAdmin_**    | `0x0f6a147de8cdfffe171daade1586996aefc68576e55cdec9b77b1e419cac1ce1` |
+| **_redemptionVaultAdmin_** | `0x5f1f545d6af70010d52bd3c02c8e59828c88b7384e5388ce3b2902ad63da8a43` |
+| **_greenlisted_**          | `0xd4cee0f1caf45844ac124a181a38faea72039907def2059414beb261dc86eb67` |

@@ -84,6 +84,7 @@ export const prefixes: Record<MTokenName, string> = {
   qHVNUSD: 'Q_HVN_USD',
   mGLO: 'M_GLO',
   sGold: 'S_GOLD',
+  turtlePST: 'TURTLE_PST',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {

@@ -142,6 +142,7 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   qHVNUSD: 'QHVNUsd',
   mGLO: 'MGlo',
   sGold: 'SGold',
+  turtlePST: 'TurtlePst',
 };
 
 export const getCommonContractNames = (): CommonContractNames => {

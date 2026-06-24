@@ -324,4 +324,8 @@ export const mTokensMetadata: Record<
     name: 'Suissequant Gold Yield',
     symbol: 'sGold',
   },
+  turtlePST: {
+    name: 'Turtle Huma PST Vault',
+    symbol: 'turtlePST',
+  },
 };
