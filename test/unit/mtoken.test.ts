@@ -37,6 +37,7 @@ import {
   clawbackTest,
   decreaseMintRateLimitTest,
   increaseMintRateLimitTest,
+  removeMintRateLimitTest,
   mint,
   setClawbackReceiverTest,
   setMetadataTest,
@@ -66,6 +67,9 @@ const INCREASE_MINT_RATE_LIMIT_SEL = encodeFnSelector(
 );
 const DECREASE_MINT_RATE_LIMIT_SEL = encodeFnSelector(
   'decreaseMintRateLimit(uint256,uint256)',
+);
+const REMOVE_MINT_RATE_LIMIT_SEL = encodeFnSelector(
+  'removeMintRateLimitConfig(uint256)',
 );
 const ERC20_PAUSABLE_PAUSED_STORAGE_SLOT = 101;
 export const ERC20_PAUSED_MSG = 'ERC20Pausable: token transfer while paused';
@@ -1702,6 +1706,78 @@ describe(`mToken`, function () {
         DECREASE_MINT_RATE_LIMIT_SEL,
       );
       await decreaseMintRateLimitTest({ tokenContract, owner }, window, 100);
+    });
+  });
+
+  describe('removeMintRateLimitConfig()', () => {
+    it('should fail: call from address without token manager role', async () => {
+      const { owner, tokenContract, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+
+      const caller = regularAccounts[0];
+      const window = days(1);
+
+      await increaseMintRateLimitTest({ tokenContract, owner }, window, 100);
+      await removeMintRateLimitTest({ tokenContract, owner }, window, {
+        from: caller,
+        revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
+      });
+    });
+
+    it('should fail: when window does not exist', async () => {
+      const { owner, tokenContract } = await loadFixture(defaultDeploy);
+
+      await removeMintRateLimitTest({ tokenContract, owner }, days(99), {
+        revertCustomError: {
+          customErrorName: 'UnknownWindowLimit',
+        },
+      });
+    });
+
+    it('call from address with token manager role', async () => {
+      const { owner, tokenContract } = await loadFixture(defaultDeploy);
+      const window = days(1);
+
+      await increaseMintRateLimitTest({ tokenContract, owner }, window, 100);
+      await removeMintRateLimitTest({ tokenContract, owner }, window);
+    });
+
+    it('call when globally paused by pause manager', async () => {
+      const { pauseManager, owner, tokenContract } = await loadFixture(
+        defaultDeploy,
+      );
+      const window = days(1);
+
+      await increaseMintRateLimitTest({ tokenContract, owner }, window, 100);
+      await pauseGlobalTest({ pauseManager, owner });
+      await removeMintRateLimitTest({ tokenContract, owner }, window);
+    });
+
+    it('call when contract is paused by pause manager', async () => {
+      const { pauseManager, owner, tokenContract } = await loadFixture(
+        defaultDeploy,
+      );
+      const window = days(1);
+
+      await increaseMintRateLimitTest({ tokenContract, owner }, window, 100);
+      await pauseVault({ pauseManager, owner }, tokenContract);
+      await removeMintRateLimitTest({ tokenContract, owner }, window);
+    });
+
+    it('call when removeMintRateLimitConfig is paused by pause manager', async () => {
+      const { pauseManager, owner, tokenContract } = await loadFixture(
+        defaultDeploy,
+      );
+      const window = days(1);
+
+      await increaseMintRateLimitTest({ tokenContract, owner }, window, 100);
+      await pauseVaultFn(
+        { pauseManager, owner },
+        tokenContract,
+        REMOVE_MINT_RATE_LIMIT_SEL,
+      );
+      await removeMintRateLimitTest({ tokenContract, owner }, window);
     });
   });
 

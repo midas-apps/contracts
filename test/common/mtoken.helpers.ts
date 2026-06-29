@@ -292,6 +292,41 @@ export const increaseMintRateLimitTest = async (
   }
 };
 
+export const removeMintRateLimitTest = async (
+  { tokenContract, owner }: CommonParams,
+  window: number,
+  opt?: OptionalCommonParams,
+) => {
+  if (
+    await handleRevert(
+      tokenContract
+        .connect(opt?.from ?? owner)
+        .removeMintRateLimitConfig.bind(this, window),
+      tokenContract,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses();
+
+  await expect(tokenContract.connect(owner).removeMintRateLimitConfig(window))
+    .to.emit(tokenContract, 'WindowLimitRemoved')
+    .withArgs(window);
+  const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses();
+
+  const configBefore = rateLimitConfigsBefore.filter((limit) =>
+    limit.window.eq(window),
+  )?.[0];
+  const configAfter = rateLimitConfigsAfter.filter((limit) =>
+    limit.window.eq(window),
+  )?.[0];
+
+  expect(configBefore).not.eq(undefined);
+  expect(configAfter).eq(undefined);
+};
+
 export const decreaseMintRateLimitTest = async (
   { tokenContract, owner }: CommonParams,
   window: number,

@@ -98,4 +98,10 @@ interface IMToken is IERC20Upgradeable {
      * @param newLimit limit amount per window
      */
     function decreaseMintRateLimit(uint256 window, uint256 newLimit) external;
+
+    /**
+     * @notice removes mint rate limit config for a given window
+     * @param window window duration in seconds
+     */
+    function removeMintRateLimitConfig(uint256 window) external;
 }

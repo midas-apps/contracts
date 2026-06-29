@@ -260,6 +260,16 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     }
 
     /**
+     * @inheritdoc IMToken
+     */
+    function removeMintRateLimitConfig(uint256 window)
+        external
+        onlyContractAdmin
+    {
+        _mintRateLimits.removeWindowLimit(window);
+    }
+
+    /**
      * @notice returns array of mint rate limit configs
      * @return statuses array of mint rate limit statuses
      */
