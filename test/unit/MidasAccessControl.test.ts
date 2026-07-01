@@ -2321,7 +2321,7 @@ describe('MidasAccessControl', function () {
         {
           revertCustomError: {
             contract: accessControl,
-            customErrorName: 'FunctionNotReady',
+            customErrorName: 'SenderIsNotTimelock',
           },
         },
       );
@@ -2531,7 +2531,7 @@ describe('WithMidasAccessControl', function () {
         wAccessControlTester
           .connect(regularAccounts[0])
           .withOnlyRole(adminRole, true),
-      ).revertedWithCustomError(accessControl, 'FunctionNotReady');
+      ).revertedWithCustomError(accessControl, 'SenderIsNotTimelock');
     });
 
     it('should fail: when validateFunctionRole is false but trying to call with function admin', async () => {
@@ -2851,7 +2851,7 @@ describe('WithMidasAccessControl', function () {
         wAccessControlTester
           .connect(regularAccounts[0])
           .withOnlyContractAdmin(),
-      ).revertedWithCustomError(accessControl, 'FunctionNotReady');
+      ).revertedWithCustomError(accessControl, 'SenderIsNotTimelock');
     });
 
     it('when trying to call with function admin and there is no timelock', async () => {

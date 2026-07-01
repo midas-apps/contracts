@@ -413,42 +413,6 @@ contract MidasTimelockManager is
     /**
      * @inheritdoc IMidasTimelockManager
      */
-    function isFunctionReadyToExecute(
-        bytes32 targetRole,
-        uint32 overrideDelay,
-        address target,
-        bytes calldata data
-    ) external view returns (bool ready, bool timelocked) {
-        (uint32 delay, ) = accessControl.getRoleTimelockDelay(
-            targetRole,
-            overrideDelay
-        );
-
-        TimelockController _timelock = TimelockController(payable(timelock));
-        (bytes32 operationId, , ) = _getOperationId(_timelock, target, data);
-
-        if (!_isPendingOperation(operationId) && delay == 0) {
-            return (true, false);
-        }
-
-        (TimelockOperationStatus opStatus, ) = _getOperationStatus(operationId);
-
-        if (opStatus == TimelockOperationStatus.ReadyToExecute) {
-            return (true, true);
-        }
-
-        bool isTimelockPassed = _timelock.isOperationReady(operationId);
-
-        if (isTimelockPassed) {
-            return (true, true);
-        }
-
-        return (false, true);
-    }
-
-    /**
-     * @inheritdoc IMidasTimelockManager
-     */
     function getOriginalProposer(address target, bytes calldata data)
         external
         view

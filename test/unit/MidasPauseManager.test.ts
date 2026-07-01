@@ -295,22 +295,32 @@ const noTimelockDelayRevert = (
 const pauseAdminFunctionNotReady = async (
   fixture: Awaited<ReturnType<typeof defaultDeploy>>,
   selector: string,
+  owner?: SignerWithAddress,
 ) => ({
   revertCustomError: {
     contract: fixture.accessControl,
-    customErrorName: 'FunctionNotReady',
-    args: [await fixture.pauseManager.pauseAdminRole(), selector],
+    customErrorName: 'SenderIsNotTimelock',
+    args: [
+      await fixture.pauseManager.pauseAdminRole(),
+      selector,
+      owner?.address ?? fixture.owner.address,
+    ],
   },
 });
 
 const contractPauserFunctionNotReady = async (
   fixture: Awaited<ReturnType<typeof defaultDeploy>>,
   selector: string,
+  owner?: SignerWithAddress,
 ) => ({
   revertCustomError: {
     contract: fixture.accessControl,
-    customErrorName: 'FunctionNotReady',
-    args: [await fixture.pausableTester.contractAdminRole(), selector],
+    customErrorName: 'SenderIsNotTimelock',
+    args: [
+      await fixture.pausableTester.contractAdminRole(),
+      selector,
+      owner?.address ?? fixture.owner.address,
+    ],
   },
 });
 
@@ -635,10 +645,11 @@ describe('MidasPauseManager', () => {
       await pauseGlobalTest(fixture, {
         revertCustomError: {
           contract: fixture.accessControl,
-          customErrorName: 'FunctionNotReady',
+          customErrorName: 'SenderIsNotTimelock',
           args: [
             await fixture.pauseManager.pauseAdminRole(),
             encodeFnSelector('globalPause()'),
+            fixture.owner.address,
           ],
         },
       });
@@ -700,10 +711,11 @@ describe('MidasPauseManager', () => {
         {
           revertCustomError: {
             contract: accessControl,
-            customErrorName: 'FunctionNotReady',
+            customErrorName: 'SenderIsNotTimelock',
             args: [
               await pauseManager.pauseAdminRole(),
               encodeFnSelector('globalUnpause()'),
+              owner.address,
             ],
           },
         },
@@ -767,10 +779,11 @@ describe('MidasPauseManager', () => {
       await unpauseGlobalTest(fixture, {
         revertCustomError: {
           contract: fixture.accessControl,
-          customErrorName: 'FunctionNotReady',
+          customErrorName: 'SenderIsNotTimelock',
           args: [
             await fixture.pauseManager.pauseAdminRole(),
             encodeFnSelector('globalUnpause()'),
+            fixture.owner.address,
           ],
         },
       });
@@ -1000,10 +1013,11 @@ describe('MidasPauseManager', () => {
       await unpauseVault({ pauseManager, owner }, pausableTester, {
         revertCustomError: {
           contract: accessControl,
-          customErrorName: 'FunctionNotReady',
+          customErrorName: 'SenderIsNotTimelock',
           args: [
             await pauseManager.pauseAdminRole(),
             BULK_UNPAUSE_CONTRACT_SEL,
+            owner.address,
           ],
         },
       });
@@ -1350,10 +1364,11 @@ describe('MidasPauseManager', () => {
         {
           revertCustomError: {
             contract: accessControl,
-            customErrorName: 'FunctionNotReady',
+            customErrorName: 'SenderIsNotTimelock',
             args: [
               await pauseManager.pauseAdminRole(),
               BULK_UNPAUSE_CONTRACT_FN_SEL,
+              owner.address,
             ],
           },
         },
@@ -1767,10 +1782,11 @@ describe('MidasPauseManager', () => {
       const { pauseManager, owner } = await loadFixture(defaultDeploy);
 
       await expect(pauseManager.connect(owner).setPauseDelay(3600))
-        .revertedWithCustomError(pauseManager, 'FunctionNotReady')
+        .revertedWithCustomError(pauseManager, 'SenderIsNotTimelock')
         .withArgs(
           await pauseManager.pauseAdminRole(),
           encodeFnSelector('setPauseDelay(uint32)'),
+          owner.address,
         );
     });
 
@@ -1809,10 +1825,11 @@ describe('MidasPauseManager', () => {
       await expect(
         pauseManager.connect(owner).setUnpauseDelay(DEFAULT_UNPAUSE_DELAY * 2),
       )
-        .revertedWithCustomError(pauseManager, 'FunctionNotReady')
+        .revertedWithCustomError(pauseManager, 'SenderIsNotTimelock')
         .withArgs(
           await pauseManager.pauseAdminRole(),
           encodeFnSelector('setUnpauseDelay(uint32)'),
+          owner.address,
         );
     });
 

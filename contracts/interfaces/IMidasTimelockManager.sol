@@ -282,22 +282,6 @@ interface IMidasTimelockManager {
     function abortOperation(bytes32 operationId) external;
 
     /**
-     * @notice Whether the function is ready to execute
-     * @param targetRole role used for delay lookup
-     * @param overrideDelay override delay for the invocation
-     * @param target target contract
-     * @param data operation data
-     * @return ready true if call can proceed
-     * @return timelocked true if execution goes through timelock
-     */
-    function isFunctionReadyToExecute(
-        bytes32 targetRole,
-        uint32 overrideDelay,
-        address target,
-        bytes calldata data
-    ) external view returns (bool ready, bool timelocked);
-
-    /**
      * @notice Returns original proposer for a pending operation
      * @param target target contract
      * @param data operation data

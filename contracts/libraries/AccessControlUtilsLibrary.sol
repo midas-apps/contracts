@@ -37,13 +37,6 @@ library AccessControlUtilsLibrary {
     error Blacklisted(bytes32 blacklistedRole, address account);
 
     /**
-     * @notice error when the function is not ready
-     * @param roleUsed role used
-     * @param functionSelector function selector
-     */
-    error FunctionNotReady(bytes32 roleUsed, bytes4 functionSelector);
-
-    /**
      * @notice error when the sender is not the timelock
      * @param roleUsed role used
      * @param functionSelector function selector
@@ -152,17 +145,12 @@ library AccessControlUtilsLibrary {
             validateFunctionRole
         );
 
-        (bool ready, bool timelocked) = timelockManager
-            .isFunctionReadyToExecute(
-                roleUsed,
-                overrideDelay,
-                address(this),
-                msg.data
-            );
+        (uint32 delay, ) = accessControl.getRoleTimelockDelay(
+            roleUsed,
+            overrideDelay
+        );
 
-        require(ready, FunctionNotReady(roleUsed, msg.sig));
-
-        if (timelocked) {
+        if (delay > 0) {
             require(
                 isTimelock,
                 SenderIsNotTimelock(roleUsed, msg.sig, accountToCheck)

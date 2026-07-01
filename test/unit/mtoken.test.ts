@@ -179,8 +179,8 @@ describe(`mToken`, function () {
       const newSymbol = 'UPD';
 
       await expect(mTBILL.connect(owner).setNameSymbol(newName, newSymbol))
-        .revertedWithCustomError(accessControl, 'FunctionNotReady')
-        .withArgs(tokenManagerRole, SET_NAME_SYMBOL_SEL);
+        .revertedWithCustomError(accessControl, 'SenderIsNotTimelock')
+        .withArgs(tokenManagerRole, SET_NAME_SYMBOL_SEL, owner.address);
     });
 
     it('should always require 2 days timelock even if contract admin/function admin role delay is different (no timelock for example)', async () => {
@@ -203,8 +203,8 @@ describe(`mToken`, function () {
       );
 
       await expect(mTBILL.connect(owner).setNameSymbol(newName, newSymbol))
-        .revertedWithCustomError(accessControl, 'FunctionNotReady')
-        .withArgs(tokenManagerRole, SET_NAME_SYMBOL_SEL);
+        .revertedWithCustomError(accessControl, 'SenderIsNotTimelock')
+        .withArgs(tokenManagerRole, SET_NAME_SYMBOL_SEL, owner.address);
 
       const calldata = mTBILL.interface.encodeFunctionData('setNameSymbol', [
         newName,
