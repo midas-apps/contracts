@@ -274,7 +274,13 @@ export const sendAndWaitForCustomTxSign = async (
       | 'set-round-data'
       | 'timelock-call-upgrade'
       | 'pause-function'
-      | 'set-lz-rate-limit-configs';
+      | 'set-greenlist-enabled'
+      | 'set-lz-rate-limit-configs'
+      | 'set-aave-pool'
+      | 'set-aave-deposits-enabled'
+      | 'set-morpho-vault'
+      | 'set-morpho-deposits-enabled'
+      | 'set-auto-invest-fallback-enabled';
   },
   safeMiddlewareWallet?: string,
   confirmations = 2,

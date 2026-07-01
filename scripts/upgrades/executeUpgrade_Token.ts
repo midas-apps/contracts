@@ -7,7 +7,7 @@ import { getMTokenOrThrow } from '../../helpers/utils';
 import { DeployFunction } from '../deploy/common/types';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const upgradeId = 'acre-btc-upgrade-v2';
+  const upgradeId = 'mwin-upgrade-permissioned';
   const networkAddresses = getCurrentAddresses(hre);
   const mToken = getMTokenOrThrow(hre);
   const tokenAddresses = networkAddresses?.[mToken];

@@ -20,6 +20,9 @@ import {
   MToken,
   RedemptionVault,
   RedemptionVaultWIthBUIDL,
+  RedemptionVaultWithAave,
+  RedemptionVaultWithMorpho,
+  RedemptionVaultWithMToken,
   RedemptionVaultWithSwapper,
   RedemptionVaultWithUSTB,
 } from '../../typechain-types';
@@ -33,6 +36,9 @@ type CommonParamsRedeem = {
     redemptionVault:
       | RedemptionVault
       | RedemptionVaultWIthBUIDL
+      | RedemptionVaultWithAave
+      | RedemptionVaultWithMorpho
+      | RedemptionVaultWithMToken
       | RedemptionVaultWithUSTB
       | RedemptionVaultWithSwapper;
   };
@@ -41,6 +47,9 @@ type CommonParams = Pick<Awaited<ReturnType<typeof defaultDeploy>>, 'owner'> & {
   redemptionVault:
     | RedemptionVault
     | RedemptionVaultWIthBUIDL
+    | RedemptionVaultWithAave
+    | RedemptionVaultWithMorpho
+    | RedemptionVaultWithMToken
     | RedemptionVaultWithUSTB
     | RedemptionVaultWithSwapper;
 };
@@ -931,6 +940,9 @@ export const getFeePercent = async (
   redemptionVault:
     | RedemptionVault
     | RedemptionVaultWIthBUIDL
+    | RedemptionVaultWithAave
+    | RedemptionVaultWithMorpho
+    | RedemptionVaultWithMToken
     | RedemptionVaultWithSwapper
     | RedemptionVaultWithUSTB,
   isInstant: boolean,
@@ -955,6 +967,9 @@ export const calcExpectedTokenOutAmount = async (
   redemptionVault:
     | RedemptionVault
     | RedemptionVaultWIthBUIDL
+    | RedemptionVaultWithAave
+    | RedemptionVaultWithMorpho
+    | RedemptionVaultWithMToken
     | RedemptionVaultWithSwapper
     | RedemptionVaultWithUSTB,
   mTokenRate: BigNumber,

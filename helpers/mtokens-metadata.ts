@@ -2,7 +2,7 @@ import { MTokenName } from '../config';
 
 export const mTokensMetadata: Record<
   MTokenName,
-  { name: string; symbol: string }
+  { name: string; symbol: string; isPermissioned?: boolean }
 > = {
   mTBILL: {
     name: 'Midas US Treasury Bill Token',
@@ -263,5 +263,69 @@ export const mTokensMetadata: Record<
   mM1USD: {
     name: 'Midas M1 USD Market Neutral',
     symbol: 'mM1-USD',
+  },
+  mRe7ETH: {
+    name: 'Midas Re7 Ethereum',
+    symbol: 'mRe7ETH',
+  },
+  mGLOBAL: {
+    name: 'Midas Fasanara Global',
+    symbol: 'mGLOBAL',
+    isPermissioned: true,
+  },
+  bondUSD: {
+    name: 'Bond USD',
+    symbol: 'bondUSD',
+  },
+  bondETH: {
+    name: 'Bond ETH',
+    symbol: 'bondETH',
+  },
+  bondBTC: {
+    name: 'Bond BTC',
+    symbol: 'bondBTC',
+  },
+  mTEST: {
+    name: 'Midas Test',
+    symbol: 'mTEST',
+    isPermissioned: true,
+  },
+  stockMarketTRBasisTrade: {
+    name: 'Morini StockMarketTRBasisTrade Vault',
+    symbol: 'StockMarketTRBasisTrade',
+  },
+  carryTradeUSDTRYLeverage: {
+    name: 'Morini CarryTradeUSDTRYLeverage Vault',
+    symbol: 'CarryTradeUSDTRYLeverage',
+  },
+  mEVETH: {
+    name: 'Midas Everstake ETH',
+    symbol: 'mEVETH',
+  },
+  liquidRWA: {
+    name: 'Ether.fi Liquid RWA',
+    symbol: 'liquidRWA',
+  },
+  mWIN: {
+    name: 'Midas Wellington Income Opportunities',
+    symbol: 'mWIN',
+    isPermissioned: true,
+  },
+  qHVNUSD: {
+    name: 'Qapture Safe Haven',
+    symbol: 'QHVN-USD',
+    isPermissioned: true,
+  },
+  mGLO: {
+    name: 'Midas Fasanara Global Open',
+    symbol: 'mGLO',
+  },
+  sGold: {
+    name: 'Suissequant Gold Yield',
+    symbol: 'sGold',
+  },
+  turtlePST: {
+    name: 'Turtle Huma PST Vault',
+    symbol: 'turtlePST',
   },
 };

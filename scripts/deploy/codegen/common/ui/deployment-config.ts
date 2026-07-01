@@ -5,6 +5,7 @@ import {
   multiselect,
   outro,
   PromptGroup,
+  select,
   stream,
   text,
 } from '@clack/prompts';
@@ -19,46 +20,133 @@ import {
   VaultType,
 } from '../../../../../config/constants/addresses';
 import { isMTokenName, isPaymentTokenName } from '../../../../../helpers/utils';
-import { DeploymentConfig, PostDeployConfig } from '../../../common/types';
+import { PostDeployConfig, VaultFunctionName } from '../../../common/types';
 
 export const configsPerNetworkConfig = {
   dv: getDvConfigFromUser,
+  dvAave: getDvAaveConfigFromUser,
+  dvMorpho: getDvMorphoConfigFromUser,
+  dvMToken: getDvMTokenConfigFromUser,
   rv: getRvConfigFromUser,
   rvSwapper: getRvSwapperConfigFromUser,
+  rvMToken: getRvMTokenConfigFromUser,
+  rvAave: getRvAaveConfigFromUser,
+  rvMorpho: getRvMorphoConfigFromUser,
   genericConfig: getGenericConfigFromUser,
   postDeploy: {
     grantRoles: getPostDeployGrantRolesConfigFromUser,
     addPaymentTokens: getPostDeployAddPaymentTokensConfigFromUser,
+    addFeeWaived: getPostDeployAddFeeWaivedConfigFromUser,
+    setAaveConfig: getPostDeploySetAaveConfigFromUser,
+    setMorphoConfig: getPostDeploySetMorphoConfigFromUser,
+    pauseFunctions: getPostDeployPauseFunctionsConfigFromUser,
   },
 };
 
 async function getGenericConfigFromUser(mToken: MTokenName) {
-  const config = await group({
-    intro: () => Promise.resolve(intro('Generic Config')).then(() => undefined),
-    maxAswerDeviation: () =>
-      text({
-        message: 'Aggregator max answer deviation',
-        validate: (value) => validateFloat(value, 8),
-      })
-        .then(requireNotCancelled)
-        .then((value) => requireFloatToBigNumberish(value, 8)),
-    tokenDenomination: () =>
-      text({
-        message: 'Token Denomination',
-        defaultValue: 'USD',
-        initialValue: 'USD',
-        placeholder: 'USD',
-      }).then(requireNotCancelled),
-    outro: () => Promise.resolve(outro('Done...')).then(() => undefined),
-  }).then(clearIntroOutro);
+  intro('Generic Config');
 
-  return {
-    customAggregator: {
-      maxAnswerDeviation: config.maxAswerDeviation,
-      description: `${mToken}/${config.tokenDenomination}`,
-    },
+  const maxAnswerDeviation = await text({
+    message: 'Aggregator max answer deviation',
+    validate: (value) => validateFloat(value, 8),
+  })
+    .then(requireNotCancelled)
+    .then((value) => requireFloatToBigNumberish(value, 8));
+
+  const tokenDenomination = await text({
+    message: 'Token Denomination',
+    defaultValue: 'USD',
+    initialValue: 'USD',
+    placeholder: 'USD',
+  }).then(requireNotCancelled);
+
+  const aggregatorType = await select<'REGULAR' | 'GROWTH'>({
+    message: 'Aggregator type',
+    options: [
+      { value: 'REGULAR', label: 'Regular' },
+      { value: 'GROWTH', label: 'Growth (applies APR to answer)' },
+    ],
+    initialValue: 'REGULAR',
+  }).then(requireNotCancelled);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const customAggregator: Record<string, any> = {
+    maxAnswerDeviation,
+    description: `${mToken}/${tokenDenomination}`,
+  };
+
+  if (aggregatorType === 'GROWTH') {
+    customAggregator.type = expr("'GROWTH'");
+
+    const onlyUp = await confirm({
+      message: 'Only up? (price can only increase)',
+      initialValue: true,
+    }).then(requireNotCancelled);
+
+    const minGrowthApr = await text({
+      message: 'Min growth APR (in %)',
+      defaultValue: '0',
+      initialValue: '0',
+      validate: (value) => validateFloat(value, 8),
+    })
+      .then(requireNotCancelled)
+      .then((value) => requireFloatToBigNumberish(value, 8));
+
+    const maxGrowthApr = await text({
+      message: 'Max growth APR (in %)',
+      validate: (value) => validateFloat(value, 8),
+    })
+      .then(requireNotCancelled)
+      .then((value) => requireFloatToBigNumberish(value, 8));
+
+    customAggregator.onlyUp = onlyUp;
+    customAggregator.minGrowthApr = minGrowthApr;
+    customAggregator.maxGrowthApr = maxGrowthApr;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result: Record<string, any> = {
+    customAggregator,
     dataFeed: {},
   };
+
+  const useAdjustedDvRv = await confirm({
+    message:
+      'Use adjusted DV/RV feeds? (separate +/- % for deposit/redemption)',
+    initialValue: false,
+  }).then(requireNotCancelled);
+
+  if (useAdjustedDvRv) {
+    const adjustmentPercentageDv = await text({
+      message: 'Adjustment percentage for DV (e.g. 7 for +7%)',
+      validate: (value) => validateFloat(value, 8),
+    })
+      .then(requireNotCancelled)
+      .then((value) => requireFloatToBigNumberish(value, 8));
+
+    const adjustmentPercentageRv = await text({
+      message: 'Adjustment percentage for RV (e.g. -7 for -7%)',
+      validate: (value) => validateFloat(value, 8),
+    })
+      .then(requireNotCancelled)
+      .then((value) => requireFloatToBigNumberish(value, 8));
+
+    const feedRef =
+      aggregatorType === 'GROWTH' ? "'customFeedGrowth'" : "'customFeed'";
+
+    result.customAggregatorAdjustedDv = {
+      adjustmentPercentage: adjustmentPercentageDv,
+      underlyingFeed: expr(feedRef),
+    };
+    result.customAggregatorAdjustedRv = {
+      adjustmentPercentage: adjustmentPercentageRv,
+      underlyingFeed: expr(feedRef),
+    };
+  }
+
+  outro('Done...');
+
+  return { ...result, isGrowth: aggregatorType === 'GROWTH' };
 }
 
 async function getDvConfigFromUser(hre: HardhatRuntimeEnvironment) {
@@ -97,6 +185,15 @@ async function getDvConfigFromUser(hre: HardhatRuntimeEnvironment) {
       })
         .then(requireNotCancelled)
         .then(requirePercentageToBigNumberish),
+    minAmount: () =>
+      text({
+        message: 'Min Amount',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
     minMTokenAmountForFirstDeposit: () =>
       text({
         message: 'Min mToken Amount For First Deposit',
@@ -120,6 +217,235 @@ async function getDvConfigFromUser(hre: HardhatRuntimeEnvironment) {
 
   return {
     type: 'REGULAR',
+    enableSanctionsList: shouldEnableSanctionsList(hre),
+    ...config,
+  };
+}
+
+async function getDvAaveConfigFromUser(hre: HardhatRuntimeEnvironment) {
+  const config = await group({
+    intro: () =>
+      Promise.resolve(intro('Deposit Vault With Aave')).then(() => undefined),
+    feeReceiver: () =>
+      text({ message: 'Fee Receiver', validate: validateAddress })
+        .then(requireNotCancelled)
+        .then(requireAddress),
+    tokensReceiver: () =>
+      text({ message: 'Tokens Receiver', validate: validateAddress })
+        .then(requireNotCancelled)
+        .then(requireAddress),
+    instantDailyLimit: () =>
+      text({
+        message: 'Instant Daily Limit',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18OrInfinite),
+    instantFee: () =>
+      text({
+        message: 'Instant Fee',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateFloat,
+      })
+        .then(requireNotCancelled)
+        .then(requireFloatToBigNumberish),
+    variationTolerance: () =>
+      text({
+        message: 'Variation Tolerance',
+        validate: validateFloat,
+      })
+        .then(requireNotCancelled)
+        .then(requirePercentageToBigNumberish),
+    minAmount: () =>
+      text({
+        message: 'Min Amount',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
+    minMTokenAmountForFirstDeposit: () =>
+      text({
+        message: 'Min mToken Amount For First Deposit',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
+    maxSupplyCap: () =>
+      text({
+        message: 'Max Supply Cap',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18OrInfinite),
+    outro: () => Promise.resolve(outro('Done...')).then(() => undefined),
+  }).then(clearIntroOutro);
+
+  return {
+    type: 'AAVE' as const,
+    enableSanctionsList: shouldEnableSanctionsList(hre),
+    ...config,
+  };
+}
+
+async function getDvMorphoConfigFromUser(hre: HardhatRuntimeEnvironment) {
+  const config = await group({
+    intro: () =>
+      Promise.resolve(intro('Deposit Vault With Morpho')).then(() => undefined),
+    feeReceiver: () =>
+      text({ message: 'Fee Receiver', validate: validateAddress })
+        .then(requireNotCancelled)
+        .then(requireAddress),
+    tokensReceiver: () =>
+      text({ message: 'Tokens Receiver', validate: validateAddress })
+        .then(requireNotCancelled)
+        .then(requireAddress),
+    instantDailyLimit: () =>
+      text({
+        message: 'Instant Daily Limit',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18OrInfinite),
+    instantFee: () =>
+      text({
+        message: 'Instant Fee',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateFloat,
+      })
+        .then(requireNotCancelled)
+        .then(requireFloatToBigNumberish),
+    variationTolerance: () =>
+      text({
+        message: 'Variation Tolerance',
+        validate: validateFloat,
+      })
+        .then(requireNotCancelled)
+        .then(requirePercentageToBigNumberish),
+    minAmount: () =>
+      text({
+        message: 'Min Amount',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
+    minMTokenAmountForFirstDeposit: () =>
+      text({
+        message: 'Min mToken Amount For First Deposit',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
+    maxSupplyCap: () =>
+      text({
+        message: 'Max Supply Cap',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18OrInfinite),
+    outro: () => Promise.resolve(outro('Done...')).then(() => undefined),
+  }).then(clearIntroOutro);
+
+  return {
+    type: 'MORPHO' as const,
+    enableSanctionsList: shouldEnableSanctionsList(hre),
+    ...config,
+  };
+}
+
+async function getDvMTokenConfigFromUser(hre: HardhatRuntimeEnvironment) {
+  const config = await group({
+    intro: () =>
+      Promise.resolve(intro('Deposit Vault With MToken')).then(() => undefined),
+    feeReceiver: () =>
+      text({ message: 'Fee Receiver', validate: validateAddress })
+        .then(requireNotCancelled)
+        .then(requireAddress),
+    tokensReceiver: () =>
+      text({ message: 'Tokens Receiver', validate: validateAddress })
+        .then(requireNotCancelled)
+        .then(requireAddress),
+    mTokenDepositVault: () =>
+      text({
+        message: 'Target mToken DepositVault Address',
+        validate: validateAddress,
+      })
+        .then(requireNotCancelled)
+        .then(requireAddress),
+    instantDailyLimit: () =>
+      text({
+        message: 'Instant Daily Limit',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18OrInfinite),
+    instantFee: () =>
+      text({
+        message: 'Instant Fee',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateFloat,
+      })
+        .then(requireNotCancelled)
+        .then(requireFloatToBigNumberish),
+    variationTolerance: () =>
+      text({
+        message: 'Variation Tolerance',
+        validate: validateFloat,
+      })
+        .then(requireNotCancelled)
+        .then(requirePercentageToBigNumberish),
+    minAmount: () =>
+      text({
+        message: 'Min Amount',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
+    minMTokenAmountForFirstDeposit: () =>
+      text({
+        message: 'Min mToken Amount For First Deposit',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
+    maxSupplyCap: () =>
+      text({
+        message: 'Max Supply Cap',
+        defaultValue: 'Infinite',
+        placeholder: 'Infinite',
+        validate: validateBase18OrInfinite,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18OrInfinite),
+    outro: () => Promise.resolve(outro('Done...')).then(() => undefined),
+  }).then(clearIntroOutro);
+
+  return {
+    type: 'MTOKEN' as const,
     enableSanctionsList: shouldEnableSanctionsList(hre),
     ...config,
   };
@@ -172,6 +498,15 @@ async function getRvConfigFromUser<T>(
       })
         .then(requireNotCancelled)
         .then(requirePercentageToBigNumberish),
+    minAmount: () =>
+      text({
+        message: 'Min Amount',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
     ...(extendGroup ?? {}),
     outro: () => Promise.resolve(outro(`Done...`)).then(() => undefined),
   }).then(clearIntroOutro);
@@ -183,17 +518,70 @@ async function getRvConfigFromUser<T>(
   };
 }
 
+async function getRvAaveConfigFromUser(hre: HardhatRuntimeEnvironment) {
+  const config = await getRvConfigFromUser(
+    hre,
+    {},
+    'Redemption Vault With Aave',
+  );
+
+  return {
+    ...config,
+    type: 'AAVE' as const,
+  };
+}
+
+async function getRvMorphoConfigFromUser(hre: HardhatRuntimeEnvironment) {
+  const config = await getRvConfigFromUser(
+    hre,
+    {},
+    'Redemption Vault With Morpho',
+  );
+
+  return {
+    ...config,
+    type: 'MORPHO' as const,
+  };
+}
+
+async function getRvMTokenConfigFromUser(hre: HardhatRuntimeEnvironment) {
+  const config = await getRvConfigFromUser(
+    hre,
+    {
+      redemptionVault: () =>
+        text({
+          message: 'mTokenA Redemption Vault Address',
+          validate: validateAddress,
+        })
+          .then(requireNotCancelled)
+          .then(requireAddress),
+    },
+    'Redemption Vault With MToken',
+  );
+
+  return {
+    ...config,
+    type: 'MTOKEN' as const,
+  };
+}
+
 const getVaultForSwapper = (
   hre: HardhatRuntimeEnvironment,
   mToken: MTokenName,
 ) => {
   const addresses = getCurrentAddresses(hre);
-  if (addresses?.[mToken]?.redemptionVaultSwapper) {
+  if (addresses?.[mToken]?.redemptionVaultMToken) {
+    return 'redemptionVaultMToken';
+  } else if (addresses?.[mToken]?.redemptionVaultSwapper) {
     return 'redemptionVaultSwapper';
   } else if (addresses?.[mToken]?.redemptionVaultUstb) {
     return 'redemptionVaultUstb';
   } else if (addresses?.[mToken]?.redemptionVaultBuidl) {
     return 'redemptionVaultBuidl';
+  } else if (addresses?.[mToken]?.redemptionVaultAave) {
+    return 'redemptionVaultAave';
+  } else if (addresses?.[mToken]?.redemptionVaultMorpho) {
+    return 'redemptionVaultMorpho';
   } else if (addresses?.[mToken]?.redemptionVault) {
     return 'redemptionVault';
   }
@@ -254,6 +642,9 @@ async function getRvSwapperConfigFromUser(hre: HardhatRuntimeEnvironment) {
 
 async function getPostDeployGrantRolesConfigFromUser(
   _: HardhatRuntimeEnvironment,
+  _vaults?: VaultType[],
+  _mToken?: MTokenName,
+  _collected?: Partial<PostDeployConfig>,
 ) {
   const config = await group({
     intro: () =>
@@ -284,6 +675,8 @@ async function getPostDeployGrantRolesConfigFromUser(
 async function getPostDeployAddPaymentTokensConfigFromUser(
   _: HardhatRuntimeEnvironment,
   vaults: VaultType[],
+  _mToken?: MTokenName,
+  _collected?: Partial<PostDeployConfig>,
 ) {
   const { selectedVaults } = await group({
     intro: () =>
@@ -382,61 +775,423 @@ async function getPostDeployAddPaymentTokensConfigFromUser(
   return { vaults: Object.values(configs) };
 }
 
-export async function getDeploymentConfigFromUser(
-  overrideNetworkConfig: boolean,
+async function getPostDeployAddFeeWaivedConfigFromUser(
+  _: HardhatRuntimeEnvironment,
+  vaults: VaultType[],
+  mToken: MTokenName,
+  _collected?: Partial<PostDeployConfig>,
 ) {
+  const { selectedVaults } = await group({
+    intro: () =>
+      Promise.resolve(intro('Post Deploy Add Fee Waived')).then(
+        () => undefined,
+      ),
+    selectedVaults: () =>
+      multiselect({
+        message: 'Select Vaults to add fee waived accounts to',
+        options: vaults.map((vault) => ({
+          value: vault,
+          label: vault,
+        })),
+        initialValues: vaults,
+      }).then(requireNotCancelled),
+  });
+
+  const result: {
+    fromVault: { mToken: MTokenName; type: VaultType };
+    toWaive: string[];
+  }[] = [];
+
+  for (const vault of selectedVaults) {
+    await stream.info(`Configuring fee waived accounts for ${vault}...`);
+
+    const toWaive: string[] = [];
+    let addMore = true;
+
+    while (addMore) {
+      const address = await text({
+        message: 'Address to waive fee for',
+        validate: validateAddress,
+      })
+        .then(requireNotCancelled)
+        .then(requireAddress);
+
+      toWaive.push(address);
+
+      addMore = await confirm({
+        message: 'Add another address?',
+        initialValue: false,
+      }).then(requireNotCancelled);
+    }
+
+    result.push({ fromVault: { mToken, type: vault }, toWaive });
+  }
+
+  outro('Done...');
+
+  return result;
+}
+
+const getConfiguredPaymentTokenNames = (
+  vaultType: VaultType,
+  collected?: Partial<PostDeployConfig>,
+) => {
+  return (
+    collected?.addPaymentTokens?.vaults
+      .find((vault) => vault.type === vaultType)
+      ?.paymentTokens.map((paymentToken) => paymentToken.token as string) ?? []
+  );
+};
+
+const getPaymentTokenNamesFromUser = async (vaultType: VaultType) => {
+  const tokens: string[] = [];
+  let addMore = true;
+
+  while (addMore) {
+    const token = await text({
+      message: `Payment token name for ${vaultType}`,
+      placeholder: 'usdc',
+      validate: (value) => {
+        if (!isPaymentTokenName(value)) {
+          return 'Unknown token name';
+        }
+      },
+    }).then(requireNotCancelled);
+
+    tokens.push(token);
+
+    addMore = await confirm({
+      message: 'Add another payment token?',
+      initialValue: false,
+    }).then(requireNotCancelled);
+  }
+
+  return tokens;
+};
+
+async function getPostDeploySetAaveConfigFromUser(
+  _: HardhatRuntimeEnvironment,
+  vaults: VaultType[],
+  _mToken?: MTokenName,
+  collected?: Partial<PostDeployConfig>,
+) {
+  const aaveVaultTypes = vaults.filter(
+    (v) => v === 'depositVaultAave' || v === 'redemptionVaultAave',
+  );
+
+  const entries: {
+    type: VaultType;
+    pools: { token: string; aavePool: string }[];
+    depositsEnabled?: boolean;
+    autoInvestFallbackEnabled?: boolean;
+  }[] = [];
+
+  intro('Post Deploy Set Aave Config');
+
+  for (const vaultType of aaveVaultTypes) {
+    await stream.info(
+      `Configuring Aave for ${vaultType} (one pool per payment token)...`,
+    );
+
+    let tokens = getConfiguredPaymentTokenNames(vaultType, collected);
+
+    if (tokens.length === 0) {
+      tokens = await getPaymentTokenNamesFromUser(vaultType);
+    }
+
+    const pools: { token: string; aavePool: string }[] = [];
+
+    for (const token of tokens) {
+      const aavePool = await text({
+        message: `Aave pool address for ${token}`,
+        validate: validateAddress,
+      })
+        .then(requireNotCancelled)
+        .then(requireAddress);
+
+      pools.push({ token, aavePool });
+    }
+
+    if (vaultType === 'depositVaultAave') {
+      const depositsEnabled = await confirm({
+        message: 'Enable Aave deposits?',
+        initialValue: true,
+      }).then(requireNotCancelled);
+
+      const autoInvestFallbackEnabled = await confirm({
+        message: 'Enable auto-invest fallback?',
+        initialValue: true,
+      }).then(requireNotCancelled);
+
+      entries.push({
+        type: vaultType,
+        pools,
+        depositsEnabled,
+        autoInvestFallbackEnabled,
+      });
+    } else {
+      entries.push({ type: vaultType, pools });
+    }
+  }
+
+  outro('Done...');
+
+  return entries;
+}
+
+async function getPostDeploySetMorphoConfigFromUser(
+  _: HardhatRuntimeEnvironment,
+  vaults: VaultType[],
+  _mToken?: MTokenName,
+  collected?: Partial<PostDeployConfig>,
+) {
+  const morphoVaultTypes = vaults.filter(
+    (v) => v === 'depositVaultMorpho' || v === 'redemptionVaultMorpho',
+  );
+
+  const entries: {
+    type: VaultType;
+    vaults: { token: string; morphoVault: string }[];
+    depositsEnabled?: boolean;
+    autoInvestFallbackEnabled?: boolean;
+  }[] = [];
+
+  intro('Post Deploy Set Morpho Config');
+
+  for (const vaultType of morphoVaultTypes) {
+    await stream.info(
+      `Configuring Morpho for ${vaultType} (one vault per payment token)...`,
+    );
+
+    let tokens = getConfiguredPaymentTokenNames(vaultType, collected);
+
+    if (tokens.length === 0) {
+      tokens = await getPaymentTokenNamesFromUser(vaultType);
+    }
+
+    const vaults: { token: string; morphoVault: string }[] = [];
+
+    for (const token of tokens) {
+      const morphoVault = await text({
+        message: `Morpho vault (ERC-4626) address for ${token}`,
+        validate: validateAddress,
+      })
+        .then(requireNotCancelled)
+        .then(requireAddress);
+
+      vaults.push({ token, morphoVault });
+    }
+
+    if (vaultType === 'depositVaultMorpho') {
+      const depositsEnabled = await confirm({
+        message: 'Enable Morpho deposits?',
+        initialValue: true,
+      }).then(requireNotCancelled);
+
+      const autoInvestFallbackEnabled = await confirm({
+        message: 'Enable auto-invest fallback?',
+        initialValue: true,
+      }).then(requireNotCancelled);
+
+      entries.push({
+        type: vaultType,
+        vaults,
+        depositsEnabled,
+        autoInvestFallbackEnabled,
+      });
+    } else {
+      entries.push({ type: vaultType, vaults });
+    }
+  }
+
+  outro('Done...');
+
+  return entries;
+}
+
+const DV_PAUSABLE_FUNCTIONS: VaultFunctionName[] = [
+  'depositInstant',
+  'depositInstantWithCustomRecipient',
+  'depositRequest',
+  'depositRequestWithCustomRecipient',
+];
+
+const RV_PAUSABLE_FUNCTIONS: VaultFunctionName[] = [
+  'redeemInstant',
+  'redeemInstantWithCustomRecipient',
+  'redeemFiatRequest',
+  'redeemRequest',
+  'redeemRequestWithCustomRecipient',
+];
+
+async function getPostDeployPauseFunctionsConfigFromUser(
+  _: HardhatRuntimeEnvironment,
+  vaults: VaultType[],
+  _mToken?: MTokenName,
+  _collected?: Partial<PostDeployConfig>,
+) {
+  intro('Post Deploy Pause Functions');
+
+  const config: Partial<Record<VaultType, VaultFunctionName[]>> = {};
+
+  for (const vaultType of vaults) {
+    const options = vaultType.startsWith('deposit')
+      ? DV_PAUSABLE_FUNCTIONS
+      : RV_PAUSABLE_FUNCTIONS;
+
+    const selected = await multiselect<VaultFunctionName>({
+      message: `Select functions to pause for ${vaultType} (empty to skip)`,
+      options: options.map((fn) => ({ value: fn, label: fn })),
+      initialValues: [],
+      required: false,
+    }).then(requireNotCancelled);
+
+    if (selected.length > 0) {
+      config[vaultType] = selected;
+    }
+  }
+
+  outro('Done...');
+
+  return config;
+}
+
+export type NetworkConfigMode = 'create' | 'add' | 'override' | 'skip';
+
+const allVaultConfigOptions = [
+  {
+    value: 'dv' as const,
+    label: 'Deposit Vault',
+    hint: 'Deposit Vault contract',
+  },
+  {
+    value: 'dvAave' as const,
+    label: 'Deposit Vault With Aave',
+    hint: 'Deposit Vault with Aave V3 auto-invest',
+  },
+  {
+    value: 'dvMorpho' as const,
+    label: 'Deposit Vault With Morpho',
+    hint: 'Deposit Vault with Morpho auto-invest',
+  },
+  {
+    value: 'dvMToken' as const,
+    label: 'Deposit Vault With MToken',
+    hint: 'Deposit Vault with mToken auto-invest',
+  },
+  {
+    value: 'rv' as const,
+    label: 'Redemption Vault',
+    hint: 'Redemption Vault contract',
+  },
+  {
+    value: 'rvSwapper' as const,
+    label: 'Redemption Vault With Swapper',
+    hint: 'Redemption Vault With Swapper contract',
+  },
+  {
+    value: 'rvMToken' as const,
+    label: 'Redemption Vault With MToken',
+    hint: 'Redemption Vault With MToken liquid strategy contract',
+  },
+  {
+    value: 'rvAave' as const,
+    label: 'Redemption Vault With Aave',
+    hint: 'Redemption Vault With Aave V3 contract',
+  },
+  {
+    value: 'rvMorpho' as const,
+    label: 'Redemption Vault With Morpho',
+    hint: 'Redemption Vault With Morpho Vault (ERC-4626) contract',
+  },
+];
+
+type VaultConfigKey = (typeof allVaultConfigOptions)[number]['value'];
+
+export async function getDeploymentConfigFromUser(
+  networkConfigMode: NetworkConfigMode,
+  existingVaultConfigKeys: string[] = [],
+) {
+  const vaultOptions =
+    networkConfigMode === 'add'
+      ? allVaultConfigOptions.filter(
+          (option) => !existingVaultConfigKeys.includes(option.value),
+        )
+      : allVaultConfigOptions;
+
+  const skipVaultConfigs =
+    networkConfigMode === 'skip' || vaultOptions.length === 0;
+
   const config = await group({
     deploymentConfigs: () =>
-      multiselect<
-        keyof Pick<
-          DeploymentConfig['networkConfigs'][number],
-          'rv' | 'rvSwapper' | 'dv'
-        >
-      >({
-        message:
-          'Select configs to generate. (Space to select, Enter to confirm)',
-        options: [
-          {
-            value: 'dv',
-            label: 'Deposit Vault',
-            hint: 'Deposit Vault contract',
-          },
-          {
-            value: 'rv',
-            label: 'Redemption Vault',
-            hint: 'Redemption Vault contract',
-          },
-          {
-            value: 'rvSwapper',
-            label: 'Redemption Vault With Swapper',
-            hint: 'Redemption Vault With Swapper contract',
-          },
-        ],
-        initialValues: ['dv', 'rvSwapper'],
-        required: true,
-      }).then(requireNotCancelled),
+      skipVaultConfigs
+        ? Promise.resolve([] as VaultConfigKey[])
+        : multiselect<VaultConfigKey>({
+            message:
+              'Select configs to generate. (Space to select, Enter to confirm)',
+            options: vaultOptions,
+            initialValues:
+              networkConfigMode === 'add'
+                ? []
+                : (['dv', 'rvSwapper'] as VaultConfigKey[]),
+            required: true,
+          }).then(requireNotCancelled),
     includePostDeploy: () =>
       confirm({
         message: `${
-          overrideNetworkConfig ? 'Override' : 'Include'
+          networkConfigMode === 'override' ? 'Override' : 'Include'
         } post deploy configs?`,
         initialValue: true,
       }).then(requireNotCancelled),
-    postDeployConfigs: ({ results: { includePostDeploy } }) =>
+    postDeployConfigs: ({
+      results: { includePostDeploy, deploymentConfigs },
+    }) =>
       includePostDeploy
         ? multiselect<keyof PostDeployConfig>({
             message: 'Select post deploy configs to generate.',
             options: [
               {
-                value: 'addPaymentTokens',
+                value: 'addPaymentTokens' as const,
                 label: 'Add Payment Tokens',
                 hint: 'Add Payment Tokens script',
               },
               {
-                value: 'grantRoles',
+                value: 'grantRoles' as const,
                 label: 'Grant Roles',
                 hint: 'Grant Roles script',
               },
+              {
+                value: 'addFeeWaived' as const,
+                label: 'Add Fee Waived',
+                hint: 'Waive vault fees for specific accounts',
+              },
+              {
+                value: 'pauseFunctions' as const,
+                label: 'Pause Functions',
+                hint: 'Pause selected vault functions after deploy',
+              },
+              ...(deploymentConfigs?.some(
+                (c) => c === 'dvAave' || c === 'rvAave',
+              )
+                ? [
+                    {
+                      value: 'setAaveConfig' as const,
+                      label: 'Set Aave Config',
+                      hint: 'Aave pool + deposit flags',
+                    },
+                  ]
+                : []),
+              ...(deploymentConfigs?.some(
+                (c) => c === 'dvMorpho' || c === 'rvMorpho',
+              )
+                ? [
+                    {
+                      value: 'setMorphoConfig' as const,
+                      label: 'Set Morpho Config',
+                      hint: 'Morpho vault + deposit flags',
+                    },
+                  ]
+                : []),
             ],
             initialValues: ['addPaymentTokens', 'grantRoles'],
             required: true,
@@ -517,7 +1272,7 @@ const validateBase18 = (value: string) => {
   try {
     parseUnits(value, 18);
     return undefined;
-  } catch (_) {
+  } catch {
     return new Error('Invalid value');
   }
 };
@@ -531,7 +1286,7 @@ const validateFloat = (value: string, maxDecimals = 2) => {
   try {
     parseUnits(value, maxDecimals);
     return undefined;
-  } catch (_) {
+  } catch {
     return new Error('Invalid float');
   }
 };

@@ -3,6 +3,7 @@ pragma solidity 0.8.9;
 
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import "./RedemptionVault.sol";
 import "./interfaces/IRedemptionVault.sol";
@@ -246,7 +247,12 @@ contract RedemptionVaultWithSwapper is
             .mTokenDataFeed()
             .getDataInBase18();
         uint256 mTokenRate = mTokenDataFeed.getDataInBase18();
-        mTokenAmount = (mToken1Amount * mTokenRate) / mTbillRate;
+        mTokenAmount = Math.mulDiv(
+            mToken1Amount,
+            mTokenRate,
+            mTbillRate,
+            Math.Rounding.Up
+        );
 
         _tokenTransferFromTo(
             address(mTbillRedemptionVault.mToken()),

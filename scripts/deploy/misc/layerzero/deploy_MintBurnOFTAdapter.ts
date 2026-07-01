@@ -43,10 +43,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const rateLimitConfigDefault = config.layerZero.rateLimitConfig?.default;
   const rateLimitConfigOverrides = config.layerZero.rateLimitConfig?.overrides;
 
-  if (!rateLimitConfigDefault) {
-    throw new Error('Rate limit config default not found');
-  }
-
   const allReceiverNetworks =
     lzConfigsPerMToken?.[originalNetwork]?.[mToken]?.linkedNetworks;
 
@@ -61,6 +57,9 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const rateLimitConfigs = networksToRateLimit.map((network) => {
     const configBase =
       rateLimitConfigOverrides?.[network] ?? rateLimitConfigDefault;
+    if (!configBase) {
+      throw new Error(`Rate limit config not found for network ${network}`);
+    }
     return {
       ...configBase,
       dstEid: layerZeroEids[network]!,

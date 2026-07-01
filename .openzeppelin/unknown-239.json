@@ -3922,6 +3922,358 @@
           }
         }
       }
+    },
+    "43909ca96a81bc7640bc340e77ae05d746045fbb24db8b61f5a89643be3e2bdd": {
+      "address": "0x0c567663A5C60e1cD1679BF0cD13AEeD55B0FC77",
+      "txHash": "0x6de40077fc83bf16887bc6824fc6a6e641d4817b77cc0ece76933f3a52946963",
+      "layout": {
+        "solcVersion": "0.8.9",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "accessControl",
+            "offset": 2,
+            "slot": "0",
+            "type": "t_contract(MidasAccessControl)17280",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:24"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:29"
+          },
+          {
+            "label": "description",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_string_storage",
+            "contract": "CustomAggregatorV3CompatibleFeed",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeed.sol:31"
+          },
+          {
+            "label": "latestRound",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_uint80",
+            "contract": "CustomAggregatorV3CompatibleFeed",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeed.sol:36"
+          },
+          {
+            "label": "maxAnswerDeviation",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_uint256",
+            "contract": "CustomAggregatorV3CompatibleFeed",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeed.sol:42"
+          },
+          {
+            "label": "minAnswer",
+            "offset": 0,
+            "slot": "54",
+            "type": "t_int192",
+            "contract": "CustomAggregatorV3CompatibleFeed",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeed.sol:47"
+          },
+          {
+            "label": "maxAnswer",
+            "offset": 0,
+            "slot": "55",
+            "type": "t_int192",
+            "contract": "CustomAggregatorV3CompatibleFeed",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeed.sol:52"
+          },
+          {
+            "label": "_roundData",
+            "offset": 0,
+            "slot": "56",
+            "type": "t_mapping(t_uint80,t_struct(RoundData)17975_storage)",
+            "contract": "CustomAggregatorV3CompatibleFeed",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeed.sol:57"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "57",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "MRe7CustomAggregatorFeed",
+            "src": "contracts/products/mRE7/MRe7CustomAggregatorFeed.sol:20"
+          }
+        ],
+        "types": {
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(MidasAccessControl)17280": {
+            "label": "contract MidasAccessControl",
+            "numberOfBytes": "20"
+          },
+          "t_int192": {
+            "label": "int192",
+            "numberOfBytes": "24"
+          },
+          "t_int256": {
+            "label": "int256",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint80,t_struct(RoundData)17975_storage)": {
+            "label": "mapping(uint80 => struct CustomAggregatorV3CompatibleFeed.RoundData)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(RoundData)17975_storage": {
+            "label": "struct CustomAggregatorV3CompatibleFeed.RoundData",
+            "members": [
+              {
+                "label": "roundId",
+                "type": "t_uint80",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "answer",
+                "type": "t_int256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "startedAt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "updatedAt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "answeredInRound",
+                "type": "t_uint80",
+                "offset": 0,
+                "slot": "4"
+              }
+            ],
+            "numberOfBytes": "160"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          },
+          "t_uint80": {
+            "label": "uint80",
+            "numberOfBytes": "10"
+          }
+        }
+      }
+    },
+    "05588bcec573148c271023ff7181bd88d53bd686db47b39b7ea5333dd847f20a": {
+      "address": "0xC102d21e98aB3F62ea2299783f284A948bF9c015",
+      "txHash": "0x41a8c307be38af59a3cdcc22b23b17d8803328f4b0e7e5c6f5a4735de0a589fe",
+      "layout": {
+        "solcVersion": "0.8.9",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "accessControl",
+            "offset": 2,
+            "slot": "0",
+            "type": "t_contract(MidasAccessControl)17280",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:24"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:29"
+          },
+          {
+            "label": "description",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_string_storage",
+            "contract": "CustomAggregatorV3CompatibleFeed",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeed.sol:31"
+          },
+          {
+            "label": "latestRound",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_uint80",
+            "contract": "CustomAggregatorV3CompatibleFeed",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeed.sol:36"
+          },
+          {
+            "label": "maxAnswerDeviation",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_uint256",
+            "contract": "CustomAggregatorV3CompatibleFeed",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeed.sol:42"
+          },
+          {
+            "label": "minAnswer",
+            "offset": 0,
+            "slot": "54",
+            "type": "t_int192",
+            "contract": "CustomAggregatorV3CompatibleFeed",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeed.sol:47"
+          },
+          {
+            "label": "maxAnswer",
+            "offset": 0,
+            "slot": "55",
+            "type": "t_int192",
+            "contract": "CustomAggregatorV3CompatibleFeed",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeed.sol:52"
+          },
+          {
+            "label": "_roundData",
+            "offset": 0,
+            "slot": "56",
+            "type": "t_mapping(t_uint80,t_struct(RoundData)17975_storage)",
+            "contract": "CustomAggregatorV3CompatibleFeed",
+            "src": "contracts/feeds/CustomAggregatorV3CompatibleFeed.sol:57"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "57",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "TacTonCustomAggregatorFeed",
+            "src": "contracts/products/tacTON/TacTonCustomAggregatorFeed.sol:20"
+          }
+        ],
+        "types": {
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(MidasAccessControl)17280": {
+            "label": "contract MidasAccessControl",
+            "numberOfBytes": "20"
+          },
+          "t_int192": {
+            "label": "int192",
+            "numberOfBytes": "24"
+          },
+          "t_int256": {
+            "label": "int256",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint80,t_struct(RoundData)17975_storage)": {
+            "label": "mapping(uint80 => struct CustomAggregatorV3CompatibleFeed.RoundData)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(RoundData)17975_storage": {
+            "label": "struct CustomAggregatorV3CompatibleFeed.RoundData",
+            "members": [
+              {
+                "label": "roundId",
+                "type": "t_uint80",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "answer",
+                "type": "t_int256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "startedAt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "updatedAt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "answeredInRound",
+                "type": "t_uint80",
+                "offset": 0,
+                "slot": "4"
+              }
+            ],
+            "numberOfBytes": "160"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          },
+          "t_uint80": {
+            "label": "uint80",
+            "numberOfBytes": "10"
+          }
+        }
+      }
     }
   }
 }

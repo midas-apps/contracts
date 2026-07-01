@@ -1,7 +1,11 @@
 import { MTokenName } from '../../../../../config';
 import { importWithoutCache } from '../../../../../helpers/utils';
 
-export const getTokenContractFromTemplate = async (mToken: MTokenName) => {
+export const getTokenContractFromTemplate = async (
+  mToken: MTokenName,
+  optionalParams?: Record<string, unknown>,
+) => {
+  const { isPermissionedMToken = false } = optionalParams || {};
   const { getTokenContractNames } = await importWithoutCache(
     require.resolve('../../../../../helpers/contracts'),
   );
@@ -25,14 +29,17 @@ export const getTokenContractFromTemplate = async (mToken: MTokenName) => {
   // SPDX-License-Identifier: MIT
   pragma solidity 0.8.9;
 
-  import "../../mToken.sol";
+  import "../../mToken${isPermissionedMToken ? 'Permissioned' : ''}.sol";
+  ${isPermissionedMToken ? `import "./${contractNames.roles}.sol";` : ''}
 
   /**
    * @title ${contractNames.token}
    * @author RedDuck Software
    */
   //solhint-disable contract-name-camelcase
-  contract ${contractNames.token} is mToken {
+  contract ${contractNames.token} is mToken${
+      isPermissionedMToken ? `Permissioned, ${contractNames.roles}` : ''
+    } {
       /**
        * @notice actor that can mint ${contractNames.token}
        */
@@ -87,6 +94,18 @@ export const getTokenContractFromTemplate = async (mToken: MTokenName) => {
        */
       function _pauserRole() internal pure override returns (bytes32) {
           return ${roles.pauser};
+      }
+
+      ${
+        isPermissionedMToken
+          ? `
+       /**
+       * @inheritdoc mTokenPermissioned
+       */
+      function _greenlistedRole() internal pure override returns (bytes32) {
+          return ${roles.greenlisted};
+      }`
+          : ''
       }
   }`,
   };

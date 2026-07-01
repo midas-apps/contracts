@@ -7,6 +7,11 @@ import {
 } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
 import { deployAndVerifyProxy } from '../../common/utils';
+import {
+  defaultDepositVaultPriority,
+  resolveVaultAddress,
+  routingRedemptionVaultPriority,
+} from '../../common/vault-resolver';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const mToken = getMTokenOrThrow(hre);
@@ -23,6 +28,22 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('mToken layerzero adapter not found');
   }
 
+  const depositVault = resolveVaultAddress(
+    mTokenAddresses,
+    defaultDepositVaultPriority,
+  );
+  if (!depositVault) {
+    throw new Error('Deposit vault not found');
+  }
+
+  const redemptionVault = resolveVaultAddress(
+    mTokenAddresses,
+    routingRedemptionVaultPriority,
+  );
+  if (!redemptionVault) {
+    throw new Error('Redemption vault not found');
+  }
+
   const pTokenOft = addresses?.paymentTokens?.[pToken]?.layerZero?.oft;
 
   if (!pTokenOft) {
@@ -32,11 +53,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   await deployAndVerifyProxy(hre, 'MidasLzVaultComposerSync', [], undefined, {
     unsafeAllow: ['state-variable-immutable'],
     constructorArgs: [
-      mTokenAddresses.depositVault!,
-      mTokenAddresses.redemptionVaultSwapper ??
-        mTokenAddresses.redemptionVaultUstb ??
-        mTokenAddresses.redemptionVault ??
-        mTokenAddresses.redemptionVaultBuidl!,
+      depositVault,
+      redemptionVault,
       pTokenOft,
       mTokenAddresses.layerZero.oft,
     ],

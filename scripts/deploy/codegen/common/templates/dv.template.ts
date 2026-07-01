@@ -1,7 +1,12 @@
 import { MTokenName } from '../../../../../config';
 import { importWithoutCache } from '../../../../../helpers/utils';
 
-export const getDvContractFromTemplate = async (mToken: MTokenName) => {
+export const getDvContractFromTemplate = async (
+  mToken: MTokenName,
+  optionalParams?: Record<string, unknown>,
+) => {
+  const { vaultUseTokenLevelGreenList = false } = optionalParams || {};
+
   const { getTokenContractNames } = await importWithoutCache(
     require.resolve('../../../../../helpers/contracts'),
   );
@@ -37,6 +42,19 @@ export const getDvContractFromTemplate = async (mToken: MTokenName) => {
        */
       function vaultRole() public pure override returns (bytes32) {
           return ${roles.depositVaultAdmin};
+      }
+
+      ${
+        vaultUseTokenLevelGreenList
+          ? `
+        /**
+         * @inheritdoc Greenlistable
+         */
+        function greenlistedRole() public pure override returns (bytes32) {
+            return ${roles.greenlisted};
+        }
+        `
+          : ''
       }
   }`,
   };

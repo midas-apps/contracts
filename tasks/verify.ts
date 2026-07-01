@@ -1,4 +1,8 @@
 import { LibraryToAddress } from '@nomicfoundation/hardhat-verify/internal/solc/artifacts';
+import {
+  resolveConstructorArguments,
+  resolveLibraries,
+} from '@nomicfoundation/hardhat-verify/internal/utilities';
 import { task } from 'hardhat/config';
 
 import { chainIds, ENV, Network, verifyConfig } from '../config';
@@ -6,11 +10,45 @@ import {
   etherscanVerify,
   etherscanVerifyImplementation,
 } from '../helpers/utils';
+import { getTransparentProxyConstructorArgs } from '../helpers/verify-proxy';
 
 task('verifyProxy')
   .addPositionalParam('proxyAddress')
   .setAction(async ({ proxyAddress }, hre) => {
     await etherscanVerifyImplementation(hre, proxyAddress);
+  });
+
+/**
+ * Verifies any OpenZeppelin TransparentUpgradeableProxy on an explorer.
+ *
+ * Recovers the original `(impl, admin, initData)` constructor args from the
+ * proxy creation tx recorded in `.openzeppelin/<network>.json`, so it works
+ * for every contract type (token, custom aggregators, data feeds, deposit /
+ * redemption vault variants, …)
+ */
+task(
+  'verify-transparent-proxy',
+  'Verify OZ TransparentUpgradeableProxy (constructor args decoded from creation tx)',
+)
+  .addPositionalParam('proxy', 'Proxy contract address')
+  .setAction(async ({ proxy }, hre) => {
+    const { implementation, admin, initData } =
+      await getTransparentProxyConstructorArgs(hre, proxy);
+
+    console.log(
+      `Recovered constructor args for ${proxy}:\n` +
+        `  implementation: ${implementation}\n` +
+        `  admin:          ${admin}\n` +
+        `  initData:       ${initData}`,
+    );
+
+    await hre.run('verify:verify', {
+      address: proxy,
+      contract:
+        '@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy',
+      constructorArguments: [implementation, admin, initData],
+      libraries: {} as LibraryToAddress,
+    });
   });
 
 task('verifyRegular')
@@ -38,7 +76,19 @@ task('verify').setAction(
       return;
     }
 
-    await hre.run('verify:verify', args);
+    const constructorArguments = await resolveConstructorArguments(
+      args.constructorArgsParams,
+      args.constructorArgs,
+    );
+    const libraries = await resolveLibraries(args.libraries);
+
+    await hre.run('verify:verify', {
+      address: args.address,
+      constructorArguments,
+      libraries,
+      contract: args.contract,
+      force: args.force,
+    });
   },
 );
 
@@ -102,9 +152,7 @@ task('verify:verify').setAction(
               chainId: chainIds[network],
               network,
               urls: {
-                apiURL:
-                  'https://api.etherscan.io/v2/api?chainid=' +
-                  chainIds[network],
+                apiURL: 'https://api.etherscan.io/v2/api',
                 browserURL: config.browserUrl,
               },
             },
@@ -114,7 +162,7 @@ task('verify:verify').setAction(
         const apiKey = config.apiKey;
 
         hre.config.etherscan = {
-          apiKey: apiKey ? { [network]: apiKey } : 'no-key',
+          apiKey: apiKey ? { [network]: apiKey } : { [network]: 'no-key' },
           enabled: true,
           customChains: [
             {
@@ -130,7 +178,10 @@ task('verify:verify').setAction(
       } else if (config.type === 'sourcify') {
         hre.config.sourcify = {
           enabled: true,
-          apiUrl: config.overrideApiUrl,
+          apiUrl:
+            config.overrideApiUrl ??
+            ENV.SOURCIFY_API_URL ??
+            'https://sourcify.dev/server',
           browserUrl: config.browserUrl,
         };
       } else {

@@ -84,9 +84,11 @@ export const mHyperBTCDeploymentConfig: DeploymentConfig = {
           delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
           owner: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
           rateLimitConfig: {
-            default: {
-              limit: parseUnits('50'),
-              window: hours(24),
+            overrides: {
+              monad: {
+                limit: parseUnits('50'),
+                window: hours(24),
+              },
             },
           },
         },
@@ -167,9 +169,11 @@ export const mHyperBTCDeploymentConfig: DeploymentConfig = {
           delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
           owner: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
           rateLimitConfig: {
-            default: {
-              limit: parseUnits('50'),
-              window: hours(24),
+            overrides: {
+              main: {
+                limit: parseUnits('50'),
+                window: hours(24),
+              },
             },
           },
         },

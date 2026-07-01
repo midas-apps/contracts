@@ -3,7 +3,7 @@ import { solidityKeccak256 } from 'ethers/lib/utils';
 
 import { MTokenName } from '../config';
 
-const prefixes: Record<MTokenName, string> = {
+export const prefixes: Record<MTokenName, string> = {
   mTBILL: 'M_TBILL',
   mBASIS: 'M_BASIS',
   mBTC: 'M_BTC',
@@ -70,10 +70,60 @@ const prefixes: Record<MTokenName, string> = {
   weEUR: 'WE_EUR',
   mTU: 'M_TU',
   mM1USD: 'M_M1_USD',
+  mRe7ETH: 'M_RE7ETH',
+  mGLOBAL: 'M_GLOBAL',
+  bondUSD: 'BOND_USD',
+  bondETH: 'BOND_ETH',
+  bondBTC: 'BOND_BTC',
+  mTEST: 'M_TEST',
+  stockMarketTRBasisTrade: 'STOCK_MARKET_TR_BASIS_TRADE',
+  carryTradeUSDTRYLeverage: 'CARRY_TRADE_USD_TRY_LEVERAGE',
+  mEVETH: 'M_EV_ETH',
+  liquidRWA: 'LIQUID_RWA',
+  mWIN: 'M_WIN',
+  qHVNUSD: 'Q_HVN_USD',
+  mGLO: 'M_GLO',
+  sGold: 'S_GOLD',
+  turtlePST: 'TURTLE_PST',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {
   mFONE: 'mF-ONE',
+};
+
+/**
+ * Products whose vaults use a product-specific (a.k.a. "separated")
+ * greenlist role, i.e. they override `Greenlistable.greenlistedRole()` to
+ * return `<PREFIX>_GREENLISTED_ROLE` instead of the shared common
+ * `GREENLISTED_ROLE`. Keep this in sync with the on-chain
+ * `greenlistedRole()` overrides under `contracts/products/*`.
+ */
+export const tokenLevelGreenlistTokens: MTokenName[] = [
+  'mGLOBAL',
+  'mTEST',
+  'mWIN',
+  'qHVNUSD',
+  'mGLO',
+];
+
+/**
+ * Products that intentionally REUSE another product's greenlist role rather
+ * than minting their own. The greenlist role name is derived from the source
+ * token's prefix, while every other role stays on the token's own prefix.
+ *
+ * mGLO shares mGLOBAL's greenlist (`M_GLOBAL_GREENLISTED_ROLE`).
+ */
+export const sharedGreenlistRoleSource: Partial<
+  Record<MTokenName, MTokenName>
+> = {
+  mGLO: 'mGLOBAL',
+};
+
+const getGreenlistRoleName = (token: MTokenName): string => {
+  const greenlistToken = sharedGreenlistRoleSource[token] ?? token;
+  const restPrefix =
+    greenlistToken === 'mTBILL' ? '' : prefixes[greenlistToken] + '_';
+  return `${restPrefix}GREENLISTED_ROLE`;
 };
 
 type TokenRoles = {
@@ -83,6 +133,7 @@ type TokenRoles = {
   depositVaultAdmin: string;
   redemptionVaultAdmin: string;
   customFeedAdmin: string | null;
+  greenlisted: string;
 };
 
 type CommonRoles = {
@@ -93,9 +144,14 @@ type CommonRoles = {
   defaultAdmin: string;
 };
 
+type IntegrationRoles = {
+  infinifiMGCustomFeedAdmin: string;
+};
+
 type AllRoles = {
   common: CommonRoles;
   tokenRoles: Record<MTokenName, TokenRoles>;
+  integration: IntegrationRoles;
 };
 
 const keccak256 = (role: string) => {
@@ -118,6 +174,7 @@ export const getRolesNamesForToken = (token: MTokenName): TokenRoles => {
       : `${tokenPrefix}_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE`,
     depositVaultAdmin: `${restPrefix}DEPOSIT_VAULT_ADMIN_ROLE`,
     redemptionVaultAdmin: `${restPrefix}REDEMPTION_VAULT_ADMIN_ROLE`,
+    greenlisted: getGreenlistRoleName(token),
   };
 };
 export const getRolesNamesCommon = (): CommonRoles => {
@@ -154,8 +211,15 @@ export const getRolesForToken = (token: MTokenName): TokenRoles => {
   return getRolesHashes(rolesNames) as TokenRoles;
 };
 
+export const getRolesNamesIntegration = (): IntegrationRoles => {
+  return {
+    infinifiMGCustomFeedAdmin: 'INFINIFI_MG_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE',
+  };
+};
+
 export const getAllRoles = (): AllRoles => {
   const rolesNamesCommon = getRolesNamesCommon();
+  const rolesNamesIntegration = getRolesNamesIntegration();
   return {
     common: {
       defaultAdmin: constants.HashZero,
@@ -170,5 +234,10 @@ export const getAllRoles = (): AllRoles => {
         getRolesForToken(token as MTokenName),
       ]),
     ) as Record<MTokenName, TokenRoles>,
+    integration: {
+      infinifiMGCustomFeedAdmin: keccak256(
+        rolesNamesIntegration.infinifiMGCustomFeedAdmin,
+      ),
+    },
   };
 };

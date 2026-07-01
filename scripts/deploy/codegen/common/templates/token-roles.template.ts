@@ -1,7 +1,12 @@
 import { MTokenName } from '../../../../../config';
 import { importWithoutCache } from '../../../../../helpers/utils';
 
-export const getTokenRolesContractFromTemplate = async (mToken: MTokenName) => {
+export const getTokenRolesContractFromTemplate = async (
+  mToken: MTokenName,
+  optionalParams?: Record<string, unknown>,
+) => {
+  const { vaultUseTokenLevelGreenList = false } = optionalParams || {};
+
   const { getTokenContractNames } = await importWithoutCache(
     require.resolve('../../../../../helpers/contracts'),
   );
@@ -21,7 +26,9 @@ export const getTokenRolesContractFromTemplate = async (mToken: MTokenName) => {
 
   /**
    * @title ${contractNames.roles}
-   * @notice Base contract that stores all roles descriptors for ${contractNames.token} contracts
+   * @notice Base contract that stores all roles descriptors for ${
+     contractNames.token
+   } contracts
    * @author RedDuck Software
    */
   abstract contract ${contractNames.roles} {
@@ -38,10 +45,24 @@ export const getTokenRolesContractFromTemplate = async (mToken: MTokenName) => {
           keccak256("${roles.redemptionVaultAdmin}");
 
       /**
-       * @notice actor that can manage ${contractNames.customAggregator} and ${contractNames.dataFeed}
+       * @notice actor that can manage ${contractNames.customAggregator} and ${
+      contractNames.dataFeed
+    }
        */
       bytes32 public constant ${roles.customFeedAdmin} =
           keccak256("${roles.customFeedAdmin}");
+
+      ${
+        vaultUseTokenLevelGreenList
+          ? `
+      /**
+       * @notice greenlist role for ${contractNames.token}
+       */
+      bytes32 public constant ${roles.greenlisted} =
+          keccak256("${roles.greenlisted}");
+      `
+          : ''
+      }
   }`,
   };
 };

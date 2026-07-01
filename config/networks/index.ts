@@ -1,7 +1,7 @@
 import { EndpointId } from '@layerzerolabs/lz-definitions';
 import { HardhatNetworkUserConfig, HttpNetworkUserConfig } from 'hardhat/types';
 
-import { GWEI, MOCK_AGGREGATOR_NETWORK_TAG } from '../constants';
+import { GWEI } from '../constants';
 import { ENV } from '../env';
 import {
   ConfigPerNetwork,
@@ -20,9 +20,10 @@ const {
   MNEMONIC_PROD,
   QUICK_NODE_PROJECT,
   QUICK_NODE_KEY,
+  getRpcUrl,
 } = ENV;
 
-export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
+const defaultRpcUrls: ConfigPerNetwork<RpcUrl> = {
   main: ALCHEMY_KEY
     ? `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
     : `https://mainnet.infura.io/v3/${INFURA_KEY}`,
@@ -32,7 +33,11 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   etherlink: 'https://node.mainnet.etherlink.com',
   hardhat: 'http://localhost:8545',
   localhost: 'http://localhost:8545',
-  base: 'https://mainnet.base.org',
+  base: ALCHEMY_KEY
+    ? `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
+    : INFURA_KEY
+    ? `https://base-mainnet.infura.io/v3/${INFURA_KEY}`
+    : 'https://mainnet.base.org',
   oasis: 'https://sapphire.oasis.io',
   plume: 'https://rpc.plume.org',
   rootstock: 'https://mycrypto.rsk.co',
@@ -48,34 +53,30 @@ export const rpcUrls: ConfigPerNetwork<RpcUrl> = {
   bsc: ALCHEMY_KEY
     ? `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
     : 'https://bsc-dataseed.bnbchain.org',
-  scroll: 'https://rpc.scroll.io',
+  scroll: INFURA_KEY
+    ? `https://scroll-mainnet.infura.io/v3/${INFURA_KEY}`
+    : 'https://scroll.drpc.org',
   monad: 'https://rpc.monad.xyz',
   injective: `https://${QUICK_NODE_PROJECT}.injective-mainnet.quiknode.pro/${QUICK_NODE_KEY}/`,
+  optimism: ALCHEMY_KEY
+    ? `https://opt-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
+    : `https://optimism-mainnet.infura.io/v3/${INFURA_KEY}`,
+  // TODO: Put real robinhood RPC URL when provided
+  robinhood: 'https://rpc.robinhood.invalid',
 };
 
-export const gasPrices: ConfigPerNetwork<number | 'auto' | undefined> = {
-  etherlink: undefined,
-  main: undefined,
-  sepolia: undefined,
+export const rpcUrls: ConfigPerNetwork<RpcUrl> = Object.entries(
+  defaultRpcUrls,
+).reduce((acc, [networkKey, rpcUrl]) => {
+  const network = networkKey as Network;
+  acc[network] = getRpcUrl(network) ?? rpcUrl;
+  return acc;
+}, {} as ConfigPerNetwork<RpcUrl>);
+
+export const gasPrices: PartialConfigPerNetwork<number | 'auto' | undefined> = {
   hardhat: 'auto',
   base: 'auto',
   localhost: 70 * GWEI,
-  oasis: undefined,
-  plume: undefined,
-  rootstock: undefined,
-  arbitrum: undefined,
-  tacTestnet: undefined,
-  hyperevm: undefined,
-  katana: undefined,
-  tac: undefined,
-  xrplevm: undefined,
-  zerog: undefined,
-  plasma: undefined,
-  arbitrumSepolia: undefined,
-  bsc: undefined,
-  scroll: undefined,
-  monad: undefined,
-  injective: undefined,
 };
 
 export const chainIds: ConfigPerNetwork<number> = {
@@ -101,6 +102,8 @@ export const chainIds: ConfigPerNetwork<number> = {
   scroll: 534352,
   monad: 143,
   injective: 1776,
+  optimism: 10,
+  robinhood: 4663,
 };
 
 export const mnemonics: ConfigPerNetwork<string | undefined> = {
@@ -126,114 +129,37 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   scroll: MNEMONIC_PROD,
   monad: MNEMONIC_PROD,
   injective: MNEMONIC_PROD,
+  optimism: MNEMONIC_PROD,
+  robinhood: MNEMONIC_PROD,
 };
 
-export const gases: ConfigPerNetwork<number | undefined> = {
-  main: undefined,
-  sepolia: undefined,
-  hardhat: undefined,
-  etherlink: undefined,
-  localhost: undefined,
-  base: undefined,
-  oasis: undefined,
-  plume: undefined,
-  rootstock: undefined,
-  arbitrum: undefined,
-  tacTestnet: undefined,
-  hyperevm: undefined,
-  katana: undefined,
-  tac: undefined,
-  xrplevm: undefined,
-  zerog: undefined,
-  plasma: undefined,
-  arbitrumSepolia: undefined,
-  bsc: undefined,
-  scroll: undefined,
-  monad: undefined,
-  injective: undefined,
-};
+export const gases: PartialConfigPerNetwork<number | undefined> = {};
 
-export const timeouts: ConfigPerNetwork<number | undefined> = {
-  main: undefined,
+export const timeouts: PartialConfigPerNetwork<number | undefined> = {
   sepolia: 999999,
-  hardhat: undefined,
   localhost: 999999,
-  etherlink: undefined,
-  base: undefined,
-  oasis: undefined,
-  plume: undefined,
-  rootstock: undefined,
-  arbitrum: undefined,
-  tacTestnet: undefined,
-  hyperevm: undefined,
-  katana: undefined,
-  tac: undefined,
-  xrplevm: undefined,
-  zerog: undefined,
-  plasma: undefined,
-  arbitrumSepolia: undefined,
-  bsc: undefined,
-  scroll: undefined,
-  monad: undefined,
-  injective: undefined,
 };
 
-export const blockGasLimits: ConfigPerNetwork<number | undefined> = {
-  main: undefined,
-  sepolia: undefined,
-  etherlink: undefined,
+export const blockGasLimits: PartialConfigPerNetwork<number | undefined> = {
   hardhat: 300 * 10 ** 6,
-  localhost: undefined,
-  base: undefined,
-  oasis: undefined,
-  plume: undefined,
-  rootstock: undefined,
-  arbitrum: undefined,
-  tacTestnet: undefined,
-  hyperevm: undefined,
-  katana: undefined,
-  tac: undefined,
-  xrplevm: undefined,
-  zerog: undefined,
-  plasma: undefined,
-  arbitrumSepolia: undefined,
-  bsc: undefined,
-  scroll: undefined,
-  monad: undefined,
-  injective: undefined,
 };
 
-export const initialBasesFeePerGas: ConfigPerNetwork<number | undefined> = {
-  main: undefined,
-  etherlink: undefined,
-  sepolia: undefined,
+export const initialBasesFeePerGas: PartialConfigPerNetwork<
+  number | undefined
+> = {
   hardhat: 0,
-  localhost: undefined,
-  base: undefined,
-  oasis: undefined,
-  plume: undefined,
-  rootstock: undefined,
-  arbitrum: undefined,
-  tacTestnet: undefined,
-  hyperevm: undefined,
-  katana: undefined,
-  tac: undefined,
-  xrplevm: undefined,
-  zerog: undefined,
-  plasma: undefined,
-  arbitrumSepolia: undefined,
-  bsc: undefined,
-  scroll: undefined,
-  monad: undefined,
-  injective: undefined,
 };
 
-export const blockFinality: PartialConfigPerNetwork<number> = {
-  main: 15,
+export const layerZeroBlockFinality: PartialConfigPerNetwork<number> = {
+  main: 70,
   sepolia: 2,
   arbitrumSepolia: 1,
-  monad: 10,
-  katana: 20,
+  monad: 3600,
+  katana: 1200,
+  scroll: 800,
+  optimism: 650,
+  plasma: 1800,
+  zerog: 6000,
 };
 
 export const axelarChainNames: PartialConfigPerNetwork<string> = {
@@ -262,6 +188,7 @@ export const layerZeroEids: PartialConfigPerNetwork<EndpointId> = {
   arbitrumSepolia: EndpointId.ARBSEP_V2_TESTNET,
   scroll: EndpointId.SCROLL_V2_MAINNET,
   monad: EndpointId.MONAD_V2_MAINNET,
+  optimism: EndpointId.OPTIMISM_V2_MAINNET,
 };
 
 export const layerZeroEidToNetwork = Object.fromEntries(
@@ -280,7 +207,6 @@ export const chainIdToNetwork = Object.fromEntries(
 
 export const getBaseNetworkConfig = (
   network: Network,
-  tags: Array<string> = [MOCK_AGGREGATOR_NETWORK_TAG],
 ): HttpNetworkUserConfig => ({
   accounts: mnemonics[network]
     ? {
@@ -291,13 +217,12 @@ export const getBaseNetworkConfig = (
   gas: gases[network],
   gasPrice: gasPrices[network],
   timeout: timeouts[network],
-  tags,
 });
 
 export const getLocalNetworkConfig = (
   network: Network,
 ): Omit<HardhatNetworkUserConfig, 'accounts'> => ({
-  ...getBaseNetworkConfig(network, []),
+  ...getBaseNetworkConfig(network),
   blockGasLimit: blockGasLimits[network],
   initialBaseFeePerGas: initialBasesFeePerGas[network],
   eid: undefined as never,
@@ -306,13 +231,11 @@ export const getLocalNetworkConfig = (
 
 export const getNetworkConfig = (
   network: Network,
-  tags: Array<string> = [MOCK_AGGREGATOR_NETWORK_TAG],
   forkingNetwork?: Network,
 ): HttpNetworkUserConfig => ({
-  ...getBaseNetworkConfig(forkingNetwork ?? network, tags),
+  ...getBaseNetworkConfig(forkingNetwork ?? network),
   url: rpcUrls[network],
   chainId: chainIds[network],
-  saveDeployments: true,
   eid: layerZeroEids[network],
 });
 
@@ -323,8 +246,6 @@ export const getForkNetworkConfig = (
   accounts: {
     mnemonic: mnemonics[network],
   },
-  live: false,
-  saveDeployments: true,
   mining: {
     auto: false,
     interval: 1000,
@@ -338,8 +259,6 @@ export const getForkNetworkConfig = (
 export const getHardhatNetworkConfig = (): HardhatNetworkUserConfig => ({
   ...getLocalNetworkConfig('hardhat'),
   accounts: mnemonics.hardhat ? { mnemonic: mnemonics.hardhat } : undefined,
-  saveDeployments: true,
-  live: false,
   allowUnlimitedContractSize: true,
 });
 

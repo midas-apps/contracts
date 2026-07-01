@@ -7,7 +7,6 @@ import {
   PaymentTokenName,
   Network as MidasNetwork,
 } from '../config/types';
-import { Logger } from '../helpers/logger';
 
 import 'hardhat/types/runtime';
 
@@ -21,7 +20,8 @@ declare module 'hardhat/types/runtime' {
     action?: string;
     skipValidation?: boolean;
     aggregatorType?: 'numerator' | 'denominator';
-    logger: Logger & {
+    addressBookKeys?: string[];
+    logger: {
       // default: false
       logToFile: boolean;
       // default: logs/
@@ -56,7 +56,10 @@ declare module 'hardhat/types/runtime' {
           chainId?: number;
           idempotenceId?: string;
         },
-      ) => Promise<{ tx: TransactionResponse } | { payload: unknown }>;
+      ) => Promise<
+        | { type: 'hardhatSigner'; tx: TransactionResponse }
+        | { type: 'customSigner'; payload: unknown }
+      >;
     }>;
   }
 }

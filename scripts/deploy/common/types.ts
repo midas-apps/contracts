@@ -1,20 +1,35 @@
 import { BigNumberish } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { AddFeeWaivedConfig, AddPaymentTokensConfig } from './common-vault';
 import {
+  AddFeeWaivedConfig,
+  AddPaymentTokensConfig,
+  SetAaveConfigConfig,
+  SetMorphoConfigConfig,
+} from './common-vault';
+import {
+  DeployCustomAggregatorAdjustedConfig,
   DeployCustomAggregatorConfig,
-  DeployCustomAggregatorDiscountedConfig,
   DeployDataFeedConfig,
   SetRoundDataConfig,
 } from './data-feed';
-import { DeployDvRegularConfig, DeployDvUstbConfig } from './dv';
+import {
+  DeployDvAaveConfig,
+  DeployDvMorphoConfig,
+  DeployDvMTokenConfig,
+  DeployDvRegularConfig,
+  DeployDvUstbConfig,
+} from './dv';
+import type { GreenlistConfig } from './greenlist';
 import {
   GrantAllTokenRolesConfig,
   GrantDefaultAdminRoleToAcAdminConfig,
 } from './roles';
 import {
+  DeployRvAaveConfig,
   DeployRvBuidlConfig,
+  DeployRvMorphoConfig,
+  DeployRvMTokenConfig,
   DeployRvRegularConfig,
   DeployRvSwapperConfig,
 } from './rv';
@@ -60,7 +75,7 @@ export type LayerZeroConfig = {
   delegate: string;
   owner?: string;
   rateLimitConfig?: {
-    default: Omit<RateLimiter.RateLimitConfigStruct, 'dstEid'>;
+    default?: Omit<RateLimiter.RateLimitConfigStruct, 'dstEid'>;
     overrides?: PartialConfigPerNetwork<
       Omit<RateLimiter.RateLimitConfigStruct, 'dstEid'>
     >;
@@ -77,15 +92,20 @@ export type PostDeployConfig = {
   grantRoles?: GrantAllTokenRolesConfig;
   setRoundData?: SetRoundDataConfig;
   addFeeWaived?: AddFeeWaivedConfig;
+  greenlist?: GreenlistConfig;
   pauseFunctions?: PauseFunctionsConfig;
   layerZero?: LayerZeroConfig;
   axelarIts?: AxelarItsConfig;
+  setAaveConfig?: SetAaveConfigConfig;
+  setMorphoConfig?: SetMorphoConfigConfig;
 };
 
 export type DeploymentConfig = {
   genericConfigs: {
     customAggregator?: DeployCustomAggregatorConfig;
-    customAggregatorDiscounted?: DeployCustomAggregatorDiscountedConfig;
+    customAggregatorAdjusted?: DeployCustomAggregatorAdjustedConfig;
+    customAggregatorAdjustedDv?: DeployCustomAggregatorAdjustedConfig;
+    customAggregatorAdjustedRv?: DeployCustomAggregatorAdjustedConfig;
     dataFeed?: DeployDataFeedConfig;
   };
   networkConfigs: Record<
@@ -93,9 +113,15 @@ export type DeploymentConfig = {
     {
       dv?: DeployDvRegularConfig;
       dvUstb?: DeployDvUstbConfig;
+      dvAave?: DeployDvAaveConfig;
+      dvMorpho?: DeployDvMorphoConfig;
+      dvMToken?: DeployDvMTokenConfig;
       rv?: DeployRvRegularConfig;
       rvBuidl?: DeployRvBuidlConfig;
       rvSwapper?: DeployRvSwapperConfig;
+      rvAave?: DeployRvAaveConfig;
+      rvMorpho?: DeployRvMorphoConfig;
+      rvMToken?: DeployRvMTokenConfig;
       postDeploy?: PostDeployConfig;
     }
   >;
@@ -131,10 +157,5 @@ export type NetworkDeploymentConfig = Record<
     timelock?: DeployTimelockConfig;
   }
 >;
-
-export type RvType =
-  | 'redemptionVault'
-  | 'redemptionVaultBuidl'
-  | 'redemptionVaultSwapper';
 
 export type DeployFunction = (hre: HardhatRuntimeEnvironment) => Promise<void>;

@@ -1,8 +1,9 @@
+import { mine } from '@nomicfoundation/hardhat-network-helpers';
 import { task } from 'hardhat/config';
 
 import path from 'path';
 
-import { extendWithContext } from '../config';
+import { chainIds, ENV, extendWithContext, Network, rpcUrls } from '../config';
 import { isMTokenName, isPaymentTokenName } from '../helpers/utils';
 
 import './layerzero';
@@ -14,19 +15,51 @@ task('runscript', 'Runs a user-defined script')
   .addOptionalParam('mtoken', 'MToken')
   .addOptionalParam('ptoken', 'Payment Token')
   .addOptionalParam('action', 'Timelock Action')
-  .addOptionalParam('skipvalidation', 'Skip Validation', 'false')
+  .addOptionalParam('customSignerScript', 'Custom Signer Script')
+  .addOptionalParam('skipValidation', 'Skip Validation', 'false')
   .addOptionalParam('aggregatorType', 'Aggregator Type')
   .addOptionalParam('logToFile', 'Log to file')
   .addOptionalParam('logsFolderPath', 'Logs folder path')
+  .addOptionalParam('forkingNetwork', 'Forking Network')
   .addOptionalParam('originalNetwork', 'Original Network')
+  .addOptionalParam(
+    'keys',
+    'Comma-separated list of address book keys to include (e.g. layerZero)',
+  )
   .setAction(async (taskArgs, hre) => {
     const mtoken = taskArgs.mtoken;
     const ptoken = taskArgs.ptoken;
     const action = taskArgs.action;
+
+    const forkingNetwork: Network =
+      taskArgs.forkingNetwork ?? ENV.FORKING_NETWORK;
+
+    if (forkingNetwork) {
+      console.log('Forking network', forkingNetwork);
+      // Fork the specified network
+      await hre.network.provider.request({
+        method: 'hardhat_reset',
+        params: [
+          {
+            forking: {
+              jsonRpcUrl: rpcUrls[forkingNetwork],
+            },
+          },
+        ],
+      });
+
+      await mine();
+
+      const chainId = chainIds[forkingNetwork];
+      hre.network.config.chainId = chainId;
+      hre.network.name = forkingNetwork;
+    }
+
     const originalNetwork = taskArgs.originalNetwork;
+    const keys = taskArgs.keys;
 
     const scriptPath = taskArgs.path;
-    const skipValidation = taskArgs.skipvalidation;
+    const skipValidation = taskArgs.skipValidation;
 
     hre.skipValidation = (skipValidation ?? 'false') === 'true';
     hre.aggregatorType = taskArgs.aggregatorType;
@@ -63,6 +96,10 @@ task('runscript', 'Runs a user-defined script')
       hre.layerZero = {
         originalNetwork,
       };
+    }
+
+    if (keys) {
+      hre.addressBookKeys = keys.split(',').map((k: string) => k.trim());
     }
 
     const scriptPathResolved = path.resolve(scriptPath);

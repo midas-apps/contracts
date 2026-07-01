@@ -140,6 +140,13 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           maxAnswer: parseUnits('1.003', 8),
         },
       },
+      rlusd: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
       wbtc: {
         dataFeed: {
           healthyDiff: 12 * 60 * 60,
@@ -183,9 +190,23 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
       },
       susde: {
         dataFeed: {
-          healthyDiff: constants.MaxUint256,
-          minAnswer: parseUnits('1.17454296', 18),
-          maxAnswer: parseUnits('1.3', 18),
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('1', 8),
+          maxAnswer: parseUnits('2', 8),
+        },
+      },
+      usdg: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+      pyusd: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
         },
       },
       weeth: {
@@ -361,6 +382,18 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           healthyDiff: 24 * 60 * 60,
           minAnswer: parseUnits('0.997', 8),
           maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+    },
+    [chainIds.robinhood]: {
+      usdg: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+        postDeploy: {
+          setRoundData: { data: parseUnits('1', 8) },
         },
       },
     },
@@ -786,8 +819,74 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
       yinj: {
         dataFeed: {
           healthyDiff: constants.MaxUint256,
-          minAnswer: parseUnits('1', 8),
-          maxAnswer: parseUnits('1.02', 8),
+          minAnswer: parseUnits('1', 18),
+          maxAnswer: parseUnits('1.1', 18),
+        },
+      },
+    },
+    [chainIds.optimism]: {
+      weth: {
+        customAggregator: {
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+          description: 'WETH/ETH',
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.99999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+      wsteth: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('1.23056234', 18),
+          maxAnswer: parseUnits('1.35', 18),
+        },
+      },
+      weeth: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('1.09132691', 18),
+          maxAnswer: parseUnits('1.2', 18),
+        },
+      },
+      eurc: {
+        customAggregator: {
+          description: 'EURC/EUR',
+          minAnswer: parseUnits('0.999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+      usdc: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+      usdt: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
         },
       },
     },

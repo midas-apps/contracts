@@ -15,6 +15,9 @@ import {
   DataFeedTest__factory,
   DepositVault,
   DepositVaultTest,
+  DepositVaultWithAaveTest,
+  DepositVaultWithMorphoTest,
+  DepositVaultWithMTokenTest,
   DepositVaultWithUSTBTest,
   ERC20,
   ERC20__factory,
@@ -22,7 +25,13 @@ import {
 } from '../../typechain-types';
 
 type CommonParamsDeposit = {
-  depositVault: DepositVault | DepositVaultTest | DepositVaultWithUSTBTest;
+  depositVault:
+    | DepositVault
+    | DepositVaultTest
+    | DepositVaultWithAaveTest
+    | DepositVaultWithMorphoTest
+    | DepositVaultWithMTokenTest
+    | DepositVaultWithUSTBTest;
   mTBILL: MToken;
 } & Pick<
   Awaited<ReturnType<typeof defaultDeploy>>,
@@ -196,9 +205,11 @@ export const depositRequestTest = async (
     mTokenToUsdDataFeed,
     waivedFee,
     customRecipient,
+    checkTokensReceiver = true,
   }: CommonParamsDeposit & {
     waivedFee?: boolean;
     customRecipient?: AccountOrContract;
+    checkTokensReceiver?: boolean;
   },
   tokenIn: ERC20 | string,
   amountUsdIn: number,
@@ -315,9 +326,11 @@ export const depositRequestTest = async (
   expect(request.tokenIn).eq(tokenContract.address);
 
   expect(latestRequestIdAfter).eq(latestRequestIdBefore.add(1));
-  expect(balanceAfterContract).eq(
-    balanceBeforeContract.add(amountInWithoutFee),
-  );
+  if (checkTokensReceiver) {
+    expect(balanceAfterContract).eq(
+      balanceBeforeContract.add(amountInWithoutFee),
+    );
+  }
   expect(feeReceiverBalanceAfterContract).eq(
     feeReceiverBalanceBeforeContract.add(fee),
   );
@@ -714,7 +727,13 @@ export const setMaxSupplyCapTest = async (
 export const getFeePercent = async (
   sender: string,
   token: string,
-  depositVault: DepositVault | DepositVaultTest | DepositVaultWithUSTBTest,
+  depositVault:
+    | DepositVault
+    | DepositVaultTest
+    | DepositVaultWithAaveTest
+    | DepositVaultWithMorphoTest
+    | DepositVaultWithMTokenTest
+    | DepositVaultWithUSTBTest,
   isInstant: boolean,
 ) => {
   const tokenConfig = await depositVault.tokensConfig(token);
@@ -733,7 +752,13 @@ export const getFeePercent = async (
 export const calcExpectedMintAmount = async (
   sender: SignerWithAddress,
   token: string,
-  depositVault: DepositVault | DepositVaultTest | DepositVaultWithUSTBTest,
+  depositVault:
+    | DepositVault
+    | DepositVaultTest
+    | DepositVaultWithAaveTest
+    | DepositVaultWithMorphoTest
+    | DepositVaultWithMTokenTest
+    | DepositVaultWithUSTBTest,
   mTokenRate: BigNumber,
   amountIn: BigNumber,
   isInstant: boolean,
