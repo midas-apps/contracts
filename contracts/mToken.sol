@@ -356,7 +356,7 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         PauseUtilsLibrary.requireNotPaused(accessControl, msg.sig);
 
         if (to != address(0)) {
-            if (!_inClawback) {
+            if (!_inClawback && from != address(0)) {
                 _onlyNotBlacklisted(from);
             }
             _onlyNotBlacklisted(to);
