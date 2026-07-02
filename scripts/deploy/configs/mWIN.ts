@@ -43,6 +43,20 @@ export const mWINDeploymentConfig: DeploymentConfig = {
           redemptionVaultType: 'redemptionVaultUstb',
         },
       },
+      rvMToken: {
+        type: 'MTOKEN',
+        redemptionVault: '0x569D7dccBF6923350521ecBC28A555A500c4f0Ec',
+        feeReceiver: '0x1ED5C5AbfF8d97dBAf9D9C61C3ee744c1b9C51ac',
+        tokensReceiver: '0x1ED5C5AbfF8d97dBAf9D9C61C3ee744c1b9C51ac',
+        requestRedeemer: '0xF81295463396d709814a8F414F198b4aA7902737',
+        instantDailyLimit: parseUnits('500000', 18),
+        instantFee: parseUnits('0.5', 2),
+        variationTolerance: parseUnits('0.2', 2),
+        enableSanctionsList: true,
+        minAmount: parseUnits('1', 18),
+        fiatAdditionalFee: parseUnits('0.1', 2),
+        fiatFlatFee: parseUnits('30', 18),
+      },
       postDeploy: {
         addPaymentTokens: {
           vaults: [
@@ -51,6 +65,10 @@ export const mWINDeploymentConfig: DeploymentConfig = {
                 {
                   token: 'usdc',
                   allowance: parseUnits('1000000000', 18),
+                },
+                {
+                  token: 'ausd',
+                  allowance: parseUnits('500000000', 18),
                 },
                 // {
                 //   token: 'rlusd',
@@ -68,6 +86,15 @@ export const mWINDeploymentConfig: DeploymentConfig = {
               ],
               type: 'redemptionVaultSwapper',
             },
+            {
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  allowance: parseUnits('1000000000', 18),
+                },
+              ],
+              type: 'redemptionVaultMToken',
+            },
           ],
         },
         grantRoles: {
@@ -81,12 +108,20 @@ export const mWINDeploymentConfig: DeploymentConfig = {
         addFeeWaived: [
           {
             fromVault: { mToken: 'mTBILL', type: 'redemptionVaultUstb' },
-            toWaive: [{ mToken: 'mWIN', type: 'redemptionVaultSwapper' }],
+            toWaive: [
+              { mToken: 'mWIN', type: 'redemptionVaultSwapper' },
+              { mToken: 'mWIN', type: 'redemptionVaultMToken' },
+            ],
           },
         ],
         pauseFunctions: {
           depositVault: ['depositRequest', 'depositRequestWithCustomRecipient'],
           redemptionVaultSwapper: ['redeemFiatRequest'],
+          redemptionVaultMToken: [
+            'redeemFiatRequest',
+            'redeemRequest',
+            'redeemRequestWithCustomRecipient',
+          ],
         },
       },
     },
