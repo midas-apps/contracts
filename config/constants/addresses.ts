@@ -601,6 +601,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xa27c1658730e4FAFb7fB8B257a64BbB6A0ea4077',
       depositVault: '0xF7F1b944FCDe7805F6Ef3088817145d2eB667db4',
       redemptionVaultSwapper: '0x605704d7b36d1677a8d242ded68eD505523c7924',
+      redemptionVaultMToken: '0x14fECa41FB9541Fd8f61a6bA6304c5b706709fca',
     },
     qHVNUSD: {
       token: '0xE68f4e819aD09F2E0e668297cC1a905994808D38',
