@@ -66,6 +66,10 @@ export const mWINDeploymentConfig: DeploymentConfig = {
                   token: 'usdc',
                   allowance: parseUnits('1000000000', 18),
                 },
+                {
+                  token: 'ausd',
+                  allowance: parseUnits('500000000', 18),
+                },
                 // {
                 //   token: 'rlusd',
                 //   allowance: parseUnits('500000000', 18),

@@ -110,6 +110,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         token: '0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD',
         dataFeed: '0x5aA9E745904df263b8BDcC2B0205c8e665631ce6',
       },
+      ausd: {
+        aggregator: '0xB00341502DfEA6Ced8A5786b4059d29dA5E4D1FD',
+        token: '0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a',
+        dataFeed: '0x01BA6cf294566A0033f84d54457315DbcF41bd1A',
+      },
       dai: {
         aggregator: '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9',
         token: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
