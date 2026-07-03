@@ -5,6 +5,32 @@ import { UpgradeConfig } from '../common/types';
 
 export const upgradeConfigs: UpgradeConfig = {
   upgrades: {
+    'mfone-rv-swapper-to-mtoken': {
+      vaults: {
+        [chainIds.sepolia]: {
+          overrides: {
+            mFONE: {
+              overrides: {
+                redemptionVaultSwapper: {
+                  vaultTypeTo: 'redemptionVaultMToken',
+                },
+              },
+            },
+          },
+        },
+        [chainIds.main]: {
+          overrides: {
+            mFONE: {
+              overrides: {
+                redemptionVaultSwapper: {
+                  vaultTypeTo: 'redemptionVaultMToken',
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     'mwin-separate-whitelist': {
       vaults: {
         [chainIds.main]: {

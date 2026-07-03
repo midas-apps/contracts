@@ -143,4 +143,9 @@ export const verifyConfig: VerifyConfigPerNetwork = {
     type: 'etherscan',
     browserUrl: 'https://optimistic.etherscan.io',
   },
+  robinhood: {
+    type: 'custom',
+    apiUrl: 'https://robinhoodchain.blockscout.com/api',
+    browserUrl: 'https://robinhoodchain.blockscout.com',
+  },
 };

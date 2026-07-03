@@ -60,6 +60,7 @@ import { mXRPDeploymentConfig } from './mXRP';
 import { obeatUSDDeploymentConfig } from './obeatUSD';
 import { plUSDDeploymentConfig } from './plUSD';
 import { qHVNUSDDeploymentConfig } from './qHVNUSD';
+import { sGoldDeploymentConfig } from './sGold';
 import { sLINJDeploymentConfig } from './sLINJ';
 import { splUSDDeploymentConfig } from './splUSD';
 import { stockMarketTRBasisTradeDeploymentConfig } from './stockMarketTRBasisTrade';
@@ -69,6 +70,7 @@ import { TACmMEVDeploymentConfig } from './tac/TACmMEV';
 import { tacTONDeploymentConfig } from './tacTON';
 import { tBTCDeploymentConfig } from './tBTC';
 import { tETHDeploymentConfig } from './tETH';
+import { turtlePSTDeploymentConfig } from './turtlePST';
 import { tUSDeDeploymentConfig } from './tUSDe';
 import { weEURDeploymentConfig } from './weEUR';
 import { wNLPDeploymentConfig } from './wNLP';
@@ -159,4 +161,6 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mWIN: mWINDeploymentConfig,
   qHVNUSD: qHVNUSDDeploymentConfig,
   mGLO: mGLODeploymentConfig,
+  sGold: sGoldDeploymentConfig,
+  turtlePST: turtlePSTDeploymentConfig,
 };

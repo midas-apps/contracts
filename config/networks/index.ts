@@ -61,6 +61,8 @@ const defaultRpcUrls: ConfigPerNetwork<RpcUrl> = {
   optimism: ALCHEMY_KEY
     ? `https://opt-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
     : `https://optimism-mainnet.infura.io/v3/${INFURA_KEY}`,
+  // TODO: Put real robinhood RPC URL when provided
+  robinhood: 'https://rpc.robinhood.invalid',
 };
 
 export const rpcUrls: ConfigPerNetwork<RpcUrl> = Object.entries(
@@ -101,6 +103,7 @@ export const chainIds: ConfigPerNetwork<number> = {
   monad: 143,
   injective: 1776,
   optimism: 10,
+  robinhood: 4663,
 };
 
 export const mnemonics: ConfigPerNetwork<string | undefined> = {
@@ -127,6 +130,7 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   monad: MNEMONIC_PROD,
   injective: MNEMONIC_PROD,
   optimism: MNEMONIC_PROD,
+  robinhood: MNEMONIC_PROD,
 };
 
 export const gases: PartialConfigPerNetwork<number | undefined> = {};
