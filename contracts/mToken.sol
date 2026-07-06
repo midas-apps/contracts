@@ -56,7 +56,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     /**
      * @inheritdoc IMToken
      */
-    function forceBurn(address from, uint256 amount)
+    function burnGoverned(address from, uint256 amount)
         external
         onlyRole(_burnerRole(), msg.sender)
     {

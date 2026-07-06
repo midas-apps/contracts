@@ -635,7 +635,7 @@ export const tokenContractsTests = (token: MTokenName) => {
         });
       });
 
-      it('forceBurn(...) when address is blacklisted', async () => {
+      it('burnGoverned(...) when address is blacklisted', async () => {
         const { owner, regularAccounts, accessControl, tokenContract } =
           await deployMTokenWithFixture();
 
@@ -651,13 +651,13 @@ export const tokenContractsTests = (token: MTokenName) => {
           blacklisted.address,
         );
         await expect(
-          tokenContract.connect(owner).forceBurn(blacklisted.address, 1),
+          tokenContract.connect(owner).burnGoverned(blacklisted.address, 1),
         ).to.not.reverted;
         const balanceAfter = await tokenContract.balanceOf(blacklisted.address);
         expect(balanceBefore.sub(balanceAfter)).eq(1);
       });
 
-      it('should fail: forceBurn(...) when caller lacks burner role', async () => {
+      it('should fail: burnGoverned(...) when caller lacks burner role', async () => {
         const { owner, regularAccounts, tokenContract } =
           await deployMTokenWithFixture();
 
@@ -667,7 +667,7 @@ export const tokenContractsTests = (token: MTokenName) => {
         await mint({ tokenContract, owner }, target, 1);
 
         await expect(
-          tokenContract.connect(unauthorized).forceBurn(target.address, 1),
+          tokenContract.connect(unauthorized).burnGoverned(target.address, 1),
         ).revertedWith(acErrors.WMAC_HASNT_ROLE);
       });
 

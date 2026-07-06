@@ -31,7 +31,7 @@ interface IMToken is IERC20Upgradeable {
      * @param from address to burn tokens from
      * @param amount amount to burn
      */
-    function forceBurn(address from, uint256 amount) external;
+    function burnGoverned(address from, uint256 amount) external;
 
     /**
      * @notice updates contract`s metadata.
