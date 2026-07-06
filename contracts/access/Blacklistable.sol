@@ -2,7 +2,7 @@
 pragma solidity 0.8.34;
 
 import {WithMidasAccessControl} from "./WithMidasAccessControl.sol";
-import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.sol";
+import {MidasAuthLibrary} from "../libraries/MidasAuthLibrary.sol";
 
 /**
  * @title Blacklistable
@@ -28,10 +28,10 @@ abstract contract Blacklistable is WithMidasAccessControl {
      * @dev checks that a given `account` doesnt have blacklisted role
      */
     function _onlyNotBlacklisted(address account) internal view {
-        AccessControlUtilsLibrary.requireNotBlacklisted(
+        MidasAuthLibrary.requireNotBlacklisted(
             accessControl,
             account,
-            AccessControlUtilsLibrary.DEFAULT_BLACKLISTED_ROLE
+            MidasAuthLibrary.DEFAULT_BLACKLISTED_ROLE
         );
     }
 }

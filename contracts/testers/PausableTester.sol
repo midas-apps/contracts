@@ -2,7 +2,7 @@
 pragma solidity 0.8.34;
 
 import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
-import {PauseUtilsLibrary} from "../libraries/PauseUtilsLibrary.sol";
+import {PauseGuardsLibrary} from "../libraries/PauseGuardsLibrary.sol";
 
 contract PausableTester is WithMidasAccessControl {
     bytes32 private _contractAdminRoleOverride;
@@ -16,11 +16,11 @@ contract PausableTester is WithMidasAccessControl {
     }
 
     function requireFnNotPaused(bytes4 fn) external {
-        PauseUtilsLibrary.requireFnNotPaused(accessControl, fn);
+        PauseGuardsLibrary.requireFnNotPaused(accessControl, fn);
     }
 
     function requireNotPaused(bytes4 fn) external {
-        PauseUtilsLibrary.requireNotPaused(accessControl, fn);
+        PauseGuardsLibrary.requireNotPaused(accessControl, fn);
     }
 
     function contractAdminRole() public view override returns (bytes32) {

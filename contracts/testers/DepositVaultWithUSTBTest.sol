@@ -13,7 +13,7 @@ contract DepositVaultWithUSTBTest is
     constructor()
         DepositVaultWithUSTB(
             keccak256("DEPOSIT_VAULT_ADMIN_ROLE"),
-            AccessControlUtilsLibrary.DEFAULT_GREENLISTED_ROLE
+            MidasAuthLibrary.DEFAULT_GREENLISTED_ROLE
         )
     {}
 

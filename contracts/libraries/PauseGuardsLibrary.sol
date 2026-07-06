@@ -5,11 +5,11 @@ import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
 import {IMidasPauseManager} from "../interfaces/IMidasPauseManager.sol";
 
 /**
- * @title PauseUtilsLibrary
+ * @title PauseGuardsLibrary
  * @notice library for checking pause statuses
  * @author RedDuck Software
  */
-library PauseUtilsLibrary {
+library PauseGuardsLibrary {
     /**
      * @notice error thrown when a function is paused
      * @param contractAddr contract address

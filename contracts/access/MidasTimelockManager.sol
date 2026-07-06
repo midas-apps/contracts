@@ -4,7 +4,7 @@ pragma solidity 0.8.34;
 import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
 import {TimelockControllerUpgradeable as TimelockController} from "@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol";
 import {IMidasTimelockManager, GetOperationStatusResult, TimelockOperationStatus} from "../interfaces/IMidasTimelockManager.sol";
-import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.sol";
+import {MidasAuthLibrary} from "../libraries/MidasAuthLibrary.sol";
 import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
 import {IMidasPauseManager} from "../interfaces/IMidasPauseManager.sol";
 import {EnumerableSetUpgradeable as EnumerableSet} from "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
@@ -20,7 +20,7 @@ contract MidasTimelockManager is
     WithMidasAccessControl,
     ReentrancyGuard
 {
-    using AccessControlUtilsLibrary for IMidasAccessControl;
+    using MidasAuthLibrary for IMidasAccessControl;
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
@@ -148,7 +148,7 @@ contract MidasTimelockManager is
     modifier onlyContractAdminNoFunctionRole() {
         _validateFunctionAccessWithTimelock(
             contractAdminRole(),
-            AccessControlUtilsLibrary.NULL_DELAY,
+            MidasAuthLibrary.NULL_DELAY,
             false,
             msg.sender,
             false

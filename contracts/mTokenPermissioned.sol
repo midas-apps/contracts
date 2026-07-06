@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import {AccessControlUtilsLibrary} from "./libraries/AccessControlUtilsLibrary.sol";
+import {MidasAuthLibrary} from "./libraries/MidasAuthLibrary.sol";
 
 import {mToken} from "./mToken.sol";
 
@@ -73,7 +73,7 @@ contract mTokenPermissioned is mToken {
      * @dev checks that a given `account` has `greenlistedRole()`
      */
     function _onlyGreenlisted(address account) private view {
-        AccessControlUtilsLibrary.requireGreenlisted(
+        MidasAuthLibrary.requireGreenlisted(
             accessControl,
             account,
             greenlistedRole()

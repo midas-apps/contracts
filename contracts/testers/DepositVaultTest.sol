@@ -4,7 +4,7 @@ pragma solidity 0.8.34;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../DepositVault.sol";
-import "../libraries/AccessControlUtilsLibrary.sol";
+import "../libraries/MidasAuthLibrary.sol";
 import {ManageableVaultTesterBase} from "./ManageableVaultTester.sol";
 
 abstract contract DepositVaultTestBase is
@@ -90,7 +90,7 @@ contract DepositVaultTest is DepositVaultTestBase {
     constructor()
         DepositVault(
             keccak256("DEPOSIT_VAULT_ADMIN_ROLE"),
-            AccessControlUtilsLibrary.DEFAULT_GREENLISTED_ROLE
+            MidasAuthLibrary.DEFAULT_GREENLISTED_ROLE
         )
     {}
 }

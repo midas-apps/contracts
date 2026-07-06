@@ -6,10 +6,10 @@ import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
 import {IMidasTimelockManager} from "../interfaces/IMidasTimelockManager.sol";
 
 /**
- * @title AccessControlUtilsLibrary
+ * @title MidasAuthLibrary
  * @author RedDuck Software
  */
-library AccessControlUtilsLibrary {
+library MidasAuthLibrary {
     /**
      * @notice error when the function permission is not found
      * @param roleUsed role used

@@ -6,7 +6,7 @@ import {IAccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acc
 
 import {MidasInitializable} from "../abstract/MidasInitializable.sol";
 import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
-import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.sol";
+import {MidasAuthLibrary} from "../libraries/MidasAuthLibrary.sol";
 import {TimelockControllerUpgradeable as TimelockController} from "@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol";
 import {IMidasAccessControlManaged} from "../interfaces/IMidasAccessControlManaged.sol";
 
@@ -125,12 +125,8 @@ contract MidasAccessControl is
 
         defaultDelay = _defaultDelay;
 
-        isUserFacingRole[
-            AccessControlUtilsLibrary.DEFAULT_BLACKLISTED_ROLE
-        ] = true;
-        isUserFacingRole[
-            AccessControlUtilsLibrary.DEFAULT_GREENLISTED_ROLE
-        ] = true;
+        isUserFacingRole[MidasAuthLibrary.DEFAULT_BLACKLISTED_ROLE] = true;
+        isUserFacingRole[MidasAuthLibrary.DEFAULT_GREENLISTED_ROLE] = true;
 
         for (uint256 i = 0; i < _userFacingRoles.length; ++i) {
             isUserFacingRole[_userFacingRoles[i]] = true;
@@ -226,7 +222,7 @@ contract MidasAccessControl is
         bytes32 masterRole = _getContractAdminRole(targetContract);
         _validateRoleAccess(masterRole);
 
-        AccessControlUtilsLibrary.requireNotUserFacingRole(this, masterRole);
+        MidasAuthLibrary.requireNotUserFacingRole(this, masterRole);
 
         for (uint256 i = 0; i < params.length; ++i) {
             SetGrantOperatorRoleParams calldata param = params[i];
@@ -528,13 +524,13 @@ contract MidasAccessControl is
             bool /* isDefault */
         )
     {
-        uint32 delay = overrideDelay != AccessControlUtilsLibrary.NULL_DELAY
+        uint32 delay = overrideDelay != MidasAuthLibrary.NULL_DELAY
             ? overrideDelay
             : _roleTimelockDelays[role];
 
-        uint32 actualDelay = delay == AccessControlUtilsLibrary.NULL_DELAY
+        uint32 actualDelay = delay == MidasAuthLibrary.NULL_DELAY
             ? defaultDelay
-            : delay == AccessControlUtilsLibrary.NO_DELAY
+            : delay == MidasAuthLibrary.NO_DELAY
             ? 0
             : delay;
 
@@ -553,7 +549,7 @@ contract MidasAccessControl is
      * @param role role id
      */
     function _validateAndUpdateDelay(bytes32 role, uint32 delay) private {
-        if (delay == AccessControlUtilsLibrary.NULL_DELAY) {
+        if (delay == MidasAuthLibrary.NULL_DELAY) {
             return;
         }
 
@@ -593,11 +589,11 @@ contract MidasAccessControl is
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
         _setRoleAdmin(
-            AccessControlUtilsLibrary.DEFAULT_BLACKLISTED_ROLE,
+            MidasAuthLibrary.DEFAULT_BLACKLISTED_ROLE,
             BLACKLIST_OPERATOR_ROLE
         );
         _setRoleAdmin(
-            AccessControlUtilsLibrary.DEFAULT_GREENLISTED_ROLE,
+            MidasAuthLibrary.DEFAULT_GREENLISTED_ROLE,
             GREENLIST_OPERATOR_ROLE
         );
     }
@@ -607,7 +603,7 @@ contract MidasAccessControl is
      * @param delay delay to validate
      */
     function _validateDelay(uint32 delay) private view {
-        AccessControlUtilsLibrary.validateTimelockDelay(delay);
+        MidasAuthLibrary.validateTimelockDelay(delay);
     }
 
     /**
@@ -640,7 +636,7 @@ contract MidasAccessControl is
         )
     {
         return
-            AccessControlUtilsLibrary.validateFunctionAccessWithTimelock(
+            MidasAuthLibrary.validateFunctionAccessWithTimelock(
                 this,
                 role,
                 overrideDelay,
@@ -663,10 +659,10 @@ contract MidasAccessControl is
         )
     {
         return
-            AccessControlUtilsLibrary.validateFunctionAccessWithTimelock(
+            MidasAuthLibrary.validateFunctionAccessWithTimelock(
                 this,
                 role,
-                AccessControlUtilsLibrary.NULL_DELAY,
+                MidasAuthLibrary.NULL_DELAY,
                 false,
                 _msgSender(),
                 false
@@ -688,10 +684,10 @@ contract MidasAccessControl is
         bytes32 role = _resolveOperatorRole(masterRole, operatorRole, account);
         bool isOperatorRole = role == operatorRole;
 
-        AccessControlUtilsLibrary.validateFunctionAccessWithTimelock(
+        MidasAuthLibrary.validateFunctionAccessWithTimelock(
             this,
             role,
-            AccessControlUtilsLibrary.NULL_DELAY,
+            MidasAuthLibrary.NULL_DELAY,
             isOperatorRole,
             account,
             false
@@ -725,11 +721,11 @@ contract MidasAccessControl is
         }
 
         return
-            AccessControlUtilsLibrary.resolveAccessRole(
+            MidasAuthLibrary.resolveAccessRole(
                 this,
                 masterRole,
                 operatorRole,
-                AccessControlUtilsLibrary.NULL_DELAY
+                MidasAuthLibrary.NULL_DELAY
             );
     }
 

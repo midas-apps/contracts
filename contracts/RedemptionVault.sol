@@ -9,7 +9,7 @@ import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.s
 import {IRedemptionVault, LiquidityProviderLoanRequest, Request, RedemptionVaultInitParams} from "./interfaces/IRedemptionVault.sol";
 import {CommonVaultInitParams, RequestStatus} from "./interfaces/IManageableVault.sol";
 import {ManageableVault} from "./abstract/ManageableVault.sol";
-import {RedemptionVaultUtils} from "./libraries/RedemptionVaultUtils.sol";
+import {RedemptionSwapperHelpersLibrary} from "./libraries/RedemptionSwapperHelpersLibrary.sol";
 
 /**
  * @title RedemptionVault
@@ -970,8 +970,14 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         {
             uint256 mTokenABalance;
 
-            (mTokenARate, mTokenA, mTokenABalance) = RedemptionVaultUtils
-                .getSwapperDetails(_loanSwapperVault, _loanLp);
+            (
+                mTokenARate,
+                mTokenA,
+                mTokenABalance
+            ) = RedemptionSwapperHelpersLibrary.getSwapperDetails(
+                _loanSwapperVault,
+                _loanLp
+            );
 
             grossTokenOutAmount = Math.mulDiv(
                 mTokenABalance,
@@ -1011,7 +1017,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         );
 
         return (
-            RedemptionVaultUtils.redeemInstantSwapper(
+            RedemptionSwapperHelpersLibrary.redeemInstantSwapper(
                 _loanSwapperVault,
                 mTokenA,
                 _loanLp,

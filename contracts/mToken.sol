@@ -5,9 +5,9 @@ import {ERC20PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/toke
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 import {RateLimitLibrary} from "./libraries/RateLimitLibrary.sol";
-import {AccessControlUtilsLibrary} from "./libraries/AccessControlUtilsLibrary.sol";
+import {MidasAuthLibrary} from "./libraries/MidasAuthLibrary.sol";
 import {IMidasAccessControl} from "./interfaces/IMidasAccessControl.sol";
-import {PauseUtilsLibrary} from "./libraries/PauseUtilsLibrary.sol";
+import {PauseGuardsLibrary} from "./libraries/PauseGuardsLibrary.sol";
 import {MidasInitializable} from "./abstract/MidasInitializable.sol";
 import {WithMidasAccessControl} from "./access/WithMidasAccessControl.sol";
 import {Blacklistable} from "./access/Blacklistable.sol";
@@ -20,7 +20,7 @@ import {IMToken} from "./interfaces/IMToken.sol";
 //solhint-disable contract-name-camelcase
 contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     using RateLimitLibrary for RateLimitLibrary.WindowRateLimits;
-    using AccessControlUtilsLibrary for IMidasAccessControl;
+    using MidasAuthLibrary for IMidasAccessControl;
 
     /**
      * @dev role that grants contract admin rights to the contract
@@ -353,7 +353,7 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         address to,
         uint256 amount
     ) internal virtual override(ERC20PausableUpgradeable) {
-        PauseUtilsLibrary.requireNotPaused(accessControl, msg.sig);
+        PauseGuardsLibrary.requireNotPaused(accessControl, msg.sig);
 
         if (to != address(0)) {
             if (!_inClawback && from != address(0)) {

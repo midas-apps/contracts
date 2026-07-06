@@ -7,7 +7,7 @@ import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgrade
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {DecimalsCorrectionLibrary} from "./DecimalsCorrectionLibrary.sol";
 
-library RedemptionVaultUtils {
+library RedemptionSwapperHelpersLibrary {
     using SafeERC20 for IERC20;
     using DecimalsCorrectionLibrary for uint256;
 

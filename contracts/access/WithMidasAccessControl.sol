@@ -3,7 +3,7 @@ pragma solidity 0.8.34;
 
 import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
 import {MidasInitializable} from "../abstract/MidasInitializable.sol";
-import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.sol";
+import {MidasAuthLibrary} from "../libraries/MidasAuthLibrary.sol";
 import {IMidasAccessControlManaged} from "../interfaces/IMidasAccessControlManaged.sol";
 
 /**
@@ -15,7 +15,7 @@ abstract contract WithMidasAccessControl is
     MidasInitializable,
     IMidasAccessControlManaged
 {
-    using AccessControlUtilsLibrary for IMidasAccessControl;
+    using MidasAuthLibrary for IMidasAccessControl;
 
     /**
      * @notice admin role
@@ -47,7 +47,7 @@ abstract contract WithMidasAccessControl is
     modifier onlyRole(bytes32 role, bool validateFunctionRole) {
         _validateFunctionAccessWithTimelock(
             role,
-            AccessControlUtilsLibrary.NULL_DELAY,
+            MidasAuthLibrary.NULL_DELAY,
             false,
             msg.sender,
             validateFunctionRole
@@ -96,7 +96,7 @@ abstract contract WithMidasAccessControl is
     modifier onlyContractAdmin() {
         _validateFunctionAccessWithTimelock(
             contractAdminRole(),
-            AccessControlUtilsLibrary.NULL_DELAY,
+            MidasAuthLibrary.NULL_DELAY,
             false,
             msg.sender,
             true
@@ -156,7 +156,7 @@ abstract contract WithMidasAccessControl is
         accessControl.validateFunctionAccess(
             address(this),
             role,
-            AccessControlUtilsLibrary.NO_DELAY,
+            MidasAuthLibrary.NO_DELAY,
             roleIsFunctionOperator,
             account,
             msg.sig,

@@ -2,7 +2,7 @@
 pragma solidity 0.8.34;
 
 import "../abstract/ManageableVault.sol";
-import "../libraries/AccessControlUtilsLibrary.sol";
+import "../libraries/MidasAuthLibrary.sol";
 
 abstract contract ManageableVaultTesterBase is ManageableVault {
     bytes32 private _contractAdminRoleOverride;
@@ -81,7 +81,7 @@ contract ManageableVaultTester is ManageableVaultTesterBase {
     constructor()
         ManageableVault(
             keccak256("VAULT_ADMIN_ROLE"),
-            AccessControlUtilsLibrary.DEFAULT_GREENLISTED_ROLE
+            MidasAuthLibrary.DEFAULT_GREENLISTED_ROLE
         )
     {}
 }

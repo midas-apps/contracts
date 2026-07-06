@@ -11,7 +11,7 @@ import {ManageableVault} from "./abstract/ManageableVault.sol";
 import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
 import {IRedemptionVault, RedemptionVaultInitParams} from "./interfaces/IRedemptionVault.sol";
 import {CommonVaultInitParams} from "./interfaces/IManageableVault.sol";
-import {RedemptionVaultUtils} from "./libraries/RedemptionVaultUtils.sol";
+import {RedemptionSwapperHelpersLibrary} from "./libraries/RedemptionSwapperHelpersLibrary.sol";
 
 /**
  * @title RedemptionVaultWithMToken
@@ -113,7 +113,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
             uint256 mTokenARate,
             IERC20 mTokenA,
             uint256 mTokenABalance
-        ) = RedemptionVaultUtils.getSwapperDetails(
+        ) = RedemptionSwapperHelpersLibrary.getSwapperDetails(
                 _redemptionVault,
                 address(this)
             );
@@ -139,7 +139,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
         }
 
         return
-            RedemptionVaultUtils.redeemInstantSwapper(
+            RedemptionSwapperHelpersLibrary.redeemInstantSwapper(
                 _redemptionVault,
                 mTokenA,
                 address(this),

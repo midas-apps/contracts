@@ -19,7 +19,7 @@ import {WithSanctionsList} from "../abstract/WithSanctionsList.sol";
 
 import {DecimalsCorrectionLibrary} from "../libraries/DecimalsCorrectionLibrary.sol";
 import {IMidasAccessControlManaged} from "../interfaces/IMidasAccessControlManaged.sol";
-import {PauseUtilsLibrary} from "../libraries/PauseUtilsLibrary.sol";
+import {PauseGuardsLibrary} from "../libraries/PauseGuardsLibrary.sol";
 import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
 
 import {RateLimitLibrary} from "../libraries/RateLimitLibrary.sol";
@@ -730,7 +730,7 @@ abstract contract ManageableVault is
     {
         require(user != address(0), InvalidAddress(user));
         if (!validatePaused) return;
-        PauseUtilsLibrary.requireNotPaused(accessControl, msg.sig);
+        PauseGuardsLibrary.requireNotPaused(accessControl, msg.sig);
     }
 
     /**
@@ -772,7 +772,7 @@ abstract contract ManageableVault is
         address account,
         bool validateFunctionRole
     ) internal view override {
-        PauseUtilsLibrary.requireFnNotPaused(accessControl, msg.sig);
+        PauseGuardsLibrary.requireFnNotPaused(accessControl, msg.sig);
 
         super._validateFunctionAccessWithTimelock(
             role,

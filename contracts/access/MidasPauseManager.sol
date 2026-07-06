@@ -4,7 +4,7 @@ pragma solidity 0.8.34;
 import {WithMidasAccessControl} from "./WithMidasAccessControl.sol";
 import {IMidasAccessControlManaged} from "../interfaces/IMidasAccessControlManaged.sol";
 import {IMidasPauseManager} from "../interfaces/IMidasPauseManager.sol";
-import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.sol";
+import {MidasAuthLibrary} from "../libraries/MidasAuthLibrary.sol";
 import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
 
 /**
@@ -13,7 +13,7 @@ import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
  * @author RedDuck Software
  */
 contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
-    using AccessControlUtilsLibrary for IMidasAccessControl;
+    using MidasAuthLibrary for IMidasAccessControl;
 
     /**
      * @notice static delay for setting pause delay
@@ -337,7 +337,7 @@ contract MidasPauseManager is WithMidasAccessControl, IMidasPauseManager {
      * @param delay delay to validate
      */
     function _validateDelay(uint32 delay) private view {
-        AccessControlUtilsLibrary.validateTimelockDelay(delay);
+        MidasAuthLibrary.validateTimelockDelay(delay);
     }
 
     /**

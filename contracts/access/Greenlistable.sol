@@ -2,7 +2,7 @@
 pragma solidity 0.8.34;
 
 import {WithMidasAccessControl} from "./WithMidasAccessControl.sol";
-import {AccessControlUtilsLibrary} from "../libraries/AccessControlUtilsLibrary.sol";
+import {MidasAuthLibrary} from "../libraries/MidasAuthLibrary.sol";
 
 /**
  * @title Greenlistable
@@ -31,7 +31,7 @@ abstract contract Greenlistable is WithMidasAccessControl {
      */
     modifier onlyGreenlisted(address account) {
         if (greenlistEnabled) {
-            AccessControlUtilsLibrary.requireGreenlisted(
+            MidasAuthLibrary.requireGreenlisted(
                 accessControl,
                 account,
                 greenlistedRole()

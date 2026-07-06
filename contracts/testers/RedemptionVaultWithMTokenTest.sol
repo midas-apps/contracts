@@ -12,7 +12,7 @@ contract RedemptionVaultWithMTokenTest is
     constructor()
         RedemptionVaultWithMToken(
             keccak256("REDEMPTION_VAULT_ADMIN_ROLE"),
-            AccessControlUtilsLibrary.DEFAULT_GREENLISTED_ROLE
+            MidasAuthLibrary.DEFAULT_GREENLISTED_ROLE
         )
     {}
 
