@@ -145,7 +145,7 @@ export const verifyConfig: VerifyConfigPerNetwork = {
   },
   robinhood: {
     type: 'custom',
-    browserUrl: '',
-    apiUrl: '',
+    apiUrl: 'https://robinhoodchain.blockscout.com/api',
+    browserUrl: 'https://robinhoodchain.blockscout.com',
   },
 };

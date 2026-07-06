@@ -93,6 +93,29 @@ export const mLIQUIDITYDeploymentConfig: DeploymentConfig = {
         fiatFlatFee: parseUnits('30'),
         enableSanctionsList: true,
       },
+      dvMorpho: {
+        type: 'MORPHO',
+        enableSanctionsList: true,
+        feeReceiver: '0x846E6379197074Ec2384bdb320bc947BB6E84Bb8',
+        tokensReceiver: '0x89A4c184822823e4A284C50417733F4Bd0d8D716',
+        instantDailyLimit: parseUnits('100000000'),
+        instantFee: parseUnits('0', 2),
+        variationTolerance: parseUnits('0.01', 2),
+        minAmount: parseUnits('0', 18),
+        minMTokenAmountForFirstDeposit: parseUnits('0', 18),
+        maxSupplyCap: constants.MaxUint256,
+      },
+      rvMorpho: {
+        type: 'MORPHO',
+        enableSanctionsList: true,
+        feeReceiver: '0x846E6379197074Ec2384bdb320bc947BB6E84Bb8',
+        tokensReceiver: '0x89A4c184822823e4A284C50417733F4Bd0d8D716',
+        requestRedeemer: '0x13E2c115B4b7B8Eae260431FcA10eBaF33fEa665',
+        instantDailyLimit: parseUnits('100000000', 18),
+        instantFee: parseUnits('0', 2),
+        variationTolerance: parseUnits('0.01', 2),
+        minAmount: parseUnits('0', 18),
+      },
       postDeploy: {
         addPaymentTokens: {
           vaults: [
@@ -118,12 +141,41 @@ export const mLIQUIDITYDeploymentConfig: DeploymentConfig = {
               ],
               type: 'redemptionVaultAave',
             },
+            {
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  fee: 10000,
+                  isStable: true,
+                  allowance: parseUnits('1000000000', 18),
+                },
+              ],
+              type: 'depositVaultMorpho',
+            },
+            {
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  fee: 10000,
+                  isStable: true,
+                  allowance: parseUnits('1000000000', 18),
+                },
+              ],
+              type: 'redemptionVaultMorpho',
+            },
           ],
         },
         grantRoles: {
           tokenManagerAddress: '0xA4BC9e80ab95f51475eCeA4FEC9A70AD2cc3FfF9',
           vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
           oracleManagerAddress: '0x3476a1cD01d73AB5A0918471094277C7eD1E110a',
+        },
+        pauseFunctions: {
+          depositVaultMorpho: [
+            'depositRequest',
+            'depositRequestWithCustomRecipient',
+          ],
+          redemptionVaultMorpho: ['redeemFiatRequest'],
         },
         addFeeWaived: [
           {
@@ -133,6 +185,42 @@ export const mLIQUIDITYDeploymentConfig: DeploymentConfig = {
           {
             fromVault: { mToken: 'mLIQUIDITY', type: 'redemptionVaultAave' },
             toWaive: ['0xCe570ad47230C141ED36cd7DFAD1727883a0c276'],
+          },
+          {
+            fromVault: {
+              mToken: 'mLIQUIDITY',
+              type: 'depositVaultMorpho',
+            },
+            toWaive: ['0x0461bD693caE49bE9d030E5c212e080F9c78B846'],
+          },
+          {
+            fromVault: {
+              mToken: 'mLIQUIDITY',
+              type: 'redemptionVaultMorpho',
+            },
+            toWaive: ['0x0461bD693caE49bE9d030E5c212e080F9c78B846'],
+          },
+        ],
+        setMorphoConfig: [
+          {
+            type: 'depositVaultMorpho',
+            vaults: [
+              {
+                token: 'usdc',
+                morphoVault: '0xe99A27169c2aA26a8f2757949d09Fa3f9A8f0B3B',
+              },
+            ],
+            depositsEnabled: true,
+            autoInvestFallbackEnabled: true,
+          },
+          {
+            type: 'redemptionVaultMorpho',
+            vaults: [
+              {
+                token: 'usdc',
+                morphoVault: '0xe99A27169c2aA26a8f2757949d09Fa3f9A8f0B3B',
+              },
+            ],
           },
         ],
         setAaveConfig: [

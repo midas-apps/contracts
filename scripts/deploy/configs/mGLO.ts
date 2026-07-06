@@ -10,7 +10,7 @@ export const mGLODeploymentConfig: DeploymentConfig = {
       maxAnswerDeviation: parseUnits('1', 8),
       description: 'mGLO/USD',
     },
-    // Steakhouse mGLOBAL/ETH listing: 6% discount (holdbacks)
+    // 6% discount (holdbacks) for Steakhouse mGLOBAL/ETH listing and Robinhood listing
     customAggregatorAdjusted: {
       adjustmentPercentage: parseUnits('-6', 8),
       underlyingFeed: 'customFeed',

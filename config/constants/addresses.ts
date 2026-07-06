@@ -110,6 +110,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         token: '0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD',
         dataFeed: '0x5aA9E745904df263b8BDcC2B0205c8e665631ce6',
       },
+      ausd: {
+        aggregator: '0xB00341502DfEA6Ced8A5786b4059d29dA5E4D1FD',
+        token: '0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a',
+        dataFeed: '0x01BA6cf294566A0033f84d54457315DbcF41bd1A',
+      },
       dai: {
         aggregator: '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9',
         token: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
@@ -336,8 +341,10 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xBF2a93B420225558a76FC9888C687c14977E6E7C',
       depositVault: '0xf89fEbef93c54618C4420Ee4173e69Cd21B27e3a',
       depositVaultAave: '0xc616E6eDB81BA30b8De057eB96557315a1990ea2',
+      depositVaultMorpho: '0x71B1170fC586e1a9ee4821B982560C9EC817D28A',
       redemptionVault: '0x97acdfb3956403c4c6bbe837dc611e3a6ba1b3a7',
       redemptionVaultAave: '0x8521b0063D4B90658Cc8849db78641Da0235D1Cf',
+      redemptionVaultMorpho: '0x6E8518b24079a3B3D68956439205888577d01119',
     },
     hypeETH: {
       token: '0x8E2C2C9dEF45efB9Bd3C448945830Ddb254154BE',
@@ -599,6 +606,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xa27c1658730e4FAFb7fB8B257a64BbB6A0ea4077',
       depositVault: '0xF7F1b944FCDe7805F6Ef3088817145d2eB667db4',
       redemptionVaultSwapper: '0x605704d7b36d1677a8d242ded68eD505523c7924',
+      redemptionVaultMToken: '0x14fECa41FB9541Fd8f61a6bA6304c5b706709fca',
     },
     qHVNUSD: {
       token: '0xE68f4e819aD09F2E0e668297cC1a905994808D38',
