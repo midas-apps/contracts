@@ -1,6 +1,8 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumber, BigNumberish } from 'ethers';
+import { parseUnits } from 'ethers/lib/utils';
+import { ethers } from 'hardhat';
 
 import {
   AccountOrContract,
@@ -136,6 +138,11 @@ export const redeemInstantWithMorphoTest = async (
       usdc.balanceOf(sender.address),
     ]);
 
+  const morphoVaultErc4626 = await ethers.getContractAt(
+    'IMorphoVault',
+    morphoVault.address,
+  );
+
   await redeemInstantTest(
     {
       redemptionVault,
@@ -145,6 +152,14 @@ export const redeemInstantWithMorphoTest = async (
       waivedFee: params.waivedFee,
       minAmount: params.minAmount,
       customRecipient,
+      // The vault's Morpho shares are extra tokenOut liquidity: value them in
+      // tokenOut units via the ERC-4626 preview.
+      additionalLiquidity: async () =>
+        morphoVaultErc4626.previewRedeem(
+          await morphoVault.balanceOf(redemptionVault.address),
+        ),
+      // Share price accrues across the redeem block; tolerate the drift.
+      vaultBalanceTolerance: parseUnits('0.01', 6),
     },
     usdc,
     amountTBillIn,

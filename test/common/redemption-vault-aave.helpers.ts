@@ -1,6 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumber, BigNumberish } from 'ethers';
+import { parseUnits } from 'ethers/lib/utils';
 
 import {
   AccountOrContract,
@@ -145,6 +146,13 @@ export const redeemInstantWithAaveTest = async (
       waivedFee: params.waivedFee,
       minAmount: params.minAmount,
       customRecipient,
+      // aTokens redeem 1:1 for the underlying, so the vault's aToken balance is
+      // extra tokenOut liquidity available on top of its direct tokenOut balance.
+      additionalLiquidity: async () =>
+        aToken.balanceOf(redemptionVault.address),
+      // Real aTokens rebase, accruing a few wei of interest across the redeem
+      // block; tolerate that so the balance assertion isn't yield-flaky.
+      vaultBalanceTolerance: parseUnits('0.01', 6),
     },
     usdc,
     amountTBillIn,

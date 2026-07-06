@@ -11,7 +11,7 @@ export const deployProxyContract = async <
   TContract extends Contract = Contract,
 >(
   contractName: string,
-  initParams?: unknown[],
+  initParams?: unknown[] | readonly unknown[],
   initializer = 'initialize',
   constructorParams?: unknown[],
 ): Promise<TContract> => {

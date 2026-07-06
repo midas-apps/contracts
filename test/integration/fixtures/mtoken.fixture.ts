@@ -2,10 +2,7 @@ import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
 import { rpcUrls } from '../../../config';
-import { getAllRoles } from '../../../helpers/roles';
 import {
-  MidasAccessControlTest,
-  MTBILLTest,
   DepositVaultTest,
   DepositVaultWithMTokenTest,
   RedemptionVaultTest,
@@ -13,8 +10,21 @@ import {
   DataFeedTest,
   AggregatorV3Mock,
 } from '../../../typechain-types';
-import { asyncForEach } from '../../common/common.helpers';
 import { deployProxyContract } from '../../common/deploy.helpers';
+import {
+  getInitializerParamsDv,
+  getInitializerParamsDvWithMToken,
+  getInitializerParamsRv,
+  getInitializerParamsRvWithMToken,
+} from '../../common/fixtures';
+import {
+  DV_MTOKEN_INIT_FN,
+  RV_MTOKEN_INIT_FN,
+} from '../../common/vault-initializer.helpers';
+import {
+  deployIntegrationMToken,
+  setupIntegrationBase,
+} from '../helpers/ac.helpers';
 import { impersonateAndFundAccount, resetFork } from '../helpers/fork.helpers';
 import { MAINNET_ADDRESSES } from '../helpers/mainnet-addresses';
 
@@ -23,59 +33,31 @@ const FORK_BLOCK_NUMBER = 24441000;
 async function setupMTokenBase() {
   await resetFork(rpcUrls.main, FORK_BLOCK_NUMBER);
 
-  const [
+  const {
+    accessControl,
+    mTBILL,
     owner,
     tokensReceiver,
     feeReceiver,
     requestRedeemer,
     vaultAdmin,
     testUser,
-    targetTokensReceiver,
-  ] = await ethers.getSigners();
-  const allRoles = getAllRoles();
+    clawbackReceiver,
+    regularUsers,
+    roles: allRoles,
+  } = await setupIntegrationBase();
 
-  const accessControl = await deployProxyContract<MidasAccessControlTest>(
-    'MidasAccessControlTest',
-    [],
-  );
+  // Extra receiver so USDC flowing through the target vault doesn't contaminate
+  // the product vault's tokensReceiver balance assertions.
+  const targetTokensReceiver = regularUsers[0];
 
-  // "Target" mToken (simulating mTBILL)
-  const mTBILL = await deployProxyContract<MTBILLTest>('mTBILLTest', [
+  // "Product" mToken (simulating mFONE). Shares the mTBILL role hashes so the
+  // product vaults can mint/burn it with the same granted roles.
+  const mFONE = await deployIntegrationMToken(
     accessControl.address,
-  ]);
-
-  // "Product" mToken (simulating mFONE)
-  const mFONE = await deployProxyContract<MTBILLTest>('mTBILLTest', [
-    accessControl.address,
-  ]);
-
-  const rolesArray = [
-    allRoles.common.defaultAdmin,
-    allRoles.tokenRoles.mTBILL.minter,
-    allRoles.tokenRoles.mTBILL.burner,
-    allRoles.tokenRoles.mTBILL.pauser,
-    allRoles.tokenRoles.mTBILL.depositVaultAdmin,
-    allRoles.tokenRoles.mTBILL.redemptionVaultAdmin,
-    allRoles.common.greenlistedOperator,
-  ];
-
-  await asyncForEach(rolesArray, async (role) => {
-    await accessControl['grantRole(bytes32,address)'](role, owner.address);
-  });
-
-  await accessControl['grantRole(bytes32,address)'](
-    allRoles.tokenRoles.mTBILL.depositVaultAdmin,
-    vaultAdmin.address,
-  );
-
-  await accessControl['grantRole(bytes32,address)'](
-    allRoles.tokenRoles.mTBILL.redemptionVaultAdmin,
-    vaultAdmin.address,
-  );
-
-  await accessControl['grantRole(bytes32,address)'](
-    allRoles.common.greenlisted,
-    testUser.address,
+    clawbackReceiver.address,
+    allRoles.tokenRoles.mTBILL,
+    { name: 'mFONE', symbol: 'mFONE' },
   );
 
   // USDC data feed
@@ -175,26 +157,18 @@ export async function mTokenDepositFixture() {
   // doesn't contaminate the product DV's tokensReceiver balance assertions
   const targetDepositVault = await deployProxyContract<DepositVaultTest>(
     'DepositVaultTest',
-    [
-      accessControl.address,
-      {
-        mToken: mTBILL.address,
-        mTokenDataFeed: base.mTokenToUsdDataFeed.address,
-      },
-      {
-        feeReceiver: base.feeReceiver.address,
-        tokensReceiver: base.targetTokensReceiver.address,
-      },
-      {
-        instantFee: 0,
-        instantDailyLimit: ethers.constants.MaxUint256,
-      },
-      ethers.constants.AddressZero,
-      200,
-      parseUnits('0'),
-      0,
-      ethers.constants.MaxUint256,
-    ],
+    getInitializerParamsDv({
+      accessControl: accessControl.address,
+      mockedSanctionsList: ethers.constants.AddressZero,
+      mTBILL: mTBILL.address,
+      mTokenToUsdDataFeed: base.mTokenToUsdDataFeed.address,
+      tokensReceiver: base.targetTokensReceiver.address,
+      minAmount: parseUnits('0'),
+      instantFee: 0,
+      variationTolerance: 200,
+      maxApproveRequestId: ethers.constants.MaxUint256,
+    }),
+    undefined,
   );
 
   // Grant minter to target DV (so it can mint mTBILL)
@@ -218,28 +192,19 @@ export async function mTokenDepositFixture() {
   const depositVaultWithMToken =
     await deployProxyContract<DepositVaultWithMTokenTest>(
       'DepositVaultWithMTokenTest',
-      [
-        accessControl.address,
-        {
-          mToken: mFONE.address,
-          mTokenDataFeed: base.mFoneToUsdDataFeed.address,
-        },
-        {
-          feeReceiver: base.feeReceiver.address,
-          tokensReceiver: base.tokensReceiver.address,
-        },
-        {
-          instantFee: 100,
-          instantDailyLimit: ethers.constants.MaxUint256,
-        },
-        ethers.constants.AddressZero,
-        200,
-        parseUnits('0'),
-        0,
-        ethers.constants.MaxUint256,
-        targetDepositVault.address,
-      ],
-      'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)',
+      getInitializerParamsDvWithMToken({
+        accessControl: accessControl.address,
+        mockedSanctionsList: ethers.constants.AddressZero,
+        mTBILL: mFONE.address,
+        mTokenToUsdDataFeed: base.mFoneToUsdDataFeed.address,
+        tokensReceiver: base.tokensReceiver.address,
+        minAmount: parseUnits('0'),
+        instantFee: 100,
+        variationTolerance: 200,
+        maxApproveRequestId: ethers.constants.MaxUint256,
+        depositVault: targetDepositVault.address,
+      }),
+      DV_MTOKEN_INIT_FN,
     );
 
   // Grant minter to product DV (so it can mint mFONE)
@@ -284,30 +249,19 @@ export async function mTokenRedemptionFixture() {
   // Deploy target RV (plain RedemptionVault for mTBILL)
   const targetRedemptionVault = await deployProxyContract<RedemptionVaultTest>(
     'RedemptionVaultTest',
-    [
-      accessControl.address,
-      {
-        mToken: mTBILL.address,
-        mTokenDataFeed: base.mTokenToUsdDataFeed.address,
-      },
-      {
-        feeReceiver: base.feeReceiver.address,
-        tokensReceiver: base.tokensReceiver.address,
-      },
-      {
-        instantFee: 100,
-        instantDailyLimit: ethers.constants.MaxUint256,
-      },
-      ethers.constants.AddressZero,
-      200,
-      parseUnits('100', 18),
-      {
-        minFiatRedeemAmount: parseUnits('1000', 18),
-        fiatAdditionalFee: 100,
-        fiatFlatFee: parseUnits('10', 18),
-      },
-      base.requestRedeemer.address,
-    ],
+    getInitializerParamsRv({
+      accessControl: accessControl.address,
+      mockedSanctionsList: ethers.constants.AddressZero,
+      mTBILL: mTBILL.address,
+      mTokenToUsdDataFeed: base.mTokenToUsdDataFeed.address,
+      tokensReceiver: base.tokensReceiver.address,
+      minAmount: parseUnits('100', 18),
+      instantFee: 100,
+      variationTolerance: 200,
+      maxApproveRequestId: ethers.constants.MaxUint256,
+      requestRedeemer: base.requestRedeemer.address,
+    }),
+    undefined,
   );
 
   // Grant BURN_ROLE to target RV (so it can burn mTBILL)
@@ -336,32 +290,20 @@ export async function mTokenRedemptionFixture() {
   const redemptionVaultWithMToken =
     await deployProxyContract<RedemptionVaultWithMTokenTest>(
       'RedemptionVaultWithMTokenTest',
-      [
-        accessControl.address,
-        {
-          mToken: mFONE.address,
-          mTokenDataFeed: base.mFoneToUsdDataFeed.address,
-        },
-        {
-          feeReceiver: base.feeReceiver.address,
-          tokensReceiver: base.tokensReceiver.address,
-        },
-        {
-          instantFee: 100,
-          instantDailyLimit: ethers.constants.MaxUint256,
-        },
-        ethers.constants.AddressZero,
-        200,
-        parseUnits('100', 18),
-        {
-          minFiatRedeemAmount: parseUnits('1000', 18),
-          fiatAdditionalFee: 100,
-          fiatFlatFee: parseUnits('10', 18),
-        },
-        base.requestRedeemer.address,
-        targetRedemptionVault.address,
-      ],
-      'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)',
+      getInitializerParamsRvWithMToken({
+        accessControl: accessControl.address,
+        mockedSanctionsList: ethers.constants.AddressZero,
+        mTBILL: mFONE.address,
+        mTokenToUsdDataFeed: base.mFoneToUsdDataFeed.address,
+        tokensReceiver: base.tokensReceiver.address,
+        minAmount: parseUnits('100', 18),
+        instantFee: 100,
+        variationTolerance: 200,
+        maxApproveRequestId: ethers.constants.MaxUint256,
+        requestRedeemer: base.requestRedeemer.address,
+        redemptionVault: targetRedemptionVault.address,
+      }),
+      RV_MTOKEN_INIT_FN,
     );
 
   // Grant BURN_ROLE to product RV (so it can burn mFONE)

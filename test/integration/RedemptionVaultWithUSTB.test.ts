@@ -208,7 +208,7 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         mTBILLAmount,
         {
           from: testUser,
-          revertMessage: 'RVU: ustb fee not zero',
+          revertMessage: 'ERC20: transfer amount exceeds balance',
         },
       );
     });
@@ -261,7 +261,7 @@ describe('RedemptionVaultWithUSTB - Mainnet Fork Integration Tests', function ()
         mTBILLAmount,
         {
           from: testUser,
-          revertMessage: 'RVU: insufficient USTB balance',
+          revertMessage: 'ERC20: transfer amount exceeds balance',
         },
       );
     });

@@ -252,7 +252,7 @@ describe('RedemptionVaultWithMToken - Mainnet Fork Integration Tests', function 
             parseUnits(String(mFONEAmount)),
             0,
           ),
-      ).to.be.revertedWith('RVMT: balance < needed');
+      ).to.be.revertedWith('ERC20: transfer amount exceeds balance');
     });
   });
 });

@@ -96,6 +96,7 @@ export const redeemInstantTest = async (
     checkSupply = true,
     expectedAmountOut,
     additionalLiquidity,
+    vaultBalanceTolerance,
     loanLiquidityExpectToFail,
     holdback,
   }: CommonParamsRedeem & {
@@ -105,6 +106,11 @@ export const redeemInstantTest = async (
     checkSupply?: boolean;
     expectedAmountOut?: BigNumberish;
     additionalLiquidity?: () => Promise<BigNumberish>;
+    // Allowed absolute drift on the vault tokenOut balance assertion. Needed
+    // when `additionalLiquidity` points at a live yield-bearing source (e.g. a
+    // rebasing aToken on a mainnet fork) that accrues a few wei of interest
+    // across the redeem block. Defaults to exact equality.
+    vaultBalanceTolerance?: BigNumberish;
     loanLiquidityExpectToFail?: boolean;
     holdback?: {
       callFunction: () => Promise<ContractTransaction>;
@@ -296,7 +302,15 @@ export const redeemInstantTest = async (
       getTotalFromInstantShare(amountIn, holdback?.instantShare),
     ),
   );
-  expect(balanceAfterVault).eq(balanceBeforeVault.sub(toTransferFromVault));
+  const expectedBalanceAfterVault = balanceBeforeVault.sub(toTransferFromVault);
+  if (vaultBalanceTolerance !== undefined) {
+    expect(balanceAfterVault).closeTo(
+      expectedBalanceAfterVault,
+      vaultBalanceTolerance,
+    );
+  } else {
+    expect(balanceAfterVault).eq(expectedBalanceAfterVault);
+  }
   const expectedAmountToReceive = expectedAmountOut ?? amountOutWithoutFee!;
   expect(balanceAfterTokenOutRecipient).eq(
     balanceBeforeTokenOutRecipient.add(expectedAmountToReceive),
