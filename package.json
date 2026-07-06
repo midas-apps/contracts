@@ -106,7 +106,8 @@
     "@axelar-network/axelar-local-dev": "2.3.3",
     "@axelar-network/axelarjs-sdk": "0.17.9",
     "@axelar-network/interchain-token-service": "2.2.0",
-    "@chainlink/contracts": "0.6.1",
+    "@chainlink/contracts": "1.4.0",
+    "@chainlink/contracts-ccip": "1.6.1",
     "@clack/prompts": "0.11.0",
     "@commitlint/cli": "17.1.2",
     "@commitlint/config-conventional": "17.1.0",
@@ -171,7 +172,8 @@
     "typescript-eslint": "8.46.4"
   },
   "resolutions": {
-    "@layerzerolabs/oft-evm/@openzeppelin/contracts": "4.8.3"
+    "@layerzerolabs/oft-evm/@openzeppelin/contracts": "4.8.3",
+    "@chainlink/contracts-ccip/@chainlink/contracts": "1.4.0"
   },
   "packageManager": "yarn@4.10.3",
   "lint-staged": {
