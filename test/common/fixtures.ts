@@ -60,6 +60,9 @@ import {
   AxelarInterchainTokenServiceMock__factory,
   MidasAxelarVaultExecutableTester,
   LzEndpointV2Mock__factory,
+  MidasCCTBurnMintTokenPool__factory,
+  Router__factory,
+  CCIPRmnMock__factory,
 } from '../../typechain-types';
 
 export const defaultDeploy = async () => {
@@ -1347,5 +1350,79 @@ export const axelarFixture = async () => {
     chainNameA,
     chainNameB,
     ...defaultFixture,
+  };
+};
+
+export const ccipCctFixture = async () => {
+  const defaultFixture = await defaultDeploy();
+
+  const { owner, accessControl, mTBILL, regularAccounts } = defaultFixture;
+
+  const remoteChainSelector = ethers.BigNumber.from('5009297550715157269');
+
+  const [onRamp, offRamp, remotePool, remoteToken, alice] = regularAccounts;
+
+  const remotePoolAddress = ethers.utils.defaultAbiCoder.encode(
+    ['address'],
+    [remotePool.address],
+  );
+  const remoteTokenAddress = ethers.utils.defaultAbiCoder.encode(
+    ['address'],
+    [remoteToken.address],
+  );
+
+  const rmn = await new CCIPRmnMock__factory(owner).deploy();
+
+  const router = await new Router__factory(owner).deploy(
+    constants.AddressZero,
+    rmn.address,
+  );
+
+  const pool = await new MidasCCTBurnMintTokenPool__factory(owner).deploy(
+    mTBILL.address,
+    [],
+    rmn.address,
+    router.address,
+  );
+
+  const roles = getRolesForToken('mTBILL');
+  await accessControl.grantRoleMult(
+    [roles.minter, roles.burner],
+    [pool.address, pool.address],
+  );
+
+  await router.applyRampUpdates(
+    [{ destChainSelector: remoteChainSelector, onRamp: onRamp.address }],
+    [],
+    [{ sourceChainSelector: remoteChainSelector, offRamp: offRamp.address }],
+  );
+
+  const disabledRateLimiter = {
+    isEnabled: false,
+    capacity: 0,
+    rate: 0,
+  };
+  await pool.applyChainUpdates(
+    [],
+    [
+      {
+        remoteChainSelector,
+        remotePoolAddresses: [remotePoolAddress],
+        remoteTokenAddress,
+        outboundRateLimiterConfig: disabledRateLimiter,
+        inboundRateLimiterConfig: disabledRateLimiter,
+      },
+    ],
+  );
+
+  return {
+    ...defaultFixture,
+    pool,
+    remoteChainSelector,
+    remotePoolAddress,
+    remoteTokenAddress,
+    onRamp,
+    offRamp,
+    alice,
   };
 };
