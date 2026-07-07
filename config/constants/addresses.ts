@@ -30,6 +30,12 @@ type AxelarTokenAddresses = {
   executables?: Partial<Record<PaymentTokenName, string>>;
 };
 
+type CCIPTokenAddresses = {
+  cct?: {
+    tokenPool: string;
+  };
+};
+
 type TokenFeedAddresses = {
   customFeed?: string;
   customFeedGrowth?: string;
@@ -47,6 +53,7 @@ export type TokenAddresses = TokenFeedAddresses & {
   token?: string;
   layerZero?: LayerZeroTokenAddresses;
   axelar?: AxelarTokenAddresses;
+  ccip?: CCIPTokenAddresses;
 } & Partial<Record<DepositVaultType | RedemptionVaultType, string>>;
 
 export type VaultType = RedemptionVaultType | DepositVaultType;
@@ -1659,6 +1666,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
           usdt: '0x75726da161ef6aE712e941E00705879715b260f6',
         },
       },
+      ccip: {
+        cct: {
+          tokenPool: '0xc00C119a9421a62F194068B241E9676811B1e3EC',
+        },
+      },
     },
     mBASIS: {
       customFeed: '0x263A7AcE5E77986b77DcA125859248fEED52383c',
@@ -1808,6 +1820,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         manager: '0xa5ff89Dd34ef8B2875a54858af486931fAAB7eAA',
         tokenId:
           '0x46929f12e9fc2e41757d789d461b77f9dcfbf328d3797a4446f8335fbe27d985',
+      },
+      ccip: {
+        cct: {
+          tokenPool: '0x9230F9cBAca32bad2B19CAB331d3e6509B8EB0cB',
+        },
       },
     },
   },
