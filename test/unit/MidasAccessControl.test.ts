@@ -33,6 +33,7 @@ import {
   validateImplementation,
   asyncForEach,
 } from '../common/common.helpers';
+import { deployProxyContract } from '../common/deploy.helpers';
 import { defaultDeploy } from '../common/fixtures';
 import {
   executeTimelockOperationTester,
@@ -49,6 +50,23 @@ const withOnlyRoleNoTimelockSelector = encodeFnSelector(
 
 const DELAY_FOR_SET_DEFAULT_DELAY = 2 * 24 * 3600;
 const setDefaultDelaySelector = encodeFnSelector('setDefaultDelay(uint256)');
+
+const PROXY_ADMIN_SLOT =
+  '0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103';
+
+const setProxyAdmin = (address: string, admin: string) =>
+  ethers.provider.send('hardhat_setStorageAt', [
+    address,
+    PROXY_ADMIN_SLOT,
+    ethers.utils.hexZeroPad(admin, 32),
+  ]);
+
+const setInitializedVersion = (address: string, version: number) =>
+  ethers.provider.send('hardhat_setStorageAt', [
+    address,
+    ethers.utils.hexZeroPad('0x00', 32),
+    ethers.utils.hexZeroPad(ethers.utils.hexlify(version), 32),
+  ]);
 
 const timelockManagerRevertOpts = (
   timelockManager: MidasTimelockManager,
@@ -198,6 +216,60 @@ describe('MidasAccessControl', function () {
     await expect(accessControl.initialize(NO_DELAY, [])).revertedWith(
       'Initializable: contract is already initialized',
     );
+  });
+
+  describe('initializeV2() proxy admin restriction', () => {
+    const deployAccessControl = () =>
+      deployProxyContract<MidasAccessControl>(
+        'MidasAccessControl',
+        [0, []],
+        'initialize',
+      );
+
+    it('initializeV2 runs while proxy admin is zero during fresh deploy', async () => {
+      const accessControl = await deployProxyContract<MidasAccessControl>(
+        'MidasAccessControl',
+        [3600, []],
+        'initialize',
+      );
+
+      expect(await accessControl.defaultDelay()).eq(3600);
+    });
+
+    it('should fail: when already reinitialized, even from the proxy admin', async () => {
+      const [, admin] = await ethers.getSigners();
+      const accessControl = await deployAccessControl();
+
+      await setProxyAdmin(accessControl.address, admin.address);
+
+      await expect(
+        accessControl.connect(admin).initializeV2(0, []),
+      ).revertedWith('Initializable: contract is already initialized');
+    });
+
+    it('should fail: when initialized and caller is not the proxy admin', async () => {
+      const [, admin, stranger] = await ethers.getSigners();
+      const accessControl = await deployAccessControl();
+
+      await setProxyAdmin(accessControl.address, admin.address);
+      await setInitializedVersion(accessControl.address, 1);
+
+      await expect(
+        accessControl.connect(stranger).initializeV2(0, []),
+      ).revertedWithCustomError(accessControl, 'SenderNotProxyAdmin');
+    });
+
+    it('when initialized and caller is the proxy admin', async () => {
+      const [, admin] = await ethers.getSigners();
+      const accessControl = await deployAccessControl();
+
+      await setProxyAdmin(accessControl.address, admin.address);
+      await setInitializedVersion(accessControl.address, 1);
+
+      await accessControl.connect(admin).initializeV2(3600, []);
+
+      expect(await accessControl.defaultDelay()).eq(3600);
+    });
   });
 
   describe('renounceRole()', () => {

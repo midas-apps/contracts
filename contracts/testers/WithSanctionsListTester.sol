@@ -32,4 +32,6 @@ contract WithSanctionsListTester is WithSanctionsList {
     }
 
     function _disableInitializers() internal override {}
+
+    function _onlyProxyAdmin() internal view override {}
 }

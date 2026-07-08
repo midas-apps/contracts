@@ -7,4 +7,6 @@ contract MidasAccessControlTimelockControllerTest is
     MidasAccessControlTimelockController
 {
     function _disableInitializers() internal override {}
+
+    function _onlyProxyAdmin() internal view override {}
 }

@@ -27,6 +27,7 @@ import {
   pauseVault,
   pauseVaultFn,
 } from '../common/common.helpers';
+import { deployProxyContract } from '../common/deploy.helpers';
 import {
   defaultDeploy,
   DefaultFixture,
@@ -80,6 +81,23 @@ const SET_NAME_SYMBOL_SEL = encodeFnSelector('setNameSymbol(string,string)');
 
 const toStorageSlotHex = (slot: number) =>
   '0x' + slot.toString(16).padStart(64, '0');
+
+const PROXY_ADMIN_SLOT =
+  '0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103';
+
+const setProxyAdmin = (address: string, admin: string) =>
+  ethers.provider.send('hardhat_setStorageAt', [
+    address,
+    PROXY_ADMIN_SLOT,
+    ethers.utils.hexZeroPad(admin, 32),
+  ]);
+
+const setInitializedVersion = (address: string, version: number) =>
+  ethers.provider.send('hardhat_setStorageAt', [
+    address,
+    toStorageSlotHex(0),
+    ethers.utils.hexZeroPad(ethers.utils.hexlify(version), 32),
+  ]);
 
 const toBoolWordHex = (value: boolean) =>
   '0x' + (value ? '1' : '0').padStart(64, '0');
@@ -168,6 +186,73 @@ describe(`mToken`, function () {
     await expect(
       tokenContract.initializeV2(clawbackReceiver.address),
     ).to.revertedWith('Initializable: contract is already initialized');
+  });
+
+  describe('initializeV2() proxy admin restriction', () => {
+    const deployMToken = async () => {
+      const { accessControl, clawbackReceiver } = await loadFixture(
+        defaultDeploy,
+      );
+
+      const mTBILL = await deployProxyContract<MToken>(
+        'mToken',
+        [
+          accessControl.address,
+          clawbackReceiver.address,
+          mTokensMetadata.mTBILL.name,
+          mTokensMetadata.mTBILL.symbol,
+        ],
+        'initialize',
+        [
+          ethers.utils.id('M_TOKEN_MANAGER_ROLE'),
+          ethers.utils.id('M_TOKEN_MINTER_ROLE'),
+          ethers.utils.id('M_TOKEN_BURNER_ROLE'),
+        ],
+      );
+
+      return { mTBILL, clawbackReceiver };
+    };
+
+    it('fresh deploy: initializeV2 runs while proxy admin is zero', async () => {
+      const { mTBILL, clawbackReceiver } = await deployMToken();
+
+      expect(await mTBILL.clawbackReceiver()).eq(clawbackReceiver.address);
+    });
+
+    it('should fail: when already reinitialized, even from the proxy admin', async () => {
+      const [, admin] = await ethers.getSigners();
+      const { mTBILL, clawbackReceiver } = await deployMToken();
+
+      await setProxyAdmin(mTBILL.address, admin.address);
+
+      await expect(
+        mTBILL.connect(admin).initializeV2(clawbackReceiver.address),
+      ).revertedWith('Initializable: contract is already initialized');
+    });
+
+    it('should fail: when initialized and caller is not the proxy admin', async () => {
+      const [, admin, stranger] = await ethers.getSigners();
+      const { mTBILL, clawbackReceiver } = await deployMToken();
+
+      await setProxyAdmin(mTBILL.address, admin.address);
+      await setInitializedVersion(mTBILL.address, 1);
+
+      await expect(
+        mTBILL.connect(stranger).initializeV2(clawbackReceiver.address),
+      ).revertedWithCustomError(mTBILL, 'SenderNotProxyAdmin');
+    });
+
+    it('when initialized and caller is the proxy admin', async () => {
+      const [, admin, newClawbackReceiver] = await ethers.getSigners();
+      const { mTBILL } = await deployMToken();
+
+      await setProxyAdmin(mTBILL.address, admin.address);
+      await setInitializedVersion(mTBILL.address, 1);
+
+      await mTBILL.connect(admin).initializeV2(newClawbackReceiver.address);
+
+      expect(await mTBILL.clawbackReceiver()).eq(newClawbackReceiver.address);
+    });
   });
 
   describe('setNameSymbol()', () => {

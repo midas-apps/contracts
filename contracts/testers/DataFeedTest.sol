@@ -7,4 +7,6 @@ contract DataFeedTest is DataFeed {
     constructor() DataFeed(_DEFAULT_ADMIN_ROLE) {}
 
     function _disableInitializers() internal override {}
+
+    function _onlyProxyAdmin() internal view override {}
 }

@@ -14,6 +14,8 @@ contract CustomAggregatorV3CompatibleFeedTester is
 
     function _disableInitializers() internal override {}
 
+    function _onlyProxyAdmin() internal view override {}
+
     function getDeviation(int256 _lastPrice, int256 _newPrice)
         public
         pure

@@ -7,4 +7,6 @@ contract CompositeDataFeedTest is CompositeDataFeed {
     constructor() CompositeDataFeed(_DEFAULT_ADMIN_ROLE) {}
 
     function _disableInitializers() internal override {}
+
+    function _onlyProxyAdmin() internal view override {}
 }

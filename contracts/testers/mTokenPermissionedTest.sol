@@ -15,4 +15,6 @@ contract mTokenPermissionedTest is mTokenPermissioned {
     {}
 
     function _disableInitializers() internal override {}
+
+    function _onlyProxyAdmin() internal view override {}
 }

@@ -61,4 +61,6 @@ contract WithMidasAccessControlTester is WithMidasAccessControl {
     }
 
     function _disableInitializers() internal override {}
+
+    function _onlyProxyAdmin() internal view override {}
 }

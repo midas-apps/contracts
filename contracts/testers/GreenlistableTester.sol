@@ -15,6 +15,8 @@ contract GreenlistableTester is Greenlistable {
 
     function _disableInitializers() internal override {}
 
+    function _onlyProxyAdmin() internal view override {}
+
     function greenlistAdminRole() public view virtual returns (bytes32) {
         return keccak256("GREENLIST_ADMIN_ROLE");
     }

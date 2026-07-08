@@ -12,4 +12,6 @@ contract mTokenTest is mToken {
     ) mToken(_managerRole, _mintOperatorRole, _burnOperatorRole) {}
 
     function _disableInitializers() internal override {}
+
+    function _onlyProxyAdmin() internal view override {}
 }

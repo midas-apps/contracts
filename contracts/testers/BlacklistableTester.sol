@@ -18,4 +18,6 @@ contract BlacklistableTester is Blacklistable {
     }
 
     function _disableInitializers() internal override {}
+
+    function _onlyProxyAdmin() internal view override {}
 }

@@ -39,7 +39,7 @@ abstract contract MidasInitializable is Initializable {
     /**
      * @notice function to check if the sender is the proxy admin
      */
-    function _onlyProxyAdmin() private view {
+    function _onlyProxyAdmin() internal view virtual {
         address admin = StorageSlot
             .getAddressSlot(
                 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103

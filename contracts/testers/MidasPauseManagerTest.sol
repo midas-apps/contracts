@@ -5,4 +5,6 @@ import "../access/MidasPauseManager.sol";
 
 contract MidasPauseManagerTest is MidasPauseManager {
     function _disableInitializers() internal override {}
+
+    function _onlyProxyAdmin() internal view override {}
 }
