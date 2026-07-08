@@ -96,6 +96,8 @@
     "deploy:cct:pool": "yarn hh:run:script scripts/deploy/misc/chainlink/deploy_BurnMintTokenPool.ts",
     "deploy:cct:post:grant:roles": "yarn hh:run:script scripts/deploy/misc/chainlink/grant_Roles.ts",
     "deploy:cct:post:configure": "yarn hh:run:script scripts/deploy/misc/chainlink/set_ChainConfigs.ts",
+    "deploy:cct:post:set:pool": "yarn hh:run:script scripts/deploy/misc/chainlink/set_Pool.ts",
+    "deploy:cct:post:accept:admin": "yarn hh:run:script scripts/deploy/misc/chainlink/accept_Admin.ts",
     "deploy:cct:post:configure:initial": "yarn hh:run:script scripts/deploy/misc/chainlink/set_InitialChainConfigs.ts",
     "deploy:cct:post:revoke:roles": "yarn hh:run:script scripts/deploy/misc/chainlink/revoke_Roles.ts",
     "deploy:post:set:sanctionsList": "yarn hh:run:script scripts/deploy/post-deploy/set_SanctionsList.ts",

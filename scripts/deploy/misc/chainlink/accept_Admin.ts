@@ -38,22 +38,12 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     deployer,
   );
 
-  console.log('Token admin registry...', contract.address);
-
-  console.log('Setting pool...', tokenAddresses.token, poolAddress, network);
-
   await sendAndWaitForCustomTxSign(
     hre,
-    await contract.populateTransaction.setPool(
-      tokenAddresses.token,
-      poolAddress,
-    ),
+    await contract.populateTransaction.acceptAdminRole(tokenAddresses.token),
     {
       action: 'update-cct',
     },
-    (
-      await contract.getTokenConfig(tokenAddresses.token)
-    ).administrator,
   );
 };
 
