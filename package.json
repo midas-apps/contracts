@@ -99,6 +99,7 @@
     "verify:proxy": "yarn hardhat verify-transparent-proxy",
     "verify:sourcify": "VERIFY_SOURCIFY=true VERIFY_ETHERSCAN=false yarn hardhat verify",
     "dump:roles": "yarn hh:run scripts/dump_roles.ts",
+    "dump:errors": "ts-node scripts/generate-errors-readme.ts",
     "verify:all:impl": "yarn hh:run:script scripts/verify_contracts.ts",
     "oz:merge-manifest": "ts-node scripts/merge-oz-manifests.ts"
   },
