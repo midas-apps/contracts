@@ -140,6 +140,7 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         public
         virtual
         reinitializer(3)
+        onlyProxyAdmin
     {
         require(
             _clawbackReceiver != address(0),

@@ -120,7 +120,7 @@ contract MidasAccessControl is
     function initializeV2(
         uint32 _defaultDelay,
         bytes32[] calldata _userFacingRoles
-    ) public reinitializer(2) {
+    ) public reinitializer(2) onlyProxyAdmin {
         _validateDelay(_defaultDelay);
 
         defaultDelay = _defaultDelay;
