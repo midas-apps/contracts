@@ -1418,7 +1418,11 @@ export const ccipCctFixture = async () => {
   return {
     ...defaultFixture,
     pool,
+    router,
+    rmn,
     remoteChainSelector,
+    remotePool,
+    remoteToken,
     remotePoolAddress,
     remoteTokenAddress,
     onRamp,

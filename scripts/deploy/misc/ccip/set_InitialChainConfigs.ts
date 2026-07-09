@@ -34,6 +34,14 @@ type UpdateChainConfig = {
 };
 
 const getRateLimitConfig = (config?: CCIPRateLimitConfigCore) => {
+  const rate = config
+    ? BigNumber.from(config.capacity).div(config.window)
+    : BigNumber.from(0);
+
+  if (rate.eq(0)) {
+    throw new Error('Rate is 0');
+  }
+
   return config
     ? {
         capacity: config.capacity,
