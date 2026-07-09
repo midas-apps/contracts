@@ -72,7 +72,7 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
             },
           },
         },
-        cct: {
+        ccip: {
           rateLimitConfig: {
             default: {
               inbound: {
@@ -148,7 +148,7 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
             },
           },
         },
-        cct: {
+        ccip: {
           rateLimitConfig: {
             default: {
               inbound: {

@@ -263,7 +263,7 @@ export const sendAndWaitForCustomTxSign = async (
       | 'update-timelock'
       | 'update-lz'
       | 'update-lz-oapp-config'
-      | 'update-cct'
+      | 'update-ccip'
       | 'axelar-wire-tokens'
       | 'axelar-update-config'
       | 'deployer';

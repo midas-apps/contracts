@@ -93,13 +93,13 @@
     "deploy:axelar:post:set:flowlimit": "yarn hh:run:script scripts/deploy/misc/axelar/set_FlowLimit.ts",
     "deploy:axelar:post:grant:roles": "yarn hh:run:script scripts/deploy/misc/axelar/grant_Roles.ts",
     "deploy:axelar:post:revoke:roles": "yarn hh:run:script scripts/deploy/misc/axelar/revoke_Roles.ts",
-    "deploy:cct:pool": "yarn hh:run:script scripts/deploy/misc/chainlink/deploy_BurnMintTokenPool.ts",
-    "deploy:cct:post:grant:roles": "yarn hh:run:script scripts/deploy/misc/chainlink/grant_Roles.ts",
-    "deploy:cct:post:configure": "yarn hh:run:script scripts/deploy/misc/chainlink/set_ChainConfigs.ts",
-    "deploy:cct:post:set:pool": "yarn hh:run:script scripts/deploy/misc/chainlink/set_Pool.ts",
-    "deploy:cct:post:accept:admin": "yarn hh:run:script scripts/deploy/misc/chainlink/accept_Admin.ts",
-    "deploy:cct:post:configure:initial": "yarn hh:run:script scripts/deploy/misc/chainlink/set_InitialChainConfigs.ts",
-    "deploy:cct:post:revoke:roles": "yarn hh:run:script scripts/deploy/misc/chainlink/revoke_Roles.ts",
+    "deploy:ccip:pool": "yarn hh:run:script scripts/deploy/misc/ccip/deploy_BurnMintTokenPool.ts",
+    "deploy:ccip:post:grant:roles": "yarn hh:run:script scripts/deploy/misc/ccip/grant_Roles.ts",
+    "deploy:ccip:post:configure": "yarn hh:run:script scripts/deploy/misc/ccip/set_ChainConfigs.ts",
+    "deploy:ccip:post:set:pool": "yarn hh:run:script scripts/deploy/misc/ccip/set_Pool.ts",
+    "deploy:ccip:post:accept:admin": "yarn hh:run:script scripts/deploy/misc/ccip/accept_Admin.ts",
+    "deploy:ccip:post:configure:initial": "yarn hh:run:script scripts/deploy/misc/ccip/set_InitialChainConfigs.ts",
+    "deploy:ccip:post:revoke:roles": "yarn hh:run:script scripts/deploy/misc/ccip/revoke_Roles.ts",
     "deploy:post:set:sanctionsList": "yarn hh:run:script scripts/deploy/post-deploy/set_SanctionsList.ts",
     "deploy:post:set:aaveconfig": "yarn hh:run:script scripts/deploy/post-deploy/set_AaveConfig.ts",
     "deploy:post:set:morphoconfig": "yarn hh:run:script scripts/deploy/post-deploy/set_MorphoConfig.ts",
@@ -179,8 +179,7 @@
     "typescript-eslint": "8.46.4"
   },
   "resolutions": {
-    "@layerzerolabs/oft-evm/@openzeppelin/contracts": "4.8.3",
-    "@chainlink/contracts-ccip/@chainlink/contracts": "1.4.0"
+    "@layerzerolabs/oft-evm/@openzeppelin/contracts": "4.8.3"
   },
   "packageManager": "yarn@4.10.3",
   "lint-staged": {

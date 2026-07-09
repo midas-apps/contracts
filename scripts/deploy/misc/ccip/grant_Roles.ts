@@ -16,7 +16,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   if (
     !mTokenAddresses ||
     !mTokenAddresses.token ||
-    !mTokenAddresses.ccip?.cct?.tokenPool
+    !mTokenAddresses.ccip?.tokenPool
   ) {
     throw new Error('mToken addresses not found or missing required fields');
   }
@@ -29,18 +29,18 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     deployer,
   );
 
-  const rolesToRevoke = [roles.minter, roles.burner];
+  const rolesToGrant = [roles.minter, roles.burner];
 
   const tx = await sendAndWaitForCustomTxSign(
     hre,
-    await contract.populateTransaction.revokeRoleMult(
-      rolesToRevoke,
-      rolesToRevoke.map(() => mTokenAddresses.ccip?.cct?.tokenPool ?? ''),
+    await contract.populateTransaction.grantRoleMult(
+      rolesToGrant,
+      rolesToGrant.map(() => mTokenAddresses.ccip?.tokenPool ?? ''),
     ),
     {
       action: 'update-ac',
-      subAction: 'revoke-token-roles',
-      comment: `revoke ${mToken} ccip cct token pool roles`,
+      subAction: 'grant-token-roles',
+      comment: `grant required ${mToken} ccip cct token pool roles`,
     },
   );
 

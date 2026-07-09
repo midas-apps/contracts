@@ -43,7 +43,7 @@ type ConfigPerNetwork<TKey extends string> = Partial<
   >
 >;
 
-export const cctConfigPerMToken: PartialConfigPerNetwork<
+export const ccipConfigPerMToken: PartialConfigPerNetwork<
   ConfigPerNetwork<MTokenName>
 > = {
   sepolia: {

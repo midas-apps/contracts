@@ -15,9 +15,9 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const deployer = await getDeployer(hre);
   const addresses = getCurrentAddresses(hre);
 
-  const address = addresses?.[mToken]?.ccip?.cct?.tokenPool;
+  const address = addresses?.[mToken]?.ccip?.tokenPool;
   const config = getNetworkConfig(hre, mToken, 'postDeploy');
-  const newOwner = config?.cct?.owner;
+  const newOwner = config?.ccip?.owner;
 
   if (!address) {
     throw new Error('pool address is not found');

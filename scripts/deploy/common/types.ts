@@ -82,21 +82,21 @@ export type LayerZeroConfig = {
   };
 };
 
-export type CCTRateLimitConfigCore = {
+export type CCIPRateLimitConfigCore = {
   capacity: BigNumberish;
   window: number;
 };
 
-export type CCTRateLimitConfig = {
-  inbound?: CCTRateLimitConfigCore;
-  outbound?: CCTRateLimitConfigCore;
+export type CCIPRateLimitConfig = {
+  inbound?: CCIPRateLimitConfigCore;
+  outbound?: CCIPRateLimitConfigCore;
 };
 
-export type CCTConfig = {
+export type CCIPConfig = {
   owner?: string;
   rateLimitConfig?: {
-    default?: CCTRateLimitConfig;
-    overrides?: PartialConfigPerNetwork<CCTRateLimitConfig>;
+    default?: CCIPRateLimitConfig;
+    overrides?: PartialConfigPerNetwork<CCIPRateLimitConfig>;
   };
 };
 
@@ -113,7 +113,7 @@ export type PostDeployConfig = {
   greenlist?: GreenlistConfig;
   pauseFunctions?: PauseFunctionsConfig;
   layerZero?: LayerZeroConfig;
-  cct?: CCTConfig;
+  ccip?: CCIPConfig;
   axelarIts?: AxelarItsConfig;
   setAaveConfig?: SetAaveConfigConfig;
   setMorphoConfig?: SetMorphoConfigConfig;

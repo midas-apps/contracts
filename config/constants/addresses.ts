@@ -31,9 +31,7 @@ type AxelarTokenAddresses = {
 };
 
 type CCIPTokenAddresses = {
-  cct?: {
-    tokenPool: string;
-  };
+  tokenPool: string;
 };
 
 type TokenFeedAddresses = {
@@ -1667,9 +1665,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         },
       },
       ccip: {
-        cct: {
-          tokenPool: '0xc00C119a9421a62F194068B241E9676811B1e3EC',
-        },
+        tokenPool: '0xc00C119a9421a62F194068B241E9676811B1e3EC',
       },
     },
     mBASIS: {
@@ -1822,9 +1818,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
           '0x46929f12e9fc2e41757d789d461b77f9dcfbf328d3797a4446f8335fbe27d985',
       },
       ccip: {
-        cct: {
-          tokenPool: '0x9230F9cBAca32bad2B19CAB331d3e6509B8EB0cB',
-        },
+        tokenPool: '0x9230F9cBAca32bad2B19CAB331d3e6509B8EB0cB',
       },
     },
   },

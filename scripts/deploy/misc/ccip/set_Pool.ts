@@ -20,7 +20,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('token address is not found');
   }
 
-  const poolAddress = tokenAddresses?.ccip?.cct?.tokenPool;
+  const poolAddress = tokenAddresses?.ccip?.tokenPool;
 
   if (!poolAddress) {
     throw new Error('pool address is not found');
@@ -49,7 +49,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       poolAddress,
     ),
     {
-      action: 'update-cct',
+      action: 'update-ccip',
     },
     (
       await contract.getTokenConfig(tokenAddresses.token)

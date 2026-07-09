@@ -2,7 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
   ccipNetworkConfig,
-  cctConfigPerMToken,
+  ccipConfigPerMToken,
   Network,
 } from '../../../../config';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
@@ -44,11 +44,11 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('CCIP config not found');
   }
 
-  const rateLimitConfigDefault = config.cct?.rateLimitConfig?.default;
-  const rateLimitConfigOverrides = config.cct?.rateLimitConfig?.overrides;
+  const rateLimitConfigDefault = config.ccip?.rateLimitConfig?.default;
+  const rateLimitConfigOverrides = config.ccip?.rateLimitConfig?.overrides;
 
   const allReceiverNetworks =
-    cctConfigPerMToken?.[originalNetwork]?.[mToken]?.linkedNetworks;
+    ccipConfigPerMToken?.[originalNetwork]?.[mToken]?.linkedNetworks;
 
   if (!allReceiverNetworks || allReceiverNetworks.length === 0) {
     throw new Error('Receiver networks not found');

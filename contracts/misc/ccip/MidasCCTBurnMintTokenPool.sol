@@ -6,6 +6,11 @@ import {BurnMintTokenPool} from "@chainlink/contracts-ccip/contracts/pools/BurnM
 import {TokenPool} from "@chainlink/contracts-ccip/contracts/pools/TokenPool.sol";
 import {IMToken} from "../../interfaces/IMToken.sol";
 
+/**
+ * @title MidasCCTBurnMintTokenPool
+ * @notice BurnMintTokenPool implementation for Midas mTokens
+ * @author RedDuck Software
+ */
 contract MidasCCTBurnMintTokenPool is BurnMintTokenPool {
     constructor(
         IMToken token,
