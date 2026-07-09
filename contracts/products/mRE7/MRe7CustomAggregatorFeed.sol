@@ -9,6 +9,7 @@ import "./MRe7MidasAccessControlRoles.sol";
  * @notice AggregatorV3 compatible feed for mRE7,
  * where price is submitted manually by feed admins
  * @author RedDuck Software
+ * @dev last initialization version is 3
  */
 contract MRe7CustomAggregatorFeed is
     CustomAggregatorV3CompatibleFeed,
@@ -18,44 +19,6 @@ contract MRe7CustomAggregatorFeed is
      * @dev leaving a storage gap for futures updates
      */
     uint256[50] private __gap;
-
-    /**
-     * @inheritdoc CustomAggregatorV3CompatibleFeed
-     */
-    function initialize(
-        address _accessControl,
-        int192 _minAnswer,
-        int192 _maxAnswer,
-        uint256 _maxAnswerDeviation,
-        string calldata _description
-    ) public override {
-        super.initialize(
-            _accessControl,
-            _minAnswer,
-            _maxAnswer,
-            _maxAnswerDeviation,
-            _description
-        );
-        // call v3 to increase contract version to 3
-        initializeV3(_maxAnswerDeviation);
-    }
-
-    /**
-     * @notice initializes the contract with a new max answer deviation
-     * @dev increases contract version to 3 (2 was already used)
-     * @param _newMaxAnswerDeviation new max answer deviation
-     */
-    function initializeV3(uint256 _newMaxAnswerDeviation)
-        public
-        reinitializer(3)
-    {
-        require(
-            _newMaxAnswerDeviation <= 100 * (10**decimals()),
-            "CA: !max deviation"
-        );
-
-        maxAnswerDeviation = _newMaxAnswerDeviation;
-    }
 
     /**
      * @inheritdoc CustomAggregatorV3CompatibleFeed
