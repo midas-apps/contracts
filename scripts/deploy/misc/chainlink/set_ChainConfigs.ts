@@ -1,4 +1,4 @@
-import { BigNumber, BigNumberish } from 'ethers';
+import { BigNumber, BigNumberish, ethers } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
@@ -11,7 +11,11 @@ import { getCurrentAddresses } from '../../../../config/constants/addresses';
 import { getHreByNetworkName } from '../../../../helpers/hardhat';
 import { getMTokenOrThrow } from '../../../../helpers/utils';
 import { CCTRateLimitConfigCore, DeployFunction } from '../../common/types';
-import { getDeployer, getNetworkConfig } from '../../common/utils';
+import {
+  getDeployer,
+  getNetworkConfig,
+  sendAndWaitForCustomTxSign,
+} from '../../common/utils';
 
 type UpdateChainConfig = {
   inboundRateLimiterConfig: {
@@ -71,8 +75,11 @@ const getRateLimitConfig = (config?: CCTRateLimitConfigCore) => {
       };
 };
 
+const encodeAddress = (address: string) => {
+  return ethers.utils.defaultAbiCoder.encode(['address'], [address]);
+};
+
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const deployer = await getDeployer(hre);
   const mToken = getMTokenOrThrow(hre);
 
   const currentNetwork = hre.network.name as Network;
@@ -129,6 +136,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   for (const { source, destination } of networksPairs) {
     const srcHre = await getHreByNetworkName(source);
+    const deployer = await getDeployer(srcHre);
+
     const dstHre = await getHreByNetworkName(destination);
     const config = getNetworkConfig(srcHre, mToken, 'postDeploy');
 
@@ -148,7 +157,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       throw new Error(`Token pool not found for network ${source}`);
     }
 
-    const contract = await hre.ethers.getContractAt(
+    const contract = await srcHre.ethers.getContractAt(
       'MidasCCTBurnMintTokenPool',
       mTokenAddresses?.ccip?.cct?.tokenPool ?? '',
       deployer,
@@ -182,8 +191,10 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       inboundRateLimiterConfig: getRateLimitConfig(configBase.inbound),
       outboundRateLimiterConfig: getRateLimitConfig(configBase.outbound),
       remoteChainSelector: dstChainSelector.toString(),
-      remotePoolAddresses: [dstMTokenAddresses.ccip.cct.tokenPool],
-      remoteTokenAddress: dstMTokenAddresses.token,
+      remotePoolAddresses: [
+        encodeAddress(dstMTokenAddresses.ccip.cct.tokenPool),
+      ],
+      remoteTokenAddress: encodeAddress(dstMTokenAddresses.token),
     };
     callDataPerNetwork[source] ??= {
       uniqueDestinationChains: [dstChainSelector],
@@ -216,7 +227,9 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
       if (!cmpChainConfig(updateObj, dstConfig)) {
         if (
-          !callDataPerNetwork[source].chainsToRemove.includes(dstChainSelector)
+          !callDataPerNetwork[source].chainsToRemove.find((v) =>
+            dstChainSelector.eq(v),
+          )
         ) {
           callDataPerNetwork[source].chainsToRemove.push(dstChainSelector);
         }
@@ -229,8 +242,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     }
 
     if (
-      !callDataPerNetwork[source].uniqueDestinationChains.includes(
-        dstChainSelector,
+      !callDataPerNetwork[source].uniqueDestinationChains.find((v) =>
+        dstChainSelector.eq(v),
       )
     ) {
       callDataPerNetwork[source].uniqueDestinationChains.push(dstChainSelector);
@@ -239,44 +252,53 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   for (const data of Object.values(callDataPerNetwork)) {
     for (const supportedChain of data.supportedChains) {
-      if (!data.uniqueDestinationChains.includes(supportedChain)) {
+      if (
+        !data.uniqueDestinationChains.find((v) =>
+          BigNumber.from(v).eq(supportedChain),
+        )
+      ) {
         data.chainsToRemove.push(supportedChain);
       }
     }
   }
 
   console.log('callDataPerNetwork', callDataPerNetwork);
-  // contract.applyChainUpdates(
-  //   [],
-  //   [
-  //     {
-  //       inboundRateLimiterConfig: { capacity: 0, rate: 0, isEnabled: false },
-  //       outboundRateLimiterConfig: { capacity: 0, rate: 0, isEnabled: false },
-  //       remoteChainSelector: '',
-  //       remotePoolAddresses: [],
-  //       remoteTokenAddress: '',
-  //     },
-  //   ],
-  // );
 
-  // if (rateLimitConfigs.length === 0) {
-  //   console.log('No rate limit configs to set, everything is up to date');
-  //   return;
-  // }
+  for (const [source, data] of Object.entries(callDataPerNetwork)) {
+    const srcNetwork = source as Network;
+    const srcHre = await getHreByNetworkName(srcNetwork);
+    const addresses = getCurrentAddresses(srcHre);
+    const mTokenAddresses = addresses?.[mToken];
+    const srcDeployer = await getDeployer(srcHre);
 
-  // console.log('rateLimitConfigs', rateLimitConfigs);
+    if (!data.chainsToRemove.length && !data.chainsToUpdate.length) {
+      console.log(
+        `No chains to remove or update for ${srcNetwork}, skipping...`,
+      );
+      continue;
+    }
 
-  // const tx = await sendAndWaitForCustomTxSign(
-  //   hre,
-  //   await contract.populateTransaction.setRateLimits(rateLimitConfigs),
-  //   {
-  //     action: 'update-lz',
-  //     subAction: 'set-lz-rate-limit-configs',
-  //   },
-  //   await contract.owner(),
-  // );
+    const contract = await srcHre.ethers.getContractAt(
+      'MidasCCTBurnMintTokenPool',
+      mTokenAddresses?.ccip?.cct?.tokenPool ?? '',
+      srcDeployer,
+    );
 
-  // console.log('Tx is submitted', tx);
+    await sendAndWaitForCustomTxSign(
+      srcHre,
+      await contract.populateTransaction.applyChainUpdates(
+        data.chainsToRemove,
+        data.chainsToUpdate,
+      ),
+      {
+        action: 'update-cct',
+        mToken: mToken,
+        comment: `set initial CCIP CCT token configs for ${mToken}`,
+      },
+    );
+  }
+
+  console.log('Txs submitted');
 };
 
 export default func;
