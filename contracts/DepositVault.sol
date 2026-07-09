@@ -129,7 +129,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 _minMTokenAmountForFirstDeposit,
         uint256 _maxSupplyCap
     ) public {
-        initializeV1(
+        _initializeV1(
             _ac,
             _mTokenInitParams,
             _receiversInitParams,
@@ -140,7 +140,7 @@ contract DepositVault is ManageableVault, IDepositVault {
             _minMTokenAmountForFirstDeposit
         );
 
-        initializeV2(_maxSupplyCap);
+        _initializeV2(_maxSupplyCap);
     }
 
     /**
@@ -154,7 +154,7 @@ contract DepositVault is ManageableVault, IDepositVault {
      * @param _minAmount basic min amount for operations in mToken
      * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
      */
-    function initializeV1(
+    function _initializeV1(
         address _ac,
         MTokenInitParams calldata _mTokenInitParams,
         ReceiversInitParams calldata _receiversInitParams,
@@ -163,7 +163,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 _variationTolerance,
         uint256 _minAmount,
         uint256 _minMTokenAmountForFirstDeposit
-    ) public initializer {
+    ) private initializer {
         __ManageableVault_init(
             _ac,
             _mTokenInitParams,
@@ -180,7 +180,7 @@ contract DepositVault is ManageableVault, IDepositVault {
      * @notice v2 initializer
      * @param _maxSupplyCap max supply cap for mToken
      */
-    function initializeV2(uint256 _maxSupplyCap) public reinitializer(2) {
+    function _initializeV2(uint256 _maxSupplyCap) private reinitializer(2) {
         maxSupplyCap = _maxSupplyCap;
     }
 
