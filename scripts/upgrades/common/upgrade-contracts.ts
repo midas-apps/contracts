@@ -240,6 +240,7 @@ Implementation: ${deployment.implementationAddress}`,
           newImplementation: deployment.implementationAddress,
           initializer: deployment.initializer,
           initializerCalldata: deployment.initializerCalldata,
+          contractName: deployment.contractName,
         },
         upgradeId,
       );

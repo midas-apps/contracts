@@ -20,7 +20,7 @@ import {
 import {
   executeTimeLockTransferOwnershipTx,
   executeTimeLockUpgradeTx,
-  GetUpgradeTxParams,
+  GetVaultUpgradeTxParams,
   proposeTimeLockTransferOwnershipTx,
   proposeTimeLockUpgradeTx,
   TransferOwnershipTxParams,
@@ -159,7 +159,7 @@ const upgradeAllVaults = async (
   upgradeId: string,
   callBack: (
     hre: HardhatRuntimeEnvironment,
-    params: GetUpgradeTxParams,
+    params: GetVaultUpgradeTxParams,
     salt: string,
   ) => Promise<boolean>,
 ) => {
@@ -443,6 +443,7 @@ Implementation: ${deployment.implementationAddress}`,
           newImplementation: deployment.implementationAddress,
           initializer: deployment.initializer,
           initializerCalldata: deployment.initializerCalldata,
+          contractName: deployment.contractName,
           vaultType: deployment.vaultType,
           mToken: deployment.mToken,
         },
@@ -463,13 +464,16 @@ Implementation: ${deployment.implementationAddress}`,
     }
   }
 
-  if (failedUpgrades.length > 0) {
-    console.log('Failed upgrades', failedUpgrades);
-  }
-
   console.log(
     `Successfully executed ${deployments.length - failedUpgrades.length}/${
       deployments.length
     } upgrades`,
   );
+
+  if (failedUpgrades.length > 0) {
+    console.log('Failed upgrades', failedUpgrades);
+    throw new Error(
+      `${failedUpgrades.length}/${deployments.length} vault upgrades failed`,
+    );
+  }
 };
