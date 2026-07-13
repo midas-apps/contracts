@@ -629,6 +629,16 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x95EF0179867545bEA9DbdAB27955551C0802307e',
       redemptionVaultSwapper: '0xAB09Be3d1E02dFe1f0dbDa460Ff362BF1A5792Fb',
     },
+    mGLO: {
+      token: '0x1DD91a111606382B77A917633ED90feAf25E0F76',
+      customFeed: '0x59313b6ae481e39B8E7710C8C26dC0ada3C532Ca',
+      customFeedDv: '0x1e1fAB87C0600Bf4696871dAE93f6D1046d44469',
+      customFeedRv: '0x298372e3D18E34eD5c44EA7875F50Af7482233f7',
+      dataFeedDv: '0xb1306c60dCcBc3258149FAC18Cc0984D65E0886E',
+      dataFeedRv: '0x98bd3a24d3998EF96b12d896045EaCA7955Ea963',
+      depositVault: '0xe6522C0B034Eb725BB03D5cf957abEC1D2566E91',
+      redemptionVaultSwapper: '0x55f3Ab43E49FFb6b1FFf5E2B310C21278bDAf0f5',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
