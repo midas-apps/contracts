@@ -203,6 +203,18 @@ export const deployAndVerify = async (
   return deployment;
 };
 
+export const getDeploymentGenericConfigOptional = <
+  TConfigKey extends keyof DeploymentConfig['genericConfigs'],
+  TConfig extends DeploymentConfig['genericConfigs'][TConfigKey],
+>(
+  token: MTokenName,
+  configKey: TConfigKey,
+) => {
+  return configsPerToken[token]?.genericConfigs?.[configKey] as
+    | TConfig
+    | undefined;
+};
+
 export const getDeploymentGenericConfig = <
   TConfigKey extends keyof DeploymentConfig['genericConfigs'],
   TConfig extends DeploymentConfig['genericConfigs'][TConfigKey],
@@ -211,7 +223,10 @@ export const getDeploymentGenericConfig = <
   token: MTokenName,
   configKey: TConfigKey,
 ) => {
-  const config = configsPerToken[token]?.genericConfigs?.[configKey] as TConfig;
+  const config = getDeploymentGenericConfigOptional<TConfigKey, TConfig>(
+    token,
+    configKey,
+  );
 
   if (!config) {
     throw new Error('Deployment config is not found');

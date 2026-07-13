@@ -15,7 +15,10 @@ export const mGLODeploymentConfig: DeploymentConfig = {
       adjustmentPercentage: parseUnits('-6', 8),
       underlyingFeed: 'customFeed',
     },
-    dataFeed: {},
+    dataFeed: {
+      minAnswer: parseUnits('1', 8),
+      maxAnswer: parseUnits('1.1', 8),
+    },
     customAggregatorAdjustedDv: {
       adjustmentPercentage: parseUnits('7', 8),
       underlyingFeed: 'customFeed',
