@@ -213,12 +213,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     if (alreadyExists) {
       // validate current config
-      const inboundConfig = await contract.getCurrentInboundRateLimiterState(
-        dstChainSelector,
-      );
-      const outboundConfig = await contract.getCurrentOutboundRateLimiterState(
-        dstChainSelector,
-      );
+      const [outboundConfig, inboundConfig] =
+        await contract.getCurrentRateLimiterState(dstChainSelector, false);
       const remotePoolAddresses = await contract.getRemotePools(
         dstChainSelector,
       );

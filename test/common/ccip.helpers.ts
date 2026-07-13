@@ -10,6 +10,11 @@ type Fixture = Awaited<ReturnType<typeof ccipCctFixture>>;
 export const encodeDecimals = (decimals: number) =>
   ethers.utils.defaultAbiCoder.encode(['uint256'], [decimals]);
 
+// In CCIP 2.0.0 lockOrBurn/releaseOrMint are overloaded, so the single-arg
+const LOCK_OR_BURN_SIG = 'lockOrBurn((bytes,uint64,address,uint256,address))';
+const RELEASE_OR_MINT_SIG =
+  'releaseOrMint((bytes,uint64,address,uint256,address,bytes,bytes,bytes))';
+
 type LockOrBurnParams = {
   amount: BigNumberish;
   receiver?: string;
@@ -49,7 +54,7 @@ export const lockOrBurn = async (
     localToken: localToken ?? mTBILL.address,
   };
 
-  const tx = () => pool.connect(caller).lockOrBurn(lockOrBurnIn);
+  const tx = () => pool.connect(caller)[LOCK_OR_BURN_SIG](lockOrBurnIn);
 
   if (opt?.revertMessage) {
     await expect(tx()).revertedWith(opt.revertMessage);
@@ -72,7 +77,9 @@ export const lockOrBurn = async (
   const totalSupplyBefore = await mTBILL.totalSupply();
   const poolBalanceBefore = await mTBILL.balanceOf(pool.address);
 
-  const out = await pool.connect(caller).callStatic.lockOrBurn(lockOrBurnIn);
+  const out = await pool
+    .connect(caller)
+    .callStatic[LOCK_OR_BURN_SIG](lockOrBurnIn);
   expect(out.destTokenAddress).eq(remoteTokenAddress);
   expect(out.destPoolData).eq(encodeDecimals(18));
 
@@ -131,7 +138,7 @@ export const releaseOrMint = async (
     offchainTokenData: '0x',
   };
 
-  const tx = () => pool.connect(caller).releaseOrMint(releaseOrMintIn);
+  const tx = () => pool.connect(caller)[RELEASE_OR_MINT_SIG](releaseOrMintIn);
 
   if (opt?.revertMessage) {
     await expect(tx()).revertedWith(opt.revertMessage);
@@ -156,7 +163,7 @@ export const releaseOrMint = async (
 
   const out = await pool
     .connect(caller)
-    .callStatic.releaseOrMint(releaseOrMintIn);
+    .callStatic[RELEASE_OR_MINT_SIG](releaseOrMintIn);
   expect(out.destinationAmount).eq(amount);
 
   await expect(tx())

@@ -1380,7 +1380,6 @@ export const ccipCctFixture = async () => {
 
   const pool = await new MidasCCTBurnMintTokenPool__factory(owner).deploy(
     mTBILL.address,
-    [],
     rmn.address,
     router.address,
   );

@@ -1,6 +1,6 @@
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
-import { constants } from 'ethers';
+import { BigNumberish, constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
@@ -26,42 +26,29 @@ const enabledRateLimiter = (capacity: string, rate: string) => ({
   rate: parseUnits(rate),
 });
 
-const deployPoolWithAllowlist = async (
-  fixture: Fixture,
-  allowlist: string[],
-) => {
-  const { owner, accessControl, mTBILL, rmn, router, remoteChainSelector } =
-    fixture;
-
-  const pool = await new MidasCCTBurnMintTokenPool__factory(owner).deploy(
-    mTBILL.address,
-    allowlist,
-    rmn.address,
-    router.address,
-  );
-
-  const roles = getRolesForToken('mTBILL');
-  await accessControl.grantRoleMult(
-    [roles.minter, roles.burner],
-    [pool.address, pool.address],
-  );
-
-  const disabledRateLimiter = { isEnabled: false, capacity: 0, rate: 0 };
-  await pool.applyChainUpdates(
-    [],
-    [
-      {
-        remoteChainSelector,
-        remotePoolAddresses: [fixture.remotePoolAddress],
-        remoteTokenAddress: fixture.remoteTokenAddress,
-        outboundRateLimiterConfig: disabledRateLimiter,
-        inboundRateLimiterConfig: disabledRateLimiter,
-      },
-    ],
-  );
-
-  return pool;
+type RateLimiterConfig = {
+  isEnabled: boolean;
+  capacity: BigNumberish;
+  rate: BigNumberish;
 };
+
+// CCIP 2.0.0 replaced setChainRateLimiterConfig(selector, outbound, inbound)
+// with setRateLimitConfig(RateLimitConfigArgs[]). This shim keeps the tests
+// expressive while targeting the new API (standard, non-fast-finality).
+const setChainRateLimiterConfig = (
+  pool: Fixture['pool'],
+  remoteChainSelector: BigNumberish,
+  outboundRateLimiterConfig: RateLimiterConfig,
+  inboundRateLimiterConfig: RateLimiterConfig,
+) =>
+  pool.setRateLimitConfig([
+    {
+      remoteChainSelector,
+      fastFinality: false,
+      outboundRateLimiterConfig,
+      inboundRateLimiterConfig,
+    },
+  ]);
 
 describe('CCIP', function () {
   describe('MidasCCTBurnMintTokenPool', () => {
@@ -75,7 +62,6 @@ describe('CCIP', function () {
         await expect(
           new MidasCCTBurnMintTokenPool__factory(owner).deploy(
             token.address,
-            [],
             rmn.address,
             router.address,
           ),
@@ -91,11 +77,10 @@ describe('CCIP', function () {
         await expect(
           new MidasCCTBurnMintTokenPool__factory(owner).deploy(
             mTBILL.address,
-            [],
             rmn.address,
             constants.AddressZero,
           ),
-        ).revertedWithCustomError(pool, 'ZeroAddressNotAllowed');
+        ).revertedWithCustomError(pool, 'ZeroAddressInvalid');
       });
 
       it('should fail: when rmn is the zero address', async () => {
@@ -105,11 +90,10 @@ describe('CCIP', function () {
         await expect(
           new MidasCCTBurnMintTokenPool__factory(owner).deploy(
             mTBILL.address,
-            [],
             constants.AddressZero,
             router.address,
           ),
-        ).revertedWithCustomError(pool, 'ZeroAddressNotAllowed');
+        ).revertedWithCustomError(pool, 'ZeroAddressInvalid');
       });
 
       it('encodes 18 decimals in the destPoolData and sourcePoolData', async () => {
@@ -425,7 +409,8 @@ describe('CCIP', function () {
         const { pool, mTBILL, remoteChainSelector } = fixture;
 
         await mintToken(mTBILL, pool.address, 1000);
-        await pool.setChainRateLimiterConfig(
+        await setChainRateLimiterConfig(
+          pool,
           remoteChainSelector,
           enabledRateLimiter('100', '10'),
           { isEnabled: false, capacity: 0, rate: 0 },
@@ -450,7 +435,8 @@ describe('CCIP', function () {
         const { pool, mTBILL, remoteChainSelector } = fixture;
 
         await mintToken(mTBILL, pool.address, 1000);
-        await pool.setChainRateLimiterConfig(
+        await setChainRateLimiterConfig(
+          pool,
           remoteChainSelector,
           enabledRateLimiter('100', '10'),
           { isEnabled: false, capacity: 0, rate: 0 },
@@ -460,13 +446,15 @@ describe('CCIP', function () {
         await lockOrBurn(fixture, { amount: parseUnits('100') });
 
         await expect(
-          pool.connect(fixture.onRamp).lockOrBurn({
-            receiver: '0x',
-            remoteChainSelector,
-            originalSender: fixture.owner.address,
-            amount: parseUnits('100'),
-            localToken: mTBILL.address,
-          }),
+          pool
+            .connect(fixture.onRamp)
+            ['lockOrBurn((bytes,uint64,address,uint256,address))']({
+              receiver: '0x',
+              remoteChainSelector,
+              originalSender: fixture.owner.address,
+              amount: parseUnits('100'),
+              localToken: mTBILL.address,
+            }),
         ).revertedWithCustomError(pool, 'TokenRateLimitReached');
       });
 
@@ -475,7 +463,8 @@ describe('CCIP', function () {
         const { pool, mTBILL, remoteChainSelector } = fixture;
 
         await mintToken(mTBILL, pool.address, 1000);
-        await pool.setChainRateLimiterConfig(
+        await setChainRateLimiterConfig(
+          pool,
           remoteChainSelector,
           enabledRateLimiter('100', '10'),
           { isEnabled: false, capacity: 0, rate: 0 },
@@ -492,7 +481,8 @@ describe('CCIP', function () {
         const { pool, mTBILL, remoteChainSelector } = fixture;
 
         await mintToken(mTBILL, pool.address, 1000);
-        await pool.setChainRateLimiterConfig(
+        await setChainRateLimiterConfig(
+          pool,
           remoteChainSelector,
           { isEnabled: true, capacity: 0, rate: 0 },
           { isEnabled: false, capacity: 0, rate: 0 },
@@ -517,7 +507,8 @@ describe('CCIP', function () {
         const fixture = await loadFixture(ccipCctFixture);
         const { pool, mTBILL, remoteChainSelector } = fixture;
 
-        await pool.setChainRateLimiterConfig(
+        await setChainRateLimiterConfig(
+          pool,
           remoteChainSelector,
           { isEnabled: false, capacity: 0, rate: 0 },
           enabledRateLimiter('100', '10'),
@@ -541,7 +532,8 @@ describe('CCIP', function () {
         const { pool, mTBILL, remoteChainSelector, remotePoolAddress } =
           fixture;
 
-        await pool.setChainRateLimiterConfig(
+        await setChainRateLimiterConfig(
+          pool,
           remoteChainSelector,
           { isEnabled: false, capacity: 0, rate: 0 },
           enabledRateLimiter('100', '10'),
@@ -551,16 +543,20 @@ describe('CCIP', function () {
         await releaseOrMint(fixture, { amount: parseUnits('100') });
 
         await expect(
-          pool.connect(fixture.offRamp).releaseOrMint({
-            originalSender: fixture.owner.address,
-            remoteChainSelector,
-            receiver: fixture.owner.address,
-            sourceDenominatedAmount: parseUnits('100'),
-            localToken: mTBILL.address,
-            sourcePoolAddress: remotePoolAddress,
-            sourcePoolData: encodeDecimals(18),
-            offchainTokenData: '0x',
-          }),
+          pool
+            .connect(fixture.offRamp)
+            [
+              'releaseOrMint((bytes,uint64,address,uint256,address,bytes,bytes,bytes))'
+            ]({
+              originalSender: fixture.owner.address,
+              remoteChainSelector,
+              receiver: fixture.owner.address,
+              sourceDenominatedAmount: parseUnits('100'),
+              localToken: mTBILL.address,
+              sourcePoolAddress: remotePoolAddress,
+              sourcePoolData: encodeDecimals(18),
+              offchainTokenData: '0x',
+            }),
         ).revertedWithCustomError(pool, 'TokenRateLimitReached');
       });
 
@@ -568,7 +564,8 @@ describe('CCIP', function () {
         const fixture = await loadFixture(ccipCctFixture);
         const { pool, remoteChainSelector } = fixture;
 
-        await pool.setChainRateLimiterConfig(
+        await setChainRateLimiterConfig(
+          pool,
           remoteChainSelector,
           { isEnabled: false, capacity: 0, rate: 0 },
           enabledRateLimiter('100', '10'),
@@ -582,58 +579,21 @@ describe('CCIP', function () {
     });
 
     describe('allowlist', () => {
+      // In CCIP 2.0.0 the pool-level allowlist was removed. Sender allowlisting
+      // is now an optional, separately-deployed AdvancedPoolHooks contract.
+      // The Midas pool is deployed with no hooks (advancedPoolHooks = address(0)),
+      // so it is permissionless and accepts any originalSender.
       it('is permissionless by default and accepts any sender', async () => {
         const fixture = await loadFixture(ccipCctFixture);
         const { pool, alice } = fixture;
 
-        expect(await pool.getAllowListEnabled()).eq(false);
+        expect(await pool.getAdvancedPoolHooks()).eq(constants.AddressZero);
 
         await mintToken(fixture.mTBILL, pool.address, 100);
         await lockOrBurn(fixture, {
           amount: parseUnits('100'),
           originalSender: alice.address,
         });
-      });
-
-      it('should fail: lockOrBurn for a non-allowlisted sender', async () => {
-        const fixture = await loadFixture(ccipCctFixture);
-        const { owner, alice, onRamp, remoteChainSelector } = fixture;
-
-        const pool = await deployPoolWithAllowlist(fixture, [alice.address]);
-        expect(await pool.getAllowListEnabled()).eq(true);
-
-        await mintToken(fixture.mTBILL, pool.address, 100);
-
-        await expect(
-          pool.connect(onRamp).lockOrBurn({
-            receiver: '0x',
-            remoteChainSelector,
-            originalSender: owner.address,
-            amount: parseUnits('100'),
-            localToken: fixture.mTBILL.address,
-          }),
-        )
-          .revertedWithCustomError(pool, 'SenderNotAllowed')
-          .withArgs(owner.address);
-      });
-
-      it('lockOrBurn succeeds for an allowlisted sender', async () => {
-        const fixture = await loadFixture(ccipCctFixture);
-        const { alice, onRamp, remoteChainSelector } = fixture;
-
-        const pool = await deployPoolWithAllowlist(fixture, [alice.address]);
-
-        await mintToken(fixture.mTBILL, pool.address, 100);
-
-        await expect(
-          pool.connect(onRamp).lockOrBurn({
-            receiver: '0x',
-            remoteChainSelector,
-            originalSender: alice.address,
-            amount: parseUnits('100'),
-            localToken: fixture.mTBILL.address,
-          }),
-        ).to.emit(pool, 'LockedOrBurned');
       });
     });
 
@@ -688,13 +648,22 @@ describe('CCIP', function () {
         const { pool, alice, remoteChainSelector } = fixture;
 
         await expect(
-          pool
-            .connect(alice)
-            .setChainRateLimiterConfig(
+          pool.connect(alice).setRateLimitConfig([
+            {
               remoteChainSelector,
-              { isEnabled: false, capacity: 0, rate: 0 },
-              { isEnabled: false, capacity: 0, rate: 0 },
-            ),
+              fastFinality: false,
+              outboundRateLimiterConfig: {
+                isEnabled: false,
+                capacity: 0,
+                rate: 0,
+              },
+              inboundRateLimiterConfig: {
+                isEnabled: false,
+                capacity: 0,
+                rate: 0,
+              },
+            },
+          ]),
         ).revertedWithCustomError(pool, 'Unauthorized');
       });
 
@@ -709,12 +678,18 @@ describe('CCIP', function () {
         ).revertedWithCustomError(pool, 'OnlyCallableByOwner');
       });
 
-      it('should fail: setRouter by a non-owner', async () => {
+      it('should fail: setDynamicConfig by a non-owner', async () => {
         const fixture = await loadFixture(ccipCctFixture);
         const { pool, alice, router } = fixture;
 
         await expect(
-          pool.connect(alice).setRouter(router.address),
+          pool
+            .connect(alice)
+            .setDynamicConfig(
+              router.address,
+              constants.AddressZero,
+              constants.AddressZero,
+            ),
         ).revertedWithCustomError(pool, 'OnlyCallableByOwner');
       });
     });

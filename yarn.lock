@@ -293,15 +293,22 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@chainlink/contracts-ccip@npm:1.6.1":
-  version: 1.6.1
-  resolution: "@chainlink/contracts-ccip@npm:1.6.1"
+"@chainlink/ace@npm:1.0.0":
+  version: 1.0.0
+  resolution: "@chainlink/ace@npm:1.0.0"
+  checksum: 10c0/2ca0e0beea2382c294ca39cfedbc7b24ea620a0cd2657699e8a6b823c1661cc34fce60c6a5d5bbe0d34cab2a09ac0c2ada0fa28adae236a2c064e900e951437e
+  languageName: node
+  linkType: hard
+
+"@chainlink/contracts-ccip@npm:2.0.0":
+  version: 2.0.0
+  resolution: "@chainlink/contracts-ccip@npm:2.0.0"
   dependencies:
-    "@chainlink/contracts": "npm:1.4.0"
-    "@changesets/cli": "npm:^2.29.5"
-    "@changesets/get-github-info": "npm:^0.6.0"
-    semver: "npm:^7.7.2"
-  checksum: 10c0/809064560325a39d37ce887a453127eb2e8d1c1308ea4ea304defb386d9fbaec305550e13a504998a532d5cf1282b2bca308667f647f7e216bad85c8345de31f
+    "@chainlink/ace": "npm:1.0.0"
+    "@chainlink/contracts": "npm:1.5.0"
+    "@openzeppelin/contracts-4.8.3": "npm:@openzeppelin/contracts@4.8.3"
+    "@openzeppelin/contracts-5.3.0": "npm:@openzeppelin/contracts@5.3.0"
+  checksum: 10c0/452556375a9e8cdcb59f34ec640abf7ff814ea068a04b7586a0a56002eeecd999ca65f1feefbc6806684222ceca75a9ba24e40aa1481a92182d47213ba040ee5
   languageName: node
   linkType: hard
 
@@ -319,6 +326,28 @@ __metadata:
     "@zksync/contracts": "github:matter-labs/era-contracts#446d391d34bdb48255d5f8fef8a8248925fc98b9"
     semver: "npm:^7.7.1"
   checksum: 10c0/2793adde6c1458fc0ec00cb990bb159abaf84fd2b979d1bf15f7978e93bd9c737eb44a694274e46ec9cd664afd6d7b701416b6f7d67c211e582045ce88874f93
+  languageName: node
+  linkType: hard
+
+"@chainlink/contracts@npm:1.5.0":
+  version: 1.5.0
+  resolution: "@chainlink/contracts@npm:1.5.0"
+  dependencies:
+    "@arbitrum/nitro-contracts": "npm:3.0.0"
+    "@changesets/cli": "npm:^2.29.6"
+    "@changesets/get-github-info": "npm:^0.6.0"
+    "@eslint/eslintrc": "npm:^3.3.1"
+    "@eth-optimism/contracts": "npm:0.6.0"
+    "@openzeppelin/contracts-4.7.3": "npm:@openzeppelin/contracts@4.7.3"
+    "@openzeppelin/contracts-4.8.3": "npm:@openzeppelin/contracts@4.8.3"
+    "@openzeppelin/contracts-4.9.6": "npm:@openzeppelin/contracts@4.9.6"
+    "@openzeppelin/contracts-5.0.2": "npm:@openzeppelin/contracts@5.0.2"
+    "@openzeppelin/contracts-5.1.0": "npm:@openzeppelin/contracts@5.1.0"
+    "@openzeppelin/contracts-upgradeable": "npm:4.9.6"
+    "@scroll-tech/contracts": "npm:2.0.0"
+    "@zksync/contracts": "github:matter-labs/era-contracts#446d391d34bdb48255d5f8fef8a8248925fc98b9"
+    semver: "npm:^7.7.2"
+  checksum: 10c0/08704d880252cfc078a586edfd0416cf57024d6c6cd3b479e998787e24f899ea59c5d6136cfce58eed615ed92878595a0f0cf67ed94bd736a6141b30492eab18
   languageName: node
   linkType: hard
 
@@ -366,7 +395,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@changesets/cli@npm:^2.29.5":
+"@changesets/cli@npm:^2.29.6":
   version: 2.31.0
   resolution: "@changesets/cli@npm:2.31.0"
   dependencies:
@@ -3165,6 +3194,48 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@openzeppelin/contracts-4.7.3@npm:@openzeppelin/contracts@4.7.3, @openzeppelin/contracts@npm:4.7.3":
+  version: 4.7.3
+  resolution: "@openzeppelin/contracts@npm:4.7.3"
+  checksum: 10c0/fa4091de95f664e82c3db318d9914412e062684c2b423198bc0d63ac9b4084e3a77ef31ff46488edef41573cf0451e3583ae69055a52e8c2f44bb2dab52b352b
+  languageName: node
+  linkType: hard
+
+"@openzeppelin/contracts-4.8.3@npm:@openzeppelin/contracts@4.8.3, @openzeppelin/contracts@npm:4.8.3":
+  version: 4.8.3
+  resolution: "@openzeppelin/contracts@npm:4.8.3"
+  checksum: 10c0/1f80772c4e5b4f495ad0863663d5e1fd5315aec8b3886371f610dab41e96c3699eff631c66eedbc1f47a3df3010c17fa9ce217d9350e5ef070232c6386a7a40d
+  languageName: node
+  linkType: hard
+
+"@openzeppelin/contracts-4.9.6@npm:@openzeppelin/contracts@4.9.6, @openzeppelin/contracts@npm:4.9.6":
+  version: 4.9.6
+  resolution: "@openzeppelin/contracts@npm:4.9.6"
+  checksum: 10c0/f834b000778f634a260ed5507827cc67c0922557a1f57e1d76cf7ace061fea171aaf16640ba2e54fd7ed2cc629a9d706bc671a9692d2bb9a9469ea6154de6e8c
+  languageName: node
+  linkType: hard
+
+"@openzeppelin/contracts-5.0.2@npm:@openzeppelin/contracts@5.0.2":
+  version: 5.0.2
+  resolution: "@openzeppelin/contracts@npm:5.0.2"
+  checksum: 10c0/d042661db7bb2f3a4b9ef30bba332e86ac20907d171f2ebfccdc9255cc69b62786fead8d6904b8148a8f26946bc7c15eead91b95f75db0c193a99d52e528663e
+  languageName: node
+  linkType: hard
+
+"@openzeppelin/contracts-5.1.0@npm:@openzeppelin/contracts@5.1.0":
+  version: 5.1.0
+  resolution: "@openzeppelin/contracts@npm:5.1.0"
+  checksum: 10c0/dd6cf97fbc07910e57efefec1ca5b49cbe70ad7f53ff66fa7d1ecb4ec0c47a8609220e46496665dbebed9dba95a4524679adf0cf36fdd58c59a98787fd019678
+  languageName: node
+  linkType: hard
+
+"@openzeppelin/contracts-5.3.0@npm:@openzeppelin/contracts@5.3.0":
+  version: 5.3.0
+  resolution: "@openzeppelin/contracts@npm:5.3.0"
+  checksum: 10c0/b8a2d97413c24635c92de4b2a1188fa58ab252515aff38eabce4fa66bd3d8ae1649010d17fccaeb4e266bf8314c8bd92757fedca97bf643b6b98e11dea3fa83d
+  languageName: node
+  linkType: hard
+
 "@openzeppelin/contracts-upgradeable@npm:4.7.3":
   version: 4.7.3
   resolution: "@openzeppelin/contracts-upgradeable@npm:4.7.3"
@@ -3183,27 +3254,6 @@ __metadata:
   version: 4.9.6
   resolution: "@openzeppelin/contracts-upgradeable@npm:4.9.6"
   checksum: 10c0/c2bbd28130f630601fdae0eda6aea170f9a730b1f31b069c9029b7131d3e0c05041821c75555039488a340cb2c0eb848a1ce0921553bc2c5cdd5be2b56dd427d
-  languageName: node
-  linkType: hard
-
-"@openzeppelin/contracts@npm:4.7.3":
-  version: 4.7.3
-  resolution: "@openzeppelin/contracts@npm:4.7.3"
-  checksum: 10c0/fa4091de95f664e82c3db318d9914412e062684c2b423198bc0d63ac9b4084e3a77ef31ff46488edef41573cf0451e3583ae69055a52e8c2f44bb2dab52b352b
-  languageName: node
-  linkType: hard
-
-"@openzeppelin/contracts@npm:4.8.3":
-  version: 4.8.3
-  resolution: "@openzeppelin/contracts@npm:4.8.3"
-  checksum: 10c0/1f80772c4e5b4f495ad0863663d5e1fd5315aec8b3886371f610dab41e96c3699eff631c66eedbc1f47a3df3010c17fa9ce217d9350e5ef070232c6386a7a40d
-  languageName: node
-  linkType: hard
-
-"@openzeppelin/contracts@npm:4.9.6":
-  version: 4.9.6
-  resolution: "@openzeppelin/contracts@npm:4.9.6"
-  checksum: 10c0/f834b000778f634a260ed5507827cc67c0922557a1f57e1d76cf7ace061fea171aaf16640ba2e54fd7ed2cc629a9d706bc671a9692d2bb9a9469ea6154de6e8c
   languageName: node
   linkType: hard
 
@@ -3459,6 +3509,13 @@ __metadata:
   version: 0.1.0
   resolution: "@scroll-tech/contracts@npm:0.1.0"
   checksum: 10c0/6855c6a3013be4d0af03f918f4ad9e32ce0385345c8d1267c67338db5d43269158cf6f690d37eb77f768a9b612ba11826cd507d817b6411541e75ff977abb15d
+  languageName: node
+  linkType: hard
+
+"@scroll-tech/contracts@npm:2.0.0":
+  version: 2.0.0
+  resolution: "@scroll-tech/contracts@npm:2.0.0"
+  checksum: 10c0/688c697702859cb83cbdb65ea0cad85c9f4322831eb58ab643461f769ee282f30261d31c20257772f675bad527e6be7e4905252f1bf7e90885ca02c29db2010d
   languageName: node
   linkType: hard
 
@@ -12253,7 +12310,7 @@ __metadata:
     "@axelar-network/axelarjs-sdk": "npm:0.17.9"
     "@axelar-network/interchain-token-service": "npm:2.2.0"
     "@chainlink/contracts": "npm:1.4.0"
-    "@chainlink/contracts-ccip": "npm:1.6.1"
+    "@chainlink/contracts-ccip": "npm:2.0.0"
     "@clack/prompts": "npm:0.11.0"
     "@commitlint/cli": "npm:17.1.2"
     "@commitlint/config-conventional": "npm:17.1.0"

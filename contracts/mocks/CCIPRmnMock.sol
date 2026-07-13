@@ -18,12 +18,12 @@ contract CCIPRmnMock is IRMN {
         return _sCursed;
     }
 
-    function isBlessed(TaggedRoot calldata)
+    function getCursedSubjects()
         external
         pure
         override
-        returns (bool)
+        returns (bytes16[] memory)
     {
-        return true;
+        return new bytes16[](0);
     }
 }

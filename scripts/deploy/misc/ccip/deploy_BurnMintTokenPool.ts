@@ -73,10 +73,9 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const args = [
     mTokenAddresses.token,
-    [], // TODO: allowlist?
     ccipConfig.rmnProxy,
     ccipConfig.router,
-  ] as readonly [string, string[], string, string];
+  ] as readonly [string, string, string];
 
   const contract = await factory.deploy(...args);
 
