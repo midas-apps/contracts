@@ -639,6 +639,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0xe6522C0B034Eb725BB03D5cf957abEC1D2566E91',
       redemptionVaultSwapper: '0x55f3Ab43E49FFb6b1FFf5E2B310C21278bDAf0f5',
     },
+    mM1BTC: {
+      token: '0xc57c754f51DbbFae1a12b1aD1b8a8587bf24260a',
+      customFeed: '0x0066B0Cf5d7185cC30345AAAe258568f564b46d1',
+      dataFeed: '0xd5a4371EDAC4495d1733D2261B3B3c8FAC338174',
+      depositVault: '0xcEDCa505839c01Cc4FbE65496AA3Bb03B8ff98Ed',
+      redemptionVaultSwapper: '0x7F72AA0339b4944E1A77df847168AE1936c1EBBB',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
