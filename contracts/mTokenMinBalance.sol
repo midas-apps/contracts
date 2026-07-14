@@ -12,14 +12,14 @@ import "./mToken.sol";
 abstract contract mTokenMinBalance is mToken {
     /**
      * @param user address of the user
-     * @param isFree bool if the user is free from min balance checks
+     * @param isExempt bool if the user is exempt from min balance checks
      */
-    event SetIsFreeFromMinBalance(address indexed user, bool isFree);
+    event SetIsMinBalanceExempt(address indexed user, bool isExempt);
 
     /**
-     * @notice mapping, user address => is free from min balance checks
+     * @notice mapping, user address => is exempt from min balance checks
      */
-    mapping(address => bool) public isFreeFromMinBalance;
+    mapping(address => bool) public isMinBalanceExempt;
 
     /**
      * @dev leaving a storage gap for futures updates
@@ -27,20 +27,20 @@ abstract contract mTokenMinBalance is mToken {
     uint256[50] private __gap;
 
     /**
-     * @notice set if a user is free from min balance checks
+     * @notice set if a user is exempt from min balance checks
      * @param user address of the user
-     * @param isFree bool if the user is free from min balance checks
+     * @param isExempt bool if the user is exempt from min balance checks
      */
-    function setIsFreeFromMinBalance(address user, bool isFree)
+    function setIsMinBalanceExempt(address user, bool isExempt)
         external
         onlyRole(DEFAULT_ADMIN_ROLE, msg.sender)
     {
-        if (isFreeFromMinBalance[user] == isFree) {
+        if (isMinBalanceExempt[user] == isExempt) {
             return;
         }
 
-        isFreeFromMinBalance[user] = isFree;
-        emit SetIsFreeFromMinBalance(user, isFree);
+        isMinBalanceExempt[user] = isExempt;
+        emit SetIsMinBalanceExempt(user, isExempt);
     }
 
     /**
@@ -51,11 +51,11 @@ abstract contract mTokenMinBalance is mToken {
         address to,
         uint256 amount
     ) internal virtual override {
-        if (from != address(0) && !isFreeFromMinBalance[from]) {
+        if (from != address(0) && !isMinBalanceExempt[from]) {
             _validateMinBalance(from, true);
         }
 
-        if (to != address(0) && !isFreeFromMinBalance[to]) {
+        if (to != address(0) && !isMinBalanceExempt[to]) {
             _validateMinBalance(to, from != address(0));
         }
 
