@@ -46,6 +46,7 @@ import {
   getGenerationModeFromUser,
   getGreenlistRoleSourceFromUser,
   getShouldUseTokenLevelGreenListFromUser,
+  getShouldUseTokenMinBalanceFromUser,
   getShouldUseTokenPermissionedFromUser,
   getTokenContractNameFromUser,
 } from './ui/deployment-contracts';
@@ -110,6 +111,7 @@ export const updateConfigFiles = (
     symbol,
     mToken,
     isPermissioned,
+    isMinBalance,
     useTokenLevelGreenList,
     greenlistRoleSource,
   }: {
@@ -119,6 +121,7 @@ export const updateConfigFiles = (
     symbol: string;
     mToken: string;
     isPermissioned?: true;
+    isMinBalance?: true;
     useTokenLevelGreenList?: boolean;
     greenlistRoleSource?: string;
   },
@@ -233,17 +236,20 @@ export const updateConfigFiles = (
     );
 
     if (!objLiteral.getProperty(mToken)) {
+      const flags = [
+        isPermissioned ? 'isPermissioned: true' : undefined,
+        isMinBalance ? 'isMinBalance: true' : undefined,
+      ]
+        .filter(Boolean)
+        .map((flag) => `,\n              ${flag}`)
+        .join('');
+
       objLiteral.addPropertyAssignment({
         name: mToken,
         initializer: (writer) =>
           writer.write(`{
             name: '${name}',
-            symbol: '${symbol}'${
-            isPermissioned
-              ? `,
-              isPermissioned: true`
-              : ''
-          }
+            symbol: '${symbol}'${flags}
           }`),
       });
     }
@@ -775,6 +781,7 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
     rolesPrefix: string;
   };
   let isPermissionedFromMetadata = false;
+  let isMinBalanceFromMetadata = false;
 
   if (mode === 'create') {
     config = await getConfigFromUser(mToken);
@@ -800,12 +807,14 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
       rolesPrefix,
     };
     isPermissionedFromMetadata = !!metadata.isPermissioned;
+    isMinBalanceFromMetadata = !!metadata.isMinBalance;
   }
 
   const contractsToGenerate = await getContractsToGenerateFromUser();
 
   let shouldUseTokenLevelGreenList = false;
   let shouldUseTokenPermissioned = isPermissionedFromMetadata;
+  let shouldUseTokenMinBalance = isMinBalanceFromMetadata;
   let greenlistRoleSource: string | undefined;
 
   if (
@@ -835,6 +844,7 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
 
   if (contractsToGenerate.includes('token') && mode === 'create') {
     shouldUseTokenPermissioned = await getShouldUseTokenPermissionedFromUser();
+    shouldUseTokenMinBalance = await getShouldUseTokenMinBalanceFromUser();
   }
 
   await tasks([
@@ -848,6 +858,7 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
           symbol: config.tokenSymbol,
           mToken: config.tokenContractName,
           isPermissioned: shouldUseTokenPermissioned ? true : undefined,
+          isMinBalance: shouldUseTokenMinBalance ? true : undefined,
           useTokenLevelGreenList: shouldUseTokenLevelGreenList,
           greenlistRoleSource,
         });
@@ -883,6 +894,7 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
       generator(mToken, {
         vaultUseTokenLevelGreenList: shouldUseTokenLevelGreenList,
         isPermissionedMToken: shouldUseTokenPermissioned,
+        isMinBalanceMToken: shouldUseTokenMinBalance,
       }),
     ),
   );
