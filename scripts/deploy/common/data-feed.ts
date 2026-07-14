@@ -58,6 +58,15 @@ export type DeployDataFeedConfig =
   | DeployDataFeedConfigComposite
   | DeployDataFeedConfigRegular;
 
+export const isAnswerWithinExpectedRange = (
+  roundId: BigNumber,
+  answer: BigNumber,
+  minAnswer: BigNumber,
+  maxAnswer: BigNumber,
+) => {
+  return roundId.isZero() || (answer.gte(minAnswer) && answer.lte(maxAnswer));
+};
+
 type DeployCustomAggregatorCommonConfig = {
   /**
    * Default: 0.1
@@ -363,9 +372,9 @@ const updateExpectedAnswers = async (
     );
   }
 
-  const { answer } = await aggregator.latestRoundData();
+  const { answer, roundId } = await aggregator.latestRoundData();
 
-  if (answer.lt(newMin) || answer.gt(newMax)) {
+  if (!isAnswerWithinExpectedRange(roundId, answer, newMin, newMax)) {
     throw new Error(
       `current aggregator answer ${formatUnits(
         answer,
