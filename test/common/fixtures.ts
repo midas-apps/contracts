@@ -57,6 +57,8 @@ import {
   MidasLzOFTAdapter__factory,
   MidasLzVaultComposerSyncTester,
   MTokenPermissionedTest__factory,
+  MTokenMinBalanceTest__factory,
+  MTokenPermissionedMinBalanceTest__factory,
   AxelarInterchainTokenServiceMock__factory,
   MidasAxelarVaultExecutableTester,
   LzEndpointV2Mock__factory,
@@ -982,6 +984,77 @@ export const mTokenPermissionedFixture = async (
     },
     mTokenPermissionedDepositVault,
     mTokenPermissionedRedemptionVault,
+  };
+};
+
+/**
+ * mTokenMinBalanceTest fixture for min-balance unit tests.
+ */
+export const mTokenMinBalanceFixture = async (
+  baseFixture?: Awaited<ReturnType<typeof defaultDeploy>>,
+) => {
+  const fx = baseFixture ?? (await defaultDeploy());
+  const { owner, accessControl } = fx;
+
+  const mTokenMinBalance = await new MTokenMinBalanceTest__factory(
+    owner,
+  ).deploy();
+  await mTokenMinBalance.initialize(accessControl.address);
+
+  const mintRole = await mTokenMinBalance.M_TOKEN_TEST_MINT_OPERATOR_ROLE();
+  const burnRole = await mTokenMinBalance.M_TOKEN_TEST_BURN_OPERATOR_ROLE();
+  const pauseRole = await mTokenMinBalance.M_TOKEN_TEST_PAUSE_OPERATOR_ROLE();
+
+  await accessControl.grantRole(mintRole, owner.address);
+  await accessControl.grantRole(burnRole, owner.address);
+  await accessControl.grantRole(pauseRole, owner.address);
+
+  return {
+    ...fx,
+    mTokenMinBalance,
+    mTokenMinBalanceRoles: {
+      mint: mintRole,
+      burn: burnRole,
+      pause: pauseRole,
+    },
+  };
+};
+
+/**
+ * mTokenPermissionedMinBalanceTest fixture for permissioned + min-balance unit tests.
+ */
+export const mTokenPermissionedMinBalanceFixture = async (
+  baseFixture?: Awaited<ReturnType<typeof defaultDeploy>>,
+) => {
+  const fx = baseFixture ?? (await defaultDeploy());
+  const { owner, accessControl } = fx;
+
+  const mTokenPermissionedMinBalance =
+    await new MTokenPermissionedMinBalanceTest__factory(owner).deploy();
+  await mTokenPermissionedMinBalance.initialize(accessControl.address);
+
+  const mintRole =
+    await mTokenPermissionedMinBalance.M_TOKEN_TEST_MINT_OPERATOR_ROLE();
+  const burnRole =
+    await mTokenPermissionedMinBalance.M_TOKEN_TEST_BURN_OPERATOR_ROLE();
+  const pauseRole =
+    await mTokenPermissionedMinBalance.M_TOKEN_TEST_PAUSE_OPERATOR_ROLE();
+  const greenlistedRole =
+    await mTokenPermissionedMinBalance.M_TOKEN_TEST_GREENLISTED_ROLE();
+
+  await accessControl.grantRole(mintRole, owner.address);
+  await accessControl.grantRole(burnRole, owner.address);
+  await accessControl.grantRole(pauseRole, owner.address);
+
+  return {
+    ...fx,
+    mTokenPermissionedMinBalance,
+    mTokenPermissionedMinBalanceRoles: {
+      mint: mintRole,
+      burn: burnRole,
+      pause: pauseRole,
+      greenlisted: greenlistedRole,
+    },
   };
 };
 

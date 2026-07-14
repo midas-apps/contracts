@@ -5,10 +5,21 @@ import { defaultAbiCoder, solidityKeccak256 } from 'ethers/lib/utils';
 
 import { Account, OptionalCommonParams, getAccount } from './common.helpers';
 
-import { MTBILL, MToken, MTokenPermissioned } from '../../typechain-types';
+import {
+  MTBILL,
+  MToken,
+  MTokenMinBalance,
+  MTokenPermissioned,
+  MTokenPermissionedMinBalance,
+} from '../../typechain-types';
 
 type CommonParams = {
-  tokenContract: MToken | MTBILL | MTokenPermissioned;
+  tokenContract:
+    | MToken
+    | MTBILL
+    | MTokenPermissioned
+    | MTokenMinBalance
+    | MTokenPermissionedMinBalance;
   owner: SignerWithAddress;
 };
 
