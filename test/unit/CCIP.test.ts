@@ -9,11 +9,12 @@ import {
   ERC20Mock__factory,
   MidasCCTBurnMintTokenPool__factory,
 } from '../../typechain-types';
-import { acErrors, blackList } from '../common/ac.helpers';
+import { blackList } from '../common/ac.helpers';
 import {
   encodeDecimals,
   lockOrBurn,
   releaseOrMint,
+  setFallbackReceiver,
 } from '../common/ccip.helpers';
 import { mintToken } from '../common/common.helpers';
 import { ccipCctFixture } from '../common/fixtures';
@@ -55,7 +56,7 @@ describe('CCIP', function () {
     describe('deployment', () => {
       it('should fail: when token decimals are not 18', async () => {
         const fixture = await loadFixture(ccipCctFixture);
-        const { owner, pool, rmn, router } = fixture;
+        const { owner, pool, rmn, router, fallbackReceiver } = fixture;
 
         const token = await new ERC20Mock__factory(owner).deploy(6);
 
@@ -64,6 +65,7 @@ describe('CCIP', function () {
             token.address,
             rmn.address,
             router.address,
+            fallbackReceiver.address,
           ),
         )
           .revertedWithCustomError(pool, 'InvalidDecimalArgs')
@@ -72,28 +74,51 @@ describe('CCIP', function () {
 
       it('should fail: when router is the zero address', async () => {
         const fixture = await loadFixture(ccipCctFixture);
-        const { owner, pool, rmn, mTBILL } = fixture;
+        const { owner, pool, rmn, mTBILL, fallbackReceiver } = fixture;
 
         await expect(
           new MidasCCTBurnMintTokenPool__factory(owner).deploy(
             mTBILL.address,
             rmn.address,
             constants.AddressZero,
+            fallbackReceiver.address,
           ),
         ).revertedWithCustomError(pool, 'ZeroAddressInvalid');
       });
 
       it('should fail: when rmn is the zero address', async () => {
         const fixture = await loadFixture(ccipCctFixture);
-        const { owner, pool, router, mTBILL } = fixture;
+        const { owner, pool, router, mTBILL, fallbackReceiver } = fixture;
 
         await expect(
           new MidasCCTBurnMintTokenPool__factory(owner).deploy(
             mTBILL.address,
             constants.AddressZero,
             router.address,
+            fallbackReceiver.address,
           ),
         ).revertedWithCustomError(pool, 'ZeroAddressInvalid');
+      });
+
+      it('should fail: when fallback receiver is the zero address', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { owner, rmn, router, mTBILL } = fixture;
+
+        await expect(
+          new MidasCCTBurnMintTokenPool__factory(owner).deploy(
+            mTBILL.address,
+            rmn.address,
+            router.address,
+            constants.AddressZero,
+          ),
+        ).revertedWith('MCCT: address zero');
+      });
+
+      it('sets the fallback receiver from the constructor', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { pool, fallbackReceiver } = fixture;
+
+        expect(await pool.fallbackReceiver()).eq(fallbackReceiver.address);
       });
 
       it('encodes 18 decimals in the destPoolData and sourcePoolData', async () => {
@@ -103,6 +128,36 @@ describe('CCIP', function () {
         expect(encodeDecimals(18)).eq(
           ethers.utils.defaultAbiCoder.encode(['uint256'], [18]),
         );
+      });
+    });
+
+    describe('setFallbackReceiver', () => {
+      it('updates the fallback receiver when called by the owner', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { alice } = fixture;
+
+        await setFallbackReceiver(fixture, alice);
+      });
+
+      it('should fail: when called by a non-owner', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { pool, alice } = fixture;
+
+        await setFallbackReceiver(fixture, alice, {
+          from: alice,
+          revertWithCustomError: {
+            contract: pool,
+            error: 'OnlyCallableByOwner',
+          },
+        });
+      });
+
+      it('should fail: when the new fallback receiver is the zero address', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+
+        await setFallbackReceiver(fixture, constants.AddressZero, {
+          revertMessage: 'MCCT: address zero',
+        });
       });
     });
 
@@ -389,16 +444,34 @@ describe('CCIP', function () {
         await releaseOrMint(fixture, { amount: parseUnits('100') });
       });
 
-      it('should fail: when the receiver is blacklisted', async () => {
+      it('mints to the fallback receiver when the receiver is blacklisted', async () => {
         const fixture = await loadFixture(ccipCctFixture);
         const { mTBILL, accessControl, owner, alice } = fixture;
 
         await blackList({ blacklistable: mTBILL, accessControl, owner }, alice);
 
+        await releaseOrMint(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice.address,
+          expectFallback: true,
+        });
+      });
+
+      it('should fail: when the receiver and fallback receiver are both blacklisted', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { mTBILL, accessControl, owner, alice, fallbackReceiver } =
+          fixture;
+
+        await blackList({ blacklistable: mTBILL, accessControl, owner }, alice);
+        await blackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          fallbackReceiver,
+        );
+
         await releaseOrMint(
           fixture,
           { amount: parseUnits('100'), receiver: alice.address },
-          { revertMessage: acErrors.WMAC_HAS_ROLE },
+          { revertMessage: 'WMAC: has role' },
         );
       });
     });

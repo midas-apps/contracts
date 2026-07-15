@@ -1,8 +1,9 @@
+import { anyValue } from '@nomicfoundation/hardhat-chai-matchers/withArgs';
 import { expect } from 'chai';
 import { BigNumberish, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
-import { OptionalCommonParams } from './common.helpers';
+import { Account, OptionalCommonParams, getAccount } from './common.helpers';
 import { ccipCctFixture } from './fixtures';
 
 type Fixture = Awaited<ReturnType<typeof ccipCctFixture>>;
@@ -30,6 +31,40 @@ type CcipRevertParams = {
     args?: unknown[];
   };
 } & OptionalCommonParams;
+
+export const setFallbackReceiver = async (
+  fixture: Fixture,
+  newFallbackReceiver: Account,
+  opt?: CcipRevertParams,
+) => {
+  const { pool, owner } = fixture;
+  const caller = opt?.from ?? owner;
+  const receiver = getAccount(newFallbackReceiver);
+
+  const tx = () => pool.connect(caller).setFallbackReceiver(receiver);
+
+  if (opt?.revertMessage) {
+    await expect(tx()).revertedWith(opt.revertMessage);
+    return;
+  }
+
+  if (opt?.revertWithCustomError) {
+    const assertion = expect(tx()).revertedWithCustomError(
+      opt.revertWithCustomError.contract,
+      opt.revertWithCustomError.error,
+    );
+    if (opt.revertWithCustomError.args) {
+      await assertion.withArgs(...opt.revertWithCustomError.args);
+    } else {
+      await assertion;
+    }
+    return;
+  }
+
+  await expect(tx()).to.emit(pool, 'FallbackReceiverSet').withArgs(receiver);
+
+  expect(await pool.fallbackReceiver()).eq(receiver);
+};
 
 export const lockOrBurn = async (
   fixture: Fixture,
@@ -107,6 +142,7 @@ type ReleaseOrMintParams = {
   remoteChainSelector?: BigNumberish;
   sourcePoolAddress?: string;
   sourcePoolData?: string;
+  expectFallback?: boolean;
 };
 
 export const releaseOrMint = async (
@@ -119,6 +155,7 @@ export const releaseOrMint = async (
     remoteChainSelector,
     sourcePoolAddress,
     sourcePoolData,
+    expectFallback = false,
   }: ReleaseOrMintParams,
   opt?: CcipRevertParams,
 ) => {
@@ -126,6 +163,7 @@ export const releaseOrMint = async (
 
   const caller = opt?.from ?? offRamp;
   const to = receiver ?? owner.address;
+  const fallback = await pool.fallbackReceiver();
 
   const releaseOrMintIn = {
     originalSender: originalSender ?? owner.address,
@@ -160,13 +198,14 @@ export const releaseOrMint = async (
 
   const totalSupplyBefore = await mTBILL.totalSupply();
   const balanceToBefore = await mTBILL.balanceOf(to);
+  const balanceFallbackBefore = await mTBILL.balanceOf(fallback);
 
   const out = await pool
     .connect(caller)
     .callStatic[RELEASE_OR_MINT_SIG](releaseOrMintIn);
   expect(out.destinationAmount).eq(amount);
 
-  await expect(tx())
+  const assertion = expect(tx())
     .to.emit(pool, 'ReleasedOrMinted')
     .withArgs(
       releaseOrMintIn.remoteChainSelector,
@@ -176,9 +215,27 @@ export const releaseOrMint = async (
       amount,
     );
 
+  if (expectFallback) {
+    await assertion.and.to
+      .emit(pool, 'FallbackHit')
+      .withArgs(to, fallback, amount, anyValue);
+  } else {
+    await assertion.and.to.not.emit(pool, 'FallbackHit');
+  }
+
   const totalSupplyAfter = await mTBILL.totalSupply();
   const balanceToAfter = await mTBILL.balanceOf(to);
+  const balanceFallbackAfter = await mTBILL.balanceOf(fallback);
 
   expect(totalSupplyAfter).eq(totalSupplyBefore.add(amount));
-  expect(balanceToAfter).eq(balanceToBefore.add(amount));
+
+  if (expectFallback) {
+    expect(balanceToAfter).eq(balanceToBefore);
+    expect(balanceFallbackAfter).eq(balanceFallbackBefore.add(amount));
+  } else {
+    expect(balanceToAfter).eq(balanceToBefore.add(amount));
+    if (fallback !== to) {
+      expect(balanceFallbackAfter).eq(balanceFallbackBefore);
+    }
+  }
 };

@@ -73,6 +73,7 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
           },
         },
         ccip: {
+          fallbackReceiver: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
           rateLimitConfig: {
             default: {
               inbound: {
@@ -149,6 +150,7 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
           },
         },
         ccip: {
+          fallbackReceiver: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
           rateLimitConfig: {
             default: {
               inbound: {

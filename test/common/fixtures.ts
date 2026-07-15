@@ -1360,7 +1360,8 @@ export const ccipCctFixture = async () => {
 
   const remoteChainSelector = ethers.BigNumber.from('5009297550715157269');
 
-  const [onRamp, offRamp, remotePool, remoteToken, alice] = regularAccounts;
+  const [onRamp, offRamp, remotePool, remoteToken, alice, fallbackReceiver] =
+    regularAccounts;
 
   const remotePoolAddress = ethers.utils.defaultAbiCoder.encode(
     ['address'],
@@ -1382,6 +1383,7 @@ export const ccipCctFixture = async () => {
     mTBILL.address,
     rmn.address,
     router.address,
+    fallbackReceiver.address,
   );
 
   const roles = getRolesForToken('mTBILL');
@@ -1427,5 +1429,6 @@ export const ccipCctFixture = async () => {
     onRamp,
     offRamp,
     alice,
+    fallbackReceiver,
   };
 };

@@ -46,6 +46,11 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const rateLimitConfigDefault = config.ccip?.rateLimitConfig?.default;
   const rateLimitConfigOverrides = config.ccip?.rateLimitConfig?.overrides;
+  const fallbackReceiver = config.ccip?.fallbackReceiver;
+
+  if (!fallbackReceiver) {
+    throw new Error('CCIP fallbackReceiver is not found');
+  }
 
   const allReceiverNetworks =
     ccipConfigPerMToken?.[originalNetwork]?.[mToken]?.linkedNetworks;
@@ -75,7 +80,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     mTokenAddresses.token,
     ccipConfig.rmnProxy,
     ccipConfig.router,
-  ] as readonly [string, string, string];
+    fallbackReceiver,
+  ] as readonly [string, string, string, string];
 
   const contract = await factory.deploy(...args);
 

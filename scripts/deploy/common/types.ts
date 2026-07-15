@@ -94,6 +94,7 @@ export type CCIPRateLimitConfig = {
 
 export type CCIPConfig = {
   owner?: string;
+  fallbackReceiver?: string;
   rateLimitConfig?: {
     default?: CCIPRateLimitConfig;
     overrides?: PartialConfigPerNetwork<CCIPRateLimitConfig>;
