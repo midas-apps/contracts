@@ -63,6 +63,18 @@ export const getTokenContractFromTemplate = async (
       bytes32 public constant ${roles.pauser} =
           keccak256("${roles.pauser}");
 
+      ${
+        isMinBalanceMToken
+          ? `
+      /**
+       * @notice actor that is exempt from ${contractNames.token} min balance checks
+       */
+      bytes32 public constant ${roles.minBalanceExempt} =
+          keccak256("${roles.minBalanceExempt}");
+      `
+          : ''
+      }
+
       /**
        * @dev leaving a storage gap for futures updates
        */
@@ -109,6 +121,18 @@ export const getTokenContractFromTemplate = async (
        */
       function _greenlistedRole() internal pure override returns (bytes32) {
           return ${roles.greenlisted};
+      }`
+          : ''
+      }
+
+      ${
+        isMinBalanceMToken
+          ? `
+       /**
+       * @inheritdoc mTokenMinBalance
+       */
+      function _minBalanceExemptRole() internal pure override returns (bytes32) {
+          return ${roles.minBalanceExempt};
       }`
           : ''
       }

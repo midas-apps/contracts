@@ -454,79 +454,6 @@ describe('Token contracts', () => {
   });
 
   describe('mTokenMinBalance (mTokenMinBalanceTest)', () => {
-    describe('setIsMinBalanceExempt()', () => {
-      it('should fail: call from address without DEFAULT_ADMIN_ROLE', async () => {
-        const baseFixture = await defaultDeploy();
-        const { regularAccounts, mTokenMinBalance } = await loadFixture(
-          mTokenMinBalanceFixture.bind(this, baseFixture),
-        );
-
-        await expect(
-          mTokenMinBalance
-            .connect(regularAccounts[0])
-            .setIsMinBalanceExempt(regularAccounts[1].address, true),
-        ).revertedWith(acErrors.WMAC_HASNT_ROLE);
-      });
-
-      it('set isMinBalanceExempt to true', async () => {
-        const baseFixture = await defaultDeploy();
-        const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
-          mTokenMinBalanceFixture.bind(this, baseFixture),
-        );
-
-        const user = regularAccounts[0];
-        await expect(
-          mTokenMinBalance
-            .connect(owner)
-            .setIsMinBalanceExempt(user.address, true),
-        )
-          .to.emit(mTokenMinBalance, 'SetIsMinBalanceExempt')
-          .withArgs(user.address, true);
-
-        expect(await mTokenMinBalance.isMinBalanceExempt(user.address)).eq(
-          true,
-        );
-      });
-
-      it('set isMinBalanceExempt to false', async () => {
-        const baseFixture = await defaultDeploy();
-        const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
-          mTokenMinBalanceFixture.bind(this, baseFixture),
-        );
-
-        const user = regularAccounts[0];
-        await mTokenMinBalance
-          .connect(owner)
-          .setIsMinBalanceExempt(user.address, true);
-
-        await expect(
-          mTokenMinBalance
-            .connect(owner)
-            .setIsMinBalanceExempt(user.address, false),
-        )
-          .to.emit(mTokenMinBalance, 'SetIsMinBalanceExempt')
-          .withArgs(user.address, false);
-
-        expect(await mTokenMinBalance.isMinBalanceExempt(user.address)).eq(
-          false,
-        );
-      });
-
-      it('no-op when value is unchanged', async () => {
-        const baseFixture = await defaultDeploy();
-        const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
-          mTokenMinBalanceFixture.bind(this, baseFixture),
-        );
-
-        const user = regularAccounts[0];
-        await expect(
-          mTokenMinBalance
-            .connect(owner)
-            .setIsMinBalanceExempt(user.address, false),
-        ).to.not.emit(mTokenMinBalance, 'SetIsMinBalanceExempt');
-      });
-    });
-
     describe('transfer()', () => {
       it('transfer when both parties hold above min balance after transfer', async () => {
         const baseFixture = await defaultDeploy();
@@ -584,9 +511,13 @@ describe('Token contracts', () => {
 
       it('transfer dust to empty recipient when recipient is free from min balance', async () => {
         const baseFixture = await defaultDeploy();
-        const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
-          mTokenMinBalanceFixture.bind(this, baseFixture),
-        );
+        const {
+          owner,
+          accessControl,
+          regularAccounts,
+          mTokenMinBalance,
+          mTokenMinBalanceRoles,
+        } = await loadFixture(mTokenMinBalanceFixture.bind(this, baseFixture));
 
         const from = regularAccounts[0];
         const to = regularAccounts[1];
@@ -597,9 +528,10 @@ describe('Token contracts', () => {
           from,
           parseUnits('3'),
         );
-        await mTokenMinBalance
-          .connect(owner)
-          .setIsMinBalanceExempt(to.address, true);
+        await accessControl.grantRole(
+          mTokenMinBalanceRoles.minBalanceExempt,
+          to.address,
+        );
 
         await expect(
           mTokenMinBalance.connect(from).transfer(to.address, amount),
@@ -609,16 +541,21 @@ describe('Token contracts', () => {
 
       it('should fail: transfer dust from waived sender to empty non-waived recipient', async () => {
         const baseFixture = await defaultDeploy();
-        const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
-          mTokenMinBalanceFixture.bind(this, baseFixture),
-        );
+        const {
+          owner,
+          accessControl,
+          regularAccounts,
+          mTokenMinBalance,
+          mTokenMinBalanceRoles,
+        } = await loadFixture(mTokenMinBalanceFixture.bind(this, baseFixture));
 
         const from = regularAccounts[0];
         const to = regularAccounts[1];
 
-        await mTokenMinBalance
-          .connect(owner)
-          .setIsMinBalanceExempt(from.address, true);
+        await accessControl.grantRole(
+          mTokenMinBalanceRoles.minBalanceExempt,
+          from.address,
+        );
         await mint(
           { tokenContract: mTokenMinBalance, owner },
           from,
@@ -680,9 +617,13 @@ describe('Token contracts', () => {
 
       it('transfer leaving sender below min balance when sender is free from min balance', async () => {
         const baseFixture = await defaultDeploy();
-        const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
-          mTokenMinBalanceFixture.bind(this, baseFixture),
-        );
+        const {
+          owner,
+          accessControl,
+          regularAccounts,
+          mTokenMinBalance,
+          mTokenMinBalanceRoles,
+        } = await loadFixture(mTokenMinBalanceFixture.bind(this, baseFixture));
 
         const from = regularAccounts[0];
         const to = regularAccounts[1];
@@ -697,9 +638,10 @@ describe('Token contracts', () => {
           to,
           parseUnits('1'),
         );
-        await mTokenMinBalance
-          .connect(owner)
-          .setIsMinBalanceExempt(from.address, true);
+        await accessControl.grantRole(
+          mTokenMinBalanceRoles.minBalanceExempt,
+          from.address,
+        );
 
         await expect(
           mTokenMinBalance
@@ -984,14 +926,19 @@ describe('Token contracts', () => {
 
       it('mint less than 1 token to empty recipient when free from min balance', async () => {
         const baseFixture = await defaultDeploy();
-        const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
-          mTokenMinBalanceFixture.bind(this, baseFixture),
-        );
+        const {
+          owner,
+          accessControl,
+          regularAccounts,
+          mTokenMinBalance,
+          mTokenMinBalanceRoles,
+        } = await loadFixture(mTokenMinBalanceFixture.bind(this, baseFixture));
 
         const to = regularAccounts[0];
-        await mTokenMinBalance
-          .connect(owner)
-          .setIsMinBalanceExempt(to.address, true);
+        await accessControl.grantRole(
+          mTokenMinBalanceRoles.minBalanceExempt,
+          to.address,
+        );
 
         await mint(
           { tokenContract: mTokenMinBalance, owner },
@@ -1104,9 +1051,13 @@ describe('Token contracts', () => {
 
       it('burn leaving holder below min balance when free from min balance', async () => {
         const baseFixture = await defaultDeploy();
-        const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
-          mTokenMinBalanceFixture.bind(this, baseFixture),
-        );
+        const {
+          owner,
+          accessControl,
+          regularAccounts,
+          mTokenMinBalance,
+          mTokenMinBalanceRoles,
+        } = await loadFixture(mTokenMinBalanceFixture.bind(this, baseFixture));
 
         const holder = regularAccounts[0];
         await mint(
@@ -1114,9 +1065,10 @@ describe('Token contracts', () => {
           holder,
           parseUnits('3'),
         );
-        await mTokenMinBalance
-          .connect(owner)
-          .setIsMinBalanceExempt(holder.address, true);
+        await accessControl.grantRole(
+          mTokenMinBalanceRoles.minBalanceExempt,
+          holder.address,
+        );
 
         await burn(
           { tokenContract: mTokenMinBalance, owner },
@@ -1307,7 +1259,8 @@ describe('Token contracts', () => {
 
         const from = regularAccounts[0];
         const to = regularAccounts[1];
-        const { greenlisted } = mTokenPermissionedMinBalanceRoles;
+        const { greenlisted, minBalanceExempt } =
+          mTokenPermissionedMinBalanceRoles;
         const amount = parseUnits('0.1');
 
         await accessControl.grantRole(greenlisted, from.address);
@@ -1317,9 +1270,7 @@ describe('Token contracts', () => {
           from,
           parseUnits('3'),
         );
-        await mTokenPermissionedMinBalance
-          .connect(owner)
-          .setIsMinBalanceExempt(to.address, true);
+        await accessControl.grantRole(minBalanceExempt, to.address);
 
         await expect(
           mTokenPermissionedMinBalance
@@ -1345,13 +1296,12 @@ describe('Token contracts', () => {
 
         const from = regularAccounts[0];
         const to = regularAccounts[1];
-        const { greenlisted } = mTokenPermissionedMinBalanceRoles;
+        const { greenlisted, minBalanceExempt } =
+          mTokenPermissionedMinBalanceRoles;
 
         await accessControl.grantRole(greenlisted, from.address);
         await accessControl.grantRole(greenlisted, to.address);
-        await mTokenPermissionedMinBalance
-          .connect(owner)
-          .setIsMinBalanceExempt(from.address, true);
+        await accessControl.grantRole(minBalanceExempt, from.address);
         await mint(
           { tokenContract: mTokenPermissionedMinBalance, owner },
           from,

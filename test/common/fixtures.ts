@@ -1004,6 +1004,8 @@ export const mTokenMinBalanceFixture = async (
   const mintRole = await mTokenMinBalance.M_TOKEN_TEST_MINT_OPERATOR_ROLE();
   const burnRole = await mTokenMinBalance.M_TOKEN_TEST_BURN_OPERATOR_ROLE();
   const pauseRole = await mTokenMinBalance.M_TOKEN_TEST_PAUSE_OPERATOR_ROLE();
+  const minBalanceExemptRole =
+    await mTokenMinBalance.M_TOKEN_TEST_MIN_BALANCE_EXEMPT_ROLE();
 
   await accessControl.grantRole(mintRole, owner.address);
   await accessControl.grantRole(burnRole, owner.address);
@@ -1016,6 +1018,7 @@ export const mTokenMinBalanceFixture = async (
       mint: mintRole,
       burn: burnRole,
       pause: pauseRole,
+      minBalanceExempt: minBalanceExemptRole,
     },
   };
 };
@@ -1041,6 +1044,8 @@ export const mTokenPermissionedMinBalanceFixture = async (
     await mTokenPermissionedMinBalance.M_TOKEN_TEST_PAUSE_OPERATOR_ROLE();
   const greenlistedRole =
     await mTokenPermissionedMinBalance.M_TOKEN_TEST_GREENLISTED_ROLE();
+  const minBalanceExemptRole =
+    await mTokenPermissionedMinBalance.M_TOKEN_TEST_MIN_BALANCE_EXEMPT_ROLE();
 
   await accessControl.grantRole(mintRole, owner.address);
   await accessControl.grantRole(burnRole, owner.address);
@@ -1054,6 +1059,7 @@ export const mTokenPermissionedMinBalanceFixture = async (
       burn: burnRole,
       pause: pauseRole,
       greenlisted: greenlistedRole,
+      minBalanceExempt: minBalanceExemptRole,
     },
   };
 };

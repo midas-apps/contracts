@@ -11,37 +11,9 @@ import "./mToken.sol";
 //solhint-disable contract-name-camelcase
 abstract contract mTokenMinBalance is mToken {
     /**
-     * @param user address of the user
-     * @param isExempt bool if the user is exempt from min balance checks
-     */
-    event SetIsMinBalanceExempt(address indexed user, bool isExempt);
-
-    /**
-     * @notice mapping, user address => is exempt from min balance checks
-     */
-    mapping(address => bool) public isMinBalanceExempt;
-
-    /**
      * @dev leaving a storage gap for futures updates
      */
     uint256[50] private __gap;
-
-    /**
-     * @notice set if a user is exempt from min balance checks
-     * @param user address of the user
-     * @param isExempt bool if the user is exempt from min balance checks
-     */
-    function setIsMinBalanceExempt(address user, bool isExempt)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE, msg.sender)
-    {
-        if (isMinBalanceExempt[user] == isExempt) {
-            return;
-        }
-
-        isMinBalanceExempt[user] = isExempt;
-        emit SetIsMinBalanceExempt(user, isExempt);
-    }
 
     /**
      * @dev overrides _afterTokenTransfer function to check if the recipient has a minimum balance
@@ -51,11 +23,11 @@ abstract contract mTokenMinBalance is mToken {
         address to,
         uint256 amount
     ) internal virtual override {
-        if (from != address(0) && !isMinBalanceExempt[from]) {
+        if (from != address(0) && !_isMinBalanceExempt(from)) {
             _validateMinBalance(from, true);
         }
 
-        if (to != address(0) && !isMinBalanceExempt[to]) {
+        if (to != address(0) && !_isMinBalanceExempt(to)) {
             _validateMinBalance(to, from != address(0));
         }
 
@@ -63,11 +35,25 @@ abstract contract mTokenMinBalance is mToken {
     }
 
     /**
+     * @dev returns the role holder of which is exempt from min balance checks
+     */
+    function _minBalanceExemptRole() internal view virtual returns (bytes32);
+
+    /**
+     * @dev checks if a user is exempt from min balance checks
+     * @param user address of the user
+     * @return bool true if the user is exempt from min balance checks
+     */
+    function _isMinBalanceExempt(address user) private view returns (bool) {
+        return accessControl.hasRole(_minBalanceExemptRole(), user);
+    }
+
+    /**
      * @dev validates the minimum balance of a user
      * @param user address of the user
      * @param canBeZero bool if the user can have a balance of 0
      */
-    function _validateMinBalance(address user, bool canBeZero) internal view {
+    function _validateMinBalance(address user, bool canBeZero) private view {
         uint256 balance = balanceOf(user);
 
         bool isMinBalanceMet = balance >= 1 ether;

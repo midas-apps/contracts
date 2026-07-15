@@ -11,8 +11,8 @@ import "./mTokenMinBalance.sol";
  */
 //solhint-disable contract-name-camelcase
 abstract contract mTokenPermissionedMinBalance is
-    mTokenPermissioned,
-    mTokenMinBalance
+    mTokenMinBalance,
+    mTokenPermissioned
 {
     /**
      * @dev leaving a storage gap for futures updates

@@ -17,6 +17,9 @@ contract mTokenPermissionedMinBalanceTest is mTokenPermissionedMinBalance {
     bytes32 public constant M_TOKEN_TEST_GREENLISTED_ROLE =
         keccak256("M_TOKEN_TEST_GREENLISTED_ROLE");
 
+    bytes32 public constant M_TOKEN_TEST_MIN_BALANCE_EXEMPT_ROLE =
+        keccak256("M_TOKEN_TEST_MIN_BALANCE_EXEMPT_ROLE");
+
     function _disableInitializers() internal override {}
 
     function _getNameSymbol()
@@ -45,5 +48,9 @@ contract mTokenPermissionedMinBalanceTest is mTokenPermissionedMinBalance {
 
     function _greenlistedRole() internal pure override returns (bytes32) {
         return M_TOKEN_TEST_GREENLISTED_ROLE;
+    }
+
+    function _minBalanceExemptRole() internal pure override returns (bytes32) {
+        return M_TOKEN_TEST_MIN_BALANCE_EXEMPT_ROLE;
     }
 }

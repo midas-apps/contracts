@@ -134,6 +134,7 @@ type TokenRoles = {
   redemptionVaultAdmin: string;
   customFeedAdmin: string | null;
   greenlisted: string;
+  minBalanceExempt: string;
 };
 
 type CommonRoles = {
@@ -175,6 +176,7 @@ export const getRolesNamesForToken = (token: MTokenName): TokenRoles => {
     depositVaultAdmin: `${restPrefix}DEPOSIT_VAULT_ADMIN_ROLE`,
     redemptionVaultAdmin: `${restPrefix}REDEMPTION_VAULT_ADMIN_ROLE`,
     greenlisted: getGreenlistRoleName(token),
+    minBalanceExempt: `${tokenPrefix}_MIN_BALANCE_EXEMPT_ROLE`,
   };
 };
 export const getRolesNamesCommon = (): CommonRoles => {
