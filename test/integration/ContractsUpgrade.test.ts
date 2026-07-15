@@ -447,6 +447,20 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
   describe('mTBILL', () => {
     const mTbillRoles = getRolesForToken('mTBILL');
 
+    it('should keep permissioned/min-balance flags off after upgrade', async () => {
+      const { mTbill, clawbackReceiver } = await loadFixture(
+        mainnetUpgradeFixture,
+      );
+
+      expect(await mTbill.isPermissioned()).eq(false);
+      expect(await mTbill.isMinHoldingBalanceEnforced()).eq(false);
+      expect(await mTbill.clawbackReceiver()).eq(clawbackReceiver.address);
+      expect(await mTbill.greenlistedRole()).eq(mTbillRoles.greenlisted);
+      expect(await mTbill.minBalanceExemptRole()).eq(
+        mTbillRoles.minBalanceExempt,
+      );
+    });
+
     describe('mint()', () => {
       it('should mint tokens to recipient', async () => {
         const {
@@ -755,6 +769,20 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
 
   describe('mGLOBAL', () => {
     const mGlobalRoles = getRolesForToken('mGLOBAL');
+
+    it('should enable permissioned flag after upgrade', async () => {
+      const { mGlobal, clawbackReceiver } = await loadFixture(
+        mainnetUpgradeFixture,
+      );
+
+      expect(await mGlobal.isPermissioned()).eq(true);
+      expect(await mGlobal.isMinHoldingBalanceEnforced()).eq(false);
+      expect(await mGlobal.clawbackReceiver()).eq(clawbackReceiver.address);
+      expect(await mGlobal.greenlistedRole()).eq(mGlobalRoles.greenlisted);
+      expect(await mGlobal.minBalanceExemptRole()).eq(
+        mGlobalRoles.minBalanceExempt,
+      );
+    });
 
     describe('mint()', () => {
       it('should mint tokens to greenlisted recipient', async () => {

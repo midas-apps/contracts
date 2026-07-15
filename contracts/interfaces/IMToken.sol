@@ -14,6 +14,24 @@ interface IMToken is IERC20Upgradeable {
     event ClawbackReceiverSet(address indexed clawbackReceiver);
 
     /**
+     * @param name new name
+     * @param symbol new symbol
+     */
+    event SetNameSymbol(string indexed name, string indexed symbol);
+
+    /**
+     * @param isPermissioned if true then the token is permissioned
+     */
+    event SetIsPermissioned(bool indexed isPermissioned);
+
+    /**
+     * @param isMinHoldingBalanceEnforced if true then the token has a minimum holding balance enforced
+     */
+    event SetIsMinHoldingBalanceEnforced(
+        bool indexed isMinHoldingBalanceEnforced
+    );
+
+    /**
      * @notice when new limit is invalid
      * @param newLimit new limit
      * @param existingLimit existing limit
@@ -104,4 +122,29 @@ interface IMToken is IERC20Upgradeable {
      * @param window window duration in seconds
      */
     function removeMintRateLimitConfig(uint256 window) external;
+
+    /**
+     * @notice sets the permissioned status of the token
+     * @param isPermissioned if true then the token is permissioned
+     */
+    function setIsPermissioned(bool isPermissioned) external;
+
+    /**
+     * @notice sets the min holding balance enforced status of the token
+     * @param isMinHoldingBalanceEnforced if true then the token has a minimum holding balance enforced
+     */
+    function setMinHoldingBalanceEnforced(bool isMinHoldingBalanceEnforced)
+        external;
+
+    /**
+     * @notice role that grants min balance exempt rights to the contract
+     * @return role bytes32 role
+     */
+    function minBalanceExemptRole() external view returns (bytes32);
+
+    /**
+     * @notice sets the role that grants greenlisted rights to the contract
+     * @return role bytes32 role
+     */
+    function greenlistedRole() external view returns (bytes32);
 }

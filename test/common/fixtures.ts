@@ -78,7 +78,6 @@ import {
   MidasLzOFT__factory,
   MidasLzOFTAdapter__factory,
   MidasLzVaultComposerSyncTester,
-  MTokenPermissionedTest__factory,
   AxelarInterchainTokenServiceMock__factory,
   MidasAxelarVaultExecutableTester,
   LzEndpointV2Mock__factory,
@@ -164,11 +163,15 @@ export const defaultDeploy = async () => {
     allRoles.tokenRoles.mTBILL.tokenManager,
     allRoles.tokenRoles.mTBILL.minter,
     allRoles.tokenRoles.mTBILL.burner,
+    allRoles.tokenRoles.mTBILL.greenlisted,
+    allRoles.tokenRoles.mTBILL.minBalanceExempt,
   );
 
   await mTBILL.initialize(
     accessControl.address,
     clawbackReceiver.address,
+    false,
+    false,
     mTokensMetadata.mTBILL.name,
     mTokensMetadata.mTBILL.symbol,
   );
@@ -177,11 +180,15 @@ export const defaultDeploy = async () => {
     keccak256('M_TOKEN_MANAGER_ROLE'),
     keccak256('M_TOKEN_TEST_MINT_OPERATOR_ROLE'),
     keccak256('M_TOKEN_TEST_BURN_OPERATOR_ROLE'),
+    keccak256('M_TOKEN_TEST_GREENLISTED_ROLE'),
+    keccak256('M_TOKEN_TEST_MIN_BALANCE_EXEMPT_ROLE'),
   );
 
   await mTokenLoan.initialize(
     accessControl.address,
     clawbackReceiver.address,
+    false,
+    false,
     'mTokenLoan',
     'mTokenLoan',
   );
@@ -777,8 +784,64 @@ export type DefaultFixture = Omit<
   redemptionVault: RedemptionVaultTest;
 };
 
+const M_TOKEN_TEST_MANAGER_ROLE = keccak256('M_TOKEN_TEST_MANAGER_ROLE');
+const M_TOKEN_TEST_MINT_OPERATOR_ROLE = keccak256(
+  'M_TOKEN_TEST_MINT_OPERATOR_ROLE',
+);
+const M_TOKEN_TEST_BURN_OPERATOR_ROLE = keccak256(
+  'M_TOKEN_TEST_BURN_OPERATOR_ROLE',
+);
+const M_TOKEN_TEST_GREENLISTED_ROLE = keccak256(
+  'M_TOKEN_TEST_GREENLISTED_ROLE',
+);
+const M_TOKEN_TEST_MIN_BALANCE_EXEMPT_ROLE = keccak256(
+  'M_TOKEN_TEST_MIN_BALANCE_EXEMPT_ROLE',
+);
+
+const deployFeatureFlaggedMToken = async (
+  owner: Awaited<ReturnType<typeof defaultDeploy>>['owner'],
+  accessControl: Awaited<ReturnType<typeof defaultDeploy>>['accessControl'],
+  clawbackReceiver: string,
+  isPermissioned: boolean,
+  isMinHoldingBalanceEnforced: boolean,
+  name: string,
+  symbol: string,
+) => {
+  const token = await new MTokenTest__factory(owner).deploy(
+    M_TOKEN_TEST_MANAGER_ROLE,
+    M_TOKEN_TEST_MINT_OPERATOR_ROLE,
+    M_TOKEN_TEST_BURN_OPERATOR_ROLE,
+    M_TOKEN_TEST_GREENLISTED_ROLE,
+    M_TOKEN_TEST_MIN_BALANCE_EXEMPT_ROLE,
+  );
+
+  await token.initialize(
+    accessControl.address,
+    clawbackReceiver,
+    isPermissioned,
+    isMinHoldingBalanceEnforced,
+    name,
+    symbol,
+  );
+
+  await accessControl['grantRole(bytes32,address)'](
+    M_TOKEN_TEST_MINT_OPERATOR_ROLE,
+    owner.address,
+  );
+  await accessControl['grantRole(bytes32,address)'](
+    M_TOKEN_TEST_BURN_OPERATOR_ROLE,
+    owner.address,
+  );
+  await accessControl['grantRole(bytes32,address)'](
+    M_TOKEN_TEST_MANAGER_ROLE,
+    owner.address,
+  );
+
+  return token;
+};
+
 /**
- * mTokenPermissionedTest + dedicated deposit/redemption vaults (for integration-style tests).
+ * Permissioned mToken (feature flag) + dedicated deposit/redemption vaults.
  */
 export const mTokenPermissionedFixture = async (
   baseFixture?: Awaited<ReturnType<typeof defaultDeploy>>,
@@ -793,12 +856,12 @@ export const mTokenPermissionedFixture = async (
     mTokenToUsdDataFeed,
   } = fx;
 
-  const mTokenPermissioned = await new MTokenPermissionedTest__factory(
+  const mTokenPermissioned = await deployFeatureFlaggedMToken(
     owner,
-  ).deploy();
-  await mTokenPermissioned.initialize(
-    accessControl.address,
+    accessControl,
     fx.clawbackReceiver.address,
+    true,
+    false,
     'mTokenPermissioned',
     'mTokenPermissioned',
   );
@@ -808,13 +871,6 @@ export const mTokenPermissionedFixture = async (
   const tokenManagerRole = await mTokenPermissioned.contractAdminRole();
   const mTokenPermissionedGreenlistedRole =
     await mTokenPermissioned.greenlistedRole();
-
-  await accessControl['grantRole(bytes32,address)'](mintRole, owner.address);
-  await accessControl['grantRole(bytes32,address)'](burnRole, owner.address);
-  await accessControl['grantRole(bytes32,address)'](
-    tokenManagerRole,
-    owner.address,
-  );
 
   const mTokenPermissionedDepositVault = await initializeDv(
     {
@@ -863,6 +919,70 @@ export const mTokenPermissionedFixture = async (
     },
     mTokenPermissionedDepositVault,
     mTokenPermissionedRedemptionVault,
+  };
+};
+
+/**
+ * mToken with min holding balance enforced (feature flag).
+ */
+export const mTokenMinBalanceFixture = async (
+  baseFixture?: Awaited<ReturnType<typeof defaultDeploy>>,
+) => {
+  const fx = baseFixture ?? (await defaultDeploy());
+  const { owner, accessControl } = fx;
+
+  const mTokenMinBalance = await deployFeatureFlaggedMToken(
+    owner,
+    accessControl,
+    fx.clawbackReceiver.address,
+    false,
+    true,
+    'mTokenMinBalance',
+    'mTokenMinBalance',
+  );
+
+  return {
+    ...fx,
+    mTokenMinBalance,
+    mTokenMinBalanceRoles: {
+      mint: await mTokenMinBalance.minterRole(),
+      burn: await mTokenMinBalance.burnerRole(),
+      manager: await mTokenMinBalance.contractAdminRole(),
+      minBalanceExempt: await mTokenMinBalance.minBalanceExemptRole(),
+    },
+  };
+};
+
+/**
+ * Permissioned mToken with min holding balance enforced (feature flags).
+ */
+export const mTokenPermissionedMinBalanceFixture = async (
+  baseFixture?: Awaited<ReturnType<typeof defaultDeploy>>,
+) => {
+  const fx = baseFixture ?? (await defaultDeploy());
+  const { owner, accessControl } = fx;
+
+  const mTokenPermissionedMinBalance = await deployFeatureFlaggedMToken(
+    owner,
+    accessControl,
+    fx.clawbackReceiver.address,
+    true,
+    true,
+    'mTokenPermissionedMinBalance',
+    'mTokenPermissionedMinBalance',
+  );
+
+  return {
+    ...fx,
+    mTokenPermissionedMinBalance,
+    mTokenPermissionedMinBalanceRoles: {
+      mint: await mTokenPermissionedMinBalance.minterRole(),
+      burn: await mTokenPermissionedMinBalance.burnerRole(),
+      manager: await mTokenPermissionedMinBalance.contractAdminRole(),
+      greenlisted: await mTokenPermissionedMinBalance.greenlistedRole(),
+      minBalanceExempt:
+        await mTokenPermissionedMinBalance.minBalanceExemptRole(),
+    },
   };
 };
 

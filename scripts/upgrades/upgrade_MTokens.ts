@@ -7,6 +7,7 @@ import {
 
 import { MTokenName } from '../../config';
 import { getCurrentAddresses } from '../../config/constants/addresses';
+import { mTokensMetadata } from '../../helpers/mtokens-metadata';
 import { getRolesForToken } from '../../helpers/roles';
 import { getActionOrThrow, upgradeActions } from '../../helpers/utils';
 import { DeployFunction } from '../deploy/common/types';
@@ -34,6 +35,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     mTokens.map((mToken) => {
       const clawbackRecipient = clawbackRecipients[mToken] ?? deployer.address;
       const roles = getRolesForToken(mToken);
+      const isPermissioned = !!mTokensMetadata[mToken]?.isPermissioned;
 
       return {
         mToken,
@@ -42,8 +44,14 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
           {
             contractType: 'token',
             initializer: 'initializeV2',
-            initializerArgs: [clawbackRecipient],
-            constructorArgs: [roles.tokenManager, roles.minter, roles.burner],
+            initializerArgs: [clawbackRecipient, isPermissioned, false],
+            constructorArgs: [
+              roles.tokenManager,
+              roles.minter,
+              roles.burner,
+              roles.greenlisted,
+              roles.minBalanceExempt,
+            ],
           },
         ],
       };

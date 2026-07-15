@@ -12,10 +12,10 @@ import {
 } from './common.helpers';
 import { calculateWindowRateLimitCapacity } from './manageable-vault.helpers';
 
-import { MToken, MTokenPermissioned } from '../../typechain-types';
+import { MToken } from '../../typechain-types';
 
 type CommonParams = {
-  tokenContract: MToken | MTokenPermissioned;
+  tokenContract: MToken;
   owner: SignerWithAddress;
 };
 
@@ -71,6 +71,92 @@ export const setClawbackReceiverTest = async (
     )
     .withArgs(newReceiver);
   expect(await tokenContract.clawbackReceiver()).eq(newReceiver);
+};
+
+export const setIsPermissionedTest = async (
+  { tokenContract, owner }: CommonParams,
+  isPermissioned: boolean,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+  const before = await tokenContract.isPermissioned();
+
+  if (
+    await handleRevert(
+      tokenContract.connect(from).setIsPermissioned.bind(this, isPermissioned),
+      tokenContract,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  const assertion = expect(
+    tokenContract.connect(from).setIsPermissioned(isPermissioned),
+  );
+
+  if (before === isPermissioned) {
+    await assertion.to.not.emit(
+      tokenContract,
+      tokenContract.interface.events['SetIsPermissioned(bool)'].name,
+    );
+  } else {
+    await assertion.to
+      .emit(
+        tokenContract,
+        tokenContract.interface.events['SetIsPermissioned(bool)'].name,
+      )
+      .withArgs(isPermissioned);
+  }
+
+  expect(await tokenContract.isPermissioned()).eq(isPermissioned);
+};
+
+export const setMinHoldingBalanceEnforcedTest = async (
+  { tokenContract, owner }: CommonParams,
+  isMinHoldingBalanceEnforced: boolean,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+  const before = await tokenContract.isMinHoldingBalanceEnforced();
+
+  if (
+    await handleRevert(
+      tokenContract
+        .connect(from)
+        .setMinHoldingBalanceEnforced.bind(this, isMinHoldingBalanceEnforced),
+      tokenContract,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  const assertion = expect(
+    tokenContract
+      .connect(from)
+      .setMinHoldingBalanceEnforced(isMinHoldingBalanceEnforced),
+  );
+
+  if (before === isMinHoldingBalanceEnforced) {
+    await assertion.to.not.emit(
+      tokenContract,
+      tokenContract.interface.events['SetIsMinHoldingBalanceEnforced(bool)']
+        .name,
+    );
+  } else {
+    await assertion.to
+      .emit(
+        tokenContract,
+        tokenContract.interface.events['SetIsMinHoldingBalanceEnforced(bool)']
+          .name,
+      )
+      .withArgs(isMinHoldingBalanceEnforced);
+  }
+
+  expect(await tokenContract.isMinHoldingBalanceEnforced()).eq(
+    isMinHoldingBalanceEnforced,
+  );
 };
 
 export const clawbackTest = async (

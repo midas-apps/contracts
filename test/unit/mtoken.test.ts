@@ -31,7 +31,9 @@ import { deployProxyContract } from '../common/deploy.helpers';
 import {
   defaultDeploy,
   DefaultFixture,
+  mTokenMinBalanceFixture,
   mTokenPermissionedFixture,
+  mTokenPermissionedMinBalanceFixture,
 } from '../common/fixtures';
 import {
   burn,
@@ -78,6 +80,12 @@ const PAUSE_TEST_AMOUNT = parseUnits('100');
 
 const SET_NAME_SYMBOL_DELAY = 2 * 24 * 3600;
 const SET_NAME_SYMBOL_SEL = encodeFnSelector('setNameSymbol(string,string)');
+const SET_IS_PERMISSIONED_DELAY = SET_NAME_SYMBOL_DELAY;
+const SET_IS_PERMISSIONED_SEL = encodeFnSelector('setIsPermissioned(bool)');
+const SET_MIN_HOLDING_BALANCE_ENFORCED_DELAY = SET_NAME_SYMBOL_DELAY;
+const SET_MIN_HOLDING_BALANCE_ENFORCED_SEL = encodeFnSelector(
+  'setMinHoldingBalanceEnforced(bool)',
+);
 
 const toStorageSlotHex = (slot: number) =>
   '0x' + slot.toString(16).padStart(64, '0');
@@ -167,6 +175,10 @@ describe(`mToken`, function () {
     expect(await mTBILL.minterRole()).eq(tokenRoles.minter);
 
     expect(await mTBILL.contractAdminRole()).eq(tokenRoles.tokenManager);
+    expect(await mTBILL.greenlistedRole()).eq(tokenRoles.greenlisted);
+    expect(await mTBILL.minBalanceExemptRole()).eq(tokenRoles.minBalanceExempt);
+    expect(await mTBILL.isPermissioned()).eq(false);
+    expect(await mTBILL.isMinHoldingBalanceEnforced()).eq(false);
   });
 
   it('initialize and v2 initialize', async () => {
@@ -178,13 +190,15 @@ describe(`mToken`, function () {
       tokenContract.initialize(
         ethers.constants.AddressZero,
         clawbackReceiver.address,
+        false,
+        false,
         mTokensMetadata.mTBILL.name,
         mTokensMetadata.mTBILL.symbol,
       ),
     ).revertedWith('Initializable: contract is already initialized');
 
     await expect(
-      tokenContract.initializeV2(clawbackReceiver.address),
+      tokenContract.initializeV2(clawbackReceiver.address, false, false),
     ).to.revertedWith('Initializable: contract is already initialized');
   });
 
@@ -199,6 +213,8 @@ describe(`mToken`, function () {
         [
           accessControl.address,
           clawbackReceiver.address,
+          false,
+          false,
           mTokensMetadata.mTBILL.name,
           mTokensMetadata.mTBILL.symbol,
         ],
@@ -207,6 +223,8 @@ describe(`mToken`, function () {
           ethers.utils.id('M_TOKEN_MANAGER_ROLE'),
           ethers.utils.id('M_TOKEN_MINTER_ROLE'),
           ethers.utils.id('M_TOKEN_BURNER_ROLE'),
+          ethers.utils.id('M_TOKEN_GREENLISTED_ROLE'),
+          ethers.utils.id('M_TOKEN_MIN_BALANCE_EXEMPT_ROLE'),
         ],
       );
 
@@ -217,6 +235,37 @@ describe(`mToken`, function () {
       const { mTBILL, clawbackReceiver } = await deployMToken();
 
       expect(await mTBILL.clawbackReceiver()).eq(clawbackReceiver.address);
+      expect(await mTBILL.isPermissioned()).eq(false);
+      expect(await mTBILL.isMinHoldingBalanceEnforced()).eq(false);
+    });
+
+    it('fresh deploy: initializeV2 can enable feature flags', async () => {
+      const { accessControl, clawbackReceiver } = await loadFixture(
+        defaultDeploy,
+      );
+
+      const mTBILL = await deployProxyContract<MToken>(
+        'mToken',
+        [
+          accessControl.address,
+          clawbackReceiver.address,
+          true,
+          true,
+          mTokensMetadata.mTBILL.name,
+          mTokensMetadata.mTBILL.symbol,
+        ],
+        'initialize',
+        [
+          ethers.utils.id('M_TOKEN_MANAGER_ROLE'),
+          ethers.utils.id('M_TOKEN_MINTER_ROLE'),
+          ethers.utils.id('M_TOKEN_BURNER_ROLE'),
+          ethers.utils.id('M_TOKEN_GREENLISTED_ROLE'),
+          ethers.utils.id('M_TOKEN_MIN_BALANCE_EXEMPT_ROLE'),
+        ],
+      );
+
+      expect(await mTBILL.isPermissioned()).eq(true);
+      expect(await mTBILL.isMinHoldingBalanceEnforced()).eq(true);
     });
 
     it('should fail: when already reinitialized, even from the proxy admin', async () => {
@@ -226,7 +275,9 @@ describe(`mToken`, function () {
       await setProxyAdmin(mTBILL.address, admin.address);
 
       await expect(
-        mTBILL.connect(admin).initializeV2(clawbackReceiver.address),
+        mTBILL
+          .connect(admin)
+          .initializeV2(clawbackReceiver.address, false, false),
       ).revertedWith('Initializable: contract is already initialized');
     });
 
@@ -238,7 +289,9 @@ describe(`mToken`, function () {
       await setInitializedVersion(mTBILL.address, 1);
 
       await expect(
-        mTBILL.connect(stranger).initializeV2(clawbackReceiver.address),
+        mTBILL
+          .connect(stranger)
+          .initializeV2(clawbackReceiver.address, false, false),
       ).revertedWithCustomError(mTBILL, 'SenderNotProxyAdmin');
     });
 
@@ -249,9 +302,433 @@ describe(`mToken`, function () {
       await setProxyAdmin(mTBILL.address, admin.address);
       await setInitializedVersion(mTBILL.address, 1);
 
-      await mTBILL.connect(admin).initializeV2(newClawbackReceiver.address);
+      await mTBILL
+        .connect(admin)
+        .initializeV2(newClawbackReceiver.address, true, true);
 
       expect(await mTBILL.clawbackReceiver()).eq(newClawbackReceiver.address);
+      expect(await mTBILL.isPermissioned()).eq(true);
+      expect(await mTBILL.isMinHoldingBalanceEnforced()).eq(true);
+    });
+  });
+
+  describe('setIsPermissioned()', () => {
+    it('should fail: when called directly', async () => {
+      const { mTBILL, accessControl, owner } = await loadFixture(defaultDeploy);
+
+      const tokenManagerRole = await mTBILL.contractAdminRole();
+
+      await expect(mTBILL.connect(owner).setIsPermissioned(true))
+        .revertedWithCustomError(accessControl, 'SenderIsNotTimelock')
+        .withArgs(tokenManagerRole, SET_IS_PERMISSIONED_SEL, owner.address);
+    });
+
+    it('should fail: call from address without token manager role', async () => {
+      const { mTBILL, accessControl, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+
+      const caller = regularAccounts[0];
+      const tokenManagerRole = await mTBILL.contractAdminRole();
+
+      await expect(
+        mTBILL.connect(caller).setIsPermissioned(true),
+      ).revertedWithCustomError(accessControl, 'NoFunctionPermission');
+
+      expect(await accessControl.hasRole(tokenManagerRole, caller.address)).eq(
+        false,
+      );
+      expect(await mTBILL.isPermissioned()).eq(false);
+    });
+
+    it('should always require 2 days timelock even if contract admin/function admin role delay is different (no timelock for example)', async () => {
+      const { mTBILL, accessControl, owner, timelock, timelockManager } =
+        await loadFixture(defaultDeploy);
+
+      const tokenManagerRole = await mTBILL.contractAdminRole();
+      const functionRoleKey = await accessControl.permissionRoleKey(
+        tokenManagerRole,
+        mTBILL.address,
+        SET_IS_PERMISSIONED_SEL,
+      );
+
+      await setRoleTimelocksTester(
+        { accessControl, owner, timelock, timelockManager },
+        [tokenManagerRole, functionRoleKey],
+        [NO_DELAY, NO_DELAY],
+      );
+
+      await expect(mTBILL.connect(owner).setIsPermissioned(true))
+        .revertedWithCustomError(accessControl, 'SenderIsNotTimelock')
+        .withArgs(tokenManagerRole, SET_IS_PERMISSIONED_SEL, owner.address);
+
+      const calldata = mTBILL.interface.encodeFunctionData(
+        'setIsPermissioned',
+        [true],
+      );
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [mTBILL.address],
+        [calldata],
+      );
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        mTBILL.address,
+        calldata,
+        owner.address,
+        {
+          revertCustomError: {
+            contract: timelockManager,
+            customErrorName: 'TimelockOperationNotReady',
+          },
+        },
+      );
+
+      await increase(SET_IS_PERMISSIONED_DELAY);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        mTBILL.address,
+        calldata,
+        owner.address,
+      );
+
+      expect(await mTBILL.isPermissioned()).eq(true);
+    });
+
+    it('when called through timelock manager with 2 days delay', async () => {
+      const { mTBILL, accessControl, owner, timelock, timelockManager } =
+        await loadFixture(defaultDeploy);
+
+      const calldata = mTBILL.interface.encodeFunctionData(
+        'setIsPermissioned',
+        [true],
+      );
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [mTBILL.address],
+        [calldata],
+      );
+
+      await increase(SET_IS_PERMISSIONED_DELAY);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        mTBILL.address,
+        calldata,
+        owner.address,
+      );
+
+      expect(await mTBILL.isPermissioned()).eq(true);
+    });
+
+    it('does not change state when setting the same value', async () => {
+      const { mTBILL, accessControl, owner, timelock, timelockManager } =
+        await loadFixture(defaultDeploy);
+
+      const enableCalldata = mTBILL.interface.encodeFunctionData(
+        'setIsPermissioned',
+        [true],
+      );
+      const sameValueCalldata = mTBILL.interface.encodeFunctionData(
+        'setIsPermissioned',
+        [true],
+      );
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [mTBILL.address],
+        [enableCalldata],
+      );
+      await increase(SET_IS_PERMISSIONED_DELAY);
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        mTBILL.address,
+        enableCalldata,
+        owner.address,
+      );
+
+      expect(await mTBILL.isPermissioned()).eq(true);
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [mTBILL.address],
+        [sameValueCalldata],
+      );
+      await increase(SET_IS_PERMISSIONED_DELAY);
+
+      const filter = mTBILL.filters.SetIsPermissioned();
+      const eventsBefore = await mTBILL.queryFilter(filter);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        mTBILL.address,
+        sameValueCalldata,
+        owner.address,
+      );
+
+      const eventsAfter = await mTBILL.queryFilter(filter);
+      expect(eventsAfter.length).eq(eventsBefore.length);
+      expect(await mTBILL.isPermissioned()).eq(true);
+    });
+
+    it('disabling permissioned flag allows transfers without greenlist', async () => {
+      const { mTBILL, accessControl, owner, timelock, timelockManager } =
+        await loadFixture(defaultDeploy);
+      const [, from, to] = await ethers.getSigners();
+
+      const enableCalldata = mTBILL.interface.encodeFunctionData(
+        'setIsPermissioned',
+        [true],
+      );
+      const disableCalldata = mTBILL.interface.encodeFunctionData(
+        'setIsPermissioned',
+        [false],
+      );
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [mTBILL.address],
+        [enableCalldata],
+      );
+      await increase(SET_IS_PERMISSIONED_DELAY);
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        mTBILL.address,
+        enableCalldata,
+        owner.address,
+      );
+
+      await mint({ tokenContract: mTBILL, owner }, from, parseUnits('1'), {
+        revertCustomError: { customErrorName: 'NotGreenlisted' },
+      });
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [mTBILL.address],
+        [disableCalldata],
+      );
+      await increase(SET_IS_PERMISSIONED_DELAY);
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        mTBILL.address,
+        disableCalldata,
+        owner.address,
+      );
+
+      await mint({ tokenContract: mTBILL, owner }, from, parseUnits('1'));
+      await expect(mTBILL.connect(from).transfer(to.address, parseUnits('1')))
+        .not.reverted;
+    });
+  });
+
+  describe('setMinHoldingBalanceEnforced()', () => {
+    it('should fail: when called directly', async () => {
+      const { mTBILL, accessControl, owner } = await loadFixture(defaultDeploy);
+
+      const tokenManagerRole = await mTBILL.contractAdminRole();
+
+      await expect(mTBILL.connect(owner).setMinHoldingBalanceEnforced(true))
+        .revertedWithCustomError(accessControl, 'SenderIsNotTimelock')
+        .withArgs(
+          tokenManagerRole,
+          SET_MIN_HOLDING_BALANCE_ENFORCED_SEL,
+          owner.address,
+        );
+    });
+
+    it('should fail: call from address without token manager role', async () => {
+      const { mTBILL, accessControl, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+
+      const caller = regularAccounts[0];
+      const tokenManagerRole = await mTBILL.contractAdminRole();
+
+      await expect(
+        mTBILL.connect(caller).setMinHoldingBalanceEnforced(true),
+      ).revertedWithCustomError(accessControl, 'NoFunctionPermission');
+
+      expect(await accessControl.hasRole(tokenManagerRole, caller.address)).eq(
+        false,
+      );
+      expect(await mTBILL.isMinHoldingBalanceEnforced()).eq(false);
+    });
+
+    it('should always require 2 days timelock even if contract admin/function admin role delay is different (no timelock for example)', async () => {
+      const { mTBILL, accessControl, owner, timelock, timelockManager } =
+        await loadFixture(defaultDeploy);
+
+      const tokenManagerRole = await mTBILL.contractAdminRole();
+      const functionRoleKey = await accessControl.permissionRoleKey(
+        tokenManagerRole,
+        mTBILL.address,
+        SET_MIN_HOLDING_BALANCE_ENFORCED_SEL,
+      );
+
+      await setRoleTimelocksTester(
+        { accessControl, owner, timelock, timelockManager },
+        [tokenManagerRole, functionRoleKey],
+        [NO_DELAY, NO_DELAY],
+      );
+
+      await expect(mTBILL.connect(owner).setMinHoldingBalanceEnforced(true))
+        .revertedWithCustomError(accessControl, 'SenderIsNotTimelock')
+        .withArgs(
+          tokenManagerRole,
+          SET_MIN_HOLDING_BALANCE_ENFORCED_SEL,
+          owner.address,
+        );
+
+      const calldata = mTBILL.interface.encodeFunctionData(
+        'setMinHoldingBalanceEnforced',
+        [true],
+      );
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [mTBILL.address],
+        [calldata],
+      );
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        mTBILL.address,
+        calldata,
+        owner.address,
+        {
+          revertCustomError: {
+            contract: timelockManager,
+            customErrorName: 'TimelockOperationNotReady',
+          },
+        },
+      );
+
+      await increase(SET_MIN_HOLDING_BALANCE_ENFORCED_DELAY);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        mTBILL.address,
+        calldata,
+        owner.address,
+      );
+
+      expect(await mTBILL.isMinHoldingBalanceEnforced()).eq(true);
+    });
+
+    it('when called through timelock manager with 2 days delay', async () => {
+      const { mTBILL, accessControl, owner, timelock, timelockManager } =
+        await loadFixture(defaultDeploy);
+
+      const calldata = mTBILL.interface.encodeFunctionData(
+        'setMinHoldingBalanceEnforced',
+        [true],
+      );
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [mTBILL.address],
+        [calldata],
+      );
+
+      await increase(SET_MIN_HOLDING_BALANCE_ENFORCED_DELAY);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        mTBILL.address,
+        calldata,
+        owner.address,
+      );
+
+      expect(await mTBILL.isMinHoldingBalanceEnforced()).eq(true);
+    });
+
+    it('does not change state when setting the same value', async () => {
+      const { mTBILL, accessControl, owner, timelock, timelockManager } =
+        await loadFixture(defaultDeploy);
+
+      const enableCalldata = mTBILL.interface.encodeFunctionData(
+        'setMinHoldingBalanceEnforced',
+        [true],
+      );
+      const sameValueCalldata = mTBILL.interface.encodeFunctionData(
+        'setMinHoldingBalanceEnforced',
+        [true],
+      );
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [mTBILL.address],
+        [enableCalldata],
+      );
+      await increase(SET_MIN_HOLDING_BALANCE_ENFORCED_DELAY);
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        mTBILL.address,
+        enableCalldata,
+        owner.address,
+      );
+
+      expect(await mTBILL.isMinHoldingBalanceEnforced()).eq(true);
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [mTBILL.address],
+        [sameValueCalldata],
+      );
+      await increase(SET_MIN_HOLDING_BALANCE_ENFORCED_DELAY);
+
+      const filter = mTBILL.filters.SetIsMinHoldingBalanceEnforced();
+      const eventsBefore = await mTBILL.queryFilter(filter);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        mTBILL.address,
+        sameValueCalldata,
+        owner.address,
+      );
+
+      const eventsAfter = await mTBILL.queryFilter(filter);
+      expect(eventsAfter.length).eq(eventsBefore.length);
+      expect(await mTBILL.isMinHoldingBalanceEnforced()).eq(true);
+    });
+
+    it('enabling min balance rejects dust mint to empty recipient', async () => {
+      const { mTBILL, accessControl, owner, timelock, timelockManager } =
+        await loadFixture(defaultDeploy);
+      const [, to] = await ethers.getSigners();
+
+      await mint({ tokenContract: mTBILL, owner }, to, parseUnits('0.5'));
+
+      const enableCalldata = mTBILL.interface.encodeFunctionData(
+        'setMinHoldingBalanceEnforced',
+        [true],
+      );
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [mTBILL.address],
+        [enableCalldata],
+      );
+      await increase(SET_MIN_HOLDING_BALANCE_ENFORCED_DELAY);
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        mTBILL.address,
+        enableCalldata,
+        owner.address,
+      );
+
+      await mint(
+        { tokenContract: mTBILL, owner },
+        (
+          await ethers.getSigners()
+        )[2],
+        parseUnits('0.5'),
+        { revertMessage: 'MTMB: min balance not met' },
+      );
     });
   });
 
@@ -2636,6 +3113,903 @@ describe('mTokenPermissioned', () => {
         amount,
         holder,
         { revertCustomError: { customErrorName: 'NotGreenlisted' } },
+      );
+    });
+  });
+});
+
+describe('mTokenMinBalance', () => {
+  describe('transfer()', () => {
+    it('transfer when both parties hold above min balance after transfer', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
+        mTokenMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const from = regularAccounts[0];
+      const to = regularAccounts[1];
+      const amount = parseUnits('0.1');
+
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        from,
+        parseUnits('3'),
+      );
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        to,
+        parseUnits('3'),
+      );
+
+      await expect(mTokenMinBalance.connect(from).transfer(to.address, amount))
+        .not.reverted;
+      expect(await mTokenMinBalance.balanceOf(from.address)).eq(
+        parseUnits('2.9'),
+      );
+      expect(await mTokenMinBalance.balanceOf(to.address)).eq(
+        parseUnits('3.1'),
+      );
+    });
+
+    it('should fail: transfer dust to empty recipient', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
+        mTokenMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const from = regularAccounts[0];
+      const to = regularAccounts[1];
+
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        from,
+        parseUnits('3'),
+      );
+
+      await expect(
+        mTokenMinBalance.connect(from).transfer(to.address, parseUnits('0.1')),
+      ).revertedWith('MTMB: min balance not met');
+    });
+
+    it('transfer dust to empty recipient when recipient is free from min balance', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const {
+        owner,
+        accessControl,
+        regularAccounts,
+        mTokenMinBalance,
+        mTokenMinBalanceRoles,
+      } = await loadFixture(mTokenMinBalanceFixture.bind(this, baseFixture));
+
+      const from = regularAccounts[0];
+      const to = regularAccounts[1];
+      const amount = parseUnits('0.1');
+
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        from,
+        parseUnits('3'),
+      );
+      await accessControl['grantRole(bytes32,address)'](
+        mTokenMinBalanceRoles.minBalanceExempt,
+        to.address,
+      );
+
+      await expect(mTokenMinBalance.connect(from).transfer(to.address, amount))
+        .not.reverted;
+      expect(await mTokenMinBalance.balanceOf(to.address)).eq(amount);
+    });
+
+    it('should fail: transfer dust from waived sender to empty non-waived recipient', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const {
+        owner,
+        accessControl,
+        regularAccounts,
+        mTokenMinBalance,
+        mTokenMinBalanceRoles,
+      } = await loadFixture(mTokenMinBalanceFixture.bind(this, baseFixture));
+
+      const from = regularAccounts[0];
+      const to = regularAccounts[1];
+
+      await accessControl['grantRole(bytes32,address)'](
+        mTokenMinBalanceRoles.minBalanceExempt,
+        from.address,
+      );
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        from,
+        parseUnits('0.3'),
+      );
+
+      await expect(
+        mTokenMinBalance.connect(from).transfer(to.address, parseUnits('0.1')),
+      ).revertedWith('MTMB: min balance not met');
+    });
+
+    it('transfer entire balance leaving sender at zero', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
+        mTokenMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const from = regularAccounts[0];
+      const to = regularAccounts[1];
+      const amount = parseUnits('3');
+
+      await mint({ tokenContract: mTokenMinBalance, owner }, from, amount);
+
+      await expect(mTokenMinBalance.connect(from).transfer(to.address, amount))
+        .not.reverted;
+      expect(await mTokenMinBalance.balanceOf(from.address)).eq(0);
+      expect(await mTokenMinBalance.balanceOf(to.address)).eq(amount);
+    });
+
+    it('should fail: transfer leaving sender below min balance', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
+        mTokenMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const from = regularAccounts[0];
+      const to = regularAccounts[1];
+
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        from,
+        parseUnits('3'),
+      );
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        to,
+        parseUnits('1'),
+      );
+
+      await expect(
+        mTokenMinBalance.connect(from).transfer(to.address, parseUnits('2.5')),
+      ).revertedWith('MTMB: min balance not met');
+    });
+
+    it('transfer leaving sender below min balance when sender is free from min balance', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const {
+        owner,
+        accessControl,
+        regularAccounts,
+        mTokenMinBalance,
+        mTokenMinBalanceRoles,
+      } = await loadFixture(mTokenMinBalanceFixture.bind(this, baseFixture));
+
+      const from = regularAccounts[0];
+      const to = regularAccounts[1];
+
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        from,
+        parseUnits('3'),
+      );
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        to,
+        parseUnits('1'),
+      );
+      await accessControl['grantRole(bytes32,address)'](
+        mTokenMinBalanceRoles.minBalanceExempt,
+        from.address,
+      );
+
+      await expect(
+        mTokenMinBalance.connect(from).transfer(to.address, parseUnits('2.5')),
+      ).not.reverted;
+      expect(await mTokenMinBalance.balanceOf(from.address)).eq(
+        parseUnits('0.5'),
+      );
+    });
+
+    it('transfer leaving both parties at exactly min balance', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
+        mTokenMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const from = regularAccounts[0];
+      const to = regularAccounts[1];
+
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        from,
+        parseUnits('2'),
+      );
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        to,
+        parseUnits('1'),
+      );
+
+      await expect(
+        mTokenMinBalance.connect(from).transfer(to.address, parseUnits('1')),
+      ).not.reverted;
+      expect(await mTokenMinBalance.balanceOf(from.address)).eq(
+        parseUnits('1'),
+      );
+      expect(await mTokenMinBalance.balanceOf(to.address)).eq(parseUnits('2'));
+    });
+
+    it('should fail: transfer when from is blacklisted', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const { owner, accessControl, regularAccounts, mTokenMinBalance } =
+        await loadFixture(mTokenMinBalanceFixture.bind(this, baseFixture));
+
+      const from = regularAccounts[0];
+      const to = regularAccounts[1];
+
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        from,
+        parseUnits('3'),
+      );
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        to,
+        parseUnits('3'),
+      );
+      await blackList(
+        { blacklistable: mTokenMinBalance, accessControl, owner },
+        from,
+      );
+
+      await expect(
+        mTokenMinBalance.connect(from).transfer(to.address, parseUnits('0.1')),
+      ).revertedWithCustomError(
+        mTokenMinBalance,
+        acErrors.WMAC_BLACKLISTED().customErrorName,
+      );
+    });
+
+    it('should fail: transfer when to is blacklisted', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const { owner, accessControl, regularAccounts, mTokenMinBalance } =
+        await loadFixture(mTokenMinBalanceFixture.bind(this, baseFixture));
+
+      const from = regularAccounts[0];
+      const to = regularAccounts[1];
+
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        from,
+        parseUnits('3'),
+      );
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        to,
+        parseUnits('3'),
+      );
+      await blackList(
+        { blacklistable: mTokenMinBalance, accessControl, owner },
+        to,
+      );
+
+      await expect(
+        mTokenMinBalance.connect(from).transfer(to.address, parseUnits('0.1')),
+      ).revertedWithCustomError(
+        mTokenMinBalance,
+        acErrors.WMAC_BLACKLISTED().customErrorName,
+      );
+    });
+
+    it('should fail: transfer when ERC20Pausable is paused', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
+        mTokenMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const from = regularAccounts[0];
+      const to = regularAccounts[1];
+
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        from,
+        parseUnits('3'),
+      );
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        to,
+        parseUnits('3'),
+      );
+      await setErc20PausablePaused(mTokenMinBalance);
+
+      await expect(
+        mTokenMinBalance.connect(from).transfer(to.address, parseUnits('0.1')),
+      ).revertedWith(ERC20_PAUSED_MSG);
+    });
+  });
+
+  describe('transferFrom()', () => {
+    it('transferFrom when both parties hold above min balance after transfer', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
+        mTokenMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const from = regularAccounts[0];
+      const spender = regularAccounts[1];
+      const to = regularAccounts[2];
+      const amount = parseUnits('0.1');
+
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        from,
+        parseUnits('3'),
+      );
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        to,
+        parseUnits('3'),
+      );
+      await mTokenMinBalance.connect(from).approve(spender.address, amount);
+
+      await expect(
+        mTokenMinBalance
+          .connect(spender)
+          .transferFrom(from.address, to.address, amount),
+      ).not.reverted;
+    });
+
+    it('should fail: transferFrom dust to empty recipient', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
+        mTokenMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const from = regularAccounts[0];
+      const spender = regularAccounts[1];
+      const to = regularAccounts[2];
+      const amount = parseUnits('0.1');
+
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        from,
+        parseUnits('3'),
+      );
+      await mTokenMinBalance.connect(from).approve(spender.address, amount);
+
+      await expect(
+        mTokenMinBalance
+          .connect(spender)
+          .transferFrom(from.address, to.address, amount),
+      ).revertedWith('MTMB: min balance not met');
+    });
+  });
+
+  describe('mint()', () => {
+    it('mint at least 1 token to empty recipient', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
+        mTokenMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        regularAccounts[0],
+        parseUnits('1'),
+      );
+    });
+
+    it('should fail: mint less than 1 token to empty recipient', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
+        mTokenMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        regularAccounts[0],
+        parseUnits('0.5'),
+        { revertMessage: 'MTMB: min balance not met' },
+      );
+    });
+
+    it('mint less than 1 token to empty recipient when free from min balance', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const {
+        owner,
+        accessControl,
+        regularAccounts,
+        mTokenMinBalance,
+        mTokenMinBalanceRoles,
+      } = await loadFixture(mTokenMinBalanceFixture.bind(this, baseFixture));
+
+      const to = regularAccounts[0];
+      await accessControl['grantRole(bytes32,address)'](
+        mTokenMinBalanceRoles.minBalanceExempt,
+        to.address,
+      );
+
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        to,
+        parseUnits('0.5'),
+      );
+    });
+
+    it('mint dust to recipient that already holds min balance', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
+        mTokenMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const to = regularAccounts[0];
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        to,
+        parseUnits('1'),
+      );
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        to,
+        parseUnits('0.1'),
+      );
+    });
+  });
+
+  describe('burn()', () => {
+    it('burn leaving holder at zero', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
+        mTokenMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const holder = regularAccounts[0];
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        holder,
+        parseUnits('1'),
+      );
+      await burn(
+        { tokenContract: mTokenMinBalance, owner },
+        holder,
+        parseUnits('1'),
+      );
+    });
+
+    it('burn leaving holder at or above min balance', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
+        mTokenMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const holder = regularAccounts[0];
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        holder,
+        parseUnits('3'),
+      );
+      await burn(
+        { tokenContract: mTokenMinBalance, owner },
+        holder,
+        parseUnits('1'),
+      );
+      expect(await mTokenMinBalance.balanceOf(holder.address)).eq(
+        parseUnits('2'),
+      );
+    });
+
+    it('should fail: burn leaving holder below min balance', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
+        mTokenMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const holder = regularAccounts[0];
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        holder,
+        parseUnits('3'),
+      );
+
+      await burn(
+        { tokenContract: mTokenMinBalance, owner },
+        holder,
+        parseUnits('2.5'),
+        { revertMessage: 'MTMB: min balance not met' },
+      );
+    });
+
+    it('burn leaving holder below min balance when free from min balance', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const {
+        owner,
+        accessControl,
+        regularAccounts,
+        mTokenMinBalance,
+        mTokenMinBalanceRoles,
+      } = await loadFixture(mTokenMinBalanceFixture.bind(this, baseFixture));
+
+      const holder = regularAccounts[0];
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        holder,
+        parseUnits('3'),
+      );
+      await accessControl['grantRole(bytes32,address)'](
+        mTokenMinBalanceRoles.minBalanceExempt,
+        holder.address,
+      );
+
+      await burn(
+        { tokenContract: mTokenMinBalance, owner },
+        holder,
+        parseUnits('2.5'),
+      );
+      expect(await mTokenMinBalance.balanceOf(holder.address)).eq(
+        parseUnits('0.5'),
+      );
+    });
+
+    it('should fail: burnGoverned leaving holder below min balance', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
+        mTokenMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const holder = regularAccounts[0];
+      await mint(
+        { tokenContract: mTokenMinBalance, owner },
+        holder,
+        parseUnits('3'),
+      );
+
+      await expect(
+        mTokenMinBalance
+          .connect(owner)
+          .burnGoverned(holder.address, parseUnits('2.5')),
+      ).revertedWith('MTMB: min balance not met');
+    });
+  });
+});
+
+describe('mTokenPermissionedMinBalance', () => {
+  describe('transfer()', () => {
+    it('should fail: transfer when sender is not greenlisted', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const {
+        owner,
+        accessControl,
+        regularAccounts,
+        mTokenPermissionedMinBalance,
+        mTokenPermissionedMinBalanceRoles,
+      } = await loadFixture(
+        mTokenPermissionedMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const from = regularAccounts[0];
+      const to = regularAccounts[1];
+      const { greenlisted } = mTokenPermissionedMinBalanceRoles;
+
+      await accessControl['grantRole(bytes32,address)'](
+        greenlisted,
+        from.address,
+      );
+      await accessControl['grantRole(bytes32,address)'](
+        greenlisted,
+        to.address,
+      );
+      await mint(
+        { tokenContract: mTokenPermissionedMinBalance, owner },
+        from,
+        parseUnits('3'),
+      );
+      await mint(
+        { tokenContract: mTokenPermissionedMinBalance, owner },
+        to,
+        parseUnits('3'),
+      );
+      await accessControl.revokeRole(greenlisted, from.address);
+
+      await expect(
+        mTokenPermissionedMinBalance
+          .connect(from)
+          .transfer(to.address, parseUnits('0.1')),
+      ).revertedWithCustomError(mTokenPermissionedMinBalance, 'NotGreenlisted');
+    });
+
+    it('should fail: transfer when recipient is not greenlisted', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const {
+        owner,
+        accessControl,
+        regularAccounts,
+        mTokenPermissionedMinBalance,
+        mTokenPermissionedMinBalanceRoles,
+      } = await loadFixture(
+        mTokenPermissionedMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const from = regularAccounts[0];
+      const to = regularAccounts[1];
+      const { greenlisted } = mTokenPermissionedMinBalanceRoles;
+
+      await accessControl['grantRole(bytes32,address)'](
+        greenlisted,
+        from.address,
+      );
+      await mint(
+        { tokenContract: mTokenPermissionedMinBalance, owner },
+        from,
+        parseUnits('3'),
+      );
+
+      await expect(
+        mTokenPermissionedMinBalance
+          .connect(from)
+          .transfer(to.address, parseUnits('0.1')),
+      ).revertedWithCustomError(mTokenPermissionedMinBalance, 'NotGreenlisted');
+    });
+
+    it('should fail: transfer dust to empty recipient when both greenlisted', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const {
+        owner,
+        accessControl,
+        regularAccounts,
+        mTokenPermissionedMinBalance,
+        mTokenPermissionedMinBalanceRoles,
+      } = await loadFixture(
+        mTokenPermissionedMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const from = regularAccounts[0];
+      const to = regularAccounts[1];
+      const { greenlisted } = mTokenPermissionedMinBalanceRoles;
+
+      await accessControl['grantRole(bytes32,address)'](
+        greenlisted,
+        from.address,
+      );
+      await accessControl['grantRole(bytes32,address)'](
+        greenlisted,
+        to.address,
+      );
+      await mint(
+        { tokenContract: mTokenPermissionedMinBalance, owner },
+        from,
+        parseUnits('3'),
+      );
+
+      await expect(
+        mTokenPermissionedMinBalance
+          .connect(from)
+          .transfer(to.address, parseUnits('0.1')),
+      ).revertedWith('MTMB: min balance not met');
+    });
+
+    it('transfer dust to empty recipient when recipient is free from min balance', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const {
+        owner,
+        accessControl,
+        regularAccounts,
+        mTokenPermissionedMinBalance,
+        mTokenPermissionedMinBalanceRoles,
+      } = await loadFixture(
+        mTokenPermissionedMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const from = regularAccounts[0];
+      const to = regularAccounts[1];
+      const { greenlisted, minBalanceExempt } =
+        mTokenPermissionedMinBalanceRoles;
+      const amount = parseUnits('0.1');
+
+      await accessControl['grantRole(bytes32,address)'](
+        greenlisted,
+        from.address,
+      );
+      await accessControl['grantRole(bytes32,address)'](
+        greenlisted,
+        to.address,
+      );
+      await mint(
+        { tokenContract: mTokenPermissionedMinBalance, owner },
+        from,
+        parseUnits('3'),
+      );
+      await accessControl['grantRole(bytes32,address)'](
+        minBalanceExempt,
+        to.address,
+      );
+
+      await expect(
+        mTokenPermissionedMinBalance.connect(from).transfer(to.address, amount),
+      ).not.reverted;
+      expect(await mTokenPermissionedMinBalance.balanceOf(to.address)).eq(
+        amount,
+      );
+    });
+
+    it('transfer when both greenlisted and above min balance', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const {
+        owner,
+        accessControl,
+        regularAccounts,
+        mTokenPermissionedMinBalance,
+        mTokenPermissionedMinBalanceRoles,
+      } = await loadFixture(
+        mTokenPermissionedMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const from = regularAccounts[0];
+      const to = regularAccounts[1];
+      const { greenlisted } = mTokenPermissionedMinBalanceRoles;
+      const amount = parseUnits('0.1');
+
+      await accessControl['grantRole(bytes32,address)'](
+        greenlisted,
+        from.address,
+      );
+      await accessControl['grantRole(bytes32,address)'](
+        greenlisted,
+        to.address,
+      );
+      await mint(
+        { tokenContract: mTokenPermissionedMinBalance, owner },
+        from,
+        parseUnits('3'),
+      );
+      await mint(
+        { tokenContract: mTokenPermissionedMinBalance, owner },
+        to,
+        parseUnits('3'),
+      );
+
+      await expect(
+        mTokenPermissionedMinBalance.connect(from).transfer(to.address, amount),
+      ).not.reverted;
+    });
+  });
+
+  describe('transferFrom()', () => {
+    it('should fail: transferFrom dust to empty recipient when both greenlisted', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const {
+        owner,
+        accessControl,
+        regularAccounts,
+        mTokenPermissionedMinBalance,
+        mTokenPermissionedMinBalanceRoles,
+      } = await loadFixture(
+        mTokenPermissionedMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const from = regularAccounts[0];
+      const spender = regularAccounts[1];
+      const to = regularAccounts[2];
+      const { greenlisted } = mTokenPermissionedMinBalanceRoles;
+      const amount = parseUnits('0.1');
+
+      await accessControl['grantRole(bytes32,address)'](
+        greenlisted,
+        from.address,
+      );
+      await accessControl['grantRole(bytes32,address)'](
+        greenlisted,
+        to.address,
+      );
+      await mint(
+        { tokenContract: mTokenPermissionedMinBalance, owner },
+        from,
+        parseUnits('3'),
+      );
+      await mTokenPermissionedMinBalance
+        .connect(from)
+        .approve(spender.address, amount);
+
+      await expect(
+        mTokenPermissionedMinBalance
+          .connect(spender)
+          .transferFrom(from.address, to.address, amount),
+      ).revertedWith('MTMB: min balance not met');
+    });
+
+    it('transferFrom when both greenlisted and above min balance', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const {
+        owner,
+        accessControl,
+        regularAccounts,
+        mTokenPermissionedMinBalance,
+        mTokenPermissionedMinBalanceRoles,
+      } = await loadFixture(
+        mTokenPermissionedMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const from = regularAccounts[0];
+      const spender = regularAccounts[1];
+      const to = regularAccounts[2];
+      const { greenlisted } = mTokenPermissionedMinBalanceRoles;
+      const amount = parseUnits('0.1');
+
+      await accessControl['grantRole(bytes32,address)'](
+        greenlisted,
+        from.address,
+      );
+      await accessControl['grantRole(bytes32,address)'](
+        greenlisted,
+        to.address,
+      );
+      await mint(
+        { tokenContract: mTokenPermissionedMinBalance, owner },
+        from,
+        parseUnits('3'),
+      );
+      await mint(
+        { tokenContract: mTokenPermissionedMinBalance, owner },
+        to,
+        parseUnits('3'),
+      );
+      await mTokenPermissionedMinBalance
+        .connect(from)
+        .approve(spender.address, amount);
+
+      await expect(
+        mTokenPermissionedMinBalance
+          .connect(spender)
+          .transferFrom(from.address, to.address, amount),
+      ).not.reverted;
+    });
+  });
+
+  describe('mint()', () => {
+    it('should fail: mint less than 1 token to greenlisted empty recipient', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const {
+        owner,
+        accessControl,
+        regularAccounts,
+        mTokenPermissionedMinBalance,
+        mTokenPermissionedMinBalanceRoles,
+      } = await loadFixture(
+        mTokenPermissionedMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const to = regularAccounts[0];
+      await accessControl['grantRole(bytes32,address)'](
+        mTokenPermissionedMinBalanceRoles.greenlisted,
+        to.address,
+      );
+
+      await mint(
+        { tokenContract: mTokenPermissionedMinBalance, owner },
+        to,
+        parseUnits('0.5'),
+        { revertMessage: 'MTMB: min balance not met' },
+      );
+    });
+
+    it('mint at least 1 token to greenlisted recipient', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const {
+        owner,
+        accessControl,
+        regularAccounts,
+        mTokenPermissionedMinBalance,
+        mTokenPermissionedMinBalanceRoles,
+      } = await loadFixture(
+        mTokenPermissionedMinBalanceFixture.bind(this, baseFixture),
+      );
+
+      const to = regularAccounts[0];
+      await accessControl['grantRole(bytes32,address)'](
+        mTokenPermissionedMinBalanceRoles.greenlisted,
+        to.address,
+      );
+
+      await mint(
+        { tokenContract: mTokenPermissionedMinBalance, owner },
+        to,
+        parseUnits('1'),
       );
     });
   });

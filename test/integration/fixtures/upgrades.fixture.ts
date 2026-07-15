@@ -5,7 +5,7 @@ import { ethers } from 'hardhat';
 import hre from 'hardhat';
 
 import { rpcUrls } from '../../../config';
-import { getAllRoles } from '../../../helpers/roles';
+import { getAllRoles, getRolesForToken } from '../../../helpers/roles';
 import {
   MidasAccessControl,
   MidasAccessControlTimelockController,
@@ -20,13 +20,28 @@ import {
   CustomAggregatorV3CompatibleFeed__factory,
   MToken__factory,
   CustomAggregatorV3CompatibleFeedGrowth,
-  MTokenPermissioned,
-  MTokenPermissioned__factory,
 } from '../../../typechain-types';
 import { NO_DELAY, NULL_DELAY } from '../../common/ac.helpers';
 import { asyncForEach, Constructor } from '../../common/common.helpers';
 import { deployProxyContract } from '../../common/deploy.helpers';
 import { impersonateAndFundAccount, resetFork } from '../helpers/fork.helpers';
+
+const mTokenConstructorArgs = (roles: ReturnType<typeof getRolesForToken>) => [
+  roles.tokenManager,
+  roles.minter,
+  roles.burner,
+  roles.greenlisted,
+  roles.minBalanceExempt,
+];
+
+const mTokenReinitializerParams = (
+  clawbackReceiver: string,
+  isPermissioned: boolean,
+  isMinHoldingBalanceEnforced = false,
+) => ({
+  fn: 'initializeV2',
+  args: [clawbackReceiver, isPermissioned, isMinHoldingBalanceEnforced],
+});
 
 export async function mainnetUpgradeFixture() {
   const acDefaultAdminAddress = '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227';
@@ -107,15 +122,11 @@ export async function mainnetUpgradeFixture() {
       {
         proxy: mTbillAddress,
         implementation: MToken__factory,
-        constructorArgs: [
-          allRoles.tokenRoles.mTBILL.tokenManager,
-          allRoles.tokenRoles.mTBILL.minter,
-          allRoles.tokenRoles.mTBILL.burner,
-        ],
-        reinitializerParams: {
-          fn: 'initializeV2',
-          args: [clawbackReceiver.address],
-        },
+        constructorArgs: mTokenConstructorArgs(allRoles.tokenRoles.mTBILL),
+        reinitializerParams: mTokenReinitializerParams(
+          clawbackReceiver.address,
+          false,
+        ),
       },
       // no gap in the product contract (MBtcDataFeed), has gap in DataFeed
       {
@@ -135,15 +146,11 @@ export async function mainnetUpgradeFixture() {
       {
         proxy: mBtcAddress,
         implementation: MToken__factory,
-        constructorArgs: [
-          allRoles.tokenRoles.mBTC.tokenManager,
-          allRoles.tokenRoles.mBTC.minter,
-          allRoles.tokenRoles.mBTC.burner,
-        ],
-        reinitializerParams: {
-          fn: 'initializeV2',
-          args: [clawbackReceiver.address],
-        },
+        constructorArgs: mTokenConstructorArgs(allRoles.tokenRoles.mBTC),
+        reinitializerParams: mTokenReinitializerParams(
+          clawbackReceiver.address,
+          false,
+        ),
       },
       // no gap in the product contract (MBtcDataFeed), has gap in DataFeed
       {
@@ -159,20 +166,15 @@ export async function mainnetUpgradeFixture() {
       },
     ],
     mGlobal: [
-      // inherits mTokenPermissioned, has 3 __gap on the token level (mToken, mTokenPermissioned, mGLOBAL)
+      // was mTokenPermissioned; now unified mToken with isPermissioned=true
       {
         proxy: mGlobalAddress,
-        implementation: MTokenPermissioned__factory,
-        constructorArgs: [
-          allRoles.tokenRoles.mGLOBAL.tokenManager,
-          allRoles.tokenRoles.mGLOBAL.minter,
-          allRoles.tokenRoles.mGLOBAL.burner,
-          allRoles.tokenRoles.mGLOBAL.greenlisted,
-        ],
-        reinitializerParams: {
-          fn: 'initializeV2',
-          args: [clawbackReceiver.address],
-        },
+        implementation: MToken__factory,
+        constructorArgs: mTokenConstructorArgs(allRoles.tokenRoles.mGLOBAL),
+        reinitializerParams: mTokenReinitializerParams(
+          clawbackReceiver.address,
+          true,
+        ),
       },
       {
         // has gap in the product contract (MGlobalDataFeed), has gap in DataFeed
@@ -192,15 +194,11 @@ export async function mainnetUpgradeFixture() {
       {
         proxy: mRoxAddress,
         implementation: MToken__factory,
-        constructorArgs: [
-          allRoles.tokenRoles.mROX.tokenManager,
-          allRoles.tokenRoles.mROX.minter,
-          allRoles.tokenRoles.mROX.burner,
-        ],
-        reinitializerParams: {
-          fn: 'initializeV2',
-          args: [clawbackReceiver.address],
-        },
+        constructorArgs: mTokenConstructorArgs(allRoles.tokenRoles.mROX),
+        reinitializerParams: mTokenReinitializerParams(
+          clawbackReceiver.address,
+          false,
+        ),
       },
     ],
   };
@@ -264,9 +262,9 @@ export async function mainnetUpgradeFixture() {
     mTbillAddress,
   )) as MToken;
   const mGlobal = (await ethers.getContractAt(
-    'mTokenPermissioned',
+    'mToken',
     mGlobalAddress,
-  )) as MTokenPermissioned;
+  )) as MToken;
   const mTbillDataFeed = (await ethers.getContractAt(
     'DataFeed',
     mTbillDataFeedAddress,

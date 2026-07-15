@@ -44,6 +44,19 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     bytes32 private immutable _BURNER_ROLE;
 
     /**
+     * @dev role that grants greenlisted rights to the contract
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _GREENLISTED_ROLE;
+
+    /**
+     * @dev role that grants min balance exempt rights to the contract
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _MIN_BALANCE_EXEMPT_ROLE;
+    /**
      * @notice metadata key => metadata value
      */
     mapping(bytes32 => bytes) public metadata;
@@ -74,30 +87,48 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     string private _symbol;
 
     /**
+     * @notice if true then the token is permissioned
+     */
+    bool public isPermissioned;
+
+    /**
+     * @notice if true then the token has a minimum holding balance enforced
+     */
+    bool public isMinHoldingBalanceEnforced;
+
+    /**
      * @dev leaving a storage gap for futures updates
      */
-    uint256[44] private __gap;
+    uint256[43] private __gap;
 
     /**
      * @dev having a second gap here to match with the gap of previous implementations
      */
     uint256[50] private ___gap;
 
+    // TODO: do we need an extra gap here?
+
     /**
      * @notice constructor
      * @param _contractAdminRole contract admin role
      * @param _minterRole minter role
      * @param _burnerRole burner role
+     * @param _greenlistedRole greenlisted role
+     * @param _minBalanceExemptRole min balance exempt role
      * @custom:oz-upgrades-unsafe-allow constructor
      */
     constructor(
         bytes32 _contractAdminRole,
         bytes32 _minterRole,
-        bytes32 _burnerRole
+        bytes32 _burnerRole,
+        bytes32 _greenlistedRole,
+        bytes32 _minBalanceExemptRole
     ) MidasInitializable() {
         _CONTRACT_ADMIN_ROLE = _contractAdminRole;
         _MINTER_ROLE = _minterRole;
         _BURNER_ROLE = _burnerRole;
+        _GREENLISTED_ROLE = _greenlistedRole;
+        _MIN_BALANCE_EXEMPT_ROLE = _minBalanceExemptRole;
     }
 
     /**
@@ -110,11 +141,17 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     function initialize(
         address _accessControl,
         address _clawbackReceiver,
+        bool isPermissioned,
+        bool isMinHoldingBalanceEnforced,
         string memory name_,
         string memory symbol_
     ) external {
         _initializeV1(_accessControl, name_, symbol_);
-        initializeV2(_clawbackReceiver);
+        initializeV2(
+            _clawbackReceiver,
+            isPermissioned,
+            isMinHoldingBalanceEnforced
+        );
     }
 
     /**
@@ -135,13 +172,14 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     /**
      * @dev v2 initializer
      * @param _clawbackReceiver address to which clawback tokens will be sent
+     * @param _isPermissioned if true then the token is permissioned
+     * @param _isMinHoldingBalanceEnforced if true then the token has a minimum holding balance enforced
      */
-    function initializeV2(address _clawbackReceiver)
-        public
-        virtual
-        reinitializer(3)
-        onlyProxyAdmin
-    {
+    function initializeV2(
+        address _clawbackReceiver,
+        bool _isPermissioned,
+        bool _isMinHoldingBalanceEnforced
+    ) public reinitializer(3) onlyProxyAdmin {
         require(
             _clawbackReceiver != address(0),
             InvalidAddress(_clawbackReceiver)
@@ -152,6 +190,9 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         // to make upgrades safer, we sync the name and symbol from the ERC20Upgradeable
         _name = ERC20Upgradeable.name();
         _symbol = ERC20Upgradeable.symbol();
+
+        isPermissioned = _isPermissioned;
+        isMinHoldingBalanceEnforced = _isMinHoldingBalanceEnforced;
     }
 
     /**
@@ -163,6 +204,38 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     {
         _name = name_;
         _symbol = symbol_;
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function setIsPermissioned(bool _isPermissioned)
+        external
+        onlyRoleDelayOverride(contractAdminRole(), 2 days, false)
+    {
+        if (isPermissioned == _isPermissioned) {
+            return;
+        }
+
+        isPermissioned = _isPermissioned;
+
+        emit SetIsPermissioned(_isPermissioned);
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function setMinHoldingBalanceEnforced(bool _isMinHoldingBalanceEnforced)
+        external
+        onlyRoleDelayOverride(contractAdminRole(), 2 days, false)
+    {
+        if (isMinHoldingBalanceEnforced == _isMinHoldingBalanceEnforced) {
+            return;
+        }
+
+        isMinHoldingBalanceEnforced = _isMinHoldingBalanceEnforced;
+
+        emit SetIsMinHoldingBalanceEnforced(_isMinHoldingBalanceEnforced);
     }
 
     /**
@@ -287,41 +360,49 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     /**
      * @notice AC role, owner of which can mint mToken token
      */
-    function minterRole() public view virtual returns (bytes32) {
+    function minterRole() public view returns (bytes32) {
         return _MINTER_ROLE;
     }
 
     /**
      * @notice AC role, owner of which can burn mToken token
      */
-    function burnerRole() public view virtual returns (bytes32) {
+    function burnerRole() public view returns (bytes32) {
         return _BURNER_ROLE;
     }
 
     /**
      * @inheritdoc WithMidasAccessControl
      */
-    function contractAdminRole()
-        public
-        view
-        virtual
-        override
-        returns (bytes32)
-    {
+    function contractAdminRole() public view override returns (bytes32) {
         return _CONTRACT_ADMIN_ROLE;
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function greenlistedRole() public view returns (bytes32) {
+        return _GREENLISTED_ROLE;
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function minBalanceExemptRole() public view returns (bytes32) {
+        return _MIN_BALANCE_EXEMPT_ROLE;
     }
 
     /**
      * @inheritdoc ERC20Upgradeable
      */
-    function name() public view virtual override returns (string memory) {
+    function name() public view override returns (string memory) {
         return _name;
     }
 
     /**
      * @inheritdoc ERC20Upgradeable
      */
-    function symbol() public view virtual override returns (string memory) {
+    function symbol() public view override returns (string memory) {
         return _symbol;
     }
 
@@ -353,7 +434,7 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         address from,
         address to,
         uint256 amount
-    ) internal virtual override(ERC20PausableUpgradeable) {
+    ) internal override(ERC20PausableUpgradeable) {
         PauseGuardsLibrary.requireNotPaused(accessControl, msg.sig);
 
         if (to != address(0)) {
@@ -368,6 +449,92 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
             _mintRateLimits.consumeLimit(amount);
         }
 
+        _validatePermissioned(from, to);
         ERC20PausableUpgradeable._beforeTokenTransfer(from, to, amount);
+    }
+
+    /**
+     * @dev overrides _afterTokenTransfer function to run custom validations
+     * @param from address of the sender
+     * @param to address of the recipient
+     * @param amount amount of tokens transferred
+     */
+    function _afterTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override {
+        _validateMinBalance(from, to);
+        super._afterTokenTransfer(from, to, amount);
+    }
+
+    /**
+     * @dev validates the minimum balance of a user
+     * @param from address of the sender
+     * @param to address of the recipient
+     */
+    function _validateMinBalance(address from, address to) private view {
+        if (!isMinHoldingBalanceEnforced) {
+            return;
+        }
+
+        if (from != address(0) && !_isMinBalanceExempt(from)) {
+            _validateUserMinBalance(from);
+        }
+
+        if (to != address(0) && !_isMinBalanceExempt(to)) {
+            _validateUserMinBalance(to);
+        }
+    }
+
+    /**
+     * @dev checks if a user is exempt from min balance checks
+     * @param user address of the user
+     * @return bool true if the user is exempt from min balance checks
+     */
+    function _isMinBalanceExempt(address user) private view returns (bool) {
+        return accessControl.hasRole(minBalanceExemptRole(), user);
+    }
+
+    /**
+     * @dev validates the minimum balance of a user
+     * @param user address of the user
+     */
+    function _validateUserMinBalance(address user) private view {
+        uint256 balance = balanceOf(user);
+        require(
+            balance == 0 || balance >= 1 ether,
+            "MTMB: min balance not met"
+        );
+    }
+
+    /**
+     * @dev validates that the sender and recipient are permissioned
+     * @param from address of the sender
+     * @param to address of the recipient
+     */
+    function _validatePermissioned(address from, address to) internal {
+        if (!isPermissioned) {
+            return;
+        }
+
+        if (to != address(0)) {
+            if (!_inClawback && from != address(0)) {
+                _onlyGreenlisted(from);
+            }
+
+            _onlyGreenlisted(to);
+        }
+    }
+
+    /**
+     * @dev checks that a given `account` has `greenlistedRole()`
+     */
+    function _onlyGreenlisted(address account) private view {
+        MidasAuthLibrary.requireGreenlisted(
+            accessControl,
+            account,
+            greenlistedRole()
+        );
     }
 }

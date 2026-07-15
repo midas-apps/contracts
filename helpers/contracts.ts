@@ -156,7 +156,7 @@ export const getCommonContractNames = (): CommonContractNames => {
     timelockController: 'MidasAccessControlTimelockController',
     dv: 'DepositVault',
     token: 'mToken',
-    tokenPermissioned: 'mTokenPermissioned',
+    tokenPermissioned: 'mToken',
     dvUstb: 'DepositVaultWithUSTB',
     dvAave: 'DepositVaultWithAave',
     dvMorpho: 'DepositVaultWithMorpho',

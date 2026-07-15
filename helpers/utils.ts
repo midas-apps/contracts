@@ -30,7 +30,7 @@ const contractNameToPath = {
     'CustomAggregatorV3CompatibleFeedGrowth',
     'DataFeed',
   ],
-  root: ['mToken', 'mTokenPermissioned'],
+  root: ['mToken'],
 };
 
 const getContractPath = (contractName: string) => {
