@@ -24,11 +24,11 @@ abstract contract mTokenMinBalance is mToken {
         uint256 amount
     ) internal virtual override {
         if (from != address(0) && !_isMinBalanceExempt(from)) {
-            _validateMinBalance(from, true);
+            _validateMinBalance(from);
         }
 
         if (to != address(0) && !_isMinBalanceExempt(to)) {
-            _validateMinBalance(to, from != address(0));
+            _validateMinBalance(to);
         }
 
         super._afterTokenTransfer(from, to, amount);
@@ -51,17 +51,12 @@ abstract contract mTokenMinBalance is mToken {
     /**
      * @dev validates the minimum balance of a user
      * @param user address of the user
-     * @param canBeZero bool if the user can have a balance of 0
      */
-    function _validateMinBalance(address user, bool canBeZero) private view {
+    function _validateMinBalance(address user) private view {
         uint256 balance = balanceOf(user);
-
-        bool isMinBalanceMet = balance >= 1 ether;
-
-        if (canBeZero) {
-            isMinBalanceMet = balance == 0 || isMinBalanceMet;
-        }
-
-        require(isMinBalanceMet, "MTMB: min balance not met");
+        require(
+            balance == 0 || balance >= 1 ether,
+            "MTMB: min balance not met"
+        );
     }
 }
