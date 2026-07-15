@@ -1,9 +1,15 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
+import { upgrades } from 'hardhat';
 
 import { MTokenNameEnum } from '../../config';
 import { getRolesForToken, getRolesNamesForToken } from '../../helpers/roles';
+import {
+  MTokenPermissionedMinBalanceTest,
+  MTokenPermissionedMinBalanceTest__factory,
+  MTokenPermissionedTest__factory,
+} from '../../typechain-types';
 import { acErrors, blackList } from '../common/ac.helpers';
 import {
   defaultDeploy,
@@ -1887,5 +1893,125 @@ describe('Shared greenlist role (mGLO -> mGLOBAL)', () => {
     expect(mGloRoles.customFeedAdmin).eq(
       'M_GLO_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE',
     );
+  });
+});
+
+describe('mToken upgrades', () => {
+  describe('PermissionedMinBalance -> Permissioned', () => {
+    const permissionedMinBalanceProxyFixture = async () => {
+      const { owner, accessControl, regularAccounts } = await defaultDeploy();
+
+      const token = (await upgrades.deployProxy(
+        new MTokenPermissionedMinBalanceTest__factory(owner),
+        [accessControl.address],
+        { initializer: 'initialize', kind: 'transparent' },
+      )) as MTokenPermissionedMinBalanceTest;
+
+      const mintRole = await token.M_TOKEN_TEST_MINT_OPERATOR_ROLE();
+      const burnRole = await token.M_TOKEN_TEST_BURN_OPERATOR_ROLE();
+      const pauseRole = await token.M_TOKEN_TEST_PAUSE_OPERATOR_ROLE();
+      const greenlisted = await token.M_TOKEN_TEST_GREENLISTED_ROLE();
+      const minBalanceExempt =
+        await token.M_TOKEN_TEST_MIN_BALANCE_EXEMPT_ROLE();
+
+      await accessControl.grantRole(mintRole, owner.address);
+      await accessControl.grantRole(burnRole, owner.address);
+      await accessControl.grantRole(pauseRole, owner.address);
+
+      return {
+        owner,
+        accessControl,
+        regularAccounts,
+        token,
+        roles: { mintRole, burnRole, pauseRole, greenlisted, minBalanceExempt },
+      };
+    };
+
+    it('preserves balances and keeps greenlist after dropping min-balance checks', async () => {
+      const { owner, accessControl, regularAccounts, token, roles } =
+        await loadFixture(permissionedMinBalanceProxyFixture);
+
+      const from = regularAccounts[0];
+      const to = regularAccounts[1];
+      const dust = parseUnits('0.1');
+
+      await accessControl.grantRole(roles.greenlisted, from.address);
+      await accessControl.grantRole(roles.greenlisted, to.address);
+
+      await mint({ tokenContract: token, owner }, from, parseUnits('3'));
+
+      const balanceBefore = await token.balanceOf(from.address);
+      const totalSupplyBefore = await token.totalSupply();
+      const nameBefore = await token.name();
+      const symbolBefore = await token.symbol();
+
+      await expect(token.connect(from).transfer(to.address, dust)).revertedWith(
+        'MTMB: min balance not met',
+      );
+
+      await upgrades.upgradeProxy(
+        token.address,
+        new MTokenPermissionedTest__factory(owner),
+        {
+          unsafeSkipStorageCheck: true,
+        },
+      );
+
+      const upgraded = MTokenPermissionedTest__factory.connect(
+        token.address,
+        owner,
+      );
+
+      expect(await upgraded.balanceOf(from.address)).eq(balanceBefore);
+      expect(await upgraded.totalSupply()).eq(totalSupplyBefore);
+      expect(await upgraded.name()).eq(nameBefore);
+      expect(await upgraded.symbol()).eq(symbolBefore);
+
+      await expect(upgraded.connect(from).transfer(to.address, dust)).not
+        .reverted;
+      expect(await upgraded.balanceOf(to.address)).eq(dust);
+
+      await accessControl.revokeRole(roles.greenlisted, from.address);
+      await expect(
+        upgraded.connect(from).transfer(to.address, dust),
+      ).revertedWith(acErrors.WMAC_HASNT_ROLE);
+    });
+
+    it('preserves greenlist mint rules after upgrade', async () => {
+      const { owner, accessControl, regularAccounts, token, roles } =
+        await loadFixture(permissionedMinBalanceProxyFixture);
+
+      const recipient = regularAccounts[0];
+
+      await mint({ tokenContract: token, owner }, recipient, parseUnits('1'), {
+        revertMessage: acErrors.WMAC_HASNT_ROLE,
+      });
+
+      await upgrades.upgradeProxy(
+        token.address,
+        new MTokenPermissionedTest__factory(owner),
+        { unsafeSkipStorageCheck: true },
+      );
+
+      const upgraded = MTokenPermissionedTest__factory.connect(
+        token.address,
+        owner,
+      );
+
+      await mint(
+        { tokenContract: upgraded, owner },
+        recipient,
+        parseUnits('1'),
+        { revertMessage: acErrors.WMAC_HASNT_ROLE },
+      );
+
+      await accessControl.grantRole(roles.greenlisted, recipient.address);
+      await mint(
+        { tokenContract: upgraded, owner },
+        recipient,
+        parseUnits('0.5'),
+      );
+      expect(await upgraded.balanceOf(recipient.address)).eq(parseUnits('0.5'));
+    });
   });
 });
