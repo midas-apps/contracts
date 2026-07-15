@@ -14,10 +14,8 @@ abstract contract mTokenPermissionedMinBalance is
     mTokenMinBalance,
     mTokenPermissioned
 {
-    /**
-     * @dev leaving a storage gap for futures updates
-     */
-    uint256[50] private __gap;
+    // no gap as we would upgrade some of the deployments
+    // to mTokenMinBalance
 
     /**
      * @dev overrides _beforeTokenTransfer function to call the parent hooks

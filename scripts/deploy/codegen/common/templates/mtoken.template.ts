@@ -75,10 +75,19 @@ export const getTokenContractFromTemplate = async (
           : ''
       }
 
+      ${
+        isPermissionedMToken && isMinBalanceMToken
+          ? `
+      // no gap as we would upgrade some of the deployments
+      // to mTokenMinBalance
+      `
+          : `
       /**
        * @dev leaving a storage gap for futures updates
        */
       uint256[50] private __gap;
+      `
+      }
 
       /**
        * @inheritdoc mToken
