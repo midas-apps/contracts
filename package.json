@@ -87,6 +87,7 @@
     "deploy:lz:post:grant:roles": "yarn hh:run:script scripts/deploy/misc/layerzero/grant_Roles.ts",
     "deploy:lz:post:revoke:roles": "yarn hh:run:script scripts/deploy/misc/layerzero/revoke_Roles.ts",
     "deploy:lz:post:wire": "yarn hardhat lz:oapp:wire:midas",
+    "deploy:lz:deprecate": "yarn hh:run:script scripts/deploy/misc/layerzero/deprecate_Ofts.ts",
     "deploy:axelar:executable": "yarn hh:run:script scripts/deploy/misc/axelar/deploy_Executable.ts",
     "deploy:axelar:post:wire": "yarn hh:run:script scripts/deploy/misc/axelar/wire_Tokens.ts",
     "deploy:axelar:post:wire:ptoken": "yarn hh:run:script scripts/deploy/misc/axelar/wire_PaymentTokens.ts",

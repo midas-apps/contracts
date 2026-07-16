@@ -127,6 +127,16 @@ export type DeploymentConfig = {
     customAggregatorAdjustedDv?: DeployCustomAggregatorAdjustedConfig;
     customAggregatorAdjustedRv?: DeployCustomAggregatorAdjustedConfig;
     dataFeed?: DeployDataFeedConfig;
+    /**
+     * Overrides `dataFeed`'s minAnswer/maxAnswer for the DV-side data feed.
+     * Falls back to `dataFeed` when unset.
+     */
+    dataFeedDv?: DeployDataFeedConfig;
+    /**
+     * Overrides `dataFeed`'s minAnswer/maxAnswer for the RV-side data feed.
+     * Falls back to `dataFeed` when unset.
+     */
+    dataFeedRv?: DeployDataFeedConfig;
   };
   networkConfigs: Record<
     number,

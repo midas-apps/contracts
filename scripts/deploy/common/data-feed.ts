@@ -8,6 +8,7 @@ import {
   deployAndVerifyProxy,
   getDeployer,
   getDeploymentGenericConfig,
+  getDeploymentGenericConfigOptional,
   getNetworkConfig,
   sendAndWaitForCustomTxSign,
 } from './utils';
@@ -56,6 +57,15 @@ export type DeployDataFeedConfigComposite = {
 export type DeployDataFeedConfig =
   | DeployDataFeedConfigComposite
   | DeployDataFeedConfigRegular;
+
+export const isAnswerWithinExpectedRange = (
+  roundId: BigNumber,
+  answer: BigNumber,
+  minAnswer: BigNumber,
+  maxAnswer: BigNumber,
+) => {
+  return roundId.isZero() || (answer.gte(minAnswer) && answer.lte(maxAnswer));
+};
 
 type DeployCustomAggregatorCommonConfig = {
   /**
@@ -270,21 +280,51 @@ export const updateExpectedAnswersMToken = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
 ) => {
-  const networkConfig = getDeploymentGenericConfig(hre, token, 'dataFeed');
+  const dataFeedConfig = getDeploymentGenericConfig(hre, token, 'dataFeed');
 
   const addresses = getCurrentAddresses(hre);
-  const dataFeedAddress = addresses?.[token]?.dataFeed;
+  const tokenAddresses = addresses?.[token];
 
-  if (!dataFeedAddress) {
+  const feeds: {
+    dataFeedAddress: string;
+    networkConfig: DeployDataFeedConfigRegular;
+  }[] = [];
+
+  if (tokenAddresses?.dataFeedDv || tokenAddresses?.dataFeedRv) {
+    if (tokenAddresses.dataFeedDv) {
+      feeds.push({
+        dataFeedAddress: tokenAddresses.dataFeedDv,
+        networkConfig:
+          getDeploymentGenericConfigOptional(token, 'dataFeedDv') ??
+          dataFeedConfig,
+      });
+    }
+    if (tokenAddresses.dataFeedRv) {
+      feeds.push({
+        dataFeedAddress: tokenAddresses.dataFeedRv,
+        networkConfig:
+          getDeploymentGenericConfigOptional(token, 'dataFeedRv') ??
+          dataFeedConfig,
+      });
+    }
+  } else if (tokenAddresses?.dataFeed) {
+    feeds.push({
+      dataFeedAddress: tokenAddresses.dataFeed,
+      networkConfig: dataFeedConfig,
+    });
+  }
+
+  if (!feeds.length) {
     throw new Error('Token config is not found or dataFeed is not set');
   }
 
-  await updateExpectedAnswers(hre, {
-    isMToken: true,
-    token,
-    dataFeedAddress,
-    networkConfig,
-  });
+  for (const feed of feeds) {
+    await updateExpectedAnswers(hre, {
+      isMToken: true,
+      token,
+      ...feed,
+    });
+  }
 };
 
 const updateExpectedAnswers = async (
@@ -332,9 +372,9 @@ const updateExpectedAnswers = async (
     );
   }
 
-  const { answer } = await aggregator.latestRoundData();
+  const { answer, roundId } = await aggregator.latestRoundData();
 
-  if (answer.lt(newMin) || answer.gt(newMax)) {
+  if (!isAnswerWithinExpectedRange(roundId, answer, newMin, newMax)) {
     throw new Error(
       `current aggregator answer ${formatUnits(
         answer,
@@ -657,7 +697,8 @@ export const deployMTokenDataFeedDv = async (
     hre,
     tokenAddresses.customFeedDv,
     dataFeedContractName,
-    getDeploymentGenericConfig(hre, token, 'dataFeed'),
+    getDeploymentGenericConfigOptional(token, 'dataFeedDv') ??
+      getDeploymentGenericConfig(hre, token, 'dataFeed'),
   );
 };
 
@@ -682,7 +723,8 @@ export const deployMTokenDataFeedRv = async (
     hre,
     tokenAddresses.customFeedRv,
     dataFeedContractName,
-    getDeploymentGenericConfig(hre, token, 'dataFeed'),
+    getDeploymentGenericConfigOptional(token, 'dataFeedRv') ??
+      getDeploymentGenericConfig(hre, token, 'dataFeed'),
   );
 };
 
