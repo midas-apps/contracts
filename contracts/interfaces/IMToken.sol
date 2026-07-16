@@ -32,6 +32,19 @@ interface IMToken is IERC20Upgradeable {
     );
 
     /**
+     * @param key metadata key
+     * @param data metadata data
+     */
+    event SetMetadata(bytes32 indexed key, bytes data);
+
+    /**
+     * @param from address to clawback tokens from
+     * @param to address to clawback tokens to
+     * @param amount amount to clawback
+     */
+    event Clawback(address indexed from, address indexed to, uint256 amount);
+
+    /**
      * @notice when new limit is invalid
      * @param newLimit new limit
      * @param existingLimit existing limit

@@ -40,9 +40,16 @@ export const setMetadataTest = async (
     return;
   }
 
-  await tokenContract
-    .connect(opt?.from ?? owner)
-    .setMetadata(keyBytes32, valueBytes);
+  await expect(
+    tokenContract
+      .connect(opt?.from ?? owner)
+      .setMetadata(keyBytes32, valueBytes),
+  )
+    .to.emit(
+      tokenContract,
+      tokenContract.interface.events['SetMetadata(bytes32,bytes)'].name,
+    )
+    .withArgs(keyBytes32, valueBytes);
 
   expect(await tokenContract.metadata(keyBytes32)).eq(valueBytes);
 };
@@ -182,12 +189,17 @@ export const clawbackTest = async (
   const balanceFromBefore = await tokenContract.balanceOf(fromAddr);
   const balanceReceiverBefore = await tokenContract.balanceOf(receiver);
 
-  await expect(
-    tokenContract.connect(caller).clawback(amount, fromAddr),
-  ).to.emit(
-    tokenContract,
-    tokenContract.interface.events['Transfer(address,address,uint256)'].name,
-  );
+  await expect(tokenContract.connect(caller).clawback(amount, fromAddr))
+    .to.emit(
+      tokenContract,
+      tokenContract.interface.events['Transfer(address,address,uint256)'].name,
+    )
+    .withArgs(fromAddr, receiver, amount)
+    .and.to.emit(
+      tokenContract,
+      tokenContract.interface.events['Clawback(address,address,uint256)'].name,
+    )
+    .withArgs(fromAddr, receiver, amount);
 
   expect(await tokenContract.balanceOf(fromAddr)).eq(
     balanceFromBefore.sub(amount),

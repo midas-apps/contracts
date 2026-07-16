@@ -106,7 +106,12 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     uint256[50] private ___gap;
 
-    // TODO: do we need an extra gap here?
+    /**
+     * @dev havings a third gap here to match with the gap of previous implementations
+     */
+    uint256[50] private ____gap;
+
+    // TODO: can we remove 2nd and 3rd gaps somehow without disabling storage layout checks?
 
     /**
      * @notice constructor
@@ -298,9 +303,11 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      * @inheritdoc IMToken
      */
     function clawback(uint256 amount, address from) external onlyContractAdmin {
+        address to = clawbackReceiver;
         _inClawback = true;
-        _transfer(from, clawbackReceiver, amount);
+        _transfer(from, to, amount);
         _inClawback = false;
+        emit Clawback(from, to, amount);
     }
 
     /**
@@ -311,6 +318,7 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         onlyContractAdmin
     {
         metadata[key] = data;
+        emit SetMetadata(key, data);
     }
 
     /**
