@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity ^0.8.24;
+pragma solidity 0.8.26;
 
 import {IBurnMintERC20} from "@chainlink/contracts-ccip/contracts/interfaces/IBurnMintERC20.sol";
 import {BurnMintTokenPool} from "@chainlink/contracts-ccip/contracts/pools/BurnMintTokenPool.sol";
-import {BurnMintTokenPoolAbstract} from "@chainlink/contracts-ccip/contracts/pools/BurnMintTokenPoolAbstract.sol";
 import {TokenPool} from "@chainlink/contracts-ccip/contracts/pools/TokenPool.sol";
 import {IMToken} from "../../interfaces/IMToken.sol";
 
@@ -35,6 +34,16 @@ contract MidasCCTBurnMintTokenPool is BurnMintTokenPool {
         uint256 amount,
         bytes error
     );
+
+    /**
+     * @notice Error thrown when the fallback receiver is set to address zero
+     */
+    error InvalidFallbackReceiver(address newFallbackReceiver);
+
+    /**
+     * @notice Error thrown when the function is called by an address other than the contract itself
+     */
+    error NotSelf();
 
     constructor(
         IMToken token,
@@ -72,7 +81,10 @@ contract MidasCCTBurnMintTokenPool is BurnMintTokenPool {
     }
 
     /**
-     * @inheritdoc BurnMintTokenPoolAbstract
+     * @dev Mints the tokens to the receiver, in case if
+     * user mint fails it mints to the fallback receiver
+     * @param receiver The original receiver of the tokens
+     * @param amount The amount of tokens
      */
     function _releaseOrMint(
         address receiver,
@@ -88,18 +100,19 @@ contract MidasCCTBurnMintTokenPool is BurnMintTokenPool {
     }
 
     /**
-     * @notice Mint the tokens to the receiver
+     * @notice Function that mints the tokens to the receiver and
+     * can be wrapped with a try/catch to handle errors
      * @dev Only callable by the contract itself
      * @param receiver The receiver of the tokens
      * @param amount The amount of tokens
      */
     function releaseOrMintInternal(address receiver, uint256 amount) external {
-        require(msg.sender == address(this), "not self");
+        require(msg.sender == address(this), NotSelf());
         _mint(receiver, amount);
     }
 
     /**
-     * @notice Mint the tokens to the receiver
+     * @dev Mint the tokens to the receiver
      * @param receiver The receiver of the tokens
      * @param amount The amount of tokens
      */
@@ -107,8 +120,15 @@ contract MidasCCTBurnMintTokenPool is BurnMintTokenPool {
         IMToken(address(i_token)).mint(receiver, amount);
     }
 
+    /**
+     * @dev Set the fallback receiver of the pool
+     * @param newFallbackReceiver The new fallback receiver
+     */
     function _setFallbackReceiver(address newFallbackReceiver) internal {
-        require(newFallbackReceiver != address(0), "MCCT: address zero");
+        require(
+            newFallbackReceiver != address(0),
+            InvalidFallbackReceiver(newFallbackReceiver)
+        );
         fallbackReceiver = newFallbackReceiver;
         emit FallbackReceiverSet(newFallbackReceiver);
     }

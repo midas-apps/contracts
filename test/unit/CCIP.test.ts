@@ -102,7 +102,7 @@ describe('CCIP', function () {
 
       it('should fail: when fallback receiver is the zero address', async () => {
         const fixture = await loadFixture(ccipCctFixture);
-        const { owner, rmn, router, mTBILL } = fixture;
+        const { owner, pool, rmn, router, mTBILL } = fixture;
 
         await expect(
           new MidasCCTBurnMintTokenPool__factory(owner).deploy(
@@ -111,7 +111,9 @@ describe('CCIP', function () {
             router.address,
             constants.AddressZero,
           ),
-        ).revertedWith('MCCT: address zero');
+        )
+          .revertedWithCustomError(pool, 'InvalidFallbackReceiver')
+          .withArgs(constants.AddressZero);
       });
 
       it('sets the fallback receiver from the constructor', async () => {
@@ -154,9 +156,14 @@ describe('CCIP', function () {
 
       it('should fail: when the new fallback receiver is the zero address', async () => {
         const fixture = await loadFixture(ccipCctFixture);
+        const { pool } = fixture;
 
         await setFallbackReceiver(fixture, constants.AddressZero, {
-          revertMessage: 'MCCT: address zero',
+          revertWithCustomError: {
+            contract: pool,
+            error: 'InvalidFallbackReceiver',
+            args: [constants.AddressZero],
+          },
         });
       });
     });
