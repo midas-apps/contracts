@@ -40,6 +40,7 @@ import { mHyperBTCDeploymentConfig } from './mHyperBTC';
 import { mHyperETHDeploymentConfig } from './mHyperETH';
 import { mKRalphaDeploymentConfig } from './mKRalpha';
 import { mLIQUIDITYDeploymentConfig } from './mLIQUIDITY';
+import { mM1BTCDeploymentConfig } from './mM1BTC';
 import { mM1USDDeploymentConfig } from './mM1USD';
 import { mMEVDeploymentConfig } from './mMEV';
 import { mPortofinoDeploymentConfig } from './mPortofino';
@@ -163,4 +164,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mGLO: mGLODeploymentConfig,
   sGold: sGoldDeploymentConfig,
   turtlePST: turtlePSTDeploymentConfig,
+  mM1BTC: mM1BTCDeploymentConfig,
 };

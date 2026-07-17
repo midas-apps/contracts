@@ -322,6 +322,7 @@ Implementation: ${deployment.implementationAddress}`,
           newImplementation: deployment.implementationAddress,
           initializer: deployment.initializer,
           initializerCalldata,
+          contractName: deployment.contractName,
         },
         upgradeId,
       );

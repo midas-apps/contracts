@@ -150,8 +150,8 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
       ausd: {
         dataFeed: {
           healthyDiff: 24 * 60 * 60,
-          minAnswer: parseUnits('0.997', 8),
-          maxAnswer: parseUnits('1.003', 8),
+          minAnswer: parseUnits('0.997', 18),
+          maxAnswer: parseUnits('1.003', 18),
         },
       },
       wbtc: {

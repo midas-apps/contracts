@@ -632,6 +632,23 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x95EF0179867545bEA9DbdAB27955551C0802307e',
       redemptionVaultSwapper: '0xAB09Be3d1E02dFe1f0dbDa460Ff362BF1A5792Fb',
     },
+    mGLO: {
+      token: '0x1DD91a111606382B77A917633ED90feAf25E0F76',
+      customFeed: '0x59313b6ae481e39B8E7710C8C26dC0ada3C532Ca',
+      customFeedDv: '0x1e1fAB87C0600Bf4696871dAE93f6D1046d44469',
+      customFeedRv: '0x298372e3D18E34eD5c44EA7875F50Af7482233f7',
+      dataFeedDv: '0xb1306c60dCcBc3258149FAC18Cc0984D65E0886E',
+      dataFeedRv: '0x98bd3a24d3998EF96b12d896045EaCA7955Ea963',
+      depositVault: '0xe6522C0B034Eb725BB03D5cf957abEC1D2566E91',
+      redemptionVaultSwapper: '0x55f3Ab43E49FFb6b1FFf5E2B310C21278bDAf0f5',
+    },
+    mM1BTC: {
+      token: '0xc57c754f51DbbFae1a12b1aD1b8a8587bf24260a',
+      customFeed: '0x0066B0Cf5d7185cC30345AAAe258568f564b46d1',
+      dataFeed: '0xd5a4371EDAC4495d1733D2261B3B3c8FAC338174',
+      depositVault: '0xcEDCa505839c01Cc4FbE65496AA3Bb03B8ff98Ed',
+      redemptionVaultSwapper: '0x7F72AA0339b4944E1A77df847168AE1936c1EBBB',
+    },
   },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',

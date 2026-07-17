@@ -24,6 +24,11 @@ import {
 import { getRolesForToken } from '../../../helpers/roles';
 import { logDeploy } from '../../../helpers/utils';
 import { ProxyAdmin, TimelockController } from '../../../typechain-types';
+import {
+  assertReinitializerCovered,
+  getImplAddress,
+  verifyReinitializersConsumed,
+} from '../../upgrades/common/reinitializer';
 import { networkDeploymentConfigs } from '../configs/network-configs';
 
 export type DeployTimelockConfig = {
@@ -68,9 +73,10 @@ export type GetUpgradeTxParams = {
   newImplementation: string;
   initializer?: string;
   initializerCalldata?: string;
+  contractName: string;
 };
 
-type GetVaultUpgradeTxParams = GetUpgradeTxParams & {
+export type GetVaultUpgradeTxParams = GetUpgradeTxParams & {
   vaultType: VaultType;
   mToken: MTokenName;
 };
@@ -105,17 +111,56 @@ export const proposeTimeLockUpgradeTx = async (
   );
 };
 
+// Layer 2: verify consumption after execution. When the execute tx routed to a
+// Safe and isn't on-chain yet, defer to the standalone verify script.
+const verifyReinitializersAfterUpgrade = async (
+  hre: HardhatRuntimeEnvironment,
+  params: GetUpgradeTxParams,
+) => {
+  const provider = hre.ethers.provider;
+  const readImpl = () => getImplAddress(provider, params.proxyAddress);
+  const isUpgraded = (impl: string | null) =>
+    impl?.toLowerCase() === params.newImplementation.toLowerCase();
+
+  let impl = await readImpl();
+  if (
+    !isUpgraded(impl) &&
+    ['hardhat', 'localhost'].includes(hre.network.name)
+  ) {
+    await mine();
+    impl = await readImpl();
+  }
+  if (!isUpgraded(impl)) {
+    console.warn(
+      `Upgrade of ${params.proxyAddress} is not executed on-chain yet ` +
+        `(impl is still ${impl}). Once the tx confirms, run ` +
+        `scripts/upgrades/verifyUpgrade_Reinitializers.ts to verify ` +
+        `reinitializers are consumed.`,
+    );
+    return;
+  }
+  const { abi } = await hre.artifacts.readArtifact(params.contractName);
+  await verifyReinitializersConsumed({
+    provider,
+    proxyAddress: params.proxyAddress,
+    abi,
+  });
+  console.log(`Reinitializer verify passed for ${params.proxyAddress}`);
+};
+
 export const executeTimeLockUpgradeTx = async (
   hre: HardhatRuntimeEnvironment,
   upgradeParams: GetUpgradeTxParams,
   salt: string,
 ) => {
-  return await createUpgradeTimelockTx(
+  const result = await createUpgradeTimelockTx(
     hre,
     upgradeParams,
     salt,
     executeTimelockTx,
   );
+  if (result) await verifyReinitializersAfterUpgrade(hre, upgradeParams);
+  return result;
 };
 
 export const validateSimulateTimeLockUpgradeTx = async (
@@ -123,7 +168,7 @@ export const validateSimulateTimeLockUpgradeTx = async (
   upgradeParams: GetVaultUpgradeTxParams,
   salt: string,
 ) => {
-  return await createUpgradeTimelockTx(
+  const result = await createUpgradeTimelockTx(
     hre,
     upgradeParams,
     salt,
@@ -132,6 +177,8 @@ export const validateSimulateTimeLockUpgradeTx = async (
       await validateSimulateContractUpgrade(hre, upgradeParams, tx);
     },
   );
+  if (result) await verifyReinitializersAfterUpgrade(hre, upgradeParams);
+  return result;
 };
 
 export const validateSimulateTimeLockProposeUpgradeTx = async (
@@ -530,6 +577,16 @@ const createUpgradeTimelockTx = async (
           `Using custom initializer ${params.initializer} with calldata ${params.initializerCalldata}`,
         );
       }
+
+      // Runs even under skipValidation — this is the incident-preventing check.
+      const { abi } = await hre.artifacts.readArtifact(params.contractName);
+      await assertReinitializerCovered({
+        provider: hre.ethers.provider,
+        proxyAddress: params.proxyAddress,
+        newImplementation: params.newImplementation,
+        abi,
+        initializerCalldata: params.initializerCalldata,
+      });
 
       return {
         isValid: true,

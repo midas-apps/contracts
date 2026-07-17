@@ -27,7 +27,10 @@ export const mGLOBALDeploymentConfig: DeploymentConfig = {
       adjustmentPercentage: parseUnits('-6', 8),
       underlyingFeed: 'customFeedGrowth',
     },
-    dataFeed: {},
+    dataFeed: {
+      minAnswer: parseUnits('0.9', 8),
+      maxAnswer: parseUnits('1.1', 8),
+    },
   },
   networkConfigs: {
     [chainIds.main]: {
