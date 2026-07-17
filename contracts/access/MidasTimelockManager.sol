@@ -542,7 +542,9 @@ contract MidasTimelockManager is
             uint32 /* overrideDelay */
         )
     {
-        (bool success, bytes memory err) = target.staticcall(data);
+        (bool success, bytes memory err) = target.staticcall(
+            MidasAuthLibrary.appendProposer(data, proposer)
+        );
         require(!success, PreflightCallUnexpectedSuccess());
         bytes4 selector = _getFunctionSelector(data);
 

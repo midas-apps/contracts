@@ -9,6 +9,7 @@ import { encodeFnSelector } from '../../helpers/utils';
 import {
   MidasAccessControl,
   MidasAccessControl__factory,
+  MidasAccessControlTimelockController,
   MidasTimelockManager,
   WithMidasAccessControlTester,
   WithMidasAccessControlTester__factory,
@@ -571,6 +572,9 @@ describe('MidasAccessControl', function () {
     });
 
     it('should fail: when revoking DEFAULT_ADMIN_ROLE from self and timelock delay is not 0', async () => {
+      // Locks in that _validateRevokeRole uses the resolved proposer (actualSender),
+      // not msg.sender. If it compared against the timelock address, self-revoke
+      // via timelock would incorrectly succeed.
       const { accessControl, owner, roles, timelock, timelockManager } =
         await loadFixture(defaultDeploy);
 
@@ -605,6 +609,10 @@ describe('MidasAccessControl', function () {
           revertMessage: 'TimelockController: underlying transaction reverted',
         },
       );
+
+      expect(
+        await accessControl.hasRole(roles.common.defaultAdmin, owner.address),
+      ).eq(true);
     });
 
     it('when timelock delay is not 0 - schedule and execute the tx', async () => {
@@ -1514,27 +1522,6 @@ describe('MidasAccessControl', function () {
       );
     });
 
-    it('caller have mater role but dont have function role', async () => {
-      const { accessControl, owner, regularAccounts, roles } =
-        await loadFixture(defaultDeploy);
-
-      const selector = encodeFnSelector('setGreenlistEnable(bool)');
-
-      await setPermissionRoleTester(
-        { accessControl, owner },
-        undefined,
-        accessControl.address,
-        selector,
-        [
-          {
-            account: regularAccounts[2].address,
-            enabled: true,
-          },
-        ],
-        undefined,
-      );
-    });
-
     it('when address is already has permission (shouldnt fail)', async () => {
       const {
         accessControl,
@@ -1598,158 +1585,6 @@ describe('MidasAccessControl', function () {
         undefined,
         { revertCustomError: { customErrorName: 'EmptyArray' } },
       );
-    });
-
-    it('when timelock delay is not 0 - schedule and execute the tx', async () => {
-      const {
-        accessControl,
-        owner,
-        regularAccounts,
-        roles,
-        timelock,
-        timelockManager,
-        wAccessControlTester,
-      } = await loadFixture(defaultDeploy);
-
-      const selector = encodeFnSelector('setGreenlistEnable(bool)');
-      await wAccessControlTester.setContractAdminRole(
-        roles.common.greenlistedOperator,
-      );
-      const operatorRoleKey = await accessControl.grantOperatorRoleKey(
-        roles.common.greenlistedOperator,
-        wAccessControlTester.address,
-        selector,
-      );
-
-      await setGrantOperatorRoleTester(
-        { accessControl, owner },
-        wAccessControlTester.address,
-        [
-          {
-            functionSelector: selector,
-            operator: owner.address,
-            enabled: true,
-          },
-        ],
-      );
-
-      await setRoleTimelocksTester(
-        { timelockManager, timelock, owner, accessControl },
-        [operatorRoleKey],
-        [3600],
-      );
-
-      await setRoleTimelocksTester(
-        { timelockManager, timelock, owner, accessControl },
-        [roles.common.greenlistedOperator],
-        [3600],
-      );
-
-      const data = accessControl.interface.encodeFunctionData(
-        'setPermissionRoleMult(address,bytes4,uint32,(address,bool)[])',
-        [
-          wAccessControlTester.address,
-          selector,
-          0,
-          [{ account: regularAccounts[0].address, enabled: true }],
-        ],
-      );
-
-      await bulkScheduleTimelockOperationTester(
-        { timelockManager, timelock, owner, accessControl },
-        [accessControl.address],
-        [data],
-        {},
-        { from: owner },
-      );
-
-      await increase(3600);
-
-      await executeTimelockOperationTester(
-        { timelockManager, timelock, owner, accessControl },
-        accessControl.address,
-        data,
-        owner.address,
-        { from: owner },
-      );
-    });
-
-    it('when caller has operator role but not master role and operator role has no delay - uses operator role', async () => {
-      const {
-        accessControl,
-        owner,
-        regularAccounts,
-        roles,
-        timelock,
-        timelockManager,
-        wAccessControlTester,
-      } = await loadFixture(defaultDeploy);
-
-      const selector = encodeFnSelector('setGreenlistEnable(bool)');
-      const masterRole = roles.common.greenlistedOperator;
-      const operator = regularAccounts[0];
-
-      await wAccessControlTester.setContractAdminRole(masterRole);
-
-      await setGrantOperatorRoleTester(
-        { accessControl, owner },
-        wAccessControlTester.address,
-        [
-          {
-            functionSelector: selector,
-            operator: operator.address,
-            enabled: true,
-          },
-        ],
-      );
-
-      const operatorRoleKey = await accessControl.grantOperatorRoleKey(
-        masterRole,
-        wAccessControlTester.address,
-        selector,
-      );
-
-      await setRoleTimelocksTester(
-        { timelockManager, timelock, owner, accessControl },
-        [operatorRoleKey],
-        [NO_DELAY],
-      );
-
-      await setRoleTimelocksTester(
-        { timelockManager, timelock, owner, accessControl },
-        [masterRole],
-        [3600],
-      );
-
-      expect(await accessControl.hasRole(masterRole, operator.address)).eq(
-        false,
-      );
-      expect(
-        await accessControl[
-          'isFunctionAccessGrantOperator(bytes32,address,bytes4,address)'
-        ](masterRole, wAccessControlTester.address, selector, operator.address),
-      ).eq(true);
-
-      await setPermissionRoleTester(
-        { accessControl, owner },
-        undefined,
-        wAccessControlTester.address,
-        selector,
-        [{ account: regularAccounts[1].address, enabled: true }],
-        undefined,
-        { from: operator },
-      );
-
-      expect(
-        await accessControl[
-          'hasFunctionPermission(bytes32,address,bytes4,address)'
-        ](
-          masterRole,
-          wAccessControlTester.address,
-          selector,
-          regularAccounts[1].address,
-        ),
-      ).eq(true);
     });
 
     it('should fail: when user do not have grant operator role', async () => {
@@ -1894,110 +1729,646 @@ describe('MidasAccessControl', function () {
       );
     });
 
-    it('when have both operator and master roles, and master role does not have a delay but operator do - should use master role', async () => {
-      const {
-        accessControl,
-        owner,
-        regularAccounts,
-        roles,
-        timelock,
-        timelockManager,
-        wAccessControlTester,
-      } = await loadFixture(defaultDeploy);
+    describe('without timelock', () => {
+      it('when caller has master role but not operator role - uses master role', async () => {
+        const {
+          accessControl,
+          owner,
+          regularAccounts,
+          roles,
+          wAccessControlTester,
+        } = await loadFixture(defaultDeploy);
 
-      const selector = encodeFnSelector('setGreenlistEnable(bool)');
+        const selector = encodeFnSelector('setGreenlistEnable(bool)');
+        const masterRole = roles.common.greenlistedOperator;
 
-      await wAccessControlTester.setContractAdminRole(
-        roles.common.greenlistedOperator,
-      );
+        await wAccessControlTester.setContractAdminRole(masterRole);
 
-      const operatorRoleKey = await accessControl.grantOperatorRoleKey(
-        roles.common.greenlistedOperator,
-        wAccessControlTester.address,
-        selector,
-      );
+        expect(await accessControl.hasRole(masterRole, owner.address)).eq(true);
+        expect(
+          await accessControl[
+            'isFunctionAccessGrantOperator(bytes32,address,bytes4,address)'
+          ](masterRole, wAccessControlTester.address, selector, owner.address),
+        ).eq(false);
 
-      await setGrantOperatorRoleTester(
-        { accessControl, owner },
-        wAccessControlTester.address,
-        [
-          {
-            functionSelector: selector,
-            operator: owner.address,
-            enabled: true,
-          },
-        ],
-      );
+        await setPermissionRoleTester(
+          { accessControl, owner },
+          undefined,
+          wAccessControlTester.address,
+          selector,
+          [{ account: regularAccounts[0].address, enabled: true }],
+        );
+      });
 
-      await setRoleTimelocksTester(
-        { timelockManager, timelock, owner, accessControl },
-        [operatorRoleKey],
-        [3600],
-      );
+      it('when caller has operator role but not master role - uses operator role', async () => {
+        const {
+          accessControl,
+          owner,
+          regularAccounts,
+          roles,
+          timelock,
+          timelockManager,
+          wAccessControlTester,
+        } = await loadFixture(defaultDeploy);
 
-      await setPermissionRoleTester(
-        { accessControl, owner },
-        undefined,
-        wAccessControlTester.address,
-        selector,
-        [{ account: regularAccounts[0].address, enabled: true }],
-      );
+        const selector = encodeFnSelector('setGreenlistEnable(bool)');
+        const masterRole = roles.common.greenlistedOperator;
+        const operator = regularAccounts[0];
+
+        await wAccessControlTester.setContractAdminRole(masterRole);
+
+        await setGrantOperatorRoleTester(
+          { accessControl, owner },
+          wAccessControlTester.address,
+          [
+            {
+              functionSelector: selector,
+              operator: operator.address,
+              enabled: true,
+            },
+          ],
+        );
+
+        const operatorRoleKey = await accessControl.grantOperatorRoleKey(
+          masterRole,
+          wAccessControlTester.address,
+          selector,
+        );
+
+        // master has delay so direct call would fail if master role were wrongly selected
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [masterRole],
+          [3600],
+        );
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [operatorRoleKey],
+          [NO_DELAY],
+        );
+
+        expect(await accessControl.hasRole(masterRole, operator.address)).eq(
+          false,
+        );
+        expect(
+          await accessControl[
+            'isFunctionAccessGrantOperator(bytes32,address,bytes4,address)'
+          ](
+            masterRole,
+            wAccessControlTester.address,
+            selector,
+            operator.address,
+          ),
+        ).eq(true);
+
+        await setPermissionRoleTester(
+          { accessControl, owner },
+          undefined,
+          wAccessControlTester.address,
+          selector,
+          [{ account: regularAccounts[1].address, enabled: true }],
+          undefined,
+          { from: operator },
+        );
+      });
+
+      it('when caller has both roles and master has no delay but operator does - uses master role', async () => {
+        const {
+          accessControl,
+          owner,
+          regularAccounts,
+          roles,
+          timelock,
+          timelockManager,
+          wAccessControlTester,
+        } = await loadFixture(defaultDeploy);
+
+        const selector = encodeFnSelector('setGreenlistEnable(bool)');
+        const masterRole = roles.common.greenlistedOperator;
+
+        await wAccessControlTester.setContractAdminRole(masterRole);
+
+        const operatorRoleKey = await accessControl.grantOperatorRoleKey(
+          masterRole,
+          wAccessControlTester.address,
+          selector,
+        );
+
+        await setGrantOperatorRoleTester(
+          { accessControl, owner },
+          wAccessControlTester.address,
+          [
+            {
+              functionSelector: selector,
+              operator: owner.address,
+              enabled: true,
+            },
+          ],
+        );
+
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [operatorRoleKey],
+          [3600],
+        );
+
+        await setPermissionRoleTester(
+          { accessControl, owner },
+          undefined,
+          wAccessControlTester.address,
+          selector,
+          [{ account: regularAccounts[0].address, enabled: true }],
+        );
+      });
+
+      it('when caller has both roles and operator has no delay but master does - uses operator role', async () => {
+        const {
+          accessControl,
+          owner,
+          regularAccounts,
+          roles,
+          timelock,
+          timelockManager,
+          wAccessControlTester,
+        } = await loadFixture(defaultDeploy);
+
+        const selector = encodeFnSelector('setGreenlistEnable(bool)');
+        const masterRole = roles.common.greenlistedOperator;
+
+        await wAccessControlTester.setContractAdminRole(masterRole);
+
+        const operatorRoleKey = await accessControl.grantOperatorRoleKey(
+          masterRole,
+          wAccessControlTester.address,
+          selector,
+        );
+
+        await setGrantOperatorRoleTester(
+          { accessControl, owner },
+          wAccessControlTester.address,
+          [
+            {
+              functionSelector: selector,
+              operator: owner.address,
+              enabled: true,
+            },
+          ],
+        );
+
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [masterRole],
+          [3600],
+        );
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [operatorRoleKey],
+          [NO_DELAY],
+        );
+
+        await setPermissionRoleTester(
+          { accessControl, owner },
+          undefined,
+          wAccessControlTester.address,
+          selector,
+          [{ account: regularAccounts[0].address, enabled: true }],
+        );
+      });
     });
 
-    it('when have both operator and master roles, and operator role does not have a delay but master do - should use operator role', async () => {
-      const {
-        accessControl,
-        owner,
-        regularAccounts,
-        roles,
-        timelock,
-        timelockManager,
-        wAccessControlTester,
-      } = await loadFixture(defaultDeploy);
+    describe('with timelock', () => {
+      const encodeSetPermissionRoleMult = (
+        accessControl: MidasAccessControl,
+        target: string,
+        selector: string,
+        account: string,
+      ) =>
+        accessControl.interface.encodeFunctionData(
+          'setPermissionRoleMult(address,bytes4,uint32,(address,bool)[])',
+          [target, selector, 0, [{ account, enabled: true }]],
+        );
 
-      const selector = encodeFnSelector('setGreenlistEnable(bool)');
+      const scheduleAndExecuteSetPermissionRoleMult = async (
+        {
+          accessControl,
+          owner,
+          timelock,
+          timelockManager,
+        }: {
+          accessControl: MidasAccessControl;
+          owner: SignerWithAddress;
+          timelock: MidasAccessControlTimelockController;
+          timelockManager: MidasTimelockManager;
+        },
+        data: string,
+        delay: number,
+        from: SignerWithAddress,
+      ) => {
+        await bulkScheduleTimelockOperationTester(
+          { timelockManager, timelock, owner, accessControl },
+          [accessControl.address],
+          [data],
+          {},
+          { from },
+        );
 
-      await wAccessControlTester.setContractAdminRole(
-        roles.common.greenlistedOperator,
-      );
+        await increase(delay);
 
-      const operatorRoleKey = await accessControl.grantOperatorRoleKey(
-        roles.common.greenlistedOperator,
-        wAccessControlTester.address,
-        selector,
-      );
+        await executeTimelockOperationTester(
+          { timelockManager, timelock, owner, accessControl },
+          accessControl.address,
+          data,
+          from.address,
+          { from: owner },
+        );
+      };
 
-      await setGrantOperatorRoleTester(
-        { accessControl, owner },
-        wAccessControlTester.address,
-        [
-          {
-            functionSelector: selector,
-            operator: owner.address,
-            enabled: true,
-          },
-        ],
-      );
+      it('when caller has master role but not operator role - schedule and execute', async () => {
+        const {
+          accessControl,
+          owner,
+          regularAccounts,
+          roles,
+          timelock,
+          timelockManager,
+          wAccessControlTester,
+        } = await loadFixture(defaultDeploy);
 
-      await setRoleTimelocksTester(
-        { timelockManager, timelock, owner, accessControl },
-        [roles.common.greenlistedOperator],
-        [3600],
-      );
+        const selector = encodeFnSelector('setGreenlistEnable(bool)');
+        const masterRole = roles.common.greenlistedOperator;
+        const delay = 3600;
+        const permissionAccount = regularAccounts[0].address;
 
-      await setRoleTimelocksTester(
-        { timelockManager, timelock, owner, accessControl },
-        [operatorRoleKey],
-        [NO_DELAY],
-      );
+        await wAccessControlTester.setContractAdminRole(masterRole);
 
-      await setPermissionRoleTester(
-        { accessControl, owner },
-        undefined,
-        wAccessControlTester.address,
-        selector,
-        [{ account: regularAccounts[0].address, enabled: true }],
-      );
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [masterRole],
+          [delay],
+        );
+
+        expect(await accessControl.hasRole(masterRole, owner.address)).eq(true);
+        expect(
+          await accessControl[
+            'isFunctionAccessGrantOperator(bytes32,address,bytes4,address)'
+          ](masterRole, wAccessControlTester.address, selector, owner.address),
+        ).eq(false);
+
+        const data = encodeSetPermissionRoleMult(
+          accessControl,
+          wAccessControlTester.address,
+          selector,
+          permissionAccount,
+        );
+
+        const [roleUsed] = await timelockManager.getTargetRole(
+          accessControl.address,
+          data,
+          owner.address,
+        );
+        expect(roleUsed).eq(masterRole);
+
+        await scheduleAndExecuteSetPermissionRoleMult(
+          { accessControl, owner, timelock, timelockManager },
+          data,
+          delay,
+          owner,
+        );
+
+        expect(
+          await accessControl[
+            'hasFunctionPermission(bytes32,address,bytes4,address)'
+          ](
+            masterRole,
+            wAccessControlTester.address,
+            selector,
+            permissionAccount,
+          ),
+        ).eq(true);
+      });
+
+      it('when caller has operator role but not master role - schedule and execute', async () => {
+        const {
+          accessControl,
+          owner,
+          regularAccounts,
+          roles,
+          timelock,
+          timelockManager,
+          wAccessControlTester,
+        } = await loadFixture(defaultDeploy);
+
+        const selector = encodeFnSelector('setGreenlistEnable(bool)');
+        const masterRole = roles.common.greenlistedOperator;
+        const operator = regularAccounts[0];
+        const delay = 3600;
+        const permissionAccount = regularAccounts[1].address;
+
+        await wAccessControlTester.setContractAdminRole(masterRole);
+
+        await setGrantOperatorRoleTester(
+          { accessControl, owner },
+          wAccessControlTester.address,
+          [
+            {
+              functionSelector: selector,
+              operator: operator.address,
+              enabled: true,
+            },
+          ],
+        );
+
+        const operatorRoleKey = await accessControl.grantOperatorRoleKey(
+          masterRole,
+          wAccessControlTester.address,
+          selector,
+        );
+
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [operatorRoleKey],
+          [delay],
+        );
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [masterRole],
+          [7200],
+        );
+
+        expect(await accessControl.hasRole(masterRole, operator.address)).eq(
+          false,
+        );
+        expect(
+          await accessControl[
+            'isFunctionAccessGrantOperator(bytes32,address,bytes4,address)'
+          ](
+            masterRole,
+            wAccessControlTester.address,
+            selector,
+            operator.address,
+          ),
+        ).eq(true);
+
+        const data = encodeSetPermissionRoleMult(
+          accessControl,
+          wAccessControlTester.address,
+          selector,
+          permissionAccount,
+        );
+
+        const [roleUsed] = await timelockManager.getTargetRole(
+          accessControl.address,
+          data,
+          operator.address,
+        );
+        expect(roleUsed).eq(operatorRoleKey);
+
+        await scheduleAndExecuteSetPermissionRoleMult(
+          { accessControl, owner, timelock, timelockManager },
+          data,
+          delay,
+          operator,
+        );
+
+        expect(
+          await accessControl[
+            'hasFunctionPermission(bytes32,address,bytes4,address)'
+          ](
+            masterRole,
+            wAccessControlTester.address,
+            selector,
+            permissionAccount,
+          ),
+        ).eq(true);
+      });
+
+      it('when caller has both roles with the same delay - schedule and execute', async () => {
+        const {
+          accessControl,
+          owner,
+          regularAccounts,
+          roles,
+          timelock,
+          timelockManager,
+          wAccessControlTester,
+        } = await loadFixture(defaultDeploy);
+
+        const selector = encodeFnSelector('setGreenlistEnable(bool)');
+        const masterRole = roles.common.greenlistedOperator;
+        const delay = 3600;
+        const permissionAccount = regularAccounts[0].address;
+
+        await wAccessControlTester.setContractAdminRole(masterRole);
+
+        const operatorRoleKey = await accessControl.grantOperatorRoleKey(
+          masterRole,
+          wAccessControlTester.address,
+          selector,
+        );
+
+        await setGrantOperatorRoleTester(
+          { accessControl, owner },
+          wAccessControlTester.address,
+          [
+            {
+              functionSelector: selector,
+              operator: owner.address,
+              enabled: true,
+            },
+          ],
+        );
+
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [operatorRoleKey, masterRole],
+          [delay, delay],
+        );
+
+        const data = encodeSetPermissionRoleMult(
+          accessControl,
+          wAccessControlTester.address,
+          selector,
+          permissionAccount,
+        );
+
+        // equal delays → resolveAccessRole prefers master (rootDelay <= functionDelay)
+        const [roleUsed] = await timelockManager.getTargetRole(
+          accessControl.address,
+          data,
+          owner.address,
+        );
+        expect(roleUsed).eq(masterRole);
+
+        await scheduleAndExecuteSetPermissionRoleMult(
+          { accessControl, owner, timelock, timelockManager },
+          data,
+          delay,
+          owner,
+        );
+
+        expect(
+          await accessControl[
+            'hasFunctionPermission(bytes32,address,bytes4,address)'
+          ](
+            masterRole,
+            wAccessControlTester.address,
+            selector,
+            permissionAccount,
+          ),
+        ).eq(true);
+      });
+
+      it('when caller has both roles and master has shorter delay - uses master role delay', async () => {
+        const {
+          accessControl,
+          owner,
+          regularAccounts,
+          roles,
+          timelock,
+          timelockManager,
+          wAccessControlTester,
+        } = await loadFixture(defaultDeploy);
+
+        const selector = encodeFnSelector('setGreenlistEnable(bool)');
+        const masterRole = roles.common.greenlistedOperator;
+        const masterDelay = 3600;
+        const operatorDelay = 7200;
+        const permissionAccount = regularAccounts[0].address;
+
+        await wAccessControlTester.setContractAdminRole(masterRole);
+
+        const operatorRoleKey = await accessControl.grantOperatorRoleKey(
+          masterRole,
+          wAccessControlTester.address,
+          selector,
+        );
+
+        await setGrantOperatorRoleTester(
+          { accessControl, owner },
+          wAccessControlTester.address,
+          [
+            {
+              functionSelector: selector,
+              operator: owner.address,
+              enabled: true,
+            },
+          ],
+        );
+
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [masterRole, operatorRoleKey],
+          [masterDelay, operatorDelay],
+        );
+
+        const data = encodeSetPermissionRoleMult(
+          accessControl,
+          wAccessControlTester.address,
+          selector,
+          permissionAccount,
+        );
+
+        const [roleUsed] = await timelockManager.getTargetRole(
+          accessControl.address,
+          data,
+          owner.address,
+        );
+        expect(roleUsed).eq(masterRole);
+
+        await scheduleAndExecuteSetPermissionRoleMult(
+          { accessControl, owner, timelock, timelockManager },
+          data,
+          masterDelay,
+          owner,
+        );
+
+        expect(
+          await accessControl[
+            'hasFunctionPermission(bytes32,address,bytes4,address)'
+          ](
+            masterRole,
+            wAccessControlTester.address,
+            selector,
+            permissionAccount,
+          ),
+        ).eq(true);
+      });
+
+      it('when caller has both roles and operator has shorter delay - uses operator role delay', async () => {
+        const {
+          accessControl,
+          owner,
+          regularAccounts,
+          roles,
+          timelock,
+          timelockManager,
+          wAccessControlTester,
+        } = await loadFixture(defaultDeploy);
+
+        const selector = encodeFnSelector('setGreenlistEnable(bool)');
+        const masterRole = roles.common.greenlistedOperator;
+        const masterDelay = 7200;
+        const operatorDelay = 3600;
+        const permissionAccount = regularAccounts[0].address;
+
+        await wAccessControlTester.setContractAdminRole(masterRole);
+
+        const operatorRoleKey = await accessControl.grantOperatorRoleKey(
+          masterRole,
+          wAccessControlTester.address,
+          selector,
+        );
+
+        await setGrantOperatorRoleTester(
+          { accessControl, owner },
+          wAccessControlTester.address,
+          [
+            {
+              functionSelector: selector,
+              operator: owner.address,
+              enabled: true,
+            },
+          ],
+        );
+
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [masterRole, operatorRoleKey],
+          [masterDelay, operatorDelay],
+        );
+
+        const data = encodeSetPermissionRoleMult(
+          accessControl,
+          wAccessControlTester.address,
+          selector,
+          permissionAccount,
+        );
+
+        const [roleUsed] = await timelockManager.getTargetRole(
+          accessControl.address,
+          data,
+          owner.address,
+        );
+        expect(roleUsed).eq(operatorRoleKey);
+
+        await scheduleAndExecuteSetPermissionRoleMult(
+          { accessControl, owner, timelock, timelockManager },
+          data,
+          operatorDelay,
+          owner,
+        );
+
+        expect(
+          await accessControl[
+            'hasFunctionPermission(bytes32,address,bytes4,address)'
+          ](
+            masterRole,
+            wAccessControlTester.address,
+            selector,
+            permissionAccount,
+          ),
+        ).eq(true);
+      });
     });
   });
 
@@ -2199,6 +2570,9 @@ describe('MidasAccessControl', function () {
     });
 
     it('should fail: when revoking DEFAULT_ADMIN_ROLE from self and timelock delay is not 0', async () => {
+      // Locks in that _validateRevokeRole uses the resolved proposer (actualSender),
+      // not msg.sender. If it compared against the timelock address, self-revoke
+      // via timelock would incorrectly succeed.
       const { accessControl, owner, roles, timelock, timelockManager } =
         await loadFixture(defaultDeploy);
 
@@ -2233,6 +2607,68 @@ describe('MidasAccessControl', function () {
           revertMessage: 'TimelockController: underlying transaction reverted',
         },
       );
+
+      expect(
+        await accessControl.hasRole(roles.common.defaultAdmin, owner.address),
+      ).eq(true);
+    });
+
+    it('when revoking DEFAULT_ADMIN_ROLE from another admin via timelock - succeeds', async () => {
+      const {
+        accessControl,
+        owner,
+        regularAccounts,
+        roles,
+        timelock,
+        timelockManager,
+      } = await loadFixture(defaultDeploy);
+
+      const otherAdmin = regularAccounts[0];
+
+      await grantRoleTester(
+        { accessControl, owner },
+        roles.common.defaultAdmin,
+        otherAdmin.address,
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [roles.common.defaultAdmin],
+        [3600],
+      );
+
+      const data = accessControl.interface.encodeFunctionData('revokeRole', [
+        roles.common.defaultAdmin,
+        otherAdmin.address,
+      ]);
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [accessControl.address],
+        [data],
+        {},
+        { from: owner },
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        accessControl.address,
+        data,
+        owner.address,
+        { from: owner },
+      );
+
+      expect(
+        await accessControl.hasRole(
+          roles.common.defaultAdmin,
+          otherAdmin.address,
+        ),
+      ).eq(false);
+      expect(
+        await accessControl.hasRole(roles.common.defaultAdmin, owner.address),
+      ).eq(true);
     });
   });
 
