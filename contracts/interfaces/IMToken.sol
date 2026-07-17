@@ -52,6 +52,12 @@ interface IMToken is IERC20Upgradeable {
     error InvalidNewLimit(uint256 newLimit, uint256 existingLimit);
 
     /**
+     * @notice when the balance is not met
+     * @param balance balance
+     */
+    error MinBalanceNotMet(uint256 balance);
+
+    /**
      * @notice mints mToken token `amount` to a given `to` address.
      * should be called only from permissioned actor
      * bypasses the timelock entirely

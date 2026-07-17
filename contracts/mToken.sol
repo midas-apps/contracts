@@ -74,7 +74,7 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     /**
      * @notice if true then current transfer is clawback operation
      */
-    bool internal _inClawback;
+    bool private _inClawback;
 
     /**
      * @notice name of the token
@@ -146,16 +146,16 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     function initialize(
         address _accessControl,
         address _clawbackReceiver,
-        bool isPermissioned,
-        bool isMinHoldingBalanceEnforced,
+        bool _isPermissioned,
+        bool _isMinHoldingBalanceEnforced,
         string memory name_,
         string memory symbol_
     ) external {
         _initializeV1(_accessControl, name_, symbol_);
-        initializeV2(
+        initializeV3(
             _clawbackReceiver,
-            isPermissioned,
-            isMinHoldingBalanceEnforced
+            _isPermissioned,
+            _isMinHoldingBalanceEnforced
         );
     }
 
@@ -175,12 +175,13 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     }
 
     /**
-     * @dev v2 initializer
+     * @notice v3 initializer
+     * @dev not v2 because some of the original product mTokens were upgraded to v2 already
      * @param _clawbackReceiver address to which clawback tokens will be sent
      * @param _isPermissioned if true then the token is permissioned
      * @param _isMinHoldingBalanceEnforced if true then the token has a minimum holding balance enforced
      */
-    function initializeV2(
+    function initializeV3(
         address _clawbackReceiver,
         bool _isPermissioned,
         bool _isMinHoldingBalanceEnforced
@@ -510,10 +511,7 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     function _validateUserMinBalance(address user) private view {
         uint256 balance = balanceOf(user);
-        require(
-            balance == 0 || balance >= 1 ether,
-            "MTMB: min balance not met"
-        );
+        require(balance == 0 || balance >= 1 ether, MinBalanceNotMet(balance));
     }
 
     /**
@@ -521,7 +519,7 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      * @param from address of the sender
      * @param to address of the recipient
      */
-    function _validatePermissioned(address from, address to) internal {
+    function _validatePermissioned(address from, address to) private {
         if (!isPermissioned) {
             return;
         }

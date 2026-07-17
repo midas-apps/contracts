@@ -198,11 +198,11 @@ describe(`mToken`, function () {
     ).revertedWith('Initializable: contract is already initialized');
 
     await expect(
-      tokenContract.initializeV2(clawbackReceiver.address, false, false),
+      tokenContract.initializeV3(clawbackReceiver.address, false, false),
     ).to.revertedWith('Initializable: contract is already initialized');
   });
 
-  describe('initializeV2() proxy admin restriction', () => {
+  describe('initializeV3() proxy admin restriction', () => {
     const deployMToken = async () => {
       const { accessControl, clawbackReceiver } = await loadFixture(
         defaultDeploy,
@@ -231,7 +231,7 @@ describe(`mToken`, function () {
       return { mTBILL, clawbackReceiver };
     };
 
-    it('fresh deploy: initializeV2 runs while proxy admin is zero', async () => {
+    it('fresh deploy: initializeV3 runs while proxy admin is zero', async () => {
       const { mTBILL, clawbackReceiver } = await deployMToken();
 
       expect(await mTBILL.clawbackReceiver()).eq(clawbackReceiver.address);
@@ -239,7 +239,7 @@ describe(`mToken`, function () {
       expect(await mTBILL.isMinHoldingBalanceEnforced()).eq(false);
     });
 
-    it('fresh deploy: initializeV2 can enable feature flags', async () => {
+    it('fresh deploy: initializeV3 can enable feature flags', async () => {
       const { accessControl, clawbackReceiver } = await loadFixture(
         defaultDeploy,
       );
@@ -277,7 +277,7 @@ describe(`mToken`, function () {
       await expect(
         mTBILL
           .connect(admin)
-          .initializeV2(clawbackReceiver.address, false, false),
+          .initializeV3(clawbackReceiver.address, false, false),
       ).revertedWith('Initializable: contract is already initialized');
     });
 
@@ -291,7 +291,7 @@ describe(`mToken`, function () {
       await expect(
         mTBILL
           .connect(stranger)
-          .initializeV2(clawbackReceiver.address, false, false),
+          .initializeV3(clawbackReceiver.address, false, false),
       ).revertedWithCustomError(mTBILL, 'SenderNotProxyAdmin');
     });
 
@@ -304,7 +304,7 @@ describe(`mToken`, function () {
 
       await mTBILL
         .connect(admin)
-        .initializeV2(newClawbackReceiver.address, true, true);
+        .initializeV3(newClawbackReceiver.address, true, true);
 
       expect(await mTBILL.clawbackReceiver()).eq(newClawbackReceiver.address);
       expect(await mTBILL.isPermissioned()).eq(true);
@@ -727,7 +727,7 @@ describe(`mToken`, function () {
           await ethers.getSigners()
         )[2],
         parseUnits('0.5'),
-        { revertMessage: 'MTMB: min balance not met' },
+        { revertCustomError: { customErrorName: 'MinBalanceNotMet' } },
       );
     });
   });
@@ -3168,7 +3168,7 @@ describe('mTokenMinBalance', () => {
 
       await expect(
         mTokenMinBalance.connect(from).transfer(to.address, parseUnits('0.1')),
-      ).revertedWith('MTMB: min balance not met');
+      ).revertedWithCustomError(mTokenMinBalance, 'MinBalanceNotMet');
     });
 
     it('transfer dust to empty recipient when recipient is free from min balance', async () => {
@@ -3225,7 +3225,7 @@ describe('mTokenMinBalance', () => {
 
       await expect(
         mTokenMinBalance.connect(from).transfer(to.address, parseUnits('0.1')),
-      ).revertedWith('MTMB: min balance not met');
+      ).revertedWithCustomError(mTokenMinBalance, 'MinBalanceNotMet');
     });
 
     it('transfer entire balance leaving sender at zero', async () => {
@@ -3268,7 +3268,7 @@ describe('mTokenMinBalance', () => {
 
       await expect(
         mTokenMinBalance.connect(from).transfer(to.address, parseUnits('2.5')),
-      ).revertedWith('MTMB: min balance not met');
+      ).revertedWithCustomError(mTokenMinBalance, 'MinBalanceNotMet');
     });
 
     it('transfer leaving sender below min balance when sender is free from min balance', async () => {
@@ -3478,7 +3478,7 @@ describe('mTokenMinBalance', () => {
         mTokenMinBalance
           .connect(spender)
           .transferFrom(from.address, to.address, amount),
-      ).revertedWith('MTMB: min balance not met');
+      ).revertedWithCustomError(mTokenMinBalance, 'MinBalanceNotMet');
     });
   });
 
@@ -3506,7 +3506,7 @@ describe('mTokenMinBalance', () => {
         { tokenContract: mTokenMinBalance, owner },
         regularAccounts[0],
         parseUnits('0.5'),
-        { revertMessage: 'MTMB: min balance not met' },
+        { revertCustomError: { customErrorName: 'MinBalanceNotMet' } },
       );
     });
 
@@ -3612,7 +3612,7 @@ describe('mTokenMinBalance', () => {
         { tokenContract: mTokenMinBalance, owner },
         holder,
         parseUnits('2.5'),
-        { revertMessage: 'MTMB: min balance not met' },
+        { revertCustomError: { customErrorName: 'MinBalanceNotMet' } },
       );
     });
 
@@ -3664,7 +3664,7 @@ describe('mTokenMinBalance', () => {
         mTokenMinBalance
           .connect(owner)
           .burnGoverned(holder.address, parseUnits('2.5')),
-      ).revertedWith('MTMB: min balance not met');
+      ).revertedWithCustomError(mTokenMinBalance, 'MinBalanceNotMet');
     });
   });
 });
@@ -3781,7 +3781,10 @@ describe('mTokenPermissionedMinBalance', () => {
         mTokenPermissionedMinBalance
           .connect(from)
           .transfer(to.address, parseUnits('0.1')),
-      ).revertedWith('MTMB: min balance not met');
+      ).revertedWithCustomError(
+        mTokenPermissionedMinBalance,
+        'MinBalanceNotMet',
+      );
     });
 
     it('transfer dust to empty recipient when recipient is free from min balance', async () => {
@@ -3910,7 +3913,10 @@ describe('mTokenPermissionedMinBalance', () => {
         mTokenPermissionedMinBalance
           .connect(spender)
           .transferFrom(from.address, to.address, amount),
-      ).revertedWith('MTMB: min balance not met');
+      ).revertedWithCustomError(
+        mTokenPermissionedMinBalance,
+        'MinBalanceNotMet',
+      );
     });
 
     it('transferFrom when both greenlisted and above min balance', async () => {
@@ -3984,7 +3990,7 @@ describe('mTokenPermissionedMinBalance', () => {
         { tokenContract: mTokenPermissionedMinBalance, owner },
         to,
         parseUnits('0.5'),
-        { revertMessage: 'MTMB: min balance not met' },
+        { revertCustomError: { customErrorName: 'MinBalanceNotMet' } },
       );
     });
 
