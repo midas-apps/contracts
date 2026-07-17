@@ -35,7 +35,7 @@ import {
 } from '../common/timelock-manager.helpers';
 
 const executeTimelockOperationSelector = encodeFnSelector(
-  'executeTimelockOperation(address,bytes)',
+  'executeTimelockOperation(address,bytes,bool)',
 );
 const withOnlyContractAdminSelector = encodeFnSelector(
   'withOnlyContractAdmin()',
@@ -1244,6 +1244,155 @@ describe('MidasTimelockManager', () => {
       );
       expect(await timelockManager.securityCouncilVersion()).to.eq(
         councilVersionBefore.add(1),
+      );
+    });
+
+    it('when revertOnFailure is false and underlying call fails', async () => {
+      const { timelockManager, timelock, owner, accessControl } =
+        await loadFixture(defaultDeploy);
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [constants.HashZero],
+        [3600],
+      );
+
+      // body validation fails only on execute; preflight still succeeds
+      const failingCalldata = timelockManager.interface.encodeFunctionData(
+        'setMaxPendingOperationsPerProposer',
+        [0],
+      );
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [timelockManager.address],
+        [failingCalldata],
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        timelockManager.address,
+        failingCalldata,
+        owner.address,
+        {
+          revertOnFailure: false,
+          expectExecutionSuccess: false,
+        },
+      );
+    });
+
+    it('should fail: when revertOnFailure is true and underlying call fails', async () => {
+      const { timelockManager, timelock, owner, accessControl } =
+        await loadFixture(defaultDeploy);
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [constants.HashZero],
+        [3600],
+      );
+
+      const failingCalldata = timelockManager.interface.encodeFunctionData(
+        'setMaxPendingOperationsPerProposer',
+        [0],
+      );
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [timelockManager.address],
+        [failingCalldata],
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        timelockManager.address,
+        failingCalldata,
+        owner.address,
+        {
+          revertOnFailure: true,
+          revertMessage: 'TimelockController: underlying transaction reverted',
+        },
+      );
+    });
+
+    it('when revertOnFailure is false and underlying call succeeds', async () => {
+      const {
+        timelockManager,
+        timelock,
+        owner,
+        accessControl,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [constants.HashZero],
+        [3600],
+      );
+
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withOnlyContractAdmin',
+      );
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [calldata],
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        owner.address,
+        {
+          revertOnFailure: false,
+          expectExecutionSuccess: true,
+        },
+      );
+    });
+
+    it('when revertOnFailure is true and underlying call succeeds', async () => {
+      const {
+        timelockManager,
+        timelock,
+        owner,
+        accessControl,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [constants.HashZero],
+        [3600],
+      );
+
+      const calldata = wAccessControlTester.interface.encodeFunctionData(
+        'withOnlyContractAdmin',
+      );
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [wAccessControlTester.address],
+        [calldata],
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        wAccessControlTester.address,
+        calldata,
+        owner.address,
+        {
+          revertOnFailure: true,
+          expectExecutionSuccess: true,
+        },
       );
     });
   });

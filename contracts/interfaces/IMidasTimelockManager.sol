@@ -14,7 +14,8 @@ enum TimelockOperationStatus {
     ReadyToAbort,
     Expired,
     Aborted,
-    Executed
+    Executed,
+    ExecutedWithFailure
 }
 
 /**
@@ -101,10 +102,12 @@ interface IMidasTimelockManager {
     /**
      * @param caller executor address
      * @param operationId executed operation id
+     * @param success true if operation executed successfully, false otherwise
      */
     event ExecuteTimelockOperation(
         address indexed caller,
-        bytes32 indexed operationId
+        bytes32 indexed operationId,
+        bool success
     );
 
     /**
@@ -249,9 +252,13 @@ interface IMidasTimelockManager {
      * @notice Executes a scheduled timelock operation
      * @param target target contract
      * @param data operation data
+     * @param revertOnFailure true if execution should revert on failure
      */
-    function executeTimelockOperation(address target, bytes calldata data)
-        external;
+    function executeTimelockOperation(
+        address target,
+        bytes calldata data,
+        bool revertOnFailure
+    ) external;
 
     /**
      * @notice Pauses a pending operation

@@ -251,18 +251,25 @@ const validateOperationDetails = async ({
   return operationId;
 };
 
+export type ExecuteTimelockOperationOpt = OptionalCommonParams & {
+  revertOnFailure?: boolean;
+  expectExecutionSuccess?: boolean;
+};
+
 export const executeTimelockOperationTester = async (
   { timelockManager, timelock, owner }: CommonParamsTimelock,
   target: string,
   data: string,
   originalCaller: string,
-  opt?: OptionalCommonParams,
+  opt?: ExecuteTimelockOperationOpt,
 ) => {
   const from = opt?.from ?? owner;
+  const revertOnFailure = opt?.revertOnFailure ?? true;
+  const expectExecutionSuccess = opt?.expectExecutionSuccess ?? true;
 
   const callFn = timelockManager
     .connect(from)
-    .executeTimelockOperation.bind(this, target, data);
+    .executeTimelockOperation.bind(this, target, data, revertOnFailure);
 
   if (await handleRevert(callFn, timelockManager, opt)) {
     return;
@@ -283,27 +290,43 @@ export const executeTimelockOperationTester = async (
   const detailsBefore = await timelockManager.getOperationDetails(operationId);
 
   const txPromise = callFn();
-  await expect(txPromise)
+  let txExpect = expect(txPromise)
     .to.emit(
       timelockManager,
       timelockManager.interface.events[
-        'ExecuteTimelockOperation(address,bytes32)'
+        'ExecuteTimelockOperation(address,bytes32,bool)'
       ].name,
     )
-    .withArgs(from.address, operationId);
+    .withArgs(from.address, operationId, expectExecutionSuccess);
+
+  if (!expectExecutionSuccess) {
+    txExpect = txExpect.to
+      .emit(timelock, timelock.interface.events['Cancelled(bytes32)'].name)
+      .withArgs(operationId);
+  }
+
+  await txExpect;
 
   const dataHashIndexAfter = await timelockManager.dataHashIndexes(dataHash);
 
   expect(dataHashIndexAfter).to.eq(dataHashIndexBefore.add(1));
 
-  expect(await timelock.isOperation(operationId)).to.be.true;
-  expect(await timelock.isOperationReady(operationId)).to.be.false;
-  expect(await timelock.isOperationDone(operationId)).to.be.true;
-  expect(await timelock.isOperationPending(operationId)).to.be.false;
+  if (expectExecutionSuccess) {
+    expect(await timelock.isOperation(operationId)).to.be.true;
+    expect(await timelock.isOperationReady(operationId)).to.be.false;
+    expect(await timelock.isOperationDone(operationId)).to.be.true;
+    expect(await timelock.isOperationPending(operationId)).to.be.false;
+  } else {
+    expect(await timelock.isOperation(operationId)).to.be.false;
+    expect(await timelock.isOperationReady(operationId)).to.be.false;
+    expect(await timelock.isOperationDone(operationId)).to.be.false;
+    expect(await timelock.isOperationPending(operationId)).to.be.false;
+  }
 
   const detailsAfter = await timelockManager.getOperationDetails(operationId);
 
-  expect(detailsAfter.status).to.be.equal(8);
+  // Executed = 8, ExecutedWithFailure = 9
+  expect(detailsAfter.status).to.be.equal(expectExecutionSuccess ? 8 : 9);
   expect(detailsAfter.pauser).to.be.equal(detailsBefore.pauser);
   expect(detailsAfter.operationProposer).to.be.equal(
     detailsBefore.operationProposer,

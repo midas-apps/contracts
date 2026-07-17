@@ -239,11 +239,11 @@ contract MidasTimelockManager is
     /**
      * @inheritdoc IMidasTimelockManager
      */
-    function executeTimelockOperation(address target, bytes calldata data)
-        external
-        nonReentrant
-        onlyContractAdminNoTimelock(true)
-    {
+    function executeTimelockOperation(
+        address target,
+        bytes calldata data,
+        bool revertOnFailure
+    ) external nonReentrant onlyContractAdminNoTimelock(true) {
         TimelockController _timelock = TimelockController(payable(timelock));
 
         (
@@ -267,19 +267,38 @@ contract MidasTimelockManager is
             _timelock.isOperationReady(operationId),
             TimelockOperationNotReady()
         );
+        bool success = true;
 
-        _timelock.execute(target, 0, data, bytes32(0), bytes32(dataHashIndex));
+        try
+            _timelock.execute(
+                target,
+                0,
+                data,
+                bytes32(0),
+                bytes32(dataHashIndex)
+            )
+        {
+            opDetails.status = TimelockOperationStatus.Executed;
+        } catch (bytes memory err) {
+            if (revertOnFailure) {
+                assembly ("memory-safe") {
+                    revert(add(err, 32), mload(err))
+                }
+            } else {
+                _timelock.cancel(operationId);
+                success = false;
+                opDetails.status = TimelockOperationStatus.ExecutedWithFailure;
+            }
+        }
 
         _resetPendingSetCouncilOperation(opDetails);
 
-        // updating state after execution to be able to verify tx against current context
-        // in case of reentrancy timelock.execute will revert
-        opDetails.status = TimelockOperationStatus.Executed;
+        // updating state after execution to be able to verify tx against current contexts
         dataHashIndexes[dataHash] = dataHashIndex + 1;
         --proposerPendingOperationsCount[opDetails.operationProposer];
         require(_pendingOperations.remove(operationId), OperationNotPending());
 
-        emit ExecuteTimelockOperation(msg.sender, operationId);
+        emit ExecuteTimelockOperation(msg.sender, operationId, success);
     }
 
     /**
