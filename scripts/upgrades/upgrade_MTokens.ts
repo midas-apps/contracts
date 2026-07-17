@@ -43,8 +43,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
         contracts: [
           {
             contractType: 'token',
-            initializer: 'initializeV2',
-            initializerArgs: [clawbackRecipient, isPermissioned, false],
+            // initializer: 'initializeV2',
+            // initializerArgs: [clawbackRecipient, isPermissioned, false],
             constructorArgs: [
               roles.tokenManager,
               roles.minter,

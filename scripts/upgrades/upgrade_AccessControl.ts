@@ -7,7 +7,6 @@ import {
 
 import { getCurrentAddresses } from '../../config/constants/addresses';
 import { getCommonContractNames } from '../../helpers/contracts';
-import { getRolesForToken } from '../../helpers/roles';
 import { getActionOrThrow, upgradeActions } from '../../helpers/utils';
 import { DeployFunction } from '../deploy/common/types';
 
@@ -28,8 +27,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       contractName: getCommonContractNames().ac,
       proxyAddress: networkAddresses?.accessControl ?? '',
       contractType: 'accessControl',
-      initializer: 'initializeV2',
-      initializerArgs: [0, [getRolesForToken('mGLOBAL').greenlisted]],
     },
   ]);
 };
