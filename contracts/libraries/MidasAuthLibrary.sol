@@ -119,7 +119,6 @@ library MidasAuthLibrary {
         );
 
         bool isPreflight = accountToCheck == address(timelockManager);
-        bool isTimelock = accountToCheck == timelockManager.timelock();
 
         if (isPreflight) {
             revert IMidasTimelockManager.RolePreflightSucceeded(
@@ -129,6 +128,8 @@ library MidasAuthLibrary {
                 validateFunctionRole
             );
         }
+
+        bool isTimelock = accountToCheck == timelockManager.timelock();
 
         address account = isTimelock
             ? timelockManager.getOriginalProposer(address(this), msg.data)
@@ -334,5 +335,32 @@ library MidasAuthLibrary {
         );
 
         hasPermission = accessControl.hasFunctionPermission(key, account);
+    }
+
+    /**
+     * @dev appends the proposer to the data
+     * @param data operation data
+     * @param proposer proposer address
+     * @return appended data
+     */
+    function appendProposer(bytes calldata data, address proposer)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return abi.encodePacked(data, proposer);
+    }
+
+    /**
+     * @dev resolves the proposer from the data
+     * @param data data
+     * @return proposer proposer address
+     */
+    function resolveProposer(bytes calldata data)
+        internal
+        pure
+        returns (address proposer)
+    {
+        return address(bytes20(data[data.length - 20:]));
     }
 }

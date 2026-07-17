@@ -7,8 +7,8 @@ import {IAccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acc
 import {MidasInitializable} from "../abstract/MidasInitializable.sol";
 import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
 import {MidasAuthLibrary} from "../libraries/MidasAuthLibrary.sol";
-import {TimelockControllerUpgradeable as TimelockController} from "@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol";
 import {IMidasAccessControlManaged} from "../interfaces/IMidasAccessControlManaged.sol";
+import {IMidasTimelockManager} from "../interfaces/IMidasTimelockManager.sol";
 
 /**
  * @title MidasAccessControl
@@ -705,6 +705,20 @@ contract MidasAccessControl is
         bytes32 operatorRole,
         address account
     ) internal view returns (bytes32) {
+        IMidasTimelockManager _timelockManager = IMidasTimelockManager(
+            timelockManager
+        );
+
+        // means that its a preflight call
+        if (account == address(_timelockManager)) {
+            account = MidasAuthLibrary.resolveProposer(msg.data);
+        } else if (account == _timelockManager.timelock()) {
+            account = _timelockManager.getOriginalProposer(
+                address(this),
+                msg.data
+            );
+        }
+
         bool isOperator = isFunctionAccessGrantOperator(operatorRole, account);
         bool hasMasterRole = hasRole(masterRole, account);
 
