@@ -29,7 +29,7 @@ abstract contract mTokenPermissionedMinBalance is
     }
 
     /**
-     * @dev overrides _beforeTokenTransfer function to call the parent hooks
+     * @dev overrides _afterTokenTransfer function to call the parent hooks
      */
     function _afterTokenTransfer(
         address from,
