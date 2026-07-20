@@ -20,6 +20,7 @@ import {
   setMaxGrowthApr,
   setMaxAnswerDeviationTest,
   setMinGrowthApr,
+  setMinMaxAnswerTest,
   setOnlyUp,
   setRoundDataGrowth,
   setRoundDataSafeGrowth,
@@ -448,6 +449,43 @@ describe('CustomAggregatorV3CompatibleFeedGrowth', function () {
       await setRoundDataSafeGrowth(fixture, 100, -10000, 0);
       await increase(3600);
       await setRoundDataSafeGrowth(fixture, 100.9, -100, 0);
+    });
+  });
+
+  describe('setMinMaxAnswer()', () => {
+    it('call from owner', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      await setMinMaxAnswerTest(
+        fixture,
+        parseUnits('1', 8),
+        parseUnits('5000', 8),
+      );
+    });
+
+    it('should fail: call from non owner', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      await setMinMaxAnswerTest(
+        fixture,
+        parseUnits('1', 8),
+        parseUnits('5000', 8),
+        {
+          from: fixture.regularAccounts[0],
+          revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
+        },
+      );
+    });
+
+    it('should fail: when min >= max', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      await setMinMaxAnswerTest(
+        fixture,
+        parseUnits('100', 8),
+        parseUnits('100', 8),
+        { revertMessage: 'CA: !min/max' },
+      );
     });
   });
 

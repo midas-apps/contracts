@@ -37,10 +37,44 @@ export const setHealthyDiffTest = async (
     return;
   }
 
-  await expect(dataFeed.connect(sender).setHealthyDiff(healthyDiff)).not
-    .reverted;
+  await expect(dataFeed.connect(sender).setHealthyDiff(healthyDiff))
+    .to.emit(dataFeed, 'SetHealthyDiff')
+    .withArgs(healthyDiff);
 
   expect(await dataFeed.healthyDiff()).eq(healthyDiff);
+};
+
+export const setMinMaxExpectedAnswerTest = async (
+  { dataFeed, owner }: CommonParamsSetHealthyDiff,
+  maxExpectedAnswer: BigNumberish,
+  minExpectedAnswer: BigNumberish,
+  opt?: OptionalCommonParams,
+) => {
+  const sender: SignerWithAddress = opt?.from ?? owner;
+
+  if (
+    await handleRevert(
+      () =>
+        dataFeed
+          .connect(sender)
+          .setMinMaxExpectedAnswer(maxExpectedAnswer, minExpectedAnswer),
+      dataFeed,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  await expect(
+    dataFeed
+      .connect(sender)
+      .setMinMaxExpectedAnswer(maxExpectedAnswer, minExpectedAnswer),
+  )
+    .to.emit(dataFeed, 'SetMinMaxExpectedAnswer')
+    .withArgs(maxExpectedAnswer, minExpectedAnswer).to.not.reverted;
+
+  expect(await dataFeed.maxExpectedAnswer()).eq(maxExpectedAnswer);
+  expect(await dataFeed.minExpectedAnswer()).eq(minExpectedAnswer);
 };
 
 export const setRoundData = async (

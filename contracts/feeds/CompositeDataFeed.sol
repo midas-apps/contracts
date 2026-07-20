@@ -17,6 +17,25 @@ import {IDataFeed} from "../interfaces/IDataFeed.sol";
  */
 contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
     /**
+     * @param _numeratorFeed new IDataFeed contract address
+     */
+    event ChangeNumeratorFeed(address indexed _numeratorFeed);
+
+    /**
+     * @param _denominatorFeed new IDataFeed contract address
+     */
+    event ChangeDenominatorFeed(address indexed _denominatorFeed);
+
+    /**
+     * @param _maxExpectedAnswer new max expected answer
+     * @param _minExpectedAnswer new min expected answer
+     */
+    event SetMinMaxExpectedAnswer(
+        uint256 indexed _maxExpectedAnswer,
+        uint256 indexed _minExpectedAnswer
+    );
+
+    /**
      * @notice contract admin role
      * @custom:oz-upgrades-unsafe-allow state-variable-immutable
      */
@@ -74,19 +93,14 @@ contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
         uint256 _minExpectedAnswer,
         uint256 _maxExpectedAnswer
     ) external initializer {
+        __WithMidasAccessControl_init(_ac);
+        _setMinMaxExpectedAnswer(_maxExpectedAnswer, _minExpectedAnswer);
+
         require(_numeratorFeed != address(0), "CDF: invalid address");
         require(_denominatorFeed != address(0), "CDF: invalid address");
-        require(
-            _maxExpectedAnswer >= _minExpectedAnswer,
-            "CDF: invalid exp. prices"
-        );
-
-        __WithMidasAccessControl_init(_ac);
 
         numeratorFeed = IDataFeed(_numeratorFeed);
         denominatorFeed = IDataFeed(_denominatorFeed);
-        minExpectedAnswer = _minExpectedAnswer;
-        maxExpectedAnswer = _maxExpectedAnswer;
     }
 
     /**
@@ -101,6 +115,7 @@ contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
         require(_numeratorFeed != address(0), "CDF: invalid address");
 
         numeratorFeed = IDataFeed(_numeratorFeed);
+        emit ChangeNumeratorFeed(_numeratorFeed);
     }
 
     /**
@@ -115,38 +130,19 @@ contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
         require(_denominatorFeed != address(0), "CDF: invalid address");
 
         denominatorFeed = IDataFeed(_denominatorFeed);
+        emit ChangeDenominatorFeed(_denominatorFeed);
     }
 
     /**
-     * @dev updates `minExpectedAnswer` value
-     * @param _minExpectedAnswer min value
+     * @notice updates `minExpectedAnswer` and `maxExpectedAnswer` values
+     * @param _maxExpectedAnswer new max expected answer
+     * @param _minExpectedAnswer new min expected answer
      */
-    function setMinExpectedAnswer(uint256 _minExpectedAnswer)
-        external
-        onlyContractAdmin
-    {
-        require(
-            maxExpectedAnswer >= _minExpectedAnswer,
-            "CDF: invalid exp. prices"
-        );
-
-        minExpectedAnswer = _minExpectedAnswer;
-    }
-
-    /**
-     * @dev updates `maxExpectedAnswer` value
-     * @param _maxExpectedAnswer max value
-     */
-    function setMaxExpectedAnswer(uint256 _maxExpectedAnswer)
-        external
-        onlyContractAdmin
-    {
-        require(
-            _maxExpectedAnswer >= minExpectedAnswer,
-            "CDF: invalid exp. prices"
-        );
-
-        maxExpectedAnswer = _maxExpectedAnswer;
+    function setMinMaxExpectedAnswer(
+        uint256 _maxExpectedAnswer,
+        uint256 _minExpectedAnswer
+    ) external onlyContractAdmin {
+        _setMinMaxExpectedAnswer(_maxExpectedAnswer, _minExpectedAnswer);
     }
 
     /**
@@ -167,6 +163,13 @@ contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
     }
 
     /**
+     * @inheritdoc WithMidasAccessControl
+     */
+    function contractAdminRole() public view override returns (bytes32) {
+        return _CONTRACT_ADMIN_ROLE;
+    }
+
+    /**
      * @dev computes the composite price by dividing numerator by denominator
      * @param numerator numerator value from the first feed
      * @param denominator denominator value from the second feed
@@ -183,9 +186,24 @@ contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
     }
 
     /**
-     * @inheritdoc WithMidasAccessControl
+     * @dev sets the min and max expected answer
+     * @param _maxExpectedAnswer the new max expected answer
+     * @param _minExpectedAnswer the new min expected answer
      */
-    function contractAdminRole() public view override returns (bytes32) {
-        return _CONTRACT_ADMIN_ROLE;
+    function _setMinMaxExpectedAnswer(
+        uint256 _maxExpectedAnswer,
+        uint256 _minExpectedAnswer
+    ) private {
+        require(_maxExpectedAnswer > 0, "CDF: invalid max exp. price");
+        require(_minExpectedAnswer > 0, "CDF: invalid min exp. price");
+        require(
+            _maxExpectedAnswer >= _minExpectedAnswer,
+            "CDF: invalid exp. prices"
+        );
+
+        maxExpectedAnswer = _maxExpectedAnswer;
+        minExpectedAnswer = _minExpectedAnswer;
+
+        emit SetMinMaxExpectedAnswer(_maxExpectedAnswer, _minExpectedAnswer);
     }
 }

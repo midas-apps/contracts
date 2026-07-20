@@ -348,5 +348,35 @@ export const setMaxAnswerDeviationTest = async (
   expect(maxAnswerDeviationAfter).eq(maxAnswerDeviation);
 };
 
+export const setMinMaxAnswerTest = async (
+  { customFeedGrowth, owner }: CommonParamsSetRoundData,
+  minAnswer: BigNumberish,
+  maxAnswer: BigNumberish,
+  opt?: OptionalCommonParams,
+) => {
+  const sender = opt?.from ?? owner;
+
+  if (
+    await handleRevert(
+      customFeedGrowth
+        .connect(sender)
+        .setMinMaxAnswer.bind(this, minAnswer, maxAnswer),
+      customFeedGrowth,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  await expect(
+    customFeedGrowth.connect(sender).setMinMaxAnswer(minAnswer, maxAnswer),
+  )
+    .to.emit(customFeedGrowth, 'SetMinMaxAnswer')
+    .withArgs(minAnswer, maxAnswer).to.not.reverted;
+
+  expect(await customFeedGrowth.minAnswer()).eq(minAnswer);
+  expect(await customFeedGrowth.maxAnswer()).eq(maxAnswer);
+};
+
 export const calculatePriceDiviation = (last: number, next: number) =>
   Math.abs(((next - last) * 100) / last);

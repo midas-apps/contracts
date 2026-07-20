@@ -403,52 +403,25 @@ const updateExpectedAnswers = async (
     )}`,
   );
 
-  const action = isMToken ? 'update-feed-mtoken' : 'update-feed-ptoken';
-
-  const setMax = async () => {
-    if (newMax.eq(currentMax)) {
-      console.log('maxExpectedAnswer is already up to date, skipping');
-      return;
-    }
-    const tx = await dataFeed.populateTransaction.setMaxExpectedAnswer(newMax);
-    const log = `${token} set maxExpectedAnswer to ${formatUnits(
-      newMax,
-      aggregatorDecimals,
-    )}`;
-    const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
-      action,
-      comment: log,
-    });
-    console.log(log, txRes);
-  };
-
-  const setMin = async () => {
-    if (newMin.eq(currentMin)) {
-      console.log('minExpectedAnswer is already up to date, skipping');
-      return;
-    }
-    const tx = await dataFeed.populateTransaction.setMinExpectedAnswer(newMin);
-    const log = `${token} set minExpectedAnswer to ${formatUnits(
-      newMin,
-      aggregatorDecimals,
-    )}`;
-    const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
-      action,
-      comment: log,
-    });
-    console.log(log, txRes);
-  };
-
-  // ordering matters: the contract enforces max > min on every update.
-  // when raising the range (e.g. 8 -> 18 decimals migration), max must
-  // be raised first; when lowering the range, min must be lowered first.
-  if (newMax.gt(currentMin)) {
-    await setMax();
-    await setMin();
-  } else {
-    await setMin();
-    await setMax();
+  if (newMin.eq(currentMin) && newMax.eq(currentMax)) {
+    console.log('min/max expected answers are already up to date, skipping');
+    return;
   }
+
+  const action = isMToken ? 'update-feed-mtoken' : 'update-feed-ptoken';
+  const tx = await dataFeed.populateTransaction.setMinMaxExpectedAnswer(
+    newMax,
+    newMin,
+  );
+  const log = `${token} set expected answers to [${formatUnits(
+    newMin,
+    aggregatorDecimals,
+  )}, ${formatUnits(newMax, aggregatorDecimals)}]`;
+  const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
+    action,
+    comment: log,
+  });
+  console.log(log, txRes);
 };
 
 const getAggregatorContract = async (

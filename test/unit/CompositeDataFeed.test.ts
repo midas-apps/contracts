@@ -38,7 +38,9 @@ describe('CompositeDataFeed', function () {
   });
 
   it('initialize', async () => {
-    const { compositeDataFeed, owner } = await loadFixture(defaultDeploy);
+    const { compositeDataFeed, owner, accessControl } = await loadFixture(
+      defaultDeploy,
+    );
 
     await expect(
       compositeDataFeed.initialize(
@@ -56,27 +58,47 @@ describe('CompositeDataFeed', function () {
 
     await expect(
       dataFeedNew.initialize(
-        ethers.constants.AddressZero,
+        accessControl.address,
         ethers.constants.AddressZero,
         ethers.constants.AddressZero,
         0,
         0,
       ),
-    ).revertedWith('CDF: invalid address');
+    ).revertedWith('CDF: invalid max exp. price');
 
     await expect(
       dataFeedNew.initialize(
-        dataFeedNew.address,
-        dataFeedNew.address,
         ethers.constants.AddressZero,
-        0,
-        0,
+        dataFeedNew.address,
+        dataFeedNew.address,
+        1,
+        2,
+      ),
+    ).revertedWithCustomError(dataFeedNew, 'InvalidAddress');
+
+    await expect(
+      dataFeedNew.initialize(
+        accessControl.address,
+        ethers.constants.AddressZero,
+        ethers.constants.AddressZero,
+        1,
+        2,
       ),
     ).revertedWith('CDF: invalid address');
 
     await expect(
       dataFeedNew.initialize(
+        accessControl.address,
         dataFeedNew.address,
+        ethers.constants.AddressZero,
+        1,
+        2,
+      ),
+    ).revertedWith('CDF: invalid address');
+
+    await expect(
+      dataFeedNew.initialize(
+        accessControl.address,
         dataFeedNew.address,
         dataFeedNew.address,
         2,
@@ -116,7 +138,9 @@ describe('CompositeDataFeed', function () {
 
       await expect(
         compositeDataFeed.changeNumeratorFeed(mTokenToUsdDataFeed.address),
-      ).not.reverted;
+      )
+        .to.emit(compositeDataFeed, 'ChangeNumeratorFeed')
+        .withArgs(mTokenToUsdDataFeed.address);
     });
   });
 
@@ -151,11 +175,13 @@ describe('CompositeDataFeed', function () {
 
       await expect(
         compositeDataFeed.changeDenominatorFeed(mTokenToUsdDataFeed.address),
-      ).not.reverted;
+      )
+        .to.emit(compositeDataFeed, 'ChangeDenominatorFeed')
+        .withArgs(mTokenToUsdDataFeed.address);
     });
   });
 
-  describe('setMinExpectedAnswer', () => {
+  describe('setMinMaxExpectedAnswer', () => {
     it('should fail: call from address without DEFAULT_ADMIN_ROLE', async () => {
       const { compositeDataFeed, regularAccounts } = await loadFixture(
         defaultDeploy,
@@ -164,80 +190,64 @@ describe('CompositeDataFeed', function () {
       await expect(
         compositeDataFeed
           .connect(regularAccounts[0])
-          .setMinExpectedAnswer(parseUnits('1')),
+          .setMinMaxExpectedAnswer(parseUnits('1000'), parseUnits('1')),
       ).revertedWithCustomError(
         compositeDataFeed,
         acErrors.WMAC_HASNT_PERMISSION().customErrorName,
       );
     });
 
-    it('should fail: pass value more than max expected answer', async () => {
+    it('should fail: when min > max', async () => {
       const { compositeDataFeed } = await loadFixture(defaultDeploy);
 
       await expect(
-        compositeDataFeed.setMinExpectedAnswer(parseUnits('10001')),
+        compositeDataFeed.setMinMaxExpectedAnswer(
+          parseUnits('1'),
+          parseUnits('10001'),
+        ),
       ).revertedWith('CDF: invalid exp. prices');
     });
 
-    it('pass new value', async () => {
+    it('should fail: when min is zero', async () => {
       const { compositeDataFeed } = await loadFixture(defaultDeploy);
 
-      await expect(compositeDataFeed.setMinExpectedAnswer(parseUnits('1'))).not
-        .reverted;
+      await expect(
+        compositeDataFeed.setMinMaxExpectedAnswer(parseUnits('1000'), 0),
+      ).revertedWith('CDF: invalid min exp. price');
+    });
+
+    it('pass new values', async () => {
+      const { compositeDataFeed } = await loadFixture(defaultDeploy);
+
+      await expect(
+        compositeDataFeed.setMinMaxExpectedAnswer(
+          parseUnits('100'),
+          parseUnits('1'),
+        ),
+      )
+        .to.emit(compositeDataFeed, 'SetMinMaxExpectedAnswer')
+        .withArgs(parseUnits('100'), parseUnits('1'));
       expect(await compositeDataFeed.minExpectedAnswer()).eq(parseUnits('1'));
-    });
-
-    it('when new value equals max expected answer', async () => {
-      const { compositeDataFeed } = await loadFixture(defaultDeploy);
-      await compositeDataFeed.setMaxExpectedAnswer(parseUnits('1000'));
-
-      await expect(compositeDataFeed.setMinExpectedAnswer(parseUnits('1000')))
-        .not.reverted;
-      expect(await compositeDataFeed.minExpectedAnswer()).eq(
-        parseUnits('1000'),
-      );
-    });
-  });
-
-  describe('setMaxExpectedAnswer', () => {
-    it('should fail: call from address without DEFAULT_ADMIN_ROLE', async () => {
-      const { compositeDataFeed, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
-
-      await expect(
-        compositeDataFeed
-          .connect(regularAccounts[0])
-          .setMaxExpectedAnswer(parseUnits('1')),
-      ).revertedWithCustomError(
-        compositeDataFeed,
-        acErrors.WMAC_HASNT_PERMISSION().customErrorName,
-      );
-    });
-
-    it('should fail: pass value less than min expected answer', async () => {
-      const { compositeDataFeed } = await loadFixture(defaultDeploy);
-
-      await expect(
-        compositeDataFeed.setMaxExpectedAnswer(parseUnits('0.099')),
-      ).revertedWith('CDF: invalid exp. prices');
-    });
-
-    it('pass new value', async () => {
-      const { compositeDataFeed } = await loadFixture(defaultDeploy);
-
-      await expect(compositeDataFeed.setMaxExpectedAnswer(parseUnits('100')))
-        .not.reverted;
       expect(await compositeDataFeed.maxExpectedAnswer()).eq(parseUnits('100'));
     });
 
-    it('when new value equals min expected answer', async () => {
+    it('when min equals max', async () => {
       const { compositeDataFeed } = await loadFixture(defaultDeploy);
-      await compositeDataFeed.setMinExpectedAnswer(parseUnits('1'));
 
-      await expect(compositeDataFeed.setMaxExpectedAnswer(parseUnits('1'))).not
-        .reverted;
-      expect(await compositeDataFeed.maxExpectedAnswer()).eq(parseUnits('1'));
+      await expect(
+        compositeDataFeed.setMinMaxExpectedAnswer(
+          parseUnits('1000'),
+          parseUnits('1000'),
+        ),
+      )
+        .to.emit(compositeDataFeed, 'SetMinMaxExpectedAnswer')
+        .withArgs(parseUnits('1000'), parseUnits('1000'));
+      expect(await compositeDataFeed.minExpectedAnswer()).eq(
+        parseUnits('1000'),
+      );
+      expect(await compositeDataFeed.maxExpectedAnswer()).eq(
+        parseUnits('1000'),
+      );
     });
   });
 
@@ -285,7 +295,10 @@ describe('CompositeDataFeed', function () {
       } = await loadFixture(defaultDeploy);
       await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
       await setRoundData({ mockedAggregator: mockedAggregatorMBasis }, 1);
-      await compositeDataFeed.setMinExpectedAnswer(parseUnits('1'));
+      await compositeDataFeed.setMinMaxExpectedAnswer(
+        parseUnits('10000'),
+        parseUnits('1'),
+      );
       expect(await compositeDataFeed.getDataInBase18()).eq(parseUnits('1'));
     });
 
@@ -297,7 +310,10 @@ describe('CompositeDataFeed', function () {
       } = await loadFixture(defaultDeploy);
       await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1000);
       await setRoundData({ mockedAggregator: mockedAggregatorMBasis }, 1);
-      await compositeDataFeed.setMaxExpectedAnswer(parseUnits('1000'));
+      await compositeDataFeed.setMinMaxExpectedAnswer(
+        parseUnits('1000'),
+        parseUnits('0.1'),
+      );
       expect(await compositeDataFeed.getDataInBase18()).eq(parseUnits('1000'));
     });
 
@@ -309,7 +325,10 @@ describe('CompositeDataFeed', function () {
       } = await loadFixture(defaultDeploy);
       await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1001);
       await setRoundData({ mockedAggregator: mockedAggregatorMBasis }, 1);
-      await compositeDataFeed.setMaxExpectedAnswer(parseUnits('1000'));
+      await compositeDataFeed.setMinMaxExpectedAnswer(
+        parseUnits('1000'),
+        parseUnits('0.1'),
+      );
       await expect(compositeDataFeed.getDataInBase18()).to.be.revertedWith(
         'CDF: feed is unhealthy',
       );
@@ -322,7 +341,10 @@ describe('CompositeDataFeed', function () {
       } = await loadFixture(defaultDeploy);
       await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 0.999);
       await setRoundData({ mockedAggregator: mockedAggregatorMBasis }, 1);
-      await compositeDataFeed.setMinExpectedAnswer(parseUnits('1'));
+      await compositeDataFeed.setMinMaxExpectedAnswer(
+        parseUnits('10000'),
+        parseUnits('1'),
+      );
       await expect(compositeDataFeed.getDataInBase18()).to.be.revertedWith(
         'CDF: feed is unhealthy',
       );

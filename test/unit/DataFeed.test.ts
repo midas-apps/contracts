@@ -44,7 +44,7 @@ describe('DataFeed', function () {
   });
 
   it('initialize', async () => {
-    const { dataFeed, owner } = await loadFixture(defaultDeploy);
+    const { dataFeed, owner, accessControl } = await loadFixture(defaultDeploy);
 
     await expect(
       dataFeed.initialize(
@@ -60,28 +60,72 @@ describe('DataFeed', function () {
 
     await expect(
       dataFeedNew.initialize(
+        accessControl.address,
         ethers.constants.AddressZero,
+        1,
+        0,
+        0,
+      ),
+    ).revertedWith('DF: invalid max exp. price');
+
+    await expect(
+      dataFeedNew.initialize(
         ethers.constants.AddressZero,
-        0,
-        0,
-        0,
+        dataFeedNew.address,
+        1,
+        1,
+        2,
+      ),
+    ).revertedWithCustomError(dataFeedNew, 'InvalidAddress');
+
+    await expect(
+      dataFeedNew.initialize(
+        accessControl.address,
+        ethers.constants.AddressZero,
+        1,
+        1,
+        2,
       ),
     ).revertedWith('DF: invalid address');
 
     await expect(
-      dataFeedNew.initialize(dataFeedNew.address, dataFeedNew.address, 0, 0, 0),
+      dataFeedNew.initialize(
+        accessControl.address,
+        dataFeedNew.address,
+        0,
+        1,
+        2,
+      ),
     ).revertedWith('DF: invalid diff');
 
     await expect(
-      dataFeedNew.initialize(dataFeedNew.address, dataFeedNew.address, 1, 0, 0),
+      dataFeedNew.initialize(
+        accessControl.address,
+        dataFeedNew.address,
+        1,
+        0,
+        2,
+      ),
     ).revertedWith('DF: invalid min exp. price');
 
     await expect(
-      dataFeedNew.initialize(dataFeedNew.address, dataFeedNew.address, 1, 1, 0),
+      dataFeedNew.initialize(
+        accessControl.address,
+        dataFeedNew.address,
+        1,
+        1,
+        0,
+      ),
     ).revertedWith('DF: invalid max exp. price');
 
     await expect(
-      dataFeedNew.initialize(dataFeedNew.address, dataFeedNew.address, 1, 2, 1),
+      dataFeedNew.initialize(
+        accessControl.address,
+        dataFeedNew.address,
+        1,
+        2,
+        1,
+      ),
     ).revertedWith('DF: invalid exp. prices');
   });
 
@@ -110,8 +154,9 @@ describe('DataFeed', function () {
     it('pass new aggregator address', async () => {
       const { dataFeed, mockedAggregator } = await loadFixture(defaultDeploy);
 
-      await expect(dataFeed.changeAggregator(mockedAggregator.address)).not
-        .reverted;
+      await expect(dataFeed.changeAggregator(mockedAggregator.address))
+        .to.emit(dataFeed, 'ChangeAggregator')
+        .withArgs(mockedAggregator.address);
     });
   });
 
@@ -466,8 +511,10 @@ describe('DataFeed Unhealthy with growth', function () {
   it('should fail: when: feed is unhealthy (by max answer)', async () => {
     const { dataFeedGrowth, ...fixture } = await loadFixture(defaultDeploy);
 
-    await dataFeedGrowth.setMinExpectedAnswer(parseUnits('10', 8));
-    await dataFeedGrowth.setMaxExpectedAnswer(parseUnits('100', 8));
+    await dataFeedGrowth.setMinMaxExpectedAnswer(
+      parseUnits('100', 8),
+      parseUnits('10', 8),
+    );
 
     await setRoundDataGrowth(fixture, 100, -100, 0);
     await expect(dataFeedGrowth.getDataInBase18()).to.be.not.reverted;

@@ -85,6 +85,12 @@ contract CustomAggregatorV3CompatibleFeed is
     event MaxAnswerDeviationUpdated(uint256 indexed maxAnswerDeviation);
 
     /**
+     * @param minAnswer the new min answer
+     * @param maxAnswer the new max answer
+     */
+    event SetMinMaxAnswer(int192 indexed minAnswer, int192 indexed maxAnswer);
+
+    /**
      * @notice constructor
      * @param _contractAdminRole contract admin role
      * @custom:oz-upgrades-unsafe-allow constructor
@@ -110,16 +116,28 @@ contract CustomAggregatorV3CompatibleFeed is
     ) public virtual initializer {
         __WithMidasAccessControl_init(_accessControl);
 
-        require(_minAnswer < _maxAnswer, "CA: !min/max");
+        _setMinMaxAnswer(_minAnswer, _maxAnswer);
+
         require(
             _maxAnswerDeviation <= 100 * (10**decimals()),
             "CA: !max deviation"
         );
 
-        minAnswer = _minAnswer;
-        maxAnswer = _maxAnswer;
         maxAnswerDeviation = _maxAnswerDeviation;
         description = _description;
+    }
+
+    /**
+     * @notice sets the min and max answer
+     * @dev the min and max answer are the minimum and maximum allowed values for the answer
+     * @param _minAnswer the new min answer
+     * @param _maxAnswer the new max answer
+     */
+    function setMinMaxAnswer(int192 _minAnswer, int192 _maxAnswer)
+        external
+        onlyContractAdmin
+    {
+        _setMinMaxAnswer(_minAnswer, _maxAnswer);
     }
 
     /**
@@ -280,5 +298,17 @@ contract CustomAggregatorV3CompatibleFeed is
         int256 deviation = (priceDif * one * 100) / _lastPrice;
         deviation = deviation < 0 ? deviation * -1 : deviation;
         return uint256(deviation);
+    }
+
+    /**
+     * @dev sets the min and max answer
+     * @param _minAnswer the new min answer
+     * @param _maxAnswer the new max answer
+     */
+    function _setMinMaxAnswer(int192 _minAnswer, int192 _maxAnswer) private {
+        require(_minAnswer < _maxAnswer, "CA: !min/max");
+        minAnswer = _minAnswer;
+        maxAnswer = _maxAnswer;
+        emit SetMinMaxAnswer(_minAnswer, _maxAnswer);
     }
 }

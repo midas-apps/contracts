@@ -157,6 +157,16 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     /**
      * @inheritdoc IAggregatorV3CompatibleFeedGrowth
      */
+    function setMinMaxAnswer(int192 _minAnswer, int192 _maxAnswer)
+        external
+        onlyContractAdmin
+    {
+        _setMinMaxAnswer(_minAnswer, _maxAnswer);
+    }
+
+    /**
+     * @inheritdoc IAggregatorV3CompatibleFeedGrowth
+     */
     function setMaxGrowthApr(int80 _maxGrowthApr)
         external
         override
@@ -485,5 +495,17 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
 
         deviation = deviation < 0 ? deviation * -1 : deviation;
         return uint256(deviation);
+    }
+
+    /**
+     * @dev sets the min and max answer
+     * @param _minAnswer the new min answer
+     * @param _maxAnswer the new max answer
+     */
+    function _setMinMaxAnswer(int192 _minAnswer, int192 _maxAnswer) private {
+        require(_minAnswer < _maxAnswer, "CA: !min/max");
+        minAnswer = _minAnswer;
+        maxAnswer = _maxAnswer;
+        emit SetMinMaxAnswer(_minAnswer, _maxAnswer);
     }
 }

@@ -50,6 +50,12 @@ interface IAggregatorV3CompatibleFeedGrowth is AggregatorV3Interface {
     event OnlyUpUpdated(bool newOnlyUp);
 
     /**
+     * @param minAnswer the new min answer
+     * @param maxAnswer the new max answer
+     */
+    event SetMinMaxAnswer(int192 indexed minAnswer, int192 indexed maxAnswer);
+
+    /**
      * @notice updates onlyUp flag
      *
      * @param _onlyUp new onlyUp flag
@@ -76,6 +82,13 @@ interface IAggregatorV3CompatibleFeedGrowth is AggregatorV3Interface {
      * @param _maxAnswerDeviation the new max answer deviation in %
      */
     function setMaxAnswerDeviation(uint256 _maxAnswerDeviation) external;
+
+    /**
+     * @notice sets the min and max answer
+     * @param _minAnswer the new min answer
+     * @param _maxAnswer the new max answer
+     */
+    function setMinMaxAnswer(int192 _minAnswer, int192 _maxAnswer) external;
 
     /**
      * @notice works as `setRoundData()`, but also checks the

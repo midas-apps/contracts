@@ -17,6 +17,25 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
     using DecimalsCorrectionLibrary for uint256;
 
     /**
+     * @param _aggregator new AggregatorV3Interface contract address
+     */
+    event ChangeAggregator(address indexed _aggregator);
+
+    /**
+     * @param _healthyDiff new healthy diff value
+     */
+    event SetHealthyDiff(uint256 indexed _healthyDiff);
+
+    /**
+     * @param _maxExpectedAnswer new max expected answer
+     * @param _minExpectedAnswer new min expected answer
+     */
+    event SetMinMaxExpectedAnswer(
+        int256 indexed _maxExpectedAnswer,
+        int256 indexed _minExpectedAnswer
+    );
+
+    /**
      * @notice contract admin role
      * @custom:oz-upgrades-unsafe-allow state-variable-immutable
      */
@@ -77,21 +96,15 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
         int256 _minExpectedAnswer,
         int256 _maxExpectedAnswer
     ) external initializer {
+        __WithMidasAccessControl_init(_ac);
+        _setMinMaxExpectedAnswer(_maxExpectedAnswer, _minExpectedAnswer);
+
         require(_aggregator != address(0), "DF: invalid address");
         require(_healthyDiff > 0, "DF: invalid diff");
-        require(_minExpectedAnswer > 0, "DF: invalid min exp. price");
-        require(_maxExpectedAnswer > 0, "DF: invalid max exp. price");
-        require(
-            _maxExpectedAnswer > _minExpectedAnswer,
-            "DF: invalid exp. prices"
-        );
 
-        __WithMidasAccessControl_init(_ac);
         aggregator = AggregatorV3Interface(_aggregator);
 
         healthyDiff = _healthyDiff;
-        minExpectedAnswer = _minExpectedAnswer;
-        maxExpectedAnswer = _maxExpectedAnswer;
     }
 
     /**
@@ -102,6 +115,7 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
         require(_aggregator != address(0), "DF: invalid address");
 
         aggregator = AggregatorV3Interface(_aggregator);
+        emit ChangeAggregator(_aggregator);
     }
 
     /**
@@ -112,40 +126,19 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
         require(_healthyDiff > 0, "DF: invalid diff");
 
         healthyDiff = _healthyDiff;
+        emit SetHealthyDiff(_healthyDiff);
     }
 
     /**
-     * @dev updates `minExpectedAnswer` value
-     * @param _minExpectedAnswer min value
+     * @notice updates `minExpectedAnswer` and `maxExpectedAnswer` values
+     * @param _maxExpectedAnswer new max expected answer
+     * @param _minExpectedAnswer new min expected answer
      */
-    function setMinExpectedAnswer(int256 _minExpectedAnswer)
-        external
-        onlyContractAdmin
-    {
-        require(_minExpectedAnswer > 0, "DF: invalid min exp. price");
-        require(
-            maxExpectedAnswer > _minExpectedAnswer,
-            "DF: invalid exp. prices"
-        );
-
-        minExpectedAnswer = _minExpectedAnswer;
-    }
-
-    /**
-     * @dev updates `maxExpectedAnswer` value
-     * @param _maxExpectedAnswer max value
-     */
-    function setMaxExpectedAnswer(int256 _maxExpectedAnswer)
-        external
-        onlyContractAdmin
-    {
-        require(_maxExpectedAnswer > 0, "DF: invalid max exp. price");
-        require(
-            _maxExpectedAnswer > minExpectedAnswer,
-            "DF: invalid exp. prices"
-        );
-
-        maxExpectedAnswer = _maxExpectedAnswer;
+    function setMinMaxExpectedAnswer(
+        int256 _maxExpectedAnswer,
+        int256 _minExpectedAnswer
+    ) external onlyContractAdmin {
+        _setMinMaxExpectedAnswer(_maxExpectedAnswer, _minExpectedAnswer);
     }
 
     /**
@@ -160,6 +153,28 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
      */
     function contractAdminRole() public view override returns (bytes32) {
         return _CONTRACT_ADMIN_ROLE;
+    }
+
+    /**
+     * @dev sets the min and max expected answer
+     * @param _maxExpectedAnswer the new max expected answer
+     * @param _minExpectedAnswer the new min expected answer
+     */
+    function _setMinMaxExpectedAnswer(
+        int256 _maxExpectedAnswer,
+        int256 _minExpectedAnswer
+    ) private {
+        require(_maxExpectedAnswer > 0, "DF: invalid max exp. price");
+        require(_minExpectedAnswer > 0, "DF: invalid min exp. price");
+        require(
+            _maxExpectedAnswer >= _minExpectedAnswer,
+            "DF: invalid exp. prices"
+        );
+
+        maxExpectedAnswer = _maxExpectedAnswer;
+        minExpectedAnswer = _minExpectedAnswer;
+
+        emit SetMinMaxExpectedAnswer(_maxExpectedAnswer, _minExpectedAnswer);
     }
 
     /**
