@@ -334,4 +334,8 @@ export const mTokensMetadata: Record<
     name: 'Turtle Huma PST Vault',
     symbol: 'turtlePST',
   },
+  mM1BTC: {
+    name: 'Midas M1 BTC Market Neutral',
+    symbol: 'mM1-BTC',
+  },
 };
