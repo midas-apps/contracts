@@ -8,7 +8,8 @@ import { getMTokenOrThrow } from '../../helpers/utils';
 import { DeployFunction } from '../deploy/common/types';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const upgradeId = 'mkralpha-custom-aggregator-upgrade-v2';
+  const upgradeId = 'mwin-custom-aggregator-upgrade-v2';
+
   const networkAddresses = getCurrentAddresses(hre);
   const mToken = getMTokenOrThrow(hre);
   const tokenAddresses = networkAddresses?.[mToken];
@@ -25,7 +26,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
         {
           contractType: 'customAggregator',
           initializer: 'initializeV2',
-          initializerArgs: [parseUnits('0.66', 8)],
+          initializerArgs: [parseUnits('90', 8), parseUnits('140', 8)],
         },
       ],
     },
