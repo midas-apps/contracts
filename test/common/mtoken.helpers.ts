@@ -166,6 +166,33 @@ export const setMinHoldingBalanceEnforcedTest = async (
   );
 };
 
+export const setMaxSupplyCapTest = async (
+  { tokenContract, owner }: CommonParams,
+  maxSupplyCap: BigNumberish,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+
+  if (
+    await handleRevert(
+      tokenContract.connect(from).setMaxSupplyCap.bind(this, maxSupplyCap),
+      tokenContract,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  await expect(tokenContract.connect(from).setMaxSupplyCap(maxSupplyCap))
+    .to.emit(
+      tokenContract,
+      tokenContract.interface.events['SetMaxSupplyCap(uint256)'].name,
+    )
+    .withArgs(maxSupplyCap);
+
+  expect(await tokenContract.maxSupplyCap()).eq(maxSupplyCap);
+};
+
 export const clawbackTest = async (
   { tokenContract, owner }: CommonParams,
   amount: BigNumberish,

@@ -46,7 +46,6 @@ import {
 } from '../../common/custom-feed-growth.helpers';
 import { setRoundData } from '../../common/data-feed.helpers';
 import {
-  setMaxSupplyCapTest,
   setMaxAmountPerRequestTest,
   approveRequestTest,
   depositInstantTest,
@@ -72,6 +71,7 @@ import {
   setWaivedFeeAccountTest,
   setMaxApproveRequestIdTest,
 } from '../../common/manageable-vault.helpers';
+import { setMaxSupplyCapTest } from '../../common/mtoken.helpers';
 import { InitializerParamsDv } from '../../common/vault-initializer.helpers';
 import { sanctionUser } from '../../common/with-sanctions-list.helpers';
 
@@ -189,11 +189,11 @@ export const depositVaultSuits = (
 
     it('deployment', async () => {
       const fixture = await loadDvFixture();
-      const { depositVault } = fixture;
+      const { depositVault, mTBILL } = fixture;
 
       expect(await depositVault.minMTokenAmountForFirstDeposit()).eq('0');
 
-      expect(await depositVault.maxSupplyCap()).eq(constants.MaxUint256);
+      expect(await mTBILL.maxSupplyCap()).eq(constants.MaxUint256);
 
       await deploymentAdditionalChecks({
         ...fixture,
@@ -352,87 +352,6 @@ export const depositVaultSuits = (
           );
 
           await setMinAmountToDepositTest({ depositVault, owner }, 2.2, {
-            from: regularAccounts[0],
-          });
-        });
-      });
-
-      describe('setMaxSupplyCap()', () => {
-        it('should fail: call from address without DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-          const { owner, depositVault, regularAccounts } =
-            await loadDvFixture();
-
-          await setMaxSupplyCapTest({ depositVault, owner }, 1.1, {
-            from: regularAccounts[0],
-            revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
-          });
-        });
-
-        it('call from address with DEPOSIT_VAULT_ADMIN_ROLE role', async () => {
-          const { owner, depositVault } = await loadDvFixture();
-          await setMaxSupplyCapTest({ depositVault, owner }, 1.1);
-        });
-
-        it('should fail: when function is paused', async () => {
-          const { owner, depositVault } = await loadDvFixture();
-
-          await pauseVaultFn(
-            { pauseManager, owner },
-            depositVault,
-            encodeFnSelector('setMaxSupplyCap(uint256)'),
-          );
-
-          await setMaxSupplyCapTest({ depositVault, owner }, 1.1, {
-            revertCustomError: {
-              customErrorName: 'Paused',
-            },
-          });
-        });
-
-        it('succeeds with only scoped function permission', async () => {
-          const { accessControl, owner, depositVault, regularAccounts } =
-            await loadDvFixture();
-
-          const contractAdminRole = await depositVault.contractAdminRole();
-          await setupPermissionRole(
-            { accessControl, owner },
-            contractAdminRole,
-            depositVault.address,
-            'setMaxSupplyCap(uint256)',
-            regularAccounts[0].address,
-          );
-
-          expect(
-            await accessControl.hasRole(
-              contractAdminRole,
-              regularAccounts[0].address,
-            ),
-          ).eq(false);
-
-          await setMaxSupplyCapTest({ depositVault, owner }, 2.2, {
-            from: regularAccounts[0],
-          });
-        });
-
-        it('succeeds with scoped permission and vault admin role', async () => {
-          const { accessControl, owner, depositVault, regularAccounts, roles } =
-            await loadDvFixture();
-
-          const contractAdminRole = await depositVault.contractAdminRole();
-          await setupPermissionRole(
-            { accessControl, owner },
-            contractAdminRole,
-            depositVault.address,
-            'setMaxSupplyCap(uint256)',
-            regularAccounts[0].address,
-          );
-
-          await accessControl['grantRole(bytes32,address)'](
-            roles.tokenRoles.mTBILL.depositVaultAdmin,
-            regularAccounts[0].address,
-          );
-
-          await setMaxSupplyCapTest({ depositVault, owner }, 2.2, {
             from: regularAccounts[0],
           });
         });
@@ -1808,7 +1727,10 @@ export const depositVaultSuits = (
             true,
           );
 
-          await setMaxSupplyCapTest({ depositVault, owner }, 99);
+          await setMaxSupplyCapTest(
+            { tokenContract: mTBILL, owner },
+            parseUnits('99'),
+          );
           await setRoundData({ mockedAggregator }, 1);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
           await setInstantFeeTest({ vault: depositVault, owner }, 0);
@@ -1876,7 +1798,10 @@ export const depositVaultSuits = (
             true,
           );
 
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setMaxSupplyCapTest(
+            { tokenContract: mTBILL, owner },
+            parseUnits('100'),
+          );
           await setRoundData({ mockedAggregator }, 1);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
           await setInstantFeeTest({ vault: depositVault, owner }, 0);
@@ -1944,7 +1869,10 @@ export const depositVaultSuits = (
             true,
           );
 
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setMaxSupplyCapTest(
+            { tokenContract: mTBILL, owner },
+            parseUnits('100'),
+          );
           await setRoundData({ mockedAggregator }, 1);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
           await setInstantFeeTest({ vault: depositVault, owner }, 0);
@@ -4134,7 +4062,10 @@ export const depositVaultSuits = (
             true,
           );
 
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setMaxSupplyCapTest(
+            { tokenContract: mTBILL, owner },
+            parseUnits('100'),
+          );
           await setRoundData({ mockedAggregator }, 1);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
           await setInstantFeeTest({ vault: depositVault, owner }, 0);
@@ -4201,7 +4132,10 @@ export const depositVaultSuits = (
             true,
           );
 
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setMaxSupplyCapTest(
+            { tokenContract: mTBILL, owner },
+            parseUnits('100'),
+          );
           await setRoundData({ mockedAggregator }, 1);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
           await setInstantFeeTest({ vault: depositVault, owner }, 0);
@@ -4627,7 +4561,10 @@ export const depositVaultSuits = (
               0,
               true,
             );
-            await setMaxSupplyCapTest({ depositVault, owner }, 100);
+            await setMaxSupplyCapTest(
+              { tokenContract: mTBILL, owner },
+              parseUnits('100'),
+            );
             await setRoundData({ mockedAggregator }, 1);
             await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
             await setInstantFeeTest({ vault: depositVault, owner }, 0);
@@ -4667,7 +4604,10 @@ export const depositVaultSuits = (
               0,
               true,
             );
-            await setMaxSupplyCapTest({ depositVault, owner }, 100);
+            await setMaxSupplyCapTest(
+              { tokenContract: mTBILL, owner },
+              parseUnits('100'),
+            );
             await setRoundData({ mockedAggregator }, 1);
             await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
             await setInstantFeeTest({ vault: depositVault, owner }, 0);
@@ -5256,7 +5196,10 @@ export const depositVaultSuits = (
               { vault: depositVault, owner },
               1000,
             );
-            await setMaxSupplyCapTest({ depositVault, owner }, 100);
+            await setMaxSupplyCapTest(
+              { tokenContract: mTBILL, owner },
+              parseUnits('100'),
+            );
             await setRoundData({ mockedAggregator }, 1);
             await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
             await setInstantFeeTest({ vault: depositVault, owner }, 0);
@@ -5305,7 +5248,10 @@ export const depositVaultSuits = (
               { vault: depositVault, owner },
               1000,
             );
-            await setMaxSupplyCapTest({ depositVault, owner }, 100);
+            await setMaxSupplyCapTest(
+              { tokenContract: mTBILL, owner },
+              parseUnits('100'),
+            );
             await setRoundData({ mockedAggregator }, 1);
             await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
             await setInstantFeeTest({ vault: depositVault, owner }, 0);
@@ -5373,7 +5319,10 @@ export const depositVaultSuits = (
               1000,
             );
             await setInstantFeeTest({ vault: depositVault, owner }, 0);
-            await setMaxSupplyCapTest({ depositVault, owner }, 100);
+            await setMaxSupplyCapTest(
+              { tokenContract: mTBILL, owner },
+              parseUnits('100'),
+            );
             await setRoundData({ mockedAggregator }, 1);
             await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
             await setMinAmountTest({ vault: depositVault, owner }, 0);
@@ -5458,7 +5407,10 @@ export const depositVaultSuits = (
               1000,
             );
             await setInstantFeeTest({ vault: depositVault, owner }, 0);
-            await setMaxSupplyCapTest({ depositVault, owner }, 100);
+            await setMaxSupplyCapTest(
+              { tokenContract: mTBILL, owner },
+              parseUnits('100'),
+            );
             await setRoundData({ mockedAggregator }, 1);
             await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
             await setMinAmountTest({ vault: depositVault, owner }, 0);
@@ -5538,7 +5490,10 @@ export const depositVaultSuits = (
               true,
             );
 
-            await setMaxSupplyCapTest({ depositVault, owner }, 100);
+            await setMaxSupplyCapTest(
+              { tokenContract: mTBILL, owner },
+              parseUnits('100'),
+            );
             await setRoundData({ mockedAggregator }, 1);
             await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
             await setInstantFeeTest({ vault: depositVault, owner }, 0);
@@ -6179,7 +6134,10 @@ export const depositVaultSuits = (
           await setRoundData({ mockedAggregator }, 1);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
           await setMinAmountTest({ vault: depositVault, owner }, 0);
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setMaxSupplyCapTest(
+            { tokenContract: mTBILL, owner },
+            parseUnits('100'),
+          );
 
           await depositRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -6553,7 +6511,10 @@ export const depositVaultSuits = (
           await setRoundData({ mockedAggregator }, 1);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
           await setMinAmountTest({ vault: depositVault, owner }, 0);
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setMaxSupplyCapTest(
+            { tokenContract: mTBILL, owner },
+            parseUnits('100'),
+          );
 
           await depositRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -6954,7 +6915,10 @@ export const depositVaultSuits = (
           await setRoundData({ mockedAggregator }, 1);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
           await setMinAmountTest({ vault: depositVault, owner }, 0);
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setMaxSupplyCapTest(
+            { tokenContract: mTBILL, owner },
+            parseUnits('100'),
+          );
 
           await depositRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -7340,7 +7304,10 @@ export const depositVaultSuits = (
           await setRoundData({ mockedAggregator }, 1);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
           await setMinAmountTest({ vault: depositVault, owner }, 0);
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setMaxSupplyCapTest(
+            { tokenContract: mTBILL, owner },
+            parseUnits('100'),
+          );
 
           await depositRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -7862,7 +7829,10 @@ export const depositVaultSuits = (
           await setRoundData({ mockedAggregator }, 1);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
           await setMinAmountTest({ vault: depositVault, owner }, 0);
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setMaxSupplyCapTest(
+            { tokenContract: mTBILL, owner },
+            parseUnits('100'),
+          );
 
           await depositRequestTest(
             {
@@ -8370,7 +8340,10 @@ export const depositVaultSuits = (
           await setRoundData({ mockedAggregator }, 1);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
           await setMinAmountTest({ vault: depositVault, owner }, 0);
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setMaxSupplyCapTest(
+            { tokenContract: mTBILL, owner },
+            parseUnits('100'),
+          );
 
           await depositRequestTest(
             {
@@ -9279,7 +9252,10 @@ export const depositVaultSuits = (
           await setRoundData({ mockedAggregator }, 1);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
           await setMinAmountTest({ vault: depositVault, owner }, 0);
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setMaxSupplyCapTest(
+            { tokenContract: mTBILL, owner },
+            parseUnits('100'),
+          );
 
           await depositRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
@@ -10567,7 +10543,10 @@ export const depositVaultSuits = (
             0,
             true,
           );
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setMaxSupplyCapTest(
+            { tokenContract: mTBILL, owner },
+            parseUnits('100'),
+          );
           await setRoundData({ mockedAggregator }, 1);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
           await setInstantFeeTest({ vault: depositVault, owner }, 0);
@@ -11201,7 +11180,10 @@ export const depositVaultSuits = (
             true,
           );
 
-          await setMaxSupplyCapTest({ depositVault, owner }, 100);
+          await setMaxSupplyCapTest(
+            { tokenContract: mTBILL, owner },
+            parseUnits('100'),
+          );
           await setRoundData({ mockedAggregator }, 1);
           await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
           await setMinAmountTest({ vault: depositVault, owner }, 0);

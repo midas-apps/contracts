@@ -1,3 +1,4 @@
+import { constants } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { deployAndVerifyProxy, getDeployer } from './utils';
@@ -29,6 +30,7 @@ export const deployMToken = async (
     [
       addresses.accessControl,
       deployer.address,
+      constants.MaxUint256,
       isPermissioned,
       false,
       metadata.name,

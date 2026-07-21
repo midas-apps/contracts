@@ -33,8 +33,6 @@ struct Request {
 struct DepositVaultInitParams {
     /// @notice minimal USD amount for first user`s deposit
     uint256 minMTokenAmountForFirstDeposit;
-    /// @notice max supply cap value in mToken
-    uint256 maxSupplyCap;
     /// @notice max amount per request in mToken
     uint256 maxAmountPerRequest;
 }
@@ -48,11 +46,6 @@ interface IDepositVault is IManageableVault {
      * @param newValue new min amount to deposit value
      */
     event SetMinMTokenAmountForFirstDeposit(uint256 newValue);
-
-    /**
-     * @param newValue new max supply cap value
-     */
-    event SetMaxSupplyCap(uint256 newValue);
 
     /**
      * @param newValue new max amount per request
@@ -306,13 +299,6 @@ interface IDepositVault is IManageableVault {
      * @param newValue new min. deposit value
      */
     function setMinMTokenAmountForFirstDeposit(uint256 newValue) external;
-
-    /**
-     * @notice sets new max supply cap value
-     * can be called only from vault`s admin
-     * @param newValue new max supply cap value
-     */
-    function setMaxSupplyCap(uint256 newValue) external;
 
     /**
      * @notice sets new max amount per request

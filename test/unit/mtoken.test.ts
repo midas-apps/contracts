@@ -43,6 +43,7 @@ import {
   removeMintRateLimitTest,
   mint,
   setClawbackReceiverTest,
+  setMaxSupplyCapTest,
   setMetadataTest,
 } from '../common/mtoken.helpers';
 import {
@@ -179,6 +180,7 @@ describe(`mToken`, function () {
     expect(await mTBILL.minBalanceExemptRole()).eq(tokenRoles.minBalanceExempt);
     expect(await mTBILL.isPermissioned()).eq(false);
     expect(await mTBILL.isMinHoldingBalanceEnforced()).eq(false);
+    expect(await mTBILL.maxSupplyCap()).eq(ethers.constants.MaxUint256);
   });
 
   it('initialize and v2 initialize', async () => {
@@ -190,6 +192,7 @@ describe(`mToken`, function () {
       tokenContract.initialize(
         ethers.constants.AddressZero,
         clawbackReceiver.address,
+        ethers.constants.MaxUint256,
         false,
         false,
         mTokensMetadata.mTBILL.name,
@@ -198,7 +201,12 @@ describe(`mToken`, function () {
     ).revertedWith('Initializable: contract is already initialized');
 
     await expect(
-      tokenContract.initializeV3(clawbackReceiver.address, false, false),
+      tokenContract.initializeV3(
+        clawbackReceiver.address,
+        ethers.constants.MaxUint256,
+        false,
+        false,
+      ),
     ).to.revertedWith('Initializable: contract is already initialized');
   });
 
@@ -213,6 +221,7 @@ describe(`mToken`, function () {
         [
           accessControl.address,
           clawbackReceiver.address,
+          ethers.constants.MaxUint256,
           false,
           false,
           mTokensMetadata.mTBILL.name,
@@ -235,6 +244,7 @@ describe(`mToken`, function () {
       const { mTBILL, clawbackReceiver } = await deployMToken();
 
       expect(await mTBILL.clawbackReceiver()).eq(clawbackReceiver.address);
+      expect(await mTBILL.maxSupplyCap()).eq(ethers.constants.MaxUint256);
       expect(await mTBILL.isPermissioned()).eq(false);
       expect(await mTBILL.isMinHoldingBalanceEnforced()).eq(false);
     });
@@ -249,6 +259,7 @@ describe(`mToken`, function () {
         [
           accessControl.address,
           clawbackReceiver.address,
+          ethers.constants.MaxUint256,
           true,
           true,
           mTokensMetadata.mTBILL.name,
@@ -277,7 +288,12 @@ describe(`mToken`, function () {
       await expect(
         mTBILL
           .connect(admin)
-          .initializeV3(clawbackReceiver.address, false, false),
+          .initializeV3(
+            clawbackReceiver.address,
+            ethers.constants.MaxUint256,
+            false,
+            false,
+          ),
       ).revertedWith('Initializable: contract is already initialized');
     });
 
@@ -291,7 +307,12 @@ describe(`mToken`, function () {
       await expect(
         mTBILL
           .connect(stranger)
-          .initializeV3(clawbackReceiver.address, false, false),
+          .initializeV3(
+            clawbackReceiver.address,
+            ethers.constants.MaxUint256,
+            false,
+            false,
+          ),
       ).revertedWithCustomError(mTBILL, 'SenderNotProxyAdmin');
     });
 
@@ -302,11 +323,14 @@ describe(`mToken`, function () {
       await setProxyAdmin(mTBILL.address, admin.address);
       await setInitializedVersion(mTBILL.address, 1);
 
+      const maxSupplyCap = parseUnits('1000');
+
       await mTBILL
         .connect(admin)
-        .initializeV3(newClawbackReceiver.address, true, true);
+        .initializeV3(newClawbackReceiver.address, maxSupplyCap, true, true);
 
       expect(await mTBILL.clawbackReceiver()).eq(newClawbackReceiver.address);
+      expect(await mTBILL.maxSupplyCap()).eq(maxSupplyCap);
       expect(await mTBILL.isPermissioned()).eq(true);
       expect(await mTBILL.isMinHoldingBalanceEnforced()).eq(true);
     });
@@ -732,6 +756,92 @@ describe(`mToken`, function () {
     });
   });
 
+  describe('setMaxSupplyCap()', () => {
+    it('should fail: call from address without token manager role nor function permission', async () => {
+      const { owner, tokenContract, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await setMaxSupplyCapTest({ tokenContract, owner }, parseUnits('100'), {
+        from: regularAccounts[0],
+        revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
+      });
+    });
+
+    it('call from address with token manager role', async () => {
+      const { owner, tokenContract } = await loadFixture(defaultDeploy);
+
+      await setMaxSupplyCapTest({ tokenContract, owner }, parseUnits('100'));
+    });
+
+    it('call from address with scoped function permission only', async () => {
+      const { owner, tokenContract, regularAccounts, accessControl, roles } =
+        await loadFixture(defaultDeploy);
+
+      const user = regularAccounts[0];
+      const selector = encodeFnSelector('setMaxSupplyCap(uint256)');
+
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole: roles.tokenRoles.mTBILL.tokenManager,
+        targetContract: tokenContract.address,
+        functionSelector: selector,
+        grantOperator: owner,
+      });
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        undefined,
+        tokenContract.address,
+        selector,
+        [{ account: user.address, enabled: true }],
+      );
+
+      expect(
+        await accessControl.hasRole(
+          roles.tokenRoles.mTBILL.tokenManager,
+          user.address,
+        ),
+      ).eq(false);
+
+      await setMaxSupplyCapTest({ tokenContract, owner }, parseUnits('250'), {
+        from: user,
+      });
+    });
+
+    it('allows setting cap below current total supply', async () => {
+      const { owner, tokenContract, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await mint(
+        { tokenContract, owner },
+        regularAccounts[0],
+        parseUnits('100'),
+      );
+
+      await setMaxSupplyCapTest({ tokenContract, owner }, parseUnits('50'));
+
+      expect(await tokenContract.totalSupply()).eq(parseUnits('100'));
+      expect(await tokenContract.maxSupplyCap()).eq(parseUnits('50'));
+    });
+
+    it('call when setMaxSupplyCap is paused by pause manager', async () => {
+      const { pauseManager, owner, tokenContract } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await pauseVaultFn(
+        { pauseManager, owner },
+        tokenContract,
+        encodeFnSelector('setMaxSupplyCap(uint256)'),
+      );
+
+      await setMaxSupplyCapTest({ tokenContract, owner }, parseUnits('100'));
+    });
+  });
+
   describe('setNameSymbol()', () => {
     it('should fail: when called directly', async () => {
       const { mTBILL, accessControl, owner } = await loadFixture(defaultDeploy);
@@ -858,6 +968,36 @@ describe(`mToken`, function () {
       const to = regularAccounts[0].address;
 
       await mint({ tokenContract, owner }, to, amount);
+    });
+
+    it('should fail: mint would exceed maxSupplyCap', async () => {
+      const { owner, tokenContract, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await setMaxSupplyCapTest({ tokenContract, owner }, parseUnits('100'));
+
+      await mint(
+        { tokenContract, owner },
+        regularAccounts[0],
+        parseUnits('100'),
+      );
+
+      await mint({ tokenContract, owner }, regularAccounts[0], 1, {
+        revertCustomError: { customErrorName: 'MaxSupplyCapExceeded' },
+      });
+    });
+
+    it('mint up to exactly maxSupplyCap succeeds', async () => {
+      const { owner, tokenContract, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+
+      const cap = parseUnits('100');
+      await setMaxSupplyCapTest({ tokenContract, owner }, cap);
+
+      await mint({ tokenContract, owner }, regularAccounts[0], cap);
+      expect(await tokenContract.totalSupply()).eq(cap);
     });
 
     it('when 1h limit is set but not exceeded', async () => {
@@ -1419,6 +1559,48 @@ describe(`mToken`, function () {
         PAUSE_TEST_AMOUNT,
         { revertMessage: ERC20_PAUSED_MSG },
       );
+    });
+
+    it('should fail: mintGoverned does not bypass maxSupplyCap', async () => {
+      const { owner, tokenContract, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await setMaxSupplyCapTest({ tokenContract, owner }, parseUnits('100'));
+      await mint(
+        { tokenContract, owner, isGoverned: true },
+        regularAccounts[0],
+        parseUnits('100'),
+      );
+
+      await mint(
+        { tokenContract, owner, isGoverned: true },
+        regularAccounts[0],
+        1,
+        { revertCustomError: { customErrorName: 'MaxSupplyCapExceeded' } },
+      );
+    });
+
+    it('burn remains available when totalSupply exceeds maxSupplyCap', async () => {
+      const { owner, tokenContract, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await mint(
+        { tokenContract, owner },
+        regularAccounts[0],
+        parseUnits('100'),
+      );
+      await setMaxSupplyCapTest({ tokenContract, owner }, parseUnits('50'));
+
+      await burn(
+        { tokenContract, owner },
+        regularAccounts[0],
+        parseUnits('10'),
+      );
+
+      expect(await tokenContract.totalSupply()).eq(parseUnits('90'));
+      expect(await tokenContract.maxSupplyCap()).eq(parseUnits('50'));
     });
   });
 

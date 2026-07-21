@@ -97,9 +97,14 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     bool public isMinHoldingBalanceEnforced;
 
     /**
+     * @notice maximum supply cap for the token
+     */
+    uint256 public override maxSupplyCap;
+
+    /**
      * @dev leaving a storage gap for futures updates
      */
-    uint256[43] private __gap;
+    uint256[42] private __gap;
 
     /**
      * @dev having a second gap here to match with the gap of previous implementations
@@ -146,6 +151,7 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     function initialize(
         address _accessControl,
         address _clawbackReceiver,
+        uint256 _maxSupplyCap,
         bool _isPermissioned,
         bool _isMinHoldingBalanceEnforced,
         string memory name_,
@@ -154,6 +160,7 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         _initializeV1(_accessControl, name_, symbol_);
         initializeV3(
             _clawbackReceiver,
+            _maxSupplyCap,
             _isPermissioned,
             _isMinHoldingBalanceEnforced
         );
@@ -178,11 +185,13 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      * @notice v3 initializer
      * @dev not v2 because some of the original product mTokens were upgraded to v2 already
      * @param _clawbackReceiver address to which clawback tokens will be sent
+     * @param _maxSupplyCap maximum supply cap for the token
      * @param _isPermissioned if true then the token is permissioned
      * @param _isMinHoldingBalanceEnforced if true then the token has a minimum holding balance enforced
      */
     function initializeV3(
         address _clawbackReceiver,
+        uint256 _maxSupplyCap,
         bool _isPermissioned,
         bool _isMinHoldingBalanceEnforced
     ) public reinitializer(3) onlyProxyAdmin {
@@ -191,6 +200,7 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
             InvalidAddress(_clawbackReceiver)
         );
 
+        maxSupplyCap = _maxSupplyCap;
         clawbackReceiver = _clawbackReceiver;
 
         // to make upgrades safer, we sync the name and symbol from the ERC20Upgradeable
@@ -242,6 +252,14 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         isMinHoldingBalanceEnforced = _isMinHoldingBalanceEnforced;
 
         emit SetIsMinHoldingBalanceEnforced(_isMinHoldingBalanceEnforced);
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function setMaxSupplyCap(uint256 _maxSupplyCap) external onlyContractAdmin {
+        maxSupplyCap = _maxSupplyCap;
+        emit SetMaxSupplyCap(_maxSupplyCap);
     }
 
     /**
@@ -416,6 +434,16 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     }
 
     /**
+     * @dev overrides _mint function to validate the maximum supply cap
+     * @param to address of the recipient
+     * @param amount amount of tokens to mint
+     */
+    function _mint(address to, uint256 amount) internal override {
+        super._mint(to, amount);
+        _validateMaxSupplyCap();
+    }
+
+    /**
      * @dev set mint rate limit config
      * @param window window duration in seconds
      * @param limit limit amount per window
@@ -475,6 +503,13 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     ) internal override {
         _validateMinBalance(from, to);
         super._afterTokenTransfer(from, to, amount);
+    }
+
+    /**
+     * @dev validates that the total supply is less than or equal to the maximum supply cap
+     */
+    function _validateMaxSupplyCap() private view {
+        require(totalSupply() <= maxSupplyCap, MaxSupplyCapExceeded());
     }
 
     /**

@@ -36,7 +36,7 @@ import {
 } from '../../typechain-types';
 
 export const DV_USTB_INIT_FN =
-  'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(uint256,uint256,uint256),address)';
+  'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(uint256,uint256),address)';
 
 export const DV_MTOKEN_INIT_FN = DV_USTB_INIT_FN;
 
@@ -64,7 +64,6 @@ export type InitializerParamsMv = {
 export type InitializerParamsDv = {
   maxAmountPerRequest?: BigNumberish;
   minMTokenAmountForFirstDeposit?: BigNumberish;
-  maxSupplyCap?: BigNumberish;
 } & InitializerParamsMv;
 
 export type InitializerParamsDvWithUstb = {
@@ -215,14 +214,12 @@ export const getInitializerParamsRvWithUstb = ({
 export const getInitializerParamsDv = ({
   maxAmountPerRequest,
   minMTokenAmountForFirstDeposit,
-  maxSupplyCap,
   ...commonParams
 }: InitializerParamsDv) => {
   return [
     ...getInitializerParamsMv(commonParams),
     {
       minMTokenAmountForFirstDeposit: minMTokenAmountForFirstDeposit ?? 0,
-      maxSupplyCap: maxSupplyCap ?? constants.MaxUint256,
       maxAmountPerRequest: maxAmountPerRequest ?? constants.MaxUint256,
     },
   ] as const;

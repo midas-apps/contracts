@@ -148,7 +148,7 @@ export const depositInstantTest = async (
 
   const totalMintedBefore = await depositVault.totalMinted(sender.address);
   const totalMintedBeforeRecipient = await depositVault.totalMinted(recipient);
-  const maxSupplyCapBefore = await depositVault.maxSupplyCap();
+  const maxSupplyCapBefore = await mTBILL.maxSupplyCap();
 
   const mTokenRate = await mTokenToUsdDataFeed.getDataInBase18();
 
@@ -220,7 +220,7 @@ export const depositInstantTest = async (
   const balanceAfterUser = await balanceOfBase18(tokenContract, sender.address);
   const balanceMtBillAfterUser = await balanceOfBase18(mTBILL, recipient);
 
-  const maxSupplyCapAfter = await depositVault.maxSupplyCap();
+  const maxSupplyCapAfter = await mTBILL.maxSupplyCap();
 
   expect(balanceMtBillAfterUser).eq(
     balanceMtBillBeforeUser.add(expectedMinted),
@@ -347,7 +347,7 @@ export const depositRequestTest = async (
   const latestRequestIdBefore = await depositVault.currentRequestId();
   const mTokenRate = await mTokenToUsdDataFeed.getDataInBase18();
 
-  const maxSupplyCapBefore = await depositVault.maxSupplyCap();
+  const maxSupplyCapBefore = await mTBILL.maxSupplyCap();
   const supplyBefore = await mTBILL.totalSupply();
   const upcomingSupplyBefore = await depositVault.upcomingSupply();
 
@@ -437,7 +437,7 @@ export const depositRequestTest = async (
 
   const balanceAfterUser = await balanceOfBase18(tokenContract, sender.address);
   const request = await depositVault.mintRequests(latestRequestIdBefore);
-  const maxSupplyCapAfter = await depositVault.maxSupplyCap();
+  const maxSupplyCapAfter = await mTBILL.maxSupplyCap();
   const upcomingSupplyAfter = await depositVault.upcomingSupply();
 
   expect(request.depositedUsdAmount).eq(
@@ -747,7 +747,7 @@ export const safeBulkApproveRequestTest = async (
   );
 
   const totalSupplyBefore = await mTBILL.totalSupply();
-  const supplyCap = await depositVault.maxSupplyCap();
+  const supplyCap = await mTBILL.maxSupplyCap();
 
   const upcomingSupplyBefore = await depositVault.upcomingSupply();
 
@@ -1016,42 +1016,6 @@ export const rejectRequestTest = async (
     requestData.depositedUsdAmount,
   );
   expect(requestDataAfter.status).eq(2);
-};
-
-export const setMaxSupplyCapTest = async (
-  {
-    depositVault,
-    owner,
-  }: {
-    depositVault: DepositVault | DepositVaultTest;
-    owner: SignerWithAddress;
-  },
-  valueN: number,
-  opt?: OptionalCommonParams,
-) => {
-  const value = parseUnits(valueN.toString());
-
-  if (
-    await handleRevert(
-      depositVault
-        .connect(opt?.from ?? owner)
-        .setMaxSupplyCap.bind(this, value),
-      depositVault,
-      opt,
-    )
-  ) {
-    return;
-  }
-
-  await expect(
-    depositVault.connect(opt?.from ?? owner).setMaxSupplyCap(value),
-  ).to.emit(
-    depositVault,
-    depositVault.interface.events['SetMaxSupplyCap(uint256)'].name,
-  ).to.not.reverted;
-
-  const newMax = await depositVault.maxSupplyCap();
-  expect(newMax).eq(value);
 };
 
 export const setMaxAmountPerRequestTest = async (

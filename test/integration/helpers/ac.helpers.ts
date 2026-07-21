@@ -1,4 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { constants } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { mTokensMetadata } from '../../../helpers/mtokens-metadata';
@@ -17,6 +18,8 @@ type MTokenRoles = {
   minter: string;
   burner: string;
   tokenManager: string;
+  greenlisted: string;
+  minBalanceExempt: string;
 };
 
 export async function deployAccessControlInfra(
@@ -60,13 +63,31 @@ export async function deployIntegrationMToken(
   accessControl: string,
   clawbackReceiver: string,
   roles: MTokenRoles,
-  metadata: { name: string; symbol: string } = mTokensMetadata.mTBILL,
+  metadata: {
+    name: string;
+    symbol: string;
+    isPermissioned?: boolean;
+  } = mTokensMetadata.mTBILL,
 ) {
   return deployProxyContract<MToken>(
     'mToken',
-    [accessControl, clawbackReceiver, metadata.name, metadata.symbol],
-    undefined,
-    [roles.tokenManager, roles.minter, roles.burner],
+    [
+      accessControl,
+      clawbackReceiver,
+      constants.MaxUint256,
+      !!metadata.isPermissioned,
+      false,
+      metadata.name,
+      metadata.symbol,
+    ],
+    'initialize',
+    [
+      roles.tokenManager,
+      roles.minter,
+      roles.burner,
+      roles.greenlisted,
+      roles.minBalanceExempt,
+    ],
   );
 }
 

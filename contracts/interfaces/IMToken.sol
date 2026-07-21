@@ -45,6 +45,11 @@ interface IMToken is IERC20Upgradeable {
     event Clawback(address indexed from, address indexed to, uint256 amount);
 
     /**
+     * @param maxSupplyCap new maximum supply cap
+     */
+    event SetMaxSupplyCap(uint256 maxSupplyCap);
+
+    /**
      * @notice when new limit is invalid
      * @param newLimit new limit
      * @param existingLimit existing limit
@@ -56,6 +61,11 @@ interface IMToken is IERC20Upgradeable {
      * @param balance balance
      */
     error MinBalanceNotMet(uint256 balance);
+
+    /**
+     * @notice when the maximum supply cap is exceeded
+     */
+    error MaxSupplyCapExceeded();
 
     /**
      * @notice mints mToken token `amount` to a given `to` address.
@@ -106,6 +116,12 @@ interface IMToken is IERC20Upgradeable {
      * @param clawbackReceiver address to which clawback tokens will be sent
      */
     function setClawbackReceiver(address clawbackReceiver) external;
+
+    /**
+     * @notice sets the maximum supply cap for the token
+     * @param maxSupplyCap new maximum supply cap
+     */
+    function setMaxSupplyCap(uint256 maxSupplyCap) external;
 
     /**
      * @notice sets the name and symbol of the token
@@ -166,4 +182,10 @@ interface IMToken is IERC20Upgradeable {
      * @return role bytes32 role
      */
     function greenlistedRole() external view returns (bytes32);
+
+    /**
+     * @notice returns the maximum supply cap for the token
+     * @return maxSupplyCap maximum supply cap
+     */
+    function maxSupplyCap() external view returns (uint256);
 }

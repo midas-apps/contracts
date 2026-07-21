@@ -56,13 +56,6 @@ contract DepositVault is ManageableVault, IDepositVault {
     uint256 public minMTokenAmountForFirstDeposit;
 
     /**
-     * @notice max supply cap value in mToken
-     * @dev if after the deposit, mToken.totalSupply() > maxSupplyCap,
-     * the tx will be reverted
-     */
-    uint256 public maxSupplyCap;
-
-    /**
      * @notice max amount per request in mToken
      */
     uint256 public maxAmountPerRequest;
@@ -101,7 +94,6 @@ contract DepositVault is ManageableVault, IDepositVault {
 
         minMTokenAmountForFirstDeposit = _depositVaultInitParams
             .minMTokenAmountForFirstDeposit;
-        maxSupplyCap = _depositVaultInitParams.maxSupplyCap;
         maxAmountPerRequest = _depositVaultInitParams.maxAmountPerRequest;
     }
 
@@ -293,15 +285,6 @@ contract DepositVault is ManageableVault, IDepositVault {
         minMTokenAmountForFirstDeposit = newValue;
 
         emit SetMinMTokenAmountForFirstDeposit(newValue);
-    }
-
-    /**
-     * @inheritdoc IDepositVault
-     */
-    function setMaxSupplyCap(uint256 newValue) external onlyContractAdmin {
-        maxSupplyCap = newValue;
-
-        emit SetMaxSupplyCap(newValue);
     }
 
     /**
@@ -783,7 +766,7 @@ contract DepositVault is ManageableVault, IDepositVault {
     }
 
     /**
-     * @dev validates that mToken.totalSupply() <= maxSupplyCap
+     * @dev validates that mToken.totalSupply() <= mToken.maxSupplyCap()
      *
      * @param revertOnError if true, will revert if supply is exceeded
      * if false, will return false if supply is exceeded without reverting
@@ -799,7 +782,7 @@ contract DepositVault is ManageableVault, IDepositVault {
     }
 
     /**
-     * @dev validates that mToken.totalSupply() <= maxSupplyCap
+     * @dev validates that mToken.totalSupply() <= mToken.maxSupplyCap()
      *
      * @param requestEstimatedMintAmount estimated amount of mToken to mint from request
      * @param mintAmount amount of mToken to mint
@@ -816,7 +799,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         bool isExceeded = _getEffectiveMTokenSupply() +
             mintAmount -
             requestEstimatedMintAmount >
-            maxSupplyCap;
+            mToken.maxSupplyCap();
 
         if (!revertOnError) {
             return !isExceeded;

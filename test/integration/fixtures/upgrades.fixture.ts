@@ -39,8 +39,13 @@ const mTokenReinitializerParams = (
   isPermissioned: boolean,
   isMinHoldingBalanceEnforced = false,
 ) => ({
-  fn: 'initializeV2',
-  args: [clawbackReceiver, isPermissioned, isMinHoldingBalanceEnforced],
+  fn: 'initializeV3',
+  args: [
+    clawbackReceiver,
+    ethers.constants.MaxUint256,
+    isPermissioned,
+    isMinHoldingBalanceEnforced,
+  ],
 });
 
 export async function mainnetUpgradeFixture() {

@@ -170,6 +170,7 @@ export const defaultDeploy = async () => {
   await mTBILL.initialize(
     accessControl.address,
     clawbackReceiver.address,
+    constants.MaxUint256,
     false,
     false,
     mTokensMetadata.mTBILL.name,
@@ -187,6 +188,7 @@ export const defaultDeploy = async () => {
   await mTokenLoan.initialize(
     accessControl.address,
     clawbackReceiver.address,
+    constants.MaxUint256,
     false,
     false,
     'mTokenLoan',
@@ -818,6 +820,7 @@ const deployFeatureFlaggedMToken = async (
   await token.initialize(
     accessControl.address,
     clawbackReceiver,
+    constants.MaxUint256,
     isPermissioned,
     isMinHoldingBalanceEnforced,
     name,

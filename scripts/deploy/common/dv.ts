@@ -35,6 +35,8 @@ export type DeployDvConfigCommonLegacy = {
    */
   minMTokenAmountForFirstDeposit?: BigNumberish;
   /**
+   * @deprecated Cap now lives on mToken. Kept optional for config compatibility;
+   * not passed to DepositVault.initialize. Set via mToken initialize / setMaxSupplyCap.
    * @default constants.MaxUint256
    */
   maxSupplyCap?: BigNumberish;
@@ -56,6 +58,10 @@ type DeployVaultConfigCommon = {
 
 type DeployDvConfigCommonNew = DeployVaultConfigCommon & {
   minMTokenAmountForFirstDeposit?: BigNumberish;
+  /**
+   * @deprecated Cap now lives on mToken. Kept optional for config compatibility;
+   * not passed to DepositVault.initialize. Set via mToken initialize / setMaxSupplyCap.
+   */
   maxSupplyCap?: BigNumberish;
   maxAmountPerRequest?: BigNumberish;
 };
@@ -161,7 +167,7 @@ export const deployDepositVault = async (
   }
 
   const ustbMTokenInitializer =
-    'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(uint256,uint256,uint256),address)' as const;
+    'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(uint256,uint256),address)' as const;
   const params = [
     {
       variationTolerance: networkConfig.variationTolerance,
@@ -182,7 +188,6 @@ export const deployDepositVault = async (
     {
       minMTokenAmountForFirstDeposit:
         networkConfig.minMTokenAmountForFirstDeposit ?? 0,
-      maxSupplyCap: networkConfig.maxSupplyCap ?? constants.MaxUint256,
       maxAmountPerRequest:
         networkConfig.maxAmountPerRequest ?? constants.MaxUint256,
     },
