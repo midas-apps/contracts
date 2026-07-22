@@ -26,7 +26,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
         {
           contractType: 'customAggregator',
           initializer: 'initializeV2',
-          initializerArgs: [parseUnits('90', 8), parseUnits('140', 8)],
+          initializerArgs: [parseUnits('90000', 8), parseUnits('140000', 8)],
         },
       ],
     },
