@@ -11,7 +11,7 @@ import { getActionOrThrow, upgradeActions } from '../../helpers/utils';
 import { DeployFunction } from '../deploy/common/types';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const upgradeId = 'q2-testnet-custom-aggregator-upgrade';
+  const upgradeId = 'q2-testnet-custom-aggregator-upgrade-v2';
 
   const networkAddresses = getCurrentAddresses(hre);
 

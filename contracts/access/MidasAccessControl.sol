@@ -260,30 +260,45 @@ contract MidasAccessControl is
     function setPermissionRoleMult(
         bytes32 masterRole,
         address targetContract,
-        bytes4 functionSelector,
-        uint32 delay,
         SetPermissionRoleParams[] calldata params
     ) public {
+        require(params.length > 0, EmptyArray());
+
         bytes32 operatorRoleKey = grantOperatorRoleKey(
             masterRole,
             targetContract,
-            functionSelector
+            params[0].functionSelector
         );
 
-        _validateOperatorRoleAccess(masterRole, operatorRoleKey, _msgSender());
-
-        require(params.length > 0, EmptyArray());
-
-        bytes32 functionRoleKey = permissionRoleKey(
+        bool isOperatorRoleUsed = _validateOperatorRoleAccess(
             masterRole,
-            targetContract,
-            functionSelector
+            operatorRoleKey,
+            _msgSender()
         );
-
-        _validateAndUpdateDelay(functionRoleKey, delay);
 
         for (uint256 i = 0; i < params.length; ++i) {
             SetPermissionRoleParams calldata param = params[i];
+
+            // if master role is used, then selectors could be different
+            // if operator role is used, then selectors must be the same as different
+            // selectors require different operator role hence different delays
+            if (isOperatorRoleUsed && i > 0) {
+                require(
+                    param.functionSelector == params[0].functionSelector,
+                    FunctionSelectorMismatch(
+                        param.functionSelector,
+                        params[0].functionSelector
+                    )
+                );
+            }
+
+            bytes32 functionRoleKey = permissionRoleKey(
+                masterRole,
+                targetContract,
+                param.functionSelector
+            );
+
+            _validateAndUpdateDelay(functionRoleKey, param.delay);
 
             // if value already set, skip and do not emit event
             if (
@@ -298,7 +313,7 @@ contract MidasAccessControl is
                 masterRole,
                 targetContract,
                 param.account,
-                functionSelector,
+                param.functionSelector,
                 param.enabled
             );
         }
@@ -309,18 +324,10 @@ contract MidasAccessControl is
      */
     function setPermissionRoleMult(
         address targetContract,
-        bytes4 functionSelector,
-        uint32 delay,
         SetPermissionRoleParams[] calldata params
     ) external {
         bytes32 masterRole = _getContractAdminRole(targetContract);
-        setPermissionRoleMult(
-            masterRole,
-            targetContract,
-            functionSelector,
-            delay,
-            params
-        );
+        setPermissionRoleMult(masterRole, targetContract, params);
     }
 
     /**
@@ -675,14 +682,15 @@ contract MidasAccessControl is
      * @param masterRole master role
      * @param operatorRole operator role
      * @param account account to check access for
+     * @return isOperatorRole whether the account has the operator role
      */
     function _validateOperatorRoleAccess(
         bytes32 masterRole,
         bytes32 operatorRole,
         address account
-    ) internal view {
+    ) internal view returns (bool isOperatorRole) {
         bytes32 role = _resolveOperatorRole(masterRole, operatorRole, account);
-        bool isOperatorRole = role == operatorRole;
+        isOperatorRole = role == operatorRole;
 
         MidasAuthLibrary.validateFunctionAccessWithTimelock(
             this,

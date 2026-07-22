@@ -22,6 +22,7 @@ import {
   revokeRoleTester,
   setIsUserFacingRoleTester,
   setGrantOperatorRoleTester,
+  setPermissionRoleMultTester,
   setPermissionRoleTester,
   setupGrantOperatorRole,
   setDefaultDelayTest,
@@ -1729,6 +1730,273 @@ describe('MidasAccessControl', function () {
       );
     });
 
+    it('when master batches multiple selectors for one account', async () => {
+      const {
+        accessControl,
+        owner,
+        regularAccounts,
+        roles,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      const selectorA = encodeFnSelector('withOnlyRole(bytes32,bool)');
+      const selectorB = encodeFnSelector('withOnlyContractAdmin()');
+      const masterRole = roles.common.greenlistedOperator;
+      const account = regularAccounts[0].address;
+
+      await wAccessControlTester.setContractAdminRole(masterRole);
+
+      await setPermissionRoleMultTester(
+        { accessControl, owner },
+        undefined,
+        wAccessControlTester.address,
+        [
+          {
+            functionSelector: selectorA,
+            account,
+            enabled: true,
+          },
+          {
+            functionSelector: selectorB,
+            account,
+            enabled: true,
+          },
+        ],
+      );
+
+      expect(
+        await accessControl[
+          'hasFunctionPermission(bytes32,address,bytes4,address)'
+        ](masterRole, wAccessControlTester.address, selectorA, account),
+      ).eq(true);
+      expect(
+        await accessControl[
+          'hasFunctionPermission(bytes32,address,bytes4,address)'
+        ](masterRole, wAccessControlTester.address, selectorB, account),
+      ).eq(true);
+    });
+
+    it('when master batches multiple selectors for multiple accounts', async () => {
+      const {
+        accessControl,
+        owner,
+        regularAccounts,
+        roles,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      const selectorA = encodeFnSelector('withOnlyRole(bytes32,bool)');
+      const selectorB = encodeFnSelector('withOnlyContractAdmin()');
+      const masterRole = roles.common.greenlistedOperator;
+
+      await wAccessControlTester.setContractAdminRole(masterRole);
+
+      await setPermissionRoleMultTester(
+        { accessControl, owner },
+        undefined,
+        wAccessControlTester.address,
+        [
+          {
+            functionSelector: selectorA,
+            account: regularAccounts[0].address,
+            enabled: true,
+          },
+          {
+            functionSelector: selectorB,
+            account: regularAccounts[1].address,
+            enabled: true,
+          },
+        ],
+      );
+
+      expect(
+        await accessControl[
+          'hasFunctionPermission(bytes32,address,bytes4,address)'
+        ](
+          masterRole,
+          wAccessControlTester.address,
+          selectorA,
+          regularAccounts[0].address,
+        ),
+      ).eq(true);
+      expect(
+        await accessControl[
+          'hasFunctionPermission(bytes32,address,bytes4,address)'
+        ](
+          masterRole,
+          wAccessControlTester.address,
+          selectorB,
+          regularAccounts[1].address,
+        ),
+      ).eq(true);
+    });
+
+    it('when operator batches multiple accounts for the same selector', async () => {
+      const {
+        accessControl,
+        owner,
+        regularAccounts,
+        roles,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      const selector = encodeFnSelector('setGreenlistEnable(bool)');
+      const masterRole = roles.common.greenlistedOperator;
+
+      await wAccessControlTester.setContractAdminRole(masterRole);
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole,
+        targetContract: wAccessControlTester.address,
+        functionSelector: selector,
+        grantOperator: owner,
+      });
+
+      await setPermissionRoleMultTester(
+        { accessControl, owner },
+        undefined,
+        wAccessControlTester.address,
+        [
+          {
+            functionSelector: selector,
+            account: regularAccounts[0].address,
+            enabled: true,
+          },
+          {
+            functionSelector: selector,
+            account: regularAccounts[1].address,
+            enabled: true,
+          },
+        ],
+      );
+
+      expect(
+        await accessControl[
+          'hasFunctionPermission(bytes32,address,bytes4,address)'
+        ](
+          masterRole,
+          wAccessControlTester.address,
+          selector,
+          regularAccounts[0].address,
+        ),
+      ).eq(true);
+      expect(
+        await accessControl[
+          'hasFunctionPermission(bytes32,address,bytes4,address)'
+        ](
+          masterRole,
+          wAccessControlTester.address,
+          selector,
+          regularAccounts[1].address,
+        ),
+      ).eq(true);
+    });
+
+    it('should fail: when operator batches mixed selectors', async () => {
+      const {
+        accessControl,
+        owner,
+        regularAccounts,
+        roles,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      const selectorA = encodeFnSelector('withOnlyRole(bytes32,bool)');
+      const selectorB = encodeFnSelector('withOnlyContractAdmin()');
+      const masterRole = roles.common.greenlistedOperator;
+      const operator = regularAccounts[0];
+
+      await wAccessControlTester.setContractAdminRole(masterRole);
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole,
+        targetContract: wAccessControlTester.address,
+        functionSelector: selectorA,
+        grantOperator: operator,
+      });
+
+      expect(await accessControl.hasRole(masterRole, operator.address)).eq(
+        false,
+      );
+
+      await setPermissionRoleMultTester(
+        { accessControl, owner },
+        undefined,
+        wAccessControlTester.address,
+        [
+          {
+            functionSelector: selectorA,
+            account: regularAccounts[1].address,
+            enabled: true,
+          },
+          {
+            functionSelector: selectorB,
+            account: regularAccounts[1].address,
+            enabled: true,
+          },
+        ],
+        {
+          from: operator,
+          revertCustomError: {
+            customErrorName: 'FunctionSelectorMismatch',
+          },
+        },
+      );
+    });
+
+    it('when master batches multiple selectors with per-param delays', async () => {
+      const {
+        accessControl,
+        owner,
+        regularAccounts,
+        roles,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      const selectorA = encodeFnSelector('withOnlyRole(bytes32,bool)');
+      const selectorB = encodeFnSelector('withOnlyContractAdmin()');
+      const masterRole = roles.common.greenlistedOperator;
+      const account = regularAccounts[0].address;
+
+      await wAccessControlTester.setContractAdminRole(masterRole);
+
+      await setPermissionRoleMultTester(
+        { accessControl, owner },
+        undefined,
+        wAccessControlTester.address,
+        [
+          {
+            functionSelector: selectorA,
+            account,
+            enabled: true,
+            delay: 3600,
+          },
+          {
+            functionSelector: selectorB,
+            account,
+            enabled: true,
+            delay: 7200,
+          },
+        ],
+      );
+
+      const keyA = await accessControl.permissionRoleKey(
+        masterRole,
+        wAccessControlTester.address,
+        selectorA,
+      );
+      const keyB = await accessControl.permissionRoleKey(
+        masterRole,
+        wAccessControlTester.address,
+        selectorB,
+      );
+
+      expect((await accessControl.getRoleTimelockDelay(keyA, 0))[0]).eq(3600);
+      expect((await accessControl.getRoleTimelockDelay(keyB, 0))[0]).eq(7200);
+    });
+
     describe('without timelock', () => {
       it('when caller has master role but not operator role - uses master role', async () => {
         const {
@@ -1934,18 +2202,172 @@ describe('MidasAccessControl', function () {
           [{ account: regularAccounts[0].address, enabled: true }],
         );
       });
+
+      it('when caller has both roles and operator has shorter delay - should fail on mixed selectors', async () => {
+        const {
+          accessControl,
+          owner,
+          regularAccounts,
+          roles,
+          timelock,
+          timelockManager,
+          wAccessControlTester,
+        } = await loadFixture(defaultDeploy);
+
+        const selectorA = encodeFnSelector('withOnlyRole(bytes32,bool)');
+        const selectorB = encodeFnSelector('withOnlyContractAdmin()');
+        const masterRole = roles.common.greenlistedOperator;
+
+        await wAccessControlTester.setContractAdminRole(masterRole);
+
+        const operatorRoleKey = await accessControl.grantOperatorRoleKey(
+          masterRole,
+          wAccessControlTester.address,
+          selectorA,
+        );
+
+        await setGrantOperatorRoleTester(
+          { accessControl, owner },
+          wAccessControlTester.address,
+          [
+            {
+              functionSelector: selectorA,
+              operator: owner.address,
+              enabled: true,
+            },
+          ],
+        );
+
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [masterRole],
+          [7200],
+        );
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [operatorRoleKey],
+          [NO_DELAY],
+        );
+
+        await setPermissionRoleMultTester(
+          { accessControl, owner },
+          undefined,
+          wAccessControlTester.address,
+          [
+            {
+              functionSelector: selectorA,
+              account: regularAccounts[0].address,
+              enabled: true,
+            },
+            {
+              functionSelector: selectorB,
+              account: regularAccounts[0].address,
+              enabled: true,
+            },
+          ],
+          {
+            revertCustomError: {
+              customErrorName: 'FunctionSelectorMismatch',
+            },
+          },
+        );
+      });
+
+      it('when caller has both roles and master has shorter delay - can batch mixed selectors', async () => {
+        const {
+          accessControl,
+          owner,
+          regularAccounts,
+          roles,
+          timelock,
+          timelockManager,
+          wAccessControlTester,
+        } = await loadFixture(defaultDeploy);
+
+        const selectorA = encodeFnSelector('withOnlyRole(bytes32,bool)');
+        const selectorB = encodeFnSelector('withOnlyContractAdmin()');
+        const masterRole = roles.common.greenlistedOperator;
+        const account = regularAccounts[0].address;
+
+        await wAccessControlTester.setContractAdminRole(masterRole);
+
+        const operatorRoleKey = await accessControl.grantOperatorRoleKey(
+          masterRole,
+          wAccessControlTester.address,
+          selectorA,
+        );
+
+        await setGrantOperatorRoleTester(
+          { accessControl, owner },
+          wAccessControlTester.address,
+          [
+            {
+              functionSelector: selectorA,
+              operator: owner.address,
+              enabled: true,
+            },
+          ],
+        );
+
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [operatorRoleKey],
+          [3600],
+        );
+
+        await setPermissionRoleMultTester(
+          { accessControl, owner },
+          undefined,
+          wAccessControlTester.address,
+          [
+            {
+              functionSelector: selectorA,
+              account,
+              enabled: true,
+            },
+            {
+              functionSelector: selectorB,
+              account,
+              enabled: true,
+            },
+          ],
+        );
+
+        expect(
+          await accessControl[
+            'hasFunctionPermission(bytes32,address,bytes4,address)'
+          ](masterRole, wAccessControlTester.address, selectorA, account),
+        ).eq(true);
+        expect(
+          await accessControl[
+            'hasFunctionPermission(bytes32,address,bytes4,address)'
+          ](masterRole, wAccessControlTester.address, selectorB, account),
+        ).eq(true);
+      });
     });
 
     describe('with timelock', () => {
       const encodeSetPermissionRoleMult = (
         accessControl: MidasAccessControl,
         target: string,
-        selector: string,
-        account: string,
+        params: {
+          functionSelector: string;
+          account: string;
+          enabled: boolean;
+          delay?: number;
+        }[],
       ) =>
         accessControl.interface.encodeFunctionData(
-          'setPermissionRoleMult(address,bytes4,uint32,(address,bool)[])',
-          [target, selector, 0, [{ account, enabled: true }]],
+          'setPermissionRoleMult(address,(bytes4,address,uint32,bool)[])',
+          [
+            target,
+            params.map((param) => [
+              param.functionSelector,
+              param.account,
+              param.delay ?? 0,
+              param.enabled,
+            ]),
+          ],
         );
 
       const scheduleAndExecuteSetPermissionRoleMult = async (
@@ -2017,8 +2439,13 @@ describe('MidasAccessControl', function () {
         const data = encodeSetPermissionRoleMult(
           accessControl,
           wAccessControlTester.address,
-          selector,
-          permissionAccount,
+          [
+            {
+              functionSelector: selector,
+              account: permissionAccount,
+              enabled: true,
+            },
+          ],
         );
 
         const [roleUsed] = await timelockManager.getTargetRole(
@@ -2112,8 +2539,13 @@ describe('MidasAccessControl', function () {
         const data = encodeSetPermissionRoleMult(
           accessControl,
           wAccessControlTester.address,
-          selector,
-          permissionAccount,
+          [
+            {
+              functionSelector: selector,
+              account: permissionAccount,
+              enabled: true,
+            },
+          ],
         );
 
         const [roleUsed] = await timelockManager.getTargetRole(
@@ -2187,8 +2619,13 @@ describe('MidasAccessControl', function () {
         const data = encodeSetPermissionRoleMult(
           accessControl,
           wAccessControlTester.address,
-          selector,
-          permissionAccount,
+          [
+            {
+              functionSelector: selector,
+              account: permissionAccount,
+              enabled: true,
+            },
+          ],
         );
 
         // equal delays → resolveAccessRole prefers master (rootDelay <= functionDelay)
@@ -2264,8 +2701,13 @@ describe('MidasAccessControl', function () {
         const data = encodeSetPermissionRoleMult(
           accessControl,
           wAccessControlTester.address,
-          selector,
-          permissionAccount,
+          [
+            {
+              functionSelector: selector,
+              account: permissionAccount,
+              enabled: true,
+            },
+          ],
         );
 
         const [roleUsed] = await timelockManager.getTargetRole(
@@ -2340,8 +2782,13 @@ describe('MidasAccessControl', function () {
         const data = encodeSetPermissionRoleMult(
           accessControl,
           wAccessControlTester.address,
-          selector,
-          permissionAccount,
+          [
+            {
+              functionSelector: selector,
+              account: permissionAccount,
+              enabled: true,
+            },
+          ],
         );
 
         const [roleUsed] = await timelockManager.getTargetRole(
@@ -2368,6 +2815,181 @@ describe('MidasAccessControl', function () {
             permissionAccount,
           ),
         ).eq(true);
+      });
+
+      it('when master schedules multi-selector batch - schedule and execute', async () => {
+        const {
+          accessControl,
+          owner,
+          regularAccounts,
+          roles,
+          timelock,
+          timelockManager,
+          wAccessControlTester,
+        } = await loadFixture(defaultDeploy);
+
+        const selectorA = encodeFnSelector('withOnlyRole(bytes32,bool)');
+        const selectorB = encodeFnSelector('withOnlyContractAdmin()');
+        const masterRole = roles.common.greenlistedOperator;
+        const delay = 3600;
+        const account = regularAccounts[0].address;
+
+        await wAccessControlTester.setContractAdminRole(masterRole);
+
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [masterRole],
+          [delay],
+        );
+
+        const data = encodeSetPermissionRoleMult(
+          accessControl,
+          wAccessControlTester.address,
+          [
+            {
+              functionSelector: selectorA,
+              account,
+              enabled: true,
+            },
+            {
+              functionSelector: selectorB,
+              account,
+              enabled: true,
+            },
+          ],
+        );
+
+        const [roleUsed] = await timelockManager.getTargetRole(
+          accessControl.address,
+          data,
+          owner.address,
+        );
+        expect(roleUsed).eq(masterRole);
+
+        await scheduleAndExecuteSetPermissionRoleMult(
+          { accessControl, owner, timelock, timelockManager },
+          data,
+          delay,
+          owner,
+        );
+
+        expect(
+          await accessControl[
+            'hasFunctionPermission(bytes32,address,bytes4,address)'
+          ](masterRole, wAccessControlTester.address, selectorA, account),
+        ).eq(true);
+        expect(
+          await accessControl[
+            'hasFunctionPermission(bytes32,address,bytes4,address)'
+          ](masterRole, wAccessControlTester.address, selectorB, account),
+        ).eq(true);
+      });
+
+      it('when operator schedules mixed-selector batch - should fail on execute', async () => {
+        const {
+          accessControl,
+          owner,
+          regularAccounts,
+          roles,
+          timelock,
+          timelockManager,
+          wAccessControlTester,
+        } = await loadFixture(defaultDeploy);
+
+        const selectorA = encodeFnSelector('withOnlyRole(bytes32,bool)');
+        const selectorB = encodeFnSelector('withOnlyContractAdmin()');
+        const masterRole = roles.common.greenlistedOperator;
+        const operator = regularAccounts[0];
+        const delay = 3600;
+        const account = regularAccounts[1].address;
+
+        await wAccessControlTester.setContractAdminRole(masterRole);
+
+        await setGrantOperatorRoleTester(
+          { accessControl, owner },
+          wAccessControlTester.address,
+          [
+            {
+              functionSelector: selectorA,
+              operator: operator.address,
+              enabled: true,
+            },
+          ],
+        );
+
+        const operatorRoleKey = await accessControl.grantOperatorRoleKey(
+          masterRole,
+          wAccessControlTester.address,
+          selectorA,
+        );
+
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [operatorRoleKey],
+          [delay],
+        );
+        await setRoleTimelocksTester(
+          { timelockManager, timelock, owner, accessControl },
+          [masterRole],
+          [7200],
+        );
+
+        const data = encodeSetPermissionRoleMult(
+          accessControl,
+          wAccessControlTester.address,
+          [
+            {
+              functionSelector: selectorA,
+              account,
+              enabled: true,
+            },
+            {
+              functionSelector: selectorB,
+              account,
+              enabled: true,
+            },
+          ],
+        );
+
+        const [roleUsed] = await timelockManager.getTargetRole(
+          accessControl.address,
+          data,
+          operator.address,
+        );
+        expect(roleUsed).eq(operatorRoleKey);
+
+        await bulkScheduleTimelockOperationTester(
+          { timelockManager, timelock, owner, accessControl },
+          [accessControl.address],
+          [data],
+          {},
+          { from: operator },
+        );
+
+        await increase(delay);
+
+        await executeTimelockOperationTester(
+          { timelockManager, timelock, owner, accessControl },
+          accessControl.address,
+          data,
+          operator.address,
+          {
+            from: owner,
+            revertMessage:
+              'TimelockController: underlying transaction reverted',
+          },
+        );
+
+        expect(
+          await accessControl[
+            'hasFunctionPermission(bytes32,address,bytes4,address)'
+          ](masterRole, wAccessControlTester.address, selectorA, account),
+        ).eq(false);
+        expect(
+          await accessControl[
+            'hasFunctionPermission(bytes32,address,bytes4,address)'
+          ](masterRole, wAccessControlTester.address, selectorB, account),
+        ).eq(false);
       });
     });
   });

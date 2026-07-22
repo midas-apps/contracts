@@ -533,7 +533,30 @@ export const setGrantOperatorRoleTester = async (
   });
 };
 
-export const setPermissionRoleTester = async (
+export type SetPermissionRoleParam = {
+  functionSelector: string;
+  account: string;
+  enabled: boolean;
+  delay?: BigNumberish;
+};
+
+const normalizeSetPermissionRoleParams = (
+  functionSelector: string,
+  params: {
+    account: string;
+    enabled: boolean;
+    delay?: BigNumberish;
+  }[],
+  defaultDelay?: BigNumberish,
+): SetPermissionRoleParam[] =>
+  params.map((param) => ({
+    functionSelector,
+    account: param.account,
+    enabled: param.enabled,
+    delay: param.delay ?? defaultDelay ?? 0,
+  }));
+
+export const setPermissionRoleMultTester = async (
   {
     accessControl,
     owner,
@@ -543,38 +566,31 @@ export const setPermissionRoleTester = async (
   },
   masterRole: string | undefined,
   targetContract: string,
-  functionSelector: string,
-  params: {
-    account: string;
-    enabled: boolean;
-  }[],
-  delay?: BigNumberish,
+  params: SetPermissionRoleParam[],
   opt?: OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
 
-  const callFn = masterRole
-    ? accessControl
-        .connect(from)
-        [
-          'setPermissionRoleMult(bytes32,address,bytes4,uint32,(address,bool)[])'
-        ].bind(
-          this,
-          masterRole,
-          targetContract,
-          functionSelector,
-          delay ?? 0,
-          params,
-        )
-    : accessControl
-        .connect(from)
-        ['setPermissionRoleMult(address,bytes4,uint32,(address,bool)[])'].bind(
-          this,
-          targetContract,
-          functionSelector,
-          delay ?? 0,
-          params,
-        );
+  const normalizedParams = params.map((param) => ({
+    functionSelector: param.functionSelector,
+    account: param.account,
+    enabled: param.enabled,
+    delay: param.delay ?? 0,
+  }));
+
+  const callFn = () =>
+    masterRole
+      ? accessControl
+          .connect(from)
+          [
+            'setPermissionRoleMult(bytes32,address,(bytes4,address,uint32,bool)[])'
+          ](masterRole, targetContract, normalizedParams)
+      : accessControl
+          .connect(from)
+          ['setPermissionRoleMult(address,(bytes4,address,uint32,bool)[])'](
+            targetContract,
+            normalizedParams,
+          );
 
   if (await handleRevert(callFn, accessControl, opt)) {
     return;
@@ -588,17 +604,17 @@ export const setPermissionRoleTester = async (
     ).contractAdminRole());
 
   const statesBefore = await Promise.all(
-    params.map(async (param) => {
+    normalizedParams.map(async (param) => {
       return await accessControl[
         'hasFunctionPermission(bytes32,address,bytes4,address)'
-      ](masterRole, targetContract, functionSelector, param.account);
+      ](masterRole, targetContract, param.functionSelector, param.account);
     }),
   );
 
   const txPromise = callFn();
   let permissionExpect: ReturnType<typeof expect> | undefined;
   for (const [index, stateBefore] of statesBefore.entries()) {
-    const param = params[index];
+    const param = normalizedParams[index];
 
     if (stateBefore !== param.enabled) {
       if (permissionExpect === undefined) {
@@ -613,7 +629,7 @@ export const setPermissionRoleTester = async (
             masterRole,
             targetContract,
             param.account,
-            functionSelector,
+            param.functionSelector,
             param.enabled,
           );
       } else {
@@ -628,7 +644,7 @@ export const setPermissionRoleTester = async (
             masterRole,
             targetContract,
             param.account,
-            functionSelector,
+            param.functionSelector,
             param.enabled,
           );
       }
@@ -640,27 +656,63 @@ export const setPermissionRoleTester = async (
     await txPromise;
   }
 
-  const key = await accessControl.permissionRoleKey(
-    masterRole,
-    targetContract,
-    functionSelector,
-  );
+  const delayChecks = new Map<string, BigNumberish>();
+  for (const param of normalizedParams) {
+    const delay = param.delay ?? 0;
+    if (BigNumber.from(delay).gt(0)) {
+      const key = await accessControl.permissionRoleKey(
+        masterRole,
+        targetContract,
+        param.functionSelector,
+      );
+      if (!delayChecks.has(key)) {
+        delayChecks.set(key, delay);
+      }
+    }
+  }
 
-  if (delay !== undefined && BigNumber.from(delay).gt(0)) {
+  for (const [key, delay] of delayChecks.entries()) {
     const [actualDelay] = await accessControl.getRoleTimelockDelay(key, 0);
     expect(actualDelay).eq(delay);
   }
 
-  await asyncForEach(statesBefore.entries(), async ([index, stateBefore]) => {
-    const param = params[index];
+  await asyncForEach(statesBefore.entries(), async ([index]) => {
+    const param = normalizedParams[index];
 
     expect(
       await accessControl[
         'hasFunctionPermission(bytes32,address,bytes4,address)'
-      ](masterRole, targetContract, functionSelector, param.account),
+      ](masterRole, targetContract, param.functionSelector, param.account),
     ).eq(param.enabled);
   });
 };
+
+export const setPermissionRoleTester = async (
+  {
+    accessControl,
+    owner,
+  }: {
+    accessControl: MidasAccessControl;
+    owner: SignerWithAddress;
+  },
+  masterRole: string | undefined,
+  targetContract: string,
+  functionSelector: string,
+  params: {
+    account: string;
+    enabled: boolean;
+    delay?: BigNumberish;
+  }[],
+  delay?: BigNumberish,
+  opt?: OptionalCommonParams,
+) =>
+  setPermissionRoleMultTester(
+    { accessControl, owner },
+    masterRole,
+    targetContract,
+    normalizeSetPermissionRoleParams(functionSelector, params, delay),
+    opt,
+  );
 
 type SetupFunctionAccessGrantOperatorParams = {
   accessControl: MidasAccessControl;

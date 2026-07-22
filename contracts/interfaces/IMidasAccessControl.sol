@@ -32,8 +32,12 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
      * @notice Set function permission params
      */
     struct SetPermissionRoleParams {
+        /// @notice scoped function selector
+        bytes4 functionSelector;
         /// @notice address receiving or losing permission
         address account;
+        /// @notice delay value
+        uint32 delay;
         /// @notice grant or revoke permission
         bool enabled;
     }
@@ -159,6 +163,16 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
     error RoleAdminMismatch(bytes32 role, bytes32 adminRole);
 
     /**
+     * @notice when the function selector mismatch
+     * @param actualFunctionSelector actual function selector
+     * @param requiredFunctionSelector required function selector
+     */
+    error FunctionSelectorMismatch(
+        bytes4 actualFunctionSelector,
+        bytes4 requiredFunctionSelector
+    );
+
+    /**
      * @notice Enable or disable which OZ role may administer function-access scopes for that role.
      * @dev Only `DEFAULT_ADMIN_ROLE` can call this function.
      * Prevents unrelated role admins from spamming access mappings.
@@ -184,14 +198,10 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
      * @dev caller must be a grant operator for the scope or have the master role
      * target contract must implement `IMidasAccessControlManaged` interface;
      * @param targetContract scoped contract
-     * @param functionSelector scoped function
-     * @param delay delay value
      * @param params array of SetPermissionRoleParams
      */
     function setPermissionRoleMult(
         address targetContract,
-        bytes4 functionSelector,
-        uint32 delay,
         SetPermissionRoleParams[] calldata params
     ) external;
 
@@ -200,15 +210,11 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
      * @dev caller must be a grant operator for the scope or have the master role
      * @param masterRole OZ role for the scope
      * @param targetContract scoped contract
-     * @param functionSelector scoped function
-     * @param delay delay value
      * @param params array of SetPermissionRoleParams
      */
     function setPermissionRoleMult(
         bytes32 masterRole,
         address targetContract,
-        bytes4 functionSelector,
-        uint32 delay,
         SetPermissionRoleParams[] calldata params
     ) external;
 
