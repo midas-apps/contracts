@@ -1,14 +1,17 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { MTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
-import { getChainOrThrow, getMTokenOrThrow } from '../../../helpers/utils';
+import { getChainOrThrow } from '../../../helpers/utils';
 import { applyGreenlistConfig } from '../common/greenlist';
 import { DeployFunction } from '../common/types';
 import { getNetworkConfig } from '../common/utils';
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+) => {
   const { networkName } = getChainOrThrow(hre);
-  const mToken = getMTokenOrThrow(hre);
   const greenlistConfig = getNetworkConfig(
     hre,
     mToken,

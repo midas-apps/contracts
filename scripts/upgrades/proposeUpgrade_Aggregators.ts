@@ -3,15 +3,18 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { proposeUpgradeContracts } from './common/upgrade-contracts';
 
+import { MTokenName } from '../../config';
 import { getCurrentAddresses } from '../../config/constants/addresses';
-import { getMTokenOrThrow } from '../../helpers/utils';
 import { DeployFunction } from '../deploy/common/types';
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+  _skipValidation?: boolean,
+) => {
   const upgradeId = 'mre7-custom-aggregator-upgrade-v3';
 
   const networkAddresses = getCurrentAddresses(hre);
-  const mToken = getMTokenOrThrow(hre);
   const tokenAddresses = networkAddresses?.[mToken];
 
   if (!tokenAddresses) {

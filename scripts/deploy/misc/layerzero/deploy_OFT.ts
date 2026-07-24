@@ -1,21 +1,18 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { rpcUrls } from '../../../../config';
+import { Network, PaymentTokenName, rpcUrls } from '../../../../config';
 import { midasAddressesPerNetwork } from '../../../../config/constants/addresses';
-import {
-  etherscanVerify,
-  getOriginalNetworkOrThrow,
-  getPaymentTokenOrThrow,
-  logDeploy,
-} from '../../../../helpers/utils';
+import { etherscanVerify, logDeploy } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
 import { getDeployer } from '../../common/utils';
 import { paymentTokenDeploymentConfigs } from '../../configs/payment-tokens';
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  paymentToken: PaymentTokenName,
+  originalNetwork: Network,
+) => {
   const deployer = await getDeployer(hre);
-  const paymentToken = getPaymentTokenOrThrow(hre);
-  const originalNetwork = getOriginalNetworkOrThrow(hre);
 
   const config =
     paymentTokenDeploymentConfigs.networkConfigs[hre.network.config.chainId!]?.[

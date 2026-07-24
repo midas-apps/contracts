@@ -1,23 +1,21 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { layerZeroEids, Network } from '../../../../config';
+import { layerZeroEids, MTokenName, Network } from '../../../../config';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
 import { lzConfigsPerMToken } from '../../../../config/misc';
-import {
-  etherscanVerify,
-  getOriginalNetwork,
-  getMTokenOrThrow,
-  logDeploy,
-} from '../../../../helpers/utils';
+import { etherscanVerify, logDeploy } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
 import { getDeployer, getNetworkConfig } from '../../common/utils';
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+  originalNetwork?: Network,
+) => {
   const deployer = await getDeployer(hre);
-  const mToken = getMTokenOrThrow(hre);
 
-  const originalNetwork =
-    getOriginalNetwork(hre) ?? (hre.network.name as Network);
+  const resolvedOriginalNetwork =
+    originalNetwork ?? (hre.network.name as Network);
 
   const addresses = getCurrentAddresses(hre);
 
@@ -44,15 +42,16 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const rateLimitConfigOverrides = config.layerZero.rateLimitConfig?.overrides;
 
   const allReceiverNetworks =
-    lzConfigsPerMToken?.[originalNetwork]?.[mToken]?.linkedNetworks;
+    lzConfigsPerMToken?.[resolvedOriginalNetwork]?.[mToken]?.linkedNetworks;
 
   if (!allReceiverNetworks || allReceiverNetworks.length === 0) {
     throw new Error('Receiver networks not found');
   }
 
-  const networksToRateLimit = [...allReceiverNetworks, originalNetwork].filter(
-    (network) => network !== hre.network.name,
-  );
+  const networksToRateLimit = [
+    ...allReceiverNetworks,
+    resolvedOriginalNetwork,
+  ].filter((network) => network !== hre.network.name);
 
   const rateLimitConfigs = networksToRateLimit.map((network) => {
     const configBase =

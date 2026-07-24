@@ -3,10 +3,12 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { deployPaymentTokenCustomAggregator } from './common/data-feed';
 import { DeployFunction } from './common/types';
 
-import { getPaymentTokenOrThrow } from '../../helpers/utils';
+import { PaymentTokenName } from '../../config';
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const paymentToken = getPaymentTokenOrThrow(hre);
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  paymentToken: PaymentTokenName,
+) => {
   await deployPaymentTokenCustomAggregator(hre, paymentToken);
 };
 

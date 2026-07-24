@@ -1,11 +1,11 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { MTokenName } from '../../../config';
 import {
   getCurrentAddresses,
   LayerZeroTokenAddresses,
   TokenAddresses,
 } from '../../../config/constants/addresses';
-import { getMTokenOrThrow } from '../../../helpers/utils';
 import { DeployFunction } from '../common/types';
 
 type AddressBookEntryConfig = {
@@ -49,9 +49,11 @@ const ADDRESS_BOOK_MAPPING: Partial<
   },
 };
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const mToken = getMTokenOrThrow(hre);
-
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+  keys?: string[],
+) => {
   const addresses = getCurrentAddresses(hre);
 
   if (!addresses) {
@@ -64,7 +66,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('Token addresses not found');
   }
 
-  const allowedKeys = hre.addressBookKeys;
+  const allowedKeys = keys;
 
   for (const [key, value] of Object.entries(tokenAddresses)) {
     if (!value) {
