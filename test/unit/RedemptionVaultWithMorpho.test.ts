@@ -953,8 +953,9 @@ describe('RedemptionVaultWithMorpho', function () {
   describe('redeemInstant()', () => {
     it('with min-balance mToken - redeems the full balance after transferring the fee', async () => {
       const {
-        feeReceiver,
         mTokenMinBalance,
+        mTokenToUsdDataFeed,
+        owner,
         paymentToken,
         redemptionVaultWithMorpho,
         regularAccounts,
@@ -967,19 +968,19 @@ describe('RedemptionVaultWithMorpho', function () {
         .connect(user)
         .approve(redemptionVaultWithMorpho.address, amount);
 
-      await expect(
-        redemptionVaultWithMorpho
-          .connect(user)
-          ['redeemInstant(address,uint256,uint256)'](
-            paymentToken.address,
-            amount,
-            0,
-          ),
-      ).not.reverted;
-      expect(await mTokenMinBalance.balanceOf(user.address)).eq(0);
-      expect(await mTokenMinBalance.balanceOf(feeReceiver.address)).eq(
-        parseUnits('0.0055'),
+      await redeemInstantTest(
+        {
+          redemptionVault: redemptionVaultWithMorpho,
+          owner,
+          mTBILL: mTokenMinBalance,
+          mTokenToUsdDataFeed,
+        },
+        paymentToken,
+        1.1,
+        { from: user },
       );
+
+      expect(await mTokenMinBalance.balanceOf(user.address)).eq(0);
     });
 
     it('should fail: when there is no token in vault', async () => {

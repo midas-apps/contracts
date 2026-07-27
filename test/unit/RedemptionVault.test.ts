@@ -1474,8 +1474,9 @@ describe('RedemptionVault', function () {
   describe('redeemInstant()', () => {
     it('with min-balance mToken - redeems the full balance after transferring the fee', async () => {
       const {
-        feeReceiver,
         mTokenMinBalance,
+        mTokenToUsdDataFeed,
+        owner,
         paymentToken,
         redemptionVault,
         regularAccounts,
@@ -1488,24 +1489,26 @@ describe('RedemptionVault', function () {
         .connect(user)
         .approve(redemptionVault.address, amount);
 
-      await expect(
-        redemptionVault
-          .connect(user)
-          ['redeemInstant(address,uint256,uint256)'](
-            paymentToken.address,
-            amount,
-            0,
-          ),
-      ).not.reverted;
-      expect(await mTokenMinBalance.balanceOf(user.address)).eq(0);
-      expect(await mTokenMinBalance.balanceOf(feeReceiver.address)).eq(
-        parseUnits('0.0055'),
+      await redeemInstantTest(
+        {
+          redemptionVault,
+          owner,
+          mTBILL: mTokenMinBalance,
+          mTokenToUsdDataFeed,
+        },
+        paymentToken,
+        1.1,
+        { from: user },
       );
+
+      expect(await mTokenMinBalance.balanceOf(user.address)).eq(0);
     });
 
     it('with min-balance mToken - allows a redemption that leaves exactly one token', async () => {
       const {
         mTokenMinBalance,
+        mTokenToUsdDataFeed,
+        owner,
         paymentToken,
         redemptionVault,
         regularAccounts,
@@ -1518,15 +1521,18 @@ describe('RedemptionVault', function () {
         .connect(user)
         .approve(redemptionVault.address, amount);
 
-      await expect(
-        redemptionVault
-          .connect(user)
-          ['redeemInstant(address,uint256,uint256)'](
-            paymentToken.address,
-            amount,
-            0,
-          ),
-      ).not.reverted;
+      await redeemInstantTest(
+        {
+          redemptionVault,
+          owner,
+          mTBILL: mTokenMinBalance,
+          mTokenToUsdDataFeed,
+        },
+        paymentToken,
+        1.1,
+        { from: user },
+      );
+
       expect(await mTokenMinBalance.balanceOf(user.address)).eq(
         parseUnits('1'),
       );
@@ -2906,8 +2912,9 @@ describe('RedemptionVault', function () {
   describe('redeemRequest()', () => {
     it('with min-balance mToken - requests the full balance after transferring the fee', async () => {
       const {
-        feeReceiver,
         mTokenMinBalance,
+        mTokenToUsdDataFeed,
+        owner,
         paymentToken,
         redemptionVault,
         regularAccounts,
@@ -2924,15 +2931,19 @@ describe('RedemptionVault', function () {
         .connect(user)
         .approve(redemptionVault.address, amount);
 
-      await expect(
-        redemptionVault
-          .connect(user)
-          ['redeemRequest(address,uint256)'](paymentToken.address, amount),
-      ).not.reverted;
-      expect(await mTokenMinBalance.balanceOf(user.address)).eq(0);
-      expect(await mTokenMinBalance.balanceOf(feeReceiver.address)).eq(
-        parseUnits('0.0055'),
+      await redeemRequestTest(
+        {
+          redemptionVault,
+          owner,
+          mTBILL: mTokenMinBalance,
+          mTokenToUsdDataFeed,
+        },
+        paymentToken,
+        1.1,
+        { from: user },
       );
+
+      expect(await mTokenMinBalance.balanceOf(user.address)).eq(0);
       expect(await mTokenMinBalance.balanceOf(redemptionVault.address)).eq(
         parseUnits('1.0945'),
       );
