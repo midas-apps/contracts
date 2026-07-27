@@ -1444,7 +1444,7 @@ describe('RedemptionVaultWithUSTB', function () {
         stableCoins.usdc,
         100,
         {
-          revertMessage: 'ERC20: burn amount exceeds balance',
+          revertMessage: 'ERC20: transfer amount exceeds balance',
         },
       );
     });

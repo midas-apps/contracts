@@ -996,7 +996,7 @@ describe('RedemptionVaultWithMToken', function () {
         stableCoins.dai,
         100,
         {
-          revertMessage: 'ERC20: burn amount exceeds balance',
+          revertMessage: 'ERC20: transfer amount exceeds balance',
         },
       );
     });

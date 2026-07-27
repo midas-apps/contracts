@@ -16,7 +16,10 @@ import {
   pauseVaultFn,
 } from '../common/common.helpers';
 import { setRoundData } from '../common/data-feed.helpers';
-import { defaultDeploy } from '../common/fixtures';
+import {
+  defaultDeploy,
+  mTokenMinBalanceRedemptionFixture,
+} from '../common/fixtures';
 import {
   addPaymentTokenTest,
   setInstantFeeTest,
@@ -948,6 +951,37 @@ describe('RedemptionVaultWithMorpho', function () {
   });
 
   describe('redeemInstant()', () => {
+    it('with min-balance mToken - redeems the full balance after transferring the fee', async () => {
+      const {
+        feeReceiver,
+        mTokenMinBalance,
+        paymentToken,
+        redemptionVaultWithMorpho,
+        regularAccounts,
+      } = await mTokenMinBalanceRedemptionFixture();
+      const user = regularAccounts[0];
+      const amount = parseUnits('1.1');
+
+      await mTokenMinBalance.mint(user.address, amount);
+      await mTokenMinBalance
+        .connect(user)
+        .approve(redemptionVaultWithMorpho.address, amount);
+
+      await expect(
+        redemptionVaultWithMorpho
+          .connect(user)
+          ['redeemInstant(address,uint256,uint256)'](
+            paymentToken.address,
+            amount,
+            0,
+          ),
+      ).not.reverted;
+      expect(await mTokenMinBalance.balanceOf(user.address)).eq(0);
+      expect(await mTokenMinBalance.balanceOf(feeReceiver.address)).eq(
+        parseUnits('0.0055'),
+      );
+    });
+
     it('should fail: when there is no token in vault', async () => {
       const {
         owner,
@@ -1108,7 +1142,7 @@ describe('RedemptionVaultWithMorpho', function () {
         stableCoins.usdc,
         100,
         {
-          revertMessage: 'ERC20: burn amount exceeds balance',
+          revertMessage: 'ERC20: transfer amount exceeds balance',
         },
       );
     });
