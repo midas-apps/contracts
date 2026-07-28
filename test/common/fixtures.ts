@@ -1027,8 +1027,11 @@ export const mTokenMinBalanceRedemptionFixture = async () => {
   const fx = await mTokenMinBalanceFixture();
   const {
     accessControl,
+    aavePoolMock,
+    buidlRedemption,
     dataFeed,
     feeReceiver,
+    liquidityProvider,
     mockedSanctionsList,
     morphoVaultMock,
     mTokenMinBalance,
@@ -1038,6 +1041,7 @@ export const mTokenMinBalanceRedemptionFixture = async () => {
     requestRedeemer,
     stableCoins,
     tokensReceiver,
+    ustbRedemption,
   } = fx;
 
   const redemptionVault = await new RedemptionVaultTest__factory(
@@ -1068,6 +1072,69 @@ export const mTokenMinBalanceRedemptionFixture = async () => {
     requestRedeemer.address,
   );
 
+  const redemptionVaultWithAave =
+    await new RedemptionVaultWithAaveTest__factory(owner).deploy();
+  await redemptionVaultWithAave.initialize(
+    accessControl.address,
+    {
+      mToken: mTokenMinBalance.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: parseUnits('0.5', 2),
+      instantDailyLimit: parseUnits('500000'),
+    },
+    mockedSanctionsList.address,
+    parseUnits('2', 2),
+    parseUnits('1.1'),
+    {
+      fiatAdditionalFee: parseUnits('0.1', 2),
+      fiatFlatFee: parseUnits('30'),
+      minFiatRedeemAmount: parseUnits('1000'),
+    },
+    requestRedeemer.address,
+  );
+  await redemptionVaultWithAave.setAavePool(
+    stableCoins.usdc.address,
+    aavePoolMock.address,
+  );
+
+  const redemptionVaultWithBUIDL =
+    await new RedemptionVaultWithBUIDLTest__factory(owner).deploy();
+  await redemptionVaultWithBUIDL[
+    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,uint256,uint256)'
+  ](
+    accessControl.address,
+    {
+      mToken: mTokenMinBalance.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: parseUnits('0.5', 2),
+      instantDailyLimit: parseUnits('500000'),
+    },
+    mockedSanctionsList.address,
+    parseUnits('2', 2),
+    parseUnits('1.1'),
+    {
+      fiatAdditionalFee: parseUnits('0.1', 2),
+      fiatFlatFee: parseUnits('30'),
+      minFiatRedeemAmount: parseUnits('1000'),
+    },
+    requestRedeemer.address,
+    buidlRedemption.address,
+    parseUnits('250000', 6),
+    parseUnits('250000', 6),
+  );
+
   const redemptionVaultWithMorpho =
     await new RedemptionVaultWithMorphoTest__factory(owner).deploy();
   await redemptionVaultWithMorpho.initialize(
@@ -1095,6 +1162,97 @@ export const mTokenMinBalanceRedemptionFixture = async () => {
     requestRedeemer.address,
   );
 
+  const redemptionVaultWithMToken =
+    await new RedemptionVaultWithMTokenTest__factory(owner).deploy();
+  await redemptionVaultWithMToken[
+    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
+  ](
+    accessControl.address,
+    {
+      mToken: mTokenMinBalance.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: parseUnits('0.5', 2),
+      instantDailyLimit: parseUnits('500000'),
+    },
+    mockedSanctionsList.address,
+    parseUnits('2', 2),
+    parseUnits('1.1'),
+    {
+      fiatAdditionalFee: parseUnits('0.1', 2),
+      fiatFlatFee: parseUnits('30'),
+      minFiatRedeemAmount: parseUnits('1000'),
+    },
+    requestRedeemer.address,
+    redemptionVault.address,
+  );
+
+  const redemptionVaultWithUSTB =
+    await new RedemptionVaultWithUSTBTest__factory(owner).deploy();
+  await redemptionVaultWithUSTB[
+    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
+  ](
+    accessControl.address,
+    {
+      mToken: mTokenMinBalance.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: parseUnits('0.5', 2),
+      instantDailyLimit: parseUnits('500000'),
+    },
+    mockedSanctionsList.address,
+    parseUnits('2', 2),
+    parseUnits('1.1'),
+    {
+      fiatAdditionalFee: parseUnits('0.1', 2),
+      fiatFlatFee: parseUnits('30'),
+      minFiatRedeemAmount: parseUnits('1000'),
+    },
+    requestRedeemer.address,
+    ustbRedemption.address,
+  );
+
+  const redemptionVaultWithSwapper =
+    await new RedemptionVaultWithSwapperTest__factory(owner).deploy();
+  await redemptionVaultWithSwapper[
+    'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address,address)'
+  ](
+    accessControl.address,
+    {
+      mToken: mTokenMinBalance.address,
+      mTokenDataFeed: mTokenToUsdDataFeed.address,
+    },
+    {
+      feeReceiver: feeReceiver.address,
+      tokensReceiver: tokensReceiver.address,
+    },
+    {
+      instantFee: parseUnits('0.5', 2),
+      instantDailyLimit: parseUnits('500000'),
+    },
+    mockedSanctionsList.address,
+    parseUnits('2', 2),
+    parseUnits('1.1'),
+    {
+      fiatAdditionalFee: parseUnits('0.1', 2),
+      fiatFlatFee: parseUnits('30'),
+      minFiatRedeemAmount: parseUnits('1000'),
+    },
+    requestRedeemer.address,
+    redemptionVault.address,
+    liquidityProvider.address,
+  );
+
   await accessControl.grantRole(
     mTokenMinBalanceRoles.burn,
     redemptionVault.address,
@@ -1104,12 +1262,40 @@ export const mTokenMinBalanceRedemptionFixture = async () => {
     redemptionVaultWithMorpho.address,
   );
   await accessControl.grantRole(
+    mTokenMinBalanceRoles.burn,
+    redemptionVaultWithAave.address,
+  );
+  await accessControl.grantRole(
+    mTokenMinBalanceRoles.burn,
+    redemptionVaultWithBUIDL.address,
+  );
+  await accessControl.grantRole(
+    mTokenMinBalanceRoles.burn,
+    redemptionVaultWithMToken.address,
+  );
+  await accessControl.grantRole(
+    mTokenMinBalanceRoles.burn,
+    redemptionVaultWithSwapper.address,
+  );
+  await accessControl.grantRole(
+    mTokenMinBalanceRoles.burn,
+    redemptionVaultWithUSTB.address,
+  );
+  await accessControl.grantRole(
     mTokenMinBalanceRoles.minBalanceExempt,
     feeReceiver.address,
   );
 
   const paymentToken = stableCoins.usdc;
-  for (const vault of [redemptionVault, redemptionVaultWithMorpho]) {
+  for (const vault of [
+    redemptionVault,
+    redemptionVaultWithAave,
+    redemptionVaultWithBUIDL,
+    redemptionVaultWithMToken,
+    redemptionVaultWithMorpho,
+    redemptionVaultWithSwapper,
+    redemptionVaultWithUSTB,
+  ]) {
     await vault.addPaymentToken(
       paymentToken.address,
       dataFeed.address,
@@ -1130,12 +1316,26 @@ export const mTokenMinBalanceRedemptionFixture = async () => {
     redemptionVaultWithMorpho.address,
     parseUnits('100', 8),
   );
+  for (const vault of [
+    redemptionVaultWithAave,
+    redemptionVaultWithBUIDL,
+    redemptionVaultWithMToken,
+    redemptionVaultWithSwapper,
+    redemptionVaultWithUSTB,
+  ]) {
+    await paymentToken.mint(vault.address, parseUnits('100', 8));
+  }
 
   return {
     ...fx,
     paymentToken,
     redemptionVault,
+    redemptionVaultWithAave,
+    redemptionVaultWithBUIDL,
     redemptionVaultWithMorpho,
+    redemptionVaultWithMToken,
+    redemptionVaultWithSwapper,
+    redemptionVaultWithUSTB,
   };
 };
 
