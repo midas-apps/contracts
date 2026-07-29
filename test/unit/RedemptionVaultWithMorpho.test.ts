@@ -16,7 +16,10 @@ import {
   pauseVaultFn,
 } from '../common/common.helpers';
 import { setRoundData } from '../common/data-feed.helpers';
-import { defaultDeploy } from '../common/fixtures';
+import {
+  defaultDeploy,
+  mTokenMinBalanceRedemptionFixture,
+} from '../common/fixtures';
 import {
   addPaymentTokenTest,
   setInstantFeeTest,
@@ -948,6 +951,137 @@ describe('RedemptionVaultWithMorpho', function () {
   });
 
   describe('redeemInstant()', () => {
+    it('with min-balance mToken - allows a redemption that leaves exactly one token', async () => {
+      const {
+        mTokenMinBalance,
+        mTokenToUsdDataFeed,
+        owner,
+        paymentToken,
+        redemptionVaultWithMorpho,
+        regularAccounts,
+      } = await mTokenMinBalanceRedemptionFixture();
+      const user = regularAccounts[0];
+      const amount = parseUnits('1.1');
+
+      await mTokenMinBalance.mint(user.address, parseUnits('2.1'));
+      await mTokenMinBalance
+        .connect(user)
+        .approve(redemptionVaultWithMorpho.address, amount);
+
+      await redeemInstantTest(
+        {
+          redemptionVault: redemptionVaultWithMorpho,
+          owner,
+          mTBILL: mTokenMinBalance,
+          mTokenToUsdDataFeed,
+        },
+        paymentToken,
+        1.1,
+        { from: user },
+      );
+
+      expect(await mTokenMinBalance.balanceOf(user.address)).eq(
+        parseUnits('1'),
+      );
+    });
+
+    it('should fail: with min-balance mToken - redemption would leave dust', async () => {
+      const {
+        feeReceiver,
+        mTokenMinBalance,
+        paymentToken,
+        redemptionVaultWithMorpho,
+        regularAccounts,
+      } = await mTokenMinBalanceRedemptionFixture();
+      const user = regularAccounts[0];
+      const amount = parseUnits('1.1');
+      const balance = parseUnits('2');
+
+      await mTokenMinBalance.mint(user.address, balance);
+      await mTokenMinBalance
+        .connect(user)
+        .approve(redemptionVaultWithMorpho.address, amount);
+
+      await expect(
+        redemptionVaultWithMorpho
+          .connect(user)
+          ['redeemInstant(address,uint256,uint256)'](
+            paymentToken.address,
+            amount,
+            0,
+          ),
+      ).revertedWith('MTMB: min balance not met');
+      expect(await mTokenMinBalance.balanceOf(user.address)).eq(balance);
+      expect(await mTokenMinBalance.balanceOf(feeReceiver.address)).eq(0);
+    });
+
+    it('should fail: with min-balance mToken - fee receiver is not exempt', async () => {
+      const {
+        accessControl,
+        feeReceiver,
+        mTokenMinBalance,
+        mTokenMinBalanceRoles,
+        paymentToken,
+        redemptionVaultWithMorpho,
+        regularAccounts,
+      } = await mTokenMinBalanceRedemptionFixture();
+      const user = regularAccounts[0];
+      const amount = parseUnits('1.1');
+
+      await accessControl.revokeRole(
+        mTokenMinBalanceRoles.minBalanceExempt,
+        feeReceiver.address,
+      );
+      await mTokenMinBalance.mint(user.address, amount);
+      await mTokenMinBalance
+        .connect(user)
+        .approve(redemptionVaultWithMorpho.address, amount);
+
+      await expect(
+        redemptionVaultWithMorpho
+          .connect(user)
+          ['redeemInstant(address,uint256,uint256)'](
+            paymentToken.address,
+            amount,
+            0,
+          ),
+      ).revertedWith('MTMB: min balance not met');
+      expect(await mTokenMinBalance.balanceOf(user.address)).eq(amount);
+      expect(await mTokenMinBalance.balanceOf(feeReceiver.address)).eq(0);
+    });
+
+    it('with min-balance mToken - redeems the full balance after transferring the fee', async () => {
+      const {
+        mTokenMinBalance,
+        mTokenToUsdDataFeed,
+        owner,
+        paymentToken,
+        redemptionVaultWithMorpho,
+        regularAccounts,
+      } = await mTokenMinBalanceRedemptionFixture();
+      const user = regularAccounts[0];
+      const amount = parseUnits('1.1');
+
+      await mTokenMinBalance.mint(user.address, amount);
+      await mTokenMinBalance
+        .connect(user)
+        .approve(redemptionVaultWithMorpho.address, amount);
+
+      await redeemInstantTest(
+        {
+          redemptionVault: redemptionVaultWithMorpho,
+          owner,
+          mTBILL: mTokenMinBalance,
+          mTokenToUsdDataFeed,
+        },
+        paymentToken,
+        1.1,
+        { from: user },
+      );
+
+      expect(await mTokenMinBalance.balanceOf(user.address)).eq(0);
+    });
+
     it('should fail: when there is no token in vault', async () => {
       const {
         owner,
@@ -1108,7 +1242,7 @@ describe('RedemptionVaultWithMorpho', function () {
         stableCoins.usdc,
         100,
         {
-          revertMessage: 'ERC20: burn amount exceeds balance',
+          revertMessage: 'ERC20: transfer amount exceeds balance',
         },
       );
     });
