@@ -45,6 +45,19 @@ export const upgradeConfigs: UpgradeConfig = {
         },
       },
     },
+    'mwin-rv-fee-transfer-order-fix': {
+      vaults: {
+        [chainIds.main]: {
+          overrides: {
+            mWIN: {
+              overrides: {
+                redemptionVaultMToken: true,
+              },
+            },
+          },
+        },
+      },
+    },
     'batch-upgrade-scope-w-supply-cap': {
       initializers: {
         depositVault: {
