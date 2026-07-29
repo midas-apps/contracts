@@ -184,7 +184,7 @@ export const releaseOrMint = async (
     expectMinted = !expectFallbackFail,
   }: ReleaseOrMintParams,
   opt?: CcipRevertParams,
-) => {
+): Promise<string> => {
   const { pool, mTBILL, offRamp, owner, remotePoolAddress, escrow } = fixture;
 
   const caller = opt?.from ?? offRamp;
@@ -215,7 +215,7 @@ export const releaseOrMint = async (
 
   if (opt?.revertMessage) {
     await expect(tx()).revertedWith(opt.revertMessage);
-    return;
+    return constants.HashZero;
   }
 
   if (opt?.revertWithCustomError) {
@@ -228,7 +228,7 @@ export const releaseOrMint = async (
     } else {
       await assertion;
     }
-    return;
+    return constants.HashZero;
   }
 
   const totalSupplyBefore = await mTBILL.totalSupply();
@@ -334,7 +334,7 @@ export const createEscrowFailedMessage = async (
     amount: BigNumberish;
     receiver?: Account;
   },
-) => {
+): Promise<string> => {
   const { mTBILL, accessControl, owner, alice } = fixture;
   const to = getAccount(receiver ?? alice);
 

@@ -504,7 +504,7 @@ describe('CCIP', function () {
         await blackList({ blacklistable: mTBILL, accessControl, owner }, alice);
         await blackList(
           { blacklistable: mTBILL, accessControl, owner },
-          fallbackReceiver,
+          fallbackReceiver.address,
         );
 
         await releaseOrMint(fixture, {
@@ -1434,6 +1434,677 @@ describe('CCIP', function () {
         expect(await escrow.supportsInterface(escrowInterfaceId)).eq(true);
         expect(await escrow.supportsInterface('0x01ffc9a7')).eq(true);
         expect(await escrow.supportsInterface('0xffffffff')).eq(false);
+      });
+    });
+  });
+
+  describe('Gas estimation', () => {
+    const RELEASE_OR_MINT_SIG =
+      'releaseOrMint((bytes,uint64,address,uint256,address,bytes,bytes,bytes))';
+
+    // Measured on fresh fixtures; bounds include ~5-10% headroom.
+    // Worst path: escrow FallbackHit + onFailedMessage (~300k).
+    const GAS_MAX = {
+      directMint: 130_000,
+      eoaFallbackHit: 160_000,
+      contractNoCallbackFallbackHit: 160_000,
+      escrowFallbackHitWithCallback: 320_000,
+      fallbackFailBothBlacklisted: 110_000,
+      fallbackFailPaused: 120_000,
+      fallbackFailMinterRevoked: 100_000,
+      fallbackFailCallbackReverts: 165_000,
+      permissionedDirectMint: 135_000,
+      permissionedEoaFallbackHit: 160_000,
+      permissionedFallbackFail: 125_000,
+      permissionedEscrowFallbackHitWithCallback: 320_000,
+      permissionedFallbackFailCallbackReverts: 165_000,
+    } as const;
+
+    const buildReleaseOrMintIn = (params: {
+      fixture: Fixture;
+      receiver: string;
+      localToken: string;
+    }) => {
+      const { fixture, receiver, localToken } = params;
+      return {
+        originalSender: fixture.owner.address,
+        remoteChainSelector: fixture.remoteChainSelector,
+        receiver,
+        sourceDenominatedAmount: parseUnits('100'),
+        localToken,
+        sourcePoolAddress: fixture.remotePoolAddress,
+        sourcePoolData: encodeDecimals(18),
+        offchainTokenData: '0x',
+      };
+    };
+
+    type ReleaseOrMintInput = ReturnType<typeof buildReleaseOrMintIn>;
+
+    const measureReleaseOrMint = async (params: {
+      pool: Fixture['pool'];
+      offRamp: Fixture['offRamp'];
+      input: ReleaseOrMintInput;
+    }) => {
+      const { pool, offRamp, input } = params;
+      const estimated = await pool
+        .connect(offRamp)
+        .estimateGas[RELEASE_OR_MINT_SIG](input);
+
+      const tx = await pool
+        .connect(offRamp)
+        [RELEASE_OR_MINT_SIG](input, { gasLimit: estimated.mul(2) });
+      const receipt = await tx.wait();
+
+      const eventNames =
+        receipt.events
+          ?.map((e) => e.event)
+          .filter((name): name is string => typeof name === 'string') ?? [];
+
+      const fallbackHit = receipt.events?.find(
+        (e) => e.event === 'FallbackHit',
+      );
+
+      return {
+        gasUsed: receipt.gasUsed,
+        eventNames,
+        withCallback: fallbackHit?.args?.withCallback as boolean | undefined,
+      };
+    };
+
+    const deployPermissionedPool = async (
+      fixture: Fixture,
+      fallbackReceiver: string,
+    ) => {
+      const {
+        owner,
+        accessControl,
+        rmn,
+        router,
+        remoteChainSelector,
+        remotePoolAddress,
+        remoteTokenAddress,
+      } = fixture;
+
+      const TokenFactory = await ethers.getContractFactory(
+        'mTokenPermissionedTest',
+      );
+      const token = await TokenFactory.deploy();
+      await token.initialize(accessControl.address);
+
+      const minterRole = await token.M_TOKEN_TEST_MINT_OPERATOR_ROLE();
+      const burnerRole = await token.M_TOKEN_TEST_BURN_OPERATOR_ROLE();
+      const pauserRole = await token.M_TOKEN_TEST_PAUSE_OPERATOR_ROLE();
+      const greenlistedRole = await token.M_TOKEN_TEST_GREENLISTED_ROLE();
+
+      await accessControl.grantRole(minterRole, owner.address);
+      await accessControl.grantRole(burnerRole, owner.address);
+      await accessControl.grantRole(pauserRole, owner.address);
+
+      const PoolFactory = await ethers.getContractFactory(
+        'MidasCCTBurnMintTokenPool',
+      );
+      const pool = await PoolFactory.deploy(
+        token.address,
+        rmn.address,
+        router.address,
+        fallbackReceiver,
+      );
+
+      await accessControl.grantRole(minterRole, pool.address);
+      await accessControl.grantRole(burnerRole, pool.address);
+
+      const disabledRateLimiter = {
+        isEnabled: false,
+        capacity: 0,
+        rate: 0,
+      };
+      await pool.applyChainUpdates(
+        [],
+        [
+          {
+            remoteChainSelector,
+            remotePoolAddresses: [remotePoolAddress],
+            remoteTokenAddress,
+            outboundRateLimiterConfig: disabledRateLimiter,
+            inboundRateLimiterConfig: disabledRateLimiter,
+          },
+        ],
+      );
+
+      return { token, pool, greenlistedRole };
+    };
+
+    const deployEscrowForPool = async (
+      fixture: Fixture,
+      poolAddress: string,
+    ) => {
+      const { accessControl, defaultRecipient, owner } = fixture;
+      const escrow = await deployProxyContract('MidasCCTFallbackEscrow', [
+        accessControl.address,
+        poolAddress,
+        defaultRecipient.address,
+      ]);
+      await accessControl.grantRole(
+        await escrow.FALLBACK_ESCROW_ADMIN_ROLE(),
+        owner.address,
+      );
+      return escrow;
+    };
+
+    describe('mTBILL + EOA fallback (no callback)', () => {
+      it('direct mint is bounded', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { pool, offRamp, owner, defaultRecipient, mTBILL } = fixture;
+
+        await setFallbackReceiver(fixture, defaultRecipient);
+
+        const { gasUsed, eventNames } = await measureReleaseOrMint({
+          pool,
+          offRamp,
+          input: buildReleaseOrMintIn({
+            fixture,
+            receiver: owner.address,
+            localToken: mTBILL.address,
+          }),
+        });
+
+        expect(eventNames).to.include('ReleasedOrMinted');
+        expect(eventNames).to.not.include('FallbackHit');
+        expect(eventNames).to.not.include('FallbackFail');
+        expect(gasUsed).to.lte(GAS_MAX.directMint);
+      });
+
+      it('FallbackHit when receiver is blacklisted is bounded', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const {
+          pool,
+          offRamp,
+          accessControl,
+          owner,
+          alice,
+          defaultRecipient,
+          mTBILL,
+        } = fixture;
+
+        await setFallbackReceiver(fixture, defaultRecipient);
+        await blackList({ blacklistable: mTBILL, accessControl, owner }, alice);
+
+        const { gasUsed, eventNames, withCallback } =
+          await measureReleaseOrMint({
+            pool,
+            offRamp,
+            input: buildReleaseOrMintIn({
+              fixture,
+              receiver: alice.address,
+              localToken: mTBILL.address,
+            }),
+          });
+
+        expect(eventNames).to.include('FallbackHit');
+        expect(withCallback).eq(false);
+        expect(eventNames).to.not.include('FallbackFail');
+        expect(gasUsed).to.lte(GAS_MAX.eoaFallbackHit);
+      });
+
+      it('FallbackFail when receiver and fallback are both blacklisted is bounded', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const {
+          pool,
+          offRamp,
+          accessControl,
+          owner,
+          alice,
+          defaultRecipient,
+          mTBILL,
+        } = fixture;
+
+        await setFallbackReceiver(fixture, defaultRecipient);
+        await blackList({ blacklistable: mTBILL, accessControl, owner }, alice);
+        await blackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          defaultRecipient,
+        );
+
+        const { gasUsed, eventNames } = await measureReleaseOrMint({
+          pool,
+          offRamp,
+          input: buildReleaseOrMintIn({
+            fixture,
+            receiver: alice.address,
+            localToken: mTBILL.address,
+          }),
+        });
+
+        expect(eventNames).to.include('FallbackFail');
+        expect(eventNames).to.not.include('FallbackHit');
+        expect(gasUsed).to.lte(GAS_MAX.fallbackFailBothBlacklisted);
+      });
+
+      it('FallbackFail when token is paused is bounded', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { pool, offRamp, owner, defaultRecipient, mTBILL } = fixture;
+
+        await setFallbackReceiver(fixture, defaultRecipient);
+        await mTBILL.pause();
+
+        const { gasUsed, eventNames } = await measureReleaseOrMint({
+          pool,
+          offRamp,
+          input: buildReleaseOrMintIn({
+            fixture,
+            receiver: owner.address,
+            localToken: mTBILL.address,
+          }),
+        });
+
+        expect(eventNames).to.include('FallbackFail');
+        expect(eventNames).to.not.include('FallbackHit');
+        expect(gasUsed).to.lte(GAS_MAX.fallbackFailPaused);
+      });
+
+      it('FallbackFail when minter role is revoked is bounded', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const {
+          pool,
+          offRamp,
+          accessControl,
+          owner,
+          alice,
+          defaultRecipient,
+          mTBILL,
+        } = fixture;
+
+        await setFallbackReceiver(fixture, defaultRecipient);
+        await blackList({ blacklistable: mTBILL, accessControl, owner }, alice);
+        const roles = getRolesForToken('mTBILL');
+        await accessControl.revokeRole(roles.minter, pool.address);
+
+        const { gasUsed, eventNames } = await measureReleaseOrMint({
+          pool,
+          offRamp,
+          input: buildReleaseOrMintIn({
+            fixture,
+            receiver: alice.address,
+            localToken: mTBILL.address,
+          }),
+        });
+
+        expect(eventNames).to.include('FallbackFail');
+        expect(eventNames).to.not.include('FallbackHit');
+        expect(gasUsed).to.lte(GAS_MAX.fallbackFailMinterRevoked);
+      });
+    });
+
+    describe('mTBILL + escrow fallback (with callback)', () => {
+      it('direct mint is bounded', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { pool, offRamp, owner, mTBILL } = fixture;
+
+        const { gasUsed, eventNames } = await measureReleaseOrMint({
+          pool,
+          offRamp,
+          input: buildReleaseOrMintIn({
+            fixture,
+            receiver: owner.address,
+            localToken: mTBILL.address,
+          }),
+        });
+
+        expect(eventNames).to.include('ReleasedOrMinted');
+        expect(eventNames).to.not.include('FallbackHit');
+        expect(eventNames).to.not.include('FallbackFail');
+        expect(gasUsed).to.lte(GAS_MAX.directMint);
+      });
+
+      it('FallbackHit + onFailedMessage when receiver is blacklisted is bounded', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { pool, offRamp, accessControl, owner, alice, mTBILL } = fixture;
+
+        await blackList({ blacklistable: mTBILL, accessControl, owner }, alice);
+
+        const { gasUsed, eventNames, withCallback } =
+          await measureReleaseOrMint({
+            pool,
+            offRamp,
+            input: buildReleaseOrMintIn({
+              fixture,
+              receiver: alice.address,
+              localToken: mTBILL.address,
+            }),
+          });
+
+        expect(eventNames).to.include('FallbackHit');
+        expect(withCallback).eq(true);
+        expect(eventNames).to.not.include('FallbackFail');
+        expect(gasUsed).to.lte(GAS_MAX.escrowFallbackHitWithCallback);
+      });
+
+      it('FallbackFail when escrow is blacklisted is bounded', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { pool, offRamp, accessControl, owner, alice, escrow, mTBILL } =
+          fixture;
+
+        await blackList({ blacklistable: mTBILL, accessControl, owner }, alice);
+        await blackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          escrow.address,
+        );
+
+        const { gasUsed, eventNames } = await measureReleaseOrMint({
+          pool,
+          offRamp,
+          input: buildReleaseOrMintIn({
+            fixture,
+            receiver: alice.address,
+            localToken: mTBILL.address,
+          }),
+        });
+
+        expect(eventNames).to.include('FallbackFail');
+        expect(eventNames).to.not.include('FallbackHit');
+        expect(gasUsed).to.lte(GAS_MAX.fallbackFailBothBlacklisted);
+      });
+
+      it('FallbackFail when token is paused is bounded', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { pool, offRamp, owner, mTBILL } = fixture;
+
+        await mTBILL.pause();
+
+        const { gasUsed, eventNames } = await measureReleaseOrMint({
+          pool,
+          offRamp,
+          input: buildReleaseOrMintIn({
+            fixture,
+            receiver: owner.address,
+            localToken: mTBILL.address,
+          }),
+        });
+
+        expect(eventNames).to.include('FallbackFail');
+        expect(eventNames).to.not.include('FallbackHit');
+        expect(gasUsed).to.lte(GAS_MAX.fallbackFailPaused);
+      });
+
+      it('FallbackFail when minter role is revoked is bounded', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { pool, offRamp, accessControl, owner, alice, mTBILL } = fixture;
+
+        await blackList({ blacklistable: mTBILL, accessControl, owner }, alice);
+        const roles = getRolesForToken('mTBILL');
+        await accessControl.revokeRole(roles.minter, pool.address);
+
+        const { gasUsed, eventNames } = await measureReleaseOrMint({
+          pool,
+          offRamp,
+          input: buildReleaseOrMintIn({
+            fixture,
+            receiver: alice.address,
+            localToken: mTBILL.address,
+          }),
+        });
+
+        expect(eventNames).to.include('FallbackFail');
+        expect(eventNames).to.not.include('FallbackHit');
+        expect(gasUsed).to.lte(GAS_MAX.fallbackFailMinterRevoked);
+      });
+    });
+
+    describe('mTBILL + contract fallback without callback', () => {
+      it('FallbackHit without callback when receiver is blacklisted is bounded', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { pool, offRamp, accessControl, owner, alice, mTBILL } = fixture;
+
+        const mock = await new ERC20Mock__factory(owner).deploy(18);
+        await setFallbackReceiver(fixture, mock.address);
+        await blackList({ blacklistable: mTBILL, accessControl, owner }, alice);
+
+        const { gasUsed, eventNames, withCallback } =
+          await measureReleaseOrMint({
+            pool,
+            offRamp,
+            input: buildReleaseOrMintIn({
+              fixture,
+              receiver: alice.address,
+              localToken: mTBILL.address,
+            }),
+          });
+
+        expect(eventNames).to.include('FallbackHit');
+        expect(withCallback).eq(false);
+        expect(eventNames).to.not.include('FallbackFail');
+        expect(gasUsed).to.lte(GAS_MAX.contractNoCallbackFallbackHit);
+      });
+    });
+
+    describe('mTBILL + reverting callback fallback', () => {
+      it('FallbackFail when fallback mint succeeds but callback reverts is bounded', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { pool, offRamp, accessControl, owner, alice, mTBILL } = fixture;
+
+        const RevertingFactory = await ethers.getContractFactory(
+          'MidasCCTFailedMessageFallbackRevertingTester',
+        );
+        const reverting = await RevertingFactory.deploy();
+        await setFallbackReceiver(fixture, reverting.address);
+        await blackList({ blacklistable: mTBILL, accessControl, owner }, alice);
+
+        const { gasUsed, eventNames } = await measureReleaseOrMint({
+          pool,
+          offRamp,
+          input: buildReleaseOrMintIn({
+            fixture,
+            receiver: alice.address,
+            localToken: mTBILL.address,
+          }),
+        });
+
+        expect(eventNames).to.include('FallbackFail');
+        expect(eventNames).to.not.include('FallbackHit');
+        expect(gasUsed).to.lte(GAS_MAX.fallbackFailCallbackReverts);
+      });
+    });
+
+    describe('mTokenPermissionedTest + EOA fallback', () => {
+      it('direct mint is bounded (receiver greenlisted)', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { offRamp, accessControl, alice, defaultRecipient } = fixture;
+
+        const { token, pool, greenlistedRole } = await deployPermissionedPool(
+          fixture,
+          defaultRecipient.address,
+        );
+        await accessControl.grantRole(greenlistedRole, alice.address);
+
+        const { gasUsed, eventNames } = await measureReleaseOrMint({
+          pool,
+          offRamp,
+          input: buildReleaseOrMintIn({
+            fixture,
+            receiver: alice.address,
+            localToken: token.address,
+          }),
+        });
+
+        expect(eventNames).to.include('ReleasedOrMinted');
+        expect(eventNames).to.not.include('FallbackHit');
+        expect(eventNames).to.not.include('FallbackFail');
+        expect(gasUsed).to.lte(GAS_MAX.permissionedDirectMint);
+      });
+
+      it('FallbackHit when receiver is not greenlisted and fallback is greenlisted is bounded', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { offRamp, accessControl, alice, defaultRecipient } = fixture;
+
+        const { token, pool, greenlistedRole } = await deployPermissionedPool(
+          fixture,
+          defaultRecipient.address,
+        );
+        await accessControl.grantRole(
+          greenlistedRole,
+          defaultRecipient.address,
+        );
+
+        const { gasUsed, eventNames, withCallback } =
+          await measureReleaseOrMint({
+            pool,
+            offRamp,
+            input: buildReleaseOrMintIn({
+              fixture,
+              receiver: alice.address,
+              localToken: token.address,
+            }),
+          });
+
+        expect(eventNames).to.include('FallbackHit');
+        expect(withCallback).eq(false);
+        expect(eventNames).to.not.include('FallbackFail');
+        expect(gasUsed).to.lte(GAS_MAX.permissionedEoaFallbackHit);
+      });
+
+      it('FallbackFail when neither receiver nor fallback is greenlisted is bounded', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { offRamp, alice, defaultRecipient } = fixture;
+
+        const { token, pool } = await deployPermissionedPool(
+          fixture,
+          defaultRecipient.address,
+        );
+
+        const { gasUsed, eventNames } = await measureReleaseOrMint({
+          pool,
+          offRamp,
+          input: buildReleaseOrMintIn({
+            fixture,
+            receiver: alice.address,
+            localToken: token.address,
+          }),
+        });
+
+        expect(eventNames).to.include('FallbackFail');
+        expect(eventNames).to.not.include('FallbackHit');
+        expect(gasUsed).to.lte(GAS_MAX.permissionedFallbackFail);
+      });
+
+      it('FallbackFail when token is paused is bounded', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { offRamp, accessControl, alice, defaultRecipient } = fixture;
+
+        const { token, pool, greenlistedRole } = await deployPermissionedPool(
+          fixture,
+          defaultRecipient.address,
+        );
+        await accessControl.grantRole(greenlistedRole, alice.address);
+        await accessControl.grantRole(
+          greenlistedRole,
+          defaultRecipient.address,
+        );
+        await token.pause();
+
+        const { gasUsed, eventNames } = await measureReleaseOrMint({
+          pool,
+          offRamp,
+          input: buildReleaseOrMintIn({
+            fixture,
+            receiver: alice.address,
+            localToken: token.address,
+          }),
+        });
+
+        expect(eventNames).to.include('FallbackFail');
+        expect(eventNames).to.not.include('FallbackHit');
+        expect(gasUsed).to.lte(GAS_MAX.permissionedFallbackFail);
+      });
+    });
+
+    describe('mTokenPermissionedTest + escrow fallback', () => {
+      it('FallbackHit + onFailedMessage is bounded', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { offRamp, accessControl, alice, defaultRecipient } = fixture;
+
+        const { token, pool, greenlistedRole } = await deployPermissionedPool(
+          fixture,
+          defaultRecipient.address,
+        );
+        const escrow = await deployEscrowForPool(fixture, pool.address);
+        await pool.setFallbackReceiver(escrow.address);
+        await accessControl.grantRole(greenlistedRole, escrow.address);
+
+        const { gasUsed, eventNames, withCallback } =
+          await measureReleaseOrMint({
+            pool,
+            offRamp,
+            input: buildReleaseOrMintIn({
+              fixture,
+              receiver: alice.address,
+              localToken: token.address,
+            }),
+          });
+
+        expect(eventNames).to.include('FallbackHit');
+        expect(withCallback).eq(true);
+        expect(eventNames).to.not.include('FallbackFail');
+        expect(gasUsed).to.lte(
+          GAS_MAX.permissionedEscrowFallbackHitWithCallback,
+        );
+      });
+
+      it('FallbackFail when escrow is not greenlisted is bounded', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { offRamp, alice, defaultRecipient } = fixture;
+
+        const { token, pool } = await deployPermissionedPool(
+          fixture,
+          defaultRecipient.address,
+        );
+        const escrow = await deployEscrowForPool(fixture, pool.address);
+        await pool.setFallbackReceiver(escrow.address);
+
+        const { gasUsed, eventNames } = await measureReleaseOrMint({
+          pool,
+          offRamp,
+          input: buildReleaseOrMintIn({
+            fixture,
+            receiver: alice.address,
+            localToken: token.address,
+          }),
+        });
+
+        expect(eventNames).to.include('FallbackFail');
+        expect(eventNames).to.not.include('FallbackHit');
+        expect(gasUsed).to.lte(GAS_MAX.permissionedFallbackFail);
+      });
+    });
+
+    describe('mTokenPermissionedTest + reverting callback fallback', () => {
+      it('FallbackFail when fallback mint succeeds but callback reverts is bounded', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { offRamp, accessControl, alice } = fixture;
+
+        const RevertingFactory = await ethers.getContractFactory(
+          'MidasCCTFailedMessageFallbackRevertingTester',
+        );
+        const reverting = await RevertingFactory.deploy();
+
+        const { token, pool, greenlistedRole } = await deployPermissionedPool(
+          fixture,
+          reverting.address,
+        );
+        await accessControl.grantRole(greenlistedRole, reverting.address);
+
+        const { gasUsed, eventNames } = await measureReleaseOrMint({
+          pool,
+          offRamp,
+          input: buildReleaseOrMintIn({
+            fixture,
+            receiver: alice.address,
+            localToken: token.address,
+          }),
+        });
+
+        expect(eventNames).to.include('FallbackFail');
+        expect(eventNames).to.not.include('FallbackHit');
+        expect(gasUsed).to.lte(GAS_MAX.permissionedFallbackFailCallbackReverts);
       });
     });
   });
