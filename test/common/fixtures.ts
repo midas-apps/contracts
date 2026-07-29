@@ -61,6 +61,7 @@ import {
   MidasAxelarVaultExecutableTester,
   LzEndpointV2Mock__factory,
   MidasCCTBurnMintTokenPool__factory,
+  MidasCCTFallbackEscrow,
   Router__factory,
   CCIPRmnMock__factory,
 } from '../../typechain-types';
@@ -1360,7 +1361,7 @@ export const ccipCctFixture = async () => {
 
   const remoteChainSelector = ethers.BigNumber.from('5009297550715157269');
 
-  const [onRamp, offRamp, remotePool, remoteToken, alice, fallbackReceiver] =
+  const [onRamp, offRamp, remotePool, remoteToken, alice, defaultRecipient] =
     regularAccounts;
 
   const remotePoolAddress = ethers.utils.defaultAbiCoder.encode(
@@ -1379,11 +1380,24 @@ export const ccipCctFixture = async () => {
     rmn.address,
   );
 
+  // Temporary fallback until the escrow is deployed and wired in.
   const pool = await new MidasCCTBurnMintTokenPool__factory(owner).deploy(
     mTBILL.address,
     rmn.address,
     router.address,
-    fallbackReceiver.address,
+    defaultRecipient.address,
+  );
+
+  const escrow = await deployProxyContract<MidasCCTFallbackEscrow>(
+    'MidasCCTFallbackEscrow',
+    [accessControl.address, pool.address, defaultRecipient.address],
+  );
+
+  await pool.setFallbackReceiver(escrow.address);
+
+  await accessControl.grantRole(
+    await escrow.FALLBACK_ESCROW_ADMIN_ROLE(),
+    owner.address,
   );
 
   const roles = getRolesForToken('mTBILL');
@@ -1419,6 +1433,7 @@ export const ccipCctFixture = async () => {
   return {
     ...defaultFixture,
     pool,
+    escrow,
     router,
     rmn,
     remoteChainSelector,
@@ -1429,6 +1444,7 @@ export const ccipCctFixture = async () => {
     onRamp,
     offRamp,
     alice,
-    fallbackReceiver,
+    defaultRecipient,
+    fallbackReceiver: escrow,
   };
 };

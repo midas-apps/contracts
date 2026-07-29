@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity 0.8.26;
+pragma solidity 0.8.28;
+
+import {ERC165CheckerUpgradeable as ERC165Checker} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol";
 
 import {IBurnMintERC20} from "@chainlink/contracts-ccip/contracts/interfaces/IBurnMintERC20.sol";
 import {BurnMintTokenPool} from "@chainlink/contracts-ccip/contracts/pools/BurnMintTokenPool.sol";
 import {TokenPool} from "@chainlink/contracts-ccip/contracts/pools/TokenPool.sol";
+import {IPoolV2} from "@chainlink/contracts-ccip/contracts/interfaces/IPoolV2.sol";
+import {Pool} from "@chainlink/contracts-ccip/contracts/libraries/Pool.sol";
+
 import {IMToken} from "../../interfaces/IMToken.sol";
+import {IMidasCCTFailedMessageFallback} from "../../interfaces/ccip/IMidasCCTFailedMessageFallback.sol";
 
 /**
  * @title MidasCCTBurnMintTokenPool
@@ -13,7 +19,7 @@ import {IMToken} from "../../interfaces/IMToken.sol";
  */
 contract MidasCCTBurnMintTokenPool is BurnMintTokenPool {
     /**
-     * @notice The receiver of the tokens if user mint fails
+     * @notice the receiver of the tokens if user mint fails
      */
     address public fallbackReceiver;
 
@@ -29,6 +35,20 @@ contract MidasCCTBurnMintTokenPool is BurnMintTokenPool {
      * @param error The error that occurred
      */
     event FallbackHit(
+        address indexed originalReceiver,
+        address indexed fallbackReceiver,
+        uint256 amount,
+        bool withCallback,
+        bytes error
+    );
+
+    /**
+     * @param originalReceiver The original receiver of the tokens
+     * @param fallbackReceiver The fallback receiver of the tokens
+     * @param amount The amount of tokens
+     * @param error The error that occurred
+     */
+    event FallbackFail(
         address indexed originalReceiver,
         address indexed fallbackReceiver,
         uint256 amount,
@@ -74,10 +94,47 @@ contract MidasCCTBurnMintTokenPool is BurnMintTokenPool {
     }
 
     /**
-     * @inheritdoc TokenPool
+     * @notice Handle the fallback of the pool
+     * @dev Only callable by the contract itself
+     * @param receiver The receiver of the tokens
+     * @param amount The amount of tokens
+     * @return _fallbackReceiver The fallback receiver of the tokens
+     * @return _withCallback Whether the fallback has a callback
      */
-    function _lockOrBurn(uint64, uint256 amount) internal virtual override {
-        IMToken(address(i_token)).burn(address(this), amount);
+    function handleFallback(address receiver, uint256 amount)
+        external
+        returns (address _fallbackReceiver, bool _withCallback)
+    {
+        _onlySelf();
+
+        _fallbackReceiver = fallbackReceiver;
+        _mint(_fallbackReceiver, amount);
+
+        if (
+            _fallbackReceiver.code.length > 0 &&
+            ERC165Checker.supportsInterface(
+                _fallbackReceiver,
+                type(IMidasCCTFailedMessageFallback).interfaceId
+            )
+        ) {
+            _withCallback = true;
+            IMidasCCTFailedMessageFallback(_fallbackReceiver).onFailedMessage(
+                receiver,
+                amount
+            );
+        }
+    }
+
+    /**
+     * @notice Function that mints the tokens to the receiver and
+     * can be wrapped with a try/catch to handle errors
+     * @dev Only callable by the contract itself
+     * @param receiver The receiver of the tokens
+     * @param amount The amount of tokens
+     */
+    function releaseOrMintInternal(address receiver, uint256 amount) external {
+        _onlySelf();
+        _mint(receiver, amount);
     }
 
     /**
@@ -92,23 +149,35 @@ contract MidasCCTBurnMintTokenPool is BurnMintTokenPool {
         uint64 /* remoteChainSelector */
     ) internal virtual override {
         try this.releaseOrMintInternal(receiver, amount) {} catch (
-            bytes memory error
+            bytes memory err
         ) {
-            _mint(fallbackReceiver, amount);
-            emit FallbackHit(receiver, fallbackReceiver, amount, error);
+            try this.handleFallback(receiver, amount) returns (
+                address _fallbackReceiver,
+                bool withCallback
+            ) {
+                emit FallbackHit(
+                    receiver,
+                    _fallbackReceiver,
+                    amount,
+                    withCallback,
+                    err
+                );
+            } catch (bytes memory errFallback) {
+                emit FallbackFail(
+                    receiver,
+                    fallbackReceiver,
+                    amount,
+                    errFallback
+                );
+            }
         }
     }
 
     /**
-     * @notice Function that mints the tokens to the receiver and
-     * can be wrapped with a try/catch to handle errors
-     * @dev Only callable by the contract itself
-     * @param receiver The receiver of the tokens
-     * @param amount The amount of tokens
+     * @inheritdoc TokenPool
      */
-    function releaseOrMintInternal(address receiver, uint256 amount) external {
-        require(msg.sender == address(this), NotSelf());
-        _mint(receiver, amount);
+    function _lockOrBurn(uint64, uint256 amount) internal virtual override {
+        IMToken(address(i_token)).burn(address(this), amount);
     }
 
     /**
@@ -116,7 +185,7 @@ contract MidasCCTBurnMintTokenPool is BurnMintTokenPool {
      * @param receiver The receiver of the tokens
      * @param amount The amount of tokens
      */
-    function _mint(address receiver, uint256 amount) internal {
+    function _mint(address receiver, uint256 amount) private {
         IMToken(address(i_token)).mint(receiver, amount);
     }
 
@@ -124,12 +193,19 @@ contract MidasCCTBurnMintTokenPool is BurnMintTokenPool {
      * @dev Set the fallback receiver of the pool
      * @param newFallbackReceiver The new fallback receiver
      */
-    function _setFallbackReceiver(address newFallbackReceiver) internal {
+    function _setFallbackReceiver(address newFallbackReceiver) private {
         require(
             newFallbackReceiver != address(0),
             InvalidFallbackReceiver(newFallbackReceiver)
         );
         fallbackReceiver = newFallbackReceiver;
         emit FallbackReceiverSet(newFallbackReceiver);
+    }
+
+    /**
+     * @dev Check if the caller is the contract itself
+     */
+    function _onlySelf() private view {
+        require(msg.sender == address(this), NotSelf());
     }
 }

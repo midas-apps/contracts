@@ -7,16 +7,27 @@ import { ethers } from 'hardhat';
 import { getRolesForToken } from '../../helpers/roles';
 import {
   ERC20Mock__factory,
+  IMidasCCTFailedMessageFallback__factory,
+  IMidasCCTFallbackEscrow__factory,
   MidasCCTBurnMintTokenPool__factory,
 } from '../../typechain-types';
-import { blackList } from '../common/ac.helpers';
+import { blackList, unBlackList } from '../common/ac.helpers';
 import {
+  MessageStatus,
+  claimFailedMessage,
+  closeBulk,
+  createEscrowFailedMessage,
   encodeDecimals,
   lockOrBurn,
+  onFailedMessage,
+  recoverBulk,
+  registerOrphanedBulk,
   releaseOrMint,
+  setDefaultRecipient,
   setFallbackReceiver,
 } from '../common/ccip.helpers';
 import { mintToken } from '../common/common.helpers';
+import { deployProxyContract } from '../common/deploy.helpers';
 import { ccipCctFixture } from '../common/fixtures';
 
 type Fixture = Awaited<ReturnType<typeof ccipCctFixture>>;
@@ -324,11 +335,11 @@ describe('CCIP', function () {
         const roles = getRolesForToken('mTBILL');
         await accessControl.revokeRole(roles.minter, pool.address);
 
-        await releaseOrMint(
-          fixture,
-          { amount: parseUnits('100') },
-          { revertMessage: 'WMAC: hasnt role' },
-        );
+        await releaseOrMint(fixture, {
+          amount: parseUnits('100'),
+          expectFallbackFail: true,
+          expectMinted: false,
+        });
       });
 
       it('should fail: when called by the owner instead of the offRamp', async () => {
@@ -451,9 +462,9 @@ describe('CCIP', function () {
         await releaseOrMint(fixture, { amount: parseUnits('100') });
       });
 
-      it('mints to the fallback receiver when the receiver is blacklisted', async () => {
+      it('mints to the escrow and records the failed message when the receiver is blacklisted', async () => {
         const fixture = await loadFixture(ccipCctFixture);
-        const { mTBILL, accessControl, owner, alice } = fixture;
+        const { mTBILL, accessControl, owner, alice, escrow } = fixture;
 
         await blackList({ blacklistable: mTBILL, accessControl, owner }, alice);
 
@@ -461,10 +472,31 @@ describe('CCIP', function () {
           amount: parseUnits('100'),
           receiver: alice.address,
           expectFallback: true,
+          expectFallbackCallback: true,
+          expectEscrowRecord: true,
+        });
+
+        expect(await mTBILL.balanceOf(escrow.address)).eq(parseUnits('100'));
+      });
+
+      it('mints to an EOA fallback without recording an escrow message', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { mTBILL, accessControl, owner, alice, defaultRecipient } =
+          fixture;
+
+        await setFallbackReceiver(fixture, defaultRecipient);
+        await blackList({ blacklistable: mTBILL, accessControl, owner }, alice);
+
+        await releaseOrMint(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice.address,
+          expectFallback: true,
+          expectFallbackCallback: false,
+          expectEscrowRecord: false,
         });
       });
 
-      it('should fail: when the receiver and fallback receiver are both blacklisted', async () => {
+      it('emits FallbackFail when the receiver and fallback receiver are both blacklisted', async () => {
         const fixture = await loadFixture(ccipCctFixture);
         const { mTBILL, accessControl, owner, alice, fallbackReceiver } =
           fixture;
@@ -475,11 +507,23 @@ describe('CCIP', function () {
           fallbackReceiver,
         );
 
-        await releaseOrMint(
-          fixture,
-          { amount: parseUnits('100'), receiver: alice.address },
-          { revertMessage: 'WMAC: has role' },
-        );
+        await releaseOrMint(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice.address,
+          expectFallbackFail: true,
+          expectMinted: false,
+        });
+      });
+    });
+
+    describe('handleFallback', () => {
+      it('should fail: when called by an address other than the pool itself', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { pool, owner, alice } = fixture;
+
+        await expect(
+          pool.connect(owner).handleFallback(alice.address, parseUnits('1')),
+        ).revertedWithCustomError(pool, 'NotSelf');
       });
     });
 
@@ -771,6 +815,625 @@ describe('CCIP', function () {
               constants.AddressZero,
             ),
         ).revertedWithCustomError(pool, 'OnlyCallableByOwner');
+      });
+    });
+  });
+
+  describe('MidasCCTFallbackEscrow', () => {
+    describe('deployment', () => {
+      it('initializes tokenPool, defaultRecipient and accessControl', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, pool, accessControl, defaultRecipient } = fixture;
+
+        expect(await escrow.tokenPool()).eq(pool.address);
+        expect(await escrow.defaultRecipient()).eq(defaultRecipient.address);
+        expect(await escrow.accessControl()).eq(accessControl.address);
+        expect(await escrow.failedMessageCount()).eq(0);
+        expect(await escrow.getFailedMessageIds()).deep.eq([]);
+      });
+
+      it('should fail: when accessControl is the zero address', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { pool, defaultRecipient } = fixture;
+
+        await expect(
+          deployProxyContract('MidasCCTFallbackEscrow', [
+            constants.AddressZero,
+            pool.address,
+            defaultRecipient.address,
+          ]),
+        ).revertedWith('zero address');
+      });
+
+      it('should fail: when tokenPool is the zero address', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, accessControl, defaultRecipient } = fixture;
+
+        await expect(
+          deployProxyContract('MidasCCTFallbackEscrow', [
+            accessControl.address,
+            constants.AddressZero,
+            defaultRecipient.address,
+          ]),
+        ).revertedWithCustomError(escrow, 'ZeroAddress');
+      });
+
+      it('should fail: when defaultRecipient is the zero address', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, accessControl, pool } = fixture;
+
+        await expect(
+          deployProxyContract('MidasCCTFallbackEscrow', [
+            accessControl.address,
+            pool.address,
+            constants.AddressZero,
+          ]),
+        ).revertedWithCustomError(escrow, 'ZeroAddress');
+      });
+
+      it('should fail: when initialize is called twice', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, accessControl, pool, defaultRecipient } = fixture;
+
+        await expect(
+          escrow.initialize(
+            accessControl.address,
+            pool.address,
+            defaultRecipient.address,
+          ),
+        ).revertedWith('Initializable: contract is already initialized');
+      });
+    });
+
+    describe('setDefaultRecipient', () => {
+      it('updates the default recipient when called by the admin', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { alice } = fixture;
+
+        await setDefaultRecipient(fixture, alice);
+      });
+
+      it('should fail: when called by a non-admin', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, alice } = fixture;
+
+        await setDefaultRecipient(fixture, alice, {
+          from: alice,
+          revertWithCustomError: {
+            contract: escrow,
+            error: 'NotContractAdmin',
+          },
+        });
+      });
+
+      it('should fail: when the new default recipient is the zero address', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow } = fixture;
+
+        await setDefaultRecipient(fixture, constants.AddressZero, {
+          revertWithCustomError: {
+            contract: escrow,
+            error: 'ZeroAddress',
+          },
+        });
+      });
+    });
+
+    describe('onFailedMessage', () => {
+      it('records a failed message when called by the token pool', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { alice } = fixture;
+
+        await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+      });
+
+      it('should fail: when called by an address other than the token pool', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, alice } = fixture;
+
+        await onFailedMessage(
+          fixture,
+          {
+            originalRecipient: alice,
+            tokenAmount: parseUnits('100'),
+          },
+          {
+            from: alice,
+            revertWithCustomError: {
+              contract: escrow,
+              error: 'NotTokenPool',
+            },
+          },
+        );
+      });
+    });
+
+    describe('claim', () => {
+      it('lets the original recipient claim to themselves after unblacklist', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { mTBILL, accessControl, owner, alice } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await unBlackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          alice,
+        );
+
+        await claimFailedMessage(
+          fixture,
+          {
+            messageId,
+            recipient: alice,
+          },
+          { from: alice },
+        );
+      });
+
+      it('lets the original recipient claim to another address', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { mTBILL, accessControl, owner, alice, defaultRecipient } =
+          fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('50'),
+          receiver: alice,
+        });
+
+        await unBlackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          alice,
+        );
+
+        await claimFailedMessage(
+          fixture,
+          {
+            messageId,
+            recipient: defaultRecipient,
+          },
+          { from: alice },
+        );
+      });
+
+      it('should fail: when the caller is not the original recipient', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const {
+          escrow,
+          mTBILL,
+          accessControl,
+          owner,
+          alice,
+          defaultRecipient,
+        } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await unBlackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          alice,
+        );
+
+        await claimFailedMessage(
+          fixture,
+          {
+            messageId,
+            recipient: defaultRecipient,
+          },
+          {
+            from: defaultRecipient,
+            revertWithCustomError: {
+              contract: escrow,
+              error: 'InvalidSender',
+              args: [alice.address],
+            },
+          },
+        );
+      });
+
+      it('should fail: when the caller is blacklisted', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { alice } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await claimFailedMessage(
+          fixture,
+          {
+            messageId,
+            recipient: alice,
+          },
+          {
+            from: alice,
+            revertMessage: 'WMAC: has role',
+          },
+        );
+      });
+
+      it('should fail: when the message is not found', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, alice } = fixture;
+        const unknownMessageId = ethers.utils.formatBytes32String('unknown');
+
+        await claimFailedMessage(
+          fixture,
+          {
+            messageId: unknownMessageId,
+            recipient: alice,
+          },
+          {
+            from: alice,
+            revertWithCustomError: {
+              contract: escrow,
+              error: 'FailedMessageNotFound',
+              args: [unknownMessageId],
+            },
+          },
+        );
+      });
+
+      it('should fail: when the message was already claimed', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, mTBILL, accessControl, owner, alice } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await unBlackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          alice,
+        );
+
+        await claimFailedMessage(
+          fixture,
+          {
+            messageId,
+            recipient: alice,
+          },
+          { from: alice },
+        );
+
+        await claimFailedMessage(
+          fixture,
+          {
+            messageId,
+            recipient: alice,
+          },
+          {
+            from: alice,
+            revertWithCustomError: {
+              contract: escrow,
+              error: 'FailedMessageNotFound',
+              args: [messageId],
+            },
+          },
+        );
+      });
+    });
+
+    describe('recoverBulk', () => {
+      it('recovers failed messages to the original recipients', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { mTBILL, accessControl, owner, alice, defaultRecipient } =
+          fixture;
+
+        const messageIdAlice = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+        const messageIdDefault = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('25'),
+          receiver: defaultRecipient,
+        });
+
+        await unBlackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          alice,
+        );
+        await unBlackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          defaultRecipient,
+        );
+
+        await recoverBulk(fixture, [messageIdAlice, messageIdDefault]);
+      });
+
+      it('should fail: when called by a non-admin', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, alice } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await recoverBulk(fixture, [messageId], {
+          from: alice,
+          revertWithCustomError: {
+            contract: escrow,
+            error: 'NotContractAdmin',
+          },
+        });
+      });
+
+      it('should fail: when a message is not found', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow } = fixture;
+        const unknownMessageId = ethers.utils.formatBytes32String('unknown');
+
+        await recoverBulk(fixture, [unknownMessageId], {
+          revertWithCustomError: {
+            contract: escrow,
+            error: 'FailedMessageNotFound',
+            args: [unknownMessageId],
+          },
+        });
+      });
+
+      it('should fail: when the original recipient is still blacklisted', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { alice } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await recoverBulk(fixture, [messageId], {
+          revertMessage: 'WMAC: has role',
+        });
+      });
+    });
+
+    describe('closeBulk', () => {
+      it('closes failed messages and transfers tokens to the default recipient', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { alice } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await closeBulk(fixture, [messageId]);
+      });
+
+      it('closes multiple failed messages in one call', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { alice, customRecipient } = fixture;
+
+        const messageIdAlice = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('40'),
+          receiver: alice,
+        });
+        const messageIdCustom = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('60'),
+          receiver: customRecipient,
+        });
+
+        await closeBulk(fixture, [messageIdAlice, messageIdCustom]);
+      });
+
+      it('should fail: when called by a non-admin', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, alice } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await closeBulk(fixture, [messageId], {
+          from: alice,
+          revertWithCustomError: {
+            contract: escrow,
+            error: 'NotContractAdmin',
+          },
+        });
+      });
+
+      it('should fail: when a message is not found', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow } = fixture;
+        const unknownMessageId = ethers.utils.formatBytes32String('unknown');
+
+        await closeBulk(fixture, [unknownMessageId], {
+          revertWithCustomError: {
+            contract: escrow,
+            error: 'FailedMessageNotFound',
+            args: [unknownMessageId],
+          },
+        });
+      });
+
+      it('uses the updated default recipient after setDefaultRecipient', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { mTBILL, alice, owner } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await setDefaultRecipient(fixture, owner);
+
+        const ownerBalanceBefore = await mTBILL.balanceOf(owner.address);
+        await closeBulk(fixture, [messageId]);
+        expect(await mTBILL.balanceOf(owner.address)).eq(
+          ownerBalanceBefore.add(parseUnits('100')),
+        );
+      });
+    });
+
+    describe('registerOrphanedBulk', () => {
+      it('registers orphaned messages without transferring tokens', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { alice, customRecipient } = fixture;
+
+        const messageIds = await registerOrphanedBulk(fixture, [
+          {
+            originalRecipient: alice.address,
+            tokenAmount: parseUnits('100'),
+          },
+          {
+            originalRecipient: customRecipient.address,
+            tokenAmount: parseUnits('25'),
+          },
+        ]);
+
+        expect(messageIds).to.have.length(2);
+      });
+
+      it('should fail: when called by a non-admin', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, alice } = fixture;
+
+        await registerOrphanedBulk(
+          fixture,
+          [
+            {
+              originalRecipient: alice.address,
+              tokenAmount: parseUnits('100'),
+            },
+          ],
+          {
+            from: alice,
+            revertWithCustomError: {
+              contract: escrow,
+              error: 'NotContractAdmin',
+            },
+          },
+        );
+      });
+
+      it('lets admin register orphaned tokens after a fallback failure and close them', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { mTBILL, accessControl, owner, alice, escrow, pool } = fixture;
+
+        await blackList({ blacklistable: mTBILL, accessControl, owner }, alice);
+        await mintToken(mTBILL, escrow.address, 100);
+
+        const roles = getRolesForToken('mTBILL');
+        await accessControl.revokeRole(roles.minter, pool.address);
+
+        await releaseOrMint(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice.address,
+          expectFallbackFail: true,
+          expectMinted: false,
+        });
+
+        const [messageId] = await registerOrphanedBulk(fixture, [
+          {
+            originalRecipient: alice.address,
+            tokenAmount: parseUnits('100'),
+          },
+        ]);
+
+        await closeBulk(fixture, [messageId]);
+      });
+    });
+
+    describe('getFailedMessageIds', () => {
+      it('returns an empty list when there are no pending messages', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow } = fixture;
+
+        expect(await escrow.getFailedMessageIds()).deep.eq([]);
+      });
+
+      it('returns pending message ids and drops them after resolution', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, alice } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        expect(await escrow.getFailedMessageIds()).deep.eq([messageId]);
+
+        await closeBulk(fixture, [messageId]);
+
+        expect(await escrow.getFailedMessageIds()).deep.eq([]);
+      });
+    });
+
+    describe('getFailedMessage', () => {
+      it('returns the stored failed message content', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, alice } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        const failedMessage = await escrow.getFailedMessage(messageId);
+        expect(failedMessage.originalRecipient).eq(alice.address);
+        expect(failedMessage.tokenAmount).eq(parseUnits('100'));
+        expect(failedMessage.status).eq(MessageStatus.Pending);
+      });
+
+      it('returns empty data for an unknown message id', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow } = fixture;
+        const unknownMessageId = ethers.utils.formatBytes32String('unknown');
+
+        const failedMessage = await escrow.getFailedMessage(unknownMessageId);
+        expect(failedMessage.originalRecipient).eq(constants.AddressZero);
+        expect(failedMessage.tokenAmount).eq(0);
+        expect(failedMessage.status).eq(MessageStatus.Pending);
+      });
+    });
+
+    describe('supportsInterface', () => {
+      it('supports IMidasCCTFailedMessageFallback and IMidasCCTFallbackEscrow', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow } = fixture;
+
+        const failedMessageFallbackId =
+          IMidasCCTFailedMessageFallback__factory.createInterface().getSighash(
+            'onFailedMessage(address,uint256)',
+          );
+
+        // Solidity's type(IDerived).interfaceId XORs only selectors declared on the
+        // derived interface itself, not selectors inherited from parent interfaces.
+        const escrowIface = IMidasCCTFallbackEscrow__factory.createInterface();
+        const escrowInterfaceId = ethers.utils.hexZeroPad(
+          escrowIface.fragments
+            .filter(
+              (fragment) =>
+                fragment.type === 'function' &&
+                fragment.name !== 'onFailedMessage',
+            )
+            .reduce(
+              (acc, fragment) => acc.xor(escrowIface.getSighash(fragment)),
+              ethers.constants.Zero,
+            )
+            .toHexString(),
+          4,
+        );
+
+        expect(await escrow.supportsInterface(failedMessageFallbackId)).eq(
+          true,
+        );
+        expect(await escrow.supportsInterface(escrowInterfaceId)).eq(true);
+        expect(await escrow.supportsInterface('0x01ffc9a7')).eq(true);
+        expect(await escrow.supportsInterface('0xffffffff')).eq(false);
       });
     });
   });
