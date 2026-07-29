@@ -11,7 +11,11 @@ contract MidasCCTFailedMessageFallbackRevertingTester is
 {
     error CallbackFailed();
 
-    function onFailedMessage(address, uint256) external pure {
+    function onFailedMessage(
+        address,
+        uint256,
+        uint64
+    ) external pure {
         revert CallbackFailed();
     }
 

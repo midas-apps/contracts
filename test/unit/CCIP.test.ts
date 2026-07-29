@@ -15,9 +15,11 @@ import { blackList, unBlackList } from '../common/ac.helpers';
 import {
   MessageStatus,
   claimFailedMessage,
+  claimFailedMessageToRemote,
   closeBulk,
   createEscrowFailedMessage,
   encodeDecimals,
+  getFailedMessage,
   lockOrBurn,
   onFailedMessage,
   recoverBulk,
@@ -519,10 +521,16 @@ describe('CCIP', function () {
     describe('handleFallback', () => {
       it('should fail: when called by an address other than the pool itself', async () => {
         const fixture = await loadFixture(ccipCctFixture);
-        const { pool, owner, alice } = fixture;
+        const { pool, owner, alice, remoteChainSelector } = fixture;
 
         await expect(
-          pool.connect(owner).handleFallback(alice.address, parseUnits('1')),
+          pool
+            .connect(owner)
+            .handleFallback(
+              alice.address,
+              parseUnits('1'),
+              remoteChainSelector,
+            ),
         ).revertedWithCustomError(pool, 'NotSelf');
       });
     });
@@ -951,6 +959,287 @@ describe('CCIP', function () {
       });
     });
 
+    describe('claimToRemote', () => {
+      const encodeRemoteRecipient = (recipient: string) =>
+        ethers.utils.defaultAbiCoder.encode(['address'], [recipient]);
+
+      const wireMockRouter = async (fixture: Fixture) => {
+        const { pool, owner } = fixture;
+        const mockRouter = await (
+          await ethers.getContractFactory('CCIPRouterClientMock')
+        ).deploy();
+        await pool
+          .connect(owner)
+          .setDynamicConfig(
+            mockRouter.address,
+            constants.AddressZero,
+            constants.AddressZero,
+          );
+        return mockRouter;
+      };
+
+      it('lets the original recipient claim escrowed tokens to a remote chain', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const {
+          mTBILL,
+          accessControl,
+          owner,
+          alice,
+          defaultRecipient,
+          remoteChainSelector,
+        } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await unBlackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          alice,
+        );
+
+        const mockRouter = await wireMockRouter(fixture);
+        const expectedCcipMessageId = ethers.utils.formatBytes32String('ccip');
+        await mockRouter.setNextMessageId(expectedCcipMessageId);
+
+        const remoteRecipient = encodeRemoteRecipient(defaultRecipient.address);
+        const escrowBalanceBefore = await mTBILL.balanceOf(
+          fixture.escrow.address,
+        );
+        const routerBalanceBefore = await mTBILL.balanceOf(mockRouter.address);
+
+        await expect(
+          fixture.escrow
+            .connect(alice)
+            .claimToRemote(messageId, remoteRecipient, remoteChainSelector),
+        )
+          .to.emit(fixture.escrow, 'ClaimToRemote')
+          .withArgs(
+            messageId,
+            expectedCcipMessageId,
+            remoteRecipient,
+            remoteChainSelector,
+          )
+          .and.to.emit(mockRouter, 'CcipSend')
+          .withArgs(
+            remoteChainSelector,
+            constants.AddressZero,
+            0,
+            mTBILL.address,
+            parseUnits('100'),
+            remoteRecipient,
+          );
+
+        expect(await mTBILL.balanceOf(fixture.escrow.address)).eq(
+          escrowBalanceBefore.sub(parseUnits('100')),
+        );
+        expect(await mTBILL.balanceOf(mockRouter.address)).eq(
+          routerBalanceBefore.add(parseUnits('100')),
+        );
+        expect((await getFailedMessage(fixture.escrow, messageId)).status).eq(
+          MessageStatus.Claimed,
+        );
+        expect(await fixture.escrow.getFailedMessageIds()).deep.eq([]);
+      });
+
+      it('pays the native fee required by the router', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { mTBILL, accessControl, owner, alice, defaultRecipient } =
+          fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('50'),
+          receiver: alice,
+        });
+
+        await unBlackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          alice,
+        );
+
+        const mockRouter = await wireMockRouter(fixture);
+        const fee = parseUnits('0.01', 18);
+        await mockRouter.setFee(fee);
+
+        await claimFailedMessageToRemote(
+          fixture,
+          {
+            messageId,
+            recipient: encodeRemoteRecipient(defaultRecipient.address),
+            value: fee,
+          },
+          { from: alice },
+        );
+
+        expect(await ethers.provider.getBalance(mockRouter.address)).eq(fee);
+      });
+
+      it('should fail: when the attached native fee is insufficient', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { mTBILL, accessControl, owner, alice, defaultRecipient } =
+          fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('50'),
+          receiver: alice,
+        });
+
+        await unBlackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          alice,
+        );
+
+        const mockRouter = await wireMockRouter(fixture);
+        await mockRouter.setFee(parseUnits('0.01', 18));
+
+        await expect(
+          fixture.escrow
+            .connect(alice)
+            .claimToRemote(
+              messageId,
+              encodeRemoteRecipient(defaultRecipient.address),
+              fixture.remoteChainSelector,
+              { value: 0 },
+            ),
+        ).revertedWithCustomError(mockRouter, 'InsufficientFeeTokenAmount');
+      });
+
+      it('should fail: when the caller is not the original recipient', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const {
+          escrow,
+          mTBILL,
+          accessControl,
+          owner,
+          alice,
+          defaultRecipient,
+        } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await unBlackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          alice,
+        );
+        await wireMockRouter(fixture);
+
+        await claimFailedMessageToRemote(
+          fixture,
+          {
+            messageId,
+            recipient: encodeRemoteRecipient(defaultRecipient.address),
+          },
+          {
+            from: defaultRecipient,
+            revertWithCustomError: {
+              contract: escrow,
+              error: 'InvalidSender',
+              args: [alice.address],
+            },
+          },
+        );
+      });
+
+      it('should fail: when the caller is blacklisted', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { alice, defaultRecipient } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+        await wireMockRouter(fixture);
+
+        await claimFailedMessageToRemote(
+          fixture,
+          {
+            messageId,
+            recipient: encodeRemoteRecipient(defaultRecipient.address),
+          },
+          {
+            from: alice,
+            revertMessage: 'WMAC: has role',
+          },
+        );
+      });
+
+      it('should fail: when the message is not found', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, alice, defaultRecipient } = fixture;
+        const unknownMessageId = ethers.utils.formatBytes32String('unknown');
+        await wireMockRouter(fixture);
+
+        await claimFailedMessageToRemote(
+          fixture,
+          {
+            messageId: unknownMessageId,
+            recipient: encodeRemoteRecipient(defaultRecipient.address),
+          },
+          {
+            from: alice,
+            revertWithCustomError: {
+              contract: escrow,
+              error: 'FailedMessageNotFound',
+              args: [unknownMessageId],
+            },
+          },
+        );
+      });
+
+      it('should fail: when the message was already claimed locally', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const {
+          escrow,
+          mTBILL,
+          accessControl,
+          owner,
+          alice,
+          defaultRecipient,
+        } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await unBlackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          alice,
+        );
+
+        await claimFailedMessage(
+          fixture,
+          {
+            messageId,
+            recipient: alice,
+          },
+          { from: alice },
+        );
+
+        await wireMockRouter(fixture);
+
+        await claimFailedMessageToRemote(
+          fixture,
+          {
+            messageId,
+            recipient: encodeRemoteRecipient(defaultRecipient.address),
+          },
+          {
+            from: alice,
+            revertWithCustomError: {
+              contract: escrow,
+              error: 'FailedMessageNotFound',
+              args: [messageId],
+            },
+          },
+        );
+      });
+    });
+
     describe('claim', () => {
       it('lets the original recipient claim to themselves after unblacklist', async () => {
         const fixture = await loadFixture(ccipCctFixture);
@@ -1372,18 +1661,21 @@ describe('CCIP', function () {
       });
     });
 
-    describe('getFailedMessage', () => {
+    describe('failedMessages', () => {
       it('returns the stored failed message content', async () => {
         const fixture = await loadFixture(ccipCctFixture);
-        const { escrow, alice } = fixture;
+        const { escrow, alice, remoteChainSelector } = fixture;
 
         const messageId = await createEscrowFailedMessage(fixture, {
           amount: parseUnits('100'),
           receiver: alice,
         });
 
-        const failedMessage = await escrow.getFailedMessage(messageId);
+        const failedMessage = await getFailedMessage(escrow, messageId);
         expect(failedMessage.originalRecipient).eq(alice.address);
+        expect(failedMessage.originalSourceChainSelector).eq(
+          remoteChainSelector,
+        );
         expect(failedMessage.tokenAmount).eq(parseUnits('100'));
         expect(failedMessage.status).eq(MessageStatus.Pending);
       });
@@ -1393,8 +1685,9 @@ describe('CCIP', function () {
         const { escrow } = fixture;
         const unknownMessageId = ethers.utils.formatBytes32String('unknown');
 
-        const failedMessage = await escrow.getFailedMessage(unknownMessageId);
+        const failedMessage = await getFailedMessage(escrow, unknownMessageId);
         expect(failedMessage.originalRecipient).eq(constants.AddressZero);
+        expect(failedMessage.originalSourceChainSelector).eq(0);
         expect(failedMessage.tokenAmount).eq(0);
         expect(failedMessage.status).eq(MessageStatus.Pending);
       });
@@ -1407,7 +1700,7 @@ describe('CCIP', function () {
 
         const failedMessageFallbackId =
           IMidasCCTFailedMessageFallback__factory.createInterface().getSighash(
-            'onFailedMessage(address,uint256)',
+            'onFailedMessage(address,uint256,uint64)',
           );
 
         // Solidity's type(IDerived).interfaceId XORs only selectors declared on the

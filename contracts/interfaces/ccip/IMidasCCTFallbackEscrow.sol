@@ -20,6 +20,7 @@ interface IMidasCCTFallbackEscrow is IMidasCCTFailedMessageFallback {
 
     struct FailedMessage {
         address originalRecipient;
+        uint64 originalSourceChainSelector;
         uint256 tokenAmount;
         MessageStatus status;
     }
@@ -27,6 +28,7 @@ interface IMidasCCTFallbackEscrow is IMidasCCTFailedMessageFallback {
     struct OrphanedMessage {
         address originalRecipient;
         uint256 tokenAmount;
+        uint64 originalSourceChainSelector;
     }
 
     /**
@@ -34,6 +36,19 @@ interface IMidasCCTFallbackEscrow is IMidasCCTFailedMessageFallback {
      * @param _recipient the recipient of the failed message
      */
     event Claim(bytes32 _messageId, address _recipient);
+
+    /**
+     * @param _messageId the id of the failed message
+     * @param _ccipMessageId the id of the CCIP message
+     * @param _recipient the recipient of the failed message in bytes
+     * @param _remoteChainSelector the remote chain selector
+     */
+    event ClaimToRemote(
+        bytes32 _messageId,
+        bytes32 _ccipMessageId,
+        bytes _recipient,
+        uint64 _remoteChainSelector
+    );
 
     /**
      * @param _messageIds the ids of the closed messages
@@ -100,6 +115,19 @@ interface IMidasCCTFallbackEscrow is IMidasCCTFailedMessageFallback {
     function claim(bytes32 _messageId, address _recipient) external;
 
     /**
+     * @notice Claims a failed message to a remote chain
+     * @dev should be called by the original recipient of the failed message
+     * @param _messageId the id of the failed message
+     * @param _recipient the recipient of the failed message in bytes
+     * @param _remoteChainSelector the remote chain selector
+     */
+    function claimToRemote(
+        bytes32 _messageId,
+        bytes memory _recipient,
+        uint64 _remoteChainSelector
+    ) external payable;
+
+    /**
      * @notice Recovers a bulk of failed messages
      * @dev should be called by the contract admin
      * @param _messageIds the ids of the failed messages to recover
@@ -127,14 +155,4 @@ interface IMidasCCTFallbackEscrow is IMidasCCTFailedMessageFallback {
      * @return the ids of the pending failed messages
      */
     function getFailedMessageIds() external view returns (bytes32[] memory);
-
-    /**
-     * @notice Gets a failed message
-     * @param _messageId the id of the failed message
-     * @return the failed message
-     */
-    function getFailedMessage(bytes32 _messageId)
-        external
-        view
-        returns (FailedMessage memory);
 }

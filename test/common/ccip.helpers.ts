@@ -22,12 +22,26 @@ export const encodeDecimals = (decimals: number) =>
 export const encodeEscrowMessageId = (
   originalRecipient: string,
   tokenAmount: BigNumberish,
+  originalSourceChainSelector: BigNumberish,
   index: BigNumberish,
 ) =>
   ethers.utils.solidityKeccak256(
-    ['address', 'uint256', 'uint256'],
-    [originalRecipient, tokenAmount, index],
+    ['address', 'uint256', 'uint64', 'uint256'],
+    [originalRecipient, tokenAmount, originalSourceChainSelector, index],
   );
+
+export const getFailedMessage = async (
+  escrow: Fixture['escrow'],
+  messageId: string,
+) => {
+  const message = await escrow.failedMessages(messageId);
+  return {
+    originalRecipient: message.originalRecipient,
+    originalSourceChainSelector: message.originalSourceChainSelector,
+    tokenAmount: message.tokenAmount,
+    status: message.status,
+  };
+};
 
 // In CCIP 2.0.0 lockOrBurn/releaseOrMint are overloaded, so the single-arg
 const LOCK_OR_BURN_SIG = 'lockOrBurn((bytes,uint64,address,uint256,address))';
@@ -245,6 +259,7 @@ export const releaseOrMint = async (
   const expectedMessageId = encodeEscrowMessageId(
     to,
     amount,
+    releaseOrMintIn.remoteChainSelector,
     failedMessageCountBefore,
   );
 
@@ -263,7 +278,14 @@ export const releaseOrMint = async (
   if (expectFallback) {
     await expect(txPromise)
       .to.emit(pool, 'FallbackHit')
-      .withArgs(to, fallback, amount, expectFallbackCallback, anyValue);
+      .withArgs(
+        to,
+        fallback,
+        amount,
+        releaseOrMintIn.remoteChainSelector,
+        expectFallbackCallback,
+        anyValue,
+      );
   } else {
     await expect(txPromise).to.not.emit(pool, 'FallbackHit');
   }
@@ -271,7 +293,13 @@ export const releaseOrMint = async (
   if (expectFallbackFail) {
     await expect(txPromise)
       .to.emit(pool, 'FallbackFail')
-      .withArgs(to, fallback, amount, anyValue);
+      .withArgs(
+        to,
+        fallback,
+        amount,
+        releaseOrMintIn.remoteChainSelector,
+        anyValue,
+      );
   } else {
     await expect(txPromise).to.not.emit(pool, 'FallbackFail');
   }
@@ -314,8 +342,11 @@ export const releaseOrMint = async (
       expectedMessageId,
     ]);
 
-    const failedMessage = await escrow.getFailedMessage(expectedMessageId);
+    const failedMessage = await getFailedMessage(escrow, expectedMessageId);
     expect(failedMessage.originalRecipient).eq(to);
+    expect(failedMessage.originalSourceChainSelector).eq(
+      releaseOrMintIn.remoteChainSelector,
+    );
     expect(failedMessage.tokenAmount).eq(amount);
     expect(failedMessage.status).eq(MessageStatus.Pending);
 
@@ -352,6 +383,7 @@ export const createEscrowFailedMessage = async (
 export type OrphanedMessage = {
   originalRecipient: string;
   tokenAmount: BigNumberish;
+  originalSourceChainSelector?: BigNumberish;
 };
 
 export const registerOrphanedBulk = async (
@@ -362,7 +394,15 @@ export const registerOrphanedBulk = async (
   const { escrow, owner } = fixture;
   const caller = opt?.from ?? owner;
 
-  const tx = () => escrow.connect(caller).registerOrphanedBulk(messages);
+  const normalizedMessages = messages.map((message) => ({
+    originalRecipient: message.originalRecipient,
+    tokenAmount: message.tokenAmount,
+    originalSourceChainSelector:
+      message.originalSourceChainSelector ?? fixture.remoteChainSelector,
+  }));
+
+  const tx = () =>
+    escrow.connect(caller).registerOrphanedBulk(normalizedMessages);
 
   if (opt?.revertMessage) {
     await expect(tx()).revertedWith(opt.revertMessage);
@@ -384,10 +424,11 @@ export const registerOrphanedBulk = async (
 
   const failedMessageCountBefore = await escrow.failedMessageCount();
   const pendingIdsBefore = await escrow.getFailedMessageIds();
-  const messageIds = messages.map((message, index) =>
+  const messageIds = normalizedMessages.map((message, index) =>
     encodeEscrowMessageId(
       message.originalRecipient,
       message.tokenAmount,
+      message.originalSourceChainSelector,
       failedMessageCountBefore.add(index),
     ),
   );
@@ -402,10 +443,15 @@ export const registerOrphanedBulk = async (
     ...messageIds,
   ]);
 
-  for (let i = 0; i < messages.length; i++) {
-    const failedMessage = await escrow.getFailedMessage(messageIds[i]);
-    expect(failedMessage.originalRecipient).eq(messages[i].originalRecipient);
-    expect(failedMessage.tokenAmount).eq(messages[i].tokenAmount);
+  for (let i = 0; i < normalizedMessages.length; i++) {
+    const failedMessage = await getFailedMessage(escrow, messageIds[i]);
+    expect(failedMessage.originalRecipient).eq(
+      normalizedMessages[i].originalRecipient,
+    );
+    expect(failedMessage.tokenAmount).eq(normalizedMessages[i].tokenAmount);
+    expect(failedMessage.originalSourceChainSelector).eq(
+      normalizedMessages[i].originalSourceChainSelector,
+    );
     expect(failedMessage.status).eq(MessageStatus.Pending);
   }
 
@@ -451,18 +497,24 @@ export const onFailedMessage = async (
   {
     originalRecipient,
     tokenAmount,
+    originalSourceChainSelector,
   }: {
     originalRecipient: Account;
     tokenAmount: BigNumberish;
+    originalSourceChainSelector?: BigNumberish;
   },
   opt?: CcipRevertParams,
 ) => {
   const { escrow, owner } = fixture;
   const caller = opt?.from ?? owner;
   const recipient = getAccount(originalRecipient);
+  const sourceChainSelector =
+    originalSourceChainSelector ?? fixture.remoteChainSelector;
 
   const tx = () =>
-    escrow.connect(caller).onFailedMessage(recipient, tokenAmount);
+    escrow
+      .connect(caller)
+      .onFailedMessage(recipient, tokenAmount, sourceChainSelector);
 
   if (opt?.revertMessage) {
     await expect(tx()).revertedWith(opt.revertMessage);
@@ -486,6 +538,7 @@ export const onFailedMessage = async (
   const expectedMessageId = encodeEscrowMessageId(
     recipient,
     tokenAmount,
+    sourceChainSelector,
     failedMessageCountBefore,
   );
 
@@ -493,9 +546,10 @@ export const onFailedMessage = async (
     .to.emit(escrow, 'OnFailedMessage')
     .withArgs(expectedMessageId);
 
-  const failedMessage = await escrow.getFailedMessage(expectedMessageId);
+  const failedMessage = await getFailedMessage(escrow, expectedMessageId);
   expect(failedMessage.originalRecipient).eq(recipient);
   expect(failedMessage.tokenAmount).eq(tokenAmount);
+  expect(failedMessage.originalSourceChainSelector).eq(sourceChainSelector);
   expect(failedMessage.status).eq(MessageStatus.Pending);
   expect(await escrow.getFailedMessageIds()).to.include(expectedMessageId);
 
@@ -537,7 +591,7 @@ export const claimFailedMessage = async (
     return;
   }
 
-  const failedMessage = await escrow.getFailedMessage(messageId);
+  const failedMessage = await getFailedMessage(escrow, messageId);
   const escrowBalanceBefore = await mTBILL.balanceOf(escrow.address);
   const recipientBalanceBefore = await mTBILL.balanceOf(to);
   const pendingIdsBefore = await escrow.getFailedMessageIds();
@@ -550,7 +604,71 @@ export const claimFailedMessage = async (
   expect(await mTBILL.balanceOf(to)).eq(
     recipientBalanceBefore.add(failedMessage.tokenAmount),
   );
-  expect((await escrow.getFailedMessage(messageId)).status).eq(
+  expect((await getFailedMessage(escrow, messageId)).status).eq(
+    MessageStatus.Claimed,
+  );
+  expect(await escrow.getFailedMessageIds()).deep.eq(
+    pendingIdsBefore.filter((id) => id !== messageId),
+  );
+};
+
+export const claimFailedMessageToRemote = async (
+  fixture: Fixture,
+  {
+    messageId,
+    recipient,
+    remoteChainSelector,
+    value,
+  }: {
+    messageId: string;
+    recipient: string;
+    remoteChainSelector?: BigNumberish;
+    value?: BigNumberish;
+  },
+  opt?: CcipRevertParams,
+) => {
+  const { escrow, mTBILL, owner } = fixture;
+  const caller = opt?.from ?? owner;
+  const destChainSelector = remoteChainSelector ?? fixture.remoteChainSelector;
+  const feeValue = value ?? 0;
+
+  const tx = () =>
+    escrow
+      .connect(caller)
+      .claimToRemote(messageId, recipient, destChainSelector, {
+        value: feeValue,
+      });
+
+  if (opt?.revertMessage) {
+    await expect(tx()).revertedWith(opt.revertMessage);
+    return;
+  }
+
+  if (opt?.revertWithCustomError) {
+    const assertion = expect(tx()).revertedWithCustomError(
+      opt.revertWithCustomError.contract,
+      opt.revertWithCustomError.error,
+    );
+    if (opt.revertWithCustomError.args) {
+      await assertion.withArgs(...opt.revertWithCustomError.args);
+    } else {
+      await assertion;
+    }
+    return;
+  }
+
+  const failedMessage = await getFailedMessage(escrow, messageId);
+  const escrowBalanceBefore = await mTBILL.balanceOf(escrow.address);
+  const pendingIdsBefore = await escrow.getFailedMessageIds();
+
+  await expect(tx())
+    .to.emit(escrow, 'ClaimToRemote')
+    .withArgs(messageId, anyValue, recipient, destChainSelector);
+
+  expect(await mTBILL.balanceOf(escrow.address)).eq(
+    escrowBalanceBefore.sub(failedMessage.tokenAmount),
+  );
+  expect((await getFailedMessage(escrow, messageId)).status).eq(
     MessageStatus.Claimed,
   );
   expect(await escrow.getFailedMessageIds()).deep.eq(
@@ -587,7 +705,7 @@ export const recoverBulk = async (
   }
 
   const messages = await Promise.all(
-    messageIds.map((id) => escrow.getFailedMessage(id)),
+    messageIds.map((id) => getFailedMessage(escrow, id)),
   );
   const escrowBalanceBefore = await mTBILL.balanceOf(escrow.address);
   const recipientBalancesBefore = await Promise.all(
@@ -609,7 +727,7 @@ export const recoverBulk = async (
     expect(await mTBILL.balanceOf(messages[i].originalRecipient)).eq(
       recipientBalancesBefore[i].add(messages[i].tokenAmount),
     );
-    expect((await escrow.getFailedMessage(messageIds[i])).status).eq(
+    expect((await getFailedMessage(escrow, messageIds[i])).status).eq(
       MessageStatus.Recovered,
     );
   }
@@ -649,7 +767,7 @@ export const closeBulk = async (
   }
 
   const messages = await Promise.all(
-    messageIds.map((id) => escrow.getFailedMessage(id)),
+    messageIds.map((id) => getFailedMessage(escrow, id)),
   );
   const escrowBalanceBefore = await mTBILL.balanceOf(escrow.address);
   const defaultRecipientBalanceBefore = await mTBILL.balanceOf(
@@ -671,7 +789,7 @@ export const closeBulk = async (
   );
 
   for (const messageId of messageIds) {
-    expect((await escrow.getFailedMessage(messageId)).status).eq(
+    expect((await getFailedMessage(escrow, messageId)).status).eq(
       MessageStatus.Closed,
     );
   }

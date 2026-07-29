@@ -11,7 +11,11 @@ interface IMidasCCTFailedMessageFallback {
      * @dev this function is called by the token pool when it catches a failed message
      * @param _originalRecipient the original recipient of the failed message
      * @param _tokenAmount the amount of tokens to recover
+     * @param _originalSourceChainSelector the original source chain selector
      */
-    function onFailedMessage(address _originalRecipient, uint256 _tokenAmount)
-        external;
+    function onFailedMessage(
+        address _originalRecipient,
+        uint256 _tokenAmount,
+        uint64 _originalSourceChainSelector
+    ) external;
 }

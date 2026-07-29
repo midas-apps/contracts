@@ -38,6 +38,7 @@ contract MidasCCTBurnMintTokenPool is BurnMintTokenPool {
         address indexed originalReceiver,
         address indexed fallbackReceiver,
         uint256 amount,
+        uint64 remoteChainSelector,
         bool withCallback,
         bytes error
     );
@@ -52,6 +53,7 @@ contract MidasCCTBurnMintTokenPool is BurnMintTokenPool {
         address indexed originalReceiver,
         address indexed fallbackReceiver,
         uint256 amount,
+        uint64 remoteChainSelector,
         bytes error
     );
 
@@ -98,13 +100,15 @@ contract MidasCCTBurnMintTokenPool is BurnMintTokenPool {
      * @dev Only callable by the contract itself
      * @param receiver The receiver of the tokens
      * @param amount The amount of tokens
+     * @param remoteChainSelector The remote chain selector
      * @return _fallbackReceiver The fallback receiver of the tokens
      * @return _withCallback Whether the fallback has a callback
      */
-    function handleFallback(address receiver, uint256 amount)
-        external
-        returns (address _fallbackReceiver, bool _withCallback)
-    {
+    function handleFallback(
+        address receiver,
+        uint256 amount,
+        uint64 remoteChainSelector
+    ) external returns (address _fallbackReceiver, bool _withCallback) {
         _onlySelf();
 
         _fallbackReceiver = fallbackReceiver;
@@ -120,7 +124,8 @@ contract MidasCCTBurnMintTokenPool is BurnMintTokenPool {
             _withCallback = true;
             IMidasCCTFailedMessageFallback(_fallbackReceiver).onFailedMessage(
                 receiver,
-                amount
+                amount,
+                remoteChainSelector
             );
         }
     }
@@ -146,19 +151,19 @@ contract MidasCCTBurnMintTokenPool is BurnMintTokenPool {
     function _releaseOrMint(
         address receiver,
         uint256 amount,
-        uint64 /* remoteChainSelector */
+        uint64 remoteChainSelector
     ) internal virtual override {
         try this.releaseOrMintInternal(receiver, amount) {} catch (
             bytes memory err
         ) {
-            try this.handleFallback(receiver, amount) returns (
-                address _fallbackReceiver,
-                bool withCallback
-            ) {
+            try
+                this.handleFallback(receiver, amount, remoteChainSelector)
+            returns (address _fallbackReceiver, bool withCallback) {
                 emit FallbackHit(
                     receiver,
                     _fallbackReceiver,
                     amount,
+                    remoteChainSelector,
                     withCallback,
                     err
                 );
@@ -167,6 +172,7 @@ contract MidasCCTBurnMintTokenPool is BurnMintTokenPool {
                     receiver,
                     fallbackReceiver,
                     amount,
+                    remoteChainSelector,
                     errFallback
                 );
             }

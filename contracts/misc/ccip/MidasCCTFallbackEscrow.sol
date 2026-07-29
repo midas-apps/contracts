@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.28;
 
-import {EnumerableMap} from "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 import {ERC165Upgradeable as ERC165} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {EnumerableSetUpgradeable as EnumerableSet} from "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 
 import {Client} from "@chainlink/contracts-ccip/contracts/libraries/Client.sol";
-import {Pool} from "@chainlink/contracts-ccip/contracts/libraries/Pool.sol";
+import {IRouterClient} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 import {TokenPool} from "@chainlink/contracts-ccip/contracts/pools/TokenPool.sol";
 
 import {WithMidasAccessControl} from "../../access/WithMidasAccessControl.sol";
@@ -99,13 +98,16 @@ contract MidasCCTFallbackEscrow is
     /**
      * @inheritdoc IMidasCCTFailedMessageFallback
      */
-    function onFailedMessage(address _originalRecipient, uint256 _tokenAmount)
-        external
-    {
+    function onFailedMessage(
+        address _originalRecipient,
+        uint256 _tokenAmount,
+        uint64 _originalSourceChainSelector
+    ) external {
         require(msg.sender == address(tokenPool), NotTokenPool());
         bytes32 _messageId = _registerFailedMessages(
             _originalRecipient,
-            _tokenAmount
+            _tokenAmount,
+            _originalSourceChainSelector
         );
         emit OnFailedMessage(_messageId);
     }
@@ -120,11 +122,40 @@ contract MidasCCTFallbackEscrow is
         FailedMessage storage failedMessage = _processMessage(
             _messageId,
             _recipient,
-            MessageStatus.Claimed
+            MessageStatus.Claimed,
+            true
         );
-        address _expectedSender = failedMessage.originalRecipient;
-        require(msg.sender == _expectedSender, InvalidSender(_expectedSender));
+        _validateClaim(failedMessage.originalRecipient);
         emit Claim(_messageId, _recipient);
+    }
+
+    /**
+     * @inheritdoc IMidasCCTFallbackEscrow
+     */
+    function claimToRemote(
+        bytes32 _messageId,
+        bytes memory _recipient,
+        uint64 _remoteChainSelector
+    ) external payable onlyNotBlacklisted(msg.sender) {
+        FailedMessage storage failedMessage = _processMessage(
+            _messageId,
+            address(0),
+            MessageStatus.Claimed,
+            false
+        );
+        _validateClaim(failedMessage.originalRecipient);
+        bytes32 ccipMessageId = _sendToRemote(
+            _recipient,
+            _remoteChainSelector,
+            failedMessage.tokenAmount
+        );
+
+        emit ClaimToRemote(
+            _messageId,
+            ccipMessageId,
+            _recipient,
+            _remoteChainSelector
+        );
     }
 
     /**
@@ -138,7 +169,8 @@ contract MidasCCTFallbackEscrow is
             _processMessage(
                 _messageIds[i],
                 address(0),
-                MessageStatus.Recovered
+                MessageStatus.Recovered,
+                true
             );
         }
         emit RecoverBulk(_messageIds);
@@ -152,7 +184,12 @@ contract MidasCCTFallbackEscrow is
         onlyContractAdmin
     {
         for (uint256 i = 0; i < _messageIds.length; i++) {
-            _processMessage(_messageIds[i], address(0), MessageStatus.Closed);
+            _processMessage(
+                _messageIds[i],
+                address(0),
+                MessageStatus.Closed,
+                true
+            );
         }
         emit CloseBulk(_messageIds);
     }
@@ -167,7 +204,8 @@ contract MidasCCTFallbackEscrow is
             OrphanedMessage calldata message = _messages[i];
             _registerFailedMessages(
                 message.originalRecipient,
-                message.tokenAmount
+                message.tokenAmount,
+                message.originalSourceChainSelector
             );
         }
         emit RegisterOrphanedBulk(_messages);
@@ -178,17 +216,6 @@ contract MidasCCTFallbackEscrow is
      */
     function getFailedMessageIds() external view returns (bytes32[] memory) {
         return _failedMessageIds.values();
-    }
-
-    /**
-     * @inheritdoc IMidasCCTFallbackEscrow
-     */
-    function getFailedMessage(bytes32 _messageId)
-        external
-        view
-        returns (FailedMessage memory)
-    {
-        return failedMessages[_messageId];
     }
 
     /**
@@ -217,7 +244,8 @@ contract MidasCCTFallbackEscrow is
     function _processMessage(
         bytes32 _messageId,
         address _overrideRecipient,
-        MessageStatus _status
+        MessageStatus _status,
+        bool _doTransfer
     ) private returns (FailedMessage storage) {
         require(
             _failedMessageIds.contains(_messageId),
@@ -227,10 +255,12 @@ contract MidasCCTFallbackEscrow is
         failedMessage.status = _status;
         _failedMessageIds.remove(_messageId);
 
-        IERC20(address(tokenPool.getToken())).safeTransfer(
-            _extractRecipient(failedMessage, _overrideRecipient, _status),
-            failedMessage.tokenAmount
-        );
+        if (_doTransfer) {
+            _getToken().safeTransfer(
+                _extractRecipient(failedMessage, _overrideRecipient, _status),
+                failedMessage.tokenAmount
+            );
+        }
 
         return failedMessage;
     }
@@ -239,23 +269,69 @@ contract MidasCCTFallbackEscrow is
      * @notice registers a failed message
      * @param _originalRecipient the original recipient of the failed message
      * @param _tokenAmount the amount of tokens to recover
+     * @param _originalSourceChainSelector the original source chain selector
      * @return messageId the message id
      */
     function _registerFailedMessages(
         address _originalRecipient,
-        uint256 _tokenAmount
+        uint256 _tokenAmount,
+        uint64 _originalSourceChainSelector
     ) private returns (bytes32 messageId) {
         messageId = _getMessageId(
             _originalRecipient,
             _tokenAmount,
+            _originalSourceChainSelector,
             failedMessageCount++
         );
         failedMessages[messageId] = FailedMessage({
             status: MessageStatus.Pending,
             originalRecipient: _originalRecipient,
-            tokenAmount: _tokenAmount
+            tokenAmount: _tokenAmount,
+            originalSourceChainSelector: _originalSourceChainSelector
         });
         _failedMessageIds.add(messageId);
+    }
+
+    /**
+     * @notice Sends escrowed tokens cross-chain via the CCIP Router.
+     * @dev Pays fees in native gas token (`feeToken = address(0)`). Caller is
+     * responsible for attaching a sufficient `msg.value` fee.
+     * @param _recipient ABI-encoded destination receiver
+     * @param _remoteChainSelector Destination chain selector
+     * @param _tokenAmount Amount of the pool token to send
+     */
+    function _sendToRemote(
+        bytes memory _recipient,
+        uint64 _remoteChainSelector,
+        uint256 _tokenAmount
+    ) private returns (bytes32) {
+        IERC20 token = _getToken();
+        (address routerAddress, , ) = tokenPool.getDynamicConfig();
+        IRouterClient router = IRouterClient(routerAddress);
+
+        Client.EVMTokenAmount[]
+            memory tokenAmounts = new Client.EVMTokenAmount[](1);
+        tokenAmounts[0] = Client.EVMTokenAmount({
+            token: address(token),
+            amount: _tokenAmount
+        });
+
+        Client.EVM2AnyMessage memory message = Client.EVM2AnyMessage({
+            receiver: _recipient,
+            data: "",
+            tokenAmounts: tokenAmounts,
+            feeToken: address(0),
+            extraArgs: Client._argsToBytes(
+                Client.GenericExtraArgsV2({
+                    gasLimit: 0,
+                    allowOutOfOrderExecution: true
+                })
+            )
+        });
+
+        token.safeApprove(routerAddress, _tokenAmount);
+
+        return router.ccipSend{value: msg.value}(_remoteChainSelector, message);
     }
 
     /**
@@ -300,6 +376,22 @@ contract MidasCCTFallbackEscrow is
     }
 
     /**
+     * @notice gets the token
+     * @return the token
+     */
+    function _getToken() private view returns (IERC20) {
+        return IERC20(address(tokenPool.getToken()));
+    }
+
+    /**
+     * @notice validates the claim
+     * @param _expectedSender the expected sender
+     */
+    function _validateClaim(address _expectedSender) private view {
+        require(msg.sender == _expectedSender, InvalidSender(_expectedSender));
+    }
+
+    /**
      * @notice generates a message id
      * @param _originalRecipient the original recipient of the failed message
      * @param _tokenAmount the amount of tokens to recover
@@ -309,11 +401,17 @@ contract MidasCCTFallbackEscrow is
     function _getMessageId(
         address _originalRecipient,
         uint256 _tokenAmount,
+        uint64 _originalSourceChainSelector,
         uint256 _index
     ) private view returns (bytes32) {
         return
             keccak256(
-                abi.encodePacked(_originalRecipient, _tokenAmount, _index)
+                abi.encodePacked(
+                    _originalRecipient,
+                    _tokenAmount,
+                    _originalSourceChainSelector,
+                    _index
+                )
             );
     }
 }
