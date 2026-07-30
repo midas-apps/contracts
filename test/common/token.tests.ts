@@ -110,7 +110,8 @@ export const tokenContractsTests = (token: MTokenName) => {
   };
 
   const isPermissioned = !!mTokensMetadata[token]?.isPermissioned;
-  const unitAmount = mTokensMetadata[token]?.isMinBalance ? parseUnits('1') : 1;
+  const isMinBalance = !!mTokensMetadata[token]?.isMinBalance;
+  const unitAmount = isMinBalance ? parseUnits('1') : 1;
 
   const deployMTokenWithFixture = async () => {
     const fixture = await loadFixture(defaultDeploy);
@@ -350,6 +351,11 @@ export const tokenContractsTests = (token: MTokenName) => {
       expect(await contract[tokenRoleNames.burner]()).eq(tokenRoles.burner);
       expect(await contract[tokenRoleNames.minter]()).eq(tokenRoles.minter);
       expect(await contract[tokenRoleNames.pauser]()).eq(tokenRoles.pauser);
+      if (isMinBalance) {
+        expect(await contract[tokenRoleNames.minBalanceExempt]()).eq(
+          tokenRoles.minBalanceExempt,
+        );
+      }
 
       expect(await contract[allRoleNames.defaultAdmin]()).eq(
         allRoles.common.defaultAdmin,

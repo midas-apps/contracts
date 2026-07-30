@@ -80,6 +80,7 @@ export enum MTokenNameEnum {
   sGold = 'sGold',
   turtlePST = 'turtlePST',
   mM1BTC = 'mM1BTC',
+  mGLOeuro = 'mGLOeuro',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
@@ -136,6 +137,7 @@ export enum PaymentTokenNameEnum {
   winj = 'winj',
   yinj = 'yinj',
   eurc = 'eurc',
+  eurcv = 'eurcv',
   usdg = 'usdg',
   pyusd = 'pyusd',
   ausd = 'ausd',

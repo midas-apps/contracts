@@ -105,6 +105,25 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         token: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
         dataFeed: '0x3aAc6fd73fA4e16Ec683BD4aaF5Ec89bb2C0EdC2',
       },
+      eurc: {
+        token: '0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c',
+        numerator: {
+          // Chainlink EURC/USD: USD per EURC, 8 decimals.
+          aggregator: '0x04F84020Fdf10d9ee64D1dcC2986EDF2F556DA11',
+          dataFeed: '0x2A2895f343CA5a5E3d81A53e4C959367EB339f11',
+        },
+        denominator: {
+          // Chainlink EUR/USD: USD per EUR, 8 decimals.
+          aggregator: '0xb49f677943BC038e9857d61E7d053CaA2C1734C1',
+          dataFeed: '0xFBD70c323238B5EDA94b6DEfFc5dB8c70F1f0e6D',
+        },
+        dataFeed: '0x04DbaB674457A696cd4884c2E7c8cc6cA3118513',
+      },
+      eurcv: {
+        token: '0x5F7827FDeb7c20b443265Fc2F40845B715385Ff2',
+        aggregator: '0xD9795cDFb09f1c599e16f6b150f642eC529b7aBB',
+        dataFeed: '0x4D88E4a32cf289ECfA6C9303B57aF0b6c132a733',
+      },
       rlusd: {
         aggregator: '0x26C46B7aD0012cA71F2298ada567dC9Af14E7f2A',
         token: '0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD',
@@ -645,6 +664,16 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xd5a4371EDAC4495d1733D2261B3B3c8FAC338174',
       depositVault: '0xcEDCa505839c01Cc4FbE65496AA3Bb03B8ff98Ed',
       redemptionVaultSwapper: '0x7F72AA0339b4944E1A77df847168AE1936c1EBBB',
+    },
+    mGLOeuro: {
+      token: '0x2F8bae126b8d416C009b82Ccd60e4f9cAbbd7702',
+      customFeed: '0x8B7B1689396ef4468df1c0faB181D29B47089609',
+      customFeedDv: '0x165a52261202c0e32F70dE8eD715A1e3cF9a228c',
+      customFeedRv: '0x0f46c1E4F51B92c2966BEA4bd5A52E71E423D6e0',
+      dataFeedDv: '0xc27Cd7c0203B73933dcbcF7bdB4cC5D7bDA80A64',
+      dataFeedRv: '0xF76653eBc3e47B80e89F0e5b9CF6A5CAaB848946',
+      depositVaultMorpho: '0xE0Dcf20b0460e1f9222528F3997F9D71Ad6375C5',
+      redemptionVaultMorpho: '0x1E9f04408FF38d1FB70CE939fC87D26D61F6F758',
     },
   },
   arbitrum: {

@@ -26,6 +26,7 @@ export type GrantAllTokenRolesConfig = {
   tokenManagerAddress: Address;
   vaultsManagerAddress?: Address;
   oracleManagerAddress: Address;
+  minBalanceExemptAddresses?: Address[];
 };
 
 const acAdminAddress = '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227';
@@ -72,6 +73,11 @@ export const grantAllProductRoles = async (
   ];
 
   const oracleManagerRoles = [tokenRoles.customFeedAdmin!];
+  const minBalanceExemptAddresses =
+    networkConfig.minBalanceExemptAddresses ?? [];
+  const minBalanceExemptRoles = minBalanceExemptAddresses.map(
+    () => tokenRoles.minBalanceExempt,
+  );
 
   const defaultManager = provider.address;
 
@@ -100,6 +106,7 @@ export const grantAllProductRoles = async (
     ...tokenManagerRoles,
     ...vaultManagerRoles,
     ...oracleManagerRoles,
+    ...minBalanceExemptRoles,
     ...contractsRoles,
   ];
   const grantAddresses = [
@@ -108,6 +115,7 @@ export const grantAllProductRoles = async (
       () => networkConfig.vaultsManagerAddress ?? defaultManager,
     ),
     ...oracleManagerRoles.map(() => networkConfig.oracleManagerAddress),
+    ...minBalanceExemptAddresses,
     ...contractsAddresses,
   ];
 

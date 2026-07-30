@@ -338,4 +338,9 @@ export const mTokensMetadata: Record<
     name: 'Midas M1 BTC Market Neutral',
     symbol: 'mM1-BTC',
   },
+  mGLOeuro: {
+    name: 'Midas Fasanara Global Euro',
+    symbol: 'mGLOeuro',
+    isMinBalance: true,
+  },
 };

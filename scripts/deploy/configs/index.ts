@@ -35,6 +35,7 @@ import { mFARMDeploymentConfig } from './mFARM';
 import { mFONEDeploymentConfig } from './mFONE';
 import { mGLODeploymentConfig } from './mGLO';
 import { mGLOBALDeploymentConfig } from './mGLOBAL';
+import { mGLOeuroDeploymentConfig } from './mGLOeuro';
 import { mHYPERDeploymentConfig } from './mHYPER';
 import { mHyperBTCDeploymentConfig } from './mHyperBTC';
 import { mHyperETHDeploymentConfig } from './mHyperETH';
@@ -165,4 +166,5 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   sGold: sGoldDeploymentConfig,
   turtlePST: turtlePSTDeploymentConfig,
   mM1BTC: mM1BTCDeploymentConfig,
+  mGLOeuro: mGLOeuroDeploymentConfig,
 };

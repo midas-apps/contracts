@@ -382,6 +382,41 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           maxAnswer: parseUnits('1.250000', 6),
         },
       },
+      eurc: {
+        dataFeed: {
+          // EURC/EUR = (USD per EURC) / (USD per EUR).
+          // Each wrapper converts its native 8-decimal Chainlink answer to 18 decimals.
+          numerator: {
+            healthyDiff: 24 * 60 * 60,
+          },
+          denominator: {
+            healthyDiff: 24 * 60 * 60,
+          },
+          feedType: 'composite',
+          // Composite output and bounds are EUR per EURC in 18 decimals (1e18 = 1 EUR per EURC).
+          // The standard stable-payment-token bounds are shared by the DV and RV.
+          minAnswer: parseUnits('0.997'),
+          maxAnswer: parseUnits('1.003'),
+        },
+      },
+      eurcv: {
+        customAggregator: {
+          description: 'EURCV/EUR',
+          minAnswer: parseUnits('0.9999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.9999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
     },
     [chainIds.base]: {
       usdc: {
