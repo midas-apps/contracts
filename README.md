@@ -24,7 +24,7 @@ This repository contains EVM smart contracts for the Midas protocol.
 
 ### Required Software
 
-- **Node.js**: >=22
+- **Node.js**: >=22 <23
 - **Yarn**: Berry (check the [installation guide](https://yarnpkg.com/getting-started/install))
 
 ### Installation
@@ -232,8 +232,10 @@ Global manager for pausing and unpausing protocol functions. Pausing can be appl
 
 **Key Functions:**
 
-- `pause()` / `unpause()` - change the pause status for a contract or function
-- Per-function granularity, so only the affected operations can be stopped
+- `globalPause()` / `globalUnpause()` - pause or unpause the whole protocol
+- `bulkPauseContract()` / `bulkUnpauseContract()` - pause or unpause entire contracts
+- `bulkPauseContractFn()` / `bulkUnpauseContractFn()` - pause or unpause individual functions (by selector), so only the affected operations are stopped
+- `isPaused()` / `isFunctionPaused()` - view the current pause status
 
 ### mTokens
 
@@ -244,18 +246,27 @@ Base contract for all mToken implementations
 **Key Features:**
 
 - Minting and burning functionality (role-protected)
-- Pausable transfers (inherited from `ERC20PausableUpgradeable`)
+- Pausable transfers - transfers are gated by the global [`MidasPauseManager`](contracts/access/MidasPauseManager.sol) (function-level pause), on top of `ERC20PausableUpgradeable`
 - Blacklist functionality - blacklisted users cannot send or receive any tokens
+- Configurable maximum supply cap (`maxSupplyCap`), enforced on every mint
+- Per-token mint rate limits (windowed)
+- Optional permissioned transfers and minimum holding balance enforcement (toggled via flags, see below)
+- Clawback of tokens by a contract admin to a configured `clawbackReceiver`
 
 **Key Functions:**
 
 - `mint(address to, uint256 amount)` - Mint tokens to any address (requires minter role)
 - `burn(address from, uint256 amount)` - Burn tokens from any address (requires burner role)
-- `pause()` / `unpause()` - Pause/unpause transfers (requires pauser role)
+- `mintGoverned()` / `burnGoverned()` - Mint/burn variants callable by the contract admin
+- `clawback(uint256 amount, address from)` - Move tokens from an address to the `clawbackReceiver` (requires contract admin)
+- `setMaxSupplyCap()`, `increaseMintRateLimit()` / `decreaseMintRateLimit()` - Supply cap and rate limit management
 
-**mToken Variations:**
+**Configurable behavior (single contract, no separate variations):**
 
-- **mTokenPermissioned** ([`contracts/mTokenPermissioned.sol`](contracts/mTokenPermissioned.sol)) - An mToken with fully permissioned transfers, where transfers are only allowed between approved addresses.
+Permissioning is a built-in flag rather than a separate contract:
+
+- `isPermissioned` - when enabled, transfers are only allowed between greenlisted addresses. Toggled via `setIsPermissioned()`.
+- `isMinHoldingBalanceEnforced` - when enabled, non-exempt holders must keep a minimum balance (or zero). Toggled via `setMinHoldingBalanceEnforced()`.
 
 ### Data Feeds and Aggregators
 
@@ -318,7 +329,7 @@ Both vaults support two execution modes:
 - Two-step process
 - User submits request on-chain
 - Admin approves or rejects after off-chain processing
-- Used when instant liquidity is insufficient or instant operations are disabled. Also for fiat operations
+- Used when instant liquidity is insufficient or instant operations are disabled
 
 #### **DepositVault** ([`contracts/DepositVault.sol`](contracts/DepositVault.sol))
 
@@ -328,7 +339,7 @@ Manages the minting process for mTokens. Users deposit payment tokens to receive
 
 - Instant deposits - minting happens atomically
 - Request-based deposits - user pays in one transaction and tokens are minted in a second tx initiated by vault admin
-- Supply cap management
+- Supply cap enforcement - deposits are validated against the mToken's `maxSupplyCap` (the cap lives on the token, not the vault)
 - Minimal mTokens amount for first mint transaction
 
 **Key Functions:**
@@ -353,14 +364,12 @@ Manages the redemption process for mTokens. Burns mTokens from a user and transf
 
 - Instant redemptions - user receive payment tokens atomically
 - Request-based redemptions - tokens are burned from user in one transaction and payment tokens are transferred in a second tx initiated by vault admin
-- Fiat redemption support
 - Separate liquidity source for request-based operations
 
 **Key Functions:**
 
 - `redeemInstant()` - Instant redemption with immediate token transfer
 - `redeemRequest()` - Create redemption request
-- `redeemFiatRequest()` - Create fiat redemption request
 - `approveRequest()` - Admin fulfills redemption request
 - `rejectRequest()` - Admin rejects redemption request
 
@@ -394,6 +403,8 @@ Wrapper around Midas vaults so they can be used by the Acre protocol.
 
 Contracts for LayerZero cross-chain messaging:
 
+- `MidasLzOFT.sol` - Native OFT that mints/burns its own supply, deployed on remote chains
+- `MidasLzOFTAdapter.sol` - Lock/unlock OFT adapter wrapping an existing ERC20 on its home chain
 - `MidasLzMintBurnOFTAdapter.sol` - OFT adapter that uses native mint/burn on mTokens
 - `MidasLzVaultComposerSync.sol` - Vault composer for instant-only operations
 
