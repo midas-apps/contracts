@@ -64,7 +64,7 @@ const setChainRateLimiterConfig = (
     },
   ]);
 
-describe.only('CCIP', function () {
+describe('CCIP', function () {
   describe('MidasCCTBurnMintTokenPool', () => {
     describe('deployment', () => {
       it('should fail: when token decimals are not 18', async () => {
