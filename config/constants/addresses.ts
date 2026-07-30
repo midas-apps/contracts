@@ -1627,6 +1627,16 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x97b30c9D53A010009136b830f8A12f8d5624Bc43',
       redemptionVaultSwapper: '0x12Ae90dCe5C2a4Ee5141FBfc408ff1022D051F42',
     },
+    mGLO: {
+      token: '0x1Eaf7cceAA5DC6d605760718722fbcC58579b3Ff',
+      customFeed: '0x4c8f5CEd7F3211ad1D70B6F33e585309Fb1AcA75',
+      customFeedDv: '0x116fc90020456f33C801850e89a05a7edCd04673',
+      customFeedRv: '0x02E16Cc29B99A27725E77976400dDf204c295705',
+      dataFeedDv: '0xAf91e7754E12c90F3F07a1719E39a65Fc58204ff',
+      dataFeedRv: '0xB391486b0d058176A845aCcF2Cb160A2be9CfCb8',
+      depositVault: '0xa5d0E53059b648B7615B67602De4489079EAe2B4',
+      redemptionVaultSwapper: '0x99656E9753047F2769D10fa65B9D8ebfE44B35ab',
+    },
   },
   robinhood: {
     accessControl: '0xe5F087203F9e7A6104c821ec25b1F0a4505D3cb5',
