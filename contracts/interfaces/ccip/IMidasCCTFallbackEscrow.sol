@@ -117,6 +117,8 @@ interface IMidasCCTFallbackEscrow is IMidasCCTFailedMessageFallback {
     /**
      * @notice Claims a failed message to a remote chain
      * @dev should be called by the original recipient of the failed message
+     * sender should provide exactly IRouterClient.getFee(...) value for a tx
+     * otherwise the tx will either revert or sender will lose unused fees
      * @param _messageId the id of the failed message
      * @param _recipient the recipient of the failed message in bytes
      * @param _remoteChainSelector the remote chain selector
