@@ -82,6 +82,26 @@ export type LayerZeroConfig = {
   };
 };
 
+export type CCIPRateLimitConfigCore = {
+  capacity: BigNumberish;
+  window: number;
+};
+
+export type CCIPRateLimitConfig = {
+  inbound?: CCIPRateLimitConfigCore;
+  outbound?: CCIPRateLimitConfigCore;
+};
+
+export type CCIPConfig = {
+  owner?: string;
+  defaultReceiver?: string;
+  escrowAdmin?: string;
+  rateLimitConfig?: {
+    default?: CCIPRateLimitConfig;
+    overrides?: PartialConfigPerNetwork<CCIPRateLimitConfig>;
+  };
+};
+
 export type AxelarItsConfig = {
   operator: string;
   flowLimit?: BigNumberish;
@@ -95,6 +115,7 @@ export type PostDeployConfig = {
   greenlist?: GreenlistConfig;
   pauseFunctions?: PauseFunctionsConfig;
   layerZero?: LayerZeroConfig;
+  ccip?: CCIPConfig;
   axelarIts?: AxelarItsConfig;
   setAaveConfig?: SetAaveConfigConfig;
   setMorphoConfig?: SetMorphoConfigConfig;
