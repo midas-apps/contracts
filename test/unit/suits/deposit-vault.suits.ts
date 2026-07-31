@@ -1764,7 +1764,8 @@ export const depositVaultSuits = (
             {
               from: regularAccounts[0],
               revertCustomError: {
-                customErrorName: 'SupplyCapExceeded',
+                contract: mTBILL,
+                customErrorName: 'MaxSupplyCapExceeded',
               },
             },
           );
@@ -1835,7 +1836,8 @@ export const depositVaultSuits = (
             {
               from: regularAccounts[0],
               revertCustomError: {
-                customErrorName: 'SupplyCapExceeded',
+                contract: mTBILL,
+                customErrorName: 'MaxSupplyCapExceeded',
               },
             },
           );

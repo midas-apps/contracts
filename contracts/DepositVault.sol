@@ -202,7 +202,6 @@ contract DepositVault is ManageableVault, IDepositVault {
      */
     function safeBulkApproveRequestAtSavedRate(uint256[] calldata requestIds)
         external
-        onlyContractAdmin
     {
         _safeBulkApproveRequest(requestIds, 0, true, false);
     }
@@ -324,16 +323,7 @@ contract DepositVault is ManageableVault, IDepositVault {
             if (isRequestRate) {
                 newOutRate = mintRequests[requestIds[i]].tokenOutRate;
             }
-            bool success = _approveRequest(
-                requestIds[i],
-                newOutRate,
-                true,
-                isAvgRate
-            );
-
-            if (!success) {
-                continue;
-            }
+            _approveRequest(requestIds[i], newOutRate, true, isAvgRate);
         }
     }
 
@@ -410,7 +400,7 @@ contract DepositVault is ManageableVault, IDepositVault {
 
         _instantTransferTokensToTokensReceiver(
             tokenIn,
-            result.amountTokenWithoutFee + result.feeTokenAmount,
+            amountToken,
             result.tokenDecimals
         );
 
@@ -573,21 +563,13 @@ contract DepositVault is ManageableVault, IDepositVault {
      * - safely validates max supply cap
      * - requires variation tolerance
      * @param isAvgRate if true, newOutRate is avg rate
-     *
-     * @return success true if success, otherwise false if isSafe flag is true,
-     * or revert if isSafe flag is false
      */
     function _approveRequest(
         uint256 requestId,
         uint256 newOutRate,
         bool isSafe,
         bool isAvgRate
-    )
-        private
-        returns (
-            bool /* success */
-        )
-    {
+    ) private {
         Request memory request = mintRequests[requestId];
 
         _validateRequest(requestId, request.recipient, request.status);
@@ -602,6 +584,10 @@ contract DepositVault is ManageableVault, IDepositVault {
                 request,
                 newOutRate
             );
+
+            if (request.depositedInstantUsdAmount > 0) {
+                require(avgRate > 0, InvalidAvgRate());
+            }
 
             if (avgRate != 0) {
                 newOutRate = avgRate;
@@ -624,7 +610,7 @@ contract DepositVault is ManageableVault, IDepositVault {
                 !isSafe
             ) || !_validateAndUpdateNextRequestIdToProcess(requestId, !isSafe)
         ) {
-            return false;
+            return;
         }
 
         upcomingSupply -= upcomingSupplyDecrease;
@@ -640,8 +626,6 @@ contract DepositVault is ManageableVault, IDepositVault {
         mintRequests[requestId] = request;
 
         emit ApproveRequest(requestId, newOutRate, isSafe, isAvgRate);
-
-        return true;
     }
 
     /**

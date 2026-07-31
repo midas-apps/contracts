@@ -197,8 +197,8 @@ abstract contract ManageableVault is
             _commonVaultInitParams.sanctionsList
         );
 
-        _validateAddress(_commonVaultInitParams.mToken, false);
-        _validateAddress(_commonVaultInitParams.mTokenDataFeed, false);
+        _validateAddress(_commonVaultInitParams.mToken, true);
+        _validateAddress(_commonVaultInitParams.mTokenDataFeed, true);
         _validateAddress(_commonVaultInitParams.tokensReceiver, true);
         _validateFee(_commonVaultInitParams.variationTolerance, true);
         _validateFee(_commonVaultInitParams.instantFee, false);

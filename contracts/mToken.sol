@@ -301,10 +301,16 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      * @inheritdoc IMToken
      */
     function burn(address from, uint256 amount)
-        external
+        public
+        virtual
         onlyRoleNoTimelock(burnerRole(), false)
     {
         _onlyNotBlacklisted(from);
+
+        if (isPermissioned) {
+            _onlyGreenlisted(from);
+        }
+
         _burn(from, amount);
     }
 
@@ -473,6 +479,7 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         uint256 amount
     ) internal override(ERC20PausableUpgradeable) {
         PauseGuardsLibrary.requireNotPaused(accessControl, msg.sig);
+        ERC20PausableUpgradeable._beforeTokenTransfer(from, to, amount);
 
         if (to != address(0)) {
             if (!_inClawback && from != address(0)) {
@@ -481,13 +488,12 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
             _onlyNotBlacklisted(to);
         }
 
+        _validatePermissioned(from, to);
+
         // if minting, check and update mint rate limit
         if (from == address(0)) {
             _mintRateLimits.consumeLimit(amount);
         }
-
-        _validatePermissioned(from, to);
-        ERC20PausableUpgradeable._beforeTokenTransfer(from, to, amount);
     }
 
     /**

@@ -71,9 +71,9 @@ describe('MidasTimelockManager', () => {
     }
     expect(await timelockManager.EXPIRY_PERIOD()).to.eq(days(45));
     expect(await timelockManager.DISPUTE_PERIOD()).to.eq(days(3));
-    expect(await timelockManager.MAX_PENDING_OPERATIONS_PER_PROPOSER()).to.eq(
-      100,
-    );
+    expect(
+      await timelockManager.MAX_OF_MAX_PENDING_OPERATIONS_PER_PROPOSER(),
+    ).to.eq(100);
     expect(await timelockManager.SECURITY_COUNCIL_MAX_MEMBERS()).to.eq(15);
     expect(await timelockManager.SECURITY_COUNCIL_MIN_MEMBERS()).to.eq(5);
     expect(await timelockManager.maxPendingOperationsPerProposer()).to.eq(100);
@@ -1580,7 +1580,7 @@ describe('MidasTimelockManager', () => {
       );
     });
 
-    it('should fail: when max pending operations per proposer > MAX_PENDING_OPERATIONS_PER_PROPOSER', async () => {
+    it('should fail: when max pending operations per proposer > MAX_OF_MAX_PENDING_OPERATIONS_PER_PROPOSER', async () => {
       const { timelockManager, timelock, owner, accessControl } =
         await loadFixture(defaultDeploy);
 

@@ -37,6 +37,7 @@ contract MidasTimelockManager is
         bool isSetCouncilOperation;
         uint32 createdAt;
         uint32 executionApprovedAt;
+        uint32 pausedAt;
         address operationProposer;
         address pauser;
     }
@@ -76,7 +77,7 @@ contract MidasTimelockManager is
     /**
      * @notice hard cap for max pending operations per proposer
      */
-    uint256 public constant MAX_PENDING_OPERATIONS_PER_PROPOSER = 100;
+    uint256 public constant MAX_OF_MAX_PENDING_OPERATIONS_PER_PROPOSER = 100;
 
     /**
      * @inheritdoc IMidasTimelockManager
@@ -269,6 +270,11 @@ contract MidasTimelockManager is
         );
         bool success = true;
 
+        _resetPendingSetCouncilOperation(opDetails);
+
+        --proposerPendingOperationsCount[opDetails.operationProposer];
+        require(_pendingOperations.remove(operationId), OperationNotPending());
+
         try
             _timelock.execute(
                 target,
@@ -291,12 +297,10 @@ contract MidasTimelockManager is
             }
         }
 
-        _resetPendingSetCouncilOperation(opDetails);
-
-        // updating state after execution to be able to verify tx against current contexts
+        // updating hash after execution to be able to get current proposer
+        // from the executing operation
+        // in case of reentrancy timelock.execute will revert
         dataHashIndexes[dataHash] = dataHashIndex + 1;
-        --proposerPendingOperationsCount[opDetails.operationProposer];
-        require(_pendingOperations.remove(operationId), OperationNotPending());
 
         emit ExecuteTimelockOperation(msg.sender, operationId, success);
     }
@@ -325,6 +329,7 @@ contract MidasTimelockManager is
         opDetails.pauseReasonCode = pauseReasonCode;
         opDetails.councilVersion = councilVersion;
         opDetails.pauser = msg.sender;
+        opDetails.pausedAt = uint32(block.timestamp);
 
         emit PauseTimelockOperation(
             msg.sender,
@@ -496,6 +501,7 @@ contract MidasTimelockManager is
         result.votesForExecution = uint8(opDetails.votersForExecution.length());
         result.votesForVeto = uint8(opDetails.votersForVeto.length());
         result.isSetCouncilOperation = opDetails.isSetCouncilOperation;
+        result.pausedAt = opDetails.pausedAt;
     }
 
     /**
@@ -764,7 +770,7 @@ contract MidasTimelockManager is
         require(
             _maxPendingOperationsPerProposer > 0 &&
                 _maxPendingOperationsPerProposer <=
-                MAX_PENDING_OPERATIONS_PER_PROPOSER,
+                MAX_OF_MAX_PENDING_OPERATIONS_PER_PROPOSER,
             InvalidMaxPendingOperationsPerProposer()
         );
         maxPendingOperationsPerProposer = _maxPendingOperationsPerProposer;

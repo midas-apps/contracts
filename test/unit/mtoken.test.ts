@@ -2984,7 +2984,7 @@ describe('mTokenPermissioned', () => {
       );
     });
 
-    it('burn without greenlist on holder', async () => {
+    it('burnGoverned without greenlist on holder', async () => {
       const baseFixture = await loadFixture(defaultDeploy);
       const {
         owner,
@@ -3005,7 +3005,37 @@ describe('mTokenPermissioned', () => {
         holder.address,
       );
 
-      await burn({ tokenContract: mTokenPermissioned, owner }, holder, 1);
+      await burn(
+        { tokenContract: mTokenPermissioned, owner, isGoverned: true },
+        holder,
+        1,
+      );
+    });
+
+    it('should fail: burn without greenlist on holder', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const {
+        owner,
+        accessControl,
+        regularAccounts,
+        mTokenPermissioned,
+        mTokenPermissionedRoles,
+      } = await loadFixture(mTokenPermissionedFixture.bind(this, baseFixture));
+
+      const holder = regularAccounts[0];
+      await accessControl['grantRole(bytes32,address)'](
+        mTokenPermissionedRoles.greenlisted,
+        holder.address,
+      );
+      await mint({ tokenContract: mTokenPermissioned, owner }, holder, 1);
+      await accessControl.revokeRole(
+        mTokenPermissionedRoles.greenlisted,
+        holder.address,
+      );
+
+      await burn({ tokenContract: mTokenPermissioned, owner }, holder, 1, {
+        revertCustomError: { customErrorName: 'NotGreenlisted' },
+      });
     });
   });
 

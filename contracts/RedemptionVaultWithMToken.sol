@@ -16,7 +16,6 @@ import {RedemptionSwapperHelpersLibrary} from "./libraries/RedemptionSwapperHelp
 /**
  * @title RedemptionVaultWithMToken
  * @notice Smart contract that handles redemptions using mToken RedemptionVault withdrawals
- * @dev Storage layout is preserved for safe upgrades from RedemptionVaultWithSwapper
  * @author RedDuck Software
  */
 contract RedemptionVaultWithMToken is RedemptionVault {
