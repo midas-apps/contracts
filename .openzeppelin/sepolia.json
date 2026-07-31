@@ -784,6 +784,11 @@
       "address": "0x75726da161ef6aE712e941E00705879715b260f6",
       "txHash": "0xcb8a84e91a264b44fc00c807ea3736e68d2fa84562889cbd9062d8747963febb",
       "kind": "transparent"
+    },
+    {
+      "address": "0xF0c0A588e8B3198f9Afb8b9DDa2E7F958D1Ae4D6",
+      "txHash": "0x481a971de0584b2c8d5972931f48818bd95ba2078b8a1ab6dcd03aa3d085b0b6",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -47504,6 +47509,219 @@
           "t_uint256": {
             "label": "uint256",
             "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "69ebccb7d41fa70c66b7077c92d3d3a6cc0126c6b0d6f125dffbbc6bb5550a61": {
+      "address": "0xd9FD24b60208290c018Dc35ED831F86719A48510",
+      "txHash": "0x95d61109cdabac57b6c6e651a87136525d99ecda991c456bdcfd1d278b04502f",
+      "layout": {
+        "solcVersion": "0.8.28",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "accessControl",
+            "offset": 2,
+            "slot": "0",
+            "type": "t_contract(MidasAccessControl)33501",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:24"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:29"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "Blacklistable",
+            "src": "contracts/access/Blacklistable.sol:16"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC165Upgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:41"
+          },
+          {
+            "label": "tokenPool",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_contract(TokenPool)6988",
+            "contract": "MidasCCTFallbackEscrow",
+            "src": "contracts/misc/ccip/MidasCCTFallbackEscrow.sol:36"
+          },
+          {
+            "label": "defaultRecipient",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_address",
+            "contract": "MidasCCTFallbackEscrow",
+            "src": "contracts/misc/ccip/MidasCCTFallbackEscrow.sol:41"
+          },
+          {
+            "label": "failedMessageCount",
+            "offset": 0,
+            "slot": "153",
+            "type": "t_uint256",
+            "contract": "MidasCCTFallbackEscrow",
+            "src": "contracts/misc/ccip/MidasCCTFallbackEscrow.sol:46"
+          },
+          {
+            "label": "failedMessages",
+            "offset": 0,
+            "slot": "154",
+            "type": "t_mapping(t_bytes32,t_struct(FailedMessage)34513_storage)",
+            "contract": "MidasCCTFallbackEscrow",
+            "src": "contracts/misc/ccip/MidasCCTFallbackEscrow.sol:51"
+          },
+          {
+            "label": "_failedMessageIds",
+            "offset": 0,
+            "slot": "155",
+            "type": "t_struct(Bytes32Set)20239_storage",
+            "contract": "MidasCCTFallbackEscrow",
+            "src": "contracts/misc/ccip/MidasCCTFallbackEscrow.sol:56"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_bytes32)dyn_storage": {
+            "label": "bytes32[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_contract(MidasAccessControl)33501": {
+            "label": "contract MidasAccessControl",
+            "numberOfBytes": "20"
+          },
+          "t_contract(TokenPool)6988": {
+            "label": "contract TokenPool",
+            "numberOfBytes": "20"
+          },
+          "t_enum(MessageStatus)34503": {
+            "label": "enum IMidasCCTFallbackEscrow.MessageStatus",
+            "members": ["Pending", "Claimed", "Recovered", "Closed"],
+            "numberOfBytes": "1"
+          },
+          "t_mapping(t_bytes32,t_struct(FailedMessage)34513_storage)": {
+            "label": "mapping(bytes32 => struct IMidasCCTFallbackEscrow.FailedMessage)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_uint256)": {
+            "label": "mapping(bytes32 => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Bytes32Set)20239_storage": {
+            "label": "struct EnumerableSetUpgradeable.Bytes32Set",
+            "members": [
+              {
+                "label": "_inner",
+                "type": "t_struct(Set)20045_storage",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(FailedMessage)34513_storage": {
+            "label": "struct IMidasCCTFallbackEscrow.FailedMessage",
+            "members": [
+              {
+                "label": "originalRecipient",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "originalSourceChainSelector",
+                "type": "t_uint64",
+                "offset": 20,
+                "slot": "0"
+              },
+              {
+                "label": "tokenAmount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "status",
+                "type": "t_enum(MessageStatus)34503",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_struct(Set)20045_storage": {
+            "label": "struct EnumerableSetUpgradeable.Set",
+            "members": [
+              {
+                "label": "_values",
+                "type": "t_array(t_bytes32)dyn_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_indexes",
+                "type": "t_mapping(t_bytes32,t_uint256)",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
           },
           "t_uint8": {
             "label": "uint8",

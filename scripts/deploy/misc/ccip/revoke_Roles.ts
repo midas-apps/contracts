@@ -1,10 +1,14 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
-import { getRolesForToken } from '../../../../helpers/roles';
+import { getAllRoles, getRolesForToken } from '../../../../helpers/roles';
 import { getMTokenOrThrow } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
-import { getDeployer, sendAndWaitForCustomTxSign } from '../../common/utils';
+import {
+  getDeployer,
+  getNetworkConfig,
+  sendAndWaitForCustomTxSign,
+} from '../../common/utils';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const deployer = await getDeployer(hre);
@@ -12,6 +16,13 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const addresses = getCurrentAddresses(hre);
   const mTokenAddresses = addresses?.[mToken];
+
+  const config = getNetworkConfig(hre, mToken, 'postDeploy');
+  const escrowAdmin = config?.ccip?.escrowAdmin;
+
+  if (!escrowAdmin) {
+    throw new Error('escrow admin address is not found');
+  }
 
   if (
     !mTokenAddresses ||
@@ -23,20 +34,27 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const roles = getRolesForToken(mToken);
 
+  const allRoles = getAllRoles();
+
   const contract = await hre.ethers.getContractAt(
     'MidasAccessControl',
     addresses.accessControl!,
     deployer,
   );
 
-  const rolesToRevoke = [roles.minter, roles.burner];
+  const rolesToRevoke = [
+    roles.minter,
+    roles.burner,
+    allRoles.common.escrowAdmin,
+  ];
 
   const tx = await sendAndWaitForCustomTxSign(
     hre,
-    await contract.populateTransaction.revokeRoleMult(
-      rolesToRevoke,
-      rolesToRevoke.map(() => mTokenAddresses.ccip?.tokenPool ?? ''),
-    ),
+    await contract.populateTransaction.revokeRoleMult(rolesToRevoke, [
+      mTokenAddresses.ccip?.tokenPool ?? '',
+      mTokenAddresses.ccip?.tokenPool ?? '',
+      escrowAdmin,
+    ]),
     {
       action: 'update-ac',
       subAction: 'revoke-token-roles',

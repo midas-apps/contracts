@@ -1683,7 +1683,8 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         },
       },
       ccip: {
-        tokenPool: '0xc00C119a9421a62F194068B241E9676811B1e3EC',
+        tokenPool: '0xC209b77eb3a435A334E8Aadea7496F28D3712112',
+        fallbackEscrow: '0xF0c0A588e8B3198f9Afb8b9DDa2E7F958D1Ae4D6',
       },
     },
     mBASIS: {
@@ -1836,7 +1837,8 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
           '0x46929f12e9fc2e41757d789d461b77f9dcfbf328d3797a4446f8335fbe27d985',
       },
       ccip: {
-        tokenPool: '0x9230F9cBAca32bad2B19CAB331d3e6509B8EB0cB',
+        tokenPool: '0x20cd58F72cF1727a2937eB1816593390cf8d91cB',
+        fallbackEscrow: '0xde7c5BbCa091638D32BF30c641146D51Ca8C8e52',
       },
     },
   },
