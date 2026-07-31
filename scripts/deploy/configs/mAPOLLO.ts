@@ -44,7 +44,7 @@ export const mAPOLLODeploymentConfig: DeploymentConfig = {
         liquidityProvider: '0x0461bD693caE49bE9d030E5c212e080F9c78B846',
         swapperVault: {
           mToken: 'mTBILL',
-          redemptionVaultType: 'redemptionVaultBuidl',
+          redemptionVaultType: 'redemptionVaultUstb',
         },
         enableSanctionsList: true,
       },

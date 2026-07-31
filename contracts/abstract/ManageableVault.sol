@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
@@ -9,16 +9,21 @@ import {EnumerableSetUpgradeable as EnumerableSet} from "@openzeppelin/contracts
 
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 
-import "../interfaces/IManageableVault.sol";
-import "../interfaces/IMToken.sol";
-import "../interfaces/IDataFeed.sol";
+import {IManageableVault, TokenConfig, CommonVaultInitParams} from "../interfaces/IManageableVault.sol";
+import {IMToken} from "../interfaces/IMToken.sol";
+import {IDataFeed} from "../interfaces/IDataFeed.sol";
 
-import "../access/Greenlistable.sol";
-import "../access/Blacklistable.sol";
-import "../abstract/WithSanctionsList.sol";
+import {Greenlistable} from "../access/Greenlistable.sol";
+import {Blacklistable} from "../access/Blacklistable.sol";
+import {WithSanctionsList} from "../abstract/WithSanctionsList.sol";
 
-import "../libraries/DecimalsCorrectionLibrary.sol";
-import "../access/Pausable.sol";
+import {DecimalsCorrectionLibrary} from "../libraries/DecimalsCorrectionLibrary.sol";
+import {IMidasAccessControlManaged} from "../interfaces/IMidasAccessControlManaged.sol";
+import {PauseGuardsLibrary} from "../libraries/PauseGuardsLibrary.sol";
+import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
+
+import {RateLimitLibrary} from "../libraries/RateLimitLibrary.sol";
+import {MidasInitializable} from "./MidasInitializable.sol";
 
 /**
  * @title ManageableVault
@@ -26,21 +31,16 @@ import "../access/Pausable.sol";
  * @notice Contract with base Vault methods
  */
 abstract contract ManageableVault is
-    Pausable,
     IManageableVault,
     Blacklistable,
     Greenlistable,
     WithSanctionsList
 {
     using EnumerableSet for EnumerableSet.AddressSet;
+    using EnumerableSet for EnumerableSet.UintSet;
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
-    using Counters for Counters.Counter;
-
-    /**
-     * @notice address that represents off-chain USD bank transfer
-     */
-    address public constant MANUAL_FULLFILMENT_TOKEN = address(0x0);
+    using RateLimitLibrary for RateLimitLibrary.WindowRateLimits;
 
     /**
      * @notice stable coin static rate 1:1 USD in 18 decimals
@@ -48,17 +48,64 @@ abstract contract ManageableVault is
     uint256 public constant STABLECOIN_RATE = 10**18;
 
     /**
-     * @notice last request id
-     */
-    Counters.Counter public currentRequestId;
-
-    /**
      * @notice 100 percent with base 100
      * @dev for example, 10% will be (10 * 100)%
      */
     uint256 public constant ONE_HUNDRED_PERCENT = 100 * 100;
 
-    uint256 public constant MAX_UINT = type(uint256).max;
+    /**
+     * @dev role that grants admin rights to the contract
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _CONTRACT_ADMIN_ROLE;
+
+    /**
+     * @dev role that grants greenlisted status to the contract
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _GREENLISTED_ROLE;
+
+    /**
+     * @notice mapping, token address to token config
+     */
+    mapping(address => TokenConfig) public tokensConfig;
+
+    /**
+     * @notice mapping, user address => is free frmo min amounts
+     */
+    mapping(address => bool) public isFreeFromMinAmount;
+
+    /**
+     * @notice address restriction with zero fees
+     */
+    mapping(address => bool) public override waivedFeeRestriction;
+
+    /**
+     * @dev tokens that can be used as USD representation
+     */
+    EnumerableSet.AddressSet internal _paymentTokens;
+
+    /**
+     * @notice instant rate limits state
+     */
+    RateLimitLibrary.WindowRateLimits private _instantRateLimits;
+
+    /**
+     * @notice last request id
+     */
+    uint256 public currentRequestId;
+
+    /**
+     * @notice next expected request id to process
+     */
+    uint256 public nextExpectedRequestIdToProcess;
+
+    /**
+     * @notice max requestId that can be approved
+     */
+    uint256 public maxApproveRequestId;
 
     /**
      * @notice mToken token
@@ -76,46 +123,9 @@ abstract contract ManageableVault is
     address public tokensReceiver;
 
     /**
-     * @dev fee for initial operations 1% = 100
-     */
-    uint256 public instantFee;
-
-    /**
-     * @dev daily limit for initial operations
-     * if user exceed this limit he will need
-     * to create requests
-     */
-    uint256 public instantDailyLimit;
-
-    /**
-     * @dev mapping days (number from 1970) to limit amount
-     */
-    mapping(uint256 => uint256) public dailyLimits;
-
-    /**
-     * @notice address to which fees will be sent
-     */
-    address public feeReceiver;
-
-    /**
      * @notice variation tolerance of tokenOut rates for "safe" requests approve
      */
     uint256 public variationTolerance;
-
-    /**
-     * @notice address restriction with zero fees
-     */
-    mapping(address => bool) public waivedFeeRestriction;
-
-    /**
-     * @dev tokens that can be used as USD representation
-     */
-    EnumerableSet.AddressSet internal _paymentTokens;
-
-    /**
-     * @notice mapping, token address to token config
-     */
-    mapping(address => TokenConfig) public tokensConfig;
 
     /**
      * @notice basic min operations amount
@@ -123,9 +133,29 @@ abstract contract ManageableVault is
     uint256 public minAmount;
 
     /**
-     * @notice mapping, user address => is free frmo min amounts
+     * @dev fee for initial operations 1% = 100
      */
-    mapping(address => bool) public isFreeFromMinAmount;
+    uint256 public instantFee;
+
+    /**
+     * @notice minimum instant fee
+     */
+    uint256 public minInstantFee;
+
+    /**
+     * @notice maximum instant fee
+     */
+    uint256 public maxInstantFee;
+
+    /**
+     * @notice maximum instant share value in basis points (100 = 1%)
+     */
+    uint256 public maxInstantShare;
+
+    /**
+     * @notice enforce sequential request processing flag
+     */
+    bool public sequentialRequestProcessing;
 
     /**
      * @dev leaving a storage gap for futures updates
@@ -133,67 +163,64 @@ abstract contract ManageableVault is
     uint256[50] private __gap;
 
     /**
-     * @dev checks that msg.sender do have a vaultRole() role
+     * @dev validate msg.sender and recipient access, validates if function is not paused
+     * @param recipient recipient address
      */
-    modifier onlyVaultAdmin() {
-        _onlyRole(vaultRole(), msg.sender);
+    modifier validateUserAccess(address recipient) {
+        _validateUserAccess(msg.sender, recipient);
         _;
     }
 
     /**
-     * @dev upgradeable pattern contract`s initializer
-     * @param _ac address of MidasAccessControll contract
-     * @param _mTokenInitParams init params for mToken
-     * @param _receiversInitParams init params for receivers
-     * @param _instantInitParams init params for instant operations
-     * @param _sanctionsList address of sanctionsList contract
-     * @param _variationTolerance percent of prices diviation 1% = 100
-     * @param _minAmount basic min amount for operations
+     * @notice constructor
+     * @param _contractAdminRole contract admin role
+     * @param _greenlistedRole greenlisted role
+     * @custom:oz-upgrades-unsafe-allow constructor
      */
-    // solhint-disable func-name-mixedcase
-    function __ManageableVault_init(
-        address _ac,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount
-    ) internal onlyInitializing {
-        _validateAddress(_mTokenInitParams.mToken, false);
-        _validateAddress(_mTokenInitParams.mTokenDataFeed, false);
-        _validateAddress(_receiversInitParams.tokensReceiver, true);
-        _validateAddress(_receiversInitParams.feeReceiver, true);
-        require(_instantInitParams.instantDailyLimit > 0, "zero limit");
-        _validateFee(_variationTolerance, true);
-        _validateFee(_instantInitParams.instantFee, false);
-
-        mToken = IMToken(_mTokenInitParams.mToken);
-        __Pausable_init(_ac);
-        __Greenlistable_init_unchained();
-        __Blacklistable_init_unchained();
-        __WithSanctionsList_init_unchained(_sanctionsList);
-
-        tokensReceiver = _receiversInitParams.tokensReceiver;
-        feeReceiver = _receiversInitParams.feeReceiver;
-        instantFee = _instantInitParams.instantFee;
-        instantDailyLimit = _instantInitParams.instantDailyLimit;
-        minAmount = _minAmount;
-        variationTolerance = _variationTolerance;
-        mTokenDataFeed = IDataFeed(_mTokenInitParams.mTokenDataFeed);
+    constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
+        MidasInitializable()
+    {
+        _CONTRACT_ADMIN_ROLE = _contractAdminRole;
+        _GREENLISTED_ROLE = _greenlistedRole;
     }
 
     /**
-     * @inheritdoc IManageableVault
+     * @dev upgradeable pattern contract`s initializer
+     * @param _commonVaultInitParams init params for common vault
      */
-    function withdrawToken(
-        address token,
-        uint256 amount,
-        address withdrawTo
-    ) external onlyVaultAdmin {
-        IERC20(token).safeTransfer(withdrawTo, amount);
+    // solhint-disable func-name-mixedcase
+    function __ManageableVault_init(
+        CommonVaultInitParams calldata _commonVaultInitParams
+    ) internal onlyInitializing {
+        __WithMidasAccessControl_init(_commonVaultInitParams.ac);
+        __WithSanctionsList_init_unchained(
+            _commonVaultInitParams.sanctionsList
+        );
 
-        emit WithdrawToken(msg.sender, token, withdrawTo, amount);
+        _validateAddress(_commonVaultInitParams.mToken, true);
+        _validateAddress(_commonVaultInitParams.mTokenDataFeed, true);
+        _validateAddress(_commonVaultInitParams.tokensReceiver, true);
+        _validateFee(_commonVaultInitParams.variationTolerance, true);
+        _validateFee(_commonVaultInitParams.instantFee, false);
+        _validateFee(_commonVaultInitParams.maxInstantShare, false);
+
+        mToken = IMToken(_commonVaultInitParams.mToken);
+
+        tokensReceiver = _commonVaultInitParams.tokensReceiver;
+        instantFee = _commonVaultInitParams.instantFee;
+        minAmount = _commonVaultInitParams.minAmount;
+        variationTolerance = _commonVaultInitParams.variationTolerance;
+        mTokenDataFeed = IDataFeed(_commonVaultInitParams.mTokenDataFeed);
+        sequentialRequestProcessing = _commonVaultInitParams
+            .sequentialRequestProcessing;
+
+        maxInstantShare = _commonVaultInitParams.maxInstantShare;
+        maxApproveRequestId = _commonVaultInitParams.maxApproveRequestId;
+
+        _setMinMaxInstantFee(
+            _commonVaultInitParams.minInstantFee,
+            _commonVaultInitParams.maxInstantFee
+        );
     }
 
     /**
@@ -205,8 +232,8 @@ abstract contract ManageableVault is
         uint256 tokenFee,
         uint256 allowance,
         bool stable
-    ) external onlyVaultAdmin {
-        require(_paymentTokens.add(token), "MV: already added");
+    ) external onlyContractAdmin {
+        require(_paymentTokens.add(token), PaymentTokenAlreadyAdded(token));
         _validateAddress(dataFeed, false);
         _validateFee(tokenFee, false);
 
@@ -216,41 +243,30 @@ abstract contract ManageableVault is
             allowance: allowance,
             stable: stable
         });
-        emit AddPaymentToken(
-            msg.sender,
-            token,
-            dataFeed,
-            tokenFee,
-            allowance,
-            stable
-        );
+        emit AddPaymentToken(token, dataFeed, tokenFee, allowance, stable);
     }
 
     /**
      * @inheritdoc IManageableVault
      * @dev reverts if token is not presented
      */
-    function removePaymentToken(address token) external onlyVaultAdmin {
-        require(_paymentTokens.remove(token), "MV: not exists");
+    function removePaymentToken(address token) external onlyContractAdmin {
+        require(_paymentTokens.remove(token), PaymentTokenNotExists(token));
         delete tokensConfig[token];
-        emit RemovePaymentToken(token, msg.sender);
+        emit RemovePaymentToken(token);
     }
 
     /**
      * @inheritdoc IManageableVault
-     * @dev reverts if new allowance zero
      */
     function changeTokenAllowance(address token, uint256 allowance)
         external
-        onlyVaultAdmin
+        onlyContractAdmin
     {
-        if (token != MANUAL_FULLFILMENT_TOKEN) {
-            _requireTokenExists(token);
-        }
+        _requireTokenExists(token);
 
-        require(allowance > 0, "MV: zero allowance");
         tokensConfig[token].allowance = allowance;
-        emit ChangeTokenAllowance(token, msg.sender, allowance);
+        emit ChangeTokenAllowance(token, allowance);
     }
 
     /**
@@ -259,98 +275,122 @@ abstract contract ManageableVault is
      */
     function changeTokenFee(address token, uint256 fee)
         external
-        onlyVaultAdmin
+        onlyContractAdmin
     {
         _requireTokenExists(token);
         _validateFee(fee, false);
 
         tokensConfig[token].fee = fee;
-        emit ChangeTokenFee(token, msg.sender, fee);
+        emit ChangeTokenFee(token, fee);
     }
 
     /**
      * @inheritdoc IManageableVault
-     * @dev reverts if new tolerance zero
+     * @dev reverts if new tolerance > 100%
      */
-    function setVariationTolerance(uint256 tolerance) external onlyVaultAdmin {
-        _validateFee(tolerance, true);
+    function setVariationTolerance(uint256 tolerance)
+        external
+        onlyContractAdmin
+    {
+        _validateFee(tolerance, false);
 
         variationTolerance = tolerance;
-        emit SetVariationTolerance(msg.sender, tolerance);
+        emit SetVariationTolerance(tolerance);
     }
 
     /**
      * @inheritdoc IManageableVault
      */
-    function setMinAmount(uint256 newAmount) external onlyVaultAdmin {
+    function setMinAmount(uint256 newAmount) external onlyContractAdmin {
         minAmount = newAmount;
-        emit SetMinAmount(msg.sender, newAmount);
+        emit SetMinAmount(newAmount);
     }
 
     /**
      * @inheritdoc IManageableVault
-     * @dev reverts if account is already added
      */
-    function addWaivedFeeAccount(address account) external onlyVaultAdmin {
-        require(!waivedFeeRestriction[account], "MV: already added");
-        waivedFeeRestriction[account] = true;
-        emit AddWaivedFeeAccount(account, msg.sender);
-    }
-
-    /**
-     * @inheritdoc IManageableVault
-     * @dev reverts if account is already removed
-     */
-    function removeWaivedFeeAccount(address account) external onlyVaultAdmin {
-        require(waivedFeeRestriction[account], "MV: not found");
-        waivedFeeRestriction[account] = false;
-        emit RemoveWaivedFeeAccount(account, msg.sender);
+    function setWaivedFeeAccount(address account, bool enable)
+        external
+        onlyContractAdmin
+    {
+        require(waivedFeeRestriction[account] != enable, SameBoolValue(enable));
+        waivedFeeRestriction[account] = enable;
+        emit SetWaivedFeeAccount(account, enable);
     }
 
     /**
      * @inheritdoc IManageableVault
      * @dev reverts address zero or equal address(this)
      */
-    function setFeeReceiver(address receiver) external onlyVaultAdmin {
-        _validateAddress(receiver, true);
-
-        feeReceiver = receiver;
-
-        emit SetFeeReceiver(msg.sender, receiver);
-    }
-
-    /**
-     * @inheritdoc IManageableVault
-     * @dev reverts address zero or equal address(this)
-     */
-    function setTokensReceiver(address receiver) external onlyVaultAdmin {
+    function setTokensReceiver(address receiver) external onlyContractAdmin {
         _validateAddress(receiver, true);
 
         tokensReceiver = receiver;
 
-        emit SetTokensReceiver(msg.sender, receiver);
+        emit SetTokensReceiver(receiver);
     }
 
     /**
      * @inheritdoc IManageableVault
      */
-    function setInstantFee(uint256 newInstantFee) external onlyVaultAdmin {
+    function setInstantFee(uint256 newInstantFee) external onlyContractAdmin {
         _validateFee(newInstantFee, false);
 
         instantFee = newInstantFee;
-        emit SetInstantFee(msg.sender, newInstantFee);
+        emit SetInstantFee(newInstantFee);
     }
 
     /**
      * @inheritdoc IManageableVault
      */
-    function setInstantDailyLimit(uint256 newInstantDailyLimit)
+    function setMinMaxInstantFee(
+        uint256 newMinInstantFee,
+        uint256 newMaxInstantFee
+    ) external onlyContractAdmin {
+        _setMinMaxInstantFee(newMinInstantFee, newMaxInstantFee);
+    }
+
+    /**
+     * @inheritdoc IManageableVault
+     */
+    function setMaxInstantShare(uint256 newMaxInstantShare)
         external
-        onlyVaultAdmin
+        onlyContractAdmin
     {
-        require(newInstantDailyLimit > 0, "MV: limit zero");
-        instantDailyLimit = newInstantDailyLimit;
-        emit SetInstantDailyLimit(msg.sender, newInstantDailyLimit);
+        _validateFee(newMaxInstantShare, false);
+        maxInstantShare = newMaxInstantShare;
+        emit SetMaxInstantShare(newMaxInstantShare);
+    }
+
+    /**
+     * @inheritdoc IManageableVault
+     */
+    function setMaxApproveRequestId(uint256 newMaxApproveRequestId)
+        external
+        onlyContractAdmin
+    {
+        maxApproveRequestId = newMaxApproveRequestId;
+        emit SetMaxApproveRequestId(newMaxApproveRequestId);
+    }
+
+    /**
+     * @inheritdoc IManageableVault
+     */
+    function setInstantLimitConfig(uint256 window, uint256 limit)
+        external
+        onlyContractAdmin
+    {
+        _instantRateLimits.setWindowLimit(window, limit);
+    }
+
+    /**
+     * @inheritdoc IManageableVault
+     */
+    function removeInstantLimitConfig(uint256 window)
+        external
+        onlyContractAdmin
+    {
+        _instantRateLimits.removeWindowLimit(window);
     }
 
     /**
@@ -358,13 +398,37 @@ abstract contract ManageableVault is
      */
     function freeFromMinAmount(address user, bool enable)
         external
-        onlyVaultAdmin
+        onlyContractAdmin
     {
-        require(isFreeFromMinAmount[user] != enable, "DV: already free");
+        require(isFreeFromMinAmount[user] != enable, SameAddressValue(user));
 
         isFreeFromMinAmount[user] = enable;
 
         emit FreeFromMinAmount(user, enable);
+    }
+
+    /**
+     * @inheritdoc IManageableVault
+     */
+    function setSequentialRequestProcessing(bool enforce)
+        external
+        onlyContractAdmin
+    {
+        require(sequentialRequestProcessing != enforce, SameBoolValue(enforce));
+        sequentialRequestProcessing = enforce;
+        emit SetSequentialRequestProcessing(enforce);
+    }
+
+    /**
+     * @inheritdoc IManageableVault
+     */
+    function withdrawToken(address token, uint256 amount)
+        external
+        onlyContractAdmin
+    {
+        address withdrawTo = tokensReceiver;
+        IERC20(token).safeTransfer(withdrawTo, amount);
+        emit WithdrawToken(token, withdrawTo, amount);
     }
 
     /**
@@ -377,29 +441,44 @@ abstract contract ManageableVault is
     }
 
     /**
-     * @notice AC role of vault administrator
-     * @return role bytes32 role
+     * @notice returns array of instant rate limit statuses
+     * @return statuses array of instant rate limit statuses
      */
-    function vaultRole() public view virtual returns (bytes32);
-
-    /**
-     * @inheritdoc WithSanctionsList
-     */
-    function sanctionsListAdminRole()
-        public
+    function getInstantLimitStatuses()
+        external
         view
-        virtual
-        override
-        returns (bytes32)
+        returns (
+            RateLimitLibrary.WindowRateLimitStatus[] memory /* statuses */
+        )
     {
-        return vaultRole();
+        return _instantRateLimits.getWindowStatuses();
     }
 
     /**
-     * @inheritdoc Pausable
+     * @inheritdoc Greenlistable
      */
-    function pauseAdminRole() public view override returns (bytes32) {
-        return vaultRole();
+    function greenlistedRole() public view virtual override returns (bytes32) {
+        return _GREENLISTED_ROLE;
+    }
+
+    /**
+     * @dev set minimum/maximum instant fee
+     * @param newMinInstantFee new minimum instant fee
+     * @param newMaxInstantFee new maximum instant fee
+     */
+    function _setMinMaxInstantFee(
+        uint256 newMinInstantFee,
+        uint256 newMaxInstantFee
+    ) private {
+        _validateFee(newMinInstantFee, false);
+        _validateFee(newMaxInstantFee, false);
+        require(
+            newMinInstantFee <= newMaxInstantFee,
+            InvalidMinMaxInstantFee(newMinInstantFee, newMaxInstantFee)
+        );
+        minInstantFee = newMinInstantFee;
+        maxInstantFee = newMaxInstantFee;
+        emit SetMinMaxInstantFee(newMinInstantFee, newMaxInstantFee);
     }
 
     /**
@@ -418,22 +497,17 @@ abstract contract ManageableVault is
         uint256 amount,
         uint256 tokenDecimals
     ) internal returns (uint256 transferAmount) {
-        transferAmount = amount.convertFromBase18(tokenDecimals);
-
-        require(
-            amount == transferAmount.convertToBase18(tokenDecimals),
-            "MV: invalid rounding"
-        );
-
-        IERC20(token).safeTransferFrom(msg.sender, to, transferAmount);
+        return
+            _tokenTransferFromTo(token, msg.sender, to, amount, tokenDecimals);
     }
 
     /**
-     * @dev do safeTransferFrom on a given token
+     * @dev do safeTransfer or safeTransferFrom on a given token
      * and converts `amount` from base18
      * to amount with a correct precision.
      * @param token address of token
-     * @param from address
+     * @param from address. If its address(this) the safeTransfer will be used
+     * instead of safeTransferFrom
      * @param to address
      * @param amount amount of `token` to transfer from `user`
      * @param tokenDecimals token decimals
@@ -444,41 +518,68 @@ abstract contract ManageableVault is
         address to,
         uint256 amount,
         uint256 tokenDecimals
-    ) internal {
-        uint256 transferAmount = amount.convertFromBase18(tokenDecimals);
+    ) internal returns (uint256 transferAmount) {
+        if (amount == 0) return 0;
+        transferAmount = amount.convertFromBase18(tokenDecimals);
+        uint256 truncatedAmount = transferAmount.convertToBase18(tokenDecimals);
 
         require(
-            amount == transferAmount.convertToBase18(tokenDecimals),
-            "MV: invalid rounding"
+            amount == truncatedAmount,
+            InvalidRounding(amount, truncatedAmount)
         );
 
-        IERC20(token).safeTransferFrom(from, to, transferAmount);
+        if (from == address(this)) {
+            IERC20(token).safeTransfer(to, transferAmount);
+        } else {
+            IERC20(token).safeTransferFrom(from, to, transferAmount);
+        }
     }
 
     /**
-     * @dev do safeTransfer on a given token
-     * and converts `amount` from base18
-     * to amount with a correct precision. Sends tokens
-     * from `contract` to `user`
-     * @param token address of token
-     * @param to address of user
-     * @param amount amount of `token` to transfer from `user` (decimals 18)
-     * @param tokenDecimals token decimals
+     * @dev check if operation exceed daily limit and update limit data
+     * @param amount operation amount (decimals 18)
      */
-    function _tokenTransferToUser(
-        address token,
-        address to,
-        uint256 amount,
-        uint256 tokenDecimals
-    ) internal {
-        uint256 transferAmount = amount.convertFromBase18(tokenDecimals);
+    function _requireAndUpdateLimit(uint256 amount) internal {
+        _instantRateLimits.consumeLimit(amount);
+    }
+
+    /**
+     * @dev check if request id is sequential and update next expected request id to process
+     * @param requestId request id
+     * @param revertIfInvalid if true, reverts if request id is not sequential, otherwise returns false
+     * @return isValid true if request id is sequential or sequentialRequestProcessing is disabled
+     */
+    function _validateAndUpdateNextRequestIdToProcess(
+        uint256 requestId,
+        bool revertIfInvalid
+    ) internal returns (bool isValid) {
+        isValid = true;
+
+        if (!_validateMaxApproveRequestId(requestId, revertIfInvalid)) {
+            return false;
+        }
+
+        uint256 _nextExpectedRequestIdToProcess = nextExpectedRequestIdToProcess;
+
+        if (
+            sequentialRequestProcessing &&
+            requestId != _nextExpectedRequestIdToProcess
+        ) {
+            isValid = false;
+        }
+
+        if (!revertIfInvalid && !isValid) {
+            return false;
+        }
 
         require(
-            amount == transferAmount.convertToBase18(tokenDecimals),
-            "MV: invalid rounding"
+            isValid,
+            InvalidRequestSequence(requestId, _nextExpectedRequestIdToProcess)
         );
 
-        IERC20(token).safeTransfer(to, transferAmount);
+        if (requestId >= _nextExpectedRequestIdToProcess) {
+            nextExpectedRequestIdToProcess = requestId + 1;
+        }
     }
 
     /**
@@ -495,20 +596,7 @@ abstract contract ManageableVault is
      * @param token address of token
      */
     function _requireTokenExists(address token) internal view virtual {
-        require(_paymentTokens.contains(token), "MV: token not exists");
-    }
-
-    /**
-     * @dev check if operation exceed daily limit and update limit data
-     * @param amount operation amount (decimals 18)
-     */
-    function _requireAndUpdateLimit(uint256 amount) internal {
-        uint256 currentDayNumber = block.timestamp / 1 days;
-        uint256 nextLimitAmount = dailyLimits[currentDayNumber] + amount;
-
-        require(nextLimitAmount <= instantDailyLimit, "MV: exceed limit");
-
-        dailyLimits[currentDayNumber] = nextLimitAmount;
+        require(_paymentTokens.contains(token), UnknownPaymentToken(token));
     }
 
     /**
@@ -520,45 +608,63 @@ abstract contract ManageableVault is
         internal
     {
         uint256 prevAllowance = tokensConfig[token].allowance;
-        if (prevAllowance == MAX_UINT) return;
+        if (prevAllowance == type(uint256).max) return;
 
-        require(prevAllowance >= amount, "MV: exceed allowance");
+        require(
+            prevAllowance >= amount,
+            AllowanceExceeded(prevAllowance, amount)
+        );
 
         tokensConfig[token].allowance -= amount;
     }
 
     /**
-     * @dev returns calculated fee amount depends on parameters
-     * if additionalFee not zero, token fee replaced with additionalFee
+     * @dev returns calculated fee amount depends on the provided fee percent and amount
+     * @param feePercent fee percent
+     * @param amount amount of token (decimals 18)
+
+     * @return feeAmount calculated fee amount
+     */
+    function _getFeeAmount(uint256 feePercent, uint256 amount)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (amount * feePercent) / ONE_HUNDRED_PERCENT;
+    }
+
+    /**
+     * @dev returns calculated fee percent depends on parameters
      * @param sender sender address
      * @param token token address
-     * @param amount amount of token (decimals 18)
      * @param isInstant is instant operation
-     * @param additionalFee fee for fiat operations
-     * @return fee amount of input token
+     *
+     * @return feePercent calculated fee percent
      */
-    function _getFeeAmount(
+    function _getFee(
         address sender,
         address token,
-        uint256 amount,
-        bool isInstant,
-        uint256 additionalFee
-    ) internal view returns (uint256) {
+        bool isInstant
+    ) internal view returns (uint256 feePercent) {
         if (waivedFeeRestriction[sender]) return 0;
 
-        uint256 feePercent;
-        if (additionalFee == 0) {
-            TokenConfig storage tokenConfig = tokensConfig[token];
-            feePercent = tokenConfig.fee;
-        } else {
-            feePercent = additionalFee;
-        }
+        feePercent = tokensConfig[token].fee;
 
         if (isInstant) feePercent += instantFee;
 
         if (feePercent > ONE_HUNDRED_PERCENT) feePercent = ONE_HUNDRED_PERCENT;
+    }
 
-        return (amount * feePercent) / ONE_HUNDRED_PERCENT;
+    /**
+     * @dev validates instant fee is within the range of min/max instant fee
+     */
+    function _validateInstantFee() internal view {
+        uint256 currentInstantFee = instantFee;
+        require(
+            currentInstantFee >= minInstantFee &&
+                currentInstantFee <= maxInstantFee,
+            InstantFeeOutOfBounds(currentInstantFee)
+        );
     }
 
     /**
@@ -578,17 +684,104 @@ abstract contract ManageableVault is
 
         require(
             priceDifPercent <= variationTolerance,
-            "MV: exceed price diviation"
+            PriceVariationExceeded(priceDifPercent, variationTolerance)
         );
     }
 
-    function _validateUserAccess(address user)
+    /**
+     * @dev validates that inputted mToken amount is >= minAmount()
+     * only if the `user` is not free from min amount
+     * @param user user address
+     * @param amountMToken amount of mToken
+     * @return isFreeFromMinAmount if the `user` is free from min amount
+     */
+    function _validateMTokenAmount(address user, uint256 amountMToken)
+        internal
+        view
+        returns (
+            bool /* isFreeFromMinAmount */
+        )
+    {
+        require(amountMToken > 0, InvalidAmount());
+
+        if (isFreeFromMinAmount[user]) {
+            return true;
+        }
+
+        require(
+            amountMToken >= minAmount,
+            AmountLessThanMin(amountMToken, minAmount)
+        );
+
+        return false;
+    }
+
+    /**
+     * @dev validate user access
+     * @param user user address
+     * @param validatePaused if true, validates if function is not paused
+     */
+    function _validateUserAccess(address user, bool validatePaused)
         internal
         view
         onlyGreenlisted(user)
         onlyNotBlacklisted(user)
         onlyNotSanctioned(user)
-    {}
+    {
+        require(user != address(0), InvalidAddress(user));
+        if (!validatePaused) return;
+        PauseGuardsLibrary.requireNotPaused(accessControl, msg.sig);
+    }
+
+    /**
+     * @dev validate user access and validates if function is not paused
+     * @param user user address
+     * @param recipient recipient address
+     */
+    function _validateUserAccess(address user, address recipient)
+        internal
+        view
+    {
+        _validateUserAccess(user, true);
+
+        if (recipient != user) {
+            _validateUserAccess(recipient, false);
+        }
+    }
+
+    /**
+     * @inheritdoc WithMidasAccessControl
+     */
+    function contractAdminRole()
+        public
+        view
+        virtual
+        override
+        returns (bytes32)
+    {
+        return _CONTRACT_ADMIN_ROLE;
+    }
+
+    /**
+     * @inheritdoc WithMidasAccessControl
+     */
+    function _validateFunctionAccessWithTimelock(
+        bytes32 role,
+        uint32 overrideDelay,
+        bool roleIsFunctionOperator,
+        address account,
+        bool validateFunctionRole
+    ) internal view override {
+        PauseGuardsLibrary.requireFnNotPaused(accessControl, msg.sig);
+
+        super._validateFunctionAccessWithTimelock(
+            role,
+            overrideDelay,
+            roleIsFunctionOperator,
+            account,
+            validateFunctionRole
+        );
+    }
 
     /**
      * @dev convert value to inputted decimals precision
@@ -610,8 +803,8 @@ abstract contract ManageableVault is
      * @param checkMin if need to check minimum
      */
     function _validateFee(uint256 fee, bool checkMin) internal pure {
-        require(fee <= ONE_HUNDRED_PERCENT, "fee > 100%");
-        if (checkMin) require(fee > 0, "fee == 0");
+        require(fee <= ONE_HUNDRED_PERCENT, InvalidFee(fee));
+        if (checkMin) require(fee > 0, InvalidFee(fee));
     }
 
     /**
@@ -620,8 +813,8 @@ abstract contract ManageableVault is
      * @param selfCheck check if address not address(this)
      */
     function _validateAddress(address addr, bool selfCheck) internal view {
-        require(addr != address(0), "zero address");
-        if (selfCheck) require(addr != address(this), "invalid address");
+        require(addr != address(0), InvalidAddress(addr));
+        if (selfCheck) require(addr != address(this), InvalidAddress(addr));
     }
 
     /**
@@ -641,5 +834,67 @@ abstract contract ManageableVault is
         if (stable) return STABLECOIN_RATE;
 
         return rate;
+    }
+
+    /**
+     * @dev gets and validates mToken rate
+     * @return mTokenRate mToken rate
+     */
+    function _getMTokenRate() internal view returns (uint256 mTokenRate) {
+        mTokenRate = _getTokenRate(address(mTokenDataFeed), false);
+        _validateTokenRate(mTokenRate);
+    }
+
+    /**
+     * @dev gets and validates pToken rate
+     * @param token address of pToken
+     * @return tokenRate token rate
+     */
+    function _getPTokenRate(address token)
+        internal
+        view
+        returns (uint256 tokenRate)
+    {
+        TokenConfig storage tokenConfig = tokensConfig[token];
+        tokenRate = _getTokenRate(tokenConfig.dataFeed, tokenConfig.stable);
+        _validateTokenRate(tokenRate);
+    }
+
+    /**
+     * @dev validates that actual receive amount is greater than or equal to minimum receive amount
+     * @param actualReceiveAmount actual receive amount
+     * @param minReceiveAmount minimum receive amount
+     */
+    function _requireSlippageNotExceeded(
+        uint256 actualReceiveAmount,
+        uint256 minReceiveAmount
+    ) internal pure {
+        require(
+            actualReceiveAmount >= minReceiveAmount,
+            SlippageExceeded(minReceiveAmount, actualReceiveAmount)
+        );
+    }
+
+    /**
+     * @dev validates that request id is less than or equal to max approve request id
+     * @param requestId request id
+     */
+    function _validateMaxApproveRequestId(
+        uint256 requestId,
+        bool revertIfInvalid
+    ) internal view returns (bool isValid) {
+        isValid = requestId <= maxApproveRequestId;
+
+        if (revertIfInvalid) {
+            require(isValid, RequestIdTooHigh(requestId, maxApproveRequestId));
+        }
+    }
+
+    /**
+     * @dev validates token rate
+     * @param rate token rate
+     */
+    function _validateTokenRate(uint256 rate) private pure {
+        require(rate > 0, InvalidTokenRate(rate));
     }
 }

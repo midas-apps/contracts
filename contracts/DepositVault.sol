@@ -1,15 +1,14 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
+import {IDepositVault, DepositVaultInitParams, Request} from "./interfaces/IDepositVault.sol";
+import {CommonVaultInitParams, RequestStatus} from "./interfaces/IManageableVault.sol";
 
-import "./interfaces/IDepositVault.sol";
-import "./interfaces/IDataFeed.sol";
-
-import "./abstract/ManageableVault.sol";
+import {ManageableVault} from "./abstract/ManageableVault.sol";
+import {Greenlistable} from "./access/Greenlistable.sol";
 
 /**
  * @title DepositVault
@@ -17,7 +16,7 @@ import "./abstract/ManageableVault.sol";
  * @author RedDuck Software
  */
 contract DepositVault is ManageableVault, IDepositVault {
-    using Counters for Counters.Counter;
+    using SafeERC20 for IERC20;
 
     /**
      * @notice return data of _calcAndValidateDeposit
@@ -41,36 +40,15 @@ contract DepositVault is ManageableVault, IDepositVault {
     }
 
     /**
-     * @dev default role that grants admin rights to the contract
+     * @notice request data storage
      */
-    bytes32 private constant _DEFAULT_DEPOSIT_VAULT_ADMIN_ROLE =
-        keccak256("DEPOSIT_VAULT_ADMIN_ROLE");
+    mapping(uint256 => Request) public mintRequests;
 
     /**
-     * @dev selector for deposit instant
+     * @dev how much mTokens were minted by the depositor
+     * @dev depositor address => amount minted
      */
-    bytes4 private constant _DEPOSIT_INSTANT_SELECTOR =
-        bytes4(keccak256("depositInstant(address,uint256,uint256,bytes32)"));
-
-    /**
-     * @dev selector for deposit instant with custom recipient
-     */
-    bytes4 private constant _DEPOSIT_INSTANT_WITH_CUSTOM_RECIPIENT_SELECTOR =
-        bytes4(
-            keccak256("depositInstant(address,uint256,uint256,bytes32,address)")
-        );
-
-    /**
-     * @dev selector for deposit request
-     */
-    bytes4 private constant _DEPOSIT_REQUEST_SELECTOR =
-        bytes4(keccak256("depositRequest(address,uint256,bytes32)"));
-
-    /**
-     * @dev selector for deposit request with custom recipient
-     */
-    bytes4 private constant _DEPOSIT_REQUEST_WITH_CUSTOM_RECIPIENT_SELECTOR =
-        bytes4(keccak256("depositRequest(address,uint256,bytes32,address)"));
+    mapping(address => uint256) public totalMinted;
 
     /**
      * @notice minimal USD amount for first user`s deposit
@@ -78,110 +56,45 @@ contract DepositVault is ManageableVault, IDepositVault {
     uint256 public minMTokenAmountForFirstDeposit;
 
     /**
-     * @notice mapping, requestId => request data
+     * @notice max amount per request in mToken
      */
-    mapping(uint256 => Request) public mintRequests;
+    uint256 public maxAmountPerRequest;
 
     /**
-     * @dev depositor address => amount minted
+     * @notice pending supply in mToken that will be released
+     * after the deposit request is processed
      */
-    mapping(address => uint256) public totalMinted;
-
-    /**
-     * @notice max supply cap value in mToken
-     * @dev if after the deposit, mToken.totalSupply() > maxSupplyCap,
-     * the tx will be reverted
-     */
-    uint256 public maxSupplyCap;
+    uint256 public upcomingSupply;
 
     /**
      * @dev leaving a storage gap for futures updates
-     *
-     * used slots:
-     * 50 - `maxSupplyCap`
      */
-    uint256[49] private __gap;
+    uint256[50] private __gap;
+
+    /**
+     * @notice Passes role identifiers to the base ManageableVault constructor
+     * @param _contractAdminRole contract admin role identifier
+     * @param _greenlistedRole greenlisted role identifier
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
+        ManageableVault(_contractAdminRole, _greenlistedRole)
+    {}
 
     /**
      * @notice upgradeable pattern contract`s initializer
-     * @dev Calls all versioned initializers (V1, V2, ...) in chronological order.
-     * This ensures that every deployment, whether fresh or upgraded, ends up
-     * initialized to the latest contract state without breaking the
-     * initializer/reinitializer versioning rules.
-     * @param _ac address of MidasAccessControll contract
-     * @param _mTokenInitParams init params for mToken
-     * @param _receiversInitParams init params for receivers
-     * @param _instantInitParams init params for instant operations
-     * @param _sanctionsList address of sanctionsList contract
-     * @param _variationTolerance percent of prices diviation 1% = 100
-     * @param _minAmount basic min amount for operations in mToken
-     * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
-     * @param _maxSupplyCap max supply cap for mToken
+     * @param _commonVaultInitParams init params for common vault
+     * @param _depositVaultInitParams init params for deposit vault
      */
     function initialize(
-        address _ac,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount,
-        uint256 _minMTokenAmountForFirstDeposit,
-        uint256 _maxSupplyCap
-    ) public {
-        _initializeV1(
-            _ac,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount,
-            _minMTokenAmountForFirstDeposit
-        );
+        CommonVaultInitParams calldata _commonVaultInitParams,
+        DepositVaultInitParams calldata _depositVaultInitParams
+    ) public initializer {
+        __ManageableVault_init(_commonVaultInitParams);
 
-        _initializeV2(_maxSupplyCap);
-    }
-
-    /**
-     * @notice v1 initializer
-     * @param _ac address of MidasAccessControll contract
-     * @param _mTokenInitParams init params for mToken
-     * @param _receiversInitParams init params for receivers
-     * @param _instantInitParams init params for instant operations
-     * @param _sanctionsList address of sanctionsList contract
-     * @param _variationTolerance percent of prices diviation 1% = 100
-     * @param _minAmount basic min amount for operations in mToken
-     * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
-     */
-    function _initializeV1(
-        address _ac,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount,
-        uint256 _minMTokenAmountForFirstDeposit
-    ) private initializer {
-        __ManageableVault_init(
-            _ac,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount
-        );
-        minMTokenAmountForFirstDeposit = _minMTokenAmountForFirstDeposit;
-    }
-
-    /**
-     * @notice v2 initializer
-     * @param _maxSupplyCap max supply cap for mToken
-     */
-    function _initializeV2(uint256 _maxSupplyCap) private reinitializer(2) {
-        maxSupplyCap = _maxSupplyCap;
+        minMTokenAmountForFirstDeposit = _depositVaultInitParams
+            .minMTokenAmountForFirstDeposit;
+        maxAmountPerRequest = _depositVaultInitParams.maxAmountPerRequest;
     }
 
     /**
@@ -192,98 +105,66 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 amountToken,
         uint256 minReceiveAmount,
         bytes32 referrerId
-    ) external whenFnNotPaused(_DEPOSIT_INSTANT_SELECTOR) {
-        _validateUserAccess(msg.sender);
+    )
+        external
+        returns (
+            uint256 /* mintAmount */
+        )
+    {
+        return
+            _depositInstantWithCustomRecipient(
+                tokenIn,
+                amountToken,
+                minReceiveAmount,
+                referrerId,
+                msg.sender,
+                ONE_HUNDRED_PERCENT
+            ).mintAmount;
+    }
 
-        CalcAndValidateDepositResult memory result = _depositInstant(
+    /**
+     * @inheritdoc IDepositVault
+     */
+    function depositInstant(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 minReceiveAmount,
+        bytes32 referrerId,
+        address recipient
+    )
+        external
+        returns (
+            uint256 /* mintAmount */
+        )
+    {
+        return
+            _depositInstantWithCustomRecipient(
+                tokenIn,
+                amountToken,
+                minReceiveAmount,
+                referrerId,
+                recipient,
+                ONE_HUNDRED_PERCENT
+            ).mintAmount;
+    }
+
+    /**
+     * @inheritdoc IDepositVault
+     */
+    function depositRequest(
+        address tokenIn,
+        uint256 amountToken,
+        bytes32 referrerId
+    ) external returns (uint256 requestId) {
+        (requestId, ) = _depositRequestWithCustomRecipient(
             tokenIn,
             amountToken,
-            minReceiveAmount,
+            referrerId,
+            msg.sender,
+            0,
+            0,
             msg.sender
         );
-
-        emit DepositInstant(
-            msg.sender,
-            tokenIn,
-            result.tokenAmountInUsd,
-            amountToken,
-            result.feeTokenAmount,
-            result.mintAmount,
-            referrerId
-        );
-    }
-
-    /**
-     * @inheritdoc IDepositVault
-     */
-    function depositInstant(
-        address tokenIn,
-        uint256 amountToken,
-        uint256 minReceiveAmount,
-        bytes32 referrerId,
-        address recipient
-    )
-        external
-        whenFnNotPaused(_DEPOSIT_INSTANT_WITH_CUSTOM_RECIPIENT_SELECTOR)
-    {
-        _validateUserAccess(msg.sender);
-
-        if (recipient != msg.sender) {
-            _validateUserAccess(recipient);
-        }
-
-        CalcAndValidateDepositResult memory result = _depositInstant(
-            tokenIn,
-            amountToken,
-            minReceiveAmount,
-            recipient
-        );
-
-        emit DepositInstantWithCustomRecipient(
-            msg.sender,
-            tokenIn,
-            recipient,
-            result.tokenAmountInUsd,
-            amountToken,
-            result.feeTokenAmount,
-            result.mintAmount,
-            referrerId
-        );
-    }
-
-    /**
-     * @inheritdoc IDepositVault
-     */
-    function depositRequest(
-        address tokenIn,
-        uint256 amountToken,
-        bytes32 referrerId
-    )
-        external
-        whenFnNotPaused(_DEPOSIT_REQUEST_SELECTOR)
-        returns (
-            uint256 /*requestId*/
-        )
-    {
-        _validateUserAccess(msg.sender);
-
-        (
-            uint256 requestId,
-            CalcAndValidateDepositResult memory calcResult
-        ) = _depositRequest(tokenIn, amountToken, msg.sender);
-
-        emit DepositRequest(
-            requestId,
-            msg.sender,
-            tokenIn,
-            amountToken,
-            calcResult.tokenAmountInUsd,
-            calcResult.feeTokenAmount,
-            calcResult.tokenOutRate,
-            referrerId
-        );
-
-        return requestId;
     }
 
     /**
@@ -293,40 +174,27 @@ contract DepositVault is ManageableVault, IDepositVault {
         address tokenIn,
         uint256 amountToken,
         bytes32 referrerId,
-        address recipient
+        address recipientRequest,
+        uint256 instantShare,
+        uint256 minReceiveAmountInstantShare,
+        address recipientInstant
     )
         external
-        whenFnNotPaused(_DEPOSIT_REQUEST_WITH_CUSTOM_RECIPIENT_SELECTOR)
         returns (
-            uint256 /*requestId*/
+            uint256, /*requestId*/
+            uint256 /* instantMintAmount */
         )
     {
-        _validateUserAccess(msg.sender);
-
-        if (recipient != msg.sender) {
-            _validateUserAccess(recipient);
-        }
-
-        (
-            uint256 requestId,
-            CalcAndValidateDepositResult memory calcResult
-        ) = _depositRequest(tokenIn, amountToken, recipient);
-
-        bytes32 referrerIdCopy = referrerId;
-
-        emit DepositRequestWithCustomRecipient(
-            requestId,
-            msg.sender,
-            tokenIn,
-            recipient,
-            amountToken,
-            calcResult.tokenAmountInUsd,
-            calcResult.feeTokenAmount,
-            calcResult.tokenOutRate,
-            referrerIdCopy
-        );
-
-        return requestId;
+        return
+            _depositRequestWithCustomRecipient(
+                tokenIn,
+                amountToken,
+                referrerId,
+                recipientRequest,
+                instantShare,
+                minReceiveAmountInstantShare,
+                recipientInstant
+            );
     }
 
     /**
@@ -334,18 +202,8 @@ contract DepositVault is ManageableVault, IDepositVault {
      */
     function safeBulkApproveRequestAtSavedRate(uint256[] calldata requestIds)
         external
-        onlyVaultAdmin
     {
-        for (uint256 i = 0; i < requestIds.length; i++) {
-            uint256 rate = mintRequests[requestIds[i]].tokenOutRate;
-            bool success = _approveRequest(requestIds[i], rate, true, false);
-
-            if (!success) {
-                continue;
-            }
-
-            emit SafeApproveRequest(requestIds[i], rate);
-        }
+        _safeBulkApproveRequest(requestIds, 0, true, false);
     }
 
     /**
@@ -353,69 +211,17 @@ contract DepositVault is ManageableVault, IDepositVault {
      */
     function safeBulkApproveRequest(uint256[] calldata requestIds) external {
         uint256 currentMTokenRate = _getMTokenRate();
-        safeBulkApproveRequest(requestIds, currentMTokenRate);
+        _safeBulkApproveRequest(requestIds, currentMTokenRate, false, false);
     }
 
     /**
      * @inheritdoc IDepositVault
      */
-    function safeApproveRequest(uint256 requestId, uint256 newOutRate)
+    function safeBulkApproveRequestAvgRate(uint256[] calldata requestIds)
         external
-        onlyVaultAdmin
     {
-        _approveRequest(requestId, newOutRate, true, true);
-
-        emit SafeApproveRequest(requestId, newOutRate);
-    }
-
-    /**
-     * @inheritdoc IDepositVault
-     */
-    function approveRequest(uint256 requestId, uint256 newOutRate)
-        external
-        onlyVaultAdmin
-    {
-        _approveRequest(requestId, newOutRate, false, true);
-
-        emit ApproveRequest(requestId, newOutRate);
-    }
-
-    /**
-     * @inheritdoc IDepositVault
-     */
-    function rejectRequest(uint256 requestId) external onlyVaultAdmin {
-        Request memory request = mintRequests[requestId];
-
-        require(request.sender != address(0), "DV: request not exist");
-        require(
-            request.status == RequestStatus.Pending,
-            "DV: request not pending"
-        );
-
-        mintRequests[requestId].status = RequestStatus.Canceled;
-
-        emit RejectRequest(requestId, request.sender);
-    }
-
-    /**
-     * @inheritdoc IDepositVault
-     */
-    function setMinMTokenAmountForFirstDeposit(uint256 newValue)
-        external
-        onlyVaultAdmin
-    {
-        minMTokenAmountForFirstDeposit = newValue;
-
-        emit SetMinMTokenAmountForFirstDeposit(msg.sender, newValue);
-    }
-
-    /**
-     * @inheritdoc IDepositVault
-     */
-    function setMaxSupplyCap(uint256 newValue) external onlyVaultAdmin {
-        maxSupplyCap = newValue;
-
-        emit SetMaxSupplyCap(msg.sender, newValue);
+        uint256 currentMTokenRate = _getMTokenRate();
+        _safeBulkApproveRequest(requestIds, currentMTokenRate, false, true);
     }
 
     /**
@@ -424,41 +230,147 @@ contract DepositVault is ManageableVault, IDepositVault {
     function safeBulkApproveRequest(
         uint256[] calldata requestIds,
         uint256 newOutRate
-    ) public onlyVaultAdmin {
-        for (uint256 i = 0; i < requestIds.length; i++) {
-            bool success = _approveRequest(
-                requestIds[i],
-                newOutRate,
-                true,
-                false
-            );
+    ) external {
+        _safeBulkApproveRequest(requestIds, newOutRate, false, false);
+    }
 
-            if (!success) {
-                continue;
+    /**
+     * @inheritdoc IDepositVault
+     */
+    function safeBulkApproveRequestAvgRate(
+        uint256[] calldata requestIds,
+        uint256 avgMTokenRate
+    ) external {
+        _safeBulkApproveRequest(requestIds, avgMTokenRate, false, true);
+    }
+
+    /**
+     * @inheritdoc IDepositVault
+     */
+    function approveRequest(
+        uint256 requestId,
+        uint256 newOutRate,
+        bool isAvgRate
+    ) external onlyContractAdmin {
+        _approveRequest(requestId, newOutRate, false, isAvgRate);
+    }
+
+    /**
+     * @inheritdoc IDepositVault
+     */
+    function rejectRequest(uint256 requestId) external onlyContractAdmin {
+        Request memory request = mintRequests[requestId];
+
+        _validateRequest(requestId, request.recipient, request.status);
+        _validateAndUpdateNextRequestIdToProcess(requestId, true);
+
+        mintRequests[requestId].status = RequestStatus.Canceled;
+
+        upcomingSupply -= _quoteMTokenFromRequest(
+            request,
+            request.tokenOutRate
+        );
+
+        emit RejectRequest(requestId);
+    }
+
+    /**
+     * @inheritdoc IDepositVault
+     */
+    function setMinMTokenAmountForFirstDeposit(uint256 newValue)
+        external
+        onlyContractAdmin
+    {
+        minMTokenAmountForFirstDeposit = newValue;
+
+        emit SetMinMTokenAmountForFirstDeposit(newValue);
+    }
+
+    /**
+     * @inheritdoc IDepositVault
+     */
+    function setMaxAmountPerRequest(uint256 newValue)
+        external
+        onlyContractAdmin
+    {
+        maxAmountPerRequest = newValue;
+
+        emit SetMaxAmountPerRequest(newValue);
+    }
+
+    /**
+     * @notice calculates effective mToken supply including upcoming supply
+     * @return effective mToken supply
+     */
+    function getEffectiveMTokenSupply() external view returns (uint256) {
+        return _getEffectiveMTokenSupply();
+    }
+
+    /**
+     * @dev internal function to approve requests
+     * @param requestIds request ids
+     * @param newOutRate new out rate
+     * @param isRequestRate if true, newOutRate will be ignored and request rate will be used
+     * @param isAvgRate if true, newOutRate is avg rate
+     */
+    function _safeBulkApproveRequest(
+        uint256[] calldata requestIds,
+        uint256 newOutRate,
+        bool isRequestRate,
+        bool isAvgRate
+    ) private onlyContractAdmin {
+        for (uint256 i = 0; i < requestIds.length; ++i) {
+            if (isRequestRate) {
+                newOutRate = mintRequests[requestIds[i]].tokenOutRate;
             }
-
-            emit SafeApproveRequest(requestIds[i], newOutRate);
+            _approveRequest(requestIds[i], newOutRate, true, isAvgRate);
         }
     }
 
     /**
-     * @inheritdoc ManageableVault
+     * @dev internal deposit instant logic with custom recipient
+     * @param tokenIn tokenIn address
+     * @param amountToken amount of tokenIn (decimals 18)
+     * @param minReceiveAmount min amount of mToken to receive (decimals 18)
+     * @param referrerId referrer id
+     * @param recipient recipient address
+     * @param instantShareToValidate % amount of `amountToken` that will be deposited instantly
      */
-    function vaultRole() public pure virtual override returns (bytes32) {
-        return _DEFAULT_DEPOSIT_VAULT_ADMIN_ROLE;
-    }
-
-    /**
-     * @inheritdoc Greenlistable
-     */
-    function greenlistTogglerRole()
-        public
-        view
-        virtual
-        override
-        returns (bytes32)
+    function _depositInstantWithCustomRecipient(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 minReceiveAmount,
+        bytes32 referrerId,
+        address recipient,
+        uint256 instantShareToValidate
+    )
+        private
+        validateUserAccess(recipient)
+        returns (CalcAndValidateDepositResult memory result)
     {
-        return vaultRole();
+        require(
+            instantShareToValidate <= maxInstantShare,
+            InstantShareTooHigh(instantShareToValidate, maxInstantShare)
+        );
+
+        result = _depositInstant(
+            tokenIn,
+            amountToken,
+            minReceiveAmount,
+            recipient
+        );
+
+        emit DepositInstant(
+            msg.sender,
+            tokenIn,
+            recipient,
+            amountToken,
+            result.feeTokenAmount,
+            result.mintAmount,
+            result.tokenOutRate,
+            result.tokenInRate,
+            referrerId
+        );
     }
 
     /**
@@ -480,10 +392,7 @@ contract DepositVault is ManageableVault, IDepositVault {
 
         result = _calcAndValidateDeposit(user, tokenIn, amountToken, true);
 
-        require(
-            result.mintAmount >= minReceiveAmount,
-            "DV: minReceiveAmount > actual"
-        );
+        _requireSlippageNotExceeded(result.mintAmount, minReceiveAmount);
 
         totalMinted[user] += result.mintAmount;
 
@@ -491,17 +400,9 @@ contract DepositVault is ManageableVault, IDepositVault {
 
         _instantTransferTokensToTokensReceiver(
             tokenIn,
-            result.amountTokenWithoutFee,
+            amountToken,
             result.tokenDecimals
         );
-
-        if (result.feeTokenAmount > 0)
-            _tokenTransferFromUser(
-                tokenIn,
-                feeReceiver,
-                result.feeTokenAmount,
-                result.tokenDecimals
-            );
 
         mToken.mint(recipient, result.mintAmount);
 
@@ -509,55 +410,145 @@ contract DepositVault is ManageableVault, IDepositVault {
     }
 
     /**
+     * @dev internal deposit request logic with custom recipient
+     * @param tokenIn tokenIn address
+     * @param amountToken amount of tokenIn (decimals 18)
+     * @param referrerId referrer id
+     * @param recipientRequest recipient address for the request part
+     * @param instantShare % amount of `amountToken` that will be deposited instantly
+     * @param minReceiveAmountInstantShare min amount of mToken to receive for the instant share
+     * @param recipientInstant recipient address for the instant part
+     * @return requestId request id
+     */
+    function _depositRequestWithCustomRecipient(
+        address tokenIn,
+        uint256 amountToken,
+        bytes32 referrerId,
+        address recipientRequest,
+        uint256 instantShare,
+        uint256 minReceiveAmountInstantShare,
+        address recipientInstant
+    )
+        private
+        validateUserAccess(recipientRequest)
+        returns (
+            uint256, /* requestId */
+            uint256 /* instantMintAmount */
+        )
+    {
+        uint256 amountTokenInstant = _truncate(
+            (amountToken * instantShare) / ONE_HUNDRED_PERCENT,
+            _tokenDecimals(tokenIn)
+        );
+
+        CalcAndValidateDepositResult memory instantResult;
+        if (amountTokenInstant > 0) {
+            instantResult = _depositInstantWithCustomRecipient(
+                tokenIn,
+                amountTokenInstant,
+                minReceiveAmountInstantShare,
+                referrerId,
+                recipientInstant,
+                instantShare
+            );
+        }
+
+        uint256 amountTokenRequest = amountToken - amountTokenInstant;
+
+        return (
+            _depositRequest(
+                tokenIn,
+                amountTokenRequest,
+                recipientRequest,
+                referrerId,
+                amountTokenInstant,
+                instantResult.tokenAmountInUsd
+            ),
+            instantResult.mintAmount
+        );
+    }
+
+    /**
      * @dev internal deposit request logic
      * @param tokenIn tokenIn address
      * @param amountToken amount of tokenIn (decimals 18)
      * @param recipient recipient address
-     *
+     * @param referrerId referrer id
+     * @param depositedInstantAmount amount of tokenIn that was deposited instantly (decimals 18)
+     * @param depositedInstantUsdAmount amount of tokenIn that was deposited instantly in USD
+
      * @return requestId request id
-     * @return calcResult calculated deposit result
      */
     function _depositRequest(
         address tokenIn,
         uint256 amountToken,
-        address recipient
-    )
-        private
-        returns (
-            uint256 requestId,
-            CalcAndValidateDepositResult memory calcResult
-        )
-    {
+        address recipient,
+        bytes32 referrerId,
+        uint256 depositedInstantAmount,
+        uint256 depositedInstantUsdAmount
+    ) private returns (uint256 requestId) {
         address user = msg.sender;
 
-        requestId = currentRequestId.current();
-        currentRequestId.increment();
+        requestId = currentRequestId++;
 
-        calcResult = _calcAndValidateDeposit(user, tokenIn, amountToken, false);
+        CalcAndValidateDepositResult
+            memory calcResult = _calcAndValidateDeposit(
+                user,
+                tokenIn,
+                amountToken,
+                false
+            );
 
         _requestTransferTokensToTokensReceiver(
             tokenIn,
-            calcResult.amountTokenWithoutFee,
+            calcResult.amountTokenWithoutFee + calcResult.feeTokenAmount,
             calcResult.tokenDecimals
         );
 
-        if (calcResult.feeTokenAmount > 0)
-            _tokenTransferFromUser(
-                tokenIn,
-                feeReceiver,
-                calcResult.feeTokenAmount,
-                calcResult.tokenDecimals
+        // prevents stack too deep error
+        {
+            Request memory request = Request({
+                recipient: recipient,
+                tokenIn: tokenIn,
+                status: RequestStatus.Pending,
+                depositedUsdAmount: calcResult.tokenAmountInUsd,
+                usdAmountWithoutFees: (calcResult.amountTokenWithoutFee *
+                    calcResult.tokenInRate) / 10**18,
+                tokenOutRate: calcResult.tokenOutRate,
+                depositedInstantUsdAmount: depositedInstantUsdAmount,
+                approvedTokenOutRate: 0,
+                amountMToken: 0
+            });
+
+            mintRequests[requestId] = request;
+
+            uint256 estimatedMintAmount = _quoteMTokenFromRequest(
+                request,
+                request.tokenOutRate
             );
 
-        mintRequests[requestId] = Request({
-            sender: recipient,
-            tokenIn: tokenIn,
-            status: RequestStatus.Pending,
-            depositedUsdAmount: calcResult.tokenAmountInUsd,
-            usdAmountWithoutFees: (calcResult.amountTokenWithoutFee *
-                calcResult.tokenInRate) / 10**18,
-            tokenOutRate: calcResult.tokenOutRate
-        });
+            require(
+                estimatedMintAmount <= maxAmountPerRequest,
+                MaxAmountPerRequestExceeded(estimatedMintAmount)
+            );
+
+            upcomingSupply += estimatedMintAmount;
+        }
+
+        _validateMaxSupplyCap(true);
+
+        emit DepositRequest(
+            requestId,
+            msg.sender,
+            tokenIn,
+            recipient,
+            amountToken,
+            depositedInstantAmount,
+            calcResult.feeTokenAmount,
+            calcResult.tokenOutRate,
+            calcResult.tokenInRate,
+            referrerId
+        );
     }
 
     /**
@@ -566,45 +557,75 @@ contract DepositVault is ManageableVault, IDepositVault {
      * Mints mTokens to user
      * @param requestId request id
      * @param newOutRate mToken rate
+     * @param isSafe if true:
+     * - safely validates max approve request id
+     * - safely validates if request id is sequential
+     * - safely validates max supply cap
+     * - requires variation tolerance
+     * @param isAvgRate if true, newOutRate is avg rate
      */
     function _approveRequest(
         uint256 requestId,
         uint256 newOutRate,
         bool isSafe,
-        bool revertAboveSupplyCap
-    )
-        private
-        returns (
-            bool /* success */
-        )
-    {
+        bool isAvgRate
+    ) private {
         Request memory request = mintRequests[requestId];
 
-        require(request.sender != address(0), "DV: request not exist");
-        require(
-            request.status == RequestStatus.Pending,
-            "DV: request not pending"
-        );
+        _validateRequest(requestId, request.recipient, request.status);
+        _validateUserAccess(request.recipient, false);
 
-        if (isSafe)
+        if (isSafe) {
             _requireVariationTolerance(request.tokenOutRate, newOutRate);
-
-        uint256 amountMToken = (request.usdAmountWithoutFees * (10**18)) /
-            newOutRate;
-
-        if (!_validateMaxSupplyCap(amountMToken, revertAboveSupplyCap)) {
-            return false;
         }
 
-        mToken.mint(request.sender, amountMToken);
+        if (isAvgRate) {
+            uint256 avgRate = _calculateHoldbackPartRateFromAvg(
+                request,
+                newOutRate
+            );
 
-        totalMinted[request.sender] += amountMToken;
+            if (request.depositedInstantUsdAmount > 0) {
+                require(avgRate > 0, InvalidAvgRate());
+            }
 
+            if (avgRate != 0) {
+                newOutRate = avgRate;
+            }
+        }
+
+        require(newOutRate > 0, InvalidNewMTokenRate());
+
+        uint256 amountMToken = _quoteMTokenFromRequest(request, newOutRate);
+
+        uint256 upcomingSupplyDecrease = _quoteMTokenFromRequest(
+            request,
+            request.tokenOutRate
+        );
+
+        if (
+            !_validateMaxSupplyCap(
+                upcomingSupplyDecrease,
+                amountMToken,
+                !isSafe
+            ) || !_validateAndUpdateNextRequestIdToProcess(requestId, !isSafe)
+        ) {
+            return;
+        }
+
+        upcomingSupply -= upcomingSupplyDecrease;
+
+        mToken.mint(request.recipient, amountMToken);
+
+        totalMinted[request.recipient] += amountMToken;
+
+        request.approvedTokenOutRate = newOutRate;
+        request.amountMToken = amountMToken;
         request.status = RequestStatus.Processed;
-        request.tokenOutRate = newOutRate;
+
         mintRequests[requestId] = request;
 
-        return true;
+        emit ApproveRequest(requestId, newOutRate, isSafe, isAvgRate);
     }
 
     /**
@@ -646,6 +667,26 @@ contract DepositVault is ManageableVault, IDepositVault {
     }
 
     /**
+     * @notice validates request
+     * if exist
+     * if status is expected
+     * @param requestId request id
+     * @param validateAddress address to check if not zero
+     * @param status request status
+     */
+    function _validateRequest(
+        uint256 requestId,
+        address validateAddress,
+        RequestStatus status
+    ) internal pure {
+        require(validateAddress != address(0), RequestNotExists(requestId));
+        require(
+            status == RequestStatus.Pending,
+            UnexpectedRequestStatus(requestId, status)
+        );
+    }
+
+    /**
      * @dev validate deposit and calculate mint amount
      * @param user user address
      * @param tokenIn tokenIn address
@@ -660,7 +701,9 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 amountToken,
         bool isInstant
     ) internal returns (CalcAndValidateDepositResult memory result) {
-        require(amountToken > 0, "DV: invalid amount");
+        require(amountToken > 0, InvalidAmount());
+
+        _validateInstantFee();
 
         result.tokenDecimals = _tokenDecimals(tokenIn);
 
@@ -677,9 +720,10 @@ contract DepositVault is ManageableVault, IDepositVault {
         _requireAndUpdateAllowance(tokenIn, amountToken);
 
         result.feeTokenAmount = _truncate(
-            _getFeeAmount(userCopy, tokenIn, amountToken, isInstant, 0),
+            _getFeeAmount(_getFee(userCopy, tokenIn, isInstant), amountToken),
             result.tokenDecimals
         );
+
         result.amountTokenWithoutFee = amountToken - result.feeTokenAmount;
 
         uint256 feeInUsd = (result.feeTokenAmount * result.tokenInRate) /
@@ -691,34 +735,22 @@ contract DepositVault is ManageableVault, IDepositVault {
         result.mintAmount = mTokenAmount;
         result.tokenOutRate = mTokenRate;
 
-        if (!isFreeFromMinAmount[userCopy]) {
-            _validateMinAmount(userCopy, result.mintAmount);
+        if (
+            !_validateMTokenAmount(userCopy, result.mintAmount) &&
+            totalMinted[userCopy] == 0
+        ) {
+            require(
+                result.mintAmount >= minMTokenAmountForFirstDeposit,
+                LessThanMinAmountFirstDeposit(
+                    result.mintAmount,
+                    minMTokenAmountForFirstDeposit
+                )
+            );
         }
-        require(result.mintAmount > 0, "DV: invalid mint amount");
     }
 
     /**
-     * @dev validates that inputted USD amount >= minAmountToDepositInUsd()
-     * and amount >= minAmount()
-     * @param user user address
-     * @param amountMTokenWithoutFee amount of mToken without fee (decimals 18)
-     */
-    function _validateMinAmount(address user, uint256 amountMTokenWithoutFee)
-        internal
-        view
-    {
-        require(amountMTokenWithoutFee >= minAmount, "DV: mToken amount < min");
-
-        if (totalMinted[user] != 0) return;
-
-        require(
-            amountMTokenWithoutFee >= minMTokenAmountForFirstDeposit,
-            "DV: mint amount < min"
-        );
-    }
-
-    /**
-     * @dev validates that mToken.totalSupply() <= maxSupplyCap
+     * @dev validates that mToken.totalSupply() <= mToken.maxSupplyCap()
      *
      * @param revertOnError if true, will revert if supply is exceeded
      * if false, will return false if supply is exceeded without reverting
@@ -730,30 +762,34 @@ contract DepositVault is ManageableVault, IDepositVault {
         view
         returns (bool)
     {
-        return _validateMaxSupplyCap(0, revertOnError);
+        return _validateMaxSupplyCap(0, 0, revertOnError);
     }
 
     /**
-     * @dev validates that mToken.totalSupply() <= maxSupplyCap
+     * @dev validates that mToken.totalSupply() <= mToken.maxSupplyCap()
      *
+     * @param requestEstimatedMintAmount estimated amount of mToken to mint from request
      * @param mintAmount amount of mToken to mint
      * @param revertOnError if true, will revert if supply is exceeded
      * if false, will return false if supply is exceeded without reverting
      *
      * @return true if supply is valid, false otherwise
      */
-    function _validateMaxSupplyCap(uint256 mintAmount, bool revertOnError)
-        internal
-        view
-        returns (bool)
-    {
-        bool isExceeded = mToken.totalSupply() + mintAmount > maxSupplyCap;
+    function _validateMaxSupplyCap(
+        uint256 requestEstimatedMintAmount,
+        uint256 mintAmount,
+        bool revertOnError
+    ) private view returns (bool) {
+        bool isExceeded = _getEffectiveMTokenSupply() +
+            mintAmount -
+            requestEstimatedMintAmount >
+            mToken.maxSupplyCap();
 
         if (!revertOnError) {
             return !isExceeded;
         }
 
-        require(!isExceeded, "DV: max supply cap exceeded");
+        require(!isExceeded, SupplyCapExceeded());
 
         return true;
     }
@@ -772,12 +808,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         virtual
         returns (uint256 amountInUsd, uint256 rate)
     {
-        require(amount > 0, "DV: amount zero");
-
-        TokenConfig storage tokenConfig = tokensConfig[tokenIn];
-
-        rate = _getTokenRate(tokenConfig.dataFeed, tokenConfig.stable);
-        require(rate > 0, "DV: rate zero");
+        rate = _getPTokenRate(tokenIn);
 
         amountInUsd = (amount * rate) / (10**18);
     }
@@ -801,11 +832,58 @@ contract DepositVault is ManageableVault, IDepositVault {
     }
 
     /**
-     * @dev gets and validates mToken rate
-     * @return mTokenRate mToken rate
+     * @dev calculates holdback part rate from avg rate
+     * @param request request
+     * @param avgMTokenRate avg mToken rate
+     * @return holdback part rate
      */
-    function _getMTokenRate() private view returns (uint256 mTokenRate) {
-        mTokenRate = _getTokenRate(address(mTokenDataFeed), false);
-        require(mTokenRate > 0, "DV: rate zero");
+    function _calculateHoldbackPartRateFromAvg(
+        Request memory request,
+        uint256 avgMTokenRate
+    ) internal pure returns (uint256) {
+        if (
+            avgMTokenRate == 0 ||
+            request.tokenOutRate == 0 ||
+            request.depositedInstantUsdAmount == 0
+        ) {
+            return 0;
+        }
+
+        uint256 targetTotalMTokenValue = ((request.depositedUsdAmount +
+            request.depositedInstantUsdAmount) * (10**18)) / avgMTokenRate;
+
+        uint256 instantPartMTokenValue = (request.depositedInstantUsdAmount *
+            (10**18)) / request.tokenOutRate;
+
+        if (targetTotalMTokenValue <= instantPartMTokenValue) {
+            return 0;
+        }
+
+        uint256 holdbackPartValue = targetTotalMTokenValue -
+            instantPartMTokenValue;
+
+        return (request.depositedUsdAmount * (10**18)) / holdbackPartValue;
+    }
+
+    /**
+     * @dev calculates mToken amount to mint from request and provided mToken rate
+     * @param request request
+     * @param mTokenRate mToken rate
+     * @return mToken amount to mint
+     */
+    function _quoteMTokenFromRequest(Request memory request, uint256 mTokenRate)
+        private
+        view
+        returns (uint256)
+    {
+        return (request.usdAmountWithoutFees * (10**18)) / mTokenRate;
+    }
+
+    /**
+     * @dev calculates effective mToken supply including upcoming supply
+     * @return effective mToken supply
+     */
+    function _getEffectiveMTokenSupply() private view returns (uint256) {
+        return mToken.totalSupply() + upcomingSupply;
     }
 }

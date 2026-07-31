@@ -1,10 +1,11 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "./DepositVault.sol";
+import {DepositVault} from "./DepositVault.sol";
+import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
 import {IMorphoVault} from "./interfaces/morpho/IMorphoVault.sol";
 
 /**
@@ -42,22 +43,16 @@ contract DepositVaultWithMorpho is DepositVault {
 
     /**
      * @notice Emitted when a Morpho Vault is configured for a payment token
-     * @param caller address of the caller
      * @param token payment token address
      * @param vault Morpho Vault address
      */
-    event SetMorphoVault(
-        address indexed caller,
-        address indexed token,
-        address indexed vault
-    );
+    event SetMorphoVault(address indexed token, address indexed vault);
 
     /**
      * @notice Emitted when a Morpho Vault is removed for a payment token
-     * @param caller address of the caller
      * @param token payment token address
      */
-    event RemoveMorphoVault(address indexed caller, address indexed token);
+    event RemoveMorphoVault(address indexed token);
 
     /**
      * @notice Emitted when `morphoDepositsEnabled` flag is updated
@@ -72,42 +67,77 @@ contract DepositVaultWithMorpho is DepositVault {
     event SetAutoInvestFallbackEnabled(bool indexed enabled);
 
     /**
+     * @notice when asset mismatch
+     * @param morphoVault Morpho Vault address
+     * @param token token address
+     */
+    error AssetMismatch(address morphoVault, address token);
+
+    /**
+     * @notice when vault is not set
+     * @param token token address
+     */
+    error VaultNotSet(address token);
+
+    /**
+     * @notice when zero shares are received
+     * @param shares shares
+     */
+    error ZeroShares(uint256 shares);
+
+    /**
+     * @notice when auto-invest fails
+     * @param err error bytes
+     */
+    error AutoInvestFailed(bytes err);
+
+    /**
+     * @notice Passes role identifiers to the base DepositVault constructor
+     * @param _contractAdminRole contract admin role identifier
+     * @param _greenlistedRole greenlisted role identifier
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
+        DepositVault(_contractAdminRole, _greenlistedRole)
+    {}
+
+    /**
      * @notice Sets the Morpho Vault for a specific payment token
      * @param _token payment token address
      * @param _morphoVault Morpho Vault (ERC-4626) address for this token
      */
     function setMorphoVault(address _token, address _morphoVault)
         external
-        onlyVaultAdmin
+        onlyContractAdmin
     {
         _validateAddress(_token, true);
         _validateAddress(_morphoVault, true);
         require(
             IMorphoVault(_morphoVault).asset() == _token,
-            "DVM: asset mismatch"
+            AssetMismatch(_morphoVault, _token)
         );
         morphoVaults[_token] = IMorphoVault(_morphoVault);
-        emit SetMorphoVault(msg.sender, _token, _morphoVault);
+        emit SetMorphoVault(_token, _morphoVault);
     }
 
     /**
      * @notice Removes the Morpho Vault for a specific payment token
      * @param _token payment token address
      */
-    function removeMorphoVault(address _token) external onlyVaultAdmin {
+    function removeMorphoVault(address _token) external onlyContractAdmin {
         require(
             address(morphoVaults[_token]) != address(0),
-            "DVM: vault not set"
+            VaultNotSet(_token)
         );
         delete morphoVaults[_token];
-        emit RemoveMorphoVault(msg.sender, _token);
+        emit RemoveMorphoVault(_token);
     }
 
     /**
      * @notice Updates `morphoDepositsEnabled` value
      * @param enabled whether Morpho auto-invest deposits are enabled
      */
-    function setMorphoDepositsEnabled(bool enabled) external onlyVaultAdmin {
+    function setMorphoDepositsEnabled(bool enabled) external onlyContractAdmin {
         morphoDepositsEnabled = enabled;
         emit SetMorphoDepositsEnabled(enabled);
     }
@@ -118,7 +148,7 @@ contract DepositVaultWithMorpho is DepositVault {
      */
     function setAutoInvestFallbackEnabled(bool enabled)
         external
-        onlyVaultAdmin
+        onlyContractAdmin
     {
         autoInvestFallbackEnabled = enabled;
         emit SetAutoInvestFallbackEnabled(enabled);
@@ -131,7 +161,7 @@ contract DepositVaultWithMorpho is DepositVault {
         address tokenIn,
         uint256 amountToken,
         uint256 tokensDecimals
-    ) internal override {
+    ) internal virtual override {
         IMorphoVault vault = morphoVaults[tokenIn];
         if (!morphoDepositsEnabled || address(vault) == address(0)) {
             return
@@ -152,7 +182,7 @@ contract DepositVaultWithMorpho is DepositVault {
         address tokenIn,
         uint256 amountToken,
         uint256 tokensDecimals
-    ) internal override {
+    ) internal virtual override {
         IMorphoVault vault = morphoVaults[tokenIn];
         if (!morphoDepositsEnabled || address(vault) == address(0)) {
             return
@@ -196,13 +226,13 @@ contract DepositVaultWithMorpho is DepositVault {
         try vault.deposit(transferredAmount, tokensReceiver) returns (
             uint256 shares
         ) {
-            require(shares > 0, "DVM: zero shares");
-        } catch {
+            require(shares > 0, ZeroShares(shares));
+        } catch (bytes memory err) {
             if (autoInvestFallbackEnabled) {
                 IERC20(tokenIn).safeApprove(address(vault), 0);
                 IERC20(tokenIn).safeTransfer(tokensReceiver, transferredAmount);
             } else {
-                revert("DVM: auto-invest failed");
+                revert AutoInvestFailed(err);
             }
         }
     }

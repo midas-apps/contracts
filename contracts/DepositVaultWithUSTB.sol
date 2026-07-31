@@ -1,9 +1,13 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
+import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {ISuperstateToken} from "./interfaces/ustb/ISuperstateToken.sol";
-
-import "./DepositVault.sol";
+import {CommonVaultInitParams} from "./interfaces/IManageableVault.sol";
+import {DepositVault} from "./DepositVault.sol";
+import {DepositVaultInitParams} from "./interfaces/IDepositVault.sol";
+import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
 
 /**
  * @title DepositVaultWithUSTB
@@ -38,40 +42,39 @@ contract DepositVaultWithUSTB is DepositVault {
     event SetUstbDepositsEnabled(bool indexed enabled);
 
     /**
+     * @notice when USTB token is not supported
+     * @param token token address
+     */
+    error UnsupportedUSTBToken(address token);
+
+    /**
+     * @notice when USTB fee is not zero
+     * @param fee fee
+     */
+    error USTBFeeNotZero(uint256 fee);
+
+    /**
+     * @notice Passes role identifiers to the base DepositVault constructor
+     * @param _contractAdminRole contract admin role identifier
+     * @param _greenlistedRole greenlisted role identifier
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
+        DepositVault(_contractAdminRole, _greenlistedRole)
+    {}
+
+    /**
      * @notice upgradeable pattern contract`s initializer
-     * @param _ac address of MidasAccessControll contract
-     * @param _mTokenInitParams init params for mToken
-     * @param _receiversInitParams init params for receivers
-     * @param _instantInitParams init params for instant operations
-     * @param _sanctionsList address of sanctionsList contract
-     * @param _variationTolerance percent of prices diviation 1% = 100
-     * @param _minAmount basic min amount for operations in mToken
-     * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
+     * @param _commonVaultInitParams init params for common vault
+     * @param _depositVaultInitParams init params for deposit vault
      * @param _ustb USTB token address
      */
     function initialize(
-        address _ac,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount,
-        uint256 _minMTokenAmountForFirstDeposit,
-        uint256 _maxSupplyCap,
+        CommonVaultInitParams calldata _commonVaultInitParams,
+        DepositVaultInitParams calldata _depositVaultInitParams,
         address _ustb
     ) external {
-        initialize(
-            _ac,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount,
-            _minMTokenAmountForFirstDeposit,
-            _maxSupplyCap
-        );
+        initialize(_commonVaultInitParams, _depositVaultInitParams);
 
         _validateAddress(_ustb, false);
 
@@ -82,7 +85,7 @@ contract DepositVaultWithUSTB is DepositVault {
      * @notice Updates `ustbDepositsEnabled` value
      * @param enabled whether USTB deposits are enabled
      */
-    function setUstbDepositsEnabled(bool enabled) external onlyVaultAdmin {
+    function setUstbDepositsEnabled(bool enabled) external onlyContractAdmin {
         ustbDepositsEnabled = enabled;
         emit SetUstbDepositsEnabled(enabled);
     }
@@ -102,7 +105,7 @@ contract DepositVaultWithUSTB is DepositVault {
         address tokenIn,
         uint256 amountToken,
         uint256 tokensDecimals
-    ) internal override {
+    ) internal virtual override {
         if (!ustbDepositsEnabled) {
             return
                 super._instantTransferTokensToTokensReceiver(
@@ -117,10 +120,10 @@ contract DepositVaultWithUSTB is DepositVault {
 
         require(
             config.sweepDestination != address(0),
-            "DVU: unsupported USTB token"
+            UnsupportedUSTBToken(tokenIn)
         );
 
-        require(config.fee == 0, "DVU: USTB fee is not 0");
+        require(config.fee == 0, USTBFeeNotZero(config.fee));
 
         address ustbToken = ustb;
         uint256 transferredAmount = _tokenTransferFromUser(

@@ -1,8 +1,9 @@
 import { setNextBlockTimestamp } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
 import { expect } from 'chai';
+import { BigNumberish } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
-import { OptionalCommonParams } from './common.helpers';
+import { handleRevert, OptionalCommonParams } from './common.helpers';
 import { defaultDeploy } from './fixtures';
 
 type CommonParamsSetRoundData = Pick<
@@ -19,10 +20,13 @@ export const setRoundData = async (
 
   const dataParsed = parseUnits(data.toFixed(8).replace(/\.?0+$/, ''), 8);
 
-  if (opt?.revertMessage) {
-    await expect(
-      customFeed.connect(sender).setRoundData(dataParsed),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      customFeed.connect(sender).setRoundData.bind(this, dataParsed),
+      customFeed,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -74,10 +78,13 @@ export const setRoundDataSafe = async (
 
   const dataParsed = parseUnits(data.toFixed(8).replace(/\.?0+$/, ''), 8);
 
-  if (opt?.revertMessage) {
-    await expect(
-      customFeed.connect(sender).setRoundDataSafe(dataParsed),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      customFeed.connect(sender).setRoundDataSafe.bind(this, dataParsed),
+      customFeed,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -118,6 +125,66 @@ export const setRoundDataSafe = async (
 
   expect(await customFeed.lastTimestamp()).eq(lastRoundDataAfter.updatedAt);
   expect(await customFeed.lastAnswer()).eq(lastRoundDataAfter.answer);
+};
+
+export const setMaxAnswerDeviationTest = async (
+  { customFeed, owner }: CommonParamsSetRoundData,
+  maxAnswerDeviation: BigNumberish,
+  opt?: OptionalCommonParams,
+) => {
+  const sender = opt?.from ?? owner;
+
+  if (
+    await handleRevert(
+      customFeed
+        .connect(sender)
+        .setMaxAnswerDeviation.bind(this, maxAnswerDeviation),
+      customFeed,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  await expect(
+    customFeed.connect(sender).setMaxAnswerDeviation(maxAnswerDeviation),
+  )
+    .to.emit(
+      customFeed,
+      customFeed.interface.events['MaxAnswerDeviationUpdated(uint256)'].name,
+    )
+    .withArgs(maxAnswerDeviation).to.not.reverted;
+
+  const maxAnswerDeviationAfter = await customFeed.maxAnswerDeviation();
+  expect(maxAnswerDeviationAfter).eq(maxAnswerDeviation);
+};
+
+export const setMinMaxAnswerTest = async (
+  { customFeed, owner }: CommonParamsSetRoundData,
+  minAnswer: BigNumberish,
+  maxAnswer: BigNumberish,
+  opt?: OptionalCommonParams,
+) => {
+  const sender = opt?.from ?? owner;
+
+  if (
+    await handleRevert(
+      customFeed
+        .connect(sender)
+        .setMinMaxAnswer.bind(this, minAnswer, maxAnswer),
+      customFeed,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  await expect(customFeed.connect(sender).setMinMaxAnswer(minAnswer, maxAnswer))
+    .to.emit(customFeed, 'SetMinMaxAnswer')
+    .withArgs(minAnswer, maxAnswer).to.not.reverted;
+
+  expect(await customFeed.minAnswer()).eq(minAnswer);
+  expect(await customFeed.maxAnswer()).eq(maxAnswer);
 };
 
 export const calculatePriceDiviation = (last: number, next: number) =>

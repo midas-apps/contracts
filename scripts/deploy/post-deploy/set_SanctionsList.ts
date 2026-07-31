@@ -45,10 +45,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       address: tokenAddresses.redemptionVault,
     },
     {
-      type: 'redemptionVaultBuidl',
-      address: tokenAddresses.redemptionVaultBuidl,
-    },
-    {
       type: 'redemptionVaultSwapper',
       address: tokenAddresses.redemptionVaultSwapper,
     },

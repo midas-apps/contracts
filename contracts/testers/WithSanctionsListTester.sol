@@ -1,22 +1,15 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
 import "../abstract/WithSanctionsList.sol";
 
-// TODO: add natspec
 contract WithSanctionsListTester is WithSanctionsList {
     function initialize(address _accessControl, address _sanctionsList)
         external
         initializer
     {
-        __WithSanctionsList_init(_accessControl, _sanctionsList);
-    }
-
-    function initializeWithoutInitializer(
-        address _accessControl,
-        address _sanctionsList
-    ) external {
-        __WithSanctionsList_init(_accessControl, _sanctionsList);
+        __WithMidasAccessControl_init(_accessControl);
+        __WithSanctionsList_init_unchained(_sanctionsList);
     }
 
     function initializeUnchainedWithoutInitializer(address _sanctionsList)
@@ -30,9 +23,15 @@ contract WithSanctionsListTester is WithSanctionsList {
         onlyNotSanctioned(user)
     {}
 
-    function sanctionsListAdminRole() public pure override returns (bytes32) {
+    function sanctionsListAdminRole() public pure returns (bytes32) {
         return keccak256("TESTER_SANCTIONS_LIST_ADMIN_ROLE");
     }
 
+    function contractAdminRole() public pure override returns (bytes32) {
+        return _DEFAULT_ADMIN_ROLE;
+    }
+
     function _disableInitializers() internal override {}
+
+    function _onlyProxyAdmin() internal view override {}
 }

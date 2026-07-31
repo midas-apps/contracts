@@ -2,186 +2,227 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 
 import { encodeFnSelector } from '../../helpers/utils';
-import { PausableTester__factory } from '../../typechain-types';
+import { acErrors } from '../common/ac.helpers';
 import {
   pauseVault,
   pauseVaultFn,
-  unpauseVault,
-  unpauseVaultFn,
+  pauseGlobalTest,
 } from '../common/common.helpers';
 import { defaultDeploy } from '../common/fixtures';
 
 describe('Pausable', () => {
   it('deployment', async () => {
-    const { pausableTester, roles } = await loadFixture(defaultDeploy);
+    const { pausableTester, roles, pauseManager } = await loadFixture(
+      defaultDeploy,
+    );
 
-    expect(await pausableTester.pauseAdminRole()).eq(roles.common.defaultAdmin);
+    expect(await pausableTester.contractAdminRole()).eq(
+      roles.common.defaultAdmin,
+    );
 
-    expect(await pausableTester.paused()).eq(false);
-  });
-
-  it('onlyInitializing', async () => {
-    const { accessControl, owner } = await loadFixture(defaultDeploy);
-
-    const pausable = await new PausableTester__factory(owner).deploy();
-
-    await expect(
-      pausable.initializeWithoutInitializer(accessControl.address),
-    ).revertedWith('Initializable: contract is not initializing');
+    expect(
+      await pauseManager.isPaused(pausableTester.address, '0x00000000'),
+    ).eq(false);
   });
 
   describe('onlyPauseAdmin modifier', async () => {
     it('should fail: can`t pause if doesn`t have role', async () => {
-      const { pausableTester, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
+      const { pausableTester, regularAccounts, pauseManager, owner } =
+        await loadFixture(defaultDeploy);
 
-      await pauseVault(pausableTester, {
+      await pauseVault({ pauseManager, owner }, pausableTester, {
         from: regularAccounts[0],
-        revertMessage: 'WMAC: hasnt role',
+        revertCustomError: {
+          ...acErrors.WMAC_HASNT_PERMISSION(),
+          contract: pauseManager,
+        },
       });
     });
 
     it('can change state if has role', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
-
-      await pauseVault(pausableTester);
-    });
-  });
-
-  describe('pause()', async () => {
-    it('fail: can`t pause if caller doesnt have admin role', async () => {
-      const { pausableTester, regularAccounts } = await loadFixture(
+      const { pausableTester, pauseManager, owner } = await loadFixture(
         defaultDeploy,
       );
 
-      await pauseVault(pausableTester, {
-        from: regularAccounts[0],
-        revertMessage: 'WMAC: hasnt role',
-      });
-    });
-
-    it('fail: when paused', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
-
-      await pauseVault(pausableTester);
-      await pauseVault(pausableTester, {
-        revertMessage: 'Pausable: paused',
-      });
-    });
-
-    it('when not paused and caller is admin', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
-
-      await pauseVault(pausableTester);
+      await pauseVault({ pauseManager, owner }, pausableTester);
     });
   });
 
-  describe('pauseFn()', async () => {
-    it('fail: can`t pause if caller doesnt have admin role', async () => {
-      const { pausableTester, regularAccounts } = await loadFixture(
+  describe('_requireFnNotPaused()', () => {
+    it('should not fail when fn is not paused', async () => {
+      const { pausableTester } = await loadFixture(defaultDeploy);
+      const selector = encodeFnSelector(
+        'depositRequest(address,uint256,bytes32)',
+      );
+
+      await expect(pausableTester.requireFnNotPaused(selector)).not.reverted;
+    });
+
+    it('should not fail when contract is not paused', async () => {
+      const { pausableTester } = await loadFixture(defaultDeploy);
+
+      await expect(
+        pausableTester.requireFnNotPaused(encodeFnSelector('randomSelector()')),
+      ).not.reverted;
+    });
+
+    it('should not fail when globally is not paused', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
         defaultDeploy,
       );
 
-      const selector = encodeFnSelector(
-        'depositRequest(address,uint256,bytes32)',
-      );
-
-      await pauseVaultFn(pausableTester, selector, {
-        from: regularAccounts[0],
-        revertMessage: 'WMAC: hasnt role',
-      });
+      await expect(
+        pausableTester.requireFnNotPaused(encodeFnSelector('randomSelector()')),
+      ).not.reverted;
     });
 
-    it('fail: when paused', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
-
+    it('should fail: when fn is paused', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
       const selector = encodeFnSelector(
         'depositRequest(address,uint256,bytes32)',
       );
 
-      await pauseVaultFn(pausableTester, selector);
-      await pauseVaultFn(pausableTester, selector, {
-        revertMessage: 'Pausable: fn paused',
-      });
+      await pauseVaultFn({ pauseManager, owner }, pausableTester, selector);
+
+      await expect(pausableTester.requireFnNotPaused(selector))
+        .revertedWithCustomError(pausableTester, 'Paused')
+        .withArgs(pausableTester.address, selector);
     });
 
-    it('when not paused and caller is admin', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
-
+    it('should not fail when contract is paused', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
       const selector = encodeFnSelector(
         'depositRequest(address,uint256,bytes32)',
       );
 
-      await pauseVaultFn(pausableTester, selector);
+      await pauseVault({ pauseManager, owner }, pausableTester);
+
+      await expect(pausableTester.requireFnNotPaused(selector)).not.reverted;
+    });
+
+    it('should not fail when globally is paused', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
+      const selector = encodeFnSelector(
+        'depositRequest(address,uint256,bytes32)',
+      );
+
+      await pauseGlobalTest({ pauseManager, owner });
+
+      await expect(pausableTester.requireFnNotPaused(selector)).not.reverted;
+    });
+
+    it('should fail: when globally, contract and fn are paused', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
+      const selector = encodeFnSelector(
+        'depositRequest(address,uint256,bytes32)',
+      );
+
+      await pauseGlobalTest({ pauseManager, owner });
+      await pauseVault({ pauseManager, owner }, pausableTester);
+      await pauseVaultFn({ pauseManager, owner }, pausableTester, selector);
+
+      await expect(pausableTester.requireFnNotPaused(selector))
+        .revertedWithCustomError(pausableTester, 'Paused')
+        .withArgs(pausableTester.address, selector);
     });
   });
 
-  describe('unpauseFn()', async () => {
-    it('fail: can`t pause if caller doesnt have admin role', async () => {
-      const { pausableTester, regularAccounts } = await loadFixture(
-        defaultDeploy,
-      );
-
+  describe('_requireNotPaused()', () => {
+    it('should not fail when fn is not paused', async () => {
+      const { pausableTester } = await loadFixture(defaultDeploy);
       const selector = encodeFnSelector(
         'depositRequest(address,uint256,bytes32)',
       );
 
-      await unpauseVaultFn(pausableTester, selector, {
-        from: regularAccounts[0],
-        revertMessage: 'WMAC: hasnt role',
-      });
+      await expect(pausableTester.requireNotPaused(selector)).not.reverted;
     });
 
-    it('fail: when unpaused', async () => {
+    it('should not fail when contract is not paused', async () => {
       const { pausableTester } = await loadFixture(defaultDeploy);
 
-      const selector = encodeFnSelector(
-        'function depositRequest(address,uint256,bytes32)',
+      await expect(
+        pausableTester.requireNotPaused(encodeFnSelector('randomSelector()')),
+      ).not.reverted;
+    });
+
+    it('should not fail when globally is not paused', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
       );
 
-      await unpauseVaultFn(pausableTester, selector, {
-        revertMessage: 'Pausable: fn unpaused',
-      });
+      await expect(
+        pausableTester.requireNotPaused(encodeFnSelector('randomSelector()')),
+      ).not.reverted;
     });
 
-    it('when paused and caller is admin', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
-
+    it('should fail: when fn is paused', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
       const selector = encodeFnSelector(
         'depositRequest(address,uint256,bytes32)',
       );
 
-      await pauseVaultFn(pausableTester, selector);
-      await unpauseVaultFn(pausableTester, selector);
-    });
-  });
+      await pauseVaultFn({ pauseManager, owner }, pausableTester, selector);
 
-  describe('unpause()', async () => {
-    it('fail: can`t unpause if caller doesnt have admin role', async () => {
-      const { pausableTester, regularAccounts } = await loadFixture(
+      await expect(pausableTester.requireNotPaused(selector))
+        .revertedWithCustomError(pausableTester, 'Paused')
+        .withArgs(pausableTester.address, selector);
+    });
+
+    it('should fail: when contract is paused', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
         defaultDeploy,
       );
+      const selector = encodeFnSelector(
+        'depositRequest(address,uint256,bytes32)',
+      );
 
-      await unpauseVault(pausableTester, {
-        from: regularAccounts[0],
-        revertMessage: 'WMAC: hasnt role',
-      });
+      await pauseVault({ pauseManager, owner }, pausableTester);
+
+      await expect(
+        pausableTester.requireNotPaused(selector),
+      ).revertedWithCustomError(pausableTester, 'Paused');
     });
 
-    it('fail: when not paused', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
+    it('should fail: when globally is paused', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
+      const selector = encodeFnSelector(
+        'depositRequest(address,uint256,bytes32)',
+      );
 
-      await unpauseVault(pausableTester, {
-        revertMessage: 'Pausable: not paused',
-      });
+      await pauseGlobalTest({ pauseManager, owner });
+
+      await expect(
+        pausableTester.requireNotPaused(selector),
+      ).revertedWithCustomError(pausableTester, 'Paused');
     });
 
-    it('when paused and caller is admin', async () => {
-      const { pausableTester } = await loadFixture(defaultDeploy);
+    it('should fail: when globally, contract and fn are paused', async () => {
+      const { pausableTester, pauseManager, owner } = await loadFixture(
+        defaultDeploy,
+      );
+      const selector = encodeFnSelector(
+        'depositRequest(address,uint256,bytes32)',
+      );
 
-      await pauseVault(pausableTester);
-      await unpauseVault(pausableTester);
+      await pauseGlobalTest({ pauseManager, owner });
+      await pauseVault({ pauseManager, owner }, pausableTester);
+      await pauseVaultFn({ pauseManager, owner }, pausableTester, selector);
+
+      await expect(pausableTester.requireNotPaused(selector))
+        .revertedWithCustomError(pausableTester, 'Paused')
+        .withArgs(pausableTester.address, selector);
     });
   });
 });

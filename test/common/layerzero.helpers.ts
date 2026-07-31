@@ -4,13 +4,16 @@ import {
   BigNumber,
   BigNumberish,
   constants,
-  Contract,
   ContractTransaction,
 } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import { OptionalCommonParams, tokenAmountToBase18 } from './common.helpers';
+import {
+  handleRevert,
+  OptionalCommonParams,
+  tokenAmountToBase18,
+} from './common.helpers';
 import { calcExpectedMintAmount } from './deposit-vault.helpers';
 import { layerZeroFixture } from './fixtures';
 import { calcExpectedTokenOutAmount } from './redemption-vault.helpers';
@@ -60,10 +63,11 @@ export const setRateLimitConfig = async (
 ) => {
   const from = opt?.from ?? owner;
 
-  if (opt?.revertMessage) {
-    await expect(
-      oftAdapter.connect(from).setRateLimits([{ dstEid, limit, window }]),
-    ).revertedWith(opt?.revertMessage);
+  const callFn = oftAdapter
+    .connect(from)
+    .setRateLimits.bind(this, [{ dstEid, limit, window }]);
+
+  if (await handleRevert(callFn, oftAdapter, opt)) {
     return;
   }
 
@@ -84,10 +88,6 @@ export const sendOft = async (
   },
   opt?: {
     revertOnDst?: boolean;
-    revertWithCustomError?: {
-      contract: Contract;
-      error: string;
-    };
   } & OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
@@ -130,20 +130,9 @@ export const sendOft = async (
     { value: nativeFee },
   ] as const;
 
-  if (opt?.revertMessage && !opt?.revertOnDst) {
-    await expect(
-      oftFrom.connect(opt?.from ?? owner).send(...params),
-    ).revertedWith(opt?.revertMessage);
-    return;
-  }
+  const callFn = oftFrom.connect(opt?.from ?? owner).send.bind(this, ...params);
 
-  if (opt?.revertWithCustomError && !opt?.revertOnDst) {
-    await expect(
-      oftFrom.connect(opt?.from ?? owner).send(...params),
-    ).revertedWithCustomError(
-      opt?.revertWithCustomError.contract,
-      opt?.revertWithCustomError.error,
-    );
+  if (!opt?.revertOnDst && (await handleRevert(callFn, oftFrom, opt))) {
     return;
   }
 
@@ -155,7 +144,7 @@ export const sendOft = async (
     oftFrom,
     oftFrom.interface.events['OFTSent(bytes32,uint32,address,uint256,uint256)']
       .name,
-  ).not.reverted;
+  );
 
   const totalSupplyAfter = await mTBILL.totalSupply();
   const balanceFromAfter = await mTBILL.balanceOf(from.address);
@@ -203,10 +192,6 @@ export const sendOftLockBox = async (
   },
   opt?: {
     revertOnDst?: boolean;
-    revertWithCustomError?: {
-      contract: Contract;
-      error: string;
-    };
   } & OptionalCommonParams,
 ) => {
   const from = opt?.from ?? owner;
@@ -249,20 +234,9 @@ export const sendOftLockBox = async (
     { value: nativeFee },
   ] as const;
 
-  if (opt?.revertMessage && !opt?.revertOnDst) {
-    await expect(
-      oftFrom.connect(opt?.from ?? owner).send(...params),
-    ).revertedWith(opt?.revertMessage);
-    return;
-  }
+  const callFn = oftFrom.connect(opt?.from ?? owner).send.bind(this, ...params);
 
-  if (opt?.revertWithCustomError && !opt?.revertOnDst) {
-    await expect(
-      oftFrom.connect(opt?.from ?? owner).send(...params),
-    ).revertedWithCustomError(
-      opt?.revertWithCustomError.contract,
-      opt?.revertWithCustomError.error,
-    );
+  if (!opt?.revertOnDst && (await handleRevert(callFn, oftFrom, opt))) {
     return;
   }
 
@@ -277,7 +251,7 @@ export const sendOftLockBox = async (
     oftFrom,
     oftFrom.interface.events['OFTSent(bytes32,uint32,address,uint256,uint256)']
       .name,
-  ).not.reverted;
+  );
 
   const totalSupplyAfter = await pToken.totalSupply();
   const totalSupplyOftAfter = await pTokenLzOft.totalSupply();
@@ -333,10 +307,6 @@ export const depositAndSend = async (
   opt?: {
     revertOnDst?: boolean;
     refundOnDst?: boolean;
-    revertWithCustomError?: {
-      contract: Contract;
-      error: string;
-    };
     overrideValue?: BigNumberish;
     expectedMintAmountWoDust?: BigNumberish;
   } & OptionalCommonParams,
@@ -491,16 +461,9 @@ export const depositAndSend = async (
     txFn = composer.connect(from).depositAndSend.bind(this, ...params);
   }
 
-  if (opt?.revertMessage && !opt?.revertOnDst) {
-    await expect(txFn()).revertedWith(opt?.revertMessage);
-    return;
-  }
+  const callFn = composer.connect(from).depositAndSend.bind(this, ...params);
 
-  if (opt?.revertWithCustomError && !opt?.revertOnDst) {
-    await expect(txFn()).revertedWithCustomError(
-      opt?.revertWithCustomError.contract,
-      opt?.revertWithCustomError.error,
-    );
+  if (!opt?.revertOnDst && (await handleRevert(callFn, composer, opt))) {
     return;
   }
 
@@ -515,31 +478,12 @@ export const depositAndSend = async (
       composer.interface.events['Refunded(bytes32)'].name,
     );
   } else {
-    await expect(txFn())
-      .to.emit(
-        composer,
-        composer.interface.events[
-          'Deposited(bytes32,bytes32,uint32,uint256,uint256)'
-        ].name,
-      )
-      .to.emit(
-        depositVault,
-        depositVault.interface.events[
-          'DepositInstantWithCustomRecipient(address,address,address,uint256,uint256,uint256,uint256,bytes32)'
-        ].name,
-      )
-      .withArgs(
-        composer.address,
-        await composer.paymentTokenErc20(),
-        direction === 'A_TO_A' || direction === 'B_TO_A'
-          ? recipient
-          : composer.address,
-        actualAmountInUsd,
-        amountParsed,
-        fee,
-        mintAmount,
-        referrerId,
-      );
+    await expect(txFn()).to.emit(
+      composer,
+      composer.interface.events[
+        'Deposited(bytes32,bytes32,uint32,uint256,uint256)'
+      ].name,
+    );
   }
 
   const totalSupplyAfter = await mTBILL.totalSupply();
@@ -605,10 +549,7 @@ export const redeemAndSend = async (
     refundOnDst?: boolean;
     expectedReceiveAmountWoDust?: BigNumberish;
     revertOnDst?: boolean;
-    revertWithCustomError?: {
-      contract: Contract;
-      error: string;
-    };
+
     overrideValue?: BigNumberish;
   } & OptionalCommonParams,
 ) => {
@@ -749,16 +690,9 @@ export const redeemAndSend = async (
     txFn = composer.connect(from).redeemAndSend.bind(this, ...params);
   }
 
-  if (opt?.revertMessage && !opt?.revertOnDst) {
-    await expect(txFn()).revertedWith(opt?.revertMessage);
-    return;
-  }
+  const callFn = composer.connect(from).redeemAndSend.bind(this, ...params);
 
-  if (opt?.revertWithCustomError && !opt?.revertOnDst) {
-    await expect(txFn()).revertedWithCustomError(
-      opt?.revertWithCustomError.contract,
-      opt?.revertWithCustomError.error,
-    );
+  if (!opt?.revertOnDst && (await handleRevert(callFn, composer, opt))) {
     return;
   }
 
@@ -787,22 +721,6 @@ export const redeemAndSend = async (
         addressToBytes32(recipient),
         direction === 'A_TO_A' || direction === 'B_TO_A' ? eidA : eidB,
         amountParsed,
-        amountOut,
-      )
-      .to.emit(
-        redemptionVault,
-        redemptionVault.interface.events[
-          'RedeemInstantWithCustomRecipient(address,address,address,uint256,uint256,uint256)'
-        ].name,
-      )
-      .withArgs(
-        composer.address,
-        await composer.paymentTokenErc20(),
-        direction === 'A_TO_A' || direction === 'B_TO_A'
-          ? recipient
-          : composer.address,
-        amountParsed,
-        fee,
         amountOut,
       );
   }

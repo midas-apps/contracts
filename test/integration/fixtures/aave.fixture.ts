@@ -2,16 +2,18 @@ import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
 import { rpcUrls } from '../../../config';
-import { getAllRoles } from '../../../helpers/roles';
 import {
-  MidasAccessControlTest,
-  MTBILLTest,
   DepositVaultWithAaveTest,
   RedemptionVaultWithAaveTest,
   DataFeedTest,
   AggregatorV3Mock,
 } from '../../../typechain-types';
 import { deployProxyContract } from '../../common/deploy.helpers';
+import {
+  getInitializerParamsDv,
+  getInitializerParamsRv,
+} from '../../common/fixtures';
+import { setupIntegrationBase } from '../helpers/ac.helpers';
 import { impersonateAndFundAccount, resetFork } from '../helpers/fork.helpers';
 import { MAINNET_ADDRESSES } from '../helpers/mainnet-addresses';
 
@@ -20,50 +22,18 @@ const FORK_BLOCK_NUMBER = 24441000;
 async function setupAaveBase() {
   await resetFork(rpcUrls.main, FORK_BLOCK_NUMBER);
 
-  const [
+  const {
+    accessControl,
+    mTBILL,
     owner,
     tokensReceiver,
     feeReceiver,
     requestRedeemer,
     vaultAdmin,
     testUser,
-  ] = await ethers.getSigners();
-  const allRoles = getAllRoles();
-
-  const accessControl = await deployProxyContract<MidasAccessControlTest>(
-    'MidasAccessControlTest',
-    [],
-  );
-
-  const mTBILL = await deployProxyContract<MTBILLTest>('mTBILLTest', [
-    accessControl.address,
-  ]);
-
-  const rolesArray = [
-    allRoles.common.defaultAdmin,
-    allRoles.tokenRoles.mTBILL.minter,
-    allRoles.tokenRoles.mTBILL.burner,
-    allRoles.tokenRoles.mTBILL.pauser,
-    allRoles.tokenRoles.mTBILL.depositVaultAdmin,
-    allRoles.tokenRoles.mTBILL.redemptionVaultAdmin,
-    allRoles.common.greenlistedOperator,
-  ];
-
-  for (const role of rolesArray) {
-    await accessControl.grantRole(role, owner.address);
-  }
-
-  await accessControl.grantRole(
-    allRoles.tokenRoles.mTBILL.depositVaultAdmin,
-    vaultAdmin.address,
-  );
-
-  await accessControl.grantRole(
-    allRoles.tokenRoles.mTBILL.redemptionVaultAdmin,
-    vaultAdmin.address,
-  );
-
-  await accessControl.grantRole(allRoles.common.greenlisted, testUser.address);
+    clawbackReceiver,
+    roles: allRoles,
+  } = await setupIntegrationBase();
 
   const usdcAggregator = (await (
     await ethers.getContractFactory('AggregatorV3Mock')
@@ -167,6 +137,7 @@ async function setupAaveBase() {
     usdtWhale,
     aUsdtWhale,
     roles: allRoles,
+    clawbackReceiver,
   };
 }
 
@@ -178,30 +149,22 @@ export async function aaveDepositFixture() {
   const depositVaultWithAave =
     await deployProxyContract<DepositVaultWithAaveTest>(
       'DepositVaultWithAaveTest',
-      [
-        accessControl.address,
-        {
-          mToken: mTBILL.address,
-          mTokenDataFeed: base.mTokenToUsdDataFeed.address,
-        },
-        {
-          feeReceiver: base.feeReceiver.address,
-          tokensReceiver: base.tokensReceiver.address,
-        },
-        {
-          instantFee: 100,
-          instantDailyLimit: ethers.constants.MaxUint256,
-        },
-        ethers.constants.AddressZero, // sanctions list
-        200,
-        parseUnits('0'),
-        0,
-        ethers.constants.MaxUint256,
-      ],
+      getInitializerParamsDv({
+        accessControl: accessControl.address,
+        mockedSanctionsList: ethers.constants.AddressZero,
+        mTBILL: mTBILL.address,
+        mTokenToUsdDataFeed: base.mTokenToUsdDataFeed.address,
+        tokensReceiver: base.tokensReceiver.address,
+        minAmount: parseUnits('0'),
+        instantFee: 100,
+        variationTolerance: 200,
+        maxApproveRequestId: ethers.constants.MaxUint256,
+      }),
+      undefined,
     );
 
   // Grant MINTER_ROLE to deposit vault
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     roles.tokenRoles.mTBILL.minter,
     depositVaultWithAave.address,
   );
@@ -247,35 +210,23 @@ export async function aaveRedemptionFixture() {
   const redemptionVaultWithAave =
     await deployProxyContract<RedemptionVaultWithAaveTest>(
       'RedemptionVaultWithAaveTest',
-      [
-        accessControl.address,
-        {
-          mToken: mTBILL.address,
-          mTokenDataFeed: base.mTokenToUsdDataFeed.address,
-        },
-        {
-          feeReceiver: base.feeReceiver.address,
-          tokensReceiver: base.tokensReceiver.address,
-        },
-        {
-          instantFee: 100, // 1%
-          instantDailyLimit: ethers.constants.MaxUint256,
-        },
-        ethers.constants.AddressZero, // sanctions list
-        200, // variation tolerance 2%
-        parseUnits('100', 18), // min amount
-        {
-          minFiatRedeemAmount: parseUnits('1000', 18),
-          fiatAdditionalFee: 100,
-          fiatFlatFee: parseUnits('10', 18),
-        },
-        base.requestRedeemer.address,
-      ],
-      'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address)',
+      getInitializerParamsRv({
+        accessControl: accessControl.address,
+        mockedSanctionsList: ethers.constants.AddressZero,
+        mTBILL: mTBILL.address,
+        mTokenToUsdDataFeed: base.mTokenToUsdDataFeed.address,
+        tokensReceiver: base.tokensReceiver.address,
+        minAmount: parseUnits('0'),
+        instantFee: 100,
+        variationTolerance: 200,
+        maxApproveRequestId: ethers.constants.MaxUint256,
+        requestRedeemer: base.requestRedeemer.address,
+      }),
+      undefined,
     );
 
   // Grant BURN_ROLE to redemption vault
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     roles.tokenRoles.mTBILL.burner,
     redemptionVaultWithAave.address,
   );

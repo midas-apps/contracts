@@ -4,14 +4,28 @@ import { expect } from 'chai';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
-import { DataFeedTest__factory } from '../../typechain-types';
-import { acErrors } from '../common/ac.helpers';
+import { encodeFnSelector } from '../../helpers/utils';
+import {
+  DataFeed__factory,
+  DataFeedTest__factory,
+} from '../../typechain-types';
+import {
+  acErrors,
+  setPermissionRoleTester,
+  setRoleTimelocksTester,
+  setupGrantOperatorRole,
+} from '../common/ac.helpers';
+import { validateImplementation } from '../common/common.helpers';
 import {
   setMinGrowthApr,
   setRoundDataGrowth,
 } from '../common/custom-feed-growth.helpers';
-import { setRoundData } from '../common/data-feed.helpers';
+import { setHealthyDiffTest, setRoundData } from '../common/data-feed.helpers';
 import { defaultDeploy } from '../common/fixtures';
+import {
+  bulkScheduleTimelockOperationTester,
+  executeTimelockOperationTester,
+} from '../common/timelock-manager.helpers';
 
 describe('DataFeed', function () {
   it('deployment', async () => {
@@ -26,10 +40,11 @@ describe('DataFeed', function () {
     expect(await dataFeed.maxExpectedAnswer()).eq(
       parseUnits('10000', mockedAggregatorDecimals),
     );
+    await validateImplementation(DataFeed__factory);
   });
 
   it('initialize', async () => {
-    const { dataFeed, owner } = await loadFixture(defaultDeploy);
+    const { dataFeed, owner, accessControl } = await loadFixture(defaultDeploy);
 
     await expect(
       dataFeed.initialize(
@@ -45,28 +60,72 @@ describe('DataFeed', function () {
 
     await expect(
       dataFeedNew.initialize(
+        accessControl.address,
         ethers.constants.AddressZero,
+        1,
+        0,
+        0,
+      ),
+    ).revertedWith('DF: invalid max exp. price');
+
+    await expect(
+      dataFeedNew.initialize(
         ethers.constants.AddressZero,
-        0,
-        0,
-        0,
+        dataFeedNew.address,
+        1,
+        1,
+        2,
+      ),
+    ).revertedWithCustomError(dataFeedNew, 'InvalidAddress');
+
+    await expect(
+      dataFeedNew.initialize(
+        accessControl.address,
+        ethers.constants.AddressZero,
+        1,
+        1,
+        2,
       ),
     ).revertedWith('DF: invalid address');
 
     await expect(
-      dataFeedNew.initialize(dataFeedNew.address, dataFeedNew.address, 0, 0, 0),
+      dataFeedNew.initialize(
+        accessControl.address,
+        dataFeedNew.address,
+        0,
+        1,
+        2,
+      ),
     ).revertedWith('DF: invalid diff');
 
     await expect(
-      dataFeedNew.initialize(dataFeedNew.address, dataFeedNew.address, 1, 0, 0),
+      dataFeedNew.initialize(
+        accessControl.address,
+        dataFeedNew.address,
+        1,
+        0,
+        2,
+      ),
     ).revertedWith('DF: invalid min exp. price');
 
     await expect(
-      dataFeedNew.initialize(dataFeedNew.address, dataFeedNew.address, 1, 1, 0),
+      dataFeedNew.initialize(
+        accessControl.address,
+        dataFeedNew.address,
+        1,
+        1,
+        0,
+      ),
     ).revertedWith('DF: invalid max exp. price');
 
     await expect(
-      dataFeedNew.initialize(dataFeedNew.address, dataFeedNew.address, 1, 2, 1),
+      dataFeedNew.initialize(
+        accessControl.address,
+        dataFeedNew.address,
+        1,
+        2,
+        1,
+      ),
     ).revertedWith('DF: invalid exp. prices');
   });
 
@@ -78,7 +137,10 @@ describe('DataFeed', function () {
         dataFeed
           .connect(regularAccounts[0])
           .changeAggregator(ethers.constants.AddressZero),
-      ).revertedWith(acErrors.WMAC_HASNT_ROLE);
+      ).revertedWithCustomError(
+        dataFeed,
+        acErrors.WMAC_HASNT_PERMISSION().customErrorName,
+      );
     });
 
     it('should fail: pass zero address', async () => {
@@ -92,8 +154,247 @@ describe('DataFeed', function () {
     it('pass new aggregator address', async () => {
       const { dataFeed, mockedAggregator } = await loadFixture(defaultDeploy);
 
-      await expect(dataFeed.changeAggregator(mockedAggregator.address)).not
-        .reverted;
+      await expect(dataFeed.changeAggregator(mockedAggregator.address))
+        .to.emit(dataFeed, 'ChangeAggregator')
+        .withArgs(mockedAggregator.address);
+    });
+  });
+
+  describe('setHealthyDiff()', () => {
+    const validHealthyDiff = 2 * 24 * 3600;
+    const invalidHealthyDiff = 0;
+    const setHealthyDiffSelector = encodeFnSelector('setHealthyDiff(uint256)');
+
+    it('call from owner', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      await setHealthyDiffTest(fixture, validHealthyDiff);
+    });
+
+    it('should fail: call from non owner', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      await setHealthyDiffTest(fixture, validHealthyDiff, {
+        from: fixture.regularAccounts[0],
+        revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
+      });
+    });
+
+    it('should fail: when healthy diff is 0', async () => {
+      const fixture = await loadFixture(defaultDeploy);
+
+      await setHealthyDiffTest(fixture, invalidHealthyDiff, {
+        revertMessage: 'DF: invalid diff',
+      });
+    });
+
+    it('succeeds with only scoped function permission', async () => {
+      const { accessControl, dataFeed, owner, regularAccounts } =
+        await loadFixture(defaultDeploy);
+
+      const user = regularAccounts[0];
+      const feedAdminRole = await dataFeed.contractAdminRole();
+
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole: feedAdminRole,
+        targetContract: dataFeed.address,
+        functionSelector: setHealthyDiffSelector,
+        grantOperator: owner,
+      });
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        undefined,
+        dataFeed.address,
+        setHealthyDiffSelector,
+        [{ account: user.address, enabled: true }],
+      );
+
+      expect(await accessControl.hasRole(feedAdminRole, user.address)).eq(
+        false,
+      );
+
+      await setHealthyDiffTest({ dataFeed, owner }, validHealthyDiff, {
+        from: user,
+      });
+    });
+
+    it('succeeds with scoped permission and feed admin role', async () => {
+      const { accessControl, dataFeed, owner, regularAccounts } =
+        await loadFixture(defaultDeploy);
+
+      const user = regularAccounts[0];
+      const feedAdminRole = await dataFeed.contractAdminRole();
+
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole: feedAdminRole,
+        targetContract: dataFeed.address,
+        functionSelector: setHealthyDiffSelector,
+        grantOperator: owner,
+      });
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        undefined,
+        dataFeed.address,
+        setHealthyDiffSelector,
+        [{ account: user.address, enabled: true }],
+      );
+
+      await accessControl['grantRole(bytes32,address)'](
+        feedAdminRole,
+        user.address,
+      );
+
+      await setHealthyDiffTest({ dataFeed, owner }, validHealthyDiff, {
+        from: user,
+      });
+    });
+
+    it('when called through timelock with contract admin role', async () => {
+      const {
+        accessControl,
+        dataFeed,
+        owner,
+        regularAccounts,
+        timelock,
+        timelockManager,
+      } = await loadFixture(defaultDeploy);
+
+      const proposer = regularAccounts[0];
+      const feedAdminRole = await dataFeed.contractAdminRole();
+
+      await accessControl['grantRole(bytes32,address)'](
+        feedAdminRole,
+        proposer.address,
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [feedAdminRole],
+        [3600],
+      );
+
+      const calldata = dataFeed.interface.encodeFunctionData('setHealthyDiff', [
+        validHealthyDiff,
+      ]);
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [dataFeed.address],
+        [calldata],
+        {},
+        { from: proposer },
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        dataFeed.address,
+        calldata,
+        proposer.address,
+        { from: owner },
+      );
+
+      expect(await dataFeed.healthyDiff()).eq(validHealthyDiff);
+    });
+
+    it('when called through timelock with function admin role', async () => {
+      const {
+        accessControl,
+        dataFeed,
+        owner,
+        regularAccounts,
+        timelock,
+        timelockManager,
+      } = await loadFixture(defaultDeploy);
+
+      const proposer = regularAccounts[0];
+      const feedAdminRole = await dataFeed.contractAdminRole();
+
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole: feedAdminRole,
+        targetContract: dataFeed.address,
+        functionSelector: setHealthyDiffSelector,
+        grantOperator: owner,
+      });
+
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole: feedAdminRole,
+        targetContract: timelockManager.address,
+        functionSelector: setHealthyDiffSelector,
+        grantOperator: owner,
+      });
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        feedAdminRole,
+        dataFeed.address,
+        setHealthyDiffSelector,
+        [{ account: proposer.address, enabled: true }],
+      );
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        feedAdminRole,
+        timelockManager.address,
+        setHealthyDiffSelector,
+        [{ account: proposer.address, enabled: true }],
+      );
+
+      expect(await accessControl.hasRole(feedAdminRole, proposer.address)).eq(
+        false,
+      );
+
+      const feedPermissionKey = await accessControl.permissionRoleKey(
+        feedAdminRole,
+        dataFeed.address,
+        setHealthyDiffSelector,
+      );
+      const timelockPermissionKey = await accessControl.permissionRoleKey(
+        feedAdminRole,
+        timelockManager.address,
+        setHealthyDiffSelector,
+      );
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [feedPermissionKey, timelockPermissionKey],
+        [3600, 3600],
+      );
+
+      const calldata = dataFeed.interface.encodeFunctionData('setHealthyDiff', [
+        validHealthyDiff,
+      ]);
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [dataFeed.address],
+        [calldata],
+        {},
+        { from: proposer },
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        dataFeed.address,
+        calldata,
+        proposer.address,
+        { from: owner },
+      );
+
+      expect(await dataFeed.healthyDiff()).eq(validHealthyDiff);
     });
   });
 
@@ -146,14 +447,15 @@ describe('DataFeed', function () {
 });
 
 describe('DataFeed Deprecated', function () {
-  it('should fail when: feed is deprecated', async () => {
-    const { dataFeedDeprecated } = await loadFixture(defaultDeploy);
+  it('should fail: when: feed is deprecated', async () => {
+    const { deployDeprecatedFeed } = await loadFixture(defaultDeploy);
+    const { dataFeedDeprecated } = await deployDeprecatedFeed();
     await expect(dataFeedDeprecated.getDataInBase18()).to.be.reverted;
   });
 });
 
 describe('DataFeed Deprecated with growth', function () {
-  it('should fail when: feed is deprecated (price < 0)', async () => {
+  it('should fail: when: feed is deprecated (price < 0)', async () => {
     const { dataFeedGrowth, ...fixture } = await loadFixture(defaultDeploy);
     await setMinGrowthApr(fixture, -1000000);
     await setRoundDataGrowth(fixture, 0.001, -1000000, -1000000);
@@ -164,11 +466,12 @@ describe('DataFeed Deprecated with growth', function () {
 });
 
 describe('DataFeed Unhealthy', function () {
-  it('should fail when: feed is unhealthy (by time)', async () => {
-    const { dataFeedUnhealthy } = await loadFixture(defaultDeploy);
+  it('should fail: when: feed is unhealthy (by time)', async () => {
+    const { deployUnhealthyFeed } = await loadFixture(defaultDeploy);
+    const { dataFeedUnhealthy } = await deployUnhealthyFeed();
     await expect(dataFeedUnhealthy.getDataInBase18()).to.be.reverted;
   });
-  it('should fail when: feed is unhealthy (by min answer)', async () => {
+  it('should fail: when: feed is unhealthy (by min answer)', async () => {
     const { dataFeed, mockedAggregator } = await loadFixture(defaultDeploy);
     await setRoundData({ mockedAggregator }, 0.1);
     await expect(dataFeed.getDataInBase18()).to.be.not.reverted;
@@ -176,7 +479,7 @@ describe('DataFeed Unhealthy', function () {
     await expect(dataFeed.getDataInBase18()).to.be.reverted;
   });
 
-  it('should fail when: feed is unhealthy (by max answer)', async () => {
+  it('should fail: when: feed is unhealthy (by max answer)', async () => {
     const { dataFeed, mockedAggregator } = await loadFixture(defaultDeploy);
     await setRoundData({ mockedAggregator }, 10000);
     await expect(dataFeed.getDataInBase18()).to.be.not.reverted;
@@ -186,7 +489,7 @@ describe('DataFeed Unhealthy', function () {
 });
 
 describe('DataFeed Unhealthy with growth', function () {
-  it('should fail when: feed is unhealthy (by time)', async () => {
+  it('should fail: when: feed is unhealthy (by time)', async () => {
     const { dataFeedGrowth, ...fixture } = await loadFixture(defaultDeploy);
     await setRoundDataGrowth(fixture, 0.1, -10, 0);
 
@@ -195,7 +498,7 @@ describe('DataFeed Unhealthy with growth', function () {
       'DF: feed is unhealthy',
     );
   });
-  it('should fail when: feed is unhealthy (by min answer)', async () => {
+  it('should fail: when: feed is unhealthy (by min answer)', async () => {
     const { dataFeedGrowth, ...fixture } = await loadFixture(defaultDeploy);
     await setRoundDataGrowth(fixture, 0.1, -100, 0);
     await expect(dataFeedGrowth.getDataInBase18()).to.be.not.reverted;
@@ -205,11 +508,13 @@ describe('DataFeed Unhealthy with growth', function () {
     );
   });
 
-  it('should fail when: feed is unhealthy (by max answer)', async () => {
+  it('should fail: when: feed is unhealthy (by max answer)', async () => {
     const { dataFeedGrowth, ...fixture } = await loadFixture(defaultDeploy);
 
-    await dataFeedGrowth.setMinExpectedAnswer(parseUnits('10', 8));
-    await dataFeedGrowth.setMaxExpectedAnswer(parseUnits('100', 8));
+    await dataFeedGrowth.setMinMaxExpectedAnswer(
+      parseUnits('100', 8),
+      parseUnits('10', 8),
+    );
 
     await setRoundDataGrowth(fixture, 100, -100, 0);
     await expect(dataFeedGrowth.getDataInBase18()).to.be.not.reverted;

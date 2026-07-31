@@ -23,6 +23,7 @@ import {
   getCommonContractNames,
   getTokenContractNames,
 } from '../../../helpers/contracts';
+import { getAllRoles } from '../../../helpers/roles';
 import {
   CustomAggregatorV3CompatibleFeed,
   CustomAggregatorV3CompatibleFeedGrowth,
@@ -214,7 +215,7 @@ const setRoundData = async (
 
     tx = await aggregator.populateTransaction.setRoundData(
       networkConfig.data,
-      networkConfig.dataTimestamp ?? currentTimestamp,
+      networkConfig.dataTimestamp ?? currentTimestamp - 1,
       networkConfig.apr,
     );
     log = `${token} set price to ${formatUnits(
@@ -402,52 +403,25 @@ const updateExpectedAnswers = async (
     )}`,
   );
 
-  const action = isMToken ? 'update-feed-mtoken' : 'update-feed-ptoken';
-
-  const setMax = async () => {
-    if (newMax.eq(currentMax)) {
-      console.log('maxExpectedAnswer is already up to date, skipping');
-      return;
-    }
-    const tx = await dataFeed.populateTransaction.setMaxExpectedAnswer(newMax);
-    const log = `${token} set maxExpectedAnswer to ${formatUnits(
-      newMax,
-      aggregatorDecimals,
-    )}`;
-    const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
-      action,
-      comment: log,
-    });
-    console.log(log, txRes);
-  };
-
-  const setMin = async () => {
-    if (newMin.eq(currentMin)) {
-      console.log('minExpectedAnswer is already up to date, skipping');
-      return;
-    }
-    const tx = await dataFeed.populateTransaction.setMinExpectedAnswer(newMin);
-    const log = `${token} set minExpectedAnswer to ${formatUnits(
-      newMin,
-      aggregatorDecimals,
-    )}`;
-    const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
-      action,
-      comment: log,
-    });
-    console.log(log, txRes);
-  };
-
-  // ordering matters: the contract enforces max > min on every update.
-  // when raising the range (e.g. 8 -> 18 decimals migration), max must
-  // be raised first; when lowering the range, min must be lowered first.
-  if (newMax.gt(currentMin)) {
-    await setMax();
-    await setMin();
-  } else {
-    await setMin();
-    await setMax();
+  if (newMin.eq(currentMin) && newMax.eq(currentMax)) {
+    console.log('min/max expected answers are already up to date, skipping');
+    return;
   }
+
+  const action = isMToken ? 'update-feed-mtoken' : 'update-feed-ptoken';
+  const tx = await dataFeed.populateTransaction.setMinMaxExpectedAnswer(
+    newMax,
+    newMin,
+  );
+  const log = `${token} set expected answers to [${formatUnits(
+    newMin,
+    aggregatorDecimals,
+  )}, ${formatUnits(newMax, aggregatorDecimals)}]`;
+  const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
+    action,
+    comment: log,
+  });
+  console.log(log, txRes);
 };
 
 const getAggregatorContract = async (
@@ -523,15 +497,6 @@ export const deployPaymentTokenDataFeed = async (
     const compositeConfig = networkConfig as DeployDataFeedConfigComposite;
     const feedType = compositeConfig.feedType;
 
-    const contractName =
-      feedType === 'multiply'
-        ? getCommonContractNames().dataFeedMultiply
-        : getCommonContractNames().dataFeedComposite;
-
-    if (!contractName) {
-      throw new Error(`${feedType} data feed contract name is not set`);
-    }
-
     if (
       !tokenAddresses?.denominator?.dataFeed ||
       !tokenAddresses?.numerator?.dataFeed
@@ -544,7 +509,6 @@ export const deployPaymentTokenDataFeed = async (
         hre,
         tokenAddresses.numerator.dataFeed,
         tokenAddresses.denominator.dataFeed,
-        contractName,
         compositeConfig,
       );
     } else {
@@ -552,13 +516,10 @@ export const deployPaymentTokenDataFeed = async (
         hre,
         tokenAddresses.numerator.dataFeed,
         tokenAddresses.denominator.dataFeed,
-        contractName,
         compositeConfig,
       );
     }
   } else {
-    const contractName = getCommonContractNames().dataFeed;
-
     let aggregator: string | undefined;
     let config: DeployDataFeedConfigRegular;
 
@@ -574,15 +535,17 @@ export const deployPaymentTokenDataFeed = async (
       throw new Error('Incorrect params');
     }
 
-    if (!contractName) {
-      throw new Error('Data feed contract name is not set');
-    }
-
     if (!aggregator) {
       throw new Error('Token config is not found or aggregator is not set');
     }
 
-    await deployTokenDataFeed(hre, aggregator, contractName, config);
+    const roles = getAllRoles();
+    await deployTokenDataFeed(
+      hre,
+      aggregator,
+      roles.common.defaultAdmin,
+      config,
+    );
   }
 };
 
@@ -602,9 +565,11 @@ export const deployPaymentTokenCustomAggregator = async (
       paymentToken
     ]?.customAggregator;
 
+  const roles = getAllRoles();
   await deployCustomAggregator(
     hre,
     customAggregatorContractName,
+    roles.common.defaultAdmin,
     networkConfig,
   );
 };
@@ -625,20 +590,15 @@ export const deployMTokenDataFeed = async (
     throw new Error('Token config is not found or customFeed is not set');
   }
 
-  const dataFeedContractName = getTokenContractNames(token).dataFeed;
-
-  if (!dataFeedContractName) {
-    throw new Error('Data feed contract name is not set');
-  }
-
   if (tokenAddresses?.customFeedAdjusted) {
     console.log('Using single adjusted feed as aggregator for DataFeed');
   }
 
+  const roles = getAllRoles();
   await deployTokenDataFeed(
     hre,
     aggregator,
-    dataFeedContractName,
+    roles.tokenRoles[token].customFeedAdmin!,
     getDeploymentGenericConfig(hre, token, 'dataFeed'),
   );
 };
@@ -687,18 +647,12 @@ export const deployMTokenDataFeedDv = async (
     throw new Error('Token config is not found or customFeedDv is not set');
   }
 
-  const dataFeedContractName = getTokenContractNames(token).dataFeed;
-
-  if (!dataFeedContractName) {
-    throw new Error('Data feed contract name is not set');
-  }
-
+  const roles = getAllRoles();
   await deployTokenDataFeed(
     hre,
     tokenAddresses.customFeedDv,
-    dataFeedContractName,
-    getDeploymentGenericConfigOptional(token, 'dataFeedDv') ??
-      getDeploymentGenericConfig(hre, token, 'dataFeed'),
+    roles.tokenRoles[token].customFeedAdmin!,
+    getDeploymentGenericConfig(hre, token, 'dataFeed'),
   );
 };
 
@@ -713,18 +667,12 @@ export const deployMTokenDataFeedRv = async (
     throw new Error('Token config is not found or customFeedRv is not set');
   }
 
-  const dataFeedContractName = getTokenContractNames(token).dataFeed;
-
-  if (!dataFeedContractName) {
-    throw new Error('Data feed contract name is not set');
-  }
-
+  const roles = getAllRoles();
   await deployTokenDataFeed(
     hre,
     tokenAddresses.customFeedRv,
-    dataFeedContractName,
-    getDeploymentGenericConfigOptional(token, 'dataFeedRv') ??
-      getDeploymentGenericConfig(hre, token, 'dataFeed'),
+    roles.tokenRoles[token].customFeedAdmin!,
+    getDeploymentGenericConfig(hre, token, 'dataFeed'),
   );
 };
 
@@ -743,13 +691,24 @@ export const deployMTokenCustomAggregator = async (
     throw new Error('Custom aggregator contract name is not set');
   }
 
-  await deployCustomAggregator(hre, customAggregatorContractName, config);
+  const roles = getAllRoles();
+
+  if (!roles.tokenRoles[token].customFeedAdmin) {
+    throw new Error('Custom feed admin role is not set');
+  }
+
+  await deployCustomAggregator(
+    hre,
+    customAggregatorContractName,
+    roles.tokenRoles[token].customFeedAdmin,
+    config,
+  );
 };
 
 const deployTokenDataFeed = async (
   hre: HardhatRuntimeEnvironment,
   aggregator: string,
-  dataFeedContractName: string,
+  adminRole: string,
   networkConfig?: DeployDataFeedConfigRegular,
 ) => {
   const addresses = getCurrentAddresses(hre);
@@ -758,20 +717,27 @@ const deployTokenDataFeed = async (
     throw new Error('Network config is not found');
   }
 
-  await deployAndVerifyProxy(hre, dataFeedContractName, [
-    addresses?.accessControl,
-    aggregator,
-    networkConfig.healthyDiff ?? 2592000,
-    networkConfig.minAnswer ?? parseUnits('0.1', 8),
-    networkConfig.maxAnswer ?? parseUnits('1000', 8),
-  ]);
+  await deployAndVerifyProxy(
+    hre,
+    getCommonContractNames().dataFeed,
+    [
+      addresses?.accessControl,
+      aggregator,
+      networkConfig.healthyDiff ?? 2592000,
+      networkConfig.minAnswer ?? parseUnits('0.1', 8),
+      networkConfig.maxAnswer ?? parseUnits('1000', 8),
+    ],
+    undefined,
+    {
+      constructorArgs: [adminRole],
+    },
+  );
 };
 
 const deployTokenDataFeedComposite = async (
   hre: HardhatRuntimeEnvironment,
   numeratorFeed: string,
   denominatorFeed: string,
-  dataFeedContractName: string,
   networkConfig?: DeployDataFeedConfigComposite,
 ) => {
   const addresses = getCurrentAddresses(hre);
@@ -780,7 +746,7 @@ const deployTokenDataFeedComposite = async (
     throw new Error('Network config is not found');
   }
 
-  await deployAndVerifyProxy(hre, dataFeedContractName, [
+  await deployAndVerifyProxy(hre, getCommonContractNames().dataFeedComposite, [
     addresses?.accessControl,
     numeratorFeed,
     denominatorFeed,
@@ -793,7 +759,6 @@ export const deployTokenDataFeedMultiply = async (
   hre: HardhatRuntimeEnvironment,
   numeratorFeed: string,
   denominatorFeed: string,
-  dataFeedContractName: string,
   networkConfig?: DeployDataFeedConfigComposite,
 ) => {
   const addresses = getCurrentAddresses(hre);
@@ -802,7 +767,7 @@ export const deployTokenDataFeedMultiply = async (
     throw new Error('Network config is not found');
   }
 
-  await deployAndVerifyProxy(hre, dataFeedContractName, [
+  await deployAndVerifyProxy(hre, getCommonContractNames().dataFeedMultiply, [
     addresses?.accessControl,
     numeratorFeed,
     denominatorFeed,
@@ -814,6 +779,7 @@ export const deployTokenDataFeedMultiply = async (
 const deployCustomAggregator = async (
   hre: HardhatRuntimeEnvironment,
   customAggregatorContractName: string,
+  adminRole: string,
   networkConfig?: DeployCustomAggregatorConfig,
 ) => {
   const addresses = getCurrentAddresses(hre);
@@ -840,6 +806,9 @@ const deployCustomAggregator = async (
     customAggregatorContractName,
     params,
     undefined,
+    {
+      constructorArgs: [adminRole],
+    },
   );
 };
 

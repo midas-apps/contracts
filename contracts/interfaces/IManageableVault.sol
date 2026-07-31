@@ -1,18 +1,20 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity 0.8.34;
 
-import "./IMToken.sol";
-import "./IDataFeed.sol";
+import {IMToken} from "./IMToken.sol";
+import {IDataFeed} from "./IDataFeed.sol";
 
 /**
- * @param dataFeed data feed token/USD address
- * @param fee fee by token, 1% = 100
- * @param allowance token allowance (decimals 18)
+ * @notice Payment token config
  */
 struct TokenConfig {
+    /// @notice data feed token/USD address
     address dataFeed;
+    /// @notice fee by token, 1% = 100
     uint256 fee;
+    /// @notice token allowance (decimals 18)
     uint256 allowance;
+    /// @notice stablecoin flag
     bool stable;
 }
 
@@ -22,17 +24,36 @@ enum RequestStatus {
     Canceled
 }
 
-struct MTokenInitParams {
-    address mToken;
-    address mTokenDataFeed;
-}
-struct ReceiversInitParams {
-    address tokensReceiver;
-    address feeReceiver;
-}
-struct InstantInitParams {
+/**
+ * @notice Common vault init params
+ */
+struct CommonVaultInitParams {
+    /// @notice variation tolerance of mToken rates for "safe" requests approve
+    uint256 variationTolerance;
+    /// @notice minimum amount for operations in mToken
+    uint256 minAmount;
+    /// @notice fee for initial operations 1% = 100
     uint256 instantFee;
-    uint256 instantDailyLimit;
+    /// @notice address of the access control contract
+    address ac;
+    /// @notice address of the sanctions list contract
+    address sanctionsList;
+    /// @notice mToken address
+    address mToken;
+    /// @notice mToken data feed address
+    address mTokenDataFeed;
+    /// @notice address to which proceeds will be sent
+    address tokensReceiver;
+    /// @notice minimum instant fee
+    uint256 minInstantFee;
+    /// @notice maximum instant fee
+    uint256 maxInstantFee;
+    /// @notice maximum instant share value in basis points (100 = 1%)
+    uint256 maxInstantShare;
+    /// @notice max requestId that can be approved
+    uint256 maxApproveRequestId;
+    /// @notice enforce sequential request processing flag
+    bool sequentialRequestProcessing;
 }
 
 /**
@@ -41,20 +62,17 @@ struct InstantInitParams {
  */
 interface IManageableVault {
     /**
-     * @param caller function caller (msg.sender)
      * @param token token that was withdrawn
      * @param withdrawTo address to which tokens were withdrawn
      * @param amount `token` transfer amount
      */
     event WithdrawToken(
-        address indexed caller,
         address indexed token,
         address indexed withdrawTo,
         uint256 amount
     );
 
     /**
-     * @param caller function caller (msg.sender)
      * @param token address of token that
      * @param dataFeed token dataFeed address
      * @param fee fee 1% = 100
@@ -62,7 +80,6 @@ interface IManageableVault {
      * @param stable stablecoin flag
      */
     event AddPaymentToken(
-        address indexed caller,
         address indexed token,
         address indexed dataFeed,
         uint256 fee,
@@ -72,88 +89,218 @@ interface IManageableVault {
 
     /**
      * @param token address of token that
-     * @param caller function caller (msg.sender)
      * @param allowance new allowance
      */
-    event ChangeTokenAllowance(
-        address indexed token,
-        address indexed caller,
-        uint256 allowance
-    );
+    event ChangeTokenAllowance(address indexed token, uint256 allowance);
 
     /**
      * @param token address of token that
-     * @param caller function caller (msg.sender)
      * @param fee new fee
      */
-    event ChangeTokenFee(
-        address indexed token,
-        address indexed caller,
-        uint256 fee
-    );
+    event ChangeTokenFee(address indexed token, uint256 fee);
 
     /**
      * @param token address of token that
-     * @param caller function caller (msg.sender)
      */
-    event RemovePaymentToken(address indexed token, address indexed caller);
+    event RemovePaymentToken(address indexed token);
 
     /**
      * @param account address of account
-     * @param caller function caller (msg.sender)
+     * @param enable is enabled
      */
-    event AddWaivedFeeAccount(address indexed account, address indexed caller);
+    event SetWaivedFeeAccount(address indexed account, bool enable);
 
     /**
-     * @param account address of account
-     * @param caller function caller (msg.sender)
+     * @param newFee new operation fee value
      */
-    event RemoveWaivedFeeAccount(
-        address indexed account,
-        address indexed caller
+    event SetInstantFee(uint256 newFee);
+
+    /**
+     * @param newMinInstantFee new minimum instant fee
+     * @param newMaxInstantFee new maximum instant fee
+     */
+    event SetMinMaxInstantFee(
+        uint256 newMinInstantFee,
+        uint256 newMaxInstantFee
     );
 
     /**
-     * @param caller function caller (msg.sender)
-     * @param newFee new operation fee value
-     */
-    event SetInstantFee(address indexed caller, uint256 newFee);
-
-    /**
-     * @param caller function caller (msg.sender)
      * @param newAmount new min amount for operation
      */
-    event SetMinAmount(address indexed caller, uint256 newAmount);
+    event SetMinAmount(uint256 newAmount);
 
     /**
-     * @param caller function caller (msg.sender)
-     * @param newLimit new operation daily limit
+     * @param newMaxInstantShare new maximum instant share value in basis points (100 = 1%)
      */
-    event SetInstantDailyLimit(address indexed caller, uint256 newLimit);
+    event SetMaxInstantShare(uint256 newMaxInstantShare);
 
     /**
-     * @param caller function caller (msg.sender)
      * @param newTolerance percent of price diviation 1% = 100
      */
-    event SetVariationTolerance(address indexed caller, uint256 newTolerance);
+    event SetVariationTolerance(uint256 newTolerance);
 
     /**
-     * @param caller function caller (msg.sender)
-     * @param reciever new reciever address
+     * @param receiver new receiver address
      */
-    event SetFeeReceiver(address indexed caller, address indexed reciever);
+    event SetTokensReceiver(address indexed receiver);
 
     /**
-     * @param caller function caller (msg.sender)
-     * @param reciever new reciever address
+     * @param newMaxApproveRequestId new max requestId that can be approved
      */
-    event SetTokensReceiver(address indexed caller, address indexed reciever);
+    event SetMaxApproveRequestId(uint256 newMaxApproveRequestId);
 
     /**
      * @param user user address
      * @param enable is enabled
      */
     event FreeFromMinAmount(address indexed user, bool enable);
+
+    /**
+     * @param enforce enforce sequential request processing flag
+     */
+    event SetSequentialRequestProcessing(bool enforce);
+
+    /**
+     * @notice Payment token is already added
+     * @param token token address
+     */
+    error PaymentTokenAlreadyAdded(address token);
+
+    /**
+     * @notice Payment token is not in the list
+     * @param token token address
+     */
+    error PaymentTokenNotExists(address token);
+
+    /**
+     * @notice Value is the same as the current one
+     * @param account account address
+     */
+    error SameAddressValue(address account);
+
+    /**
+     * @notice Min instant fee is greater than max instant fee
+     * @param minFee minimum instant fee
+     * @param maxFee maximum instant fee
+     */
+    error InvalidMinMaxInstantFee(uint256 minFee, uint256 maxFee);
+
+    /**
+     * @notice Amount does not match token decimals after rounding
+     * @param amount input amount
+     * @param requiredAmount amount after round-trip conversion
+     */
+    error InvalidRounding(uint256 amount, uint256 requiredAmount);
+
+    /**
+     * @notice Payment token is not supported
+     * @param token token address
+     */
+    error UnknownPaymentToken(address token);
+
+    /**
+     * @notice Operation amount exceeds token allowance
+     * @param prevAllowance current allowance
+     * @param amount requested amount
+     */
+    error AllowanceExceeded(uint256 prevAllowance, uint256 amount);
+
+    /**
+     * @notice Instant fee is outside min/max range
+     * @param instantFee current instant fee
+     */
+    error InstantFeeOutOfBounds(uint256 instantFee);
+
+    /**
+     * @notice Price change is too large
+     * @param difPercent actual price change percent (1% = 100)
+     * @param variationTolerance max allowed change percent (1% = 100)
+     */
+    error PriceVariationExceeded(
+        uint256 difPercent,
+        uint256 variationTolerance
+    );
+
+    /**
+     * @notice Fee is out of allowed range
+     * @param fee fee value (1% = 100)
+     */
+    error InvalidFee(uint256 fee);
+
+    /**
+     * @notice Token rate is zero or invalid
+     * @param tokenRate token rate value
+     */
+    error InvalidTokenRate(uint256 tokenRate);
+
+    /**
+     * @notice Received amount is below minimum
+     * @param minReceiveAmount minimum expected amount
+     * @param actualReceiveAmount actual received amount
+     */
+    error SlippageExceeded(
+        uint256 minReceiveAmount,
+        uint256 actualReceiveAmount
+    );
+
+    /**
+     * @notice Request id is above max approve id
+     * @param requestId request id
+     * @param maxApproveRequestId max request id that can be approved
+     */
+    error RequestIdTooHigh(uint256 requestId, uint256 maxApproveRequestId);
+
+    /**
+     * @notice New mToken rate must be greater than zero
+     */
+    error InvalidNewMTokenRate();
+
+    /**
+     * @notice Avg rate must be greater than zero
+     */
+    error InvalidAvgRate();
+
+    /**
+     * @notice Request does not exist
+     * @param requestId request id
+     */
+    error RequestNotExists(uint256 requestId);
+
+    /**
+     * @notice Request has wrong status
+     * @param requestId request id
+     * @param status current request status
+     */
+    error UnexpectedRequestStatus(uint256 requestId, RequestStatus status);
+
+    /**
+     * @notice Instant share is above max allowed
+     * @param instantShare instant share in basis points (100 = 1%)
+     * @param maxInstantShare max allowed instant share
+     */
+    error InstantShareTooHigh(uint256 instantShare, uint256 maxInstantShare);
+
+    /**
+     * @notice Amount must be greater than zero
+     */
+    error InvalidAmount();
+
+    /**
+     * @notice Amount is below minimum
+     * @param amount requested amount
+     * @param minAmount minimum allowed amount
+     */
+    error AmountLessThanMin(uint256 amount, uint256 minAmount);
+
+    /**
+     * @notice Request id is not the next expected one
+     * @param requestId request id
+     * @param nextExpectedRequestIdToProcess next request id to process
+     */
+    error InvalidRequestSequence(
+        uint256 requestId,
+        uint256 nextExpectedRequestIdToProcess
+    );
 
     /**
      * @notice The mTokenDataFeed contract address.
@@ -166,19 +313,6 @@ interface IManageableVault {
      * @return The address of the mToken contract.
      */
     function mToken() external view returns (IMToken);
-
-    /**
-     * @notice withdraws `amount` of a given `token` from the contract.
-     * can be called only from permissioned actor.
-     * @param token token address
-     * @param amount token amount
-     * @param withdrawTo withdraw destination address
-     */
-    function withdrawToken(
-        address token,
-        uint256 amount,
-        address withdrawTo
-    ) external;
 
     /**
      * @notice adds a token to the stablecoins list.
@@ -206,7 +340,7 @@ interface IManageableVault {
 
     /**
      * @notice set new token allowance.
-     * if MAX_UINT = infinite allowance
+     * if type(uint256).max = infinite allowance
      * prev allowance rewrites by new
      * can be called only from permissioned actor.
      * @param token token address
@@ -237,32 +371,19 @@ interface IManageableVault {
     function setMinAmount(uint256 newAmount) external;
 
     /**
-     * @notice adds a account to waived fee restriction.
+     * @notice sets a account to waived fee restriction.
      * can be called only from permissioned actor.
      * @param account user address
+     * @param enable is enabled
      */
-    function addWaivedFeeAccount(address account) external;
+    function setWaivedFeeAccount(address account, bool enable) external;
 
     /**
-     * @notice removes a account from waived fee restriction.
+     * @notice set new receiver for tokens.
      * can be called only from permissioned actor.
-     * @param account user address
+     * @param receiver new token receiver address
      */
-    function removeWaivedFeeAccount(address account) external;
-
-    /**
-     * @notice set new reciever for fees.
-     * can be called only from permissioned actor.
-     * @param reciever new fee reciever address
-     */
-    function setFeeReceiver(address reciever) external;
-
-    /**
-     * @notice set new reciever for tokens.
-     * can be called only from permissioned actor.
-     * @param reciever new token reciever address
-     */
-    function setTokensReceiver(address reciever) external;
+    function setTokensReceiver(address receiver) external;
 
     /**
      * @notice set operation fee percent.
@@ -272,11 +393,41 @@ interface IManageableVault {
     function setInstantFee(uint256 newInstantFee) external;
 
     /**
-     * @notice set operation daily limit.
-     * can be called only from permissioned actor.
-     * @param newInstantDailyLimit new operation daily limit (decimals 18)
+     * @notice set new minimum/maximum instant fee
+     * @param newMinInstantFee new minimum instant fee
+     * @param newMaxInstantFee new maximum instant fee
      */
-    function setInstantDailyLimit(uint256 newInstantDailyLimit) external;
+    function setMinMaxInstantFee(
+        uint256 newMinInstantFee,
+        uint256 newMaxInstantFee
+    ) external;
+
+    /**
+     * @notice set operation limit configs.
+     * can be called only from permissioned actor.
+     * @param window window duration in seconds
+     * @param limit limit amount per window
+     */
+    function setInstantLimitConfig(uint256 window, uint256 limit) external;
+
+    /**
+     * @notice set maximum instant share value in basis points (100 = 1%)
+     * @param newMaxInstantShare new maximum instant share value in basis points (100 = 1%)
+     */
+    function setMaxInstantShare(uint256 newMaxInstantShare) external;
+
+    /**
+     * @notice sets max requestId that can be approved
+     * @param newMaxApproveRequestId new max requestId that can be approved
+     */
+    function setMaxApproveRequestId(uint256 newMaxApproveRequestId) external;
+
+    /**
+     * @notice remove operation limit config.
+     * can be called only from permissioned actor.
+     * @param window window duration in seconds
+     */
+    function removeInstantLimitConfig(uint256 window) external;
 
     /**
      * @notice frees given `user` from the minimal deposit
@@ -284,4 +435,25 @@ interface IManageableVault {
      * @param user address of user
      */
     function freeFromMinAmount(address user, bool enable) external;
+
+    /**
+     * @notice set enforce sequential request processing flag
+     * @param enforce enforce sequential request processing flag
+     */
+    function setSequentialRequestProcessing(bool enforce) external;
+
+    /**
+     * @notice withdraws `amount` of a given `token` from the contract
+     * to the `tokensReceiver` address
+     * @param token token address
+     * @param amount token amount
+     */
+    function withdrawToken(address token, uint256 amount) external;
+
+    /**
+     * @notice check if the account is waived from fee restriction
+     * @param account account address
+     * @return true if the account is waived from fee restriction, false otherwise
+     */
+    function waivedFeeRestriction(address account) external view returns (bool);
 }

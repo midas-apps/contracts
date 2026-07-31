@@ -1,15 +1,22 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumber, BigNumberish } from 'ethers';
+import { parseUnits } from 'ethers/lib/utils';
+import { ethers } from 'hardhat';
 
-import { AccountOrContract, OptionalCommonParams } from './common.helpers';
+import {
+  AccountOrContract,
+  handleRevert,
+  OptionalCommonParams,
+  shouldRevert,
+} from './common.helpers';
 import { redeemInstantTest } from './redemption-vault.helpers';
 
 import {
   IERC20,
   RedemptionVaultWithMorpho,
-  MTBILLTest,
   DataFeedTest,
+  MToken,
 } from '../../typechain-types';
 
 type CommonParamsSetMorphoVault = {
@@ -20,7 +27,7 @@ type CommonParamsSetMorphoVault = {
 type RedemptionWithMorphoParams = {
   redemptionVault: RedemptionVaultWithMorpho;
   owner: SignerWithAddress;
-  mTBILL: MTBILLTest;
+  mTBILL: MToken;
   mTokenToUsdDataFeed: DataFeedTest;
   usdc: IERC20;
   morphoVault: IERC20;
@@ -37,10 +44,15 @@ export const setMorphoVaultTest = async (
   vault: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      redemptionVault.connect(opt?.from ?? owner).setMorphoVault(token, vault),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      redemptionVault
+        .connect(opt?.from ?? owner)
+        .setMorphoVault.bind(this, token, vault),
+      redemptionVault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -48,8 +60,7 @@ export const setMorphoVaultTest = async (
     redemptionVault.connect(opt?.from ?? owner).setMorphoVault(token, vault),
   ).to.emit(
     redemptionVault,
-    redemptionVault.interface.events['SetMorphoVault(address,address,address)']
-      .name,
+    redemptionVault.interface.events['SetMorphoVault(address,address)'].name,
   ).to.not.reverted;
 
   const vaultAfter = await redemptionVault.morphoVaults(token);
@@ -61,10 +72,15 @@ export const removeMorphoVaultTest = async (
   token: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      redemptionVault.connect(opt?.from ?? owner).removeMorphoVault(token),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      redemptionVault
+        .connect(opt?.from ?? owner)
+        .removeMorphoVault.bind(this, token),
+      redemptionVault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -72,7 +88,7 @@ export const removeMorphoVaultTest = async (
     redemptionVault.connect(opt?.from ?? owner).removeMorphoVault(token),
   ).to.emit(
     redemptionVault,
-    redemptionVault.interface.events['RemoveMorphoVault(address,address)'].name,
+    redemptionVault.interface.events['RemoveMorphoVault(address)'].name,
   ).to.not.reverted;
 
   const vaultAfter = await redemptionVault.morphoVaults(token);
@@ -96,7 +112,7 @@ export const redeemInstantWithMorphoTest = async (
     customRecipient,
   } = params;
 
-  if (opt?.revertMessage) {
+  if (shouldRevert(opt)) {
     await redeemInstantTest(
       {
         redemptionVault,
@@ -122,6 +138,11 @@ export const redeemInstantWithMorphoTest = async (
       usdc.balanceOf(sender.address),
     ]);
 
+  const morphoVaultErc4626 = await ethers.getContractAt(
+    'IMorphoVault',
+    morphoVault.address,
+  );
+
   await redeemInstantTest(
     {
       redemptionVault,
@@ -131,6 +152,14 @@ export const redeemInstantWithMorphoTest = async (
       waivedFee: params.waivedFee,
       minAmount: params.minAmount,
       customRecipient,
+      // The vault's Morpho shares are extra tokenOut liquidity: value them in
+      // tokenOut units via the ERC-4626 preview.
+      additionalLiquidity: async () =>
+        morphoVaultErc4626.previewRedeem(
+          await morphoVault.balanceOf(redemptionVault.address),
+        ),
+      // Share price accrues across the redeem block; tolerate the drift.
+      vaultBalanceTolerance: parseUnits('0.01', 6),
     },
     usdc,
     amountTBillIn,

@@ -1,12 +1,12 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
-import "../access/WithMidasAccessControl.sol";
-import "../libraries/DecimalsCorrectionLibrary.sol";
-import "../interfaces/IDataFeed.sol";
+import {MidasInitializable} from "../abstract/MidasInitializable.sol";
+import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
+import {DecimalsCorrectionLibrary} from "../libraries/DecimalsCorrectionLibrary.sol";
+import {IDataFeed} from "../interfaces/IDataFeed.sol";
 
 /**
  * @title CustomAggregatorV3CompatibleFeed
@@ -24,6 +24,13 @@ contract CustomAggregatorV3CompatibleFeed is
         uint256 updatedAt;
         uint80 answeredInRound;
     }
+
+    /**
+     * @notice contract admin role
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _CONTRACT_ADMIN_ROLE;
 
     /**
      * @notice feed description
@@ -56,6 +63,16 @@ contract CustomAggregatorV3CompatibleFeed is
      */
     mapping(uint80 => RoundData) private _roundData;
 
+    /**
+     * @dev leaving a storage gap for futures updates
+     */
+    uint256[50] private __gap;
+
+    /**
+     * @param data data value
+     * @param roundId round id
+     * @param timestamp timestamp
+     */
     event AnswerUpdated(
         int256 indexed data,
         uint256 indexed roundId,
@@ -63,11 +80,23 @@ contract CustomAggregatorV3CompatibleFeed is
     );
 
     /**
-     * @dev checks that msg.sender do have a feedAdminRole() role
+     * @param maxAnswerDeviation the new max answer deviation
      */
-    modifier onlyAggregatorAdmin() {
-        _onlyRole(feedAdminRole(), msg.sender);
-        _;
+    event MaxAnswerDeviationUpdated(uint256 indexed maxAnswerDeviation);
+
+    /**
+     * @param minAnswer the new min answer
+     * @param maxAnswer the new max answer
+     */
+    event SetMinMaxAnswer(int192 indexed minAnswer, int192 indexed maxAnswer);
+
+    /**
+     * @notice constructor
+     * @param _contractAdminRole contract admin role
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bytes32 _contractAdminRole) MidasInitializable() {
+        _CONTRACT_ADMIN_ROLE = _contractAdminRole;
     }
 
     /**
@@ -87,16 +116,28 @@ contract CustomAggregatorV3CompatibleFeed is
     ) public virtual initializer {
         __WithMidasAccessControl_init(_accessControl);
 
-        require(_minAnswer < _maxAnswer, "CA: !min/max");
+        _setMinMaxAnswer(_minAnswer, _maxAnswer);
+
         require(
             _maxAnswerDeviation <= 100 * (10**decimals()),
             "CA: !max deviation"
         );
 
-        minAnswer = _minAnswer;
-        maxAnswer = _maxAnswer;
         maxAnswerDeviation = _maxAnswerDeviation;
         description = _description;
+    }
+
+    /**
+     * @notice sets the min and max answer
+     * @dev the min and max answer are the minimum and maximum allowed values for the answer
+     * @param _minAnswer the new min answer
+     * @param _maxAnswer the new max answer
+     */
+    function setMinMaxAnswer(int192 _minAnswer, int192 _maxAnswer)
+        external
+        onlyContractAdmin
+    {
+        _setMinMaxAnswer(_minAnswer, _maxAnswer);
     }
 
     /**
@@ -125,10 +166,10 @@ contract CustomAggregatorV3CompatibleFeed is
     /**
      * @notice sets the data for `latestRound` + 1 round id
      * @dev `_data` should be >= `minAnswer` and <= `maxAnswer`.
-     * Function should be called only from address with `feedAdminRole()`
+     * Function should be called only from address with `contractAdminRole()`
      * @param _data data value
      */
-    function setRoundData(int256 _data) public onlyAggregatorAdmin {
+    function setRoundData(int256 _data) public onlyContractAdmin {
         require(
             _data >= minAnswer && _data <= maxAnswer,
             "CA: out of [min;max]"
@@ -147,6 +188,23 @@ contract CustomAggregatorV3CompatibleFeed is
         latestRound = roundId;
 
         emit AnswerUpdated(_data, roundId, block.timestamp);
+    }
+
+    /**
+     * @notice sets the max answer deviation
+     * @dev the max answer deviation is the maximum allowed deviation from the latest price
+     * @param _maxAnswerDeviation the new max answer deviation
+     */
+    function setMaxAnswerDeviation(uint256 _maxAnswerDeviation)
+        external
+        onlyContractAdmin
+    {
+        require(
+            _maxAnswerDeviation <= 100 * (10**decimals()),
+            "CA: !max deviation"
+        );
+        maxAnswerDeviation = _maxAnswerDeviation;
+        emit MaxAnswerDeviationUpdated(_maxAnswerDeviation);
     }
 
     /**
@@ -212,11 +270,10 @@ contract CustomAggregatorV3CompatibleFeed is
     }
 
     /**
-     * @dev describes a role, owner of which can update prices in this feed
-     * @return role descriptor
+     * @inheritdoc WithMidasAccessControl
      */
-    function feedAdminRole() public view virtual returns (bytes32) {
-        return DEFAULT_ADMIN_ROLE;
+    function contractAdminRole() public view override returns (bytes32) {
+        return _CONTRACT_ADMIN_ROLE;
     }
 
     /**
@@ -241,5 +298,17 @@ contract CustomAggregatorV3CompatibleFeed is
         int256 deviation = (priceDif * one * 100) / _lastPrice;
         deviation = deviation < 0 ? deviation * -1 : deviation;
         return uint256(deviation);
+    }
+
+    /**
+     * @dev sets the min and max answer
+     * @param _minAnswer the new min answer
+     * @param _maxAnswer the new max answer
+     */
+    function _setMinMaxAnswer(int192 _minAnswer, int192 _maxAnswer) private {
+        require(_minAnswer < _maxAnswer, "CA: !min/max");
+        minAnswer = _minAnswer;
+        maxAnswer = _maxAnswer;
+        emit SetMinMaxAnswer(_minAnswer, _maxAnswer);
     }
 }

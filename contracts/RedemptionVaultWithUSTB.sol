@@ -1,13 +1,15 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "./RedemptionVault.sol";
+import {RedemptionVault} from "./RedemptionVault.sol";
+import {RedemptionVaultInitParams} from "./interfaces/IRedemptionVault.sol";
+import {CommonVaultInitParams} from "./interfaces/IManageableVault.sol";
 
-import "./interfaces/ustb/IUSTBRedemption.sol";
-import "./libraries/DecimalsCorrectionLibrary.sol";
+import {IUSTBRedemption} from "./interfaces/ustb/IUSTBRedemption.sol";
+import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
 
 /**
  * @title RedemptionVaultWithUSTB
@@ -17,16 +19,6 @@ import "./libraries/DecimalsCorrectionLibrary.sol";
 contract RedemptionVaultWithUSTB is RedemptionVault {
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
-
-    /**
-     * @custom:oz-upgrades-renamed-from minBuidlToRedeem
-     */
-    uint256 private __deprecatedStorageSlot1;
-
-    /**
-     * @custom:oz-upgrades-renamed-from minBuidlBalance
-     */
-    uint256 private __deprecatedStorageSlot2;
 
     /**
      * @notice USTB redemption contract address
@@ -40,158 +32,91 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
     uint256[50] private __gap;
 
     /**
+     * @notice Passes role identifiers to the base RedemptionVault constructor
+     * @param _contractAdminRole contract admin role identifier
+     * @param _greenlistedRole greenlisted role identifier
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
+        RedemptionVault(_contractAdminRole, _greenlistedRole)
+    {}
+
+    /**
      * @notice upgradeable pattern contract`s initializer
-     * @param _ac address of MidasAccessControll contract
-     * @param _mTokenInitParams init params for mToken
-     * @param _receiversInitParams init params for receivers
-     * @param _instantInitParams init params for instant operations
-     * @param _sanctionsList address of sanctionsList contract
-     * @param _variationTolerance percent of prices diviation 1% = 100
-     * @param _minAmount basic min amount for operations
-     * @param _fiatRedemptionInitParams params fiatAdditionalFee, fiatFlatFee, minFiatRedeemAmount
-     * @param _requestRedeemer address is designated for standard redemptions, allowing tokens to be pulled from this address
+     * @param _commonVaultInitParams init params for common vault
+     * @param _redemptionInitParams init params for redemption vault state values
      * @param _ustbRedemption USTB redemption contract address
      */
     function initialize(
-        address _ac,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount,
-        FiatRedeptionInitParams calldata _fiatRedemptionInitParams,
-        address _requestRedeemer,
+        CommonVaultInitParams calldata _commonVaultInitParams,
+        RedemptionVaultInitParams calldata _redemptionInitParams,
         address _ustbRedemption
-    ) external initializer {
-        __RedemptionVault_init(
-            _ac,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount,
-            _fiatRedemptionInitParams,
-            _requestRedeemer
-        );
+    ) external {
+        initialize(_commonVaultInitParams, _redemptionInitParams);
         _validateAddress(_ustbRedemption, false);
         ustbRedemption = IUSTBRedemption(_ustbRedemption);
-    }
-
-    /**
-     * @dev Redeem mToken to the selected payment token if daily limit and allowance are not exceeded.
-     * If USDC is the payment token and the contract doesn't have enough USDC, the USTB redemption flow will be triggered for the missing amount.
-     * Burns mToken from the user.
-     * Transfers fee in mToken to feeReceiver.
-     * Transfers tokenOut to user.
-     * @param tokenOut token out address
-     * @param amountMTokenIn amount of mToken to redeem
-     * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
-     */
-    function _redeemInstant(
-        address tokenOut,
-        uint256 amountMTokenIn,
-        uint256 minReceiveAmount,
-        address recipient
-    )
-        internal
-        override
-        returns (
-            CalcAndValidateRedeemResult memory calcResult,
-            uint256 amountTokenOutWithoutFee
-        )
-    {
-        address user = msg.sender;
-
-        calcResult = _calcAndValidateRedeem(
-            user,
-            tokenOut,
-            amountMTokenIn,
-            true,
-            false
-        );
-
-        _requireAndUpdateLimit(amountMTokenIn);
-
-        uint256 tokenDecimals = _tokenDecimals(tokenOut);
-
-        uint256 amountMTokenInCopy = amountMTokenIn;
-        address tokenOutCopy = tokenOut;
-        uint256 minReceiveAmountCopy = minReceiveAmount;
-
-        (uint256 amountMTokenInUsd, uint256 mTokenRate) = _convertMTokenToUsd(
-            amountMTokenInCopy
-        );
-        (uint256 amountTokenOut, uint256 tokenOutRate) = _convertUsdToToken(
-            amountMTokenInUsd,
-            tokenOutCopy
-        );
-
-        _requireAndUpdateAllowance(tokenOutCopy, amountTokenOut);
-
-        mToken.burn(user, calcResult.amountMTokenWithoutFee);
-        if (calcResult.feeAmount > 0)
-            _tokenTransferFromUser(
-                address(mToken),
-                feeReceiver,
-                calcResult.feeAmount,
-                18
-            );
-
-        uint256 amountTokenOutWithoutFeeFrom18 = ((calcResult
-            .amountMTokenWithoutFee * mTokenRate) / tokenOutRate)
-            .convertFromBase18(tokenDecimals);
-
-        amountTokenOutWithoutFee = amountTokenOutWithoutFeeFrom18
-            .convertToBase18(tokenDecimals);
-
-        require(
-            amountTokenOutWithoutFee >= minReceiveAmountCopy,
-            "RVU: minReceiveAmount > actual"
-        );
-
-        _checkAndRedeemUSTB(tokenOutCopy, amountTokenOutWithoutFeeFrom18);
-
-        _tokenTransferToUser(
-            tokenOutCopy,
-            recipient,
-            amountTokenOutWithoutFee,
-            tokenDecimals
-        );
     }
 
     /**
      * @notice Check if contract has enough USDC balance for redeem
      * if not, trigger USTB redemption flow to redeem exactly the missing amount
      * @param tokenOut tokenOut address
-     * @param amountTokenOut amount of tokenOut needed
+     * @param missingAmountBase18 amount of tokenOut needed in base 18
+     * @param currentTokenOutBalanceBase18 current balance of tokenOut in the vault in base 18
+     * @param tokenOutDecimals decimals of tokenOut
      */
-    function _checkAndRedeemUSTB(address tokenOut, uint256 amountTokenOut)
+    function _obtainVaultLiquidity(
+        address tokenOut,
+        uint256 missingAmountBase18,
+        uint256, /* tokenOutRate */
+        uint256 currentTokenOutBalanceBase18,
+        uint256 tokenOutDecimals
+    )
         internal
+        virtual
+        override
+        returns (
+            uint256 /* obtainedLiquidityBase18 */
+        )
     {
-        uint256 contractBalanceTokenOut = IERC20(tokenOut).balanceOf(
-            address(this)
+        // If tokenOut is not USDC, do nothing
+        if (tokenOut != ustbRedemption.USDC()) {
+            return 0;
+        }
+
+        uint256 missingAmount = missingAmountBase18.convertFromBase18(
+            tokenOutDecimals
         );
-        if (contractBalanceTokenOut >= amountTokenOut) return;
 
-        require(tokenOut == ustbRedemption.USDC(), "RVU: invalid token");
+        IUSTBRedemption _ustbRedemption = ustbRedemption;
 
-        uint256 missingAmount = amountTokenOut - contractBalanceTokenOut;
+        uint256 fee = _ustbRedemption.calculateFee(missingAmount);
 
-        uint256 fee = ustbRedemption.calculateFee(missingAmount);
-        require(fee == 0, "RVU: ustb fee not zero");
+        // If fee is not zero, do nothing
+        if (fee != 0) {
+            return 0;
+        }
 
-        (uint256 ustbToRedeem, ) = ustbRedemption.calculateUstbIn(
+        (uint256 ustbToRedeem, ) = _ustbRedemption.calculateUstbIn(
             missingAmount
         );
 
-        IERC20 ustb = IERC20(ustbRedemption.SUPERSTATE_TOKEN());
+        IERC20 ustb = IERC20(_ustbRedemption.SUPERSTATE_TOKEN());
         uint256 ustbBalance = ustb.balanceOf(address(this));
 
-        require(ustbBalance >= ustbToRedeem, "RVU: insufficient USTB balance");
+        ustbToRedeem = ustbBalance >= ustbToRedeem ? ustbToRedeem : ustbBalance;
 
-        ustb.safeIncreaseAllowance(address(ustbRedemption), ustbToRedeem);
-        ustbRedemption.redeem(ustbToRedeem);
+        // if nothing to redeem, do nothing
+        if (ustbToRedeem == 0) {
+            return 0;
+        }
+
+        ustb.safeIncreaseAllowance(address(_ustbRedemption), ustbToRedeem);
+        _ustbRedemption.redeem(ustbToRedeem);
+
+        return
+            IERC20(tokenOut).balanceOf(address(this)).convertToBase18(
+                tokenOutDecimals
+            ) - currentTokenOutBalanceBase18;
     }
 }

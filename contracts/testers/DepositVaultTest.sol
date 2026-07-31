@@ -1,39 +1,36 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
+
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../DepositVault.sol";
+import "../libraries/MidasAuthLibrary.sol";
+import {ManageableVaultTesterBase} from "./ManageableVaultTester.sol";
 
-contract DepositVaultTest is DepositVault {
-    bool private _overrideGetTokenRate;
-    uint256 private _getTokenRateValue;
+abstract contract DepositVaultTestBase is
+    DepositVault,
+    ManageableVaultTesterBase
+{
+    function _disableInitializers()
+        internal
+        virtual
+        override(Initializable, ManageableVaultTesterBase)
+    {}
 
-    function _disableInitializers() internal override {}
-
-    function tokenTransferFromToTester(
-        address token,
-        address from,
-        address to,
-        uint256 amount,
-        uint256 tokenDecimals
-    ) external {
-        _tokenTransferFromTo(token, from, to, amount, tokenDecimals);
+    function convertTokenToUsdTest(address tokenIn, uint256 amount)
+        external
+        view
+        returns (uint256 amountInUsd, uint256 rate)
+    {
+        return _convertTokenToUsd(tokenIn, amount);
     }
 
-    function tokenTransferToUserTester(
-        address token,
-        address to,
-        uint256 amount,
-        uint256 tokenDecimals
-    ) external {
-        _tokenTransferToUser(token, to, amount, tokenDecimals);
-    }
-
-    function setOverrideGetTokenRate(bool val) external {
-        _overrideGetTokenRate = val;
-    }
-
-    function setGetTokenRateValue(uint256 val) external {
-        _getTokenRateValue = val;
+    function convertUsdToMTokenTest(uint256 amountUsd)
+        external
+        view
+        returns (uint256 amountMToken, uint256 mTokenRate)
+    {
+        return _convertUsdToMToken(amountUsd);
     }
 
     function calcAndValidateDeposit(
@@ -45,30 +42,55 @@ contract DepositVaultTest is DepositVault {
         return _calcAndValidateDeposit(user, tokenIn, amountToken, isInstant);
     }
 
-    function convertTokenToUsdTest(address tokenIn, uint256 amount)
-        external
-        returns (uint256 amountInUsd, uint256 rate)
-    {
-        return _convertTokenToUsd(tokenIn, amount);
-    }
-
-    function convertUsdToMTokenTest(uint256 amountUsd)
-        external
-        returns (uint256 amountMToken, uint256 mTokenRate)
-    {
-        return _convertUsdToMToken(amountUsd);
+    function calculateHoldbackPartRateFromAvgTest(
+        uint256 depositedUsdAmount,
+        uint256 depositedInstantUsdAmount,
+        uint256 mTokenRate,
+        uint256 avgMTokenRate
+    ) external pure returns (uint256) {
+        return
+            _calculateHoldbackPartRateFromAvg(
+                Request({
+                    depositedInstantUsdAmount: depositedInstantUsdAmount,
+                    tokenOutRate: mTokenRate,
+                    approvedTokenOutRate: 0,
+                    depositedUsdAmount: depositedUsdAmount,
+                    usdAmountWithoutFees: 0,
+                    recipient: address(0),
+                    tokenIn: address(0),
+                    status: RequestStatus.Pending,
+                    amountMToken: 0
+                }),
+                avgMTokenRate
+            );
     }
 
     function _getTokenRate(address dataFeed, bool stable)
         internal
         view
-        override
+        virtual
+        override(ManageableVaultTesterBase, ManageableVault)
         returns (uint256)
     {
-        if (_overrideGetTokenRate) {
-            return _getTokenRateValue;
-        }
-
-        return super._getTokenRate(dataFeed, stable);
+        return ManageableVaultTesterBase._getTokenRate(dataFeed, stable);
     }
+
+    function contractAdminRole()
+        public
+        view
+        virtual
+        override(ManageableVaultTesterBase, ManageableVault)
+        returns (bytes32)
+    {
+        return ManageableVault.contractAdminRole();
+    }
+}
+
+contract DepositVaultTest is DepositVaultTestBase {
+    constructor()
+        DepositVault(
+            keccak256("DEPOSIT_VAULT_ADMIN_ROLE"),
+            MidasAuthLibrary.DEFAULT_GREENLISTED_ROLE
+        )
+    {}
 }

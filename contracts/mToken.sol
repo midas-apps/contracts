@@ -1,35 +1,280 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
+import {ERC20PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
-import "./access/Blacklistable.sol";
-import "./interfaces/IMToken.sol";
+import {RateLimitLibrary} from "./libraries/RateLimitLibrary.sol";
+import {MidasAuthLibrary} from "./libraries/MidasAuthLibrary.sol";
+import {IMidasAccessControl} from "./interfaces/IMidasAccessControl.sol";
+import {PauseGuardsLibrary} from "./libraries/PauseGuardsLibrary.sol";
+import {MidasInitializable} from "./abstract/MidasInitializable.sol";
+import {WithMidasAccessControl} from "./access/WithMidasAccessControl.sol";
+import {Blacklistable} from "./access/Blacklistable.sol";
+import {IMToken} from "./interfaces/IMToken.sol";
 
 /**
  * @title mToken
  * @author RedDuck Software
  */
 //solhint-disable contract-name-camelcase
-abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
+contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
+    using RateLimitLibrary for RateLimitLibrary.WindowRateLimits;
+    using MidasAuthLibrary for IMidasAccessControl;
+
+    /**
+     * @dev role that grants contract admin rights to the contract
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _CONTRACT_ADMIN_ROLE;
+
+    /**
+     * @dev role that grants minter rights to the contract
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _MINTER_ROLE;
+
+    /**
+     * @dev role that grants burner rights to the contract
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _BURNER_ROLE;
+
+    /**
+     * @dev role that grants greenlisted rights to the contract
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _GREENLISTED_ROLE;
+
+    /**
+     * @dev role that grants min balance exempt rights to the contract
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _MIN_BALANCE_EXEMPT_ROLE;
     /**
      * @notice metadata key => metadata value
      */
     mapping(bytes32 => bytes) public metadata;
 
     /**
+     * @notice mint rate limits state
+     */
+    RateLimitLibrary.WindowRateLimits private _mintRateLimits;
+
+    /**
+     * @notice address to which clawback tokens will be sent
+     */
+    address public clawbackReceiver;
+
+    /**
+     * @notice if true then current transfer is clawback operation
+     */
+    bool private _inClawback;
+
+    /**
+     * @notice name of the token
+     */
+    string private _name;
+
+    /**
+     * @notice symbol of the token
+     */
+    string private _symbol;
+
+    /**
+     * @notice if true then the token is permissioned
+     */
+    bool public isPermissioned;
+
+    /**
+     * @notice if true then the token has a minimum holding balance enforced
+     */
+    bool public isMinHoldingBalanceEnforced;
+
+    /**
+     * @notice maximum supply cap for the token
+     */
+    uint256 public override maxSupplyCap;
+
+    /**
      * @dev leaving a storage gap for futures updates
      */
-    uint256[50] private __gap;
+    uint256[42] private __gap;
+
+    /**
+     * @dev having a second gap here to match with the gap of previous implementations
+     */
+    uint256[50] private ___gap;
+
+    /**
+     * @dev havings a third gap here to match with the gap of previous implementations
+     */
+    uint256[50] private ____gap;
+
+    // TODO: can we remove 2nd and 3rd gaps somehow without disabling storage layout checks?
+
+    /**
+     * @notice constructor
+     * @param _contractAdminRole contract admin role
+     * @param _minterRole minter role
+     * @param _burnerRole burner role
+     * @param _greenlistedRole greenlisted role
+     * @param _minBalanceExemptRole min balance exempt role
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(
+        bytes32 _contractAdminRole,
+        bytes32 _minterRole,
+        bytes32 _burnerRole,
+        bytes32 _greenlistedRole,
+        bytes32 _minBalanceExemptRole
+    ) MidasInitializable() {
+        _CONTRACT_ADMIN_ROLE = _contractAdminRole;
+        _MINTER_ROLE = _minterRole;
+        _BURNER_ROLE = _burnerRole;
+        _GREENLISTED_ROLE = _greenlistedRole;
+        _MIN_BALANCE_EXEMPT_ROLE = _minBalanceExemptRole;
+    }
 
     /**
      * @notice upgradeable pattern contract`s initializer
      * @param _accessControl address of MidasAccessControll contract
+     * @param _clawbackReceiver address to which clawback tokens will be sent
+     * @param name_ name of the token
+     * @param symbol_ symbol of the token
      */
-    function initialize(address _accessControl) external virtual initializer {
-        __Blacklistable_init(_accessControl);
-        (string memory _name, string memory _symbol) = _getNameSymbol();
-        __ERC20_init(_name, _symbol);
+    function initialize(
+        address _accessControl,
+        address _clawbackReceiver,
+        uint256 _maxSupplyCap,
+        bool _isPermissioned,
+        bool _isMinHoldingBalanceEnforced,
+        string memory name_,
+        string memory symbol_
+    ) external {
+        _initializeV1(_accessControl, name_, symbol_);
+        initializeV3(
+            _clawbackReceiver,
+            _maxSupplyCap,
+            _isPermissioned,
+            _isMinHoldingBalanceEnforced
+        );
+    }
+
+    /**
+     * @dev v1 initializer
+     * @param _accessControl address of MidasAccessControll contract
+     * @param name_ name of the token
+     * @param symbol_ symbol of the token
+     */
+    function _initializeV1(
+        address _accessControl,
+        string memory name_,
+        string memory symbol_
+    ) private initializer {
+        __WithMidasAccessControl_init(_accessControl);
+        __ERC20_init(name_, symbol_);
+    }
+
+    /**
+     * @notice v3 initializer
+     * @dev not v2 because some of the original product mTokens were upgraded to v2 already
+     * @param _clawbackReceiver address to which clawback tokens will be sent
+     * @param _maxSupplyCap maximum supply cap for the token
+     * @param _isPermissioned if true then the token is permissioned
+     * @param _isMinHoldingBalanceEnforced if true then the token has a minimum holding balance enforced
+     */
+    function initializeV3(
+        address _clawbackReceiver,
+        uint256 _maxSupplyCap,
+        bool _isPermissioned,
+        bool _isMinHoldingBalanceEnforced
+    ) public reinitializer(3) onlyProxyAdmin {
+        require(
+            _clawbackReceiver != address(0),
+            InvalidAddress(_clawbackReceiver)
+        );
+
+        maxSupplyCap = _maxSupplyCap;
+        clawbackReceiver = _clawbackReceiver;
+
+        // to make upgrades safer, we sync the name and symbol from the ERC20Upgradeable
+        _name = ERC20Upgradeable.name();
+        _symbol = ERC20Upgradeable.symbol();
+
+        isPermissioned = _isPermissioned;
+        isMinHoldingBalanceEnforced = _isMinHoldingBalanceEnforced;
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function setNameSymbol(string memory name_, string memory symbol_)
+        external
+        onlyRoleDelayOverride(contractAdminRole(), 2 days, false)
+    {
+        _name = name_;
+        _symbol = symbol_;
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function setIsPermissioned(bool _isPermissioned)
+        external
+        onlyRoleDelayOverride(contractAdminRole(), 2 days, false)
+    {
+        if (isPermissioned == _isPermissioned) {
+            return;
+        }
+
+        isPermissioned = _isPermissioned;
+
+        emit SetIsPermissioned(_isPermissioned);
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function setMinHoldingBalanceEnforced(bool _isMinHoldingBalanceEnforced)
+        external
+        onlyRoleDelayOverride(contractAdminRole(), 2 days, false)
+    {
+        if (isMinHoldingBalanceEnforced == _isMinHoldingBalanceEnforced) {
+            return;
+        }
+
+        isMinHoldingBalanceEnforced = _isMinHoldingBalanceEnforced;
+
+        emit SetIsMinHoldingBalanceEnforced(_isMinHoldingBalanceEnforced);
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function setMaxSupplyCap(uint256 _maxSupplyCap) external onlyContractAdmin {
+        maxSupplyCap = _maxSupplyCap;
+        emit SetMaxSupplyCap(_maxSupplyCap);
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function setClawbackReceiver(address _clawbackReceiver)
+        external
+        onlyContractAdmin
+    {
+        require(
+            _clawbackReceiver != address(0),
+            InvalidAddress(_clawbackReceiver)
+        );
+        clawbackReceiver = _clawbackReceiver;
+        emit ClawbackReceiverSet(_clawbackReceiver);
     }
 
     /**
@@ -37,7 +282,17 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     function mint(address to, uint256 amount)
         external
-        onlyRole(_minterRole(), msg.sender)
+        onlyRoleNoTimelock(minterRole(), false)
+    {
+        _mint(to, amount);
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function mintGoverned(address to, uint256 amount)
+        external
+        onlyContractAdmin
     {
         _mint(to, amount);
     }
@@ -46,10 +301,16 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      * @inheritdoc IMToken
      */
     function burn(address from, uint256 amount)
-        external
-        onlyRole(_burnerRole(), msg.sender)
+        public
+        virtual
+        onlyRoleNoTimelock(burnerRole(), false)
     {
         _onlyNotBlacklisted(from);
+
+        if (isPermissioned) {
+            _onlyGreenlisted(from);
+        }
+
         _burn(from, amount);
     }
 
@@ -58,7 +319,7 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     function burnGoverned(address from, uint256 amount)
         external
-        onlyRole(_burnerRole(), msg.sender)
+        onlyContractAdmin
     {
         _burn(from, amount);
     }
@@ -66,15 +327,12 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     /**
      * @inheritdoc IMToken
      */
-    function pause() external override onlyRole(_pauserRole(), msg.sender) {
-        _pause();
-    }
-
-    /**
-     * @inheritdoc IMToken
-     */
-    function unpause() external override onlyRole(_pauserRole(), msg.sender) {
-        _unpause();
+    function clawback(uint256 amount, address from) external onlyContractAdmin {
+        address to = clawbackReceiver;
+        _inClawback = true;
+        _transfer(from, to, amount);
+        _inClawback = false;
+        emit Clawback(from, to, amount);
     }
 
     /**
@@ -82,9 +340,133 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     function setMetadata(bytes32 key, bytes memory data)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE, msg.sender)
+        onlyContractAdmin
     {
         metadata[key] = data;
+        emit SetMetadata(key, data);
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function increaseMintRateLimit(uint256 window, uint256 newLimit)
+        external
+        onlyContractAdmin
+    {
+        _setMintRateLimitConfig(window, newLimit, true);
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function decreaseMintRateLimit(uint256 window, uint256 newLimit)
+        external
+        onlyContractAdmin
+    {
+        _setMintRateLimitConfig(window, newLimit, false);
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function removeMintRateLimitConfig(uint256 window)
+        external
+        onlyContractAdmin
+    {
+        _mintRateLimits.removeWindowLimit(window);
+    }
+
+    /**
+     * @notice returns array of mint rate limit configs
+     * @return statuses array of mint rate limit statuses
+     */
+    function getMintRateLimitStatuses()
+        external
+        view
+        returns (
+            RateLimitLibrary.WindowRateLimitStatus[] memory /* statuses */
+        )
+    {
+        return _mintRateLimits.getWindowStatuses();
+    }
+
+    /**
+     * @notice AC role, owner of which can mint mToken token
+     */
+    function minterRole() public view returns (bytes32) {
+        return _MINTER_ROLE;
+    }
+
+    /**
+     * @notice AC role, owner of which can burn mToken token
+     */
+    function burnerRole() public view returns (bytes32) {
+        return _BURNER_ROLE;
+    }
+
+    /**
+     * @inheritdoc WithMidasAccessControl
+     */
+    function contractAdminRole() public view override returns (bytes32) {
+        return _CONTRACT_ADMIN_ROLE;
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function greenlistedRole() public view returns (bytes32) {
+        return _GREENLISTED_ROLE;
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function minBalanceExemptRole() public view returns (bytes32) {
+        return _MIN_BALANCE_EXEMPT_ROLE;
+    }
+
+    /**
+     * @inheritdoc ERC20Upgradeable
+     */
+    function name() public view override returns (string memory) {
+        return _name;
+    }
+
+    /**
+     * @inheritdoc ERC20Upgradeable
+     */
+    function symbol() public view override returns (string memory) {
+        return _symbol;
+    }
+
+    /**
+     * @dev overrides _mint function to validate the maximum supply cap
+     * @param to address of the recipient
+     * @param amount amount of tokens to mint
+     */
+    function _mint(address to, uint256 amount) internal override {
+        super._mint(to, amount);
+        _validateMaxSupplyCap();
+    }
+
+    /**
+     * @dev set mint rate limit config
+     * @param window window duration in seconds
+     * @param limit limit amount per window
+     * @param increaseOnly if true - only increase the limit, if false - only decrease the limit
+     */
+    function _setMintRateLimitConfig(
+        uint256 window,
+        uint256 limit,
+        bool increaseOnly
+    ) private {
+        uint256 previousLimit = _mintRateLimits.setWindowLimit(window, limit);
+
+        bool isNewLimitValid = increaseOnly
+            ? limit > previousLimit
+            : limit < previousLimit;
+
+        require(isNewLimitValid, InvalidNewLimit(limit, previousLimit));
     }
 
     /**
@@ -95,37 +477,111 @@ abstract contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         address from,
         address to,
         uint256 amount
-    ) internal virtual override(ERC20PausableUpgradeable) {
+    ) internal override(ERC20PausableUpgradeable) {
+        PauseGuardsLibrary.requireNotPaused(accessControl, msg.sig);
+        ERC20PausableUpgradeable._beforeTokenTransfer(from, to, amount);
+
         if (to != address(0)) {
-            _onlyNotBlacklisted(from);
+            if (!_inClawback && from != address(0)) {
+                _onlyNotBlacklisted(from);
+            }
             _onlyNotBlacklisted(to);
         }
 
-        ERC20PausableUpgradeable._beforeTokenTransfer(from, to, amount);
+        _validatePermissioned(from, to);
+
+        // if minting, check and update mint rate limit
+        if (from == address(0)) {
+            _mintRateLimits.consumeLimit(amount);
+        }
     }
 
     /**
-     * @dev returns name and symbol of the token
-     * @return name of the token
-     * @return symbol of the token
+     * @dev overrides _afterTokenTransfer function to run custom validations
+     * @param from address of the sender
+     * @param to address of the recipient
+     * @param amount amount of tokens transferred
      */
-    function _getNameSymbol()
-        internal
-        virtual
-        returns (string memory, string memory);
+    function _afterTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override {
+        _validateMinBalance(from, to);
+        super._afterTokenTransfer(from, to, amount);
+    }
 
     /**
-     * @dev AC role, owner of which can mint mToken token
+     * @dev validates that the total supply is less than or equal to the maximum supply cap
      */
-    function _minterRole() internal pure virtual returns (bytes32);
+    function _validateMaxSupplyCap() private view {
+        require(totalSupply() <= maxSupplyCap, MaxSupplyCapExceeded());
+    }
 
     /**
-     * @dev AC role, owner of which can burn mToken token
+     * @dev validates the minimum balance of a user
+     * @param from address of the sender
+     * @param to address of the recipient
      */
-    function _burnerRole() internal pure virtual returns (bytes32);
+    function _validateMinBalance(address from, address to) private view {
+        if (!isMinHoldingBalanceEnforced) {
+            return;
+        }
+
+        if (from != address(0) && !_isMinBalanceExempt(from)) {
+            _validateUserMinBalance(from);
+        }
+
+        if (to != address(0) && !_isMinBalanceExempt(to)) {
+            _validateUserMinBalance(to);
+        }
+    }
 
     /**
-     * @dev AC role, owner of which can pause mToken token
+     * @dev checks if a user is exempt from min balance checks
+     * @param user address of the user
+     * @return bool true if the user is exempt from min balance checks
      */
-    function _pauserRole() internal pure virtual returns (bytes32);
+    function _isMinBalanceExempt(address user) private view returns (bool) {
+        return accessControl.hasRole(minBalanceExemptRole(), user);
+    }
+
+    /**
+     * @dev validates the minimum balance of a user
+     * @param user address of the user
+     */
+    function _validateUserMinBalance(address user) private view {
+        uint256 balance = balanceOf(user);
+        require(balance == 0 || balance >= 1 ether, MinBalanceNotMet(balance));
+    }
+
+    /**
+     * @dev validates that the sender and recipient are permissioned
+     * @param from address of the sender
+     * @param to address of the recipient
+     */
+    function _validatePermissioned(address from, address to) private {
+        if (!isPermissioned) {
+            return;
+        }
+
+        if (to != address(0)) {
+            if (!_inClawback && from != address(0)) {
+                _onlyGreenlisted(from);
+            }
+
+            _onlyGreenlisted(to);
+        }
+    }
+
+    /**
+     * @dev checks that a given `account` has `greenlistedRole()`
+     */
+    function _onlyGreenlisted(address account) private view {
+        MidasAuthLibrary.requireGreenlisted(
+            accessControl,
+            account,
+            greenlistedRole()
+        );
+    }
 }

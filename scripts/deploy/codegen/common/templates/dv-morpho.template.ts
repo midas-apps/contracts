@@ -20,8 +20,8 @@ export const getDvMorphoContractFromTemplate = async (
   return {
     name: contractNames.dvMorpho,
     content: `
-    // SPDX-License-Identifier: MIT
-    pragma solidity 0.8.9;
+    // SPDX-License-Identifier: BUSL-1.1
+    pragma solidity 0.8.34;
 
     import "../../DepositVaultWithMorpho.sol";
     import "./${contractNames.roles}.sol";

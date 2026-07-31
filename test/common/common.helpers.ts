@@ -1,27 +1,98 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { BigNumber, BigNumberish, Contract } from 'ethers';
+import {
+  BigNumber,
+  BigNumberish,
+  Contract,
+  ContractFactory,
+  ContractTransaction,
+} from 'ethers';
 import { parseUnits, solidityKeccak256 } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
+import { DefaultFixture } from './fixtures';
+
 import {
   ERC20,
+  ERC20__factory,
   ERC20Mock,
   IERC20Metadata,
-  MTBILL,
-  Pausable,
+  MidasPauseManager,
+  MToken,
+  USTBMock,
 } from '../../typechain-types';
-
-export type OptionalCommonParams = {
-  from?: SignerWithAddress;
-  revertMessage?: string;
+type RevertCustomError = {
+  contract?: Contract;
+  customErrorName: string;
+  args?: unknown[];
 };
+
+export type OptionalCommonParams =
+  | {
+      from?: SignerWithAddress;
+      revertMessage?: string;
+    }
+  | {
+      from?: SignerWithAddress;
+      revertCustomError: RevertCustomError;
+    }
+  | {
+      from?: SignerWithAddress;
+      revertCustomError: (
+        args?: unknown[],
+        contract?: Contract,
+      ) => RevertCustomError;
+    };
 
 export type Account = SignerWithAddress | string;
 export type AccountOrContract = Account | Contract;
 
 export const keccak256 = (role: string) => {
   return solidityKeccak256(['string'], [role]);
+};
+
+export const shouldRevert = (opt?: OptionalCommonParams) => {
+  return (
+    opt &&
+    (('revertMessage' in opt && opt.revertMessage) ||
+      ('revertCustomError' in opt && opt.revertCustomError))
+  );
+};
+
+export const handleRevert = async (
+  txOrTxFn: (() => Promise<ContractTransaction>) | Promise<ContractTransaction>,
+  contract: Contract,
+  opt?: OptionalCommonParams,
+) => {
+  if (!opt || !shouldRevert(opt)) return false;
+
+  const getPromise = () =>
+    typeof txOrTxFn === 'function' ? txOrTxFn() : txOrTxFn;
+
+  if ('revertCustomError' in opt && opt.revertCustomError) {
+    const txPromise = getPromise();
+    const revertCustomError =
+      typeof opt.revertCustomError === 'function'
+        ? opt.revertCustomError(undefined, contract)
+        : opt.revertCustomError;
+
+    const match = expect(txPromise).revertedWithCustomError(
+      revertCustomError.contract ?? contract,
+      revertCustomError.customErrorName,
+    );
+
+    await (revertCustomError.args
+      ? match.withArgs(...revertCustomError.args)
+      : match);
+
+    return true;
+  } else if ('revertMessage' in opt && opt.revertMessage) {
+    const txPromise = getPromise();
+    await expect(txPromise).revertedWith(opt.revertMessage);
+    return true;
+  } else {
+    return false;
+  }
 };
 
 export const getAccount = (account: AccountOrContract) => {
@@ -32,88 +103,411 @@ export const getAccount = (account: AccountOrContract) => {
   );
 };
 
+type PauseParams = {
+  pauseManager: MidasPauseManager;
+  owner: SignerWithAddress;
+};
+
+export const pauseGlobalTest = async (
+  { pauseManager, owner }: PauseParams,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+
+  const callFn = pauseManager.connect(from).globalPause.bind(this);
+
+  if (await handleRevert(callFn, pauseManager, opt)) {
+    return;
+  }
+
+  const wasPaused = await pauseManager.globalPaused();
+
+  if (wasPaused) {
+    await callFn();
+  } else {
+    await expect(callFn())
+      .to.emit(
+        pauseManager,
+        pauseManager.interface.events['GlobalPauseStatusChange(bool)'].name,
+      )
+      .withArgs(true);
+  }
+
+  expect(await pauseManager.globalPaused()).eq(true);
+};
+
+export const unpauseGlobalTest = async (
+  { pauseManager, owner }: PauseParams,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+
+  if (
+    await handleRevert(
+      pauseManager.connect(from).globalUnpause.bind(this),
+      pauseManager,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  const wasPaused = await pauseManager.globalPaused();
+
+  if (!wasPaused) {
+    await pauseManager.connect(from).globalUnpause();
+  } else {
+    await expect(pauseManager.connect(from).globalUnpause())
+      .to.emit(
+        pauseManager,
+        pauseManager.interface.events['GlobalPauseStatusChange(bool)'].name,
+      )
+      .withArgs(false);
+  }
+
+  expect(await pauseManager.globalPaused()).eq(false);
+};
+
+// TODO: rename to pauseContracts
 export const pauseVault = async (
-  vault: Pausable,
+  { pauseManager, owner }: PauseParams,
+  contracts: Contract | Contract[],
   opt?: OptionalCommonParams,
 ) => {
-  const [defaultSigner] = await ethers.getSigners();
+  const from = opt?.from ?? owner;
 
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? defaultSigner).pause(),
-    ).revertedWith(opt?.revertMessage);
+  const contractsArr = Array.isArray(contracts) ? contracts : [contracts];
+
+  if (
+    await handleRevert(
+      pauseManager.connect(from).bulkPauseContract.bind(
+        this,
+        contractsArr.map((c) => c.address),
+      ),
+      pauseManager,
+      opt,
+    )
+  ) {
     return;
   }
 
-  await expect(await vault.connect(opt?.from ?? defaultSigner).pause()).not
-    .reverted;
+  const contractAddresses = contractsArr.map((c) => c.address);
+  const addressesToPause = (
+    await Promise.all(
+      contractAddresses.map(async (contractAddr) => ({
+        contractAddr,
+        paused: await pauseManager.contractPaused(contractAddr),
+      })),
+    )
+  )
+    .filter(({ paused }) => !paused)
+    .map(({ contractAddr }) => contractAddr);
 
-  expect(await vault.paused()).eq(true);
-};
-
-export const pauseVaultFn = async (
-  vault: Pausable,
-  fnSelector: string,
-  opt?: OptionalCommonParams,
-) => {
-  const [defaultSigner] = await ethers.getSigners();
-
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? defaultSigner).pauseFn(fnSelector),
-    ).revertedWith(opt?.revertMessage);
-    return;
+  const tx = pauseManager.connect(from).bulkPauseContract(contractAddresses);
+  if (addressesToPause.length > 0) {
+    let pauseExpect = expect(tx);
+    for (const contractAddr of addressesToPause) {
+      pauseExpect = pauseExpect.to
+        .emit(
+          pauseManager,
+          pauseManager.interface.events[
+            'ContractPauseStatusChange(address,bool)'
+          ].name,
+        )
+        .withArgs(contractAddr, true);
+    }
+    await pauseExpect;
+  } else {
+    await tx;
   }
 
-  await expect(
-    await vault.connect(opt?.from ?? defaultSigner).pauseFn(fnSelector),
-  ).not.reverted;
-
-  expect(await vault.fnPaused(fnSelector)).eq(true);
+  await asyncForEach(contractsArr, async (contract) => {
+    expect(await pauseManager.isPaused(contract.address, '0x00000000')).eq(
+      true,
+    );
+    expect(await pauseManager.contractPaused(contract.address)).eq(true);
+  });
 };
 
-export const unpauseVaultFn = async (
-  vault: Pausable,
-  fnSelector: string,
-  opt?: OptionalCommonParams,
-) => {
-  const [defaultSigner] = await ethers.getSigners();
-
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? defaultSigner).unpauseFn(fnSelector),
-    ).revertedWith(opt?.revertMessage);
-    return;
-  }
-
-  await expect(
-    await vault.connect(opt?.from ?? defaultSigner).unpauseFn(fnSelector),
-  ).not.reverted;
-
-  expect(await vault.fnPaused(fnSelector)).eq(false);
-};
-
+// TODO: rename to unpauseContracts
 export const unpauseVault = async (
-  vault: Pausable,
+  { owner, pauseManager }: PauseParams,
+  contracts: Contract | Contract[],
   opt?: OptionalCommonParams,
 ) => {
-  const [defaultSigner] = await ethers.getSigners();
+  const from = opt?.from ?? owner;
 
-  if (opt?.revertMessage) {
-    await expect(
-      vault.connect(opt?.from ?? defaultSigner).unpause(),
-    ).revertedWith(opt?.revertMessage);
+  const contractsArr = Array.isArray(contracts) ? contracts : [contracts];
+
+  if (
+    await handleRevert(
+      pauseManager.connect(from).bulkUnpauseContract.bind(
+        this,
+        contractsArr.map((c) => c.address),
+      ),
+      pauseManager,
+      opt,
+    )
+  ) {
     return;
   }
 
-  await expect(await vault.connect(opt?.from ?? defaultSigner).unpause()).not
-    .reverted;
+  const contractAddresses = contractsArr.map((c) => c.address);
+  const addressesToUnpause = (
+    await Promise.all(
+      contractAddresses.map(async (contractAddr) => ({
+        contractAddr,
+        paused: await pauseManager.contractPaused(contractAddr),
+      })),
+    )
+  )
+    .filter(({ paused }) => paused)
+    .map(({ contractAddr }) => contractAddr);
 
-  expect(await vault.paused()).eq(false);
+  const tx = pauseManager.connect(from).bulkUnpauseContract(contractAddresses);
+  if (addressesToUnpause.length > 0) {
+    let unpauseExpect = expect(tx);
+    for (const contractAddr of addressesToUnpause) {
+      unpauseExpect = unpauseExpect.to
+        .emit(
+          pauseManager,
+          pauseManager.interface.events[
+            'ContractPauseStatusChange(address,bool)'
+          ].name,
+        )
+        .withArgs(contractAddr, false);
+    }
+    await unpauseExpect;
+  } else {
+    await tx;
+  }
+
+  await asyncForEach(contractsArr, async (contract) => {
+    expect(await pauseManager.isPaused(contract.address, '0x00000000')).eq(
+      false,
+    );
+    expect(await pauseManager.contractPaused(contract.address)).eq(false);
+  });
+};
+
+// TODO: rename to pauseContractsFn
+export const pauseVaultFn = async (
+  { pauseManager, owner }: PauseParams,
+  contracts: Contract | Contract[],
+  fnSelector: string | string[],
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+
+  const selectors = Array.isArray(fnSelector) ? fnSelector : [fnSelector];
+
+  const contractsArr = Array.isArray(contracts) ? contracts : [contracts];
+
+  if (
+    await handleRevert(
+      pauseManager.connect(from).bulkPauseContractFn.bind(
+        this,
+        contractsArr.map((c) => c.address),
+        selectors,
+      ),
+      pauseManager,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  const contractAddresses = contractsArr.map((c) => c.address);
+  const fnPauseTargets = (
+    await Promise.all(
+      contractAddresses.flatMap((contractAddr) =>
+        selectors.map(async (fnSelector) => ({
+          contractAddr,
+          fnSelector,
+          paused: await pauseManager.isFunctionPaused(contractAddr, fnSelector),
+        })),
+      ),
+    )
+  ).filter(({ paused }) => !paused);
+
+  const tx = pauseManager
+    .connect(from)
+    .bulkPauseContractFn(contractAddresses, selectors);
+  if (fnPauseTargets.length > 0) {
+    let pauseFnExpect = expect(tx);
+    for (const { contractAddr, fnSelector } of fnPauseTargets) {
+      pauseFnExpect = pauseFnExpect.to
+        .emit(
+          pauseManager,
+          pauseManager.interface.events[
+            'FnPauseStatusChange(address,bytes4,bool)'
+          ].name,
+        )
+        .withArgs(contractAddr, fnSelector, true);
+    }
+    await pauseFnExpect;
+  } else {
+    await tx;
+  }
+
+  await asyncForEach(contractsArr, async (contract) => {
+    await asyncForEach(selectors, async (fnSelector) => {
+      expect(await pauseManager.isPaused(contract.address, fnSelector)).eq(
+        true,
+      );
+      expect(
+        await pauseManager.contractFnPaused(contract.address, fnSelector),
+      ).eq(true);
+    });
+  });
+};
+
+// TODO: rename to unpauseContractsFn
+export const unpauseVaultFn = async (
+  { pauseManager, owner }: PauseParams,
+  contracts: Contract | Contract[],
+  fnSelector: string | string[],
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+
+  const selectors = Array.isArray(fnSelector) ? fnSelector : [fnSelector];
+
+  const contractsArr = Array.isArray(contracts) ? contracts : [contracts];
+  if (
+    await handleRevert(
+      pauseManager.connect(from).bulkUnpauseContractFn.bind(
+        this,
+        contractsArr.map((c) => c.address),
+        selectors,
+      ),
+      pauseManager,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  const contractAddresses = contractsArr.map((c) => c.address);
+  const fnUnpauseTargets = (
+    await Promise.all(
+      contractAddresses.flatMap((contractAddr) =>
+        selectors.map(async (fnSelector) => ({
+          contractAddr,
+          fnSelector,
+          paused: await pauseManager.isFunctionPaused(contractAddr, fnSelector),
+        })),
+      ),
+    )
+  ).filter(({ paused }) => paused);
+
+  const tx = pauseManager
+    .connect(from)
+    .bulkUnpauseContractFn(contractAddresses, selectors);
+  if (fnUnpauseTargets.length > 0) {
+    let unpauseFnExpect = expect(tx);
+    for (const { contractAddr, fnSelector } of fnUnpauseTargets) {
+      unpauseFnExpect = unpauseFnExpect.to
+        .emit(
+          pauseManager,
+          pauseManager.interface.events[
+            'FnPauseStatusChange(address,bytes4,bool)'
+          ].name,
+        )
+        .withArgs(contractAddr, fnSelector, false);
+    }
+    await unpauseFnExpect;
+  } else {
+    await tx;
+  }
+
+  await asyncForEach(contractsArr, async (contract) => {
+    await asyncForEach(selectors, async (fnSelector) => {
+      expect(await pauseManager.isPaused(contract.address, fnSelector)).eq(
+        false,
+      );
+      expect(
+        await pauseManager.contractFnPaused(contract.address, fnSelector),
+      ).eq(false);
+    });
+  });
+};
+
+export const adminPauseContractTest = async (
+  { pauseManager, owner }: PauseParams,
+  contract: Contract,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+
+  if (
+    await handleRevert(
+      pauseManager
+        .connect(from)
+        .contractAdminPause.bind(this, contract.address),
+      pauseManager,
+      opt,
+    )
+  ) {
+    return;
+  }
+  const alreadyPaused = await pauseManager.contractPaused(contract.address);
+  const tx = pauseManager.connect(from).contractAdminPause(contract.address);
+
+  if (alreadyPaused) {
+    await tx;
+  } else {
+    await expect(tx)
+      .to.emit(
+        pauseManager,
+        pauseManager.interface.events['ContractPauseStatusChange(address,bool)']
+          .name,
+      )
+      .withArgs(contract.address, true);
+  }
+
+  expect(await pauseManager.contractPaused(contract.address)).eq(true);
+  expect(await pauseManager.isPaused(contract.address, '0x00000000')).eq(true);
+};
+
+export const adminUnpauseContractTest = async (
+  { pauseManager, owner }: PauseParams,
+  contract: Contract,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+  if (
+    await handleRevert(
+      pauseManager
+        .connect(from)
+        .contractAdminUnpause.bind(this, contract.address),
+      pauseManager,
+      opt,
+    )
+  ) {
+    return;
+  }
+  const alreadyPaused = await pauseManager.contractPaused(contract.address);
+  const tx = pauseManager.connect(from).contractAdminUnpause(contract.address);
+
+  if (!alreadyPaused) {
+    await tx;
+  } else {
+    await expect(tx)
+      .to.emit(
+        pauseManager,
+        pauseManager.interface.events['ContractPauseStatusChange(address,bool)']
+          .name,
+      )
+      .withArgs(contract.address, false);
+  }
+
+  expect(await pauseManager.contractPaused(contract.address)).eq(false);
+  expect(await pauseManager.isPaused(contract.address, '0x00000000')).eq(false);
 };
 
 export const mintToken = async (
-  token: ERC20Mock | MTBILL,
+  token: ERC20Mock | MToken | USTBMock,
   to: AccountOrContract,
   amountN: number,
 ) => {
@@ -182,12 +576,126 @@ export const tokenAmountFromBase18 = async (
 };
 
 export const balanceOfBase18 = async (
-  token: ERC20 | IERC20Metadata,
+  token: ERC20 | IERC20Metadata | string,
   of: AccountOrContract,
 ) => {
+  if (typeof token === 'string') {
+    token = ERC20__factory.connect(token, ethers.provider);
+  }
+
   if (token.address === ethers.constants.AddressZero)
     return ethers.constants.Zero;
   of = getAccount(of);
   const balance = await token.balanceOf(of);
   return tokenAmountToBase18(token, balance);
+};
+
+export const getCurrentBlockTimestamp = async () => {
+  return (await ethers.provider.getBlock('latest')).timestamp;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type Constructor<T = unknown> = new (...args: any[]) => T;
+
+export const validateImplementation = async (
+  _implementationFactory: Constructor<ContractFactory> | ContractFactory,
+) => {
+  // FIXME: hardhat-upgrades call fails because it does not accept the constructor arguments
+  // const factory =
+  //   typeof implementationFactory === 'function'
+  //     ? new implementationFactory()
+  //     : implementationFactory;
+  // await hre.upgrades.validateImplementation(factory);
+};
+
+export type InitializeParamCase<TParams> = {
+  title: string;
+  params:
+    | Partial<TParams>
+    | ((
+        fixture: DefaultFixture,
+        contract?: Contract,
+      ) => Partial<TParams> | Promise<Partial<TParams>>);
+  contract?:
+    | Contract
+    | ((fixture: DefaultFixture) => Contract | Promise<Contract>);
+  revertCustomError: {
+    customErrorName: string;
+    args?:
+      | unknown[]
+      | ((fixture: DefaultFixture, contract?: Contract) => unknown[]);
+  };
+};
+
+export type InitializeParamsOpt = OptionalCommonParams & {
+  contract?: Contract;
+};
+
+const runInitializeParamCase = async <TParams>(
+  fixture: DefaultFixture,
+  paramCase: InitializeParamCase<TParams>,
+  initializeFunction: (
+    fixture: DefaultFixture,
+    params: Partial<TParams>,
+    opt?: InitializeParamsOpt,
+  ) => Promise<void>,
+) => {
+  const contract =
+    paramCase.contract === undefined
+      ? undefined
+      : typeof paramCase.contract === 'function'
+      ? await paramCase.contract(fixture)
+      : paramCase.contract;
+
+  const params =
+    typeof paramCase.params === 'function'
+      ? await paramCase.params(fixture, contract)
+      : paramCase.params;
+
+  const args =
+    typeof paramCase.revertCustomError.args === 'function'
+      ? paramCase.revertCustomError.args(fixture, contract)
+      : paramCase.revertCustomError.args;
+
+  await initializeFunction(fixture, params, {
+    contract,
+    revertCustomError: {
+      customErrorName: paramCase.revertCustomError.customErrorName,
+      args,
+    },
+  });
+};
+
+export const initializeParamsSuits = <TParams>(
+  paramCases: InitializeParamCase<TParams>[],
+  fixtureFn: () => Promise<DefaultFixture>,
+  initializeFunction: (
+    fixture: DefaultFixture,
+    params: Partial<TParams>,
+    opt?: InitializeParamsOpt,
+  ) => Promise<void>,
+) => {
+  describe('initialization params', () => {
+    // TODO: should replace with async?
+    for (const paramCase of paramCases) {
+      it(`should fail: when ${paramCase.title}`, async () => {
+        const fixture = await fixtureFn();
+        await runInitializeParamCase(fixture, paramCase, initializeFunction);
+      });
+    }
+  });
+};
+
+export const asyncForEach = async <T>(
+  array: Iterable<T>,
+  callback: (item: T) => Promise<void>,
+  sync = false,
+) => {
+  if (sync) {
+    for (const item of array) {
+      await callback(item);
+    }
+  } else {
+    return await Promise.all(Array.from(array).map(callback));
+  }
 };

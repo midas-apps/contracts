@@ -1,19 +1,21 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import "./RedemptionVault.sol";
-import "./interfaces/IRedemptionVault.sol";
-import "./libraries/DecimalsCorrectionLibrary.sol";
+import {RedemptionVault} from "./RedemptionVault.sol";
+import {ManageableVault} from "./abstract/ManageableVault.sol";
+import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
+import {IRedemptionVault, RedemptionVaultInitParams} from "./interfaces/IRedemptionVault.sol";
+import {CommonVaultInitParams} from "./interfaces/IManageableVault.sol";
+import {RedemptionSwapperHelpersLibrary} from "./libraries/RedemptionSwapperHelpersLibrary.sol";
 
 /**
  * @title RedemptionVaultWithMToken
  * @notice Smart contract that handles redemptions using mToken RedemptionVault withdrawals
- * @dev Storage layout is preserved for safe upgrades from RedemptionVaultWithSwapper
  * @author RedDuck Software
  */
 contract RedemptionVaultWithMToken is RedemptionVault {
@@ -21,22 +23,9 @@ contract RedemptionVaultWithMToken is RedemptionVault {
     using SafeERC20 for IERC20;
 
     /**
-     * @dev Storage gap preserved from RedemptionVaultWithSwapper layout
-     */
-    uint256[50] private ___gap;
-
-    /**
      * @notice mToken RedemptionVault used for fallback redemptions
-     * @custom:oz-renamed-from mTbillRedemptionVault
      */
     IRedemptionVault public redemptionVault;
-
-    /**
-     * @dev Deprecated storage slot preserved for storage layout compatibility. Must not be removed
-     * @custom:oz-renamed-from liquidityProvider
-     */
-    // solhint-disable-next-line var-name-mixedcase
-    address public liquidityProvider_deprecated;
 
     /**
      * @dev leaving a storage gap for futures updates
@@ -45,47 +34,32 @@ contract RedemptionVaultWithMToken is RedemptionVault {
 
     /**
      * @notice Emitted when the redemption vault address is updated
-     * @param caller address of the caller
      * @param newVault new redemption vault address
      */
-    event SetRedemptionVault(address indexed caller, address indexed newVault);
+    event SetRedemptionVault(address indexed newVault);
+
+    /**
+     * @notice Passes role identifiers to the base RedemptionVault constructor
+     * @param _contractAdminRole contract admin role identifier
+     * @param _greenlistedRole greenlisted role identifier
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
+        RedemptionVault(_contractAdminRole, _greenlistedRole)
+    {}
 
     /**
      * @notice upgradeable pattern contract`s initializer
-     * @param _ac address of MidasAccessControll contract
-     * @param _mTokenInitParams init params for mToken
-     * @param _receiversInitParams init params for receivers
-     * @param _instantInitParams init params for instant operations
-     * @param _sanctionsList address of sanctionsList contract
-     * @param _variationTolerance percent of prices diviation 1% = 100
-     * @param _minAmount basic min amount for operations
-     * @param _fiatRedemptionInitParams params fiatAdditionalFee, fiatFlatFee, minFiatRedeemAmount
-     * @param _requestRedeemer address is designated for standard redemptions, allowing tokens to be pulled from this address
+     * @param _commonVaultInitParams init params for common vault
+     * @param _redemptionInitParams init params for redemption vault state values
      * @param _redemptionVault address of the mTokenA RedemptionVault
      */
     function initialize(
-        address _ac,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount,
-        FiatRedeptionInitParams calldata _fiatRedemptionInitParams,
-        address _requestRedeemer,
+        CommonVaultInitParams calldata _commonVaultInitParams,
+        RedemptionVaultInitParams calldata _redemptionInitParams,
         address _redemptionVault
-    ) external initializer {
-        __RedemptionVault_init(
-            _ac,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount,
-            _fiatRedemptionInitParams,
-            _requestRedeemer
-        );
+    ) external {
+        initialize(_commonVaultInitParams, _redemptionInitParams);
         _validateAddress(_redemptionVault, true);
         redemptionVault = IRedemptionVault(_redemptionVault);
     }
@@ -96,105 +70,17 @@ contract RedemptionVaultWithMToken is RedemptionVault {
      */
     function setRedemptionVault(address _redemptionVault)
         external
-        onlyVaultAdmin
+        onlyContractAdmin
     {
         require(
             _redemptionVault != address(redemptionVault),
-            "RVMT: already set"
+            SameAddressValue(_redemptionVault)
         );
         _validateAddress(_redemptionVault, true);
 
         redemptionVault = IRedemptionVault(_redemptionVault);
 
-        emit SetRedemptionVault(msg.sender, _redemptionVault);
-    }
-
-    /**
-     * @dev Redeem mToken to the selected payment token if daily limit and allowance are not exceeded.
-     * If the contract doesn't have enough payment token, the mToken RedemptionVault flow
-     * will be triggered to redeem the missing amount.
-     * Burns mToken from the user.
-     * Transfers fee in mToken to feeReceiver.
-     * Transfers tokenOut to user.
-     * @param tokenOut token out address
-     * @param amountMTokenIn amount of mToken to redeem
-     * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
-     * @param recipient address that will receive the tokenOut
-     */
-    function _redeemInstant(
-        address tokenOut,
-        uint256 amountMTokenIn,
-        uint256 minReceiveAmount,
-        address recipient
-    )
-        internal
-        override
-        returns (
-            CalcAndValidateRedeemResult memory calcResult,
-            uint256 amountTokenOutWithoutFee
-        )
-    {
-        address user = msg.sender;
-
-        calcResult = _calcAndValidateRedeem(
-            user,
-            tokenOut,
-            amountMTokenIn,
-            true,
-            false
-        );
-
-        _requireAndUpdateLimit(amountMTokenIn);
-
-        uint256 tokenDecimals = _tokenDecimals(tokenOut);
-
-        uint256 amountMTokenInCopy = amountMTokenIn;
-        address tokenOutCopy = tokenOut;
-        uint256 minReceiveAmountCopy = minReceiveAmount;
-
-        (uint256 amountMTokenInUsd, uint256 mTokenRate) = _convertMTokenToUsd(
-            amountMTokenInCopy
-        );
-        (uint256 amountTokenOut, uint256 tokenOutRate) = _convertUsdToToken(
-            amountMTokenInUsd,
-            tokenOutCopy
-        );
-
-        _requireAndUpdateAllowance(tokenOutCopy, amountTokenOut);
-
-        mToken.burn(user, calcResult.amountMTokenWithoutFee);
-        if (calcResult.feeAmount > 0)
-            _tokenTransferFromUser(
-                address(mToken),
-                feeReceiver,
-                calcResult.feeAmount,
-                18
-            );
-
-        uint256 amountTokenOutWithoutFeeFrom18 = ((calcResult
-            .amountMTokenWithoutFee * mTokenRate) / tokenOutRate)
-            .convertFromBase18(tokenDecimals);
-
-        amountTokenOutWithoutFee = amountTokenOutWithoutFeeFrom18
-            .convertToBase18(tokenDecimals);
-
-        require(
-            amountTokenOutWithoutFee >= minReceiveAmountCopy,
-            "RVMT: minReceiveAmount > actual"
-        );
-
-        _checkAndRedeemMToken(
-            tokenOutCopy,
-            amountTokenOutWithoutFeeFrom18,
-            tokenOutRate
-        );
-
-        _tokenTransferToUser(
-            tokenOutCopy,
-            recipient,
-            amountTokenOutWithoutFee,
-            tokenDecimals
-        );
+        emit SetRedemptionVault(_redemptionVault);
     }
 
     /**
@@ -203,35 +89,33 @@ contract RedemptionVaultWithMToken is RedemptionVault {
      * @dev The other vault burns this contract's mToken and transfers the
      * underlying asset to this contract
      * @param tokenOut tokenOut address
-     * @param amountTokenOut amount of tokenOut needed (native decimals)
-     * @param tokenOutRate tokenOut price rate (decimals 18)
+     * @param missingAmountBase18 amount of tokenOut needed in base 18
+     * @param tokenOutRate tokenOut rate
      */
-    function _checkAndRedeemMToken(
+    function _obtainVaultLiquidity(
         address tokenOut,
-        uint256 amountTokenOut,
-        uint256 tokenOutRate
-    ) internal {
-        uint256 tokenDecimals = _tokenDecimals(tokenOut);
-        uint256 amountTokenOutBase18 = amountTokenOut.convertToBase18(
-            tokenDecimals
-        );
-        uint256 contractBalanceBase18 = IERC20(tokenOut)
-            .balanceOf(address(this))
-            .convertToBase18(tokenDecimals);
-        if (contractBalanceBase18 >= amountTokenOutBase18) return;
+        uint256 missingAmountBase18,
+        uint256 tokenOutRate,
+        uint256, /* currentTokenOutBalanceBase18 */
+        uint256 tokenOutDecimals
+    )
+        internal
+        virtual
+        override
+        returns (
+            uint256 /* obtainedLiquidityBase18 */
+        )
+    {
+        IRedemptionVault _redemptionVault = redemptionVault;
 
-        require(
-            ManageableVault(address(redemptionVault)).waivedFeeRestriction(
+        (
+            uint256 mTokenARate,
+            IERC20 mTokenA,
+            uint256 mTokenABalance
+        ) = RedemptionSwapperHelpersLibrary.getSwapperDetails(
+                _redemptionVault,
                 address(this)
-            ),
-            "RVMT: fees not waived on target"
-        );
-
-        uint256 missingAmountBase18 = amountTokenOutBase18 -
-            contractBalanceBase18;
-        uint256 mTokenARate = redemptionVault
-            .mTokenDataFeed()
-            .getDataInBase18();
+            );
 
         // Ceil so the inner vault's floored output is still >= missingAmountBase18.
         uint256 mTokenAAmount = Math.mulDiv(
@@ -241,22 +125,26 @@ contract RedemptionVaultWithMToken is RedemptionVault {
             Math.Rounding.Up
         );
 
-        address mTokenA = address(redemptionVault.mToken());
+        mTokenAAmount = mTokenABalance >= mTokenAAmount
+            ? mTokenAAmount
+            : mTokenABalance;
 
-        require(
-            IERC20(mTokenA).balanceOf(address(this)) >= mTokenAAmount,
-            "RVMT: balance < needed"
-        );
+        if (!_redemptionVault.waivedFeeRestriction(address(this))) {
+            return 0;
+        }
 
-        IERC20(mTokenA).safeIncreaseAllowance(
-            address(redemptionVault),
-            mTokenAAmount
-        );
+        if (mTokenAAmount == 0) {
+            return 0;
+        }
 
-        redemptionVault.redeemInstant(
-            tokenOut,
-            mTokenAAmount,
-            missingAmountBase18
-        );
+        return
+            RedemptionSwapperHelpersLibrary.redeemInstantSwapper(
+                _redemptionVault,
+                mTokenA,
+                address(this),
+                tokenOut,
+                mTokenAAmount,
+                tokenOutDecimals
+            );
     }
 }

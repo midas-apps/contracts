@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity 0.8.34;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-
-import "../access/WithMidasAccessControl.sol";
-import "../libraries/DecimalsCorrectionLibrary.sol";
+import {DecimalsCorrectionLibrary} from "../libraries/DecimalsCorrectionLibrary.sol";
 
 /**
  * @title IDataFeed
@@ -18,10 +14,4 @@ interface IDataFeed {
      * @return answer fetched aggregator answer
      */
     function getDataInBase18() external view returns (uint256 answer);
-
-    /**
-     * @dev describes a role, owner of which can manage this feed
-     * @return role descriptor
-     */
-    function feedAdminRole() external view returns (bytes32);
 }

@@ -6,6 +6,8 @@ import {
   OptionalCommonParams,
   balanceOfBase18,
   getAccount,
+  handleRevert,
+  shouldRevert,
 } from './common.helpers';
 import {
   depositInstantTest,
@@ -42,12 +44,15 @@ export const setAaveDepositsEnabledTest = async (
   enabled: boolean,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       depositVaultWithAave
         .connect(opt?.from ?? owner)
-        .setAaveDepositsEnabled(enabled),
-    ).revertedWith(opt?.revertMessage);
+        .setAaveDepositsEnabled.bind(this, enabled),
+      depositVaultWithAave,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -70,10 +75,15 @@ export const setAavePoolTest = async (
   pool: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      depositVaultWithAave.connect(opt?.from ?? owner).setAavePool(token, pool),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      depositVaultWithAave
+        .connect(opt?.from ?? owner)
+        .setAavePool.bind(this, token, pool),
+      depositVaultWithAave,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -81,9 +91,7 @@ export const setAavePoolTest = async (
     depositVaultWithAave.connect(opt?.from ?? owner).setAavePool(token, pool),
   ).to.emit(
     depositVaultWithAave,
-    depositVaultWithAave.interface.events[
-      'SetAavePool(address,address,address)'
-    ].name,
+    depositVaultWithAave.interface.events['SetAavePool(address,address)'].name,
   ).to.not.reverted;
 
   const poolAfter = await depositVaultWithAave.aavePools(token);
@@ -95,10 +103,15 @@ export const removeAavePoolTest = async (
   token: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      depositVaultWithAave.connect(opt?.from ?? owner).removeAavePool(token),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      depositVaultWithAave
+        .connect(opt?.from ?? owner)
+        .removeAavePool.bind(this, token),
+      depositVaultWithAave,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -106,8 +119,7 @@ export const removeAavePoolTest = async (
     depositVaultWithAave.connect(opt?.from ?? owner).removeAavePool(token),
   ).to.emit(
     depositVaultWithAave,
-    depositVaultWithAave.interface.events['RemoveAavePool(address,address)']
-      .name,
+    depositVaultWithAave.interface.events['RemoveAavePool(address)'].name,
   ).to.not.reverted;
 
   const poolAfter = await depositVaultWithAave.aavePools(token);
@@ -137,7 +149,7 @@ export const depositInstantWithAaveTest = async (
 ) => {
   tokenIn = getAccount(tokenIn);
 
-  if (opt?.revertMessage) {
+  if (shouldRevert(opt)) {
     await depositInstantTest(
       {
         depositVault: depositVaultWithAave,
@@ -203,12 +215,15 @@ export const setAutoInvestFallbackEnabledAaveTest = async (
   enabled: boolean,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       depositVaultWithAave
         .connect(opt?.from ?? owner)
-        .setAutoInvestFallbackEnabled(enabled),
-    ).revertedWith(opt?.revertMessage);
+        .setAutoInvestFallbackEnabled.bind(this, enabled),
+      depositVaultWithAave,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -248,7 +263,7 @@ export const depositRequestWithAaveTest = async (
 ) => {
   tokenIn = getAccount(tokenIn);
 
-  if (opt?.revertMessage) {
+  if (shouldRevert(opt)) {
     await depositRequestTest(
       {
         depositVault: depositVaultWithAave,

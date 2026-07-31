@@ -228,7 +228,7 @@ describe('RedemptionVaultWithMToken - Mainnet Fork Integration Tests', function 
       );
       await redemptionVaultWithMToken
         .connect(owner)
-        .withdrawToken(mTBILL.address, vaultMTBILL, owner.address);
+        .withdrawToken(mTBILL.address, vaultMTBILL);
 
       const mFONEAmount = 1000;
 
@@ -252,7 +252,7 @@ describe('RedemptionVaultWithMToken - Mainnet Fork Integration Tests', function 
             parseUnits(String(mFONEAmount)),
             0,
           ),
-      ).to.be.revertedWith('RVMT: balance < needed');
+      ).to.be.revertedWith('ERC20: transfer amount exceeds balance');
     });
   });
 });

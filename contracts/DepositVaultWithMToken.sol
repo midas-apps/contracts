@@ -1,11 +1,14 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "./DepositVault.sol";
-import "./interfaces/IDepositVault.sol";
+import {DepositVault} from "./DepositVault.sol";
+import {ManageableVault} from "./abstract/ManageableVault.sol";
+import {IDepositVault, DepositVaultInitParams} from "./interfaces/IDepositVault.sol";
+import {CommonVaultInitParams} from "./interfaces/IManageableVault.sol";
+import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
 
 /**
  * @title DepositVaultWithMToken
@@ -42,13 +45,9 @@ contract DepositVaultWithMToken is DepositVault {
 
     /**
      * @notice Emitted when the mToken DepositVault address is updated
-     * @param caller address of the caller
      * @param newVault new mToken DepositVault address
      */
-    event SetMTokenDepositVault(
-        address indexed caller,
-        address indexed newVault
-    );
+    event SetMTokenDepositVault(address indexed newVault);
 
     /**
      * @notice Emitted when `mTokenDepositsEnabled` flag is updated
@@ -63,41 +62,39 @@ contract DepositVaultWithMToken is DepositVault {
     event SetAutoInvestFallbackEnabled(bool indexed enabled);
 
     /**
+     * @notice when zero mToken is received
+     * @param mTokenReceived mToken received
+     */
+    error ZeroMTokenReceived(uint256 mTokenReceived);
+
+    /**
+     * @notice when auto-invest fails
+     * @param err error bytes
+     */
+    error AutoInvestFailed(bytes err);
+
+    /**
+     * @notice Passes role identifiers to the base DepositVault constructor
+     * @param _contractAdminRole contract admin role identifier
+     * @param _greenlistedRole greenlisted role identifier
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
+        DepositVault(_contractAdminRole, _greenlistedRole)
+    {}
+
+    /**
      * @notice upgradeable pattern contract`s initializer
-     * @param _ac address of MidasAccessControll contract
-     * @param _mTokenInitParams init params for mToken
-     * @param _receiversInitParams init params for receivers
-     * @param _instantInitParams init params for instant operations
-     * @param _sanctionsList address of sanctionsList contract
-     * @param _variationTolerance percent of prices diviation 1% = 100
-     * @param _minAmount basic min amount for operations in mToken
-     * @param _minMTokenAmountForFirstDeposit min amount for first deposit in mToken
-     * @param _maxSupplyCap max supply cap for mToken
+     * @param _commonVaultInitParams init params for common vault
+     * @param _depositVaultInitParams init params for deposit vault
      * @param _mTokenDepositVault target mToken DepositVault address
      */
     function initialize(
-        address _ac,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount,
-        uint256 _minMTokenAmountForFirstDeposit,
-        uint256 _maxSupplyCap,
+        CommonVaultInitParams calldata _commonVaultInitParams,
+        DepositVaultInitParams calldata _depositVaultInitParams,
         address _mTokenDepositVault
     ) external {
-        initialize(
-            _ac,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount,
-            _minMTokenAmountForFirstDeposit,
-            _maxSupplyCap
-        );
+        initialize(_commonVaultInitParams, _depositVaultInitParams);
 
         _validateAddress(_mTokenDepositVault, true);
         mTokenDepositVault = IDepositVault(_mTokenDepositVault);
@@ -109,22 +106,22 @@ contract DepositVaultWithMToken is DepositVault {
      */
     function setMTokenDepositVault(address _mTokenDepositVault)
         external
-        onlyVaultAdmin
+        onlyContractAdmin
     {
         require(
             _mTokenDepositVault != address(mTokenDepositVault),
-            "DVMT: already set"
+            SameAddressValue(_mTokenDepositVault)
         );
         _validateAddress(_mTokenDepositVault, true);
         mTokenDepositVault = IDepositVault(_mTokenDepositVault);
-        emit SetMTokenDepositVault(msg.sender, _mTokenDepositVault);
+        emit SetMTokenDepositVault(_mTokenDepositVault);
     }
 
     /**
      * @notice Updates `mTokenDepositsEnabled` value
      * @param enabled whether mToken auto-invest deposits are enabled
      */
-    function setMTokenDepositsEnabled(bool enabled) external onlyVaultAdmin {
+    function setMTokenDepositsEnabled(bool enabled) external onlyContractAdmin {
         mTokenDepositsEnabled = enabled;
         emit SetMTokenDepositsEnabled(enabled);
     }
@@ -135,7 +132,7 @@ contract DepositVaultWithMToken is DepositVault {
      */
     function setAutoInvestFallbackEnabled(bool enabled)
         external
-        onlyVaultAdmin
+        onlyContractAdmin
     {
         autoInvestFallbackEnabled = enabled;
         emit SetAutoInvestFallbackEnabled(enabled);
@@ -148,7 +145,7 @@ contract DepositVaultWithMToken is DepositVault {
         address tokenIn,
         uint256 amountToken,
         uint256 tokensDecimals
-    ) internal override {
+    ) internal virtual override {
         if (!mTokenDepositsEnabled) {
             return
                 super._instantTransferTokensToTokensReceiver(
@@ -168,7 +165,7 @@ contract DepositVaultWithMToken is DepositVault {
         address tokenIn,
         uint256 amountToken,
         uint256 tokensDecimals
-    ) internal override {
+    ) internal virtual override {
         if (!mTokenDepositsEnabled) {
             return
                 super._requestTransferTokensToTokensReceiver(
@@ -214,7 +211,6 @@ contract DepositVaultWithMToken is DepositVault {
         );
 
         IERC20 targetMToken = IERC20(address(mTokenDepositVault.mToken()));
-        uint256 balanceBefore = targetMToken.balanceOf(address(this));
 
         try
             mTokenDepositVault.depositInstant(
@@ -223,17 +219,15 @@ contract DepositVaultWithMToken is DepositVault {
                 0,
                 bytes32(0)
             )
-        {
-            uint256 mTokenReceived = targetMToken.balanceOf(address(this)) -
-                balanceBefore;
-            require(mTokenReceived > 0, "DVMT: zero mToken received");
+        returns (uint256 mTokenReceived) {
+            require(mTokenReceived > 0, ZeroMTokenReceived(mTokenReceived));
             targetMToken.safeTransfer(tokensReceiver, mTokenReceived);
-        } catch {
+        } catch (bytes memory err) {
             if (autoInvestFallbackEnabled) {
                 IERC20(tokenIn).safeApprove(address(mTokenDepositVault), 0);
                 IERC20(tokenIn).safeTransfer(tokensReceiver, transferredAmount);
             } else {
-                revert("DVMT: auto-invest failed");
+                revert AutoInvestFailed(err);
             }
         }
     }

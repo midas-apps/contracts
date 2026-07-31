@@ -27,7 +27,6 @@ import {
 } from './roles';
 import {
   DeployRvAaveConfig,
-  DeployRvBuidlConfig,
   DeployRvMorphoConfig,
   DeployRvMTokenConfig,
   DeployRvRegularConfig,
@@ -40,6 +39,7 @@ import { PartialConfigPerNetwork, PaymentTokenName } from '../../../config';
 import { VaultType } from '../../../config/constants/addresses';
 import { RateLimiter } from '../../../typechain-types';
 
+// TODO: fix selectors
 export const VAULT_FUNCTION_SELECTORS = {
   // Deposit vault functions
   depositInstant: toFunctionSelector(
@@ -127,7 +127,6 @@ export type DeploymentConfig = {
       dvMorpho?: DeployDvMorphoConfig;
       dvMToken?: DeployDvMTokenConfig;
       rv?: DeployRvRegularConfig;
-      rvBuidl?: DeployRvBuidlConfig;
       rvSwapper?: DeployRvSwapperConfig;
       rvAave?: DeployRvAaveConfig;
       rvMorpho?: DeployRvMorphoConfig;

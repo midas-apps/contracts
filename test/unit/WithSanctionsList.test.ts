@@ -2,8 +2,13 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { constants } from 'ethers';
 
+import { encodeFnSelector } from '../../helpers/utils';
 import { WithSanctionsListTester__factory } from '../../typechain-types';
-import { acErrors } from '../common/ac.helpers';
+import {
+  acErrors,
+  setPermissionRoleTester,
+  setupGrantOperatorRole,
+} from '../common/ac.helpers';
 import { defaultDeploy } from '../common/fixtures';
 import {
   sanctionUser,
@@ -29,8 +34,7 @@ describe('WithSanctionsList', function () {
     ).deploy();
 
     await expect(
-      withSanctionsList.initializeWithoutInitializer(
-        constants.AddressZero,
+      withSanctionsList.initializeUnchainedWithoutInitializer(
         constants.AddressZero,
       ),
     ).revertedWith('Initializable: contract is not initializing');
@@ -56,7 +60,7 @@ describe('WithSanctionsList', function () {
         withSanctionsListTester.onlyNotSanctionedTester(
           regularAccounts[0].address,
         ),
-      ).revertedWith('WSL: sanctioned');
+      ).revertedWithCustomError(withSanctionsListTester, 'Sanctioned');
     });
 
     it('call from not sanctioned user', async () => {
@@ -82,7 +86,7 @@ describe('WithSanctionsList', function () {
         constants.AddressZero,
         {
           from: regularAccounts[0],
-          revertMessage: acErrors.WMAC_HASNT_ROLE,
+          revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
         },
       );
     });
@@ -91,7 +95,7 @@ describe('WithSanctionsList', function () {
       const { accessControl, withSanctionsListTester, owner } =
         await loadFixture(defaultDeploy);
 
-      await accessControl.grantRole(
+      await accessControl['grantRole(bytes32,address)'](
         await withSanctionsListTester.sanctionsListAdminRole(),
         owner.address,
       );
@@ -99,6 +103,100 @@ describe('WithSanctionsList', function () {
       await setSanctionsList(
         { withSanctionsList: withSanctionsListTester, owner },
         constants.AddressZero,
+      );
+    });
+
+    it('succeeds with only scoped function permission', async () => {
+      const { accessControl, withSanctionsListTester, owner, regularAccounts } =
+        await loadFixture(defaultDeploy);
+
+      const sanctionsListAdmin =
+        await withSanctionsListTester.sanctionsListAdminRole();
+      const selector = encodeFnSelector('setSanctionsList(address)');
+
+      await accessControl['grantRole(bytes32,address)'](
+        sanctionsListAdmin,
+        owner.address,
+      );
+
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole: sanctionsListAdmin,
+        targetContract: withSanctionsListTester.address,
+        functionSelector: selector,
+        grantOperator: owner,
+      });
+
+      const user = regularAccounts[0];
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        undefined,
+        withSanctionsListTester.address,
+        selector,
+        [
+          {
+            account: user.address,
+            enabled: true,
+          },
+        ],
+      );
+      expect(await accessControl.hasRole(sanctionsListAdmin, user.address)).eq(
+        false,
+      );
+
+      await setSanctionsList(
+        { withSanctionsList: withSanctionsListTester, owner },
+        constants.AddressZero,
+        { from: user },
+      );
+    });
+
+    it('succeeds with scoped permission and sanctions list admin role', async () => {
+      const { accessControl, withSanctionsListTester, owner, regularAccounts } =
+        await loadFixture(defaultDeploy);
+
+      const sanctionsListAdmin =
+        await withSanctionsListTester.sanctionsListAdminRole();
+      const selector = encodeFnSelector('setSanctionsList(address)');
+      const user = regularAccounts[0];
+
+      await accessControl['grantRole(bytes32,address)'](
+        sanctionsListAdmin,
+        owner.address,
+      );
+
+      await setupGrantOperatorRole({
+        accessControl,
+        owner,
+        masterRole: sanctionsListAdmin,
+        targetContract: withSanctionsListTester.address,
+        functionSelector: selector,
+        grantOperator: owner,
+      });
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        undefined,
+        withSanctionsListTester.address,
+        selector,
+        [
+          {
+            account: user.address,
+            enabled: true,
+          },
+        ],
+      );
+
+      await accessControl['grantRole(bytes32,address)'](
+        sanctionsListAdmin,
+        user.address,
+      );
+
+      await setSanctionsList(
+        { withSanctionsList: withSanctionsListTester, owner },
+        constants.AddressZero,
+        { from: user },
       );
     });
   });
@@ -113,7 +211,7 @@ describe('WithSanctionsList', function () {
         regularAccounts,
       } = await loadFixture(defaultDeploy);
 
-      await accessControl.grantRole(
+      await accessControl['grantRole(bytes32,address)'](
         await withSanctionsListTester.sanctionsListAdminRole(),
         owner.address,
       );

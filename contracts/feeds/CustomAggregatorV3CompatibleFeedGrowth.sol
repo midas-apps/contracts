@@ -1,10 +1,11 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
-import "../access/WithMidasAccessControl.sol";
-import "../interfaces/IAggregatorV3CompatibleFeedGrowth.sol";
+import {MidasInitializable} from "../abstract/MidasInitializable.sol";
+import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
+import {IAggregatorV3CompatibleFeedGrowth} from "../interfaces/IAggregatorV3CompatibleFeedGrowth.sol";
 
 /**
  * @title CustomAggregatorV3CompatibleFeedGrowth
@@ -24,6 +25,13 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
         uint256 startedAt;
         uint256 updatedAt;
     }
+
+    /**
+     * @notice contract admin role
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _CONTRACT_ADMIN_ROLE;
 
     /**
      * @dev decimals of the aggregator
@@ -88,11 +96,17 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     uint256[50] private __gap;
 
     /**
-     * @dev checks that msg.sender do have a feedAdminRole() role
+     * @dev having a second gap here to match with the gap of previous implementations
      */
-    modifier onlyAggregatorAdmin() {
-        _onlyRole(feedAdminRole(), msg.sender);
-        _;
+    uint256[50] private ___gap;
+
+    /**
+     * @notice constructor
+     * @param _contractAdminRole contract admin role
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bytes32 _contractAdminRole) MidasInitializable() {
+        _CONTRACT_ADMIN_ROLE = _contractAdminRole;
     }
 
     /**
@@ -135,9 +149,19 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     /**
      * @inheritdoc IAggregatorV3CompatibleFeedGrowth
      */
-    function setOnlyUp(bool _onlyUp) external override onlyAggregatorAdmin {
+    function setOnlyUp(bool _onlyUp) external override onlyContractAdmin {
         onlyUp = _onlyUp;
         emit OnlyUpUpdated(_onlyUp);
+    }
+
+    /**
+     * @inheritdoc IAggregatorV3CompatibleFeedGrowth
+     */
+    function setMinMaxAnswer(int192 _minAnswer, int192 _maxAnswer)
+        external
+        onlyContractAdmin
+    {
+        _setMinMaxAnswer(_minAnswer, _maxAnswer);
     }
 
     /**
@@ -146,7 +170,7 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     function setMaxGrowthApr(int80 _maxGrowthApr)
         external
         override
-        onlyAggregatorAdmin
+        onlyContractAdmin
     {
         require(_maxGrowthApr >= minGrowthApr, "CAG: !max growth");
         maxGrowthApr = _maxGrowthApr;
@@ -159,11 +183,23 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     function setMinGrowthApr(int80 _minGrowthApr)
         external
         override
-        onlyAggregatorAdmin
+        onlyContractAdmin
     {
         require(_minGrowthApr <= maxGrowthApr, "CAG: !min growth");
         minGrowthApr = _minGrowthApr;
         emit MinGrowthAprUpdated(_minGrowthApr);
+    }
+
+    /**
+     * @inheritdoc IAggregatorV3CompatibleFeedGrowth
+     */
+    function setMaxAnswerDeviation(uint256 _maxAnswerDeviation)
+        external
+        onlyContractAdmin
+    {
+        require(_maxAnswerDeviation <= 100 * _ONE, "CAG: !max deviation");
+        maxAnswerDeviation = _maxAnswerDeviation;
+        emit MaxAnswerDeviationUpdated(_maxAnswerDeviation);
     }
 
     /**
@@ -211,7 +247,7 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
         int256 _data,
         uint256 _dataTimestamp,
         int80 _growthApr
-    ) public onlyAggregatorAdmin {
+    ) public onlyContractAdmin {
         require(
             _data >= minAnswer && _data <= maxAnswer,
             "CAG: out of [min;max]"
@@ -391,11 +427,10 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     }
 
     /**
-     * @dev describes a role, owner of which can update prices in this feed
-     * @return role descriptor
+     * @inheritdoc WithMidasAccessControl
      */
-    function feedAdminRole() public view virtual returns (bytes32) {
-        return DEFAULT_ADMIN_ROLE;
+    function contractAdminRole() public view override returns (bytes32) {
+        return _CONTRACT_ADMIN_ROLE;
     }
 
     /**
@@ -460,5 +495,17 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
 
         deviation = deviation < 0 ? deviation * -1 : deviation;
         return uint256(deviation);
+    }
+
+    /**
+     * @dev sets the min and max answer
+     * @param _minAnswer the new min answer
+     * @param _maxAnswer the new max answer
+     */
+    function _setMinMaxAnswer(int192 _minAnswer, int192 _maxAnswer) private {
+        require(_minAnswer < _maxAnswer, "CA: !min/max");
+        minAnswer = _minAnswer;
+        maxAnswer = _maxAnswer;
+        emit SetMinMaxAnswer(_minAnswer, _maxAnswer);
     }
 }

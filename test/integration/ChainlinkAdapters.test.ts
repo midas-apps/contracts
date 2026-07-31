@@ -17,7 +17,10 @@ for (const networkKey in configsPerNetwork) {
   const config = configsPerNetwork[network as Network]!;
 
   describe(`Chainlink Adapters on ${network}`, function () {
-    this.timeout(120000);
+    // Each adapter's first fixture load resets the mainnet fork, which can take
+    // ~2min over RPC on its own; give the suite headroom so slow forks (e.g. the
+    // Syrup adapters) don't flake on the timeout.
+    this.timeout(300000);
 
     if (config.syrupAdapters?.length) {
       syrupAdaptersSuits(

@@ -10,21 +10,24 @@ export type TokenContractNames = {
   rv: string;
   rvSwapper: string;
   rvMToken: string;
-  rvBuidl: string;
   rvUstb: string;
   rvAave: string;
   rvMorpho: string;
-  dataFeed?: string;
-  dataFeedComposite?: string;
-  dataFeedMultiply?: string;
+  dataFeed: string;
+  dataFeedComposite: string;
+  dataFeedMultiply: string;
   customAggregator?: string;
   customAggregatorGrowth?: string;
   token: string;
+  tokenPermissioned: string;
   roles: string;
 };
 
-type CommonContractNames = Omit<TokenContractNames, 'token'> & {
+type CommonContractNames = TokenContractNames & {
   ac: string;
+  pauseManager: string;
+  timelockManager: string;
+  timelockController: string;
   customAggregator: string;
   customAggregatorAdjusted: string;
   layerZero: {
@@ -43,9 +46,9 @@ const vaultTypeToContractNameMap: Record<VaultType, string> = {
   depositVaultAave: 'dvAave',
   depositVaultMorpho: 'dvMorpho',
   depositVaultMToken: 'dvMToken',
-  redemptionVaultBuidl: 'rvBuidl',
   redemptionVaultAave: 'rvAave',
   redemptionVaultMorpho: 'rvMorpho',
+  redemptionVaultBuidl: 'rvBuidl',
 };
 
 export const vaultTypeToContractName = (
@@ -149,7 +152,12 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
 export const getCommonContractNames = (): CommonContractNames => {
   return {
     ac: 'MidasAccessControl',
+    pauseManager: 'MidasPauseManager',
+    timelockManager: 'MidasTimelockManager',
+    timelockController: 'MidasAccessControlTimelockController',
     dv: 'DepositVault',
+    token: 'mToken',
+    tokenPermissioned: 'mToken',
     dvUstb: 'DepositVaultWithUSTB',
     dvAave: 'DepositVaultWithAave',
     dvMorpho: 'DepositVaultWithMorpho',
@@ -157,7 +165,6 @@ export const getCommonContractNames = (): CommonContractNames => {
     rv: 'RedemptionVault',
     rvSwapper: 'RedemptionVaultWithSwapper',
     rvMToken: 'RedemptionVaultWithMToken',
-    rvBuidl: 'RedemptionVaultWIthBUIDL',
     rvUstb: 'RedemptionVaultWithUSTB',
     rvAave: 'RedemptionVaultWithAave',
     rvMorpho: 'RedemptionVaultWithMorpho',
@@ -175,35 +182,11 @@ export const getCommonContractNames = (): CommonContractNames => {
   };
 };
 
+// TODO: remove this function
 export const getTokenContractNames = (
-  token: MTokenName,
+  _token: MTokenName,
 ): TokenContractNames => {
   const commonContractNames = getCommonContractNames();
-  const prefix = contractNamesPrefixes[token];
 
-  const isMtbill = token === 'mTBILL';
-  const isTac = token.startsWith('TAC');
-  const tokenPrefix = isMtbill ? '' : prefix;
-
-  return {
-    dv: `${tokenPrefix}${commonContractNames.dv}`,
-    dvUstb: `${tokenPrefix}${commonContractNames.dvUstb}`,
-    dvAave: `${tokenPrefix}${commonContractNames.dvAave}`,
-    dvMorpho: `${tokenPrefix}${commonContractNames.dvMorpho}`,
-    dvMToken: `${tokenPrefix}${commonContractNames.dvMToken}`,
-    rv: `${tokenPrefix}${commonContractNames.rv}`,
-    rvSwapper: `${tokenPrefix}${commonContractNames.rvSwapper}`,
-    rvMToken: `${tokenPrefix}${commonContractNames.rvMToken}`,
-    rvBuidl: `${tokenPrefix}${commonContractNames.rvBuidl}`,
-    rvUstb: `${tokenPrefix}${commonContractNames.rvUstb}`,
-    rvAave: `${tokenPrefix}${commonContractNames.rvAave}`,
-    rvMorpho: `${tokenPrefix}${commonContractNames.rvMorpho}`,
-    dataFeed: isTac ? undefined : `${prefix}${commonContractNames.dataFeed}`,
-    customAggregator: isTac ? undefined : `${prefix}CustomAggregatorFeed`,
-    customAggregatorGrowth: isTac
-      ? undefined
-      : `${prefix}CustomAggregatorFeedGrowth`,
-    token: `${token}`,
-    roles: `${prefix}${commonContractNames.roles}`,
-  };
+  return commonContractNames;
 };

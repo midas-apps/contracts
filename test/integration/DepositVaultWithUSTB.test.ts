@@ -112,7 +112,13 @@ describe('DepositVaultWithUSTB - Mainnet Fork Integration Tests', function () {
         },
         usdc,
         usdcAmount,
-        { from: testUser, revertMessage: 'DVU: unsupported USTB token' },
+        {
+          from: testUser,
+          revertCustomError: {
+            customErrorName: 'UnsupportedUSTBToken',
+            args: [usdc.address],
+          },
+        },
       );
     });
 
@@ -170,7 +176,12 @@ describe('DepositVaultWithUSTB - Mainnet Fork Integration Tests', function () {
         },
         usdc,
         usdcAmount,
-        { from: testUser, revertMessage: 'DVU: USTB fee is not 0' },
+        {
+          from: testUser,
+          revertCustomError: {
+            customErrorName: 'USTBFeeNotZero',
+          },
+        },
       );
     });
   });

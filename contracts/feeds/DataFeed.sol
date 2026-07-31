@@ -1,12 +1,12 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
-import "../access/WithMidasAccessControl.sol";
-import "../libraries/DecimalsCorrectionLibrary.sol";
-import "../interfaces/IDataFeed.sol";
+import {MidasInitializable} from "../abstract/MidasInitializable.sol";
+import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
+import {DecimalsCorrectionLibrary} from "../libraries/DecimalsCorrectionLibrary.sol";
+import {IDataFeed} from "../interfaces/IDataFeed.sol";
 
 /**
  * @title DataFeed
@@ -15,6 +15,32 @@ import "../interfaces/IDataFeed.sol";
  */
 contract DataFeed is WithMidasAccessControl, IDataFeed {
     using DecimalsCorrectionLibrary for uint256;
+
+    /**
+     * @param _aggregator new AggregatorV3Interface contract address
+     */
+    event ChangeAggregator(address indexed _aggregator);
+
+    /**
+     * @param _healthyDiff new healthy diff value
+     */
+    event SetHealthyDiff(uint256 indexed _healthyDiff);
+
+    /**
+     * @param _maxExpectedAnswer new max expected answer
+     * @param _minExpectedAnswer new min expected answer
+     */
+    event SetMinMaxExpectedAnswer(
+        int256 indexed _maxExpectedAnswer,
+        int256 indexed _minExpectedAnswer
+    );
+
+    /**
+     * @notice contract admin role
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _CONTRACT_ADMIN_ROLE;
 
     /**
      * @notice AggregatorV3Interface contract address
@@ -42,6 +68,20 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
     uint256[50] private __gap;
 
     /**
+     * @dev having a second gap here to match with the gap of previous implementations
+     */
+    uint256[50] private ___gap;
+
+    /**
+     * @notice constructor
+     * @param _contractAdminRole contract admin role
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bytes32 _contractAdminRole) MidasInitializable() {
+        _CONTRACT_ADMIN_ROLE = _contractAdminRole;
+    }
+
+    /**
      * @notice upgradeable pattern contract`s initializer
      * @param _ac MidasAccessControl contract address
      * @param _aggregator AggregatorV3Interface contract address
@@ -56,81 +96,49 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
         int256 _minExpectedAnswer,
         int256 _maxExpectedAnswer
     ) external initializer {
+        __WithMidasAccessControl_init(_ac);
+        _setMinMaxExpectedAnswer(_maxExpectedAnswer, _minExpectedAnswer);
+
         require(_aggregator != address(0), "DF: invalid address");
         require(_healthyDiff > 0, "DF: invalid diff");
-        require(_minExpectedAnswer > 0, "DF: invalid min exp. price");
-        require(_maxExpectedAnswer > 0, "DF: invalid max exp. price");
-        require(
-            _maxExpectedAnswer > _minExpectedAnswer,
-            "DF: invalid exp. prices"
-        );
 
-        __WithMidasAccessControl_init(_ac);
         aggregator = AggregatorV3Interface(_aggregator);
 
         healthyDiff = _healthyDiff;
-        minExpectedAnswer = _minExpectedAnswer;
-        maxExpectedAnswer = _maxExpectedAnswer;
     }
 
     /**
      * @notice updates `aggregator` address
      * @param _aggregator new AggregatorV3Interface contract address
      */
-    function changeAggregator(address _aggregator)
-        external
-        onlyRole(feedAdminRole(), msg.sender)
-    {
+    function changeAggregator(address _aggregator) external onlyContractAdmin {
         require(_aggregator != address(0), "DF: invalid address");
 
         aggregator = AggregatorV3Interface(_aggregator);
+        emit ChangeAggregator(_aggregator);
     }
 
     /**
      * @dev updates `healthyDiff` value
      * @param _healthyDiff new value
      */
-    function setHealthyDiff(uint256 _healthyDiff)
-        external
-        onlyRole(feedAdminRole(), msg.sender)
-    {
+    function setHealthyDiff(uint256 _healthyDiff) external onlyContractAdmin {
         require(_healthyDiff > 0, "DF: invalid diff");
 
         healthyDiff = _healthyDiff;
+        emit SetHealthyDiff(_healthyDiff);
     }
 
     /**
-     * @dev updates `minExpectedAnswer` value
-     * @param _minExpectedAnswer min value
+     * @notice updates `minExpectedAnswer` and `maxExpectedAnswer` values
+     * @param _maxExpectedAnswer new max expected answer
+     * @param _minExpectedAnswer new min expected answer
      */
-    function setMinExpectedAnswer(int256 _minExpectedAnswer)
-        external
-        onlyRole(feedAdminRole(), msg.sender)
-    {
-        require(_minExpectedAnswer > 0, "DF: invalid min exp. price");
-        require(
-            maxExpectedAnswer > _minExpectedAnswer,
-            "DF: invalid exp. prices"
-        );
-
-        minExpectedAnswer = _minExpectedAnswer;
-    }
-
-    /**
-     * @dev updates `maxExpectedAnswer` value
-     * @param _maxExpectedAnswer max value
-     */
-    function setMaxExpectedAnswer(int256 _maxExpectedAnswer)
-        external
-        onlyRole(feedAdminRole(), msg.sender)
-    {
-        require(_maxExpectedAnswer > 0, "DF: invalid max exp. price");
-        require(
-            _maxExpectedAnswer > minExpectedAnswer,
-            "DF: invalid exp. prices"
-        );
-
-        maxExpectedAnswer = _maxExpectedAnswer;
+    function setMinMaxExpectedAnswer(
+        int256 _maxExpectedAnswer,
+        int256 _minExpectedAnswer
+    ) external onlyContractAdmin {
+        _setMinMaxExpectedAnswer(_maxExpectedAnswer, _minExpectedAnswer);
     }
 
     /**
@@ -141,10 +149,32 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
     }
 
     /**
-     * @inheritdoc IDataFeed
+     * @inheritdoc WithMidasAccessControl
      */
-    function feedAdminRole() public pure virtual override returns (bytes32) {
-        return DEFAULT_ADMIN_ROLE;
+    function contractAdminRole() public view override returns (bytes32) {
+        return _CONTRACT_ADMIN_ROLE;
+    }
+
+    /**
+     * @dev sets the min and max expected answer
+     * @param _maxExpectedAnswer the new max expected answer
+     * @param _minExpectedAnswer the new min expected answer
+     */
+    function _setMinMaxExpectedAnswer(
+        int256 _maxExpectedAnswer,
+        int256 _minExpectedAnswer
+    ) private {
+        require(_maxExpectedAnswer > 0, "DF: invalid max exp. price");
+        require(_minExpectedAnswer > 0, "DF: invalid min exp. price");
+        require(
+            _maxExpectedAnswer >= _minExpectedAnswer,
+            "DF: invalid exp. prices"
+        );
+
+        maxExpectedAnswer = _maxExpectedAnswer;
+        minExpectedAnswer = _minExpectedAnswer;
+
+        emit SetMinMaxExpectedAnswer(_maxExpectedAnswer, _minExpectedAnswer);
     }
 
     /**

@@ -1,9 +1,8 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
-import "../interfaces/ISanctionsList.sol";
-import "../access/WithMidasAccessControl.sol";
-import "./MidasInitializable.sol";
+import {ISanctionsList} from "../interfaces/ISanctionsList.sol";
+import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
 
 /**
  * @title WithSanctionsList
@@ -23,13 +22,15 @@ abstract contract WithSanctionsList is WithMidasAccessControl {
     uint256[50] private __gap;
 
     /**
-     * @param caller function caller (msg.sender)
      * @param newSanctionsList new address of `sanctionsList`
      */
-    event SetSanctionsList(
-        address indexed caller,
-        address indexed newSanctionsList
-    );
+    event SetSanctionsList(address indexed newSanctionsList);
+
+    /**
+     * @notice when user is sanctioned on sanctions list contract
+     * @param user user address
+     */
+    error Sanctioned(address user);
 
     /**
      * @dev checks that a given `user` is not sanctioned
@@ -39,22 +40,10 @@ abstract contract WithSanctionsList is WithMidasAccessControl {
         if (_sanctionsList != address(0)) {
             require(
                 !ISanctionsList(_sanctionsList).isSanctioned(user),
-                "WSL: sanctioned"
+                Sanctioned(user)
             );
         }
         _;
-    }
-
-    /**
-     * @dev upgradeable pattern contract`s initializer
-     */
-    // solhint-disable func-name-mixedcase
-    function __WithSanctionsList_init(
-        address _accesControl,
-        address _sanctionsList
-    ) internal onlyInitializing {
-        __WithMidasAccessControl_init(_accesControl);
-        __WithSanctionsList_init_unchained(_sanctionsList);
     }
 
     /**
@@ -70,21 +59,13 @@ abstract contract WithSanctionsList is WithMidasAccessControl {
 
     /**
      * @notice updates `sanctionsList` address.
-     * can be called only from permissioned actor that have
-     * `sanctionsListAdminRole()` role
      * @param newSanctionsList new sanctions list address
      */
-    function setSanctionsList(address newSanctionsList) external {
-        _onlyRole(sanctionsListAdminRole(), msg.sender);
-
+    function setSanctionsList(address newSanctionsList)
+        external
+        onlyContractAdmin
+    {
         sanctionsList = newSanctionsList;
-        emit SetSanctionsList(msg.sender, newSanctionsList);
+        emit SetSanctionsList(newSanctionsList);
     }
-
-    /**
-     * @notice AC role of sanctions list admin
-     * @dev address that have this role can use `setSanctionsList`
-     * @return role bytes32 role
-     */
-    function sanctionsListAdminRole() public view virtual returns (bytes32);
 }

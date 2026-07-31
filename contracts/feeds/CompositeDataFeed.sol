@@ -1,8 +1,11 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
-import "../access/WithMidasAccessControl.sol";
-import "../interfaces/IDataFeed.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+
+import {MidasInitializable} from "../abstract/MidasInitializable.sol";
+import {WithMidasAccessControl} from "../access/WithMidasAccessControl.sol";
+import {IDataFeed} from "../interfaces/IDataFeed.sol";
 
 /**
  * @title CompositeDataFeed
@@ -13,6 +16,32 @@ import "../interfaces/IDataFeed.sol";
  * @author RedDuck Software
  */
 contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
+    /**
+     * @param _numeratorFeed new IDataFeed contract address
+     */
+    event ChangeNumeratorFeed(address indexed _numeratorFeed);
+
+    /**
+     * @param _denominatorFeed new IDataFeed contract address
+     */
+    event ChangeDenominatorFeed(address indexed _denominatorFeed);
+
+    /**
+     * @param _maxExpectedAnswer new max expected answer
+     * @param _minExpectedAnswer new min expected answer
+     */
+    event SetMinMaxExpectedAnswer(
+        uint256 indexed _maxExpectedAnswer,
+        uint256 indexed _minExpectedAnswer
+    );
+
+    /**
+     * @notice contract admin role
+     * @custom:oz-upgrades-unsafe-allow state-variable-immutable
+     */
+    // solhint-disable-next-line var-name-mixedcase
+    bytes32 private immutable _CONTRACT_ADMIN_ROLE;
+
     /**
      * @notice price feed used as the numerator in the ratio calculation.
      * @dev typically represents the asset of interest (e.g., cbBTC/USD).
@@ -41,6 +70,15 @@ contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
     uint256[50] private __gap;
 
     /**
+     * @notice constructor
+     * @param _contractAdminRole contract admin role
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bytes32 _contractAdminRole) MidasInitializable() {
+        _CONTRACT_ADMIN_ROLE = _contractAdminRole;
+    }
+
+    /**
      * @notice upgradeable pattern contract`s initializer
      * @param _ac MidasAccessControl contract address
      * @param _numeratorFeed numerator feed address
@@ -55,19 +93,14 @@ contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
         uint256 _minExpectedAnswer,
         uint256 _maxExpectedAnswer
     ) external initializer {
+        __WithMidasAccessControl_init(_ac);
+        _setMinMaxExpectedAnswer(_maxExpectedAnswer, _minExpectedAnswer);
+
         require(_numeratorFeed != address(0), "CDF: invalid address");
         require(_denominatorFeed != address(0), "CDF: invalid address");
-        require(
-            _maxExpectedAnswer >= _minExpectedAnswer,
-            "CDF: invalid exp. prices"
-        );
-
-        __WithMidasAccessControl_init(_ac);
 
         numeratorFeed = IDataFeed(_numeratorFeed);
         denominatorFeed = IDataFeed(_denominatorFeed);
-        minExpectedAnswer = _minExpectedAnswer;
-        maxExpectedAnswer = _maxExpectedAnswer;
     }
 
     /**
@@ -77,11 +110,12 @@ contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
      */
     function changeNumeratorFeed(address _numeratorFeed)
         external
-        onlyRole(feedAdminRole(), msg.sender)
+        onlyContractAdmin
     {
         require(_numeratorFeed != address(0), "CDF: invalid address");
 
         numeratorFeed = IDataFeed(_numeratorFeed);
+        emit ChangeNumeratorFeed(_numeratorFeed);
     }
 
     /**
@@ -91,43 +125,24 @@ contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
      */
     function changeDenominatorFeed(address _denominatorFeed)
         external
-        onlyRole(feedAdminRole(), msg.sender)
+        onlyContractAdmin
     {
         require(_denominatorFeed != address(0), "CDF: invalid address");
 
         denominatorFeed = IDataFeed(_denominatorFeed);
+        emit ChangeDenominatorFeed(_denominatorFeed);
     }
 
     /**
-     * @dev updates `minExpectedAnswer` value
-     * @param _minExpectedAnswer min value
+     * @notice updates `minExpectedAnswer` and `maxExpectedAnswer` values
+     * @param _maxExpectedAnswer new max expected answer
+     * @param _minExpectedAnswer new min expected answer
      */
-    function setMinExpectedAnswer(uint256 _minExpectedAnswer)
-        external
-        onlyRole(feedAdminRole(), msg.sender)
-    {
-        require(
-            maxExpectedAnswer >= _minExpectedAnswer,
-            "CDF: invalid exp. prices"
-        );
-
-        minExpectedAnswer = _minExpectedAnswer;
-    }
-
-    /**
-     * @dev updates `maxExpectedAnswer` value
-     * @param _maxExpectedAnswer max value
-     */
-    function setMaxExpectedAnswer(uint256 _maxExpectedAnswer)
-        external
-        onlyRole(feedAdminRole(), msg.sender)
-    {
-        require(
-            _maxExpectedAnswer >= minExpectedAnswer,
-            "CDF: invalid exp. prices"
-        );
-
-        maxExpectedAnswer = _maxExpectedAnswer;
+    function setMinMaxExpectedAnswer(
+        uint256 _maxExpectedAnswer,
+        uint256 _minExpectedAnswer
+    ) external onlyContractAdmin {
+        _setMinMaxExpectedAnswer(_maxExpectedAnswer, _minExpectedAnswer);
     }
 
     /**
@@ -148,6 +163,13 @@ contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
     }
 
     /**
+     * @inheritdoc WithMidasAccessControl
+     */
+    function contractAdminRole() public view override returns (bytes32) {
+        return _CONTRACT_ADMIN_ROLE;
+    }
+
+    /**
      * @dev computes the composite price by dividing numerator by denominator
      * @param numerator numerator value from the first feed
      * @param denominator denominator value from the second feed
@@ -164,9 +186,24 @@ contract CompositeDataFeed is WithMidasAccessControl, IDataFeed {
     }
 
     /**
-     * @inheritdoc IDataFeed
+     * @dev sets the min and max expected answer
+     * @param _maxExpectedAnswer the new max expected answer
+     * @param _minExpectedAnswer the new min expected answer
      */
-    function feedAdminRole() public pure virtual override returns (bytes32) {
-        return DEFAULT_ADMIN_ROLE;
+    function _setMinMaxExpectedAnswer(
+        uint256 _maxExpectedAnswer,
+        uint256 _minExpectedAnswer
+    ) private {
+        require(_maxExpectedAnswer > 0, "CDF: invalid max exp. price");
+        require(_minExpectedAnswer > 0, "CDF: invalid min exp. price");
+        require(
+            _maxExpectedAnswer >= _minExpectedAnswer,
+            "CDF: invalid exp. prices"
+        );
+
+        maxExpectedAnswer = _maxExpectedAnswer;
+        minExpectedAnswer = _minExpectedAnswer;
+
+        emit SetMinMaxExpectedAnswer(_maxExpectedAnswer, _minExpectedAnswer);
     }
 }

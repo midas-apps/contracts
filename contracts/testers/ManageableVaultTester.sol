@@ -1,60 +1,87 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
 import "../abstract/ManageableVault.sol";
+import "../libraries/MidasAuthLibrary.sol";
 
-contract ManageableVaultTester is ManageableVault {
-    function _disableInitializers() internal override {}
+abstract contract ManageableVaultTesterBase is ManageableVault {
+    bytes32 private _contractAdminRoleOverride;
+    bool private _overrideGetTokenRate;
+    uint256 private _getTokenRateValue;
 
-    function initialize(
-        address _ac,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount
+    function _disableInitializers() internal virtual override {}
+
+    function setVaultRole(bytes32 role) external {
+        _contractAdminRoleOverride = role;
+    }
+
+    function setOverrideGetTokenRate(bool _override) external {
+        _overrideGetTokenRate = _override;
+    }
+
+    function tokenTransferFromToTester(
+        address token,
+        address from,
+        address to,
+        uint256 amount,
+        uint256 tokenDecimals
+    ) external {
+        _tokenTransferFromTo(token, from, to, amount, tokenDecimals);
+    }
+
+    function setGetTokenRateValue(uint256 val) external {
+        _getTokenRateValue = val;
+    }
+
+    function _getTokenRate(address dataFeed, bool stable)
+        internal
+        view
+        virtual
+        override
+        returns (uint256)
+    {
+        if (_overrideGetTokenRate) {
+            return _getTokenRateValue;
+        }
+
+        return super._getTokenRate(dataFeed, stable);
+    }
+
+    function initializeExternal(
+        CommonVaultInitParams calldata _commonVaultInitParams
     ) external initializer {
-        __ManageableVault_init(
-            _ac,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount
-        );
+        __ManageableVault_init(_commonVaultInitParams);
     }
 
     function initializeWithoutInitializer(
-        address _ac,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount
+        CommonVaultInitParams calldata _commonVaultInitParams
     ) external {
-        __ManageableVault_init(
-            _ac,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount
-        );
+        __ManageableVault_init(_commonVaultInitParams);
     }
 
-    function vaultRole() public view virtual override returns (bytes32) {}
-
-    function greenlistTogglerRole()
+    function contractAdminRole()
         public
         view
         virtual
         override
         returns (bytes32)
     {
-        return keccak256("GREENLIST_TOGGLER_ROLE");
+        if (_contractAdminRoleOverride != bytes32(0)) {
+            return _contractAdminRoleOverride;
+        }
+
+        return keccak256("VAULT_ADMIN_ROLE");
     }
+}
+
+contract ManageableVaultTester is ManageableVaultTesterBase {
+    /**
+     * @notice constructor
+     */
+    constructor()
+        ManageableVault(
+            keccak256("VAULT_ADMIN_ROLE"),
+            MidasAuthLibrary.DEFAULT_GREENLISTED_ROLE
+        )
+    {}
 }

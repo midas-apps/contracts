@@ -7,6 +7,7 @@ import {
   AccountOrContract,
   balanceOfBase18,
   getAccount,
+  handleRevert,
   OptionalCommonParams,
 } from '../../common/common.helpers';
 import { acreAdapterFixture } from '../../common/fixtures';
@@ -38,12 +39,11 @@ export const acreWrapperDepositTest = async (
 
   const mTokenRate = await fixture.mTokenToUsdDataFeed.getDataInBase18();
 
-  if (opt?.revertMessage) {
-    await expect(
-      fixture.acreUsdcMTbillAdapter
-        .connect(from)
-        .deposit(parseUnits(amountN.toString(), 8), receiverAddress),
-    ).revertedWith(opt?.revertMessage);
+  const callFn = fixture.acreUsdcMTbillAdapter
+    .connect(from)
+    .deposit.bind(this, parseUnits(amountN.toString(), 8), receiverAddress);
+
+  if (await handleRevert(callFn, fixture.acreUsdcMTbillAdapter, opt)) {
     return;
   }
 
@@ -67,11 +67,7 @@ export const acreWrapperDepositTest = async (
     .connect(from)
     .callStatic.deposit(parseUnits(amountN.toString(), 8), receiverAddress);
 
-  await expect(
-    fixture.acreUsdcMTbillAdapter
-      .connect(from)
-      .deposit(parseUnits(amountN.toString(), 8), receiverAddress),
-  )
+  await expect(callFn())
     .emit(
       fixture.acreUsdcMTbillAdapter,
       fixture.acreUsdcMTbillAdapter.interface.events[
@@ -131,12 +127,11 @@ export const acreWrapperRequestRedeemTest = async (
 
   const amountBase18 = parseUnits(amountN.toFixed(18).replace(/\.?0+$/, ''));
 
-  if (opt?.revertMessage) {
-    await expect(
-      fixture.acreUsdcMTbillAdapter
-        .connect(from)
-        .requestRedeem(amountBase18, receiverAddress),
-    ).revertedWith(opt?.revertMessage);
+  const callFn = fixture.acreUsdcMTbillAdapter
+    .connect(from)
+    .requestRedeem.bind(this, amountBase18, receiverAddress);
+
+  if (await handleRevert(callFn, fixture.acreUsdcMTbillAdapter, opt)) {
     return;
   }
 
@@ -159,11 +154,7 @@ export const acreWrapperRequestRedeemTest = async (
     .callStatic.requestRedeem(amountBase18, receiverAddress);
   const requestId = await fixture.redemptionVault.currentRequestId();
 
-  await expect(
-    fixture.acreUsdcMTbillAdapter
-      .connect(from)
-      .requestRedeem(amountBase18, receiverAddress),
-  )
+  await expect(callFn())
     .emit(
       fixture.acreUsdcMTbillAdapter,
       fixture.acreUsdcMTbillAdapter.interface.events[
@@ -199,7 +190,7 @@ export const acreWrapperRequestRedeemTest = async (
 
   expect(requestIdReturned).eq(requestId);
   expect(request.amountMToken).eq(amountBase18);
-  expect(request.sender).eq(receiverAddress);
+  expect(request.recipient).eq(receiverAddress);
   expect(balanceUserAfter).eq(balanceUserBefore);
   expect(balanceContractAfter).eq(constants.Zero);
   expect(balanceMTokenAfter).eq(balanceMTokenBefore.sub(amountBase18));

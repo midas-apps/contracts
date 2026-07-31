@@ -179,8 +179,10 @@ describe('RedemptionVaultWithAave - Mainnet Fork Integration Tests', function ()
         mTBILLAmount,
       );
 
-      // Perform redemption: 1000 mTBILL @ 1:1 rate, 1% fee = 990 USDC needed
-      // Vault has 500 USDC, so shortfall = 490 USDC from Aave
+      // Perform redemption: 1000 mTBILL @ 1:1 rate, 1% fee.
+      // The vault sources the gross redeem amount (1000 USDC, fee-inclusive) and
+      // keeps the 10 USDC fee. With 500 USDC on hand the shortfall pulled from
+      // Aave is 1000 - 500 = 500 USDC.
       const result = await redeemInstantWithAaveTest(
         {
           redemptionVault: redemptionVaultWithAave,
@@ -197,8 +199,8 @@ describe('RedemptionVaultWithAave - Mainnet Fork Integration Tests', function ()
       // Verify user received USDC
       expect(result?.userUSDCReceived).to.equal(parseUnits('990', 6));
 
-      // Verify aToken decrease equals the shortfall (990 - 500 = 490)
-      const expectedShortfall = parseUnits('490', 6);
+      // Verify aToken decrease equals the shortfall (1000 - 500 = 500)
+      const expectedShortfall = parseUnits('500', 6);
       expect(result?.aTokenUsed).to.be.closeTo(
         expectedShortfall,
         parseUnits('1', 6), // 1 USDC tolerance for Aave interest accrual
@@ -250,7 +252,7 @@ describe('RedemptionVaultWithAave - Mainnet Fork Integration Tests', function ()
         mTBILLAmount,
         {
           from: testUser,
-          revertMessage: 'RVA: insufficient aToken balance',
+          revertMessage: 'ERC20: transfer amount exceeds balance',
         },
       );
     });
@@ -309,7 +311,7 @@ describe('RedemptionVaultWithAave - Mainnet Fork Integration Tests', function ()
         mTBILLAmount,
         {
           from: testUser,
-          revertMessage: 'RVA: no pool for token',
+          revertMessage: 'ERC20: transfer amount exceeds balance',
         },
       );
     });

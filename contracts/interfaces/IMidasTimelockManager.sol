@@ -1,0 +1,451 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.34;
+
+/**
+ * @notice Timelock operation status
+ * @dev Computed status may differ from stored status (expiry, dispute period).
+ */
+enum TimelockOperationStatus {
+    NotExist,
+    Pending,
+    Paused,
+    ApprovedExecution,
+    ReadyToExecute,
+    ReadyToAbort,
+    Expired,
+    Aborted,
+    Executed,
+    ExecutedWithFailure
+}
+
+/**
+ * @notice Operation details returned by `getOperationDetails`
+ */
+struct GetOperationStatusResult {
+    /// @notice current status
+    TimelockOperationStatus status;
+    /// @notice block timestamp when operation was scheduled
+    uint32 createdAt;
+    /// @notice block timestamp when execution was approved by council
+    uint32 executionApprovedAt;
+    /// @notice pause reason code set by pauser
+    uint8 pauseReasonCode;
+    /// @notice security council version at pause time
+    uint256 councilVersion;
+    /// @notice address that scheduled the operation
+    address operationProposer;
+    /// @notice address that paused the operation
+    address pauser;
+    /// @notice block timestamp when operation was paused
+    uint32 pausedAt;
+    /// @notice hash of target, value and data
+    bytes32 dataHash;
+    /// @notice number of council votes for execution
+    uint8 votesForExecution;
+    /// @notice number of council votes for veto
+    uint8 votesForVeto;
+    /// @notice true if operation updates security council
+    bool isSetCouncilOperation;
+}
+
+/**
+ * @title IMidasTimelockManager
+ * @notice Interface for the MidasTimelockManager
+ * @author RedDuck Software
+ */
+interface IMidasTimelockManager {
+    /**
+     * @notice Parameters for scheduling a timelock operation
+     * @param target target contract
+     * @param data calldata
+     */
+    struct ScheduleTimelockOperationParams {
+        /// @notice target contract
+        address target;
+        /// @notice calldata
+        bytes data;
+    }
+
+    /**
+     * @param maxPendingOperationsPerProposer new limit
+     */
+    event SetMaxPendingOperationsPerProposer(
+        uint256 maxPendingOperationsPerProposer
+    );
+
+    /**
+     * @param version new security council version
+     * @param members council member addresses
+     */
+    event SetSecurityCouncil(uint256 indexed version, address[] members);
+
+    /**
+     * @param caller operation proposer
+     * @param operationId scheduled operation id
+     */
+    event ScheduleTimelockOperation(
+        address indexed caller,
+        bytes32 indexed operationId
+    );
+
+    /**
+     * @param caller pauser address
+     * @param operationId paused operation id
+     * @param pauseReasonCode pause reason code
+     * @param councilVersion security council version at pause
+     */
+    event PauseTimelockOperation(
+        address indexed caller,
+        bytes32 indexed operationId,
+        uint8 indexed pauseReasonCode,
+        uint256 councilVersion
+    );
+
+    /**
+     * @param caller executor address
+     * @param operationId executed operation id
+     * @param success true if operation executed successfully, false otherwise
+     */
+    event ExecuteTimelockOperation(
+        address indexed caller,
+        bytes32 indexed operationId,
+        bool success
+    );
+
+    /**
+     * @param caller council member address
+     * @param operationId operation id
+     * @param votedForExecution true for execution vote, false for veto vote
+     */
+    event PausedProposalVoteCast(
+        address indexed caller,
+        bytes32 indexed operationId,
+        bool indexed votedForExecution
+    );
+
+    /**
+     * @param caller address that aborted the operation
+     * @param operationId aborted operation id
+     * @param status status before abort
+     */
+    event AbortTimelockOperation(
+        address indexed caller,
+        bytes32 indexed operationId,
+        TimelockOperationStatus status
+    );
+
+    /**
+     * @notice Preflight call succeeded with role info
+     * @param role role used for the call
+     * @param overrideDelay override delay for the invocation
+     * @param roleIsFunctionOperator true if role is function operator
+     * @param validateFunctionRole true if function role should be validated
+     */
+    error RolePreflightSucceeded(
+        bytes32 role,
+        uint32 overrideDelay,
+        bool roleIsFunctionOperator,
+        bool validateFunctionRole
+    );
+
+    /**
+     * @notice Timelock address is already set
+     */
+    error TimelockAlreadySet();
+
+    /**
+     * @notice Operation status is not valid for this action
+     * @param actualStatus current operation status
+     */
+    error UnexpectedOperationStatus(TimelockOperationStatus actualStatus);
+
+    /**
+     * @notice Operation is not in the pending set
+     */
+    error OperationNotPending();
+
+    /**
+     * @notice Operation is already pending
+     */
+    error OperationAlreadyPending();
+
+    /**
+     * @notice Timelock delay has not passed yet
+     */
+    error TimelockOperationNotReady();
+
+    /**
+     * @notice Caller is not a security council member for this operation
+     */
+    error NotInSecurityCouncil();
+
+    /**
+     * @notice Council member already voted
+     */
+    error AlreadyVoted();
+
+    /**
+     * @notice Role has no timelock delay configured
+     */
+    error NoTimelockDelayForRole();
+
+    /**
+     * @notice Proposer has too many pending operations
+     */
+    error TooManyPendingOperations();
+
+    /**
+     * @notice Pending set-council operation already exists
+     */
+    error PendingSetCouncilOperationExists();
+
+    /**
+     * @notice Security council size is out of allowed range
+     */
+    error InvalidSecurityCouncilMembersLength();
+
+    /**
+     * @notice Max pending operations value is invalid
+     */
+    error InvalidMaxPendingOperationsPerProposer();
+
+    /**
+     * @notice Target call should have reverted on preflight
+     */
+    error PreflightCallUnexpectedSuccess();
+
+    /**
+     * @notice Preflight revert data is invalid
+     * @param err revert bytes
+     */
+    error InvalidPreflightError(bytes err);
+
+    /**
+     * @notice Sets max pending operations per proposer
+     * @param _maxPendingOperationsPerProposer new limit
+     */
+    function setMaxPendingOperationsPerProposer(
+        uint256 _maxPendingOperationsPerProposer
+    ) external;
+
+    /**
+     * @notice Sets a new security council version
+     * @param members council member addresses
+     */
+    function setSecurityCouncil(address[] calldata members) external;
+
+    /**
+     * @notice Schedules multiple timelock operations
+     * @param params array of schedule timelock operation parameters
+     */
+    function bulkScheduleTimelockOperation(
+        ScheduleTimelockOperationParams[] calldata params
+    ) external;
+
+    /**
+     * @notice Schedules one timelock operation
+     * @param params schedule timelock operation parameters
+     */
+    function scheduleTimelockOperation(
+        ScheduleTimelockOperationParams calldata params
+    ) external;
+
+    /**
+     * @notice Executes a scheduled timelock operation
+     * @param target target contract
+     * @param data operation data
+     * @param revertOnFailure true if execution should revert on failure
+     */
+    function executeTimelockOperation(
+        address target,
+        bytes calldata data,
+        bool revertOnFailure
+    ) external;
+
+    /**
+     * @notice Pauses a pending operation
+     * @param operationId operation id
+     * @param pauseReasonCode reason code set by pauser
+     */
+    function pauseOperation(bytes32 operationId, uint8 pauseReasonCode)
+        external;
+
+    /**
+     * @notice Security council votes to abort the operation
+     * @dev can vote even if member is already voted for execution
+     * @param operationId operation id
+     */
+    function voteForVeto(bytes32 operationId) external;
+
+    /**
+     * @notice Security council votes to allow execution
+     * @dev cannot vote if member is already voted for veto
+     * @param operationId operation id
+     */
+    function voteForExecution(bytes32 operationId) external;
+
+    /**
+     * @notice Aborts operation after veto quorum or expiry
+     * @param operationId operation id
+     */
+    function abortOperation(bytes32 operationId) external;
+
+    /**
+     * @notice Returns original proposer for a pending operation
+     * @param target target contract
+     * @param data operation data
+     * @return proposer address
+     */
+    function getOriginalProposer(address target, bytes calldata data)
+        external
+        view
+        returns (address);
+
+    /**
+     * @notice Votes needed for council quorum at a version
+     * @param version security council version
+     * @return quorum required votes
+     */
+    function councilQuorum(uint256 version)
+        external
+        view
+        returns (uint8 quorum);
+
+    /**
+     * @notice Whether a council member voted on an operation
+     * @param operationId operation id
+     * @param councilMember member address
+     * @return votedForExecution true if voted for execution
+     * @return votedForVeto true if voted for veto
+     */
+    function getCouncilMemberVoteStatus(
+        bytes32 operationId,
+        address councilMember
+    ) external view returns (bool votedForExecution, bool votedForVeto);
+
+    /**
+     * @notice Returns all pending operation ids
+     * @return operationIds pending operation ids
+     */
+    function getPendingOperations()
+        external
+        view
+        returns (bytes32[] memory operationIds);
+
+    /**
+     * @notice Returns full operation details
+     * @param operationId operation id
+     * @return result operation details
+     */
+    function getOperationDetails(bytes32 operationId)
+        external
+        view
+        returns (GetOperationStatusResult memory result);
+
+    /**
+     * @notice Returns operation status (with expiry/dispute rules applied)
+     * @param operationId operation id
+     * @return status current status
+     */
+    function getOperationStatus(bytes32 operationId)
+        external
+        view
+        returns (TimelockOperationStatus status);
+
+    /**
+     * @notice Returns stored operation status without adjustments
+     * @param operationId operation id
+     * @return status stored status
+     */
+    function getOperationStatusRaw(bytes32 operationId)
+        external
+        view
+        returns (TimelockOperationStatus status);
+
+    /**
+     * @notice Returns security council members for a version
+     * @param version security council version
+     * @return members member addresses
+     */
+    function getSecurityCouncilMembers(uint256 version)
+        external
+        view
+        returns (address[] memory members);
+
+    /**
+     * @notice Returns operation id for target and data
+     * @param target target contract
+     * @param data operation data
+     * @return operationId operation id
+     */
+    function getOperationId(address target, bytes calldata data)
+        external
+        view
+        returns (bytes32 operationId);
+
+    /**
+     * @dev gets the target role for a given operation
+     * @param target target contract
+     * @param data operation data
+     * @param proposer operation proposer address
+     * @return role target role
+     * @return overrideDelay override delay for the invocation
+     */
+    function getTargetRole(
+        address target,
+        bytes calldata data,
+        address proposer
+    ) external view returns (bytes32 role, uint32 overrideDelay);
+
+    /**
+     * @notice Checks if an account is in the security council for a given version
+     * @param version security council version
+     * @param account account to check
+     * @return true if the account is in the security council
+     */
+    function isInSecurityCouncil(uint256 version, address account)
+        external
+        view
+        returns (bool);
+
+    /**
+     * @notice Timelock controller address
+     * @return timelockAddress timelock controller
+     */
+    function timelock() external view returns (address timelockAddress);
+
+    /**
+     * @notice Max pending operations per proposer
+     * @return value current limit
+     */
+    function maxPendingOperationsPerProposer() external view returns (uint256);
+
+    /**
+     * @notice Current security council version
+     * @return version council version
+     */
+    function securityCouncilVersion() external view returns (uint256);
+
+    /**
+     * @notice Data hash index used for operation id salt
+     * @param dataHash operation data hash
+     * @return index current index for this data hash
+     */
+    function dataHashIndexes(bytes32 dataHash) external view returns (uint256);
+
+    /**
+     * @notice Pending operations count for a proposer
+     * @param proposer proposer address
+     * @return count pending count
+     */
+    function proposerPendingOperationsCount(address proposer)
+        external
+        view
+        returns (uint256);
+
+    /**
+     * @notice Pending set-security-council operation id, if any
+     * @return operationId operation id or zero
+     */
+    function pendingSetCouncilOperationId() external view returns (bytes32);
+}

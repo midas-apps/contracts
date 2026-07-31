@@ -1,25 +1,21 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
-import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
-import {
-  AcreAdapter__factory,
-  DepositVaultTest__factory,
-} from '../../../typechain-types';
+import { AcreAdapter__factory } from '../../../typechain-types';
 import { acreAdapterFixture } from '../../common/fixtures';
 import {
   addPaymentTokenTest,
-  addWaivedFeeAccountTest,
   changeTokenFeeTest,
   removePaymentTokenTest,
-  removeWaivedFeeAccountTest,
+  setWaivedFeeAccountTest,
   setInstantFeeTest,
 } from '../../common/manageable-vault.helpers';
 import {
   acreWrapperDepositTest,
   acreWrapperRequestRedeemTest,
 } from '../../common/misc/acre.helpers';
+import { initializeDv } from '../../common/vault-initializer.helpers';
 
 describe('AcreAdapter', () => {
   it('initialize', async () => {
@@ -42,30 +38,10 @@ describe('AcreAdapter', () => {
       fixture.mTokenToUsdDataFeed.address,
     );
 
-    const dvWithDifferentDataFeed = await new DepositVaultTest__factory(
-      fixture.owner,
-    ).deploy();
-
-    await dvWithDifferentDataFeed.initialize(
-      fixture.accessControl.address,
-      {
-        mToken: fixture.mTBILL.address,
-        mTokenDataFeed: fixture.dataFeed.address,
-      },
-      {
-        feeReceiver: fixture.feeReceiver.address,
-        tokensReceiver: fixture.tokensReceiver.address,
-      },
-      {
-        instantFee: 100,
-        instantDailyLimit: parseUnits('100000'),
-      },
-      fixture.mockedSanctionsList.address,
-      1,
-      parseUnits('100'),
-      0,
-      constants.MaxUint256,
-    );
+    const dvWithDifferentDataFeed = await initializeDv({
+      ...fixture,
+      mTokenToUsdDataFeed: fixture.dataFeedGrowth,
+    });
 
     await expect(
       fixture.owner.sendTransaction(
@@ -81,7 +57,7 @@ describe('AcreAdapter', () => {
       fixture.owner.sendTransaction(
         new AcreAdapter__factory().getDeployTransaction(
           fixture.depositVault.address,
-          fixture.redemptionVaultWithSwapper.address,
+          fixture.redemptionVaultLoanSwapper.address,
           fixture.stableCoins.usdc.address,
         ),
       ),
@@ -119,9 +95,10 @@ describe('AcreAdapter', () => {
         10,
       );
 
-      await addWaivedFeeAccountTest(
+      await setWaivedFeeAccountTest(
         { vault: fixture.depositVault, owner: fixture.owner },
         fixture.acreUsdcMTbillAdapter.address,
+        true,
       );
       await acreWrapperDepositTest(fixture, 100);
     });
@@ -154,7 +131,10 @@ describe('AcreAdapter', () => {
       );
 
       await acreWrapperDepositTest(fixture, 100, undefined, {
-        revertMessage: 'DV: minReceiveAmount > actual',
+        revertCustomError: {
+          contract: fixture.depositVault,
+          customErrorName: 'SlippageExceeded',
+        },
       });
     });
 
@@ -168,7 +148,10 @@ describe('AcreAdapter', () => {
       );
 
       await acreWrapperDepositTest(fixture, 100, undefined, {
-        revertMessage: 'DV: minReceiveAmount > actual',
+        revertCustomError: {
+          contract: fixture.depositVault,
+          customErrorName: 'SlippageExceeded',
+        },
       });
     });
   });
@@ -246,9 +229,10 @@ describe('AcreAdapter', () => {
     it('should fail: when not fee waived', async () => {
       const fixture = await loadFixture(acreAdapterFixture);
 
-      await removeWaivedFeeAccountTest(
+      await setWaivedFeeAccountTest(
         { vault: fixture.redemptionVault, owner: fixture.owner },
         fixture.acreUsdcMTbillAdapter.address,
+        false,
       );
 
       await acreWrapperRequestRedeemTest(fixture, 20, undefined, {
@@ -296,9 +280,10 @@ describe('AcreAdapter', () => {
     it('should not account any fees', async () => {
       const fixture = await loadFixture(acreAdapterFixture);
 
-      await removeWaivedFeeAccountTest(
+      await setWaivedFeeAccountTest(
         { vault: fixture.redemptionVault, owner: fixture.owner },
         fixture.acreUsdcMTbillAdapter.address,
+        false,
       );
 
       await setInstantFeeTest(

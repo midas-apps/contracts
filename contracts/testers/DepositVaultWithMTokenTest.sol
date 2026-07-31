@@ -1,74 +1,68 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
+
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../DepositVaultWithMToken.sol";
+import "./DepositVaultTest.sol";
 
-contract DepositVaultWithMTokenTest is DepositVaultWithMToken {
-    bool private _overrideGetTokenRate;
-    uint256 private _getTokenRateValue;
+contract DepositVaultWithMTokenTest is
+    DepositVaultTestBase,
+    DepositVaultWithMToken
+{
+    constructor()
+        DepositVaultWithMToken(
+            keccak256("DEPOSIT_VAULT_ADMIN_ROLE"),
+            MidasAuthLibrary.DEFAULT_GREENLISTED_ROLE
+        )
+    {}
 
-    function _disableInitializers() internal override {}
-
-    function tokenTransferFromToTester(
-        address token,
-        address from,
-        address to,
-        uint256 amount,
-        uint256 tokenDecimals
-    ) external {
-        _tokenTransferFromTo(token, from, to, amount, tokenDecimals);
+    function _disableInitializers()
+        internal
+        override(Initializable, DepositVaultTestBase)
+    {
+        DepositVaultTestBase._disableInitializers();
     }
 
-    function tokenTransferToUserTester(
-        address token,
-        address to,
-        uint256 amount,
-        uint256 tokenDecimals
-    ) external {
-        _tokenTransferToUser(token, to, amount, tokenDecimals);
-    }
-
-    function setOverrideGetTokenRate(bool val) external {
-        _overrideGetTokenRate = val;
-    }
-
-    function setGetTokenRateValue(uint256 val) external {
-        _getTokenRateValue = val;
-    }
-
-    function calcAndValidateDeposit(
-        address user,
+    function _instantTransferTokensToTokensReceiver(
         address tokenIn,
         uint256 amountToken,
-        bool isInstant
-    ) external returns (CalcAndValidateDepositResult memory) {
-        return _calcAndValidateDeposit(user, tokenIn, amountToken, isInstant);
+        uint256 tokensDecimals
+    ) internal virtual override(DepositVaultWithMToken, DepositVault) {
+        DepositVaultWithMToken._instantTransferTokensToTokensReceiver(
+            tokenIn,
+            amountToken,
+            tokensDecimals
+        );
     }
 
-    function convertTokenToUsdTest(address tokenIn, uint256 amount)
-        external
-        returns (uint256 amountInUsd, uint256 rate)
-    {
-        return _convertTokenToUsd(tokenIn, amount);
-    }
-
-    function convertUsdToMTokenTest(uint256 amountUsd)
-        external
-        returns (uint256 amountMToken, uint256 mTokenRate)
-    {
-        return _convertUsdToMToken(amountUsd);
+    function _requestTransferTokensToTokensReceiver(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 tokensDecimals
+    ) internal override(DepositVaultWithMToken, DepositVault) {
+        DepositVaultWithMToken._requestTransferTokensToTokensReceiver(
+            tokenIn,
+            amountToken,
+            tokensDecimals
+        );
     }
 
     function _getTokenRate(address dataFeed, bool stable)
         internal
         view
-        override
+        override(DepositVaultTestBase, ManageableVault)
         returns (uint256)
     {
-        if (_overrideGetTokenRate) {
-            return _getTokenRateValue;
-        }
+        return DepositVaultTestBase._getTokenRate(dataFeed, stable);
+    }
 
-        return super._getTokenRate(dataFeed, stable);
+    function contractAdminRole()
+        public
+        view
+        override(DepositVaultTestBase, ManageableVault)
+        returns (bytes32)
+    {
+        return DepositVaultTestBase.contractAdminRole();
     }
 }

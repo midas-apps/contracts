@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -109,9 +109,12 @@ contract AcreAdapter is IAcreAdapter {
 
         IERC20(share()).safeTransferFrom(msg.sender, address(this), shares);
 
-        requestId = IRedemptionVault(redemptionVault).redeemRequest(
+        (requestId, ) = IRedemptionVault(redemptionVault).redeemRequest(
             asset(),
             shares,
+            receiver,
+            0,
+            0,
             receiver
         );
 

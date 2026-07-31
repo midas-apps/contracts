@@ -1,10 +1,13 @@
+import { constants } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { deployAndVerifyProxy } from './utils';
+import { deployAndVerifyProxy, getDeployer } from './utils';
 
 import { MTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
-import { getTokenContractNames } from '../../../helpers/contracts';
+import { getCommonContractNames } from '../../../helpers/contracts';
+import { mTokensMetadata } from '../../../helpers/mtokens-metadata';
+import { getAllRoles } from '../../../helpers/roles';
 
 export const deployMToken = async (
   hre: HardhatRuntimeEnvironment,
@@ -15,7 +18,33 @@ export const deployMToken = async (
   if (!addresses?.accessControl)
     throw new Error('Access control address is not set');
 
-  const tokenContractName = getTokenContractNames(token).token;
+  const allRoles = getAllRoles();
+  const roles = allRoles.tokenRoles[token];
+  const metadata = mTokensMetadata[token];
+  const deployer = await getDeployer(hre);
+  const isPermissioned = !!metadata.isPermissioned;
 
-  await deployAndVerifyProxy(hre, tokenContractName, [addresses.accessControl]);
+  await deployAndVerifyProxy(
+    hre,
+    getCommonContractNames().token,
+    [
+      addresses.accessControl,
+      deployer.address,
+      constants.MaxUint256,
+      isPermissioned,
+      false,
+      metadata.name,
+      metadata.symbol,
+    ],
+    undefined,
+    {
+      constructorArgs: [
+        roles.tokenManager,
+        roles.minter,
+        roles.burner,
+        roles.greenlisted,
+        roles.minBalanceExempt,
+      ],
+    },
+  );
 };

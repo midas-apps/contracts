@@ -14,8 +14,8 @@ import 'hardhat-deploy';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
 import 'hardhat-tracer';
-
 import './tasks';
+
 import {
   chainIds,
   ENV,
@@ -35,20 +35,11 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: '0.8.9',
+        version: '0.8.34',
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200,
-          },
-        },
-      },
-      {
-        version: '0.8.22',
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
+            runs: 1,
           },
         },
       },

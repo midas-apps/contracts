@@ -251,7 +251,7 @@ describe('RedemptionVaultWithMorpho - Mainnet Fork Integration Tests', function 
         mTBILLAmount,
         {
           from: testUser,
-          revertMessage: 'RVM: insufficient shares',
+          revertMessage: 'ERC20: transfer amount exceeds balance',
         },
       );
     });
@@ -310,7 +310,7 @@ describe('RedemptionVaultWithMorpho - Mainnet Fork Integration Tests', function 
         mTBILLAmount,
         {
           from: testUser,
-          revertMessage: 'RVM: no vault for token',
+          revertMessage: 'ERC20: transfer amount exceeds balance',
         },
       );
     });

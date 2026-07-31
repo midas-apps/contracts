@@ -1,11 +1,14 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "./DepositVault.sol";
-import "./interfaces/aave/IAaveV3Pool.sol";
+import {DepositVault} from "./DepositVault.sol";
+import {IAaveV3Pool} from "./interfaces/aave/IAaveV3Pool.sol";
+import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
+import {Greenlistable} from "./access/Greenlistable.sol";
+import {ManageableVault} from "./abstract/ManageableVault.sol";
 
 /**
  * @title DepositVaultWithAave
@@ -42,22 +45,16 @@ contract DepositVaultWithAave is DepositVault {
 
     /**
      * @notice Emitted when an Aave V3 Pool is configured for a payment token
-     * @param caller address of the caller
      * @param token payment token address
      * @param pool Aave V3 Pool address
      */
-    event SetAavePool(
-        address indexed caller,
-        address indexed token,
-        address indexed pool
-    );
+    event SetAavePool(address indexed token, address indexed pool);
 
     /**
      * @notice Emitted when an Aave V3 Pool is removed for a payment token
-     * @param caller address of the caller
      * @param token payment token address
      */
-    event RemoveAavePool(address indexed caller, address indexed token);
+    event RemoveAavePool(address indexed token);
 
     /**
      * @notice Emitted when `aaveDepositsEnabled` flag is updated
@@ -72,39 +69,68 @@ contract DepositVaultWithAave is DepositVault {
     event SetAutoInvestFallbackEnabled(bool indexed enabled);
 
     /**
+     * @notice when token is not in pool
+     * @param aavePool Aave V3 Pool address
+     * @param token token address
+     */
+    error TokenNotInPool(address aavePool, address token);
+
+    /**
+     * @notice when pool is not set
+     * @param token token address
+     */
+    error PoolNotSet(address token);
+
+    /**
+     * @notice when auto-invest fails
+     * @param err error bytes
+     */
+    error AutoInvestFailed(bytes err);
+
+    /**
+     * @notice Passes role identifiers to the base DepositVault constructor
+     * @param _contractAdminRole contract admin role identifier
+     * @param _greenlistedRole greenlisted role identifier
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
+        DepositVault(_contractAdminRole, _greenlistedRole)
+    {}
+
+    /**
      * @notice Sets the Aave V3 Pool for a specific payment token
      * @param _token payment token address
      * @param _aavePool Aave V3 Pool address for this token
      */
     function setAavePool(address _token, address _aavePool)
         external
-        onlyVaultAdmin
+        onlyContractAdmin
     {
         _validateAddress(_token, true);
         _validateAddress(_aavePool, true);
         require(
             IAaveV3Pool(_aavePool).getReserveAToken(_token) != address(0),
-            "DVA: token not in pool"
+            TokenNotInPool(_aavePool, _token)
         );
         aavePools[_token] = IAaveV3Pool(_aavePool);
-        emit SetAavePool(msg.sender, _token, _aavePool);
+        emit SetAavePool(_token, _aavePool);
     }
 
     /**
      * @notice Removes the Aave V3 Pool for a specific payment token
      * @param _token payment token address
      */
-    function removeAavePool(address _token) external onlyVaultAdmin {
-        require(address(aavePools[_token]) != address(0), "DVA: pool not set");
+    function removeAavePool(address _token) external onlyContractAdmin {
+        require(address(aavePools[_token]) != address(0), PoolNotSet(_token));
         delete aavePools[_token];
-        emit RemoveAavePool(msg.sender, _token);
+        emit RemoveAavePool(_token);
     }
 
     /**
      * @notice Updates `aaveDepositsEnabled` value
      * @param enabled whether Aave auto-invest deposits are enabled
      */
-    function setAaveDepositsEnabled(bool enabled) external onlyVaultAdmin {
+    function setAaveDepositsEnabled(bool enabled) external onlyContractAdmin {
         aaveDepositsEnabled = enabled;
         emit SetAaveDepositsEnabled(enabled);
     }
@@ -115,7 +141,7 @@ contract DepositVaultWithAave is DepositVault {
      */
     function setAutoInvestFallbackEnabled(bool enabled)
         external
-        onlyVaultAdmin
+        onlyContractAdmin
     {
         autoInvestFallbackEnabled = enabled;
         emit SetAutoInvestFallbackEnabled(enabled);
@@ -128,7 +154,7 @@ contract DepositVaultWithAave is DepositVault {
         address tokenIn,
         uint256 amountToken,
         uint256 tokensDecimals
-    ) internal override {
+    ) internal virtual override {
         IAaveV3Pool pool = aavePools[tokenIn];
         if (!aaveDepositsEnabled || address(pool) == address(0)) {
             return
@@ -149,7 +175,7 @@ contract DepositVaultWithAave is DepositVault {
         address tokenIn,
         uint256 amountToken,
         uint256 tokensDecimals
-    ) internal override {
+    ) internal virtual override {
         IAaveV3Pool pool = aavePools[tokenIn];
         if (!aaveDepositsEnabled || address(pool) == address(0)) {
             return
@@ -189,12 +215,12 @@ contract DepositVaultWithAave is DepositVault {
 
         try
             pool.supply(tokenIn, transferredAmount, tokensReceiver, 0)
-        {} catch {
+        {} catch (bytes memory error) {
             if (autoInvestFallbackEnabled) {
                 IERC20(tokenIn).safeApprove(address(pool), 0);
                 IERC20(tokenIn).safeTransfer(tokensReceiver, transferredAmount);
             } else {
-                revert("DVA: auto-invest failed");
+                revert AutoInvestFailed(error);
             }
         }
     }

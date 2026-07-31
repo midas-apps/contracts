@@ -1,19 +1,11 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
 import "../access/Greenlistable.sol";
 
 contract GreenlistableTester is Greenlistable {
     function initialize(address _accessControl) external initializer {
-        __Greenlistable_init(_accessControl);
-    }
-
-    function initializeWithoutInitializer(address _accessControl) external {
-        __Greenlistable_init(_accessControl);
-    }
-
-    function initializeUnchainedWithoutInitializer() external {
-        __Greenlistable_init_unchained();
+        __WithMidasAccessControl_init(_accessControl);
     }
 
     function onlyGreenlistedTester(address account)
@@ -21,19 +13,19 @@ contract GreenlistableTester is Greenlistable {
         onlyGreenlisted(account)
     {}
 
-    function onlyGreenlistTogglerTester(address account) external view {
-        _onlyGreenlistToggler(account);
-    }
-
     function _disableInitializers() internal override {}
 
-    function greenlistTogglerRole()
-        public
-        view
-        virtual
-        override
-        returns (bytes32)
-    {
-        return keccak256("GREENLIST_TOGGLER_ROLE");
+    function _onlyProxyAdmin() internal view override {}
+
+    function greenlistAdminRole() public view virtual returns (bytes32) {
+        return keccak256("GREENLIST_ADMIN_ROLE");
+    }
+
+    function contractAdminRole() public pure override returns (bytes32) {
+        return _DEFAULT_ADMIN_ROLE;
+    }
+
+    function greenlistedRole() public view virtual override returns (bytes32) {
+        return MidasAuthLibrary.DEFAULT_GREENLISTED_ROLE;
     }
 }

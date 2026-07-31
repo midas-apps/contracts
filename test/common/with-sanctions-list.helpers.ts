@@ -1,7 +1,12 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 
-import { Account, OptionalCommonParams, getAccount } from './common.helpers';
+import {
+  Account,
+  OptionalCommonParams,
+  getAccount,
+  handleRevert,
+} from './common.helpers';
 
 import { SanctionsListMock, WithSanctionsList } from '../../typechain-types';
 
@@ -28,26 +33,27 @@ export const setSanctionsList = async (
   newSanctionsList: Account,
   opt?: OptionalCommonParams,
 ) => {
+  const sender = opt?.from ?? owner;
   newSanctionsList = getAccount(newSanctionsList);
 
-  if (opt?.revertMessage) {
-    await expect(
+  if (
+    await handleRevert(
       withSanctionsList
-        .connect(opt?.from ?? owner)
-        .setSanctionsList(newSanctionsList),
-    ).revertedWith(opt?.revertMessage);
+        .connect(sender)
+        .setSanctionsList.bind(this, newSanctionsList),
+      withSanctionsList,
+      opt,
+    )
+  ) {
     return;
   }
 
   await expect(
-    withSanctionsList
-      .connect(opt?.from ?? owner)
-      .setSanctionsList(newSanctionsList),
+    withSanctionsList.connect(sender).setSanctionsList(newSanctionsList),
   ).to.emit(
     withSanctionsList,
-    withSanctionsList.interface.events['SetSanctionsList(address,address)']
-      .name,
-  ).to.not.reverted;
+    withSanctionsList.interface.events['SetSanctionsList(address)'].name,
+  );
 
   expect(await withSanctionsList.sanctionsList()).eq(newSanctionsList);
 };

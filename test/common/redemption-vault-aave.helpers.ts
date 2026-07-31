@@ -1,15 +1,21 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumber, BigNumberish } from 'ethers';
+import { parseUnits } from 'ethers/lib/utils';
 
-import { AccountOrContract, OptionalCommonParams } from './common.helpers';
+import {
+  AccountOrContract,
+  handleRevert,
+  OptionalCommonParams,
+  shouldRevert,
+} from './common.helpers';
 import { redeemInstantTest } from './redemption-vault.helpers';
 
 import {
   IERC20,
   RedemptionVaultWithAave,
-  MTBILLTest,
   DataFeedTest,
+  MToken,
 } from '../../typechain-types';
 
 type CommonParamsSetAavePool = {
@@ -20,7 +26,7 @@ type CommonParamsSetAavePool = {
 type RedemptionWithAaveParams = {
   redemptionVault: RedemptionVaultWithAave;
   owner: SignerWithAddress;
-  mTBILL: MTBILLTest;
+  mTBILL: MToken;
   mTokenToUsdDataFeed: DataFeedTest;
   usdc: IERC20;
   aToken: IERC20;
@@ -37,10 +43,15 @@ export const setAavePoolTest = async (
   pool: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      redemptionVault.connect(opt?.from ?? owner).setAavePool(token, pool),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      redemptionVault
+        .connect(opt?.from ?? owner)
+        .setAavePool.bind(this, token, pool),
+      redemptionVault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -48,8 +59,7 @@ export const setAavePoolTest = async (
     redemptionVault.connect(opt?.from ?? owner).setAavePool(token, pool),
   ).to.emit(
     redemptionVault,
-    redemptionVault.interface.events['SetAavePool(address,address,address)']
-      .name,
+    redemptionVault.interface.events['SetAavePool(address,address)'].name,
   ).to.not.reverted;
 
   const poolAfter = await redemptionVault.aavePools(token);
@@ -61,10 +71,15 @@ export const removeAavePoolTest = async (
   token: string,
   opt?: OptionalCommonParams,
 ) => {
-  if (opt?.revertMessage) {
-    await expect(
-      redemptionVault.connect(opt?.from ?? owner).removeAavePool(token),
-    ).revertedWith(opt?.revertMessage);
+  if (
+    await handleRevert(
+      redemptionVault
+        .connect(opt?.from ?? owner)
+        .removeAavePool.bind(this, token),
+      redemptionVault,
+      opt,
+    )
+  ) {
     return;
   }
 
@@ -72,7 +87,7 @@ export const removeAavePoolTest = async (
     redemptionVault.connect(opt?.from ?? owner).removeAavePool(token),
   ).to.emit(
     redemptionVault,
-    redemptionVault.interface.events['RemoveAavePool(address,address)'].name,
+    redemptionVault.interface.events['RemoveAavePool(address)'].name,
   ).to.not.reverted;
 
   const poolAfter = await redemptionVault.aavePools(token);
@@ -96,7 +111,7 @@ export const redeemInstantWithAaveTest = async (
     customRecipient,
   } = params;
 
-  if (opt?.revertMessage) {
+  if (shouldRevert(opt)) {
     await redeemInstantTest(
       {
         redemptionVault,
@@ -131,6 +146,13 @@ export const redeemInstantWithAaveTest = async (
       waivedFee: params.waivedFee,
       minAmount: params.minAmount,
       customRecipient,
+      // aTokens redeem 1:1 for the underlying, so the vault's aToken balance is
+      // extra tokenOut liquidity available on top of its direct tokenOut balance.
+      additionalLiquidity: async () =>
+        aToken.balanceOf(redemptionVault.address),
+      // Real aTokens rebase, accruing a few wei of interest across the redeem
+      // block; tolerate that so the balance assertion isn't yield-flaky.
+      vaultBalanceTolerance: parseUnits('0.01', 6),
     },
     usdc,
     amountTBillIn,

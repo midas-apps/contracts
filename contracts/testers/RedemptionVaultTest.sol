@@ -1,87 +1,110 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
+
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../RedemptionVault.sol";
+import "../libraries/MidasAuthLibrary.sol";
+import {ManageableVaultTesterBase} from "./ManageableVaultTester.sol";
 
-contract RedemptionVaultTest is RedemptionVault {
-    bool private _overrideGetTokenRate;
-    uint256 private _getTokenRateValue;
-
-    function _disableInitializers() internal override {}
-
-    function initializeWithoutInitializer(
-        address _ac,
-        MTokenInitParams calldata _mTokenInitParams,
-        ReceiversInitParams calldata _receiversInitParams,
-        InstantInitParams calldata _instantInitParams,
-        address _sanctionsList,
-        uint256 _variationTolerance,
-        uint256 _minAmount,
-        FiatRedeptionInitParams calldata _fiatRedemptionInitParams,
-        address _requestRedeemer
-    ) external {
-        __RedemptionVault_init(
-            _ac,
-            _mTokenInitParams,
-            _receiversInitParams,
-            _instantInitParams,
-            _sanctionsList,
-            _variationTolerance,
-            _minAmount,
-            _fiatRedemptionInitParams,
-            _requestRedeemer
-        );
-    }
-
-    function setOverrideGetTokenRate(bool val) external {
-        _overrideGetTokenRate = val;
-    }
-
-    function setGetTokenRateValue(uint256 val) external {
-        _getTokenRateValue = val;
-    }
+abstract contract RedemptionVaultTestBase is
+    RedemptionVault,
+    ManageableVaultTesterBase
+{
+    function _disableInitializers()
+        internal
+        virtual
+        override(Initializable, ManageableVaultTesterBase)
+    {}
 
     function calcAndValidateRedeemTest(
         address user,
         address tokenOut,
         uint256 amountMTokenIn,
-        bool isInstant,
-        bool isFiat
+        uint256 overrideMTokenRate,
+        uint256 overrideTokenOutRate,
+        bool shouldOverrideFeePercent,
+        uint256 overrideFeePercent,
+        bool isInstant
     ) external returns (CalcAndValidateRedeemResult memory calcResult) {
         return
             _calcAndValidateRedeem(
                 user,
                 tokenOut,
                 amountMTokenIn,
-                isInstant,
-                isFiat
+                overrideMTokenRate,
+                overrideTokenOutRate,
+                shouldOverrideFeePercent,
+                overrideFeePercent,
+                isInstant
             );
     }
 
-    function convertUsdToTokenTest(uint256 amountUsd, address tokenOut)
-        external
-        returns (uint256 amountToken, uint256 tokenRate)
-    {
-        return _convertUsdToToken(amountUsd, tokenOut);
+    function calculateHoldbackPartRateFromAvgTest(
+        uint256 amountMToken,
+        uint256 amountMTokenInstant,
+        uint256 mTokenRate,
+        uint256 avgMTokenRate
+    ) external pure returns (uint256) {
+        return
+            _calculateHoldbackPartRateFromAvg(
+                Request({
+                    amountMToken: amountMToken,
+                    amountMTokenInstant: amountMTokenInstant,
+                    mTokenRate: mTokenRate,
+                    tokenOut: address(0),
+                    tokenOutRate: 0,
+                    feePercent: 0,
+                    recipient: address(0),
+                    status: RequestStatus.Pending,
+                    approvedMTokenRate: 0,
+                    amountTokenOut: 0
+                }),
+                avgMTokenRate
+            );
     }
 
-    function convertMTokenToUsdTest(uint256 amountMToken)
-        external
-        returns (uint256 amountUsd, uint256 mTokenRate)
-    {
-        return _convertMTokenToUsd(amountMToken);
+    function convertUsdToTokenTest(
+        uint256 amountUsd,
+        address tokenOut,
+        uint256 overrideTokenOutRate
+    ) external view returns (uint256 amountToken, uint256 tokenRate) {
+        return _convertUsdToToken(amountUsd, tokenOut, overrideTokenOutRate);
+    }
+
+    function convertMTokenToUsdTest(
+        uint256 amountMToken,
+        uint256 overrideMTokenRate
+    ) external view returns (uint256 amountUsd, uint256 mTokenRate) {
+        return _convertMTokenToUsd(amountMToken, overrideMTokenRate);
     }
 
     function _getTokenRate(address dataFeed, bool stable)
         internal
         view
-        override
+        virtual
+        override(ManageableVaultTesterBase, ManageableVault)
         returns (uint256)
     {
-        if (_overrideGetTokenRate) {
-            return _getTokenRateValue;
-        }
-
-        return super._getTokenRate(dataFeed, stable);
+        return ManageableVaultTesterBase._getTokenRate(dataFeed, stable);
     }
+
+    function contractAdminRole()
+        public
+        view
+        virtual
+        override(ManageableVaultTesterBase, ManageableVault)
+        returns (bytes32)
+    {
+        return ManageableVault.contractAdminRole();
+    }
+}
+
+contract RedemptionVaultTest is RedemptionVaultTestBase {
+    constructor()
+        RedemptionVault(
+            keccak256("REDEMPTION_VAULT_ADMIN_ROLE"),
+            MidasAuthLibrary.DEFAULT_GREENLISTED_ROLE
+        )
+    {}
 }

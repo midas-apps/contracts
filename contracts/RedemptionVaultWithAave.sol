@@ -1,12 +1,12 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
-import "./RedemptionVault.sol";
+import {RedemptionVault} from "./RedemptionVault.sol";
 
-import "./interfaces/aave/IAaveV3Pool.sol";
-import "./libraries/DecimalsCorrectionLibrary.sol";
+import {IAaveV3Pool} from "./interfaces/aave/IAaveV3Pool.sol";
+import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
 
 /**
  * @title RedemptionVaultWithAave
@@ -30,22 +30,49 @@ contract RedemptionVaultWithAave is RedemptionVault {
 
     /**
      * @notice Emitted when an Aave V3 Pool is configured for a payment token
-     * @param caller address of the caller
      * @param token payment token address
      * @param pool Aave V3 Pool address
      */
-    event SetAavePool(
-        address indexed caller,
-        address indexed token,
-        address indexed pool
-    );
+    event SetAavePool(address indexed token, address indexed pool);
 
     /**
      * @notice Emitted when an Aave V3 Pool is removed for a payment token
-     * @param caller address of the caller
      * @param token payment token address
      */
-    event RemoveAavePool(address indexed caller, address indexed token);
+    event RemoveAavePool(address indexed token);
+
+    /**
+     * @notice when token is not in aave pool
+     * @param aavePool Aave V3 Pool address
+     * @param token token address
+     */
+    error TokenNotInPool(address aavePool, address token);
+
+    /**
+     * @notice when pool is not set
+     * @param token token address
+     */
+    error PoolNotSet(address token);
+
+    /**
+     * @notice when insufficient withdrawn amount
+     * @param withdrawnAmount withdrawn amount
+     * @param toWithdraw amount to withdraw
+     */
+    error InsufficientWithdrawnAmount(
+        uint256 withdrawnAmount,
+        uint256 toWithdraw
+    );
+
+    /**
+     * @notice Passes role identifiers to the base RedemptionVault constructor
+     * @param _contractAdminRole contract admin role identifier
+     * @param _greenlistedRole greenlisted role identifier
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
+        RedemptionVault(_contractAdminRole, _greenlistedRole)
+    {}
 
     /**
      * @notice Sets the Aave V3 Pool for a specific payment token
@@ -54,110 +81,26 @@ contract RedemptionVaultWithAave is RedemptionVault {
      */
     function setAavePool(address _token, address _aavePool)
         external
-        onlyVaultAdmin
+        onlyContractAdmin
     {
         _validateAddress(_token, true);
         _validateAddress(_aavePool, true);
         require(
             IAaveV3Pool(_aavePool).getReserveAToken(_token) != address(0),
-            "RVA: token not in pool"
+            TokenNotInPool(_aavePool, _token)
         );
         aavePools[_token] = IAaveV3Pool(_aavePool);
-        emit SetAavePool(msg.sender, _token, _aavePool);
+        emit SetAavePool(_token, _aavePool);
     }
 
     /**
      * @notice Removes the Aave V3 Pool for a specific payment token
      * @param _token payment token address
      */
-    function removeAavePool(address _token) external onlyVaultAdmin {
-        require(address(aavePools[_token]) != address(0), "RVA: pool not set");
+    function removeAavePool(address _token) external onlyContractAdmin {
+        require(address(aavePools[_token]) != address(0), PoolNotSet(_token));
         delete aavePools[_token];
-        emit RemoveAavePool(msg.sender, _token);
-    }
-
-    /**
-     * @dev Redeem mToken to the selected payment token if daily limit and allowance are not exceeded.
-     * If the contract doesn't have enough payment token, the Aave V3 withdrawal flow will be
-     * triggered to withdraw the missing amount from the Aave Pool.
-     * Burns mToken from the user.
-     * Transfers fee in mToken to feeReceiver.
-     * Transfers tokenOut to user.
-     * @param tokenOut token out address
-     * @param amountMTokenIn amount of mToken to redeem
-     * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
-     * @param recipient address that will receive the tokenOut
-     */
-    function _redeemInstant(
-        address tokenOut,
-        uint256 amountMTokenIn,
-        uint256 minReceiveAmount,
-        address recipient
-    )
-        internal
-        override
-        returns (
-            CalcAndValidateRedeemResult memory calcResult,
-            uint256 amountTokenOutWithoutFee
-        )
-    {
-        address user = msg.sender;
-
-        calcResult = _calcAndValidateRedeem(
-            user,
-            tokenOut,
-            amountMTokenIn,
-            true,
-            false
-        );
-
-        _requireAndUpdateLimit(amountMTokenIn);
-
-        uint256 tokenDecimals = _tokenDecimals(tokenOut);
-
-        uint256 amountMTokenInCopy = amountMTokenIn;
-        address tokenOutCopy = tokenOut;
-        uint256 minReceiveAmountCopy = minReceiveAmount;
-
-        (uint256 amountMTokenInUsd, uint256 mTokenRate) = _convertMTokenToUsd(
-            amountMTokenInCopy
-        );
-        (uint256 amountTokenOut, uint256 tokenOutRate) = _convertUsdToToken(
-            amountMTokenInUsd,
-            tokenOutCopy
-        );
-
-        _requireAndUpdateAllowance(tokenOutCopy, amountTokenOut);
-
-        mToken.burn(user, calcResult.amountMTokenWithoutFee);
-        if (calcResult.feeAmount > 0)
-            _tokenTransferFromUser(
-                address(mToken),
-                feeReceiver,
-                calcResult.feeAmount,
-                18
-            );
-
-        uint256 amountTokenOutWithoutFeeFrom18 = ((calcResult
-            .amountMTokenWithoutFee * mTokenRate) / tokenOutRate)
-            .convertFromBase18(tokenDecimals);
-
-        amountTokenOutWithoutFee = amountTokenOutWithoutFeeFrom18
-            .convertToBase18(tokenDecimals);
-
-        require(
-            amountTokenOutWithoutFee >= minReceiveAmountCopy,
-            "RVA: minReceiveAmount > actual"
-        );
-
-        _checkAndRedeemAave(tokenOutCopy, amountTokenOutWithoutFeeFrom18);
-
-        _tokenTransferToUser(
-            tokenOutCopy,
-            recipient,
-            amountTokenOutWithoutFee,
-            tokenDecimals
-        );
+        emit RemoveAavePool(_token);
     }
 
     /**
@@ -167,35 +110,61 @@ contract RedemptionVaultWithAave is RedemptionVault {
      * asset directly to this contract. No approval is needed because the Pool
      * burns aTokens from msg.sender (this contract) internally.
      * @param tokenOut tokenOut address
-     * @param amountTokenOut amount of tokenOut needed
+     * @param missingAmountBase18 amount of tokenOut needed in base 18
+     * @param tokenOutDecimals decimals of tokenOut
      */
-    function _checkAndRedeemAave(address tokenOut, uint256 amountTokenOut)
+    function _obtainVaultLiquidity(
+        address tokenOut,
+        uint256 missingAmountBase18,
+        uint256, /* tokenOutRate */
+        uint256, /* currentTokenOutBalanceBase18 */
+        uint256 tokenOutDecimals
+    )
         internal
+        virtual
+        override
+        returns (
+            uint256 /* obtainedLiquidityBase18 */
+        )
     {
-        uint256 contractBalanceTokenOut = IERC20(tokenOut).balanceOf(
-            address(this)
-        );
-        if (contractBalanceTokenOut >= amountTokenOut) return;
-
         IAaveV3Pool pool = aavePools[tokenOut];
-        require(address(pool) != address(0), "RVA: no pool for token");
 
-        uint256 missingAmount = amountTokenOut - contractBalanceTokenOut;
+        // if we dont have a pool for the token, we can't withdraw, so do nothing
+        if (address(pool) == address(0)) {
+            return 0;
+        }
+
+        uint256 missingAmount = missingAmountBase18.convertFromBase18(
+            tokenOutDecimals
+        );
 
         address aToken = pool.getReserveAToken(tokenOut);
-        require(aToken != address(0), "RVA: token not in Aave pool");
+
+        // if we cant find the aToken, we can't withdraw, so do nothing
+        if (aToken == address(0)) {
+            return 0;
+        }
 
         uint256 aTokenBalance = IERC20(aToken).balanceOf(address(this));
-        require(
-            aTokenBalance >= missingAmount,
-            "RVA: insufficient aToken balance"
-        );
+
+        uint256 toWithdraw = aTokenBalance >= missingAmount
+            ? missingAmount
+            : aTokenBalance;
+
+        if (toWithdraw == 0) {
+            return 0;
+        }
 
         uint256 withdrawnAmount = pool.withdraw(
             tokenOut,
-            missingAmount,
+            toWithdraw,
             address(this)
         );
-        require(withdrawnAmount >= missingAmount, "RVA: withdrawn < needed");
+        require(
+            withdrawnAmount >= toWithdraw,
+            InsufficientWithdrawnAmount(withdrawnAmount, toWithdraw)
+        );
+
+        return withdrawnAmount.convertToBase18(tokenOutDecimals);
     }
 }

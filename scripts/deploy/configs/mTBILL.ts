@@ -22,45 +22,64 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
   networkConfigs: {
     [chainIds.sepolia]: {
       dv: {
-        feeReceiver: undefined,
-        tokensReceiver: undefined,
-        instantDailyLimit: constants.MaxUint256,
+        version: 'v2',
         instantFee: parseUnits('1', 2),
-        minMTokenAmountForFirstDeposit: parseUnits('100'),
-        minAmount: parseUnits('0.01'),
         variationTolerance: parseUnits('0.1', 2),
       },
       rv: {
+        version: 'v2',
         type: 'REGULAR',
-        feeReceiver: undefined,
-        tokensReceiver: undefined,
-        instantDailyLimit: constants.MaxUint256,
         instantFee: parseUnits('1', 2),
-        minAmount: parseUnits('0.01'),
         variationTolerance: parseUnits('0.1', 2),
-        fiatAdditionalFee: parseUnits('0.1', 2),
-        fiatFlatFee: parseUnits('0.1', 18),
-        minFiatRedeemAmount: parseUnits('1', 18),
-        requestRedeemer: undefined,
-      },
-      rvBuidl: {
-        type: 'BUIDL',
-        feeReceiver: undefined,
-        tokensReceiver: undefined,
-        instantDailyLimit: constants.MaxUint256,
-        instantFee: parseUnits('1', 2),
-        minAmount: parseUnits('0.01'),
-        variationTolerance: parseUnits('0.1', 2),
-        fiatAdditionalFee: parseUnits('0.1', 2),
-        fiatFlatFee: parseUnits('0.1', 18),
-        minFiatRedeemAmount: parseUnits('1', 18),
-        requestRedeemer: undefined,
-        buidlRedemption: '0x4cb1479705EA6F0dD63415111aF56eaCfBa019bb', // mocked BUIDL redemption
-        minBuidlBalance: parseUnits('250000', 18),
-        minBuidlToRedeem: parseUnits('250000', 18),
+        loanConfig: {
+          loanApr: parseUnits('0.1', 2),
+          loanSwapperVault: {
+            mToken: 'mSL',
+            redemptionVaultType: 'redemptionVault',
+          },
+        },
       },
       postDeploy: {
-        grantRoles: {},
+        setRoundData: {
+          type: 'GROWTH',
+          data: parseUnits('1', 8),
+          apr: parseUnits('0.1', 8),
+        },
+        grantRoles: {
+          tokenManagerAddress: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          oracleManagerAddress: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          vaultsManagerAddress: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+        },
+        addPaymentTokens: {
+          vaults: [
+            {
+              type: 'depositVault',
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                },
+              ],
+            },
+            {
+              type: 'redemptionVault',
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                },
+              ],
+            },
+          ],
+        },
+        addFeeWaived: [
+          {
+            fromVault: {
+              mToken: 'mSL',
+              type: 'redemptionVault',
+            },
+            toWaive: [{ mToken: 'mTBILL', type: 'redemptionVault' }],
+            value: true,
+          },
+        ],
         axelarIts: {
           operator: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
         },
@@ -162,26 +181,7 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
         requestRedeemer: '0x1Bd4d8D25Ec7EBA10e94BE71Fd9c6BF672e31E06',
         enableSanctionsList: true,
       },
-      rvBuidl: {
-        type: 'BUIDL',
-        feeReceiver: '0x875c06A295C41c27840b9C9dfDA7f3d819d8bC6A',
-        tokensReceiver: '0x1Bd4d8D25Ec7EBA10e94BE71Fd9c6BF672e31E06',
-        instantDailyLimit: parseUnits('1000'),
-        instantFee: parseUnits('0.07', 2),
-        minAmount: parseUnits('0.1'),
-        variationTolerance: parseUnits('0.1', 2),
-        fiatAdditionalFee: parseUnits('0.1', 2),
-        fiatFlatFee: parseUnits('30', 18),
-        minFiatRedeemAmount: parseUnits('1000', 18),
-        requestRedeemer: '0x1Bd4d8D25Ec7EBA10e94BE71Fd9c6BF672e31E06',
-        enableSanctionsList: true,
-        buidlRedemption: '0x31D3F59Ad4aAC0eeE2247c65EBE8Bf6E9E470a53',
-        minBuidlBalance: parseUnits('1', 6),
-        minBuidlToRedeem: parseUnits('1', 6),
-      },
-      postDeploy: {
-        grantRoles: {},
-      },
+      postDeploy: {},
     },
     [chainIds.base]: {
       dv: {

@@ -2,16 +2,22 @@ import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
 import { rpcUrls } from '../../../config';
-import { getAllRoles } from '../../../helpers/roles';
 import {
-  MidasAccessControlTest,
-  MTBILLTest,
   RedemptionVaultWithUSTBTest,
   DataFeedTest,
   AggregatorV3Mock,
   DepositVaultWithUSTBTest,
 } from '../../../typechain-types';
 import { deployProxyContract } from '../../common/deploy.helpers';
+import {
+  getInitializerParamsDvWithUstb,
+  getInitializerParamsRvWithUstb,
+} from '../../common/fixtures';
+import {
+  DV_USTB_INIT_FN,
+  RV_USTB_INIT_FN,
+} from '../../common/vault-initializer.helpers';
+import { setupIntegrationBase } from '../helpers/ac.helpers';
 import { impersonateAndFundAccount, resetFork } from '../helpers/fork.helpers';
 import { MAINNET_ADDRESSES } from '../helpers/mainnet-addresses';
 import { setupUSTBAllowlist } from '../helpers/ustb-helpers';
@@ -22,50 +28,17 @@ const FORK_BLOCK_NUMBER = 22540000;
 async function setupUstbBase() {
   await resetFork(rpcUrls.main, FORK_BLOCK_NUMBER);
 
-  const [
+  const {
+    accessControl,
+    mTBILL,
     owner,
     tokensReceiver,
     feeReceiver,
     requestRedeemer,
     vaultAdmin,
     testUser,
-  ] = await ethers.getSigners();
-  const allRoles = getAllRoles();
-
-  const accessControl = await deployProxyContract<MidasAccessControlTest>(
-    'MidasAccessControlTest',
-    [],
-  );
-
-  const mTBILL = await deployProxyContract<MTBILLTest>('mTBILLTest', [
-    accessControl.address,
-  ]);
-
-  const rolesArray = [
-    allRoles.common.defaultAdmin,
-    allRoles.tokenRoles.mTBILL.minter,
-    allRoles.tokenRoles.mTBILL.burner,
-    allRoles.tokenRoles.mTBILL.pauser,
-    allRoles.tokenRoles.mTBILL.redemptionVaultAdmin,
-    allRoles.tokenRoles.mTBILL.depositVaultAdmin,
-    allRoles.common.greenlistedOperator,
-  ];
-
-  for (const role of rolesArray) {
-    await accessControl.grantRole(role, owner.address);
-  }
-
-  await accessControl.grantRole(
-    allRoles.tokenRoles.mTBILL.redemptionVaultAdmin,
-    vaultAdmin.address,
-  );
-
-  await accessControl.grantRole(
-    allRoles.tokenRoles.mTBILL.depositVaultAdmin,
-    vaultAdmin.address,
-  );
-
-  await accessControl.grantRole(allRoles.common.greenlisted, testUser.address);
+    roles: allRoles,
+  } = await setupIntegrationBase();
 
   const usdcAggregator = (await (
     await ethers.getContractFactory('AggregatorV3Mock')
@@ -162,32 +135,23 @@ export async function ustbDepositFixture() {
   const depositVaultWithUSTB =
     await deployProxyContract<DepositVaultWithUSTBTest>(
       'DepositVaultWithUSTBTest',
-      [
-        accessControl.address,
-        {
-          mToken: mTBILL.address,
-          mTokenDataFeed: base.mTokenToUsdDataFeed.address,
-        },
-        {
-          feeReceiver: base.feeReceiver.address,
-          tokensReceiver: base.tokensReceiver.address,
-        },
-        {
-          instantFee: 100,
-          instantDailyLimit: ethers.constants.MaxUint256,
-        },
-        ethers.constants.AddressZero, // sanctions list
-        200,
-        parseUnits('0'),
-        0,
-        ethers.constants.MaxUint256,
-        MAINNET_ADDRESSES.SUPERSTATE_TOKEN_PROXY,
-      ],
-      'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,uint256,uint256,address)',
+      getInitializerParamsDvWithUstb({
+        accessControl: accessControl.address,
+        mockedSanctionsList: ethers.constants.AddressZero,
+        mTBILL: mTBILL.address,
+        mTokenToUsdDataFeed: base.mTokenToUsdDataFeed.address,
+        tokensReceiver: base.tokensReceiver.address,
+        minAmount: parseUnits('0'),
+        instantFee: 100,
+        variationTolerance: 200,
+        maxApproveRequestId: ethers.constants.MaxUint256,
+        ustbToken: MAINNET_ADDRESSES.SUPERSTATE_TOKEN_PROXY,
+      }),
+      DV_USTB_INIT_FN,
     );
 
   // Grant MINTER_ROLE to vault
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     roles.tokenRoles.mTBILL.minter,
     depositVaultWithUSTB.address,
   );
@@ -218,36 +182,24 @@ export async function ustbRedemptionFixture() {
   const redemptionVaultWithUSTB =
     await deployProxyContract<RedemptionVaultWithUSTBTest>(
       'RedemptionVaultWithUSTBTest',
-      [
-        accessControl.address,
-        {
-          mToken: mTBILL.address,
-          mTokenDataFeed: base.mTokenToUsdDataFeed.address,
-        },
-        {
-          feeReceiver: base.feeReceiver.address,
-          tokensReceiver: base.tokensReceiver.address,
-        },
-        {
-          instantFee: 100, // 1%
-          instantDailyLimit: ethers.constants.MaxUint256,
-        },
-        ethers.constants.AddressZero, // sanctions list
-        200, // variation tolerance 2%
-        parseUnits('100', 18), // min amount
-        {
-          minFiatRedeemAmount: parseUnits('1000', 18),
-          fiatAdditionalFee: 100,
-          fiatFlatFee: parseUnits('10', 18),
-        },
-        base.requestRedeemer.address,
-        MAINNET_ADDRESSES.REDEMPTION_IDLE_PROXY,
-      ],
-      'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)',
+      getInitializerParamsRvWithUstb({
+        accessControl: accessControl.address,
+        mockedSanctionsList: ethers.constants.AddressZero,
+        mTBILL: mTBILL.address,
+        mTokenToUsdDataFeed: base.mTokenToUsdDataFeed.address,
+        tokensReceiver: base.tokensReceiver.address,
+        minAmount: parseUnits('100', 18),
+        instantFee: 100,
+        variationTolerance: 200,
+        maxApproveRequestId: ethers.constants.MaxUint256,
+        requestRedeemer: base.requestRedeemer.address,
+        ustbRedemption: MAINNET_ADDRESSES.REDEMPTION_IDLE_PROXY,
+      }),
+      RV_USTB_INIT_FN,
     );
 
   // Grant BURN_ROLE to vault
-  await accessControl.grantRole(
+  await accessControl['grantRole(bytes32,address)'](
     roles.tokenRoles.mTBILL.burner,
     redemptionVaultWithUSTB.address,
   );

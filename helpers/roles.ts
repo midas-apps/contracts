@@ -130,11 +130,12 @@ const getGreenlistRoleName = (token: MTokenName): string => {
 type TokenRoles = {
   minter: string;
   burner: string;
-  pauser: string;
+  tokenManager: string;
   depositVaultAdmin: string;
   redemptionVaultAdmin: string;
-  customFeedAdmin: string | null;
+  customFeedAdmin: string;
   greenlisted: string;
+  minBalanceExempt: string;
 };
 
 type CommonRoles = {
@@ -143,6 +144,9 @@ type CommonRoles = {
   greenlistedOperator: string;
   blacklistedOperator: string;
   defaultAdmin: string;
+  pauseAdmin: string;
+  securityCouncilManager: string;
+  timelockOperationPauser: string;
 };
 
 type IntegrationRoles = {
@@ -169,13 +173,12 @@ export const getRolesNamesForToken = (token: MTokenName): TokenRoles => {
   return {
     minter: `${tokenPrefix}_MINT_OPERATOR_ROLE`,
     burner: `${tokenPrefix}_BURN_OPERATOR_ROLE`,
-    pauser: `${tokenPrefix}_PAUSE_OPERATOR_ROLE`,
-    customFeedAdmin: isTAC
-      ? null
-      : `${tokenPrefix}_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE`,
+    tokenManager: `${tokenPrefix}_TOKEN_MANAGER_ROLE`,
+    customFeedAdmin: `${tokenPrefix}_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE`,
     depositVaultAdmin: `${restPrefix}DEPOSIT_VAULT_ADMIN_ROLE`,
     redemptionVaultAdmin: `${restPrefix}REDEMPTION_VAULT_ADMIN_ROLE`,
     greenlisted: getGreenlistRoleName(token),
+    minBalanceExempt: `${tokenPrefix}_MIN_BALANCE_EXEMPT_ROLE`,
   };
 };
 export const getRolesNamesCommon = (): CommonRoles => {
@@ -185,6 +188,9 @@ export const getRolesNamesCommon = (): CommonRoles => {
     greenlistedOperator: 'GREENLIST_OPERATOR_ROLE',
     blacklisted: 'BLACKLISTED_ROLE',
     blacklistedOperator: 'BLACKLIST_OPERATOR_ROLE',
+    pauseAdmin: 'PAUSE_ADMIN_ROLE',
+    securityCouncilManager: 'SECURITY_COUNCIL_MANAGER_ROLE',
+    timelockOperationPauser: 'TIMELOCK_OPERATION_PAUSER_ROLE',
   };
 };
 
@@ -228,6 +234,13 @@ export const getAllRoles = (): AllRoles => {
       greenlistedOperator: keccak256(rolesNamesCommon.greenlistedOperator),
       blacklisted: keccak256(rolesNamesCommon.blacklisted),
       blacklistedOperator: keccak256(rolesNamesCommon.blacklistedOperator),
+      pauseAdmin: keccak256(rolesNamesCommon.pauseAdmin),
+      securityCouncilManager: keccak256(
+        rolesNamesCommon.securityCouncilManager,
+      ),
+      timelockOperationPauser: keccak256(
+        rolesNamesCommon.timelockOperationPauser,
+      ),
     },
     tokenRoles: Object.fromEntries(
       Object.keys(prefixes).map((token) => [

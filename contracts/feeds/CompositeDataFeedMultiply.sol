@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
-import "./CompositeDataFeed.sol";
+import {CompositeDataFeed} from "./CompositeDataFeed.sol";
 
 /**
  * @title CompositeDataFeedMultiply
@@ -13,6 +13,20 @@ import "./CompositeDataFeed.sol";
  * @author RedDuck Software
  */
 contract CompositeDataFeedMultiply is CompositeDataFeed {
+    /**
+     * @dev leaving a storage gap for futures updates
+     */
+    uint256[50] private __gap;
+
+    /**
+     * @notice constructor
+     * @param _contractAdminRole contract admin role
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bytes32 _contractAdminRole)
+        CompositeDataFeed(_contractAdminRole)
+    {}
+
     /**
      * @dev computes the composite price by multiplying the two feed values
      * @param firstFeedValue value from the first feed

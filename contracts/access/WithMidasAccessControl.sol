@@ -1,8 +1,10 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
-import "./MidasAccessControl.sol";
-import "../abstract/MidasInitializable.sol";
+import {IMidasAccessControl} from "../interfaces/IMidasAccessControl.sol";
+import {MidasInitializable} from "../abstract/MidasInitializable.sol";
+import {MidasAuthLibrary} from "../libraries/MidasAuthLibrary.sol";
+import {IMidasAccessControlManaged} from "../interfaces/IMidasAccessControlManaged.sol";
 
 /**
  * @title WithMidasAccessControl
@@ -11,17 +13,20 @@ import "../abstract/MidasInitializable.sol";
  */
 abstract contract WithMidasAccessControl is
     MidasInitializable,
-    MidasAccessControlRoles
+    IMidasAccessControlManaged
 {
+    using MidasAuthLibrary for IMidasAccessControl;
+
     /**
      * @notice admin role
      */
-    bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
+    bytes32 internal constant _DEFAULT_ADMIN_ROLE = 0x00;
 
     /**
      * @notice MidasAccessControl contract address
+     * @custom:oz-retyped-from MidasAccessControl
      */
-    MidasAccessControl public accessControl;
+    IMidasAccessControl public accessControl;
 
     /**
      * @dev leaving a storage gap for futures updates
@@ -29,18 +34,73 @@ abstract contract WithMidasAccessControl is
     uint256[50] private __gap;
 
     /**
-     * @dev checks that given `address` have `role`
+     * @notice error when the value is the same as the previous value
+     * @param value value
      */
-    modifier onlyRole(bytes32 role, address account) {
-        _onlyRole(role, account);
+    error SameBoolValue(bool value);
+
+    /**
+     * @dev validates that the caller has the function role with timelock
+     * @param role base role to validate
+     * @param validateFunctionRole whether to validate the function role
+     */
+    modifier onlyRole(bytes32 role, bool validateFunctionRole) {
+        _validateFunctionAccessWithTimelock(
+            role,
+            MidasAuthLibrary.NULL_DELAY,
+            false,
+            msg.sender,
+            validateFunctionRole
+        );
         _;
     }
 
     /**
-     * @dev checks that given `address` do not have `role`
+     * @dev validates that the caller has the function role with timelock
+     * @param role base role to validate
+     * @param overrideDelay override delay for the invocation
+     * @param validateFunctionRole whether to validate the function role
      */
-    modifier onlyNotRole(bytes32 role, address account) {
-        _onlyNotRole(role, account);
+    modifier onlyRoleDelayOverride(
+        bytes32 role,
+        uint32 overrideDelay,
+        bool validateFunctionRole
+    ) {
+        _validateFunctionAccessWithTimelock(
+            role,
+            overrideDelay,
+            false,
+            msg.sender,
+            validateFunctionRole
+        );
+        _;
+    }
+
+    /**
+     * @dev validates that the caller has the function role without timelock
+     * @param role base role to validate
+     */
+    modifier onlyRoleNoTimelock(bytes32 role, bool validateFunctionRole) {
+        _validateFunctionAccessWithoutTimelock(
+            role,
+            false,
+            msg.sender,
+            validateFunctionRole
+        );
+        _;
+    }
+
+    /**
+     * @dev validates that the caller has the contract admin role or function operator role
+     */
+    modifier onlyContractAdmin() {
+        _validateFunctionAccessWithTimelock(
+            contractAdminRole(),
+            MidasAuthLibrary.NULL_DELAY,
+            false,
+            msg.sender,
+            true
+        );
         _;
     }
 
@@ -52,21 +112,60 @@ abstract contract WithMidasAccessControl is
         internal
         onlyInitializing
     {
-        require(_accessControl != address(0), "zero address");
-        accessControl = MidasAccessControl(_accessControl);
+        require(_accessControl != address(0), InvalidAddress(_accessControl));
+        accessControl = IMidasAccessControl(_accessControl);
     }
 
     /**
-     * @dev checks that given `address` have `role`
+     * @dev validates that the function access is valid with timelock
+     * @param role base role to validate
+     * @param overrideDelay override delay for the invocation
+     * @param roleIsFunctionOperator whether the role is a function operator
+     * @param account account to validate
+     * @param validateFunctionRole whether to validate the function role
      */
-    function _onlyRole(bytes32 role, address account) internal view {
-        require(accessControl.hasRole(role, account), "WMAC: hasnt role");
+    function _validateFunctionAccessWithTimelock(
+        bytes32 role,
+        uint32 overrideDelay,
+        bool roleIsFunctionOperator,
+        address account,
+        bool validateFunctionRole
+    ) internal view virtual {
+        accessControl.validateFunctionAccessWithTimelock(
+            role,
+            overrideDelay,
+            roleIsFunctionOperator,
+            account,
+            validateFunctionRole
+        );
     }
 
     /**
-     * @dev checks that given `address` do not have `role`
+     * @dev validates that the function access is valid without timelock
+     * @param role base role to validate
+     * @param roleIsFunctionOperator whether the role is a function operator
+     * @param account account to validate
+     * @param validateFunctionRole whether to validate the function role
      */
-    function _onlyNotRole(bytes32 role, address account) internal view {
-        require(!accessControl.hasRole(role, account), "WMAC: has role");
+    function _validateFunctionAccessWithoutTimelock(
+        bytes32 role,
+        bool roleIsFunctionOperator,
+        address account,
+        bool validateFunctionRole
+    ) internal view {
+        accessControl.validateFunctionAccess(
+            address(this),
+            role,
+            MidasAuthLibrary.NO_DELAY,
+            roleIsFunctionOperator,
+            account,
+            msg.sig,
+            validateFunctionRole
+        );
     }
+
+    /**
+     * @dev main admin role for the contract
+     */
+    function contractAdminRole() public view virtual returns (bytes32);
 }

@@ -1,12 +1,12 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
 
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
-import "./RedemptionVault.sol";
+import {RedemptionVault} from "./RedemptionVault.sol";
 
 import {IMorphoVault} from "./interfaces/morpho/IMorphoVault.sol";
-import "./libraries/DecimalsCorrectionLibrary.sol";
+import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
 
 /**
  * @title RedemptionVaultWithMorpho
@@ -31,22 +31,39 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
 
     /**
      * @notice Emitted when a Morpho Vault is configured for a payment token
-     * @param caller address of the caller
      * @param token payment token address
      * @param vault Morpho Vault address
      */
-    event SetMorphoVault(
-        address indexed caller,
-        address indexed token,
-        address indexed vault
-    );
+    event SetMorphoVault(address indexed token, address indexed vault);
 
     /**
      * @notice Emitted when a Morpho Vault is removed for a payment token
-     * @param caller address of the caller
      * @param token payment token address
      */
-    event RemoveMorphoVault(address indexed caller, address indexed token);
+    event RemoveMorphoVault(address indexed token);
+
+    /**
+     * @notice when asset mismatch
+     * @param morphoVault Morpho Vault address
+     * @param token token address
+     */
+    error AssetMismatch(address morphoVault, address token);
+
+    /**
+     * @notice when vault is not set
+     * @param token token address
+     */
+    error VaultNotSet(address token);
+
+    /**
+     * @notice Passes role identifiers to the base RedemptionVault constructor
+     * @param _contractAdminRole contract admin role identifier
+     * @param _greenlistedRole greenlisted role identifier
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bytes32 _contractAdminRole, bytes32 _greenlistedRole)
+        RedemptionVault(_contractAdminRole, _greenlistedRole)
+    {}
 
     /**
      * @notice Sets the Morpho Vault for a specific payment token
@@ -55,113 +72,29 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
      */
     function setMorphoVault(address _token, address _morphoVault)
         external
-        onlyVaultAdmin
+        onlyContractAdmin
     {
         _validateAddress(_token, true);
         _validateAddress(_morphoVault, true);
         require(
             IMorphoVault(_morphoVault).asset() == _token,
-            "RVM: asset mismatch"
+            AssetMismatch(_morphoVault, _token)
         );
         morphoVaults[_token] = IMorphoVault(_morphoVault);
-        emit SetMorphoVault(msg.sender, _token, _morphoVault);
+        emit SetMorphoVault(_token, _morphoVault);
     }
 
     /**
      * @notice Removes the Morpho Vault for a specific payment token
      * @param _token payment token address
      */
-    function removeMorphoVault(address _token) external onlyVaultAdmin {
+    function removeMorphoVault(address _token) external onlyContractAdmin {
         require(
             address(morphoVaults[_token]) != address(0),
-            "RVM: vault not set"
+            VaultNotSet(_token)
         );
         delete morphoVaults[_token];
-        emit RemoveMorphoVault(msg.sender, _token);
-    }
-
-    /**
-     * @dev Redeem mToken to the selected payment token if daily limit and allowance are not exceeded.
-     * If the contract doesn't have enough payment token, the Morpho Vault withdrawal flow will be
-     * triggered to withdraw the missing amount from the Morpho Vault.
-     * Burns mToken from the user.
-     * Transfers fee in mToken to feeReceiver.
-     * Transfers tokenOut to user.
-     * @param tokenOut token out address
-     * @param amountMTokenIn amount of mToken to redeem
-     * @param minReceiveAmount minimum expected amount of tokenOut to receive (decimals 18)
-     * @param recipient address that will receive the tokenOut
-     */
-    function _redeemInstant(
-        address tokenOut,
-        uint256 amountMTokenIn,
-        uint256 minReceiveAmount,
-        address recipient
-    )
-        internal
-        override
-        returns (
-            CalcAndValidateRedeemResult memory calcResult,
-            uint256 amountTokenOutWithoutFee
-        )
-    {
-        address user = msg.sender;
-
-        calcResult = _calcAndValidateRedeem(
-            user,
-            tokenOut,
-            amountMTokenIn,
-            true,
-            false
-        );
-
-        _requireAndUpdateLimit(amountMTokenIn);
-
-        uint256 tokenDecimals = _tokenDecimals(tokenOut);
-
-        uint256 amountMTokenInCopy = amountMTokenIn;
-        address tokenOutCopy = tokenOut;
-        uint256 minReceiveAmountCopy = minReceiveAmount;
-
-        (uint256 amountMTokenInUsd, uint256 mTokenRate) = _convertMTokenToUsd(
-            amountMTokenInCopy
-        );
-        (uint256 amountTokenOut, uint256 tokenOutRate) = _convertUsdToToken(
-            amountMTokenInUsd,
-            tokenOutCopy
-        );
-
-        _requireAndUpdateAllowance(tokenOutCopy, amountTokenOut);
-
-        mToken.burn(user, calcResult.amountMTokenWithoutFee);
-        if (calcResult.feeAmount > 0)
-            _tokenTransferFromUser(
-                address(mToken),
-                feeReceiver,
-                calcResult.feeAmount,
-                18
-            );
-
-        uint256 amountTokenOutWithoutFeeFrom18 = ((calcResult
-            .amountMTokenWithoutFee * mTokenRate) / tokenOutRate)
-            .convertFromBase18(tokenDecimals);
-
-        amountTokenOutWithoutFee = amountTokenOutWithoutFeeFrom18
-            .convertToBase18(tokenDecimals);
-
-        require(
-            amountTokenOutWithoutFee >= minReceiveAmountCopy,
-            "RVM: minReceiveAmount > actual"
-        );
-
-        _checkAndRedeemMorpho(tokenOutCopy, amountTokenOutWithoutFeeFrom18);
-
-        _tokenTransferToUser(
-            tokenOutCopy,
-            recipient,
-            amountTokenOutWithoutFee,
-            tokenDecimals
-        );
+        emit RemoveMorphoVault(_token);
     }
 
     /**
@@ -171,27 +104,46 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
      * asset directly to this contract. No approval is needed because the vault
      * burns shares from msg.sender (this contract) when msg.sender == owner.
      * @param tokenOut tokenOut address
-     * @param amountTokenOut amount of tokenOut needed
+     * @param missingAmountBase18 amount of tokenOut needed in base 18
+     * @param tokenOutDecimals decimals of tokenOut
      */
-    function _checkAndRedeemMorpho(address tokenOut, uint256 amountTokenOut)
+    function _obtainVaultLiquidity(
+        address tokenOut,
+        uint256 missingAmountBase18,
+        uint256, /* tokenOutRate */
+        uint256, /* currentTokenOutBalanceBase18 */
+        uint256 tokenOutDecimals
+    )
         internal
+        virtual
+        override
+        returns (
+            uint256 /* obtainedLiquidityBase18 */
+        )
     {
-        uint256 contractBalanceTokenOut = IERC20(tokenOut).balanceOf(
-            address(this)
-        );
-        if (contractBalanceTokenOut >= amountTokenOut) return;
-
         IMorphoVault vault = morphoVaults[tokenOut];
-        require(address(vault) != address(0), "RVM: no vault for token");
 
-        uint256 missingAmount = amountTokenOut - contractBalanceTokenOut;
+        if (address(vault) == address(0)) {
+            return 0;
+        }
+
+        uint256 missingAmount = missingAmountBase18.convertFromBase18(
+            tokenOutDecimals
+        );
 
         uint256 sharesNeeded = vault.previewWithdraw(missingAmount);
-        require(
-            vault.balanceOf(address(this)) >= sharesNeeded,
-            "RVM: insufficient shares"
-        );
+        uint256 vaultSharesBalance = vault.balanceOf(address(this));
+        uint256 toRedeemShares = vaultSharesBalance >= sharesNeeded
+            ? sharesNeeded
+            : vaultSharesBalance;
 
-        vault.withdraw(missingAmount, address(this), address(this));
+        if (toRedeemShares == 0) {
+            return 0;
+        }
+
+        return
+            vault
+                .redeem(toRedeemShares, address(this), address(this))
+                .convertToBase18(tokenOutDecimals);
     }
 }

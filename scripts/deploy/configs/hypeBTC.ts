@@ -44,7 +44,7 @@ export const hypeBTCDeploymentConfig: DeploymentConfig = {
         liquidityProvider: undefined,
         swapperVault: {
           mToken: 'mTBILL',
-          redemptionVaultType: 'redemptionVaultBuidl',
+          redemptionVaultType: 'redemptionVaultUstb',
         },
       },
     },

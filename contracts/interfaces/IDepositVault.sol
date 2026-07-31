@@ -1,24 +1,40 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity 0.8.34;
 
-import "./IManageableVault.sol";
+import {IManageableVault, RequestStatus} from "./IManageableVault.sol";
 
 /**
  * @notice Mint request scruct
- * @param sender user address who create
- * @param tokenIn tokenIn address
- * @param status request status
- * @param depositedUsdAmount amout USD, tokenIn -> USD
- * @param usdAmountWithoutFees amout USD, tokenIn - fees -> USD
- * @param tokenOutRate rate of mToken at request creation time
  */
 struct Request {
-    address sender;
+    /// @notice address who will receive the mTokens
+    address recipient;
+    /// @notice tokenIn address
     address tokenIn;
+    /// @notice request status
     RequestStatus status;
+    /// @notice amout USD, tokenIn -> USD
     uint256 depositedUsdAmount;
+    /// @notice amout USD, tokenIn - fees -> USD
     uint256 usdAmountWithoutFees;
+    /// @notice rate of mToken at request creation time
     uint256 tokenOutRate;
+    /// @notice amount of tokenIn that was deposited instantly in USD
+    uint256 depositedInstantUsdAmount;
+    /// @notice approved tokenOut rate
+    uint256 approvedTokenOutRate;
+    /// @notice amount of mToken that was minted
+    uint256 amountMToken;
+}
+
+/**
+ * @notice Deposit vault init params
+ */
+struct DepositVaultInitParams {
+    /// @notice minimal USD amount for first user`s deposit
+    uint256 minMTokenAmountForFirstDeposit;
+    /// @notice max amount per request in mToken
+    uint256 maxAmountPerRequest;
 }
 
 /**
@@ -27,144 +43,120 @@ struct Request {
  */
 interface IDepositVault is IManageableVault {
     /**
-     * @param caller function caller (msg.sender)
      * @param newValue new min amount to deposit value
      */
-    event SetMinMTokenAmountForFirstDeposit(
-        address indexed caller,
-        uint256 newValue
-    );
+    event SetMinMTokenAmountForFirstDeposit(uint256 newValue);
 
     /**
-     * @param caller function caller (msg.sender)
-     * @param newValue new max supply cap value
+     * @param newValue new max amount per request
      */
-    event SetMaxSupplyCap(address indexed caller, uint256 newValue);
-
-    /**
-     * @param user function caller (msg.sender)
-     * @param tokenIn address of tokenIn
-     * @param amountUsd amount of tokenIn converted to USD
-     * @param amountToken amount of tokenIn
-     * @param fee fee amount in tokenIn
-     * @param minted amount of minted mTokens
-     * @param referrerId referrer id
-     */
-    event DepositInstant(
-        address indexed user,
-        address indexed tokenIn,
-        uint256 amountUsd,
-        uint256 amountToken,
-        uint256 fee,
-        uint256 minted,
-        bytes32 referrerId
-    );
+    event SetMaxAmountPerRequest(uint256 newValue);
 
     /**
      * @param user function caller (msg.sender)
      * @param tokenIn address of tokenIn
      * @param recipient address that receives the mTokens
-     * @param amountUsd amount of tokenIn converted to USD
-     * @param amountToken amount of tokenIn
-     * @param fee fee amount in tokenIn
-     * @param minted amount of minted mTokens
+     * @param amountTokenIn amount of tokenIn
+     * @param feeAmount fee amount in tokenIn
+     * @param amountMToken amount of minted mTokens
+     * @param mTokenRate mToken rate
+     * @param tokenInRate tokenIn rate
      * @param referrerId referrer id
      */
-    event DepositInstantWithCustomRecipient(
+    event DepositInstant(
         address indexed user,
         address indexed tokenIn,
-        address recipient,
-        uint256 amountUsd,
-        uint256 amountToken,
-        uint256 fee,
-        uint256 minted,
+        address indexed recipient,
+        uint256 amountTokenIn,
+        uint256 feeAmount,
+        uint256 amountMToken,
+        uint256 mTokenRate,
+        uint256 tokenInRate,
         bytes32 referrerId
     );
 
     /**
      * @param requestId mint request id
      * @param user function caller (msg.sender)
+     * @param recipient address that receives the mTokens
      * @param tokenIn address of tokenIn
-     * @param amountToken amount of tokenIn
-     * @param amountUsd amount of tokenIn converted to USD
-     * @param fee fee amount in tokenIn
-     * @param tokenOutRate mToken rate
+     * @param amountTokenIn amount of tokenIn
+     * @param amountTokenInInstant amount of tokenIn that was deposited instantly
+     * @param feeAmount fee amount in tokenIn
+     * @param mTokenRate mToken rate
+     * @param tokenInRate tokenIn rate
      * @param referrerId referrer id
      */
     event DepositRequest(
         uint256 indexed requestId,
         address indexed user,
         address indexed tokenIn,
-        uint256 amountToken,
-        uint256 amountUsd,
-        uint256 fee,
-        uint256 tokenOutRate,
-        bytes32 referrerId
-    );
-
-    /**
-     * @param requestId mint request id
-     * @param user function caller (msg.sender)
-     * @param recipient address that receives the mTokens
-     * @param tokenIn address of tokenIn
-     * @param amountToken amount of tokenIn
-     * @param amountUsd amount of tokenIn converted to USD
-     * @param fee fee amount in tokenIn
-     * @param tokenOutRate mToken rate
-     * @param referrerId referrer id
-     */
-    event DepositRequestWithCustomRecipient(
-        uint256 indexed requestId,
-        address indexed user,
-        address indexed tokenIn,
         address recipient,
-        uint256 amountToken,
-        uint256 amountUsd,
-        uint256 fee,
-        uint256 tokenOutRate,
+        uint256 amountTokenIn,
+        uint256 amountTokenInInstant,
+        uint256 feeAmount,
+        uint256 mTokenRate,
+        uint256 tokenInRate,
         bytes32 referrerId
     );
 
     /**
      * @param requestId mint request id
      * @param newOutRate mToken rate inputted by admin
+     * @param isSafe if true, approval is safe
+     * @param isAvgRate if true, newOutRate is avg rate
      */
-    event ApproveRequest(uint256 indexed requestId, uint256 newOutRate);
+    event ApproveRequest(
+        uint256 indexed requestId,
+        uint256 newOutRate,
+        bool isSafe,
+        bool isAvgRate
+    );
 
     /**
      * @param requestId mint request id
-     * @param newOutRate mToken rate inputted by admin
      */
-    event SafeApproveRequest(uint256 indexed requestId, uint256 newOutRate);
+    event RejectRequest(uint256 indexed requestId);
 
     /**
-     * @param requestId mint request id
-     * @param user address of user
+     * @notice first deposit mint amount is below minimum
+     * @param amountMTokenWithoutFee mint amount after fee (decimals 18)
+     * @param minAmount minimum first deposit mint amount
      */
-    event RejectRequest(uint256 indexed requestId, address indexed user);
+    error LessThanMinAmountFirstDeposit(
+        uint256 amountMTokenWithoutFee,
+        uint256 minAmount
+    );
 
     /**
-     * @param user address that was freed from min deposit check
+     * @notice when token supply cap is exceeded
      */
-    event FreeFromMinDeposit(address indexed user);
+    error SupplyCapExceeded();
+
+    /**
+     * @notice when max amount per request is exceeded
+     * @param estimatedMintAmount estimated mint amount
+     */
+    error MaxAmountPerRequestExceeded(uint256 estimatedMintAmount);
 
     /**
      * @notice depositing proccess with auto mint if
      * account fit daily limit and token allowance.
      * Transfers token from the user.
-     * Transfers fee in tokenIn to feeReceiver.
+     * Transfers fee in tokenIn to tokensReceiver.
      * Mints mToken to user.
      * @param tokenIn address of tokenIn
      * @param amountToken amount of `tokenIn` that will be taken from user (decimals 18)
      * @param minReceiveAmount minimum expected amount of mToken to receive (decimals 18)
      * @param referrerId referrer id
+     * @return mintAmount amount of mToken that was minted
      */
     function depositInstant(
         address tokenIn,
         uint256 amountToken,
         uint256 minReceiveAmount,
         bytes32 referrerId
-    ) external;
+    ) external returns (uint256);
 
     /**
      * @notice Does the same as original `depositInstant` but allows specifying a custom tokensReceiver address.
@@ -173,6 +165,7 @@ interface IDepositVault is IManageableVault {
      * @param minReceiveAmount minimum expected amount of mToken to receive (decimals 18)
      * @param referrerId referrer id
      * @param tokensReceiver address to receive the tokens (instead of msg.sender)
+     * @return mintAmount amount of mToken that was minted
      */
     function depositInstant(
         address tokenIn,
@@ -180,13 +173,13 @@ interface IDepositVault is IManageableVault {
         uint256 minReceiveAmount,
         bytes32 referrerId,
         address tokensReceiver
-    ) external;
+    ) external returns (uint256);
 
     /**
      * @notice depositing proccess with mint request creating if
      * account fit token allowance.
      * Transfers token from the user.
-     * Transfers fee in tokenIn to feeReceiver.
+     * Transfers fee in tokenIn to tokensReceiver.
      * Creates mint request.
      * @param tokenIn address of tokenIn
      * @param amountToken amount of `tokenIn` that will be taken from user (decimals 18)
@@ -200,24 +193,31 @@ interface IDepositVault is IManageableVault {
     ) external returns (uint256);
 
     /**
-     * @notice Does the same as original `depositRequest` but allows specifying a custom tokensReceiver address.
+     * @notice Instantly deposits `instantShare` amount of `amountMTokenIn` and creates a request for the remaining amount.
      * @param tokenIn address of tokenIn
      * @param amountToken amount of `tokenIn` that will be taken from user (decimals 18)
      * @param referrerId referrer id
-     * @param recipient address that receives the mTokens
+     * @param recipientRequest address that receives the mTokens for the request part
+     * @param instantShare % amount of `amountToken` that will be deposited instantly
+     * @param minReceiveAmountInstantShare min receive amount for the instant share
+     * @param recipientInstant address that receives the mTokens for the instant part
      * @return request id
+     * @return instantMintAmount amount of mToken that was minted instantly
      */
     function depositRequest(
         address tokenIn,
         uint256 amountToken,
         bytes32 referrerId,
-        address recipient
-    ) external returns (uint256);
+        address recipientRequest,
+        uint256 instantShare,
+        uint256 minReceiveAmountInstantShare,
+        address recipientInstant
+    ) external returns (uint256, uint256);
 
     /**
      * @notice approving requests from the `requestIds` array
      * with the mToken rate from the request.
-     * Does same validation as `safeApproveRequest`.
+     * Validates that new mToken rate does not exceed variation tolerance
      * Mints mToken to request users.
      * Sets request flags to Processed.
      * @param requestIds request ids array
@@ -228,7 +228,7 @@ interface IDepositVault is IManageableVault {
     /**
      * @notice approving requests from the `requestIds` array
      * with the current mToken rate.
-     * Does same validation as `safeApproveRequest`.
+     * Validates that new mToken rate does not exceed variation tolerance
      * Mints mToken to request users.
      * Sets request flags to Processed.
      * @param requestIds request ids array
@@ -236,8 +236,19 @@ interface IDepositVault is IManageableVault {
     function safeBulkApproveRequest(uint256[] calldata requestIds) external;
 
     /**
+     * @notice approving requests from the `requestIds` array
+     * with the current mToken rate.
+     * Validates that new mToken rate does not exceed variation tolerance
+     * Mints mToken to request users.
+     * Sets request flags to Processed.
+     * @param requestIds request ids array
+     */
+    function safeBulkApproveRequestAvgRate(uint256[] calldata requestIds)
+        external;
+
+    /**
      * @notice approving requests from the `requestIds` array using the `newOutRate`.
-     * Does same validation as `safeApproveRequest`.
+     * Validates that new mToken rate does not exceed variation tolerance
      * Mints mToken to request users.
      * Sets request flags to Processed.
      * @param requestIds request ids array
@@ -249,13 +260,17 @@ interface IDepositVault is IManageableVault {
     ) external;
 
     /**
-     * @notice approving request if inputted token rate fit price deviation percent
-     * Mints mToken to user.
-     * Sets request flag to Processed.
-     * @param requestId request id
-     * @param newOutRate mToken rate inputted by vault admin
+     * @notice approving requests from the `requestIds` array using the `newOutRate`.
+     * Validates that new mToken rate does not exceed variation tolerance
+     * Mints mToken to request users.
+     * Sets request flags to Processed.
+     * @param requestIds request ids array
+     * @param avgMTokenRate avg mToken rate inputted by vault admin
      */
-    function safeApproveRequest(uint256 requestId, uint256 newOutRate) external;
+    function safeBulkApproveRequestAvgRate(
+        uint256[] calldata requestIds,
+        uint256 avgMTokenRate
+    ) external;
 
     /**
      * @notice approving request without price deviation check
@@ -263,8 +278,13 @@ interface IDepositVault is IManageableVault {
      * Sets request flag to Processed.
      * @param requestId request id
      * @param newOutRate mToken rate inputted by vault admin
+     * @param isAvgRate if true, newOutRate is avg rate
      */
-    function approveRequest(uint256 requestId, uint256 newOutRate) external;
+    function approveRequest(
+        uint256 requestId,
+        uint256 newOutRate,
+        bool isAvgRate
+    ) external;
 
     /**
      * @notice rejecting request
@@ -281,9 +301,9 @@ interface IDepositVault is IManageableVault {
     function setMinMTokenAmountForFirstDeposit(uint256 newValue) external;
 
     /**
-     * @notice sets new max supply cap value
+     * @notice sets new max amount per request
      * can be called only from vault`s admin
-     * @param newValue new max supply cap value
+     * @param newValue new max amount per request
      */
-    function setMaxSupplyCap(uint256 newValue) external;
+    function setMaxAmountPerRequest(uint256 newValue) external;
 }
