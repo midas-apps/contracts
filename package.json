@@ -95,6 +95,8 @@
     "deploy:axelar:post:grant:roles": "yarn hh:run:script scripts/deploy/misc/axelar/grant_Roles.ts",
     "deploy:axelar:post:revoke:roles": "yarn hh:run:script scripts/deploy/misc/axelar/revoke_Roles.ts",
     "deploy:ccip:pool": "yarn hh:run:script scripts/deploy/misc/ccip/deploy_BurnMintTokenPool.ts",
+    "deploy:ccip:escrow": "yarn hh:run:script scripts/deploy/misc/ccip/deploy_FallbackEscrow.ts",
+    "deploy:ccip:post:set:fbrecipient": "yarn hh:run:script scripts/deploy/misc/ccip/set_FallbackRecipient.ts",
     "deploy:ccip:post:grant:roles": "yarn hh:run:script scripts/deploy/misc/ccip/grant_Roles.ts",
     "deploy:ccip:post:configure": "yarn hh:run:script scripts/deploy/misc/ccip/set_ChainConfigs.ts",
     "deploy:ccip:post:set:pool": "yarn hh:run:script scripts/deploy/misc/ccip/set_Pool.ts",

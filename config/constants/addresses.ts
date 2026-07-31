@@ -32,6 +32,7 @@ type AxelarTokenAddresses = {
 
 type CCIPTokenAddresses = {
   tokenPool: string;
+  fallbackEscrow?: string;
 };
 
 type TokenFeedAddresses = {
