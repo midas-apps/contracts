@@ -6133,7 +6133,7 @@ export const redemptionVaultSuits = (
             );
           });
 
-          it('when calclulated holdback part rate is 0 should use the price passed as newMTokenRate', async () => {
+          it('should fail: when calculated holdback part rate is 0 and instant part is non-zero', async () => {
             const {
               owner,
               mockedAggregator,
@@ -6174,6 +6174,70 @@ export const redemptionVaultSuits = (
                 mTBILL,
                 mTokenToUsdDataFeed,
                 instantShare: 50_00,
+              },
+              stableCoins.dai,
+              100,
+            );
+            const requestId = 0;
+
+            await approveRedeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isAvgRate: true,
+              },
+              +requestId,
+              parseUnits('1'),
+              {
+                revertCustomError: {
+                  customErrorName: 'InvalidAvgRate',
+                },
+              },
+            );
+          });
+
+          it('when calclulated holdback part rate is 0 and instant part is 0 should use the price passed as newMTokenRate', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              requestRedeemer,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, requestRedeemer, 100000);
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await approveBase18(
+              requestRedeemer,
+              stableCoins.dai,
+              redemptionVault,
+              100000,
+            );
+
+            await mintToken(mTBILL, owner, 100);
+            await approveBase18(owner, mTBILL, redemptionVault, 100);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1.03);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
               },
               stableCoins.dai,
               100,

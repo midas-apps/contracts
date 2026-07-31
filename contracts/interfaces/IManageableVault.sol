@@ -256,6 +256,11 @@ interface IManageableVault {
     error InvalidNewMTokenRate();
 
     /**
+     * @notice Avg rate must be greater than zero
+     */
+    error InvalidAvgRate();
+
+    /**
      * @notice Request does not exist
      * @param requestId request id
      */

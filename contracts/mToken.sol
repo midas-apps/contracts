@@ -114,7 +114,7 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         string memory symbol_
     ) external {
         _initializeV1(_accessControl, name_, symbol_);
-        initializeV2(_clawbackReceiver);
+        initializeV3(_clawbackReceiver);
     }
 
     /**
@@ -133,10 +133,10 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     }
 
     /**
-     * @dev v2 initializer
+     * @dev v3 initializer
      * @param _clawbackReceiver address to which clawback tokens will be sent
      */
-    function initializeV2(address _clawbackReceiver)
+    function initializeV3(address _clawbackReceiver)
         public
         virtual
         reinitializer(3)
@@ -204,7 +204,8 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      * @inheritdoc IMToken
      */
     function burn(address from, uint256 amount)
-        external
+        public
+        virtual
         onlyRoleNoTimelock(burnerRole(), false)
     {
         _onlyNotBlacklisted(from);

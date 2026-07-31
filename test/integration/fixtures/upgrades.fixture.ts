@@ -113,7 +113,7 @@ export async function mainnetUpgradeFixture() {
           allRoles.tokenRoles.mTBILL.burner,
         ],
         reinitializerParams: {
-          fn: 'initializeV2',
+          fn: 'initializeV3',
           args: [clawbackReceiver.address],
         },
       },
@@ -141,7 +141,7 @@ export async function mainnetUpgradeFixture() {
           allRoles.tokenRoles.mBTC.burner,
         ],
         reinitializerParams: {
-          fn: 'initializeV2',
+          fn: 'initializeV3',
           args: [clawbackReceiver.address],
         },
       },
@@ -170,7 +170,7 @@ export async function mainnetUpgradeFixture() {
           allRoles.tokenRoles.mGLOBAL.greenlisted,
         ],
         reinitializerParams: {
-          fn: 'initializeV2',
+          fn: 'initializeV3',
           args: [clawbackReceiver.address],
         },
       },
@@ -198,7 +198,7 @@ export async function mainnetUpgradeFixture() {
           allRoles.tokenRoles.mROX.burner,
         ],
         reinitializerParams: {
-          fn: 'initializeV2',
+          fn: 'initializeV3',
           args: [clawbackReceiver.address],
         },
       },

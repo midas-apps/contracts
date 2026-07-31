@@ -108,7 +108,7 @@ redemptionVaultSuits(
           );
         });
 
-        it('with permissioned mToken - instant fee is 0, burns/transfers mToken from non-greenlisted user', async () => {
+        it('should fail: with permissioned mToken - instant fee is 0, burns/transfers mToken from non-greenlisted user', async () => {
           const {
             owner,
             stableCoins,
@@ -167,10 +167,13 @@ redemptionVaultSuits(
             },
             stableCoins.dai,
             999,
+            {
+              revertCustomError: { customErrorName: 'NotGreenlisted' },
+            },
           );
         });
 
-        it('with permissioned mToken - redeem instant burns mToken from non-greenlisted user when fee is not 0', async () => {
+        it('should fail: with permissioned mToken - redeem instant burns mToken from non-greenlisted user when fee is not 0', async () => {
           const {
             owner,
             stableCoins,
@@ -229,6 +232,9 @@ redemptionVaultSuits(
             },
             stableCoins.dai,
             999,
+            {
+              revertCustomError: { customErrorName: 'NotGreenlisted' },
+            },
           );
         });
       });

@@ -209,7 +209,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      */
     function safeBulkApproveRequestAtSavedRate(uint256[] calldata requestIds)
         external
-        onlyContractAdmin
     {
         _safeBulkApproveRequest(requestIds, 0, true, false);
     }
@@ -415,16 +414,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 newOutRate = redeemRequests[requestIds[i]].mTokenRate;
             }
 
-            bool success = _approveRequest(
-                requestIds[i],
-                newOutRate,
-                true,
-                isAvgRate
-            );
-
-            if (!success) {
-                continue;
-            }
+            _approveRequest(requestIds[i], newOutRate, true, isAvgRate);
         }
     }
 
@@ -441,21 +431,13 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * - safely validates if there is enough liquidity
      * - requires variation tolerance
      * @param isAvgRate if true, calculates holdback part rate from avg rate
-     *
-     * @return success true if success, otherwise false if isSafe flag is true,
-     * or revert if isSafe flag is false
      */
     function _approveRequest(
         uint256 requestId,
         uint256 newMTokenRate,
         bool isSafe,
         bool isAvgRate
-    )
-        private
-        returns (
-            bool /* success */
-        )
-    {
+    ) private {
         Request memory request = redeemRequests[requestId];
 
         _validateRequest(requestId, request.recipient, request.status);
@@ -471,6 +453,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 request,
                 newMTokenRate
             );
+
+            if (request.amountMTokenInstant > 0) {
+                require(avgRate > 0, InvalidAvgRate());
+            }
 
             if (avgRate != 0) {
                 newMTokenRate = avgRate;
@@ -497,7 +483,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                     .convertFromBase18(calcResult.tokenOutDecimals)) ||
             !_validateAndUpdateNextRequestIdToProcess(requestId, !isSafe)
         ) {
-            return false;
+            return;
         }
 
         _tokenTransferFromTo(
@@ -519,8 +505,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         redeemRequests[requestId] = request;
 
         emit ApproveRequest(requestId, newMTokenRate, isSafe, isAvgRate);
-
-        return true;
     }
 
     /**

@@ -206,12 +206,7 @@ library RateLimitLibrary {
     ) private view returns (uint256 inFlight, uint256 remaining) {
         uint256 elapsed = block.timestamp - lastUpdated;
 
-        uint256 decay = Math.mulDiv(
-            limit,
-            elapsed,
-            window > 0 ? window : 1,
-            Math.Rounding.Down
-        );
+        uint256 decay = Math.mulDiv(limit, elapsed, window, Math.Rounding.Down);
 
         inFlight = amountInFlight <= decay ? 0 : amountInFlight - decay;
 

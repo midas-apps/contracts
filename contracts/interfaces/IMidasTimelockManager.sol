@@ -35,6 +35,8 @@ struct GetOperationStatusResult {
     address operationProposer;
     /// @notice address that paused the operation
     address pauser;
+    /// @notice block timestamp when operation was paused
+    uint32 pausedAt;
     /// @notice hash of target, value and data
     bytes32 dataHash;
     /// @notice number of council votes for execution

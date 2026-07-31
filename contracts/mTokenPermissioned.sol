@@ -50,6 +50,16 @@ contract mTokenPermissioned is mToken {
     }
 
     /**
+     * @notice Burns tokens from a given address
+     * @param from address to burn tokens from
+     * @param amount amount of tokens to burn
+     */
+    function burn(address from, uint256 amount) public override {
+        _onlyGreenlisted(from);
+        super.burn(from, amount);
+    }
+
+    /**
      * @dev overrides _beforeTokenTransfer function to allow
      * greenlisted users to use the token transfers functions
      */
