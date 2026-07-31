@@ -244,6 +244,7 @@ const validateOperationDetails = async ({
   expect(details.votesForVeto).to.be.equal(0);
   expect(details.createdAt).to.be.equal(blockTimestamp);
   expect(details.executionApprovedAt).to.be.equal(0);
+  expect(details.pausedAt).to.be.equal(0);
   expect(details.pauseReasonCode).to.be.equal(0);
   expect(details.councilVersion).to.be.equal(councilVersionBefore);
   expect(details.isSetCouncilOperation).to.be.equal(isSetCouncilOperation);
@@ -317,6 +318,7 @@ export const executeTimelockOperationTester = async (
   expect(detailsAfter.executionApprovedAt).to.be.equal(
     detailsBefore.executionApprovedAt,
   );
+  expect(detailsAfter.pausedAt).to.be.equal(detailsBefore.pausedAt);
   expect(detailsAfter.pauseReasonCode).to.be.equal(
     detailsBefore.pauseReasonCode,
   );
@@ -409,6 +411,7 @@ export const pauseTimelockOperationTest = async (
   expect(details.status).to.be.equal(2);
   expect(details.pauser).to.be.equal(from.address);
   expect(details.pauseReasonCode).to.be.equal(pauseReasonCode);
+  expect(details.pausedAt).to.be.equal(await getCurrentBlockTimestamp());
   expect(details.councilVersion).to.be.equal(detailsBefore.councilVersion);
   expect(details.operationProposer).to.be.equal(
     detailsBefore.operationProposer,
@@ -455,6 +458,7 @@ export const voteForVetoTest = async (
   const details = await timelockManager.getOperationDetails(operationId);
   expect(details.pauser).to.be.equal(detailsBefore.pauser);
   expect(details.pauseReasonCode).to.be.equal(detailsBefore.pauseReasonCode);
+  expect(details.pausedAt).to.be.equal(detailsBefore.pausedAt);
   expect(details.councilVersion).to.be.equal(detailsBefore.councilVersion);
   expect(details.operationProposer).to.be.equal(
     detailsBefore.operationProposer,
@@ -504,6 +508,7 @@ export const voteForExecutionTest = async (
   const details = await timelockManager.getOperationDetails(operationId);
   expect(details.pauser).to.be.equal(detailsBefore.pauser);
   expect(details.pauseReasonCode).to.be.equal(detailsBefore.pauseReasonCode);
+  expect(details.pausedAt).to.be.equal(detailsBefore.pausedAt);
   expect(details.councilVersion).to.be.equal(detailsBefore.councilVersion);
   expect(details.operationProposer).to.be.equal(
     detailsBefore.operationProposer,
@@ -606,6 +611,7 @@ export const abortOperationTest = async (
   expect(details.executionApprovedAt).to.be.equal(
     detailsBefore.executionApprovedAt,
   );
+  expect(details.pausedAt).to.be.equal(detailsBefore.pausedAt);
   expect(await timelock.isOperation(operationId)).to.be.false;
 
   if (details.isSetCouncilOperation) {
