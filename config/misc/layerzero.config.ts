@@ -74,18 +74,6 @@ export const lzConfigsPerMToken: PartialConfigPerNetwork<
       linkedNetworks: ['scroll'],
     },
   },
-  scroll: {
-    weEUR: {
-      linkedNetworks: ['optimism'],
-      dvns: [...defaultDVNs, DVN.BCWGroup],
-      excludedDVNs: [DVN.DeutscheTelekom],
-    },
-    liquidRESERVE: {
-      linkedNetworks: ['optimism'],
-      dvns: [...defaultDVNs, DVN.BCWGroup],
-      excludedDVNs: [DVN.DeutscheTelekom],
-    },
-  },
   main: {
     mHYPER: {
       pathways: 'direct-only',
@@ -113,6 +101,26 @@ export const lzConfigsPerPaymentToken: PartialConfigPerNetwork<
   sepolia: {
     usdt: {
       linkedNetworks: ['arbitrumSepolia'],
+    },
+  },
+};
+
+/**
+ * Pathways that are being decommissioned. The outer key is the network the
+ * product is retired on. NEVER consumed by the wire task - only by
+ * scripts/deploy/misc/layerzero/deprecate_Ofts.ts, which revokes the OFT
+ * adapters' mint/burn roles and zeroes out the peers on every network of the
+ * pathway. Remove entries once the on-chain deprecation is fully executed.
+ */
+export const deprecatedLzConfigsPerMToken: PartialConfigPerNetwork<
+  ConfigPerNetwork<MTokenName>
+> = {
+  scroll: {
+    weEUR: {
+      linkedNetworks: ['optimism'],
+    },
+    liquidRESERVE: {
+      linkedNetworks: ['optimism'],
     },
   },
 };

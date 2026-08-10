@@ -2,6 +2,7 @@ import { acremBTC1DeploymentConfig } from './acremBTC1';
 import { bondBTCDeploymentConfig } from './bondBTC';
 import { bondETHDeploymentConfig } from './bondETH';
 import { bondUSDDeploymentConfig } from './bondUSD';
+import { carryTradeUSDTRYLeverageDeploymentConfig } from './carryTradeUSDTRYLeverage';
 import { cUSDODeploymentConfig } from './cUSDO';
 import { deploymentConfigNames } from './deployment-profiles';
 import { dnETHDeploymentConfig } from './dnETH';
@@ -22,21 +23,25 @@ import { kitUSDDeploymentConfig } from './kitUSD';
 import { kmiUSDDeploymentConfig } from './kmiUSD';
 import { liquidHYPEDeploymentConfig } from './liquidHYPE';
 import { liquidRESERVEDeploymentConfig } from './liquidRESERVE';
+import { liquidRWADeploymentConfig } from './liquidRWA';
 import { lstHYPEDeploymentConfig } from './lstHYPE';
 import { mAPOLLODeploymentConfig } from './mAPOLLO';
 import { mBASISDeploymentConfig } from './mBASIS';
 import { mBTCDeploymentConfig } from './mBTC';
 import { mEDGEDeploymentConfig } from './mEDGE';
 import { mevBTCDeploymentConfig } from './mevBTC';
+import { mEVETHDeploymentConfig } from './mEVETH';
 import { mEVUSDDeploymentConfig } from './mEVUSD';
 import { mFARMDeploymentConfig } from './mFARM';
 import { mFONEDeploymentConfig, mFONEUnloopDeploymentConfig } from './mFONE';
+import { mGLODeploymentConfig } from './mGLO';
 import { mGLOBALDeploymentConfig } from './mGLOBAL';
 import { mHYPERDeploymentConfig } from './mHYPER';
 import { mHyperBTCDeploymentConfig } from './mHyperBTC';
 import { mHyperETHDeploymentConfig } from './mHyperETH';
 import { mKRalphaDeploymentConfig } from './mKRalpha';
 import { mLIQUIDITYDeploymentConfig } from './mLIQUIDITY';
+import { mM1BTCDeploymentConfig } from './mM1BTC';
 import { mM1USDDeploymentConfig } from './mM1USD';
 import { mMEVDeploymentConfig } from './mMEV';
 import { mPortofinoDeploymentConfig } from './mPortofino';
@@ -52,17 +57,22 @@ import { mTBILLDeploymentConfig } from './mTBILL';
 import { mTESTDeploymentConfig } from './mTEST';
 import { mTUDeploymentConfig } from './mTU';
 import { mWildUSDDeploymentConfig } from './mWildUSD';
+import { mWINDeploymentConfig } from './mWIN';
 import { mXRPDeploymentConfig } from './mXRP';
 import { obeatUSDDeploymentConfig } from './obeatUSD';
 import { plUSDDeploymentConfig } from './plUSD';
+import { qHVNUSDDeploymentConfig } from './qHVNUSD';
+import { sGoldDeploymentConfig } from './sGold';
 import { sLINJDeploymentConfig } from './sLINJ';
 import { splUSDDeploymentConfig } from './splUSD';
+import { stockMarketTRBasisTradeDeploymentConfig } from './stockMarketTRBasisTrade';
 import { TACmBTCDeploymentConfig } from './tac/TACmBTC';
 import { TACmEDGEDeploymentConfig } from './tac/TACmEDGE';
 import { TACmMEVDeploymentConfig } from './tac/TACmMEV';
 import { tacTONDeploymentConfig } from './tacTON';
 import { tBTCDeploymentConfig } from './tBTC';
 import { tETHDeploymentConfig } from './tETH';
+import { turtlePSTDeploymentConfig } from './turtlePST';
 import { tUSDeDeploymentConfig } from './tUSDe';
 import { weEURDeploymentConfig } from './weEUR';
 import { wNLPDeploymentConfig } from './wNLP';
@@ -146,6 +156,16 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   bondETH: bondETHDeploymentConfig,
   bondBTC: bondBTCDeploymentConfig,
   mTEST: mTESTDeploymentConfig,
+  stockMarketTRBasisTrade: stockMarketTRBasisTradeDeploymentConfig,
+  carryTradeUSDTRYLeverage: carryTradeUSDTRYLeverageDeploymentConfig,
+  mEVETH: mEVETHDeploymentConfig,
+  liquidRWA: liquidRWADeploymentConfig,
+  mWIN: mWINDeploymentConfig,
+  qHVNUSD: qHVNUSDDeploymentConfig,
+  mGLO: mGLODeploymentConfig,
+  sGold: sGoldDeploymentConfig,
+  turtlePST: turtlePSTDeploymentConfig,
+  mM1BTC: mM1BTCDeploymentConfig,
 };
 
 type NamedDeploymentConfig = {

@@ -16,6 +16,7 @@ import {
   getRolesForToken,
   getRolesNamesCommon,
   getRolesNamesForToken,
+  tokenLevelGreenlistTokens,
 } from '../../helpers/roles';
 import {
   CustomAggregatorV3CompatibleFeed,
@@ -618,7 +619,7 @@ export const tokenContractsTests = (token: MTokenName) => {
         ).revertedWith(acErrors.WMAC_HAS_ROLE);
       });
 
-      it('burn(...) when address is blacklisted', async () => {
+      it('should fail: burn(...) when address is blacklisted', async () => {
         const { owner, regularAccounts, accessControl, tokenContract } =
           await deployMTokenWithFixture();
 
@@ -629,7 +630,45 @@ export const tokenContractsTests = (token: MTokenName) => {
           { blacklistable: tokenContract, accessControl, owner },
           blacklisted,
         );
-        await burn({ tokenContract, owner }, blacklisted, 1);
+        await burn({ tokenContract, owner }, blacklisted, 1, {
+          revertMessage: acErrors.WMAC_HAS_ROLE,
+        });
+      });
+
+      it('burnGoverned(...) when address is blacklisted', async () => {
+        const { owner, regularAccounts, accessControl, tokenContract } =
+          await deployMTokenWithFixture();
+
+        const blacklisted = regularAccounts[0];
+
+        await mint({ tokenContract, owner }, blacklisted, 1);
+        await blackList(
+          { blacklistable: tokenContract, accessControl, owner },
+          blacklisted,
+        );
+
+        const balanceBefore = await tokenContract.balanceOf(
+          blacklisted.address,
+        );
+        await expect(
+          tokenContract.connect(owner).burnGoverned(blacklisted.address, 1),
+        ).to.not.reverted;
+        const balanceAfter = await tokenContract.balanceOf(blacklisted.address);
+        expect(balanceBefore.sub(balanceAfter)).eq(1);
+      });
+
+      it('should fail: burnGoverned(...) when caller lacks burner role', async () => {
+        const { owner, regularAccounts, tokenContract } =
+          await deployMTokenWithFixture();
+
+        const unauthorized = regularAccounts[0];
+        const target = regularAccounts[1];
+
+        await mint({ tokenContract, owner }, target, 1);
+
+        await expect(
+          tokenContract.connect(unauthorized).burnGoverned(target.address, 1),
+        ).revertedWith(acErrors.WMAC_HASNT_ROLE);
       });
 
       it('transferFrom(...) when caller address is blacklisted', async () => {
@@ -820,6 +859,38 @@ export const tokenContractsTests = (token: MTokenName) => {
       expect(await redemptionVaultWithBuidl.vaultRole()).eq(
         tokenRoles.redemptionVaultAdmin,
       );
+    });
+
+    it('vaults greenlistedRole()', async function () {
+      const fixture = await deployMTokenVaultsWithFixture();
+
+      const vaults = (
+        [
+          fixture.tokenDepositVault,
+          fixture.tokenDepositVaultUstb,
+          fixture.tokenRedemptionVault,
+          fixture.tokenRedemptionVaultWithSwapper,
+          fixture.tokenRedemptionVaultWithBuidl,
+        ] as (Contract | null)[]
+      ).filter((v): v is Contract => !!v);
+
+      if (vaults.length === 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (this as any).skip();
+        return;
+      }
+
+      // Token-level (separated) greenlist products override greenlistedRole()
+      // to return their configured role (mGLO reuses mGLOBAL's
+      // M_GLOBAL_GREENLISTED_ROLE via sharedGreenlistRoleSource); every other
+      // product inherits the shared common GREENLISTED_ROLE.
+      const expectedGreenlistedRole = tokenLevelGreenlistTokens.includes(token)
+        ? tokenRoles.greenlisted
+        : allRoles.common.greenlisted;
+
+      for (const vault of vaults) {
+        expect(await vault.greenlistedRole()).eq(expectedGreenlistedRole);
+      }
     });
   });
 };

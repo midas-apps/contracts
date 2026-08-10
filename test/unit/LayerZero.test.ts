@@ -12,6 +12,7 @@ import {
   MidasLzOFTAdapter__factory,
   MidasLzVaultComposerSyncTester,
 } from '../../typechain-types';
+import { acErrors, blackList } from '../common/ac.helpers';
 import { approveBase18, mintToken } from '../common/common.helpers';
 import { setRoundData } from '../common/data-feed.helpers';
 import { deployProxyContract } from '../common/deploy.helpers';
@@ -147,6 +148,33 @@ describe('LayerZero', function () {
         );
 
         await sendOft(fixture, { amount: 100 }, { revertOnDst: true });
+      });
+
+      it('should fail: from A to B when sender is blacklisted', async () => {
+        const fixture = await loadFixture(layerZeroFixture);
+        const { owner, regularAccounts, accessControl, mTBILL } = fixture;
+
+        const blacklisted = regularAccounts[0];
+
+        await mint(
+          { owner, tokenContract: mTBILL },
+          blacklisted,
+          parseUnits('100', 18),
+        );
+
+        await blackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          blacklisted,
+        );
+
+        await sendOft(
+          fixture,
+          { amount: 100 },
+          {
+            from: blacklisted,
+            revertMessage: acErrors.WMAC_HAS_ROLE,
+          },
+        );
       });
 
       it('should fail: send mTBILL from A to B with rate limit exceeded', async () => {

@@ -70,6 +70,16 @@ export enum MTokenNameEnum {
   bondETH = 'bondETH',
   bondBTC = 'bondBTC',
   mTEST = 'mTEST',
+  stockMarketTRBasisTrade = 'stockMarketTRBasisTrade',
+  carryTradeUSDTRYLeverage = 'carryTradeUSDTRYLeverage',
+  mEVETH = 'mEVETH',
+  liquidRWA = 'liquidRWA',
+  mWIN = 'mWIN',
+  qHVNUSD = 'qHVNUSD',
+  mGLO = 'mGLO',
+  sGold = 'sGold',
+  turtlePST = 'turtlePST',
+  mM1BTC = 'mM1BTC',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
@@ -77,6 +87,7 @@ export type MTokenName = keyof typeof MTokenNameEnum;
 export enum PaymentTokenNameEnum {
   usdc = 'usdc',
   usdt = 'usdt',
+  rlusd = 'rlusd',
   dai = 'dai',
   m = 'm',
   wbtc = 'wbtc',
@@ -125,6 +136,9 @@ export enum PaymentTokenNameEnum {
   winj = 'winj',
   yinj = 'yinj',
   eurc = 'eurc',
+  usdg = 'usdg',
+  pyusd = 'pyusd',
+  ausd = 'ausd',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;

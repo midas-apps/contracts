@@ -20,10 +20,12 @@ import {
 import {
   executeTimeLockTransferOwnershipTx,
   executeTimeLockUpgradeTx,
-  GetUpgradeTxParams,
+  GetVaultUpgradeTxParams,
   proposeTimeLockTransferOwnershipTx,
   proposeTimeLockUpgradeTx,
   TransferOwnershipTxParams,
+  validateSimulateTimeLockProposeUpgradeTx,
+  validateSimulateTimeLockUpgradeTx,
 } from '../../deploy/common/timelock';
 import { getDeployer } from '../../deploy/common/utils';
 import { networkConfigs } from '../configs/network-configs';
@@ -44,6 +46,24 @@ export const executeUpgradeVaults = async (
 ) => {
   return upgradeAllVaults(hre, upgradeId, async (hre, params, salt) => {
     return await executeTimeLockUpgradeTx(hre, params, salt);
+  });
+};
+
+export const validateUpgradeVaults = async (
+  hre: HardhatRuntimeEnvironment,
+  upgradeId: string,
+) => {
+  return upgradeAllVaults(hre, upgradeId, async (hre, params, salt) => {
+    return await validateSimulateTimeLockUpgradeTx(hre, params, salt);
+  });
+};
+
+export const validateProposeUpgradeVaults = async (
+  hre: HardhatRuntimeEnvironment,
+  upgradeId: string,
+) => {
+  return upgradeAllVaults(hre, upgradeId, async (hre, params, salt) => {
+    return await validateSimulateTimeLockProposeUpgradeTx(hre, params, salt);
   });
 };
 
@@ -86,7 +106,7 @@ const getImplAddressFromDeployment = async (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tx.contractAddress ?? tx.to ?? ((tx as any).creates as string);
 
-  if (tx.confirmations <= 7) {
+  if (tx.confirmations <= 20) {
     return {
       deployedNew: true,
       address,
@@ -139,9 +159,9 @@ const upgradeAllVaults = async (
   upgradeId: string,
   callBack: (
     hre: HardhatRuntimeEnvironment,
-    params: GetUpgradeTxParams,
+    params: GetVaultUpgradeTxParams,
     salt: string,
-  ) => Promise<unknown>,
+  ) => Promise<boolean>,
 ) => {
   const config = upgradeConfigs.upgrades[upgradeId];
 
@@ -197,6 +217,13 @@ const upgradeAllVaults = async (
     let overrideVaults: (MTokenVaultsToUpgrade['vaults'][0] & {
       remove?: boolean;
     })[] = [];
+
+    if (overrides === false) {
+      mTokenVaultsToUpgrade = mTokenVaultsToUpgrade.filter(
+        (v) => v.mToken !== mToken,
+      );
+      continue;
+    }
 
     if (overrides?.all) {
       overrideVaults = (
@@ -343,6 +370,7 @@ const upgradeAllVaults = async (
   });
 
   console.log('upgradeContracts', upgradeContracts);
+  console.log('total upgrades', upgradeContracts.length);
 
   const deployer = await getDeployer(hre);
 
@@ -408,16 +436,23 @@ const upgradeAllVaults = async (
 Proxy: ${deployment.proxyAddress}
 Implementation: ${deployment.implementationAddress}`,
       );
-      await callBack(
+      const result = await callBack(
         hre,
         {
           proxyAddress: deployment.proxyAddress,
           newImplementation: deployment.implementationAddress,
           initializer: deployment.initializer,
           initializerCalldata: deployment.initializerCalldata,
+          contractName: deployment.contractName,
+          vaultType: deployment.vaultType,
+          mToken: deployment.mToken,
         },
         config.overrideSalt ?? upgradeId,
       );
+
+      if (!result) {
+        throw new Error('Upgrade was not finished successfully');
+      }
     } catch (e) {
       console.error(`Upgrade failed with error ${e}`);
 
@@ -429,9 +464,16 @@ Implementation: ${deployment.implementationAddress}`,
     }
   }
 
+  console.log(
+    `Successfully executed ${deployments.length - failedUpgrades.length}/${
+      deployments.length
+    } upgrades`,
+  );
+
   if (failedUpgrades.length > 0) {
     console.log('Failed upgrades', failedUpgrades);
-  } else {
-    console.log('All upgrades successful');
+    throw new Error(
+      `${failedUpgrades.length}/${deployments.length} vault upgrades failed`,
+    );
   }
 };

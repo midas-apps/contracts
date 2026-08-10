@@ -20,7 +20,7 @@ import {
   VaultType,
 } from '../../../../../config/constants/addresses';
 import { isMTokenName, isPaymentTokenName } from '../../../../../helpers/utils';
-import { DeploymentConfig, PostDeployConfig } from '../../../common/types';
+import { PostDeployConfig, VaultFunctionName } from '../../../common/types';
 
 export const configsPerNetworkConfig = {
   dv: getDvConfigFromUser,
@@ -36,6 +36,10 @@ export const configsPerNetworkConfig = {
   postDeploy: {
     grantRoles: getPostDeployGrantRolesConfigFromUser,
     addPaymentTokens: getPostDeployAddPaymentTokensConfigFromUser,
+    addFeeWaived: getPostDeployAddFeeWaivedConfigFromUser,
+    setAaveConfig: getPostDeploySetAaveConfigFromUser,
+    setMorphoConfig: getPostDeploySetMorphoConfigFromUser,
+    pauseFunctions: getPostDeployPauseFunctionsConfigFromUser,
   },
 };
 
@@ -181,6 +185,15 @@ async function getDvConfigFromUser(hre: HardhatRuntimeEnvironment) {
       })
         .then(requireNotCancelled)
         .then(requirePercentageToBigNumberish),
+    minAmount: () =>
+      text({
+        message: 'Min Amount',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
     minMTokenAmountForFirstDeposit: () =>
       text({
         message: 'Min mToken Amount For First Deposit',
@@ -485,6 +498,15 @@ async function getRvConfigFromUser<T>(
       })
         .then(requireNotCancelled)
         .then(requirePercentageToBigNumberish),
+    minAmount: () =>
+      text({
+        message: 'Min Amount',
+        defaultValue: '0',
+        placeholder: '0',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
     ...(extendGroup ?? {}),
     outro: () => Promise.resolve(outro(`Done...`)).then(() => undefined),
   }).then(clearIntroOutro);
@@ -620,6 +642,9 @@ async function getRvSwapperConfigFromUser(hre: HardhatRuntimeEnvironment) {
 
 async function getPostDeployGrantRolesConfigFromUser(
   _: HardhatRuntimeEnvironment,
+  _vaults?: VaultType[],
+  _mToken?: MTokenName,
+  _collected?: Partial<PostDeployConfig>,
 ) {
   const config = await group({
     intro: () =>
@@ -650,6 +675,8 @@ async function getPostDeployGrantRolesConfigFromUser(
 async function getPostDeployAddPaymentTokensConfigFromUser(
   _: HardhatRuntimeEnvironment,
   vaults: VaultType[],
+  _mToken?: MTokenName,
+  _collected?: Partial<PostDeployConfig>,
 ) {
   const { selectedVaults } = await group({
     intro: () =>
@@ -748,99 +775,423 @@ async function getPostDeployAddPaymentTokensConfigFromUser(
   return { vaults: Object.values(configs) };
 }
 
-export async function getDeploymentConfigFromUser(
-  overrideNetworkConfig: boolean,
+async function getPostDeployAddFeeWaivedConfigFromUser(
+  _: HardhatRuntimeEnvironment,
+  vaults: VaultType[],
+  mToken: MTokenName,
+  _collected?: Partial<PostDeployConfig>,
 ) {
+  const { selectedVaults } = await group({
+    intro: () =>
+      Promise.resolve(intro('Post Deploy Add Fee Waived')).then(
+        () => undefined,
+      ),
+    selectedVaults: () =>
+      multiselect({
+        message: 'Select Vaults to add fee waived accounts to',
+        options: vaults.map((vault) => ({
+          value: vault,
+          label: vault,
+        })),
+        initialValues: vaults,
+      }).then(requireNotCancelled),
+  });
+
+  const result: {
+    fromVault: { mToken: MTokenName; type: VaultType };
+    toWaive: string[];
+  }[] = [];
+
+  for (const vault of selectedVaults) {
+    await stream.info(`Configuring fee waived accounts for ${vault}...`);
+
+    const toWaive: string[] = [];
+    let addMore = true;
+
+    while (addMore) {
+      const address = await text({
+        message: 'Address to waive fee for',
+        validate: validateAddress,
+      })
+        .then(requireNotCancelled)
+        .then(requireAddress);
+
+      toWaive.push(address);
+
+      addMore = await confirm({
+        message: 'Add another address?',
+        initialValue: false,
+      }).then(requireNotCancelled);
+    }
+
+    result.push({ fromVault: { mToken, type: vault }, toWaive });
+  }
+
+  outro('Done...');
+
+  return result;
+}
+
+const getConfiguredPaymentTokenNames = (
+  vaultType: VaultType,
+  collected?: Partial<PostDeployConfig>,
+) => {
+  return (
+    collected?.addPaymentTokens?.vaults
+      .find((vault) => vault.type === vaultType)
+      ?.paymentTokens.map((paymentToken) => paymentToken.token as string) ?? []
+  );
+};
+
+const getPaymentTokenNamesFromUser = async (vaultType: VaultType) => {
+  const tokens: string[] = [];
+  let addMore = true;
+
+  while (addMore) {
+    const token = await text({
+      message: `Payment token name for ${vaultType}`,
+      placeholder: 'usdc',
+      validate: (value) => {
+        if (!isPaymentTokenName(value)) {
+          return 'Unknown token name';
+        }
+      },
+    }).then(requireNotCancelled);
+
+    tokens.push(token);
+
+    addMore = await confirm({
+      message: 'Add another payment token?',
+      initialValue: false,
+    }).then(requireNotCancelled);
+  }
+
+  return tokens;
+};
+
+async function getPostDeploySetAaveConfigFromUser(
+  _: HardhatRuntimeEnvironment,
+  vaults: VaultType[],
+  _mToken?: MTokenName,
+  collected?: Partial<PostDeployConfig>,
+) {
+  const aaveVaultTypes = vaults.filter(
+    (v) => v === 'depositVaultAave' || v === 'redemptionVaultAave',
+  );
+
+  const entries: {
+    type: VaultType;
+    pools: { token: string; aavePool: string }[];
+    depositsEnabled?: boolean;
+    autoInvestFallbackEnabled?: boolean;
+  }[] = [];
+
+  intro('Post Deploy Set Aave Config');
+
+  for (const vaultType of aaveVaultTypes) {
+    await stream.info(
+      `Configuring Aave for ${vaultType} (one pool per payment token)...`,
+    );
+
+    let tokens = getConfiguredPaymentTokenNames(vaultType, collected);
+
+    if (tokens.length === 0) {
+      tokens = await getPaymentTokenNamesFromUser(vaultType);
+    }
+
+    const pools: { token: string; aavePool: string }[] = [];
+
+    for (const token of tokens) {
+      const aavePool = await text({
+        message: `Aave pool address for ${token}`,
+        validate: validateAddress,
+      })
+        .then(requireNotCancelled)
+        .then(requireAddress);
+
+      pools.push({ token, aavePool });
+    }
+
+    if (vaultType === 'depositVaultAave') {
+      const depositsEnabled = await confirm({
+        message: 'Enable Aave deposits?',
+        initialValue: true,
+      }).then(requireNotCancelled);
+
+      const autoInvestFallbackEnabled = await confirm({
+        message: 'Enable auto-invest fallback?',
+        initialValue: true,
+      }).then(requireNotCancelled);
+
+      entries.push({
+        type: vaultType,
+        pools,
+        depositsEnabled,
+        autoInvestFallbackEnabled,
+      });
+    } else {
+      entries.push({ type: vaultType, pools });
+    }
+  }
+
+  outro('Done...');
+
+  return entries;
+}
+
+async function getPostDeploySetMorphoConfigFromUser(
+  _: HardhatRuntimeEnvironment,
+  vaults: VaultType[],
+  _mToken?: MTokenName,
+  collected?: Partial<PostDeployConfig>,
+) {
+  const morphoVaultTypes = vaults.filter(
+    (v) => v === 'depositVaultMorpho' || v === 'redemptionVaultMorpho',
+  );
+
+  const entries: {
+    type: VaultType;
+    vaults: { token: string; morphoVault: string }[];
+    depositsEnabled?: boolean;
+    autoInvestFallbackEnabled?: boolean;
+  }[] = [];
+
+  intro('Post Deploy Set Morpho Config');
+
+  for (const vaultType of morphoVaultTypes) {
+    await stream.info(
+      `Configuring Morpho for ${vaultType} (one vault per payment token)...`,
+    );
+
+    let tokens = getConfiguredPaymentTokenNames(vaultType, collected);
+
+    if (tokens.length === 0) {
+      tokens = await getPaymentTokenNamesFromUser(vaultType);
+    }
+
+    const vaults: { token: string; morphoVault: string }[] = [];
+
+    for (const token of tokens) {
+      const morphoVault = await text({
+        message: `Morpho vault (ERC-4626) address for ${token}`,
+        validate: validateAddress,
+      })
+        .then(requireNotCancelled)
+        .then(requireAddress);
+
+      vaults.push({ token, morphoVault });
+    }
+
+    if (vaultType === 'depositVaultMorpho') {
+      const depositsEnabled = await confirm({
+        message: 'Enable Morpho deposits?',
+        initialValue: true,
+      }).then(requireNotCancelled);
+
+      const autoInvestFallbackEnabled = await confirm({
+        message: 'Enable auto-invest fallback?',
+        initialValue: true,
+      }).then(requireNotCancelled);
+
+      entries.push({
+        type: vaultType,
+        vaults,
+        depositsEnabled,
+        autoInvestFallbackEnabled,
+      });
+    } else {
+      entries.push({ type: vaultType, vaults });
+    }
+  }
+
+  outro('Done...');
+
+  return entries;
+}
+
+const DV_PAUSABLE_FUNCTIONS: VaultFunctionName[] = [
+  'depositInstant',
+  'depositInstantWithCustomRecipient',
+  'depositRequest',
+  'depositRequestWithCustomRecipient',
+];
+
+const RV_PAUSABLE_FUNCTIONS: VaultFunctionName[] = [
+  'redeemInstant',
+  'redeemInstantWithCustomRecipient',
+  'redeemFiatRequest',
+  'redeemRequest',
+  'redeemRequestWithCustomRecipient',
+];
+
+async function getPostDeployPauseFunctionsConfigFromUser(
+  _: HardhatRuntimeEnvironment,
+  vaults: VaultType[],
+  _mToken?: MTokenName,
+  _collected?: Partial<PostDeployConfig>,
+) {
+  intro('Post Deploy Pause Functions');
+
+  const config: Partial<Record<VaultType, VaultFunctionName[]>> = {};
+
+  for (const vaultType of vaults) {
+    const options = vaultType.startsWith('deposit')
+      ? DV_PAUSABLE_FUNCTIONS
+      : RV_PAUSABLE_FUNCTIONS;
+
+    const selected = await multiselect<VaultFunctionName>({
+      message: `Select functions to pause for ${vaultType} (empty to skip)`,
+      options: options.map((fn) => ({ value: fn, label: fn })),
+      initialValues: [],
+      required: false,
+    }).then(requireNotCancelled);
+
+    if (selected.length > 0) {
+      config[vaultType] = selected;
+    }
+  }
+
+  outro('Done...');
+
+  return config;
+}
+
+export type NetworkConfigMode = 'create' | 'add' | 'override' | 'skip';
+
+const allVaultConfigOptions = [
+  {
+    value: 'dv' as const,
+    label: 'Deposit Vault',
+    hint: 'Deposit Vault contract',
+  },
+  {
+    value: 'dvAave' as const,
+    label: 'Deposit Vault With Aave',
+    hint: 'Deposit Vault with Aave V3 auto-invest',
+  },
+  {
+    value: 'dvMorpho' as const,
+    label: 'Deposit Vault With Morpho',
+    hint: 'Deposit Vault with Morpho auto-invest',
+  },
+  {
+    value: 'dvMToken' as const,
+    label: 'Deposit Vault With MToken',
+    hint: 'Deposit Vault with mToken auto-invest',
+  },
+  {
+    value: 'rv' as const,
+    label: 'Redemption Vault',
+    hint: 'Redemption Vault contract',
+  },
+  {
+    value: 'rvSwapper' as const,
+    label: 'Redemption Vault With Swapper',
+    hint: 'Redemption Vault With Swapper contract',
+  },
+  {
+    value: 'rvMToken' as const,
+    label: 'Redemption Vault With MToken',
+    hint: 'Redemption Vault With MToken liquid strategy contract',
+  },
+  {
+    value: 'rvAave' as const,
+    label: 'Redemption Vault With Aave',
+    hint: 'Redemption Vault With Aave V3 contract',
+  },
+  {
+    value: 'rvMorpho' as const,
+    label: 'Redemption Vault With Morpho',
+    hint: 'Redemption Vault With Morpho Vault (ERC-4626) contract',
+  },
+];
+
+type VaultConfigKey = (typeof allVaultConfigOptions)[number]['value'];
+
+export async function getDeploymentConfigFromUser(
+  networkConfigMode: NetworkConfigMode,
+  existingVaultConfigKeys: string[] = [],
+) {
+  const vaultOptions =
+    networkConfigMode === 'add'
+      ? allVaultConfigOptions.filter(
+          (option) => !existingVaultConfigKeys.includes(option.value),
+        )
+      : allVaultConfigOptions;
+
+  const skipVaultConfigs =
+    networkConfigMode === 'skip' || vaultOptions.length === 0;
+
   const config = await group({
     deploymentConfigs: () =>
-      multiselect<
-        keyof Pick<
-          DeploymentConfig['networkConfigs'][number],
-          | 'rv'
-          | 'rvSwapper'
-          | 'rvMToken'
-          | 'rvAave'
-          | 'rvMorpho'
-          | 'dv'
-          | 'dvAave'
-          | 'dvMorpho'
-          | 'dvMToken'
-        >
-      >({
-        message:
-          'Select configs to generate. (Space to select, Enter to confirm)',
-        options: [
-          {
-            value: 'dv',
-            label: 'Deposit Vault',
-            hint: 'Deposit Vault contract',
-          },
-          {
-            value: 'dvAave',
-            label: 'Deposit Vault With Aave',
-            hint: 'Deposit Vault with Aave V3 auto-invest',
-          },
-          {
-            value: 'dvMorpho',
-            label: 'Deposit Vault With Morpho',
-            hint: 'Deposit Vault with Morpho auto-invest',
-          },
-          {
-            value: 'dvMToken',
-            label: 'Deposit Vault With MToken',
-            hint: 'Deposit Vault with mToken auto-invest',
-          },
-          {
-            value: 'rv',
-            label: 'Redemption Vault',
-            hint: 'Redemption Vault contract',
-          },
-          {
-            value: 'rvSwapper',
-            label: 'Redemption Vault With Swapper',
-            hint: 'Redemption Vault With Swapper contract',
-          },
-          {
-            value: 'rvMToken',
-            label: 'Redemption Vault With MToken',
-            hint: 'Redemption Vault With MToken liquid strategy contract',
-          },
-          {
-            value: 'rvAave',
-            label: 'Redemption Vault With Aave',
-            hint: 'Redemption Vault With Aave V3 contract',
-          },
-          {
-            value: 'rvMorpho',
-            label: 'Redemption Vault With Morpho',
-            hint: 'Redemption Vault With Morpho Vault (ERC-4626) contract',
-          },
-        ],
-        initialValues: ['dv', 'rvSwapper'],
-        required: true,
-      }).then(requireNotCancelled),
+      skipVaultConfigs
+        ? Promise.resolve([] as VaultConfigKey[])
+        : multiselect<VaultConfigKey>({
+            message:
+              'Select configs to generate. (Space to select, Enter to confirm)',
+            options: vaultOptions,
+            initialValues:
+              networkConfigMode === 'add'
+                ? []
+                : (['dv', 'rvSwapper'] as VaultConfigKey[]),
+            required: true,
+          }).then(requireNotCancelled),
     includePostDeploy: () =>
       confirm({
         message: `${
-          overrideNetworkConfig ? 'Override' : 'Include'
+          networkConfigMode === 'override' ? 'Override' : 'Include'
         } post deploy configs?`,
         initialValue: true,
       }).then(requireNotCancelled),
-    postDeployConfigs: ({ results: { includePostDeploy } }) =>
+    postDeployConfigs: ({
+      results: { includePostDeploy, deploymentConfigs },
+    }) =>
       includePostDeploy
         ? multiselect<keyof PostDeployConfig>({
             message: 'Select post deploy configs to generate.',
             options: [
               {
-                value: 'addPaymentTokens',
+                value: 'addPaymentTokens' as const,
                 label: 'Add Payment Tokens',
                 hint: 'Add Payment Tokens script',
               },
               {
-                value: 'grantRoles',
+                value: 'grantRoles' as const,
                 label: 'Grant Roles',
                 hint: 'Grant Roles script',
               },
+              {
+                value: 'addFeeWaived' as const,
+                label: 'Add Fee Waived',
+                hint: 'Waive vault fees for specific accounts',
+              },
+              {
+                value: 'pauseFunctions' as const,
+                label: 'Pause Functions',
+                hint: 'Pause selected vault functions after deploy',
+              },
+              ...(deploymentConfigs?.some(
+                (c) => c === 'dvAave' || c === 'rvAave',
+              )
+                ? [
+                    {
+                      value: 'setAaveConfig' as const,
+                      label: 'Set Aave Config',
+                      hint: 'Aave pool + deposit flags',
+                    },
+                  ]
+                : []),
+              ...(deploymentConfigs?.some(
+                (c) => c === 'dvMorpho' || c === 'rvMorpho',
+              )
+                ? [
+                    {
+                      value: 'setMorphoConfig' as const,
+                      label: 'Set Morpho Config',
+                      hint: 'Morpho vault + deposit flags',
+                    },
+                  ]
+                : []),
             ],
             initialValues: ['addPaymentTokens', 'grantRoles'],
             required: true,

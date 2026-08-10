@@ -203,6 +203,18 @@ export const deployAndVerify = async (
   return deployment;
 };
 
+export const getDeploymentGenericConfigOptional = <
+  TConfigKey extends keyof DeploymentConfig['genericConfigs'],
+  TConfig extends DeploymentConfig['genericConfigs'][TConfigKey],
+>(
+  hre: HardhatRuntimeEnvironment,
+  token: MTokenName,
+  configKey: TConfigKey,
+) => {
+  return getDeploymentConfigForToken(token, hre.deploymentConfig)
+    ?.genericConfigs?.[configKey] as TConfig | undefined;
+};
+
 export const getDeploymentGenericConfig = <
   TConfigKey extends keyof DeploymentConfig['genericConfigs'],
   TConfig extends DeploymentConfig['genericConfigs'][TConfigKey],
@@ -211,8 +223,11 @@ export const getDeploymentGenericConfig = <
   token: MTokenName,
   configKey: TConfigKey,
 ) => {
-  const config = getDeploymentConfigForToken(token, hre.deploymentConfig)
-    ?.genericConfigs?.[configKey] as TConfig;
+  const config = getDeploymentGenericConfigOptional<TConfigKey, TConfig>(
+    hre,
+    token,
+    configKey,
+  );
 
   if (!config) {
     throw new Error('Deployment config is not found');
@@ -274,9 +289,12 @@ export const sendAndWaitForCustomTxSign = async (
       | 'set-round-data'
       | 'timelock-call-upgrade'
       | 'pause-function'
+      | 'set-greenlist-enabled'
       | 'set-lz-rate-limit-configs'
       | 'set-aave-pool'
       | 'set-aave-deposits-enabled'
+      | 'set-morpho-vault'
+      | 'set-morpho-deposits-enabled'
       | 'set-auto-invest-fallback-enabled';
   },
   safeMiddlewareWallet?: string,

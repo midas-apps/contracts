@@ -22,7 +22,15 @@ export const mGLOBALDeploymentConfig: DeploymentConfig = {
       adjustmentPercentage: parseUnits('-7', 8),
       underlyingFeed: 'customFeedGrowth',
     },
-    dataFeed: {},
+    // Steakhouse mGLOBAL/ETH listing: 6% discount (holdbacks)
+    customAggregatorAdjusted: {
+      adjustmentPercentage: parseUnits('-6', 8),
+      underlyingFeed: 'customFeedGrowth',
+    },
+    dataFeed: {
+      minAnswer: parseUnits('0.9', 8),
+      maxAnswer: parseUnits('1.1', 8),
+    },
   },
   networkConfigs: {
     [chainIds.main]: {

@@ -5,6 +5,7 @@ import {
   AddFeeWaivedConfig,
   AddPaymentTokensConfig,
   SetAaveConfigConfig,
+  SetMorphoConfigConfig,
 } from './common-vault';
 import {
   DeployCustomAggregatorAdjustedConfig,
@@ -19,6 +20,7 @@ import {
   DeployDvRegularConfig,
   DeployDvUstbConfig,
 } from './dv';
+import type { GreenlistConfig } from './greenlist';
 import {
   GrantAllTokenRolesConfig,
   GrantDefaultAdminRoleToAcAdminConfig,
@@ -90,10 +92,12 @@ export type PostDeployConfig = {
   grantRoles?: GrantAllTokenRolesConfig;
   setRoundData?: SetRoundDataConfig;
   addFeeWaived?: AddFeeWaivedConfig;
+  greenlist?: GreenlistConfig;
   pauseFunctions?: PauseFunctionsConfig;
   layerZero?: LayerZeroConfig;
   axelarIts?: AxelarItsConfig;
   setAaveConfig?: SetAaveConfigConfig;
+  setMorphoConfig?: SetMorphoConfigConfig;
 };
 
 export type DeploymentConfig = {
@@ -103,6 +107,16 @@ export type DeploymentConfig = {
     customAggregatorAdjustedDv?: DeployCustomAggregatorAdjustedConfig;
     customAggregatorAdjustedRv?: DeployCustomAggregatorAdjustedConfig;
     dataFeed?: DeployDataFeedConfig;
+    /**
+     * Overrides `dataFeed`'s minAnswer/maxAnswer for the DV-side data feed.
+     * Falls back to `dataFeed` when unset.
+     */
+    dataFeedDv?: DeployDataFeedConfig;
+    /**
+     * Overrides `dataFeed`'s minAnswer/maxAnswer for the RV-side data feed.
+     * Falls back to `dataFeed` when unset.
+     */
+    dataFeedRv?: DeployDataFeedConfig;
   };
   networkConfigs: Record<
     number,
