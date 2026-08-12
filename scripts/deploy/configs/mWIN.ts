@@ -127,3 +127,72 @@ export const mWINDeploymentConfig: DeploymentConfig = {
     },
   },
 };
+export const mWINDialecticDeploymentConfig: DeploymentConfig = {
+  genericConfigs: {
+    customAggregator: {
+      minAnswer: parseUnits('90000', 8),
+      maxAnswer: parseUnits('140000', 8),
+      maxAnswerDeviation: parseUnits('0.27', 8),
+      description: 'mWIN/USD',
+    },
+    dataFeed: {
+      minAnswer: parseUnits('129000', 8),
+      maxAnswer: parseUnits('150000', 8),
+      healthyDiff: 2592000,
+    },
+  },
+  networkConfigs: {
+    [chainIds.main]: {
+      rvSwapper: {
+        type: 'SWAPPER',
+        feeReceiver: '0x1ED5C5AbfF8d97dBAf9D9C61C3ee744c1b9C51ac',
+        tokensReceiver: '0x1ED5C5AbfF8d97dBAf9D9C61C3ee744c1b9C51ac',
+        requestRedeemer: '0xF81295463396d709814a8F414F198b4aA7902737',
+        instantDailyLimit: constants.MaxUint256,
+        instantFee: parseUnits('0', 2),
+        variationTolerance: parseUnits('2', 2),
+        minAmount: parseUnits('1', 18),
+        fiatFlatFee: parseUnits('30', 18),
+        fiatAdditionalFee: parseUnits('0.1', 2),
+        minFiatRedeemAmount: parseUnits('1000', 18),
+        liquidityProvider: 'dummy',
+        enableSanctionsList: true,
+        swapperVault: 'dummy',
+      },
+      postDeploy: {
+        addPaymentTokens: {
+          vaults: [
+            {
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  allowance: parseUnits('1000000000', 18),
+                  isStable: true,
+                  fee: 10000,
+                },
+              ],
+              type: 'redemptionVaultSwapper',
+            },
+          ],
+        },
+        grantRoles: {
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0x532FEDcF5837f411646c230CF9b743dFdD0692d3',
+        },
+        greenlist: {
+          redemptionVaultSwapper: true,
+        },
+        pauseFunctions: {
+          redemptionVaultSwapper: [
+            'redeemFiatRequest',
+            'redeemRequest',
+            'redeemRequestWithCustomRecipient',
+          ],
+        },
+        setRoundData: {
+          dataSource: 'PROFILE_INITIAL_PRICE_SOURCE',
+        },
+      },
+    },
+  },
+};

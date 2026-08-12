@@ -37,11 +37,30 @@ export const configsPerNetworkConfig = {
     grantRoles: getPostDeployGrantRolesConfigFromUser,
     addPaymentTokens: getPostDeployAddPaymentTokensConfigFromUser,
     addFeeWaived: getPostDeployAddFeeWaivedConfigFromUser,
+    greenlist: getPostDeployGreenlistConfigFromUser,
     setAaveConfig: getPostDeploySetAaveConfigFromUser,
     setMorphoConfig: getPostDeploySetMorphoConfigFromUser,
     pauseFunctions: getPostDeployPauseFunctionsConfigFromUser,
   },
 };
+
+async function getPostDeployGreenlistConfigFromUser(
+  _: HardhatRuntimeEnvironment,
+  vaults: VaultType[],
+  _mToken?: MTokenName,
+  _collected?: Partial<PostDeployConfig>,
+) {
+  intro('Post Deploy Greenlist');
+  const selectedVaults = await multiselect<VaultType>({
+    message: 'Select vaults whose greenlist should be enabled',
+    options: vaults.map((vault) => ({ value: vault, label: vault })),
+    initialValues: vaults,
+    required: true,
+  }).then(requireNotCancelled);
+  outro('Done...');
+
+  return Object.fromEntries(selectedVaults.map((vault) => [vault, true]));
+}
 
 async function getGenericConfigFromUser(mToken: MTokenName) {
   intro('Generic Config');
@@ -52,6 +71,46 @@ async function getGenericConfigFromUser(mToken: MTokenName) {
   })
     .then(requireNotCancelled)
     .then((value) => requireFloatToBigNumberish(value, 8));
+
+  const customFeedMinAnswer = await text({
+    message: 'Custom feed minimum answer',
+    defaultValue: '0.1',
+    validate: (value) => validateFloat(value, 8),
+  })
+    .then(requireNotCancelled)
+    .then((value) => requireFloatToBigNumberish(value, 8));
+
+  const customFeedMaxAnswer = await text({
+    message: 'Custom feed maximum answer',
+    defaultValue: '1000',
+    validate: (value) => validateFloat(value, 8),
+  })
+    .then(requireNotCancelled)
+    .then((value) => requireFloatToBigNumberish(value, 8));
+
+  const dataFeedMinAnswer = await text({
+    message: 'DataFeed minimum expected answer',
+    defaultValue: '0.1',
+    validate: (value) => validateFloat(value, 8),
+  })
+    .then(requireNotCancelled)
+    .then((value) => requireFloatToBigNumberish(value, 8));
+
+  const dataFeedMaxAnswer = await text({
+    message: 'DataFeed maximum expected answer',
+    defaultValue: '1000',
+    validate: (value) => validateFloat(value, 8),
+  })
+    .then(requireNotCancelled)
+    .then((value) => requireFloatToBigNumberish(value, 8));
+
+  const dataFeedHealthyDiff = await text({
+    message: 'DataFeed healthy period in seconds',
+    defaultValue: '2592000',
+    validate: validateUnsignedInteger,
+  })
+    .then(requireNotCancelled)
+    .then((value) => expr(value));
 
   const tokenDenomination = await text({
     message: 'Token Denomination',
@@ -71,6 +130,8 @@ async function getGenericConfigFromUser(mToken: MTokenName) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const customAggregator: Record<string, any> = {
+    minAnswer: customFeedMinAnswer,
+    maxAnswer: customFeedMaxAnswer,
     maxAnswerDeviation,
     description: `${mToken}/${tokenDenomination}`,
   };
@@ -107,7 +168,11 @@ async function getGenericConfigFromUser(mToken: MTokenName) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result: Record<string, any> = {
     customAggregator,
-    dataFeed: {},
+    dataFeed: {
+      minAnswer: dataFeedMinAnswer,
+      maxAnswer: dataFeedMaxAnswer,
+      healthyDiff: dataFeedHealthyDiff,
+    },
   };
 
   const useAdjustedDvRv = await confirm({
@@ -507,6 +572,33 @@ async function getRvConfigFromUser<T>(
       })
         .then(requireNotCancelled)
         .then(requireBase18),
+    fiatFlatFee: () =>
+      text({
+        message: 'Fiat flat fee',
+        defaultValue: '30',
+        initialValue: '30',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
+    fiatAdditionalFee: () =>
+      text({
+        message: 'Fiat additional fee in percent',
+        defaultValue: '0.1',
+        initialValue: '0.1',
+        validate: (value) => validateFloat(value, 2),
+      })
+        .then(requireNotCancelled)
+        .then((value) => requireFloatToBigNumberish(value, 2)),
+    minFiatRedeemAmount: () =>
+      text({
+        message: 'Minimum fiat redeem amount',
+        defaultValue: '1000',
+        initialValue: '1000',
+        validate: validateBase18,
+      })
+        .then(requireNotCancelled)
+        .then(requireBase18),
     ...(extendGroup ?? {}),
     outro: () => Promise.resolve(outro(`Done...`)).then(() => undefined),
   }).then(clearIntroOutro);
@@ -650,34 +742,45 @@ async function getPostDeployGrantRolesConfigFromUser(
     intro: () =>
       Promise.resolve(intro('Post Deploy Grant Roles')).then(() => undefined),
     tokenManagerAddress: () =>
-      text({ message: 'Token Manager Address', validate: validateAddress })
-        .then(requireNotCancelled)
-        .then(requireAddress),
-    vaultsManagerAddress: () =>
       text({
-        message: 'Vaults Manager Address',
-        defaultValue: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
-        placeholder: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
-        validate: validateAddress,
+        message: 'Token Manager Address (leave blank to skip)',
+        validate: validateOptionalAddress,
       })
         .then(requireNotCancelled)
-        .then(requireAddress),
-    oracleManagerAddress: () =>
-      text({ message: 'Oracle Manager Address', validate: validateAddress })
+        .then(normalizeOptionalAddress),
+    vaultsManagerAddress: () =>
+      text({
+        message: 'Vaults Manager Address (leave blank to skip)',
+        defaultValue: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+        placeholder: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+        validate: validateOptionalAddress,
+      })
         .then(requireNotCancelled)
-        .then(requireAddress),
+        .then(normalizeOptionalAddress),
+    oracleManagerAddress: () =>
+      text({
+        message: 'Oracle Manager Address (leave blank to skip)',
+        validate: validateOptionalAddress,
+      })
+        .then(requireNotCancelled)
+        .then(normalizeOptionalAddress),
     outro: () => Promise.resolve(outro(`Done...`)).then(() => undefined),
   }).then(clearIntroOutro);
 
-  return config;
+  return Object.fromEntries(
+    Object.entries(config).filter(([, value]) => value !== undefined),
+  );
 }
 
 async function getPostDeployAddPaymentTokensConfigFromUser(
-  _: HardhatRuntimeEnvironment,
+  hre: HardhatRuntimeEnvironment,
   vaults: VaultType[],
   _mToken?: MTokenName,
   _collected?: Partial<PostDeployConfig>,
 ) {
+  const namedProfile = Boolean(
+    hre.deploymentConfig && hre.deploymentConfig !== 'default',
+  );
   const { selectedVaults } = await group({
     intro: () =>
       Promise.resolve(intro('Post Deploy Add Payment Tokens')).then(
@@ -726,7 +829,9 @@ async function getPostDeployAddPaymentTokensConfigFromUser(
             validate: validateBase18,
           })
             .then(requireNotCancelled)
-            .then(requireBase18OrNull),
+            .then((value) =>
+              normalizePaymentTokenAllowance(value, namedProfile),
+            ),
         isStable: () =>
           confirm({
             message: 'Is stable?',
@@ -734,14 +839,13 @@ async function getPostDeployAddPaymentTokensConfigFromUser(
           }).then(requireNotCancelled),
         fee: () =>
           text({
-            message: 'Fee',
+            message: 'Raw token fee (100 = 1%)',
             defaultValue: '0',
-            initialValue: '0',
             placeholder: '0',
-            validate: validateFloat,
+            validate: validateUnsignedInteger,
           })
             .then(requireNotCancelled)
-            .then(requireFloatToBigNumberishOrNull),
+            .then((value) => expr(value)),
       });
 
       if (!configs[vault]) {
@@ -750,15 +854,17 @@ async function getPostDeployAddPaymentTokensConfigFromUser(
 
       const partialConfig = config as Partial<typeof config>;
 
-      if (config.fee === null) {
-        delete partialConfig.fee;
-      }
-      if (config.allowance === null) {
-        delete partialConfig.allowance;
-      }
+      if (!namedProfile) {
+        if (config.fee === null) {
+          delete partialConfig.fee;
+        }
+        if (config.allowance === null) {
+          delete partialConfig.allowance;
+        }
 
-      if (config.isStable === true) {
-        delete partialConfig.isStable;
+        if (config.isStable === true) {
+          delete partialConfig.isStable;
+        }
       }
 
       configs[vault].paymentTokens.push(config);
@@ -1166,6 +1272,11 @@ export async function getDeploymentConfigFromUser(
                 hint: 'Waive vault fees for specific accounts',
               },
               {
+                value: 'greenlist' as const,
+                label: 'Enable Greenlist',
+                hint: 'Enable greenlist on selected vaults',
+              },
+              {
                 value: 'pauseFunctions' as const,
                 label: 'Pause Functions',
                 hint: 'Pause selected vault functions after deploy',
@@ -1222,6 +1333,12 @@ const requireAddress = (value: string) => {
   return value;
 };
 
+const normalizeOptionalAddress = (value: string | undefined) => {
+  return value === undefined || value.trim() === ''
+    ? undefined
+    : requireAddress(value);
+};
+
 const requireBase18 = (value: string) => {
   const error = validateBase18(value);
   if (error) {
@@ -1238,6 +1355,9 @@ const requireBase18OrNull = (value: string) => {
   return value === '0' ? null : expr(`parseUnits("${value}", 18)`);
 };
 
+const normalizePaymentTokenAllowance = (value: string, namedProfile: boolean) =>
+  namedProfile ? requireBase18(value) : requireBase18OrNull(value);
+
 const requireBase18OrInfinite = (value: string) => {
   if (isInfinite(value)) {
     return expr('constants.MaxUint256');
@@ -1253,19 +1373,17 @@ const requireFloatToBigNumberish = (value: string, maxDecimals = 2) => {
   return expr(`parseUnits("${value}", ${maxDecimals})`);
 };
 
-const requireFloatToBigNumberishOrNull = (value: string, maxDecimals = 2) => {
-  const error = validateFloat(value, maxDecimals);
-  if (error) {
-    throw error;
-  }
-  return value === '0' ? null : expr(`parseUnits("${value}", ${maxDecimals})`);
-};
-
 const validateAddress = (value: string) => {
   if (!isAddress(value)) {
     return new Error('Invalid address');
   }
   return undefined;
+};
+
+const validateOptionalAddress = (value: string | undefined) => {
+  return value === undefined || value.trim() === ''
+    ? undefined
+    : validateAddress(value);
 };
 
 const validateBase18 = (value: string) => {
@@ -1289,6 +1407,10 @@ const validateFloat = (value: string, maxDecimals = 2) => {
   } catch {
     return new Error('Invalid float');
   }
+};
+
+const validateUnsignedInteger = (value: string) => {
+  return /^\d+$/.test(value) ? undefined : new Error('Invalid integer');
 };
 
 const requirePercentageToBigNumberish = (value: string) => {
