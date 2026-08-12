@@ -1,7 +1,7 @@
 import { DeployImplementationResponse } from '@openzeppelin/hardhat-upgrades/dist/deploy-implementation';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { MTokenName } from '../../../config';
+import { chainIds, MTokenName, Network } from '../../../config';
 import {
   getCurrentAddresses,
   TokenAddresses,
@@ -10,20 +10,25 @@ import {
   getTokenContractNames,
   TokenContractNames,
 } from '../../../helpers/contracts';
-import { etherscanVerify, logDeploy } from '../../../helpers/utils';
+import {
+  etherscanVerify,
+  getChainOrThrow,
+  logDeploy,
+} from '../../../helpers/utils';
 import {
   executeTimeLockUpgradeTx,
   GetUpgradeTxParams,
   proposeTimeLockUpgradeTx,
 } from '../../deploy/common/timelock';
 import { getDeployer } from '../../deploy/common/utils';
+import { upgradeConfigs } from '../configs/upgrade-configs';
 
 // TODO: refactor this whole file and make upgrades more generic
 type ContractType = 'customAggregator' | 'customAggregatorGrowth' | 'token';
 
 type ContractTypeToUpgrade = 'customFeed' | 'customFeedGrowth' | 'token';
 
-type MTokenContractsToUpgrade = {
+export type MTokenContractsToUpgrade = {
   mToken: MTokenName;
   addresses: TokenAddresses;
   contracts: {
@@ -33,6 +38,52 @@ type MTokenContractsToUpgrade = {
     initializer?: string;
     initializerArgs?: unknown[];
   }[];
+};
+
+export const getConfiguredTokenUpgrades = (
+  hre: HardhatRuntimeEnvironment,
+  upgradeId: string,
+): MTokenContractsToUpgrade[] => {
+  const { chainId, networkName } = getChainOrThrow(hre);
+
+  if (chainIds[networkName as Network] !== chainId) {
+    throw new Error(
+      `Network mismatch: ${networkName} is configured for chain ${
+        chainIds[networkName as Network]
+      }, got ${chainId}`,
+    );
+  }
+
+  const mTokens = upgradeConfigs.upgrades[upgradeId]?.tokens?.[chainId];
+
+  if (!mTokens?.length) {
+    throw new Error(
+      `Token upgrade config not found for ${upgradeId} on chain ${chainId}`,
+    );
+  }
+
+  const seen = new Set<string>();
+
+  return mTokens.map((mToken) => {
+    if (seen.has(mToken)) {
+      throw new Error(
+        `Duplicate token upgrade target: ${networkName}.${mToken}`,
+      );
+    }
+    seen.add(mToken);
+
+    const addresses = getCurrentAddresses(hre)?.[mToken];
+
+    if (!addresses?.token) {
+      throw new Error(`Token addresses not found for ${mToken}`);
+    }
+
+    return {
+      mToken,
+      addresses,
+      contracts: [{ contractType: 'token' }],
+    };
+  });
 };
 
 export const proposeUpgradeContracts = async (

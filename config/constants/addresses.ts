@@ -30,7 +30,7 @@ type AxelarTokenAddresses = {
   executables?: Partial<Record<PaymentTokenName, string>>;
 };
 
-type TokenFeedAddresses = {
+export type TokenFeedAddresses = {
   customFeed?: string;
   customFeedGrowth?: string;
 
@@ -43,10 +43,14 @@ type TokenFeedAddresses = {
   dataFeedRv?: string;
 };
 
+export type AddressProfileTokenAddresses = TokenFeedAddresses &
+  Partial<Record<DepositVaultType | RedemptionVaultType, string>>;
+
 export type TokenAddresses = TokenFeedAddresses & {
   token?: string;
   layerZero?: LayerZeroTokenAddresses;
   axelar?: AxelarTokenAddresses;
+  addressProfiles?: Partial<Record<string, AddressProfileTokenAddresses>>;
 } & Partial<Record<DepositVaultType | RedemptionVaultType, string>>;
 
 export type VaultType = RedemptionVaultType | DepositVaultType;
@@ -336,6 +340,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xCF4e49f5e750Af8F2f9Aa1642B68E5839D9c1C00',
       depositVault: '0x41438435c20B1C2f1fcA702d387889F346A0C3DE',
       redemptionVaultSwapper: '0x44b0440e35c596e858cEA433D0d82F5a985fD19C',
+      addressProfiles: {
+        mFONEUnloop: {
+          customFeed: '0x6dfD4f744273142AcdAaFd96E3A194D604a14Db3',
+          dataFeed: '0x24dF63499E8116724E8189aFa7e9a1F812e62Cca',
+          redemptionVaultSwapper: '0x375ea756418fe30Eea21E1189104974c185aBB48',
+        },
+      },
     },
     mHYPER: {
       token: '0x9b5528528656DBC094765E2abB79F293c21191B9',
@@ -580,6 +591,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVaultAave: '0xCe29c36c6D4556f2d01d79414C1354B968dDDEf1',
       redemptionVaultAave: '0xA0Fc8BDFb1E6a705C1375810989B1d70a982b01B',
       redemptionVaultSwapper: '0x1e0fd66753198c7b8bA64edEe8d41D8628Bf20D7',
+      addressProfiles: {
+        mGLOBALDialectic: {
+          customFeed: '0x355FD9Ef2AfBF812963A8be8481F08298F401080',
+          dataFeed: '0x5dE83A7ee02f7B2F915445714c20C2Bb69213049',
+          redemptionVaultSwapper: '0xdbD621E67D9cfFfFcdCD316a27285f657C178e76',
+        },
+      },
     },
     bondUSD: {
       token: '0xaD4748098C2a771cc034d7Dfc10Fad9f9ed605fD',
@@ -626,6 +644,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0xF7F1b944FCDe7805F6Ef3088817145d2eB667db4',
       redemptionVaultSwapper: '0x605704d7b36d1677a8d242ded68eD505523c7924',
       redemptionVaultMToken: '0x14fECa41FB9541Fd8f61a6bA6304c5b706709fca',
+      addressProfiles: {
+        mWINDialectic: {
+          customFeed: '0x17d3C24a956641983377975f0E903D4B87894E2B',
+          dataFeed: '0xD5DB04Ee352fa78Bef6F36007A0Ee80c064230f5',
+          redemptionVaultSwapper: '0x078b0858F609Beb26098379fB504763766b6f128',
+        },
+      },
     },
     qHVNUSD: {
       token: '0xE68f4e819aD09F2E0e668297cC1a905994808D38',
@@ -657,6 +682,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeedRv: '0x98bd3a24d3998EF96b12d896045EaCA7955Ea963',
       depositVault: '0xe6522C0B034Eb725BB03D5cf957abEC1D2566E91',
       redemptionVaultSwapper: '0x55f3Ab43E49FFb6b1FFf5E2B310C21278bDAf0f5',
+      addressProfiles: {
+        mGLO3F: {
+          customFeed: '0xeef8B6C0F079d8a156867E47f7d75890fD376701',
+          dataFeed: '0xFbeED61D0dbb1679F2B311514b339eEEb0Bd3ACc',
+          redemptionVaultSwapper: '0x027838c5f105490cadc36340Ff2Fe6c697690Adb',
+        },
+      },
     },
     mM1BTC: {
       token: '0xc57c754f51DbbFae1a12b1aD1b8a8587bf24260a',
@@ -810,6 +842,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeedRv: '0x0405eBd7C553cF1F4174BaF0199A840d6E562f62',
       depositVault: '0x2B7e9c9a72a31e4299F735D6e13445B320701Df1',
       redemptionVaultSwapper: '0xA80F9BfFff91CBC13314fEfD05560032aF018F18',
+      addressProfiles: {
+        mGLODialectic: {
+          customFeed: '0x655ed325A1244858512B3CD3FcB6BeE4e6E79B65',
+          dataFeed: '0x719ee87e02F9C773d282B34b2d7eEdFDAD47CD40',
+          redemptionVaultSwapper: '0xbC4a3a4a0d73c23C9A87F483e5244CD93FC3B84C',
+        },
+      },
     },
   },
   oasis: {

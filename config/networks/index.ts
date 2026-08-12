@@ -61,8 +61,7 @@ const defaultRpcUrls: ConfigPerNetwork<RpcUrl> = {
   optimism: ALCHEMY_KEY
     ? `https://opt-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
     : `https://optimism-mainnet.infura.io/v3/${INFURA_KEY}`,
-  // TODO: Put real robinhood RPC URL when provided
-  robinhood: 'https://rpc.robinhood.invalid',
+  robinhood: 'https://rpc.mainnet.chain.robinhood.com',
 };
 
 export const rpcUrls: ConfigPerNetwork<RpcUrl> = Object.entries(

@@ -5,6 +5,21 @@ import { UpgradeConfig } from '../common/types';
 
 export const upgradeConfigs: UpgradeConfig = {
   upgrades: {
+    'mtoken-blacklist-enforcement': {
+      tokens: {
+        [chainIds.robinhood]: ['mGLO'],
+        [chainIds.base]: ['mGLO'],
+        [chainIds.main]: ['mHYPER'],
+        [chainIds.monad]: ['mHYPER'],
+        [chainIds.plasma]: ['mHYPER'],
+        [chainIds.katana]: ['mHYPER'],
+      },
+    },
+    'mwin-upgrade-permissioned-min-balance': {
+      tokens: {
+        [chainIds.main]: ['mWIN'],
+      },
+    },
     'mfone-rv-swapper-to-mtoken': {
       vaults: {
         [chainIds.sepolia]: {

@@ -13,6 +13,7 @@ import {
   PropertyAssignment,
   SourceFile,
   SyntaxKind,
+  VariableDeclarationKind,
 } from 'ts-morph';
 
 import { execSync } from 'child_process';
@@ -61,6 +62,7 @@ import {
 import { mTokensMetadata } from '../../../../helpers/mtokens-metadata';
 import { prefixes as rolesPrefixes } from '../../../../helpers/roles';
 import { PostDeployConfig } from '../../common/types';
+import { getDeploymentProfileForToken } from '../../configs/deployment-profiles';
 
 export const EXPR = Symbol('expr');
 export type CodeExpr = { [EXPR]: string };
@@ -360,7 +362,10 @@ export const generateDeploymentConfig = async (
 ) => {
   const project = new Project();
 
-  const deploymentConfigVarName = `${mToken}DeploymentConfig`;
+  const profile = getDeploymentProfileForToken(mToken, hre.deploymentConfig);
+  const deploymentConfigVarName =
+    profile?.configExport ?? `${mToken}DeploymentConfig`;
+  const isNamedConfig = Boolean(profile);
 
   const deploymentConfigPath = path.join(
     hre.config.paths.root,
@@ -372,6 +377,7 @@ export const generateDeploymentConfig = async (
     .access(deploymentConfigPath)
     .then(() => true)
     .catch(() => false);
+  let deploymentConfigTargetExists = false;
 
   type NetworkConfigMode = 'create' | 'add' | 'override' | 'skip';
 
@@ -383,6 +389,19 @@ export const generateDeploymentConfig = async (
   };
 
   if (deploymentConfigFileExists) {
+    const sourceFile = getDeploymentConfigFile();
+    deploymentConfigTargetExists = Boolean(
+      sourceFile.getVariableDeclaration(deploymentConfigVarName),
+    );
+  }
+
+  if (isNamedConfig && deploymentConfigTargetExists) {
+    throw new Error(
+      `Named deployment config export ${deploymentConfigVarName} already exists; refusing to modify it`,
+    );
+  }
+
+  if (deploymentConfigTargetExists) {
     const networkConfigObj = getNetworkConfigObject(
       getDeploymentConfigObject(
         getDeploymentConfigFile(),
@@ -447,7 +466,7 @@ export const generateDeploymentConfig = async (
 
   let isGrowthAggregator = false;
 
-  if (!deploymentConfigFileExists) {
+  if (!deploymentConfigTargetExists) {
     const genericResult = await configsPerNetworkConfig.genericConfig(mToken);
     isGrowthAggregator = genericResult.isGrowth;
     const { isGrowth: _, ...genericConfig } = genericResult;
@@ -469,6 +488,7 @@ export const generateDeploymentConfig = async (
     'addPaymentTokens',
     'grantRoles',
     'addFeeWaived',
+    'greenlist',
     'pauseFunctions',
     'setAaveConfig',
     'setMorphoConfig',
@@ -513,15 +533,26 @@ export const generateDeploymentConfig = async (
 import { chainIds } from '../../../config';
 import { DeploymentConfig } from '../common/types';
 import { constants } from 'ethers';
-
-export const ${deploymentConfigVarName}: DeploymentConfig = {
-  networkConfigs: { },
-};`,
+`,
       'utf-8',
     );
   }
 
   const deploymentConfigFile = getDeploymentConfigFile();
+
+  if (!deploymentConfigTargetExists) {
+    deploymentConfigFile.addVariableStatement({
+      isExported: true,
+      declarationKind: VariableDeclarationKind.Const,
+      declarations: [
+        {
+          name: deploymentConfigVarName,
+          type: 'DeploymentConfig',
+          initializer: '{ networkConfigs: {} }',
+        },
+      ],
+    });
+  }
 
   const deploymentConfigObject = getDeploymentConfigObject(
     deploymentConfigFile,
@@ -532,7 +563,7 @@ export const ${deploymentConfigVarName}: DeploymentConfig = {
 
   let networkConfigProperty: PropertyAssignment;
 
-  if (!deploymentConfigFileExists) {
+  if (!deploymentConfigTargetExists) {
     deploymentConfigObject.insertPropertyAssignment(0, {
       name: 'genericConfigs',
       initializer: objectToCode(deploymentConfig.genericConfig),
@@ -585,7 +616,11 @@ export const ${deploymentConfigVarName}: DeploymentConfig = {
         postDeployProperty?.remove();
       }
 
-      const setRoundData: Record<string, unknown> = isGrowthAggregator
+      const setRoundData: Record<string, unknown> = isNamedConfig
+        ? {
+            dataSource: expr("'PROFILE_INITIAL_PRICE_SOURCE'"),
+          }
+        : isGrowthAggregator
         ? {
             type: expr("'GROWTH'"),
             data: expr('parseUnits("1", 8)'),
@@ -688,38 +723,65 @@ export const ${deploymentConfigVarName}: DeploymentConfig = {
 
   const indexFile = project.addSourceFileAtPath(indexFilePath);
 
-  // Check if import already exists
   const existingImports = indexFile.getImportDeclarations();
-  const importExists = existingImports.some((importDecl) =>
-    importDecl
-      .getNamedImports()
-      .some((namedImport) => namedImport.getName() === deploymentConfigVarName),
+  const tokenImport = existingImports.find(
+    (importDecl) => importDecl.getModuleSpecifierValue() === `./${mToken}`,
   );
+  const importExists = tokenImport
+    ?.getNamedImports()
+    .some((namedImport) => namedImport.getName() === deploymentConfigVarName);
 
   if (!importExists) {
-    // Add import statement
-    indexFile.addImportDeclaration({
-      namedImports: [deploymentConfigVarName],
-      moduleSpecifier: `./${mToken}`,
-    });
+    if (tokenImport) {
+      tokenImport.addNamedImport(deploymentConfigVarName);
+    } else {
+      indexFile.addImportDeclaration({
+        namedImports: [deploymentConfigVarName],
+        moduleSpecifier: `./${mToken}`,
+      });
+    }
   }
 
-  // Check if export already exists in configsPerToken
-  const configsPerTokenVar =
-    indexFile.getVariableDeclarationOrThrow('configsPerToken');
-  const configsPerTokenInitializer = configsPerTokenVar.getInitializerOrThrow();
-  const configsPerTokenObj = configsPerTokenInitializer.asKindOrThrow(
-    SyntaxKind.ObjectLiteralExpression,
-  );
-
-  const exportExists = configsPerTokenObj.getProperty(mToken);
-
-  if (!exportExists) {
-    // Add export to configsPerToken object
-    configsPerTokenObj.addPropertyAssignment({
-      name: mToken,
-      initializer: deploymentConfigVarName,
-    });
+  if (isNamedConfig) {
+    const namedConfigsObj = indexFile
+      .getVariableDeclarationOrThrow('namedDeploymentConfigs')
+      .getInitializerIfKindOrThrow(SyntaxKind.ObjectLiteralExpression);
+    const propertyName = `'${hre.deploymentConfig}'`;
+    const existingNamedConfig = namedConfigsObj
+      .getProperties()
+      .some(
+        (property) =>
+          property
+            .asKind(SyntaxKind.PropertyAssignment)
+            ?.getName()
+            .replace(/['"]/g, '') === hre.deploymentConfig,
+      );
+    if (existingNamedConfig) {
+      if (!deploymentConfigTargetExists) {
+        throw new Error(
+          `Named deployment config ${hre.deploymentConfig} is already registered`,
+        );
+      }
+    } else {
+      namedConfigsObj.addPropertyAssignment({
+        name: propertyName,
+        initializer: objectToCode({
+          configsPerToken: {
+            [mToken]: expr(deploymentConfigVarName),
+          },
+        }),
+      });
+    }
+  } else {
+    const configsPerTokenObj = indexFile
+      .getVariableDeclarationOrThrow('configsPerToken')
+      .getInitializerIfKindOrThrow(SyntaxKind.ObjectLiteralExpression);
+    if (!configsPerTokenObj.getProperty(mToken)) {
+      configsPerTokenObj.addPropertyAssignment({
+        name: mToken,
+        initializer: deploymentConfigVarName,
+      });
+    }
   }
 
   await tasks([

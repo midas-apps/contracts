@@ -133,3 +133,72 @@ export const mGLOBALDeploymentConfig: DeploymentConfig = {
     },
   },
 };
+export const mGLOBALDialecticDeploymentConfig: DeploymentConfig = {
+  genericConfigs: {
+    customAggregator: {
+      minAnswer: parseUnits('0.1', 8),
+      maxAnswer: parseUnits('1000', 8),
+      maxAnswerDeviation: parseUnits('1', 8),
+      description: 'mGLOBAL/USD',
+    },
+    dataFeed: {
+      minAnswer: parseUnits('0.9', 8),
+      maxAnswer: parseUnits('1.1', 8),
+      healthyDiff: 5184000,
+    },
+  },
+  networkConfigs: {
+    [chainIds.main]: {
+      rvSwapper: {
+        type: 'SWAPPER',
+        feeReceiver: '0xf5Ca9DcbabecDd95A5b7b091A2a70b81ddFa4184',
+        tokensReceiver: '0xf5Ca9DcbabecDd95A5b7b091A2a70b81ddFa4184',
+        requestRedeemer: '0x39024E164C28a252e9130c360a9bc0f4e821B160',
+        instantDailyLimit: constants.MaxUint256,
+        instantFee: parseUnits('0', 2),
+        variationTolerance: parseUnits('2', 2),
+        minAmount: parseUnits('1', 18),
+        fiatFlatFee: parseUnits('30', 18),
+        fiatAdditionalFee: parseUnits('0.1', 2),
+        minFiatRedeemAmount: parseUnits('1000', 18),
+        liquidityProvider: 'dummy',
+        enableSanctionsList: true,
+        swapperVault: 'dummy',
+      },
+      postDeploy: {
+        addPaymentTokens: {
+          vaults: [
+            {
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  allowance: parseUnits('1000000000', 18),
+                  isStable: true,
+                  fee: 10000,
+                },
+              ],
+              type: 'redemptionVaultSwapper',
+            },
+          ],
+        },
+        grantRoles: {
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0x088a74De7dF74E6a6EB832D28878a9f134eE4F05',
+        },
+        greenlist: {
+          redemptionVaultSwapper: true,
+        },
+        pauseFunctions: {
+          redemptionVaultSwapper: [
+            'redeemFiatRequest',
+            'redeemRequest',
+            'redeemRequestWithCustomRecipient',
+          ],
+        },
+        setRoundData: {
+          dataSource: 'PROFILE_INITIAL_PRICE_SOURCE',
+        },
+      },
+    },
+  },
+};

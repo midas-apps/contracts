@@ -5,6 +5,7 @@ import { getChainOrThrow, getMTokenOrThrow } from '../../../helpers/utils';
 import { applyGreenlistConfig } from '../common/greenlist';
 import { DeployFunction } from '../common/types';
 import { getNetworkConfig } from '../common/utils';
+import { getDeploymentTokenAddresses } from '../configs/deployment-profiles';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { networkName } = getChainOrThrow(hre);
@@ -26,7 +27,12 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     return;
   }
 
-  await applyGreenlistConfig(hre, mToken, greenlistConfig, addresses);
+  await applyGreenlistConfig(
+    hre,
+    mToken,
+    greenlistConfig,
+    getDeploymentTokenAddresses(addresses, mToken, hre.deploymentConfig),
+  );
 };
 
 export default func;
