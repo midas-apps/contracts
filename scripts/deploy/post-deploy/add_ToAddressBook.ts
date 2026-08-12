@@ -10,6 +10,7 @@ import { DeployFunction } from '../common/types';
 import {
   getDeploymentAddressBookEntryConfig,
   getDeploymentAddressBookTokenAddresses,
+  getDeploymentProfileForToken,
 } from '../configs/deployment-profiles';
 
 type AddressBookEntryConfig = {
@@ -74,7 +75,9 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     hre.deploymentConfig,
   );
 
-  const allowedKeys = hre.addressBookKeys;
+  const allowedKeys = getDeploymentProfileForToken(mToken, hre.deploymentConfig)
+    ? undefined
+    : hre.addressBookKeys;
 
   for (const [key, value] of Object.entries(addressBookTokenAddresses)) {
     if (!value) {

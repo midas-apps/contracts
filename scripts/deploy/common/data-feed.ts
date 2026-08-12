@@ -18,6 +18,7 @@ import {
   DataFeedAddresses,
   DataFeedAddressesComposite,
   getCurrentAddresses,
+  TokenAddresses,
 } from '../../../config/constants/addresses';
 import {
   getCommonContractNames,
@@ -28,7 +29,11 @@ import {
   CustomAggregatorV3CompatibleFeedGrowth,
   DataFeed,
 } from '../../../typechain-types';
-import { getDeploymentTokenAddresses } from '../configs/deployment-profiles';
+import {
+  getDeploymentProfileForToken,
+  getDeploymentTokenAddresses,
+  resolveDeploymentAddress,
+} from '../configs/deployment-profiles';
 import { paymentTokenDeploymentConfigs } from '../configs/payment-tokens';
 
 export type DeployDataFeedConfigCommon = {
@@ -116,9 +121,71 @@ type SetRoundDataConfigRegular = SetRoundDataConfigCommon & {
   type?: 'REGULAR';
 };
 
-export type SetRoundDataConfig =
+type SetRoundDataFromProfileSourceConfig = {
+  type?: 'REGULAR';
+  dataSource: 'PROFILE_INITIAL_PRICE_SOURCE';
+};
+
+type SetRoundDataLiteralConfig =
   | SetRoundDataConfigGrowth
   | SetRoundDataConfigRegular;
+
+export type SetRoundDataConfig =
+  | SetRoundDataLiteralConfig
+  | SetRoundDataFromProfileSourceConfig;
+
+const isProfileInitialPriceSourceConfig = (
+  config: SetRoundDataConfig,
+): config is SetRoundDataFromProfileSourceConfig => 'dataSource' in config;
+
+const resolveMTokenAggregator = (
+  tokenAddresses: TokenAddresses,
+  token: MTokenName,
+  deploymentConfigName?: string,
+) => {
+  const profile = getDeploymentProfileForToken(token, deploymentConfigName);
+
+  return profile
+    ? resolveDeploymentAddress(
+        tokenAddresses,
+        token,
+        deploymentConfigName,
+        profile.feedReferences.dataFeedAggregator,
+      )
+    : tokenAddresses.customFeedAdjusted ??
+        tokenAddresses.customFeedGrowth ??
+        tokenAddresses.customFeed;
+};
+
+const getInitialPriceFromProfileSource = async (
+  hre: HardhatRuntimeEnvironment,
+  token: MTokenName,
+) => {
+  const profile = getDeploymentProfileForToken(token, hre.deploymentConfig);
+  const source = profile?.feedReferences.initialPriceSource;
+  const tokenAddresses = getCurrentAddresses(hre)?.[token];
+
+  if (!source || !tokenAddresses) {
+    throw new Error('Initial price source is not configured');
+  }
+
+  const sourceAddress = resolveDeploymentAddress(
+    tokenAddresses,
+    token,
+    hre.deploymentConfig,
+    source,
+  );
+  const sourceAggregator = await hre.ethers.getContractAt(
+    'AggregatorV3Interface',
+    sourceAddress,
+  );
+  const answer = (await sourceAggregator.latestRoundData()).answer;
+
+  console.log(
+    `${token} initial price source ${sourceAddress}: ${formatUnits(answer, 8)}`,
+  );
+  return answer;
+};
 
 export const setRoundDataPaymentToken = async (
   hre: HardhatRuntimeEnvironment,
@@ -131,6 +198,12 @@ export const setRoundDataPaymentToken = async (
 
   if (!networkConfig) {
     throw new Error('Network config is not found');
+  }
+
+  if (isProfileInitialPriceSourceConfig(networkConfig)) {
+    throw new Error(
+      'Profile initial price source is supported only for mTokens',
+    );
   }
 
   const addresses = getCurrentAddresses(hre);
@@ -171,24 +244,24 @@ export const setRoundDataMToken = async (
   }
 
   const addresses = getCurrentAddresses(hre);
-  const tokenAddresses = addresses?.[token]
-    ? getDeploymentTokenAddresses(
-        addresses[token]!,
-        token,
-        hre.deploymentConfig,
-      )
+  const tokenAddresses = addresses?.[token];
+  const customFeed = tokenAddresses
+    ? resolveMTokenAggregator(tokenAddresses, token, hre.deploymentConfig)
     : undefined;
-  const customFeed =
-    tokenAddresses?.customFeedGrowth ?? tokenAddresses?.customFeed;
 
   if (!customFeed) {
     throw new Error('Token config is not found or aggregator is not set');
   }
 
+  const literalConfig: SetRoundDataLiteralConfig =
+    isProfileInitialPriceSourceConfig(networkConfig)
+      ? { data: await getInitialPriceFromProfileSource(hre, token) }
+      : networkConfig;
+
   await setRoundData(hre, {
     isMToken: true,
     token,
-    networkConfig,
+    networkConfig: literalConfig,
     aggregatorAddress: customFeed,
   });
 };
@@ -203,7 +276,7 @@ const setRoundData = async (
   }: {
     isMToken: boolean;
     token: string;
-    networkConfig: SetRoundDataConfig;
+    networkConfig: SetRoundDataLiteralConfig;
     aggregatorAddress: string;
   },
 ) => {
@@ -630,10 +703,9 @@ export const deployMTokenDataFeed = async (
       )
     : undefined;
 
-  const aggregator =
-    tokenAddresses?.customFeedAdjusted ??
-    tokenAddresses?.customFeedGrowth ??
-    tokenAddresses?.customFeed;
+  const aggregator = addresses?.[token]
+    ? resolveMTokenAggregator(addresses[token]!, token, hre.deploymentConfig)
+    : undefined;
 
   if (!aggregator) {
     throw new Error('Token config is not found or customFeed is not set');

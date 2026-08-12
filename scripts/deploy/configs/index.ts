@@ -4,7 +4,10 @@ import { bondETHDeploymentConfig } from './bondETH';
 import { bondUSDDeploymentConfig } from './bondUSD';
 import { carryTradeUSDTRYLeverageDeploymentConfig } from './carryTradeUSDTRYLeverage';
 import { cUSDODeploymentConfig } from './cUSDO';
-import { deploymentConfigNames } from './deployment-profiles';
+import {
+  deploymentConfigNames,
+  isNamedDeploymentConfigName,
+} from './deployment-profiles';
 import { dnETHDeploymentConfig } from './dnETH';
 import { dnFARTDeploymentConfig } from './dnFART';
 import { dnHYPEDeploymentConfig } from './dnHYPE';
@@ -34,8 +37,15 @@ import { mEVETHDeploymentConfig } from './mEVETH';
 import { mEVUSDDeploymentConfig } from './mEVUSD';
 import { mFARMDeploymentConfig } from './mFARM';
 import { mFONEDeploymentConfig, mFONEUnloopDeploymentConfig } from './mFONE';
-import { mGLODeploymentConfig } from './mGLO';
-import { mGLOBALDeploymentConfig } from './mGLOBAL';
+import {
+  mGLODeploymentConfig,
+  mGLODialecticDeploymentConfig,
+  mGLO3FDeploymentConfig,
+} from './mGLO';
+import {
+  mGLOBALDeploymentConfig,
+  mGLOBALDialecticDeploymentConfig,
+} from './mGLOBAL';
 import { mHYPERDeploymentConfig } from './mHYPER';
 import { mHyperBTCDeploymentConfig } from './mHyperBTC';
 import { mHyperETHDeploymentConfig } from './mHyperETH';
@@ -57,7 +67,7 @@ import { mTBILLDeploymentConfig } from './mTBILL';
 import { mTESTDeploymentConfig } from './mTEST';
 import { mTUDeploymentConfig } from './mTU';
 import { mWildUSDDeploymentConfig } from './mWildUSD';
-import { mWINDeploymentConfig } from './mWIN';
+import { mWINDeploymentConfig, mWINDialecticDeploymentConfig } from './mWIN';
 import { mXRPDeploymentConfig } from './mXRP';
 import { obeatUSDDeploymentConfig } from './obeatUSD';
 import { plUSDDeploymentConfig } from './plUSD';
@@ -181,6 +191,26 @@ const namedDeploymentConfigs: Record<
       mFONE: mFONEUnloopDeploymentConfig,
     },
   },
+  'mglobal-dialectic': {
+    configsPerToken: {
+      mGLOBAL: mGLOBALDialecticDeploymentConfig,
+    },
+  },
+  'mwin-dialectic': {
+    configsPerToken: {
+      mWIN: mWINDialecticDeploymentConfig,
+    },
+  },
+  'mglo-dialectic': {
+    configsPerToken: {
+      mGLO: mGLODialecticDeploymentConfig,
+    },
+  },
+  'mglo-3f': {
+    configsPerToken: {
+      mGLO: mGLO3FDeploymentConfig,
+    },
+  },
 };
 
 const getNamedDeploymentConfig = (deploymentConfigName?: string) => {
@@ -188,12 +218,7 @@ const getNamedDeploymentConfig = (deploymentConfigName?: string) => {
     return undefined;
   }
 
-  const namedDeploymentConfig =
-    namedDeploymentConfigs[
-      deploymentConfigName as (typeof deploymentConfigNames)[number]
-    ];
-
-  if (!namedDeploymentConfig) {
+  if (!isNamedDeploymentConfigName(deploymentConfigName)) {
     throw new Error(
       `Unknown deployment config "${deploymentConfigName}". Available configs: default, ${deploymentConfigNames.join(
         ', ',
@@ -201,7 +226,7 @@ const getNamedDeploymentConfig = (deploymentConfigName?: string) => {
     );
   }
 
-  return namedDeploymentConfig;
+  return namedDeploymentConfigs[deploymentConfigName];
 };
 
 export const getDeploymentConfigForToken = (

@@ -14,16 +14,19 @@ import { getCurrentAddresses } from '../../../config/constants/addresses';
 import { getCommonContractNames } from '../../../helpers/contracts';
 import { getAllRoles, getRolesForToken } from '../../../helpers/roles';
 import { MidasAccessControl } from '../../../typechain-types';
-import { getDeploymentTokenAddresses } from '../configs/deployment-profiles';
+import {
+  getDeploymentProfileForToken,
+  resolveDeploymentAddress,
+} from '../configs/deployment-profiles';
 import { getDeploymentConfigForToken } from '../configs/index';
 import { networkDeploymentConfigs } from '../configs/network-configs';
 
 type Address = `0x${string}`;
 
 export type GrantAllTokenRolesConfig = {
-  tokenManagerAddress: Address;
+  tokenManagerAddress?: Address;
   vaultsManagerAddress?: Address;
-  oracleManagerAddress: Address;
+  oracleManagerAddress?: Address;
 };
 
 const acAdminAddress = '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227';
@@ -39,13 +42,7 @@ export const grantAllProductRoles = async (
   )?.networkConfigs?.[chainId]?.postDeploy?.grantRoles;
 
   const addresses = getCurrentAddresses(hre);
-  const tokenAddresses = addresses?.[token]
-    ? getDeploymentTokenAddresses(
-        addresses[token]!,
-        token,
-        hre.deploymentConfig,
-      )
-    : undefined;
+  const tokenAddresses = addresses?.[token];
 
   if (!tokenAddresses) {
     throw new Error(`Token addresses are not found for ${token}`);
@@ -71,36 +68,64 @@ export const grantAllProductRoles = async (
     tokenRoles.redemptionVaultAdmin,
   ];
 
-  const oracleManagerRoles = [tokenRoles.customFeedAdmin!];
+  const oracleManagerRoles = tokenRoles.customFeedAdmin
+    ? [tokenRoles.customFeedAdmin]
+    : [];
 
   const defaultManager = provider.address;
-
-  const depositVaults = resolveAllVaultAddresses(
-    tokenAddresses,
-    defaultDepositVaultPriority,
-  );
-  const redemptionVaults = resolveAllVaultAddresses(
-    tokenAddresses,
-    roleGrantRedemptionVaultPriority,
-  );
+  const profile = getDeploymentProfileForToken(token, hre.deploymentConfig);
+  const depositVaults = profile
+    ? profile.operatorRoles.minters.map((reference) =>
+        resolveDeploymentAddress(tokenAddresses, token, hre.deploymentConfig, {
+          scope: reference.scope,
+          key: reference.vault,
+        }),
+      )
+    : resolveAllVaultAddresses(tokenAddresses, defaultDepositVaultPriority);
+  const redemptionVaults = profile
+    ? profile.operatorRoles.burners.map((reference) =>
+        resolveDeploymentAddress(tokenAddresses, token, hre.deploymentConfig, {
+          scope: reference.scope,
+          key: reference.vault,
+        }),
+      )
+    : resolveAllVaultAddresses(
+        tokenAddresses,
+        roleGrantRedemptionVaultPriority,
+      );
 
   const roleBatch: string[] = [];
   const addressBatch: string[] = [];
 
   // Token / vault / oracle managers
   if (managerGrantConfig) {
-    roleBatch.push(
-      ...tokenManagerRoles,
-      ...vaultManagerRoles,
-      ...oracleManagerRoles,
-    );
-    addressBatch.push(
-      ...tokenManagerRoles.map(() => managerGrantConfig.tokenManagerAddress),
-      ...vaultManagerRoles.map(
-        () => managerGrantConfig.vaultsManagerAddress ?? defaultManager,
-      ),
-      ...oracleManagerRoles.map(() => managerGrantConfig.oracleManagerAddress),
-    );
+    if (managerGrantConfig.tokenManagerAddress) {
+      roleBatch.push(...tokenManagerRoles);
+      addressBatch.push(
+        ...tokenManagerRoles.map(() => managerGrantConfig.tokenManagerAddress!),
+      );
+    }
+
+    if (managerGrantConfig.vaultsManagerAddress || !profile) {
+      roleBatch.push(...vaultManagerRoles);
+      addressBatch.push(
+        ...vaultManagerRoles.map(
+          () => managerGrantConfig.vaultsManagerAddress ?? defaultManager,
+        ),
+      );
+    }
+
+    if (managerGrantConfig.oracleManagerAddress) {
+      if (!oracleManagerRoles.length) {
+        throw new Error(`Oracle manager role is not configured for ${token}`);
+      }
+      roleBatch.push(...oracleManagerRoles);
+      addressBatch.push(
+        ...oracleManagerRoles.map(
+          () => managerGrantConfig.oracleManagerAddress!,
+        ),
+      );
+    }
   }
 
   for (const dv of depositVaults) {
