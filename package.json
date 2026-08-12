@@ -101,7 +101,7 @@
     "verify:sourcify": "VERIFY_SOURCIFY=true VERIFY_ETHERSCAN=false yarn hardhat verify",
     "dump:roles": "yarn hh:run scripts/dump_roles.ts",
     "verify:all:impl": "yarn hh:run:script scripts/verify_contracts.ts",
-    "oz:merge-manifest": "ts-node scripts/merge-oz-manifests.ts"
+    "oz:resolve-manifest-conflicts": "ts-node scripts/merge-oz-manifests.ts"
   },
   "devDependencies": {
     "@axelar-network/axelar-local-dev": "2.3.3",
