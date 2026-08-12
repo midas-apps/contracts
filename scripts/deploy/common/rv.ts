@@ -9,6 +9,7 @@ import {
   getCurrentAddresses,
   RedemptionVaultType,
   sanctionListContracts,
+  TokenAddresses,
 } from '../../../config/constants/addresses';
 import { getTokenContractNames } from '../../../helpers/contracts';
 import {
@@ -17,6 +18,11 @@ import {
   RedemptionVaultWithMToken,
   RedemptionVaultWIthBUIDL,
 } from '../../../typechain-types';
+import {
+  getDeploymentProfileForToken,
+  getDeploymentTokenAddresses,
+  resolveDeploymentAddress,
+} from '../configs/deployment-profiles';
 
 export type DeployRvConfigCommon = {
   feeReceiver?: string;
@@ -91,14 +97,38 @@ export type DeployRvConfig =
 
 const DUMMY_ADDRESS = '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF';
 
+const resolveRedemptionVaultDataFeed = (
+  tokenAddresses: TokenAddresses,
+  token: MTokenName,
+  deploymentConfigName?: string,
+) => {
+  const profile = getDeploymentProfileForToken(token, deploymentConfigName);
+
+  return profile
+    ? resolveDeploymentAddress(
+        tokenAddresses,
+        token,
+        deploymentConfigName,
+        profile.feedReferences.redemptionDataFeed,
+      )
+    : tokenAddresses.dataFeedRv ?? tokenAddresses.dataFeed;
+};
+
 export const deployRedemptionVault = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
   type: 'rv' | 'rvBuidl' | 'rvSwapper' | 'rvAave' | 'rvMorpho' | 'rvMToken',
 ) => {
   const addresses = getCurrentAddresses(hre);
-  const deployer = await getDeployer(hre);
-  const tokenAddresses = addresses?.[token];
+  const defaultTokenAddresses = addresses?.[token];
+  const profile = getDeploymentProfileForToken(token, hre.deploymentConfig);
+  const tokenAddresses = defaultTokenAddresses
+    ? getDeploymentTokenAddresses(
+        defaultTokenAddresses,
+        token,
+        hre.deploymentConfig,
+      )
+    : undefined;
 
   const networkConfig = getNetworkConfig(hre, token, type);
 
@@ -111,6 +141,33 @@ export const deployRedemptionVault = async (
   if (!contractName) {
     throw new Error('Unsupported token/type combination');
   }
+
+  if (profile) {
+    for (const [field, value] of [
+      ['feeReceiver', networkConfig.feeReceiver],
+      ['tokensReceiver', networkConfig.tokensReceiver],
+      ['requestRedeemer', networkConfig.requestRedeemer],
+      ['minAmount', networkConfig.minAmount],
+      ['fiatAdditionalFee', networkConfig.fiatAdditionalFee],
+      ['fiatFlatFee', networkConfig.fiatFlatFee],
+      ['minFiatRedeemAmount', networkConfig.minFiatRedeemAmount],
+      ['enableSanctionsList', networkConfig.enableSanctionsList],
+    ] as const) {
+      if (value === undefined) {
+        throw new Error(`Named redemption vault config requires ${field}`);
+      }
+    }
+    if (
+      networkConfig.type === 'SWAPPER' &&
+      networkConfig.liquidityProvider === undefined
+    ) {
+      throw new Error(
+        'Named redemption vault config requires liquidityProvider',
+      );
+    }
+  }
+
+  const deployer = await getDeployer(hre);
 
   const extraParams: unknown[] = [];
 
@@ -129,7 +186,7 @@ export const deployRedemptionVault = async (
       swapperVaultAddress = DUMMY_ADDRESS;
     } else {
       swapperVaultAddress =
-        addresses[swapperVault.mToken]?.[swapperVault.redemptionVaultType];
+        addresses?.[swapperVault.mToken]?.[swapperVault.redemptionVaultType];
     }
 
     if (!swapperVaultAddress) {
@@ -158,7 +215,13 @@ export const deployRedemptionVault = async (
       `Detected TAC wrapper, will be used data feed from ${originalTokenName}: ${dataFeed}`,
     );
   } else {
-    dataFeed = tokenAddresses?.dataFeedRv ?? tokenAddresses?.dataFeed;
+    dataFeed = defaultTokenAddresses
+      ? resolveRedemptionVaultDataFeed(
+          defaultTokenAddresses,
+          token,
+          hre.deploymentConfig,
+        )
+      : undefined;
   }
 
   const sanctionsList = networkConfig.enableSanctionsList

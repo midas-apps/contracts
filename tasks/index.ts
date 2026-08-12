@@ -5,6 +5,11 @@ import path from 'path';
 
 import { chainIds, ENV, extendWithContext, Network, rpcUrls } from '../config';
 import { isMTokenName, isPaymentTokenName } from '../helpers/utils';
+import {
+  deploymentConfigNames,
+  isDeploymentConfigName,
+  validateDeploymentProfileContext,
+} from '../scripts/deploy/configs/deployment-profiles';
 
 import './layerzero';
 import './axelar';
@@ -22,6 +27,10 @@ task('runscript', 'Runs a user-defined script')
   .addOptionalParam('logsFolderPath', 'Logs folder path')
   .addOptionalParam('forkingNetwork', 'Forking Network')
   .addOptionalParam('originalNetwork', 'Original Network')
+  .addOptionalParam(
+    'deploymentConfig',
+    'Named deployment config profile (for example: mfone-unloop)',
+  )
   .addOptionalParam(
     'keys',
     'Comma-separated list of address book keys to include (e.g. layerZero)',
@@ -56,9 +65,11 @@ task('runscript', 'Runs a user-defined script')
     }
 
     const originalNetwork = taskArgs.originalNetwork;
+    const deploymentConfig = taskArgs.deploymentConfig;
     const keys = taskArgs.keys;
 
     const scriptPath = taskArgs.path;
+    const scriptPathResolved = path.resolve(scriptPath);
     const skipValidation = taskArgs.skipValidation;
 
     hre.skipValidation = (skipValidation ?? 'false') === 'true';
@@ -92,6 +103,25 @@ task('runscript', 'Runs a user-defined script')
       hre.paymentToken = ptoken;
     }
 
+    if (
+      deploymentConfig !== undefined &&
+      !isDeploymentConfigName(deploymentConfig)
+    ) {
+      throw new Error(
+        `Unknown deployment config "${deploymentConfig}". Available configs: default, ${deploymentConfigNames.join(
+          ', ',
+        )}`,
+      );
+    }
+
+    const chainId = hre.network.config.chainId;
+    if (chainId === undefined) {
+      throw new Error('Network chain ID is not configured');
+    }
+
+    validateDeploymentProfileContext(deploymentConfig, hre.mtoken, chainId);
+    hre.deploymentConfig = deploymentConfig;
+
     if (originalNetwork) {
       hre.layerZero = {
         originalNetwork,
@@ -102,7 +132,6 @@ task('runscript', 'Runs a user-defined script')
       hre.addressBookKeys = keys.split(',').map((k: string) => k.trim());
     }
 
-    const scriptPathResolved = path.resolve(scriptPath);
     const { default: run } = await import(scriptPathResolved);
 
     if (!run) {

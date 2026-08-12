@@ -7,6 +7,11 @@ import {
 } from '../../../config/constants/addresses';
 import { getMTokenOrThrow } from '../../../helpers/utils';
 import { DeployFunction } from '../common/types';
+import {
+  getDeploymentAddressBookEntryConfig,
+  getDeploymentAddressBookTokenAddresses,
+  getDeploymentProfileForToken,
+} from '../configs/deployment-profiles';
 
 type AddressBookEntryConfig = {
   contractName: string | ((mToken: string) => string);
@@ -64,9 +69,17 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('Token addresses not found');
   }
 
-  const allowedKeys = hre.addressBookKeys;
+  const addressBookTokenAddresses = getDeploymentAddressBookTokenAddresses(
+    tokenAddresses,
+    mToken,
+    hre.deploymentConfig,
+  );
 
-  for (const [key, value] of Object.entries(tokenAddresses)) {
+  const allowedKeys = getDeploymentProfileForToken(mToken, hre.deploymentConfig)
+    ? undefined
+    : hre.addressBookKeys;
+
+  for (const [key, value] of Object.entries(addressBookTokenAddresses)) {
     if (!value) {
       continue;
     }
@@ -75,7 +88,13 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       continue;
     }
 
-    const config = ADDRESS_BOOK_MAPPING[key as keyof TokenAddresses];
+    const addressKey = key as keyof TokenAddresses;
+    const config =
+      getDeploymentAddressBookEntryConfig(
+        mToken,
+        addressKey,
+        hre.deploymentConfig,
+      ) ?? ADDRESS_BOOK_MAPPING[addressKey];
 
     if (!config) {
       continue;

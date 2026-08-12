@@ -267,3 +267,141 @@ export const mGLODeploymentConfig: DeploymentConfig = {
     },
   },
 };
+export const mGLODialecticDeploymentConfig: DeploymentConfig = {
+  genericConfigs: {
+    customAggregator: {
+      minAnswer: parseUnits('0.1', 8),
+      maxAnswer: parseUnits('1000', 8),
+      maxAnswerDeviation: parseUnits('1', 8),
+      description: 'mGLO/USD',
+    },
+    dataFeed: {
+      minAnswer: parseUnits('0.9', 8),
+      maxAnswer: parseUnits('1.1', 8),
+      healthyDiff: 5184000,
+    },
+  },
+  networkConfigs: {
+    [chainIds.base]: {
+      rvSwapper: {
+        type: 'SWAPPER',
+        feeReceiver: '0x83BfD9233DC281E7BA1311B1245cb2f891a94E56',
+        tokensReceiver: '0x83BfD9233DC281E7BA1311B1245cb2f891a94E56',
+        requestRedeemer: '0x27c41C320066e92688799b3cd0014992Da7f2f0C',
+        instantDailyLimit: constants.MaxUint256,
+        instantFee: parseUnits('0', 2),
+        variationTolerance: parseUnits('2', 2),
+        minAmount: parseUnits('1', 18),
+        fiatFlatFee: parseUnits('30', 18),
+        fiatAdditionalFee: parseUnits('0.1', 2),
+        minFiatRedeemAmount: parseUnits('1000', 18),
+        liquidityProvider: 'dummy',
+        enableSanctionsList: true,
+        swapperVault: 'dummy',
+      },
+      postDeploy: {
+        addPaymentTokens: {
+          vaults: [
+            {
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  allowance: parseUnits('1000000000', 18),
+                  isStable: true,
+                  fee: 10000,
+                },
+              ],
+              type: 'redemptionVaultSwapper',
+            },
+          ],
+        },
+        grantRoles: {
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0x83b573AA8C4b567c0466c9d5e32D6513676d795b',
+        },
+        greenlist: {
+          redemptionVaultSwapper: true,
+        },
+        pauseFunctions: {
+          redemptionVaultSwapper: [
+            'redeemFiatRequest',
+            'redeemRequest',
+            'redeemRequestWithCustomRecipient',
+          ],
+        },
+        setRoundData: {
+          dataSource: 'PROFILE_INITIAL_PRICE_SOURCE',
+        },
+      },
+    },
+  },
+};
+export const mGLO3FDeploymentConfig: DeploymentConfig = {
+  genericConfigs: {
+    customAggregator: {
+      minAnswer: parseUnits('0.1', 8),
+      maxAnswer: parseUnits('1000', 8),
+      maxAnswerDeviation: parseUnits('1', 8),
+      description: 'mGLO/USD',
+    },
+    dataFeed: {
+      minAnswer: parseUnits('0.9', 8),
+      maxAnswer: parseUnits('1.1', 8),
+      healthyDiff: 5184000,
+    },
+  },
+  networkConfigs: {
+    [chainIds.main]: {
+      rvSwapper: {
+        type: 'SWAPPER',
+        feeReceiver: '0x83BfD9233DC281E7BA1311B1245cb2f891a94E56',
+        tokensReceiver: '0x83BfD9233DC281E7BA1311B1245cb2f891a94E56',
+        requestRedeemer: '0x27c41C320066e92688799b3cd0014992Da7f2f0C',
+        instantDailyLimit: constants.MaxUint256,
+        instantFee: parseUnits('0', 2),
+        variationTolerance: parseUnits('2', 2),
+        minAmount: parseUnits('1', 18),
+        fiatFlatFee: parseUnits('30', 18),
+        fiatAdditionalFee: parseUnits('0.1', 2),
+        minFiatRedeemAmount: parseUnits('1000', 18),
+        liquidityProvider: 'dummy',
+        enableSanctionsList: true,
+        swapperVault: 'dummy',
+      },
+      postDeploy: {
+        addPaymentTokens: {
+          vaults: [
+            {
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  allowance: parseUnits('1000000000', 18),
+                  isStable: true,
+                  fee: 10000,
+                },
+              ],
+              type: 'redemptionVaultSwapper',
+            },
+          ],
+        },
+        grantRoles: {
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0x83b573AA8C4b567c0466c9d5e32D6513676d795b',
+        },
+        greenlist: {
+          redemptionVaultSwapper: true,
+        },
+        pauseFunctions: {
+          redemptionVaultSwapper: [
+            'redeemFiatRequest',
+            'redeemRequest',
+            'redeemRequestWithCustomRecipient',
+          ],
+        },
+        setRoundData: {
+          dataSource: 'PROFILE_INITIAL_PRICE_SOURCE',
+        },
+      },
+    },
+  },
+};
