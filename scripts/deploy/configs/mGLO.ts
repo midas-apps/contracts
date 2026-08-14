@@ -1,3 +1,4 @@
+import { hours } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
@@ -108,6 +109,17 @@ export const mGLODeploymentConfig: DeploymentConfig = {
         setRoundData: {
           data: parseUnits('1', 8),
         },
+        // Non-origin-chain OFT adapter. Outbound rate limit to Mainnet is 5M/day.
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          owner: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('5000000'),
+              window: hours(24),
+            },
+          },
+        },
       },
     },
     [chainIds.robinhood]: {
@@ -176,6 +188,17 @@ export const mGLODeploymentConfig: DeploymentConfig = {
         },
         setRoundData: {
           data: parseUnits('1', 8),
+        },
+        // Non-origin-chain OFT adapter. Outbound rate limit to Mainnet is 5M/day.
+        layerZero: {
+          delegate: '0x563e0fc290D535fC5549873aEcE97A16b001B9eD',
+          owner: '0x563e0fc290D535fC5549873aEcE97A16b001B9eD',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('5000000'),
+              window: hours(24),
+            },
+          },
         },
       },
     },
@@ -263,6 +286,27 @@ export const mGLODeploymentConfig: DeploymentConfig = {
         setRoundData: {
           data: parseUnits('1', 8),
         },
+        // Ethereum OFT adapter. Outbound rate limit is 5M/day to each spoke.
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          owner: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            overrides: {
+              base: {
+                limit: parseUnits('5000000'),
+                window: hours(24),
+              },
+              robinhood: {
+                limit: parseUnits('5000000'),
+                window: hours(24),
+              },
+              optimism: {
+                limit: parseUnits('5000000'),
+                window: hours(24),
+              },
+            },
+          },
+        },
       },
     },
     [chainIds.optimism]: {
@@ -334,6 +378,17 @@ export const mGLODeploymentConfig: DeploymentConfig = {
         },
         setRoundData: {
           data: parseUnits('1', 8),
+        },
+        // Non-origin-chain OFT adapter. Outbound rate limit to Mainnet is 5M/day.
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          owner: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('5000000'),
+              window: hours(24),
+            },
+          },
         },
       },
     },

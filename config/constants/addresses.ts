@@ -682,6 +682,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeedRv: '0x98bd3a24d3998EF96b12d896045EaCA7955Ea963',
       depositVault: '0xe6522C0B034Eb725BB03D5cf957abEC1D2566E91',
       redemptionVaultSwapper: '0x55f3Ab43E49FFb6b1FFf5E2B310C21278bDAf0f5',
+      layerZero: { oft: '0xa54712D1699258A85d91ABd47ed9D1aa2Bb00191' },
       addressProfiles: {
         mGLO3F: {
           customFeed: '0xeef8B6C0F079d8a156867E47f7d75890fD376701',
@@ -872,6 +873,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeedRv: '0x0405eBd7C553cF1F4174BaF0199A840d6E562f62',
       depositVault: '0x2B7e9c9a72a31e4299F735D6e13445B320701Df1',
       redemptionVaultSwapper: '0xA80F9BfFff91CBC13314fEfD05560032aF018F18',
+      layerZero: { oft: '0xD9B8f9352078E1259aDcDc390AdD39bc3063BF07' },
       addressProfiles: {
         mGLODialectic: {
           customFeed: '0x655ed325A1244858512B3CD3FcB6BeE4e6E79B65',
@@ -1705,6 +1707,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeedRv: '0xB391486b0d058176A845aCcF2Cb160A2be9CfCb8',
       depositVault: '0xa5d0E53059b648B7615B67602De4489079EAe2B4',
       redemptionVaultSwapper: '0x99656E9753047F2769D10fa65B9D8ebfE44B35ab',
+      layerZero: { oft: '0x969b3d76a925402Faca4D905F78eF9922ad8158E' },
     },
   },
   robinhood: {
@@ -1726,6 +1729,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeedRv: '0xA0009248ED3534Db8098b83f80aa678b066052A8',
       depositVault: '0x2A3b139EA78CC54290C672162e2b6A8c486f4791',
       redemptionVaultSwapper: '0x89db0aA579F0b136A295C427e8C0D35A3dcD0a2e',
+      layerZero: { oft: '0xc7D9168E70fAF282aa6b0ecbEf7Af2c9C5c146F9' },
     },
   },
   sepolia: {

@@ -159,9 +159,11 @@ export const layerZeroBlockFinality: PartialConfigPerNetwork<number> = {
   monad: 3600,
   katana: 1200,
   scroll: 800,
-  optimism: 650,
+  optimism: 1000,
   plasma: 1800,
   zerog: 6000,
+  base: 600,
+  robinhood: 3600,
 };
 
 export const axelarChainNames: PartialConfigPerNetwork<string> = {
@@ -191,6 +193,7 @@ export const layerZeroEids: PartialConfigPerNetwork<EndpointId> = {
   scroll: EndpointId.SCROLL_V2_MAINNET,
   monad: EndpointId.MONAD_V2_MAINNET,
   optimism: EndpointId.OPTIMISM_V2_MAINNET,
+  robinhood: EndpointId.ROBINHOOD_V2_MAINNET,
 };
 
 export const layerZeroEidToNetwork = Object.fromEntries(
