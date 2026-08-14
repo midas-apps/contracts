@@ -7,20 +7,25 @@ import { DeploymentConfig } from '../common/types';
 export const mGLOBALDeploymentConfig: DeploymentConfig = {
   genericConfigs: {
     customAggregator: {
-      type: 'GROWTH',
       maxAnswerDeviation: parseUnits('1', 8),
       description: 'mGLOBAL/USD',
-      onlyUp: true,
-      minGrowthApr: parseUnits('0', 8),
-      maxGrowthApr: parseUnits('0', 8),
+      // Ethereum uses the growth oracle.
+      // type: 'GROWTH',
+      // onlyUp: true,
+      // minGrowthApr: parseUnits('0', 8),
+      // maxGrowthApr: parseUnits('0', 8),
     },
     customAggregatorAdjustedDv: {
       adjustmentPercentage: parseUnits('7', 8),
-      underlyingFeed: 'customFeedGrowth',
+      underlyingFeed: 'customFeed',
+      // For Ethereum we use:
+      // underlyingFeed: 'customFeedGrowth',
     },
     customAggregatorAdjustedRv: {
       adjustmentPercentage: parseUnits('-7', 8),
-      underlyingFeed: 'customFeedGrowth',
+      underlyingFeed: 'customFeed',
+      // For Ethereum we use:
+      // underlyingFeed: 'customFeedGrowth',
     },
     // Steakhouse mGLOBAL/ETH listing: 6% discount (holdbacks)
     customAggregatorAdjusted: {
@@ -30,9 +35,85 @@ export const mGLOBALDeploymentConfig: DeploymentConfig = {
     dataFeed: {
       minAnswer: parseUnits('0.9', 8),
       maxAnswer: parseUnits('1.1', 8),
+      // Avalanche uses 60 days. Ethereum uses the 30-day default.
+      healthyDiff: 60 * 24 * 60 * 60,
     },
   },
   networkConfigs: {
+    [chainIds.avalanche]: {
+      dv: {
+        type: 'REGULAR',
+        enableSanctionsList: true,
+        feeReceiver: '0xE64F2b295F49dfa826278824993600a6b3e40174',
+        tokensReceiver: '0xf5Ca9DcbabecDd95A5b7b091A2a70b81ddFa4184',
+        instantDailyLimit: parseUnits('30000000', 18),
+        instantFee: parseUnits('0', 2),
+        variationTolerance: parseUnits('2', 2),
+        minAmount: parseUnits('0', 18),
+        minMTokenAmountForFirstDeposit: parseUnits('0', 18),
+        maxSupplyCap: constants.MaxUint256,
+      },
+      rvSwapper: {
+        type: 'SWAPPER',
+        feeReceiver: '0xf5Ca9DcbabecDd95A5b7b091A2a70b81ddFa4184',
+        tokensReceiver: '0xf5Ca9DcbabecDd95A5b7b091A2a70b81ddFa4184',
+        requestRedeemer: '0x39024E164C28a252e9130c360a9bc0f4e821B160',
+        instantDailyLimit: parseUnits('200000', 18),
+        instantFee: parseUnits('0.5', 2),
+        variationTolerance: parseUnits('2', 2),
+        minAmount: parseUnits('1', 18),
+        fiatFlatFee: parseUnits('30', 18),
+        fiatAdditionalFee: parseUnits('0.1', 2),
+        minFiatRedeemAmount: parseUnits('1000', 18),
+        liquidityProvider: 'dummy',
+        enableSanctionsList: true,
+        swapperVault: 'dummy',
+      },
+      postDeploy: {
+        addPaymentTokens: {
+          vaults: [
+            {
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  allowance: parseUnits('1000000000', 18),
+                  isStable: true,
+                  fee: 0,
+                },
+              ],
+              type: 'depositVault',
+            },
+            {
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  allowance: parseUnits('1000000000', 18),
+                  isStable: true,
+                  fee: 0,
+                },
+              ],
+              type: 'redemptionVaultSwapper',
+            },
+          ],
+        },
+        grantRoles: {
+          tokenManagerAddress: '0x76E350c5a674Db787918E5F728466C7356d4d361',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0x088a74De7dF74E6a6EB832D28878a9f134eE4F05',
+        },
+        greenlist: {
+          depositVault: true,
+          redemptionVaultSwapper: true,
+        },
+        pauseFunctions: {
+          depositVault: ['depositRequest', 'depositRequestWithCustomRecipient'],
+          redemptionVaultSwapper: ['redeemFiatRequest'],
+        },
+        setRoundData: {
+          data: parseUnits('1.01128145', 8),
+        },
+      },
+    },
     [chainIds.main]: {
       dvAave: {
         type: 'AAVE',

@@ -708,6 +708,36 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVaultMorpho: '0x1E9f04408FF38d1FB70CE939fC87D26D61F6F758',
     },
   },
+  avalanche: {
+    accessControl: '0xF6f56D1a218F6129679d966D03c12Af145795fd8',
+    timelock: '0x812C93b046ca0915Aa453388bF16d9C0f3CE12Bb',
+    paymentTokens: {
+      usdc: {
+        token: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E',
+        aggregator: '0xF096872672F44d6EBA71458D74fe67F9a77a23B9',
+        dataFeed: '0x79b0c48E1AFAcd9B98D54b0b7D6F9dF27b1D101D',
+      },
+    },
+    mGLOBAL: {
+      token: '0x25C2067D8b04931A6e2eb078eA8D65c8B8500031',
+      customFeed: '0x2C480226b002cc8F10655dDb46c057DbA17b6AF2',
+      // Adjusted feed: +7%
+      customFeedDv: '0x835494e0d2dD362c2c1393a192186f1E46F80dcD',
+      // Adjusted feed: -7%
+      customFeedRv: '0x983BF05dCa772E31064d42b122164ADF000c3D7a',
+      dataFeedDv: '0x9CD9625edfe1B3b5266d667723b7798330348d23',
+      dataFeedRv: '0x2A905186a12aF04b081832E058b4f777A4bd079d',
+      depositVault: '0x14A17abB809A52B8A52C4F47A51bF46eDFbd33dB',
+      redemptionVaultSwapper: '0x3B4572C25CF0a9Ab9A35832ba58f9FF304e16034',
+    },
+    mWIN: {
+      token: '0x61daEEb998bC5415DF8512A4Be1b71f4275Ef314',
+      customFeed: '0xf94E95F50F42e691519F7233E7a3802C3B94A530',
+      dataFeed: '0xD29B1A1AC063dEC0B0F71859aADE4E185028449d',
+      depositVault: '0xe50fc603bF5140ED771eB8f7deEdb8218A11FD40',
+      redemptionVaultSwapper: '0xE11E0074b69238ccB12eBb7CB4dCb63E8F00D79d',
+    },
+  },
   arbitrum: {
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     paymentTokens: {
@@ -1930,6 +1960,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
 export const sanctionListContracts: Partial<Record<number, string>> = {
   [chainIds.main]: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
   [chainIds.arbitrum]: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
+  [chainIds.avalanche]: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
   [chainIds.base]: '0x3A91A31cB3dC49b4db9Ce721F50a9D076c8D739B',
   [chainIds.bsc]: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
   [chainIds.optimism]: '0x40C57923924B5c5c5455c48D93317139ADDaC8fb',
