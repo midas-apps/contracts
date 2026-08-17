@@ -28,12 +28,14 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   if (
     !mTokenAddresses ||
     !mTokenAddresses.token ||
-    !mTokenAddresses.ccip?.tokenPool
+    !mTokenAddresses.ccip?.tokenPool ||
+    !mTokenAddresses.ccip.fallbackEscrow
   ) {
     throw new Error('mToken addresses not found or missing required fields');
   }
 
-  const tokenPool = mTokenAddresses.ccip.tokenPool!;
+  const tokenPool = mTokenAddresses.ccip.tokenPool;
+  const fallbackEscrow = mTokenAddresses.ccip.fallbackEscrow;
 
   const roles = getRolesForToken(mToken);
 
@@ -47,6 +49,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const rolesToGrant = [
     roles.minter,
     roles.burner,
+    roles.greenlisted,
+    roles.greenlisted,
     allRoles.common.escrowAdmin,
   ];
 
@@ -55,12 +59,14 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     await contract.populateTransaction.grantRoleMult(rolesToGrant, [
       tokenPool,
       tokenPool,
+      tokenPool,
+      fallbackEscrow,
       escrowAdmin,
     ]),
     {
       action: 'update-ac',
       subAction: 'grant-token-roles',
-      comment: `grant required ${mToken} ccip cct token pool roles`,
+      comment: `grant required ${mToken} CCIP pool and escrow roles`,
     },
   );
 

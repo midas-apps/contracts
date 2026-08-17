@@ -36,9 +36,10 @@ type ConfigPerNetwork<TKey extends string> = Partial<
       linkedNetworks: Network[];
 
       /**
-       * @default 'all'
+       * CCIP is always configured as hub-and-spoke. Omission means
+       * `direct-only`; the field remains explicit for config readability.
        */
-      pathways?: 'direct-only' | 'all';
+      pathways?: 'direct-only';
     }
   >
 >;

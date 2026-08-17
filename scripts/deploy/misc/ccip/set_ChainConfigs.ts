@@ -1,23 +1,30 @@
-import { BigNumber, BigNumberish, ethers } from 'ethers';
+import { BigNumberish } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
-  ccipNetworkConfig,
+  buildHubRoutes,
+  buildRateLimiterConfig,
+  encodeEvmAddress,
+  reconcileChainConfig,
+} from './helpers';
+
+import {
   ccipConfigPerMToken,
+  ccipNetworkConfig,
   Network,
   PartialConfigPerNetwork,
 } from '../../../../config';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
 import { getHreByNetworkName } from '../../../../helpers/hardhat';
 import { getMTokenOrThrow } from '../../../../helpers/utils';
-import { CCIPRateLimitConfigCore, DeployFunction } from '../../common/types';
+import { DeployFunction } from '../../common/types';
 import {
   getDeployer,
   getNetworkConfig,
   sendAndWaitForCustomTxSign,
 } from '../../common/utils';
 
-type UpdateChainConfig = {
+type PoolChainConfig = {
   inboundRateLimiterConfig: {
     capacity: BigNumberish;
     rate: BigNumberish;
@@ -28,279 +35,116 @@ type UpdateChainConfig = {
     rate: BigNumberish;
     isEnabled: boolean;
   };
-  remoteChainSelector: BigNumberish;
+  remoteChainSelector: string;
   remotePoolAddresses: string[];
   remoteTokenAddress: string;
 };
 
-const cmpChainConfig = (a: UpdateChainConfig, b: UpdateChainConfig) => {
-  return (
-    BigNumber.from(a.inboundRateLimiterConfig.capacity).eq(
-      b.inboundRateLimiterConfig.capacity,
-    ) &&
-    BigNumber.from(a.inboundRateLimiterConfig.rate).eq(
-      b.inboundRateLimiterConfig.rate,
-    ) &&
-    a.inboundRateLimiterConfig.isEnabled ===
-      b.inboundRateLimiterConfig.isEnabled &&
-    BigNumber.from(a.outboundRateLimiterConfig.capacity).eq(
-      b.outboundRateLimiterConfig.capacity,
-    ) &&
-    BigNumber.from(a.outboundRateLimiterConfig.rate).eq(
-      b.outboundRateLimiterConfig.rate,
-    ) &&
-    a.outboundRateLimiterConfig.isEnabled ===
-      b.outboundRateLimiterConfig.isEnabled &&
-    BigNumber.from(a.remoteChainSelector).eq(b.remoteChainSelector) &&
-    a.remotePoolAddresses.length === b.remotePoolAddresses.length &&
-    a.remotePoolAddresses.every(
-      (address, index) =>
-        address.toLowerCase() === b.remotePoolAddresses[index].toLowerCase(),
-    ) &&
-    a.remoteTokenAddress.toLowerCase() === b.remoteTokenAddress.toLowerCase()
-  );
-};
-
-const getRateLimitConfig = (config?: CCIPRateLimitConfigCore) => {
-  const rate = config
-    ? BigNumber.from(config.capacity).div(config.window)
-    : BigNumber.from(0);
-
-  if (rate.eq(0)) {
-    throw new Error('Rate is 0');
-  }
-
-  return config
-    ? {
-        capacity: config.capacity,
-        rate: BigNumber.from(config.capacity).div(config.window),
-        isEnabled: true,
-      }
-    : {
-        capacity: 0,
-        rate: 0,
-        isEnabled: false,
-      };
-};
-
-const encodeAddress = (address: string) => {
-  return ethers.utils.defaultAbiCoder.encode(['address'], [address]);
-};
-
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const mToken = getMTokenOrThrow(hre);
+  const hub = hre.network.name as Network;
+  const cctConfig = ccipConfigPerMToken[hub]?.[mToken];
+  if (!cctConfig) throw new Error('CCT config not found');
 
-  const currentNetwork = hre.network.name as Network;
+  const routes = buildHubRoutes({
+    hub,
+    spokes: cctConfig.linkedNetworks,
+    pathways: cctConfig.pathways,
+  });
+  const desiredPerNetwork: PartialConfigPerNetwork<PoolChainConfig[]> = {};
 
-  const cctConfig = ccipConfigPerMToken?.[currentNetwork]?.[mToken];
+  for (const route of routes) {
+    const source = route.source as Network;
+    const destination = route.destination as Network;
+    const sourceHre = await getHreByNetworkName(source);
+    const destinationHre = await getHreByNetworkName(destination);
+    const sourceConfig = getNetworkConfig(sourceHre, mToken, 'postDeploy');
+    const rateLimits =
+      sourceConfig.ccip?.rateLimitConfig?.overrides?.[destination] ??
+      sourceConfig.ccip?.rateLimitConfig?.default;
+    const destinationSelector = ccipNetworkConfig[destination]?.chainSelector;
+    const destinationAddresses = getCurrentAddresses(destinationHre)[mToken];
 
-  if (!cctConfig) {
-    throw new Error('CCT config not found');
-  }
+    if (!destinationSelector) {
+      throw new Error(`Chain selector not found for ${destination}`);
+    }
+    if (!destinationAddresses?.token || !destinationAddresses.ccip?.tokenPool) {
+      throw new Error(`CCIP token/pool not found for ${destination}`);
+    }
 
-  const allCctNetworks = [...cctConfig.linkedNetworks, currentNetwork];
-
-  const linkedNetworks = cctConfig.linkedNetworks ?? [];
-
-  let networksPairs: { source: Network; destination: Network }[] = [];
-
-  if (cctConfig.pathways === 'direct-only') {
-    networksPairs = linkedNetworks.flatMap((network) => [
-      {
-        source: currentNetwork,
-        destination: network,
-      },
-      {
-        source: network,
-        destination: currentNetwork,
-      },
-    ]);
-  } else {
-    allCctNetworks.forEach((networkA) => {
-      allCctNetworks.forEach((networkB) => {
-        if (
-          networkA !== networkB &&
-          !networksPairs.find(
-            (pair) => pair.source === networkA && pair.destination === networkB,
-          )
-        ) {
-          networksPairs.push({
-            source: networkA,
-            destination: networkB,
-          });
-        }
-      });
+    desiredPerNetwork[source] ??= [];
+    desiredPerNetwork[source].push({
+      remoteChainSelector: destinationSelector.toString(),
+      remotePoolAddresses: [
+        encodeEvmAddress(destinationAddresses.ccip.tokenPool),
+      ],
+      remoteTokenAddress: encodeEvmAddress(destinationAddresses.token),
+      inboundRateLimiterConfig: buildRateLimiterConfig(rateLimits?.inbound),
+      outboundRateLimiterConfig: buildRateLimiterConfig(rateLimits?.outbound),
     });
   }
 
-  console.log('networksPairs', networksPairs);
-
-  const callDataPerNetwork: PartialConfigPerNetwork<{
-    uniqueDestinationChains: BigNumberish[];
-    supportedChains: BigNumberish[];
-    chainsToRemove: BigNumberish[];
-    chainsToUpdate: UpdateChainConfig[];
-  }> = {};
-
-  for (const { source, destination } of networksPairs) {
-    const srcHre = await getHreByNetworkName(source);
-    const deployer = await getDeployer(srcHre);
-
-    const dstHre = await getHreByNetworkName(destination);
-    const config = getNetworkConfig(srcHre, mToken, 'postDeploy');
-
-    const configBase =
-      config.ccip?.rateLimitConfig?.overrides?.[destination] ??
-      config.ccip?.rateLimitConfig?.default;
-
-    if (!configBase) {
-      throw new Error(`Rate limit config not found for network ${source}`);
+  for (const [sourceName, desired] of Object.entries(desiredPerNetwork)) {
+    const source = sourceName as Network;
+    const sourceHre = await getHreByNetworkName(source);
+    const deployer = await getDeployer(sourceHre);
+    const sourceAddresses = getCurrentAddresses(sourceHre)[mToken];
+    if (!sourceAddresses?.ccip?.tokenPool) {
+      throw new Error(`CCIP pool not found for ${source}`);
     }
 
-    const addresses = getCurrentAddresses(srcHre);
-
-    const mTokenAddresses = addresses?.[mToken];
-
-    if (!mTokenAddresses?.ccip?.tokenPool) {
-      throw new Error(`Token pool not found for network ${source}`);
-    }
-
-    const contract = await srcHre.ethers.getContractAt(
+    const pool = await sourceHre.ethers.getContractAt(
       'MidasCCTBurnMintTokenPool',
-      mTokenAddresses?.ccip?.tokenPool ?? '',
+      sourceAddresses.ccip.tokenPool,
       deployer,
     );
-
-    const dstChainSelector = ccipNetworkConfig[destination]?.chainSelector;
-    if (!dstChainSelector) {
-      throw new Error(`Chain selector not found for network ${destination}`);
-    }
-
-    console.log('configBase', configBase);
-
-    const supportedChains = await contract.getSupportedChains();
-
-    const alreadyExists = !!supportedChains.find((chain) =>
-      dstChainSelector.eq(chain),
+    const supportedSelectors = await pool.getSupportedChains();
+    const current: PoolChainConfig[] = await Promise.all(
+      supportedSelectors.map(async (selector) => {
+        const [outbound, inbound] = await pool.getCurrentRateLimiterState(
+          selector,
+          false,
+        );
+        return {
+          remoteChainSelector: selector.toString(),
+          remotePoolAddresses: await pool.getRemotePools(selector),
+          remoteTokenAddress: await pool.getRemoteToken(selector),
+          inboundRateLimiterConfig: {
+            capacity: inbound.capacity.toString(),
+            rate: inbound.rate.toString(),
+            isEnabled: inbound.isEnabled,
+          },
+          outboundRateLimiterConfig: {
+            capacity: outbound.capacity.toString(),
+            rate: outbound.rate.toString(),
+            isEnabled: outbound.isEnabled,
+          },
+        };
+      }),
     );
-
-    const dstAddresses = getCurrentAddresses(dstHre);
-    const dstMTokenAddresses = dstAddresses?.[mToken];
-
-    if (!dstMTokenAddresses?.ccip?.tokenPool) {
-      throw new Error(`Token pool not found for network ${destination}`);
-    }
-
-    if (!dstMTokenAddresses.token) {
-      throw new Error(`Token not found for network ${destination}`);
-    }
-
-    const updateObj: UpdateChainConfig = {
-      inboundRateLimiterConfig: getRateLimitConfig(configBase.inbound),
-      outboundRateLimiterConfig: getRateLimitConfig(configBase.outbound),
-      remoteChainSelector: dstChainSelector.toString(),
-      remotePoolAddresses: [encodeAddress(dstMTokenAddresses.ccip.tokenPool)],
-      remoteTokenAddress: encodeAddress(dstMTokenAddresses.token),
-    };
-    callDataPerNetwork[source] ??= {
-      uniqueDestinationChains: [dstChainSelector],
-      supportedChains: supportedChains,
-      chainsToRemove: [],
-      chainsToUpdate: [],
-    };
-
-    const dstTokenAddress = await contract.getRemoteToken(dstChainSelector);
-
-    if (alreadyExists) {
-      // validate current config
-      const [outboundConfig, inboundConfig] =
-        await contract.getCurrentRateLimiterState(dstChainSelector, false);
-      const remotePoolAddresses = await contract.getRemotePools(
-        dstChainSelector,
-      );
-      const remoteTokenAddress = dstTokenAddress;
-      const dstConfig: UpdateChainConfig = {
-        remoteChainSelector: dstChainSelector,
-        inboundRateLimiterConfig: inboundConfig,
-        outboundRateLimiterConfig: outboundConfig,
-        remotePoolAddresses: remotePoolAddresses,
-        remoteTokenAddress: remoteTokenAddress,
-      };
-
-      if (!cmpChainConfig(updateObj, dstConfig)) {
-        if (
-          !callDataPerNetwork[source].chainsToRemove.find((v) =>
-            dstChainSelector.eq(v),
-          )
-        ) {
-          callDataPerNetwork[source].chainsToRemove.push(dstChainSelector);
-        }
-
-        callDataPerNetwork[source].chainsToUpdate.push(updateObj);
-      }
-      // otherwise, we dont update that dst config at all as it is already up to date
-    } else {
-      callDataPerNetwork[source].chainsToUpdate.push(updateObj);
-    }
-
+    const update = reconcileChainConfig({ current, desired });
     if (
-      !callDataPerNetwork[source].uniqueDestinationChains.find((v) =>
-        dstChainSelector.eq(v),
-      )
+      update.chainsToRemove.length === 0 &&
+      update.chainsToUpdate.length === 0
     ) {
-      callDataPerNetwork[source].uniqueDestinationChains.push(dstChainSelector);
-    }
-  }
-
-  for (const data of Object.values(callDataPerNetwork)) {
-    for (const supportedChain of data.supportedChains) {
-      if (
-        !data.uniqueDestinationChains.find((v) =>
-          BigNumber.from(v).eq(supportedChain),
-        )
-      ) {
-        data.chainsToRemove.push(supportedChain);
-      }
-    }
-  }
-
-  console.log('callDataPerNetwork', callDataPerNetwork);
-
-  for (const [source, data] of Object.entries(callDataPerNetwork)) {
-    const srcNetwork = source as Network;
-    const srcHre = await getHreByNetworkName(srcNetwork);
-    const addresses = getCurrentAddresses(srcHre);
-    const mTokenAddresses = addresses?.[mToken];
-    const srcDeployer = await getDeployer(srcHre);
-
-    if (!data.chainsToRemove.length && !data.chainsToUpdate.length) {
-      console.log(
-        `No chains to remove or update for ${srcNetwork}, skipping...`,
-      );
+      console.log(`CCIP pool config is already current on ${source}`);
       continue;
     }
 
-    const contract = await srcHre.ethers.getContractAt(
-      'MidasCCTBurnMintTokenPool',
-      mTokenAddresses?.ccip?.tokenPool ?? '',
-      srcDeployer,
-    );
-
     await sendAndWaitForCustomTxSign(
-      srcHre,
-      await contract.populateTransaction.applyChainUpdates(
-        data.chainsToRemove,
-        data.chainsToUpdate,
+      sourceHre,
+      await pool.populateTransaction.applyChainUpdates(
+        update.chainsToRemove,
+        update.chainsToUpdate,
       ),
       {
         action: 'update-ccip',
-        mToken: mToken,
-        comment: `set initial CCIP CCT token configs for ${mToken}`,
+        mToken,
+        comment: `reconcile ${mToken} CCIP V2 pool config on ${source}`,
       },
+      await pool.owner(),
     );
   }
-
-  console.log('Txs submitted');
 };
 
 export default func;

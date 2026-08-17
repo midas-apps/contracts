@@ -1,6 +1,5 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { Network } from '../../../../config';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
 import { getMTokenOrThrow } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
@@ -8,43 +7,40 @@ import { getDeployer, sendAndWaitForCustomTxSign } from '../../common/utils';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const mToken = getMTokenOrThrow(hre);
-
   const deployer = await getDeployer(hre);
-  const addresses = getCurrentAddresses(hre);
-
-  const network = hre.network.name as Network;
-
-  const tokenAddresses = addresses?.[mToken];
-
-  if (!tokenAddresses?.token) {
-    throw new Error('token address is not found');
-  }
-
+  const tokenAddresses = getCurrentAddresses(hre)[mToken];
   const poolAddress = tokenAddresses?.ccip?.tokenPool;
-
-  if (!poolAddress) {
-    throw new Error('pool address is not found');
-  }
-
   const fallbackEscrow = tokenAddresses?.ccip?.fallbackEscrow;
 
-  if (!fallbackEscrow) {
-    throw new Error('fallback escrow address is not found');
+  if (!tokenAddresses?.token || !poolAddress || !fallbackEscrow) {
+    throw new Error('CCIP token, pool, or fallback escrow is not found');
   }
 
-  const contract = await hre.ethers.getContractAt(
+  const pool = await hre.ethers.getContractAt(
     'MidasCCTBurnMintTokenPool',
     poolAddress,
     deployer,
   );
+  const currentFallback = await pool.fallbackReceiver();
+  if (currentFallback.toLowerCase() === fallbackEscrow.toLowerCase()) {
+    console.log('CCIP fallback escrow is already linked');
+    return;
+  }
+  if (currentFallback !== hre.ethers.constants.AddressZero) {
+    throw new Error(
+      `CCIP pool is already linked to another escrow: ${currentFallback}`,
+    );
+  }
 
   await sendAndWaitForCustomTxSign(
     hre,
-    await contract.populateTransaction.setFallbackReceiver(fallbackEscrow),
+    await pool.populateTransaction.setFallbackReceiver(fallbackEscrow),
     {
       action: 'update-ccip',
+      mToken,
+      comment: `link ${mToken} CCIP fallback escrow`,
     },
-    await contract.owner(),
+    await pool.owner(),
   );
 };
 

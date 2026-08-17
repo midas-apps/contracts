@@ -1,221 +1,309 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.28;
 
+import {ERC165CheckerUpgradeable as ERC165Checker} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol";
 import {ERC165Upgradeable as ERC165} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
-import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {IERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/IERC165Upgradeable.sol";
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import {EnumerableSetUpgradeable as EnumerableSet} from "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
+import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {IERC20 as IERC20V5} from "@openzeppelin/contracts@5.3.0/token/ERC20/IERC20.sol";
 
-import {Client} from "@chainlink/contracts-ccip/contracts/libraries/Client.sol";
+import {IPoolV2} from "@chainlink/contracts-ccip/contracts/interfaces/IPoolV2.sol";
 import {IRouterClient} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
+import {Client} from "@chainlink/contracts-ccip/contracts/libraries/Client.sol";
+import {ExtraArgsCodec} from "@chainlink/contracts-ccip/contracts/libraries/ExtraArgsCodec.sol";
+import {FinalityCodec} from "@chainlink/contracts-ccip/contracts/libraries/FinalityCodec.sol";
 import {TokenPool} from "@chainlink/contracts-ccip/contracts/pools/TokenPool.sol";
 
-import {WithMidasAccessControl} from "../../access/WithMidasAccessControl.sol";
 import {Blacklistable} from "../../access/Blacklistable.sol";
 import {IMidasCCTFallbackEscrow} from "../../interfaces/ccip/IMidasCCTFallbackEscrow.sol";
-import {IMidasCCTFailedMessageFallback} from "../../interfaces/ccip/IMidasCCTFailedMessageFallback.sol";
+import {IMidasCCTFallbackReceiver} from "../../interfaces/ccip/IMidasCCTFallbackReceiver.sol";
 
+interface IMidasAccessControlledToken {
+    function accessControl() external view returns (address);
+}
+
+/**
+ * @title MidasCCTFallbackEscrow
+ * @notice Holds fully funded recoveries created by the Midas CCIP 2.0 pool.
+ */
 contract MidasCCTFallbackEscrow is
     IMidasCCTFallbackEscrow,
-    WithMidasAccessControl,
     Blacklistable,
-    ERC165
+    ERC165,
+    ReentrancyGuard
 {
     using SafeERC20 for IERC20;
-    using EnumerableSet for EnumerableSet.Bytes32Set;
 
-    /**
-     * @notice Role for the fallback escrow admin
-     */
     bytes32 public constant FALLBACK_ESCROW_ADMIN_ROLE =
         keccak256("FALLBACK_ESCROW_ADMIN_ROLE");
 
-    /**
-     * @notice The token pool
-     */
-    TokenPool public tokenPool;
+    bytes32 private constant _RECOVERY_ID_DOMAIN =
+        keccak256("MIDAS_CCT_RECOVERY_V1");
 
-    /**
-     * @notice The default recipient
-     */
+    address public override tokenPool;
+    address public token;
     address public defaultRecipient;
 
-    /**
-     * @notice The counter of failed messages
-     */
-    uint256 public failedMessageCount;
+    uint256 public recoveryCount;
+    uint256 public pendingCount;
+    uint256 public totalReserved;
 
-    /**
-     * @notice mapping of failed message id to message content
-     */
-    mapping(bytes32 => FailedMessage) public failedMessages;
+    mapping(bytes32 => RecoveryRecord) public recoveries;
+    mapping(uint64 => mapping(address => bool)) public isPeerEscrow;
 
-    /**
-     * @notice unresolved failed message ids
-     */
-    EnumerableSet.Bytes32Set private _failedMessageIds;
-
-    /**
-     * @notice Modifier to check if the caller is the contract admin
-     */
-    modifier onlyContractAdmin() {
-        require(
-            accessControl.hasRole(FALLBACK_ESCROW_ADMIN_ROLE, msg.sender),
-            NotContractAdmin()
-        );
+    modifier onlyEscrowAdmin() {
+        if (!_isEscrowAdmin(msg.sender)) revert NotEscrowAdmin(msg.sender);
         _;
     }
 
     /**
-     * @notice initializes the contract
-     * @param _accessControl the access control address
-     * @param _tokenPool the token pool address to set
-     * @param _defaultRecipient the default recipient to set
+     * @notice Initializes the escrow and binds it to one pool/token pair.
      */
     function initialize(
-        address _accessControl,
-        address _tokenPool,
-        address _defaultRecipient
+        address suppliedAccessControl,
+        address configuredTokenPool,
+        address configuredDefaultRecipient
     ) external initializer {
-        __WithMidasAccessControl_init(_accessControl);
+        __Blacklistable_init(suppliedAccessControl);
+        __ERC165_init();
+        __ReentrancyGuard_init();
 
-        _validateAddress(_tokenPool);
-        tokenPool = TokenPool(_tokenPool);
+        if (
+            configuredTokenPool == address(0) ||
+            configuredTokenPool.code.length == 0 ||
+            !ERC165Checker.supportsInterface(
+                configuredTokenPool,
+                type(IPoolV2).interfaceId
+            )
+        ) revert InvalidPool(configuredTokenPool);
 
-        _setDefaultRecipient(_defaultRecipient);
+        address configuredToken;
+        try TokenPool(configuredTokenPool).getToken() returns (
+            IERC20V5 tokenContract
+        ) {
+            configuredToken = address(tokenContract);
+        } catch {
+            revert InvalidPool(configuredTokenPool);
+        }
+        if (configuredToken == address(0) || configuredToken.code.length == 0)
+            revert InvalidPool(configuredTokenPool);
+
+        address tokenAccessControl;
+        try
+            IMidasAccessControlledToken(configuredToken).accessControl()
+        returns (address configuredAccessControl) {
+            tokenAccessControl = configuredAccessControl;
+        } catch {
+            revert InvalidPool(configuredTokenPool);
+        }
+        if (tokenAccessControl != suppliedAccessControl)
+            revert AccessControlMismatch(
+                suppliedAccessControl,
+                tokenAccessControl
+            );
+
+        tokenPool = configuredTokenPool;
+        token = configuredToken;
+        _setDefaultRecipient(configuredDefaultRecipient);
     }
 
     /**
-     * @inheritdoc IMidasCCTFallbackEscrow
+     * @inheritdoc IMidasCCTFallbackReceiver
      */
-    function setDefaultRecipient(address _defaultRecipient)
-        external
-        onlyContractAdmin
-    {
-        _setDefaultRecipient(_defaultRecipient);
-    }
-
-    /**
-     * @inheritdoc IMidasCCTFailedMessageFallback
-     */
-    function onFailedMessage(
-        address _originalRecipient,
-        uint256 _tokenAmount,
-        uint64 _originalSourceChainSelector
-    ) external {
-        require(msg.sender == address(tokenPool), NotTokenPool());
-        bytes32 _messageId = _registerFailedMessages(
-            _originalRecipient,
-            _tokenAmount,
-            _originalSourceChainSelector
+    function onFallbackMinted(
+        address originalSender,
+        address originalRecipient,
+        uint64 originalSourceChainSelector,
+        uint256 amount
+    ) external override {
+        if (msg.sender != tokenPool) revert NotTokenPool(msg.sender);
+        _registerRecovery(
+            originalSender,
+            originalRecipient,
+            originalSourceChainSelector,
+            amount
         );
-        emit OnFailedMessage(_messageId);
     }
 
     /**
      * @inheritdoc IMidasCCTFallbackEscrow
      */
-    function claim(bytes32 _messageId, address _recipient)
+    function setDefaultRecipient(address newDefaultRecipient)
         external
+        override
+        onlyEscrowAdmin
+    {
+        _setDefaultRecipient(newDefaultRecipient);
+    }
+
+    /**
+     * @inheritdoc IMidasCCTFallbackEscrow
+     */
+    function setPeerEscrow(
+        uint64 sourceChainSelector,
+        address peerEscrow,
+        bool allowed
+    ) external override onlyEscrowAdmin {
+        if (peerEscrow == address(0)) revert ZeroAddress();
+        isPeerEscrow[sourceChainSelector][peerEscrow] = allowed;
+        emit PeerEscrowSet(sourceChainSelector, peerEscrow, allowed);
+    }
+
+    /**
+     * @inheritdoc IMidasCCTFallbackEscrow
+     */
+    function claim(bytes32 recoveryId, address recipient)
+        external
+        override
+        nonReentrant
         onlyNotBlacklisted(msg.sender)
     {
-        FailedMessage storage failedMessage = _processMessage(
-            _messageId,
-            _recipient,
-            MessageStatus.Claimed,
-            true
-        );
-        _validateClaim(failedMessage.originalRecipient);
-        emit Claim(_messageId, _recipient);
-    }
+        RecoveryRecord storage recovery = _requirePending(recoveryId);
+        if (msg.sender != recovery.originalRecipient)
+            revert UnauthorizedRecoveryCaller(recoveryId, msg.sender);
+        _validateLocalRecipient(recipient);
+        _assertSolvent();
+        _consumeRecovery(recovery, RecoveryStatus.Claimed);
 
-    /**
-     * @inheritdoc IMidasCCTFallbackEscrow
-     */
-    function claimToRemote(
-        bytes32 _messageId,
-        bytes memory _recipient,
-        uint64 _remoteChainSelector
-    ) external payable onlyNotBlacklisted(msg.sender) {
-        FailedMessage storage failedMessage = _processMessage(
-            _messageId,
-            address(0),
-            MessageStatus.Claimed,
-            false
-        );
-        _validateClaim(failedMessage.originalRecipient);
-        bytes32 ccipMessageId = _sendToRemote(
-            _recipient,
-            _remoteChainSelector,
-            failedMessage.tokenAmount
-        );
-
-        emit ClaimToRemote(
-            _messageId,
-            ccipMessageId,
-            _recipient,
-            _remoteChainSelector
+        IERC20(token).safeTransfer(recipient, recovery.amount);
+        emit RecoveryClaimed(
+            recoveryId,
+            recovery.originalRecipient,
+            recipient,
+            recovery.amount
         );
     }
 
     /**
      * @inheritdoc IMidasCCTFallbackEscrow
      */
-    function recoverBulk(bytes32[] memory _messageIds)
+    function adminRecoverBulk(LocalRecovery[] calldata localRecoveries)
         external
-        onlyContractAdmin
+        override
+        nonReentrant
+        onlyEscrowAdmin
     {
-        for (uint256 i = 0; i < _messageIds.length; i++) {
-            _processMessage(
-                _messageIds[i],
-                address(0),
-                MessageStatus.Recovered,
-                true
+        if (localRecoveries.length == 0) revert EmptyBatch();
+        _assertSolvent();
+
+        for (uint256 i = 0; i < localRecoveries.length; ++i) {
+            LocalRecovery calldata localRecovery = localRecoveries[i];
+            _validateLocalRecipient(localRecovery.recipient);
+            RecoveryRecord storage recovery = _requirePending(
+                localRecovery.recoveryId
+            );
+            _consumeRecovery(recovery, RecoveryStatus.AdminRecovered);
+
+            IERC20(token).safeTransfer(
+                localRecovery.recipient,
+                recovery.amount
+            );
+            emit RecoveryAdminRecovered(
+                localRecovery.recoveryId,
+                msg.sender,
+                localRecovery.recipient,
+                recovery.originalRecipient,
+                recovery.amount
             );
         }
-        emit RecoverBulk(_messageIds);
     }
 
     /**
      * @inheritdoc IMidasCCTFallbackEscrow
      */
-    function closeBulk(bytes32[] memory _messageIds)
+    function confiscateBulk(bytes32[] calldata recoveryIds)
         external
-        onlyContractAdmin
+        override
+        nonReentrant
+        onlyEscrowAdmin
     {
-        for (uint256 i = 0; i < _messageIds.length; i++) {
-            _processMessage(
-                _messageIds[i],
-                address(0),
-                MessageStatus.Closed,
-                true
+        if (recoveryIds.length == 0) revert EmptyBatch();
+        _assertSolvent();
+
+        uint256 confiscatedAmount;
+        for (uint256 i = 0; i < recoveryIds.length; ++i) {
+            RecoveryRecord storage recovery = _requirePending(recoveryIds[i]);
+            _consumeRecovery(recovery, RecoveryStatus.Confiscated);
+            confiscatedAmount += recovery.amount;
+            emit RecoveryConfiscated(
+                recoveryIds[i],
+                msg.sender,
+                defaultRecipient,
+                recovery.amount
             );
         }
-        emit CloseBulk(_messageIds);
+
+        IERC20(token).safeTransfer(defaultRecipient, confiscatedAmount);
     }
 
     /**
      * @inheritdoc IMidasCCTFallbackEscrow
      */
-    function registerOrphanedBulk(
-        IMidasCCTFallbackEscrow.OrphanedMessage[] calldata _messages
-    ) external onlyContractAdmin {
-        for (uint256 i = 0; i < _messages.length; i++) {
-            OrphanedMessage calldata message = _messages[i];
-            _registerFailedMessages(
-                message.originalRecipient,
-                message.tokenAmount,
-                message.originalSourceChainSelector
+    function getReturnToSourceFee(bytes32 recoveryId)
+        external
+        view
+        override
+        returns (uint256)
+    {
+        RecoveryRecord storage recovery = _requirePending(recoveryId);
+        if (!recovery.returnable) revert RecoveryNotReturnable(recoveryId);
+        IRouterClient router = _router();
+        return
+            router.getFee(
+                recovery.originalSourceChainSelector,
+                _buildReturnMessage(recovery)
             );
-        }
-        emit RegisterOrphanedBulk(_messages);
     }
 
     /**
      * @inheritdoc IMidasCCTFallbackEscrow
      */
-    function getFailedMessageIds() external view returns (bytes32[] memory) {
-        return _failedMessageIds.values();
+    function returnToSource(bytes32 recoveryId)
+        external
+        payable
+        override
+        nonReentrant
+        returns (bytes32 outboundCcipMessageId)
+    {
+        RecoveryRecord storage recovery = _requirePending(recoveryId);
+        if (!recovery.returnable) revert RecoveryNotReturnable(recoveryId);
+        if (
+            msg.sender != recovery.originalRecipient &&
+            !_isEscrowAdmin(msg.sender)
+        ) revert UnauthorizedRecoveryCaller(recoveryId, msg.sender);
+
+        _assertSolvent();
+        IRouterClient router = _router();
+        Client.EVM2AnyMessage memory message = _buildReturnMessage(recovery);
+        uint256 fee = router.getFee(
+            recovery.originalSourceChainSelector,
+            message
+        );
+        if (msg.value < fee) revert InsufficientCcipFee(msg.value, fee);
+
+        _consumeRecovery(recovery, RecoveryStatus.ReturnDispatched);
+
+        IERC20 tokenContract = IERC20(token);
+        tokenContract.safeApprove(address(router), 0);
+        tokenContract.safeApprove(address(router), recovery.amount);
+        outboundCcipMessageId = router.ccipSend{value: fee}(
+            recovery.originalSourceChainSelector,
+            message
+        );
+        tokenContract.safeApprove(address(router), 0);
+        recovery.outboundCcipMessageId = outboundCcipMessageId;
+
+        _refundNative(msg.sender, msg.value - fee);
+        emit RecoveryReturnDispatched(
+            recoveryId,
+            outboundCcipMessageId,
+            msg.sender,
+            recovery.originalSourceChainSelector,
+            recovery.originalSender,
+            recovery.amount
+        );
     }
 
     /**
@@ -225,193 +313,148 @@ contract MidasCCTFallbackEscrow is
         public
         view
         virtual
-        override
+        override(ERC165, IERC165Upgradeable)
         returns (bool)
     {
         return
-            interfaceId == type(IMidasCCTFailedMessageFallback).interfaceId ||
+            interfaceId == type(IMidasCCTFallbackReceiver).interfaceId ||
             interfaceId == type(IMidasCCTFallbackEscrow).interfaceId ||
             super.supportsInterface(interfaceId);
     }
 
-    /**
-     * @notice processes a failed message
-     * @param _messageId the id of the failed message
-     * @param _overrideRecipient the override recipient to set
-     * @param _status the new status of the failed message
-     * @return the updated failed message
-     */
-    function _processMessage(
-        bytes32 _messageId,
-        address _overrideRecipient,
-        MessageStatus _status,
-        bool _doTransfer
-    ) private returns (FailedMessage storage) {
-        require(
-            _failedMessageIds.contains(_messageId),
-            FailedMessageNotFound(_messageId)
+    function _registerRecovery(
+        address originalSender,
+        address originalRecipient,
+        uint64 originalSourceChainSelector,
+        uint256 amount
+    ) private {
+        if (originalSender == address(0))
+            revert InvalidOriginalSender(originalSender);
+        if (amount == 0) revert InvalidAmount(amount);
+
+        uint256 requiredBalance = totalReserved + amount;
+        uint256 tokenBalance = IERC20(token).balanceOf(address(this));
+        if (tokenBalance < requiredBalance)
+            revert InsufficientEscrowFunding(tokenBalance, requiredBalance);
+
+        uint256 nonce = recoveryCount;
+        bytes32 recoveryId = keccak256(
+            abi.encode(
+                _RECOVERY_ID_DOMAIN,
+                block.chainid,
+                address(this),
+                nonce,
+                originalSender,
+                originalRecipient,
+                originalSourceChainSelector,
+                amount
+            )
         );
-        FailedMessage storage failedMessage = failedMessages[_messageId];
-        failedMessage.status = _status;
-        _failedMessageIds.remove(_messageId);
+        bool returnable = !isPeerEscrow[originalSourceChainSelector][
+            originalSender
+        ];
 
-        if (_doTransfer) {
-            _getToken().safeTransfer(
-                _extractRecipient(failedMessage, _overrideRecipient, _status),
-                failedMessage.tokenAmount
-            );
-        }
-
-        return failedMessage;
-    }
-
-    /**
-     * @notice registers a failed message
-     * @param _originalRecipient the original recipient of the failed message
-     * @param _tokenAmount the amount of tokens to recover
-     * @param _originalSourceChainSelector the original source chain selector
-     * @return messageId the message id
-     */
-    function _registerFailedMessages(
-        address _originalRecipient,
-        uint256 _tokenAmount,
-        uint64 _originalSourceChainSelector
-    ) private returns (bytes32 messageId) {
-        messageId = _getMessageId(
-            _originalRecipient,
-            _tokenAmount,
-            _originalSourceChainSelector,
-            failedMessageCount++
-        );
-        failedMessages[messageId] = FailedMessage({
-            status: MessageStatus.Pending,
-            originalRecipient: _originalRecipient,
-            tokenAmount: _tokenAmount,
-            originalSourceChainSelector: _originalSourceChainSelector
+        recoveries[recoveryId] = RecoveryRecord({
+            originalSender: originalSender,
+            originalRecipient: originalRecipient,
+            originalSourceChainSelector: originalSourceChainSelector,
+            amount: amount,
+            status: RecoveryStatus.Pending,
+            returnable: returnable,
+            outboundCcipMessageId: bytes32(0)
         });
-        _failedMessageIds.add(messageId);
+        recoveryCount = nonce + 1;
+        ++pendingCount;
+        totalReserved = requiredBalance;
+
+        emit RecoveryRegistered(
+            recoveryId,
+            originalSender,
+            originalRecipient,
+            originalSourceChainSelector,
+            amount,
+            returnable
+        );
     }
 
-    /**
-     * @notice Sends escrowed tokens cross-chain via the CCIP Router.
-     * @dev Pays fees in native gas token (`feeToken = address(0)`). Caller is
-     * responsible for attaching a sufficient `msg.value` fee.
-     * @param _recipient ABI-encoded destination receiver
-     * @param _remoteChainSelector Destination chain selector
-     * @param _tokenAmount Amount of the pool token to send
-     */
-    function _sendToRemote(
-        bytes memory _recipient,
-        uint64 _remoteChainSelector,
-        uint256 _tokenAmount
-    ) private returns (bytes32) {
-        IERC20 token = _getToken();
-        (address routerAddress, , ) = tokenPool.getDynamicConfig();
-        IRouterClient router = IRouterClient(routerAddress);
+    function _requirePending(bytes32 recoveryId)
+        private
+        view
+        returns (RecoveryRecord storage recovery)
+    {
+        recovery = recoveries[recoveryId];
+        if (recovery.status != RecoveryStatus.Pending)
+            revert RecoveryNotPending(recoveryId, recovery.status);
+    }
 
+    function _validateLocalRecipient(address recipient) private view {
+        if (
+            recipient == address(0) ||
+            recipient == address(this) ||
+            recipient == tokenPool
+        ) revert InvalidLocalRecipient(recipient);
+    }
+
+    function _consumeRecovery(
+        RecoveryRecord storage recovery,
+        RecoveryStatus terminalStatus
+    ) private {
+        recovery.status = terminalStatus;
+        --pendingCount;
+        totalReserved -= recovery.amount;
+    }
+
+    function _assertSolvent() private view {
+        uint256 tokenBalance = IERC20(token).balanceOf(address(this));
+        if (tokenBalance < totalReserved)
+            revert EscrowInsolvent(tokenBalance, totalReserved);
+    }
+
+    function _buildReturnMessage(RecoveryRecord storage recovery)
+        private
+        view
+        returns (Client.EVM2AnyMessage memory message)
+    {
         Client.EVMTokenAmount[]
             memory tokenAmounts = new Client.EVMTokenAmount[](1);
         tokenAmounts[0] = Client.EVMTokenAmount({
-            token: address(token),
-            amount: _tokenAmount
+            token: token,
+            amount: recovery.amount
         });
 
-        Client.EVM2AnyMessage memory message = Client.EVM2AnyMessage({
-            receiver: _recipient,
+        message = Client.EVM2AnyMessage({
+            receiver: abi.encode(recovery.originalSender),
             data: "",
             tokenAmounts: tokenAmounts,
             feeToken: address(0),
-            extraArgs: Client._argsToBytes(
-                Client.GenericExtraArgsV2({
-                    gasLimit: 0,
-                    allowOutOfOrderExecution: true
-                })
+            extraArgs: ExtraArgsCodec._getBasicEncodedExtraArgsV3(
+                0,
+                FinalityCodec.WAIT_FOR_FINALITY_FLAG
             )
         });
-
-        token.safeApprove(routerAddress, _tokenAmount);
-
-        return router.ccipSend{value: msg.value}(_remoteChainSelector, message);
     }
 
-    /**
-     * @notice validates and sets the default recipient
-     * @param _defaultRecipient the default recipient to set
-     */
-    function _setDefaultRecipient(address _defaultRecipient) private {
-        _validateAddress(_defaultRecipient);
-        defaultRecipient = _defaultRecipient;
-        emit SetDefaultRecipient(_defaultRecipient);
+    function _router() private view returns (IRouterClient router) {
+        (address routerAddress, , ) = TokenPool(tokenPool).getDynamicConfig();
+        if (routerAddress == address(0) || routerAddress.code.length == 0)
+            revert InvalidRouter(routerAddress);
+        router = IRouterClient(routerAddress);
     }
 
-    /**
-     * @notice extracts the recipient of the failed message
-     * @param _failedMessage the failed message
-     * @param _overrideRecipient the override recipient to set
-     * @param _status the status of the failed message
-     * @return the recipient of the failed message
-     */
-    function _extractRecipient(
-        FailedMessage storage _failedMessage,
-        address _overrideRecipient,
-        MessageStatus _status
-    ) private view returns (address) {
-        if (_overrideRecipient != address(0)) {
-            return _overrideRecipient;
-        }
-
-        if (_status == MessageStatus.Closed) {
-            return defaultRecipient;
-        } else {
-            return _failedMessage.originalRecipient;
-        }
+    function _refundNative(address recipient, uint256 amount) private {
+        if (amount == 0) return;
+        (bool success, ) = payable(recipient).call{value: amount}("");
+        if (!success) revert NativeRefundFailed(recipient, amount);
     }
 
-    /**
-     * @notice validates an address
-     * @param _address the address to validate
-     */
-    function _validateAddress(address _address) private view {
-        require(_address != address(0), ZeroAddress());
+    function _isEscrowAdmin(address account) private view returns (bool) {
+        return accessControl.hasRole(FALLBACK_ESCROW_ADMIN_ROLE, account);
     }
 
-    /**
-     * @notice gets the token
-     * @return the token
-     */
-    function _getToken() private view returns (IERC20) {
-        return IERC20(address(tokenPool.getToken()));
-    }
-
-    /**
-     * @notice validates the claim
-     * @param _expectedSender the expected sender
-     */
-    function _validateClaim(address _expectedSender) private view {
-        require(msg.sender == _expectedSender, InvalidSender(_expectedSender));
-    }
-
-    /**
-     * @notice generates a message id
-     * @param _originalRecipient the original recipient of the failed message
-     * @param _tokenAmount the amount of tokens to recover
-     * @param _index the index of the failed message
-     * @return the message id
-     */
-    function _getMessageId(
-        address _originalRecipient,
-        uint256 _tokenAmount,
-        uint64 _originalSourceChainSelector,
-        uint256 _index
-    ) private view returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(
-                    _originalRecipient,
-                    _tokenAmount,
-                    _originalSourceChainSelector,
-                    _index
-                )
-            );
+    function _setDefaultRecipient(address newDefaultRecipient) private {
+        _validateLocalRecipient(newDefaultRecipient);
+        address oldDefaultRecipient = defaultRecipient;
+        defaultRecipient = newDefaultRecipient;
+        emit DefaultRecipientSet(oldDefaultRecipient, newDefaultRecipient);
     }
 }
