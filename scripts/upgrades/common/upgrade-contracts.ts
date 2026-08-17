@@ -24,9 +24,17 @@ import { getDeployer } from '../../deploy/common/utils';
 import { upgradeConfigs } from '../configs/upgrade-configs';
 
 // TODO: refactor this whole file and make upgrades more generic
-type ContractType = 'customAggregator' | 'customAggregatorGrowth' | 'token';
+type ContractType =
+  | 'customAggregator'
+  | 'customAggregatorGrowth'
+  | 'token'
+  | 'dataFeed';
 
-type ContractTypeToUpgrade = 'customFeed' | 'customFeedGrowth' | 'token';
+type ContractTypeToUpgrade =
+  | 'customFeed'
+  | 'customFeedGrowth'
+  | 'token'
+  | 'dataFeed';
 
 export type MTokenContractsToUpgrade = {
   mToken: MTokenName;
