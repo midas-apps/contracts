@@ -933,6 +933,7 @@ All the roles for the Midas protocol smart contracts are listed below.
 | **_depositVaultAdmin_**    | `0x5e436b58093eec5c9bb0bf88a6e66765dc4e9b5fd9716a7da608c87d5f7b02bf` |
 | **_redemptionVaultAdmin_** | `0xf1f308589835b1481efea09554e2f72656725481c02aa4aaadab93e7045e5a53` |
 | **_greenlisted_**          | `0xc7021654dd5cc2dc098b5f088ed0c6a046d28f5eaf2f8d0008903e2b8520acb2` |
+| **_minBalanceExempt_**     | `0x23e8bb4597bf064a5742e658e9f935a80bebc3543fc490fd89c0e3a5dcb527ab` |
 
 ### qHVNUSD Roles
 
@@ -981,3 +982,16 @@ All the roles for the Midas protocol smart contracts are listed below.
 | **_depositVaultAdmin_**    | `0x0f6a147de8cdfffe171daade1586996aefc68576e55cdec9b77b1e419cac1ce1` |
 | **_redemptionVaultAdmin_** | `0x5f1f545d6af70010d52bd3c02c8e59828c88b7384e5388ce3b2902ad63da8a43` |
 | **_greenlisted_**          | `0xd4cee0f1caf45844ac124a181a38faea72039907def2059414beb261dc86eb67` |
+
+### mGLOeuro Roles
+
+| Role Name                  | Role                                                                 |
+| -------------------------- | -------------------------------------------------------------------- |
+| **_minter_**               | `0x29b52ad8b5aa9311f7fde983a723c52e504b21cb5c9bbd739a967c9e0cd715ee` |
+| **_burner_**               | `0x070ba01379eed310ddfca9075a00e040cc41c90d55c2a52e697ce7473e0b499f` |
+| **_pauser_**               | `0x96e4a6769d73f487be8632f4c7283e8a7bd60f67e46f1c472960bfe52eb1d698` |
+| **_customFeedAdmin_**      | `0x8cfa174b39696c5fd7407caa7ed3dd721ef06ed4f345ca9e3827d221f9bbf4da` |
+| **_depositVaultAdmin_**    | `0xbea31e5142f943ef913e5422e0e9a586e9d0303ccd63e0eead6b4189eb11cb27` |
+| **_redemptionVaultAdmin_** | `0x0fada8a7f8ae9df6a95f6bc75af039633867da152deda5fb8ade34998ef95ae8` |
+| **_greenlisted_**          | `0x49a103d47daa98d445728ba0f2e848dccbbd73dea56729c961450eeb09890acc` |
+| **_minBalanceExempt_**     | `0x4c160e777147efaadeec64143e540a0cb03c77322c06777f48cab5184c7a2a03` |

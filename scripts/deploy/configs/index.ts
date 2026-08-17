@@ -46,6 +46,7 @@ import {
   mGLOBALDeploymentConfig,
   mGLOBALDialecticDeploymentConfig,
 } from './mGLOBAL';
+import { mGLOeuroDeploymentConfig } from './mGLOeuro';
 import { mHYPERDeploymentConfig } from './mHYPER';
 import { mHyperBTCDeploymentConfig } from './mHyperBTC';
 import { mHyperETHDeploymentConfig } from './mHyperETH';
@@ -176,6 +177,7 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   sGold: sGoldDeploymentConfig,
   turtlePST: turtlePSTDeploymentConfig,
   mM1BTC: mM1BTCDeploymentConfig,
+  mGLOeuro: mGLOeuroDeploymentConfig,
 };
 
 type NamedDeploymentConfig = {

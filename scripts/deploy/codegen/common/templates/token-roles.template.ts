@@ -5,7 +5,8 @@ export const getTokenRolesContractFromTemplate = async (
   mToken: MTokenName,
   optionalParams?: Record<string, unknown>,
 ) => {
-  const { vaultUseTokenLevelGreenList = false } = optionalParams || {};
+  const { vaultUseTokenLevelGreenList = false, isPermissionedMToken = false } =
+    optionalParams || {};
 
   const { getTokenContractNames } = await importWithoutCache(
     require.resolve('../../../../../helpers/contracts'),
@@ -17,6 +18,9 @@ export const getTokenRolesContractFromTemplate = async (
 
   const contractNames = getTokenContractNames(mToken);
   const roles = getRolesNamesForToken(mToken);
+
+  const includeGreenlistedRole =
+    vaultUseTokenLevelGreenList || isPermissionedMToken;
 
   return {
     name: contractNames.roles,
@@ -53,7 +57,7 @@ export const getTokenRolesContractFromTemplate = async (
           keccak256("${roles.customFeedAdmin}");
 
       ${
-        vaultUseTokenLevelGreenList
+        includeGreenlistedRole
           ? `
       /**
        * @notice greenlist role for ${contractNames.token}

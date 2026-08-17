@@ -27,6 +27,7 @@ export type GrantAllTokenRolesConfig = {
   tokenManagerAddress?: Address;
   vaultsManagerAddress?: Address;
   oracleManagerAddress?: Address;
+  minBalanceExemptAddresses?: Address[];
 };
 
 const acAdminAddress = '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227';
@@ -126,6 +127,13 @@ export const grantAllProductRoles = async (
         ),
       );
     }
+
+    const minBalanceExemptAddresses =
+      managerGrantConfig.minBalanceExemptAddresses ?? [];
+    roleBatch.push(
+      ...minBalanceExemptAddresses.map(() => tokenRoles.minBalanceExempt),
+    );
+    addressBatch.push(...minBalanceExemptAddresses);
   }
 
   for (const dv of depositVaults) {

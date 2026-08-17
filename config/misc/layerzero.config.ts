@@ -19,34 +19,31 @@ import {
 import { getMTokenOrPaymentTokenOrThrow } from '../../helpers/utils';
 import { midasAddressesPerNetwork } from '../constants/addresses';
 
-enum DVN {
+export enum DVN {
   LayerZeroLabs = 'LayerZero Labs',
   DeutscheTelekom = 'Deutsche Telekom',
   Canary = 'Canary',
   BCWGroup = 'BCW Group',
   Nethermind = 'Nethermind',
+  BitGo = 'BitGo',
 }
+
+type PathwayDVNConfig = {
+  /** Override required DVNs for a direct pathway to a linked network. */
+  dvnsByLinkedNetwork?: Partial<Record<Network, DVN[]>>;
+  dvns?: DVN[];
+  excludedDVNs?: DVN[];
+};
 
 type ConfigPerNetwork<TKey extends string> = Partial<
   Record<
     TKey,
-    {
+    PathwayDVNConfig & {
       /**
        * @default 'all'
        */
       pathways?: 'direct-only' | 'all';
       linkedNetworks: Network[];
-      /**
-       * Override DVN names for this token's pathways.
-       * Falls back to `defaultDVNs` when not set.
-       */
-      dvns?: DVN[];
-
-      /**
-       * Exclude DVN names for this token's pathways.
-       * Falls back to `[]` when not set.
-       */
-      excludedDVNs?: DVN[];
     }
   >
 >;
@@ -57,6 +54,43 @@ const defaultDVNs = [
   DVN.Canary,
   DVN.Nethermind,
 ];
+
+export const getRateLimitNetworks = (
+  currentNetwork: Network,
+  originalNetwork: Network,
+  linkedNetworks: Network[],
+  pathways?: 'direct-only' | 'all',
+): Network[] => {
+  if (pathways === 'direct-only') {
+    return currentNetwork === originalNetwork
+      ? linkedNetworks
+      : [originalNetwork];
+  }
+
+  return [...linkedNetworks, originalNetwork].filter(
+    (network) => network !== currentNetwork,
+  );
+};
+
+export const getPathwayDVNs = (
+  config: PathwayDVNConfig,
+  originalNetwork: Network,
+  networkA: Network,
+  networkB: Network,
+): DVN[] => {
+  const linkedNetwork =
+    networkA === originalNetwork
+      ? networkB
+      : networkB === originalNetwork
+      ? networkA
+      : undefined;
+  const dvns =
+    (linkedNetwork && config.dvnsByLinkedNetwork?.[linkedNetwork]) ??
+    config.dvns ??
+    defaultDVNs;
+
+  return dvns.filter((dvn) => !config.excludedDVNs?.includes(dvn));
+};
 
 export const lzConfigsPerMToken: PartialConfigPerNetwork<
   ConfigPerNetwork<MTokenName>
@@ -75,6 +109,14 @@ export const lzConfigsPerMToken: PartialConfigPerNetwork<
     },
   },
   main: {
+    mGLO: {
+      // Mainnet <-> Base, Robinhood and Optimism only.
+      pathways: 'direct-only',
+      linkedNetworks: ['base', 'robinhood', 'optimism'],
+      dvnsByLinkedNetwork: {
+        robinhood: [DVN.LayerZeroLabs, DVN.BitGo, DVN.Canary, DVN.Nethermind],
+      },
+    },
     mHYPER: {
       pathways: 'direct-only',
       linkedNetworks: ['monad', 'katana', 'plasma'],
@@ -244,9 +286,11 @@ export default async function () {
         );
       }
 
-      const dvns = tokenConfig.dvns ?? defaultDVNs;
-      const dvnsWoExcluded = dvns.filter(
-        (v) => !tokenConfig.excludedDVNs?.includes(v),
+      const dvnsWoExcluded = getPathwayDVNs(
+        tokenConfig,
+        network,
+        networkA,
+        networkB,
       );
 
       console.log('dvnsWoExcluded', dvnsWoExcluded);

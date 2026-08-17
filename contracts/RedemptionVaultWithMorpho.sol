@@ -133,7 +133,6 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
 
         _requireAndUpdateAllowance(tokenOutCopy, amountTokenOut);
 
-        mToken.burn(user, calcResult.amountMTokenWithoutFee);
         if (calcResult.feeAmount > 0)
             _tokenTransferFromUser(
                 address(mToken),
@@ -141,6 +140,7 @@ contract RedemptionVaultWithMorpho is RedemptionVault {
                 calcResult.feeAmount,
                 18
             );
+        mToken.burn(user, calcResult.amountMTokenWithoutFee);
 
         uint256 amountTokenOutWithoutFeeFrom18 = ((calcResult
             .amountMTokenWithoutFee * mTokenRate) / tokenOutRate)

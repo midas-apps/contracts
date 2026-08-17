@@ -2,7 +2,10 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { layerZeroEids, Network } from '../../../../config';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
-import { lzConfigsPerMToken } from '../../../../config/misc';
+import {
+  getRateLimitNetworks,
+  lzConfigsPerMToken,
+} from '../../../../config/misc';
 import {
   getOriginalNetwork,
   getMTokenOrThrow,
@@ -57,25 +60,12 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     );
   }
 
-  const currentNetwork = hre.network.name as Network;
-  const isDirectOnly = lzConfig.pathways === 'direct-only';
-  const linkedNetworks = lzConfig.linkedNetworks ?? [];
-
-  let networksToRateLimit: Network[];
-  if (isDirectOnly) {
-    if (currentNetwork === originalNetwork) {
-      // on original network: can send to all linked networks
-      networksToRateLimit = linkedNetworks;
-    } else {
-      // on linked network: can only send back to the original network
-      networksToRateLimit = [originalNetwork];
-    }
-  } else {
-    // For 'all' pathways (default): can send to all linked networks + original network
-    networksToRateLimit = [...linkedNetworks, originalNetwork].filter(
-      (network) => network !== currentNetwork,
-    );
-  }
+  const networksToRateLimit = getRateLimitNetworks(
+    hre.network.name as Network,
+    originalNetwork,
+    lzConfig.linkedNetworks,
+    lzConfig.pathways,
+  );
 
   const rateLimitConfigs: RateLimiter.RateLimitConfigStruct[] = [];
 

@@ -16,8 +16,6 @@ import {
   ERC20,
   ERC20__factory,
   IERC20,
-  MTBILL,
-  MToken,
   RedemptionVault,
   RedemptionVaultWIthBUIDL,
   RedemptionVaultWithAave,
@@ -28,7 +26,7 @@ import {
 } from '../../typechain-types';
 
 type CommonParamsRedeem = {
-  mTBILL: MToken | MTBILL;
+  mTBILL: IERC20;
 } & Pick<
   Awaited<ReturnType<typeof defaultDeploy>>,
   'owner' | 'mTokenToUsdDataFeed'
@@ -137,6 +135,10 @@ export const redeemInstantTest = async (
       amountIn,
       true,
     );
+  const tokenDecimals = await tokenContract.decimals();
+  const eventAmountOut = amountOut.mul(
+    BigNumber.from(10).pow(18 - tokenDecimals),
+  );
 
   await expect(callFn())
     .to.emit(
@@ -149,14 +151,14 @@ export const redeemInstantTest = async (
     )
     .withArgs(
       ...[
-        sender,
+        sender.address,
         tokenOut,
         withRecipient ? recipient : undefined,
-        amountTBillIn,
+        amountIn,
         fee,
-        amountOut,
+        eventAmountOut,
       ].filter((v) => v !== undefined),
-    ).to.not.reverted;
+    );
 
   const balanceAfterUser = await mTBILL.balanceOf(sender.address);
   const balanceAfterReceiver = await mTBILL.balanceOf(tokensReceiver);
@@ -276,14 +278,14 @@ export const redeemRequestTest = async (
     )
     .withArgs(
       ...[
-        latestRequestIdBefore.add(1),
-        sender,
+        latestRequestIdBefore,
+        sender.address,
         tokenOut,
         withRecipient ? recipient : undefined,
-        amountTBillIn,
+        amountIn,
         fee,
       ].filter((v) => v !== undefined),
-    ).to.not.reverted;
+    );
 
   const latestRequestIdAfter = await redemptionVault.currentRequestId();
   const request = await redemptionVault.redeemRequests(latestRequestIdBefore);

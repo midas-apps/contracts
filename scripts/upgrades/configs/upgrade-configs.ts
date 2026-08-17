@@ -15,6 +15,11 @@ export const upgradeConfigs: UpgradeConfig = {
         [chainIds.katana]: ['mHYPER'],
       },
     },
+    'mwin-upgrade-permissioned-min-balance': {
+      tokens: {
+        [chainIds.main]: ['mWIN'],
+      },
+    },
     'mfone-rv-swapper-to-mtoken': {
       vaults: {
         [chainIds.sepolia]: {
@@ -49,6 +54,19 @@ export const upgradeConfigs: UpgradeConfig = {
               overrides: {
                 depositVault: true,
                 redemptionVaultSwapper: true,
+              },
+            },
+          },
+        },
+      },
+    },
+    'mwin-rv-fee-transfer-order-fix': {
+      vaults: {
+        [chainIds.main]: {
+          overrides: {
+            mWIN: {
+              overrides: {
+                redemptionVaultMToken: true,
               },
             },
           },

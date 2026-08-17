@@ -1,3 +1,4 @@
+import { hours } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
@@ -108,6 +109,17 @@ export const mGLODeploymentConfig: DeploymentConfig = {
         setRoundData: {
           data: parseUnits('1', 8),
         },
+        // Non-origin-chain OFT adapter. Outbound rate limit to Mainnet is 5M/day.
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          owner: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('5000000'),
+              window: hours(24),
+            },
+          },
+        },
       },
     },
     [chainIds.robinhood]: {
@@ -176,6 +188,17 @@ export const mGLODeploymentConfig: DeploymentConfig = {
         },
         setRoundData: {
           data: parseUnits('1', 8),
+        },
+        // Non-origin-chain OFT adapter. Outbound rate limit to Mainnet is 5M/day.
+        layerZero: {
+          delegate: '0x563e0fc290D535fC5549873aEcE97A16b001B9eD',
+          owner: '0x563e0fc290D535fC5549873aEcE97A16b001B9eD',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('5000000'),
+              window: hours(24),
+            },
+          },
         },
       },
     },
@@ -262,6 +285,110 @@ export const mGLODeploymentConfig: DeploymentConfig = {
         },
         setRoundData: {
           data: parseUnits('1', 8),
+        },
+        // Ethereum OFT adapter. Outbound rate limit is 5M/day to each spoke.
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          owner: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            overrides: {
+              base: {
+                limit: parseUnits('5000000'),
+                window: hours(24),
+              },
+              robinhood: {
+                limit: parseUnits('5000000'),
+                window: hours(24),
+              },
+              optimism: {
+                limit: parseUnits('5000000'),
+                window: hours(24),
+              },
+            },
+          },
+        },
+      },
+    },
+    [chainIds.optimism]: {
+      dv: {
+        type: 'REGULAR',
+        enableSanctionsList: true,
+        feeReceiver: '0x6b5067C1D71e1Ad7e5Fbe85A8af04868B2e70a1B',
+        tokensReceiver: '0x83BfD9233DC281E7BA1311B1245cb2f891a94E56',
+        instantDailyLimit: parseUnits('30000000', 18),
+        instantFee: parseUnits('0', 2),
+        variationTolerance: parseUnits('2', 2),
+        minAmount: parseUnits('0', 18),
+        minMTokenAmountForFirstDeposit: parseUnits('0', 18),
+        maxSupplyCap: constants.MaxUint256,
+      },
+      rvSwapper: {
+        type: 'SWAPPER',
+        feeReceiver: '0x83BfD9233DC281E7BA1311B1245cb2f891a94E56',
+        tokensReceiver: '0x83BfD9233DC281E7BA1311B1245cb2f891a94E56',
+        requestRedeemer: '0x27c41C320066e92688799b3cd0014992Da7f2f0C',
+        instantDailyLimit: parseUnits('200000', 18),
+        instantFee: parseUnits('0.5', 2),
+        variationTolerance: parseUnits('2', 2),
+        minAmount: parseUnits('1', 18),
+        fiatFlatFee: parseUnits('30', 18),
+        fiatAdditionalFee: parseUnits('0.1', 2),
+        minFiatRedeemAmount: parseUnits('1000', 18),
+        enableSanctionsList: true,
+        liquidityProvider: 'dummy',
+        swapperVault: 'dummy',
+      },
+      postDeploy: {
+        addPaymentTokens: {
+          vaults: [
+            {
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  allowance: parseUnits('1000000000', 18),
+                  isStable: true,
+                },
+              ],
+              type: 'depositVault',
+            },
+            {
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  allowance: parseUnits('1000000000', 18),
+                  isStable: true,
+                },
+              ],
+              type: 'redemptionVaultSwapper',
+            },
+          ],
+        },
+        grantRoles: {
+          tokenManagerAddress: '0xA13f82F679E24ad08E014F8af6EcE32023b14F07',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0x83b573AA8C4b567c0466c9d5e32D6513676d795b',
+        },
+        greenlist: {
+          depositVault: true,
+          redemptionVaultSwapper: true,
+        },
+        pauseFunctions: {
+          depositVault: ['depositRequest', 'depositRequestWithCustomRecipient'],
+          redemptionVaultSwapper: ['redeemFiatRequest'],
+        },
+        setRoundData: {
+          data: parseUnits('1', 8),
+        },
+        // Non-origin-chain OFT adapter. Outbound rate limit to Mainnet is 5M/day.
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          owner: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('5000000'),
+              window: hours(24),
+            },
+          },
         },
       },
     },
