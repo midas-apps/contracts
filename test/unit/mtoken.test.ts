@@ -184,11 +184,11 @@ describe(`mToken`, function () {
     ).revertedWith('Initializable: contract is already initialized');
 
     await expect(
-      tokenContract.initializeV2(clawbackReceiver.address),
+      tokenContract.initializeV3(clawbackReceiver.address),
     ).to.revertedWith('Initializable: contract is already initialized');
   });
 
-  describe('initializeV2() proxy admin restriction', () => {
+  describe('initializeV3() proxy admin restriction', () => {
     const deployMToken = async () => {
       const { accessControl, clawbackReceiver } = await loadFixture(
         defaultDeploy,
@@ -213,7 +213,7 @@ describe(`mToken`, function () {
       return { mTBILL, clawbackReceiver };
     };
 
-    it('fresh deploy: initializeV2 runs while proxy admin is zero', async () => {
+    it('fresh deploy: initializeV3 runs while proxy admin is zero', async () => {
       const { mTBILL, clawbackReceiver } = await deployMToken();
 
       expect(await mTBILL.clawbackReceiver()).eq(clawbackReceiver.address);
@@ -226,7 +226,7 @@ describe(`mToken`, function () {
       await setProxyAdmin(mTBILL.address, admin.address);
 
       await expect(
-        mTBILL.connect(admin).initializeV2(clawbackReceiver.address),
+        mTBILL.connect(admin).initializeV3(clawbackReceiver.address),
       ).revertedWith('Initializable: contract is already initialized');
     });
 
@@ -238,7 +238,7 @@ describe(`mToken`, function () {
       await setInitializedVersion(mTBILL.address, 1);
 
       await expect(
-        mTBILL.connect(stranger).initializeV2(clawbackReceiver.address),
+        mTBILL.connect(stranger).initializeV3(clawbackReceiver.address),
       ).revertedWithCustomError(mTBILL, 'SenderNotProxyAdmin');
     });
 
@@ -249,7 +249,7 @@ describe(`mToken`, function () {
       await setProxyAdmin(mTBILL.address, admin.address);
       await setInitializedVersion(mTBILL.address, 1);
 
-      await mTBILL.connect(admin).initializeV2(newClawbackReceiver.address);
+      await mTBILL.connect(admin).initializeV3(newClawbackReceiver.address);
 
       expect(await mTBILL.clawbackReceiver()).eq(newClawbackReceiver.address);
     });
@@ -2325,7 +2325,7 @@ describe('mTokenPermissioned', () => {
       );
     });
 
-    it('burn without greenlist on holder', async () => {
+    it('burnGoverned without greenlist on holder', async () => {
       const baseFixture = await loadFixture(defaultDeploy);
       const {
         owner,
@@ -2346,7 +2346,37 @@ describe('mTokenPermissioned', () => {
         holder.address,
       );
 
-      await burn({ tokenContract: mTokenPermissioned, owner }, holder, 1);
+      await burn(
+        { tokenContract: mTokenPermissioned, owner, isGoverned: true },
+        holder,
+        1,
+      );
+    });
+
+    it('should fail: burn without greenlist on holder', async () => {
+      const baseFixture = await loadFixture(defaultDeploy);
+      const {
+        owner,
+        accessControl,
+        regularAccounts,
+        mTokenPermissioned,
+        mTokenPermissionedRoles,
+      } = await loadFixture(mTokenPermissionedFixture.bind(this, baseFixture));
+
+      const holder = regularAccounts[0];
+      await accessControl['grantRole(bytes32,address)'](
+        mTokenPermissionedRoles.greenlisted,
+        holder.address,
+      );
+      await mint({ tokenContract: mTokenPermissioned, owner }, holder, 1);
+      await accessControl.revokeRole(
+        mTokenPermissionedRoles.greenlisted,
+        holder.address,
+      );
+
+      await burn({ tokenContract: mTokenPermissioned, owner }, holder, 1, {
+        revertCustomError: { customErrorName: 'NotGreenlisted' },
+      });
     });
   });
 
