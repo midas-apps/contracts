@@ -1,6 +1,9 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { proposeUpgradeContracts } from './common/upgrade-contracts';
+import {
+  getConfiguredTokenUpgrades,
+  proposeUpgradeContracts,
+} from './common/upgrade-contracts';
 
 import { MTokenName } from '../../config';
 import { getCurrentAddresses } from '../../config/constants/addresses';
@@ -15,21 +18,14 @@ const func: DeployFunction = async (
   const networkAddresses = getCurrentAddresses(hre);
   const tokenAddresses = networkAddresses?.[mToken];
 
-  if (!tokenAddresses) {
-    throw new Error('Token addresses not found');
-  }
-
-  await proposeUpgradeContracts(hre, upgradeId, 'token', [
-    {
-      mToken,
-      addresses: tokenAddresses,
-      contracts: [
-        {
-          contractType: 'token',
-        },
-      ],
-    },
-  ]);
+  await proposeUpgradeContracts(
+    hre,
+    upgradeId,
+    'token',
+    getConfiguredTokenUpgrades(hre, upgradeId),
+  );
 };
 
 export default func;
+
+// yarn hardhat runscript scripts/upgrades/proposeUpgrade_Token.ts --network <NETWORK> --action <UPGRADE_ID>

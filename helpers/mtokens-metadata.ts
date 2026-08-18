@@ -2,7 +2,12 @@ import { MTokenName } from '../config';
 
 export const mTokensMetadata: Record<
   MTokenName,
-  { name: string; symbol: string; isPermissioned?: boolean }
+  {
+    name: string;
+    symbol: string;
+    isPermissioned?: boolean;
+    isMinBalance?: boolean;
+  }
 > = {
   mTBILL: {
     name: 'Midas US Treasury Bill Token',
@@ -310,6 +315,7 @@ export const mTokensMetadata: Record<
     name: 'Midas Wellington Income Opportunities',
     symbol: 'mWIN',
     isPermissioned: true,
+    isMinBalance: true,
   },
   qHVNUSD: {
     name: 'Qapture Safe Haven',
@@ -331,5 +337,10 @@ export const mTokensMetadata: Record<
   mM1BTC: {
     name: 'Midas M1 BTC Market Neutral',
     symbol: 'mM1-BTC',
+  },
+  mGLOeuro: {
+    name: 'Midas Fasanara Global Euro',
+    symbol: 'mGLOeuro',
+    isMinBalance: true,
   },
 };

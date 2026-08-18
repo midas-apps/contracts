@@ -28,7 +28,7 @@ const func: DeployFunction = async (
         {
           contractType: 'customAggregator',
           initializer: 'initializeV2',
-          initializerArgs: [parseUnits('0.66', 8)],
+          initializerArgs: [parseUnits('0', 8), parseUnits('1.2', 8)],
         },
       ],
     },

@@ -49,6 +49,10 @@ export const verifyConfig: VerifyConfigPerNetwork = {
     type: 'etherscan',
     browserUrl: 'https://sepolia.arbiscan.io',
   },
+  avalanche: {
+    type: 'etherscan',
+    browserUrl: 'https://snowscan.xyz',
+  },
   hyperevm: {
     type: 'etherscan',
     browserUrl: 'https://hyperevmscan.io',

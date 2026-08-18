@@ -5,7 +5,8 @@ export const getTokenContractFromTemplate = async (
   mToken: MTokenName,
   optionalParams?: Record<string, unknown>,
 ) => {
-  const { isPermissionedMToken = false } = optionalParams || {};
+  const { isPermissionedMToken = false, isMinBalanceMToken = false } =
+    optionalParams || {};
   const { getTokenContractNames } = await importWithoutCache(
     require.resolve('../../../../../helpers/contracts'),
   );
@@ -23,13 +24,17 @@ export const getTokenContractFromTemplate = async (
   const contractNames = getTokenContractNames(mToken);
   const roles = getRolesNamesForToken(mToken);
 
+  const mTokenBase = `mToken${isPermissionedMToken ? 'Permissioned' : ''}${
+    isMinBalanceMToken ? 'MinBalance' : ''
+  }`;
+
   return {
     name: contractNames.token,
     content: `
   // SPDX-License-Identifier: MIT
   pragma solidity 0.8.9;
 
-  import "../../mToken${isPermissionedMToken ? 'Permissioned' : ''}.sol";
+  import "../../${mTokenBase}.sol";
   ${isPermissionedMToken ? `import "./${contractNames.roles}.sol";` : ''}
 
   /**
@@ -37,8 +42,8 @@ export const getTokenContractFromTemplate = async (
    * @author RedDuck Software
    */
   //solhint-disable contract-name-camelcase
-  contract ${contractNames.token} is mToken${
-      isPermissionedMToken ? `Permissioned, ${contractNames.roles}` : ''
+  contract ${contractNames.token} is ${mTokenBase}${
+      isPermissionedMToken ? `, ${contractNames.roles}` : ''
     } {
       /**
        * @notice actor that can mint ${contractNames.token}
@@ -58,10 +63,31 @@ export const getTokenContractFromTemplate = async (
       bytes32 public constant ${roles.pauser} =
           keccak256("${roles.pauser}");
 
+      ${
+        isMinBalanceMToken
+          ? `
+      /**
+       * @notice actor that is exempt from ${contractNames.token} min balance checks
+       */
+      bytes32 public constant ${roles.minBalanceExempt} =
+          keccak256("${roles.minBalanceExempt}");
+      `
+          : ''
+      }
+
+      ${
+        isPermissionedMToken && isMinBalanceMToken
+          ? `
+      // no gap as we would upgrade some of the deployments
+      // to mTokenMinBalance
+      `
+          : `
       /**
        * @dev leaving a storage gap for futures updates
        */
       uint256[50] private __gap;
+      `
+      }
 
       /**
        * @inheritdoc mToken
@@ -104,6 +130,18 @@ export const getTokenContractFromTemplate = async (
        */
       function _greenlistedRole() internal pure override returns (bytes32) {
           return ${roles.greenlisted};
+      }`
+          : ''
+      }
+
+      ${
+        isMinBalanceMToken
+          ? `
+       /**
+       * @inheritdoc mTokenMinBalance
+       */
+      function _minBalanceExemptRole() internal pure override returns (bytes32) {
+          return ${roles.minBalanceExempt};
       }`
           : ''
       }

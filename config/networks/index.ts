@@ -42,6 +42,7 @@ const defaultRpcUrls: ConfigPerNetwork<RpcUrl> = {
   plume: 'https://rpc.plume.org',
   rootstock: 'https://mycrypto.rsk.co',
   arbitrum: 'https://arbitrum.drpc.org',
+  avalanche: 'https://api.avax.network/ext/bc/C/rpc',
   tacTestnet: 'https://turin.rpc.tac.build',
   hyperevm: 'https://rpc.hyperliquid.xyz/evm',
   katana: `https://rpc-katana.t.conduit.xyz/${CONDUIT_API_KEY}`,
@@ -61,8 +62,7 @@ const defaultRpcUrls: ConfigPerNetwork<RpcUrl> = {
   optimism: ALCHEMY_KEY
     ? `https://opt-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
     : `https://optimism-mainnet.infura.io/v3/${INFURA_KEY}`,
-  // TODO: Put real robinhood RPC URL when provided
-  robinhood: 'https://rpc.robinhood.invalid',
+  robinhood: 'https://rpc.mainnet.chain.robinhood.com',
 };
 
 export const rpcUrls: ConfigPerNetwork<RpcUrl> = Object.entries(
@@ -90,6 +90,7 @@ export const chainIds: ConfigPerNetwork<number> = {
   plume: 98866,
   rootstock: 30,
   arbitrum: 42161,
+  avalanche: 43114,
   tacTestnet: 2390,
   hyperevm: 999,
   katana: 747474,
@@ -117,6 +118,7 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   plume: MNEMONIC_PROD,
   rootstock: MNEMONIC_PROD,
   arbitrum: MNEMONIC_PROD,
+  avalanche: MNEMONIC_PROD,
   tacTestnet: MNEMONIC_DEV,
   hyperevm: MNEMONIC_PROD,
   katana: MNEMONIC_PROD,
@@ -157,9 +159,11 @@ export const layerZeroBlockFinality: PartialConfigPerNetwork<number> = {
   monad: 3600,
   katana: 1200,
   scroll: 800,
-  optimism: 650,
+  optimism: 1000,
   plasma: 1800,
   zerog: 6000,
+  base: 600,
+  robinhood: 3600,
 };
 
 export const axelarChainNames: PartialConfigPerNetwork<string> = {
@@ -189,6 +193,7 @@ export const layerZeroEids: PartialConfigPerNetwork<EndpointId> = {
   scroll: EndpointId.SCROLL_V2_MAINNET,
   monad: EndpointId.MONAD_V2_MAINNET,
   optimism: EndpointId.OPTIMISM_V2_MAINNET,
+  robinhood: EndpointId.ROBINHOOD_V2_MAINNET,
 };
 
 export const layerZeroEidToNetwork = Object.fromEntries(

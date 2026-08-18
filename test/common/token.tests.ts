@@ -109,6 +109,10 @@ export const tokenContractsTests = (token: MTokenName) => {
     return factory.attach(proxy.address) as TContract;
   };
 
+  const isPermissioned = !!mTokensMetadata[token]?.isPermissioned;
+  const isMinBalance = !!mTokensMetadata[token]?.isMinBalance;
+  const unitAmount = isMinBalance ? parseUnits('1') : 1;
+
   const deployMTokenWithFixture = async () => {
     const fixture = await loadFixture(defaultDeploy);
 
@@ -118,7 +122,7 @@ export const tokenContractsTests = (token: MTokenName) => {
       fixture.accessControl.address,
     )) as MTBILL;
 
-    if (mTokensMetadata[token]?.isPermissioned) {
+    if (isPermissioned) {
       const greenlistedRole = tokenRoles.greenlisted;
       for (const account of fixture.regularAccounts) {
         await fixture.accessControl
@@ -347,6 +351,11 @@ export const tokenContractsTests = (token: MTokenName) => {
       expect(await contract[tokenRoleNames.burner]()).eq(tokenRoles.burner);
       expect(await contract[tokenRoleNames.minter]()).eq(tokenRoles.minter);
       expect(await contract[tokenRoleNames.pauser]()).eq(tokenRoles.pauser);
+      if (isMinBalance) {
+        expect(await contract[tokenRoleNames.minBalanceExempt]()).eq(
+          tokenRoles.minBalanceExempt,
+        );
+      }
 
       expect(await contract[allRoleNames.defaultAdmin]()).eq(
         allRoles.common.defaultAdmin,
@@ -533,7 +542,7 @@ export const tokenContractsTests = (token: MTokenName) => {
           { blacklistable: tokenContract, accessControl, owner },
           blacklisted,
         );
-        await mint({ tokenContract, owner }, blacklisted, 1, {
+        await mint({ tokenContract, owner }, blacklisted, unitAmount, {
           revertMessage: acErrors.WMAC_HAS_ROLE,
         });
       });
@@ -545,14 +554,14 @@ export const tokenContractsTests = (token: MTokenName) => {
         const blacklisted = regularAccounts[0];
         const to = regularAccounts[1];
 
-        await mint({ tokenContract, owner }, blacklisted, 1);
+        await mint({ tokenContract, owner }, blacklisted, unitAmount);
         await blackList(
           { blacklistable: tokenContract, accessControl, owner },
           blacklisted,
         );
 
         await expect(
-          tokenContract.connect(blacklisted).transfer(to.address, 1),
+          tokenContract.connect(blacklisted).transfer(to.address, unitAmount),
         ).revertedWith(acErrors.WMAC_HAS_ROLE);
       });
 
@@ -563,14 +572,14 @@ export const tokenContractsTests = (token: MTokenName) => {
         const blacklisted = regularAccounts[0];
         const from = regularAccounts[1];
 
-        await mint({ tokenContract, owner }, from, 1);
+        await mint({ tokenContract, owner }, from, unitAmount);
         await blackList(
           { blacklistable: tokenContract, accessControl, owner },
           blacklisted,
         );
 
         await expect(
-          tokenContract.connect(from).transfer(blacklisted.address, 1),
+          tokenContract.connect(from).transfer(blacklisted.address, unitAmount),
         ).revertedWith(acErrors.WMAC_HAS_ROLE);
       });
 
@@ -581,18 +590,20 @@ export const tokenContractsTests = (token: MTokenName) => {
         const blacklisted = regularAccounts[0];
         const to = regularAccounts[1];
 
-        await mint({ tokenContract, owner }, blacklisted, 1);
+        await mint({ tokenContract, owner }, blacklisted, unitAmount);
         await blackList(
           { blacklistable: tokenContract, accessControl, owner },
           blacklisted,
         );
 
-        await tokenContract.connect(blacklisted).approve(to.address, 1);
+        await tokenContract
+          .connect(blacklisted)
+          .approve(to.address, unitAmount);
 
         await expect(
           tokenContract
             .connect(to)
-            .transferFrom(blacklisted.address, to.address, 1),
+            .transferFrom(blacklisted.address, to.address, unitAmount),
         ).revertedWith(acErrors.WMAC_HAS_ROLE);
       });
 
@@ -604,18 +615,18 @@ export const tokenContractsTests = (token: MTokenName) => {
         const from = regularAccounts[1];
         const caller = regularAccounts[2];
 
-        await mint({ tokenContract, owner }, from, 1);
+        await mint({ tokenContract, owner }, from, unitAmount);
 
         await blackList(
           { blacklistable: tokenContract, accessControl, owner },
           blacklisted,
         );
-        await tokenContract.connect(from).approve(caller.address, 1);
+        await tokenContract.connect(from).approve(caller.address, unitAmount);
 
         await expect(
           tokenContract
             .connect(caller)
-            .transferFrom(from.address, blacklisted.address, 1),
+            .transferFrom(from.address, blacklisted.address, unitAmount),
         ).revertedWith(acErrors.WMAC_HAS_ROLE);
       });
 
@@ -625,12 +636,12 @@ export const tokenContractsTests = (token: MTokenName) => {
 
         const blacklisted = regularAccounts[0];
 
-        await mint({ tokenContract, owner }, blacklisted, 1);
+        await mint({ tokenContract, owner }, blacklisted, unitAmount);
         await blackList(
           { blacklistable: tokenContract, accessControl, owner },
           blacklisted,
         );
-        await burn({ tokenContract, owner }, blacklisted, 1, {
+        await burn({ tokenContract, owner }, blacklisted, unitAmount, {
           revertMessage: acErrors.WMAC_HAS_ROLE,
         });
       });
@@ -641,7 +652,7 @@ export const tokenContractsTests = (token: MTokenName) => {
 
         const blacklisted = regularAccounts[0];
 
-        await mint({ tokenContract, owner }, blacklisted, 1);
+        await mint({ tokenContract, owner }, blacklisted, unitAmount);
         await blackList(
           { blacklistable: tokenContract, accessControl, owner },
           blacklisted,
@@ -651,10 +662,12 @@ export const tokenContractsTests = (token: MTokenName) => {
           blacklisted.address,
         );
         await expect(
-          tokenContract.connect(owner).burnGoverned(blacklisted.address, 1),
+          tokenContract
+            .connect(owner)
+            .burnGoverned(blacklisted.address, unitAmount),
         ).to.not.reverted;
         const balanceAfter = await tokenContract.balanceOf(blacklisted.address);
-        expect(balanceBefore.sub(balanceAfter)).eq(1);
+        expect(balanceBefore.sub(balanceAfter)).eq(unitAmount);
       });
 
       it('should fail: burnGoverned(...) when caller lacks burner role', async () => {
@@ -664,10 +677,12 @@ export const tokenContractsTests = (token: MTokenName) => {
         const unauthorized = regularAccounts[0];
         const target = regularAccounts[1];
 
-        await mint({ tokenContract, owner }, target, 1);
+        await mint({ tokenContract, owner }, target, unitAmount);
 
         await expect(
-          tokenContract.connect(unauthorized).burnGoverned(target.address, 1),
+          tokenContract
+            .connect(unauthorized)
+            .burnGoverned(target.address, unitAmount),
         ).revertedWith(acErrors.WMAC_HASNT_ROLE);
       });
 
@@ -679,18 +694,20 @@ export const tokenContractsTests = (token: MTokenName) => {
         const from = regularAccounts[1];
         const to = regularAccounts[2];
 
-        await mint({ tokenContract, owner }, from, 1);
+        await mint({ tokenContract, owner }, from, unitAmount);
         await blackList(
           { blacklistable: tokenContract, accessControl, owner },
           blacklisted,
         );
 
-        await tokenContract.connect(from).approve(blacklisted.address, 1);
+        await tokenContract
+          .connect(from)
+          .approve(blacklisted.address, unitAmount);
 
         await expect(
           tokenContract
             .connect(blacklisted)
-            .transferFrom(from.address, to.address, 1),
+            .transferFrom(from.address, to.address, unitAmount),
         ).not.reverted;
       });
 
@@ -701,14 +718,14 @@ export const tokenContractsTests = (token: MTokenName) => {
         const blacklisted = regularAccounts[0];
         const to = regularAccounts[2];
 
-        await mint({ tokenContract, owner }, blacklisted, 1);
+        await mint({ tokenContract, owner }, blacklisted, unitAmount);
         await blackList(
           { blacklistable: tokenContract, accessControl, owner },
           blacklisted,
         );
 
         await expect(
-          tokenContract.connect(blacklisted).transfer(to.address, 1),
+          tokenContract.connect(blacklisted).transfer(to.address, unitAmount),
         ).revertedWith(acErrors.WMAC_HAS_ROLE);
 
         await unBlackList(
@@ -716,8 +733,9 @@ export const tokenContractsTests = (token: MTokenName) => {
           blacklisted,
         );
 
-        await expect(tokenContract.connect(blacklisted).transfer(to.address, 1))
-          .not.reverted;
+        await expect(
+          tokenContract.connect(blacklisted).transfer(to.address, unitAmount),
+        ).not.reverted;
       });
     });
   });

@@ -21,6 +21,7 @@ import {
   RedemptionVaultWithAave,
   RedemptionVaultWithMorpho,
 } from '../../../typechain-types';
+import { getDeploymentTokenAddresses } from '../configs/deployment-profiles';
 
 export type AddPaymentTokensConfig = {
   vaults: {
@@ -268,8 +269,15 @@ const getVaultContract = async (
   vaultType: VaultType,
 ) => {
   const addresses = getCurrentAddresses(hre);
+  const tokenAddresses = addresses?.[mToken]
+    ? getDeploymentTokenAddresses(
+        addresses[mToken]!,
+        mToken,
+        hre.deploymentConfig,
+      )
+    : undefined;
 
-  const vaultAddress = addresses?.[mToken]?.[vaultType];
+  const vaultAddress = tokenAddresses?.[vaultType];
 
   if (!vaultAddress) {
     throw new Error('Vault address is not found');

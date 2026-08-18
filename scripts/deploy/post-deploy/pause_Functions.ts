@@ -1,13 +1,11 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { MTokenName } from '../../../config';
-import {
-  getCurrentAddresses,
-  VaultType,
-} from '../../../config/constants/addresses';
+import { getCurrentAddresses } from '../../../config/constants/addresses';
 import { getChainOrThrow } from '../../../helpers/utils';
 import { DeployFunction, VAULT_FUNCTION_SELECTORS } from '../common/types';
 import { sendAndWaitForCustomTxSign, getNetworkConfig } from '../common/utils';
+import { getDeploymentTokenAddresses } from '../configs/deployment-profiles';
 
 const func: DeployFunction = async (
   hre: HardhatRuntimeEnvironment,
@@ -27,10 +25,22 @@ const func: DeployFunction = async (
   }
 
   const addresses = getCurrentAddresses(hre);
+  const tokenAddresses = addresses?.[mToken];
+
+  if (!tokenAddresses) {
+    throw new Error(`Token addresses not found for ${mToken}`);
+  }
+
+  const mergedTokenAddresses = getDeploymentTokenAddresses(
+    tokenAddresses,
+    mToken,
+    hre.deploymentConfig,
+  );
 
   for (const [vaultType, functions] of Object.entries(pauseFunctions)) {
-    const vaultAddress = addresses?.[mToken]?.[vaultType as VaultType];
-    if (!vaultAddress) continue;
+    const vaultAddress =
+      mergedTokenAddresses[vaultType as keyof typeof mergedTokenAddresses];
+    if (!vaultAddress || typeof vaultAddress !== 'string') continue;
 
     const vault = await hre.ethers.getContractAt(
       'ManageableVault',

@@ -2,7 +2,10 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { layerZeroEids, MTokenName, Network } from '../../../../config';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
-import { lzConfigsPerMToken } from '../../../../config/misc';
+import {
+  getRateLimitNetworks,
+  lzConfigsPerMToken,
+} from '../../../../config/misc';
 import { etherscanVerify, logDeploy } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
 import { getDeployer, getNetworkConfig } from '../../common/utils';
@@ -41,17 +44,20 @@ const func: DeployFunction = async (
   const rateLimitConfigDefault = config.layerZero.rateLimitConfig?.default;
   const rateLimitConfigOverrides = config.layerZero.rateLimitConfig?.overrides;
 
-  const allReceiverNetworks =
-    lzConfigsPerMToken?.[resolvedOriginalNetwork]?.[mToken]?.linkedNetworks;
+  const lzConfig = lzConfigsPerMToken?.[resolvedOriginalNetwork]?.[mToken];
 
-  if (!allReceiverNetworks || allReceiverNetworks.length === 0) {
-    throw new Error('Receiver networks not found');
+  if (!lzConfig) {
+    throw new Error(
+      'LayerZero config not found or `--original-network` is not correct',
+    );
   }
 
-  const networksToRateLimit = [
-    ...allReceiverNetworks,
+  const networksToRateLimit = getRateLimitNetworks(
+    hre.network.name as Network,
     resolvedOriginalNetwork,
-  ].filter((network) => network !== hre.network.name);
+    lzConfig.linkedNetworks,
+    lzConfig.pathways,
+  );
 
   const rateLimitConfigs = networksToRateLimit.map((network) => {
     const configBase =

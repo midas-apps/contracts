@@ -11,6 +11,11 @@ import { ParamFnBase, forkingNetworkParam } from './task-params';
 import { ENV, chainIds, extendWithContext, rpcUrls } from '../../config';
 import { Network } from '../../config';
 import { isMTokenName, isPaymentTokenName } from '../../helpers/utils';
+import {
+  deploymentConfigNames,
+  isDeploymentConfigName,
+  validateDeploymentProfileContext,
+} from '../../scripts/deploy/configs/deployment-profiles';
 
 /** Truly global runner flags attached to every script task. */
 export const globalRunScriptParams = [forkingNetworkParam(true)];
@@ -39,7 +44,7 @@ export const runScript = async (
   const ptoken = taskArgs.ptoken as string | undefined;
   const action = taskArgs.action as string | undefined;
 
-  const forkingNetwork: Network =
+  const forkingNetwork =
     (taskArgs.forkingNetwork as Network | undefined) ?? ENV.FORKING_NETWORK;
 
   if (forkingNetwork) {
@@ -64,6 +69,8 @@ export const runScript = async (
 
   const originalNetwork = taskArgs.originalNetwork as Network | undefined;
   const skipValidation = taskArgs.skipValidation as string | undefined;
+  const deploymentConfig = taskArgs.deploymentConfig;
+  const keys = taskArgs.keys as string | undefined;
 
   // Kept on hre: used by extended-hre, layerzero tasks, and shared script helpers
   hre.skipValidation = (skipValidation ?? 'false') === 'true';
@@ -89,10 +96,33 @@ export const runScript = async (
     hre.paymentToken = ptoken;
   }
 
+  if (
+    deploymentConfig !== undefined &&
+    !isDeploymentConfigName(deploymentConfig)
+  ) {
+    throw new Error(
+      `Unknown deployment config "${deploymentConfig}". Available configs: default, ${deploymentConfigNames.join(
+        ', ',
+      )}`,
+    );
+  }
+
+  const chainId = hre.network.config.chainId;
+  if (chainId === undefined) {
+    throw new Error('Network chain ID is not configured');
+  }
+
+  validateDeploymentProfileContext(deploymentConfig, hre.mtoken, chainId);
+  hre.deploymentConfig = deploymentConfig;
+
   if (originalNetwork) {
     hre.layerZero = {
       originalNetwork,
     };
+  }
+
+  if (keys) {
+    hre.addressBookKeys = keys.split(',').map((k: string) => k.trim());
   }
 
   const scriptPath = taskArgs.path as string;

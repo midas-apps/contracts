@@ -12,7 +12,7 @@ import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
 } from '../../../helpers/utils';
-import { configsPerToken } from '../configs';
+import { getDeploymentConfigForToken } from '../configs';
 
 const safeAbi = [
   {
@@ -207,12 +207,12 @@ export const getDeploymentGenericConfigOptional = <
   TConfigKey extends keyof DeploymentConfig['genericConfigs'],
   TConfig extends DeploymentConfig['genericConfigs'][TConfigKey],
 >(
+  hre: HardhatRuntimeEnvironment,
   token: MTokenName,
   configKey: TConfigKey,
 ) => {
-  return configsPerToken[token]?.genericConfigs?.[configKey] as
-    | TConfig
-    | undefined;
+  return getDeploymentConfigForToken(token, hre.deploymentConfig)
+    ?.genericConfigs?.[configKey] as TConfig | undefined;
 };
 
 export const getDeploymentGenericConfig = <
@@ -224,6 +224,7 @@ export const getDeploymentGenericConfig = <
   configKey: TConfigKey,
 ) => {
   const config = getDeploymentGenericConfigOptional<TConfigKey, TConfig>(
+    hre,
     token,
     configKey,
   );
@@ -243,9 +244,8 @@ export const getNetworkConfig = <
   token: MTokenName,
   configKey: TConfigKey,
 ) => {
-  const config = configsPerToken[token]?.networkConfigs?.[
-    hre.network.config.chainId!
-  ]?.[configKey] as TConfig;
+  const config = getDeploymentConfigForToken(token, hre.deploymentConfig)
+    ?.networkConfigs?.[hre.network.config.chainId!]?.[configKey] as TConfig;
 
   if (!config) {
     throw new Error('Deployment config is not found');

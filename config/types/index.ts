@@ -7,6 +7,7 @@ export const networks = [
   'main',
   'arbitrum',
   'arbitrumSepolia',
+  'avalanche',
   'base',
   'bsc',
   'etherlink',

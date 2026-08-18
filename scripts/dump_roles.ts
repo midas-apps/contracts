@@ -1,5 +1,6 @@
 import { writeFile } from 'fs/promises';
 
+import { mTokensMetadata } from '../helpers/mtokens-metadata';
 import { getAllRoles } from '../helpers/roles';
 
 const formatKey = (k: string) => {
@@ -17,10 +18,17 @@ const func = async () => {
 
   const tokensTables = Object.entries(tokenRoles).reduce(
     (prev, [mToken, roles]) => {
-      const mdRows = Object.entries(roles).map(([role, value]) => [
-        formatKey(role),
-        formatValue(value as string),
-      ]);
+      const mdRows = Object.entries(roles)
+        .filter(
+          ([role]) =>
+            role !== 'minBalanceExempt' ||
+            mTokensMetadata[mToken as keyof typeof mTokensMetadata]
+              ?.isMinBalance,
+        )
+        .map(([role, value]) => [
+          formatKey(role),
+          formatValue(value as string),
+        ]);
 
       prev += `### ${mToken} Roles\n\n`;
 
