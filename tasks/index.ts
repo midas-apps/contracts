@@ -1,31 +1,24 @@
-import { mine } from '@nomicfoundation/hardhat-network-helpers';
 import { task } from 'hardhat/config';
 
-import path from 'path';
-
-import { chainIds, ENV, extendWithContext, Network, rpcUrls } from '../config';
-import { isMTokenName, isPaymentTokenName } from '../helpers/utils';
-import {
-  deploymentConfigNames,
-  isDeploymentConfigName,
-  validateDeploymentProfileContext,
-} from '../scripts/deploy/configs/deployment-profiles';
+import { runScript, withGlobalRunScriptParams } from './common';
 
 import './layerzero';
 import './axelar';
 import './verify';
+import './deploy';
 
-task('runscript', 'Runs a user-defined script')
+const runScriptTask = task('runscript', 'Runs a user-defined script');
+
+withGlobalRunScriptParams(runScriptTask);
+
+// Ad-hoc runscript still accepts any param so one-off scripts keep working.
+runScriptTask
   .addPositionalParam('path', 'Path to the script')
   .addOptionalParam('mtoken', 'MToken')
   .addOptionalParam('ptoken', 'Payment Token')
   .addOptionalParam('action', 'Timelock Action')
-  .addOptionalParam('customSignerScript', 'Custom Signer Script')
   .addOptionalParam('skipValidation', 'Skip Validation', 'false')
   .addOptionalParam('aggregatorType', 'Aggregator Type')
-  .addOptionalParam('logToFile', 'Log to file')
-  .addOptionalParam('logsFolderPath', 'Logs folder path')
-  .addOptionalParam('forkingNetwork', 'Forking Network')
   .addOptionalParam('originalNetwork', 'Original Network')
   .addOptionalParam(
     'deploymentConfig',
@@ -36,107 +29,5 @@ task('runscript', 'Runs a user-defined script')
     'Comma-separated list of address book keys to include (e.g. layerZero)',
   )
   .setAction(async (taskArgs, hre) => {
-    const mtoken = taskArgs.mtoken;
-    const ptoken = taskArgs.ptoken;
-    const action = taskArgs.action;
-
-    const forkingNetwork: Network =
-      taskArgs.forkingNetwork ?? ENV.FORKING_NETWORK;
-
-    if (forkingNetwork) {
-      console.log('Forking network', forkingNetwork);
-      // Fork the specified network
-      await hre.network.provider.request({
-        method: 'hardhat_reset',
-        params: [
-          {
-            forking: {
-              jsonRpcUrl: rpcUrls[forkingNetwork],
-            },
-          },
-        ],
-      });
-
-      await mine();
-
-      const chainId = chainIds[forkingNetwork];
-      hre.network.config.chainId = chainId;
-      hre.network.name = forkingNetwork;
-    }
-
-    const originalNetwork = taskArgs.originalNetwork;
-    const deploymentConfig = taskArgs.deploymentConfig;
-    const keys = taskArgs.keys;
-
-    const scriptPath = taskArgs.path;
-    const scriptPathResolved = path.resolve(scriptPath);
-    const skipValidation = taskArgs.skipValidation;
-
-    hre.skipValidation = (skipValidation ?? 'false') === 'true';
-    hre.aggregatorType = taskArgs.aggregatorType;
-
-    if (
-      hre.aggregatorType &&
-      !['numerator', 'denominator'].includes(hre.aggregatorType)
-    ) {
-      throw new Error('Invalid aggregator type parameter');
-    }
-
-    hre.action = action;
-
-    if (action) {
-      extendWithContext(hre, `${action}-${new Date().toISOString()}`);
-    }
-
-    if (mtoken) {
-      if (!isMTokenName(mtoken)) {
-        throw new Error('Invalid mtoken parameter');
-      }
-
-      hre.mtoken = mtoken;
-    }
-
-    if (ptoken) {
-      if (!isPaymentTokenName(ptoken)) {
-        throw new Error('Invalid ptoken parameter');
-      }
-      hre.paymentToken = ptoken;
-    }
-
-    if (
-      deploymentConfig !== undefined &&
-      !isDeploymentConfigName(deploymentConfig)
-    ) {
-      throw new Error(
-        `Unknown deployment config "${deploymentConfig}". Available configs: default, ${deploymentConfigNames.join(
-          ', ',
-        )}`,
-      );
-    }
-
-    const chainId = hre.network.config.chainId;
-    if (chainId === undefined) {
-      throw new Error('Network chain ID is not configured');
-    }
-
-    validateDeploymentProfileContext(deploymentConfig, hre.mtoken, chainId);
-    hre.deploymentConfig = deploymentConfig;
-
-    if (originalNetwork) {
-      hre.layerZero = {
-        originalNetwork,
-      };
-    }
-
-    if (keys) {
-      hre.addressBookKeys = keys.split(',').map((k: string) => k.trim());
-    }
-
-    const { default: run } = await import(scriptPathResolved);
-
-    if (!run) {
-      throw new Error('Script not found or it doesnt have a default export');
-    }
-
-    await run(hre);
+    await runScript(taskArgs, hre, []);
   });

@@ -343,4 +343,8 @@ export const mTokensMetadata: Record<
     symbol: 'mGLOeuro',
     isMinBalance: true,
   },
+  mALPHA: {
+    name: 'Midas Hyperithm Alpha',
+    symbol: 'mALPHA',
+  },
 };

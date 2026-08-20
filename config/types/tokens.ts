@@ -81,6 +81,7 @@ export enum MTokenNameEnum {
   turtlePST = 'turtlePST',
   mM1BTC = 'mM1BTC',
   mGLOeuro = 'mGLOeuro',
+  mALPHA = 'mALPHA',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;

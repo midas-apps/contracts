@@ -1,7 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { DeployProxyOptions } from '@openzeppelin/hardhat-upgrades/dist/utils';
 import { ethers, constants, PopulatedTransaction, Signer } from 'ethers';
-import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { EIP1193Provider, HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { DeploymentConfig } from './types';
 
@@ -116,6 +116,36 @@ export const executeFuncAsync = async <T>(
   }
 };
 
+const CUSTOM_SIGNER_RPC_METHODS = new Set([
+  'eth_accounts',
+  'eth_requestAccounts',
+  'eth_sendTransaction',
+  'eth_sign',
+  'eth_signTransaction',
+  'eth_signTypedData',
+  'eth_signTypedData_v4',
+  'personal_sign',
+]);
+
+const withHardhatEthCalls = (
+  customProvider: EIP1193Provider,
+  hardhatProvider: HardhatRuntimeEnvironment['ethers']['provider'],
+) => ({
+  request: async ({
+    method,
+    params = [],
+  }: {
+    method: string;
+    params?: unknown[];
+  }) => {
+    if (!CUSTOM_SIGNER_RPC_METHODS.has(method)) {
+      return hardhatProvider.send(method, params);
+    }
+
+    return customProvider.request({ method, params });
+  },
+});
+
 export const getDeployer = async (hre: HardhatRuntimeEnvironment) => {
   const customSigner = await hre.getCustomSigner();
 
@@ -124,7 +154,9 @@ export const getDeployer = async (hre: HardhatRuntimeEnvironment) => {
       action: 'deployer',
     });
 
-    const provider = new hre.ethers.providers.Web3Provider(customProvider);
+    const provider = new hre.ethers.providers.Web3Provider(
+      withHardhatEthCalls(customProvider, hre.ethers.provider),
+    );
     const signer = provider.getSigner();
     return await SignerWithAddress.create(signer);
   } else {

@@ -1,17 +1,20 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { MTokenName } from '../../../config';
 import {
   getCurrentAddresses,
   sanctionListContracts,
   VaultType,
 } from '../../../config/constants/addresses';
-import { getChainOrThrow, getMTokenOrThrow } from '../../../helpers/utils';
+import { getChainOrThrow } from '../../../helpers/utils';
 import { DeployFunction } from '../common/types';
 import { sendAndWaitForCustomTxSign } from '../common/utils';
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+) => {
   const { chainId, networkName } = getChainOrThrow(hre);
-  const mToken = getMTokenOrThrow(hre);
 
   const sanctionsList = sanctionListContracts[chainId];
   if (!sanctionsList) {

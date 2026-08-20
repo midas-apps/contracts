@@ -1,14 +1,17 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { MTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
-import { getChainOrThrow, getMTokenOrThrow } from '../../../helpers/utils';
+import { getChainOrThrow } from '../../../helpers/utils';
 import { DeployFunction, VAULT_FUNCTION_SELECTORS } from '../common/types';
 import { sendAndWaitForCustomTxSign, getNetworkConfig } from '../common/utils';
 import { getDeploymentTokenAddresses } from '../configs/deployment-profiles';
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+) => {
   const { networkName } = getChainOrThrow(hre);
-  const mToken = getMTokenOrThrow(hre);
 
   const pauseFunctions = getNetworkConfig(
     hre,

@@ -66,40 +66,17 @@ export const getMTokenOrThrow = (hre: HardhatRuntimeEnvironment) => {
   return mToken;
 };
 
-export const getOriginalNetwork = (hre: HardhatRuntimeEnvironment) => {
-  const originalNetwork = hre.layerZero?.originalNetwork;
-  return originalNetwork;
-};
+export type MTokenOrPaymentToken =
+  | { mToken: MTokenName; paymentToken?: undefined }
+  | { mToken?: undefined; paymentToken: PaymentTokenName };
 
-export const getOriginalNetworkOrThrow = (hre: HardhatRuntimeEnvironment) => {
-  const originalNetwork = hre.layerZero?.originalNetwork;
-  if (!originalNetwork) {
-    throw new Error('OriginalNetwork parameter not found');
-  }
-  return originalNetwork;
-};
-
-export const getPaymentTokenOrThrow = (hre: HardhatRuntimeEnvironment) => {
-  const paymentToken = hre.paymentToken;
-  if (!paymentToken) {
-    throw new Error('PaymentToken parameter not found');
-  }
-  return paymentToken;
-};
-
-export const getActionOrThrow = (hre: HardhatRuntimeEnvironment) => {
-  const action = hre.action;
-  if (!action) {
-    throw new Error('Action parameter not found');
-  }
-  return action;
-};
-
-export const getMTokenOrPaymentTokenOrThrow = (
-  hre: HardhatRuntimeEnvironment,
-) => {
-  const mToken = hre.mtoken;
-  const paymentToken = hre.paymentToken;
+/**
+ * Validates that exactly one of `mToken` / `paymentToken` is provided.
+ */
+export const requireOneOfMTokenOrPaymentToken = (
+  mToken?: MTokenName,
+  paymentToken?: PaymentTokenName,
+): MTokenOrPaymentToken => {
   if (mToken && paymentToken) {
     throw new Error('Only one of MToken or PaymentToken can be provided');
   }
@@ -114,6 +91,10 @@ export const getMTokenOrPaymentTokenOrThrow = (
 
   throw new Error('MToken or PaymentToken parameter not found');
 };
+
+export const getMTokenOrPaymentTokenOrThrow = (
+  hre: HardhatRuntimeEnvironment,
+) => requireOneOfMTokenOrPaymentToken(hre.mtoken, hre.paymentToken);
 
 export const getImplAddressFromProxy = async (
   hre: HardhatRuntimeEnvironment,

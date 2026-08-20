@@ -1,8 +1,8 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { MTokenName } from '../../config';
 import { getCurrentAddresses } from '../../config/constants/addresses';
 import { getTokenContractNames } from '../../helpers/contracts';
-import { getMTokenOrThrow } from '../../helpers/utils';
 import { DeployFunction } from '../deploy/common/types';
 import { getDeployer } from '../deploy/common/utils';
 
@@ -11,14 +11,15 @@ import { getDeployer } from '../deploy/common/utils';
  * RedemptionVaultWithMToken implementation.
  *
  * Usage:
- *   npx hardhat runscript scripts/upgrades/upgrade_RedemptionVaultMToken.ts --mtoken mFONE --network <network>
+ *   yarn hardhat upgrade:rv:mtoken --mtoken mFONE --network <network>
  *
  * The script uses `prepareUpgrade` which validates storage layout
  * compatibility and deploys the new implementation (if changed).
  */
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const mToken = getMTokenOrThrow(hre);
-
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+) => {
   const addresses = getCurrentAddresses(hre);
   const proxyAddress = addresses?.[mToken]?.redemptionVaultSwapper;
 

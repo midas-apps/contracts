@@ -708,6 +708,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVaultMorpho: '0xE0Dcf20b0460e1f9222528F3997F9D71Ad6375C5',
       redemptionVaultMorpho: '0x1E9f04408FF38d1FB70CE939fC87D26D61F6F758',
     },
+    mALPHA: {
+      token: '0x25BAC88afe5572F5A7F1670c22FD404BA47a30ad',
+      customFeed: '0xB7cc7498dc7ac2da5f59fEFfeE2dbF5Ac1061616',
+      dataFeed: '0x7F04823783b0FD849a8D759F4170899bB588EaBe',
+      depositVault: '0x852B290024e4071DF48d618874840876499aD6F4',
+      redemptionVaultSwapper: '0xcC5539d3200d3889C69C71Fe73A71b7A2Cb88d05',
+    },
   },
   avalanche: {
     accessControl: '0xF6f56D1a218F6129679d966D03c12Af145795fd8',

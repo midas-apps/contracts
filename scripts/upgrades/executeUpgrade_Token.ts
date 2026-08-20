@@ -5,11 +5,18 @@ import {
   getConfiguredTokenUpgrades,
 } from './common/upgrade-contracts';
 
-import { getActionOrThrow } from '../../helpers/utils';
+import { MTokenName } from '../../config';
+import { getCurrentAddresses } from '../../config/constants/addresses';
 import { DeployFunction } from '../deploy/common/types';
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const upgradeId = getActionOrThrow(hre);
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+  _skipValidation?: boolean,
+) => {
+  const upgradeId = 'mwin-upgrade-permissioned';
+  const networkAddresses = getCurrentAddresses(hre);
+  const tokenAddresses = networkAddresses?.[mToken];
 
   await executeUpgradeContracts(
     hre,

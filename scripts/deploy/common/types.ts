@@ -168,4 +168,8 @@ export type NetworkDeploymentConfig = Record<
   }
 >;
 
-export type DeployFunction = (hre: HardhatRuntimeEnvironment) => Promise<void>;
+export type DeployFunction = (
+  hre: HardhatRuntimeEnvironment,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ...params: any[]
+) => Promise<void>;

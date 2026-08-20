@@ -28,6 +28,7 @@ import { liquidHYPEDeploymentConfig } from './liquidHYPE';
 import { liquidRESERVEDeploymentConfig } from './liquidRESERVE';
 import { liquidRWADeploymentConfig } from './liquidRWA';
 import { lstHYPEDeploymentConfig } from './lstHYPE';
+import { mALPHADeploymentConfig } from './mALPHA';
 import { mAPOLLODeploymentConfig } from './mAPOLLO';
 import { mBASISDeploymentConfig } from './mBASIS';
 import { mBTCDeploymentConfig } from './mBTC';
@@ -178,6 +179,7 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   turtlePST: turtlePSTDeploymentConfig,
   mM1BTC: mM1BTCDeploymentConfig,
   mGLOeuro: mGLOeuroDeploymentConfig,
+  mALPHA: mALPHADeploymentConfig,
 };
 
 type NamedDeploymentConfig = {
