@@ -24,7 +24,6 @@
     "coverage": "cross-env COVERAGE=true hardhat coverage --solcoverjs ./.solcover.json --testfiles 'test/unit/*.test.ts'",
     "slither": "slither . --config-file ./slither.config.json",
     "slither:summary": "yarn slither --print human-summary --config-file ./slither.config.json",
-    "deploy": "hardhat deploy",
     "lint:ts": "eslint \"**/*.{js,ts}\"",
     "lint:ts:fix": "eslint \"**/*.{js,ts}\" --fix",
     "lint:sol": "solhint \"contracts/**/*.sol\"",
