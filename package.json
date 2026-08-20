@@ -11,6 +11,7 @@
     "postinstall": "sh -c '[ \"$NODE_ENV\" = \"production\" ] || husky install'",
     "precommit": "run-s codestyle",
     "hardhat": "hardhat",
+    "hh": "hardhat",
     "clean": "hardhat clean",
     "docgen": "hardhat docgen",
     "compile": "hardhat compile",

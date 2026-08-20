@@ -26,6 +26,7 @@ export enum DVN {
   BCWGroup = 'BCW Group',
   Nethermind = 'Nethermind',
   BitGo = 'BitGo',
+  P2P = 'P2P',
 }
 
 type PathwayDVNConfig = {
@@ -114,7 +115,7 @@ export const lzConfigsPerMToken: PartialConfigPerNetwork<
       pathways: 'direct-only',
       linkedNetworks: ['base', 'robinhood', 'optimism'],
       dvnsByLinkedNetwork: {
-        robinhood: [DVN.LayerZeroLabs, DVN.BitGo, DVN.Canary, DVN.Nethermind],
+        robinhood: [DVN.LayerZeroLabs, DVN.P2P, DVN.Canary, DVN.Nethermind],
       },
     },
     mHYPER: {
