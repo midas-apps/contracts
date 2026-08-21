@@ -12,6 +12,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from './deploy/common/types';
 import {
   getImplAddress,
+  getStorageAtCompat,
   initializedSlotFromManifest,
   loadManifestForChain,
   readInitializedVersion,
@@ -26,7 +27,7 @@ const ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
 const REINITIALIZER_INVOKE_RE = /\breinitializer\s*\(\s*(\d+)\s*\)/g;
 
 /** Attempts per explorer call (initial try + retries). */
-const SOURCE_FETCH_ATTEMPTS = 4;
+const SOURCE_FETCH_ATTEMPTS = 10;
 const SOURCE_FETCH_BASE_DELAY_MS = 1000;
 
 type EtherscanVerifyConfig = {
@@ -553,9 +554,61 @@ async function fetchSourcesForAddress(args: {
 const DEFAULT_INITIALIZED_SLOT: StorageSlotRef = { slot: 0, offset: 0 };
 
 /**
+ * OZ Contracts v5+ ERC-7201 namespaced Initializable storage:
+ *   keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.Initializable")) - 1))
+ *     & ~bytes32(uint256(0xff))
+ * Layout: uint64 _initialized at offset 0, bool _initializing at offset 8.
+ */
+const OZ5_INITIALIZABLE_STORAGE =
+  '0xf0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00';
+
+type InitializedReadSource = 'manifest' | 'default_slot' | 'oz5_namespaced';
+
+async function readOz5NamespacedInitialized(
+  provider: ethers.providers.Provider,
+  address: string,
+): Promise<number> {
+  const raw = await getStorageAtCompat(
+    provider,
+    address,
+    OZ5_INITIALIZABLE_STORAGE,
+  );
+  // uint64 at offset 0 — low 8 bytes of the slot (rightmost in getStorageAt hex).
+  return parseInt(raw.slice(2 + (32 - 8) * 2, 2 + 32 * 2), 16);
+}
+
+/**
+ * If the classic (OZ4 / midas) layout reads as 0, try the OZ5 namespaced slot
+ * used by some third-party upgradeable contracts.
+ */
+async function withOz5Fallback(
+  provider: ethers.providers.Provider,
+  address: string,
+  version: number,
+  source: Exclude<InitializedReadSource, 'oz5_namespaced'>,
+): Promise<{ version: number; source: InitializedReadSource }> {
+  if (version !== 0) {
+    return { version, source };
+  }
+  log(
+    `    _initialized=0 from ${source} — trying OZ5 namespaced slot ${OZ5_INITIALIZABLE_STORAGE}`,
+  );
+  const oz5 = await readOz5NamespacedInitialized(provider, address);
+  if (oz5 !== 0) {
+    log(
+      `    on-chain _initialized=${oz5} at ${address} (OZ5 namespaced storage)`,
+    );
+    return { version: oz5, source: 'oz5_namespaced' };
+  }
+  log(`    OZ5 namespaced slot also 0 — keeping _initialized=0`);
+  return { version: 0, source };
+}
+
+/**
  * Resolves `_initialized` via OZ manifest layout.
  * For EIP-1967 proxies missing from the manifest, falls back to the default
- * midas layout (slot 0, offset 0). Non-proxies without a manifest entry stay
+ * midas layout (slot 0, offset 0). If that reads as 0, also tries OZ5
+ * namespaced Initializable storage. Non-proxies without a manifest entry stay
  * unavailable for the caller to classify (safe_skip / manual).
  */
 async function readOnchainInitialized(
@@ -564,8 +617,7 @@ async function readOnchainInitialized(
   impl: string | null,
   chainId: number,
 ): Promise<
-  | { version: number; source: 'manifest' | 'default_slot' }
-  | { unavailable: string }
+  { version: number; source: InitializedReadSource } | { unavailable: string }
 > {
   const isProxy = impl !== null;
   const targetImpl = impl ?? proxyOrContract;
@@ -588,7 +640,7 @@ async function readOnchainInitialized(
       ref,
     );
     log(`    on-chain _initialized=${version} at ${proxyOrContract}`);
-    return { version, source: 'manifest' };
+    return withOz5Fallback(provider, proxyOrContract, version, 'manifest');
   }
 
   if (!manifest) {
@@ -610,7 +662,7 @@ async function readOnchainInitialized(
     log(
       `    on-chain _initialized=${version} at ${proxyOrContract} (default slot)`,
     );
-    return { version, source: 'default_slot' };
+    return withOz5Fallback(provider, proxyOrContract, version, 'default_slot');
   }
 
   const reason =
@@ -906,7 +958,11 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     const match = onchain.version === top;
     const slotNote =
-      onchain.source === 'default_slot' ? ' via default slot 0' : '';
+      onchain.source === 'default_slot'
+        ? ' via default slot 0'
+        : onchain.source === 'oz5_namespaced'
+        ? ' via OZ5 namespaced storage'
+        : '';
     if (match) {
       log(
         `  result: OK — top reinitializer=${top} matches _initialized=${onchain.version}${slotNote}`,
@@ -931,6 +987,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
         `source via ${fetched.via} (${fetched.fromAddress})`,
         onchain.source === 'default_slot'
           ? '_initialized read via default slot 0 (no OZ manifest record)'
+          : onchain.source === 'oz5_namespaced'
+          ? '_initialized read via OZ5 ERC-7201 namespaced storage'
           : null,
       ]
         .filter(Boolean)
