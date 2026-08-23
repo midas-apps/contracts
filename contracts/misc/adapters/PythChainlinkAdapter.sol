@@ -47,8 +47,10 @@ contract PythChainlinkAdapter is ChainlinkAdapterBase {
         uint256 fee = pyth.getUpdateFee(priceUpdateData);
         pyth.updatePriceFeeds{value: fee}(priceUpdateData);
 
-        // refund remaining eth
-        payable(msg.sender).call{value: address(this).balance}("");
+        // Refund remaining ETH and revert if the recipient rejects the transfer.
+        (bool success, ) = payable(msg.sender).call{value: address(this).balance}("");
+        require(success, "PythChainlinkAdapter: refund failed");
+
     }
 
     function decimals() public view virtual override returns (uint8) {

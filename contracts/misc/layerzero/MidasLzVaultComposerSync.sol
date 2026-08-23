@@ -197,8 +197,7 @@ contract MidasLzVaultComposerSync is
                 }
             }
 
-            // solhint-disable-next-line avoid-tx-origin
-            _refund(_composeSender, _message, amount, tx.origin);
+            _refund(_composeSender, _message, amount, composeFrom.bytes32ToAddress());
             emit Refunded(_guid);
         }
     }
@@ -243,8 +242,7 @@ contract MidasLzVaultComposerSync is
                 _amount,
                 extraOptions,
                 sendParam,
-                // solhint-disable-next-line avoid-tx-origin
-                tx.origin
+                _composeFrom.bytes32ToAddress()
             );
         } else {
             _redeemAndSend(
@@ -252,8 +250,7 @@ contract MidasLzVaultComposerSync is
                 _amount,
                 extraOptions,
                 sendParam,
-                // solhint-disable-next-line avoid-tx-origin
-                tx.origin
+                _composeFrom.bytes32ToAddress()
             );
         }
     }
