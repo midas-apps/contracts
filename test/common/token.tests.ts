@@ -19,6 +19,11 @@ import {
   tokenLevelGreenlistTokens,
 } from '../../helpers/roles';
 import {
+  evaluateGuard,
+  getReinitializers,
+  readInitializedVersion,
+} from '../../scripts/upgrades/common/reinitializer';
+import {
   CustomAggregatorV3CompatibleFeed,
   CustomAggregatorV3CompatibleFeedGrowth,
   DataFeed,
@@ -29,6 +34,42 @@ import {
   RedemptionVaultWIthBUIDL,
   RedemptionVaultWithSwapper,
 } from '../../typechain-types';
+
+/** Assert evaluateGuard would pass for a freshly deployed proxy (no upgradeAndCall needed). */
+const assertReinitializerVersionGuard = async (
+  contract: Contract | null | undefined,
+  label: string,
+) => {
+  if (!contract) return;
+
+  const formatted = contract.interface.format(ethers.utils.FormatTypes.json);
+  const abi = (
+    Array.isArray(formatted)
+      ? formatted.map((fragment) => JSON.parse(fragment as string))
+      : JSON.parse(formatted as string)
+  ) as unknown[];
+  const reinits = getReinitializers(abi);
+  const onchainVersion = await readInitializedVersion(
+    ethers.provider,
+    contract.address,
+    { slot: 0, offset: 0 },
+  );
+
+  const result = evaluateGuard({
+    reinits,
+    implVersionsPresent: reinits.map((r) => r.version),
+    onchainVersion,
+  });
+
+  expect(
+    result.ok,
+    `${label} (${contract.address}): ${
+      result.ok ? 'ok' : result.reason
+    } (_initialized=${onchainVersion}, reinits=[${reinits
+      .map((r) => `${r.name}:v${r.version}`)
+      .join(', ')}])`,
+  ).to.equal(true);
+};
 
 export const tokenContractsTests = (token: MTokenName) => {
   const contractNames = getTokenContractNames(token);
@@ -331,6 +372,40 @@ export const tokenContractsTests = (token: MTokenName) => {
       tokenCustomAggregatorFeedGrowth: customAggregatorFeedGrowth,
     };
   };
+
+  // Mirrors scripts/upgrades/common/reinitializer.ts evaluateGuard: after a
+  // fresh deploy, every proxy must already have consumed its top public
+  // initializeV{N}, so a no-op upgrade would not require upgradeAndCall.
+  describe('reinitializer version guard', () => {
+    it('all deployed contracts have consumed top reinitializer versions', async () => {
+      const fixture = await deployMTokenVaultsWithFixture();
+
+      // Only the product proxies from deployMTokenVaultsWithFixture (keys are
+      // `tokenContract` / `token*`). Ignore shared defaultDeploy contracts.
+      const deployed = (Object.entries(fixture) as [string, unknown][]).filter(
+        (entry): entry is [string, Contract] => {
+          const [label, value] = entry;
+          if (!label.startsWith('token')) return false;
+          return (
+            !!value &&
+            typeof value === 'object' &&
+            'address' in value &&
+            'interface' in value &&
+            typeof (value as Contract).interface?.format === 'function'
+          );
+        },
+      );
+
+      expect(
+        deployed.length,
+        'expected at least the mToken proxy to be deployed',
+      ).to.be.greaterThan(0);
+
+      for (const [label, contract] of deployed) {
+        await assertReinitializerVersionGuard(contract, label);
+      }
+    });
+  });
 
   describe(`Token`, function () {
     it('deployment', async () => {

@@ -105,21 +105,28 @@ export const verifyConfig: VerifyConfigPerNetwork = {
     type: 'etherscan',
     browserUrl: 'https://explorer.katanarpc.com',
   },
-  xrplevm: {
-    // explorer.xrplevm.org is Blockscout-based.
-    // Using Sourcify avoids the hardhat-verify v2 bug where object-style apiKey
-    // causes customChains apiURL to be overridden by the hardcoded Etherscan v2
-    // endpoint, causing verification to fail for non-Etherscan chains.
-    // overrideApiUrl pins to the standard Sourcify server and prevents
-    // SOURCIFY_API_URL from the .env (currently the Monad-specific instance)
-    // from being used here.
-    // browserUrl uses repo.sourcify.dev because hardhat-verify appends
-    // /contracts/full_match/{chainId}/{address}/ — that path is only served
-    // by the Sourcify repo, not by the Blockscout explorer.
-    type: 'sourcify',
-    overrideApiUrl: 'https://sourcify.dev/server',
-    browserUrl: 'https://repo.sourcify.dev',
-  },
+  xrplevm: [
+    {
+      // explorer.xrplevm.org is Blockscout-based.
+      // Using Sourcify avoids the hardhat-verify v2 bug where object-style apiKey
+      // causes customChains apiURL to be overridden by the hardcoded Etherscan v2
+      // endpoint, causing verification to fail for non-Etherscan chains.
+      // overrideApiUrl pins to the standard Sourcify server and prevents
+      // SOURCIFY_API_URL from the .env (currently the Monad-specific instance)
+      // from being used here.
+      // browserUrl uses repo.sourcify.dev because hardhat-verify appends
+      // /contracts/full_match/{chainId}/{address}/ — that path is only served
+      // by the Sourcify repo, not by the Blockscout explorer.
+      type: 'sourcify',
+      overrideApiUrl: 'https://sourcify.dev/server',
+      browserUrl: 'https://repo.sourcify.dev',
+    },
+    {
+      type: 'custom',
+      apiUrl: 'https://explorer.xrplevm.org/api',
+      browserUrl: 'https://explorer.xrplevm.org',
+    },
+  ],
   tac: {
     type: 'custom',
     apiUrl: 'https://explorer.tac.build/api',
