@@ -347,4 +347,28 @@ export const mTokensMetadata: Record<
     name: 'Midas Hyperithm Alpha',
     symbol: 'mALPHA',
   },
+  Re7YIELD: {
+    name: 'Re7 Stablecoin Yield Vault',
+    symbol: 'Re7YIELD',
+  },
+  Re7BTC: {
+    name: 'Re7 Bitcoin Vault',
+    symbol: 'Re7BTC',
+  },
+  Re7ETH: {
+    name: 'Re7 Ethereum Vault',
+    symbol: 'Re7ETH',
+  },
+  mArb: {
+    name: 'Midas Hyperithm Arbitrage',
+    symbol: 'mArb',
+  },
+  mArbBTC: {
+    name: 'Midas Hyperithm Arbitrage BTC',
+    symbol: 'mArbBTC',
+  },
+  mArbETH: {
+    name: 'Midas Hyperithm Arbitrage ETH',
+    symbol: 'mArbETH',
+  },
 };
