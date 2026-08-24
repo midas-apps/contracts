@@ -12,6 +12,7 @@ import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
 } from '../../../helpers/utils';
+import { verifyReinitializersConsumed } from '../../upgrades/common/reinitializer';
 import { getDeploymentConfigForToken } from '../configs';
 
 const safeAbi = [
@@ -189,6 +190,8 @@ export const deployAndVerifyProxy = async (
   deployer?: Signer,
   opts: DeployProxyOptions = {},
 ) => {
+  const { abi } = await hre.artifacts.readArtifact(contractName);
+
   const deployment = await deployProxy(
     hre,
     contractName,
@@ -202,6 +205,12 @@ export const deployAndVerifyProxy = async (
     await deployment.deployTransaction.wait(5);
     console.log('Waited.');
   }
+
+  await verifyReinitializersConsumed({
+    provider: hre.ethers.provider,
+    proxyAddress: deployment.address,
+    abi,
+  });
 
   await logDeployProxy(hre, contractName, deployment.address);
   await tryEtherscanVerifyImplementation(
