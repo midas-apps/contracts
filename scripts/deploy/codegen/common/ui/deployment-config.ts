@@ -72,21 +72,25 @@ async function getGenericConfigFromUser(mToken: MTokenName) {
     .then(requireNotCancelled)
     .then((value) => requireFloatToBigNumberish(value, 8));
 
-  const customFeedMinAnswer = await text({
-    message: 'Custom feed minimum answer',
-    defaultValue: '0.1',
-    validate: (value) => validateFloat(value, 8),
-  })
-    .then(requireNotCancelled)
-    .then((value) => requireFloatToBigNumberish(value, 8));
+  // for visibility keeping it here for now
+  // all the aggregators for mtokens should use 0.1/1000 for min/max
+  // as values are immutable and we dont want to change it via upgrades
+  // all the time. Will fix after Q2 migration
+  // const customFeedMinAnswer = await text({
+  //   message: 'Custom feed minimum answer',
+  //   defaultValue: '0.1',
+  //   validate: (value) => validateFloat(value, 8),
+  // })
+  //   .then(requireNotCancelled)
+  //   .then((value) => requireFloatToBigNumberish(value, 8));
 
-  const customFeedMaxAnswer = await text({
-    message: 'Custom feed maximum answer',
-    defaultValue: '1000',
-    validate: (value) => validateFloat(value, 8),
-  })
-    .then(requireNotCancelled)
-    .then((value) => requireFloatToBigNumberish(value, 8));
+  // const customFeedMaxAnswer = await text({
+  //   message: 'Custom feed maximum answer',
+  //   defaultValue: '1000',
+  //   validate: (value) => validateFloat(value, 8),
+  // })
+  //   .then(requireNotCancelled)
+  //   .then((value) => requireFloatToBigNumberish(value, 8));
 
   const dataFeedMinAnswer = await text({
     message: 'DataFeed minimum expected answer',
@@ -130,8 +134,8 @@ async function getGenericConfigFromUser(mToken: MTokenName) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const customAggregator: Record<string, any> = {
-    minAnswer: customFeedMinAnswer,
-    maxAnswer: customFeedMaxAnswer,
+    minAnswer: requireFloatToBigNumberish('0.1', 8),
+    maxAnswer: requireFloatToBigNumberish('1000', 8),
     maxAnswerDeviation,
     description: `${mToken}/${tokenDenomination}`,
   };
