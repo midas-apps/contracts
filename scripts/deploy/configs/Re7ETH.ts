@@ -84,9 +84,9 @@ export const Re7ETHDeploymentConfig: DeploymentConfig = {
           ],
         },
         grantRoles: {
-          tokenManagerAddress: '0xf5885e74d573C28687CedFB3F3d904da4713b683',
+          tokenManagerAddress: '0xc3D3AF5Bc477149D7Ae333A545A9B7aA8CF0a929',
           vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
-          oracleManagerAddress: '0xDd9f610732D0e37c806Dd1Dd775d63f169B2A1E9',
+          oracleManagerAddress: '0xCc188Ffb4596f4F36474f35aa038F6A63Df2DD4D',
         },
         pauseFunctions: {
           depositVault: ['depositRequest', 'depositRequestWithCustomRecipient'],

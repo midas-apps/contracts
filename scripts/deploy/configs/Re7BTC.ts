@@ -82,9 +82,9 @@ export const Re7BTCDeploymentConfig: DeploymentConfig = {
           ],
         },
         grantRoles: {
-          tokenManagerAddress: '0x329Da2FdE152ecfAb028a8277186bCD744e06717',
+          tokenManagerAddress: '0x28E43481fC1d4455Bddb9e52FA353D6a0948478C',
           vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
-          oracleManagerAddress: '0xFC6f39B4228C6601B180520b80284227975Bdfd6',
+          oracleManagerAddress: '0x7e1E1c6B519e512Dd33E6332dc75c19aE20E5A20',
         },
         pauseFunctions: {
           depositVault: ['depositRequest', 'depositRequestWithCustomRecipient'],
