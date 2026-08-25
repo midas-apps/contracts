@@ -30,6 +30,9 @@ import { liquidRWADeploymentConfig } from './liquidRWA';
 import { lstHYPEDeploymentConfig } from './lstHYPE';
 import { mALPHADeploymentConfig } from './mALPHA';
 import { mAPOLLODeploymentConfig } from './mAPOLLO';
+import { mArbDeploymentConfig } from './mArb';
+import { mArbBTCDeploymentConfig } from './mArbBTC';
+import { mArbETHDeploymentConfig } from './mArbETH';
 import { mBASISDeploymentConfig } from './mBASIS';
 import { mBTCDeploymentConfig } from './mBTC';
 import { mEDGEDeploymentConfig } from './mEDGE';
@@ -74,6 +77,9 @@ import { mXRPDeploymentConfig } from './mXRP';
 import { obeatUSDDeploymentConfig } from './obeatUSD';
 import { plUSDDeploymentConfig } from './plUSD';
 import { qHVNUSDDeploymentConfig } from './qHVNUSD';
+import { Re7BTCDeploymentConfig } from './Re7BTC';
+import { Re7ETHDeploymentConfig } from './Re7ETH';
+import { Re7YIELDDeploymentConfig } from './Re7YIELD';
 import { sGoldDeploymentConfig } from './sGold';
 import { sLINJDeploymentConfig } from './sLINJ';
 import { splUSDDeploymentConfig } from './splUSD';
@@ -180,6 +186,12 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mM1BTC: mM1BTCDeploymentConfig,
   mGLOeuro: mGLOeuroDeploymentConfig,
   mALPHA: mALPHADeploymentConfig,
+  Re7YIELD: Re7YIELDDeploymentConfig,
+  Re7BTC: Re7BTCDeploymentConfig,
+  Re7ETH: Re7ETHDeploymentConfig,
+  mArb: mArbDeploymentConfig,
+  mArbETH: mArbETHDeploymentConfig,
+  mArbBTC: mArbBTCDeploymentConfig,
 };
 
 type NamedDeploymentConfig = {

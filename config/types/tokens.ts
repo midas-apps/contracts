@@ -82,6 +82,12 @@ export enum MTokenNameEnum {
   mM1BTC = 'mM1BTC',
   mGLOeuro = 'mGLOeuro',
   mALPHA = 'mALPHA',
+  Re7YIELD = 'Re7YIELD',
+  Re7BTC = 'Re7BTC',
+  Re7ETH = 'Re7ETH',
+  mArb = 'mArb',
+  mArbBTC = 'mArbBTC',
+  mArbETH = 'mArbETH',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
