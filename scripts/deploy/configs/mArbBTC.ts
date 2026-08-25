@@ -56,11 +56,6 @@ export const mArbBTCDeploymentConfig: DeploymentConfig = {
                   allowance: parseUnits('10000', 18),
                   fee: 0,
                 },
-                {
-                  token: 'cbbtc',
-                  allowance: parseUnits('10000', 18),
-                  fee: 0,
-                },
               ],
               type: 'depositVault',
             },
@@ -68,11 +63,6 @@ export const mArbBTCDeploymentConfig: DeploymentConfig = {
               paymentTokens: [
                 {
                   token: 'wbtc',
-                  allowance: parseUnits('10000', 18),
-                  fee: 0,
-                },
-                {
-                  token: 'cbbtc',
                   allowance: parseUnits('10000', 18),
                   fee: 0,
                 },
