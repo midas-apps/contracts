@@ -75,7 +75,7 @@ export const Re7ETHDeploymentConfig: DeploymentConfig = {
               paymentTokens: [
                 {
                   token: 'weth',
-                  allowance: parseUnits('10000', 18),
+                  allowance: parseUnits('100000', 18),
                   fee: 0,
                 },
               ],
