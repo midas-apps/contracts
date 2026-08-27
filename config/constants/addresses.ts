@@ -838,7 +838,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     timelock: '0x9230F9cBAca32bad2B19CAB331d3e6509B8EB0cB',
     mTBILL: {
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
-      customFeed: '0x70E58b7A1c884fFFE7dbce5249337603a28b8422',
+      customFeed: '0x07a88697d339FC824aFc7d8EdFaD6B30051354cf',
       dataFeed: '0xcbCf1e67F1988e2572a2A620321Aef2ff73369f0',
       depositVault: '0x8978e327FE7C72Fa4eaF4649C23147E279ae1470',
       redemptionVaultSwapper: '0x2a8c22E3b10036f3AEF5875d04f8441d4188b656',
