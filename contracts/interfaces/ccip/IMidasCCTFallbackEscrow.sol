@@ -66,6 +66,22 @@ interface IMidasCCTFallbackEscrow is IMidasCCTFailedMessageFallback {
     event RegisterOrphanedBulk(OrphanedMessage[] _messages);
 
     /**
+     * @param _token the token to withdraw
+     * @param _amount the amount of tokens to withdraw
+     */
+    event WithdrawTokens(address indexed _token, uint256 _amount);
+
+    /**
+     * @notice Pauses the public claim function
+     */
+    event PauseClaim();
+
+    /**
+     * @notice Unpauses the public claim function
+     */
+    event UnpauseClaim();
+
+    /**
      * @param _defaultRecipient the default recipient
      */
     event SetDefaultRecipient(address _defaultRecipient);
@@ -101,6 +117,11 @@ interface IMidasCCTFallbackEscrow is IMidasCCTFailedMessageFallback {
     error InvalidSender(address _expectedSender);
 
     /**
+     * @notice Error thrown when the public claim function is paused
+     */
+    error ClaimPaused();
+
+    /**
      * @notice Sets the default recipient
      * @param _defaultRecipient the default recipient to set
      */
@@ -113,21 +134,6 @@ interface IMidasCCTFallbackEscrow is IMidasCCTFailedMessageFallback {
      * @param _recipient the recipient of the failed message
      */
     function claim(bytes32 _messageId, address _recipient) external;
-
-    /**
-     * @notice Claims a failed message to a remote chain
-     * @dev should be called by the original recipient of the failed message
-     * sender should provide exactly IRouterClient.getFee(...) value for a tx
-     * otherwise the tx will either revert or sender will lose unused fees
-     * @param _messageId the id of the failed message
-     * @param _recipient the recipient of the failed message in bytes
-     * @param _remoteChainSelector the remote chain selector
-     */
-    function claimToRemote(
-        bytes32 _messageId,
-        bytes memory _recipient,
-        uint64 _remoteChainSelector
-    ) external payable;
 
     /**
      * @notice Recovers a bulk of failed messages
@@ -151,6 +157,26 @@ interface IMidasCCTFallbackEscrow is IMidasCCTFailedMessageFallback {
      */
     function registerOrphanedBulk(OrphanedMessage[] calldata _messages)
         external;
+
+    /**
+     * @notice Withdraws tokens from the escrow contract to the default recipient
+     * @dev should be called by the contract admin
+     * @param _token the token to withdraw
+     * @param _amount the amount of tokens to withdraw
+     */
+    function withdrawTokens(address _token, uint256 _amount) external;
+
+    /**
+     * @notice Pauses the public claim function
+     * @dev should be called by the contract admin
+     */
+    function pauseClaim() external;
+
+    /**
+     * @notice Unpauses the public claim function
+     * @dev should be called by the contract admin
+     */
+    function unpauseClaim() external;
 
     /**
      * @notice Gets the ids of pending failed messages

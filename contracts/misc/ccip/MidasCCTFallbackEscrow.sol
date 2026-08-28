@@ -56,6 +56,16 @@ contract MidasCCTFallbackEscrow is
     EnumerableSet.Bytes32Set private _failedMessageIds;
 
     /**
+     * @notice whether the public claim function is paused
+     */
+    bool public claimPaused;
+
+    /**
+     * @notice gap for future upgrades
+     */
+    uint256[50] private __gap;
+
+    /**
      * @notice Modifier to check if the caller is the contract admin
      */
     modifier onlyContractAdmin() {
@@ -63,6 +73,14 @@ contract MidasCCTFallbackEscrow is
             accessControl.hasRole(FALLBACK_ESCROW_ADMIN_ROLE, msg.sender),
             NotContractAdmin()
         );
+        _;
+    }
+
+    /**
+     * @notice Modifier to check if the public claim function is not paused
+     */
+    modifier whenClaimNotPaused() {
+        require(!claimPaused, ClaimPaused());
         _;
     }
 
@@ -118,6 +136,7 @@ contract MidasCCTFallbackEscrow is
     function claim(bytes32 _messageId, address _recipient)
         external
         onlyNotBlacklisted(msg.sender)
+        whenClaimNotPaused
     {
         FailedMessage storage failedMessage = _processMessage(
             _messageId,
@@ -127,35 +146,6 @@ contract MidasCCTFallbackEscrow is
         );
         _validateClaim(failedMessage.originalRecipient);
         emit Claim(_messageId, _recipient);
-    }
-
-    /**
-     * @inheritdoc IMidasCCTFallbackEscrow
-     */
-    function claimToRemote(
-        bytes32 _messageId,
-        bytes memory _recipient,
-        uint64 _remoteChainSelector
-    ) external payable onlyNotBlacklisted(msg.sender) {
-        FailedMessage storage failedMessage = _processMessage(
-            _messageId,
-            address(0),
-            MessageStatus.Claimed,
-            false
-        );
-        _validateClaim(failedMessage.originalRecipient);
-        bytes32 ccipMessageId = _sendToRemote(
-            _recipient,
-            _remoteChainSelector,
-            failedMessage.tokenAmount
-        );
-
-        emit ClaimToRemote(
-            _messageId,
-            ccipMessageId,
-            _recipient,
-            _remoteChainSelector
-        );
     }
 
     /**
@@ -209,6 +199,34 @@ contract MidasCCTFallbackEscrow is
             );
         }
         emit RegisterOrphanedBulk(_messages);
+    }
+
+    /**
+     * @inheritdoc IMidasCCTFallbackEscrow
+     */
+    function withdrawTokens(address _token, uint256 _amount)
+        external
+        onlyContractAdmin
+    {
+        IERC20 token = IERC20(_token);
+        token.safeTransfer(defaultRecipient, _amount);
+        emit WithdrawTokens(_token, _amount);
+    }
+
+    /**
+     * @inheritdoc IMidasCCTFallbackEscrow
+     */
+    function pauseClaim() external onlyContractAdmin {
+        claimPaused = true;
+        emit PauseClaim();
+    }
+
+    /**
+     * @inheritdoc IMidasCCTFallbackEscrow
+     */
+    function unpauseClaim() external onlyContractAdmin {
+        claimPaused = false;
+        emit UnpauseClaim();
     }
 
     /**

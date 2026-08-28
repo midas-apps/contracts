@@ -14,19 +14,21 @@ import {
 import { blackList, unBlackList } from '../common/ac.helpers';
 import {
   MessageStatus,
-  claimFailedMessage,
-  claimFailedMessageToRemote,
+  claim,
   closeBulk,
   createEscrowFailedMessage,
   encodeDecimals,
   getFailedMessage,
   lockOrBurn,
   onFailedMessage,
+  pauseClaim,
   recoverBulk,
   registerOrphanedBulk,
   releaseOrMint,
   setDefaultRecipient,
   setFallbackReceiver,
+  unpauseClaim,
+  withdrawTokens,
 } from '../common/ccip.helpers';
 import { mintToken } from '../common/common.helpers';
 import { deployProxyContract } from '../common/deploy.helpers';
@@ -900,6 +902,7 @@ describe('CCIP', function () {
         expect(await escrow.defaultRecipient()).eq(defaultRecipient.address);
         expect(await escrow.accessControl()).eq(accessControl.address);
         expect(await escrow.failedMessageCount()).eq(0);
+        expect(await escrow.claimPaused()).eq(false);
         expect(await escrow.getFailedMessageIds()).deep.eq([]);
       });
 
@@ -1022,322 +1025,6 @@ describe('CCIP', function () {
       });
     });
 
-    describe('claimToRemote', () => {
-      const encodeRemoteRecipient = (recipient: string) =>
-        ethers.utils.defaultAbiCoder.encode(['address'], [recipient]);
-
-      const wireMockRouter = async (fixture: Fixture) => {
-        const { pool, owner } = fixture;
-        const mockRouter = await (
-          await ethers.getContractFactory('CCIPRouterClientMock')
-        ).deploy();
-        await pool
-          .connect(owner)
-          .setDynamicConfig(
-            mockRouter.address,
-            constants.AddressZero,
-            constants.AddressZero,
-          );
-        return mockRouter;
-      };
-
-      it('lets the original recipient claim escrowed tokens to a remote chain', async () => {
-        const fixture = await loadFixture(ccipCctFixture);
-        const {
-          mTBILL,
-          accessControl,
-          owner,
-          alice,
-          defaultRecipient,
-          remoteChainSelector,
-        } = fixture;
-
-        const messageId = await createEscrowFailedMessage(fixture, {
-          amount: parseUnits('100'),
-          receiver: alice,
-        });
-
-        await unBlackList(
-          { blacklistable: mTBILL, accessControl, owner },
-          alice,
-        );
-
-        const mockRouter = await wireMockRouter(fixture);
-        const expectedCcipMessageId = ethers.utils.formatBytes32String('ccip');
-        await mockRouter.setNextMessageId(expectedCcipMessageId);
-
-        const remoteRecipient = encodeRemoteRecipient(defaultRecipient.address);
-        const escrowBalanceBefore = await mTBILL.balanceOf(
-          fixture.escrow.address,
-        );
-        const routerBalanceBefore = await mTBILL.balanceOf(mockRouter.address);
-
-        await expect(
-          fixture.escrow
-            .connect(alice)
-            .claimToRemote(messageId, remoteRecipient, remoteChainSelector),
-        )
-          .to.emit(fixture.escrow, 'ClaimToRemote')
-          .withArgs(
-            messageId,
-            expectedCcipMessageId,
-            remoteRecipient,
-            remoteChainSelector,
-          )
-          .and.to.emit(mockRouter, 'CcipSend')
-          .withArgs(
-            remoteChainSelector,
-            constants.AddressZero,
-            0,
-            mTBILL.address,
-            parseUnits('100'),
-            remoteRecipient,
-          );
-
-        expect(await mTBILL.balanceOf(fixture.escrow.address)).eq(
-          escrowBalanceBefore.sub(parseUnits('100')),
-        );
-        expect(await mTBILL.balanceOf(mockRouter.address)).eq(
-          routerBalanceBefore.add(parseUnits('100')),
-        );
-        expect((await getFailedMessage(fixture.escrow, messageId)).status).eq(
-          MessageStatus.Claimed,
-        );
-        expect(await fixture.escrow.getFailedMessageIds()).deep.eq([]);
-      });
-
-      it('pays the native fee required by the router', async () => {
-        const fixture = await loadFixture(ccipCctFixture);
-        const { mTBILL, accessControl, owner, alice, defaultRecipient } =
-          fixture;
-
-        const messageId = await createEscrowFailedMessage(fixture, {
-          amount: parseUnits('50'),
-          receiver: alice,
-        });
-
-        await unBlackList(
-          { blacklistable: mTBILL, accessControl, owner },
-          alice,
-        );
-
-        const mockRouter = await wireMockRouter(fixture);
-        const fee = parseUnits('0.01', 18);
-        await mockRouter.setFee(fee);
-
-        await claimFailedMessageToRemote(
-          fixture,
-          {
-            messageId,
-            recipient: encodeRemoteRecipient(defaultRecipient.address),
-            value: fee,
-          },
-          { from: alice },
-        );
-
-        expect(await ethers.provider.getBalance(mockRouter.address)).eq(fee);
-      });
-
-      it('should fail: when the attached native fee is insufficient', async () => {
-        const fixture = await loadFixture(ccipCctFixture);
-        const { mTBILL, accessControl, owner, alice, defaultRecipient } =
-          fixture;
-
-        const messageId = await createEscrowFailedMessage(fixture, {
-          amount: parseUnits('50'),
-          receiver: alice,
-        });
-
-        await unBlackList(
-          { blacklistable: mTBILL, accessControl, owner },
-          alice,
-        );
-
-        const mockRouter = await wireMockRouter(fixture);
-        await mockRouter.setFee(parseUnits('0.01', 18));
-
-        await expect(
-          fixture.escrow
-            .connect(alice)
-            .claimToRemote(
-              messageId,
-              encodeRemoteRecipient(defaultRecipient.address),
-              fixture.remoteChainSelector,
-              { value: 0 },
-            ),
-        ).revertedWithCustomError(mockRouter, 'InsufficientFeeTokenAmount');
-      });
-
-      it('should fail: when the caller is not the original recipient', async () => {
-        const fixture = await loadFixture(ccipCctFixture);
-        const {
-          escrow,
-          mTBILL,
-          accessControl,
-          owner,
-          alice,
-          defaultRecipient,
-        } = fixture;
-
-        const messageId = await createEscrowFailedMessage(fixture, {
-          amount: parseUnits('100'),
-          receiver: alice,
-        });
-
-        await unBlackList(
-          { blacklistable: mTBILL, accessControl, owner },
-          alice,
-        );
-        await wireMockRouter(fixture);
-
-        await claimFailedMessageToRemote(
-          fixture,
-          {
-            messageId,
-            recipient: encodeRemoteRecipient(defaultRecipient.address),
-          },
-          {
-            from: defaultRecipient,
-            revertWithCustomError: {
-              contract: escrow,
-              error: 'InvalidSender',
-              args: [alice.address],
-            },
-          },
-        );
-      });
-
-      it('should fail: when the caller is blacklisted', async () => {
-        const fixture = await loadFixture(ccipCctFixture);
-        const { alice, defaultRecipient } = fixture;
-
-        const messageId = await createEscrowFailedMessage(fixture, {
-          amount: parseUnits('100'),
-          receiver: alice,
-        });
-        await wireMockRouter(fixture);
-
-        await claimFailedMessageToRemote(
-          fixture,
-          {
-            messageId,
-            recipient: encodeRemoteRecipient(defaultRecipient.address),
-          },
-          {
-            from: alice,
-            revertMessage: 'WMAC: has role',
-          },
-        );
-      });
-
-      it('should fail: when the message is not found', async () => {
-        const fixture = await loadFixture(ccipCctFixture);
-        const { escrow, alice, defaultRecipient } = fixture;
-        const unknownMessageId = ethers.utils.formatBytes32String('unknown');
-        await wireMockRouter(fixture);
-
-        await claimFailedMessageToRemote(
-          fixture,
-          {
-            messageId: unknownMessageId,
-            recipient: encodeRemoteRecipient(defaultRecipient.address),
-          },
-          {
-            from: alice,
-            revertWithCustomError: {
-              contract: escrow,
-              error: 'FailedMessageNotFound',
-              args: [unknownMessageId],
-            },
-          },
-        );
-      });
-
-      it('should fail: when the message was already claimed locally', async () => {
-        const fixture = await loadFixture(ccipCctFixture);
-        const {
-          escrow,
-          mTBILL,
-          accessControl,
-          owner,
-          alice,
-          defaultRecipient,
-        } = fixture;
-
-        const messageId = await createEscrowFailedMessage(fixture, {
-          amount: parseUnits('100'),
-          receiver: alice,
-        });
-
-        await unBlackList(
-          { blacklistable: mTBILL, accessControl, owner },
-          alice,
-        );
-
-        await claimFailedMessage(
-          fixture,
-          {
-            messageId,
-            recipient: alice,
-          },
-          { from: alice },
-        );
-
-        await wireMockRouter(fixture);
-
-        await claimFailedMessageToRemote(
-          fixture,
-          {
-            messageId,
-            recipient: encodeRemoteRecipient(defaultRecipient.address),
-          },
-          {
-            from: alice,
-            revertWithCustomError: {
-              contract: escrow,
-              error: 'FailedMessageNotFound',
-              args: [messageId],
-            },
-          },
-        );
-      });
-
-      it('forwards the entire attached value to the router, losing any excess', async () => {
-        const fixture = await loadFixture(ccipCctFixture);
-        const { mTBILL, accessControl, owner, alice, defaultRecipient } =
-          fixture;
-
-        const messageId = await createEscrowFailedMessage(fixture, {
-          amount: parseUnits('50'),
-          receiver: alice,
-        });
-
-        await unBlackList(
-          { blacklistable: mTBILL, accessControl, owner },
-          alice,
-        );
-
-        const mockRouter = await wireMockRouter(fixture);
-        const fee = parseUnits('0.01', 18);
-        await mockRouter.setFee(fee);
-        const overpaid = fee.mul(2);
-
-        await claimFailedMessageToRemote(
-          fixture,
-          {
-            messageId,
-            recipient: encodeRemoteRecipient(defaultRecipient.address),
-            value: overpaid,
-          },
-          { from: alice },
-        );
-
-        expect(await ethers.provider.getBalance(mockRouter.address)).eq(
-          overpaid,
-        );
-      });
-    });
-
     describe('claim', () => {
       it('lets the original recipient claim to themselves after unblacklist', async () => {
         const fixture = await loadFixture(ccipCctFixture);
@@ -1353,7 +1040,7 @@ describe('CCIP', function () {
           alice,
         );
 
-        await claimFailedMessage(
+        await claim(
           fixture,
           {
             messageId,
@@ -1378,7 +1065,7 @@ describe('CCIP', function () {
           alice,
         );
 
-        await claimFailedMessage(
+        await claim(
           fixture,
           {
             messageId,
@@ -1409,7 +1096,7 @@ describe('CCIP', function () {
           alice,
         );
 
-        await claimFailedMessage(
+        await claim(
           fixture,
           {
             messageId,
@@ -1435,7 +1122,7 @@ describe('CCIP', function () {
           receiver: alice,
         });
 
-        await claimFailedMessage(
+        await claim(
           fixture,
           {
             messageId,
@@ -1453,7 +1140,7 @@ describe('CCIP', function () {
         const { escrow, alice } = fixture;
         const unknownMessageId = ethers.utils.formatBytes32String('unknown');
 
-        await claimFailedMessage(
+        await claim(
           fixture,
           {
             messageId: unknownMessageId,
@@ -1484,7 +1171,7 @@ describe('CCIP', function () {
           alice,
         );
 
-        await claimFailedMessage(
+        await claim(
           fixture,
           {
             messageId,
@@ -1493,7 +1180,7 @@ describe('CCIP', function () {
           { from: alice },
         );
 
-        await claimFailedMessage(
+        await claim(
           fixture,
           {
             messageId,
@@ -1556,7 +1243,7 @@ describe('CCIP', function () {
           defaultRecipient,
         );
 
-        await claimFailedMessage(
+        await claim(
           fixture,
           {
             messageId,
@@ -1574,7 +1261,7 @@ describe('CCIP', function () {
           { originalRecipient: alice.address, tokenAmount: parseUnits('100') },
         ]);
 
-        await claimFailedMessage(
+        await claim(
           fixture,
           {
             messageId,
@@ -1584,6 +1271,63 @@ describe('CCIP', function () {
             from: alice,
             revertMessage: 'ERC20: transfer amount exceeds balance',
           },
+        );
+      });
+
+      it('should fail: when the public claim function is paused', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, mTBILL, accessControl, owner, alice } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await unBlackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          alice,
+        );
+        await pauseClaim(fixture);
+
+        await claim(
+          fixture,
+          {
+            messageId,
+            recipient: alice,
+          },
+          {
+            from: alice,
+            revertWithCustomError: {
+              contract: escrow,
+              error: 'ClaimPaused',
+            },
+          },
+        );
+      });
+
+      it('lets the original recipient claim after unpause', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { mTBILL, accessControl, owner, alice } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await unBlackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          alice,
+        );
+        await pauseClaim(fixture);
+        await unpauseClaim(fixture);
+
+        await claim(
+          fixture,
+          {
+            messageId,
+            recipient: alice,
+          },
+          { from: alice },
         );
       });
     });
@@ -1735,6 +1479,24 @@ describe('CCIP', function () {
           revertMessage: 'WMAC: has role',
         });
       });
+
+      it('recovers failed messages when the public claim function is paused', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { mTBILL, accessControl, owner, alice } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await unBlackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          alice,
+        );
+        await pauseClaim(fixture);
+
+        await recoverBulk(fixture, [messageId]);
+      });
     });
 
     describe('closeBulk', () => {
@@ -1852,6 +1614,20 @@ describe('CCIP', function () {
           ownerBalanceBefore.add(parseUnits('100')),
         );
       });
+
+      it('closes failed messages when the public claim function is paused', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { alice } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await pauseClaim(fixture);
+
+        await closeBulk(fixture, [messageId]);
+      });
     });
 
     describe('registerOrphanedBulk', () => {
@@ -1941,6 +1717,190 @@ describe('CCIP', function () {
         ]);
 
         await closeBulk(fixture, [messageId]);
+      });
+    });
+
+    describe('withdrawTokens', () => {
+      it('withdraws the pool token to the default recipient when called by the admin', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { alice } = fixture;
+
+        await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await withdrawTokens(fixture, { amount: parseUnits('40') });
+      });
+
+      it('withdraws an unrelated token to the default recipient', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { owner, escrow } = fixture;
+
+        const token = await new ERC20Mock__factory(owner).deploy(18);
+        await token.mint(escrow.address, parseUnits('25'));
+
+        await withdrawTokens(fixture, {
+          token,
+          amount: parseUnits('25'),
+        });
+      });
+
+      it('handles a zero-amount withdrawal', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+
+        await withdrawTokens(fixture, { amount: 0 });
+      });
+
+      it('uses the updated default recipient after setDefaultRecipient', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { mTBILL, alice, owner } = fixture;
+
+        await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await setDefaultRecipient(fixture, owner);
+
+        const ownerBalanceBefore = await mTBILL.balanceOf(owner.address);
+        await withdrawTokens(fixture, { amount: parseUnits('100') });
+        expect(await mTBILL.balanceOf(owner.address)).eq(
+          ownerBalanceBefore.add(parseUnits('100')),
+        );
+      });
+
+      it('does not resolve pending failed messages', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, alice } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await withdrawTokens(fixture, { amount: parseUnits('100') });
+
+        expect(await escrow.getFailedMessageIds()).deep.eq([messageId]);
+        expect((await getFailedMessage(escrow, messageId)).status).eq(
+          MessageStatus.Pending,
+        );
+      });
+
+      it('should fail: when called by a non-admin', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, alice } = fixture;
+
+        await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await withdrawTokens(
+          fixture,
+          { amount: parseUnits('100') },
+          {
+            from: alice,
+            revertWithCustomError: {
+              contract: escrow,
+              error: 'NotContractAdmin',
+            },
+          },
+        );
+      });
+
+      it('should fail: when the amount exceeds the escrow balance', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+
+        await withdrawTokens(
+          fixture,
+          { amount: parseUnits('1') },
+          {
+            revertMessage: 'ERC20: transfer amount exceeds balance',
+          },
+        );
+      });
+
+      it('should fail: when the default recipient is blacklisted', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { mTBILL, accessControl, owner, alice, defaultRecipient } =
+          fixture;
+
+        await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await blackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          defaultRecipient,
+        );
+
+        await withdrawTokens(
+          fixture,
+          { amount: parseUnits('100') },
+          {
+            revertMessage: 'WMAC: has role',
+          },
+        );
+      });
+    });
+
+    describe('pauseClaim', () => {
+      it('pauses the public claim function when called by the admin', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+
+        await pauseClaim(fixture);
+      });
+
+      it('can be called when the public claim function is already paused', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+
+        await pauseClaim(fixture);
+        await pauseClaim(fixture);
+      });
+
+      it('should fail: when called by a non-admin', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, alice } = fixture;
+
+        await pauseClaim(fixture, {
+          from: alice,
+          revertWithCustomError: {
+            contract: escrow,
+            error: 'NotContractAdmin',
+          },
+        });
+      });
+    });
+
+    describe('unpauseClaim', () => {
+      it('unpauses the public claim function when called by the admin', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+
+        await pauseClaim(fixture);
+        await unpauseClaim(fixture);
+      });
+
+      it('can be called when the public claim function is already unpaused', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+
+        await unpauseClaim(fixture);
+      });
+
+      it('should fail: when called by a non-admin', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, alice } = fixture;
+
+        await pauseClaim(fixture);
+
+        await unpauseClaim(fixture, {
+          from: alice,
+          revertWithCustomError: {
+            contract: escrow,
+            error: 'NotContractAdmin',
+          },
+        });
       });
     });
 

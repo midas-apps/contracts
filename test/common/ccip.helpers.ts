@@ -1,6 +1,6 @@
 import { anyValue } from '@nomicfoundation/hardhat-chai-matchers/withArgs';
 import { expect } from 'chai';
-import { BigNumberish, Contract, constants } from 'ethers';
+import { BigNumberish, Contract, constants, ethers } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { blackList } from './ac.helpers';
@@ -556,7 +556,7 @@ export const onFailedMessage = async (
   return expectedMessageId;
 };
 
-export const claimFailedMessage = async (
+export const claim = async (
   fixture: Fixture,
   {
     messageId,
@@ -603,70 +603,6 @@ export const claimFailedMessage = async (
   );
   expect(await mTBILL.balanceOf(to)).eq(
     recipientBalanceBefore.add(failedMessage.tokenAmount),
-  );
-  expect((await getFailedMessage(escrow, messageId)).status).eq(
-    MessageStatus.Claimed,
-  );
-  expect(await escrow.getFailedMessageIds()).deep.eq(
-    pendingIdsBefore.filter((id) => id !== messageId),
-  );
-};
-
-export const claimFailedMessageToRemote = async (
-  fixture: Fixture,
-  {
-    messageId,
-    recipient,
-    remoteChainSelector,
-    value,
-  }: {
-    messageId: string;
-    recipient: string;
-    remoteChainSelector?: BigNumberish;
-    value?: BigNumberish;
-  },
-  opt?: CcipRevertParams,
-) => {
-  const { escrow, mTBILL, owner } = fixture;
-  const caller = opt?.from ?? owner;
-  const destChainSelector = remoteChainSelector ?? fixture.remoteChainSelector;
-  const feeValue = value ?? 0;
-
-  const tx = () =>
-    escrow
-      .connect(caller)
-      .claimToRemote(messageId, recipient, destChainSelector, {
-        value: feeValue,
-      });
-
-  if (opt?.revertMessage) {
-    await expect(tx()).revertedWith(opt.revertMessage);
-    return;
-  }
-
-  if (opt?.revertWithCustomError) {
-    const assertion = expect(tx()).revertedWithCustomError(
-      opt.revertWithCustomError.contract,
-      opt.revertWithCustomError.error,
-    );
-    if (opt.revertWithCustomError.args) {
-      await assertion.withArgs(...opt.revertWithCustomError.args);
-    } else {
-      await assertion;
-    }
-    return;
-  }
-
-  const failedMessage = await getFailedMessage(escrow, messageId);
-  const escrowBalanceBefore = await mTBILL.balanceOf(escrow.address);
-  const pendingIdsBefore = await escrow.getFailedMessageIds();
-
-  await expect(tx())
-    .to.emit(escrow, 'ClaimToRemote')
-    .withArgs(messageId, anyValue, recipient, destChainSelector);
-
-  expect(await mTBILL.balanceOf(escrow.address)).eq(
-    escrowBalanceBefore.sub(failedMessage.tokenAmount),
   );
   expect((await getFailedMessage(escrow, messageId)).status).eq(
     MessageStatus.Claimed,
@@ -797,4 +733,122 @@ export const closeBulk = async (
   expect(await escrow.getFailedMessageIds()).deep.eq(
     pendingIdsBefore.filter((id) => !messageIds.includes(id)),
   );
+};
+
+export const withdrawTokens = async (
+  fixture: Fixture,
+  {
+    token,
+    amount,
+  }: {
+    token?: {
+      address: string;
+      balanceOf: (account: string) => Promise<ethers.BigNumber>;
+    };
+    amount: BigNumberish;
+  },
+  opt?: CcipRevertParams,
+) => {
+  const { escrow, mTBILL, owner } = fixture;
+  const caller = opt?.from ?? owner;
+  const tokenContract = token ?? mTBILL;
+  const defaultRecipient = await escrow.defaultRecipient();
+
+  const tx = () =>
+    escrow.connect(caller).withdrawTokens(tokenContract.address, amount);
+
+  if (opt?.revertMessage) {
+    await expect(tx()).revertedWith(opt.revertMessage);
+    return;
+  }
+
+  if (opt?.revertWithCustomError) {
+    const assertion = expect(tx()).revertedWithCustomError(
+      opt.revertWithCustomError.contract,
+      opt.revertWithCustomError.error,
+    );
+    if (opt.revertWithCustomError.args) {
+      await assertion.withArgs(...opt.revertWithCustomError.args);
+    } else {
+      await assertion;
+    }
+    return;
+  }
+
+  const escrowBalanceBefore = await tokenContract.balanceOf(escrow.address);
+  const defaultRecipientBalanceBefore = await tokenContract.balanceOf(
+    defaultRecipient,
+  );
+
+  await expect(tx())
+    .to.emit(escrow, 'WithdrawTokens')
+    .withArgs(tokenContract.address, amount);
+
+  expect(await tokenContract.balanceOf(escrow.address)).eq(
+    escrowBalanceBefore.sub(amount),
+  );
+  expect(await tokenContract.balanceOf(defaultRecipient)).eq(
+    defaultRecipientBalanceBefore.add(amount),
+  );
+};
+
+export const pauseClaim = async (fixture: Fixture, opt?: CcipRevertParams) => {
+  const { escrow, owner } = fixture;
+  const caller = opt?.from ?? owner;
+
+  const tx = () => escrow.connect(caller).pauseClaim();
+
+  if (opt?.revertMessage) {
+    await expect(tx()).revertedWith(opt.revertMessage);
+    return;
+  }
+
+  if (opt?.revertWithCustomError) {
+    const assertion = expect(tx()).revertedWithCustomError(
+      opt.revertWithCustomError.contract,
+      opt.revertWithCustomError.error,
+    );
+    if (opt.revertWithCustomError.args) {
+      await assertion.withArgs(...opt.revertWithCustomError.args);
+    } else {
+      await assertion;
+    }
+    return;
+  }
+
+  await expect(tx()).to.emit(escrow, 'PauseClaim');
+
+  expect(await escrow.claimPaused()).eq(true);
+};
+
+export const unpauseClaim = async (
+  fixture: Fixture,
+  opt?: CcipRevertParams,
+) => {
+  const { escrow, owner } = fixture;
+  const caller = opt?.from ?? owner;
+
+  const tx = () => escrow.connect(caller).unpauseClaim();
+
+  if (opt?.revertMessage) {
+    await expect(tx()).revertedWith(opt.revertMessage);
+    return;
+  }
+
+  if (opt?.revertWithCustomError) {
+    const assertion = expect(tx()).revertedWithCustomError(
+      opt.revertWithCustomError.contract,
+      opt.revertWithCustomError.error,
+    );
+    if (opt.revertWithCustomError.args) {
+      await assertion.withArgs(...opt.revertWithCustomError.args);
+    } else {
+      await assertion;
+    }
+    return;
+  }
+
+  await expect(tx()).to.emit(escrow, 'UnpauseClaim');
+
+  expect(await escrow.claimPaused()).eq(false);
 };
