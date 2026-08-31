@@ -770,6 +770,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0xF096872672F44d6EBA71458D74fe67F9a77a23B9',
         dataFeed: '0x79b0c48E1AFAcd9B98D54b0b7D6F9dF27b1D101D',
       },
+      usdt: {
+        token: '0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7',
+        aggregator: '0xEBE676ee90Fe1112671f19b6B7459bC678B67e8a',
+        dataFeed: '0x919935030c71e4983c2aaFD3ED3d4587e10e98e1',
+      },
     },
     mGLOBAL: {
       token: '0x25C2067D8b04931A6e2eb078eA8D65c8B8500031',
