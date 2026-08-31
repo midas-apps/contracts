@@ -750,6 +750,16 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x5F19515a285A661C2ca31D868241424Ed9c930F5',
       redemptionVaultSwapper: '0x87E88E291CC59591e0bBbAe5f6c37D4E3d75aE2a',
     },
+    mFTAC: {
+      token: '0x63cB25da044dDeF518854EC395C0288c34254C1d',
+      customFeed: '0xB4353a98aDe0EaffC215dC187A50BEa1eba597b3',
+      customFeedDv: '0x8F30023357c5c1C5FdBD3E1a0698F15efb016505',
+      customFeedRv: '0x0202eC9bc941F6A76ca9F339111DE8AAc05A2a72',
+      dataFeedDv: '0x68F4F69A30Fac38C6BF905E6f73e729bB10d73dd',
+      dataFeedRv: '0x3D58712E4d85806Da2F3C8161d67e0E3a39F4777',
+      depositVault: '0xE95F0AC383FeceAf38b07C2aefA128716c9EDEfE',
+      redemptionVaultSwapper: '0x296B6e173bE701d6086E604A19F4E39375ff4DA9',
+    },
   },
   avalanche: {
     accessControl: '0xF6f56D1a218F6129679d966D03c12Af145795fd8',
