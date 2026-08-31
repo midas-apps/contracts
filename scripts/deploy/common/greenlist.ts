@@ -1,7 +1,7 @@
 import { PopulatedTransaction } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { sendAndWaitForCustomTxSign } from './utils';
+import { sendAndWaitForCustomTxSign, getContractAt } from './utils';
 
 import { MTokenName } from '../../../config';
 import { TokenAddresses, VaultType } from '../../../config/constants/addresses';
@@ -25,10 +25,7 @@ export const applyGreenlistConfig = async (
     const vaultAddress = addresses[vaultType as VaultType];
     if (!vaultAddress) continue;
 
-    const vault = await hre.ethers.getContractAt(
-      'ManageableVault',
-      vaultAddress,
-    );
+    const vault = await getContractAt(hre, 'ManageableVault', vaultAddress);
 
     if ((await vault.greenlistEnabled()) === enabled) {
       console.log(

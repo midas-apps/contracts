@@ -1,8 +1,11 @@
-import { Provider } from '@ethersproject/providers';
 import { Signer } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { getDeployer, sendAndWaitForCustomTxSign } from './utils';
+import {
+  getContractAt,
+  getDeployer,
+  sendAndWaitForCustomTxSign,
+} from './utils';
 import {
   defaultDepositVaultPriority,
   resolveAllVaultAddresses,
@@ -236,14 +239,14 @@ export const grantDefaultAdminRoleToAcAdmin = async (
 
 const getAcContract = async (
   hre: HardhatRuntimeEnvironment,
-  provider: Provider | Signer,
+  signer: Signer,
 ) => {
   const addresses = getCurrentAddresses(hre);
 
-  return (
-    await hre.ethers.getContractAt(
-      getCommonContractNames().ac,
-      addresses!.accessControl!,
-    )
-  ).connect(provider) as MidasAccessControl;
+  return (await getContractAt(
+    hre,
+    getCommonContractNames().ac,
+    addresses!.accessControl!,
+    signer,
+  )) as MidasAccessControl;
 };
