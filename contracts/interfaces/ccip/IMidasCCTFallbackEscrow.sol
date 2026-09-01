@@ -18,17 +18,40 @@ interface IMidasCCTFallbackEscrow is IMidasCCTFailedMessageFallback {
         Closed
     }
 
+    /**
+     * @notice A failed message
+     */
     struct FailedMessage {
+        /// @notice The original recipient of the failed message
         address originalRecipient;
+        /// @notice The original source chain selector of the failed message
         uint64 originalSourceChainSelector;
+        /// @notice The amount of tokens to recover
         uint256 tokenAmount;
+        /// @notice The status of the failed message
         MessageStatus status;
     }
 
+    /**
+     * @notice An orphaned message
+     */
     struct OrphanedMessage {
+        /// @notice The original recipient of the orphaned message
         address originalRecipient;
+        /// @notice The amount of tokens to recover
         uint256 tokenAmount;
+        /// @notice The original source chain selector of the orphaned message
         uint64 originalSourceChainSelector;
+    }
+
+    /**
+     * @notice Parameters for recovering a bulk of failed messages
+     */
+    struct RecoverBulkParams {
+        /// @notice The id of the failed message
+        bytes32 messageId;
+        /// @notice The payout recipient. Zero address recovers to the original recipient
+        address recipient;
     }
 
     /**
@@ -38,27 +61,14 @@ interface IMidasCCTFallbackEscrow is IMidasCCTFailedMessageFallback {
     event Claim(bytes32 _messageId, address _recipient);
 
     /**
-     * @param _messageId the id of the failed message
-     * @param _ccipMessageId the id of the CCIP message
-     * @param _recipient the recipient of the failed message in bytes
-     * @param _remoteChainSelector the remote chain selector
-     */
-    event ClaimToRemote(
-        bytes32 _messageId,
-        bytes32 _ccipMessageId,
-        bytes _recipient,
-        uint64 _remoteChainSelector
-    );
-
-    /**
      * @param _messageIds the ids of the closed messages
      */
     event CloseBulk(bytes32[] _messageIds);
 
     /**
-     * @param _messageIds the ids of the recovered messages
+     * @param _params the parameters of the recovered messages
      */
-    event RecoverBulk(bytes32[] _messageIds);
+    event RecoverBulk(RecoverBulkParams[] _params);
 
     /**
      * @param _messages the messages to register
@@ -137,10 +147,11 @@ interface IMidasCCTFallbackEscrow is IMidasCCTFailedMessageFallback {
 
     /**
      * @notice Recovers a bulk of failed messages
-     * @dev should be called by the contract admin
-     * @param _messageIds the ids of the failed messages to recover
+     * @dev should be called by the contract admin.
+     * Pass `recipient` as the zero address to recover to the original recipient.
+     * @param _params the parameters of the failed messages to recover
      */
-    function recoverBulk(bytes32[] calldata _messageIds) external;
+    function recoverBulk(RecoverBulkParams[] calldata _params) external;
 
     /**
      * @notice Closes a bulk of failed messages and transfers the tokens to the default recipient

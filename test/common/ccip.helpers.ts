@@ -612,15 +612,27 @@ export const claim = async (
   );
 };
 
+export type RecoverBulkParam = {
+  messageId: string;
+  recipient?: Account;
+};
+
 export const recoverBulk = async (
   fixture: Fixture,
-  messageIds: string[],
+  params: RecoverBulkParam[],
   opt?: CcipRevertParams,
 ) => {
   const { escrow, mTBILL, owner } = fixture;
   const caller = opt?.from ?? owner;
 
-  const tx = () => escrow.connect(caller).recoverBulk(messageIds);
+  const normalizedParams = params.map((param) => ({
+    messageId: param.messageId,
+    recipient: param.recipient
+      ? getAccount(param.recipient)
+      : constants.AddressZero,
+  }));
+
+  const tx = () => escrow.connect(caller).recoverBulk(normalizedParams);
 
   if (opt?.revertMessage) {
     await expect(tx()).revertedWith(opt.revertMessage);
@@ -641,35 +653,71 @@ export const recoverBulk = async (
   }
 
   const messages = await Promise.all(
-    messageIds.map((id) => getFailedMessage(escrow, id)),
+    normalizedParams.map((param) => getFailedMessage(escrow, param.messageId)),
   );
+  const payoutRecipients = normalizedParams.map((param, i) =>
+    param.recipient === constants.AddressZero
+      ? messages[i].originalRecipient
+      : param.recipient,
+  );
+  const expectedDeltas = new Map<string, ethers.BigNumber>();
+  for (let i = 0; i < payoutRecipients.length; i++) {
+    const recipient = payoutRecipients[i];
+    expectedDeltas.set(
+      recipient,
+      (expectedDeltas.get(recipient) ?? ethers.BigNumber.from(0)).add(
+        messages[i].tokenAmount,
+      ),
+    );
+  }
+  const uniqueRecipients = [...expectedDeltas.keys()];
   const escrowBalanceBefore = await mTBILL.balanceOf(escrow.address);
   const recipientBalancesBefore = await Promise.all(
-    messages.map((message) => mTBILL.balanceOf(message.originalRecipient)),
+    uniqueRecipients.map((recipient) => mTBILL.balanceOf(recipient)),
   );
   const pendingIdsBefore = await escrow.getFailedMessageIds();
   const totalAmount = messages.reduce(
     (acc, message) => acc.add(message.tokenAmount),
     ethers.BigNumber.from(0),
   );
+  const recoveredIds = normalizedParams.map((param) => param.messageId);
 
-  await expect(tx()).to.emit(escrow, 'RecoverBulk').withArgs(messageIds);
+  const txResponse = await tx();
+  await expect(txResponse).to.emit(escrow, 'RecoverBulk');
+
+  const receipt = await txResponse.wait();
+  const recoveredEvent = receipt.events?.find(
+    (event) => event.event === 'RecoverBulk',
+  );
+  expect(
+    recoveredEvent?.args?._params.map(
+      (param: { messageId: string; recipient: string }) => [
+        param.messageId,
+        param.recipient,
+      ],
+    ),
+  ).deep.eq(
+    normalizedParams.map((param) => [param.messageId, param.recipient]),
+  );
 
   expect(await mTBILL.balanceOf(escrow.address)).eq(
     escrowBalanceBefore.sub(totalAmount),
   );
 
-  for (let i = 0; i < messageIds.length; i++) {
-    expect(await mTBILL.balanceOf(messages[i].originalRecipient)).eq(
-      recipientBalancesBefore[i].add(messages[i].tokenAmount),
+  for (let i = 0; i < uniqueRecipients.length; i++) {
+    expect(await mTBILL.balanceOf(uniqueRecipients[i])).eq(
+      recipientBalancesBefore[i].add(expectedDeltas.get(uniqueRecipients[i])!),
     );
-    expect((await getFailedMessage(escrow, messageIds[i])).status).eq(
+  }
+
+  for (const param of normalizedParams) {
+    expect((await getFailedMessage(escrow, param.messageId)).status).eq(
       MessageStatus.Recovered,
     );
   }
 
   expect(await escrow.getFailedMessageIds()).deep.eq(
-    pendingIdsBefore.filter((id) => !messageIds.includes(id)),
+    pendingIdsBefore.filter((id) => !recoveredIds.includes(id)),
   );
 };
 

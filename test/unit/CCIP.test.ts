@@ -1341,7 +1341,7 @@ describe('CCIP', function () {
           { originalRecipient: alice.address, tokenAmount: parseUnits('100') },
         ]);
 
-        await recoverBulk(fixture, [messageId], {
+        await recoverBulk(fixture, [{ messageId }], {
           revertMessage: 'ERC20: transfer amount exceeds balance',
         });
       });
@@ -1360,7 +1360,7 @@ describe('CCIP', function () {
           alice,
         );
 
-        await recoverBulk(fixture, [messageId, messageId], {
+        await recoverBulk(fixture, [{ messageId }, { messageId }], {
           revertWithCustomError: {
             contract: escrow,
             error: 'FailedMessageNotFound',
@@ -1386,13 +1386,17 @@ describe('CCIP', function () {
 
         const escrowBalanceBefore = await mTBILL.balanceOf(escrow.address);
 
-        await recoverBulk(fixture, [messageId, unknownMessageId], {
-          revertWithCustomError: {
-            contract: escrow,
-            error: 'FailedMessageNotFound',
-            args: [unknownMessageId],
+        await recoverBulk(
+          fixture,
+          [{ messageId }, { messageId: unknownMessageId }],
+          {
+            revertWithCustomError: {
+              contract: escrow,
+              error: 'FailedMessageNotFound',
+              args: [unknownMessageId],
+            },
           },
-        });
+        );
 
         // the valid message must not be partially resolved
         expect(await mTBILL.balanceOf(escrow.address)).eq(escrowBalanceBefore);
@@ -1431,7 +1435,10 @@ describe('CCIP', function () {
           defaultRecipient,
         );
 
-        await recoverBulk(fixture, [messageIdAlice, messageIdDefault]);
+        await recoverBulk(fixture, [
+          { messageId: messageIdAlice },
+          { messageId: messageIdDefault },
+        ]);
       });
 
       it('should fail: when called by a non-admin', async () => {
@@ -1443,7 +1450,7 @@ describe('CCIP', function () {
           receiver: alice,
         });
 
-        await recoverBulk(fixture, [messageId], {
+        await recoverBulk(fixture, [{ messageId }], {
           from: alice,
           revertWithCustomError: {
             contract: escrow,
@@ -1457,7 +1464,7 @@ describe('CCIP', function () {
         const { escrow } = fixture;
         const unknownMessageId = ethers.utils.formatBytes32String('unknown');
 
-        await recoverBulk(fixture, [unknownMessageId], {
+        await recoverBulk(fixture, [{ messageId: unknownMessageId }], {
           revertWithCustomError: {
             contract: escrow,
             error: 'FailedMessageNotFound',
@@ -1475,9 +1482,29 @@ describe('CCIP', function () {
           receiver: alice,
         });
 
-        await recoverBulk(fixture, [messageId], {
+        await recoverBulk(fixture, [{ messageId }], {
           revertMessage: 'WMAC: has role',
         });
+      });
+
+      it('recovers to an override recipient when the original is still blacklisted', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { mTBILL, accessControl, owner, alice, defaultRecipient } =
+          fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await unBlackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          defaultRecipient,
+        );
+
+        await recoverBulk(fixture, [
+          { messageId, recipient: defaultRecipient },
+        ]);
       });
 
       it('recovers failed messages when the public claim function is paused', async () => {
@@ -1495,7 +1522,7 @@ describe('CCIP', function () {
         );
         await pauseClaim(fixture);
 
-        await recoverBulk(fixture, [messageId]);
+        await recoverBulk(fixture, [{ messageId }]);
       });
     });
 

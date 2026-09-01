@@ -6,8 +6,6 @@ import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgrade
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {EnumerableSetUpgradeable as EnumerableSet} from "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 
-import {Client} from "@chainlink/contracts-ccip/contracts/libraries/Client.sol";
-import {IRouterClient} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 import {TokenPool} from "@chainlink/contracts-ccip/contracts/pools/TokenPool.sol";
 
 import {WithMidasAccessControl} from "../../access/WithMidasAccessControl.sol";
@@ -141,8 +139,7 @@ contract MidasCCTFallbackEscrow is
         FailedMessage storage failedMessage = _processMessage(
             _messageId,
             _recipient,
-            MessageStatus.Claimed,
-            true
+            MessageStatus.Claimed
         );
         _validateClaim(failedMessage.originalRecipient);
         emit Claim(_messageId, _recipient);
@@ -151,35 +148,30 @@ contract MidasCCTFallbackEscrow is
     /**
      * @inheritdoc IMidasCCTFallbackEscrow
      */
-    function recoverBulk(bytes32[] memory _messageIds)
+    function recoverBulk(RecoverBulkParams[] calldata _params)
         external
         onlyContractAdmin
     {
-        for (uint256 i = 0; i < _messageIds.length; i++) {
+        for (uint256 i = 0; i < _params.length; i++) {
+            RecoverBulkParams calldata param = _params[i];
             _processMessage(
-                _messageIds[i],
-                address(0),
-                MessageStatus.Recovered,
-                true
+                param.messageId,
+                param.recipient,
+                MessageStatus.Recovered
             );
         }
-        emit RecoverBulk(_messageIds);
+        emit RecoverBulk(_params);
     }
 
     /**
      * @inheritdoc IMidasCCTFallbackEscrow
      */
-    function closeBulk(bytes32[] memory _messageIds)
+    function closeBulk(bytes32[] calldata _messageIds)
         external
         onlyContractAdmin
     {
         for (uint256 i = 0; i < _messageIds.length; i++) {
-            _processMessage(
-                _messageIds[i],
-                address(0),
-                MessageStatus.Closed,
-                true
-            );
+            _processMessage(_messageIds[i], address(0), MessageStatus.Closed);
         }
         emit CloseBulk(_messageIds);
     }
@@ -262,8 +254,7 @@ contract MidasCCTFallbackEscrow is
     function _processMessage(
         bytes32 _messageId,
         address _overrideRecipient,
-        MessageStatus _status,
-        bool _doTransfer
+        MessageStatus _status
     ) private returns (FailedMessage storage) {
         require(
             _failedMessageIds.contains(_messageId),
@@ -273,12 +264,10 @@ contract MidasCCTFallbackEscrow is
         failedMessage.status = _status;
         _failedMessageIds.remove(_messageId);
 
-        if (_doTransfer) {
-            _getToken().safeTransfer(
-                _extractRecipient(failedMessage, _overrideRecipient, _status),
-                failedMessage.tokenAmount
-            );
-        }
+        _getToken().safeTransfer(
+            _extractRecipient(failedMessage, _overrideRecipient, _status),
+            failedMessage.tokenAmount
+        );
 
         return failedMessage;
     }
@@ -308,48 +297,6 @@ contract MidasCCTFallbackEscrow is
             originalSourceChainSelector: _originalSourceChainSelector
         });
         _failedMessageIds.add(messageId);
-    }
-
-    /**
-     * @notice Sends escrowed tokens cross-chain via the CCIP Router.
-     * @dev Pays fees in native gas token (`feeToken = address(0)`). Caller is
-     * responsible for attaching a sufficient `msg.value` fee.
-     * @param _recipient ABI-encoded destination receiver
-     * @param _remoteChainSelector Destination chain selector
-     * @param _tokenAmount Amount of the pool token to send
-     */
-    function _sendToRemote(
-        bytes memory _recipient,
-        uint64 _remoteChainSelector,
-        uint256 _tokenAmount
-    ) private returns (bytes32) {
-        IERC20 token = _getToken();
-        (address routerAddress, , ) = tokenPool.getDynamicConfig();
-        IRouterClient router = IRouterClient(routerAddress);
-
-        Client.EVMTokenAmount[]
-            memory tokenAmounts = new Client.EVMTokenAmount[](1);
-        tokenAmounts[0] = Client.EVMTokenAmount({
-            token: address(token),
-            amount: _tokenAmount
-        });
-
-        Client.EVM2AnyMessage memory message = Client.EVM2AnyMessage({
-            receiver: _recipient,
-            data: "",
-            tokenAmounts: tokenAmounts,
-            feeToken: address(0),
-            extraArgs: Client._argsToBytes(
-                Client.GenericExtraArgsV2({
-                    gasLimit: 0,
-                    allowOutOfOrderExecution: true
-                })
-            )
-        });
-
-        token.safeApprove(routerAddress, _tokenAmount);
-
-        return router.ccipSend{value: msg.value}(_remoteChainSelector, message);
     }
 
     /**
