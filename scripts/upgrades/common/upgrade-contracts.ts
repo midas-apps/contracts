@@ -19,9 +19,17 @@ import {
 import { getDeployer } from '../../deploy/common/utils';
 
 // TODO: refactor this whole file and make upgrades more generic
-type ContractType = 'customAggregator' | 'customAggregatorGrowth' | 'token';
+type ContractType =
+  | 'customAggregator'
+  | 'customAggregatorGrowth'
+  | 'token'
+  | 'ccipEscrow';
 
-type ContractTypeToUpgrade = 'customFeed' | 'customFeedGrowth' | 'token';
+type ContractTypeToUpgrade =
+  | 'customFeed'
+  | 'customFeedGrowth'
+  | 'token'
+  | 'ccipEscrow';
 
 type MTokenContractsToUpgrade = {
   mToken: MTokenName;
@@ -132,8 +140,11 @@ const upgradeAllContracts = async (
       initializerArgs,
     } of contracts) {
       const type = contractTypeTo ?? contractType;
-      const contractName =
-        getTokenContractNames(mToken)[type as keyof TokenContractNames];
+      const contractName: string | undefined =
+        getTokenContractNames(mToken)[type as keyof TokenContractNames] ??
+        type === 'ccipEscrow'
+          ? 'MidasCCTFallbackEscrow'
+          : undefined;
 
       if (!contractName) {
         throw new Error(`Contract name not found for ${mToken} ${type}`);
@@ -141,7 +152,9 @@ const upgradeAllContracts = async (
 
       const contract = await hre.ethers.getContractAt(
         contractName,
-        addresses[contractTypeToUpgrade]!,
+        contractTypeToUpgrade !== 'ccipEscrow'
+          ? addresses[contractTypeToUpgrade]!
+          : addresses.ccip!.fallbackEscrow!,
       );
 
       upgradeContracts.push({
@@ -149,7 +162,7 @@ const upgradeAllContracts = async (
         contractType: type,
         contractTypeTo,
         contractName,
-        proxyAddress: addresses[contractTypeToUpgrade]!,
+        proxyAddress: contract.address,
         overrideImplementation,
         initializer,
         initializerCalldata: initializer
