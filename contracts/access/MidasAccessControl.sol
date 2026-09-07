@@ -415,6 +415,7 @@ contract MidasAccessControl is
         external
         onlyRoleWithTimelock(getRoleAdmin(role))
     {
+        require(role != DEFAULT_ADMIN_ROLE, UnexpectedRole(role));
         _setRoleAdmin(role, newAdminRole);
     }
 

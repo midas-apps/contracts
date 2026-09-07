@@ -76,7 +76,6 @@ const REMOVE_MINT_RATE_LIMIT_SEL = encodeFnSelector(
   'removeMintRateLimitConfig(uint256)',
 );
 const ERC20_PAUSABLE_PAUSED_STORAGE_SLOT = 101;
-export const ERC20_PAUSED_MSG = 'ERC20Pausable: token transfer while paused';
 const PAUSE_TEST_AMOUNT = parseUnits('100');
 
 const SET_NAME_SYMBOL_DELAY = 2 * 24 * 3600;
@@ -333,6 +332,26 @@ describe(`mToken`, function () {
       expect(await mTBILL.maxSupplyCap()).eq(maxSupplyCap);
       expect(await mTBILL.isPermissioned()).eq(true);
       expect(await mTBILL.isMinHoldingBalanceEnforced()).eq(true);
+    });
+
+    it('should fail: when ERC20Pausable is paused', async () => {
+      const [, admin] = await ethers.getSigners();
+      const { mTBILL, clawbackReceiver } = await deployMToken();
+
+      await setProxyAdmin(mTBILL.address, admin.address);
+      await setInitializedVersion(mTBILL.address, 1);
+      await setErc20PausablePaused(mTBILL);
+
+      await expect(
+        mTBILL
+          .connect(admin)
+          .initializeV3(
+            clawbackReceiver.address,
+            ethers.constants.MaxUint256,
+            false,
+            false,
+          ),
+      ).revertedWith('Pausable: paused');
     });
   });
 
@@ -1309,7 +1328,7 @@ describe(`mToken`, function () {
       );
     });
 
-    it('should fail: mint when ERC20Pausable is paused', async () => {
+    it('mint when ERC20Pausable is paused', async () => {
       const { owner, tokenContract, regularAccounts } = await loadFixture(
         defaultDeploy,
       );
@@ -1319,7 +1338,6 @@ describe(`mToken`, function () {
         { tokenContract, owner },
         regularAccounts[0],
         PAUSE_TEST_AMOUNT,
-        { revertMessage: ERC20_PAUSED_MSG },
       );
     });
 
@@ -1469,7 +1487,7 @@ describe(`mToken`, function () {
       );
     });
 
-    it('should fail: burn when ERC20Pausable is paused', async () => {
+    it('burn when ERC20Pausable is paused', async () => {
       const { owner, tokenContract, regularAccounts } = await loadFixture(
         defaultDeploy,
       );
@@ -1484,7 +1502,6 @@ describe(`mToken`, function () {
         { tokenContract, owner },
         regularAccounts[0],
         PAUSE_TEST_AMOUNT,
-        { revertMessage: ERC20_PAUSED_MSG },
       );
     });
   });
@@ -1547,7 +1564,7 @@ describe(`mToken`, function () {
       );
     });
 
-    it('should fail: mintGoverned when ERC20Pausable is paused', async () => {
+    it('mintGoverned when ERC20Pausable is paused', async () => {
       const { owner, tokenContract, regularAccounts } = await loadFixture(
         defaultDeploy,
       );
@@ -1557,7 +1574,6 @@ describe(`mToken`, function () {
         { tokenContract, owner, isGoverned: true },
         regularAccounts[0],
         PAUSE_TEST_AMOUNT,
-        { revertMessage: ERC20_PAUSED_MSG },
       );
     });
 
@@ -1681,7 +1697,7 @@ describe(`mToken`, function () {
       );
     });
 
-    it('should fail: burnGoverned when ERC20Pausable is paused', async () => {
+    it('burnGoverned when ERC20Pausable is paused', async () => {
       const { owner, tokenContract, regularAccounts } = await loadFixture(
         defaultDeploy,
       );
@@ -1696,7 +1712,6 @@ describe(`mToken`, function () {
         { tokenContract, owner, isGoverned: true },
         regularAccounts[0],
         PAUSE_TEST_AMOUNT,
-        { revertMessage: ERC20_PAUSED_MSG },
       );
     });
   });
@@ -1762,7 +1777,7 @@ describe(`mToken`, function () {
         .withArgs(tokenContract.address, TRANSFER_SEL);
     });
 
-    it('should fail: transfer when ERC20Pausable is paused', async () => {
+    it('transfer when ERC20Pausable is paused', async () => {
       const { owner, tokenContract, regularAccounts } = await loadFixture(
         defaultDeploy,
       );
@@ -1773,7 +1788,7 @@ describe(`mToken`, function () {
         tokenContract
           .connect(owner)
           .transfer(regularAccounts[0].address, PAUSE_TEST_AMOUNT),
-      ).revertedWith(ERC20_PAUSED_MSG);
+      ).to.not.reverted;
     });
   });
 
@@ -1886,7 +1901,7 @@ describe(`mToken`, function () {
         .withArgs(tokenContract.address, TRANSFER_FROM_SEL);
     });
 
-    it('should fail: transferFrom when ERC20Pausable is paused', async () => {
+    it('transferFrom when ERC20Pausable is paused', async () => {
       const { owner, tokenContract, regularAccounts } = await loadFixture(
         defaultDeploy,
       );
@@ -1908,7 +1923,7 @@ describe(`mToken`, function () {
             owner.address,
             PAUSE_TEST_AMOUNT,
           ),
-      ).revertedWith(ERC20_PAUSED_MSG);
+      ).to.not.reverted;
     });
   });
 
@@ -2271,7 +2286,7 @@ describe(`mToken`, function () {
       );
     });
 
-    it('should fail: clawback when ERC20Pausable is paused', async () => {
+    it('clawback when ERC20Pausable is paused', async () => {
       const { owner, tokenContract, regularAccounts } = await loadFixture(
         defaultDeploy,
       );
@@ -2279,9 +2294,7 @@ describe(`mToken`, function () {
       const holder = regularAccounts[0];
       await mint({ tokenContract, owner }, holder, PAUSE_TEST_AMOUNT);
       await setErc20PausablePaused(tokenContract);
-      await clawbackTest({ tokenContract, owner }, PAUSE_TEST_AMOUNT, holder, {
-        revertMessage: ERC20_PAUSED_MSG,
-      });
+      await clawbackTest({ tokenContract, owner }, PAUSE_TEST_AMOUNT, holder);
     });
   });
 
@@ -2842,7 +2855,7 @@ describe('mTokenPermissioned', () => {
       );
     });
 
-    it('should fail: transfer when ERC20Pausable is paused', async () => {
+    it('transfer when ERC20Pausable is paused', async () => {
       const baseFixture = await loadFixture(defaultDeploy);
       const {
         owner,
@@ -2867,12 +2880,11 @@ describe('mTokenPermissioned', () => {
 
       await setErc20PausablePaused(mTokenPermissioned);
 
-      await expect(
-        mTokenPermissioned.connect(from).transfer(to.address, 1),
-      ).revertedWith(ERC20_PAUSED_MSG);
+      await expect(mTokenPermissioned.connect(from).transfer(to.address, 1)).to
+        .not.reverted;
     });
 
-    it('should fail: mint when ERC20Pausable is paused', async () => {
+    it('mint when ERC20Pausable is paused', async () => {
       const baseFixture = await loadFixture(defaultDeploy);
       const {
         owner,
@@ -2890,12 +2902,10 @@ describe('mTokenPermissioned', () => {
       );
       await setErc20PausablePaused(mTokenPermissioned);
 
-      await mint({ tokenContract: mTokenPermissioned, owner }, to, 1, {
-        revertMessage: ERC20_PAUSED_MSG,
-      });
+      await mint({ tokenContract: mTokenPermissioned, owner }, to, 1);
     });
 
-    it('should fail: burn when ERC20Pausable is paused', async () => {
+    it('burn when ERC20Pausable is paused', async () => {
       const baseFixture = await loadFixture(defaultDeploy);
       const {
         owner,
@@ -2914,9 +2924,7 @@ describe('mTokenPermissioned', () => {
       await mint({ tokenContract: mTokenPermissioned, owner }, holder, 1);
       await setErc20PausablePaused(mTokenPermissioned);
 
-      await burn({ tokenContract: mTokenPermissioned, owner }, holder, 1, {
-        revertMessage: ERC20_PAUSED_MSG,
-      });
+      await burn({ tokenContract: mTokenPermissioned, owner }, holder, 1);
     });
 
     it('should fail: mint when receiver is not greenlisted', async () => {
@@ -3610,7 +3618,7 @@ describe('mTokenMinBalance', () => {
       );
     });
 
-    it('should fail: transfer when ERC20Pausable is paused', async () => {
+    it('transfer when ERC20Pausable is paused', async () => {
       const baseFixture = await loadFixture(defaultDeploy);
       const { owner, regularAccounts, mTokenMinBalance } = await loadFixture(
         mTokenMinBalanceFixture.bind(this, baseFixture),
@@ -3633,7 +3641,7 @@ describe('mTokenMinBalance', () => {
 
       await expect(
         mTokenMinBalance.connect(from).transfer(to.address, parseUnits('0.1')),
-      ).revertedWith(ERC20_PAUSED_MSG);
+      ).to.not.reverted;
     });
   });
 

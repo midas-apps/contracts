@@ -267,7 +267,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         Request memory request = redeemRequests[requestId];
 
         _validateRequest(requestId, request.recipient, request.status);
-        _validateAndUpdateNextRequestIdToProcess(requestId, true);
 
         redeemRequests[requestId].status = RequestStatus.Canceled;
 
@@ -1033,8 +1032,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address user = msg.sender;
 
         _validateMTokenAmount(user, amountMTokenIn);
-
-        _validateInstantFee();
 
         (, uint256 mTokenRate, uint256 tokenOutRate) = _convertMTokenToTokenOut(
             amountMTokenIn,

@@ -119,18 +119,18 @@ library RateLimitLibrary {
         uint256 window,
         uint256 limit
     ) internal returns (uint256 previousLimit) {
-        if (limits.windows.add(window)) {
-            require(window >= _MIN_WINDOW, WindowTooShort(window));
-        }
-
         WindowRateLimitConfig storage cfg = limits.configs[window];
-
         previousLimit = cfg.limit;
 
-        cfg.window = window;
-        cfg.limit = limit;
+        if (limits.windows.add(window)) {
+            require(window >= _MIN_WINDOW, WindowTooShort(window));
+            cfg.window = window;
+            cfg.lastUpdated = block.timestamp;
+        } else {
+            _consumeWindowLimit(cfg, 0);
+        }
 
-        _consumeWindowLimit(cfg, 0);
+        cfg.limit = limit;
 
         emit WindowLimitSet(window, limit);
     }

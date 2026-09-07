@@ -514,7 +514,7 @@ export const approveRequestTest = async (
     ? BigNumber.from(newRate)
     : BigNumber.from(
         expectedDepositHoldbackPartRateFromAvg(
-          requestData.depositedUsdAmount,
+          requestData.usdAmountWithoutFees,
           requestData.depositedInstantUsdAmount,
           requestData.tokenOutRate,
           newRate,
@@ -795,7 +795,7 @@ export const safeBulkApproveRequestTest = async (
 
     if (isAvgRate) {
       const holdbackRate = expectedDepositHoldbackPartRateFromAvg(
-        requestData.depositedUsdAmount,
+        requestData.usdAmountWithoutFees,
         requestData.depositedInstantUsdAmount,
         requestData.tokenOutRate,
         rate,
@@ -981,15 +981,9 @@ export const rejectRequestTest = async (
   const nextExpectedRequestIdToProcessAfter =
     await depositVault.nextExpectedRequestIdToProcess();
 
-  if (nextExpectedRequestIdToProcessBefore.lte(requestId)) {
-    expect(nextExpectedRequestIdToProcessAfter).eq(
-      BigNumber.from(requestId).add(1),
-    );
-  } else {
-    expect(nextExpectedRequestIdToProcessAfter).eq(
-      nextExpectedRequestIdToProcessBefore,
-    );
-  }
+  expect(nextExpectedRequestIdToProcessAfter).eq(
+    nextExpectedRequestIdToProcessBefore,
+  );
 
   const upcomingSupplyAfter = await depositVault.upcomingSupply();
 

@@ -174,7 +174,7 @@ describe('RateLimitLibrary', function () {
       expect(getStatusByWindow(statuses, WINDOW_1D)!.limit).eq(newLimit);
     });
 
-    it('should checkpoint stored in-flight using the new limit on update', async () => {
+    it('should checkpoint stored in-flight using the previous limit on update', async () => {
       const { tester } = await loadFixture(rateLimitLibraryFixture);
       const initialLimit = parseUnits('1000');
       const newLimit = parseUnits('500');
@@ -196,7 +196,7 @@ describe('RateLimitLibrary', function () {
       const { inFlight: expectedStored } = calculateWindowRateLimitCapacity({
         amountInFlight: consumed,
         lastUpdated: lastUpdatedAfterConsume,
-        limit: newLimit,
+        limit: initialLimit,
         window: WINDOW_1D,
         now: lastUpdatedAfterSet,
       });
@@ -212,6 +212,30 @@ describe('RateLimitLibrary', function () {
       expect(status!.remaining).eq(
         newLimit.lte(expectedStored) ? 0 : newLimit.sub(expectedStored),
       );
+    });
+
+    it('should fully reset in-flight when previous window elapsed before lowering the limit', async () => {
+      const { tester } = await loadFixture(rateLimitLibraryFixture);
+      const initialLimit = parseUnits('100');
+      const newLimit = parseUnits('50');
+
+      await tester.setWindowLimitPublic(WINDOW_1D, initialLimit);
+      await tester.consumeLimitPublic(initialLimit);
+
+      await time.increase(WINDOW_1D);
+
+      await tester.setWindowLimitPublic(WINDOW_1D, newLimit);
+
+      const [, amountInFlight, lastUpdatedAfterSet] =
+        await tester.getWindowConfigPublic(WINDOW_1D);
+      const statuses = await tester.getWindowStatusesPublic();
+      const status = getStatusByWindow(statuses, WINDOW_1D);
+
+      expect(amountInFlight).eq(0);
+      expect(lastUpdatedAfterSet).eq(await getCurrentBlockTimestamp());
+      expect(status!.inFlight).eq(0);
+      expect(status!.remaining).eq(newLimit);
+      expect(status!.limit).eq(newLimit);
     });
 
     it('should support multiple independent windows', async () => {

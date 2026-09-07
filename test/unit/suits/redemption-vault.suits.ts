@@ -4262,6 +4262,184 @@ export const redemptionVaultSuits = (
           );
         });
 
+        it('redeem request when instant fee below min', async () => {
+          const {
+            redemptionVault,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            owner,
+            mTBILL,
+            stableCoins,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadRvFixture();
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 4);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+          await mintToken(stableCoins.dai, redemptionVault, 1_000_000);
+
+          await setInstantFeeTest({ vault: redemptionVault, owner }, 100);
+          await setMinMaxInstantFeeTest(
+            { vault: redemptionVault, owner },
+            200,
+            10_000,
+          );
+
+          await mintToken(mTBILL, owner, 100_000);
+          await approveBase18(owner, mTBILL, redemptionVault, 100_000);
+
+          await redeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            100,
+          );
+        });
+
+        it('redeem request when instant fee above max', async () => {
+          const {
+            redemptionVault,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            owner,
+            mTBILL,
+            stableCoins,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadRvFixture();
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 4);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+          await mintToken(stableCoins.dai, redemptionVault, 1_000_000);
+
+          await setInstantFeeTest({ vault: redemptionVault, owner }, 5000);
+          await setMinMaxInstantFeeTest(
+            { vault: redemptionVault, owner },
+            0,
+            2000,
+          );
+
+          await mintToken(mTBILL, owner, 100_000);
+          await approveBase18(owner, mTBILL, redemptionVault, 100_000);
+
+          await redeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            100,
+          );
+        });
+
+        it('should fail: MV: invalid instant fee when instant fee below min and instant share > 0', async () => {
+          const {
+            redemptionVault,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            owner,
+            mTBILL,
+            stableCoins,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadRvFixture();
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 4);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+          await mintToken(stableCoins.dai, redemptionVault, 1_000_000);
+
+          await setInstantFeeTest({ vault: redemptionVault, owner }, 100);
+          await setMinMaxInstantFeeTest(
+            { vault: redemptionVault, owner },
+            200,
+            10_000,
+          );
+
+          await mintToken(mTBILL, owner, 100_000);
+          await approveBase18(owner, mTBILL, redemptionVault, 100_000);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+            {
+              revertCustomError: {
+                customErrorName: 'InstantFeeOutOfBounds',
+              },
+            },
+          );
+        });
+
+        it('should fail: MV: invalid instant fee when instant fee above max and instant share > 0', async () => {
+          const {
+            redemptionVault,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            owner,
+            mTBILL,
+            stableCoins,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadRvFixture();
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 4);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+          await mintToken(stableCoins.dai, redemptionVault, 1_000_000);
+
+          await setInstantFeeTest({ vault: redemptionVault, owner }, 5000);
+          await setMinMaxInstantFeeTest(
+            { vault: redemptionVault, owner },
+            0,
+            2000,
+          );
+
+          await mintToken(mTBILL, owner, 100_000);
+          await approveBase18(owner, mTBILL, redemptionVault, 100_000);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+            {
+              revertCustomError: {
+                customErrorName: 'InstantFeeOutOfBounds',
+              },
+            },
+          );
+        });
+
         it('should fail: when function paused', async () => {
           const {
             owner,
@@ -13162,7 +13340,7 @@ export const redemptionVaultSuits = (
           );
         });
 
-        it('should fail: reject request id in non sequential order when sequentialRequestProcessing is enabled', async () => {
+        it('should reject request id in non sequential order when sequentialRequestProcessing is enabled', async () => {
           const {
             owner,
             mockedAggregator,
@@ -13194,7 +13372,7 @@ export const redemptionVaultSuits = (
 
           await asyncForEach(
             Array.from({ length: 3 }, (_, i) => i),
-            async (i) => {
+            async () => {
               await redeemRequestTest(
                 { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
                 stableCoins.dai,
@@ -13207,12 +13385,50 @@ export const redemptionVaultSuits = (
           await rejectRedeemRequestTest(
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             2,
-            {
-              revertCustomError: {
-                customErrorName: 'InvalidRequestSequence',
-                args: [2, 0],
-              },
-            },
+          );
+        });
+
+        it('should reject request when request id exceeds maxApproveRequestId', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadRvFixture();
+
+          await mintToken(stableCoins.dai, redemptionVault, 100000);
+          await mintToken(mTBILL, owner, 200);
+          await approveBase18(owner, mTBILL, redemptionVault, 200);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            100,
+          );
+          await redeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            100,
+          );
+
+          await setMaxApproveRequestIdTest({ redemptionVault, owner }, 0);
+
+          await rejectRedeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            1,
           );
         });
       });

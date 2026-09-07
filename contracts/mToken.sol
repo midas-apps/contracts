@@ -200,6 +200,9 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
             InvalidAddress(_clawbackReceiver)
         );
 
+        // to ensure that upgraded token was not paused
+        _requireNotPaused();
+
         maxSupplyCap = _maxSupplyCap;
         clawbackReceiver = _clawbackReceiver;
 
@@ -479,7 +482,6 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
         uint256 amount
     ) internal override(ERC20PausableUpgradeable) {
         PauseGuardsLibrary.requireNotPaused(accessControl, msg.sig);
-        ERC20PausableUpgradeable._beforeTokenTransfer(from, to, amount);
 
         if (to != address(0)) {
             if (!_inClawback && from != address(0)) {

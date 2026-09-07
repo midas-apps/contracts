@@ -55,7 +55,7 @@ abstract contract DepositVaultTestBase is
                     tokenOutRate: mTokenRate,
                     approvedTokenOutRate: 0,
                     depositedUsdAmount: depositedUsdAmount,
-                    usdAmountWithoutFees: 0,
+                    usdAmountWithoutFees: depositedUsdAmount,
                     recipient: address(0),
                     tokenIn: address(0),
                     status: RequestStatus.Pending,

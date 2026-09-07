@@ -2929,7 +2929,7 @@ export const depositVaultSuits = (
           );
         });
 
-        it('should fail: MV: invalid instant fee when instant fee below min', async () => {
+        it('deposit request when instant fee below min', async () => {
           const {
             depositVault,
             mockedAggregator,
@@ -2957,6 +2957,7 @@ export const depositVaultSuits = (
             200,
             10_000,
           );
+          await setMinAmountTest({ vault: depositVault, owner }, 0);
 
           await approveBase18(owner, stableCoins.dai, depositVault, 1_000_000);
 
@@ -2964,15 +2965,10 @@ export const depositVaultSuits = (
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             stableCoins.dai,
             100,
-            {
-              revertCustomError: {
-                customErrorName: 'InstantFeeOutOfBounds',
-              },
-            },
           );
         });
 
-        it('should fail: MV: invalid instant fee when instant fee above max', async () => {
+        it('deposit request when instant fee above max', async () => {
           const {
             depositVault,
             mockedAggregator,
@@ -3000,11 +2996,107 @@ export const depositVaultSuits = (
             0,
             2000,
           );
+          await setMinAmountTest({ vault: depositVault, owner }, 0);
 
           await approveBase18(owner, stableCoins.dai, depositVault, 1_000_000);
 
           await depositRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            100,
+          );
+        });
+
+        it('should fail: MV: invalid instant fee when instant fee below min and instant share > 0', async () => {
+          const {
+            depositVault,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            owner,
+            mTBILL,
+            stableCoins,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadDvFixture();
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 4);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+          await mintToken(stableCoins.dai, owner, 1_000_000);
+
+          await setInstantFeeTest({ vault: depositVault, owner }, 100);
+          await setMinMaxInstantFeeTest(
+            { vault: depositVault, owner },
+            200,
+            10_000,
+          );
+          await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+          await approveBase18(owner, stableCoins.dai, depositVault, 1_000_000);
+
+          await depositRequestTest(
+            {
+              depositVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
+            stableCoins.dai,
+            100,
+            {
+              revertCustomError: {
+                customErrorName: 'InstantFeeOutOfBounds',
+              },
+            },
+          );
+        });
+
+        it('should fail: MV: invalid instant fee when instant fee above max and instant share > 0', async () => {
+          const {
+            depositVault,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            owner,
+            mTBILL,
+            stableCoins,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadDvFixture();
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 4);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+          await mintToken(stableCoins.dai, owner, 1_000_000);
+
+          await setInstantFeeTest({ vault: depositVault, owner }, 5000);
+          await setMinMaxInstantFeeTest(
+            { vault: depositVault, owner },
+            0,
+            2000,
+          );
+          await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+          await approveBase18(owner, stableCoins.dai, depositVault, 1_000_000);
+
+          await depositRequestTest(
+            {
+              depositVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 50_00,
+            },
             stableCoins.dai,
             100,
             {
@@ -5027,6 +5119,66 @@ export const depositVaultSuits = (
               },
               0,
               parseUnits('5'),
+            );
+          });
+
+          it('when instant fee is applied to instant share', async () => {
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+            } = await loadDvFixture();
+
+            await mintToken(stableCoins.dai, owner, 100);
+            await approveBase18(owner, stableCoins.dai, depositVault, 100);
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData(
+              { mockedAggregator: mockedAggregatorMToken },
+              0.9,
+            );
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
+            await setInstantFeeTest({ vault: depositVault, owner }, 1000);
+
+            await depositRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 50_00,
+              },
+              stableCoins.dai,
+              100,
+            );
+
+            const request = await depositVault.mintRequests(0);
+            expect(request.depositedInstantUsdAmount).eq(parseUnits('45'));
+            expect(request.usdAmountWithoutFees).eq(parseUnits('50'));
+
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+            await approveRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                isAvgRate: true,
+              },
+              0,
+              parseUnits('1'),
             );
           });
 
@@ -10619,7 +10771,7 @@ export const depositVaultSuits = (
           );
         });
 
-        it('should fail: reject request id in non sequential order when sequentialRequestProcessing is enabled', async () => {
+        it('should reject request id in non sequential order when sequentialRequestProcessing is enabled', async () => {
           const {
             owner,
             mockedAggregator,
@@ -10651,7 +10803,7 @@ export const depositVaultSuits = (
 
           await asyncForEach(
             Array.from({ length: 3 }, (_, i) => i),
-            async (i) => {
+            async () => {
               await depositRequestTest(
                 { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
                 stableCoins.dai,
@@ -10664,12 +10816,50 @@ export const depositVaultSuits = (
           await rejectRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             2,
-            {
-              revertCustomError: {
-                customErrorName: 'InvalidRequestSequence',
-                args: [2, 0],
-              },
-            },
+          );
+        });
+
+        it('should reject request when request id exceeds maxApproveRequestId', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            depositVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+          } = await loadDvFixture();
+
+          await mintToken(stableCoins.dai, owner, 200);
+          await approveBase18(owner, stableCoins.dai, depositVault, 200);
+          await addPaymentTokenTest(
+            { vault: depositVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+          await setMinAmountTest({ vault: depositVault, owner }, 0);
+
+          await depositRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            100,
+          );
+          await depositRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            100,
+          );
+
+          await setMaxApproveRequestIdTest({ vault: depositVault, owner }, 0);
+
+          await rejectRequestTest(
+            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
+            1,
           );
         });
       });
@@ -11470,6 +11660,37 @@ export const depositVaultSuits = (
             await depositVault.calculateHoldbackPartRateFromAvgTest(
               depositedUsdAmount,
               amountTokenInstant,
+              tokenOutRate,
+              avgMTokenRate,
+            ),
+          ).eq(expected.toString());
+        });
+
+        it('uses post-fee instant USD when reconstructing previously minted mTokens', async () => {
+          const { depositVault } = await loadDvFixture();
+          const depositedUsdAmount = parseUnits('50');
+          const depositedInstantUsdAmount = parseUnits('45');
+          const grossInstantUsdAmount = parseUnits('50');
+          const tokenOutRate = parseUnits('0.9');
+          const avgMTokenRate = parseUnits('1');
+          const expected = expectedDepositHoldbackPartRateFromAvg(
+            BigInt(depositedUsdAmount.toString()),
+            BigInt(depositedInstantUsdAmount.toString()),
+            BigInt(tokenOutRate.toString()),
+            BigInt(avgMTokenRate.toString()),
+          );
+          const expectedFromGrossInstantUsd =
+            expectedDepositHoldbackPartRateFromAvg(
+              BigInt(depositedUsdAmount.toString()),
+              BigInt(grossInstantUsdAmount.toString()),
+              BigInt(tokenOutRate.toString()),
+              BigInt(avgMTokenRate.toString()),
+            );
+          expect(expected).not.eq(expectedFromGrossInstantUsd);
+          expect(
+            await depositVault.calculateHoldbackPartRateFromAvgTest(
+              depositedUsdAmount,
+              depositedInstantUsdAmount,
               tokenOutRate,
               avgMTokenRate,
             ),

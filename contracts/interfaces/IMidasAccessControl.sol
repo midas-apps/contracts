@@ -151,6 +151,12 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
     error CannotRevokeFromSelf(bytes32 role, address account);
 
     /**
+     * @notice when the role is unexpected
+     * @param role role that is unexpected
+     */
+    error UnexpectedRole(bytes32 role);
+
+    /**
      * @notice when the delay is already set
      */
     error DelayIsAlreadySet();

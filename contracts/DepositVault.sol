@@ -262,7 +262,6 @@ contract DepositVault is ManageableVault, IDepositVault {
         Request memory request = mintRequests[requestId];
 
         _validateRequest(requestId, request.recipient, request.status);
-        _validateAndUpdateNextRequestIdToProcess(requestId, true);
 
         mintRequests[requestId].status = RequestStatus.Canceled;
 
@@ -390,6 +389,8 @@ contract DepositVault is ManageableVault, IDepositVault {
     ) internal virtual returns (CalcAndValidateDepositResult memory result) {
         address user = msg.sender;
 
+        _validateInstantFee();
+
         result = _calcAndValidateDeposit(user, tokenIn, amountToken, true);
 
         _requireSlippageNotExceeded(result.mintAmount, minReceiveAmount);
@@ -462,7 +463,9 @@ contract DepositVault is ManageableVault, IDepositVault {
                 recipientRequest,
                 referrerId,
                 amountTokenInstant,
-                instantResult.tokenAmountInUsd
+                // TODO: move to fn
+                (instantResult.amountTokenWithoutFee *
+                    instantResult.tokenInRate) / 10**18
             ),
             instantResult.mintAmount
         );
@@ -703,8 +706,6 @@ contract DepositVault is ManageableVault, IDepositVault {
     ) internal returns (CalcAndValidateDepositResult memory result) {
         require(amountToken > 0, InvalidAmount());
 
-        _validateInstantFee();
-
         result.tokenDecimals = _tokenDecimals(tokenIn);
 
         _requireTokenExists(tokenIn);
@@ -849,7 +850,7 @@ contract DepositVault is ManageableVault, IDepositVault {
             return 0;
         }
 
-        uint256 targetTotalMTokenValue = ((request.depositedUsdAmount +
+        uint256 targetTotalMTokenValue = ((request.usdAmountWithoutFees +
             request.depositedInstantUsdAmount) * (10**18)) / avgMTokenRate;
 
         uint256 instantPartMTokenValue = (request.depositedInstantUsdAmount *
@@ -862,7 +863,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 holdbackPartValue = targetTotalMTokenValue -
             instantPartMTokenValue;
 
-        return (request.depositedUsdAmount * (10**18)) / holdbackPartValue;
+        return (request.usdAmountWithoutFees * (10**18)) / holdbackPartValue;
     }
 
     /**
