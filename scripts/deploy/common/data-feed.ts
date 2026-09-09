@@ -1,11 +1,11 @@
-import { Provider } from '@ethersproject/providers';
-import { BigNumber, BigNumberish, PopulatedTransaction, Signer } from 'ethers';
+import { BigNumber, BigNumberish, PopulatedTransaction } from 'ethers';
 import { formatUnits, parseUnits } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
   deployAndVerify,
   deployAndVerifyProxy,
+  getContractAt,
   getDeployer,
   getDeploymentGenericConfig,
   getDeploymentGenericConfigOptional,
@@ -191,7 +191,8 @@ const getInitialPriceFromProfileSource = async (
     hre.deploymentConfig,
     source,
   );
-  const sourceAggregator = await hre.ethers.getContractAt(
+  const sourceAggregator = await getContractAt(
+    hre,
     'AggregatorV3Interface',
     sourceAddress,
   );
@@ -301,7 +302,6 @@ const setRoundData = async (
   if (networkConfig.type === 'GROWTH') {
     const aggregator = await getAggregatorGrowthContract(
       hre,
-      hre.ethers.provider,
       aggregatorAddress,
     );
 
@@ -318,11 +318,7 @@ const setRoundData = async (
       8,
     )}/${formatUnits(networkConfig.apr, 8)}% at ${currentTimestamp}`;
   } else {
-    const aggregator = await getAggregatorContract(
-      hre,
-      hre.ethers.provider,
-      aggregatorAddress,
-    );
+    const aggregator = await getAggregatorContract(hre, aggregatorAddress);
 
     tx = await aggregator.populateTransaction.setRoundData(networkConfig.data);
     log = `${token} set price to ${formatUnits(networkConfig.data, 8)}`;
@@ -459,11 +455,14 @@ const updateExpectedAnswers = async (
     );
   }
 
-  const dataFeed = (
-    await hre.ethers.getContractAt('DataFeed', dataFeedAddress)
-  ).connect(hre.ethers.provider) as DataFeed;
+  const dataFeed = (await getContractAt(
+    hre,
+    'DataFeed',
+    dataFeedAddress,
+  )) as DataFeed;
 
-  const aggregator = await hre.ethers.getContractAt(
+  const aggregator = await getContractAt(
+    hre,
     'AggregatorV3Interface',
     await dataFeed.aggregator(),
   );
@@ -670,25 +669,24 @@ const applyExpectedAnswerUpdates = async (
 
 const getAggregatorContract = async (
   hre: HardhatRuntimeEnvironment,
-  provider: Provider | Signer,
   address: string,
 ) => {
-  return (
-    await hre.ethers.getContractAt('CustomAggregatorV3CompatibleFeed', address)
-  ).connect(provider) as CustomAggregatorV3CompatibleFeed;
+  return (await getContractAt(
+    hre,
+    'CustomAggregatorV3CompatibleFeed',
+    address,
+  )) as CustomAggregatorV3CompatibleFeed;
 };
 
 const getAggregatorGrowthContract = async (
   hre: HardhatRuntimeEnvironment,
-  provider: Provider | Signer,
   address: string,
 ) => {
-  return (
-    await hre.ethers.getContractAt(
-      'CustomAggregatorV3CompatibleFeedGrowth',
-      address,
-    )
-  ).connect(provider) as CustomAggregatorV3CompatibleFeedGrowth;
+  return (await getContractAt(
+    hre,
+    'CustomAggregatorV3CompatibleFeedGrowth',
+    address,
+  )) as CustomAggregatorV3CompatibleFeedGrowth;
 };
 
 const isCompositeDataFeedAddresses = (

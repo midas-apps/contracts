@@ -785,6 +785,16 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x5F19515a285A661C2ca31D868241424Ed9c930F5',
       redemptionVaultSwapper: '0x87E88E291CC59591e0bBbAe5f6c37D4E3d75aE2a',
     },
+    mFTAC: {
+      token: '0x63cB25da044dDeF518854EC395C0288c34254C1d',
+      customFeed: '0xB4353a98aDe0EaffC215dC187A50BEa1eba597b3',
+      customFeedDv: '0x8F30023357c5c1C5FdBD3E1a0698F15efb016505',
+      customFeedRv: '0x0202eC9bc941F6A76ca9F339111DE8AAc05A2a72',
+      dataFeedDv: '0x68F4F69A30Fac38C6BF905E6f73e729bB10d73dd',
+      dataFeedRv: '0x3D58712E4d85806Da2F3C8161d67e0E3a39F4777',
+      depositVault: '0xE95F0AC383FeceAf38b07C2aefA128716c9EDEfE',
+      redemptionVaultSwapper: '0x296B6e173bE701d6086E604A19F4E39375ff4DA9',
+    },
   },
   avalanche: {
     accessControl: '0xF6f56D1a218F6129679d966D03c12Af145795fd8',
@@ -794,6 +804,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         token: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E',
         aggregator: '0xF096872672F44d6EBA71458D74fe67F9a77a23B9',
         dataFeed: '0x79b0c48E1AFAcd9B98D54b0b7D6F9dF27b1D101D',
+      },
+      usdt: {
+        token: '0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7',
+        aggregator: '0xEBE676ee90Fe1112671f19b6B7459bC678B67e8a',
+        dataFeed: '0x919935030c71e4983c2aaFD3ED3d4587e10e98e1',
       },
     },
     mGLOBAL: {
@@ -1372,6 +1387,18 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x4F9A119FbE04F89A0491F7c983B9363ED42b187b',
         dataFeed: '0x57F06e32d99227D65eb6BD87EDeA3a18fe4D79dE',
       },
+      wbtc: {
+        token: '0xbfc94cd2b1e55999cfc7347a9313e88702b83d0f',
+        dataFeed: '0x309c748D4A9B04BA30D3ce88a3B72c45a22816Dc',
+        numerator: {
+          aggregator: '0x1ff19d163bd364cffdc873460025f49a9565d77a',
+          dataFeed: '0xD4C0227D65EE32c2B7AAD5436A7957Ba812a679b',
+        },
+        denominator: {
+          aggregator: '0x7e5a7D5d603d53d6681BdDBd1B743796956cdF17',
+          dataFeed: '0xE364b7d329A657Fd7a44166BF4b69626cd4a9b29',
+        },
+      },
     },
     mTBILL: {
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
@@ -1414,6 +1441,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x8A0cE979acAaD48B372c7692Dd79BBa8259caf2C',
       depositVault: '0x70449bbB9e6bee4D1a53151940148F21026d50b9',
       redemptionVault: '0xE14Dbe39D750e24729df95e5F7c93b0E37C65004',
+    },
+    Re7BTC: {
+      token: '0xd774e787ea272881323A39D6263002e57d0F80Ab',
+      customFeed: '0x6F4CeF26f3DD891813120694D4A08a3D598a7018',
+      dataFeed: '0x18dFBc284108c1738F7d5F552301f2982E229704',
+      depositVault: '0xcbb2360C4A7DC8F998E663AD220F774D73A94D2a',
+      redemptionVaultSwapper: '0xeA51e51f631C55E42e81d36AA00e9B5b605859d8',
     },
   },
   zerog: {

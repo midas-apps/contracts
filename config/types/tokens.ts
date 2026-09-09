@@ -88,6 +88,7 @@ export enum MTokenNameEnum {
   mArb = 'mArb',
   mArbBTC = 'mArbBTC',
   mArbETH = 'mArbETH',
+  mFTAC = 'mFTAC',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
