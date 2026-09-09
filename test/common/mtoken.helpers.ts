@@ -10,7 +10,10 @@ import {
   getCurrentBlockTimestamp,
   handleRevert,
 } from './common.helpers';
-import { calculateWindowRateLimitCapacity } from './manageable-vault.helpers';
+import {
+  calculateWindowLimitAfterSet,
+  calculateWindowRateLimitCapacity,
+} from './manageable-vault.helpers';
 
 import { MToken } from '../../typechain-types';
 
@@ -376,6 +379,7 @@ export const increaseMintRateLimitTest = async (
   }
 
   const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses();
+  const timestampBefore = await getCurrentBlockTimestamp();
 
   await expect(
     tokenContract.connect(owner).increaseMintRateLimit(window, newLimit),
@@ -393,10 +397,11 @@ export const increaseMintRateLimitTest = async (
   )?.[0];
 
   if (configBefore) {
-    const { inFlight, remaining } = calculateWindowRateLimitCapacity({
-      amountInFlight: configBefore.inFlight,
-      lastUpdated: configBefore.lastUpdated,
-      limit: newLimit,
+    const { inFlight, remaining } = calculateWindowLimitAfterSet({
+      inFlightBefore: configBefore.inFlight,
+      snapshotTimestamp: timestampBefore,
+      previousLimit: configBefore.limit,
+      newLimit,
       window,
       now: currentTimestamp,
     });
@@ -471,6 +476,7 @@ export const decreaseMintRateLimitTest = async (
   }
 
   const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses();
+  const timestampBefore = await getCurrentBlockTimestamp();
 
   await expect(
     tokenContract.connect(owner).decreaseMintRateLimit(window, newLimit),
@@ -490,10 +496,11 @@ export const decreaseMintRateLimitTest = async (
   )?.[0];
 
   if (configBefore) {
-    const { inFlight, remaining } = calculateWindowRateLimitCapacity({
-      amountInFlight: configBefore.inFlight,
-      lastUpdated: configBefore.lastUpdated,
-      limit: newLimit,
+    const { inFlight, remaining } = calculateWindowLimitAfterSet({
+      inFlightBefore: configBefore.inFlight,
+      snapshotTimestamp: timestampBefore,
+      previousLimit: configBefore.limit,
+      newLimit,
       window,
       now: currentTimestamp,
     });

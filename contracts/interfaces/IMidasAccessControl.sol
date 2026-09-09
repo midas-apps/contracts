@@ -189,6 +189,19 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
 
     /**
      * @notice Add or remove a grant operator for a specific contract function scope.
+     * @dev Caller must hold `masterRole`
+     * @param masterRole OZ role for the scope
+     * @param targetContract scoped contract
+     * @param params array of SetGrantOperatorRoleParams
+     */
+    function setGrantOperatorRoleMult(
+        bytes32 masterRole,
+        address targetContract,
+        SetGrantOperatorRoleParams[] calldata params
+    ) external;
+
+    /**
+     * @notice Add or remove a grant operator for a specific contract function scope.
      * @dev `targetContract` must implement `IMidasAccessControlManaged` interface;
      * Caller must hold `contractAdminRole` of a target contract;
      * @param targetContract scoped contract

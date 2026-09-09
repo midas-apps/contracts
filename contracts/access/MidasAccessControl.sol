@@ -94,7 +94,7 @@ contract MidasAccessControl is
 
     /**
      * @notice upgradeable pattern contract`s initializer
-     * @param _defaultDelay default delay
+     * @param _defaultDelay default delay. 0 for no delay
      * @param _userFacingRoles array of additional user facing roles
      */
     function initialize(
@@ -115,6 +115,7 @@ contract MidasAccessControl is
 
     /**
      * @notice initializerV2. Initializes user facing roles
+     * @param _defaultDelay default delay. 0 for no delay
      * @param _userFacingRoles array of additional user facing roles
      */
     function initializeV2(
@@ -214,12 +215,12 @@ contract MidasAccessControl is
      * @inheritdoc IMidasAccessControl
      */
     function setGrantOperatorRoleMult(
+        bytes32 masterRole,
         address targetContract,
         SetGrantOperatorRoleParams[] calldata params
-    ) external {
+    ) public {
         require(params.length > 0, EmptyArray());
 
-        bytes32 masterRole = _getContractAdminRole(targetContract);
         _validateRoleAccess(masterRole);
 
         MidasAuthLibrary.requireNotUserFacingRole(this, masterRole);
@@ -252,6 +253,17 @@ contract MidasAccessControl is
                 param.enabled
             );
         }
+    }
+
+    /**
+     * @inheritdoc IMidasAccessControl
+     */
+    function setGrantOperatorRoleMult(
+        address targetContract,
+        SetGrantOperatorRoleParams[] calldata params
+    ) external {
+        bytes32 masterRole = _getContractAdminRole(targetContract);
+        setGrantOperatorRoleMult(masterRole, targetContract, params);
     }
 
     /**

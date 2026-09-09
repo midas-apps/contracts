@@ -420,11 +420,21 @@ export const setIsUserFacingRoleTester = async (
   });
 };
 
+const SET_GRANT_OPERATOR_ROLE_MULT_WITH_MASTER =
+  'setGrantOperatorRoleMult(bytes32,address,(uint32,bytes4,address,bool)[])';
+const SET_GRANT_OPERATOR_ROLE_MULT_FROM_TARGET =
+  'setGrantOperatorRoleMult(address,(uint32,bytes4,address,bool)[])';
+
 export const setGrantOperatorRoleTester = async (
   {
     accessControl,
     owner,
-  }: { accessControl: MidasAccessControl; owner: SignerWithAddress },
+    masterRole,
+  }: {
+    accessControl: MidasAccessControl;
+    owner: SignerWithAddress;
+    masterRole?: string;
+  },
   targetContract: string,
   params: {
     functionSelector: string;
@@ -436,25 +446,39 @@ export const setGrantOperatorRoleTester = async (
 ) => {
   const from = opt?.from ?? owner;
 
-  const callFn = accessControl.connect(from).setGrantOperatorRoleMult.bind(
-    this,
-    targetContract,
-    params.map((param) => ({
-      ...param,
-      delay: param.delay ?? 0,
-    })),
-  );
+  const normalizedParams = params.map((param) => ({
+    ...param,
+    delay: param.delay ?? 0,
+  }));
 
-  const masterRole = params.length
-    ? await IMidasAccessControlManaged__factory.connect(
-        targetContract,
-        accessControl.provider,
-      ).contractAdminRole()
-    : constants.HashZero;
+  const callFn = () =>
+    masterRole
+      ? accessControl
+          .connect(from)
+          [SET_GRANT_OPERATOR_ROLE_MULT_WITH_MASTER](
+            masterRole,
+            targetContract,
+            normalizedParams,
+          )
+      : accessControl
+          .connect(from)
+          [SET_GRANT_OPERATOR_ROLE_MULT_FROM_TARGET](
+            targetContract,
+            normalizedParams,
+          );
 
   if (await handleRevert(callFn, accessControl, opt)) {
     return;
   }
+
+  masterRole =
+    masterRole ??
+    (params.length
+      ? await IMidasAccessControlManaged__factory.connect(
+          targetContract,
+          accessControl.provider,
+        ).contractAdminRole()
+      : constants.HashZero);
 
   const statesBefore = await Promise.all(
     params.map(async (param) => {
@@ -717,7 +741,6 @@ export const setPermissionRoleTester = async (
 type SetupFunctionAccessGrantOperatorParams = {
   accessControl: MidasAccessControl;
   owner: SignerWithAddress;
-  // TODO: remove it
   masterRole: string;
   targetContract: string;
   functionSelector: string;
@@ -727,17 +750,22 @@ type SetupFunctionAccessGrantOperatorParams = {
 export const setupGrantOperatorRole = async ({
   accessControl,
   owner,
+  masterRole,
   targetContract,
   functionSelector,
   grantOperator,
 }: SetupFunctionAccessGrantOperatorParams) => {
-  await setGrantOperatorRoleTester({ accessControl, owner }, targetContract, [
-    {
-      functionSelector,
-      operator: grantOperator.address,
-      enabled: true,
-    },
-  ]);
+  await setGrantOperatorRoleTester(
+    { accessControl, owner, masterRole },
+    targetContract,
+    [
+      {
+        functionSelector,
+        operator: grantOperator.address,
+        enabled: true,
+      },
+    ],
+  );
 };
 
 export const setupPermissionRole = async (

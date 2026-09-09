@@ -114,6 +114,43 @@ export const calculateWindowRateLimitCapacity = ({
   return { inFlight, remaining };
 };
 
+/**
+ * Mirrors `RateLimitLibrary.setWindowLimit` on an existing window: checkpoint
+ * with the current limit (`_consumeWindowLimit(cfg, 0)`), then apply `newLimit`.
+ *
+ * `inFlightBefore` must be the view snapshot taken at `snapshotTimestamp`.
+ */
+export const calculateWindowLimitAfterSet = ({
+  inFlightBefore,
+  snapshotTimestamp,
+  previousLimit,
+  newLimit,
+  window,
+  now,
+}: {
+  inFlightBefore: BigNumberish;
+  snapshotTimestamp: BigNumberish;
+  previousLimit: BigNumberish;
+  newLimit: BigNumberish;
+  window: BigNumberish;
+  now: BigNumberish;
+}): WindowRateLimitCapacity => {
+  const { inFlight } = calculateWindowRateLimitCapacity({
+    amountInFlight: inFlightBefore,
+    lastUpdated: snapshotTimestamp,
+    limit: previousLimit,
+    window,
+    now,
+  });
+
+  const newLimitBn = BigNumber.from(newLimit);
+  const remaining = newLimitBn.lte(inFlight)
+    ? BigNumber.from(0)
+    : newLimitBn.sub(inFlight);
+
+  return { inFlight, remaining };
+};
+
 export const setInstantFeeTest = async (
   { vault, owner }: CommonParamsChangePaymentToken,
   newFee: BigNumberish,
@@ -314,6 +351,7 @@ export const setInstantLimitConfigTest = async (
   }
 
   const limitConfigsBefore = await vault.getInstantLimitStatuses();
+  const timestampBefore = await getCurrentBlockTimestamp();
 
   await expect(
     vault
@@ -334,10 +372,11 @@ export const setInstantLimitConfigTest = async (
   const currentTimestamp = await getCurrentBlockTimestamp();
 
   if (configBefore) {
-    const { inFlight, remaining } = calculateWindowRateLimitCapacity({
-      amountInFlight: configBefore.inFlight,
-      lastUpdated: configBefore.lastUpdated,
-      limit: newLimitValue,
+    const { inFlight, remaining } = calculateWindowLimitAfterSet({
+      inFlightBefore: configBefore.inFlight,
+      snapshotTimestamp: timestampBefore,
+      previousLimit: configBefore.limit,
+      newLimit: newLimitValue,
       window,
       now: currentTimestamp,
     });

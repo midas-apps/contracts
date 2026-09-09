@@ -918,6 +918,95 @@ describe('MidasAccessControl', function () {
         acErrors.WMAC_HASNT_PERMISSION().customErrorName,
       );
     });
+
+    it('should fail: cannot change admin of DEFAULT_ADMIN_ROLE', async () => {
+      const { accessControl, roles } = await loadFixture(defaultDeploy);
+
+      await expect(
+        accessControl.setRoleAdmin(
+          roles.common.defaultAdmin,
+          roles.common.blacklistedOperator,
+        ),
+      )
+        .revertedWithCustomError(accessControl, 'UnexpectedRole')
+        .withArgs(roles.common.defaultAdmin);
+    });
+
+    it('should emit RoleAdminChanged and update getRoleAdmin', async () => {
+      const { accessControl, roles } = await loadFixture(defaultDeploy);
+
+      const previousAdminRole = await accessControl.getRoleAdmin(
+        roles.common.blacklisted,
+      );
+      expect(previousAdminRole).eq(roles.common.blacklistedOperator);
+
+      await expect(
+        accessControl.setRoleAdmin(
+          roles.common.blacklisted,
+          roles.common.greenlistedOperator,
+        ),
+      )
+        .to.emit(accessControl, 'RoleAdminChanged')
+        .withArgs(
+          roles.common.blacklisted,
+          previousAdminRole,
+          roles.common.greenlistedOperator,
+        );
+
+      expect(await accessControl.getRoleAdmin(roles.common.blacklisted)).eq(
+        roles.common.greenlistedOperator,
+      );
+    });
+
+    it('previous role admin cannot manage the role after admin is changed', async () => {
+      const { accessControl, owner, regularAccounts, roles } =
+        await loadFixture(defaultDeploy);
+
+      await grantRoleTester(
+        { accessControl, owner },
+        roles.common.blacklistedOperator,
+        regularAccounts[0].address,
+      );
+
+      await accessControl.setRoleAdmin(
+        roles.common.blacklisted,
+        roles.common.greenlistedOperator,
+      );
+
+      await grantRoleTester(
+        { accessControl, owner },
+        roles.common.blacklisted,
+        regularAccounts[1].address,
+        undefined,
+        {
+          from: regularAccounts[0],
+          revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
+        },
+      );
+
+      await grantRoleTester(
+        { accessControl, owner },
+        roles.common.greenlistedOperator,
+        regularAccounts[2].address,
+      );
+
+      await grantRoleTester(
+        { accessControl, owner },
+        roles.common.blacklisted,
+        regularAccounts[1].address,
+        undefined,
+        {
+          from: regularAccounts[2],
+        },
+      );
+
+      expect(
+        await accessControl.hasRole(
+          roles.common.blacklisted,
+          regularAccounts[1].address,
+        ),
+      ).eq(true);
+    });
   });
 
   describe('setUserFacingRoleMult()', () => {
@@ -1163,7 +1252,7 @@ describe('MidasAccessControl', function () {
         roles.common.greenlistedOperator,
       );
       const data = accessControl.interface.encodeFunctionData(
-        'setGrantOperatorRoleMult',
+        'setGrantOperatorRoleMult(address,(uint32,bytes4,address,bool)[])',
         [
           wAccessControlTester.address,
           [
@@ -1206,7 +1295,7 @@ describe('MidasAccessControl', function () {
       } = await loadFixture(defaultDeploy);
 
       const selector = encodeFnSelector(
-        'setGrantOperatorRoleMult(bytes32,(address,bytes4,address,bool)[])',
+        'setGrantOperatorRoleMult(bytes32,address,(uint32,bytes4,address,bool)[])',
       );
       await wAccessControlTester.setContractAdminRole(
         roles.common.greenlistedOperator,
@@ -1353,6 +1442,256 @@ describe('MidasAccessControl', function () {
           },
         ],
         { revertCustomError: { customErrorName: 'DelayIsAlreadySet' } },
+      );
+    });
+
+    it('extracts master role from target contract when not provided', async () => {
+      const { accessControl, owner, roles, wAccessControlTester } =
+        await loadFixture(defaultDeploy);
+
+      const selector = encodeFnSelector('setGreenlistEnable(bool)');
+      const contractAdminRole = roles.common.greenlistedOperator;
+
+      await wAccessControlTester.setContractAdminRole(contractAdminRole);
+
+      await setGrantOperatorRoleTester(
+        { accessControl, owner },
+        wAccessControlTester.address,
+        [
+          {
+            functionSelector: selector,
+            operator: owner.address,
+            enabled: true,
+          },
+        ],
+      );
+
+      expect(
+        await accessControl[
+          'isFunctionAccessGrantOperator(bytes32,address,bytes4,address)'
+        ](
+          contractAdminRole,
+          wAccessControlTester.address,
+          selector,
+          owner.address,
+        ),
+      ).eq(true);
+      expect(
+        await accessControl[
+          'isFunctionAccessGrantOperator(bytes32,address,bytes4,address)'
+        ](
+          roles.common.defaultAdmin,
+          wAccessControlTester.address,
+          selector,
+          owner.address,
+        ),
+      ).eq(false);
+    });
+
+    it('when provided master role differs from target contract admin role', async () => {
+      const {
+        accessControl,
+        owner,
+        regularAccounts,
+        roles,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      const selector = encodeFnSelector('setGreenlistEnable(bool)');
+      const masterRole = roles.common.greenlistedOperator;
+      const operator = regularAccounts[0];
+      const contractAdminRole = await wAccessControlTester.contractAdminRole();
+
+      expect(contractAdminRole).eq(roles.common.defaultAdmin);
+      expect(masterRole).not.eq(contractAdminRole);
+
+      await setGrantOperatorRoleTester(
+        { accessControl, owner, masterRole },
+        wAccessControlTester.address,
+        [
+          {
+            functionSelector: selector,
+            operator: operator.address,
+            enabled: true,
+          },
+        ],
+      );
+
+      expect(
+        await accessControl[
+          'isFunctionAccessGrantOperator(bytes32,address,bytes4,address)'
+        ](masterRole, wAccessControlTester.address, selector, operator.address),
+      ).eq(true);
+      expect(
+        await accessControl[
+          'isFunctionAccessGrantOperator(bytes32,address,bytes4,address)'
+        ](
+          contractAdminRole,
+          wAccessControlTester.address,
+          selector,
+          operator.address,
+        ),
+      ).eq(false);
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        masterRole,
+        wAccessControlTester.address,
+        selector,
+        [{ account: regularAccounts[1].address, enabled: true }],
+        undefined,
+        { from: operator },
+      );
+
+      expect(
+        await accessControl[
+          'hasFunctionPermission(bytes32,address,bytes4,address)'
+        ](
+          masterRole,
+          wAccessControlTester.address,
+          selector,
+          regularAccounts[1].address,
+        ),
+      ).eq(true);
+
+      await setPermissionRoleTester(
+        { accessControl, owner },
+        undefined,
+        wAccessControlTester.address,
+        selector,
+        [{ account: regularAccounts[2].address, enabled: true }],
+        undefined,
+        {
+          from: operator,
+          revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
+        },
+      );
+    });
+
+    it('should fail: caller does not hold the provided master role', async () => {
+      const {
+        accessControl,
+        owner,
+        regularAccounts,
+        roles,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      await setGrantOperatorRoleTester(
+        {
+          accessControl,
+          owner,
+          masterRole: roles.common.greenlistedOperator,
+        },
+        wAccessControlTester.address,
+        [
+          {
+            functionSelector: encodeFnSelector('setGreenlistEnable(bool)'),
+            operator: regularAccounts[1].address,
+            enabled: true,
+          },
+        ],
+        {
+          from: regularAccounts[0],
+          revertCustomError: acErrors.WMAC_HASNT_PERMISSION(),
+        },
+      );
+    });
+
+    it('should fail: when provided master role is user facing', async () => {
+      const { accessControl, owner, roles, wAccessControlTester } =
+        await loadFixture(defaultDeploy);
+
+      await setGrantOperatorRoleTester(
+        {
+          accessControl,
+          owner,
+          masterRole: roles.common.greenlisted,
+        },
+        wAccessControlTester.address,
+        [
+          {
+            functionSelector: encodeFnSelector('setGreenlistEnable(bool)'),
+            operator: owner.address,
+            enabled: true,
+          },
+        ],
+        {
+          revertCustomError: {
+            customErrorName: 'UserFacingRoleNotAllowed',
+          },
+        },
+      );
+    });
+
+    it('should fail: when params length is 0 and master role is provided', async () => {
+      const { accessControl, owner, roles, wAccessControlTester } =
+        await loadFixture(defaultDeploy);
+
+      await setGrantOperatorRoleTester(
+        {
+          accessControl,
+          owner,
+          masterRole: roles.common.greenlistedOperator,
+        },
+        wAccessControlTester.address,
+        [],
+        {
+          revertCustomError: { customErrorName: 'EmptyArray' },
+        },
+      );
+    });
+
+    it('when timelock delay is not 0 - schedule and execute the tx with explicit master role', async () => {
+      const {
+        accessControl,
+        owner,
+        roles,
+        timelock,
+        timelockManager,
+        wAccessControlTester,
+      } = await loadFixture(defaultDeploy);
+
+      const masterRole = roles.common.greenlistedOperator;
+
+      await setRoleTimelocksTester(
+        { timelockManager, timelock, owner, accessControl },
+        [masterRole],
+        [3600],
+      );
+
+      const data = accessControl.interface.encodeFunctionData(
+        'setGrantOperatorRoleMult(bytes32,address,(uint32,bytes4,address,bool)[])',
+        [
+          masterRole,
+          wAccessControlTester.address,
+          [
+            {
+              delay: 0,
+              functionSelector: encodeFnSelector('setGreenlistEnable(bool)'),
+              operator: owner.address,
+              enabled: true,
+            },
+          ],
+        ],
+      );
+
+      await bulkScheduleTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        [accessControl.address],
+        [data],
+        {},
+        { from: owner },
+      );
+
+      await increase(3600);
+
+      await executeTimelockOperationTester(
+        { timelockManager, timelock, owner, accessControl },
+        accessControl.address,
+        data,
+        owner.address,
+        { from: owner },
       );
     });
   });
