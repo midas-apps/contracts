@@ -112,6 +112,31 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
       },
     },
     [chainIds.main]: {
+      europ: {
+        customAggregator: {
+          description: 'EUROP/EUR',
+          minAnswer: parseUnits('0.9999', 8),
+          maxAnswer: parseUnits('1', 8),
+          maxAnswerDeviation: parseUnits('0', 8),
+        },
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.9999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+        postDeploy: {
+          setRoundData: {
+            data: parseUnits('1', 8),
+          },
+        },
+      },
+      frxusd: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: 99700000,
+          maxAnswer: 100300000,
+        },
+      },
       dai: {
         dataFeed: {
           healthyDiff: 60 * 60,
@@ -279,15 +304,19 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
       },
       cbbtc: {
         dataFeed: {
-          healthyDiff: constants.MaxUint256,
-          minAnswer: parseUnits('0.99999', 8),
-          maxAnswer: parseUnits('1', 8),
-        },
-        customAggregator: {
-          minAnswer: parseUnits('0.99999', 8),
-          maxAnswer: parseUnits('1', 8),
-          description: 'cbBTC/BTC',
-          maxAnswerDeviation: parseUnits('0', 8),
+          numerator: {
+            healthyDiff: 25 * 60 * 60,
+            minAnswer: 1,
+            maxAnswer: constants.MaxInt256,
+          },
+          denominator: {
+            healthyDiff: 2 * 60 * 60,
+            minAnswer: 1,
+            maxAnswer: constants.MaxInt256,
+          },
+          feedType: 'composite',
+          minAnswer: parseUnits('0.98'),
+          maxAnswer: parseUnits('1.02'),
         },
       },
       sbtc: {
@@ -357,15 +386,19 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
       },
       tbtc: {
         dataFeed: {
-          healthyDiff: constants.MaxUint256,
-          minAnswer: parseUnits('0.99999', 8),
-          maxAnswer: parseUnits('1', 8),
-        },
-        customAggregator: {
-          minAnswer: parseUnits('0.99999', 8),
-          maxAnswer: parseUnits('1', 8),
-          maxAnswerDeviation: parseUnits('0', 8),
-          description: 'tBTC/BTC',
+          numerator: {
+            healthyDiff: 25 * 60 * 60,
+            minAnswer: 1,
+            maxAnswer: constants.MaxInt256,
+          },
+          denominator: {
+            healthyDiff: 2 * 60 * 60,
+            minAnswer: 1,
+            maxAnswer: constants.MaxInt256,
+          },
+          feedType: 'composite',
+          minAnswer: parseUnits('0.98'),
+          maxAnswer: parseUnits('1.02'),
         },
       },
       syrupusdc: {

@@ -59,6 +59,12 @@ export const mGLOeuroDeploymentConfig: DeploymentConfig = {
             {
               paymentTokens: [
                 {
+                  token: 'europ',
+                  allowance: parseUnits('1000000', 18),
+                  isStable: true,
+                  fee: parseUnits('0', 2),
+                },
+                {
                   token: 'eurc',
                   allowance: parseUnits('1000000000', 18),
                   isStable: true,
@@ -75,6 +81,12 @@ export const mGLOeuroDeploymentConfig: DeploymentConfig = {
             },
             {
               paymentTokens: [
+                {
+                  token: 'europ',
+                  allowance: parseUnits('1000000', 18),
+                  isStable: true,
+                  fee: parseUnits('0', 2),
+                },
                 {
                   token: 'eurc',
                   allowance: parseUnits('1000000000', 18),

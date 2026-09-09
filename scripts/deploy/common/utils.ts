@@ -323,6 +323,7 @@ export const sendAndWaitForCustomTxSign = async (
   hre: HardhatRuntimeEnvironment,
   populatedTx: PopulatedTransaction,
   txSignMetadata?: {
+    idempotenceId?: string;
     mToken?: MTokenName;
     comment?: string;
     action?:
@@ -425,7 +426,7 @@ export const sendAndWaitForCustomTxSign = async (
     {
       ...(txSignMetadata ?? {}),
       chainId: hreNetwork.network.config.chainId,
-      idempotenceId: hreNetwork.contextId,
+      idempotenceId: txSignMetadata?.idempotenceId ?? hreNetwork.contextId,
     },
   );
 

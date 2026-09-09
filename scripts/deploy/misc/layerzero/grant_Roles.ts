@@ -1,7 +1,8 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { MTokenName } from '../../../../config';
+import { MTokenName, Network } from '../../../../config';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
+import { assertLzNetworkNotRetired } from '../../../../config/misc';
 import { getRolesForToken } from '../../../../helpers/roles';
 import { DeployFunction } from '../../common/types';
 import { getDeployer, sendAndWaitForCustomTxSign } from '../../common/utils';
@@ -10,6 +11,7 @@ const func: DeployFunction = async (
   hre: HardhatRuntimeEnvironment,
   mToken: MTokenName,
 ) => {
+  assertLzNetworkNotRetired(hre.network.name as Network, mToken);
   const deployer = await getDeployer(hre);
 
   const addresses = getCurrentAddresses(hre);

@@ -232,8 +232,19 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
       cbbtc: {
         token: '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf',
-        aggregator: '0xFa4f57E80AC77A2679e1ADFD9906977769457718',
-        dataFeed: '0x6545603e5C6B7f59085c230B2C0Bf2658b83aAc3',
+        numerator: {
+          // Chainlink cbBTC/USD
+          aggregator: '0x2665701293fCbEB223D11A08D826563EDcCE423A',
+          dataFeed: '0x897526CAbfb64A8264a2BaFC682d5A5b4017e54c',
+        },
+        denominator: {
+          // Chainlink BTC/USD
+          aggregator: '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c',
+          dataFeed: '0xe953504abf760A4CBb6C3689F6619C117Fb750B3',
+        },
+        // Old dummy 1:1 cbBTC/BTC dataFeed:
+        // 0x6545603e5C6B7f59085c230B2C0Bf2658b83aAc3
+        dataFeed: '0x440707BDDa8F265C82cc70cc1EA1805248Bc948C',
       },
       sbtc: {
         token: '0x094c0e36210634c3CfA25DC11B96b562E0b07624',
@@ -267,8 +278,19 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
       tbtc: {
         token: '0x18084fba666a33d37592fa2633fd49a74dd93a88',
-        aggregator: '0x504C048C36ff22b90D82Fb70fef99b321411Fb5d',
-        dataFeed: '0x19569a89fEf7276a7f5967b6F6910c0573616f07',
+        numerator: {
+          // Chainlink tBTC/USD
+          aggregator: '0x8350b7De6a6a2C1368E7D4Bd968190e13E354297',
+          dataFeed: '0x86bDd470881EaebA87b3C94E5E4386eFdEE8847C',
+        },
+        denominator: {
+          // Chainlink BTC/USD
+          aggregator: '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c',
+          dataFeed: '0xe953504abf760A4CBb6C3689F6619C117Fb750B3',
+        },
+        // Old dummy 1:1 tBTC/BTC dataFeed:
+        // 0x19569a89fEf7276a7f5967b6F6910c0573616f07
+        dataFeed: '0x283BF512e6cC780F6E9230A23DBB6D8d5FDD3636',
       },
       syrupusdc: {
         token: '0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b',
@@ -279,6 +301,16 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         token: '0x356B8d89c1e1239Cbbb9dE4815c39A1474d5BA7D',
         aggregator: '0xAd298d3eC4Af69Af52701A539d3bD14873Ac8493',
         dataFeed: '0x1bB6DDf0886c04e23978b755C0574BA92f32F0fA',
+      },
+      europ: {
+        token: '0x888883b5F5D21fb10Dfeb70e8f9722B9FB0E5E51',
+        aggregator: '0x7e6c583f2f7B3Fe20D5d13ECdA563912E34a9104',
+        dataFeed: '0xA82A480FFBa34Dc16CCAa4c98881b42F821B417D',
+      },
+      frxusd: {
+        token: '0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29',
+        aggregator: '0x9B4a96210bc8D9D55b1908B465D8B0de68B7fF83',
+        dataFeed: '0x379bdE9377F9069fDd3Ee46828860fb52db49844',
       },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
@@ -567,6 +599,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x2c7d47c56015be6aa8442Da78796a965928E7c4e',
       depositVault: '0x511d88E64d843Ee11Bf039a3EB837393001aEDE7',
       redemptionVaultSwapper: '0xc33dAdA688f224c514682Ec6Ba940888d43C4b29',
+      layerZero: {
+        oft: '0xB97e7987B38C360EA5613C26D999304DDfC8d417',
+      },
     },
     mTU: {
       token: '0xCdE7dD466a1121235924383A6A65948311c5b4aC',
@@ -1679,6 +1714,16 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xf91288dC7F33e6f4aD3B62090A86b8978B48b01c',
       layerZero: {
         oft: '0xe9977b9B22Ed2C19DCd68D0403163EFcd45bF874',
+      },
+    },
+    mROX: {
+      token: '0x6CF55183eA297ba200Cf88419Bba156EBA2Ed206',
+      customFeed: '0x47b301D6Fe113F97376B82D41E5CD1Ea79a8F6C4',
+      dataFeed: '0x4F34cAECf0cAa9D57534980a35Fc7DD22dE55fa3',
+      depositVault: '0xDcd123ba4E0833380ce66A5BaD3a11de4CeD452B',
+      redemptionVaultSwapper: '0x3359F3ADB4a8844DfB4416f56A454b144332Dacb',
+      layerZero: {
+        oft: '0x01859189cf84B01efC545BbF2CA1e130CeE134Ad',
       },
     },
   },

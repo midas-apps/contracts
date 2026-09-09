@@ -146,9 +146,11 @@ export enum PaymentTokenNameEnum {
   yinj = 'yinj',
   eurc = 'eurc',
   eurcv = 'eurcv',
+  europ = 'europ',
   usdg = 'usdg',
   pyusd = 'pyusd',
   ausd = 'ausd',
+  frxusd = 'frxusd',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;

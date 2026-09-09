@@ -146,7 +146,15 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   ],
   'deploy:lz:post:grant:roles': [deployLz('grant_Roles'), mTokenParam()],
   'deploy:lz:post:revoke:roles': [deployLz('revoke_Roles'), mTokenParam()],
-  'deploy:lz:deprecate': [deployLz('deprecate_Ofts')],
+  'deploy:lz:deprecate': [
+    deployLz('deprecate_Ofts'),
+    mTokenParam(),
+    () => ({
+      ...actionParam(true)(),
+      description:
+        'status (default) | disable | finalize | queue-finalize | verify. DRY_RUN=false queues all missing transactions',
+    }),
+  ],
 
   // Axelar
   'deploy:axelar:executable': [
