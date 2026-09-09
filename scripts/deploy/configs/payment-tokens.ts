@@ -435,6 +435,13 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           maxAnswer: parseUnits('1.003', 8),
         },
       },
+      usdt: {
+        dataFeed: {
+          healthyDiff: 24 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
     },
     [chainIds.robinhood]: {
       usdg: {
@@ -497,6 +504,23 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           healthyDiff: 24 * 60 * 60,
           minAnswer: parseUnits('0.997', 8),
           maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+      wbtc: {
+        dataFeed: {
+          feedType: 'composite',
+          minAnswer: parseUnits('0.997', 18),
+          maxAnswer: parseUnits('1.003', 18),
+          numerator: {
+            healthyDiff: 120,
+            minAnswer: parseUnits('20000', 8),
+            maxAnswer: parseUnits('500000', 8),
+          },
+          denominator: {
+            healthyDiff: 20,
+            minAnswer: parseUnits('20000', 8),
+            maxAnswer: parseUnits('500000', 8),
+          },
         },
       },
     },

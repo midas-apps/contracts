@@ -75,8 +75,8 @@ export const mGLOBALDeploymentConfig: DeploymentConfig = {
             {
               paymentTokens: [
                 {
-                  token: 'usdc',
-                  allowance: parseUnits('1000000000', 18),
+                  token: 'usdt',
+                  allowance: parseUnits('500000000', 18),
                   isStable: true,
                   fee: 0,
                 },
@@ -86,8 +86,8 @@ export const mGLOBALDeploymentConfig: DeploymentConfig = {
             {
               paymentTokens: [
                 {
-                  token: 'usdc',
-                  allowance: parseUnits('1000000000', 18),
+                  token: 'usdt',
+                  allowance: parseUnits('500000000', 18),
                   isStable: true,
                   fee: 0,
                 },

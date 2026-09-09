@@ -41,6 +41,7 @@ import { mEVETHDeploymentConfig } from './mEVETH';
 import { mEVUSDDeploymentConfig } from './mEVUSD';
 import { mFARMDeploymentConfig } from './mFARM';
 import { mFONEDeploymentConfig, mFONEUnloopDeploymentConfig } from './mFONE';
+import { mFTACDeploymentConfig } from './mFTAC';
 import {
   mGLODeploymentConfig,
   mGLODialecticDeploymentConfig,
@@ -192,6 +193,7 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mArb: mArbDeploymentConfig,
   mArbETH: mArbETHDeploymentConfig,
   mArbBTC: mArbBTCDeploymentConfig,
+  mFTAC: mFTACDeploymentConfig,
 };
 
 type NamedDeploymentConfig = {
