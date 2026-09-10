@@ -7,6 +7,7 @@ import { ustbDepositFixture } from './fixtures/ustb.fixture';
 import { approveBase18 } from '../common/common.helpers';
 import {
   depositInstantWithUstbTest,
+  depositRequestWithUstbTest,
   setMockUstbStablecoinConfig,
   setUstbDepositsEnabledTest,
 } from '../common/deposit-vault-ustb.helpers';
@@ -44,6 +45,49 @@ describe('DepositVaultWithUSTB - Mainnet Fork Integration Tests', function () {
 
       // Perform deposit
       await depositInstantWithUstbTest(
+        {
+          depositVaultWithUSTB,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          ustbToken,
+          expectedUstbDeposited: true,
+        },
+        usdc,
+        usdcAmount,
+        { from: testUser },
+      );
+    });
+
+    it('should invest USDC into USTB on deposit request', async function () {
+      const {
+        owner,
+        vaultAdmin,
+        testUser,
+        mTBILL,
+        depositVaultWithUSTB,
+        usdc,
+        ustbToken,
+        usdcWhale,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(ustbDepositFixture);
+
+      const usdcAmount = 100;
+
+      await setUstbDepositsEnabledTest({ depositVaultWithUSTB, owner }, true, {
+        from: vaultAdmin,
+      });
+
+      // Fund vault with USDC
+      await usdc
+        .connect(usdcWhale)
+        .transfer(testUser.address, parseUnits('100', 6));
+
+      // Approve vault
+      await approveBase18(testUser, usdc, depositVaultWithUSTB, usdcAmount);
+
+      // Perform deposit
+      await depositRequestWithUstbTest(
         {
           depositVaultWithUSTB,
           owner,
@@ -122,6 +166,68 @@ describe('DepositVaultWithUSTB - Mainnet Fork Integration Tests', function () {
       );
     });
 
+    it('should fail: USTB does not support stablecoin on deposit request', async function () {
+      const {
+        owner,
+        vaultAdmin,
+        testUser,
+        mTBILL,
+        depositVaultWithUSTB,
+        usdc,
+        ustbToken,
+        ustbTokenOwner,
+        usdcWhale,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(ustbDepositFixture);
+
+      const usdcAmount = 100;
+
+      await setUstbDepositsEnabledTest({ depositVaultWithUSTB, owner }, true, {
+        from: vaultAdmin,
+      });
+
+      // Fund vault with USDC
+      await usdc
+        .connect(usdcWhale)
+        .transfer(testUser.address, parseUnits('100', 6));
+
+      // Approve vault
+      await approveBase18(testUser, usdc, depositVaultWithUSTB, usdcAmount);
+
+      await setMockUstbStablecoinConfig(
+        { ustbToken },
+        usdc,
+        {
+          sweepDestination: constants.AddressZero,
+          fee: 0,
+        },
+        {
+          from: ustbTokenOwner,
+        },
+      );
+
+      // Perform deposit
+      await depositRequestWithUstbTest(
+        {
+          depositVaultWithUSTB,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          ustbToken,
+          expectedUstbDeposited: false,
+        },
+        usdc,
+        usdcAmount,
+        {
+          from: testUser,
+          revertCustomError: {
+            customErrorName: 'UnsupportedUSTBToken',
+            args: [usdc.address],
+          },
+        },
+      );
+    });
+
     it('should fail: USTB stablecoin fee is not 0', async function () {
       const {
         owner,
@@ -166,6 +272,69 @@ describe('DepositVaultWithUSTB - Mainnet Fork Integration Tests', function () {
 
       // Perform deposit
       await depositInstantWithUstbTest(
+        {
+          depositVaultWithUSTB,
+          owner,
+          mTBILL,
+          mTokenToUsdDataFeed,
+          ustbToken,
+          expectedUstbDeposited: false,
+        },
+        usdc,
+        usdcAmount,
+        {
+          from: testUser,
+          revertCustomError: {
+            customErrorName: 'USTBFeeNotZero',
+          },
+        },
+      );
+    });
+
+    it('should fail: USTB stablecoin fee is not 0 on deposit request', async function () {
+      const {
+        owner,
+        vaultAdmin,
+        testUser,
+        mTBILL,
+        depositVaultWithUSTB,
+        usdc,
+        ustbToken,
+        ustbTokenOwner,
+        usdcWhale,
+        mTokenToUsdDataFeed,
+      } = await loadFixture(ustbDepositFixture);
+
+      const usdcAmount = 100;
+
+      await setUstbDepositsEnabledTest({ depositVaultWithUSTB, owner }, true, {
+        from: vaultAdmin,
+      });
+
+      // Fund vault with USDC
+      await usdc
+        .connect(usdcWhale)
+        .transfer(testUser.address, parseUnits('100', 6));
+
+      // Approve vault
+      await approveBase18(testUser, usdc, depositVaultWithUSTB, usdcAmount);
+
+      const currentConfig = await ustbToken.supportedStablecoins(usdc.address);
+
+      await setMockUstbStablecoinConfig(
+        { ustbToken },
+        usdc,
+        {
+          sweepDestination: currentConfig.sweepDestination,
+          fee: currentConfig.fee.add(1),
+        },
+        {
+          from: ustbTokenOwner,
+        },
+      );
+
+      // Perform deposit
+      await depositRequestWithUstbTest(
         {
           depositVaultWithUSTB,
           owner,

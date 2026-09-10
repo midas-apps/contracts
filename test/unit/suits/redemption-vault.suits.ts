@@ -2417,6 +2417,77 @@ export const redemptionVaultSuits = (
               );
             });
 
+            it('when lp mToken balance conversion is not divisible by tokenOutRate', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mockedAggregatorMToken,
+                mockedAggregatorMTokenLoan,
+                mockedAggregator,
+                mTokenLoan,
+                redemptionVaultLoanSwapper,
+              } = await loadRvFixture();
+
+              // mTokenARate = 1, tokenOutRate = 6, lp balance = 100.
+              // ceil(100e18 * 1e18 / 6e18) = 16666666666666666667, and
+              // converting back ceil(16666666666666666667 * 6) = 100e18 + 2,
+              // which exceeds the LP balance. Flooring the first conversion
+              // keeps mTokenAAmount <= LP balance. User amount is larger than
+              // LP capacity so that value is not capped to missingAmount.
+              await mintToken(mTBILL, owner, 200);
+              await mintToken(stableCoins.usdt, redemptionVault, 17);
+              await mintToken(mTokenLoan, loanLp, 100);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 100);
+              await mintToken(
+                stableCoins.usdt,
+                redemptionVaultLoanSwapper,
+                1000,
+              );
+
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMToken },
+                1,
+              );
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMTokenLoan },
+                1,
+              );
+              await setRoundData({ mockedAggregator }, 6);
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.usdt,
+                dataFeed.address,
+                0,
+                false,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.usdt,
+                dataFeed.address,
+                0,
+                false,
+              );
+
+              await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+              await setPreferLoanLiquidityTest(
+                { redemptionVault, owner },
+                true,
+              );
+
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.usdt,
+                200,
+              );
+            });
+
             it('should fail: when not enough liquidity on both vault and loan lp', async () => {
               const {
                 owner,

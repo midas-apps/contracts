@@ -91,9 +91,9 @@ contract DepositVaultWithUSTB is DepositVault {
     }
 
     /**
-     * @dev overrides original transfer to tokens receiver function
-     * in case of USTB deposits are disabled or invest token is not supported
-     * by USTB, it will act as the original transfer
+     * @dev overrides instant deposit transfer hook to auto-invest into USTB
+     * in case of USTB deposits are disabled, it will act as the original transfer
+     * in case of invest token is not supported by USTB, it will revert
      * otherwise it will take payment tokens from user, invest them into USTB
      * and will transfer USTB to tokens receiver
      *
@@ -115,6 +115,49 @@ contract DepositVaultWithUSTB is DepositVault {
                 );
         }
 
+        _autoInvest(tokenIn, amountToken, tokensDecimals);
+    }
+
+    /**
+     * @dev overrides request deposit transfer hook to auto-invest into the USTB
+     * in case of USTB deposits are disabled, it will act as the original transfer
+     * in case of invest token is not supported by USTB, it will revert
+     * otherwise it will take payment tokens from user, invest them into USTB
+     * and will transfer USTB to tokens receiver
+     *
+     * @param tokenIn token address
+     * @param amountToken amount of tokens to transfer in base18
+     * @param tokensDecimals decimals of tokens
+     */
+    function _requestTransferTokensToTokensReceiver(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 tokensDecimals
+    ) internal virtual override {
+        if (!ustbDepositsEnabled) {
+            return
+                super._requestTransferTokensToTokensReceiver(
+                    tokenIn,
+                    amountToken,
+                    tokensDecimals
+                );
+        }
+
+        _autoInvest(tokenIn, amountToken, tokensDecimals);
+    }
+
+    /**
+     * @dev Transfers tokens from user to this contract and deposits them
+     * into the USTB
+     * @param tokenIn token address
+     * @param amountToken amount of tokens to transfer in base18
+     * @param tokensDecimals decimals of tokens
+     */
+    function _autoInvest(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 tokensDecimals
+    ) private {
         ISuperstateToken.StablecoinConfig memory config = ISuperstateToken(ustb)
             .supportedStablecoins(tokenIn);
 

@@ -36,6 +36,18 @@ contract DepositVaultWithUSTBTest is
         );
     }
 
+    function _requestTransferTokensToTokensReceiver(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 tokensDecimals
+    ) internal override(DepositVaultWithUSTB, DepositVault) {
+        DepositVaultWithUSTB._requestTransferTokensToTokensReceiver(
+            tokenIn,
+            amountToken,
+            tokensDecimals
+        );
+    }
+
     function _getTokenRate(address dataFeed, bool stable)
         internal
         view

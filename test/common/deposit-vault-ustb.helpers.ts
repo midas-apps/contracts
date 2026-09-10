@@ -8,7 +8,10 @@ import {
   handleRevert,
   shouldRevert,
 } from './common.helpers';
-import { depositInstantTest } from './deposit-vault.helpers';
+import {
+  depositInstantTest,
+  depositRequestTest,
+} from './deposit-vault.helpers';
 import { defaultDeploy } from './fixtures';
 
 import {
@@ -169,4 +172,89 @@ export const depositInstantWithUstbTest = async (
       expect(ustbReceived).eq(ustbMinted);
     }
   }
+};
+
+export const depositRequestWithUstbTest = async (
+  {
+    depositVaultWithUSTB,
+    owner,
+    mTBILL,
+    mTokenToUsdDataFeed,
+    waivedFee,
+    customRecipient,
+    ustbToken,
+    expectedUstbDeposited = true,
+    expectedUstbMinted,
+  }: CommonParamsDeposit & {
+    expectedUstbDeposited?: boolean;
+    waivedFee?: boolean;
+    customRecipient?: AccountOrContract;
+    expectedUstbMinted?: BigNumberish;
+  },
+  tokenIn: ERC20 | IERC20Metadata | string,
+  amountUsdIn: number,
+  opt?: OptionalCommonParams,
+) => {
+  tokenIn = getAccount(tokenIn);
+
+  if (shouldRevert(opt)) {
+    await depositRequestTest(
+      {
+        depositVault: depositVaultWithUSTB,
+        owner,
+        mTBILL,
+        mTokenToUsdDataFeed,
+        waivedFee,
+        customRecipient,
+        checkTokensReceiver: !expectedUstbDeposited,
+      },
+      tokenIn,
+      amountUsdIn,
+      opt,
+    );
+    return {};
+  }
+
+  const tokensReceiver = await depositVaultWithUSTB.tokensReceiver();
+  const ustbEnabledBefore = await depositVaultWithUSTB.ustbDepositsEnabled();
+  const ustbSupplyBefore = await ustbToken.totalSupply();
+  const ustbReceiverBalanceBefore = await ustbToken.balanceOf(tokensReceiver);
+
+  const result = await depositRequestTest(
+    {
+      depositVault: depositVaultWithUSTB,
+      owner,
+      mTBILL,
+      mTokenToUsdDataFeed,
+      waivedFee,
+      customRecipient,
+      checkTokensReceiver: !expectedUstbDeposited,
+    },
+    tokenIn,
+    amountUsdIn,
+    opt,
+  );
+
+  const ustbEnabledAfter = await depositVaultWithUSTB.ustbDepositsEnabled();
+  const ustbSupplyAfter = await ustbToken.totalSupply();
+  const ustbReceiverBalanceAfter = await ustbToken.balanceOf(tokensReceiver);
+
+  expect(ustbEnabledAfter).eq(ustbEnabledBefore);
+
+  if (ustbEnabledAfter && expectedUstbDeposited) {
+    const ustbMinted = ustbSupplyAfter.sub(ustbSupplyBefore);
+    const ustbReceived = ustbReceiverBalanceAfter.sub(
+      ustbReceiverBalanceBefore,
+    );
+
+    if (expectedUstbMinted !== undefined) {
+      expect(ustbMinted).eq(expectedUstbMinted);
+      expect(ustbReceived).eq(expectedUstbMinted);
+    } else {
+      expect(ustbMinted).to.be.gt(0);
+      expect(ustbReceived).eq(ustbMinted);
+    }
+  }
+
+  return result;
 };

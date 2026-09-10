@@ -966,7 +966,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 mTokenABalance,
                 mTokenARate,
                 tokenOutRate,
-                Math.Rounding.Up
+                Math.Rounding.Down
             );
         }
 
