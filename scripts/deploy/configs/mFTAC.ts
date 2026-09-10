@@ -17,19 +17,12 @@ export const mFTACDeploymentConfig: DeploymentConfig = {
       maxAnswer: parseUnits('150000', 8),
       healthyDiff: 2592000,
     },
-    customAggregatorAdjustedDv: {
-      adjustmentPercentage: parseUnits('7', 8),
-      underlyingFeed: 'customFeed',
-    },
-    customAggregatorAdjustedRv: {
-      adjustmentPercentage: parseUnits('-7', 8),
-      underlyingFeed: 'customFeed',
-    },
   },
   networkConfigs: {
     [chainIds.main]: {
       dv: {
         type: 'REGULAR',
+        mTokenDataFeed: 'dataFeed',
         enableSanctionsList: true,
         feeReceiver: '0xBBDff4916Ab2d0a645786ef2121beff9E069374f',
         tokensReceiver: '0x95389f5D2E90b8EDF4B8099e63686fc0FbAdeA5d',
@@ -42,6 +35,7 @@ export const mFTACDeploymentConfig: DeploymentConfig = {
       },
       rvSwapper: {
         type: 'SWAPPER',
+        mTokenDataFeed: 'dataFeed',
         feeReceiver: '0x95389f5D2E90b8EDF4B8099e63686fc0FbAdeA5d',
         tokensReceiver: '0x95389f5D2E90b8EDF4B8099e63686fc0FbAdeA5d',
         requestRedeemer: '0x11Cd45996c42b5EA9D1a3E240EF2F3bc8bA04e44',
@@ -64,6 +58,7 @@ export const mFTACDeploymentConfig: DeploymentConfig = {
                 {
                   token: 'usdc',
                   allowance: parseUnits('1000000000', 18),
+                  isStable: true,
                   fee: 0,
                 },
               ],
@@ -74,6 +69,7 @@ export const mFTACDeploymentConfig: DeploymentConfig = {
                 {
                   token: 'usdc',
                   allowance: parseUnits('1000000000', 18),
+                  isStable: true,
                   fee: 0,
                 },
               ],
@@ -85,6 +81,10 @@ export const mFTACDeploymentConfig: DeploymentConfig = {
           tokenManagerAddress: '0xf5F58b98f8dFF44143B78c1aD342Baf0E711EDfd',
           vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
           oracleManagerAddress: '0x204aF6B96282befb1B449d3cAeC4CAe80464B80c',
+          minBalanceExemptAddresses: [
+            'redemptionVaultSwapper',
+            '0x95389f5D2E90b8EDF4B8099e63686fc0FbAdeA5d',
+          ],
         },
         greenlist: {
           depositVault: true,

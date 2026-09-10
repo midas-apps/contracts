@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import "../../mToken.sol";
+import "../../mTokenMinBalance.sol";
 
 /**
  * @title mFTAC
  * @author RedDuck Software
  */
 //solhint-disable contract-name-camelcase
-contract mFTAC is mToken {
+contract mFTAC is mTokenMinBalance {
     /**
      * @notice actor that can mint mFTAC
      */
@@ -28,9 +28,12 @@ contract mFTAC is mToken {
         keccak256("M_FTAC_PAUSE_OPERATOR_ROLE");
 
     /**
-     * @dev leaving a storage gap for futures updates
+     * @notice actor that is exempt from mFTAC min balance checks
      */
-    uint256[50] private __gap;
+    bytes32 public constant M_FTAC_MIN_BALANCE_EXEMPT_ROLE =
+        keccak256("M_FTAC_MIN_BALANCE_EXEMPT_ROLE");
+
+    // mTokenMinBalance's gap replaces the previous mFTAC gap.
 
     /**
      * @inheritdoc mToken
@@ -63,5 +66,12 @@ contract mFTAC is mToken {
      */
     function _pauserRole() internal pure override returns (bytes32) {
         return M_FTAC_PAUSE_OPERATOR_ROLE;
+    }
+
+    /**
+     * @inheritdoc mTokenMinBalance
+     */
+    function _minBalanceExemptRole() internal pure override returns (bytes32) {
+        return M_FTAC_MIN_BALANCE_EXEMPT_ROLE;
     }
 }
