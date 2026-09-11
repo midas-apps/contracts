@@ -374,5 +374,6 @@ export const mTokensMetadata: Record<
   mFTAC: {
     name: 'Midas Fasanara TAC',
     symbol: 'mFTAC',
+    isMinBalance: true,
   },
 };

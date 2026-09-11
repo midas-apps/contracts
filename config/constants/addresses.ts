@@ -786,14 +786,20 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVaultSwapper: '0x87E88E291CC59591e0bBbAe5f6c37D4E3d75aE2a',
     },
     mFTAC: {
-      token: '0x63cB25da044dDeF518854EC395C0288c34254C1d',
+      token: '0x4D58e60005D36B23A91A0c175CB2D063E676876E',
       customFeed: '0xB4353a98aDe0EaffC215dC187A50BEa1eba597b3',
-      customFeedDv: '0x8F30023357c5c1C5FdBD3E1a0698F15efb016505',
-      customFeedRv: '0x0202eC9bc941F6A76ca9F339111DE8AAc05A2a72',
-      dataFeedDv: '0x68F4F69A30Fac38C6BF905E6f73e729bB10d73dd',
-      dataFeedRv: '0x3D58712E4d85806Da2F3C8161d67e0E3a39F4777',
-      depositVault: '0xE95F0AC383FeceAf38b07C2aefA128716c9EDEfE',
-      redemptionVaultSwapper: '0x296B6e173bE701d6086E604A19F4E39375ff4DA9',
+      dataFeed: '0x1ac4e3B639689d803fF4323917f814C8d01f9690',
+      depositVault: '0x188D773AA7bf408F959Fbdd0300001D021eaE9E3',
+      redemptionVaultSwapper: '0x3A2A1c0b7A3C34366bcc47578aD07764e093B26f',
+
+      // Retired deployment: historical references only.
+      // token: '0x63cB25da044dDeF518854EC395C0288c34254C1d',
+      // customFeedDv: '0x8F30023357c5c1C5FdBD3E1a0698F15efb016505',
+      // customFeedRv: '0x0202eC9bc941F6A76ca9F339111DE8AAc05A2a72',
+      // dataFeedDv: '0x68F4F69A30Fac38C6BF905E6f73e729bB10d73dd',
+      // dataFeedRv: '0x3D58712E4d85806Da2F3C8161d67e0E3a39F4777',
+      // depositVault: '0xE95F0AC383FeceAf38b07C2aefA128716c9EDEfE',
+      // redemptionVaultSwapper: '0x296B6e173bE701d6086E604A19F4E39375ff4DA9',
     },
   },
   avalanche: {
