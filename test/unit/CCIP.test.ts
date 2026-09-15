@@ -1113,7 +1113,7 @@ describe('CCIP', function () {
         );
       });
 
-      it('should fail: when the caller is blacklisted', async () => {
+      it('should fail: when the original recipient is still blacklisted', async () => {
         const fixture = await loadFixture(ccipCctFixture);
         const { alice } = fixture;
 
@@ -1127,6 +1127,28 @@ describe('CCIP', function () {
           {
             messageId,
             recipient: alice,
+          },
+          {
+            from: alice,
+            revertMessage: 'WMAC: has role',
+          },
+        );
+      });
+
+      it('should fail: when claiming to another address while the original is still blacklisted', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { alice, defaultRecipient } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await claim(
+          fixture,
+          {
+            messageId,
+            recipient: defaultRecipient,
           },
           {
             from: alice,
@@ -1487,7 +1509,76 @@ describe('CCIP', function () {
         });
       });
 
-      it('recovers to an override recipient when the original is still blacklisted', async () => {
+      it('should fail: when recovering to an override recipient while the original is still blacklisted', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { alice, defaultRecipient } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await recoverBulk(
+          fixture,
+          [{ messageId, recipient: defaultRecipient }],
+          {
+            revertMessage: 'WMAC: has role',
+          },
+        );
+      });
+
+      it('should fail: when any original recipient in the batch is still blacklisted', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const {
+          escrow,
+          mTBILL,
+          accessControl,
+          owner,
+          alice,
+          defaultRecipient,
+        } = fixture;
+
+        const messageIdAlice = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+        const messageIdDefault = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('25'),
+          receiver: defaultRecipient,
+        });
+
+        await unBlackList(
+          { blacklistable: mTBILL, accessControl, owner },
+          defaultRecipient,
+        );
+
+        const escrowBalanceBefore = await mTBILL.balanceOf(escrow.address);
+
+        await recoverBulk(
+          fixture,
+          [
+            { messageId: messageIdAlice, recipient: defaultRecipient },
+            { messageId: messageIdDefault },
+          ],
+          {
+            revertMessage: 'WMAC: has role',
+          },
+        );
+
+        expect(await mTBILL.balanceOf(escrow.address)).eq(escrowBalanceBefore);
+        expect(await escrow.getFailedMessageIds()).deep.eq([
+          messageIdAlice,
+          messageIdDefault,
+        ]);
+        expect((await getFailedMessage(escrow, messageIdAlice)).status).eq(
+          MessageStatus.Pending,
+        );
+        expect((await getFailedMessage(escrow, messageIdDefault)).status).eq(
+          MessageStatus.Pending,
+        );
+      });
+
+      it('recovers to an override recipient when the original is not blacklisted', async () => {
         const fixture = await loadFixture(ccipCctFixture);
         const { mTBILL, accessControl, owner, alice, defaultRecipient } =
           fixture;
@@ -1499,7 +1590,7 @@ describe('CCIP', function () {
 
         await unBlackList(
           { blacklistable: mTBILL, accessControl, owner },
-          defaultRecipient,
+          alice,
         );
 
         await recoverBulk(fixture, [
@@ -1574,6 +1665,39 @@ describe('CCIP', function () {
         });
 
         await closeBulk(fixture, [messageId]);
+      });
+
+      it('closes failed messages when the original recipient is still blacklisted', async () => {
+        const fixture = await loadFixture(ccipCctFixture);
+        const { escrow, mTBILL, alice, defaultRecipient } = fixture;
+
+        const messageId = await createEscrowFailedMessage(fixture, {
+          amount: parseUnits('100'),
+          receiver: alice,
+        });
+
+        await recoverBulk(
+          fixture,
+          [{ messageId, recipient: defaultRecipient }],
+          {
+            revertMessage: 'WMAC: has role',
+          },
+        );
+
+        expect(await escrow.getFailedMessageIds()).deep.eq([messageId]);
+        expect((await getFailedMessage(escrow, messageId)).status).eq(
+          MessageStatus.Pending,
+        );
+
+        const defaultRecipientBalanceBefore = await mTBILL.balanceOf(
+          defaultRecipient.address,
+        );
+
+        await closeBulk(fixture, [messageId]);
+
+        expect(await mTBILL.balanceOf(defaultRecipient.address)).eq(
+          defaultRecipientBalanceBefore.add(parseUnits('100')),
+        );
       });
 
       it('closes multiple failed messages in one call', async () => {

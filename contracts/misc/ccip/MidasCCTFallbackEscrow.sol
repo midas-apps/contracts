@@ -133,7 +133,6 @@ contract MidasCCTFallbackEscrow is
      */
     function claim(bytes32 _messageId, address _recipient)
         external
-        onlyNotBlacklisted(msg.sender)
         whenClaimNotPaused
     {
         FailedMessage storage failedMessage = _processMessage(
@@ -257,12 +256,15 @@ contract MidasCCTFallbackEscrow is
         MessageStatus _status
     ) private returns (FailedMessage storage) {
         require(
-            _failedMessageIds.contains(_messageId),
+            _failedMessageIds.remove(_messageId),
             FailedMessageNotFound(_messageId)
         );
         FailedMessage storage failedMessage = failedMessages[_messageId];
         failedMessage.status = _status;
-        _failedMessageIds.remove(_messageId);
+
+        if (failedMessage.status != MessageStatus.Closed) {
+            _onlyNotBlacklisted(failedMessage.originalRecipient);
+        }
 
         _getToken().safeTransfer(
             _extractRecipient(failedMessage, _overrideRecipient, _status),
