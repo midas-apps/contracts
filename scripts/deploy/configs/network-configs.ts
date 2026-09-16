@@ -3,6 +3,15 @@ import { DAY } from '../../../helpers/utils';
 import { NetworkDeploymentConfig } from '../common/types';
 
 export const networkDeploymentConfigs: NetworkDeploymentConfig = {
+  [chainIds.arc]: {
+    grantDefaultAdminRole: {
+      acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
+    },
+    timelock: {
+      minDelay: 2 * DAY,
+      proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+    },
+  },
   [chainIds.sepolia]: {
     grantDefaultAdminRole: {},
     timelock: {
