@@ -62,6 +62,14 @@ export const getRateLimitNetworks = (
   linkedNetworks: Network[],
   pathways?: 'direct-only' | 'all',
 ): Network[] => {
+  if (
+    currentNetwork !== originalNetwork &&
+    !linkedNetworks.includes(currentNetwork)
+  ) {
+    throw new Error(
+      `${currentNetwork} is not in the active LayerZero topology`,
+    );
+  }
   if (pathways === 'direct-only') {
     return currentNetwork === originalNetwork
       ? linkedNetworks
@@ -110,6 +118,16 @@ export const lzConfigsPerMToken: PartialConfigPerNetwork<
     },
   },
   main: {
+    mROX: {
+      pathways: 'direct-only',
+      linkedNetworks: ['monad'],
+      dvns: [
+        DVN.LayerZeroLabs,
+        DVN.DeutscheTelekom,
+        DVN.Canary,
+        DVN.Nethermind,
+      ],
+    },
     mGLO: {
       // Mainnet <-> Base, Robinhood and Optimism only.
       pathways: 'direct-only',
@@ -120,7 +138,7 @@ export const lzConfigsPerMToken: PartialConfigPerNetwork<
     },
     mHYPER: {
       pathways: 'direct-only',
-      linkedNetworks: ['monad', 'katana', 'plasma'],
+      linkedNetworks: ['monad', 'plasma'],
     },
     mHyperBTC: {
       pathways: 'direct-only',
@@ -150,14 +168,21 @@ export const lzConfigsPerPaymentToken: PartialConfigPerNetwork<
 
 /**
  * Pathways that are being decommissioned. The outer key is the network the
- * product is retired on. NEVER consumed by the wire task - only by
- * scripts/deploy/misc/layerzero/deprecate_Ofts.ts, which revokes the OFT
- * adapters' mint/burn roles and zeroes out the peers on every network of the
- * pathway. Remove entries once the on-chain deprecation is fully executed.
+ * product is retired on. Used by deprecate_Ofts.ts and as a wiring/grant
+ * guard; it never generates active connections. Only the outer network's
+ * adapter is retired; surviving adapters retain their roles and other peers.
+ * linkedNetworks are required counterparties; the retirement script also
+ * discovers other registered OFTs for this token. Keep entries as tombstones
+ * to prevent deployment tooling from reactivating retired adapters.
  */
 export const deprecatedLzConfigsPerMToken: PartialConfigPerNetwork<
-  ConfigPerNetwork<MTokenName>
+  Partial<Record<MTokenName, { linkedNetworks: Network[] }>>
 > = {
+  katana: {
+    mHYPER: {
+      linkedNetworks: ['main'],
+    },
+  },
   scroll: {
     weEUR: {
       linkedNetworks: ['optimism'],
@@ -167,6 +192,15 @@ export const deprecatedLzConfigsPerMToken: PartialConfigPerNetwork<
     },
   },
 };
+
+export function assertLzNetworkNotRetired(
+  network: Network,
+  mToken: MTokenName,
+) {
+  if (deprecatedLzConfigsPerMToken[network]?.[mToken]) {
+    throw new Error(`${mToken} LayerZero adapter on ${network} is retired`);
+  }
+}
 
 const EVM_ENFORCED_OPTIONS: OAppEnforcedOption[] = [
   {
@@ -248,6 +282,9 @@ export default async function () {
   }
 
   const allNetworks = [...tokenConfig.linkedNetworks, network];
+
+  if (hre.mtoken)
+    allNetworks.forEach((n) => assertLzNetworkNotRetired(n, hre.mtoken!));
 
   allNetworks.forEach((network) => {
     const adapter = getAdapterAddress(hre, network);

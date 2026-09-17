@@ -39,6 +39,7 @@
     "hh:run": "yarn hardhat run",
     "hh:run:script": "yarn hardhat runscript",
     "deploy:lz:post:wire": "yarn hardhat lz:oapp:wire:midas",
+    "deploy:lz:deprecate": "yarn hardhat deploy:lz:deprecate",
     "verify:proxy": "yarn hardhat verify-transparent-proxy",
     "verify:sourcify": "VERIFY_SOURCIFY=true VERIFY_ETHERSCAN=false yarn hardhat verify",
     "dump:roles": "yarn hh:run scripts/dump_roles.ts",

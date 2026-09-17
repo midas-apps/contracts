@@ -25,8 +25,7 @@ import { getTransparentProxyConstructorArgs } from '../helpers/verify-proxy';
  *   yarn hardhat runscript scripts/verify_products.ts --network optimism
  */
 const PRODUCTS_TO_VERIFY: Partial<Record<Network, MTokenName[]>> = {
-  main: ['Re7YIELD', 'Re7BTC', 'mArb', 'mArbETH', 'mArbBTC'],
-  optimism: ['Re7ETH'],
+  main: ['mFTAC'],
 };
 
 /** Product keys that hold nested objects rather than a proxy address. */

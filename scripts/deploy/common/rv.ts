@@ -25,6 +25,8 @@ import {
 } from '../configs/deployment-profiles';
 
 export type DeployRvConfigCommon = {
+  /** Require the shared feed instead of falling back to a legacy RV feed. */
+  mTokenDataFeed?: 'dataFeed';
   feeReceiver?: string;
   tokensReceiver?: string;
   instantDailyLimit: BigNumberish;
@@ -208,7 +210,9 @@ export const deployRedemptionVault = async (
 
   let dataFeed: string | undefined;
 
-  if (token.startsWith('TAC')) {
+  if (networkConfig.mTokenDataFeed) {
+    dataFeed = tokenAddresses[networkConfig.mTokenDataFeed];
+  } else if (token.startsWith('TAC')) {
     const originalTokenName = token.replace('TAC', '');
     dataFeed = addresses?.[originalTokenName as MTokenName]?.dataFeed;
     console.log(
@@ -222,6 +226,10 @@ export const deployRedemptionVault = async (
           hre.deploymentConfig,
         )
       : undefined;
+  }
+
+  if (!dataFeed || dataFeed === constants.AddressZero) {
+    throw new Error(`MToken data feed is not configured for ${token}`);
   }
 
   const sanctionsList = networkConfig.enableSanctionsList

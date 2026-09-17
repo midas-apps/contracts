@@ -166,6 +166,20 @@ export const getDeployer = async (hre: HardhatRuntimeEnvironment) => {
   }
 };
 
+export const getContractAt = async (
+  hre: HardhatRuntimeEnvironment,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  nameOrAbi: string | any[],
+  address: string,
+  signer?: Signer,
+) => {
+  return hre.ethers.getContractAt(
+    nameOrAbi,
+    address,
+    signer ?? (await getDeployer(hre)),
+  );
+};
+
 export const deployProxy = async (
   hre: HardhatRuntimeEnvironment,
   contractName: string,
@@ -309,6 +323,7 @@ export const sendAndWaitForCustomTxSign = async (
   hre: HardhatRuntimeEnvironment,
   populatedTx: PopulatedTransaction,
   txSignMetadata?: {
+    idempotenceId?: string;
     mToken?: MTokenName;
     comment?: string;
     action?:
@@ -352,9 +367,11 @@ export const sendAndWaitForCustomTxSign = async (
       );
 
       // we assume that the owner contract is a safe contract
-      const safeContract = await hre.ethers
-        .getContractAt(safeAbi, safeMiddlewareWallet)
-        .then((v) => v.connect(hre.ethers.provider));
+      const safeContract = await getContractAt(
+        hre,
+        safeAbi,
+        safeMiddlewareWallet,
+      );
 
       const owners: string[] = await safeContract.getOwners();
 
@@ -409,7 +426,7 @@ export const sendAndWaitForCustomTxSign = async (
     {
       ...(txSignMetadata ?? {}),
       chainId: hreNetwork.network.config.chainId,
-      idempotenceId: hreNetwork.contextId,
+      idempotenceId: txSignMetadata?.idempotenceId ?? hreNetwork.contextId,
     },
   );
 

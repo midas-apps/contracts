@@ -9,6 +9,10 @@ import { formatUnits, parseUnits } from 'ethers/lib/utils';
 import hre from 'hardhat';
 
 import {
+  DeprecationRoute,
+  getDeprecationChanges,
+} from '../../scripts/deploy/misc/layerzero/deprecate_Ofts';
+import {
   MidasLzOFTAdapter__factory,
   MidasLzVaultComposerSyncTester,
 } from '../../typechain-types';
@@ -32,6 +36,115 @@ import {
 import { mint } from '../common/mTBILL.helpers';
 
 describe('LayerZero', function () {
+  describe('route deprecation', () => {
+    const bn = ethers.BigNumber.from;
+    const peer = ethers.utils.hexZeroPad('0x01', 32);
+    const blockedLibrary = '0x0000000000000000000000000000000000000001';
+    const active: DeprecationRoute = {
+      label: 'main -> katana',
+      expectedPeer: peer,
+      peer,
+      confirmedPeer: peer,
+      limit: bn(100),
+      confirmedLimit: bn(100),
+      sendLibrary: constants.AddressZero,
+      confirmedSendLibrary: constants.AddressZero,
+      blockedLibrary,
+      outbound: bn(19),
+      confirmedOutbound: bn(19),
+      lazyInbound: bn(19),
+      pending: [],
+    };
+    const disabled = {
+      ...active,
+      limit: bn(0),
+      confirmedLimit: bn(0),
+      sendLibrary: blockedLibrary,
+      confirmedSendLibrary: blockedLibrary,
+    };
+
+    it('requires confirmed shutdown and drain, preserves unused routes, and skips completed work', () => {
+      expect(getDeprecationChanges(active, 'disable')).deep.eq([
+        'rate',
+        'block-send',
+      ]);
+      expect(getDeprecationChanges(disabled, 'disable')).deep.eq([]);
+      expect(() => getDeprecationChanges(active, 'finalize')).to.throw(
+        'disable',
+      );
+      expect(getDeprecationChanges(disabled, 'finalize')).deep.eq(['peer']);
+      for (const overrides of [
+        { confirmedLimit: bn(100) },
+        { confirmedSendLibrary: constants.AddressZero },
+        { outbound: bn(20) },
+        { outbound: bn(20), confirmedOutbound: bn(20) },
+        { pending: ['7'] },
+      ])
+        expect(() =>
+          getDeprecationChanges({ ...disabled, ...overrides }, 'finalize'),
+        ).to.throw();
+      const unlinked = {
+        ...disabled,
+        peer: constants.HashZero,
+        confirmedPeer: constants.HashZero,
+      };
+      expect(getDeprecationChanges(unlinked, 'verify')).deep.eq([]);
+      expect(() =>
+        getDeprecationChanges({ ...unlinked, confirmedPeer: peer }, 'verify'),
+      ).to.throw('confirmed');
+      // A leftover rate on an unselected, disconnected route is not a live link.
+      expect(
+        getDeprecationChanges(
+          {
+            ...active,
+            peer: constants.HashZero,
+            confirmedPeer: constants.HashZero,
+          },
+          'audit',
+        ),
+      ).deep.eq([]);
+      expect(() => getDeprecationChanges(active, 'audit')).to.throw(
+        'outside configured scope',
+      );
+    });
+
+    it('prequeues only peer removals, retaining drain and unexpected-peer checks', () => {
+      expect(getDeprecationChanges(active, 'queue-finalize')).deep.eq(['peer']);
+      expect(() =>
+        getDeprecationChanges({ ...active, pending: ['7'] }, 'queue-finalize'),
+      ).to.throw('drained');
+      expect(() =>
+        getDeprecationChanges(
+          { ...active, peer: ethers.utils.hexZeroPad('0x02', 32) },
+          'queue-finalize',
+        ),
+      ).to.throw('unexpected peer');
+    });
+
+    it('reverts both send directions after unlinking without burning user funds', async () => {
+      const fixture = await loadFixture(layerZeroFixture);
+      const { owner, mTBILL, oftAdapterA, oftAdapterB, eidA, eidB } = fixture;
+      await mint({ owner, tokenContract: mTBILL }, owner, parseUnits('100'));
+      await oftAdapterA.setPeer(eidB, constants.HashZero);
+      await oftAdapterB.setPeer(eidA, constants.HashZero);
+      const balance = await mTBILL.balanceOf(owner.address);
+      const supply = await mTBILL.totalSupply();
+      for (const direction of ['A_TO_B', 'B_TO_A'] as const) {
+        await sendOft(
+          fixture,
+          { direction },
+          {
+            revertWithCustomError: {
+              contract: direction === 'A_TO_B' ? oftAdapterA : oftAdapterB,
+              error: 'NoPeer',
+            },
+          },
+        );
+        expect(await mTBILL.balanceOf(owner.address)).eq(balance);
+        expect(await mTBILL.totalSupply()).eq(supply);
+      }
+    });
+  });
   describe('MidasLzMintBurnOFTAdapter', () => {
     it('deployment', async () => {
       const fixture = await loadFixture(layerZeroFixture);

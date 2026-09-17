@@ -4,7 +4,11 @@ import { MTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import { getChainOrThrow } from '../../../helpers/utils';
 import { DeployFunction, VAULT_FUNCTION_SELECTORS } from '../common/types';
-import { sendAndWaitForCustomTxSign, getNetworkConfig } from '../common/utils';
+import {
+  getContractAt,
+  getNetworkConfig,
+  sendAndWaitForCustomTxSign,
+} from '../common/utils';
 import { getDeploymentTokenAddresses } from '../configs/deployment-profiles';
 
 const func: DeployFunction = async (
@@ -42,10 +46,7 @@ const func: DeployFunction = async (
       mergedTokenAddresses[vaultType as keyof typeof mergedTokenAddresses];
     if (!vaultAddress || typeof vaultAddress !== 'string') continue;
 
-    const vault = await hre.ethers.getContractAt(
-      'ManageableVault',
-      vaultAddress,
-    );
+    const vault = await getContractAt(hre, 'ManageableVault', vaultAddress);
 
     for (const functionName of functions) {
       const selector = VAULT_FUNCTION_SELECTORS[functionName];

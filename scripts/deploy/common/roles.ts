@@ -1,8 +1,11 @@
-import { Provider } from '@ethersproject/providers';
 import { Signer } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { getDeployer, sendAndWaitForCustomTxSign } from './utils';
+import {
+  getContractAt,
+  getDeployer,
+  sendAndWaitForCustomTxSign,
+} from './utils';
 import {
   defaultDepositVaultPriority,
   resolveAllVaultAddresses,
@@ -10,12 +13,16 @@ import {
 } from './vault-resolver';
 
 import { MTokenName } from '../../../config';
-import { getCurrentAddresses } from '../../../config/constants/addresses';
+import {
+  getCurrentAddresses,
+  VaultType,
+} from '../../../config/constants/addresses';
 import { getCommonContractNames } from '../../../helpers/contracts';
 import { getAllRoles, getRolesForToken } from '../../../helpers/roles';
 import { MidasAccessControl } from '../../../typechain-types';
 import {
   getDeploymentProfileForToken,
+  getDeploymentTokenAddresses,
   resolveDeploymentAddress,
 } from '../configs/deployment-profiles';
 import { getDeploymentConfigForToken } from '../configs/index';
@@ -27,7 +34,7 @@ export type GrantAllTokenRolesConfig = {
   tokenManagerAddress?: Address;
   vaultsManagerAddress?: Address;
   oracleManagerAddress?: Address;
-  minBalanceExemptAddresses?: Address[];
+  minBalanceExemptAddresses?: (Address | VaultType)[];
 };
 
 const acAdminAddress = '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227';
@@ -128,8 +135,23 @@ export const grantAllProductRoles = async (
       );
     }
 
-    const minBalanceExemptAddresses =
-      managerGrantConfig.minBalanceExemptAddresses ?? [];
+    const deployedAddresses = getDeploymentTokenAddresses(
+      tokenAddresses,
+      token,
+      hre.deploymentConfig,
+    );
+    const minBalanceExemptAddresses = (
+      managerGrantConfig.minBalanceExemptAddresses ?? []
+    ).map((reference) => {
+      if (reference.startsWith('0x')) return reference;
+      const address = deployedAddresses[reference as VaultType];
+      if (!address) {
+        throw new Error(
+          `Min-balance exempt vault ${token}.${reference} is not configured`,
+        );
+      }
+      return address;
+    });
     roleBatch.push(
       ...minBalanceExemptAddresses.map(() => tokenRoles.minBalanceExempt),
     );
@@ -236,14 +258,14 @@ export const grantDefaultAdminRoleToAcAdmin = async (
 
 const getAcContract = async (
   hre: HardhatRuntimeEnvironment,
-  provider: Provider | Signer,
+  signer: Signer,
 ) => {
   const addresses = getCurrentAddresses(hre);
 
-  return (
-    await hre.ethers.getContractAt(
-      getCommonContractNames().ac,
-      addresses!.accessControl!,
-    )
-  ).connect(provider) as MidasAccessControl;
+  return (await getContractAt(
+    hre,
+    getCommonContractNames().ac,
+    addresses!.accessControl!,
+    signer,
+  )) as MidasAccessControl;
 };

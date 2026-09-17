@@ -3,6 +3,7 @@ import { BigNumber, BigNumberish, constants, Signer } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
+  getContractAt,
   getDeployer,
   getNetworkConfig,
   sendAndWaitForCustomTxSign,
@@ -283,9 +284,12 @@ const getVaultContract = async (
     throw new Error('Vault address is not found');
   }
 
-  return (
-    await hre.ethers.getContractAt('ManageableVault', vaultAddress)
-  ).connect(provider) as ManageableVault;
+  return (await getContractAt(
+    hre,
+    'ManageableVault',
+    vaultAddress,
+    Signer.isSigner(provider) ? provider : undefined,
+  )) as ManageableVault;
 };
 
 const resolvePaymentTokenAddress = (
@@ -353,7 +357,8 @@ export const setAaveConfig = async (
       continue;
     }
 
-    const vault = (await hre.ethers.getContractAt(
+    const vault = (await getContractAt(
+      hre,
       entry.type === 'depositVaultAave'
         ? 'DepositVaultWithAave'
         : 'RedemptionVaultWithAave',
@@ -482,7 +487,8 @@ export const setMorphoConfig = async (
       continue;
     }
 
-    const vault = (await hre.ethers.getContractAt(
+    const vault = (await getContractAt(
+      hre,
       entry.type === 'depositVaultMorpho'
         ? 'DepositVaultWithMorpho'
         : 'RedemptionVaultWithMorpho',

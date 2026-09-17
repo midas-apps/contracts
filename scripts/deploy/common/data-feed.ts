@@ -1,11 +1,11 @@
-import { Provider } from '@ethersproject/providers';
-import { BigNumber, BigNumberish, PopulatedTransaction, Signer } from 'ethers';
+import { BigNumber, BigNumberish, PopulatedTransaction } from 'ethers';
 import { formatUnits, parseUnits } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
   deployAndVerify,
   deployAndVerifyProxy,
+  getContractAt,
   getDeployer,
   getDeploymentGenericConfig,
   getDeploymentGenericConfigOptional,
@@ -25,9 +25,11 @@ import {
   getTokenContractNames,
 } from '../../../helpers/contracts';
 import {
+  CompositeDataFeed,
   CustomAggregatorV3CompatibleFeed,
   CustomAggregatorV3CompatibleFeedGrowth,
   DataFeed,
+  IDataFeed,
 } from '../../../typechain-types';
 import {
   getDeploymentProfileForToken,
@@ -71,6 +73,20 @@ export const isAnswerWithinExpectedRange = (
   maxAnswer: BigNumber,
 ) => {
   return roundId.isZero() || (answer.gte(minAnswer) && answer.lte(maxAnswer));
+};
+
+const getExpectedAnswerUpdates = (
+  currentMin: BigNumber,
+  currentMax: BigNumber,
+  newMin: BigNumber,
+  newMax: BigNumber,
+) => {
+  const min = { bound: 'min' as const, value: newMin };
+  const max = { bound: 'max' as const, value: newMax };
+
+  return (newMax.gt(currentMin) ? [max, min] : [min, max]).filter(
+    ({ bound, value }) => !value.eq(bound === 'min' ? currentMin : currentMax),
+  );
 };
 
 type DeployCustomAggregatorCommonConfig = {
@@ -175,7 +191,8 @@ const getInitialPriceFromProfileSource = async (
     hre.deploymentConfig,
     source,
   );
-  const sourceAggregator = await hre.ethers.getContractAt(
+  const sourceAggregator = await getContractAt(
+    hre,
     'AggregatorV3Interface',
     sourceAddress,
   );
@@ -285,7 +302,6 @@ const setRoundData = async (
   if (networkConfig.type === 'GROWTH') {
     const aggregator = await getAggregatorGrowthContract(
       hre,
-      hre.ethers.provider,
       aggregatorAddress,
     );
 
@@ -302,11 +318,7 @@ const setRoundData = async (
       8,
     )}/${formatUnits(networkConfig.apr, 8)}% at ${currentTimestamp}`;
   } else {
-    const aggregator = await getAggregatorContract(
-      hre,
-      hre.ethers.provider,
-      aggregatorAddress,
-    );
+    const aggregator = await getAggregatorContract(hre, aggregatorAddress);
 
     tx = await aggregator.populateTransaction.setRoundData(networkConfig.data);
     log = `${token} set price to ${formatUnits(networkConfig.data, 8)}`;
@@ -334,26 +346,38 @@ export const updateExpectedAnswersPaymentToken = async (
     throw new Error('Network config is not found');
   }
 
-  if (isCompositeDataFeedConfig(networkConfig)) {
-    throw new Error('Composite config is not supported');
-  }
-
   const addresses = getCurrentAddresses(hre);
   const tokenAddresses = addresses?.paymentTokens?.[token];
 
-  if (!tokenAddresses || isCompositeDataFeedAddresses(tokenAddresses)) {
-    throw new Error('Token config is not found or is composite');
+  if (!tokenAddresses) {
+    throw new Error('Token config is not found');
   }
 
   if (!tokenAddresses.dataFeed) {
     throw new Error('Data feed address is not set');
   }
 
+  const isCompositeConfig = isCompositeDataFeedConfig(networkConfig);
+  const isCompositeAddress = isCompositeDataFeedAddresses(tokenAddresses);
+
+  if (isCompositeConfig !== isCompositeAddress) {
+    throw new Error('Data feed config and addresses have different types');
+  }
+
+  if (isCompositeConfig && isCompositeAddress) {
+    await updateCompositeExpectedAnswers(hre, {
+      token,
+      dataFeedAddress: tokenAddresses.dataFeed,
+      networkConfig,
+    });
+    return;
+  }
+
   await updateExpectedAnswers(hre, {
     isMToken: false,
     token,
     dataFeedAddress: tokenAddresses.dataFeed,
-    networkConfig,
+    networkConfig: networkConfig as DeployDataFeedConfigRegular,
   });
 };
 
@@ -431,11 +455,14 @@ const updateExpectedAnswers = async (
     );
   }
 
-  const dataFeed = (
-    await hre.ethers.getContractAt('DataFeed', dataFeedAddress)
-  ).connect(hre.ethers.provider) as DataFeed;
+  const dataFeed = (await getContractAt(
+    hre,
+    'DataFeed',
+    dataFeedAddress,
+  )) as DataFeed;
 
-  const aggregator = await hre.ethers.getContractAt(
+  const aggregator = await getContractAt(
+    hre,
     'AggregatorV3Interface',
     await dataFeed.aggregator(),
   );
@@ -485,73 +512,181 @@ const updateExpectedAnswers = async (
 
   const action = isMToken ? 'update-feed-mtoken' : 'update-feed-ptoken';
 
-  const setMax = async () => {
-    if (newMax.eq(currentMax)) {
-      console.log('maxExpectedAnswer is already up to date, skipping');
-      return;
-    }
-    const tx = await dataFeed.populateTransaction.setMaxExpectedAnswer(newMax);
-    const log = `${token} set maxExpectedAnswer to ${formatUnits(
-      newMax,
-      aggregatorDecimals,
-    )}`;
-    const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
-      action,
-      comment: log,
-    });
-    console.log(log, txRes);
-  };
+  await applyExpectedAnswerUpdates(hre, {
+    token,
+    dataFeed,
+    currentMin,
+    currentMax,
+    newMin,
+    newMax,
+    decimals: aggregatorDecimals,
+    action,
+  });
+};
 
-  const setMin = async () => {
-    if (newMin.eq(currentMin)) {
-      console.log('minExpectedAnswer is already up to date, skipping');
-      return;
-    }
-    const tx = await dataFeed.populateTransaction.setMinExpectedAnswer(newMin);
-    const log = `${token} set minExpectedAnswer to ${formatUnits(
+const updateCompositeExpectedAnswers = async (
+  hre: HardhatRuntimeEnvironment,
+  {
+    token,
+    dataFeedAddress,
+    networkConfig,
+  }: {
+    token: string;
+    dataFeedAddress: string;
+    networkConfig: DeployDataFeedConfigComposite;
+  },
+) => {
+  if (
+    networkConfig.minAnswer === undefined ||
+    networkConfig.maxAnswer === undefined
+  ) {
+    throw new Error(
+      'minAnswer and maxAnswer must be explicitly set in the config',
+    );
+  }
+
+  const dataFeed = (
+    await hre.ethers.getContractAt('CompositeDataFeed', dataFeedAddress)
+  ).connect(hre.ethers.provider) as CompositeDataFeed;
+
+  const currentMin = await dataFeed.minExpectedAnswer();
+  const currentMax = await dataFeed.maxExpectedAnswer();
+  const newMin = BigNumber.from(networkConfig.minAnswer);
+  const newMax = BigNumber.from(networkConfig.maxAnswer);
+
+  if (newMax.lt(newMin)) {
+    throw new Error(
+      `maxAnswer (${newMax.toString()}) must be greater than or equal to minAnswer (${newMin.toString()})`,
+    );
+  }
+
+  const numeratorFeed = (
+    await hre.ethers.getContractAt('IDataFeed', await dataFeed.numeratorFeed())
+  ).connect(hre.ethers.provider) as IDataFeed;
+  const denominatorFeed = (
+    await hre.ethers.getContractAt(
+      'IDataFeed',
+      await dataFeed.denominatorFeed(),
+    )
+  ).connect(hre.ethers.provider) as IDataFeed;
+  const numerator = await numeratorFeed.getDataInBase18();
+  const denominator = await denominatorFeed.getDataInBase18();
+
+  if (networkConfig.feedType === 'composite' && denominator.isZero()) {
+    throw new Error('Current denominator answer is zero');
+  }
+
+  const base18 = parseUnits('1');
+  const answer =
+    networkConfig.feedType === 'multiply'
+      ? numerator.mul(denominator).div(base18)
+      : numerator.mul(base18).div(denominator);
+
+  if (answer.lt(newMin) || answer.gt(newMax)) {
+    throw new Error(
+      `current composite answer ${formatUnits(
+        answer,
+        18,
+      )} is outside the new expected range [${formatUnits(
+        newMin,
+        18,
+      )}, ${formatUnits(newMax, 18)}]`,
+    );
+  }
+
+  console.log(`${token} composite dataFeed ${dataFeedAddress}`);
+  console.log(
+    `min: ${formatUnits(currentMin, 18)} -> ${formatUnits(
       newMin,
-      aggregatorDecimals,
+      18,
+    )}, max: ${formatUnits(currentMax, 18)} -> ${formatUnits(newMax, 18)}`,
+  );
+
+  await applyExpectedAnswerUpdates(hre, {
+    token,
+    dataFeed,
+    currentMin,
+    currentMax,
+    newMin,
+    newMax,
+    decimals: 18,
+    action: 'update-feed-ptoken',
+  });
+};
+
+const applyExpectedAnswerUpdates = async (
+  hre: HardhatRuntimeEnvironment,
+  {
+    token,
+    dataFeed,
+    currentMin,
+    currentMax,
+    newMin,
+    newMax,
+    decimals,
+    action,
+  }: {
+    token: string;
+    dataFeed: DataFeed | CompositeDataFeed;
+    currentMin: BigNumber;
+    currentMax: BigNumber;
+    newMin: BigNumber;
+    newMax: BigNumber;
+    decimals: number;
+    action: 'update-feed-mtoken' | 'update-feed-ptoken';
+  },
+) => {
+  const updates = getExpectedAnswerUpdates(
+    currentMin,
+    currentMax,
+    newMin,
+    newMax,
+  );
+
+  if (newMax.eq(currentMax)) {
+    console.log('maxExpectedAnswer is already up to date, skipping');
+  }
+  if (newMin.eq(currentMin)) {
+    console.log('minExpectedAnswer is already up to date, skipping');
+  }
+
+  for (const { bound, value } of updates) {
+    const tx =
+      bound === 'max'
+        ? await dataFeed.populateTransaction.setMaxExpectedAnswer(value)
+        : await dataFeed.populateTransaction.setMinExpectedAnswer(value);
+    const log = `${token} set ${bound}ExpectedAnswer to ${formatUnits(
+      value,
+      decimals,
     )}`;
     const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
       action,
       comment: log,
     });
     console.log(log, txRes);
-  };
-
-  // ordering matters: the contract enforces max > min on every update.
-  // when raising the range (e.g. 8 -> 18 decimals migration), max must
-  // be raised first; when lowering the range, min must be lowered first.
-  if (newMax.gt(currentMin)) {
-    await setMax();
-    await setMin();
-  } else {
-    await setMin();
-    await setMax();
   }
 };
 
 const getAggregatorContract = async (
   hre: HardhatRuntimeEnvironment,
-  provider: Provider | Signer,
   address: string,
 ) => {
-  return (
-    await hre.ethers.getContractAt('CustomAggregatorV3CompatibleFeed', address)
-  ).connect(provider) as CustomAggregatorV3CompatibleFeed;
+  return (await getContractAt(
+    hre,
+    'CustomAggregatorV3CompatibleFeed',
+    address,
+  )) as CustomAggregatorV3CompatibleFeed;
 };
 
 const getAggregatorGrowthContract = async (
   hre: HardhatRuntimeEnvironment,
-  provider: Provider | Signer,
   address: string,
 ) => {
-  return (
-    await hre.ethers.getContractAt(
-      'CustomAggregatorV3CompatibleFeedGrowth',
-      address,
-    )
-  ).connect(provider) as CustomAggregatorV3CompatibleFeedGrowth;
+  return (await getContractAt(
+    hre,
+    'CustomAggregatorV3CompatibleFeedGrowth',
+    address,
+  )) as CustomAggregatorV3CompatibleFeedGrowth;
 };
 
 const isCompositeDataFeedAddresses = (

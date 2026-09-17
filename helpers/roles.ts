@@ -94,6 +94,7 @@ export const prefixes: Record<MTokenName, string> = {
   mArb: 'M_ARB',
   mArbBTC: 'M_ARB_BTC',
   mArbETH: 'M_ARB_ETH',
+  mFTAC: 'M_FTAC',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {
@@ -117,6 +118,7 @@ export const tokenLevelGreenlistTokens: MTokenName[] = [
   'mArb',
   'mArbBTC',
   'mArbETH',
+  'mFTAC',
 ];
 
 /**
@@ -133,6 +135,7 @@ export const sharedGreenlistRoleSource: Partial<
   mGLOeuro: 'mGLOBAL',
   mArbBTC: 'mArb',
   mArbETH: 'mArb',
+  mFTAC: 'mGLOBAL',
 };
 
 const getGreenlistRoleName = (token: MTokenName): string => {

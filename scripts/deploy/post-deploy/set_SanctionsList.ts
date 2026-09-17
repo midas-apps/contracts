@@ -8,7 +8,7 @@ import {
 } from '../../../config/constants/addresses';
 import { getChainOrThrow } from '../../../helpers/utils';
 import { DeployFunction } from '../common/types';
-import { sendAndWaitForCustomTxSign } from '../common/utils';
+import { sendAndWaitForCustomTxSign, getContractAt } from '../common/utils';
 
 const func: DeployFunction = async (
   hre: HardhatRuntimeEnvironment,
@@ -76,7 +76,7 @@ const func: DeployFunction = async (
   for (const { type, address } of vaultEntries) {
     if (!address) continue;
 
-    const vault = await hre.ethers.getContractAt('ManageableVault', address);
+    const vault = await getContractAt(hre, 'ManageableVault', address);
 
     const current = await vault.sanctionsList();
     if (current?.toLowerCase() === sanctionsList.toLowerCase()) {

@@ -371,4 +371,9 @@ export const mTokensMetadata: Record<
     name: 'Midas Hyperithm Arbitrage ETH',
     symbol: 'mArbETH',
   },
+  mFTAC: {
+    name: 'Midas Fasanara TAC',
+    symbol: 'mFTAC',
+    isMinBalance: true,
+  },
 };

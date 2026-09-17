@@ -82,6 +82,34 @@ export const mFONEDeploymentConfig: DeploymentConfig = {
         },
         enableSanctionsList: true,
       },
+      postDeploy: {
+        addPaymentTokens: {
+          vaults: [
+            {
+              type: 'depositVault',
+              paymentTokens: [
+                {
+                  token: 'frxusd',
+                  fee: 1,
+                  isStable: true,
+                  allowance: parseUnits('5000000', 18),
+                },
+              ],
+            },
+            {
+              type: 'redemptionVaultSwapper',
+              paymentTokens: [
+                {
+                  token: 'frxusd',
+                  fee: 1,
+                  isStable: true,
+                  allowance: parseUnits('5000000', 18),
+                },
+              ],
+            },
+          ],
+        },
+      },
     },
   },
 };
