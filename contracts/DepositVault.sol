@@ -463,7 +463,6 @@ contract DepositVault is ManageableVault, IDepositVault {
                 recipientRequest,
                 referrerId,
                 amountTokenInstant,
-                // TODO: move to fn
                 (instantResult.amountTokenWithoutFee *
                     instantResult.tokenInRate) / 10**18
             ),

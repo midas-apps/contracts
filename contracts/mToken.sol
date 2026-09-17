@@ -116,8 +116,6 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     uint256[50] private ____gap;
 
-    // TODO: can we remove 2nd and 3rd gaps somehow without disabling storage layout checks?
-
     /**
      * @notice constructor
      * @param _contractAdminRole contract admin role
