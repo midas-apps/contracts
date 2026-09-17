@@ -323,7 +323,7 @@ interface IRedemptionVault is IManageableVault {
     ) external;
 
     /**
-     * @notice approving redeem request if not exceed tokenOut allowance
+     * @notice approving redeem request
      * Burns amount mToken from contract
      * Transfers tokenOut to user
      * Sets flag Processed

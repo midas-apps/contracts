@@ -493,8 +493,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             calcResult.tokenOutDecimals
         );
 
-        _requireAndUpdateAllowance(request.tokenOut, calcResult.amountTokenOut);
-
         mToken.burn(requestRedeemer, request.amountMToken);
 
         request.amountTokenOut = calcResult.amountTokenOutWithoutFee;
@@ -1033,12 +1031,11 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         _validateMTokenAmount(user, amountMTokenIn);
 
-        (, uint256 mTokenRate, uint256 tokenOutRate) = _convertMTokenToTokenOut(
-            amountMTokenIn,
-            0,
-            tokenOut,
-            0
-        );
+        (
+            uint256 approximateAmountOut,
+            uint256 mTokenRate,
+            uint256 tokenOutRate
+        ) = _convertMTokenToTokenOut(amountMTokenIn, 0, tokenOut, 0);
 
         _tokenTransferFromUser(
             address(mToken),
@@ -1046,6 +1043,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             amountMTokenIn,
             18 // mToken always have 18 decimals
         );
+
+        _requireAndUpdateAllowance(tokenOut, approximateAmountOut);
 
         requestId = currentRequestId++;
 

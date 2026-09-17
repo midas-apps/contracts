@@ -358,6 +358,15 @@ export const redeemInstantTest = async (
   return callPromise;
 };
 
+const convertMTokenToTokenOutBase18 = (
+  amountMToken: BigNumber,
+  mTokenRate: BigNumber,
+  tokenOutRate: BigNumber,
+) => {
+  const amountUsd = amountMToken.mul(mTokenRate).div(parseUnits('1'));
+  return amountUsd.mul(parseUnits('1')).div(tokenOutRate);
+};
+
 export const redeemRequestTest = async (
   {
     redemptionVault,
@@ -457,6 +466,7 @@ export const redeemRequestTest = async (
 
   const nextExpectedRequestIdToProcessBefore =
     await redemptionVault.nextExpectedRequestIdToProcess();
+  const tokenConfigBefore = await redemptionVault.tokensConfig(tokenOut);
 
   let callPromise: Awaited<ReturnType<typeof redeemInstantTest>>;
 
@@ -550,6 +560,38 @@ export const redeemRequestTest = async (
     balanceBeforeRequestRedeemer.add(amountMTokenInRequest),
   );
 
+  const tokenConfigAfter = await redemptionVault.tokensConfig(tokenOut);
+
+  if (tokenConfigBefore.allowance.eq(constants.MaxUint256)) {
+    expect(tokenConfigAfter.allowance).eq(tokenConfigBefore.allowance);
+  } else {
+    const reservedRequest = convertMTokenToTokenOutBase18(
+      amountMTokenInRequest,
+      mTokenRate,
+      tokenOutRate,
+    );
+
+    let expectedDecrease = reservedRequest;
+
+    if (amountMTokenInInstant.gt(0)) {
+      const tokenDecimals = await tokenContract.decimals();
+      expectedDecrease = expectedDecrease.add(
+        truncateToTokenDecimals(
+          convertMTokenToTokenOutBase18(
+            amountMTokenInInstant,
+            mTokenRate,
+            tokenOutRate,
+          ),
+          tokenDecimals,
+        ),
+      );
+    }
+
+    expect(tokenConfigBefore.allowance.sub(tokenConfigAfter.allowance)).eq(
+      expectedDecrease,
+    );
+  }
+
   return {
     requestId: latestRequestIdBefore,
     rate: mTokenRate,
@@ -584,6 +626,9 @@ export const approveRedeemRequestTest = async (
   }
 
   const requestDataBefore = await redemptionVault.redeemRequests(requestId);
+  const allowanceBefore = (
+    await redemptionVault.tokensConfig(requestDataBefore.tokenOut)
+  ).allowance;
 
   let actualRate = !isAvgRate
     ? rate
@@ -715,6 +760,11 @@ export const approveRedeemRequestTest = async (
   expect(balanceAfterContract).eq(balanceBeforeContract);
 
   expect(balanceAfterReceiver).eq(balanceBeforeReceiver);
+
+  const allowanceAfter = (
+    await redemptionVault.tokensConfig(requestDataBefore.tokenOut)
+  ).allowance;
+  expect(allowanceAfter).eq(allowanceBefore);
 };
 
 export const truncateToTokenDecimals = (
@@ -1020,6 +1070,16 @@ export const safeBulkApproveRequestTest = async (
   const nextExpectedRequestIdToProcessBefore =
     await redemptionVault.nextExpectedRequestIdToProcess();
 
+  const uniqueTokenOuts = [
+    ...new Set(requestDatasBefore.map(({ tokenOut }) => tokenOut)),
+  ];
+  const allowancesBefore = await Promise.all(
+    uniqueTokenOuts.map(async (tokenOut) => ({
+      tokenOut,
+      allowance: (await redemptionVault.tokensConfig(tokenOut)).allowance,
+    })),
+  );
+
   const txPromise = callFn();
   await expect(txPromise).to.not.reverted;
 
@@ -1190,6 +1250,12 @@ export const safeBulkApproveRequestTest = async (
       expect(requestDataAfter.status).eq(0);
     }
   }
+
+  for (const { tokenOut, allowance } of allowancesBefore) {
+    expect((await redemptionVault.tokensConfig(tokenOut)).allowance).eq(
+      allowance,
+    );
+  }
 };
 
 export const rejectRedeemRequestTest = async (
@@ -1212,6 +1278,9 @@ export const rejectRedeemRequestTest = async (
   }
 
   const requestDataBefore = await redemptionVault.redeemRequests(requestId);
+  const allowanceBefore = (
+    await redemptionVault.tokensConfig(requestDataBefore.tokenOut)
+  ).allowance;
 
   const balanceBeforeUser = await mTBILL.balanceOf(sender.address);
   const balanceBeforeContract = await mTBILL.balanceOf(redemptionVault.address);
@@ -1270,6 +1339,11 @@ export const rejectRedeemRequestTest = async (
   expect(balanceAfterContract).eq(balanceBeforeContract);
   expect(balanceAfterReceiver).eq(balanceBeforeReceiver);
   expect(balanceAfterContractPToken).eq(balanceBeforeContractPToken);
+
+  const allowanceAfter = (
+    await redemptionVault.tokensConfig(requestDataBefore.tokenOut)
+  ).allowance;
+  expect(allowanceAfter).eq(allowanceBefore);
 };
 
 export const cancelLpLoanRequestTest = async (
