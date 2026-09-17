@@ -280,7 +280,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         external
         onlyContractAdmin
     {
-        uint256 _loanApr = loanApr;
         for (uint256 i = 0; i < requestIds.length; ++i) {
             LiquidityProviderLoanRequest memory request = loanRequests[
                 requestIds[i]
@@ -291,7 +290,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             uint8 decimals = _tokenDecimals(request.tokenOut);
             uint256 duration = block.timestamp - request.createdAt;
             uint256 accruedInterest = _truncate(
-                (request.amountTokenOut * _loanApr * duration) /
+                (request.amountTokenOut * request.loanApr * duration) /
                     (10_000 * 365 days),
                 decimals
             );
@@ -759,10 +758,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         uint256 loanRequestId = currentLoanRequestId++;
 
+        uint256 _loanApr = loanApr;
         loanRequests[loanRequestId] = LiquidityProviderLoanRequest({
             tokenOut: tokenOut,
             amountTokenOut: usedLpLiquidity,
             amountFee: lpFeePortion,
+            loanApr: _loanApr,
             createdAt: block.timestamp,
             status: RequestStatus.Pending
         });
@@ -773,7 +774,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             usedLpLiquidity,
             lpFeePortion,
             calcResult.mTokenRate,
-            calcResult.tokenOutRate
+            calcResult.tokenOutRate,
+            _loanApr
         );
     }
 

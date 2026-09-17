@@ -14485,6 +14485,7 @@ export const redemptionVaultSuits = (
             } = fixture;
 
             await setInstantFeeTest({ vault: redemptionVault, owner }, 100);
+            await setLoanAprTest({ redemptionVault, owner }, 50);
             await prepareTest(fixture, stableCoins.dai);
             await increase(days(365));
 
@@ -14495,8 +14496,6 @@ export const redemptionVaultSuits = (
               redemptionVault,
               101,
             );
-
-            await setLoanAprTest({ redemptionVault, owner }, 50);
 
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
@@ -14515,6 +14514,7 @@ export const redemptionVaultSuits = (
             } = fixture;
 
             await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+            await setLoanAprTest({ redemptionVault, owner }, 10000);
             await prepareTest(fixture, stableCoins.usdt);
             const request = await redemptionVault.loanRequests(0);
             await ethers.provider.send('evm_setNextBlockTimestamp', [
@@ -14528,8 +14528,6 @@ export const redemptionVaultSuits = (
               redemptionVault,
               1000,
             );
-
-            await setLoanAprTest({ redemptionVault, owner }, 10000);
 
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
@@ -14548,6 +14546,7 @@ export const redemptionVaultSuits = (
             } = fixture;
 
             await setInstantFeeTest({ vault: redemptionVault, owner }, 200);
+            await setLoanAprTest({ redemptionVault, owner }, 100);
             await prepareTest(fixture, stableCoins.dai);
             await setInstantFeeTest({ vault: redemptionVault, owner }, 50);
             await increase(days(365));
@@ -14559,8 +14558,6 @@ export const redemptionVaultSuits = (
               redemptionVault,
               102,
             );
-
-            await setLoanAprTest({ redemptionVault, owner }, 100);
 
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
@@ -14579,6 +14576,7 @@ export const redemptionVaultSuits = (
             } = fixture;
 
             await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+            await setLoanAprTest({ redemptionVault, owner }, 20000);
             await prepareTest(fixture, stableCoins.usdt);
             const request = await redemptionVault.loanRequests(0);
             await ethers.provider.send('evm_setNextBlockTimestamp', [
@@ -14593,7 +14591,6 @@ export const redemptionVaultSuits = (
               1000,
             );
 
-            await setLoanAprTest({ redemptionVault, owner }, 20000);
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }],
@@ -14610,9 +14607,10 @@ export const redemptionVaultSuits = (
               stableCoins,
             } = fixture;
 
+            await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+            await setLoanAprTest({ redemptionVault, owner }, 10000);
             await prepareTest(fixture, stableCoins.usdt);
             await prepareTest(fixture, stableCoins.usdt, false);
-            await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
 
             const r0 = await redemptionVault.loanRequests(0);
             const r1 = await redemptionVault.loanRequests(1);
@@ -14628,8 +14626,6 @@ export const redemptionVaultSuits = (
               redemptionVault,
               2000,
             );
-
-            await setLoanAprTest({ redemptionVault, owner }, 10000);
 
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
@@ -14647,9 +14643,10 @@ export const redemptionVaultSuits = (
               stableCoins,
             } = fixture;
 
+            await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+            await setLoanAprTest({ redemptionVault, owner }, 5000);
             await prepareTest(fixture, stableCoins.dai);
             await prepareTest(fixture, stableCoins.usdc);
-            await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
 
             const r0 = await redemptionVault.loanRequests(0);
             const r1 = await redemptionVault.loanRequests(1);
@@ -14673,7 +14670,6 @@ export const redemptionVaultSuits = (
               1000,
             );
 
-            await setLoanAprTest({ redemptionVault, owner }, 5000);
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }, { id: 1 }],
@@ -14690,10 +14686,11 @@ export const redemptionVaultSuits = (
               stableCoins,
             } = fixture;
 
+            await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+            await setLoanAprTest({ redemptionVault, owner }, 5000);
             await prepareTest(fixture, stableCoins.usdt);
             await prepareTest(fixture, stableCoins.usdt, false);
             await prepareTest(fixture, stableCoins.usdt, false);
-            await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
 
             const r0 = await redemptionVault.loanRequests(0);
             const r1 = await redemptionVault.loanRequests(1);
@@ -14714,8 +14711,6 @@ export const redemptionVaultSuits = (
               5000,
             );
 
-            await setLoanAprTest({ redemptionVault, owner }, 5000);
-
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
               [{ id: 0 }, { id: 1 }, { id: 2 }],
@@ -14732,20 +14727,22 @@ export const redemptionVaultSuits = (
               stableCoins,
             } = fixture;
 
+            const loanApr = BigNumber.from(3333);
+
             await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+            await setLoanAprTest({ redemptionVault, owner }, loanApr);
             await prepareTest(fixture, stableCoins.usdc6);
             await increase(days(1));
 
             const request = await redemptionVault.loanRequests(0);
             const tokenDecimals = await stableCoins.usdc6.decimals();
-            const loanApr = BigNumber.from(3333);
             const currentTimestamp = await getCurrentBlockTimestamp();
             const duration = BigNumber.from(currentTimestamp).sub(
               request.createdAt,
             );
 
             const accruedInterestRaw = request.amountTokenOut
-              .mul(loanApr)
+              .mul(request.loanApr)
               .mul(duration)
               .div(BigNumber.from(10_000).mul(365).mul(86400));
 
@@ -14754,6 +14751,7 @@ export const redemptionVaultSuits = (
               tokenDecimals,
             );
 
+            expect(request.loanApr).eq(loanApr);
             expect(accruedInterestRaw).gt(accruedInterestTruncated);
             expect(accruedInterestTruncated).gt(request.amountFee);
 
@@ -14764,8 +14762,6 @@ export const redemptionVaultSuits = (
               redemptionVault,
               1000,
             );
-
-            await setLoanAprTest({ redemptionVault, owner }, loanApr);
 
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
@@ -14783,22 +14779,18 @@ export const redemptionVaultSuits = (
               stableCoins,
             } = fixture;
 
+            const loanApr = BigNumber.from(133);
+            const durationSeconds = 23_950_800;
+
             await setInstantFeeTest({ vault: redemptionVault, owner }, 100);
+            await setLoanAprTest({ redemptionVault, owner }, loanApr);
             await prepareTest(fixture, stableCoins.usdc6);
 
             const request = await redemptionVault.loanRequests(0);
             const tokenDecimals = await stableCoins.usdc6.decimals();
-            const loanApr = BigNumber.from(133);
-            const durationSeconds = 23_950_800;
-
-            await ethers.provider.send('evm_setNextBlockTimestamp', [
-              request.createdAt.toNumber() + durationSeconds,
-            ]);
-            await ethers.provider.send('evm_mine', []);
-
             const duration = BigNumber.from(durationSeconds);
             const accruedInterestRaw = request.amountTokenOut
-              .mul(loanApr)
+              .mul(request.loanApr)
               .mul(duration)
               .div(BigNumber.from(10_000).mul(365).mul(86400));
 
@@ -14807,6 +14799,7 @@ export const redemptionVaultSuits = (
               tokenDecimals,
             );
 
+            expect(request.loanApr).eq(loanApr);
             expect(accruedInterestRaw).gt(request.amountFee);
             expect(accruedInterestTruncated).lte(request.amountFee);
             expect(accruedInterestRaw).gt(accruedInterestTruncated);
@@ -14819,7 +14812,9 @@ export const redemptionVaultSuits = (
               100,
             );
 
-            await setLoanAprTest({ redemptionVault, owner }, loanApr);
+            await ethers.provider.send('evm_setNextBlockTimestamp', [
+              request.createdAt.toNumber() + durationSeconds,
+            ]);
 
             await bulkRepayLpLoanRequestTest(
               { redemptionVault, owner, mTBILL },
@@ -14828,6 +14823,48 @@ export const redemptionVaultSuits = (
 
             const requestAfter = await redemptionVault.loanRequests(0);
             expect(requestAfter.amountFee).eq(request.amountFee);
+            expect(requestAfter.loanApr).eq(loanApr);
+          });
+
+          it('approve 1 request using snapshotted loanApr when global loanApr changes after creation', async () => {
+            const fixture = await loadRvFixture();
+            const {
+              redemptionVault,
+              owner,
+              mTBILL,
+              loanRepaymentAddress,
+              stableCoins,
+            } = fixture;
+
+            await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+            await setLoanAprTest({ redemptionVault, owner }, 10000);
+            await prepareTest(fixture, stableCoins.usdt);
+
+            const request = await redemptionVault.loanRequests(0);
+            expect(request.loanApr).eq(10000);
+
+            await ethers.provider.send('evm_setNextBlockTimestamp', [
+              request.createdAt.toNumber() + days(365),
+            ]);
+
+            await mintToken(stableCoins.usdt, loanRepaymentAddress, 1000);
+            await approveBase18(
+              loanRepaymentAddress,
+              stableCoins.usdt,
+              redemptionVault,
+              1000,
+            );
+
+            await setLoanAprTest({ redemptionVault, owner }, 20000);
+
+            await bulkRepayLpLoanRequestTest(
+              { redemptionVault, owner, mTBILL },
+              [{ id: 0 }],
+            );
+
+            const requestAfter = await redemptionVault.loanRequests(0);
+            expect(requestAfter.loanApr).eq(10000);
+            expect(await redemptionVault.loanApr()).eq(20000);
           });
         });
 

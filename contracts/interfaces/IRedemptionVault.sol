@@ -55,6 +55,8 @@ struct LiquidityProviderLoanRequest {
     uint256 amountTokenOut;
     /// @notice amount of tokenOut fee
     uint256 amountFee;
+    /// @notice loan APR value in basis points (100 = 1%)
+    uint256 loanApr;
     /// @notice timestamp of the request creation
     uint256 createdAt;
     /// @notice status of the loan
@@ -117,6 +119,7 @@ interface IRedemptionVault is IManageableVault {
      * @param amountFee fee amount in payment token
      * @param mTokenRate mToken rate
      * @param tokenOutRate tokenOut rate
+     * @param loanApr loan APR value in basis points (100 = 1%)
      */
     event CreateLiquidityProviderLoanRequest(
         uint256 indexed loanId,
@@ -124,7 +127,8 @@ interface IRedemptionVault is IManageableVault {
         uint256 amountTokenOut,
         uint256 amountFee,
         uint256 mTokenRate,
-        uint256 tokenOutRate
+        uint256 tokenOutRate,
+        uint256 loanApr
     );
 
     /**

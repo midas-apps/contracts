@@ -332,6 +332,7 @@ export const redeemInstantTest = async (
     );
     expect(loanRequest.amountTokenOut).eq(toTransferFromLpBase18);
     expect(loanRequest.amountFee).eq(lpFeePortionBase18);
+    expect(loanRequest.loanApr).eq(await redemptionVault.loanApr());
     expect(loanRequest.status).eq(0);
     expect(loanRequest.tokenOut).eq(tokenOut);
     expect(loanRequest.createdAt).eq(await getCurrentBlockTimestamp());
@@ -876,8 +877,6 @@ export const bulkRepayLpLoanRequestTest = async (
   const txBlock = await ethers.provider.getBlock(txReceipt.blockNumber);
   const currentTimestamp = txBlock.timestamp;
 
-  const loanApr = await redemptionVault.loanApr();
-
   const feePercents = await Promise.all(
     requestDatasBefore.map(async (requestData) => {
       const duration = BigNumber.from(currentTimestamp).sub(
@@ -890,7 +889,7 @@ export const bulkRepayLpLoanRequestTest = async (
       ).decimals();
 
       const accruedInterestRaw = requestData.amountTokenOut
-        .mul(loanApr)
+        .mul(requestData.loanApr)
         .mul(duration)
         .div(BigNumber.from(10_000).mul(365).mul(86400));
 
@@ -966,6 +965,7 @@ export const bulkRepayLpLoanRequestTest = async (
     expect(requestDataAfter.amountTokenOut).eq(
       requestDataBefore.amountTokenOut,
     );
+    expect(requestDataAfter.loanApr).eq(requestDataBefore.loanApr);
 
     const logs = parsedLogs.filter((log) => log.requestId.eq(id));
 
