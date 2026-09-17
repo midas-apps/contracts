@@ -669,9 +669,9 @@ export const approveRedeemRequestTest = async (
 
   const supplyBefore = await mTBILL.totalSupply();
 
-  const balanceUserTokenOutBefore = await balanceOfBase18(
+  const balanceRecipientTokenOutBefore = await balanceOfBase18(
     tokenContract,
-    sender.address,
+    requestDataBefore.recipient,
   );
 
   const { amountOutWithoutFeeBase18, feeBase18 } =
@@ -730,9 +730,9 @@ export const approveRedeemRequestTest = async (
   );
 
   const balanceAfterContract = await mTBILL.balanceOf(redemptionVault.address);
-  const balanceUserTokenOutAfter = await balanceOfBase18(
+  const balanceRecipientTokenOutAfter = await balanceOfBase18(
     tokenContract,
-    sender.address,
+    requestDataBefore.recipient,
   );
 
   const supplyAfter = await mTBILL.totalSupply();
@@ -749,8 +749,10 @@ export const approveRedeemRequestTest = async (
 
   expect(requestDataAfter.status).eq(1);
 
-  expect(balanceUserTokenOutAfter).eq(
-    balanceUserTokenOutBefore?.add(amountOutWithoutFeeBase18!.add(feeBase18!)),
+  expect(balanceRecipientTokenOutAfter).eq(
+    balanceRecipientTokenOutBefore?.add(
+      amountOutWithoutFeeBase18!.add(feeBase18!),
+    ),
   );
   expect(balanceAfterVaultPToken).eq(balanceBeforeVaultPToken);
 

@@ -634,6 +634,48 @@ export const redemptionVaultSuits = (
           );
         });
 
+        it('redeem below minAmount to custom recipient when caller is freeFromMinAmount', async () => {
+          const {
+            redemptionVault,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            owner,
+            mTBILL,
+            stableCoins,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            customRecipient,
+          } = await loadRvFixture();
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+          await mintToken(mTBILL, owner, 100);
+          await mintToken(stableCoins.dai, redemptionVault, 100_000);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+
+          await setMinAmountTest({ vault: redemptionVault, owner }, 100_000);
+          await redemptionVault.freeFromMinAmount(owner.address, true);
+
+          await redeemInstantTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              customRecipient,
+            },
+            stableCoins.dai,
+            100,
+          );
+        });
+
         it('should fail: if exceed allowance of deposit by token', async () => {
           const {
             redemptionVault,
@@ -4915,6 +4957,49 @@ export const redemptionVaultSuits = (
 
           await redeemRequestTest(
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            99_999,
+            {
+              revertCustomError: {
+                customErrorName: 'AmountLessThanMin',
+              },
+            },
+          );
+        });
+
+        it('should fail: call for amount < minAmount with custom recipient', async () => {
+          const {
+            redemptionVault,
+            mockedAggregator,
+            owner,
+            mTBILL,
+            stableCoins,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            customRecipient,
+          } = await loadRvFixture();
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1);
+
+          await mintToken(mTBILL, owner, 100_000);
+          await approveBase18(owner, mTBILL, redemptionVault, 100_000);
+
+          await setMinAmountTest({ vault: redemptionVault, owner }, 100_000);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              customRecipient,
+            },
             stableCoins.dai,
             99_999,
             {
@@ -14043,6 +14128,110 @@ export const redemptionVaultSuits = (
           );
         });
 
+        it('call for amount == minAmount, then raise minAmount, then approve', async () => {
+          const {
+            redemptionVault,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            owner,
+            mTBILL,
+            stableCoins,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1);
+
+          await mintToken(mTBILL, owner, 100_000);
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await approveBase18(owner, mTBILL, redemptionVault, 100_000);
+
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+          await setMinAmountTest({ vault: redemptionVault, owner }, 100_000);
+
+          await redeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.dai,
+            100_000,
+          );
+
+          await setMinAmountTest({ vault: redemptionVault, owner }, 200_000);
+
+          await approveRedeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            0,
+            parseUnits('1'),
+          );
+        });
+
+        it('call for amount < minAmount as exempt user to another recipient, then approve', async () => {
+          const {
+            redemptionVault,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            owner,
+            mTBILL,
+            stableCoins,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            requestRedeemer,
+            customRecipient,
+          } = await loadRvFixture();
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1);
+
+          await mintToken(mTBILL, owner, 100);
+          await mintToken(stableCoins.dai, requestRedeemer, 100000);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            100000,
+          );
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+          await setMinAmountTest({ vault: redemptionVault, owner }, 100_000);
+          await redemptionVault.freeFromMinAmount(owner.address, true);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              customRecipient,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          await approveRedeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            0,
+            parseUnits('1'),
+          );
+        });
+
         it('call for amount == minAmount, then safe approve', async () => {
           const {
             redemptionVault,
@@ -15402,7 +15591,46 @@ export const redemptionVaultSuits = (
               0,
               false,
             ),
-          ).to.be.revertedWithCustomError(redemptionVault, 'InvalidAmount');
+          )
+            .to.be.revertedWithCustomError(redemptionVault, 'FeeExceedsAmount')
+            .withArgs(0, 0);
+        });
+
+        it('does not revert when amountMTokenIn < minAmount', async () => {
+          const {
+            redemptionVault,
+            stableCoins,
+            owner,
+            dataFeed,
+            mockedAggregator,
+            mockedAggregatorMToken,
+          } = await loadRvFixture();
+
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await setRoundData({ mockedAggregator }, 1);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+          await setMinAmountTest({ vault: redemptionVault, owner }, 100_000);
+
+          const result =
+            await redemptionVault.callStatic.calcAndValidateRedeemTest(
+              constants.AddressZero,
+              stableCoins.dai.address,
+              parseUnits('100'),
+              0,
+              0,
+              false,
+              0,
+              false,
+            );
+
+          expect(result.amountTokenOutWithoutFee).eq(parseUnits('100'));
         });
 
         it('should override fee percent', async () => {

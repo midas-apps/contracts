@@ -639,6 +639,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         _validateInstantFee();
 
+        _validateMTokenAmount(user, amountMTokenIn);
+
         calcResult = _calcAndValidateRedeem(
             user,
             tokenOut,
@@ -1147,8 +1149,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         returns (CalcAndValidateRedeemResult memory result)
     {
         _requireTokenExists(tokenOut);
-
-        _validateMTokenAmount(user, amountMTokenIn);
 
         (
             uint256 amountTokenOut,
