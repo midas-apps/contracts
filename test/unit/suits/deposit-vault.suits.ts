@@ -793,7 +793,7 @@ export const depositVaultSuits = (
           await setMinAmountToDepositTest({ depositVault, owner }, 100_000);
           await setInstantLimitConfigTest(
             { vault: depositVault, owner },
-            150_000,
+            parseUnits('150000'),
           );
 
           await depositInstantTest(
@@ -835,7 +835,7 @@ export const depositVaultSuits = (
           await setMinAmountToDepositTest({ depositVault, owner }, 100_000);
           await setInstantLimitConfigTest(
             { vault: depositVault, owner },
-            150_000,
+            parseUnits('150000'),
           );
 
           await depositInstantTest(
@@ -1434,7 +1434,7 @@ export const depositVaultSuits = (
             100,
             {
               revertCustomError: {
-                customErrorName: 'InvalidAmount',
+                customErrorName: 'AmountLessThanMin',
               },
             },
           );
@@ -1457,7 +1457,7 @@ export const depositVaultSuits = (
             100,
             {
               revertCustomError: {
-                customErrorName: 'InvalidAmount',
+                customErrorName: 'AmountLessThanMin',
               },
             },
           );
@@ -2530,6 +2530,400 @@ export const depositVaultSuits = (
             );
           });
 
+          it('when 90% instant and 10% holdback and total meets minAmount', async () => {
+            const {
+              owner,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = await loadDvFixture();
+
+            await mintToken(stableCoins.dai, regularAccounts[0], 500);
+            await approveBase18(
+              regularAccounts[0],
+              stableCoins.dai,
+              depositVault,
+              500,
+            );
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 100);
+
+            await depositRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 90_00,
+              },
+              stableCoins.dai,
+              500,
+              {
+                from: regularAccounts[0],
+              },
+            );
+          });
+
+          it('should fail: when 90% instant and 10% holdback and total is below minAmount', async () => {
+            const {
+              owner,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = await loadDvFixture();
+
+            await mintToken(stableCoins.dai, regularAccounts[0], 99);
+            await approveBase18(
+              regularAccounts[0],
+              stableCoins.dai,
+              depositVault,
+              99,
+            );
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 100);
+
+            await depositRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 90_00,
+              },
+              stableCoins.dai,
+              99,
+              {
+                from: regularAccounts[0],
+                revertCustomError: {
+                  customErrorName: 'AmountLessThanMin',
+                },
+              },
+            );
+          });
+
+          it('when 90% instant and 10% holdback and total meets minMTokenAmountForFirstDeposit', async () => {
+            const {
+              owner,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = await loadDvFixture();
+
+            await mintToken(stableCoins.dai, regularAccounts[0], 500);
+            await approveBase18(
+              regularAccounts[0],
+              stableCoins.dai,
+              depositVault,
+              500,
+            );
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
+            await setMinAmountToDepositTest({ depositVault, owner }, 100);
+
+            await depositRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 90_00,
+              },
+              stableCoins.dai,
+              500,
+              {
+                from: regularAccounts[0],
+              },
+            );
+          });
+
+          it('should fail: when 90% instant and 10% holdback and total is below minMTokenAmountForFirstDeposit', async () => {
+            const {
+              owner,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = await loadDvFixture();
+
+            await mintToken(stableCoins.dai, regularAccounts[0], 99);
+            await approveBase18(
+              regularAccounts[0],
+              stableCoins.dai,
+              depositVault,
+              99,
+            );
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
+            await setMinAmountToDepositTest({ depositVault, owner }, 100);
+
+            await depositRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 90_00,
+              },
+              stableCoins.dai,
+              99,
+              {
+                from: regularAccounts[0],
+                revertCustomError: {
+                  customErrorName: 'LessThanMinAmountFirstDeposit',
+                },
+              },
+            );
+          });
+
+          it('when 10% instant and 90% holdback and total meets minAmount', async () => {
+            const {
+              owner,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = await loadDvFixture();
+
+            await mintToken(stableCoins.dai, regularAccounts[0], 500);
+            await approveBase18(
+              regularAccounts[0],
+              stableCoins.dai,
+              depositVault,
+              500,
+            );
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 100);
+
+            await depositRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 10_00,
+              },
+              stableCoins.dai,
+              500,
+              {
+                from: regularAccounts[0],
+              },
+            );
+          });
+
+          it('when 50% instant and 50% holdback and total meets minAmount', async () => {
+            const {
+              owner,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = await loadDvFixture();
+
+            await mintToken(stableCoins.dai, regularAccounts[0], 150);
+            await approveBase18(
+              regularAccounts[0],
+              stableCoins.dai,
+              depositVault,
+              150,
+            );
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 100);
+
+            await depositRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 50_00,
+              },
+              stableCoins.dai,
+              150,
+              {
+                from: regularAccounts[0],
+              },
+            );
+          });
+
+          it('when 10% instant and 90% holdback and total meets minMTokenAmountForFirstDeposit', async () => {
+            const {
+              owner,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = await loadDvFixture();
+
+            await mintToken(stableCoins.dai, regularAccounts[0], 500);
+            await approveBase18(
+              regularAccounts[0],
+              stableCoins.dai,
+              depositVault,
+              500,
+            );
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
+            await setMinAmountToDepositTest({ depositVault, owner }, 100);
+
+            await depositRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 10_00,
+              },
+              stableCoins.dai,
+              500,
+              {
+                from: regularAccounts[0],
+              },
+            );
+          });
+
+          it('when 50% instant and 50% holdback and total meets minMTokenAmountForFirstDeposit', async () => {
+            const {
+              owner,
+              depositVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+              mockedAggregator,
+              mockedAggregatorMToken,
+            } = await loadDvFixture();
+
+            await mintToken(stableCoins.dai, regularAccounts[0], 150);
+            await approveBase18(
+              regularAccounts[0],
+              stableCoins.dai,
+              depositVault,
+              150,
+            );
+            await addPaymentTokenTest(
+              { vault: depositVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setInstantFeeTest({ vault: depositVault, owner }, 0);
+            await setMinAmountTest({ vault: depositVault, owner }, 0);
+            await setMinAmountToDepositTest({ depositVault, owner }, 100);
+
+            await depositRequestTest(
+              {
+                depositVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 50_00,
+              },
+              stableCoins.dai,
+              150,
+              {
+                from: regularAccounts[0],
+              },
+            );
+          });
+
           it('when 0% instant and 100% holdback', async () => {
             const {
               owner,
@@ -3461,7 +3855,7 @@ export const depositVaultSuits = (
             100,
             {
               revertCustomError: {
-                customErrorName: 'InvalidAmount',
+                customErrorName: 'AmountLessThanMin',
               },
             },
           );

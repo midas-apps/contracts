@@ -48,6 +48,15 @@ contract DepositVaultWithMTokenTest is
         );
     }
 
+    function _validateMTokenAmount(address user, uint256 amountMToken)
+        internal
+        view
+        override(DepositVaultTestBase, DepositVault)
+        returns (bool)
+    {
+        return DepositVaultTestBase._validateMTokenAmount(user, amountMToken);
+    }
+
     function _getTokenRate(address dataFeed, bool stable)
         internal
         view

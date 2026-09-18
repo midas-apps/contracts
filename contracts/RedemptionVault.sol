@@ -543,6 +543,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             InstantShareTooHigh(instantShareToValidate, maxInstantShare)
         );
 
+        // otherwise holdback is used so we validate
+        // it in `_redeemRequestWithCustomRecipient`
+        if (instantShareToValidate == ONE_HUNDRED_PERCENT) {
+            _validateMTokenAmount(msg.sender, amountMTokenIn);
+        }
+
         CalcAndValidateRedeemResult memory calcResult = _redeemInstant(
             tokenOut,
             amountMTokenIn,
@@ -598,6 +604,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 amountMTokenInInstant = (amountMTokenIn * instantShare) /
             ONE_HUNDRED_PERCENT;
 
+        _validateMTokenAmount(msg.sender, amountMTokenIn);
+
         if (amountMTokenInInstant > 0) {
             instantReceivedAmount = _redeemInstantWithCustomRecipient(
                 tokenOut,
@@ -637,9 +645,9 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     ) private returns (CalcAndValidateRedeemResult memory calcResult) {
         address user = msg.sender;
 
-        _validateInstantFee();
+        _validateInputAmount(amountMTokenIn);
 
-        _validateMTokenAmount(user, amountMTokenIn);
+        _validateInstantFee();
 
         calcResult = _calcAndValidateRedeem(
             user,
@@ -1029,11 +1037,17 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         address recipient,
         uint256 amountMTokenInstant
     ) private returns (uint256 requestId) {
-        _requireTokenExists(tokenOut);
-
         address user = msg.sender;
 
-        _validateMTokenAmount(user, amountMTokenIn);
+        _requireTokenExists(tokenOut);
+
+        _validateInputAmount(amountMTokenIn);
+
+        // otherwise holdback is used so we validate
+        // it in `_redeemRequestWithCustomRecipient`
+        if (amountMTokenInstant == 0) {
+            _validateMTokenAmount(user, amountMTokenIn);
+        }
 
         (
             uint256 approximateAmountOut,

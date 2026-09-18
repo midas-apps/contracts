@@ -65,6 +65,16 @@ abstract contract DepositVaultTestBase is
             );
     }
 
+    function _validateMTokenAmount(address user, uint256 amountMToken)
+        internal
+        view
+        virtual
+        override(DepositVault, ManageableVault)
+        returns (bool)
+    {
+        return DepositVault._validateMTokenAmount(user, amountMToken);
+    }
+
     function _getTokenRate(address dataFeed, bool stable)
         internal
         view

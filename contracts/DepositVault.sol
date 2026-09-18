@@ -359,6 +359,13 @@ contract DepositVault is ManageableVault, IDepositVault {
             recipient
         );
 
+        // otherwise holdback is used so we validate
+        // it in `_depositRequestWithCustomRecipient`
+        if (instantShareToValidate == ONE_HUNDRED_PERCENT) {
+            _validateMTokenAmount(msg.sender, result.mintAmount);
+            _increaseTotalMinted(msg.sender, result.mintAmount);
+        }
+
         emit DepositInstant(
             msg.sender,
             tokenIn,
@@ -394,8 +401,6 @@ contract DepositVault is ManageableVault, IDepositVault {
         result = _calcAndValidateDeposit(user, tokenIn, amountToken, true);
 
         _requireSlippageNotExceeded(result.mintAmount, minReceiveAmount);
-
-        totalMinted[user] += result.mintAmount;
 
         _requireAndUpdateLimit(result.mintAmount);
 
@@ -454,20 +459,29 @@ contract DepositVault is ManageableVault, IDepositVault {
             );
         }
 
-        uint256 amountTokenRequest = amountToken - amountTokenInstant;
-
-        return (
-            _depositRequest(
+        (
+            uint256 requestId,
+            uint256 estimatedMintAmountRequest
+        ) = _depositRequest(
                 tokenIn,
-                amountTokenRequest,
+                amountToken - amountTokenInstant,
                 recipientRequest,
                 referrerId,
                 amountTokenInstant,
                 (instantResult.amountTokenWithoutFee *
                     instantResult.tokenInRate) / 10**18
-            ),
-            instantResult.mintAmount
+            );
+
+        _validateMTokenAmount(
+            msg.sender,
+            estimatedMintAmountRequest + instantResult.mintAmount
         );
+
+        if (instantResult.mintAmount > 0) {
+            _increaseTotalMinted(msg.sender, instantResult.mintAmount);
+        }
+
+        return (requestId, instantResult.mintAmount);
     }
 
     /**
@@ -480,6 +494,7 @@ contract DepositVault is ManageableVault, IDepositVault {
      * @param depositedInstantUsdAmount amount of tokenIn that was deposited instantly in USD
 
      * @return requestId request id
+     * @return estimatedMintAmount estimated amount of mToken to mint
      */
     function _depositRequest(
         address tokenIn,
@@ -488,10 +503,14 @@ contract DepositVault is ManageableVault, IDepositVault {
         bytes32 referrerId,
         uint256 depositedInstantAmount,
         uint256 depositedInstantUsdAmount
-    ) private returns (uint256 requestId) {
+    )
+        private
+        returns (
+            uint256, /* requestId */
+            uint256 /* estimatedMintAmount */
+        )
+    {
         address user = msg.sender;
-
-        requestId = currentRequestId++;
 
         CalcAndValidateDepositResult
             memory calcResult = _calcAndValidateDeposit(
@@ -501,11 +520,21 @@ contract DepositVault is ManageableVault, IDepositVault {
                 false
             );
 
+        // otherwise holdback is used so we validate
+        // it in `_depositRequestWithCustomRecipient`
+        if (depositedInstantAmount == 0) {
+            _validateMTokenAmount(user, calcResult.mintAmount);
+        }
+
         _requestTransferTokensToTokensReceiver(
             tokenIn,
             calcResult.amountTokenWithoutFee + calcResult.feeTokenAmount,
             calcResult.tokenDecimals
         );
+
+        bytes32 _referrerIdCopy = referrerId;
+
+        uint256 requestId = currentRequestId++;
 
         // prevents stack too deep error
         {
@@ -549,8 +578,10 @@ contract DepositVault is ManageableVault, IDepositVault {
             calcResult.feeTokenAmount,
             calcResult.tokenOutRate,
             calcResult.tokenInRate,
-            referrerId
+            _referrerIdCopy
         );
+
+        return (requestId, calcResult.mintAmount);
     }
 
     /**
@@ -619,7 +650,7 @@ contract DepositVault is ManageableVault, IDepositVault {
 
         mToken.mint(request.recipient, amountMToken);
 
-        totalMinted[request.recipient] += amountMToken;
+        _increaseTotalMinted(request.recipient, amountMToken);
 
         request.approvedTokenOutRate = newOutRate;
         request.amountMToken = amountMToken;
@@ -628,6 +659,15 @@ contract DepositVault is ManageableVault, IDepositVault {
         mintRequests[requestId] = request;
 
         emit ApproveRequest(requestId, newOutRate, isSafe, isAvgRate);
+    }
+
+    /**
+     * @dev internal function to increase total minted amount
+     * @param user user address
+     * @param amountMToken amount of mToken to increase
+     */
+    function _increaseTotalMinted(address user, uint256 amountMToken) internal {
+        totalMinted[user] += amountMToken;
     }
 
     /**
@@ -703,7 +743,7 @@ contract DepositVault is ManageableVault, IDepositVault {
         uint256 amountToken,
         bool isInstant
     ) internal returns (CalcAndValidateDepositResult memory result) {
-        require(amountToken > 0, InvalidAmount());
+        _validateInputAmount(amountToken);
 
         result.tokenDecimals = _tokenDecimals(tokenIn);
 
@@ -734,15 +774,26 @@ contract DepositVault is ManageableVault, IDepositVault {
         );
         result.mintAmount = mTokenAmount;
         result.tokenOutRate = mTokenRate;
+    }
 
-        if (
-            !_validateMTokenAmount(userCopy, result.mintAmount) &&
-            totalMinted[userCopy] == 0
-        ) {
+    /**
+     * @inheritdoc ManageableVault
+     * @dev additionally validates that the `user` has not minted any mTokens yet
+     */
+    function _validateMTokenAmount(address user, uint256 amountMToken)
+        internal
+        view
+        virtual
+        override
+        returns (bool isFreeFromMinAmount)
+    {
+        isFreeFromMinAmount = super._validateMTokenAmount(user, amountMToken);
+
+        if (!isFreeFromMinAmount && totalMinted[user] == 0) {
             require(
-                result.mintAmount >= minMTokenAmountForFirstDeposit,
+                amountMToken >= minMTokenAmountForFirstDeposit,
                 LessThanMinAmountFirstDeposit(
-                    result.mintAmount,
+                    amountMToken,
                     minMTokenAmountForFirstDeposit
                 )
             );

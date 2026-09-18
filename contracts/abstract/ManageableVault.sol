@@ -698,12 +698,11 @@ abstract contract ManageableVault is
     function _validateMTokenAmount(address user, uint256 amountMToken)
         internal
         view
+        virtual
         returns (
             bool /* isFreeFromMinAmount */
         )
     {
-        require(amountMToken > 0, InvalidAmount());
-
         if (isFreeFromMinAmount[user]) {
             return true;
         }
@@ -714,6 +713,14 @@ abstract contract ManageableVault is
         );
 
         return false;
+    }
+
+    /**
+     * @dev validates that inputted amount is greater than zero
+     * @param amount amount
+     */
+    function _validateInputAmount(uint256 amount) internal pure {
+        require(amount > 0, InvalidAmount());
     }
 
     /**

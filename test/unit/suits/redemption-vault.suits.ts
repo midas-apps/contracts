@@ -477,7 +477,7 @@ export const redemptionVaultSuits = (
             0,
             {
               revertCustomError: {
-                customErrorName: 'InvalidAmount',
+                customErrorName: 'AmountLessThanMin',
               },
             },
           );
@@ -4053,6 +4053,185 @@ export const redemptionVaultSuits = (
             );
           });
 
+          it('when 90% instant and 10% holdback and total meets minAmount', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(mTBILL, regularAccounts[0], 500);
+            await approveBase18(
+              regularAccounts[0],
+              mTBILL,
+              redemptionVault,
+              500,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setMinAmountTest({ vault: redemptionVault, owner }, 100);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 90_00,
+              },
+              stableCoins.dai,
+              500,
+              {
+                from: regularAccounts[0],
+              },
+            );
+          });
+
+          it('should fail: when 90% instant and 10% holdback and total is below minAmount', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(mTBILL, regularAccounts[0], 99);
+            await approveBase18(
+              regularAccounts[0],
+              mTBILL,
+              redemptionVault,
+              99,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setMinAmountTest({ vault: redemptionVault, owner }, 100);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 90_00,
+              },
+              stableCoins.dai,
+              99,
+              {
+                from: regularAccounts[0],
+                revertCustomError: {
+                  customErrorName: 'AmountLessThanMin',
+                },
+              },
+            );
+          });
+
+          it('when 10% instant and 90% holdback and total meets minAmount', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(mTBILL, regularAccounts[0], 500);
+            await approveBase18(
+              regularAccounts[0],
+              mTBILL,
+              redemptionVault,
+              500,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setMinAmountTest({ vault: redemptionVault, owner }, 100);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 10_00,
+              },
+              stableCoins.dai,
+              500,
+              {
+                from: regularAccounts[0],
+              },
+            );
+          });
+
+          it('when 50% instant and 50% holdback and total meets minAmount', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.dai, redemptionVault, 100000);
+            await mintToken(mTBILL, regularAccounts[0], 150);
+            await approveBase18(
+              regularAccounts[0],
+              mTBILL,
+              redemptionVault,
+              150,
+            );
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.dai,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setMinAmountTest({ vault: redemptionVault, owner }, 100);
+
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 50_00,
+              },
+              stableCoins.dai,
+              150,
+              {
+                from: regularAccounts[0],
+              },
+            );
+          });
+
           it('when 0% instant and 100% holdback', async () => {
             const {
               owner,
@@ -4369,7 +4548,7 @@ export const redemptionVaultSuits = (
             0,
             {
               revertCustomError: {
-                customErrorName: 'InvalidAmount',
+                customErrorName: 'AmountLessThanMin',
               },
             },
           );
