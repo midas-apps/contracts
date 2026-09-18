@@ -359,14 +359,35 @@ export const redeemInstantTest = async (
   return callPromise;
 };
 
-const convertMTokenToTokenOutBase18 = (
-  amountMToken: BigNumber,
+const WAD = parseUnits('1');
+
+/** Nested floors matching inner `_convertMTokenToUsd` then `_convertUsdToToken`. */
+export const mTokenAmountToTokenOutAmount = (
+  mTokenAmount: BigNumber,
   mTokenRate: BigNumber,
   tokenOutRate: BigNumber,
 ) => {
-  const amountUsd = amountMToken.mul(mTokenRate).div(parseUnits('1'));
-  return amountUsd.mul(parseUnits('1')).div(tokenOutRate);
+  if (mTokenAmount.eq(0) || mTokenRate.eq(0) || tokenOutRate.eq(0)) {
+    return constants.Zero;
+  }
+  const amountUsd = mTokenAmount.mul(mTokenRate).div(WAD);
+  return amountUsd.mul(WAD).div(tokenOutRate);
 };
+
+/** Nested ceils inverting `mTokenAmountToTokenOutAmount`. */
+export const tokenOutAmountToMTokenAmount = (
+  tokenOutAmount: BigNumber,
+  tokenOutRate: BigNumber,
+  mTokenRate: BigNumber,
+) => {
+  if (tokenOutAmount.eq(0) || tokenOutRate.eq(0) || mTokenRate.eq(0)) {
+    return constants.Zero;
+  }
+  const amountUsd = tokenOutAmount.mul(tokenOutRate).add(WAD.sub(1)).div(WAD);
+  return amountUsd.mul(WAD).add(mTokenRate.sub(1)).div(mTokenRate);
+};
+
+const convertMTokenToTokenOutBase18 = mTokenAmountToTokenOutAmount;
 
 export const redeemRequestTest = async (
   {
@@ -1744,6 +1765,7 @@ export const estimateSendTokensFromLiquidity = async (
       return {
         amountReceivedBase18: constants.Zero,
         feePortionBase18: constants.Zero,
+        mTokenAmount: constants.Zero,
       };
     }
 
@@ -1756,6 +1778,7 @@ export const estimateSendTokensFromLiquidity = async (
       return {
         amountReceivedBase18: constants.Zero,
         feePortionBase18: constants.Zero,
+        mTokenAmount: constants.Zero,
       };
     }
 
@@ -1764,12 +1787,16 @@ export const estimateSendTokensFromLiquidity = async (
       return {
         amountReceivedBase18: constants.Zero,
         feePortionBase18: constants.Zero,
+        mTokenAmount: constants.Zero,
       };
     }
 
-    let grossTokenOutAmount = (await loanSwapperVaultMToken.balanceOf(loanLp))
-      .mul(mTokenARate)
-      .div(tokenOutRate);
+    const lpMTokenBalance = await loanSwapperVaultMToken.balanceOf(loanLp);
+    let grossTokenOutAmount = mTokenAmountToTokenOutAmount(
+      lpMTokenBalance,
+      mTokenARate,
+      tokenOutRate,
+    );
 
     if (grossTokenOutAmount.gt(amountTokenOutBase18)) {
       grossTokenOutAmount = amountTokenOutBase18;
@@ -1779,6 +1806,7 @@ export const estimateSendTokensFromLiquidity = async (
       return {
         amountReceivedBase18: constants.Zero,
         feePortionBase18: constants.Zero,
+        mTokenAmount: constants.Zero,
       };
     }
 
@@ -1790,27 +1818,44 @@ export const estimateSendTokensFromLiquidity = async (
       return {
         amountReceivedBase18: constants.Zero,
         feePortionBase18,
+        mTokenAmount: constants.Zero,
       };
     }
 
+    const netTokenOutAmount = grossTokenOutAmount.sub(feePortionBase18);
+    let mTokenAmount = tokenOutAmountToMTokenAmount(
+      netTokenOutAmount,
+      tokenOutRate,
+      mTokenARate,
+    );
+    if (mTokenAmount.gt(lpMTokenBalance)) {
+      mTokenAmount = lpMTokenBalance;
+    }
+
     return {
-      amountReceivedBase18: grossTokenOutAmount.sub(feePortionBase18),
+      amountReceivedBase18: truncateToTokenDecimals(
+        mTokenAmountToTokenOutAmount(mTokenAmount, mTokenARate, tokenOutRate),
+      ),
       feePortionBase18,
+      mTokenAmount,
     };
   };
 
   const preferLoanLiquidity = await redemptionVault.preferLoanLiquidity();
   let usedLpLiquidityBase18 = constants.Zero;
   let lpFeePortionBase18 = constants.Zero;
+  let toTransferFromLpMToken = constants.Zero;
 
   if (preferLoanLiquidity) {
     ({
       amountReceivedBase18: usedLpLiquidityBase18,
       feePortionBase18: lpFeePortionBase18,
+      mTokenAmount: toTransferFromLpMToken,
     } = loanLiquidityExpectToFail
       ? {
           amountReceivedBase18: constants.Zero,
           feePortionBase18: constants.Zero,
+          mTokenAmount: constants.Zero,
         }
       : await estimateUseLoanLpLiquidity(
           totalAmountBase18,
@@ -1827,6 +1872,7 @@ export const estimateSendTokensFromLiquidity = async (
       ({
         amountReceivedBase18: usedLpLiquidityBase18,
         feePortionBase18: lpFeePortionBase18,
+        mTokenAmount: toTransferFromLpMToken,
       } = await estimateUseLoanLpLiquidity(
         totalAmountBase18.sub(newBalanceBase18),
         totalAmountBase18,
@@ -1847,17 +1893,6 @@ export const estimateSendTokensFromLiquidity = async (
     toUseLpLiquidityBase18,
   );
 
-  const mTokenARate = loanSwapperVaultMTokenDataFeed
-    ? await loanSwapperVaultMTokenDataFeed.getDataInBase18()
-    : constants.Zero;
-  const mTokenAAmount =
-    toTransferFromLpBase18.eq(0) || mTokenARate.eq(0)
-      ? constants.Zero
-      : toTransferFromLpBase18
-          .mul(tokenOutRate)
-          .add(mTokenARate.sub(1))
-          .div(mTokenARate);
-
   return {
     toTransferFromVaultBase18,
     toTransferFromLpBase18,
@@ -1866,7 +1901,7 @@ export const estimateSendTokensFromLiquidity = async (
     toUseVaultLiquidityBase18,
     toUseLpLiquidityBase18,
     toTransferFromVault: toTransferFromVaultBase18.div(precision),
-    toTransferFromLpMToken: mTokenAAmount,
+    toTransferFromLpMToken,
     lpFeePortion: lpFeePortionBase18.div(precision),
     vaultFeePortion: vaultFeePortionBase18.div(precision),
     toUseVaultLiquidity: toUseVaultLiquidityBase18.div(precision),

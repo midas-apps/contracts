@@ -79,6 +79,8 @@ import {
   setLoanRepaymentAddressTest,
   setLoanSwapperVaultTest,
   expectedHoldbackPartRateFromAvg,
+  mTokenAmountToTokenOutAmount,
+  tokenOutAmountToMTokenAmount,
   setPreferLoanLiquidityTest,
   setLoanAprTest,
   setRequestRedeemerTest,
@@ -2476,11 +2478,10 @@ export const redemptionVaultSuits = (
               } = await loadRvFixture();
 
               // mTokenARate = 1, tokenOutRate = 6, lp balance = 100.
-              // ceil(100e18 * 1e18 / 6e18) = 16666666666666666667, and
-              // converting back ceil(16666666666666666667 * 6) = 100e18 + 2,
-              // which exceeds the LP balance. Flooring the first conversion
-              // keeps mTokenAAmount <= LP balance. User amount is larger than
-              // LP capacity so that value is not capped to missingAmount.
+              // Nested-floor capacity of 100e18 is 16...666. A ceiled capacity
+              // would invert to 100e18 + 2 and revert on transferFrom.
+              // User amount is larger than LP capacity so gross is not capped
+              // to missingAmount.
               await mintToken(mTBILL, owner, 200);
               await mintToken(stableCoins.usdt, redemptionVault, 17);
               await mintToken(mTokenLoan, loanLp, 100);
@@ -2528,6 +2529,101 @@ export const redemptionVaultSuits = (
                 stableCoins.usdt,
                 200,
               );
+            });
+
+            it('when nested tokenOut conversion would be 1 wei short with a combined ceil', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                loanLp,
+                mockedAggregatorMToken,
+                mockedAggregatorMTokenLoan,
+                mockedAggregator,
+                mTokenLoan,
+                redemptionVaultLoanSwapper,
+                dataFeed,
+              } = await loadRvFixture();
+
+              // Combined ceil(missing * 0.9 / 0.9) = missing, but inner
+              // floor/floor pays missing - 1. Two-step inverse sizes +1 mToken.
+              const missingTokenOut = BigNumber.from('111111111111111111111');
+              const amountMTokenIn = BigNumber.from('111111111111111111112');
+              const mTokenAToPull = tokenOutAmountToMTokenAmount(
+                missingTokenOut,
+                parseUnits('0.9'),
+                parseUnits('0.9'),
+              );
+
+              await mTBILL.mint(owner.address, amountMTokenIn);
+              await mTBILL
+                .connect(owner)
+                .approve(redemptionVault.address, amountMTokenIn);
+              await mTokenLoan.mint(loanLp.address, parseUnits('1000'));
+              await mTokenLoan
+                .connect(loanLp)
+                .approve(redemptionVault.address, parseUnits('1000'));
+              await mintToken(
+                stableCoins.usdt,
+                redemptionVaultLoanSwapper,
+                1000,
+              );
+
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMToken },
+                0.9,
+              );
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMTokenLoan },
+                0.9,
+              );
+              await setRoundData({ mockedAggregator }, 0.9);
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.usdt,
+                dataFeed.address,
+                0,
+                false,
+              );
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.usdt,
+                dataFeed.address,
+                0,
+                false,
+              );
+              await setInstantFeeTest({ vault: redemptionVault, owner }, 0);
+              await setPreferLoanLiquidityTest(
+                { redemptionVault, owner },
+                true,
+              );
+
+              const lpMTokenBefore = await mTokenLoan.balanceOf(loanLp.address);
+
+              await expect(
+                redemptionVault['redeemInstant(address,uint256,uint256)'](
+                  stableCoins.usdt.address,
+                  amountMTokenIn,
+                  0,
+                ),
+              ).to.not.be.reverted;
+
+              expect(await stableCoins.usdt.balanceOf(owner.address)).eq(
+                missingTokenOut,
+              );
+              expect(await mTokenLoan.balanceOf(loanLp.address)).eq(
+                lpMTokenBefore.sub(mTokenAToPull),
+              );
+              expect(mTokenAToPull).eq(BigNumber.from('111111111111111111112'));
+              expect(
+                mTokenAmountToTokenOutAmount(
+                  BigNumber.from('111111111111111111111'),
+                  parseUnits('0.9'),
+                  parseUnits('0.9'),
+                ),
+              ).eq(missingTokenOut.sub(1));
             });
 
             it('should fail: when not enough liquidity on both vault and loan lp', async () => {
@@ -15438,6 +15534,139 @@ export const redemptionVaultSuits = (
                 0,
               ),
           ).to.not.revertedWithCustomError(redemptionVault, 'NotSelfCall');
+        });
+
+        it('sizes mToken with nested ceil inverse so inner floor/floor is not 1 wei short', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            loanLp,
+            mockedAggregatorMTokenLoan,
+            mockedAggregator,
+            mTokenLoan,
+            redemptionVaultLoanSwapper,
+            dataFeed,
+          } = await loadRvFixture();
+
+          const missingTokenOut = BigNumber.from('111111111111111111111');
+          const tokenOutRate = parseUnits('0.9');
+          const mTokenRate = parseUnits('0.9');
+          const mTokenAToPull = tokenOutAmountToMTokenAmount(
+            missingTokenOut,
+            tokenOutRate,
+            mTokenRate,
+          );
+
+          await mTokenLoan.mint(loanLp.address, parseUnits('1000'));
+          await mTokenLoan
+            .connect(loanLp)
+            .approve(redemptionVault.address, parseUnits('1000'));
+          await mintToken(stableCoins.usdt, redemptionVaultLoanSwapper, 1000);
+
+          await setRoundData(
+            { mockedAggregator: mockedAggregatorMTokenLoan },
+            0.9,
+          );
+          await setRoundData({ mockedAggregator }, 0.9);
+          await addPaymentTokenTest(
+            { vault: redemptionVaultLoanSwapper, owner },
+            stableCoins.usdt,
+            dataFeed.address,
+            0,
+            false,
+          );
+
+          const impersonatedRv = await ethers.getImpersonatedSigner(
+            redemptionVault.address,
+          );
+          await setBalance(impersonatedRv.address, parseUnits('100'));
+
+          const lpMTokenBefore = await mTokenLoan.balanceOf(loanLp.address);
+
+          await redemptionVault
+            .connect(impersonatedRv)
+            ._obtainLoanLpLiquidityExternal(
+              stableCoins.usdt.address,
+              missingTokenOut,
+              missingTokenOut,
+              tokenOutRate,
+              0,
+              18,
+            );
+
+          expect(await stableCoins.usdt.balanceOf(redemptionVault.address)).eq(
+            missingTokenOut,
+          );
+          expect(await mTokenLoan.balanceOf(loanLp.address)).eq(
+            lpMTokenBefore.sub(mTokenAToPull),
+          );
+          expect(mTokenAToPull.gt(missingTokenOut)).eq(true);
+        });
+
+        it('does not pull more mToken than LP balance when capacity is not divisible', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            loanLp,
+            mockedAggregatorMTokenLoan,
+            mockedAggregator,
+            mTokenLoan,
+            redemptionVaultLoanSwapper,
+            dataFeed,
+          } = await loadRvFixture();
+
+          const lpBalance = parseUnits('100');
+          await mTokenLoan.mint(loanLp.address, lpBalance);
+          await mTokenLoan
+            .connect(loanLp)
+            .approve(redemptionVault.address, lpBalance);
+          await mintToken(stableCoins.usdt, redemptionVaultLoanSwapper, 1000);
+
+          await setRoundData(
+            { mockedAggregator: mockedAggregatorMTokenLoan },
+            1,
+          );
+          await setRoundData({ mockedAggregator }, 6);
+          await addPaymentTokenTest(
+            { vault: redemptionVaultLoanSwapper, owner },
+            stableCoins.usdt,
+            dataFeed.address,
+            0,
+            false,
+          );
+
+          const impersonatedRv = await ethers.getImpersonatedSigner(
+            redemptionVault.address,
+          );
+          await setBalance(impersonatedRv.address, parseUnits('100'));
+
+          await redemptionVault
+            .connect(impersonatedRv)
+            ._obtainLoanLpLiquidityExternal(
+              stableCoins.usdt.address,
+              parseUnits('200'),
+              parseUnits('200'),
+              parseUnits('6'),
+              0,
+              18,
+            );
+
+          const lpMTokenAfter = await mTokenLoan.balanceOf(loanLp.address);
+          const pulled = lpBalance.sub(lpMTokenAfter);
+          expect(pulled).lte(lpBalance);
+          expect(pulled).eq(
+            tokenOutAmountToMTokenAmount(
+              mTokenAmountToTokenOutAmount(
+                lpBalance,
+                parseUnits('1'),
+                parseUnits('6'),
+              ),
+              parseUnits('6'),
+              parseUnits('1'),
+            ),
+          );
         });
       });
 

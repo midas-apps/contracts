@@ -960,9 +960,9 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         uint256 grossTokenOutAmount;
 
         // prevent stack too deep errors
-        {
-            uint256 mTokenABalance;
+        uint256 mTokenABalance;
 
+        {
             (
                 mTokenARate,
                 mTokenA,
@@ -972,12 +972,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 _loanLp
             );
 
-            grossTokenOutAmount = Math.mulDiv(
-                mTokenABalance,
-                mTokenARate,
-                tokenOutRate,
-                Math.Rounding.Down
-            );
+            grossTokenOutAmount = RedemptionSwapperHelpersLibrary
+                .mTokenAmountToTokenOutAmount(
+                    mTokenABalance,
+                    mTokenARate,
+                    tokenOutRate
+                );
         }
 
         if (grossTokenOutAmount > missingAmountBase18) {
@@ -998,16 +998,20 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         }
 
         address _tokenOut = tokenOut;
+        uint256 _tokenOutRate = tokenOutRate;
         uint256 _tokenOutDecimals = tokenOutDecimals;
 
-        // Ceil so the inner vault's floored output is still >= net token out amount.
         // Requires address(this) to have waivedFeeRestriction on the inner vault.
-        uint256 mTokenAAmount = Math.mulDiv(
-            grossTokenOutAmount - lpFeePortion,
-            tokenOutRate,
-            mTokenARate,
-            Math.Rounding.Up
-        );
+        uint256 mTokenAAmount = RedemptionSwapperHelpersLibrary
+            .tokenOutAmountToMTokenAmount(
+                grossTokenOutAmount - lpFeePortion,
+                _tokenOutRate,
+                mTokenARate
+            );
+
+        if (mTokenAAmount > mTokenABalance) {
+            mTokenAAmount = mTokenABalance;
+        }
 
         return (
             RedemptionSwapperHelpersLibrary.redeemInstantSwapper(

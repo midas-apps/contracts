@@ -51,4 +51,48 @@ library RedemptionSwapperHelpersLibrary {
                 .redeemInstant(_tokenOut, _mTokenAAmount, 0)
                 .convertToBase18(_tokenOutDecimals);
     }
+
+    /**
+     * @notice Convert a token out amount to an mToken amount
+     * @dev using ceiling division to avoid rounding errors
+     * @param _tokenOutAmount The amount of token out to convert
+     * @param _tokenOutRate The rate of the token out
+     * @param _mTokenRate The rate of the mToken
+     * @return The amount of mToken
+     */
+    function tokenOutAmountToMTokenAmount(
+        uint256 _tokenOutAmount,
+        uint256 _tokenOutRate,
+        uint256 _mTokenRate
+    ) internal pure returns (uint256) {
+        uint256 amountUsd = Math.mulDiv(
+            _tokenOutAmount,
+            _tokenOutRate,
+            1e18,
+            Math.Rounding.Up
+        );
+        return Math.mulDiv(amountUsd, 1e18, _mTokenRate, Math.Rounding.Up);
+    }
+
+    /**
+     * @notice Convert an mToken amount to a token out amount
+     * @dev using floor division to avoid rounding errors
+     * @param _mTokenAmount The amount of mToken to convert
+     * @param _mTokenRate The rate of the mToken
+     * @param _tokenOutRate The rate of the token out
+     * @return The amount of token out
+     */
+    function mTokenAmountToTokenOutAmount(
+        uint256 _mTokenAmount,
+        uint256 _mTokenRate,
+        uint256 _tokenOutRate
+    ) internal pure returns (uint256) {
+        uint256 amountUsd = Math.mulDiv(
+            _mTokenAmount,
+            _mTokenRate,
+            1e18,
+            Math.Rounding.Down
+        );
+        return Math.mulDiv(amountUsd, 1e18, _tokenOutRate, Math.Rounding.Down);
+    }
 }

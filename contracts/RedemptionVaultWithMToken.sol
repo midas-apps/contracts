@@ -117,13 +117,12 @@ contract RedemptionVaultWithMToken is RedemptionVault {
                 address(this)
             );
 
-        // Ceil so the inner vault's floored output is still >= missingAmountBase18.
-        uint256 mTokenAAmount = Math.mulDiv(
-            missingAmountBase18,
-            tokenOutRate,
-            mTokenARate,
-            Math.Rounding.Up
-        );
+        uint256 mTokenAAmount = RedemptionSwapperHelpersLibrary
+            .tokenOutAmountToMTokenAmount(
+                missingAmountBase18,
+                tokenOutRate,
+                mTokenARate
+            );
 
         mTokenAAmount = mTokenABalance >= mTokenAAmount
             ? mTokenAAmount
