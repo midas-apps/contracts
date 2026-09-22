@@ -17,11 +17,11 @@ export const mGLOeuroDeploymentConfig: DeploymentConfig = {
       maxAnswer: parseUnits('110000', 8),
     },
     customAggregatorAdjustedDv: {
-      adjustmentPercentage: parseUnits('7', 8),
+      adjustmentPercentage: parseUnits('2', 8),
       underlyingFeed: 'customFeed',
     },
     customAggregatorAdjustedRv: {
-      adjustmentPercentage: parseUnits('-7', 8),
+      adjustmentPercentage: parseUnits('-2', 8),
       underlyingFeed: 'customFeed',
     },
   },
