@@ -31,7 +31,7 @@ struct Request {
  * @notice Deposit vault init params
  */
 struct DepositVaultInitParams {
-    /// @notice minimal USD amount for first user`s deposit
+    /// @notice minimal mTokens amount for first user`s deposit
     uint256 minMTokenAmountForFirstDeposit;
     /// @notice max amount per request in mToken
     uint256 maxAmountPerRequest;
@@ -294,7 +294,7 @@ interface IDepositVault is IManageableVault {
     function rejectRequest(uint256 requestId) external;
 
     /**
-     * @notice sets new minimal amount to deposit in EUR.
+     * @notice sets new minimal amount to deposit in mTokens.
      * can be called only from vault`s admin
      * @param newValue new min. deposit value
      */

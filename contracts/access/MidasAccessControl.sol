@@ -59,7 +59,7 @@ contract MidasAccessControl is
     address public timelockManager;
 
     /**
-     * @notice address of MidasAccessControlTimelockController contract
+     * @notice address of MidasPauseManager contract
      */
     address public pauseManager;
 

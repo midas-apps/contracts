@@ -51,7 +51,7 @@ contract DepositVault is ManageableVault, IDepositVault {
     mapping(address => uint256) public totalMinted;
 
     /**
-     * @notice minimal USD amount for first user`s deposit
+     * @notice minimal mTokens amount for first user`s deposit
      */
     uint256 public minMTokenAmountForFirstDeposit;
 
