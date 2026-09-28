@@ -268,6 +268,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         _validateRequest(requestId, request.recipient, request.status);
 
+        _validateAndUpdateNextRequestIdToProcess(requestId, true, true);
+
         redeemRequests[requestId].status = RequestStatus.Canceled;
 
         emit RejectRequest(requestId);
@@ -479,7 +481,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 IERC20(request.tokenOut).balanceOf(requestRedeemer) <
                 (calcResult.amountTokenOutWithoutFee + calcResult.feeAmount)
                     .convertFromBase18(calcResult.tokenOutDecimals)) ||
-            !_validateAndUpdateNextRequestIdToProcess(requestId, !isSafe)
+            !_validateAndUpdateNextRequestIdToProcess(requestId, !isSafe, false)
         ) {
             return;
         }

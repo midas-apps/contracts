@@ -263,6 +263,8 @@ contract DepositVault is ManageableVault, IDepositVault {
 
         _validateRequest(requestId, request.recipient, request.status);
 
+        _validateAndUpdateNextRequestIdToProcess(requestId, true, true);
+
         mintRequests[requestId].status = RequestStatus.Canceled;
 
         upcomingSupply -= _quoteMTokenFromRequest(
@@ -641,7 +643,8 @@ contract DepositVault is ManageableVault, IDepositVault {
                 upcomingSupplyDecrease,
                 amountMToken,
                 !isSafe
-            ) || !_validateAndUpdateNextRequestIdToProcess(requestId, !isSafe)
+            ) ||
+            !_validateAndUpdateNextRequestIdToProcess(requestId, !isSafe, false)
         ) {
             return;
         }

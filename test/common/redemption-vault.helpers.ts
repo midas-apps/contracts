@@ -1333,9 +1333,15 @@ export const rejectRedeemRequestTest = async (
   const nextExpectedRequestIdToProcessAfter =
     await redemptionVault.nextExpectedRequestIdToProcess();
 
-  expect(nextExpectedRequestIdToProcessAfter).eq(
-    nextExpectedRequestIdToProcessBefore,
-  );
+  if (nextExpectedRequestIdToProcessBefore.lte(requestId)) {
+    expect(nextExpectedRequestIdToProcessAfter).eq(
+      BigNumber.from(requestId).add(1),
+    );
+  } else {
+    expect(nextExpectedRequestIdToProcessAfter).eq(
+      nextExpectedRequestIdToProcessBefore,
+    );
+  }
 
   const balanceVaultAfter = await balanceOfBase18(
     requestDataBefore.tokenOut,
