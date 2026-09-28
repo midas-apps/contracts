@@ -122,9 +122,7 @@ contract MidasAccessControl is
         uint32 _defaultDelay,
         bytes32[] calldata _userFacingRoles
     ) public reinitializer(2) onlyProxyAdmin {
-        _validateDelay(_defaultDelay);
-
-        defaultDelay = _defaultDelay;
+        _setDefaultDelay(_defaultDelay);
 
         isUserFacingRole[MidasAuthLibrary.DEFAULT_BLACKLISTED_ROLE] = true;
         isUserFacingRole[MidasAuthLibrary.DEFAULT_GREENLISTED_ROLE] = true;
@@ -167,9 +165,7 @@ contract MidasAccessControl is
         external
         onlyRoleDelayOverride(DEFAULT_ADMIN_ROLE, 2 days)
     {
-        _validateDelay(_defaultDelay);
-        defaultDelay = _defaultDelay;
-        emit SetDefaultDelay(_defaultDelay);
+        _setDefaultDelay(_defaultDelay);
     }
 
     /**
@@ -616,6 +612,22 @@ contract MidasAccessControl is
             MidasAuthLibrary.DEFAULT_GREENLISTED_ROLE,
             GREENLIST_OPERATOR_ROLE
         );
+    }
+
+    /**
+     * @dev sets the default delay and validates it
+     * @param _defaultDelay default delay
+     */
+    function _setDefaultDelay(uint32 _defaultDelay) private {
+        // setting default delay to NO_DELAY will break the delay fallback mechanism
+        // so for default delay 0 should be used as NO_DELAY
+        require(
+            _defaultDelay != MidasAuthLibrary.NO_DELAY,
+            MidasAuthLibrary.InvalidDelay()
+        );
+        _validateDelay(_defaultDelay);
+        defaultDelay = _defaultDelay;
+        emit SetDefaultDelay(_defaultDelay);
     }
 
     /**

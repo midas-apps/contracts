@@ -2,7 +2,7 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { constants } from 'ethers';
+import { BigNumberish, constants } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { encodeFnSelector } from '../../helpers/utils';
@@ -51,7 +51,112 @@ const withOnlyRoleNoTimelockSelector = encodeFnSelector(
 );
 
 const DELAY_FOR_SET_DEFAULT_DELAY = 2 * 24 * 3600;
+const MAX_DELAY = 7 * 24 * 3600;
 const setDefaultDelaySelector = encodeFnSelector('setDefaultDelay(uint256)');
+
+const UNSET_DELAY_ROLE = ethers.utils.id('UNSET_DELAY_ROLE');
+
+const expectUnsetRoleInheritsDefault = async (
+  accessControl: MidasAccessControl,
+  expectedDelay: BigNumberish,
+) => {
+  const [delay, isDefault] = await accessControl.getRoleTimelockDelay(
+    UNSET_DELAY_ROLE,
+    0,
+  );
+
+  expect(delay).eq(expectedDelay);
+  expect(isDefault).eq(true);
+};
+
+const expectProxyInitializeReverts = async (defaultDelay: BigNumberish) => {
+  const factory = await ethers.getContractFactory('MidasAccessControl');
+  const impl = await factory.deploy();
+  await impl.deployed();
+
+  const initData = factory.interface.encodeFunctionData('initialize', [
+    defaultDelay,
+    [],
+  ]);
+  const proxyFactory = await ethers.getContractFactory('ERC1967Proxy');
+
+  await expect(
+    proxyFactory.deploy(impl.address, initData),
+  ).to.be.revertedWithCustomError(impl, 'InvalidDelay');
+};
+
+type SetDefaultDelayContext = {
+  timelockManager: MidasTimelockManager;
+  timelock: MidasAccessControlTimelockController;
+  owner: SignerWithAddress;
+  accessControl: MidasAccessControl;
+};
+
+const scheduleSetDefaultDelay = async (
+  ctx: SetDefaultDelayContext,
+  newDelay: BigNumberish,
+) => {
+  const calldata = ctx.accessControl.interface.encodeFunctionData(
+    'setDefaultDelay',
+    [newDelay],
+  );
+
+  await bulkScheduleTimelockOperationTester(
+    ctx,
+    [ctx.accessControl.address],
+    [calldata],
+  );
+  await increase(DELAY_FOR_SET_DEFAULT_DELAY);
+
+  return calldata;
+};
+
+const executeSetDefaultDelay = async (
+  ctx: SetDefaultDelayContext,
+  newDelay: BigNumberish,
+) => {
+  const calldata = await scheduleSetDefaultDelay(ctx, newDelay);
+  const eventsBefore = await ctx.accessControl.queryFilter(
+    ctx.accessControl.filters.SetDefaultDelay(),
+  );
+
+  await executeTimelockOperationTester(
+    ctx,
+    ctx.accessControl.address,
+    calldata,
+    ctx.owner.address,
+  );
+
+  const eventsAfter = await ctx.accessControl.queryFilter(
+    ctx.accessControl.filters.SetDefaultDelay(),
+  );
+
+  expect(eventsAfter.length).eq(eventsBefore.length + 1);
+  expect(eventsAfter[eventsAfter.length - 1].args.defaultDelay).eq(newDelay);
+  expect(await ctx.accessControl.defaultDelay()).eq(newDelay);
+  await expectUnsetRoleInheritsDefault(ctx.accessControl, newDelay);
+};
+
+const expectSetDefaultDelayExecutionReverts = async (
+  ctx: SetDefaultDelayContext,
+  newDelay: BigNumberish,
+) => {
+  const delayBefore = await ctx.accessControl.defaultDelay();
+  const calldata = await scheduleSetDefaultDelay(ctx, newDelay);
+
+  await executeTimelockOperationTester(
+    ctx,
+    ctx.accessControl.address,
+    calldata,
+    ctx.owner.address,
+    {
+      revertMessage: 'TimelockController: underlying transaction reverted',
+    },
+  );
+
+  expect(await ctx.accessControl.defaultDelay()).eq(delayBefore);
+  await expectUnsetRoleInheritsDefault(ctx.accessControl, delayBefore);
+};
 
 const PROXY_ADMIN_SLOT =
   '0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103';
@@ -236,6 +341,37 @@ describe('MidasAccessControl', function () {
       );
 
       expect(await accessControl.defaultDelay()).eq(3600);
+      await expectUnsetRoleInheritsDefault(accessControl, 3600);
+    });
+
+    it('stores zero as no delay during fresh initialize', async () => {
+      const accessControl = await deployProxyContract<MidasAccessControl>(
+        'MidasAccessControl',
+        [0, []],
+        'initialize',
+      );
+
+      expect(await accessControl.defaultDelay()).eq(0);
+      await expectUnsetRoleInheritsDefault(accessControl, 0);
+    });
+
+    it('stores the maximum delay during fresh initialize', async () => {
+      const accessControl = await deployProxyContract<MidasAccessControl>(
+        'MidasAccessControl',
+        [MAX_DELAY, []],
+        'initialize',
+      );
+
+      expect(await accessControl.defaultDelay()).eq(MAX_DELAY);
+      await expectUnsetRoleInheritsDefault(accessControl, MAX_DELAY);
+    });
+
+    it('should fail: when fresh initialize default delay is NO_DELAY', async () => {
+      await expectProxyInitializeReverts(NO_DELAY);
+    });
+
+    it('should fail: when fresh initialize default delay exceeds the maximum', async () => {
+      await expectProxyInitializeReverts(MAX_DELAY + 1);
     });
 
     it('should fail: when already reinitialized, even from the proxy admin', async () => {
@@ -271,6 +407,63 @@ describe('MidasAccessControl', function () {
       await accessControl.connect(admin).initializeV2(3600, []);
 
       expect(await accessControl.defaultDelay()).eq(3600);
+      await expectUnsetRoleInheritsDefault(accessControl, 3600);
+    });
+
+    it('stores zero as no delay', async () => {
+      const [, admin] = await ethers.getSigners();
+      const accessControl = await deployAccessControl();
+
+      await setProxyAdmin(accessControl.address, admin.address);
+      await setInitializedVersion(accessControl.address, 1);
+
+      await accessControl.connect(admin).initializeV2(0, []);
+
+      expect(await accessControl.defaultDelay()).eq(0);
+      await expectUnsetRoleInheritsDefault(accessControl, 0);
+    });
+
+    it('stores the maximum delay', async () => {
+      const [, admin] = await ethers.getSigners();
+      const accessControl = await deployAccessControl();
+
+      await setProxyAdmin(accessControl.address, admin.address);
+      await setInitializedVersion(accessControl.address, 1);
+
+      await accessControl.connect(admin).initializeV2(MAX_DELAY, []);
+
+      expect(await accessControl.defaultDelay()).eq(MAX_DELAY);
+      await expectUnsetRoleInheritsDefault(accessControl, MAX_DELAY);
+    });
+
+    it('should fail: when default delay is NO_DELAY', async () => {
+      const [, admin] = await ethers.getSigners();
+      const accessControl = await deployAccessControl();
+
+      await setProxyAdmin(accessControl.address, admin.address);
+      await setInitializedVersion(accessControl.address, 1);
+
+      await expect(
+        accessControl.connect(admin).initializeV2(NO_DELAY, []),
+      ).to.be.revertedWithCustomError(accessControl, 'InvalidDelay');
+
+      expect(await accessControl.defaultDelay()).eq(0);
+      await expectUnsetRoleInheritsDefault(accessControl, 0);
+    });
+
+    it('should fail: when default delay exceeds the maximum', async () => {
+      const [, admin] = await ethers.getSigners();
+      const accessControl = await deployAccessControl();
+
+      await setProxyAdmin(accessControl.address, admin.address);
+      await setInitializedVersion(accessControl.address, 1);
+
+      await expect(
+        accessControl.connect(admin).initializeV2(MAX_DELAY + 1, []),
+      ).to.be.revertedWithCustomError(accessControl, 'InvalidDelay');
+
+      expect(await accessControl.defaultDelay()).eq(0);
+      await expectUnsetRoleInheritsDefault(accessControl, 0);
     });
   });
 
@@ -3710,12 +3903,52 @@ describe('MidasAccessControl', function () {
         [calldata],
       );
       await increase(DELAY_FOR_SET_DEFAULT_DELAY);
+      const eventsBefore = await accessControl.queryFilter(
+        accessControl.filters.SetDefaultDelay(),
+      );
+
       await executeTimelockOperationTester(
         { timelockManager, timelock, owner, accessControl },
         accessControl.address,
         calldata,
         owner.address,
       );
+
+      const eventsAfter = await accessControl.queryFilter(
+        accessControl.filters.SetDefaultDelay(),
+      );
+
+      expect(eventsAfter.length).eq(eventsBefore.length + 1);
+      expect(eventsAfter[eventsAfter.length - 1].args.defaultDelay).eq(
+        newDelay,
+      );
+      expect(await accessControl.defaultDelay()).eq(newDelay);
+      await expectUnsetRoleInheritsDefault(accessControl, newDelay);
+    });
+
+    it('accepts zero as no delay', async () => {
+      const ctx = await loadFixture(defaultDeploy);
+
+      await executeSetDefaultDelay(ctx, 3600);
+      await executeSetDefaultDelay(ctx, 0);
+    });
+
+    it('accepts the maximum delay', async () => {
+      const ctx = await loadFixture(defaultDeploy);
+
+      await executeSetDefaultDelay(ctx, MAX_DELAY);
+    });
+
+    it('should fail: when delay is NO_DELAY', async () => {
+      const ctx = await loadFixture(defaultDeploy);
+
+      await expectSetDefaultDelayExecutionReverts(ctx, NO_DELAY);
+    });
+
+    it('should fail: when delay exceeds the maximum', async () => {
+      const ctx = await loadFixture(defaultDeploy);
+
+      await expectSetDefaultDelayExecutionReverts(ctx, MAX_DELAY + 1);
     });
 
     it('should fail: when called from a wallet without default admin role', async () => {
