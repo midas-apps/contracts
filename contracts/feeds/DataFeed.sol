@@ -22,6 +22,13 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
     event ChangeAggregator(address indexed _aggregator);
 
     /**
+     * @param _sequencerUptimeAggregator new AggregatorV3Interface contract address
+     */
+    event ChangeSequencerUptimeAggregator(
+        address indexed _sequencerUptimeAggregator
+    );
+
+    /**
      * @param _healthyDiff new healthy diff value
      */
     event SetHealthyDiff(uint256 indexed _healthyDiff);
@@ -34,6 +41,11 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
         int256 indexed _maxExpectedAnswer,
         int256 indexed _minExpectedAnswer
     );
+
+    /**
+     * @notice sequencer uptime aggregator grace period after it becomes healthy
+     */
+    uint256 public constant SEQUENCER_UPTIME_AGGREGATOR_GRACE_PERIOD = 1 hours;
 
     /**
      * @notice contract admin role
@@ -63,9 +75,14 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
     int256 public maxExpectedAnswer;
 
     /**
+     * @notice AggregatorV3Interface L2 uptime aggregator contract address
+     */
+    AggregatorV3Interface public sequencerUptimeAggregator;
+
+    /**
      * @dev leaving a storage gap for futures updates
      */
-    uint256[50] private __gap;
+    uint256[49] private __gap;
 
     /**
      * @dev having a second gap here to match with the gap of previous implementations
@@ -88,14 +105,41 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
      * @param _healthyDiff max. staleness time for data feed answers
      * @param _minExpectedAnswer min.expected answer value from data feed
      * @param _maxExpectedAnswer max.expected answer value from data feed
+     * @param _sequencerUptimeAggregator L2 sequencer uptime aggregator contract address
      */
     function initialize(
         address _ac,
         address _aggregator,
         uint256 _healthyDiff,
         int256 _minExpectedAnswer,
+        int256 _maxExpectedAnswer,
+        address _sequencerUptimeAggregator
+    ) external {
+        _initializeV1(
+            _ac,
+            _aggregator,
+            _healthyDiff,
+            _minExpectedAnswer,
+            _maxExpectedAnswer
+        );
+        initializeV2(_sequencerUptimeAggregator);
+    }
+
+    /**
+     * @dev v1 initializer
+     * @param _ac MidasAccessControl contract address
+     * @param _aggregator AggregatorV3Interface contract address
+     * @param _healthyDiff max. staleness time for data feed answers
+     * @param _minExpectedAnswer min.expected answer value from data feed
+     * @param _maxExpectedAnswer max.expected answer value from data feed
+     */
+    function _initializeV1(
+        address _ac,
+        address _aggregator,
+        uint256 _healthyDiff,
+        int256 _minExpectedAnswer,
         int256 _maxExpectedAnswer
-    ) external initializer {
+    ) private initializer {
         __WithMidasAccessControl_init(_ac);
         _setMinMaxExpectedAnswer(_maxExpectedAnswer, _minExpectedAnswer);
 
@@ -108,6 +152,20 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
     }
 
     /**
+     * @dev v2 initializer
+     * @param _sequencerUptimeAggregator L2 sequencer uptime aggregator contract address
+     */
+    function initializeV2(address _sequencerUptimeAggregator)
+        public
+        reinitializer(2)
+        onlyProxyAdmin
+    {
+        sequencerUptimeAggregator = AggregatorV3Interface(
+            _sequencerUptimeAggregator
+        );
+    }
+
+    /**
      * @notice updates `aggregator` address
      * @param _aggregator new AggregatorV3Interface contract address
      */
@@ -116,6 +174,21 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
 
         aggregator = AggregatorV3Interface(_aggregator);
         emit ChangeAggregator(_aggregator);
+    }
+
+    /**
+     * @notice updates `sequencerUptimeAggregator` address.
+     * If zero address is provided, L2 sequencer uptime check will be skipped.
+     * @param _sequencerUptimeAggregator new L2 sequencer uptime aggregator contract address
+     */
+    function changeSequencerUptimeAggregator(address _sequencerUptimeAggregator)
+        external
+        onlyContractAdmin
+    {
+        sequencerUptimeAggregator = AggregatorV3Interface(
+            _sequencerUptimeAggregator
+        );
+        emit ChangeSequencerUptimeAggregator(_sequencerUptimeAggregator);
     }
 
     /**
@@ -145,7 +218,7 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
      * @inheritdoc IDataFeed
      */
     function getDataInBase18() external view returns (uint256 answer) {
-        (, answer) = _getDataInBase18();
+        (, answer) = _getDataInBase18(_validateSequencerUptime());
     }
 
     /**
@@ -178,28 +251,80 @@ contract DataFeed is WithMidasAccessControl, IDataFeed {
     }
 
     /**
+     * @dev validates L2 sequencer uptime if sequencerUptimeAggregator is set
+     * @return startedAt timestamp of the latest L2 uptime feed update
+     */
+    function _validateSequencerUptime() private view returns (uint256) {
+        if (address(sequencerUptimeAggregator) == address(0)) {
+            return 0;
+        }
+
+        (, int256 _answer, uint256 _startedAt, ) = _getLatestRoundData(
+            sequencerUptimeAggregator
+        );
+
+        require(
+            _answer == 0 &&
+                _startedAt > 0 &&
+                block.timestamp - _startedAt >
+                SEQUENCER_UPTIME_AGGREGATOR_GRACE_PERIOD,
+            "DF: sequencer is unhealthy"
+        );
+
+        return _startedAt;
+    }
+
+    /**
      * @dev fetches answer from aggregator
      * and converts it to the base18 precision
+     * @param _minUpdatedAt minimum updatedAt timestamp
      * @return roundId fetched aggregator answer roundId
      * @return answer fetched aggregator answer
      */
-    function _getDataInBase18()
+    function _getDataInBase18(uint256 _minUpdatedAt)
         private
         view
         returns (uint80 roundId, uint256 answer)
     {
         uint8 decimals = aggregator.decimals();
-        (uint80 _roundId, int256 _answer, , uint256 updatedAt, ) = aggregator
-            .latestRoundData();
+        (
+            uint80 _roundId,
+            int256 _answer,
+            ,
+            uint256 updatedAt
+        ) = _getLatestRoundData(aggregator);
         require(_answer > 0, "DF: feed is deprecated");
         require(
             // solhint-disable-next-line not-rely-on-time
             block.timestamp - updatedAt <= healthyDiff &&
+                updatedAt >= _minUpdatedAt &&
                 _answer >= minExpectedAnswer &&
                 _answer <= maxExpectedAnswer,
             "DF: feed is unhealthy"
         );
         roundId = _roundId;
         answer = uint256(_answer).convertToBase18(decimals);
+    }
+
+    /**
+     * @dev fetches latest round data from the aggregator
+     * @param _aggregator AggregatorV3Interface contract address
+     * @return _roundId fetched aggregator answer roundId
+     * @return _answer fetched aggregator answer
+     * @return _startedAt fetched aggregator answer startedAt
+     * @return _updatedAt fetched aggregator answer updatedAt
+     */
+    function _getLatestRoundData(AggregatorV3Interface _aggregator)
+        private
+        view
+        returns (
+            uint80 _roundId,
+            int256 _answer,
+            uint256 _startedAt,
+            uint256 _updatedAt
+        )
+    {
+        (_roundId, _answer, _startedAt, _updatedAt, ) = _aggregator
+            .latestRoundData();
     }
 }

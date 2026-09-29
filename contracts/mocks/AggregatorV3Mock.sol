@@ -11,6 +11,9 @@ import "../interfaces/IDataFeed.sol";
 contract AggregatorV3Mock is AggregatorV3Interface {
     int256 private _latestRoundData;
     uint80 private _latestRoundId;
+    uint256 private _startedAt;
+    uint256 private _updatedAt;
+    bool private _hasCustomTimestamps;
 
     function decimals() external view returns (uint8) {
         return 8;
@@ -23,6 +26,21 @@ contract AggregatorV3Mock is AggregatorV3Interface {
     function setRoundData(int256 _data) external {
         _latestRoundData = _data;
         _latestRoundId++;
+        _startedAt = 0;
+        _updatedAt = 0;
+        _hasCustomTimestamps = false;
+    }
+
+    function setRoundDataWithTimestamps(
+        int256 _data,
+        uint256 startedAt,
+        uint256 updatedAt
+    ) external {
+        _latestRoundData = _data;
+        _latestRoundId++;
+        _startedAt = startedAt;
+        _updatedAt = updatedAt;
+        _hasCustomTimestamps = true;
     }
 
     function getRoundData(uint80 _roundId)
@@ -49,6 +67,7 @@ contract AggregatorV3Mock is AggregatorV3Interface {
         )
     {
         // solhint-disable-next-line not-rely-on-time
-        return (_latestRoundId, _latestRoundData, 0, block.timestamp, 0);
+        uint256 updatedAt = _hasCustomTimestamps ? _updatedAt : block.timestamp;
+        return (_latestRoundId, _latestRoundData, _startedAt, updatedAt, 0);
     }
 }

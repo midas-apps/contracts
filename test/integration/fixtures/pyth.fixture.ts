@@ -82,6 +82,7 @@ export async function pythAdapterFixture(
       healthyDiff,
       minExpectedAnswer,
       maxExpectedAnswer,
+      ethers.constants.AddressZero,
     ]);
 
     Object.assign(result, {

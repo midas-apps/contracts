@@ -34,6 +34,11 @@ const mTokenConstructorArgs = (roles: ReturnType<typeof getRolesForToken>) => [
   roles.minBalanceExempt,
 ];
 
+const dataFeedReinitializerParams = {
+  fn: 'initializeV2',
+  args: [ethers.constants.AddressZero],
+};
+
 const mTokenReinitializerParams = (
   clawbackReceiver: string,
   isPermissioned: boolean,
@@ -138,6 +143,7 @@ export async function mainnetUpgradeFixture() {
         proxy: mTbillDataFeedAddress,
         implementation: DataFeed__factory,
         constructorArgs: [allRoles.tokenRoles.mTBILL.customFeedAdmin],
+        reinitializerParams: dataFeedReinitializerParams,
       },
       // has gap in the product contract (MBtcCustomAggregatorFeed) and no gap in CustomAggregatorV3CompatibleFeed
       {
@@ -162,6 +168,7 @@ export async function mainnetUpgradeFixture() {
         proxy: mBtcDataFeedAddress,
         implementation: DataFeed__factory,
         constructorArgs: [allRoles.tokenRoles.mBTC.customFeedAdmin],
+        reinitializerParams: dataFeedReinitializerParams,
       },
       // no gap in the product contract (MBtcCustomAggregatorFeed) and no gap in CustomAggregatorV3CompatibleFeed
       {
@@ -186,6 +193,7 @@ export async function mainnetUpgradeFixture() {
         proxy: mGlobalDataFeedAddress,
         implementation: DataFeed__factory,
         constructorArgs: [allRoles.tokenRoles.mGLOBAL.customFeedAdmin],
+        reinitializerParams: dataFeedReinitializerParams,
       },
       // has gap in the product contract (MGlobalCustomFeedGrowth), has gap in CustomAggregatorV3CompatibleFeedGrowth
       {

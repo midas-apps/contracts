@@ -1,5 +1,11 @@
 import { Provider } from '@ethersproject/providers';
-import { BigNumber, BigNumberish, PopulatedTransaction, Signer } from 'ethers';
+import {
+  BigNumber,
+  BigNumberish,
+  constants,
+  PopulatedTransaction,
+  Signer,
+} from 'ethers';
 import { formatUnits, parseUnits } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
@@ -47,6 +53,12 @@ export type DeployDataFeedConfigRegular = {
    * Default: 2592000
    */
   healthyDiff?: BigNumberish;
+  /**
+   * Chainlink L2 sequencer uptime feed.
+   * Address zero disables the check.
+   * Default: address(0)
+   */
+  sequencerUptimeAggregator?: string;
 } & DeployDataFeedConfigCommon;
 
 export type DeployDataFeedConfigComposite = {
@@ -726,6 +738,7 @@ const deployTokenDataFeed = async (
       networkConfig.healthyDiff ?? 2592000,
       networkConfig.minAnswer ?? parseUnits('0.1', 8),
       networkConfig.maxAnswer ?? parseUnits('1000', 8),
+      networkConfig.sequencerUptimeAggregator ?? constants.AddressZero,
     ],
     undefined,
     {

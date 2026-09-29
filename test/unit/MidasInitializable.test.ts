@@ -2,26 +2,11 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
 import { MidasInitializableTester } from '../../typechain-types';
-import { deployProxyContract } from '../common/deploy.helpers';
-
-const PROXY_ADMIN_SLOT =
-  '0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103';
-
-const INITIALIZED_SLOT = ethers.utils.hexZeroPad('0x00', 32);
-
-const setProxyAdmin = (address: string, admin: string) =>
-  ethers.provider.send('hardhat_setStorageAt', [
-    address,
-    PROXY_ADMIN_SLOT,
-    ethers.utils.hexZeroPad(admin, 32),
-  ]);
-
-const setInitializedVersion = (address: string, version: number) =>
-  ethers.provider.send('hardhat_setStorageAt', [
-    address,
-    INITIALIZED_SLOT,
-    ethers.utils.hexZeroPad(ethers.utils.hexlify(version), 32),
-  ]);
+import {
+  deployProxyContract,
+  setInitializedVersion,
+  setProxyAdmin,
+} from '../common/deploy.helpers';
 
 const deployTester = () =>
   deployProxyContract<MidasInitializableTester>(

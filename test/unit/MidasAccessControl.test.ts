@@ -35,7 +35,11 @@ import {
   validateImplementation,
   asyncForEach,
 } from '../common/common.helpers';
-import { deployProxyContract } from '../common/deploy.helpers';
+import {
+  deployProxyContract,
+  setInitializedVersion,
+  setProxyAdmin,
+} from '../common/deploy.helpers';
 import { defaultDeploy } from '../common/fixtures';
 import {
   executeTimelockOperationTester,
@@ -157,23 +161,6 @@ const expectSetDefaultDelayExecutionReverts = async (
   expect(await ctx.accessControl.defaultDelay()).eq(delayBefore);
   await expectUnsetRoleInheritsDefault(ctx.accessControl, delayBefore);
 };
-
-const PROXY_ADMIN_SLOT =
-  '0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103';
-
-const setProxyAdmin = (address: string, admin: string) =>
-  ethers.provider.send('hardhat_setStorageAt', [
-    address,
-    PROXY_ADMIN_SLOT,
-    ethers.utils.hexZeroPad(admin, 32),
-  ]);
-
-const setInitializedVersion = (address: string, version: number) =>
-  ethers.provider.send('hardhat_setStorageAt', [
-    address,
-    ethers.utils.hexZeroPad('0x00', 32),
-    ethers.utils.hexZeroPad(ethers.utils.hexlify(version), 32),
-  ]);
 
 const timelockManagerRevertOpts = (
   timelockManager: MidasTimelockManager,

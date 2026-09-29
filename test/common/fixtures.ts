@@ -252,6 +252,7 @@ export const defaultDeploy = async () => {
     3 * 24 * 3600,
     parseUnits('0.1', mockedAggregatorDecimals),
     parseUnits('10000', mockedAggregatorDecimals),
+    constants.AddressZero,
   );
 
   const mTokenToUsdDataFeed = await new DataFeedTest__factory(owner).deploy();
@@ -261,6 +262,7 @@ export const defaultDeploy = async () => {
     3 * 24 * 3600,
     parseUnits('0.1', mockedAggregatorMTokenDecimals),
     parseUnits('10000', mockedAggregatorMTokenDecimals),
+    constants.AddressZero,
   );
 
   const mTokenLoanToUsdDataFeed = await new DataFeedTest__factory(
@@ -272,6 +274,7 @@ export const defaultDeploy = async () => {
     3 * 24 * 3600,
     parseUnits('0.1', await mockedAggregatorMTokenLoan.decimals()),
     parseUnits('10000', await mockedAggregatorMTokenLoan.decimals()),
+    constants.AddressZero,
   );
 
   const mBasisToUsdDataFeed = await new DataFeedTest__factory(owner).deploy();
@@ -281,6 +284,7 @@ export const defaultDeploy = async () => {
     3 * 24 * 3600,
     parseUnits('0.1', await mockedAggregatorMBasis.decimals()),
     parseUnits('10000', await mockedAggregatorMBasis.decimals()),
+    constants.AddressZero,
   );
 
   const compositeDataFeed = await new CompositeDataFeedTest__factory(
@@ -542,6 +546,7 @@ export const defaultDeploy = async () => {
     3 * 24 * 3600,
     parseUnits('0.1', mockedAggregatorDecimals),
     parseUnits('10000', mockedAggregatorDecimals),
+    constants.AddressZero,
   );
 
   const redemptionVaultWithMToken = await initializeRvWithMToken(
@@ -605,6 +610,7 @@ export const defaultDeploy = async () => {
     3 * 24 * 3600,
     parseUnits('0.1', mockedAggregatorDecimals),
     parseUnits('10000', mockedAggregatorDecimals),
+    constants.AddressZero,
   );
 
   const customFeedAdjusted =
@@ -674,6 +680,7 @@ export const defaultDeploy = async () => {
       3 * 24 * 3600,
       parseUnits('0.1', mockedDeprecatedAggregatorDecimals),
       parseUnits('10000', mockedDeprecatedAggregatorDecimals),
+      constants.AddressZero,
     );
 
     return {
@@ -703,6 +710,7 @@ export const defaultDeploy = async () => {
       3 * 24 * 3600,
       parseUnits('0.1', mockedUnhealthyAggregatorDecimals),
       parseUnits('10000', mockedUnhealthyAggregatorDecimals),
+      constants.AddressZero,
     );
 
     return {

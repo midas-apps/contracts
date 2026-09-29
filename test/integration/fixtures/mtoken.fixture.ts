@@ -74,6 +74,7 @@ async function setupMTokenBase() {
     3 * 24 * 3600,
     parseUnits('0.1', await usdcAggregator.decimals()),
     parseUnits('10000', await usdcAggregator.decimals()),
+    ethers.constants.AddressZero,
   ]);
 
   // Target mToken (mTBILL) data feed
@@ -92,6 +93,7 @@ async function setupMTokenBase() {
       3 * 24 * 3600,
       parseUnits('0.1', await mtbillAggregator.decimals()),
       parseUnits('10000', await mtbillAggregator.decimals()),
+      ethers.constants.AddressZero,
     ],
   );
 
@@ -111,6 +113,7 @@ async function setupMTokenBase() {
       3 * 24 * 3600,
       parseUnits('0.1', await mfoneAggregator.decimals()),
       parseUnits('10000', await mfoneAggregator.decimals()),
+      ethers.constants.AddressZero,
     ],
   );
 

@@ -60,6 +60,7 @@ async function setupUstbBase() {
     3 * 24 * 3600,
     parseUnits('0.1', await usdcAggregator.decimals()),
     parseUnits('10000', await usdcAggregator.decimals()),
+    ethers.constants.AddressZero,
   ]);
 
   const mtbillDataFeed = await deployProxyContract<DataFeedTest>(
@@ -70,6 +71,7 @@ async function setupUstbBase() {
       3 * 24 * 3600,
       parseUnits('0.1', await mtbillAggregator.decimals()),
       parseUnits('10000', await mtbillAggregator.decimals()),
+      ethers.constants.AddressZero,
     ],
   );
 

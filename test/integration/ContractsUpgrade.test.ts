@@ -1115,6 +1115,16 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
       });
     });
 
+    describe('sequencerUptimeAggregator()', () => {
+      it('stays disabled after initializeV2 on mainnet', async () => {
+        const { mTbillDataFeed } = await loadFixture(mainnetUpgradeFixture);
+
+        expect(await mTbillDataFeed.sequencerUptimeAggregator()).eq(
+          constants.AddressZero,
+        );
+      });
+    });
+
     describe('changeAggregator()', () => {
       it('should change aggregator after resetting delays', async () => {
         const {
@@ -1469,6 +1479,16 @@ describe('ContractsUpgrade - Mainnet Upgrade Integration Tests', function () {
 
         const price = await mGlobalDataFeed.getDataInBase18();
         expect(price).to.be.gt(0);
+      });
+    });
+
+    describe('sequencerUptimeAggregator()', () => {
+      it('stays disabled after initializeV2 on mainnet', async () => {
+        const { mGlobalDataFeed } = await loadFixture(mainnetUpgradeFixture);
+
+        expect(await mGlobalDataFeed.sequencerUptimeAggregator()).eq(
+          constants.AddressZero,
+        );
       });
     });
 

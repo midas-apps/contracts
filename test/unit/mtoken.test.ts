@@ -27,7 +27,11 @@ import {
   pauseVault,
   pauseVaultFn,
 } from '../common/common.helpers';
-import { deployProxyContract } from '../common/deploy.helpers';
+import {
+  deployProxyContract,
+  setInitializedVersion,
+  setProxyAdmin,
+} from '../common/deploy.helpers';
 import {
   defaultDeploy,
   DefaultFixture,
@@ -93,23 +97,6 @@ const SET_MIN_HOLDING_BALANCE_ENFORCED_SEL = encodeFnSelector(
 
 const toStorageSlotHex = (slot: number) =>
   '0x' + slot.toString(16).padStart(64, '0');
-
-const PROXY_ADMIN_SLOT =
-  '0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103';
-
-const setProxyAdmin = (address: string, admin: string) =>
-  ethers.provider.send('hardhat_setStorageAt', [
-    address,
-    PROXY_ADMIN_SLOT,
-    ethers.utils.hexZeroPad(admin, 32),
-  ]);
-
-const setInitializedVersion = (address: string, version: number) =>
-  ethers.provider.send('hardhat_setStorageAt', [
-    address,
-    toStorageSlotHex(0),
-    ethers.utils.hexZeroPad(ethers.utils.hexlify(version), 32),
-  ]);
 
 const toBoolWordHex = (value: boolean) =>
   '0x' + (value ? '1' : '0').padStart(64, '0');
