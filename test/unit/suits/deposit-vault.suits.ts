@@ -11165,7 +11165,7 @@ export const depositVaultSuits = (
           );
         });
 
-        it('should fail: reject request id out of order when sequentialRequestProcessing is enabled', async () => {
+        it('should reject request id in non sequential order when sequentialRequestProcessing is enabled', async () => {
           const {
             owner,
             mockedAggregator,
@@ -11207,22 +11207,10 @@ export const depositVaultSuits = (
             true,
           );
 
-          const upcomingSupplyBefore = await depositVault.upcomingSupply();
-
           await rejectRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             2,
-            {
-              revertCustomError: {
-                customErrorName: 'InvalidRequestSequence',
-                args: [2, 0],
-              },
-            },
           );
-
-          expect(await depositVault.nextExpectedRequestIdToProcess()).eq(0);
-          expect((await depositVault.mintRequests(2)).status).eq(0);
-          expect(await depositVault.upcomingSupply()).eq(upcomingSupplyBefore);
         });
 
         it('should reject request when request id exceeds maxApproveRequestId', async () => {
@@ -11266,98 +11254,6 @@ export const depositVaultSuits = (
           await rejectRequestTest(
             { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
             1,
-          );
-
-          await rejectRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            0,
-          );
-        });
-
-        it('should reject the next request above maxApproveRequestId when sequentialRequestProcessing is enabled', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            depositVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-          } = await loadDvFixture();
-
-          await setSequentialRequestProcessingTest(
-            { vault: depositVault, owner },
-            true,
-          );
-
-          await mintToken(stableCoins.dai, owner, 300);
-          await approveBase18(owner, stableCoins.dai, depositVault, 300);
-          await addPaymentTokenTest(
-            { vault: depositVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1.03);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
-          await setMinAmountTest({ vault: depositVault, owner }, 0);
-
-          await asyncForEach(
-            Array.from({ length: 3 }, (_, i) => i),
-            async () => {
-              await depositRequestTest(
-                { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-                stableCoins.dai,
-                100,
-              );
-            },
-            true,
-          );
-
-          await setMaxApproveRequestIdTest({ vault: depositVault, owner }, 0);
-
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            0,
-            parseUnits('5'),
-          );
-
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            1,
-            parseUnits('5'),
-            {
-              revertCustomError: {
-                customErrorName: 'RequestIdTooHigh',
-                args: [1, 0],
-              },
-            },
-          );
-
-          await rejectRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            1,
-          );
-
-          expect((await depositVault.mintRequests(2)).status).eq(0);
-
-          await approveRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            2,
-            parseUnits('5'),
-            {
-              revertCustomError: {
-                customErrorName: 'RequestIdTooHigh',
-                args: [2, 0],
-              },
-            },
-          );
-
-          await rejectRequestTest(
-            { depositVault, owner, mTBILL, mTokenToUsdDataFeed },
-            2,
           );
         });
       });

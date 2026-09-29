@@ -547,20 +547,15 @@ abstract contract ManageableVault is
      * @dev check if request id is sequential and update next expected request id to process
      * @param requestId request id
      * @param revertIfInvalid if true, reverts if request id is not sequential, otherwise returns false
-     * @param isReject if true, request is rejected, otherwise request is processed
      * @return isValid true if request id is sequential or sequentialRequestProcessing is disabled
      */
     function _validateAndUpdateNextRequestIdToProcess(
         uint256 requestId,
-        bool revertIfInvalid,
-        bool isReject
+        bool revertIfInvalid
     ) internal returns (bool isValid) {
         isValid = true;
 
-        if (
-            !isReject &&
-            !_validateMaxApproveRequestId(requestId, revertIfInvalid)
-        ) {
+        if (!_validateMaxApproveRequestId(requestId, revertIfInvalid)) {
             return false;
         }
 

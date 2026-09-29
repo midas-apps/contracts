@@ -14184,7 +14184,7 @@ export const redemptionVaultSuits = (
           );
         });
 
-        it('should fail: reject request id out of order when sequentialRequestProcessing is enabled', async () => {
+        it('should reject request id in non sequential order when sequentialRequestProcessing is enabled', async () => {
           const {
             owner,
             mockedAggregator,
@@ -14229,16 +14229,7 @@ export const redemptionVaultSuits = (
           await rejectRedeemRequestTest(
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             2,
-            {
-              revertCustomError: {
-                customErrorName: 'InvalidRequestSequence',
-                args: [2, 0],
-              },
-            },
           );
-
-          expect(await redemptionVault.nextExpectedRequestIdToProcess()).eq(0);
-          expect((await redemptionVault.redeemRequests(2)).status).eq(0);
         });
 
         it('should reject request when request id exceeds maxApproveRequestId', async () => {
@@ -14282,106 +14273,6 @@ export const redemptionVaultSuits = (
           await rejectRedeemRequestTest(
             { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
             1,
-          );
-
-          await rejectRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-            0,
-          );
-        });
-
-        it('should reject the next request above maxApproveRequestId when sequentialRequestProcessing is enabled', async () => {
-          const {
-            owner,
-            mockedAggregator,
-            mockedAggregatorMToken,
-            redemptionVault,
-            stableCoins,
-            mTBILL,
-            dataFeed,
-            mTokenToUsdDataFeed,
-            requestRedeemer,
-          } = await loadRvFixture();
-
-          await setSequentialRequestProcessingTest(
-            { vault: redemptionVault, owner },
-            true,
-          );
-
-          await mintToken(stableCoins.dai, requestRedeemer, 100000);
-          await mintToken(stableCoins.dai, redemptionVault, 100000);
-          await approveBase18(
-            requestRedeemer,
-            stableCoins.dai,
-            redemptionVault,
-            100000,
-          );
-          await mintToken(mTBILL, owner, 300);
-          await approveBase18(owner, mTBILL, redemptionVault, 300);
-          await addPaymentTokenTest(
-            { vault: redemptionVault, owner },
-            stableCoins.dai,
-            dataFeed.address,
-            0,
-            true,
-          );
-          await setRoundData({ mockedAggregator }, 1.03);
-          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
-
-          await asyncForEach(
-            Array.from({ length: 3 }, (_, i) => i),
-            async () => {
-              await redeemRequestTest(
-                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-                stableCoins.dai,
-                100,
-              );
-            },
-            true,
-          );
-
-          await setMaxApproveRequestIdTest({ redemptionVault, owner }, 0);
-
-          await approveRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-            0,
-            parseUnits('5'),
-          );
-
-          await approveRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-            1,
-            parseUnits('5'),
-            {
-              revertCustomError: {
-                customErrorName: 'RequestIdTooHigh',
-                args: [1, 0],
-              },
-            },
-          );
-
-          await rejectRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-            1,
-          );
-
-          expect((await redemptionVault.redeemRequests(2)).status).eq(0);
-
-          await approveRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-            2,
-            parseUnits('5'),
-            {
-              revertCustomError: {
-                customErrorName: 'RequestIdTooHigh',
-                args: [2, 0],
-              },
-            },
-          );
-
-          await rejectRedeemRequestTest(
-            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
-            2,
           );
         });
       });

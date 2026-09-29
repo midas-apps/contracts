@@ -981,15 +981,9 @@ export const rejectRequestTest = async (
   const nextExpectedRequestIdToProcessAfter =
     await depositVault.nextExpectedRequestIdToProcess();
 
-  if (nextExpectedRequestIdToProcessBefore.lte(requestId)) {
-    expect(nextExpectedRequestIdToProcessAfter).eq(
-      BigNumber.from(requestId).add(1),
-    );
-  } else {
-    expect(nextExpectedRequestIdToProcessAfter).eq(
-      nextExpectedRequestIdToProcessBefore,
-    );
-  }
+  expect(nextExpectedRequestIdToProcessAfter).eq(
+    nextExpectedRequestIdToProcessBefore,
+  );
 
   const upcomingSupplyAfter = await depositVault.upcomingSupply();
 
