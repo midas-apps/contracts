@@ -56,15 +56,23 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      */
     // solhint-disable-next-line var-name-mixedcase
     bytes32 private immutable _MIN_BALANCE_EXEMPT_ROLE;
+
     /**
      * @notice metadata key => metadata value
      */
     mapping(bytes32 => bytes) public metadata;
 
     /**
-     * @notice mint rate limits state
+     * @notice wallet bucket id
+     * @dev address => bucket id
      */
-    RateLimitLibrary.WindowRateLimits private _mintRateLimits;
+    mapping(address => uint8) public walletBucketId;
+
+    /**
+     * @notice mint rate limits state per bucket
+     * @dev bucket id => window rate limits
+     */
+    mapping(uint8 => RateLimitLibrary.WindowRateLimits) private _mintRateLimits;
 
     /**
      * @notice address to which clawback tokens will be sent
@@ -104,7 +112,7 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     /**
      * @dev leaving a storage gap for futures updates
      */
-    uint256[42] private __gap;
+    uint256[43] private __gap;
 
     /**
      * @dev having a second gap here to match with the gap of previous implementations
@@ -350,45 +358,59 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
     /**
      * @inheritdoc IMToken
      */
-    function increaseMintRateLimit(uint256 window, uint256 newLimit)
+    function setWalletBucketId(address wallet, uint8 bucketId)
         external
         onlyContractAdmin
     {
-        _setMintRateLimitConfig(window, newLimit, true);
+        walletBucketId[wallet] = bucketId;
+        emit WalletBucketIdSet(wallet, bucketId);
     }
 
     /**
      * @inheritdoc IMToken
      */
-    function decreaseMintRateLimit(uint256 window, uint256 newLimit)
-        external
-        onlyContractAdmin
-    {
-        _setMintRateLimitConfig(window, newLimit, false);
+    function increaseMintRateLimit(
+        uint8 bucketId,
+        uint256 window,
+        uint256 newLimit
+    ) external onlyContractAdmin {
+        _setMintRateLimitConfig(bucketId, window, newLimit, true);
     }
 
     /**
      * @inheritdoc IMToken
      */
-    function removeMintRateLimitConfig(uint256 window)
+    function decreaseMintRateLimit(
+        uint8 bucketId,
+        uint256 window,
+        uint256 newLimit
+    ) external onlyContractAdmin {
+        _setMintRateLimitConfig(bucketId, window, newLimit, false);
+    }
+
+    /**
+     * @inheritdoc IMToken
+     */
+    function removeMintRateLimitConfig(uint8 bucketId, uint256 window)
         external
         onlyContractAdmin
     {
-        _mintRateLimits.removeWindowLimit(window);
+        _mintRateLimits[bucketId].removeWindowLimit(window);
     }
 
     /**
      * @notice returns array of mint rate limit configs
+     * @param bucketId bucket id
      * @return statuses array of mint rate limit statuses
      */
-    function getMintRateLimitStatuses()
+    function getMintRateLimitStatuses(uint8 bucketId)
         external
         view
         returns (
             RateLimitLibrary.WindowRateLimitStatus[] memory /* statuses */
         )
     {
-        return _mintRateLimits.getWindowStatuses();
+        return _mintRateLimits[bucketId].getWindowStatuses();
     }
 
     /**
@@ -457,11 +479,15 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
      * @param increaseOnly if true - only increase the limit, if false - only decrease the limit
      */
     function _setMintRateLimitConfig(
+        uint8 bucketId,
         uint256 window,
         uint256 limit,
         bool increaseOnly
     ) private {
-        uint256 previousLimit = _mintRateLimits.setWindowLimit(window, limit);
+        uint256 previousLimit = _mintRateLimits[bucketId].setWindowLimit(
+            window,
+            limit
+        );
 
         bool isNewLimitValid = increaseOnly
             ? limit > previousLimit
@@ -492,7 +518,7 @@ contract mToken is ERC20PausableUpgradeable, Blacklistable, IMToken {
 
         // if minting, check and update mint rate limit
         if (from == address(0)) {
-            _mintRateLimits.consumeLimit(amount);
+            _mintRateLimits[walletBucketId[msg.sender]].consumeLimit(amount);
         }
     }
 

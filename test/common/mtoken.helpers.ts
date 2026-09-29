@@ -20,7 +20,10 @@ import { MToken } from '../../typechain-types';
 type CommonParams = {
   tokenContract: MToken;
   owner: SignerWithAddress;
+  bucketId?: number;
 };
+
+const rateLimitBucketId = (bucketId?: number) => bucketId ?? 0;
 
 export const setMetadataTest = async (
   { tokenContract, owner }: CommonParams,
@@ -263,7 +266,10 @@ export const mint = async (
 
   const balanceBefore = await tokenContract.balanceOf(to);
 
-  const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses();
+  const bucketId = await tokenContract.walletBucketId(caller.address);
+  const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses(
+    bucketId,
+  );
 
   const timetsampBefore = await getCurrentBlockTimestamp();
 
@@ -272,7 +278,9 @@ export const mint = async (
     tokenContract.interface.events['Transfer(address,address,uint256)'].name,
   );
 
-  const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses();
+  const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses(
+    bucketId,
+  );
   const timestampAfter = await getCurrentBlockTimestamp();
 
   const expectedLimitsAfter = await Promise.all(
@@ -338,14 +346,19 @@ export const burn = async (
 
   const balanceBefore = await tokenContract.balanceOf(from);
 
-  const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses();
+  const bucketId = await tokenContract.walletBucketId(caller.address);
+  const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses(
+    bucketId,
+  );
 
   await expect(callFn()).to.emit(
     tokenContract,
     tokenContract.interface.events['Transfer(address,address,uint256)'].name,
   );
 
-  const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses();
+  const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses(
+    bucketId,
+  );
 
   for (const [index, limit] of rateLimitConfigsBefore.entries()) {
     expect(rateLimitConfigsAfter[index].limit).eq(limit.limit);
@@ -361,16 +374,18 @@ export const burn = async (
 };
 
 export const increaseMintRateLimitTest = async (
-  { tokenContract, owner }: CommonParams,
+  { tokenContract, owner, bucketId: bucketIdParam }: CommonParams,
   window: number,
   newLimit: BigNumberish,
   opt?: OptionalCommonParams,
 ) => {
+  const bucketId = rateLimitBucketId(bucketIdParam);
+
   if (
     await handleRevert(
       tokenContract
         .connect(opt?.from ?? owner)
-        .increaseMintRateLimit.bind(this, window, newLimit),
+        .increaseMintRateLimit.bind(this, bucketId, window, newLimit),
       tokenContract,
       opt,
     )
@@ -378,16 +393,22 @@ export const increaseMintRateLimitTest = async (
     return;
   }
 
-  const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses();
+  const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses(
+    bucketId,
+  );
   const timestampBefore = await getCurrentBlockTimestamp();
 
   await expect(
-    tokenContract.connect(owner).increaseMintRateLimit(window, newLimit),
+    tokenContract
+      .connect(owner)
+      .increaseMintRateLimit(bucketId, window, newLimit),
   )
     .to.emit(tokenContract, 'WindowLimitSet')
     .withArgs(window, newLimit);
   const currentTimestamp = await getCurrentBlockTimestamp();
-  const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses();
+  const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses(
+    bucketId,
+  );
 
   const configBefore = rateLimitConfigsBefore.filter((limit) =>
     limit.window.eq(window),
@@ -423,15 +444,17 @@ export const increaseMintRateLimitTest = async (
 };
 
 export const removeMintRateLimitTest = async (
-  { tokenContract, owner }: CommonParams,
+  { tokenContract, owner, bucketId: bucketIdParam }: CommonParams,
   window: number,
   opt?: OptionalCommonParams,
 ) => {
+  const bucketId = rateLimitBucketId(bucketIdParam);
+
   if (
     await handleRevert(
       tokenContract
         .connect(opt?.from ?? owner)
-        .removeMintRateLimitConfig.bind(this, window),
+        .removeMintRateLimitConfig.bind(this, bucketId, window),
       tokenContract,
       opt,
     )
@@ -439,12 +462,18 @@ export const removeMintRateLimitTest = async (
     return;
   }
 
-  const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses();
+  const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses(
+    bucketId,
+  );
 
-  await expect(tokenContract.connect(owner).removeMintRateLimitConfig(window))
+  await expect(
+    tokenContract.connect(owner).removeMintRateLimitConfig(bucketId, window),
+  )
     .to.emit(tokenContract, 'WindowLimitRemoved')
     .withArgs(window);
-  const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses();
+  const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses(
+    bucketId,
+  );
 
   const configBefore = rateLimitConfigsBefore.filter((limit) =>
     limit.window.eq(window),
@@ -458,16 +487,18 @@ export const removeMintRateLimitTest = async (
 };
 
 export const decreaseMintRateLimitTest = async (
-  { tokenContract, owner }: CommonParams,
+  { tokenContract, owner, bucketId: bucketIdParam }: CommonParams,
   window: number,
   newLimit: BigNumberish,
   opt?: OptionalCommonParams,
 ) => {
+  const bucketId = rateLimitBucketId(bucketIdParam);
+
   if (
     await handleRevert(
       tokenContract
         .connect(opt?.from ?? owner)
-        .decreaseMintRateLimit.bind(this, window, newLimit),
+        .decreaseMintRateLimit.bind(this, bucketId, window, newLimit),
       tokenContract,
       opt,
     )
@@ -475,17 +506,23 @@ export const decreaseMintRateLimitTest = async (
     return;
   }
 
-  const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses();
+  const rateLimitConfigsBefore = await tokenContract.getMintRateLimitStatuses(
+    bucketId,
+  );
   const timestampBefore = await getCurrentBlockTimestamp();
 
   await expect(
-    tokenContract.connect(owner).decreaseMintRateLimit(window, newLimit),
+    tokenContract
+      .connect(owner)
+      .decreaseMintRateLimit(bucketId, window, newLimit),
   )
     .to.emit(tokenContract, 'WindowLimitSet')
     .withArgs(window, newLimit);
 
   const currentTimestamp = await getCurrentBlockTimestamp();
-  const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses();
+  const rateLimitConfigsAfter = await tokenContract.getMintRateLimitStatuses(
+    bucketId,
+  );
 
   const configBefore = rateLimitConfigsBefore.filter((limit) =>
     limit.window.eq(window),
@@ -519,4 +556,35 @@ export const decreaseMintRateLimitTest = async (
     expect(configAfter.lastUpdated).eq(currentTimestamp);
     expect(configAfter.remaining).eq(newLimit);
   }
+};
+
+export const setWalletBucketIdTest = async (
+  { tokenContract, owner }: CommonParams,
+  wallet: Account,
+  bucketId: number,
+  opt?: OptionalCommonParams,
+) => {
+  const from = opt?.from ?? owner;
+  wallet = getAccount(wallet);
+
+  if (
+    await handleRevert(
+      tokenContract
+        .connect(from)
+        .setWalletBucketId.bind(this, wallet, bucketId),
+      tokenContract,
+      opt,
+    )
+  ) {
+    return;
+  }
+
+  await expect(tokenContract.connect(from).setWalletBucketId(wallet, bucketId))
+    .to.emit(
+      tokenContract,
+      tokenContract.interface.events['WalletBucketIdSet(address,uint8)'].name,
+    )
+    .withArgs(wallet, bucketId);
+
+  expect(await tokenContract.walletBucketId(wallet)).eq(bucketId);
 };

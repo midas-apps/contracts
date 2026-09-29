@@ -45,6 +45,12 @@ interface IMToken is IERC20Upgradeable {
     event Clawback(address indexed from, address indexed to, uint256 amount);
 
     /**
+     * @param wallet address of the wallet
+     * @param bucketId bucket id
+     */
+    event WalletBucketIdSet(address indexed wallet, uint8 indexed bucketId);
+
+    /**
      * @param maxSupplyCap new maximum supply cap
      */
     event SetMaxSupplyCap(uint256 maxSupplyCap);
@@ -139,24 +145,42 @@ interface IMToken is IERC20Upgradeable {
     function setMetadata(bytes32 key, bytes memory data) external;
 
     /**
+     * @notice sets the wallet bucket id for a given wallet
+     * @param wallet address of the wallet
+     * @param bucketId bucket id
+     */
+    function setWalletBucketId(address wallet, uint8 bucketId) external;
+
+    /**
      * @notice increases mint rate limit for a given window
+     * @param bucketId bucket id
      * @param window window duration in seconds
      * @param newLimit limit amount per window
      */
-    function increaseMintRateLimit(uint256 window, uint256 newLimit) external;
+    function increaseMintRateLimit(
+        uint8 bucketId,
+        uint256 window,
+        uint256 newLimit
+    ) external;
 
     /**
      * @notice decreases mint rate limit for a given window
+     * @param bucketId bucket id
      * @param window window duration in seconds
      * @param newLimit limit amount per window
      */
-    function decreaseMintRateLimit(uint256 window, uint256 newLimit) external;
+    function decreaseMintRateLimit(
+        uint8 bucketId,
+        uint256 window,
+        uint256 newLimit
+    ) external;
 
     /**
      * @notice removes mint rate limit config for a given window
+     * @param bucketId bucket id
      * @param window window duration in seconds
      */
-    function removeMintRateLimitConfig(uint256 window) external;
+    function removeMintRateLimitConfig(uint8 bucketId, uint256 window) external;
 
     /**
      * @notice sets the permissioned status of the token

@@ -45,6 +45,7 @@ import {
   setClawbackReceiverTest,
   setMaxSupplyCapTest,
   setMetadataTest,
+  setWalletBucketIdTest,
 } from '../common/mtoken.helpers';
 import {
   bulkScheduleTimelockOperationTester,
@@ -67,13 +68,16 @@ const SET_CLAWBACK_RECEIVER_SEL = encodeFnSelector(
   'setClawbackReceiver(address)',
 );
 const INCREASE_MINT_RATE_LIMIT_SEL = encodeFnSelector(
-  'increaseMintRateLimit(uint256,uint256)',
+  'increaseMintRateLimit(uint8,uint256,uint256)',
 );
 const DECREASE_MINT_RATE_LIMIT_SEL = encodeFnSelector(
-  'decreaseMintRateLimit(uint256,uint256)',
+  'decreaseMintRateLimit(uint8,uint256,uint256)',
 );
 const REMOVE_MINT_RATE_LIMIT_SEL = encodeFnSelector(
-  'removeMintRateLimitConfig(uint256)',
+  'removeMintRateLimitConfig(uint8,uint256)',
+);
+const SET_WALLET_BUCKET_ID_SEL = encodeFnSelector(
+  'setWalletBucketId(address,uint8)',
 );
 const ERC20_PAUSABLE_PAUSED_STORAGE_SLOT = 101;
 const PAUSE_TEST_AMOUNT = parseUnits('100');
@@ -161,7 +165,7 @@ describe(`mToken`, function () {
 
     expect(await mTBILL.paused()).eq(false);
 
-    const limits = await mTBILL.getMintRateLimitStatuses();
+    const limits = await mTBILL.getMintRateLimitStatuses(0);
 
     expect(limits.length).eq(0);
   });
@@ -1276,6 +1280,178 @@ describe(`mToken`, function () {
       });
     });
 
+    describe('mint() rate limit buckets', () => {
+      it('mint consumes only the caller bucket', async () => {
+        const { owner, tokenContract, regularAccounts, accessControl } =
+          await loadFixture(defaultDeploy);
+        const holder = regularAccounts[0];
+        const bridge = regularAccounts[1];
+        const window = days(1);
+
+        await accessControl['grantRole(bytes32,address)'](
+          await tokenContract.minterRole(),
+          bridge.address,
+        );
+        await setWalletBucketIdTest({ tokenContract, owner }, bridge, 1);
+        await increaseMintRateLimitTest(
+          { tokenContract, owner },
+          window,
+          parseUnits('100'),
+        );
+        await increaseMintRateLimitTest(
+          { tokenContract, owner, bucketId: 1 },
+          window,
+          parseUnits('50'),
+        );
+
+        await mint({ tokenContract, owner }, holder, parseUnits('40'));
+
+        const bridgeBucket = await tokenContract.getMintRateLimitStatuses(1);
+        expect(bridgeBucket[0].inFlight).eq(0);
+        expect(bridgeBucket[0].remaining).eq(parseUnits('50'));
+
+        const primaryBeforeBridge =
+          await tokenContract.getMintRateLimitStatuses(0);
+
+        await mint({ tokenContract, owner }, holder, parseUnits('20'), {
+          from: bridge,
+        });
+
+        const primaryAfterBridge = await tokenContract.getMintRateLimitStatuses(
+          0,
+        );
+        expect(primaryAfterBridge[0].inFlight).lte(
+          primaryBeforeBridge[0].inFlight,
+        );
+        expect(primaryAfterBridge[0].remaining).gte(
+          primaryBeforeBridge[0].remaining,
+        );
+      });
+
+      it('an exhausted default bucket does not block another bucket', async () => {
+        const { owner, tokenContract, regularAccounts, accessControl } =
+          await loadFixture(defaultDeploy);
+        const holder = regularAccounts[0];
+        const bridge = regularAccounts[1];
+        const window = days(1);
+
+        await accessControl['grantRole(bytes32,address)'](
+          await tokenContract.minterRole(),
+          bridge.address,
+        );
+        await setWalletBucketIdTest({ tokenContract, owner }, bridge, 1);
+        await increaseMintRateLimitTest({ tokenContract, owner }, window, 100);
+        await increaseMintRateLimitTest(
+          { tokenContract, owner, bucketId: 1 },
+          window,
+          100,
+        );
+
+        await mint({ tokenContract, owner }, holder, 100);
+        await mint({ tokenContract, owner }, holder, 1, {
+          revertCustomError: {
+            customErrorName: 'WindowLimitExceeded',
+            args: [window, 0, 1],
+          },
+        });
+
+        await mint({ tokenContract, owner }, holder, 100, { from: bridge });
+      });
+
+      it('an exhausted bridge bucket does not block the default bucket', async () => {
+        const { owner, tokenContract, regularAccounts, accessControl } =
+          await loadFixture(defaultDeploy);
+        const holder = regularAccounts[0];
+        const bridge = regularAccounts[1];
+        const window = days(1);
+
+        await accessControl['grantRole(bytes32,address)'](
+          await tokenContract.minterRole(),
+          bridge.address,
+        );
+        await setWalletBucketIdTest({ tokenContract, owner }, bridge, 1);
+        await increaseMintRateLimitTest({ tokenContract, owner }, window, 100);
+        await increaseMintRateLimitTest(
+          { tokenContract, owner, bucketId: 1 },
+          window,
+          100,
+        );
+
+        await mint({ tokenContract, owner }, holder, 100, { from: bridge });
+        await mint({ tokenContract, owner }, holder, 1, {
+          from: bridge,
+          revertCustomError: {
+            customErrorName: 'WindowLimitExceeded',
+            args: [window, 0, 1],
+          },
+        });
+
+        await mint({ tokenContract, owner }, holder, 100);
+      });
+
+      it('mintGoverned consumes the caller bucket', async () => {
+        const { owner, tokenContract, regularAccounts } = await loadFixture(
+          defaultDeploy,
+        );
+        const holder = regularAccounts[0];
+        const window = days(1);
+
+        await setWalletBucketIdTest({ tokenContract, owner }, owner, 1);
+        await increaseMintRateLimitTest(
+          { tokenContract, owner },
+          window,
+          parseUnits('100'),
+        );
+        await increaseMintRateLimitTest(
+          { tokenContract, owner, bucketId: 1 },
+          window,
+          parseUnits('40'),
+        );
+
+        await mint(
+          { tokenContract, owner, isGoverned: true },
+          holder,
+          parseUnits('40'),
+        );
+
+        const primaryBucket = await tokenContract.getMintRateLimitStatuses(0);
+        expect(primaryBucket[0].inFlight).eq(0);
+        expect(primaryBucket[0].remaining).eq(parseUnits('100'));
+      });
+
+      it('moving a minter back to bucket 0 uses the default bucket', async () => {
+        const { owner, tokenContract, regularAccounts, accessControl } =
+          await loadFixture(defaultDeploy);
+        const holder = regularAccounts[0];
+        const bridge = regularAccounts[1];
+        const window = days(1);
+
+        await accessControl['grantRole(bytes32,address)'](
+          await tokenContract.minterRole(),
+          bridge.address,
+        );
+        await setWalletBucketIdTest({ tokenContract, owner }, bridge, 1);
+        await increaseMintRateLimitTest({ tokenContract, owner }, window, 10);
+        await increaseMintRateLimitTest(
+          { tokenContract, owner, bucketId: 1 },
+          window,
+          100,
+        );
+
+        await mint({ tokenContract, owner }, holder, 50, { from: bridge });
+        await setWalletBucketIdTest({ tokenContract, owner }, bridge, 0);
+
+        await mint({ tokenContract, owner }, holder, 11, {
+          from: bridge,
+          revertCustomError: {
+            customErrorName: 'WindowLimitExceeded',
+            args: [window, 10, 11],
+          },
+        });
+        await mint({ tokenContract, owner }, holder, 10, { from: bridge });
+      });
+    });
+
     it('should fail: contract is paused by pause manager', async () => {
       const { pauseManager, owner, tokenContract, regularAccounts } =
         await loadFixture(defaultDeploy);
@@ -2298,6 +2474,116 @@ describe(`mToken`, function () {
     });
   });
 
+  describe('setWalletBucketId()', () => {
+    it('should fail: call from address without token manager role', async () => {
+      const { owner, tokenContract, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+
+      const caller = regularAccounts[0];
+
+      await setWalletBucketIdTest(
+        { tokenContract, owner },
+        regularAccounts[1],
+        1,
+        {
+          from: caller,
+          revertCustomError: acErrors.WMAC_HASNT_PERMISSION,
+        },
+      );
+    });
+
+    it('call from address with token manager role', async () => {
+      const { owner, tokenContract, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+
+      expect(await tokenContract.walletBucketId(regularAccounts[0].address)).eq(
+        0,
+      );
+
+      await setWalletBucketIdTest(
+        { tokenContract, owner },
+        regularAccounts[0],
+        1,
+      );
+    });
+
+    it('overwrites an existing bucket id', async () => {
+      const { owner, tokenContract, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await setWalletBucketIdTest(
+        { tokenContract, owner },
+        regularAccounts[0],
+        1,
+      );
+      await setWalletBucketIdTest(
+        { tokenContract, owner },
+        regularAccounts[0],
+        2,
+      );
+    });
+
+    it('sets bucket id back to 0', async () => {
+      const { owner, tokenContract, regularAccounts } = await loadFixture(
+        defaultDeploy,
+      );
+
+      await setWalletBucketIdTest(
+        { tokenContract, owner },
+        regularAccounts[0],
+        1,
+      );
+      await setWalletBucketIdTest(
+        { tokenContract, owner },
+        regularAccounts[0],
+        0,
+      );
+    });
+
+    it('call when globally paused by pause manager', async () => {
+      const { pauseManager, owner, tokenContract, regularAccounts } =
+        await loadFixture(defaultDeploy);
+
+      await pauseGlobalTest({ pauseManager, owner });
+      await setWalletBucketIdTest(
+        { tokenContract, owner },
+        regularAccounts[0],
+        1,
+      );
+    });
+
+    it('call when contract is paused by pause manager', async () => {
+      const { pauseManager, owner, tokenContract, regularAccounts } =
+        await loadFixture(defaultDeploy);
+
+      await pauseVault({ pauseManager, owner }, tokenContract);
+      await setWalletBucketIdTest(
+        { tokenContract, owner },
+        regularAccounts[0],
+        1,
+      );
+    });
+
+    it('call when setWalletBucketId is paused by pause manager', async () => {
+      const { pauseManager, owner, tokenContract, regularAccounts } =
+        await loadFixture(defaultDeploy);
+
+      await pauseVaultFn(
+        { pauseManager, owner },
+        tokenContract,
+        SET_WALLET_BUCKET_ID_SEL,
+      );
+      await setWalletBucketIdTest(
+        { tokenContract, owner },
+        regularAccounts[0],
+        1,
+      );
+    });
+  });
+
   describe('increaseMintRateLimit()', () => {
     it('should fail: call from address without token manager role', async () => {
       const { owner, tokenContract, regularAccounts } = await loadFixture(
@@ -2331,6 +2617,20 @@ describe(`mToken`, function () {
 
       await increaseMintRateLimitTest({ tokenContract, owner }, window, 100);
       await increaseMintRateLimitTest({ tokenContract, owner }, window, 200);
+    });
+
+    it('call for a non-default bucket', async () => {
+      const { owner, tokenContract } = await loadFixture(defaultDeploy);
+      const window = days(1);
+
+      await increaseMintRateLimitTest(
+        { tokenContract, owner, bucketId: 1 },
+        window,
+        100,
+      );
+
+      expect((await tokenContract.getMintRateLimitStatuses(0)).length).eq(0);
+      expect((await tokenContract.getMintRateLimitStatuses(1)).length).eq(1);
     });
 
     it('should fail: when window is shorter than 1 minute', async () => {
@@ -2428,6 +2728,24 @@ describe(`mToken`, function () {
       await decreaseMintRateLimitTest({ tokenContract, owner }, window, 100);
     });
 
+    it('call for a non-default bucket', async () => {
+      const { owner, tokenContract } = await loadFixture(defaultDeploy);
+      const window = days(1);
+
+      await increaseMintRateLimitTest(
+        { tokenContract, owner, bucketId: 1 },
+        window,
+        200,
+      );
+      await decreaseMintRateLimitTest(
+        { tokenContract, owner, bucketId: 1 },
+        window,
+        100,
+      );
+
+      expect((await tokenContract.getMintRateLimitStatuses(0)).length).eq(0);
+    });
+
     it('call when globally paused by pause manager', async () => {
       const { pauseManager, owner, tokenContract } = await loadFixture(
         defaultDeploy,
@@ -2498,6 +2816,25 @@ describe(`mToken`, function () {
 
       await increaseMintRateLimitTest({ tokenContract, owner }, window, 100);
       await removeMintRateLimitTest({ tokenContract, owner }, window);
+    });
+
+    it('call for a non-default bucket', async () => {
+      const { owner, tokenContract } = await loadFixture(defaultDeploy);
+      const window = days(1);
+
+      await increaseMintRateLimitTest({ tokenContract, owner }, window, 100);
+      await increaseMintRateLimitTest(
+        { tokenContract, owner, bucketId: 1 },
+        window,
+        100,
+      );
+      await removeMintRateLimitTest(
+        { tokenContract, owner, bucketId: 1 },
+        window,
+      );
+
+      expect((await tokenContract.getMintRateLimitStatuses(0)).length).eq(1);
+      expect((await tokenContract.getMintRateLimitStatuses(1)).length).eq(0);
     });
 
     it('call when globally paused by pause manager', async () => {
