@@ -605,6 +605,16 @@ contract DepositVault is ManageableVault, IDepositVault {
     ) private {
         Request memory request = mintRequests[requestId];
 
+        if (
+            !_validateNextRequestIdToProcess(
+                requestId,
+                !isSafe,
+                request.status == RequestStatus.Canceled
+            )
+        ) {
+            return;
+        }
+
         _validateRequest(requestId, request.recipient, request.status);
         _validateUserAccess(request.recipient, false);
 
@@ -641,10 +651,12 @@ contract DepositVault is ManageableVault, IDepositVault {
                 upcomingSupplyDecrease,
                 amountMToken,
                 !isSafe
-            ) || !_validateAndUpdateNextRequestIdToProcess(requestId, !isSafe)
+            )
         ) {
             return;
         }
+
+        _updateNextExpectedRequestIdToProcess(requestId);
 
         upcomingSupply -= upcomingSupplyDecrease;
 

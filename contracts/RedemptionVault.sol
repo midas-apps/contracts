@@ -438,6 +438,16 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     ) private {
         Request memory request = redeemRequests[requestId];
 
+        if (
+            !_validateNextRequestIdToProcess(
+                requestId,
+                !isSafe,
+                request.status == RequestStatus.Canceled
+            )
+        ) {
+            return;
+        }
+
         _validateRequest(requestId, request.recipient, request.status);
 
         _validateUserAccess(request.recipient, false);
@@ -478,11 +488,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             (isSafe &&
                 IERC20(request.tokenOut).balanceOf(requestRedeemer) <
                 (calcResult.amountTokenOutWithoutFee + calcResult.feeAmount)
-                    .convertFromBase18(calcResult.tokenOutDecimals)) ||
-            !_validateAndUpdateNextRequestIdToProcess(requestId, !isSafe)
+                    .convertFromBase18(calcResult.tokenOutDecimals))
         ) {
             return;
         }
+
+        _updateNextExpectedRequestIdToProcess(requestId);
 
         _tokenTransferFromTo(
             request.tokenOut,

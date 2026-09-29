@@ -545,13 +545,17 @@ abstract contract ManageableVault is
 
     /**
      * @dev check if request id is sequential and update next expected request id to process
+     * in case if request is cancelled and next expected request id to process is equal to request id,
+     * next expected request id to process is incremented
      * @param requestId request id
      * @param revertIfInvalid if true, reverts if request id is not sequential, otherwise returns false
+     * @param isCancelled if true, request is cancelled
      * @return isValid true if request id is sequential or sequentialRequestProcessing is disabled
      */
-    function _validateAndUpdateNextRequestIdToProcess(
+    function _validateNextRequestIdToProcess(
         uint256 requestId,
-        bool revertIfInvalid
+        bool revertIfInvalid,
+        bool isCancelled
     ) internal returns (bool isValid) {
         isValid = true;
 
@@ -560,6 +564,12 @@ abstract contract ManageableVault is
         }
 
         uint256 _nextExpectedRequestIdToProcess = nextExpectedRequestIdToProcess;
+
+        if (isCancelled && _nextExpectedRequestIdToProcess == requestId) {
+            nextExpectedRequestIdToProcess++;
+            emit AdvancePastRejectedRequest(requestId);
+            return false;
+        }
 
         if (
             sequentialRequestProcessing &&
@@ -576,8 +586,14 @@ abstract contract ManageableVault is
             isValid,
             InvalidRequestSequence(requestId, _nextExpectedRequestIdToProcess)
         );
+    }
 
-        if (requestId >= _nextExpectedRequestIdToProcess) {
+    /**
+     * @dev updates next expected request id to process
+     * @param requestId request id
+     */
+    function _updateNextExpectedRequestIdToProcess(uint256 requestId) internal {
+        if (requestId >= nextExpectedRequestIdToProcess) {
             nextExpectedRequestIdToProcess = requestId + 1;
         }
     }

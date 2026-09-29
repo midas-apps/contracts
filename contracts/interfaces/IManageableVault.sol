@@ -161,6 +161,11 @@ interface IManageableVault {
     event SetSequentialRequestProcessing(bool enforce);
 
     /**
+     * @param requestId request id that was skipped
+     */
+    event AdvancePastRejectedRequest(uint256 requestId);
+
+    /**
      * @notice Payment token is already added
      * @param token token address
      */

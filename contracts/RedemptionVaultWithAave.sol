@@ -43,16 +43,13 @@ contract RedemptionVaultWithAave is RedemptionVault {
 
     /**
      * @notice when token is not in aave pool
-     * @param aavePool Aave V3 Pool address
-     * @param token token address
      */
-    error TokenNotInPool(address aavePool, address token);
+    error TokenNotInPool();
 
     /**
      * @notice when pool is not set
-     * @param token token address
      */
-    error PoolNotSet(address token);
+    error PoolNotSet();
 
     /**
      * @notice when insufficient withdrawn amount
@@ -87,7 +84,7 @@ contract RedemptionVaultWithAave is RedemptionVault {
         _validateAddress(_aavePool, true);
         require(
             IAaveV3Pool(_aavePool).getReserveAToken(_token) != address(0),
-            TokenNotInPool(_aavePool, _token)
+            TokenNotInPool()
         );
         aavePools[_token] = IAaveV3Pool(_aavePool);
         emit SetAavePool(_token, _aavePool);
@@ -98,7 +95,7 @@ contract RedemptionVaultWithAave is RedemptionVault {
      * @param _token payment token address
      */
     function removeAavePool(address _token) external onlyContractAdmin {
-        require(address(aavePools[_token]) != address(0), PoolNotSet(_token));
+        require(address(aavePools[_token]) != address(0), PoolNotSet());
         delete aavePools[_token];
         emit RemoveAavePool(_token);
     }
