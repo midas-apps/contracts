@@ -748,8 +748,8 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     mGLOeuro: {
       token: '0x2F8bae126b8d416C009b82Ccd60e4f9cAbbd7702',
       customFeed: '0x8B7B1689396ef4468df1c0faB181D29B47089609',
-      customFeedDv: '0x165a52261202c0e32F70dE8eD715A1e3cF9a228c',
-      customFeedRv: '0x0f46c1E4F51B92c2966BEA4bd5A52E71E423D6e0',
+      customFeedDv: '0xe0590E4cD3C82B4df45aE771b882fB5b02a0CC72',
+      customFeedRv: '0x40715f06467c0A6A8cD2FcB59c06a2e0D07D4c08',
       dataFeedDv: '0xc27Cd7c0203B73933dcbcF7bdB4cC5D7bDA80A64',
       dataFeedRv: '0xF76653eBc3e47B80e89F0e5b9CF6A5CAaB848946',
       depositVaultMorpho: '0xE0Dcf20b0460e1f9222528F3997F9D71Ad6375C5',
