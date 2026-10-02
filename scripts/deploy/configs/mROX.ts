@@ -64,6 +64,12 @@ export const mROXDeploymentConfig: DeploymentConfig = {
                   isStable: true,
                   allowance: parseUnits('1000000000', 18),
                 },
+                {
+                  token: 'ausd',
+                  fee: 0,
+                  isStable: true,
+                  allowance: parseUnits('1000000000', 18),
+                },
               ],
             },
             {
@@ -71,6 +77,12 @@ export const mROXDeploymentConfig: DeploymentConfig = {
               paymentTokens: [
                 {
                   token: 'usdc',
+                  fee: 0,
+                  isStable: true,
+                  allowance: parseUnits('1000000000', 18),
+                },
+                {
+                  token: 'ausd',
                   fee: 0,
                   isStable: true,
                   allowance: parseUnits('1000000000', 18),

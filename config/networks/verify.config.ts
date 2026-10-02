@@ -29,6 +29,12 @@ type VerifyConfigPerNetwork = PartialConfigPerNetwork<
 >;
 
 export const verifyConfig: VerifyConfigPerNetwork = {
+  arc: {
+    type: 'custom',
+    apiUrl: 'https://api.blockscout.com/5042/api',
+    apiKey: process.env.BLOCKSCOUT_API_KEY,
+    browserUrl: 'https://explorer.arc.io',
+  },
   main: {
     type: 'etherscan',
     browserUrl: 'https://etherscan.io',

@@ -94,6 +94,18 @@ export type MidasAddresses = Partial<Record<MTokenName, TokenAddresses>> & {
 export const midasAddressesPerNetwork: ConfigPerNetwork<
   MidasAddresses | undefined
 > = {
+  arc: {
+    accessControl: '0xD0e01E127cf111AAB7CA56204D5A24532F86461c',
+    timelock: '0x450F76E9eC5bB13C4945092c2055cB39789E1A69',
+    paymentTokens: {
+      usdc: {
+        // ERC-20 interface: 6 decimals; native USDC gas balances use 18.
+        token: '0x3600000000000000000000000000000000000000',
+        aggregator: '0x374CBDcBb1C3b267350572896f3532D0d64b060E',
+        dataFeed: '0x5b5DD673fbd6B7f6ED03579C55b3e081524a1C50',
+      },
+    },
+  },
   main: {
     paymentTokens: {
       usdt: {
@@ -1697,6 +1709,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         token: '0x754704Bc059F8C67012fEd69BC8A327a5aafb603',
         aggregator: '0xf5F15f188AbCB0d165D1Edb7f37F7d6fA2fCebec',
         dataFeed: '0x7F627B2622c556680326eE060ecF551410EFe22B',
+      },
+      ausd: {
+        token: '0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a',
+        aggregator: '0xE20751C7B5867bCBef815ffc1b284c3f412a9e13',
+        dataFeed: '0x660D475079d161CA9662Da4667627cDA909f4E12',
       },
     },
     mEDGE: {

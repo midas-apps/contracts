@@ -29,6 +29,7 @@ export const networks = [
   'injective',
   'optimism',
   'robinhood',
+  'arc',
 ] as const;
 
 export type Network = (typeof networks)[number];
