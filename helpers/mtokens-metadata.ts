@@ -376,4 +376,8 @@ export const mTokensMetadata: Record<
     symbol: 'mFTAC',
     isMinBalance: true,
   },
+  moriniGoldYield: {
+    name: 'Morini Gold Yield Vault',
+    symbol: 'MoriniGoldYield',
+  },
 };
