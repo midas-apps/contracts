@@ -4,12 +4,12 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
   ccipNetworkConfig,
   ccipConfigPerMToken,
+  MTokenName,
   Network,
   PartialConfigPerNetwork,
 } from '../../../../config';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
 import { getHreByNetworkName } from '../../../../helpers/hardhat';
-import { getMTokenOrThrow } from '../../../../helpers/utils';
 import { CCIPRateLimitConfigCore, DeployFunction } from '../../common/types';
 import {
   getDeployer,
@@ -55,9 +55,11 @@ const getRateLimitConfig = (config?: CCIPRateLimitConfigCore) => {
       };
 };
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+) => {
   const deployer = await getDeployer(hre);
-  const mToken = getMTokenOrThrow(hre);
 
   const currentNetwork = hre.network.name as Network;
 

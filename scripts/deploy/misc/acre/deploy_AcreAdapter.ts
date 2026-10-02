@@ -1,23 +1,21 @@
 import { group, select } from '@clack/prompts';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { MTokenName, PaymentTokenName } from '../../../../config';
 import {
   getCurrentAddresses,
   VaultType,
 } from '../../../../config/constants/addresses';
-import {
-  etherscanVerify,
-  getMTokenOrThrow,
-  getPaymentTokenOrThrow,
-  logDeploy,
-} from '../../../../helpers/utils';
+import { etherscanVerify, logDeploy } from '../../../../helpers/utils';
 import { AcreAdapter__factory } from '../../../../typechain-types';
 import { DeployFunction } from '../../common/types';
 import { getDeployer } from '../../common/utils';
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const mToken = getMTokenOrThrow(hre);
-  const pToken = getPaymentTokenOrThrow(hre);
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+  pToken: PaymentTokenName,
+) => {
   const deployer = await getDeployer(hre);
 
   const addresses = getCurrentAddresses(hre);

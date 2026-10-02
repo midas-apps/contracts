@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import "../../mTokenPermissioned.sol";
+import "../../mTokenPermissionedMinBalance.sol";
 import "./MWinMidasAccessControlRoles.sol";
 
 /**
@@ -9,7 +9,7 @@ import "./MWinMidasAccessControlRoles.sol";
  * @author RedDuck Software
  */
 //solhint-disable contract-name-camelcase
-contract mWIN is mTokenPermissioned, MWinMidasAccessControlRoles {
+contract mWIN is mTokenPermissionedMinBalance, MWinMidasAccessControlRoles {
     /**
      * @notice actor that can mint mWIN
      */
@@ -29,9 +29,13 @@ contract mWIN is mTokenPermissioned, MWinMidasAccessControlRoles {
         keccak256("M_WIN_PAUSE_OPERATOR_ROLE");
 
     /**
-     * @dev leaving a storage gap for futures updates
+     * @notice actor that is exempt from mWIN min balance checks
      */
-    uint256[50] private __gap;
+    bytes32 public constant M_WIN_MIN_BALANCE_EXEMPT_ROLE =
+        keccak256("M_WIN_MIN_BALANCE_EXEMPT_ROLE");
+
+    // no gap as we would upgrade some of the deployments
+    // to mTokenMinBalance
 
     /**
      * @inheritdoc mToken
@@ -71,5 +75,12 @@ contract mWIN is mTokenPermissioned, MWinMidasAccessControlRoles {
      */
     function _greenlistedRole() internal pure override returns (bytes32) {
         return M_WIN_GREENLISTED_ROLE;
+    }
+
+    /**
+     * @inheritdoc mTokenMinBalance
+     */
+    function _minBalanceExemptRole() internal pure override returns (bytes32) {
+        return M_WIN_MIN_BALANCE_EXEMPT_ROLE;
     }
 }

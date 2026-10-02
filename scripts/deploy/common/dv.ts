@@ -18,6 +18,8 @@ import {
 } from '../../../typechain-types';
 
 export type DeployDvConfigCommon = {
+  /** Require the shared feed instead of falling back to a legacy DV feed. */
+  mTokenDataFeed?: 'dataFeed';
   feeReceiver?: string;
   tokensReceiver?: `0x${string}` | RedemptionVaultType;
   instantDailyLimit: BigNumberish;
@@ -87,7 +89,9 @@ export const deployDepositVault = async (
 
   let dataFeed: string | undefined;
 
-  if (token.startsWith('TAC')) {
+  if (networkConfig.mTokenDataFeed) {
+    dataFeed = tokenAddresses[networkConfig.mTokenDataFeed];
+  } else if (token.startsWith('TAC')) {
     const originalTokenName = token.replace('TAC', '');
     dataFeed = addresses?.[originalTokenName as MTokenName]?.dataFeed;
     console.log(
@@ -95,6 +99,10 @@ export const deployDepositVault = async (
     );
   } else {
     dataFeed = tokenAddresses?.dataFeedDv ?? tokenAddresses?.dataFeed;
+  }
+
+  if (!dataFeed || dataFeed === constants.AddressZero) {
+    throw new Error(`MToken data feed is not configured for ${token}`);
   }
 
   const dvContractName = getTokenContractNames(token)[type];

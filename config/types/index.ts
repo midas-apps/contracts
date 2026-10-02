@@ -7,6 +7,7 @@ export const networks = [
   'main',
   'arbitrum',
   'arbitrumSepolia',
+  'avalanche',
   'base',
   'bsc',
   'etherlink',
@@ -28,6 +29,7 @@ export const networks = [
   'injective',
   'optimism',
   'robinhood',
+  'arc',
 ] as const;
 
 export type Network = (typeof networks)[number];

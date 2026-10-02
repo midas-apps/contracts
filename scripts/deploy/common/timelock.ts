@@ -212,7 +212,7 @@ const validateSimulateContractUpgrade = async (
   await increase(days(3));
   await mine();
 
-  const proxyAdmin = (await hre.upgrades.admin.getInstance()) as ProxyAdmin;
+  const proxyAdmin = await getProxyAdmin(hre);
   const proxyAdminOwner = await proxyAdmin.owner();
 
   const timelock = await getTimelockContract(hre);
@@ -446,7 +446,7 @@ const getUpgradeTx = async (
   hre: HardhatRuntimeEnvironment,
   { newImplementation, proxyAddress, initializerCalldata }: GetUpgradeTxParams,
 ) => {
-  const admin = await hre.upgrades.admin.getInstance();
+  const admin = await getProxyAdmin(hre);
 
   const upgradeCallData = initializerCalldata
     ? admin.interface.encodeFunctionData('upgradeAndCall', [
@@ -466,7 +466,7 @@ const getTransferOwnershipTx = async (
   hre: HardhatRuntimeEnvironment,
   { newOwner }: { newOwner: string },
 ) => {
-  const admin = await hre.upgrades.admin.getInstance();
+  const admin = await getProxyAdmin(hre);
 
   const upgradeCallData = admin.interface.encodeFunctionData(
     'transferOwnership',
@@ -529,7 +529,6 @@ const proposeTimelockTx: PopulateTxFn = async (
   if (isOperationExists) {
     throw new Error('Operation is already exists');
   }
-
   const tx = await timelockContract.populateTransaction.schedule(
     ...params,
     await timelockContract.getMinDelay(),
@@ -558,7 +557,7 @@ const createUpgradeTimelockTx = async (
     hre,
     salt,
     async (hre) => {
-      const admin = (await hre.upgrades.admin.getInstance()) as ProxyAdmin;
+      const admin = await getProxyAdmin(hre);
 
       const currentImpl = await admin.getProxyImplementation(
         params.proxyAddress,
@@ -580,6 +579,7 @@ const createUpgradeTimelockTx = async (
 
       // Runs even under skipValidation — this is the incident-preventing check.
       const { abi } = await hre.artifacts.readArtifact(params.contractName);
+
       await assertReinitializerCovered({
         provider: hre.ethers.provider,
         proxyAddress: params.proxyAddress,
@@ -623,7 +623,7 @@ const createTransferOwnershipTimelockTx = async (
     async (hre) => {
       const timelockContract = await getTimelockContract(hre);
 
-      const admin = (await hre.upgrades.admin.getInstance()) as ProxyAdmin;
+      const admin = await getProxyAdmin(hre);
 
       const currentOwner = await admin.owner();
 
@@ -668,7 +668,7 @@ const createTimeLockTx = async (
     return false;
   }
 
-  const admin = (await hre.upgrades.admin.getInstance()) as ProxyAdmin;
+  const admin = await getProxyAdmin(hre);
 
   const networkAddresses = getCurrentAddresses(hre);
 
@@ -745,6 +745,12 @@ const createTimeLockTx = async (
   }
 
   return true;
+};
+
+const getProxyAdmin = async (hre: HardhatRuntimeEnvironment) => {
+  return (await hre.upgrades.admin.getInstance()).connect(
+    hre.ethers.provider,
+  ) as ProxyAdmin;
 };
 
 function parseRevertReason(data: string) {

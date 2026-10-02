@@ -51,16 +51,18 @@ const runAggregatorTimelapsedForMToken = async (
 
 export const resolveAggregatorTimelapsedMTokenRunList = (
   hre: HardhatRuntimeEnvironment,
+  mToken?: MTokenName,
+  action?: string,
 ): MTokenName[] => {
-  if (hre.mtoken) {
-    return [hre.mtoken];
+  if (mToken) {
+    return [mToken];
   }
-  if (!hre.action) {
+  if (!action) {
     throw new Error(
       'Provide --mtoken <MTOKEN> for a single product, or --action <upgradeId> for a batch (configure targets in scripts/upgrades/configs/aggregator-timelapsed-config.ts)',
     );
   }
-  return resolveTimelapsedMTokens(hre, hre.action);
+  return resolveTimelapsedMTokens(hre, action);
 };
 
 export const proposeAggregatorTimelapsedForMToken = (

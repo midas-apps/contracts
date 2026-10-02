@@ -1,7 +1,8 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { MTokenName, PaymentTokenName } from '../../../../config';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
-import { getMTokenOrPaymentTokenOrThrow } from '../../../../helpers/utils';
+import { requireOneOfMTokenOrPaymentToken } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
 import {
   getDeployer,
@@ -10,8 +11,12 @@ import {
 } from '../../common/utils';
 import { paymentTokenDeploymentConfigs } from '../../configs/payment-tokens';
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const { mToken, paymentToken } = getMTokenOrPaymentTokenOrThrow(hre);
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken?: MTokenName,
+  paymentToken?: PaymentTokenName,
+) => {
+  const selected = requireOneOfMTokenOrPaymentToken(mToken, paymentToken);
 
   const deployer = await getDeployer(hre);
   const addresses = getCurrentAddresses(hre);
@@ -19,16 +24,16 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   let address: string | undefined;
   let newOwner: string | undefined;
 
-  if (mToken) {
-    address = addresses?.[mToken]?.layerZero?.oft;
-    const config = getNetworkConfig(hre, mToken, 'postDeploy');
+  if (selected.mToken) {
+    address = addresses?.[selected.mToken]?.layerZero?.oft;
+    const config = getNetworkConfig(hre, selected.mToken, 'postDeploy');
     newOwner = config?.layerZero?.owner ?? config?.layerZero?.delegate;
   } else {
-    address = addresses?.paymentTokens?.[paymentToken]?.layerZero?.oft;
+    address = addresses?.paymentTokens?.[selected.paymentToken]?.layerZero?.oft;
     const config =
       paymentTokenDeploymentConfigs.networkConfigs[
         hre.network.config.chainId!
-      ]?.[paymentToken]?.postDeploy?.layerZero;
+      ]?.[selected.paymentToken]?.postDeploy?.layerZero;
 
     newOwner = config?.owner ?? config?.delegate;
   }

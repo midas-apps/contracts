@@ -2,6 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { verifyReinitializersConsumed } from './common/reinitializer';
 
+import { MTokenName } from '../../config';
 import {
   getCurrentAddresses,
   VaultType,
@@ -12,13 +13,14 @@ import {
   TokenContractNames,
   vaultTypeToContractName,
 } from '../../helpers/contracts';
-import { getMTokenOrThrow } from '../../helpers/utils';
 import { DeployFunction } from '../deploy/common/types';
 
 // Verifies that every upgradeable contract of the given mToken on the current
 // network has consumed its top reinitializer (read-only; no tx sent).
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const mToken = getMTokenOrThrow(hre);
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+) => {
   const addresses = getCurrentAddresses(hre);
   const tokenAddresses = addresses?.[mToken];
   if (!tokenAddresses) throw new Error(`Addresses not found for ${mToken}`);
@@ -82,5 +84,3 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 };
 
 export default func;
-
-// yarn hardhat runscript scripts/upgrades/verifyUpgrade_Reinitializers.ts --network <NETWORK> --mtoken <MTOKEN>

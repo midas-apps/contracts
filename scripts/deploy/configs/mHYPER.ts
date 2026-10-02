@@ -55,10 +55,6 @@ export const mHYPERDeploymentConfig: DeploymentConfig = {
           delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
           rateLimitConfig: {
             overrides: {
-              katana: {
-                limit: parseUnits('1000000'),
-                window: hours(24),
-              },
               monad: {
                 limit: parseUnits('1000000'),
                 window: hours(24),
@@ -172,17 +168,6 @@ export const mHYPERDeploymentConfig: DeploymentConfig = {
         },
         setRoundData: {
           data: parseUnits('1.07311680', 8), // price from 2026-01-26
-        },
-        layerZero: {
-          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
-          rateLimitConfig: {
-            overrides: {
-              main: {
-                limit: parseUnits('500000'),
-                window: hours(24),
-              },
-            },
-          },
         },
       },
     },

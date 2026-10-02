@@ -7,6 +7,7 @@ import {
   PaymentTokenName,
   Network as MidasNetwork,
 } from '../config/types';
+import type { DeploymentConfigName } from '../scripts/deploy/configs/deployment-profiles';
 
 import 'hardhat/types/runtime';
 
@@ -18,8 +19,8 @@ declare module 'hardhat/types/runtime' {
     };
     paymentToken?: PaymentTokenName;
     action?: string;
+    deploymentConfig?: DeploymentConfigName;
     skipValidation?: boolean;
-    aggregatorType?: 'numerator' | 'denominator';
     addressBookKeys?: string[];
     logger: {
       // default: false

@@ -4,12 +4,12 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
   ccipNetworkConfig,
   ccipConfigPerMToken,
+  MTokenName,
   Network,
   PartialConfigPerNetwork,
 } from '../../../../config';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
 import { getHreByNetworkName } from '../../../../helpers/hardhat';
-import { getMTokenOrThrow } from '../../../../helpers/utils';
 import { CCIPRateLimitConfigCore, DeployFunction } from '../../common/types';
 import {
   getDeployer,
@@ -87,9 +87,10 @@ const encodeAddress = (address: string) => {
   return ethers.utils.defaultAbiCoder.encode(['address'], [address]);
 };
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const mToken = getMTokenOrThrow(hre);
-
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+) => {
   const currentNetwork = hre.network.name as Network;
 
   const cctConfig = ccipConfigPerMToken?.[currentNetwork]?.[mToken];

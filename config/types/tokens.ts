@@ -80,6 +80,15 @@ export enum MTokenNameEnum {
   sGold = 'sGold',
   turtlePST = 'turtlePST',
   mM1BTC = 'mM1BTC',
+  mGLOeuro = 'mGLOeuro',
+  mALPHA = 'mALPHA',
+  Re7YIELD = 'Re7YIELD',
+  Re7BTC = 'Re7BTC',
+  Re7ETH = 'Re7ETH',
+  mArb = 'mArb',
+  mArbBTC = 'mArbBTC',
+  mArbETH = 'mArbETH',
+  mFTAC = 'mFTAC',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
@@ -136,9 +145,12 @@ export enum PaymentTokenNameEnum {
   winj = 'winj',
   yinj = 'yinj',
   eurc = 'eurc',
+  eurcv = 'eurcv',
+  europ = 'europ',
   usdg = 'usdg',
   pyusd = 'pyusd',
   ausd = 'ausd',
+  frxusd = 'frxusd',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;

@@ -1,8 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { ccipNetworkConfig, Network } from '../../../../config';
+import { ccipNetworkConfig, MTokenName, Network } from '../../../../config';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
-import { getMTokenOrThrow } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
 import {
   deployAndVerifyProxy,
@@ -10,9 +9,11 @@ import {
   getNetworkConfig,
 } from '../../common/utils';
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+) => {
   const deployer = await getDeployer(hre);
-  const mToken = getMTokenOrThrow(hre);
 
   const currentNetwork = hre.network.name as Network;
 

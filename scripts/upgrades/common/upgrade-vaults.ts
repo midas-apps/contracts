@@ -169,7 +169,7 @@ const upgradeAllVaults = async (
     throw new Error(`Upgrade config not found for upgrade ${upgradeId}`);
   }
 
-  const toUpgrade = config.vaults[hre.network.config.chainId!];
+  const toUpgrade = config.vaults?.[hre.network.config.chainId!];
 
   if (!toUpgrade) {
     throw new Error(

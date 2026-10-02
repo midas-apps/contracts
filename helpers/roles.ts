@@ -86,6 +86,15 @@ export const prefixes: Record<MTokenName, string> = {
   sGold: 'S_GOLD',
   turtlePST: 'TURTLE_PST',
   mM1BTC: 'M_M1_BTC',
+  mGLOeuro: 'M_GLO_EURO',
+  mALPHA: 'M_ALPHA',
+  Re7YIELD: 'RE7_YIELD',
+  Re7BTC: 'RE7_BTC',
+  Re7ETH: 'RE7_ETH',
+  mArb: 'M_ARB',
+  mArbBTC: 'M_ARB_BTC',
+  mArbETH: 'M_ARB_ETH',
+  mFTAC: 'M_FTAC',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {
@@ -105,6 +114,11 @@ export const tokenLevelGreenlistTokens: MTokenName[] = [
   'mWIN',
   'qHVNUSD',
   'mGLO',
+  'mGLOeuro',
+  'mArb',
+  'mArbBTC',
+  'mArbETH',
+  'mFTAC',
 ];
 
 /**
@@ -118,6 +132,10 @@ export const sharedGreenlistRoleSource: Partial<
   Record<MTokenName, MTokenName>
 > = {
   mGLO: 'mGLOBAL',
+  mGLOeuro: 'mGLOBAL',
+  mArbBTC: 'mArb',
+  mArbETH: 'mArb',
+  mFTAC: 'mGLOBAL',
 };
 
 const getGreenlistRoleName = (token: MTokenName): string => {
@@ -135,6 +153,7 @@ type TokenRoles = {
   redemptionVaultAdmin: string;
   customFeedAdmin: string | null;
   greenlisted: string;
+  minBalanceExempt: string;
 };
 
 type CommonRoles = {
@@ -177,6 +196,7 @@ export const getRolesNamesForToken = (token: MTokenName): TokenRoles => {
     depositVaultAdmin: `${restPrefix}DEPOSIT_VAULT_ADMIN_ROLE`,
     redemptionVaultAdmin: `${restPrefix}REDEMPTION_VAULT_ADMIN_ROLE`,
     greenlisted: getGreenlistRoleName(token),
+    minBalanceExempt: `${tokenPrefix}_MIN_BALANCE_EXEMPT_ROLE`,
   };
 };
 export const getRolesNamesCommon = (): CommonRoles => {

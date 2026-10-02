@@ -7,8 +7,8 @@ import {
 } from './common/aggregator-deviation';
 import { executeUpgradeContracts } from './common/upgrade-contracts';
 
+import { MTokenName } from '../../config';
 import { getCurrentAddresses } from '../../config/constants/addresses';
-import { getMTokenOrThrow } from '../../helpers/utils';
 import { DeployFunction } from '../deploy/common/types';
 
 /**
@@ -16,9 +16,11 @@ import { DeployFunction } from '../deploy/common/types';
  */
 const deviation = parseUnits('0.35', 8);
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const mToken = getMTokenOrThrow(hre);
-
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+  _skipValidation?: boolean,
+) => {
   const networkAddresses = getCurrentAddresses(hre);
   const tokenAddresses = networkAddresses?.[mToken];
 
@@ -53,5 +55,3 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 };
 
 export default func;
-
-// yarn hardhat runscript scripts/upgrades/executeUpgrade_AggregatorDeviation.ts --network <NETWORK> --mtoken <MTOKEN>

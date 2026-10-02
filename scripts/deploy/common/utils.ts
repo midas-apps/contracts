@@ -1,7 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { DeployProxyOptions } from '@openzeppelin/hardhat-upgrades/dist/utils';
 import { ethers, constants, PopulatedTransaction, Signer } from 'ethers';
-import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { EIP1193Provider, HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { DeploymentConfig } from './types';
 
@@ -12,7 +12,8 @@ import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
 } from '../../../helpers/utils';
-import { configsPerToken } from '../configs';
+import { verifyReinitializersConsumed } from '../../upgrades/common/reinitializer';
+import { getDeploymentConfigForToken } from '../configs';
 
 const safeAbi = [
   {
@@ -116,6 +117,36 @@ export const executeFuncAsync = async <T>(
   }
 };
 
+const CUSTOM_SIGNER_RPC_METHODS = new Set([
+  'eth_accounts',
+  'eth_requestAccounts',
+  'eth_sendTransaction',
+  'eth_sign',
+  'eth_signTransaction',
+  'eth_signTypedData',
+  'eth_signTypedData_v4',
+  'personal_sign',
+]);
+
+const withHardhatEthCalls = (
+  customProvider: EIP1193Provider,
+  hardhatProvider: HardhatRuntimeEnvironment['ethers']['provider'],
+) => ({
+  request: async ({
+    method,
+    params = [],
+  }: {
+    method: string;
+    params?: unknown[];
+  }) => {
+    if (!CUSTOM_SIGNER_RPC_METHODS.has(method)) {
+      return hardhatProvider.send(method, params);
+    }
+
+    return customProvider.request({ method, params });
+  },
+});
+
 export const getDeployer = async (hre: HardhatRuntimeEnvironment) => {
   const customSigner = await hre.getCustomSigner();
 
@@ -124,13 +155,29 @@ export const getDeployer = async (hre: HardhatRuntimeEnvironment) => {
       action: 'deployer',
     });
 
-    const provider = new hre.ethers.providers.Web3Provider(customProvider);
+    const provider = new hre.ethers.providers.Web3Provider(
+      withHardhatEthCalls(customProvider, hre.ethers.provider),
+    );
     const signer = provider.getSigner();
     return await SignerWithAddress.create(signer);
   } else {
     const { deployer } = await hre.getNamedAccounts();
     return await hre.ethers.getSigner(deployer);
   }
+};
+
+export const getContractAt = async (
+  hre: HardhatRuntimeEnvironment,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  nameOrAbi: string | any[],
+  address: string,
+  signer?: Signer,
+) => {
+  return hre.ethers.getContractAt(
+    nameOrAbi,
+    address,
+    signer ?? (await getDeployer(hre)),
+  );
 };
 
 export const deployProxy = async (
@@ -157,6 +204,8 @@ export const deployAndVerifyProxy = async (
   deployer?: Signer,
   opts: DeployProxyOptions = {},
 ) => {
+  const { abi } = await hre.artifacts.readArtifact(contractName);
+
   const deployment = await deployProxy(
     hre,
     contractName,
@@ -170,6 +219,12 @@ export const deployAndVerifyProxy = async (
     await deployment.deployTransaction.wait(5);
     console.log('Waited.');
   }
+
+  await verifyReinitializersConsumed({
+    provider: hre.ethers.provider,
+    proxyAddress: deployment.address,
+    abi,
+  });
 
   await logDeployProxy(hre, contractName, deployment.address);
   await tryEtherscanVerifyImplementation(
@@ -207,12 +262,12 @@ export const getDeploymentGenericConfigOptional = <
   TConfigKey extends keyof DeploymentConfig['genericConfigs'],
   TConfig extends DeploymentConfig['genericConfigs'][TConfigKey],
 >(
+  hre: HardhatRuntimeEnvironment,
   token: MTokenName,
   configKey: TConfigKey,
 ) => {
-  return configsPerToken[token]?.genericConfigs?.[configKey] as
-    | TConfig
-    | undefined;
+  return getDeploymentConfigForToken(token, hre.deploymentConfig)
+    ?.genericConfigs?.[configKey] as TConfig | undefined;
 };
 
 export const getDeploymentGenericConfig = <
@@ -224,6 +279,7 @@ export const getDeploymentGenericConfig = <
   configKey: TConfigKey,
 ) => {
   const config = getDeploymentGenericConfigOptional<TConfigKey, TConfig>(
+    hre,
     token,
     configKey,
   );
@@ -243,9 +299,8 @@ export const getNetworkConfig = <
   token: MTokenName,
   configKey: TConfigKey,
 ) => {
-  const config = configsPerToken[token]?.networkConfigs?.[
-    hre.network.config.chainId!
-  ]?.[configKey] as TConfig;
+  const config = getDeploymentConfigForToken(token, hre.deploymentConfig)
+    ?.networkConfigs?.[hre.network.config.chainId!]?.[configKey] as TConfig;
 
   if (!config) {
     throw new Error('Deployment config is not found');
@@ -268,6 +323,7 @@ export const sendAndWaitForCustomTxSign = async (
   hre: HardhatRuntimeEnvironment,
   populatedTx: PopulatedTransaction,
   txSignMetadata?: {
+    idempotenceId?: string;
     mToken?: MTokenName;
     comment?: string;
     action?:
@@ -312,9 +368,11 @@ export const sendAndWaitForCustomTxSign = async (
       );
 
       // we assume that the owner contract is a safe contract
-      const safeContract = await hre.ethers
-        .getContractAt(safeAbi, safeMiddlewareWallet)
-        .then((v) => v.connect(hre.ethers.provider));
+      const safeContract = await getContractAt(
+        hre,
+        safeAbi,
+        safeMiddlewareWallet,
+      );
 
       const owners: string[] = await safeContract.getOwners();
 
@@ -369,7 +427,7 @@ export const sendAndWaitForCustomTxSign = async (
     {
       ...(txSignMetadata ?? {}),
       chainId: hreNetwork.network.config.chainId,
-      idempotenceId: hreNetwork.contextId,
+      idempotenceId: txSignMetadata?.idempotenceId ?? hreNetwork.contextId,
     },
   );
 

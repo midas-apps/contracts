@@ -1,10 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { MTokenName, PaymentTokenName } from '../../../../config';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
-import {
-  getMTokenOrThrow,
-  getPaymentTokenOrThrow,
-} from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
 import { deployAndVerifyProxy } from '../../common/utils';
 import {
@@ -13,9 +10,11 @@ import {
   routingRedemptionVaultPriority,
 } from '../../common/vault-resolver';
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const mToken = getMTokenOrThrow(hre);
-  const pToken = getPaymentTokenOrThrow(hre);
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+  pToken: PaymentTokenName,
+) => {
   const addresses = getCurrentAddresses(hre);
 
   const mTokenAddresses = addresses?.[mToken];

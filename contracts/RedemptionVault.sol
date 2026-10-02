@@ -615,7 +615,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         _requireAndUpdateAllowance(tokenOutCopy, amountTokenOut);
 
-        mToken.burn(user, calcResult.amountMTokenWithoutFee);
         if (calcResult.feeAmount > 0)
             _tokenTransferFromUser(
                 address(mToken),
@@ -623,6 +622,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 calcResult.feeAmount,
                 18
             );
+        mToken.burn(user, calcResult.amountMTokenWithoutFee);
 
         _tokenTransferToUser(
             tokenOutCopy,
@@ -682,12 +682,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         uint256 mTokenRate = mTokenDataFeed.getDataInBase18();
 
-        _tokenTransferFromUser(
-            address(mToken),
-            address(this),
-            calcResult.amountMTokenWithoutFee,
-            18 // mToken always have 18 decimals
-        );
         if (calcResult.feeAmount > 0)
             _tokenTransferFromUser(
                 address(mToken),
@@ -695,6 +689,12 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 calcResult.feeAmount,
                 18
             );
+        _tokenTransferFromUser(
+            address(mToken),
+            address(this),
+            calcResult.amountMTokenWithoutFee,
+            18 // mToken always have 18 decimals
+        );
 
         requestId = currentRequestId.current();
         currentRequestId.increment();

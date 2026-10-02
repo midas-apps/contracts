@@ -1,32 +1,31 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { executeUpgradeContracts } from './common/upgrade-contracts';
+import {
+  executeUpgradeContracts,
+  getConfiguredTokenUpgrades,
+} from './common/upgrade-contracts';
 
+import { MTokenName } from '../../config';
 import { getCurrentAddresses } from '../../config/constants/addresses';
-import { getMTokenOrThrow } from '../../helpers/utils';
 import { DeployFunction } from '../deploy/common/types';
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+  _skipValidation?: boolean,
+) => {
   const upgradeId = 'mwin-upgrade-permissioned';
   const networkAddresses = getCurrentAddresses(hre);
-  const mToken = getMTokenOrThrow(hre);
   const tokenAddresses = networkAddresses?.[mToken];
 
-  if (!tokenAddresses) {
-    throw new Error('Token addresses not found');
-  }
-
-  await executeUpgradeContracts(hre, upgradeId, 'token', [
-    {
-      mToken,
-      addresses: tokenAddresses,
-      contracts: [
-        {
-          contractType: 'token',
-        },
-      ],
-    },
-  ]);
+  await executeUpgradeContracts(
+    hre,
+    upgradeId,
+    'token',
+    getConfiguredTokenUpgrades(hre, upgradeId),
+  );
 };
 
 export default func;
+
+// yarn hardhat runscript scripts/upgrades/executeUpgrade_Token.ts --network <NETWORK> --action <UPGRADE_ID>

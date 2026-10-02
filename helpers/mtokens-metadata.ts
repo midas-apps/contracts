@@ -2,7 +2,12 @@ import { MTokenName } from '../config';
 
 export const mTokensMetadata: Record<
   MTokenName,
-  { name: string; symbol: string; isPermissioned?: boolean }
+  {
+    name: string;
+    symbol: string;
+    isPermissioned?: boolean;
+    isMinBalance?: boolean;
+  }
 > = {
   mTBILL: {
     name: 'Midas US Treasury Bill Token',
@@ -310,6 +315,7 @@ export const mTokensMetadata: Record<
     name: 'Midas Wellington Income Opportunities',
     symbol: 'mWIN',
     isPermissioned: true,
+    isMinBalance: true,
   },
   qHVNUSD: {
     name: 'Qapture Safe Haven',
@@ -331,5 +337,43 @@ export const mTokensMetadata: Record<
   mM1BTC: {
     name: 'Midas M1 BTC Market Neutral',
     symbol: 'mM1-BTC',
+  },
+  mGLOeuro: {
+    name: 'Midas Fasanara Global Euro',
+    symbol: 'mGLOeuro',
+    isMinBalance: true,
+  },
+  mALPHA: {
+    name: 'Midas Hyperithm Alpha',
+    symbol: 'mALPHA',
+  },
+  Re7YIELD: {
+    name: 'Re7 Stablecoin Yield Vault',
+    symbol: 'Re7YIELD',
+  },
+  Re7BTC: {
+    name: 'Re7 Bitcoin Vault',
+    symbol: 'Re7BTC',
+  },
+  Re7ETH: {
+    name: 'Re7 Ethereum Vault',
+    symbol: 'Re7ETH',
+  },
+  mArb: {
+    name: 'Midas Hyperithm Arbitrage',
+    symbol: 'mArb',
+  },
+  mArbBTC: {
+    name: 'Midas Hyperithm Arbitrage BTC',
+    symbol: 'mArbBTC',
+  },
+  mArbETH: {
+    name: 'Midas Hyperithm Arbitrage ETH',
+    symbol: 'mArbETH',
+  },
+  mFTAC: {
+    name: 'Midas Fasanara TAC',
+    symbol: 'mFTAC',
+    isMinBalance: true,
   },
 };

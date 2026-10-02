@@ -24,7 +24,8 @@ export type UpgradeConfig = {
         >
       >;
       overrideSalt?: string;
-      vaults: Record<
+      tokens?: Record<number, MTokenName[]>;
+      vaults?: Record<
         number,
         {
           // default - false
