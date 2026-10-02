@@ -95,6 +95,7 @@ export const prefixes: Record<MTokenName, string> = {
   mArbBTC: 'M_ARB_BTC',
   mArbETH: 'M_ARB_ETH',
   mFTAC: 'M_FTAC',
+  moriniGoldYield: 'MORINI_GOLD_YIELD',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {
