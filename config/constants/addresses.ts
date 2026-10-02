@@ -105,6 +105,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         dataFeed: '0x5b5DD673fbd6B7f6ED03579C55b3e081524a1C50',
       },
     },
+    stockMarketTRBasisTrade: {
+      token: '0x7e233C775163A23612E5ba3800dFABe44358F7a3',
+      customFeed: '0x8EE104D5BE4DeEbA296870A3119967fa13C983A5',
+      dataFeed: '0x3f5748099c8E13502D5c0797f1f245215d7FC2Cd',
+      depositVault: '0x17c4dBd9f58e7301D000Aeb2aD3A3dD9b69354f8',
+      redemptionVaultSwapper: '0x8dFD06f256508E06eD7023BBC314AB6Bbc3eDb7A',
+    },
   },
   main: {
     paymentTokens: {
@@ -847,6 +854,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xD29B1A1AC063dEC0B0F71859aADE4E185028449d',
       depositVault: '0xe50fc603bF5140ED771eB8f7deEdb8218A11FD40',
       redemptionVaultSwapper: '0xE11E0074b69238ccB12eBb7CB4dCb63E8F00D79d',
+    },
+    stockMarketTRBasisTrade: {
+      token: '0x11d89B9E83A0C0d16D238DCda337F30098353C51',
+      customFeed: '0x7a7c5586BE75Cbe18Ea345b7D28D515dD815410A',
+      dataFeed: '0x06230cab57E1E0275C555759Af041036330C6876',
+      depositVault: '0xfb28B2626E17F66bA939e2D1Ec64A835F5Ef30c5',
+      redemptionVaultSwapper: '0x728f39089496F3Cb32399C83c394486f33Ea7B57',
     },
   },
   arbitrum: {

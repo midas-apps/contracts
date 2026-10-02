@@ -141,7 +141,7 @@ export const stockMarketTRBasisTradeDeploymentConfig: DeploymentConfig = {
           redemptionVaultSwapper: ['redeemFiatRequest'],
         },
         setRoundData: {
-          data: parseUnits('1', 8),
+          data: parseUnits('1.04472346', 8),
         },
       },
     },
@@ -209,7 +209,7 @@ export const stockMarketTRBasisTradeDeploymentConfig: DeploymentConfig = {
           redemptionVaultSwapper: ['redeemFiatRequest'],
         },
         setRoundData: {
-          data: parseUnits('1', 8),
+          data: parseUnits('1.04472346', 8),
         },
       },
     },
