@@ -22,6 +22,8 @@ const deployLz = (file: string) =>
   path.join('scripts/deploy/misc/layerzero', `${file}.ts`);
 const deployAxelar = (file: string) =>
   path.join('scripts/deploy/misc/axelar', `${file}.ts`);
+const deployCcip = (file: string) =>
+  path.join('scripts/deploy/misc/ccip', `${file}.ts`);
 const deployCodegen = (file: string) =>
   path.join('scripts/deploy/codegen', `${file}.ts`);
 const upgrade = (file: string) => path.join('scripts/upgrades', `${file}.ts`);
@@ -183,6 +185,27 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     deployAxelar('revoke_Roles'),
     mTokenParam(),
   ],
+
+  // CCIP
+  'deploy:ccip:pool': [
+    deployCcip('deploy_BurnMintTokenPool'),
+    mTokenParam(),
+    originalNetworkParam(true),
+  ],
+  'deploy:ccip:escrow': [deployCcip('deploy_FallbackEscrow'), mTokenParam()],
+  'deploy:ccip:post:set:fbrecipient': [
+    deployCcip('set_FallbackRecipient'),
+    mTokenParam(),
+  ],
+  'deploy:ccip:post:grant:roles': [deployCcip('grant_Roles'), mTokenParam()],
+  'deploy:ccip:post:configure': [deployCcip('set_ChainConfigs'), mTokenParam()],
+  'deploy:ccip:post:set:pool': [deployCcip('set_Pool'), mTokenParam()],
+  'deploy:ccip:post:accept:admin': [deployCcip('accept_Admin'), mTokenParam()],
+  'deploy:ccip:post:configure:initial': [
+    deployCcip('set_InitialChainConfigs'),
+    mTokenParam(),
+  ],
+  'deploy:ccip:post:revoke:roles': [deployCcip('revoke_Roles'), mTokenParam()],
 
   // Timelock upgrades
   'timelock:upgrade:vaults:propose': [

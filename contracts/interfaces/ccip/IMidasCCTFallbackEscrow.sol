@@ -1,0 +1,197 @@
+// SPDX-License-Identifier: AGPL-3.0
+pragma solidity 0.8.28;
+
+import {IMidasCCTFailedMessageFallback} from "./IMidasCCTFailedMessageFallback.sol";
+
+/**
+ * @title IMidasCCTFallbackEscrow
+ * @author RedDuck Software
+ */
+interface IMidasCCTFallbackEscrow is IMidasCCTFailedMessageFallback {
+    /**
+     * @notice The status of a failed message
+     */
+    enum MessageStatus {
+        Pending,
+        Claimed,
+        Recovered,
+        Closed
+    }
+
+    /**
+     * @notice A failed message
+     */
+    struct FailedMessage {
+        /// @notice The original recipient of the failed message
+        address originalRecipient;
+        /// @notice The original source chain selector of the failed message
+        uint64 originalSourceChainSelector;
+        /// @notice The amount of tokens to recover
+        uint256 tokenAmount;
+        /// @notice The status of the failed message
+        MessageStatus status;
+    }
+
+    /**
+     * @notice An orphaned message
+     */
+    struct OrphanedMessage {
+        /// @notice The original recipient of the orphaned message
+        address originalRecipient;
+        /// @notice The amount of tokens to recover
+        uint256 tokenAmount;
+        /// @notice The original source chain selector of the orphaned message
+        uint64 originalSourceChainSelector;
+    }
+
+    /**
+     * @notice Parameters for recovering a bulk of failed messages
+     */
+    struct RecoverBulkParams {
+        /// @notice The id of the failed message
+        bytes32 messageId;
+        /// @notice The payout recipient. Zero address recovers to the original recipient
+        address recipient;
+    }
+
+    /**
+     * @param _messageId the id of the failed message
+     * @param _recipient the recipient of the failed message
+     */
+    event Claim(bytes32 _messageId, address _recipient);
+
+    /**
+     * @param _messageIds the ids of the closed messages
+     */
+    event CloseBulk(bytes32[] _messageIds);
+
+    /**
+     * @param _params the parameters of the recovered messages
+     */
+    event RecoverBulk(RecoverBulkParams[] _params);
+
+    /**
+     * @param _messages the messages to register
+     */
+    event RegisterOrphanedBulk(OrphanedMessage[] _messages);
+
+    /**
+     * @param _token the token to withdraw
+     * @param _amount the amount of tokens to withdraw
+     */
+    event WithdrawTokens(address indexed _token, uint256 _amount);
+
+    /**
+     * @notice Pauses the public claim function
+     */
+    event PauseClaim();
+
+    /**
+     * @notice Unpauses the public claim function
+     */
+    event UnpauseClaim();
+
+    /**
+     * @param _defaultRecipient the default recipient
+     */
+    event SetDefaultRecipient(address _defaultRecipient);
+
+    /**
+     * @param _messageId the id of the closed message
+     */
+    event OnFailedMessage(bytes32 _messageId);
+
+    /**
+     * @notice Error thrown when the sender is invalid
+     */
+    error NotTokenPool();
+
+    /**
+     * @notice Error thrown when the caller is not the contract admin
+     */
+    error NotContractAdmin();
+
+    /**
+     * @notice Error thrown when the default recipient is invalid
+     */
+    error ZeroAddress();
+
+    /**
+     * @notice Error thrown when the failed message is not found
+     */
+    error FailedMessageNotFound(bytes32 _messageId);
+
+    /**
+     * @notice Error thrown when the sender is invalid
+     */
+    error InvalidSender(address _expectedSender);
+
+    /**
+     * @notice Error thrown when the public claim function is paused
+     */
+    error ClaimPaused();
+
+    /**
+     * @notice Sets the default recipient
+     * @param _defaultRecipient the default recipient to set
+     */
+    function setDefaultRecipient(address _defaultRecipient) external;
+
+    /**
+     * @notice Claims a failed message
+     * @dev should be called by the original recipient of the failed message
+     * @param _messageId the id of the failed message
+     * @param _recipient the recipient of the failed message
+     */
+    function claim(bytes32 _messageId, address _recipient) external;
+
+    /**
+     * @notice Recovers a bulk of failed messages
+     * @dev should be called by the contract admin.
+     * Pass `recipient` as the zero address to recover to the original recipient.
+     * @param _params the parameters of the failed messages to recover
+     */
+    function recoverBulk(RecoverBulkParams[] calldata _params) external;
+
+    /**
+     * @notice Closes a bulk of failed messages and transfers the tokens to the default recipient
+     * @dev should be called by the contract admin
+     * @param _messageIds the ids of the failed messages to close
+     */
+    function closeBulk(bytes32[] calldata _messageIds) external;
+
+    /**
+     * @notice Registers a bulk of orphaned messages
+     * @dev should be called by the contract admin
+     * tokens should be minted to the escrow contract in a separate transaction
+     * @param _messages the messages to register
+     */
+    function registerOrphanedBulk(OrphanedMessage[] calldata _messages)
+        external;
+
+    /**
+     * @notice Withdraws tokens from the escrow contract to the default recipient
+     * @dev should be called by the contract admin
+     * @param _token the token to withdraw
+     * @param _amount the amount of tokens to withdraw
+     */
+    function withdrawTokens(address _token, uint256 _amount) external;
+
+    /**
+     * @notice Pauses the public claim function
+     * @dev should be called by the contract admin
+     */
+    function pauseClaim() external;
+
+    /**
+     * @notice Unpauses the public claim function
+     * @dev should be called by the contract admin
+     */
+    function unpauseClaim() external;
+
+    /**
+     * @notice Gets the ids of pending failed messages
+     * @return the ids of the pending failed messages
+     */
+    function getFailedMessageIds() external view returns (bytes32[] memory);
+}
