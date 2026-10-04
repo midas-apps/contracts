@@ -60,6 +60,7 @@ import { mLIQUIDITYDeploymentConfig } from './mLIQUIDITY';
 import { mM1BTCDeploymentConfig } from './mM1BTC';
 import { mM1USDDeploymentConfig } from './mM1USD';
 import { mMEVDeploymentConfig } from './mMEV';
+import { moriniGoldYieldDeploymentConfig } from './moriniGoldYield';
 import { mPortofinoDeploymentConfig } from './mPortofino';
 import { mRE7DeploymentConfig } from './mRE7';
 import { mRE7BTCDeploymentConfig } from './mRE7BTC';
@@ -194,6 +195,7 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mArbETH: mArbETHDeploymentConfig,
   mArbBTC: mArbBTCDeploymentConfig,
   mFTAC: mFTACDeploymentConfig,
+  moriniGoldYield: moriniGoldYieldDeploymentConfig,
 };
 
 type NamedDeploymentConfig = {
