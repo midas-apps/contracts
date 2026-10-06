@@ -333,6 +333,48 @@ const setRoundData = async (
   console.log(log, txRes);
 };
 
+export type PaymentTokenExpectedAnswersTarget =
+  | {
+      kind: 'composite';
+      dataFeedAddress: string;
+      config: DeployDataFeedConfigComposite;
+    }
+  | {
+      kind: 'regular';
+      dataFeedAddress: string;
+      config: DeployDataFeedConfigRegular;
+    };
+
+export const getPaymentTokenExpectedAnswersTarget = (
+  tokenAddresses: DataFeedAddresses,
+  networkConfig: DeployDataFeedConfig,
+): PaymentTokenExpectedAnswersTarget => {
+  if (!tokenAddresses.dataFeed) {
+    throw new Error('Data feed address is not set');
+  }
+
+  const isCompositeConfig = isCompositeDataFeedConfig(networkConfig);
+  const isCompositeAddress = isCompositeDataFeedAddresses(tokenAddresses);
+
+  if (isCompositeConfig !== isCompositeAddress) {
+    throw new Error('Data feed config and addresses have different types');
+  }
+
+  if (isCompositeConfig) {
+    return {
+      kind: 'composite',
+      dataFeedAddress: tokenAddresses.dataFeed,
+      config: networkConfig,
+    };
+  }
+
+  return {
+    kind: 'regular',
+    dataFeedAddress: tokenAddresses.dataFeed,
+    config: networkConfig as DeployDataFeedConfigRegular,
+  };
+};
+
 export const updateExpectedAnswersPaymentToken = async (
   hre: HardhatRuntimeEnvironment,
   token: PaymentTokenName,
@@ -353,22 +395,16 @@ export const updateExpectedAnswersPaymentToken = async (
     throw new Error('Token config is not found');
   }
 
-  if (!tokenAddresses.dataFeed) {
-    throw new Error('Data feed address is not set');
-  }
+  const target = getPaymentTokenExpectedAnswersTarget(
+    tokenAddresses,
+    networkConfig,
+  );
 
-  const isCompositeConfig = isCompositeDataFeedConfig(networkConfig);
-  const isCompositeAddress = isCompositeDataFeedAddresses(tokenAddresses);
-
-  if (isCompositeConfig !== isCompositeAddress) {
-    throw new Error('Data feed config and addresses have different types');
-  }
-
-  if (isCompositeConfig && isCompositeAddress) {
+  if (target.kind === 'composite') {
     await updateCompositeExpectedAnswers(hre, {
       token,
-      dataFeedAddress: tokenAddresses.dataFeed,
-      networkConfig,
+      dataFeedAddress: target.dataFeedAddress,
+      networkConfig: target.config,
     });
     return;
   }
@@ -376,8 +412,8 @@ export const updateExpectedAnswersPaymentToken = async (
   await updateExpectedAnswers(hre, {
     isMToken: false,
     token,
-    dataFeedAddress: tokenAddresses.dataFeed,
-    networkConfig: networkConfig as DeployDataFeedConfigRegular,
+    dataFeedAddress: target.dataFeedAddress,
+    networkConfig: target.config,
   });
 };
 
