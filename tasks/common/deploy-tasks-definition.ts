@@ -98,6 +98,7 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     deployPost('set_ExpectedAnswers'),
     mTokenParam(true),
     pTokenParam(true),
+    aggregatorTypeParam(true),
   ],
   'deploy:post:set:waived': [deployPost('add_FeeWaived'), mTokenParam()],
   'deploy:post:set:greenlist': [deployPost('set_Greenlist'), mTokenParam()],

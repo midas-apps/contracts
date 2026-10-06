@@ -140,6 +140,85 @@ describe('getPaymentTokenExpectedAnswersTarget', function () {
     });
   });
 
+  describe('with aggregatorType', () => {
+    it('returns the numerator data feed and config', () => {
+      expect(
+        getPaymentTokenExpectedAnswersTarget(
+          compositeAddresses,
+          compositeConfig,
+          'numerator',
+        ),
+      ).deep.eq({
+        kind: 'regular',
+        dataFeedAddress: compositeAddresses.numerator.dataFeed,
+        config: compositeConfig.numerator,
+      });
+    });
+
+    it('returns the denominator data feed and config', () => {
+      expect(
+        getPaymentTokenExpectedAnswersTarget(
+          compositeAddresses,
+          compositeConfig,
+          'denominator',
+        ),
+      ).deep.eq({
+        kind: 'regular',
+        dataFeedAddress: compositeAddresses.denominator.dataFeed,
+        config: compositeConfig.denominator,
+      });
+    });
+
+    it('resolves the sub-feed even when the composite data feed is not set', () => {
+      expect(
+        getPaymentTokenExpectedAnswersTarget(
+          { ...compositeAddresses, dataFeed: undefined },
+          compositeConfig,
+          'numerator',
+        ),
+      ).deep.eq({
+        kind: 'regular',
+        dataFeedAddress: compositeAddresses.numerator.dataFeed,
+        config: compositeConfig.numerator,
+      });
+    });
+
+    it('throws for a regular token', () => {
+      expect(() =>
+        getPaymentTokenExpectedAnswersTarget(
+          regularAddresses,
+          regularConfig,
+          'numerator',
+        ),
+      ).to.throw('aggregatorType is only supported for composite feeds');
+    });
+
+    it('throws when the sub-feed data feed address is not set', () => {
+      expect(() =>
+        getPaymentTokenExpectedAnswersTarget(
+          {
+            ...compositeAddresses,
+            denominator: {
+              aggregator: compositeAddresses.denominator.aggregator,
+            },
+          },
+          compositeConfig,
+          'denominator',
+        ),
+      ).to.throw('denominator data feed address is not set');
+    });
+
+    it('throws when config and addresses have different types', () => {
+      expect(() =>
+        getPaymentTokenExpectedAnswersTarget(
+          compositeAddresses,
+          regularConfig,
+          'numerator',
+        ),
+      ).to.throw('Data feed config and addresses have different types');
+    });
+  });
+
   it('throws when config is regular but addresses have only a denominator', () => {
     expect(() =>
       getPaymentTokenExpectedAnswersTarget(

@@ -348,7 +348,33 @@ export type PaymentTokenExpectedAnswersTarget =
 export const getPaymentTokenExpectedAnswersTarget = (
   tokenAddresses: DataFeedAddresses,
   networkConfig: DeployDataFeedConfig,
+  aggregatorType?: 'numerator' | 'denominator',
 ): PaymentTokenExpectedAnswersTarget => {
+  if (aggregatorType !== undefined) {
+    const isCompositeConfig = isCompositeDataFeedConfig(networkConfig);
+    const isCompositeAddress = isCompositeDataFeedAddresses(tokenAddresses);
+
+    if (isCompositeConfig !== isCompositeAddress) {
+      throw new Error('Data feed config and addresses have different types');
+    }
+
+    if (!isCompositeConfig || !isCompositeAddress) {
+      throw new Error('aggregatorType is only supported for composite feeds');
+    }
+
+    const subFeedAddress = tokenAddresses[aggregatorType]?.dataFeed;
+
+    if (!subFeedAddress) {
+      throw new Error(`${aggregatorType} data feed address is not set`);
+    }
+
+    return {
+      kind: 'regular',
+      dataFeedAddress: subFeedAddress,
+      config: networkConfig[aggregatorType],
+    };
+  }
+
   if (!tokenAddresses.dataFeed) {
     throw new Error('Data feed address is not set');
   }
@@ -378,6 +404,7 @@ export const getPaymentTokenExpectedAnswersTarget = (
 export const updateExpectedAnswersPaymentToken = async (
   hre: HardhatRuntimeEnvironment,
   token: PaymentTokenName,
+  aggregatorType?: 'numerator' | 'denominator',
 ) => {
   const networkConfig =
     paymentTokenDeploymentConfigs.networkConfigs[hre.network.config.chainId!]?.[
@@ -398,6 +425,7 @@ export const updateExpectedAnswersPaymentToken = async (
   const target = getPaymentTokenExpectedAnswersTarget(
     tokenAddresses,
     networkConfig,
+    aggregatorType,
   );
 
   if (target.kind === 'composite') {
@@ -411,7 +439,7 @@ export const updateExpectedAnswersPaymentToken = async (
 
   await updateExpectedAnswers(hre, {
     isMToken: false,
-    token,
+    token: aggregatorType ? `${token} ${aggregatorType}` : token,
     dataFeedAddress: target.dataFeedAddress,
     networkConfig: target.config,
   });
