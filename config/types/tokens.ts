@@ -152,6 +152,8 @@ export enum PaymentTokenNameEnum {
   pyusd = 'pyusd',
   ausd = 'ausd',
   frxusd = 'frxusd',
+  paxg = 'paxg',
+  xaut = 'xaut',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;
