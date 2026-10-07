@@ -29,6 +29,10 @@ type VerifyConfigPerNetwork = PartialConfigPerNetwork<
 >;
 
 export const verifyConfig: VerifyConfigPerNetwork = {
+  arc: {
+    type: 'etherscan',
+    browserUrl: 'https://arc.etherscan.io',
+  },
   main: {
     type: 'etherscan',
     browserUrl: 'https://etherscan.io',

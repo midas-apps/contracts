@@ -94,6 +94,25 @@ export type MidasAddresses = Partial<Record<MTokenName, TokenAddresses>> & {
 export const midasAddressesPerNetwork: ConfigPerNetwork<
   MidasAddresses | undefined
 > = {
+  arc: {
+    accessControl: '0xD0e01E127cf111AAB7CA56204D5A24532F86461c',
+    timelock: '0x450F76E9eC5bB13C4945092c2055cB39789E1A69',
+    paymentTokens: {
+      usdc: {
+        // ERC-20 interface: 6 decimals; native USDC gas balances use 18.
+        token: '0x3600000000000000000000000000000000000000',
+        aggregator: '0x374CBDcBb1C3b267350572896f3532D0d64b060E',
+        dataFeed: '0x5b5DD673fbd6B7f6ED03579C55b3e081524a1C50',
+      },
+    },
+    stockMarketTRBasisTrade: {
+      token: '0x7e233C775163A23612E5ba3800dFABe44358F7a3',
+      customFeed: '0x8EE104D5BE4DeEbA296870A3119967fa13C983A5',
+      dataFeed: '0x3f5748099c8E13502D5c0797f1f245215d7FC2Cd',
+      depositVault: '0x17c4dBd9f58e7301D000Aeb2aD3A3dD9b69354f8',
+      redemptionVaultSwapper: '0x8dFD06f256508E06eD7023BBC314AB6Bbc3eDb7A',
+    },
+  },
   main: {
     paymentTokens: {
       usdt: {
@@ -736,8 +755,8 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     mGLOeuro: {
       token: '0x2F8bae126b8d416C009b82Ccd60e4f9cAbbd7702',
       customFeed: '0x8B7B1689396ef4468df1c0faB181D29B47089609',
-      customFeedDv: '0x165a52261202c0e32F70dE8eD715A1e3cF9a228c',
-      customFeedRv: '0x0f46c1E4F51B92c2966BEA4bd5A52E71E423D6e0',
+      customFeedDv: '0xe0590E4cD3C82B4df45aE771b882fB5b02a0CC72',
+      customFeedRv: '0x40715f06467c0A6A8cD2FcB59c06a2e0D07D4c08',
       dataFeedDv: '0xc27Cd7c0203B73933dcbcF7bdB4cC5D7bDA80A64',
       dataFeedRv: '0xF76653eBc3e47B80e89F0e5b9CF6A5CAaB848946',
       depositVaultMorpho: '0xE0Dcf20b0460e1f9222528F3997F9D71Ad6375C5',
@@ -835,6 +854,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xD29B1A1AC063dEC0B0F71859aADE4E185028449d',
       depositVault: '0xe50fc603bF5140ED771eB8f7deEdb8218A11FD40',
       redemptionVaultSwapper: '0xE11E0074b69238ccB12eBb7CB4dCb63E8F00D79d',
+    },
+    stockMarketTRBasisTrade: {
+      token: '0x11d89B9E83A0C0d16D238DCda337F30098353C51',
+      customFeed: '0x7a7c5586BE75Cbe18Ea345b7D28D515dD815410A',
+      dataFeed: '0x06230cab57E1E0275C555759Af041036330C6876',
+      depositVault: '0xfb28B2626E17F66bA939e2D1Ec64A835F5Ef30c5',
+      redemptionVaultSwapper: '0x728f39089496F3Cb32399C83c394486f33Ea7B57',
     },
   },
   arbitrum: {
@@ -1697,6 +1723,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         token: '0x754704Bc059F8C67012fEd69BC8A327a5aafb603',
         aggregator: '0xf5F15f188AbCB0d165D1Edb7f37F7d6fA2fCebec',
         dataFeed: '0x7F627B2622c556680326eE060ecF551410EFe22B',
+      },
+      ausd: {
+        token: '0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a',
+        aggregator: '0xE20751C7B5867bCBef815ffc1b284c3f412a9e13',
+        dataFeed: '0x660D475079d161CA9662Da4667627cDA909f4E12',
       },
     },
     mEDGE: {
