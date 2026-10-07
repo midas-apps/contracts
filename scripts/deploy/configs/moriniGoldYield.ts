@@ -49,6 +49,35 @@ export const moriniGoldYieldDeploymentConfig: DeploymentConfig = {
         swapperVault: 'dummy',
       },
       postDeploy: {
+        addPaymentTokens: {
+          vaults: [
+            {
+              paymentTokens: [
+                {
+                  token: 'paxg',
+                  allowance: parseUnits('100000', 18),
+                  fee: 0,
+                },
+                {
+                  token: 'xaut',
+                  allowance: parseUnits('100', 18),
+                  fee: 0,
+                },
+              ],
+              type: 'depositVault',
+            },
+            {
+              paymentTokens: [
+                {
+                  token: 'xaut',
+                  allowance: parseUnits('100', 18),
+                  fee: 0,
+                },
+              ],
+              type: 'redemptionVaultSwapper',
+            },
+          ],
+        },
         grantRoles: {
           tokenManagerAddress: '0x823D417249EDDffB2597B4c991e6aC8Dc5C7ec1a',
           vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
