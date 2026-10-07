@@ -333,6 +333,8 @@ const setRoundData = async (
   console.log(log, txRes);
 };
 
+export type AggregatorType = 'numerator' | 'denominator';
+
 export type PaymentTokenExpectedAnswersTarget =
   | {
       kind: 'composite';
@@ -348,16 +350,16 @@ export type PaymentTokenExpectedAnswersTarget =
 export const getPaymentTokenExpectedAnswersTarget = (
   tokenAddresses: DataFeedAddresses,
   networkConfig: DeployDataFeedConfig,
-  aggregatorType?: 'numerator' | 'denominator',
+  aggregatorType?: AggregatorType,
 ): PaymentTokenExpectedAnswersTarget => {
+  const isCompositeConfig = isCompositeDataFeedConfig(networkConfig);
+  const isCompositeAddress = isCompositeDataFeedAddresses(tokenAddresses);
+
+  if (isCompositeConfig !== isCompositeAddress) {
+    throw new Error('Data feed config and addresses have different types');
+  }
+
   if (aggregatorType !== undefined) {
-    const isCompositeConfig = isCompositeDataFeedConfig(networkConfig);
-    const isCompositeAddress = isCompositeDataFeedAddresses(tokenAddresses);
-
-    if (isCompositeConfig !== isCompositeAddress) {
-      throw new Error('Data feed config and addresses have different types');
-    }
-
     if (!isCompositeConfig || !isCompositeAddress) {
       throw new Error('aggregatorType is only supported for composite feeds');
     }
@@ -379,13 +381,6 @@ export const getPaymentTokenExpectedAnswersTarget = (
     throw new Error('Data feed address is not set');
   }
 
-  const isCompositeConfig = isCompositeDataFeedConfig(networkConfig);
-  const isCompositeAddress = isCompositeDataFeedAddresses(tokenAddresses);
-
-  if (isCompositeConfig !== isCompositeAddress) {
-    throw new Error('Data feed config and addresses have different types');
-  }
-
   if (isCompositeConfig) {
     return {
       kind: 'composite',
@@ -404,7 +399,7 @@ export const getPaymentTokenExpectedAnswersTarget = (
 export const updateExpectedAnswersPaymentToken = async (
   hre: HardhatRuntimeEnvironment,
   token: PaymentTokenName,
-  aggregatorType?: 'numerator' | 'denominator',
+  aggregatorType?: AggregatorType,
 ) => {
   const networkConfig =
     paymentTokenDeploymentConfigs.networkConfigs[hre.network.config.chainId!]?.[

@@ -3,6 +3,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { MTokenName, PaymentTokenName } from '../../../config';
 import { requireOneOfMTokenOrPaymentToken } from '../../../helpers/utils';
 import {
+  AggregatorType,
   updateExpectedAnswersMToken,
   updateExpectedAnswersPaymentToken,
 } from '../common/data-feed';
@@ -12,7 +13,7 @@ const func: DeployFunction = async (
   hre: HardhatRuntimeEnvironment,
   mToken?: MTokenName,
   paymentToken?: PaymentTokenName,
-  aggregatorType?: 'numerator' | 'denominator',
+  aggregatorType?: AggregatorType,
 ) => {
   const selected = requireOneOfMTokenOrPaymentToken(mToken, paymentToken);
 
