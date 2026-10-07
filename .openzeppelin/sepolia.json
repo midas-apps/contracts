@@ -59245,6 +59245,135 @@
           }
         }
       }
+    },
+    "46dd4c242ccf8416e25d755b1babaacc69cc5c478371c08be51e790f9ced623a": {
+      "address": "0x7DE594960E8785a72B7F88EB682B52c270EB9921",
+      "txHash": "0x0a2111020368a9b4fc4c7a8d7f96f79edb433f663849c69c528bd326fb69394b",
+      "layout": {
+        "solcVersion": "0.8.34",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "accessControl",
+            "offset": 2,
+            "slot": "0",
+            "type": "t_contract(IMidasAccessControl)37889",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:29",
+            "retypedFrom": "MidasAccessControl"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "WithMidasAccessControl",
+            "src": "contracts/access/WithMidasAccessControl.sol:34"
+          },
+          {
+            "label": "contractPaused",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_mapping(t_address,t_bool)",
+            "contract": "MidasPauseManager",
+            "src": "contracts/access/MidasPauseManager.sol:31"
+          },
+          {
+            "label": "contractFnPaused",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_mapping(t_address,t_mapping(t_bytes4,t_bool))",
+            "contract": "MidasPauseManager",
+            "src": "contracts/access/MidasPauseManager.sol:36"
+          },
+          {
+            "label": "pauseDelay",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_uint32",
+            "contract": "MidasPauseManager",
+            "src": "contracts/access/MidasPauseManager.sol:41"
+          },
+          {
+            "label": "unpauseDelay",
+            "offset": 4,
+            "slot": "53",
+            "type": "t_uint32",
+            "contract": "MidasPauseManager",
+            "src": "contracts/access/MidasPauseManager.sol:46"
+          },
+          {
+            "label": "globalPaused",
+            "offset": 8,
+            "slot": "53",
+            "type": "t_bool",
+            "contract": "MidasPauseManager",
+            "src": "contracts/access/MidasPauseManager.sol:51"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes4": {
+            "label": "bytes4",
+            "numberOfBytes": "4"
+          },
+          "t_contract(IMidasAccessControl)37889": {
+            "label": "contract IMidasAccessControl",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_mapping(t_bytes4,t_bool))": {
+            "label": "mapping(address => mapping(bytes4 => bool))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes4,t_bool)": {
+            "label": "mapping(bytes4 => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint32": {
+            "label": "uint32",
+            "numberOfBytes": "4"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
     }
   }
 }
