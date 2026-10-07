@@ -2,7 +2,6 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { MTokenName, Network, PaymentTokenName } from '../../config';
 import { isMTokenName, isPaymentTokenName } from '../../helpers/utils';
-import type { AggregatorType } from '../../scripts/deploy/common/data-feed';
 
 export type ParamFnBase<TReturn = unknown> = () => {
   isOptional: boolean;
@@ -81,6 +80,8 @@ export const actionParam: ParseParamFn<string> = (optional) => () => {
     },
   };
 };
+
+export type AggregatorType = 'numerator' | 'denominator';
 
 export const aggregatorTypeParam: ParseParamFn<AggregatorType> =
   (optional) => () => {

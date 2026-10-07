@@ -333,30 +333,52 @@ const setRoundData = async (
   console.log(log, txRes);
 };
 
-export type AggregatorType = 'numerator' | 'denominator';
-
-export type PaymentTokenDataFeedTarget =
+export type PaymentTokenExpectedAnswersTarget =
   | {
       kind: 'composite';
-      addresses: DataFeedAddressesComposite;
+      dataFeedAddress: string;
       config: DeployDataFeedConfigComposite;
     }
   | {
       kind: 'regular';
-      addresses: { dataFeed?: string; aggregator?: string };
+      dataFeedAddress: string;
       config: DeployDataFeedConfigRegular;
     };
 
-/**
- * Picks which data feed (and its config) a payment-token script should act on:
- * the composite feed, a regular feed, or — with `aggregatorType` — one
- * sub-feed of a composite.
- */
-export const getPaymentTokenDataFeedTarget = (
+export const getPaymentTokenExpectedAnswersTarget = (
   tokenAddresses: DataFeedAddresses,
   networkConfig: DeployDataFeedConfig,
-  aggregatorType?: AggregatorType,
-): PaymentTokenDataFeedTarget => {
+  aggregatorType?: 'numerator' | 'denominator',
+): PaymentTokenExpectedAnswersTarget => {
+  if (aggregatorType !== undefined) {
+    const isCompositeConfig = isCompositeDataFeedConfig(networkConfig);
+    const isCompositeAddress = isCompositeDataFeedAddresses(tokenAddresses);
+
+    if (isCompositeConfig !== isCompositeAddress) {
+      throw new Error('Data feed config and addresses have different types');
+    }
+
+    if (!isCompositeConfig || !isCompositeAddress) {
+      throw new Error('aggregatorType is only supported for composite feeds');
+    }
+
+    const subFeedAddress = tokenAddresses[aggregatorType]?.dataFeed;
+
+    if (!subFeedAddress) {
+      throw new Error(`${aggregatorType} data feed address is not set`);
+    }
+
+    return {
+      kind: 'regular',
+      dataFeedAddress: subFeedAddress,
+      config: networkConfig[aggregatorType],
+    };
+  }
+
+  if (!tokenAddresses.dataFeed) {
+    throw new Error('Data feed address is not set');
+  }
+
   const isCompositeConfig = isCompositeDataFeedConfig(networkConfig);
   const isCompositeAddress = isCompositeDataFeedAddresses(tokenAddresses);
 
@@ -364,40 +386,25 @@ export const getPaymentTokenDataFeedTarget = (
     throw new Error('Data feed config and addresses have different types');
   }
 
-  if (!isCompositeConfig || !isCompositeAddress) {
-    if (aggregatorType !== undefined) {
-      throw new Error('aggregatorType is only supported for composite feeds');
-    }
-    return {
-      kind: 'regular',
-      addresses: tokenAddresses as DataFeedAddressesRegular,
-      config: networkConfig as DeployDataFeedConfigRegular,
-    };
-  }
-
-  if (aggregatorType === undefined) {
+  if (isCompositeConfig) {
     return {
       kind: 'composite',
-      addresses: tokenAddresses,
+      dataFeedAddress: tokenAddresses.dataFeed,
       config: networkConfig,
     };
   }
 
-  const addresses = tokenAddresses[aggregatorType];
-  const config = networkConfig[aggregatorType];
-
-  if (!addresses || !config) {
-    throw new Error(
-      `${aggregatorType} data feed config or addresses are not set`,
-    );
-  }
-
-  return { kind: 'regular', addresses, config };
+  return {
+    kind: 'regular',
+    dataFeedAddress: tokenAddresses.dataFeed,
+    config: networkConfig as DeployDataFeedConfigRegular,
+  };
 };
 
 export const updateExpectedAnswersPaymentToken = async (
   hre: HardhatRuntimeEnvironment,
   token: PaymentTokenName,
+  aggregatorType?: 'numerator' | 'denominator',
 ) => {
   const networkConfig =
     paymentTokenDeploymentConfigs.networkConfigs[hre.network.config.chainId!]?.[
@@ -415,56 +422,25 @@ export const updateExpectedAnswersPaymentToken = async (
     throw new Error('Token config is not found');
   }
 
-  const target = getPaymentTokenDataFeedTarget(tokenAddresses, networkConfig);
+  const target = getPaymentTokenExpectedAnswersTarget(
+    tokenAddresses,
+    networkConfig,
+    aggregatorType,
+  );
 
   if (target.kind === 'composite') {
-    // Sub-feeds first: the composite reads them, so stale sub-feed bounds
-    // make the composite update revert.
-    for (const subType of ['numerator', 'denominator'] as const) {
-      const subConfig = target.config[subType];
-      const subDataFeed = target.addresses[subType]?.dataFeed;
-
-      if (
-        subConfig?.minAnswer === undefined ||
-        subConfig?.maxAnswer === undefined
-      ) {
-        console.log(
-          `${token} ${subType}: minAnswer/maxAnswer not set in config, skipping`,
-        );
-        continue;
-      }
-      if (!subDataFeed) {
-        throw new Error(`${subType} data feed address is not set`);
-      }
-
-      await updateExpectedAnswers(hre, {
-        isMToken: false,
-        token: `${token} ${subType}`,
-        dataFeedAddress: subDataFeed,
-        networkConfig: subConfig,
-      });
-    }
-
-    if (!target.addresses.dataFeed) {
-      throw new Error('Data feed address is not set');
-    }
-
     await updateCompositeExpectedAnswers(hre, {
       token,
-      dataFeedAddress: target.addresses.dataFeed,
+      dataFeedAddress: target.dataFeedAddress,
       networkConfig: target.config,
     });
     return;
   }
 
-  if (!target.addresses.dataFeed) {
-    throw new Error('Data feed address is not set');
-  }
-
   await updateExpectedAnswers(hre, {
     isMToken: false,
-    token,
-    dataFeedAddress: target.addresses.dataFeed,
+    token: aggregatorType ? `${token} ${aggregatorType}` : token,
+    dataFeedAddress: target.dataFeedAddress,
     networkConfig: target.config,
   });
 };
@@ -792,7 +768,7 @@ const isCompositeDataFeedConfig = (
 export const deployPaymentTokenDataFeed = async (
   hre: HardhatRuntimeEnvironment,
   token: PaymentTokenName,
-  aggregatorType?: AggregatorType,
+  aggregatorType?: 'numerator' | 'denominator',
 ) => {
   const addresses = getCurrentAddresses(hre);
   const tokenAddresses = addresses?.paymentTokens?.[token];
@@ -812,14 +788,21 @@ export const deployPaymentTokenDataFeed = async (
     throw new Error(`Token addresses not found for ${token}`);
   }
 
-  const target = getPaymentTokenDataFeedTarget(
-    tokenAddresses,
-    networkConfig,
-    aggregatorType,
-  );
+  const isComposite = isCompositeDataFeedAddresses(tokenAddresses);
+  const isCompositeConfig = isCompositeDataFeedConfig(networkConfig);
 
-  if (target.kind === 'composite') {
-    const { feedType } = target.config;
+  if (isComposite !== isCompositeConfig) {
+    throw new Error(
+      `Configuration mismatch: addresses ${
+        isComposite ? 'are' : 'are not'
+      } composite, but config ${isCompositeConfig ? 'is' : 'is not'} composite`,
+    );
+  }
+
+  if (isComposite && isCompositeConfig && aggregatorType === undefined) {
+    const compositeConfig = networkConfig as DeployDataFeedConfigComposite;
+    const feedType = compositeConfig.feedType;
+
     const contractName =
       feedType === 'multiply'
         ? getCommonContractNames().dataFeedMultiply
@@ -829,40 +812,58 @@ export const deployPaymentTokenDataFeed = async (
       throw new Error(`${feedType} data feed contract name is not set`);
     }
 
-    const numerator = target.addresses.numerator?.dataFeed;
-    const denominator = target.addresses.denominator?.dataFeed;
-
-    if (!numerator || !denominator) {
+    if (
+      !tokenAddresses?.denominator?.dataFeed ||
+      !tokenAddresses?.numerator?.dataFeed
+    ) {
       throw new Error('Nominator/denominator data feed is not set');
     }
 
-    const deploy =
-      feedType === 'multiply'
-        ? deployTokenDataFeedMultiply
-        : deployTokenDataFeedComposite;
+    if (feedType === 'multiply') {
+      await deployTokenDataFeedMultiply(
+        hre,
+        tokenAddresses.numerator.dataFeed,
+        tokenAddresses.denominator.dataFeed,
+        contractName,
+        compositeConfig,
+      );
+    } else {
+      await deployTokenDataFeedComposite(
+        hre,
+        tokenAddresses.numerator.dataFeed,
+        tokenAddresses.denominator.dataFeed,
+        contractName,
+        compositeConfig,
+      );
+    }
+  } else {
+    const contractName = getCommonContractNames().dataFeed;
 
-    await deploy(hre, numerator, denominator, contractName, target.config);
-    return;
+    let aggregator: string | undefined;
+    let config: DeployDataFeedConfigRegular;
+
+    if (isComposite && isCompositeConfig && aggregatorType !== undefined) {
+      aggregator = tokenAddresses[aggregatorType]?.aggregator;
+      config = networkConfig[aggregatorType];
+      console.log(`${aggregatorType} will be used`);
+    } else if (!isComposite && aggregatorType === undefined) {
+      aggregator = tokenAddresses?.aggregator;
+      config = networkConfig;
+      console.log(`regular aggregator will be used`);
+    } else {
+      throw new Error('Incorrect params');
+    }
+
+    if (!contractName) {
+      throw new Error('Data feed contract name is not set');
+    }
+
+    if (!aggregator) {
+      throw new Error('Token config is not found or aggregator is not set');
+    }
+
+    await deployTokenDataFeed(hre, aggregator, contractName, config);
   }
-
-  const contractName = getCommonContractNames().dataFeed;
-
-  if (!contractName) {
-    throw new Error('Data feed contract name is not set');
-  }
-
-  if (!target.addresses.aggregator) {
-    throw new Error('Token config is not found or aggregator is not set');
-  }
-
-  console.log(`${aggregatorType ?? 'regular'} aggregator will be used`);
-
-  await deployTokenDataFeed(
-    hre,
-    target.addresses.aggregator,
-    contractName,
-    target.config,
-  );
 };
 
 export const deployPaymentTokenCustomAggregator = async (
