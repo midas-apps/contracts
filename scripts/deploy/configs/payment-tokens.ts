@@ -463,13 +463,13 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
         dataFeed: {
           numerator: {
             healthyDiff: 25 * 60 * 60,
-            minAnswer: 1,
-            maxAnswer: constants.MaxInt256,
+            minAnswer: parseUnits('1', 8),
+            maxAnswer: parseUnits('100000', 8),
           },
           denominator: {
             healthyDiff: 25 * 60 * 60,
-            minAnswer: 1,
-            maxAnswer: constants.MaxInt256,
+            minAnswer: parseUnits('1', 8),
+            maxAnswer: parseUnits('100000', 8),
           },
           feedType: 'composite',
           minAnswer: parseUnits('0.997'),
