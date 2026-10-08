@@ -60,7 +60,7 @@ export const moriniGoldYieldDeploymentConfig: DeploymentConfig = {
                 },
                 {
                   token: 'xaut',
-                  allowance: parseUnits('100', 18),
+                  allowance: parseUnits('10000', 18),
                   fee: 0,
                 },
               ],
@@ -70,7 +70,7 @@ export const moriniGoldYieldDeploymentConfig: DeploymentConfig = {
               paymentTokens: [
                 {
                   token: 'xaut',
-                  allowance: parseUnits('100', 18),
+                  allowance: parseUnits('10000', 18),
                   fee: 0,
                 },
               ],
