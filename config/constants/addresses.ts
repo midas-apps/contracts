@@ -164,6 +164,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x026E497B99237e15C16ea15E01bBab857D207029',
         dataFeed: '0x1ab653390C7771Dcff22699f9dBFA2D681E2acE9',
       },
+      cirbtc: {
+        token: '0x72DFB2E44f59C5AD2bAFE84314E5b99a7cd5075E',
+      },
       rlusd: {
         aggregator: '0x26C46B7aD0012cA71F2298ada567dC9Af14E7f2A',
         token: '0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD',

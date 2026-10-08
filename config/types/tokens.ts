@@ -155,6 +155,7 @@ export enum PaymentTokenNameEnum {
   frxusd = 'frxusd',
   paxg = 'paxg',
   xaut = 'xaut',
+  cirbtc = 'cirbtc',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;
