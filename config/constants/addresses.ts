@@ -847,6 +847,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x2f26c745085C3Ed9f7a6589d7e37e51Eff60eEb6',
       redemptionVaultSwapper: '0x7D34D6BB415993a19098dFC956b93919CFC18660',
     },
+    moriniBTCYield: {
+      token: '0xB882Fa75604f670D0D1633c4e08FC50d3DEd3813',
+      customFeed: '0x0F51425D7A3B1aD09Eb63E53b093EFf7cdf668C1',
+      dataFeed: '0xcF4F2887735cFFfEA521A8cD21a235DB71a5edce',
+      depositVault: '0xe291aDDC6f7a1DCB23465670915868bCBDda4603',
+      redemptionVaultSwapper: '0x6a0163B96a006EE67fB201360f08A76b2d019325',
+    },
   },
   avalanche: {
     accessControl: '0xF6f56D1a218F6129679d966D03c12Af145795fd8',
