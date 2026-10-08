@@ -380,4 +380,8 @@ export const mTokensMetadata: Record<
     name: 'Morini Gold Yield Vault',
     symbol: 'MoriniGoldYield',
   },
+  moriniBTCYield: {
+    name: 'Morini BTC Yield Vault',
+    symbol: 'MoriniBTCYield',
+  },
 };

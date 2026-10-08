@@ -90,6 +90,7 @@ export enum MTokenNameEnum {
   mArbETH = 'mArbETH',
   mFTAC = 'mFTAC',
   moriniGoldYield = 'moriniGoldYield',
+  moriniBTCYield = 'moriniBTCYield',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
