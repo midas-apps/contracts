@@ -147,6 +147,23 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0xD9795cDFb09f1c599e16f6b150f642eC529b7aBB',
         dataFeed: '0x4D88E4a32cf289ECfA6C9303B57aF0b6c132a733',
       },
+      paxg: {
+        token: '0x45804880De22913dAFE09f4980848ECE6EcbAf78',
+        numerator: {
+          aggregator: '0x9944D86CEB9160aF5C5feB251FD671923323f8C3',
+          dataFeed: '0x65b9438146c9DB142878f5D0b4327EFAe67C2452',
+        },
+        denominator: {
+          aggregator: '0x214eD9Da11D2fbe465a6fc601a91E62EbEc1a0D6',
+          dataFeed: '0x797bC3C439c9a05625B629274c1Dd284D7F5d43a',
+        },
+        dataFeed: '0xC5f1AedCcc6c770B0BA3062393aCF7AdB58dF812',
+      },
+      xaut: {
+        token: '0x68749665FF8D2d112Fa859AA293F07A622782F38',
+        aggregator: '0x026E497B99237e15C16ea15E01bBab857D207029',
+        dataFeed: '0x1ab653390C7771Dcff22699f9dBFA2D681E2acE9',
+      },
       rlusd: {
         aggregator: '0x26C46B7aD0012cA71F2298ada567dC9Af14E7f2A',
         token: '0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD',
@@ -819,6 +836,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       // dataFeedRv: '0x3D58712E4d85806Da2F3C8161d67e0E3a39F4777',
       // depositVault: '0xE95F0AC383FeceAf38b07C2aefA128716c9EDEfE',
       // redemptionVaultSwapper: '0x296B6e173bE701d6086E604A19F4E39375ff4DA9',
+    },
+    moriniGoldYield: {
+      token: '0x98756258C1B77645D4E2A21CB1Ba0dB91bcBe04d',
+      customFeed: '0x27C88B702Ef379ebd818e61d9F769429E2E246AE',
+      dataFeed: '0xAF2978265D235111BEA82773bEbaB06601FD2cb0',
+      depositVault: '0x2f26c745085C3Ed9f7a6589d7e37e51Eff60eEb6',
+      redemptionVaultSwapper: '0x7D34D6BB415993a19098dFC956b93919CFC18660',
     },
   },
   avalanche: {
