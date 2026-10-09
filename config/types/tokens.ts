@@ -90,6 +90,7 @@ export enum MTokenNameEnum {
   mArbETH = 'mArbETH',
   mFTAC = 'mFTAC',
   moriniGoldYield = 'moriniGoldYield',
+  moriniBTCYield = 'moriniBTCYield',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
@@ -154,6 +155,7 @@ export enum PaymentTokenNameEnum {
   frxusd = 'frxusd',
   paxg = 'paxg',
   xaut = 'xaut',
+  cirbtc = 'cirbtc',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;
