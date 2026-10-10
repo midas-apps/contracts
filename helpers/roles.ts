@@ -163,6 +163,7 @@ type CommonRoles = {
   greenlistedOperator: string;
   blacklistedOperator: string;
   defaultAdmin: string;
+  escrowAdmin: string;
 };
 
 type IntegrationRoles = {
@@ -206,6 +207,7 @@ export const getRolesNamesCommon = (): CommonRoles => {
     greenlistedOperator: 'GREENLIST_OPERATOR_ROLE',
     blacklisted: 'BLACKLISTED_ROLE',
     blacklistedOperator: 'BLACKLIST_OPERATOR_ROLE',
+    escrowAdmin: 'FALLBACK_ESCROW_ADMIN_ROLE',
   };
 };
 
@@ -249,6 +251,7 @@ export const getAllRoles = (): AllRoles => {
       greenlistedOperator: keccak256(rolesNamesCommon.greenlistedOperator),
       blacklisted: keccak256(rolesNamesCommon.blacklisted),
       blacklistedOperator: keccak256(rolesNamesCommon.blacklistedOperator),
+      escrowAdmin: keccak256(rolesNamesCommon.escrowAdmin),
     },
     tokenRoles: Object.fromEntries(
       Object.keys(prefixes).map((token) => [

@@ -584,6 +584,35 @@ function readManifestBlob(cwd: string, commit: string, path: string): string {
   return decodeUtf8(blob, `${commit}:${path}`);
 }
 
+function manifestBlobExists(
+  cwd: string,
+  commit: string,
+  path: string,
+): boolean {
+  try {
+    execFileSync('git', ['cat-file', '-e', `${commit}:${path}`], {
+      cwd,
+      stdio: 'ignore',
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const MANIFEST_SIDES = ['base', 'ours', 'theirs'] as const;
+type ManifestSide = (typeof MANIFEST_SIDES)[number];
+
+function presentManifestSides(
+  cwd: string,
+  context: MergeContext,
+  path: string,
+): ManifestSide[] {
+  return MANIFEST_SIDES.filter((side) =>
+    manifestBlobExists(cwd, context[side], path),
+  );
+}
+
 function countManifest(manifest: OpenZeppelinManifest): ManifestCounts {
   return {
     proxies: manifest.proxies.length,
@@ -732,7 +761,18 @@ export function resolveManifestConflicts(
   console.log(`theirs: ${context.theirs}`);
   console.log(`base:   ${context.base}`);
 
-  const prepared = paths.map((path) => prepareResolution(cwd, context, path));
+  const mergeable = paths.filter((path) => {
+    const sides = presentManifestSides(cwd, context, path);
+    if (sides.length === 1) {
+      console.log(`skip ${path} (present only on ${sides[0]})`);
+      return false;
+    }
+    return true;
+  });
+
+  const prepared = mergeable.map((path) =>
+    prepareResolution(cwd, context, path),
+  );
 
   for (const item of prepared) {
     const temporaryPath = `${item.absolutePath}.merge-tmp-${
