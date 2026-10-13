@@ -164,6 +164,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x026E497B99237e15C16ea15E01bBab857D207029',
         dataFeed: '0x1ab653390C7771Dcff22699f9dBFA2D681E2acE9',
       },
+      cirbtc: {
+        token: '0x72DFB2E44f59C5AD2bAFE84314E5b99a7cd5075E',
+        aggregator: '0xa811aC3795646F0A47E471E96d0ECEF9046F69E6',
+        dataFeed: '0xAa30E2046AA26F8F45E32eAe6e4EfaD2B32EC7AC',
+      },
       rlusd: {
         aggregator: '0x26C46B7aD0012cA71F2298ada567dC9Af14E7f2A',
         token: '0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD',
@@ -843,6 +848,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xAF2978265D235111BEA82773bEbaB06601FD2cb0',
       depositVault: '0x2f26c745085C3Ed9f7a6589d7e37e51Eff60eEb6',
       redemptionVaultSwapper: '0x7D34D6BB415993a19098dFC956b93919CFC18660',
+    },
+    moriniBTCYield: {
+      token: '0xB882Fa75604f670D0D1633c4e08FC50d3DEd3813',
+      customFeed: '0x0F51425D7A3B1aD09Eb63E53b093EFf7cdf668C1',
+      dataFeed: '0xcF4F2887735cFFfEA521A8cD21a235DB71a5edce',
+      depositVault: '0xe291aDDC6f7a1DCB23465670915868bCBDda4603',
+      redemptionVaultSwapper: '0x6a0163B96a006EE67fB201360f08A76b2d019325',
     },
   },
   avalanche: {
