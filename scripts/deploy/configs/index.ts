@@ -80,6 +80,8 @@ import { mXRPDeploymentConfig } from './mXRP';
 import { obeatUSDDeploymentConfig } from './obeatUSD';
 import { plUSDDeploymentConfig } from './plUSD';
 import { qHVNUSDDeploymentConfig } from './qHVNUSD';
+import { radUSDDeploymentConfig } from './radUSD';
+import { radYCDeploymentConfig } from './radYC';
 import { Re7BTCDeploymentConfig } from './Re7BTC';
 import { Re7ETHDeploymentConfig } from './Re7ETH';
 import { Re7YIELDDeploymentConfig } from './Re7YIELD';
@@ -198,6 +200,8 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   mFTAC: mFTACDeploymentConfig,
   moriniGoldYield: moriniGoldYieldDeploymentConfig,
   moriniBTCYield: moriniBTCYieldDeploymentConfig,
+  radUSD: radUSDDeploymentConfig,
+  radYC: radYCDeploymentConfig,
 };
 
 type NamedDeploymentConfig = {

@@ -155,6 +155,8 @@ export const contractNamesPrefixes: Record<MTokenName, string> = {
   mFTAC: 'MFTac',
   moriniGoldYield: 'MoriniGoldYield',
   moriniBTCYield: 'MoriniBTCYield',
+  radUSD: 'RadUsd',
+  radYC: 'RadYc',
 };
 
 export const getCommonContractNames = (): CommonContractNames => {

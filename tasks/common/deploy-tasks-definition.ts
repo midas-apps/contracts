@@ -3,6 +3,7 @@ import path from 'node:path';
 import {
   actionParam,
   aggregatorTypeParam,
+  feedTargetParam,
   keysParam,
   mTokenParam,
   originalNetworkParam,
@@ -31,7 +32,11 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   'deploy:ac': [deploy('deploy_AccessControl')],
   'deploy:timelock': [deploy('deploy_TimeLock'), skipValidationParam(true)],
   'deploy:token': [deploy('deploy_Token'), mTokenParam()],
-  'deploy:aggregator': [deploy('deploy_CustomAggregator'), mTokenParam()],
+  'deploy:aggregator': [
+    deploy('deploy_CustomAggregator'),
+    mTokenParam(),
+    feedTargetParam(true),
+  ],
   'deploy:aggregator:adjusted': [
     deployMisc('deploy_CustomAggregatorAdjusted'),
     mTokenParam(),
@@ -93,6 +98,7 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     deployPost('set_RoundData'),
     mTokenParam(true),
     pTokenParam(true),
+    feedTargetParam(true),
   ],
   'deploy:post:set:expected-answers': [
     deployPost('set_ExpectedAnswers'),

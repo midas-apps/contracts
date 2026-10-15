@@ -34,6 +34,11 @@ export type GrantAllTokenRolesConfig = {
   tokenManagerAddress?: Address;
   vaultsManagerAddress?: Address;
   oracleManagerAddress?: Address;
+  // exact product roles for wallets outside the standard manager set
+  extraRoles?: {
+    address: Address;
+    roles: (keyof ReturnType<typeof getRolesForToken>)[];
+  }[];
   minBalanceExemptAddresses?: (Address | VaultType)[];
 };
 
@@ -133,6 +138,17 @@ export const grantAllProductRoles = async (
           () => managerGrantConfig.oracleManagerAddress!,
         ),
       );
+    }
+
+    for (const { address, roles } of managerGrantConfig.extraRoles ?? []) {
+      for (const role of roles) {
+        const roleHash = tokenRoles[role];
+        if (!roleHash) {
+          throw new Error(`Role ${role} is not configured for ${token}`);
+        }
+        roleBatch.push(roleHash);
+        addressBatch.push(address);
+      }
     }
 
     const deployedAddresses = getDeploymentTokenAddresses(

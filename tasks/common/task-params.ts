@@ -2,7 +2,10 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { MTokenName, Network, PaymentTokenName } from '../../config';
 import { isMTokenName, isPaymentTokenName } from '../../helpers/utils';
-import type { AggregatorType } from '../../scripts/deploy/common/data-feed';
+import type {
+  AggregatorType,
+  FeedTarget,
+} from '../../scripts/deploy/common/data-feed';
 
 export type ParamFnBase<TReturn = unknown> = () => {
   isOptional: boolean;
@@ -107,6 +110,20 @@ export const aggregatorTypeParam: ParseParamFn<AggregatorType> =
       },
     };
   };
+
+export const feedTargetParam: ParseParamFn<FeedTarget> = (optional) => () => ({
+  isOptional: optional ?? false,
+  name: 'feed',
+  description: 'Product feed target (general | dv | rv)',
+  defaultValue: undefined,
+  parse: (_, taskArgs) => {
+    const target = taskArgs.feed as FeedTarget | undefined;
+    if (target !== undefined && !['general', 'dv', 'rv'].includes(target)) {
+      throw new Error('Invalid product feed target');
+    }
+    return target;
+  },
+});
 
 export const originalNetworkParam: ParseParamFn<Network> = (optional) => () => {
   const isOptional = optional ?? false;
