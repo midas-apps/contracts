@@ -60,7 +60,6 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
         minBuidlToRedeem: parseUnits('250000', 18),
       },
       postDeploy: {
-        grantRoles: {},
         axelarIts: {
           operator: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
         },
@@ -70,6 +69,22 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
             default: {
               limit: parseUnits('1000000'),
               window: hours(1),
+            },
+          },
+        },
+        ccip: {
+          defaultReceiver: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          escrowAdmin: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          rateLimitConfig: {
+            default: {
+              inbound: {
+                capacity: parseUnits('1000000'),
+                window: hours(1),
+              },
+              outbound: {
+                capacity: parseUnits('1000000'),
+                window: hours(1),
+              },
             },
           },
         },
@@ -135,6 +150,22 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
             },
           },
         },
+        ccip: {
+          defaultReceiver: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          escrowAdmin: '0xa0819ae43115420beb161193b8D8Ba64C9f9faCC',
+          rateLimitConfig: {
+            default: {
+              inbound: {
+                capacity: parseUnits('1000000'),
+                window: hours(1),
+              },
+              outbound: {
+                capacity: parseUnits('1000000'),
+                window: hours(1),
+              },
+            },
+          },
+        },
       },
     },
     [chainIds.main]: {
@@ -179,9 +210,7 @@ export const mTBILLDeploymentConfig: DeploymentConfig = {
         minBuidlBalance: parseUnits('1', 6),
         minBuidlToRedeem: parseUnits('1', 6),
       },
-      postDeploy: {
-        grantRoles: {},
-      },
+      postDeploy: {},
     },
     [chainIds.base]: {
       dv: {

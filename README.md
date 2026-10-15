@@ -286,7 +286,7 @@ Custom price aggregator compatible with Chainlink's AggregatorV3 interface. Used
 
 - `setRoundData()`- function to push the price on-chain
 - `setRoundDataSafe()`- same as `setRoundData()` but also performs a deviation check by comparing current and new prices
-- `latestRoundData()` - View function, returns latest submitted price with submission details (check [AggregatorV3Interface.sol](@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol))
+- `latestRoundData()` - View function, returns latest submitted price with submission details (check [AggregatorV3Interface.sol](@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol))
 
 **CustomAggregatorV3CompatibleFeed Variations:**
 
