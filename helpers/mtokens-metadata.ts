@@ -384,4 +384,12 @@ export const mTokensMetadata: Record<
     name: 'Morini BTC Yield Vault',
     symbol: 'MoriniBTCYield',
   },
+  radUSD: {
+    name: 'Radial USD',
+    symbol: 'radUSD',
+  },
+  radYC: {
+    name: 'Radial radYC',
+    symbol: 'radYC',
+  },
 };

@@ -104,6 +104,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x374CBDcBb1C3b267350572896f3532D0d64b060E',
         dataFeed: '0x5b5DD673fbd6B7f6ED03579C55b3e081524a1C50',
       },
+      radusd: {
+        token: '0x82FA88934c97d0f8E256941655391bA65B7529DD',
+        aggregator: '0x0aFF0Aa42345AF1f2F8eA694822a762bf74e6eBc',
+        dataFeed: '0x59E2Df5A57033C50c942546fF27c66811ecfEca4',
+      },
     },
     stockMarketTRBasisTrade: {
       token: '0x7e233C775163A23612E5ba3800dFABe44358F7a3',
@@ -111,6 +116,24 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x3f5748099c8E13502D5c0797f1f245215d7FC2Cd',
       depositVault: '0x17c4dBd9f58e7301D000Aeb2aD3A3dD9b69354f8',
       redemptionVaultSwapper: '0x8dFD06f256508E06eD7023BBC314AB6Bbc3eDb7A',
+    },
+    radUSD: {
+      token: '0x82FA88934c97d0f8E256941655391bA65B7529DD',
+      customFeedDv: '0x78423a7ec0ca2ec52BE752Ba9baC8434123c161C',
+      customFeedRv: '0x0aFF0Aa42345AF1f2F8eA694822a762bf74e6eBc',
+      dataFeedDv: '0xE99db7006E9088470FB68eaB4F8956e37B607fcD',
+      dataFeedRv: '0x440630B3Fd31AedE0aa08F9A2B4C73022ed43046',
+      depositVault: '0x898555B66FE541023A45718500FD6A9F412a4168',
+      redemptionVaultSwapper: '0x666D13b7B4f428439a1ca7d403B84C0397AD2d52',
+    },
+    radYC: {
+      token: '0x7F36b7e65F2BAc2C3B13EABAe708d0fe373a4312',
+      customFeedDv: '0xC73Da57ecECD1e05D85f760227B2155cFF3f3273',
+      customFeedRv: '0x01e97D282Ae30568c5f06a20D8b4335F3699Ee6B',
+      dataFeedDv: '0x2eFB287A9C90a7a6f825eC4910eF012f6a293336',
+      dataFeedRv: '0xD21f13D209163C584083a68672333BD7B43F86F0',
+      depositVault: '0x320a9ee478096b68C74337D6fab7e9E6021e94C8',
+      redemptionVaultSwapper: '0x7A483d116c7b2178101a1C9abc71CA39221194Ba',
     },
   },
   main: {

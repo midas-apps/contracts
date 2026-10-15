@@ -15,6 +15,14 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           maxAnswer: parseUnits('1.003', 8),
         },
       },
+      // radYC vaults payment feed, reads the radUSD rv custom feed
+      radusd: {
+        dataFeed: {
+          healthyDiff: constants.MaxUint256,
+          minAnswer: parseUnits('0.9999', 8),
+          maxAnswer: parseUnits('1', 8),
+        },
+      },
     },
     [chainIds.sepolia]: {
       usdt: {

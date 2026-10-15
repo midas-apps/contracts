@@ -123,6 +123,23 @@ export type DeployCustomAggregatorConfig =
   | DeployCustomAggregatorRegularConfig
   | DeployCustomAggregatorGrowthConfig;
 
+export type FeedTarget = 'general' | 'dv' | 'rv';
+
+const customAggregatorConfigKeys = {
+  general: 'customAggregator',
+  dv: 'customAggregatorDv',
+  rv: 'customAggregatorRv',
+} as const;
+const roundDataConfigKeys = {
+  general: 'setRoundData',
+  dv: 'setRoundDataDv',
+  rv: 'setRoundDataRv',
+} as const;
+const customFeedAddressKeys = {
+  dv: 'customFeedDv',
+  rv: 'customFeedRv',
+} as const;
+
 type SetRoundDataConfigCommon = {
   data: BigNumberish;
 };
@@ -249,12 +266,11 @@ export const setRoundDataPaymentToken = async (
 export const setRoundDataMToken = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
+  feedTarget: FeedTarget = 'general',
 ) => {
-  const { setRoundData: networkConfig } = getNetworkConfig(
-    hre,
-    token,
-    'postDeploy',
-  );
+  const networkConfig = getNetworkConfig(hre, token, 'postDeploy')?.[
+    roundDataConfigKeys[feedTarget]
+  ];
 
   if (!networkConfig) {
     throw new Error('Network config is not found');
@@ -263,7 +279,9 @@ export const setRoundDataMToken = async (
   const addresses = getCurrentAddresses(hre);
   const tokenAddresses = addresses?.[token];
   const customFeed = tokenAddresses
-    ? resolveMTokenAggregator(tokenAddresses, token, hre.deploymentConfig)
+    ? feedTarget === 'general'
+      ? resolveMTokenAggregator(tokenAddresses, token, hre.deploymentConfig)
+      : tokenAddresses[customFeedAddressKeys[feedTarget]]
     : undefined;
 
   if (!customFeed) {
@@ -278,6 +296,7 @@ export const setRoundDataMToken = async (
   await setRoundData(hre, {
     isMToken: true,
     token,
+    feedLabel: feedTarget === 'general' ? undefined : `${feedTarget} feed`,
     networkConfig: literalConfig,
     aggregatorAddress: customFeed,
   });
@@ -288,15 +307,19 @@ const setRoundData = async (
   {
     isMToken,
     token,
+    feedLabel,
     networkConfig,
     aggregatorAddress,
   }: {
     isMToken: boolean;
     token: string;
+    // tells dv/rv requests apart in logs and Fordefi notes
+    feedLabel?: string;
     networkConfig: SetRoundDataLiteralConfig;
     aggregatorAddress: string;
   },
 ) => {
+  const name = feedLabel ? `${token} (${feedLabel})` : token;
   let tx: PopulatedTransaction;
   let log: string;
   if (networkConfig.type === 'GROWTH') {
@@ -313,7 +336,7 @@ const setRoundData = async (
       networkConfig.dataTimestamp ?? currentTimestamp,
       networkConfig.apr,
     );
-    log = `${token} set price to ${formatUnits(
+    log = `${name} set price to ${formatUnits(
       networkConfig.data,
       8,
     )}/${formatUnits(networkConfig.apr, 8)}% at ${currentTimestamp}`;
@@ -321,7 +344,7 @@ const setRoundData = async (
     const aggregator = await getAggregatorContract(hre, aggregatorAddress);
 
     tx = await aggregator.populateTransaction.setRoundData(networkConfig.data);
-    log = `${token} set price to ${formatUnits(networkConfig.data, 8)}`;
+    log = `${name} set price to ${formatUnits(networkConfig.data, 8)}`;
   }
 
   const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
@@ -440,14 +463,24 @@ export const updateExpectedAnswersPaymentToken = async (
   });
 };
 
-export const updateExpectedAnswersMToken = async (
-  hre: HardhatRuntimeEnvironment,
-  token: MTokenName,
-) => {
-  const dataFeedConfig = getDeploymentGenericConfig(hre, token, 'dataFeed');
+type MTokenDataFeedConfigs = Partial<
+  Record<'dataFeed' | 'dataFeedDv' | 'dataFeedRv', DeployDataFeedConfig>
+>;
 
-  const addresses = getCurrentAddresses(hre);
-  const tokenAddresses = addresses?.[token];
+export const getMTokenExpectedAnswersTargets = (
+  tokenAddresses: TokenAddresses | undefined,
+  configs: MTokenDataFeedConfigs,
+) => {
+  // dv/rv feeds fall back to the shared `dataFeed` config only when they have none of their own
+  const getConfig = (key: keyof MTokenDataFeedConfigs) => {
+    const config = configs[key] ?? configs.dataFeed;
+
+    if (!config) {
+      throw new Error('Deployment config is not found');
+    }
+
+    return config;
+  };
 
   const feeds: {
     dataFeedAddress: string;
@@ -458,29 +491,41 @@ export const updateExpectedAnswersMToken = async (
     if (tokenAddresses.dataFeedDv) {
       feeds.push({
         dataFeedAddress: tokenAddresses.dataFeedDv,
-        networkConfig:
-          getDeploymentGenericConfigOptional(hre, token, 'dataFeedDv') ??
-          dataFeedConfig,
+        networkConfig: getConfig('dataFeedDv'),
       });
     }
     if (tokenAddresses.dataFeedRv) {
       feeds.push({
         dataFeedAddress: tokenAddresses.dataFeedRv,
-        networkConfig:
-          getDeploymentGenericConfigOptional(hre, token, 'dataFeedRv') ??
-          dataFeedConfig,
+        networkConfig: getConfig('dataFeedRv'),
       });
     }
   } else if (tokenAddresses?.dataFeed) {
     feeds.push({
       dataFeedAddress: tokenAddresses.dataFeed,
-      networkConfig: dataFeedConfig,
+      networkConfig: getConfig('dataFeed'),
     });
   }
 
   if (!feeds.length) {
     throw new Error('Token config is not found or dataFeed is not set');
   }
+
+  return feeds;
+};
+
+export const updateExpectedAnswersMToken = async (
+  hre: HardhatRuntimeEnvironment,
+  token: MTokenName,
+) => {
+  const feeds = getMTokenExpectedAnswersTargets(
+    getCurrentAddresses(hre)?.[token],
+    {
+      dataFeed: getDeploymentGenericConfigOptional(hre, token, 'dataFeed'),
+      dataFeedDv: getDeploymentGenericConfigOptional(hre, token, 'dataFeedDv'),
+      dataFeedRv: getDeploymentGenericConfigOptional(hre, token, 'dataFeedRv'),
+    },
+  );
 
   for (const feed of feeds) {
     await updateExpectedAnswers(hre, {
@@ -1011,8 +1056,13 @@ export const deployMTokenDataFeedRv = async (
 export const deployMTokenCustomAggregator = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
+  feedTarget: FeedTarget = 'general',
 ) => {
-  const config = getDeploymentGenericConfig(hre, token, 'customAggregator');
+  const config = getDeploymentGenericConfig(
+    hre,
+    token,
+    customAggregatorConfigKeys[feedTarget],
+  );
   const isGrowth = config.type === 'GROWTH';
 
   const customAggregatorContractName = isGrowth

@@ -97,6 +97,8 @@ export const prefixes: Record<MTokenName, string> = {
   mFTAC: 'M_FTAC',
   moriniGoldYield: 'MORINI_GOLD_YIELD',
   moriniBTCYield: 'MORINI_BTC_YIELD',
+  radUSD: 'RAD_USD',
+  radYC: 'RAD_YC',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {
@@ -121,6 +123,8 @@ export const tokenLevelGreenlistTokens: MTokenName[] = [
   'mArbBTC',
   'mArbETH',
   'mFTAC',
+  'radUSD',
+  'radYC',
 ];
 
 /**
@@ -138,10 +142,18 @@ export const sharedGreenlistRoleSource: Partial<
   mArbBTC: 'mArb',
   mArbETH: 'mArb',
   mFTAC: 'mGLOBAL',
+  radYC: 'radUSD',
+};
+
+export const customGreenlistRoleNames: Partial<Record<MTokenName, string>> = {
+  radUSD: 'RADIAL_GREENLISTED_ROLE',
 };
 
 const getGreenlistRoleName = (token: MTokenName): string => {
   const greenlistToken = sharedGreenlistRoleSource[token] ?? token;
+  if (customGreenlistRoleNames[greenlistToken]) {
+    return customGreenlistRoleNames[greenlistToken]!;
+  }
   const restPrefix =
     greenlistToken === 'mTBILL' ? '' : prefixes[greenlistToken] + '_';
   return `${restPrefix}GREENLISTED_ROLE`;

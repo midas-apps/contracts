@@ -5,6 +5,7 @@ import { parseUnits } from 'ethers/lib/utils';
 import {
   DeployDataFeedConfigComposite,
   DeployDataFeedConfigRegular,
+  getMTokenExpectedAnswersTargets,
   getPaymentTokenExpectedAnswersTarget,
 } from '../../scripts/deploy/common/data-feed';
 
@@ -236,6 +237,63 @@ describe('DataFeed deploy scripts', function () {
           regularConfig,
         ),
       ).to.throw('Data feed config and addresses have different types');
+    });
+  });
+
+  describe('getMTokenExpectedAnswersTargets', function () {
+    const dvConfig: DeployDataFeedConfigRegular = {
+      minAnswer: 99999999,
+      maxAnswer: 100000000,
+    };
+    const rvConfig: DeployDataFeedConfigRegular = {
+      minAnswer: 99970000,
+      maxAnswer: 100000000,
+    };
+    const sharedConfig: DeployDataFeedConfigRegular = {
+      minAnswer: 113950000,
+      maxAnswer: 115140000,
+    };
+
+    const dvRvAddresses = {
+      dataFeedDv: '0x0000000000000000000000000000000000000008',
+      dataFeedRv: '0x0000000000000000000000000000000000000009',
+    };
+
+    it('uses dv/rv configs when there is no shared dataFeed config', () => {
+      expect(
+        getMTokenExpectedAnswersTargets(dvRvAddresses, {
+          dataFeedDv: dvConfig,
+          dataFeedRv: rvConfig,
+        }),
+      ).deep.eq([
+        { dataFeedAddress: dvRvAddresses.dataFeedDv, networkConfig: dvConfig },
+        { dataFeedAddress: dvRvAddresses.dataFeedRv, networkConfig: rvConfig },
+      ]);
+    });
+
+    it('falls back to the shared dataFeed config for dv/rv feeds', () => {
+      expect(
+        getMTokenExpectedAnswersTargets(dvRvAddresses, {
+          dataFeed: sharedConfig,
+        }),
+      ).deep.eq([
+        {
+          dataFeedAddress: dvRvAddresses.dataFeedDv,
+          networkConfig: sharedConfig,
+        },
+        {
+          dataFeedAddress: dvRvAddresses.dataFeedRv,
+          networkConfig: sharedConfig,
+        },
+      ]);
+    });
+
+    it('throws when a selected feed has no config', () => {
+      expect(() =>
+        getMTokenExpectedAnswersTargets(dvRvAddresses, {
+          dataFeedDv: dvConfig,
+        }),
+      ).to.throw('Deployment config is not found');
     });
   });
 });
