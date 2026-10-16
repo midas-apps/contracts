@@ -56,6 +56,10 @@ export const mM1BTCDeploymentConfig: DeploymentConfig = {
                   token: 'tbtc',
                   allowance: parseUnits('1000', 18),
                 },
+                {
+                  token: 'bgbtc',
+                  allowance: parseUnits('250', 18),
+                },
               ],
               type: 'depositVault',
             },
@@ -64,6 +68,10 @@ export const mM1BTCDeploymentConfig: DeploymentConfig = {
                 {
                   token: 'cbbtc',
                   allowance: parseUnits('1000', 18),
+                },
+                {
+                  token: 'bgbtc',
+                  allowance: parseUnits('250', 18),
                 },
               ],
               type: 'redemptionVaultSwapper',
