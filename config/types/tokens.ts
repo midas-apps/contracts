@@ -158,6 +158,7 @@ export enum PaymentTokenNameEnum {
   paxg = 'paxg',
   xaut = 'xaut',
   cirbtc = 'cirbtc',
+  bgbtc = 'bgbtc',
   radusd = 'radusd',
 }
 
