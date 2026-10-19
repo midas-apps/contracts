@@ -887,6 +887,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     dvUSD: {
       token: '0xC1339d775B3A08152de7ad31D97AD101805E6F08',
       customFeed: '0x3397f5834872eDfc3A09c75477b7e476532776BB',
+      dataFeed: '0xEC16d6Fdc1D2c384B3cED09f2287E7D371eF6123',
     },
   },
   avalanche: {
