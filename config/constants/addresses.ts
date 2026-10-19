@@ -889,6 +889,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       customFeed: '0x3397f5834872eDfc3A09c75477b7e476532776BB',
       dataFeed: '0xEC16d6Fdc1D2c384B3cED09f2287E7D371eF6123',
       depositVault: '0x042C4F033fCb593009A81E924a2Af5D1fA355c73',
+      redemptionVaultSwapper: '0xc89698f6cfB742CDc6Be9da5816360607aea9843',
     },
   },
   avalanche: {
