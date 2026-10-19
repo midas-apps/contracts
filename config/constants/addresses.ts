@@ -884,6 +884,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0xe291aDDC6f7a1DCB23465670915868bCBDda4603',
       redemptionVaultSwapper: '0x6a0163B96a006EE67fB201360f08A76b2d019325',
     },
+    dvUSD: {
+      token: '0xC1339d775B3A08152de7ad31D97AD101805E6F08',
+    },
   },
   avalanche: {
     accessControl: '0xF6f56D1a218F6129679d966D03c12Af145795fd8',
