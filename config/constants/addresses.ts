@@ -192,6 +192,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0xa811aC3795646F0A47E471E96d0ECEF9046F69E6',
         dataFeed: '0xAa30E2046AA26F8F45E32eAe6e4EfaD2B32EC7AC',
       },
+      bgbtc: {
+        token: '0x0520930F21b14Cafac7a27b102487beE7138a017',
+        aggregator: '0x1F9AcE023fb6FA1a467d8f670F41122e6eb766E8',
+        dataFeed: '0xA4fBA9C59d262112d18e7933d37669c9BB978a1c',
+      },
       rlusd: {
         aggregator: '0x26C46B7aD0012cA71F2298ada567dC9Af14E7f2A',
         token: '0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD',
