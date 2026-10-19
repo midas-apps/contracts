@@ -106,6 +106,10 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     pTokenParam(true),
     aggregatorTypeParam(true),
   ],
+  'deploy:post:set:aggregators': [
+    deployPost('set_FeedAggregators'),
+    mTokenParam(),
+  ],
   'deploy:post:set:waived': [deployPost('add_FeeWaived'), mTokenParam()],
   'deploy:post:set:greenlist': [deployPost('set_Greenlist'), mTokenParam()],
   'deploy:post:pause:functions': [deployPost('pause_Functions'), mTokenParam()],
