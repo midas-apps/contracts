@@ -221,6 +221,16 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     actionParam(),
     skipValidationParam(true),
   ],
+  'timelock:delay:update:propose': [
+    upgrade('proposeUpdateDelay_Timelock'),
+    actionParam(),
+    skipValidationParam(true),
+  ],
+  'timelock:delay:update:execute': [
+    upgrade('executeUpdateDelay_Timelock'),
+    actionParam(),
+    skipValidationParam(true),
+  ],
   'timelock:upgrade:token:propose': [
     upgrade('proposeUpgrade_Token'),
     mTokenParam(),
