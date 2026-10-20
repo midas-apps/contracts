@@ -13,6 +13,7 @@ import { dnFARTDeploymentConfig } from './dnFART';
 import { dnHYPEDeploymentConfig } from './dnHYPE';
 import { dnPUMPDeploymentConfig } from './dnPUMP';
 import { dnTESTDeploymentConfig } from './dnTEST';
+import { dvUSDDeploymentConfig } from './dvUSD';
 import { hbUSDCDeploymentConfig } from './hbUSDC';
 import { hbUSDTDeploymentConfig } from './hbUSDT';
 import { hbXAUtDeploymentConfig } from './hbXAUt';
@@ -202,6 +203,7 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   moriniBTCYield: moriniBTCYieldDeploymentConfig,
   radUSD: radUSDDeploymentConfig,
   radYC: radYCDeploymentConfig,
+  dvUSD: dvUSDDeploymentConfig,
 };
 
 type NamedDeploymentConfig = {

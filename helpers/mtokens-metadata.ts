@@ -391,4 +391,8 @@ export const mTokensMetadata: Record<
     name: 'Radial radYC',
     symbol: 'radYC',
   },
+  dvUSD: {
+    name: 'Drivvy USD Vault',
+    symbol: 'dvUSD',
+  },
 };

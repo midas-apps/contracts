@@ -99,6 +99,7 @@ export const prefixes: Record<MTokenName, string> = {
   moriniBTCYield: 'MORINI_BTC_YIELD',
   radUSD: 'RAD_USD',
   radYC: 'RAD_YC',
+  dvUSD: 'DV_USD',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {
