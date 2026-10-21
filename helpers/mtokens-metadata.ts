@@ -341,7 +341,6 @@ export const mTokensMetadata: Record<
   mGLOeuro: {
     name: 'Midas Fasanara Global Euro',
     symbol: 'mGLOeuro',
-    isMinBalance: true,
   },
   mALPHA: {
     name: 'Midas Hyperithm Alpha',
@@ -395,5 +394,9 @@ export const mTokensMetadata: Record<
   dvUSD: {
     name: 'Drivvy USD Vault',
     symbol: 'dvUSD',
+  },
+  sdvUSD: {
+    name: 'Staked Drivvy USD Vault',
+    symbol: 'sdvUSD',
   },
 };

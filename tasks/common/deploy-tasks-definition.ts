@@ -106,6 +106,10 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     pTokenParam(true),
     aggregatorTypeParam(true),
   ],
+  'deploy:post:set:aggregators': [
+    deployPost('set_FeedAggregators'),
+    mTokenParam(),
+  ],
   'deploy:post:set:waived': [deployPost('add_FeeWaived'), mTokenParam()],
   'deploy:post:set:greenlist': [deployPost('set_Greenlist'), mTokenParam()],
   'deploy:post:pause:functions': [deployPost('pause_Functions'), mTokenParam()],
@@ -214,6 +218,16 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   ],
   'timelock:admin:transfer:execute': [
     upgrade('executeTransferOwnership_ProxyAdmin'),
+    actionParam(),
+    skipValidationParam(true),
+  ],
+  'timelock:delay:update:propose': [
+    upgrade('proposeUpdateDelay_Timelock'),
+    actionParam(),
+    skipValidationParam(true),
+  ],
+  'timelock:delay:update:execute': [
+    upgrade('executeUpdateDelay_Timelock'),
     actionParam(),
     skipValidationParam(true),
   ],
