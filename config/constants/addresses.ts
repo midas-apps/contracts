@@ -381,6 +381,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0x9B4a96210bc8D9D55b1908B465D8B0de68B7fF83',
         dataFeed: '0x379bdE9377F9069fDd3Ee46828860fb52db49844',
       },
+      dvusd: {
+        token: '0xC1339d775B3A08152de7ad31D97AD101805E6F08',
+        aggregator: '0x3397f5834872eDfc3A09c75477b7e476532776BB',
+        dataFeed: '0xEC16d6Fdc1D2c384B3cED09f2287E7D371eF6123',
+      },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
     timelock: '0xE3EEe3e0D2398799C884a47FC40C029C8e241852',
@@ -890,6 +895,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xEC16d6Fdc1D2c384B3cED09f2287E7D371eF6123',
       depositVault: '0x042C4F033fCb593009A81E924a2Af5D1fA355c73',
       redemptionVaultSwapper: '0xc89698f6cfB742CDc6Be9da5816360607aea9843',
+    },
+    sdvUSD: {
+      token: '0x63ac9f2b728460E0308D0044b07495B7EA62a864',
+      customFeed: '0x05FAc01e4284c80EBAF673130235F6BBd220a16e',
+      dataFeed: '0xD880e2d3099469c8Bf7a53096B6aaC35CE357bF4',
+      depositVault: '0x44c9f1337af7fC3f67Ab8fF24459E580302D9E55',
+      redemptionVaultSwapper: '0x281317d9508d8399980D2fD467c621BdE8CCc7Be',
     },
   },
   avalanche: {
