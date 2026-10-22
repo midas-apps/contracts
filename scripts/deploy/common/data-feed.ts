@@ -139,6 +139,10 @@ const customFeedAddressKeys = {
   dv: 'customFeedDv',
   rv: 'customFeedRv',
 } as const;
+const dataFeedAddressKeys = {
+  dv: 'dataFeedDv',
+  rv: 'dataFeedRv',
+} as const;
 
 type SetRoundDataConfigCommon = {
   data: BigNumberish;
@@ -313,7 +317,6 @@ const setRoundData = async (
   }: {
     isMToken: boolean;
     token: string;
-    // tells dv/rv requests apart in logs and Fordefi notes
     feedLabel?: string;
     networkConfig: SetRoundDataLiteralConfig;
     aggregatorAddress: string;
@@ -536,7 +539,76 @@ export const updateExpectedAnswersMToken = async (
   }
 };
 
-const updateExpectedAnswers = async (
+export const setFeedAggregatorsMToken = async (
+  hre: HardhatRuntimeEnvironment,
+  token: MTokenName,
+) => {
+  const tokenAddresses = getCurrentAddresses(hre)?.[token];
+
+  for (const feedTarget of ['dv', 'rv'] as const) {
+    const dataFeedAddress = tokenAddresses?.[dataFeedAddressKeys[feedTarget]];
+    const aggregatorAddress =
+      tokenAddresses?.[customFeedAddressKeys[feedTarget]];
+
+    if (!dataFeedAddress || !aggregatorAddress) {
+      throw new Error(
+        `Token config is not found or ${feedTarget} feed is not set`,
+      );
+    }
+
+    const dataFeed = (await getContractAt(
+      hre,
+      'DataFeed',
+      dataFeedAddress,
+    )) as DataFeed;
+
+    if (
+      (await dataFeed.aggregator()).toLowerCase() ===
+      aggregatorAddress.toLowerCase()
+    ) {
+      console.log(`${token} ${feedTarget} aggregator is already set, skipping`);
+      continue;
+    }
+
+    const aggregator = await getContractAt(
+      hre,
+      'AggregatorV3Interface',
+      aggregatorAddress,
+    );
+    const decimals = await aggregator.decimals();
+    const { answer } = await aggregator.latestRoundData();
+    const min = await dataFeed.minExpectedAnswer();
+    const max = await dataFeed.maxExpectedAnswer();
+
+    if (answer.lt(min) || answer.gt(max)) {
+      throw new Error(
+        `${feedTarget} aggregator answer ${formatUnits(
+          answer,
+          decimals,
+        )} is outside the expected range [${formatUnits(
+          min,
+          decimals,
+        )}, ${formatUnits(max, decimals)}]`,
+      );
+    }
+
+    const tx = await dataFeed.populateTransaction.changeAggregator(
+      aggregatorAddress,
+    );
+    const log = `${token} ${feedTarget} feed set aggregator to ${aggregatorAddress} (${formatUnits(
+      answer,
+      decimals,
+    )})`;
+    const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
+      action: 'update-feed-mtoken',
+      mToken: token,
+      comment: log,
+    });
+    console.log(log, txRes);
+  }
+};
+
+export const updateExpectedAnswers = async (
   hre: HardhatRuntimeEnvironment,
   {
     isMToken,

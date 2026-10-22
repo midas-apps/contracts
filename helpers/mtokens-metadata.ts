@@ -341,7 +341,6 @@ export const mTokensMetadata: Record<
   mGLOeuro: {
     name: 'Midas Fasanara Global Euro',
     symbol: 'mGLOeuro',
-    isMinBalance: true,
   },
   mALPHA: {
     name: 'Midas Hyperithm Alpha',

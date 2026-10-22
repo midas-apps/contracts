@@ -8,7 +8,7 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
       acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
     },
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
     },
   },
@@ -21,13 +21,13 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
   },
   [chainIds.katana]: {
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
     },
   },
   [chainIds.base]: {
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
     },
   },
@@ -36,53 +36,53 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
       acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
     },
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
     },
   },
   [chainIds.hyperevm]: {
     grantDefaultAdminRole: {},
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0xF9e3295DBf89CF0Bf1344a3010CE96d026579BBb',
     },
   },
   [chainIds.main]: {
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
     },
   },
   [chainIds.rootstock]: {
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0x77F186c27277B80660A942839bd38e0A05B5702D',
     },
   },
   [chainIds.oasis]: {
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0x316017e4532A40ec8E67640F3B52115efB6B89A3',
     },
   },
   [chainIds.etherlink]: {
     grantDefaultAdminRole: {},
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0xdC208d4a8583663575fa548Bf6de224bb5FfC26d',
     },
   },
   [chainIds.plume]: {
     grantDefaultAdminRole: {},
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0xb28078046efa2F0F6637F67bA5D7f36B30dc8b2b',
     },
   },
   [chainIds.tac]: {
     grantDefaultAdminRole: {},
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0x88B577E8eB8a0BEFF49eb4fAB2a21210Af35264B',
     },
   },
@@ -91,7 +91,7 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
       acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
     },
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0x5aacC1A5aE6085d222ec356FBae032B5081dAde7',
     },
   },
@@ -100,7 +100,7 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
       acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
     },
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
     },
   },
@@ -109,7 +109,7 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
       acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
     },
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
     },
   },
@@ -118,7 +118,7 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
       acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
     },
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
     },
   },
@@ -127,7 +127,7 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
       acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
     },
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
     },
   },
@@ -136,7 +136,7 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
       acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
     },
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
     },
   },
@@ -145,7 +145,7 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
       acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
     },
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0xAD8bea0c137012021EEAF6486C42074701c5038E',
     },
   },
@@ -154,7 +154,7 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
       acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
     },
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
     },
   },
@@ -163,7 +163,7 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
       acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
     },
     timelock: {
-      minDelay: 2 * DAY,
+      minDelay: 7 * DAY,
       proposer: '0x563e0fc290D535fC5549873aEcE97A16b001B9eD',
     },
   },

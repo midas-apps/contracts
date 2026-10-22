@@ -20,6 +20,11 @@ export const upgradeConfigs: UpgradeConfig = {
         [chainIds.main]: ['mWIN'],
       },
     },
+    'mgloeuro-upgrade-remove-min-balance': {
+      tokens: {
+        [chainIds.main]: ['mGLOeuro'],
+      },
+    },
     'mfone-rv-swapper-to-mtoken': {
       vaults: {
         [chainIds.sepolia]: {
