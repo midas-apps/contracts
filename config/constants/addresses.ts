@@ -2164,6 +2164,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
     },
     accessControl: '0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B',
+    timelock: '0x87C9053C819bB28e0D73d33059E1b3DA80AFb0cf',
     mTBILL: {
       token: '0xDD629E5241CbC5919847783e6C96B2De4754e438',
       layerZero: {
@@ -2174,6 +2175,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         tokenId:
           '0x46929f12e9fc2e41757d789d461b77f9dcfbf328d3797a4446f8335fbe27d985',
       },
+    },
+    dnTEST: {
+      token: '0xE09823b8EbB3F0e7A533383aBDd86bD99A603861',
+      customFeed: '0xac14a14f578C143625Fc8F54218911e8F634184D',
+      dataFeed: '0xbA72f65523Fe1C08De23D0B33cFe178A804DbF10',
+      depositVault: '0x1a8BF19212d5CaBB97c1288993336ebD0A893E5E',
+      redemptionVaultSwapper: '0xE084623E02bEaCA3e8d1E7F356003A9E04417893',
     },
   },
   tacTestnet: {
