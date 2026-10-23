@@ -88,7 +88,7 @@ export const radYCDeploymentConfig: DeploymentConfig = {
           extraRoles: [
             {
               address: '0x7fb58f658CAfF2A778303D31C1b9Bde59Ed2Ae90',
-              roles: ['minter', 'burner', 'pauser'],
+              roles: ['minter', 'burner'],
             },
             {
               address: '0xF270EDf3A35829F734c35F7E7d99292f78864ef2',

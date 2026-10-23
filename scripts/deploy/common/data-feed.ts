@@ -87,20 +87,6 @@ export const isAnswerWithinExpectedRange = (
   return roundId.isZero() || (answer.gte(minAnswer) && answer.lte(maxAnswer));
 };
 
-const getExpectedAnswerUpdates = (
-  currentMin: BigNumber,
-  currentMax: BigNumber,
-  newMin: BigNumber,
-  newMax: BigNumber,
-) => {
-  const min = { bound: 'min' as const, value: newMin };
-  const max = { bound: 'max' as const, value: newMax };
-
-  return (newMax.gt(currentMin) ? [max, min] : [min, max]).filter(
-    ({ bound, value }) => !value.eq(bound === 'min' ? currentMin : currentMax),
-  );
-};
-
 type DeployCustomAggregatorCommonConfig = {
   /**
    * Default: 0.1
@@ -752,45 +738,19 @@ const applyExpectedAnswerUpdates = async (
     action: 'update-feed-mtoken' | 'update-feed-ptoken';
   },
 ) => {
-  const updates = getExpectedAnswerUpdates(
-    currentMin,
-    currentMax,
-    newMin,
-    newMax,
-  );
-
-  if (newMax.eq(currentMax)) {
-    console.log('maxExpectedAnswer is already up to date, skipping');
-  }
-  if (newMin.eq(currentMin)) {
-    console.log('minExpectedAnswer is already up to date, skipping');
+  if (newMin.eq(currentMin) && newMax.eq(currentMax)) {
+    console.log('min/max expected answers are already up to date, skipping');
+    return;
   }
 
-  for (const { bound, value } of updates) {
-    const tx =
-      bound === 'max'
-        ? await dataFeed.populateTransaction.setMaxExpectedAnswer(value)
-        : await dataFeed.populateTransaction.setMinExpectedAnswer(value);
-    const log = `${token} set ${bound}ExpectedAnswer to ${formatUnits(
-      value,
-      decimals,
-    )}`;
-    const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
-      action,
-      comment: log,
-    });
-    console.log(log, txRes);
-  }
-
-  const action = isMToken ? 'update-feed-mtoken' : 'update-feed-ptoken';
   const tx = await dataFeed.populateTransaction.setMinMaxExpectedAnswer(
     newMax,
     newMin,
   );
   const log = `${token} set expected answers to [${formatUnits(
     newMin,
-    aggregatorDecimals,
-  )}, ${formatUnits(newMax, aggregatorDecimals)}]`;
+    decimals,
+  )}, ${formatUnits(newMax, decimals)}]`;
   const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
     action,
     comment: log,
@@ -1029,6 +989,7 @@ export const deployMTokenDataFeedDv = async (
   await deployTokenDataFeed(
     hre,
     tokenAddresses.customFeedDv,
+    roles.tokenRoles[token].customFeedAdmin!,
     getDeploymentGenericConfigOptional(hre, token, 'dataFeedDv') ??
       getDeploymentGenericConfig(hre, token, 'dataFeed'),
   );
@@ -1049,6 +1010,7 @@ export const deployMTokenDataFeedRv = async (
   await deployTokenDataFeed(
     hre,
     tokenAddresses.customFeedRv,
+    roles.tokenRoles[token].customFeedAdmin!,
     getDeploymentGenericConfigOptional(hre, token, 'dataFeedRv') ??
       getDeploymentGenericConfig(hre, token, 'dataFeed'),
   );

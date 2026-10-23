@@ -708,7 +708,6 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
                 calcResult.feeAmount,
                 calcResult.tokenOutDecimals
             );
-            mToken.burn(user, calcResult.amountMTokenWithoutFee);
 
             uint256 newBalance = tokenOutBalanceBase18 + usedLpLiquidity;
 

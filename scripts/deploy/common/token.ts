@@ -23,6 +23,7 @@ export const deployMToken = async (
   const metadata = mTokensMetadata[token];
   const deployer = await getDeployer(hre);
   const isPermissioned = !!metadata.isPermissioned;
+  const isMinBalance = !!metadata.isMinBalance;
 
   await deployAndVerifyProxy(
     hre,
@@ -32,7 +33,7 @@ export const deployMToken = async (
       deployer.address,
       constants.MaxUint256,
       isPermissioned,
-      false,
+      isMinBalance,
       metadata.name,
       metadata.symbol,
     ],

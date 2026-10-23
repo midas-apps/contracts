@@ -128,7 +128,13 @@ export const deployDepositVault = async (
     throw new Error('Token config is not found');
   }
 
-  const dataFeed = tokenAddresses?.dataFeedDv ?? tokenAddresses?.dataFeed;
+  const dataFeed = networkConfig.mTokenDataFeed
+    ? tokenAddresses[networkConfig.mTokenDataFeed]
+    : tokenAddresses?.dataFeedDv ?? tokenAddresses?.dataFeed;
+
+  if (!dataFeed || dataFeed === constants.AddressZero) {
+    throw new Error(`MToken data feed is not configured for ${token}`);
+  }
 
   const sanctionsList = networkConfig.enableSanctionsList
     ? sanctionListContracts[hre.network.config.chainId!]

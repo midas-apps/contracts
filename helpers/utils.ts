@@ -97,6 +97,22 @@ export const getMTokenOrThrow = (hre: HardhatRuntimeEnvironment) => {
   return mToken;
 };
 
+export const upgradeActions = ['propose', 'execute'] as const;
+
+export const getActionOrThrow = (
+  hre: HardhatRuntimeEnvironment,
+  validActions?: string[] | readonly string[],
+) => {
+  const action = hre.action;
+  if (!action) {
+    throw new Error('Action parameter not found');
+  }
+  if (validActions?.length && !validActions.includes(action)) {
+    throw new Error(`Invalid action: ${action}`);
+  }
+  return action;
+};
+
 export type MTokenOrPaymentToken =
   | { mToken: MTokenName; paymentToken?: undefined }
   | { mToken?: undefined; paymentToken: PaymentTokenName };

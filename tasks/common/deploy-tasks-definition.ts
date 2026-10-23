@@ -67,7 +67,6 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   'deploy:dv:morpho': [deploy('deploy_DVMorpho'), mTokenParam()],
   'deploy:dv:mtoken': [deploy('deploy_DVMToken'), mTokenParam()],
   'deploy:rv': [deploy('deploy_RV'), mTokenParam()],
-  'deploy:rv:swapper': [deploy('deploy_RVSwapper'), mTokenParam()],
   'deploy:rv:aave': [deploy('deploy_RVAave'), mTokenParam()],
   'deploy:rv:morpho': [deploy('deploy_RVMorpho'), mTokenParam()],
   'deploy:rv:mtoken': [deploy('deploy_RVMToken'), mTokenParam()],
@@ -227,11 +226,6 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     mTokenParam(),
     skipValidationParam(true),
   ],
-  'timelock:upgrade:aggregators:propose': [
-    upgrade('proposeUpgrade_Aggregators'),
-    mTokenParam(),
-    skipValidationParam(true),
-  ],
   'timelock:upgrade:aggregators:execute': [
     upgrade('executeUpgrade_Aggregators'),
     mTokenParam(),
@@ -261,10 +255,6 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   ],
   'timelock:upgrade:reinitializers:verify': [
     upgrade('verifyUpgrade_Reinitializers'),
-    mTokenParam(),
-  ],
-  'upgrade:rv:mtoken': [
-    upgrade('upgrade_RedemptionVaultMToken'),
     mTokenParam(),
   ],
 

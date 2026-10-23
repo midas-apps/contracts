@@ -1,5 +1,7 @@
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
-import { ethers } from 'ethers';
+import { Contract, ethers } from 'ethers';
+import hre from 'hardhat';
 
 import fs from 'fs';
 import path from 'path';
@@ -15,6 +17,7 @@ import {
   reinitializerSelector,
   topReinitializer,
 } from '../../scripts/upgrades/common/reinitializer';
+import { defaultDeploy } from '../common/fixtures';
 
 const abi = [
   { type: 'function', name: 'initialize', inputs: [{ type: 'address' }] },
@@ -378,5 +381,58 @@ describe('reinitializer naming policy (Solidity source scan)', () => {
       }
     }
     expect(violations, violations.join('\n')).to.deep.equal([]);
+  });
+});
+
+// Mirrors evaluateGuard: after a fresh deploy, every proxy must already have
+// consumed its top public initializeV{N}, so a no-op upgrade would not require
+// upgradeAndCall.
+describe('reinitializer version guard (fresh deploy)', () => {
+  it('all deployed contracts have consumed top reinitializer versions', async () => {
+    const fixture = await loadFixture(defaultDeploy);
+
+    const deployed = (Object.entries(fixture) as [string, unknown][]).filter(
+      (entry): entry is [string, Contract] => {
+        const [, value] = entry;
+        return (
+          !!value &&
+          typeof value === 'object' &&
+          'address' in value &&
+          typeof (value as Contract).interface?.format === 'function'
+        );
+      },
+    );
+
+    let checked = 0;
+    for (const [label, contract] of deployed) {
+      const formatted = contract.interface.format(
+        ethers.utils.FormatTypes.json,
+      );
+      const reinits = getReinitializers(JSON.parse(formatted as string));
+      if (reinits.length === 0) continue;
+
+      const onchainVersion = await readInitializedVersion(
+        hre.ethers.provider,
+        contract.address,
+        { slot: 0, offset: 0 },
+      );
+      const result = evaluateGuard({
+        reinits,
+        implVersionsPresent: reinits.map((r) => r.version),
+        onchainVersion,
+      });
+
+      expect(
+        result.ok,
+        `${label} (${contract.address}): ${
+          result.ok ? 'ok' : result.reason
+        } (_initialized=${onchainVersion}, reinits=[${reinits
+          .map((r) => `${r.name}:v${r.version}`)
+          .join(', ')}])`,
+      ).to.equal(true);
+      checked++;
+    }
+
+    expect(checked, 'no contracts with reinitializers were checked').gt(0);
   });
 });

@@ -9,6 +9,10 @@ import { formatUnits, parseUnits } from 'ethers/lib/utils';
 import hre from 'hardhat';
 
 import {
+  DeprecationRoute,
+  getDeprecationChanges,
+} from '../../../scripts/deploy/misc/layerzero/deprecate_Ofts';
+import {
   MidasLzOFTAdapter__factory,
   MidasLzVaultComposerSyncTester,
 } from '../../../typechain-types';
@@ -30,10 +34,6 @@ import {
   setMinAmountTest,
 } from '../../common/manageable-vault.helpers';
 import { mint } from '../../common/mtoken.helpers';
-import {
-  DeprecationRoute,
-  getDeprecationChanges,
-} from '../../scripts/deploy/misc/layerzero/deprecate_Ofts';
 
 describe('LayerZero', function () {
   describe('route deprecation', () => {
@@ -134,9 +134,9 @@ describe('LayerZero', function () {
           fixture,
           { direction },
           {
-            revertWithCustomError: {
+            revertCustomError: {
               contract: direction === 'A_TO_B' ? oftAdapterA : oftAdapterB,
-              error: 'NoPeer',
+              customErrorName: 'NoPeer',
             },
           },
         );

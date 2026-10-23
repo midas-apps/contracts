@@ -229,11 +229,17 @@ export const deployRedemptionVault = async (
     extraParams.push(networkConfig.redemptionVault);
   }
 
-  const dataFeed = resolveRedemptionVaultDataFeed(
-    defaultTokenAddresses!,
-    token,
-    hre.deploymentConfig,
-  );
+  const dataFeed = networkConfig.mTokenDataFeed
+    ? tokenAddresses?.[networkConfig.mTokenDataFeed]
+    : resolveRedemptionVaultDataFeed(
+        defaultTokenAddresses!,
+        token,
+        hre.deploymentConfig,
+      );
+
+  if (!dataFeed || dataFeed === constants.AddressZero) {
+    throw new Error(`MToken data feed is not configured for ${token}`);
+  }
 
   const sanctionsList = networkConfig.enableSanctionsList
     ? sanctionListContracts[hre.network.config.chainId!]
