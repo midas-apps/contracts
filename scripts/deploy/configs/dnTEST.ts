@@ -68,6 +68,56 @@ export const dnTESTDeploymentConfig: DeploymentConfig = {
         },
       },
     },
+    [chainIds.sepolia]: {
+      dv: {
+        version: 'v2',
+        type: 'REGULAR',
+        tokensReceiver: '0x4Bcd2876e32087B8D72744290b1f79eC15Bad569',
+        instantFee: parseUnits('0', 2),
+        variationTolerance: parseUnits('0.6', 2),
+        minAmount: parseUnits('1', 18),
+      },
+      rv: {
+        version: 'v2',
+        type: 'REGULAR',
+        tokensReceiver: '0x4Bcd2876e32087B8D72744290b1f79eC15Bad569',
+        requestRedeemer: '0x7Fa47050aD59e55Fbac8e4512cffa185E818B568',
+        instantFee: parseUnits('0.5', 2),
+        variationTolerance: parseUnits('0.6', 2),
+      },
+      postDeploy: {
+        grantRoles: {
+          tokenManagerAddress: '0x04851F31A71FcCF106302BABfAB533e599a06419',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0x30B2a6A15c8bCA072BA685A6FCAC427b8142c913',
+        },
+        addPaymentTokens: {
+          vaults: [
+            {
+              paymentTokens: [
+                {
+                  token: 'usdt',
+                  allowance: parseUnits('1000000000', 18),
+                },
+              ],
+              type: 'depositVault',
+            },
+            {
+              paymentTokens: [
+                {
+                  token: 'usdt',
+                  allowance: parseUnits('1000000000', 18),
+                },
+              ],
+              type: 'redemptionVault',
+            },
+          ],
+        },
+        setRoundData: {
+          data: parseUnits('1', 8),
+        },
+      },
+    },
     [chainIds.bsc]: {
       postDeploy: {
         axelarIts: {

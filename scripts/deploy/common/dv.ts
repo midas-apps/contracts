@@ -190,7 +190,8 @@ export const deployDepositVault = async (
       minInstantFee: networkConfig.minInstantFee ?? 0,
       maxInstantFee: networkConfig.maxInstantFee ?? 100_00,
       maxInstantShare: networkConfig.maxInstantShare ?? 100_00,
-      maxApproveRequestId: networkConfig.maxApproveRequestId ?? 100,
+      maxApproveRequestId:
+        networkConfig.maxApproveRequestId ?? constants.MaxUint256,
       sequentialRequestProcessing:
         networkConfig.sequentialRequestProcessing ?? false,
     },

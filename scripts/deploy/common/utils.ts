@@ -1,11 +1,18 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { DeployProxyOptions } from '@openzeppelin/hardhat-upgrades/dist/utils';
-import { ethers, constants, PopulatedTransaction, Signer } from 'ethers';
+import {
+  ethers,
+  BigNumber,
+  constants,
+  PopulatedTransaction,
+  Signer,
+} from 'ethers';
 import { EIP1193Provider, HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { DeploymentConfig } from './types';
 
 import { MTokenName } from '../../../config';
+import { getCurrentAddresses } from '../../../config/constants/addresses';
 import {
   etherscanVerify,
   logDeploy,
@@ -254,7 +261,7 @@ export const deployAndVerify = async (
   }
 
   logDeploy(contractName, 'Proxy', deployment.address);
-  await etherscanVerify(hre, deployment.address, ...params);
+  await etherscanVerify(hre, deployment.address, contractName, ...params);
 
   return deployment;
 };
@@ -320,7 +327,7 @@ export const getWalletAddressForAction = async (
   return await customSigner.getWalletAddress(action, mtoken, chainId);
 };
 
-export const sendAndWaitForCustomTxSign = async (
+const sendAndWaitForCustomTxSignDirect = async (
   hre: HardhatRuntimeEnvironment,
   populatedTx: PopulatedTransaction,
   txSignMetadata?: {
@@ -458,6 +465,122 @@ export const sendAndWaitForCustomTxSign = async (
   );
 
   return resToReturn;
+};
+
+/**
+ * Resolves whether `populatedTx` must go through the timelock for `proposer`.
+ * Uses the timelock manager preflight (`getTargetRole`), which only succeeds
+ * for functions guarded by a timelock-aware modifier, so any revert there means
+ * the call is not timelocked (or the proposer has no access) and is sent as is.
+ */
+const getTimelockRequirement = async (
+  hre: HardhatRuntimeEnvironment,
+  populatedTx: PopulatedTransaction,
+  proposer: string,
+) => {
+  const acAddress = getCurrentAddresses(hre)?.accessControl;
+  if (!acAddress) return undefined;
+
+  const ac = await hre.ethers.getContractAt('MidasAccessControl', acAddress);
+
+  // legacy access control has no timelock manager
+  const timelockManagerAddress = await ac
+    .timelockManager()
+    .catch(() => constants.AddressZero);
+  if (timelockManagerAddress === constants.AddressZero) return undefined;
+
+  const timelockManager = await hre.ethers.getContractAt(
+    'MidasTimelockManager',
+    timelockManagerAddress,
+  );
+
+  const targetRole = await timelockManager
+    .getTargetRole(populatedTx.to!, populatedTx.data!, proposer)
+    .catch(() => undefined);
+  if (!targetRole) return undefined;
+
+  const [role, overrideDelay] = targetRole;
+
+  const [delay] = await ac.getRoleTimelockDelay(role, overrideDelay);
+  if (delay === 0) return undefined;
+
+  return { timelockManager, role, delay };
+};
+
+/**
+ * Sends a tx via the custom signer. If the call requires a timelock for the
+ * sender, it is wrapped into `MidasTimelockManager.scheduleTimelockOperation`
+ */
+export const sendAndWaitForCustomTxSign = async (
+  ...args: Parameters<typeof sendAndWaitForCustomTxSignDirect>
+) => {
+  const [
+    hre,
+    populatedTx,
+    txSignMetadata,
+    safeMiddlewareWallet,
+    confirmations,
+  ] = args;
+
+  const safeCaller =
+    safeMiddlewareWallet &&
+    (await hre.ethers.provider.getCode(safeMiddlewareWallet)) !== '0x'
+      ? safeMiddlewareWallet
+      : undefined;
+
+  const proposer =
+    safeCaller ??
+    (await getWalletAddressForAction(
+      hre,
+      txSignMetadata?.action ?? '',
+      txSignMetadata?.mToken,
+    ));
+
+  const timelock = await getTimelockRequirement(hre, populatedTx, proposer);
+
+  if (!timelock) {
+    return sendAndWaitForCustomTxSignDirect(...args);
+  }
+
+  if (populatedTx.value && !BigNumber.from(populatedTx.value).isZero()) {
+    throw new Error('Timelocked operations do not support msg.value');
+  }
+
+  const { timelockManager, role, delay } = timelock;
+
+  const operationId = await timelockManager.getOperationId(
+    populatedTx.to!,
+    populatedTx.data!,
+  );
+
+  console.log(
+    `Tx to ${populatedTx.to} requires timelock (role: ${role}, delay: ${delay}s), scheduling via ${timelockManager.address}`,
+  );
+
+  const scheduleTx =
+    await timelockManager.populateTransaction.scheduleTimelockOperation({
+      target: populatedTx.to!,
+      data: populatedTx.data!,
+    });
+
+  const txId = await sendAndWaitForCustomTxSignDirect(
+    hre,
+    scheduleTx,
+    {
+      ...txSignMetadata,
+      comment: `[timelock schedule] ${txSignMetadata?.comment ?? ''}`,
+    },
+    safeMiddlewareWallet,
+    confirmations,
+  );
+
+  console.log(
+    `Timelock operation scheduled. Operation id: ${operationId}, tx id: ${
+      typeof txId === 'object' ? JSON.stringify(txId) : txId
+    }`,
+  );
+
+  return txId;
 };
 
 export const toFunctionSelector = (signature: string) => {

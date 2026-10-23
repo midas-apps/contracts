@@ -2146,6 +2146,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0x807f2CF75EC43b11De43a529A0Dd9FEF754a9801',
       redemptionVaultSwapper: '0x313C76eCd990B728681f29464978D5637Cb78164',
     },
+    dnTEST: {
+      token: '0xb850ad6Ef991a9E8e01e0D08616a6Ae6004f1742',
+      customFeed: '0x878260Cf16d01bD758FdAEf51148335125Fa7A65',
+      dataFeed: '0x4001176D488c5940Dd670884BA08Cf38CE59d659',
+      depositVault: '0xD16EEDB93F29543eF5757BF9DDaC127b814C2CBE',
+      redemptionVault: '0xb1F6842433E6a1c8EE233f3B68e49a0f3a10Cc79',
+    },
   },
   arbitrumSepolia: {
     paymentTokens: {
