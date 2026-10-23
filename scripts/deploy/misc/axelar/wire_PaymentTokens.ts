@@ -8,6 +8,7 @@ import {
   isTestnetNetwork,
   itsConfigPerPToken,
   Network,
+  PaymentTokenName,
 } from '../../../../config';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
 import {
@@ -21,7 +22,6 @@ import {
   getTokenId,
 } from '../../../../helpers/axelar/utils';
 import { getHreByNetworkName } from '../../../../helpers/hardhat';
-import { getPaymentTokenOrThrow } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
 import {
   getDeployer,
@@ -30,10 +30,11 @@ import {
 } from '../../common/utils';
 import { paymentTokenDeploymentConfigs } from '../../configs/payment-tokens';
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  pToken: PaymentTokenName,
+) => {
   const deployerHub = await getDeployer(hre);
-
-  const pToken = getPaymentTokenOrThrow(hre);
   const hubNetwork = hre.network.name as Network;
   const config = itsConfigPerPToken[hubNetwork]?.[pToken];
 

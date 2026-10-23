@@ -1,10 +1,8 @@
-import { Provider } from '@ethersproject/providers';
 import {
   BigNumber,
   BigNumberish,
   constants,
   PopulatedTransaction,
-  Signer,
 } from 'ethers';
 import { formatUnits, parseUnits } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
@@ -12,6 +10,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
   deployAndVerify,
   deployAndVerifyProxy,
+  getContractAt,
   getDeployer,
   getDeploymentGenericConfig,
   getDeploymentGenericConfigOptional,
@@ -24,6 +23,7 @@ import {
   DataFeedAddresses,
   DataFeedAddressesComposite,
   getCurrentAddresses,
+  TokenAddresses,
 } from '../../../config/constants/addresses';
 import {
   getCommonContractNames,
@@ -31,10 +31,17 @@ import {
 } from '../../../helpers/contracts';
 import { getAllRoles } from '../../../helpers/roles';
 import {
+  CompositeDataFeed,
   CustomAggregatorV3CompatibleFeed,
   CustomAggregatorV3CompatibleFeedGrowth,
   DataFeed,
+  IDataFeed,
 } from '../../../typechain-types';
+import {
+  getDeploymentProfileForToken,
+  getDeploymentTokenAddresses,
+  resolveDeploymentAddress,
+} from '../configs/deployment-profiles';
 import { paymentTokenDeploymentConfigs } from '../configs/payment-tokens';
 
 export type DeployDataFeedConfigCommon = {
@@ -80,6 +87,20 @@ export const isAnswerWithinExpectedRange = (
   return roundId.isZero() || (answer.gte(minAnswer) && answer.lte(maxAnswer));
 };
 
+const getExpectedAnswerUpdates = (
+  currentMin: BigNumber,
+  currentMax: BigNumber,
+  newMin: BigNumber,
+  newMax: BigNumber,
+) => {
+  const min = { bound: 'min' as const, value: newMin };
+  const max = { bound: 'max' as const, value: newMax };
+
+  return (newMax.gt(currentMin) ? [max, min] : [min, max]).filter(
+    ({ bound, value }) => !value.eq(bound === 'min' ? currentMin : currentMax),
+  );
+};
+
 type DeployCustomAggregatorCommonConfig = {
   /**
    * Default: 0.1
@@ -114,6 +135,23 @@ export type DeployCustomAggregatorConfig =
   | DeployCustomAggregatorRegularConfig
   | DeployCustomAggregatorGrowthConfig;
 
+export type FeedTarget = 'general' | 'dv' | 'rv';
+
+const customAggregatorConfigKeys = {
+  general: 'customAggregator',
+  dv: 'customAggregatorDv',
+  rv: 'customAggregatorRv',
+} as const;
+const roundDataConfigKeys = {
+  general: 'setRoundData',
+  dv: 'setRoundDataDv',
+  rv: 'setRoundDataRv',
+} as const;
+const customFeedAddressKeys = {
+  dv: 'customFeedDv',
+  rv: 'customFeedRv',
+} as const;
+
 type SetRoundDataConfigCommon = {
   data: BigNumberish;
 };
@@ -128,9 +166,72 @@ type SetRoundDataConfigRegular = SetRoundDataConfigCommon & {
   type?: 'REGULAR';
 };
 
-export type SetRoundDataConfig =
+type SetRoundDataFromProfileSourceConfig = {
+  type?: 'REGULAR';
+  dataSource: 'PROFILE_INITIAL_PRICE_SOURCE';
+};
+
+type SetRoundDataLiteralConfig =
   | SetRoundDataConfigGrowth
   | SetRoundDataConfigRegular;
+
+export type SetRoundDataConfig =
+  | SetRoundDataLiteralConfig
+  | SetRoundDataFromProfileSourceConfig;
+
+const isProfileInitialPriceSourceConfig = (
+  config: SetRoundDataConfig,
+): config is SetRoundDataFromProfileSourceConfig => 'dataSource' in config;
+
+const resolveMTokenAggregator = (
+  tokenAddresses: TokenAddresses,
+  token: MTokenName,
+  deploymentConfigName?: string,
+) => {
+  const profile = getDeploymentProfileForToken(token, deploymentConfigName);
+
+  return profile
+    ? resolveDeploymentAddress(
+        tokenAddresses,
+        token,
+        deploymentConfigName,
+        profile.feedReferences.dataFeedAggregator,
+      )
+    : tokenAddresses.customFeedAdjusted ??
+        tokenAddresses.customFeedGrowth ??
+        tokenAddresses.customFeed;
+};
+
+const getInitialPriceFromProfileSource = async (
+  hre: HardhatRuntimeEnvironment,
+  token: MTokenName,
+) => {
+  const profile = getDeploymentProfileForToken(token, hre.deploymentConfig);
+  const source = profile?.feedReferences.initialPriceSource;
+  const tokenAddresses = getCurrentAddresses(hre)?.[token];
+
+  if (!source || !tokenAddresses) {
+    throw new Error('Initial price source is not configured');
+  }
+
+  const sourceAddress = resolveDeploymentAddress(
+    tokenAddresses,
+    token,
+    hre.deploymentConfig,
+    source,
+  );
+  const sourceAggregator = await getContractAt(
+    hre,
+    'AggregatorV3Interface',
+    sourceAddress,
+  );
+  const answer = (await sourceAggregator.latestRoundData()).answer;
+
+  console.log(
+    `${token} initial price source ${sourceAddress}: ${formatUnits(answer, 8)}`,
+  );
+  return answer;
+};
 
 export const setRoundDataPaymentToken = async (
   hre: HardhatRuntimeEnvironment,
@@ -143,6 +244,12 @@ export const setRoundDataPaymentToken = async (
 
   if (!networkConfig) {
     throw new Error('Network config is not found');
+  }
+
+  if (isProfileInitialPriceSourceConfig(networkConfig)) {
+    throw new Error(
+      'Profile initial price source is supported only for mTokens',
+    );
   }
 
   const addresses = getCurrentAddresses(hre);
@@ -171,12 +278,11 @@ export const setRoundDataPaymentToken = async (
 export const setRoundDataMToken = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
+  feedTarget: FeedTarget = 'general',
 ) => {
-  const { setRoundData: networkConfig } = getNetworkConfig(
-    hre,
-    token,
-    'postDeploy',
-  );
+  const networkConfig = getNetworkConfig(hre, token, 'postDeploy')?.[
+    roundDataConfigKeys[feedTarget]
+  ];
 
   if (!networkConfig) {
     throw new Error('Network config is not found');
@@ -184,17 +290,26 @@ export const setRoundDataMToken = async (
 
   const addresses = getCurrentAddresses(hre);
   const tokenAddresses = addresses?.[token];
-  const customFeed =
-    tokenAddresses?.customFeedGrowth ?? tokenAddresses?.customFeed;
+  const customFeed = tokenAddresses
+    ? feedTarget === 'general'
+      ? resolveMTokenAggregator(tokenAddresses, token, hre.deploymentConfig)
+      : tokenAddresses[customFeedAddressKeys[feedTarget]]
+    : undefined;
 
   if (!customFeed) {
     throw new Error('Token config is not found or aggregator is not set');
   }
 
+  const literalConfig: SetRoundDataLiteralConfig =
+    isProfileInitialPriceSourceConfig(networkConfig)
+      ? { data: await getInitialPriceFromProfileSource(hre, token) }
+      : networkConfig;
+
   await setRoundData(hre, {
     isMToken: true,
     token,
-    networkConfig,
+    feedLabel: feedTarget === 'general' ? undefined : `${feedTarget} feed`,
+    networkConfig: literalConfig,
     aggregatorAddress: customFeed,
   });
 };
@@ -204,21 +319,24 @@ const setRoundData = async (
   {
     isMToken,
     token,
+    feedLabel,
     networkConfig,
     aggregatorAddress,
   }: {
     isMToken: boolean;
     token: string;
-    networkConfig: SetRoundDataConfig;
+    // tells dv/rv requests apart in logs and Fordefi notes
+    feedLabel?: string;
+    networkConfig: SetRoundDataLiteralConfig;
     aggregatorAddress: string;
   },
 ) => {
+  const name = feedLabel ? `${token} (${feedLabel})` : token;
   let tx: PopulatedTransaction;
   let log: string;
   if (networkConfig.type === 'GROWTH') {
     const aggregator = await getAggregatorGrowthContract(
       hre,
-      hre.ethers.provider,
       aggregatorAddress,
     );
 
@@ -230,32 +348,93 @@ const setRoundData = async (
       networkConfig.dataTimestamp ?? currentTimestamp - 1,
       networkConfig.apr,
     );
-    log = `${token} set price to ${formatUnits(
+    log = `${name} set price to ${formatUnits(
       networkConfig.data,
       8,
     )}/${formatUnits(networkConfig.apr, 8)}% at ${currentTimestamp}`;
   } else {
-    const aggregator = await getAggregatorContract(
-      hre,
-      hre.ethers.provider,
-      aggregatorAddress,
-    );
+    const aggregator = await getAggregatorContract(hre, aggregatorAddress);
 
     tx = await aggregator.populateTransaction.setRoundData(networkConfig.data);
-    log = `${token} set price to ${formatUnits(networkConfig.data, 8)}`;
+    log = `${name} set price to ${formatUnits(networkConfig.data, 8)}`;
   }
 
   const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
     action: isMToken ? 'update-feed-mtoken' : 'update-feed-ptoken',
     comment: log,
+    ...(isMToken ? { mToken: token as MTokenName } : {}),
   });
 
   console.log(log, txRes);
 };
 
+export type AggregatorType = 'numerator' | 'denominator';
+
+export type PaymentTokenExpectedAnswersTarget =
+  | {
+      kind: 'composite';
+      dataFeedAddress: string;
+      config: DeployDataFeedConfigComposite;
+    }
+  | {
+      kind: 'regular';
+      dataFeedAddress: string;
+      config: DeployDataFeedConfigRegular;
+    };
+
+export const getPaymentTokenExpectedAnswersTarget = (
+  tokenAddresses: DataFeedAddresses,
+  networkConfig: DeployDataFeedConfig,
+  aggregatorType?: AggregatorType,
+): PaymentTokenExpectedAnswersTarget => {
+  const isCompositeConfig = isCompositeDataFeedConfig(networkConfig);
+  const isCompositeAddress = isCompositeDataFeedAddresses(tokenAddresses);
+
+  if (isCompositeConfig !== isCompositeAddress) {
+    throw new Error('Data feed config and addresses have different types');
+  }
+
+  if (aggregatorType !== undefined) {
+    if (!isCompositeConfig || !isCompositeAddress) {
+      throw new Error('aggregatorType is only supported for composite feeds');
+    }
+
+    const subFeedAddress = tokenAddresses[aggregatorType]?.dataFeed;
+
+    if (!subFeedAddress) {
+      throw new Error(`${aggregatorType} data feed address is not set`);
+    }
+
+    return {
+      kind: 'regular',
+      dataFeedAddress: subFeedAddress,
+      config: networkConfig[aggregatorType],
+    };
+  }
+
+  if (!tokenAddresses.dataFeed) {
+    throw new Error('Data feed address is not set');
+  }
+
+  if (isCompositeConfig) {
+    return {
+      kind: 'composite',
+      dataFeedAddress: tokenAddresses.dataFeed,
+      config: networkConfig,
+    };
+  }
+
+  return {
+    kind: 'regular',
+    dataFeedAddress: tokenAddresses.dataFeed,
+    config: networkConfig as DeployDataFeedConfigRegular,
+  };
+};
+
 export const updateExpectedAnswersPaymentToken = async (
   hre: HardhatRuntimeEnvironment,
   token: PaymentTokenName,
+  aggregatorType?: AggregatorType,
 ) => {
   const networkConfig =
     paymentTokenDeploymentConfigs.networkConfigs[hre.network.config.chainId!]?.[
@@ -266,37 +445,54 @@ export const updateExpectedAnswersPaymentToken = async (
     throw new Error('Network config is not found');
   }
 
-  if (isCompositeDataFeedConfig(networkConfig)) {
-    throw new Error('Composite config is not supported');
-  }
-
   const addresses = getCurrentAddresses(hre);
   const tokenAddresses = addresses?.paymentTokens?.[token];
 
-  if (!tokenAddresses || isCompositeDataFeedAddresses(tokenAddresses)) {
-    throw new Error('Token config is not found or is composite');
+  if (!tokenAddresses) {
+    throw new Error('Token config is not found');
   }
 
-  if (!tokenAddresses.dataFeed) {
-    throw new Error('Data feed address is not set');
+  const target = getPaymentTokenExpectedAnswersTarget(
+    tokenAddresses,
+    networkConfig,
+    aggregatorType,
+  );
+
+  if (target.kind === 'composite') {
+    await updateCompositeExpectedAnswers(hre, {
+      token,
+      dataFeedAddress: target.dataFeedAddress,
+      networkConfig: target.config,
+    });
+    return;
   }
 
   await updateExpectedAnswers(hre, {
     isMToken: false,
-    token,
-    dataFeedAddress: tokenAddresses.dataFeed,
-    networkConfig,
+    token: aggregatorType ? `${token} ${aggregatorType}` : token,
+    dataFeedAddress: target.dataFeedAddress,
+    networkConfig: target.config,
   });
 };
 
-export const updateExpectedAnswersMToken = async (
-  hre: HardhatRuntimeEnvironment,
-  token: MTokenName,
-) => {
-  const dataFeedConfig = getDeploymentGenericConfig(hre, token, 'dataFeed');
+type MTokenDataFeedConfigs = Partial<
+  Record<'dataFeed' | 'dataFeedDv' | 'dataFeedRv', DeployDataFeedConfig>
+>;
 
-  const addresses = getCurrentAddresses(hre);
-  const tokenAddresses = addresses?.[token];
+export const getMTokenExpectedAnswersTargets = (
+  tokenAddresses: TokenAddresses | undefined,
+  configs: MTokenDataFeedConfigs,
+) => {
+  // dv/rv feeds fall back to the shared `dataFeed` config only when they have none of their own
+  const getConfig = (key: keyof MTokenDataFeedConfigs) => {
+    const config = configs[key] ?? configs.dataFeed;
+
+    if (!config) {
+      throw new Error('Deployment config is not found');
+    }
+
+    return config;
+  };
 
   const feeds: {
     dataFeedAddress: string;
@@ -307,29 +503,41 @@ export const updateExpectedAnswersMToken = async (
     if (tokenAddresses.dataFeedDv) {
       feeds.push({
         dataFeedAddress: tokenAddresses.dataFeedDv,
-        networkConfig:
-          getDeploymentGenericConfigOptional(token, 'dataFeedDv') ??
-          dataFeedConfig,
+        networkConfig: getConfig('dataFeedDv'),
       });
     }
     if (tokenAddresses.dataFeedRv) {
       feeds.push({
         dataFeedAddress: tokenAddresses.dataFeedRv,
-        networkConfig:
-          getDeploymentGenericConfigOptional(token, 'dataFeedRv') ??
-          dataFeedConfig,
+        networkConfig: getConfig('dataFeedRv'),
       });
     }
   } else if (tokenAddresses?.dataFeed) {
     feeds.push({
       dataFeedAddress: tokenAddresses.dataFeed,
-      networkConfig: dataFeedConfig,
+      networkConfig: getConfig('dataFeed'),
     });
   }
 
   if (!feeds.length) {
     throw new Error('Token config is not found or dataFeed is not set');
   }
+
+  return feeds;
+};
+
+export const updateExpectedAnswersMToken = async (
+  hre: HardhatRuntimeEnvironment,
+  token: MTokenName,
+) => {
+  const feeds = getMTokenExpectedAnswersTargets(
+    getCurrentAddresses(hre)?.[token],
+    {
+      dataFeed: getDeploymentGenericConfigOptional(hre, token, 'dataFeed'),
+      dataFeedDv: getDeploymentGenericConfigOptional(hre, token, 'dataFeedDv'),
+      dataFeedRv: getDeploymentGenericConfigOptional(hre, token, 'dataFeedRv'),
+    },
+  );
 
   for (const feed of feeds) {
     await updateExpectedAnswers(hre, {
@@ -363,11 +571,14 @@ const updateExpectedAnswers = async (
     );
   }
 
-  const dataFeed = (
-    await hre.ethers.getContractAt('DataFeed', dataFeedAddress)
-  ).connect(hre.ethers.provider) as DataFeed;
+  const dataFeed = (await getContractAt(
+    hre,
+    'DataFeed',
+    dataFeedAddress,
+  )) as DataFeed;
 
-  const aggregator = await hre.ethers.getContractAt(
+  const aggregator = await getContractAt(
+    hre,
     'AggregatorV3Interface',
     await dataFeed.aggregator(),
   );
@@ -415,9 +626,160 @@ const updateExpectedAnswers = async (
     )}`,
   );
 
-  if (newMin.eq(currentMin) && newMax.eq(currentMax)) {
-    console.log('min/max expected answers are already up to date, skipping');
-    return;
+  const action = isMToken ? 'update-feed-mtoken' : 'update-feed-ptoken';
+
+  await applyExpectedAnswerUpdates(hre, {
+    token,
+    dataFeed,
+    currentMin,
+    currentMax,
+    newMin,
+    newMax,
+    decimals: aggregatorDecimals,
+    action,
+  });
+};
+
+const updateCompositeExpectedAnswers = async (
+  hre: HardhatRuntimeEnvironment,
+  {
+    token,
+    dataFeedAddress,
+    networkConfig,
+  }: {
+    token: string;
+    dataFeedAddress: string;
+    networkConfig: DeployDataFeedConfigComposite;
+  },
+) => {
+  if (
+    networkConfig.minAnswer === undefined ||
+    networkConfig.maxAnswer === undefined
+  ) {
+    throw new Error(
+      'minAnswer and maxAnswer must be explicitly set in the config',
+    );
+  }
+
+  const dataFeed = (
+    await hre.ethers.getContractAt('CompositeDataFeed', dataFeedAddress)
+  ).connect(hre.ethers.provider) as CompositeDataFeed;
+
+  const currentMin = await dataFeed.minExpectedAnswer();
+  const currentMax = await dataFeed.maxExpectedAnswer();
+  const newMin = BigNumber.from(networkConfig.minAnswer);
+  const newMax = BigNumber.from(networkConfig.maxAnswer);
+
+  if (newMax.lt(newMin)) {
+    throw new Error(
+      `maxAnswer (${newMax.toString()}) must be greater than or equal to minAnswer (${newMin.toString()})`,
+    );
+  }
+
+  const numeratorFeed = (
+    await hre.ethers.getContractAt('IDataFeed', await dataFeed.numeratorFeed())
+  ).connect(hre.ethers.provider) as IDataFeed;
+  const denominatorFeed = (
+    await hre.ethers.getContractAt(
+      'IDataFeed',
+      await dataFeed.denominatorFeed(),
+    )
+  ).connect(hre.ethers.provider) as IDataFeed;
+  const numerator = await numeratorFeed.getDataInBase18();
+  const denominator = await denominatorFeed.getDataInBase18();
+
+  if (networkConfig.feedType === 'composite' && denominator.isZero()) {
+    throw new Error('Current denominator answer is zero');
+  }
+
+  const base18 = parseUnits('1');
+  const answer =
+    networkConfig.feedType === 'multiply'
+      ? numerator.mul(denominator).div(base18)
+      : numerator.mul(base18).div(denominator);
+
+  if (answer.lt(newMin) || answer.gt(newMax)) {
+    throw new Error(
+      `current composite answer ${formatUnits(
+        answer,
+        18,
+      )} is outside the new expected range [${formatUnits(
+        newMin,
+        18,
+      )}, ${formatUnits(newMax, 18)}]`,
+    );
+  }
+
+  console.log(`${token} composite dataFeed ${dataFeedAddress}`);
+  console.log(
+    `min: ${formatUnits(currentMin, 18)} -> ${formatUnits(
+      newMin,
+      18,
+    )}, max: ${formatUnits(currentMax, 18)} -> ${formatUnits(newMax, 18)}`,
+  );
+
+  await applyExpectedAnswerUpdates(hre, {
+    token,
+    dataFeed,
+    currentMin,
+    currentMax,
+    newMin,
+    newMax,
+    decimals: 18,
+    action: 'update-feed-ptoken',
+  });
+};
+
+const applyExpectedAnswerUpdates = async (
+  hre: HardhatRuntimeEnvironment,
+  {
+    token,
+    dataFeed,
+    currentMin,
+    currentMax,
+    newMin,
+    newMax,
+    decimals,
+    action,
+  }: {
+    token: string;
+    dataFeed: DataFeed | CompositeDataFeed;
+    currentMin: BigNumber;
+    currentMax: BigNumber;
+    newMin: BigNumber;
+    newMax: BigNumber;
+    decimals: number;
+    action: 'update-feed-mtoken' | 'update-feed-ptoken';
+  },
+) => {
+  const updates = getExpectedAnswerUpdates(
+    currentMin,
+    currentMax,
+    newMin,
+    newMax,
+  );
+
+  if (newMax.eq(currentMax)) {
+    console.log('maxExpectedAnswer is already up to date, skipping');
+  }
+  if (newMin.eq(currentMin)) {
+    console.log('minExpectedAnswer is already up to date, skipping');
+  }
+
+  for (const { bound, value } of updates) {
+    const tx =
+      bound === 'max'
+        ? await dataFeed.populateTransaction.setMaxExpectedAnswer(value)
+        : await dataFeed.populateTransaction.setMinExpectedAnswer(value);
+    const log = `${token} set ${bound}ExpectedAnswer to ${formatUnits(
+      value,
+      decimals,
+    )}`;
+    const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
+      action,
+      comment: log,
+    });
+    console.log(log, txRes);
   }
 
   const action = isMToken ? 'update-feed-mtoken' : 'update-feed-ptoken';
@@ -438,25 +800,24 @@ const updateExpectedAnswers = async (
 
 const getAggregatorContract = async (
   hre: HardhatRuntimeEnvironment,
-  provider: Provider | Signer,
   address: string,
 ) => {
-  return (
-    await hre.ethers.getContractAt('CustomAggregatorV3CompatibleFeed', address)
-  ).connect(provider) as CustomAggregatorV3CompatibleFeed;
+  return (await getContractAt(
+    hre,
+    'CustomAggregatorV3CompatibleFeed',
+    address,
+  )) as CustomAggregatorV3CompatibleFeed;
 };
 
 const getAggregatorGrowthContract = async (
   hre: HardhatRuntimeEnvironment,
-  provider: Provider | Signer,
   address: string,
 ) => {
-  return (
-    await hre.ethers.getContractAt(
-      'CustomAggregatorV3CompatibleFeedGrowth',
-      address,
-    )
-  ).connect(provider) as CustomAggregatorV3CompatibleFeedGrowth;
+  return (await getContractAt(
+    hre,
+    'CustomAggregatorV3CompatibleFeedGrowth',
+    address,
+  )) as CustomAggregatorV3CompatibleFeedGrowth;
 };
 
 const isCompositeDataFeedAddresses = (
@@ -591,12 +952,17 @@ export const deployMTokenDataFeed = async (
   token: MTokenName,
 ) => {
   const addresses = getCurrentAddresses(hre);
-  const tokenAddresses = addresses?.[token];
+  const tokenAddresses = addresses?.[token]
+    ? getDeploymentTokenAddresses(
+        addresses[token]!,
+        token,
+        hre.deploymentConfig,
+      )
+    : undefined;
 
-  const aggregator =
-    tokenAddresses?.customFeedAdjusted ??
-    tokenAddresses?.customFeedGrowth ??
-    tokenAddresses?.customFeed;
+  const aggregator = addresses?.[token]
+    ? resolveMTokenAggregator(addresses[token]!, token, hre.deploymentConfig)
+    : undefined;
 
   if (!aggregator) {
     throw new Error('Token config is not found or customFeed is not set');
@@ -663,8 +1029,8 @@ export const deployMTokenDataFeedDv = async (
   await deployTokenDataFeed(
     hre,
     tokenAddresses.customFeedDv,
-    roles.tokenRoles[token].customFeedAdmin!,
-    getDeploymentGenericConfig(hre, token, 'dataFeed'),
+    getDeploymentGenericConfigOptional(hre, token, 'dataFeedDv') ??
+      getDeploymentGenericConfig(hre, token, 'dataFeed'),
   );
 };
 
@@ -683,16 +1049,21 @@ export const deployMTokenDataFeedRv = async (
   await deployTokenDataFeed(
     hre,
     tokenAddresses.customFeedRv,
-    roles.tokenRoles[token].customFeedAdmin!,
-    getDeploymentGenericConfig(hre, token, 'dataFeed'),
+    getDeploymentGenericConfigOptional(hre, token, 'dataFeedRv') ??
+      getDeploymentGenericConfig(hre, token, 'dataFeed'),
   );
 };
 
 export const deployMTokenCustomAggregator = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
+  feedTarget: FeedTarget = 'general',
 ) => {
-  const config = getDeploymentGenericConfig(hre, token, 'customAggregator');
+  const config = getDeploymentGenericConfig(
+    hre,
+    token,
+    customAggregatorConfigKeys[feedTarget],
+  );
   const isGrowth = config.type === 'GROWTH';
 
   const customAggregatorContractName = isGrowth

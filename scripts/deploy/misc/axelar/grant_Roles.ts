@@ -1,14 +1,16 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { MTokenName } from '../../../../config';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
 import { getRolesForToken } from '../../../../helpers/roles';
-import { getMTokenOrThrow } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
 import { getDeployer, sendAndWaitForCustomTxSign } from '../../common/utils';
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+) => {
   const deployer = await getDeployer(hre);
-  const mToken = getMTokenOrThrow(hre);
 
   const addresses = getCurrentAddresses(hre);
   const mTokenAddresses = addresses?.[mToken];

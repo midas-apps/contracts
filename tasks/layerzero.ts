@@ -143,6 +143,11 @@ task('lz:oapp:wire:midas', 'Runs a user-defined script')
   .addOptionalParam('mtoken', 'MToken')
   .addOptionalParam('ptoken', 'Payment Token')
   .addOptionalParam('originalNetwork', 'Original Network')
+  .addFlag('dryRun', 'Will not execute any transactions')
+  .addFlag(
+    'assert',
+    'Will not execute transactions and fails if configuration is incomplete',
+  )
   .setAction(async (taskArgs, hre) => {
     const mtoken = taskArgs.mtoken;
     const ptoken = taskArgs.ptoken;
@@ -172,6 +177,8 @@ task('lz:oapp:wire:midas', 'Runs a user-defined script')
     await hre.run('lz:oapp:wire', {
       oappConfig: './config/misc/layerzero.config.ts',
       signAndSendSubtask: '::lz:sign-and-send:midas',
+      dryRun: taskArgs.dryRun,
+      assert: taskArgs.assert,
     });
   });
 

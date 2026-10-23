@@ -91,6 +91,8 @@ export type PostDeployConfig = {
   addPaymentTokens?: AddPaymentTokensConfig;
   grantRoles?: GrantAllTokenRolesConfig;
   setRoundData?: SetRoundDataConfig;
+  setRoundDataDv?: SetRoundDataConfig;
+  setRoundDataRv?: SetRoundDataConfig;
   addFeeWaived?: AddFeeWaivedConfig;
   greenlist?: GreenlistConfig;
   pauseFunctions?: PauseFunctionsConfig;
@@ -103,6 +105,8 @@ export type PostDeployConfig = {
 export type DeploymentConfig = {
   genericConfigs: {
     customAggregator?: DeployCustomAggregatorConfig;
+    customAggregatorDv?: DeployCustomAggregatorConfig;
+    customAggregatorRv?: DeployCustomAggregatorConfig;
     customAggregatorAdjusted?: DeployCustomAggregatorAdjustedConfig;
     customAggregatorAdjustedDv?: DeployCustomAggregatorAdjustedConfig;
     customAggregatorAdjustedRv?: DeployCustomAggregatorAdjustedConfig;
@@ -167,4 +171,8 @@ export type NetworkDeploymentConfig = Record<
   }
 >;
 
-export type DeployFunction = (hre: HardhatRuntimeEnvironment) => Promise<void>;
+export type DeployFunction = (
+  hre: HardhatRuntimeEnvironment,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ...params: any[]
+) => Promise<void>;

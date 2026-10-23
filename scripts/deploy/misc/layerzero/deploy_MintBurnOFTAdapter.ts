@@ -1,23 +1,24 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { layerZeroEids, Network } from '../../../../config';
+import { layerZeroEids, MTokenName, Network } from '../../../../config';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
-import { lzConfigsPerMToken } from '../../../../config/misc';
 import {
-  etherscanVerify,
-  getOriginalNetwork,
-  getMTokenOrThrow,
-  logDeploy,
-} from '../../../../helpers/utils';
+  getRateLimitNetworks,
+  lzConfigsPerMToken,
+} from '../../../../config/misc';
+import { etherscanVerify, logDeploy } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
 import { getDeployer, getNetworkConfig } from '../../common/utils';
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+  originalNetwork?: Network,
+) => {
   const deployer = await getDeployer(hre);
-  const mToken = getMTokenOrThrow(hre);
 
-  const originalNetwork =
-    getOriginalNetwork(hre) ?? (hre.network.name as Network);
+  const resolvedOriginalNetwork =
+    originalNetwork ?? (hre.network.name as Network);
 
   const addresses = getCurrentAddresses(hre);
 
@@ -43,15 +44,19 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const rateLimitConfigDefault = config.layerZero.rateLimitConfig?.default;
   const rateLimitConfigOverrides = config.layerZero.rateLimitConfig?.overrides;
 
-  const allReceiverNetworks =
-    lzConfigsPerMToken?.[originalNetwork]?.[mToken]?.linkedNetworks;
+  const lzConfig = lzConfigsPerMToken?.[resolvedOriginalNetwork]?.[mToken];
 
-  if (!allReceiverNetworks || allReceiverNetworks.length === 0) {
-    throw new Error('Receiver networks not found');
+  if (!lzConfig) {
+    throw new Error(
+      'LayerZero config not found or `--original-network` is not correct',
+    );
   }
 
-  const networksToRateLimit = [...allReceiverNetworks, originalNetwork].filter(
-    (network) => network !== hre.network.name,
+  const networksToRateLimit = getRateLimitNetworks(
+    hre.network.name as Network,
+    resolvedOriginalNetwork,
+    lzConfig.linkedNetworks,
+    lzConfig.pathways,
   );
 
   const rateLimitConfigs = networksToRateLimit.map((network) => {

@@ -8,8 +8,13 @@ import {
 import { MTokenName } from '../../config';
 import { DeployFunction } from '../deploy/common/types';
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const mTokens = resolveAggregatorTimelapsedMTokenRunList(hre);
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken?: MTokenName,
+  action?: string,
+  _skipValidation?: boolean,
+) => {
+  const mTokens = resolveAggregatorTimelapsedMTokenRunList(hre, mToken, action);
   const failures: { mToken: MTokenName; error: string }[] = [];
   let upgraded = 0;
   let skipped = 0;
@@ -20,10 +25,10 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     } mToken(s): ${mTokens.join(', ')}`,
   );
 
-  for (const mToken of mTokens) {
-    hre.mtoken = mToken;
+  for (const token of mTokens) {
+    hre.mtoken = token;
     try {
-      const outcome = await executeAggregatorTimelapsedForMToken(hre, mToken);
+      const outcome = await executeAggregatorTimelapsedForMToken(hre, token);
       if (outcome === 'skipped') {
         skipped++;
       } else {
@@ -32,7 +37,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     } catch (e) {
       console.error(`Upgrade failed with error ${e}`);
       failures.push({
-        mToken,
+        mToken: token,
         error: e instanceof Error ? e.message : String(e),
       });
     }
@@ -51,9 +56,3 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 };
 
 export default func;
-
-// Single product:
-// yarn hardhat runscript scripts/upgrades/executeUpgrade_AggregatorTimelapsed.ts --network <NETWORK> --mtoken <MTOKEN>
-//
-// Batch (targets in scripts/upgrades/configs/aggregator-timelapsed-config.ts):
-// yarn hardhat runscript scripts/upgrades/executeUpgrade_AggregatorTimelapsed.ts --network <NETWORK> --action <UPGRADE_ID>

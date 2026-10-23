@@ -174,6 +174,13 @@ export const getShouldUseTokenPermissionedFromUser = async () => {
   }).then(requireNotCancelled);
 };
 
+export const getShouldUseTokenMinBalanceFromUser = async () => {
+  return confirm({
+    message: 'Should use min-balance mToken variant?',
+    initialValue: false,
+  }).then(requireNotCancelled);
+};
+
 /**
  * Optionally reuse an existing product's greenlist role instead of minting a
  * token-specific one (e.g. mGLO reuses mGLOBAL's M_GLOBAL_GREENLISTED_ROLE).

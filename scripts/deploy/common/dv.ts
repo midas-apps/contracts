@@ -57,6 +57,9 @@ type DeployVaultConfigCommon = {
 };
 
 type DeployDvConfigCommonNew = DeployVaultConfigCommon & {
+  /** Require the shared feed instead of falling back to a legacy DV feed. */
+  mTokenDataFeed?: 'dataFeed';
+
   minMTokenAmountForFirstDeposit?: BigNumberish;
   /**
    * @deprecated Cap now lives on mToken. Kept optional for config compatibility;

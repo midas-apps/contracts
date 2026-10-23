@@ -1,18 +1,17 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { PaymentTokenName } from '../../../../config';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
-import {
-  etherscanVerify,
-  getPaymentTokenOrThrow,
-  logDeploy,
-} from '../../../../helpers/utils';
+import { etherscanVerify, logDeploy } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
 import { getDeployer } from '../../common/utils';
 import { paymentTokenDeploymentConfigs } from '../../configs/payment-tokens';
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  paymentToken: PaymentTokenName,
+) => {
   const deployer = await getDeployer(hre);
-  const paymentToken = getPaymentTokenOrThrow(hre);
 
   const addresses = getCurrentAddresses(hre);
 

@@ -17,6 +17,11 @@ import {
   RedemptionVault,
   RedemptionVaultWithMToken,
 } from '../../../typechain-types';
+import {
+  getDeploymentProfileForToken,
+  getDeploymentTokenAddresses,
+  resolveDeploymentAddress,
+} from '../configs/deployment-profiles';
 
 export type DeployRvConfigCommonLegacy = {
   version?: 'v1';
@@ -68,6 +73,7 @@ type SwapperVault =
 
 type DeployRvConfigCommonNew = DeployVaultConfigCommon & {
   requestRedeemer?: string;
+  mTokenDataFeed?: 'dataFeed';
   loanConfig?: {
     loanLp?: string;
     loanRepaymentAddress?: string;
@@ -146,6 +152,23 @@ const resolveLoanAddresses = async (
   };
 };
 
+const resolveRedemptionVaultDataFeed = (
+  tokenAddresses: TokenAddresses,
+  token: MTokenName,
+  deploymentConfigName?: string,
+) => {
+  const profile = getDeploymentProfileForToken(token, deploymentConfigName);
+
+  return profile
+    ? resolveDeploymentAddress(
+        tokenAddresses,
+        token,
+        deploymentConfigName,
+        profile.feedReferences.redemptionDataFeed,
+      )
+    : tokenAddresses.dataFeedRv ?? tokenAddresses.dataFeed;
+};
+
 export const deployRedemptionVault = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
@@ -156,8 +179,15 @@ export const deployRedemptionVault = async (
   }
 
   const addresses = getCurrentAddresses(hre);
-  const deployer = await getDeployer(hre);
-  const tokenAddresses = addresses?.[token];
+  const defaultTokenAddresses = addresses?.[token];
+  const profile = getDeploymentProfileForToken(token, hre.deploymentConfig);
+  const tokenAddresses = defaultTokenAddresses
+    ? getDeploymentTokenAddresses(
+        defaultTokenAddresses,
+        token,
+        hre.deploymentConfig,
+      )
+    : undefined;
 
   const networkConfig = getNetworkConfig(hre, token, type);
 
@@ -174,6 +204,24 @@ export const deployRedemptionVault = async (
   }
 
   const allRoles = getAllRoles();
+  if (profile) {
+    for (const [field, value] of [
+      // TODO: should fix?
+      ['tokensReceiver', networkConfig.tokensReceiver],
+      ['requestRedeemer', networkConfig.requestRedeemer],
+      ['minAmount', networkConfig.minAmount],
+      ['enableSanctionsList', networkConfig.enableSanctionsList],
+    ] as const) {
+      if (value === undefined) {
+        throw new Error(`Named redemption vault config requires ${field}`);
+      }
+    }
+    if (networkConfig.loanConfig === undefined) {
+      throw new Error('Named redemption vault config requires loan config');
+    }
+  }
+
+  const deployer = await getDeployer(hre);
 
   const extraParams: unknown[] = [];
 
@@ -181,7 +229,11 @@ export const deployRedemptionVault = async (
     extraParams.push(networkConfig.redemptionVault);
   }
 
-  const dataFeed = tokenAddresses?.dataFeedRv ?? tokenAddresses?.dataFeed;
+  const dataFeed = resolveRedemptionVaultDataFeed(
+    defaultTokenAddresses!,
+    token,
+    hre.deploymentConfig,
+  );
 
   const sanctionsList = networkConfig.enableSanctionsList
     ? sanctionListContracts[hre.network.config.chainId!]

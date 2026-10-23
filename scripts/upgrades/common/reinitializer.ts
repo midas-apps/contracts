@@ -119,6 +119,44 @@ export interface StorageSlotRef {
   offset: number;
 }
 
+/**
+ * Encode a storage position as JSON-RPC QUANTITY (no leading zeros).
+ * ethers' getStorageAt pads to 32 bytes (`0x000…0`), which strict Go RPCs
+ * (ZeroG, some Blockscout backends) reject with:
+ *   cannot unmarshal hex number with leading zero digits
+ */
+export function toRpcStoragePosition(slot: number | string): string {
+  const hex =
+    typeof slot === 'string' && slot.startsWith('0x')
+      ? slot.toLowerCase()
+      : ethers.BigNumber.from(slot).toHexString();
+  const body = hex.replace(/^0x/i, '').replace(/^0+/, '');
+  return body.length === 0 ? '0x0' : `0x${body}`;
+}
+
+export async function getStorageAtCompat(
+  provider: ethers.providers.Provider,
+  address: string,
+  slot: number | string,
+): Promise<string> {
+  const position = toRpcStoragePosition(slot);
+  const checksummed = ethers.utils.getAddress(address);
+  const send = (provider as ethers.providers.JsonRpcProvider).send;
+  if (typeof send === 'function') {
+    const result: string = await send.call(provider, 'eth_getStorageAt', [
+      checksummed,
+      position,
+      'latest',
+    ]);
+    return ethers.utils.hexZeroPad(result, 32);
+  }
+  // Test stubs / providers without JSON-RPC `send`.
+  return ethers.utils.hexZeroPad(
+    await provider.getStorageAt(checksummed, position),
+    32,
+  );
+}
+
 export function initializedSlotFromManifest(
   manifest: any,
   impl: string,
@@ -141,10 +179,7 @@ export async function readInitializedVersion(
   address: string,
   ref: StorageSlotRef,
 ): Promise<number> {
-  const raw = ethers.utils.hexZeroPad(
-    await provider.getStorageAt(address, ref.slot),
-    32,
-  );
+  const raw = await getStorageAtCompat(provider, address, ref.slot);
   const start = 2 + (31 - ref.offset) * 2;
   return parseInt(raw.slice(start, start + 2), 16);
 }

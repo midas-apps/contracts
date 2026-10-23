@@ -10,6 +10,7 @@ import {
   axelarChainNames,
   isTestnetNetwork,
   itsConfigPerMToken,
+  MTokenName,
   Network,
 } from '../../../../config';
 import { getCurrentAddresses } from '../../../../config/constants/addresses';
@@ -25,7 +26,7 @@ import {
   getTokenId,
 } from '../../../../helpers/axelar/utils';
 import { getHreByNetworkName } from '../../../../helpers/hardhat';
-import { getMTokenOrThrow, logDeploy } from '../../../../helpers/utils';
+import { logDeploy } from '../../../../helpers/utils';
 import { DeployFunction } from '../../common/types';
 import {
   getDeployer,
@@ -36,10 +37,13 @@ import {
 
 const TOKEN_MANAGER_MINT_BURN = 4;
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+  action?: string,
+) => {
   const deployerHub = await getDeployer(hre);
 
-  const mToken = getMTokenOrThrow(hre);
   const hubNetwork = hre.network.name as Network;
   const config = itsConfigPerMToken[hubNetwork]?.[mToken];
 
@@ -82,7 +86,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const defaultGas = 300_000;
 
-  const salt = calculateSalt(mToken, hre.action);
+  const salt = calculateSalt(mToken, action);
 
   const linkedDeploySalt = await calculateDeploySalt(
     hre,

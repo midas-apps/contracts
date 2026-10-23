@@ -4,11 +4,16 @@ import { bondETHDeploymentConfig } from './bondETH';
 import { bondUSDDeploymentConfig } from './bondUSD';
 import { carryTradeUSDTRYLeverageDeploymentConfig } from './carryTradeUSDTRYLeverage';
 import { cUSDODeploymentConfig } from './cUSDO';
+import {
+  deploymentConfigNames,
+  isNamedDeploymentConfigName,
+} from './deployment-profiles';
 import { dnETHDeploymentConfig } from './dnETH';
 import { dnFARTDeploymentConfig } from './dnFART';
 import { dnHYPEDeploymentConfig } from './dnHYPE';
 import { dnPUMPDeploymentConfig } from './dnPUMP';
 import { dnTESTDeploymentConfig } from './dnTEST';
+import { dvUSDDeploymentConfig } from './dvUSD';
 import { hbUSDCDeploymentConfig } from './hbUSDC';
 import { hbUSDTDeploymentConfig } from './hbUSDT';
 import { hbXAUtDeploymentConfig } from './hbXAUt';
@@ -24,7 +29,11 @@ import { liquidHYPEDeploymentConfig } from './liquidHYPE';
 import { liquidRESERVEDeploymentConfig } from './liquidRESERVE';
 import { liquidRWADeploymentConfig } from './liquidRWA';
 import { lstHYPEDeploymentConfig } from './lstHYPE';
+import { mALPHADeploymentConfig } from './mALPHA';
 import { mAPOLLODeploymentConfig } from './mAPOLLO';
+import { mArbDeploymentConfig } from './mArb';
+import { mArbBTCDeploymentConfig } from './mArbBTC';
+import { mArbETHDeploymentConfig } from './mArbETH';
 import { mBASISDeploymentConfig } from './mBASIS';
 import { mBTCDeploymentConfig } from './mBTC';
 import { mEDGEDeploymentConfig } from './mEDGE';
@@ -32,9 +41,18 @@ import { mevBTCDeploymentConfig } from './mevBTC';
 import { mEVETHDeploymentConfig } from './mEVETH';
 import { mEVUSDDeploymentConfig } from './mEVUSD';
 import { mFARMDeploymentConfig } from './mFARM';
-import { mFONEDeploymentConfig } from './mFONE';
-import { mGLODeploymentConfig } from './mGLO';
-import { mGLOBALDeploymentConfig } from './mGLOBAL';
+import { mFONEDeploymentConfig, mFONEUnloopDeploymentConfig } from './mFONE';
+import { mFTACDeploymentConfig } from './mFTAC';
+import {
+  mGLODeploymentConfig,
+  mGLODialecticDeploymentConfig,
+  mGLO3FDeploymentConfig,
+} from './mGLO';
+import {
+  mGLOBALDeploymentConfig,
+  mGLOBALDialecticDeploymentConfig,
+} from './mGLOBAL';
+import { mGLOeuroDeploymentConfig } from './mGLOeuro';
 import { mHYPERDeploymentConfig } from './mHYPER';
 import { mHyperBTCDeploymentConfig } from './mHyperBTC';
 import { mHyperETHDeploymentConfig } from './mHyperETH';
@@ -43,6 +61,8 @@ import { mLIQUIDITYDeploymentConfig } from './mLIQUIDITY';
 import { mM1BTCDeploymentConfig } from './mM1BTC';
 import { mM1USDDeploymentConfig } from './mM1USD';
 import { mMEVDeploymentConfig } from './mMEV';
+import { moriniBTCYieldDeploymentConfig } from './moriniBTCYield';
+import { moriniGoldYieldDeploymentConfig } from './moriniGoldYield';
 import { mPortofinoDeploymentConfig } from './mPortofino';
 import { mRE7DeploymentConfig } from './mRE7';
 import { mRE7BTCDeploymentConfig } from './mRE7BTC';
@@ -56,11 +76,16 @@ import { mTBILLDeploymentConfig } from './mTBILL';
 import { mTESTDeploymentConfig } from './mTEST';
 import { mTUDeploymentConfig } from './mTU';
 import { mWildUSDDeploymentConfig } from './mWildUSD';
-import { mWINDeploymentConfig } from './mWIN';
+import { mWINDeploymentConfig, mWINDialecticDeploymentConfig } from './mWIN';
 import { mXRPDeploymentConfig } from './mXRP';
 import { obeatUSDDeploymentConfig } from './obeatUSD';
 import { plUSDDeploymentConfig } from './plUSD';
 import { qHVNUSDDeploymentConfig } from './qHVNUSD';
+import { radUSDDeploymentConfig } from './radUSD';
+import { radYCDeploymentConfig } from './radYC';
+import { Re7BTCDeploymentConfig } from './Re7BTC';
+import { Re7ETHDeploymentConfig } from './Re7ETH';
+import { Re7YIELDDeploymentConfig } from './Re7YIELD';
 import { sGoldDeploymentConfig } from './sGold';
 import { sLINJDeploymentConfig } from './sLINJ';
 import { splUSDDeploymentConfig } from './splUSD';
@@ -165,4 +190,90 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   sGold: sGoldDeploymentConfig,
   turtlePST: turtlePSTDeploymentConfig,
   mM1BTC: mM1BTCDeploymentConfig,
+  mGLOeuro: mGLOeuroDeploymentConfig,
+  mALPHA: mALPHADeploymentConfig,
+  Re7YIELD: Re7YIELDDeploymentConfig,
+  Re7BTC: Re7BTCDeploymentConfig,
+  Re7ETH: Re7ETHDeploymentConfig,
+  mArb: mArbDeploymentConfig,
+  mArbETH: mArbETHDeploymentConfig,
+  mArbBTC: mArbBTCDeploymentConfig,
+  mFTAC: mFTACDeploymentConfig,
+  moriniGoldYield: moriniGoldYieldDeploymentConfig,
+  moriniBTCYield: moriniBTCYieldDeploymentConfig,
+  radUSD: radUSDDeploymentConfig,
+  radYC: radYCDeploymentConfig,
+  dvUSD: dvUSDDeploymentConfig,
+};
+
+type NamedDeploymentConfig = {
+  configsPerToken: Partial<Record<MTokenName, DeploymentConfig>>;
+};
+
+const namedDeploymentConfigs: Record<
+  (typeof deploymentConfigNames)[number],
+  NamedDeploymentConfig
+> = {
+  'mfone-unloop': {
+    configsPerToken: {
+      mFONE: mFONEUnloopDeploymentConfig,
+    },
+  },
+  'mglobal-dialectic': {
+    configsPerToken: {
+      mGLOBAL: mGLOBALDialecticDeploymentConfig,
+    },
+  },
+  'mwin-dialectic': {
+    configsPerToken: {
+      mWIN: mWINDialecticDeploymentConfig,
+    },
+  },
+  'mglo-dialectic': {
+    configsPerToken: {
+      mGLO: mGLODialecticDeploymentConfig,
+    },
+  },
+  'mglo-3f': {
+    configsPerToken: {
+      mGLO: mGLO3FDeploymentConfig,
+    },
+  },
+};
+
+const getNamedDeploymentConfig = (deploymentConfigName?: string) => {
+  if (!deploymentConfigName || deploymentConfigName === 'default') {
+    return undefined;
+  }
+
+  if (!isNamedDeploymentConfigName(deploymentConfigName)) {
+    throw new Error(
+      `Unknown deployment config "${deploymentConfigName}". Available configs: default, ${deploymentConfigNames.join(
+        ', ',
+      )}`,
+    );
+  }
+
+  return namedDeploymentConfigs[deploymentConfigName];
+};
+
+export const getDeploymentConfigForToken = (
+  token: MTokenName,
+  deploymentConfigName?: string,
+): DeploymentConfig => {
+  const namedDeploymentConfig = getNamedDeploymentConfig(deploymentConfigName);
+
+  if (!namedDeploymentConfig) {
+    return configsPerToken[token];
+  }
+
+  const config = namedDeploymentConfig.configsPerToken[token];
+
+  if (!config) {
+    throw new Error(
+      `Deployment config "${deploymentConfigName}" is not available for ${token}`,
+    );
+  }
+
+  return config;
 };

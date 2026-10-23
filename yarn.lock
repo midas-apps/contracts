@@ -1915,7 +1915,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@layerzerolabs/evm-sdks-core@npm:^3.0.168":
+"@layerzerolabs/evm-sdks-core@npm:3.0.168, @layerzerolabs/evm-sdks-core@npm:^3.0.168":
   version: 3.0.168
   resolution: "@layerzerolabs/evm-sdks-core@npm:3.0.168"
   dependencies:
@@ -1967,11 +1967,11 @@ __metadata:
   linkType: hard
 
 "@layerzerolabs/lz-definitions@npm:^3.0.75":
-  version: 3.0.168
-  resolution: "@layerzerolabs/lz-definitions@npm:3.0.168"
+  version: 3.1.4
+  resolution: "@layerzerolabs/lz-definitions@npm:3.1.4"
   dependencies:
     tiny-invariant: "npm:^1.3.1"
-  checksum: 10c0/b4636100cac59ecc7964702fbf0b7ad581561fe6815e15f47a87ba913335428660b3fd1f9a8a624ce6bc0974092202329aa57fcca328fd153fd78bb0ce3c638a
+  checksum: 10c0/e60efabca8dc259492bd30daf79327f19fc59510e61298a1a71e53ecde3b1101ce2ec2dd2614393d8adfcc85e9de2b0552e97668ceceba6bd64df508eb353df2
   languageName: node
   linkType: hard
 
@@ -2021,12 +2021,12 @@ __metadata:
   linkType: hard
 
 "@layerzerolabs/lz-evm-sdk-v2@npm:^3.0.75":
-  version: 3.0.168
-  resolution: "@layerzerolabs/lz-evm-sdk-v2@npm:3.0.168"
+  version: 3.1.4
+  resolution: "@layerzerolabs/lz-evm-sdk-v2@npm:3.1.4"
   dependencies:
-    "@layerzerolabs/evm-sdks-core": "npm:^3.0.168"
+    "@layerzerolabs/evm-sdks-core": "npm:3.0.168"
     ethers: "npm:^5.8.0"
-  checksum: 10c0/c2c51655757828cdaa0a8cb8b8add60656c15175ec0318dd096b8fc053986af126efecff9f17b04b7eb21be4e7f916eec68a1fa0481c859395656cad0780ab43
+  checksum: 10c0/81de77254c1e23a8967763315bedd3fc1e87e8e03c27a7e30ccae1a1db6af90cedcba6e8daba533c9e8664cb20c9c9bc75a4ca721be8b6b7352e4b13123a024d
   languageName: node
   linkType: hard
 

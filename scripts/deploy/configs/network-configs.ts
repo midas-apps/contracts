@@ -3,11 +3,29 @@ import { DAY } from '../../../helpers/utils';
 import { NetworkDeploymentConfig } from '../common/types';
 
 export const networkDeploymentConfigs: NetworkDeploymentConfig = {
+  [chainIds.arc]: {
+    grantDefaultAdminRole: {
+      acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
+    },
+    timelock: {
+      minDelay: 2 * DAY,
+      proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+    },
+  },
   [chainIds.sepolia]: {
     grantDefaultAdminRole: {},
     timelock: {
       minDelay: 100,
       proposer: '0x8bcc2DA99a25aE3582E50Aa0680C96D1610b8D73',
+    },
+  },
+  [chainIds.arbitrumSepolia]: {
+    grantDefaultAdminRole: {
+      acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
+    },
+    timelock: {
+      minDelay: 100,
+      proposer: '0xe01cEd89A75df52C75F43Ba23199C843fC9E9eae',
     },
   },
   [chainIds.katana]: {
@@ -17,6 +35,15 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
     },
   },
   [chainIds.base]: {
+    timelock: {
+      minDelay: 2 * DAY,
+      proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+    },
+  },
+  [chainIds.avalanche]: {
+    grantDefaultAdminRole: {
+      acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
+    },
     timelock: {
       minDelay: 2 * DAY,
       proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',

@@ -1,15 +1,20 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { MTokenName } from '../../../config';
 import {
   getCurrentAddresses,
   LayerZeroTokenAddresses,
   TokenAddresses,
 } from '../../../config/constants/addresses';
-import { getMTokenOrThrow } from '../../../helpers/utils';
 import { DeployFunction } from '../common/types';
+import {
+  getDeploymentAddressBookEntryConfig,
+  getDeploymentAddressBookTokenAddresses,
+  getDeploymentProfileForToken,
+} from '../configs/deployment-profiles';
 
 type AddressBookEntryConfig = {
-  contractName: string | ((mToken: string) => string);
+  contractName: string | ((mToken: string, network: string) => string);
   contractTag?: string;
   extractAddress?: (value: unknown) => string | undefined;
 };
@@ -44,14 +49,21 @@ const ADDRESS_BOOK_MAPPING: Partial<
   redemptionVaultMorpho: { contractName: 'Redemption Vault (Morpho)' },
 
   layerZero: {
-    contractName: 'OFT Adapter',
+    contractName: (mToken, network) =>
+      `${mToken} OFT Adapter - ${
+        network === 'main'
+          ? 'Ethereum'
+          : network.charAt(0).toUpperCase() + network.slice(1)
+      }`,
     extractAddress: (v) => (v as LayerZeroTokenAddresses)?.oft,
   },
 };
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const mToken = getMTokenOrThrow(hre);
-
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+  keys?: string[],
+) => {
   const addresses = getCurrentAddresses(hre);
 
   if (!addresses) {
@@ -64,9 +76,17 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error('Token addresses not found');
   }
 
-  const allowedKeys = hre.addressBookKeys;
+  const addressBookTokenAddresses = getDeploymentAddressBookTokenAddresses(
+    tokenAddresses,
+    mToken,
+    hre.deploymentConfig,
+  );
 
-  for (const [key, value] of Object.entries(tokenAddresses)) {
+  const allowedKeys = getDeploymentProfileForToken(mToken, hre.deploymentConfig)
+    ? undefined
+    : hre.addressBookKeys;
+
+  for (const [key, value] of Object.entries(addressBookTokenAddresses)) {
     if (!value) {
       continue;
     }
@@ -75,7 +95,13 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       continue;
     }
 
-    const config = ADDRESS_BOOK_MAPPING[key as keyof TokenAddresses];
+    const addressKey = key as keyof TokenAddresses;
+    const config =
+      getDeploymentAddressBookEntryConfig(
+        mToken,
+        addressKey,
+        hre.deploymentConfig,
+      ) ?? ADDRESS_BOOK_MAPPING[addressKey];
 
     if (!config) {
       continue;
@@ -93,7 +119,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     const contractName =
       typeof config.contractName === 'function'
-        ? config.contractName(mToken)
+        ? config.contractName(mToken, hre.network.name)
         : config.contractName;
 
     const customSigner = await hre.getCustomSigner();
