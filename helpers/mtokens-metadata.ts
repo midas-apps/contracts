@@ -395,4 +395,8 @@ export const mTokensMetadata: Record<
     name: 'Drivvy USD Vault',
     symbol: 'dvUSD',
   },
+  sdvUSD: {
+    name: 'Staked Drivvy USD Vault',
+    symbol: 'sdvUSD',
+  },
 };

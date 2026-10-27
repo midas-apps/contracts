@@ -86,6 +86,7 @@ import { radYCDeploymentConfig } from './radYC';
 import { Re7BTCDeploymentConfig } from './Re7BTC';
 import { Re7ETHDeploymentConfig } from './Re7ETH';
 import { Re7YIELDDeploymentConfig } from './Re7YIELD';
+import { sdvUSDDeploymentConfig } from './sdvUSD';
 import { sGoldDeploymentConfig } from './sGold';
 import { sLINJDeploymentConfig } from './sLINJ';
 import { splUSDDeploymentConfig } from './splUSD';
@@ -204,6 +205,7 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   radUSD: radUSDDeploymentConfig,
   radYC: radYCDeploymentConfig,
   dvUSD: dvUSDDeploymentConfig,
+  sdvUSD: sdvUSDDeploymentConfig,
 };
 
 type NamedDeploymentConfig = {
