@@ -608,7 +608,7 @@ export const setFeedAggregatorsMToken = async (
   }
 };
 
-export const updateExpectedAnswers = async (
+const updateExpectedAnswers = async (
   hre: HardhatRuntimeEnvironment,
   {
     isMToken,

@@ -36,8 +36,8 @@ contract MGloEuroCustomAggregatorFeed is
             _maxAnswerDeviation,
             _description
         );
-        // call v2 to increase contract version to 2
-        initializeV2(_minAnswer, _maxAnswer);
+        // call v3 to increase contract version to 3
+        initializeV3(_minAnswer, _maxAnswer);
     }
 
     /**
@@ -45,9 +45,9 @@ contract MGloEuroCustomAggregatorFeed is
      * @param _newMinAnswer new min answer
      * @param _newMaxAnswer new max answer
      */
-    function initializeV2(int192 _newMinAnswer, int192 _newMaxAnswer)
+    function initializeV3(int192 _newMinAnswer, int192 _newMaxAnswer)
         public
-        reinitializer(2)
+        reinitializer(3)
     {
         require(_newMinAnswer < _newMaxAnswer, "CA: !min/max");
 

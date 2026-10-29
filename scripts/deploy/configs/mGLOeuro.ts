@@ -10,11 +10,11 @@ export const mGLOeuroDeploymentConfig: DeploymentConfig = {
       maxAnswerDeviation: parseUnits('1', 8),
       description: 'mGLOeuro/EUR',
       minAnswer: parseUnits('0.95', 8),
-      maxAnswer: parseUnits('110000', 8),
+      maxAnswer: parseUnits('1.1', 8),
     },
     dataFeed: {
-      minAnswer: parseUnits('90000', 8),
-      maxAnswer: parseUnits('110000', 8),
+      minAnswer: parseUnits('0.9', 8),
+      maxAnswer: parseUnits('1.1', 8),
     },
     customAggregatorAdjustedDv: {
       adjustmentPercentage: parseUnits('2', 8),
