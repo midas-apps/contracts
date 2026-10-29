@@ -24,4 +24,10 @@ abstract contract SdvUsdMidasAccessControlRoles {
      */
     bytes32 public constant SDV_USD_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE =
         keccak256("SDV_USD_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE");
+
+    /**
+     * @notice greenlist role for sdvUSD
+     */
+    bytes32 public constant DRIVVY_GREENLISTED_ROLE =
+        keccak256("DRIVVY_GREENLISTED_ROLE");
 }

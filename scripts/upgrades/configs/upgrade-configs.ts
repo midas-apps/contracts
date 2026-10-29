@@ -25,6 +25,26 @@ export const upgradeConfigs: UpgradeConfig = {
         [chainIds.main]: ['mGLOeuro'],
       },
     },
+    'drivvy-separate-greenlist': {
+      vaults: {
+        [chainIds.main]: {
+          overrides: {
+            dvUSD: {
+              overrides: {
+                depositVault: true,
+                redemptionVaultSwapper: true,
+              },
+            },
+            sdvUSD: {
+              overrides: {
+                depositVault: true,
+                redemptionVaultSwapper: true,
+              },
+            },
+          },
+        },
+      },
+    },
     'mfone-rv-swapper-to-mtoken': {
       vaults: {
         [chainIds.sepolia]: {

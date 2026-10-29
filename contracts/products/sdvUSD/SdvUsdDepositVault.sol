@@ -21,4 +21,11 @@ contract SdvUsdDepositVault is DepositVault, SdvUsdMidasAccessControlRoles {
     function vaultRole() public pure override returns (bytes32) {
         return SDV_USD_DEPOSIT_VAULT_ADMIN_ROLE;
     }
+
+    /**
+     * @inheritdoc Greenlistable
+     */
+    function greenlistedRole() public pure override returns (bytes32) {
+        return DRIVVY_GREENLISTED_ROLE;
+    }
 }
