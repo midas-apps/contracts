@@ -94,6 +94,7 @@ export enum MTokenNameEnum {
   radUSD = 'radUSD',
   radYC = 'radYC',
   dvUSD = 'dvUSD',
+  liquidDeFi = 'liquidDeFi',
 }
 
 export type MTokenName = keyof typeof MTokenNameEnum;
