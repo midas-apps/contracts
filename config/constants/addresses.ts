@@ -1892,6 +1892,12 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0xECef79E109e997bCA29c1c0897ec9d7b03647F5E',
         dataFeed: '0x9E41963c5D0A2F8800b046989B8815c01845a55f',
       },
+      // reuses the usdt aggregator and data feed (USDT/USD)
+      usdt0: {
+        token: '0x01bFF41798a0BcF287b996046Ca68b395DbC1071',
+        aggregator: '0xECef79E109e997bCA29c1c0897ec9d7b03647F5E',
+        dataFeed: '0x9E41963c5D0A2F8800b046989B8815c01845a55f',
+      },
     },
     mRe7ETH: {
       token: '0xE7Ba07519dFA06e60059563F484d6090dedF21B3',
@@ -1944,6 +1950,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x7f6136358088c629ef6b6dF5ECf2180074073e84',
       depositVault: '0x3EB163AFe663B2331101725a0a23510C3B1d7E31',
       redemptionVaultSwapper: '0x06a7Fa6DAA7BC7fD66a7EEFCE54475b456B4B5B4',
+    },
+    liquidDeFi: {
+      token: '0x4299b11815F25DB50fC56CD8a1C24cCCDD2AEECe',
+      customFeed: '0xF354e713E9DF3CfBEbAD1221D779F6C4ca198a57',
+      dataFeed: '0xaD3cEB978AFa78d948B285a66ED85d87F4204B07',
+      depositVault: '0x877f5D9fE35A0A2aFDD4539b992c0edD33d476f4',
+      redemptionVaultSwapper: '0x1BCb96E1D4CBf07334f9bDdF2f1F872ED00D504b',
     },
   },
   robinhood: {

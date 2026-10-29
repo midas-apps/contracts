@@ -100,6 +100,7 @@ export const prefixes: Record<MTokenName, string> = {
   radUSD: 'RAD_USD',
   radYC: 'RAD_YC',
   dvUSD: 'DV_USD',
+  liquidDeFi: 'LIQUID_DEFI',
 };
 
 const mappedTokenNames: Partial<Record<MTokenName, string>> = {

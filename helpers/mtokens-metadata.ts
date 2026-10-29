@@ -396,4 +396,8 @@ export const mTokensMetadata: Record<
     name: 'Drivvy USD Vault',
     symbol: 'dvUSD',
   },
+  liquidDeFi: {
+    name: 'Ether.Fi Liquid DeFi',
+    symbol: 'liquidDeFi',
+  },
 };
