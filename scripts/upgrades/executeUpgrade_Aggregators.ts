@@ -12,7 +12,7 @@ const func: DeployFunction = async (
   mToken: MTokenName,
   _skipValidation?: boolean,
 ) => {
-  const upgradeId = 'mkralpha-custom-aggregator-upgrade-v2';
+  const upgradeId = 'mgloeuro-custom-aggregator-upgrade-v3';
   const networkAddresses = getCurrentAddresses(hre);
   const tokenAddresses = networkAddresses?.[mToken];
 
@@ -27,8 +27,8 @@ const func: DeployFunction = async (
       contracts: [
         {
           contractType: 'customAggregator',
-          initializer: 'initializeV2',
-          initializerArgs: [parseUnits('0', 8), parseUnits('1.2', 8)],
+          initializer: 'initializeV3',
+          initializerArgs: [parseUnits('0.95', 8), parseUnits('1.1', 8)],
         },
       ],
     },

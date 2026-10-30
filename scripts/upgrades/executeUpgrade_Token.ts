@@ -14,7 +14,7 @@ const func: DeployFunction = async (
   mToken: MTokenName,
   _skipValidation?: boolean,
 ) => {
-  const upgradeId = 'mwin-upgrade-permissioned';
+  const upgradeId = 'mgloeuro-upgrade-remove-min-balance';
   const networkAddresses = getCurrentAddresses(hre);
   const tokenAddresses = networkAddresses?.[mToken];
 
