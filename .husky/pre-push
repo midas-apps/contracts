@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+
+# Optional, advisory AI review of the branch vs origin/main.
+# Never blocks the push; see scripts/ai-review.sh for behaviour and opt-out.
+sh "$(dirname "$0")/../scripts/ai-review.sh" || true
