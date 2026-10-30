@@ -25,6 +25,7 @@ import { kitBTCDeploymentConfig } from './kitBTC';
 import { kitHYPEDeploymentConfig } from './kitHYPE';
 import { kitUSDDeploymentConfig } from './kitUSD';
 import { kmiUSDDeploymentConfig } from './kmiUSD';
+import { liquidDeFiDeploymentConfig } from './liquidDeFi';
 import { liquidHYPEDeploymentConfig } from './liquidHYPE';
 import { liquidRESERVEDeploymentConfig } from './liquidRESERVE';
 import { liquidRWADeploymentConfig } from './liquidRWA';
@@ -206,6 +207,7 @@ export const configsPerToken: Record<MTokenName, DeploymentConfig> = {
   radYC: radYCDeploymentConfig,
   dvUSD: dvUSDDeploymentConfig,
   sdvUSD: sdvUSDDeploymentConfig,
+  liquidDeFi: liquidDeFiDeploymentConfig,
 };
 
 type NamedDeploymentConfig = {

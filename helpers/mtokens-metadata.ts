@@ -399,4 +399,8 @@ export const mTokensMetadata: Record<
     name: 'Staked Drivvy USD Vault',
     symbol: 'sdvUSD',
   },
+  liquidDeFi: {
+    name: 'Ether.Fi Liquid DeFi',
+    symbol: 'liquidDeFi',
+  },
 };
