@@ -3,9 +3,10 @@ import { DeployProxyOptions } from '@openzeppelin/hardhat-upgrades/dist/utils';
 import { ethers, constants, PopulatedTransaction, Signer } from 'ethers';
 import { EIP1193Provider, HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { proposeSafeTransaction } from './backoffice';
 import { DeploymentConfig } from './types';
 
-import { MTokenName } from '../../../config';
+import { ENV, MTokenName } from '../../../config';
 import {
   etherscanVerify,
   logDeploy,
@@ -15,7 +16,7 @@ import {
 import { verifyReinitializersConsumed } from '../../upgrades/common/reinitializer';
 import { getDeploymentConfigForToken } from '../configs';
 
-const safeAbi = [
+export const safeAbi = [
   {
     inputs: [],
     name: 'domainSeparator',
@@ -99,6 +100,13 @@ const safeAbi = [
     inputs: [],
     name: 'getOwners',
     outputs: [{ internalType: 'address[]', name: '', type: 'address[]' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'getThreshold',
+    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
     stateMutability: 'view',
     type: 'function',
   },
@@ -372,6 +380,48 @@ export const sendAndWaitForCustomTxSign = async (
         safeAbi,
         safeMiddlewareWallet,
       );
+
+      const threshold = await safeContract.getThreshold();
+
+      // custodian signers enforce ownership, so the caller needn't be an owner
+      if (threshold.gt(1)) {
+        if (!ENV.BACKOFFICE_API_URL || !ENV.BACKOFFICE_SERVICE_TOKEN) {
+          throw new Error(
+            `Safe ${safeMiddlewareWallet} has threshold ${threshold}, set BACKOFFICE_API_URL and BACKOFFICE_SERVICE_TOKEN to propose the tx`,
+          );
+        }
+
+        // forks reuse the real chainId, so a proposal would hit the real Safe
+        if (
+          ENV.FORKING_NETWORK &&
+          ['hardhat', 'localhost'].includes(hre.network.name)
+        ) {
+          throw new Error(
+            `Safe ${safeMiddlewareWallet} has threshold ${threshold}, proposals are disabled on forks`,
+          );
+        }
+
+        const { proposalId, safeTxHash, nonce } = await proposeSafeTransaction(
+          hre,
+          {
+            safe: safeMiddlewareWallet,
+            to: populatedTx.to!,
+            value: populatedTx.value,
+            data: populatedTx.data,
+            comment: txSignMetadata?.comment,
+            idempotenceId: txSignMetadata?.idempotenceId,
+          },
+        );
+
+        console.log(
+          `Safe proposal created: ${proposalId}, safeTxHash: ${safeTxHash}, nonce: ${nonce}`,
+        );
+        console.log(
+          `Proposal: ${ENV.BACKOFFICE_API_URL}/api/safe/proposals/${proposalId}`,
+        );
+
+        return { proposalId, safeTxHash };
+      }
 
       const owners: string[] = await safeContract.getOwners();
 

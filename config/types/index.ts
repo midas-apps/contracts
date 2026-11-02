@@ -60,5 +60,7 @@ export interface Environment {
   readonly CUSTOM_SIGNER_SCRIPT_PATH?: string;
   readonly LOG_TO_FILE: boolean;
   readonly LOGS_FOLDER_PATH?: string;
+  readonly BACKOFFICE_API_URL?: string;
+  readonly BACKOFFICE_SERVICE_TOKEN?: string;
   readonly getRpcUrl: (network: Network) => RpcUrl | undefined;
 }

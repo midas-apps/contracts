@@ -85,6 +85,9 @@ export const createSigner =
           executeFrom,
         );
 
+        const { safeTxHash } = (res ?? {}) as { safeTxHash?: string };
+        const transactionHash = safeTxHash ?? (res as string);
+
         const result = {
           wait: async (confirmations?: number) => {
             if (typeof res === 'string') {
@@ -97,13 +100,13 @@ export const createSigner =
 
               await provider.waitForTransaction(res, confirmations);
             } else {
-              logger.warn('wait is unavailable for custom signer');
+              logger.warn(
+                'wait is unavailable for custom signer or Safe proposal',
+              );
             }
-            return {
-              transactionHash: res as string,
-            };
+            return { transactionHash };
           },
-          transactionHash: res as string,
+          transactionHash,
         };
 
         console.log('Transaction sent successfully', printJson(result));
