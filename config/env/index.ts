@@ -22,6 +22,8 @@ export const ENV: Environment = {
   CUSTOM_SIGNER_SCRIPT_PATH: process.env.CUSTOM_SIGNER_SCRIPT_PATH,
   LOG_TO_FILE: process.env.LOG_TO_FILE === 'true',
   LOGS_FOLDER_PATH: process.env.LOGS_FOLDER_PATH,
+  BACKOFFICE_API_URL: process.env.BACKOFFICE_API_URL?.replace(/\/+$/, ''),
+  BACKOFFICE_API_TOKEN: process.env.BACKOFFICE_API_TOKEN,
   getRpcUrl: (network: Network) => {
     return process.env['RPC_URL_' + network.toUpperCase()] as
       | RpcUrl
