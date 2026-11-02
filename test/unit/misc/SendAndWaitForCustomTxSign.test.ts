@@ -1,6 +1,6 @@
 import { setCode } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
-import { constants, Wallet } from 'ethers';
+import { BigNumber, constants, PopulatedTransaction, Wallet } from 'ethers';
 import hre from 'hardhat';
 
 import { createServer, IncomingMessage, Server } from 'http';
@@ -21,7 +21,7 @@ const safeTxHash = '0x' + 'ab'.repeat(32);
 describe('sendAndWaitForCustomTxSign', () => {
   const originalEnv = {
     BACKOFFICE_API_URL: ENV.BACKOFFICE_API_URL,
-    BACKOFFICE_API_TOKEN: ENV.BACKOFFICE_API_TOKEN,
+    BACKOFFICE_SERVICE_TOKEN: ENV.BACKOFFICE_SERVICE_TOKEN,
     FORKING_NETWORK: ENV.FORKING_NETWORK,
   };
   const provider = hre.ethers.provider;
@@ -30,6 +30,7 @@ describe('sendAndWaitForCustomTxSign', () => {
   let server: Server;
   let backofficeUrl: string;
   let requests: { req: IncomingMessage; body: string }[];
+  let reply: { status: number; body: unknown };
   let safe: string;
   let deployer: string;
   let threshold: number;
@@ -43,14 +44,8 @@ describe('sendAndWaitForCustomTxSign', () => {
       req.on('data', (chunk) => (body += chunk));
       req.on('end', () => {
         requests.push({ req, body });
-        res.writeHead(201, { 'Content-Type': 'application/json' });
-        res.end(
-          JSON.stringify({
-            proposalId: 'proposal-1',
-            safeTxHash,
-            nonce: 7,
-          }),
-        );
+        res.writeHead(reply.status, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(reply.body));
       });
     });
     await new Promise<void>((resolve) => server.listen(0, resolve));
@@ -87,9 +82,13 @@ describe('sendAndWaitForCustomTxSign', () => {
     // never hit a real backoffice configured in .env
     Object.assign(ENV, {
       BACKOFFICE_API_URL: undefined,
-      BACKOFFICE_API_TOKEN: undefined,
+      BACKOFFICE_SERVICE_TOKEN: undefined,
     });
     requests = [];
+    reply = {
+      status: 201,
+      body: { proposalId: 'proposal-1', safeTxHash, nonce: '7' },
+    };
     owners = [deployer];
     safe = Wallet.createRandom().address;
     // STOP opcode: getCode is non-empty and execTransaction does not revert
@@ -103,17 +102,26 @@ describe('sendAndWaitForCustomTxSign', () => {
   const setBackofficeEnv = () =>
     Object.assign(ENV, {
       BACKOFFICE_API_URL: backofficeUrl,
-      BACKOFFICE_API_TOKEN: 'test-token',
+      BACKOFFICE_SERVICE_TOKEN: 'test-token',
     });
 
-  const send = (wallet: string) =>
+  const send = ({
+    wallet = safe,
+    tx = { to: target, data: targetData },
+    metadata = {},
+  }: {
+    wallet?: string;
+    tx?: PopulatedTransaction;
+    metadata?: { comment?: string; idempotenceId?: string };
+  } = {}) =>
     sendAndWaitForCustomTxSign(
       hre,
-      { to: target, data: targetData },
+      tx,
       {
         action: 'update-timelock',
         comment: 'test comment',
         idempotenceId: 'test-idempotence-id',
+        ...metadata,
       },
       wallet,
       1,
@@ -141,7 +149,7 @@ describe('sendAndWaitForCustomTxSign', () => {
     threshold = 2;
     const nonceBefore = await provider.getTransactionCount(deployer);
 
-    const res = await send(safe);
+    const res = await send();
 
     expect(res).deep.eq({ proposalId: 'proposal-1', safeTxHash });
     expect(requests).length(1);
@@ -162,17 +170,37 @@ describe('sendAndWaitForCustomTxSign', () => {
     expect(await provider.getTransactionCount(deployer)).eq(nonceBefore);
   });
 
+  it('threshold 2 with tx without data: proposes empty calldata', async () => {
+    setBackofficeEnv();
+    threshold = 2;
+
+    await send({ tx: { to: target, value: BigNumber.from(5) } });
+
+    expect(JSON.parse(requests[0].body)).include({ data: '0x', value: '5' });
+  });
+
+  it('threshold 2 with backoffice 400: throws its status and body', async () => {
+    setBackofficeEnv();
+    threshold = 2;
+    reply = {
+      status: 400,
+      body: { message: ['comment must not contain a link'], statusCode: 400 },
+    };
+
+    await expect(send()).rejectedWith(
+      'Backoffice proposal failed: 400 {"message":["comment must not contain a link"]',
+    );
+  });
+
   it('threshold 2 without explicit idempotenceId: distinct id per tx', async () => {
     setBackofficeEnv();
     threshold = 2;
 
     for (const data of [targetData, '0x87654321']) {
-      await sendAndWaitForCustomTxSign(
-        hre,
-        { to: target, data },
-        { action: 'update-timelock' },
-        safe,
-      );
+      await send({
+        tx: { to: target, data },
+        metadata: { idempotenceId: undefined },
+      });
     }
 
     const [first, second] = requests.map(
@@ -188,7 +216,7 @@ describe('sendAndWaitForCustomTxSign', () => {
     threshold = 2;
     owners = [Wallet.createRandom().address];
 
-    await send(safe);
+    await send();
 
     expect(requests).length(1);
   });
@@ -197,7 +225,7 @@ describe('sendAndWaitForCustomTxSign', () => {
     threshold = 1;
     owners = [Wallet.createRandom().address];
 
-    await expect(send(safe)).rejectedWith('is not found in the safe contract');
+    await expect(send()).rejectedWith('is not found in the safe contract');
   });
 
   it('threshold 2 on a fork: throws before proposing', async () => {
@@ -205,22 +233,25 @@ describe('sendAndWaitForCustomTxSign', () => {
     Object.assign(ENV, { FORKING_NETWORK: 'main' });
     threshold = 2;
 
-    await expect(send(safe)).rejectedWith('proposals are disabled on forks');
+    await expect(send()).rejectedWith('proposals are disabled on forks');
     expect(requests).length(0);
   });
 
   for (const [label, env] of [
     ['no backoffice env', {}],
     ['only BACKOFFICE_API_URL', { BACKOFFICE_API_URL: 'http://127.0.0.1:1' }],
-    ['only BACKOFFICE_API_TOKEN', { BACKOFFICE_API_TOKEN: 'test-token' }],
+    [
+      'only BACKOFFICE_SERVICE_TOKEN',
+      { BACKOFFICE_SERVICE_TOKEN: 'test-token' },
+    ],
   ] as const) {
     it(`threshold 2 with ${label}: throws before sending`, async () => {
       Object.assign(ENV, env);
       threshold = 2;
       const nonceBefore = await provider.getTransactionCount(deployer);
 
-      await expect(send(safe)).rejectedWith(
-        'set BACKOFFICE_API_URL and BACKOFFICE_API_TOKEN',
+      await expect(send()).rejectedWith(
+        'set BACKOFFICE_API_URL and BACKOFFICE_SERVICE_TOKEN',
       );
       expect(requests).length(0);
       expect(await provider.getTransactionCount(deployer)).eq(nonceBefore);
@@ -234,7 +265,7 @@ describe('sendAndWaitForCustomTxSign', () => {
       if (withEnv) setBackofficeEnv();
       threshold = 1;
 
-      const hash = (await send(safe)) as string;
+      const hash = (await send()) as string;
 
       const tx = await provider.getTransaction(hash);
       expect(tx.to).eq(safe);
@@ -252,7 +283,7 @@ describe('sendAndWaitForCustomTxSign', () => {
 
     let hash: string;
     try {
-      hash = (await send(eoa)) as string;
+      hash = (await send({ wallet: eoa })) as string;
     } finally {
       console.warn = originalWarn;
     }

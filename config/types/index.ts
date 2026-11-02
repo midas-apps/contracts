@@ -61,6 +61,6 @@ export interface Environment {
   readonly LOG_TO_FILE: boolean;
   readonly LOGS_FOLDER_PATH?: string;
   readonly BACKOFFICE_API_URL?: string;
-  readonly BACKOFFICE_API_TOKEN?: string;
+  readonly BACKOFFICE_SERVICE_TOKEN?: string;
   readonly getRpcUrl: (network: Network) => RpcUrl | undefined;
 }

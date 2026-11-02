@@ -385,9 +385,9 @@ export const sendAndWaitForCustomTxSign = async (
 
       // custodian signers enforce ownership, so the caller needn't be an owner
       if (threshold.gt(1)) {
-        if (!ENV.BACKOFFICE_API_URL || !ENV.BACKOFFICE_API_TOKEN) {
+        if (!ENV.BACKOFFICE_API_URL || !ENV.BACKOFFICE_SERVICE_TOKEN) {
           throw new Error(
-            `Safe ${safeMiddlewareWallet} has threshold ${threshold}, set BACKOFFICE_API_URL and BACKOFFICE_API_TOKEN to propose the tx`,
+            `Safe ${safeMiddlewareWallet} has threshold ${threshold}, set BACKOFFICE_API_URL and BACKOFFICE_SERVICE_TOKEN to propose the tx`,
           );
         }
 
@@ -407,22 +407,9 @@ export const sendAndWaitForCustomTxSign = async (
             safe: safeMiddlewareWallet,
             to: populatedTx.to!,
             value: populatedTx.value,
-            data: populatedTx.data!,
+            data: populatedTx.data,
             comment: txSignMetadata?.comment,
-            // contextId alone is shared by the run; backoffice caps the id at 64 chars
-            idempotenceId:
-              txSignMetadata?.idempotenceId ??
-              `${hre.contextId}:${ethers.utils
-                .solidityKeccak256(
-                  ['address', 'address', 'uint256', 'bytes'],
-                  [
-                    safeMiddlewareWallet,
-                    populatedTx.to,
-                    populatedTx.value ?? 0,
-                    populatedTx.data,
-                  ],
-                )
-                .slice(2, 18)}`,
+            idempotenceId: txSignMetadata?.idempotenceId,
           },
         );
 
