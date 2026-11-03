@@ -12,13 +12,32 @@ import {RedemptionVaultWithUSYCLibrary} from "./libraries/RedemptionVaultWithUSY
 /**
  * @title RedemptionVaultWithUSYC
  * @notice Smart contract that handles redemptions using USYC
+ * redeemed through the Circle USYC Teller
+ * @dev When the vault lacks tokenOut, USYC held by the vault is redeemed
+ * to USDC. If tokenOut is the mToken of `depositVault`, the USDC is
+ * deposited there and the minted mToken is used instead
  * @author RedDuck Software
  */
 contract RedemptionVaultWithUSYC is RedemptionVault {
+    /**
+     * @notice Circle USYC Teller used to redeem USYC
+     * @dev `asset()` is the token USYC is redeemed to (USDC),
+     * `share()` is USYC
+     */
     IUSYCTeller public usycTeller;
 
+    /**
+     * @notice mToken DepositVault used to convert USDC into its mToken
+     * after redeeming USYC
+     * @dev if not set, USYC is only used for USDC redemptions
+     */
     IDepositVault public depositVault;
 
+    /**
+     * @notice Redemption fee rate the Teller is expected to charge this vault
+     * @dev USYC is only redeemed when it equals
+     * `usycTeller.redemptionFeeRate(address(this))`
+     */
     uint256 public anticipatedFeeRate;
 
     /**
@@ -26,11 +45,23 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
      */
     uint256[50] private __gap;
 
-    event SetUSYCTeller(address _newTeller);
+    /**
+     * @notice Emitted when the USYC Teller address is updated
+     * @param newTeller new USYC Teller address
+     */
+    event SetUsycTeller(address indexed newTeller);
 
-    event SetDepositVault(address _newDepositVault);
+    /**
+     * @notice Emitted when the mToken DepositVault address is updated
+     * @param newVault new mToken DepositVault address
+     */
+    event SetDepositVault(address indexed newVault);
 
-    event SetAnticipatedFeeRate(uint256 _feeRate);
+    /**
+     * @notice Emitted when `anticipatedFeeRate` is updated
+     * @param feeRate new anticipated redemption fee rate
+     */
+    event SetAnticipatedFeeRate(uint256 feeRate);
 
     /**
      * @notice Passes role identifiers to the base RedemptionVault constructor
@@ -46,7 +77,9 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
      * @notice upgradeable pattern contract`s initializer
      * @param _commonVaultInitParams init params for common vault
      * @param _redemptionInitParams init params for redemption vault state values
-     * @param _usycTeller USYC redemption contract address
+     * @param _usycTeller USYC Teller address
+     * @param _depositVault mToken DepositVault address, can be zero
+     * @param _anticipatedFeeRate anticipated Teller redemption fee rate
      */
     function initialize(
         CommonVaultInitParams calldata _commonVaultInitParams,
@@ -64,28 +97,46 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
         anticipatedFeeRate = _anticipatedFeeRate;
     }
 
+    /**
+     * @notice Sets the mToken DepositVault address
+     * @dev zero address disables USYC usage for mToken redemptions
+     * @param _depositVault new mToken DepositVault address
+     */
     function setDepositVault(address _depositVault) external onlyContractAdmin {
         depositVault = IDepositVault(_depositVault);
         emit SetDepositVault(_depositVault);
     }
 
-    function setUsycTeller(address _teller) external onlyContractAdmin {
-        _validateAddress(_teller, false);
-        usycTeller = IUSYCTeller(_teller);
-        emit SetUSYCTeller(_teller);
-    }
-
-    function setAnticipatedFeeRate(uint256 _fee) external onlyContractAdmin {
-        anticipatedFeeRate = _fee;
-        emit SetAnticipatedFeeRate(_fee);
+    /**
+     * @notice Sets the USYC Teller address
+     * @param _usycTeller new USYC Teller address
+     */
+    function setUsycTeller(address _usycTeller) external onlyContractAdmin {
+        _validateAddress(_usycTeller, false);
+        usycTeller = IUSYCTeller(_usycTeller);
+        emit SetUsycTeller(_usycTeller);
     }
 
     /**
-     * @notice Check if contract has enough USDC balance for redeem
-     * if not, trigger USTB redemption flow to redeem exactly the missing amount
+     * @notice Updates `anticipatedFeeRate` value
+     * @param _feeRate new anticipated redemption fee rate
+     */
+    function setAnticipatedFeeRate(uint256 _feeRate)
+        external
+        onlyContractAdmin
+    {
+        anticipatedFeeRate = _feeRate;
+        emit SetAnticipatedFeeRate(_feeRate);
+    }
+
+    /**
+     * @notice Check if contract has enough tokenOut balance for redeem;
+     * if not, redeem USYC through the Teller to cover the missing amount
+     * @dev See {RedemptionVaultWithUSYCLibrary-obtainRedemptionLiquidity}
      * @param tokenOut tokenOut address
      * @param missingAmountBase18 amount of tokenOut needed in base 18
      * @param tokenOutDecimals decimals of tokenOut
+     * @return obtained amount of tokenOut in base 18
      */
     function _obtainVaultLiquidity(
         address tokenOut,

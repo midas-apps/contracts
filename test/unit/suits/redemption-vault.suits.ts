@@ -28,6 +28,7 @@ import {
   RedemptionVaultWithMorphoTest,
   RedemptionVaultWithMTokenTest,
   RedemptionVaultWithUSTBTest,
+  RedemptionVaultWithUSYCTest,
 } from '../../../typechain-types';
 import {
   acErrors,
@@ -182,13 +183,15 @@ export const redemptionVaultSuits = (
       | RedemptionVaultWithMTokenTest
       | RedemptionVaultWithUSTBTest
       | RedemptionVaultWithMorphoTest
+      | RedemptionVaultWithUSYCTest
     >;
     key:
       | 'redemptionVault'
       | 'redemptionVaultWithAave'
       | 'redemptionVaultWithMToken'
       | 'redemptionVaultWithUSTB'
-      | 'redemptionVaultWithMorpho';
+      | 'redemptionVaultWithMorpho'
+      | 'redemptionVaultWithUSYC';
   },
   deploymentAdditionalChecks: (fixtureRes: DefaultFixture) => Promise<void>,
   initConfig: RedemptionVaultInitConfig,

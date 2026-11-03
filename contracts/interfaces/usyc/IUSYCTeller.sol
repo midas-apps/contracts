@@ -28,11 +28,29 @@ interface IUSYCTeller {
         address account
     ) external returns (uint256 assets);
 
+    function previewDepositData(address account, uint256 assets)
+        external
+        view
+        returns (
+            uint256 shares,
+            uint256 fee,
+            int256 price
+        );
+
     function previewWithdrawData(address account, uint256 assets)
         external
         view
         returns (
             uint256 shares,
+            uint256 fee,
+            int256 price
+        );
+
+    function previewRedeemData(address account, uint256 shares)
+        external
+        view
+        returns (
+            uint256 assets,
             uint256 fee,
             int256 price
         );
@@ -55,4 +73,9 @@ interface IUSYCTeller {
         external
         view
         returns (uint256 maxShares);
+
+    function treasury(address account)
+        external
+        view
+        returns (address treasuryAddr);
 }
