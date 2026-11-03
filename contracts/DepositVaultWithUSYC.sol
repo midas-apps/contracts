@@ -253,10 +253,19 @@ contract DepositVaultWithUSYC is DepositVault {
         }
 
         uint256 tellerFeeRate = teller.subscriptionFeeRate(address(this));
-        require(
-            tellerFeeRate == anticipatedFeeRate,
-            FeeNotMatched(tellerFeeRate)
-        );
+
+        bool _autoInvestFallbackEnabled = autoInvestFallbackEnabled;
+
+        if (tellerFeeRate != anticipatedFeeRate) {
+            _fallbackDeposit(
+                abi.encodeWithSelector(FeeNotMatched.selector, tellerFeeRate),
+                teller,
+                usdc,
+                assetAmount,
+                _autoInvestFallbackEnabled
+            );
+            return;
+        }
 
         IERC20(usdc).safeIncreaseAllowance(address(teller), assetAmount);
 
@@ -266,12 +275,28 @@ contract DepositVaultWithUSYC is DepositVault {
             require(usycReceived > 0, ZeroTokensReceived());
             IERC20(teller.share()).safeTransfer(tokensReceiver, usycReceived);
         } catch (bytes memory err) {
-            if (autoInvestFallbackEnabled) {
-                IERC20(usdc).safeApprove(address(teller), 0);
-                IERC20(usdc).safeTransfer(tokensReceiver, assetAmount);
-            } else {
-                revert AutoInvestFailed(err);
-            }
+            _fallbackDeposit(
+                err,
+                teller,
+                usdc,
+                assetAmount,
+                _autoInvestFallbackEnabled
+            );
+        }
+    }
+
+    function _fallbackDeposit(
+        bytes memory err,
+        IUSYCTeller _teller,
+        address _usdc,
+        uint256 _assetAmount,
+        bool _autoInvestFallbackEnabled
+    ) internal {
+        if (_autoInvestFallbackEnabled) {
+            IERC20(_usdc).safeApprove(address(_teller), 0);
+            IERC20(_usdc).safeTransfer(tokensReceiver, _assetAmount);
+        } else {
+            revert AutoInvestFailed(err);
         }
     }
 }

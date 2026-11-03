@@ -984,7 +984,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             );
 
             grossTokenOutAmount = RedemptionSwapperHelpersLibrary
-                .mTokenAmountToTokenOutAmount(
+                .convertTokenAmountRoundingDown(
                     mTokenABalance,
                     mTokenARate,
                     tokenOutRate
@@ -1014,7 +1014,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
         // Requires address(this) to have waivedFeeRestriction on the inner vault.
         uint256 mTokenAAmount = RedemptionSwapperHelpersLibrary
-            .tokenOutAmountToMTokenAmount(
+            .convertTokenAmountRoundingUp(
                 grossTokenOutAmount - lpFeePortion,
                 _tokenOutRate,
                 mTokenARate

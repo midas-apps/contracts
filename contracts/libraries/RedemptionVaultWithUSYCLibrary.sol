@@ -69,8 +69,11 @@ library RedemptionVaultWithUSYCLibrary {
                 ? 1e18
                 : IDataFeed(feed).getDataInBase18();
 
+            // DV mints floor(floor(usdc * usdcRate / 1e18) * 1e18 / mTokenRate),
+            // so both steps are inverted with rounding up to guarantee
+            // that the minted mToken amount covers `missingAmountBase18`
             assetAmount = RedemptionSwapperHelpersLibrary
-                .mTokenAmountToTokenOutAmount(
+                .convertTokenAmountRoundingUp(
                     missingAmountBase18,
                     dv.mTokenDataFeed().getDataInBase18(),
                     usdcRate
@@ -78,7 +81,7 @@ library RedemptionVaultWithUSYCLibrary {
         }
 
         uint8 usdcDecimals = IERC20Metadata(usdc).decimals();
-        assetAmount = assetAmount.convertFromBase18(usdcDecimals);
+        assetAmount = _convertFromBase18Covering(assetAmount, usdcDecimals);
 
         (uint256 usycToRedeem, , ) = teller.previewWithdrawData(
             address(this),
@@ -112,5 +115,22 @@ library RedemptionVaultWithUSYCLibrary {
         }
 
         return receivedTokenOut;
+    }
+
+    /**
+     * @dev converts `amountBase18` to `decimals` so that the converted
+     * amount always covers `amountBase18`, i.e. precision lost on
+     * truncation is compensated by one unit of the smallest denomination
+     * @param amountBase18 amount in base18
+     * @param decimals target decimals
+     * @return amount converted amount that covers `amountBase18`
+     */
+    function _convertFromBase18Covering(uint256 amountBase18, uint256 decimals)
+        private
+        pure
+        returns (uint256 amount)
+    {
+        amount = amountBase18.convertFromBase18(decimals);
+        if (amount.convertToBase18(decimals) < amountBase18) ++amount;
     }
 }
