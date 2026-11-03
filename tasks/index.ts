@@ -16,6 +16,7 @@ runScriptTask
   .addPositionalParam('path', 'Path to the script')
   .addOptionalParam('mtoken', 'MToken')
   .addOptionalParam('ptoken', 'Payment Token')
+  .addOptionalParam('lib', 'Library')
   .addOptionalParam('action', 'Timelock Action')
   .addOptionalParam('skipValidation', 'Skip Validation', 'false')
   .addOptionalParam('aggregatorType', 'Aggregator Type')

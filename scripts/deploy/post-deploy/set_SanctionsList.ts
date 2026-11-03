@@ -44,6 +44,10 @@ const func: DeployFunction = async (
       address: tokenAddresses.depositVaultMorpho,
     },
     {
+      type: 'depositVaultUsyc',
+      address: tokenAddresses.depositVaultUsyc,
+    },
+    {
       type: 'redemptionVault',
       address: tokenAddresses.redemptionVault,
     },
@@ -66,6 +70,10 @@ const func: DeployFunction = async (
     {
       type: 'redemptionVaultMToken',
       address: tokenAddresses.redemptionVaultMToken,
+    },
+    {
+      type: 'redemptionVaultUsyc',
+      address: tokenAddresses.redemptionVaultUsyc,
     },
   ];
 

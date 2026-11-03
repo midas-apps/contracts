@@ -10,14 +10,26 @@ export type RedemptionVaultType =
   | 'redemptionVaultMToken'
   | 'redemptionVaultUstb'
   | 'redemptionVaultAave'
-  | 'redemptionVaultMorpho';
+  | 'redemptionVaultMorpho'
+  | 'redemptionVaultUsyc';
 
 export type DepositVaultType =
   | 'depositVault'
   | 'depositVaultUstb'
   | 'depositVaultAave'
   | 'depositVaultMorpho'
-  | 'depositVaultMToken';
+  | 'depositVaultMToken'
+  | 'depositVaultUsyc';
+
+/**
+ * External libraries that are deployed separately and linked into contracts
+ */
+export const libraryNames = ['RedemptionVaultWithUSYCLibrary'] as const;
+
+export type LibraryName = (typeof libraryNames)[number];
+
+export const isLibraryName = (name: string): name is LibraryName =>
+  libraryNames.includes(name as LibraryName);
 
 export type LayerZeroTokenAddresses = {
   oft?: string;
@@ -92,6 +104,7 @@ export type MidasAddresses = Partial<Record<MTokenName, TokenAddresses>> & {
   timelockController?: string;
   pauseManager?: string;
   paymentTokens?: Partial<Record<PaymentTokenName, DataFeedAddresses>>;
+  libraries?: Partial<Record<LibraryName, string>>;
 };
 
 export const midasAddressesPerNetwork: ConfigPerNetwork<
@@ -2228,6 +2241,10 @@ export const sanctionListContracts: Partial<Record<number, string>> = {
 
 export const ustbContracts: Partial<Record<number, string>> = {
   [chainIds.main]: '0x43415eB6ff9DB7E26A15b704e7A3eDCe97d31C4e',
+};
+
+export const usycTellerContracts: Partial<Record<number, string>> = {
+  [chainIds.arc]: '0x51A8CE47dC08ba5CD19c7aa84EA6fD6664f60f9b',
 };
 
 export const getCurrentAddresses = (hre: HardhatRuntimeEnvironment) => {

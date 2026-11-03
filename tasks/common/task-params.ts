@@ -1,6 +1,11 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { MTokenName, Network, PaymentTokenName } from '../../config';
+import {
+  isLibraryName,
+  LibraryName,
+  libraryNames,
+} from '../../config/constants/addresses';
 import { isMTokenName, isPaymentTokenName } from '../../helpers/utils';
 import type {
   AggregatorType,
@@ -64,6 +69,35 @@ export const pTokenParam: ParseParamFn<PaymentTokenName> = (optional) => () => {
       }
 
       return paymentToken;
+    },
+  };
+};
+
+export const libParam: ParseParamFn<LibraryName> = (optional) => () => {
+  const isOptional = optional ?? false;
+  return {
+    isOptional,
+    name: 'lib',
+    description: `Library (${libraryNames.join(' | ')})`,
+    defaultValue: undefined,
+    parse: (_, taskArgs) => {
+      const library = taskArgs.lib as string | undefined;
+      if (!library) {
+        if (!isOptional) {
+          throw new Error('lib parameter not found');
+        }
+        return undefined;
+      }
+
+      if (!isLibraryName(library)) {
+        throw new Error(
+          `Invalid lib parameter, available libraries: ${libraryNames.join(
+            ', ',
+          )}`,
+        );
+      }
+
+      return library;
     },
   };
 };

@@ -6,6 +6,7 @@ import {
   AddPaymentTokensConfig,
   SetAaveConfigConfig,
   SetMorphoConfigConfig,
+  SetUsycConfigConfig,
 } from './common-vault';
 import {
   DeployCustomAggregatorAdjustedConfig,
@@ -19,6 +20,7 @@ import {
   DeployDvMTokenConfig,
   DeployDvRegularConfig,
   DeployDvUstbConfig,
+  DeployDvUsycConfig,
 } from './dv';
 import type { GreenlistConfig } from './greenlist';
 import {
@@ -31,6 +33,7 @@ import {
   DeployRvMTokenConfig,
   DeployRvRegularConfig,
   DeployRvSwapperConfig,
+  DeployRvUsycConfig,
 } from './rv';
 import { DeployTimelockConfig } from './timelock';
 import { toFunctionSelector } from './utils';
@@ -100,6 +103,7 @@ export type PostDeployConfig = {
   axelarIts?: AxelarItsConfig;
   setAaveConfig?: SetAaveConfigConfig;
   setMorphoConfig?: SetMorphoConfigConfig;
+  setUsycConfig?: SetUsycConfigConfig;
 };
 
 export type DeploymentConfig = {
@@ -130,11 +134,13 @@ export type DeploymentConfig = {
       dvAave?: DeployDvAaveConfig;
       dvMorpho?: DeployDvMorphoConfig;
       dvMToken?: DeployDvMTokenConfig;
+      dvUsyc?: DeployDvUsycConfig;
       rv?: DeployRvRegularConfig;
       rvSwapper?: DeployRvSwapperConfig;
       rvAave?: DeployRvAaveConfig;
       rvMorpho?: DeployRvMorphoConfig;
       rvMToken?: DeployRvMTokenConfig;
+      rvUsyc?: DeployRvUsycConfig;
       postDeploy?: PostDeployConfig;
     }
   >;
