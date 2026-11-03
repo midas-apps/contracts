@@ -18,41 +18,15 @@
 pragma solidity ^0.8.0;
 
 interface IUSYCTeller {
-    function asset() external view returns (address);
-
-    function share() external view returns (address);
-
     function deposit(uint256 assets, address receiver)
         external
         returns (uint256 shares);
-
-    function mint(uint256 shares, address receiver)
-        external
-        returns (uint256 assets);
 
     function redeem(
         uint256 shares,
         address receiver,
         address account
     ) external returns (uint256 assets);
-
-    function previewDepositData(address account, uint256 assets)
-        external
-        view
-        returns (
-            uint256 shares,
-            uint256 fee,
-            int256 price
-        );
-
-    function previewMintData(address account, uint256 shares)
-        external
-        view
-        returns (
-            uint256 assets,
-            uint256 fee,
-            int256 price
-        );
 
     function previewWithdrawData(address account, uint256 assets)
         external
@@ -63,14 +37,22 @@ interface IUSYCTeller {
             int256 price
         );
 
-    function previewRedeemData(address account, uint256 shares)
+    function subscriptionFeeRate(address account)
         external
         view
-        returns (
-            uint256 assets,
-            uint256 fee,
-            int256 price
-        );
+        returns (uint256 rate);
 
-    function totalAssets() external view returns (uint256);
+    function redemptionFeeRate(address account)
+        external
+        view
+        returns (uint256 rate);
+
+    function asset() external view returns (address);
+
+    function share() external view returns (address);
+
+    function maxRedeem(address account)
+        external
+        view
+        returns (uint256 maxShares);
 }

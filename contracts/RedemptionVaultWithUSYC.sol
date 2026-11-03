@@ -1,18 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-
 import {RedemptionVault} from "./RedemptionVault.sol";
 import {RedemptionVaultInitParams} from "./interfaces/IRedemptionVault.sol";
 import {IDepositVault} from "./interfaces/IDepositVault.sol";
-import {ManageableVault, TokenConfig} from "./abstract/ManageableVault.sol";
 import {CommonVaultInitParams} from "./interfaces/IManageableVault.sol";
-import {IDataFeed} from "./interfaces/IDataFeed.sol";
 import {IUSYCTeller} from "./interfaces/usyc/IUSYCTeller.sol";
 
-import {DecimalsCorrectionLibrary} from "./libraries/DecimalsCorrectionLibrary.sol";
 import {RedemptionVaultWithUSYCLibrary} from "./libraries/RedemptionVaultWithUSYCLibrary.sol";
 
 /**
@@ -21,14 +15,11 @@ import {RedemptionVaultWithUSYCLibrary} from "./libraries/RedemptionVaultWithUSY
  * @author RedDuck Software
  */
 contract RedemptionVaultWithUSYC is RedemptionVault {
-    using DecimalsCorrectionLibrary for uint256;
-    using SafeERC20 for IERC20;
-
     IUSYCTeller public usycTeller;
 
     IDepositVault public depositVault;
 
-    uint256 public anticipatedFee;
+    uint256 public anticipatedFeeRate;
 
     /**
      * @dev leaving a storage gap for futures updates
@@ -39,7 +30,7 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
 
     event SetDepositVault(address _newDepositVault);
 
-    event SetAnticipatedFee(uint256 _fee);
+    event SetAnticipatedFeeRate(uint256 _feeRate);
 
     /**
      * @notice Passes role identifiers to the base RedemptionVault constructor
@@ -62,7 +53,7 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
         RedemptionVaultInitParams calldata _redemptionInitParams,
         address _usycTeller,
         address _depositVault,
-        uint256 _anticipatedFee
+        uint256 _anticipatedFeeRate
     ) external {
         initialize(_commonVaultInitParams, _redemptionInitParams);
         _validateAddress(_usycTeller, false);
@@ -70,7 +61,7 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
         usycTeller = IUSYCTeller(_usycTeller);
         depositVault = IDepositVault(_depositVault);
 
-        anticipatedFee = _anticipatedFee;
+        anticipatedFeeRate = _anticipatedFeeRate;
     }
 
     function setDepositVault(address _depositVault) external onlyContractAdmin {
@@ -84,9 +75,9 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
         emit SetUSYCTeller(_teller);
     }
 
-    function setAnticipatedFee(uint256 _fee) external onlyContractAdmin {
-        anticipatedFee = _fee;
-        emit SetAnticipatedFee(_fee);
+    function setAnticipatedFeeRate(uint256 _fee) external onlyContractAdmin {
+        anticipatedFeeRate = _fee;
+        emit SetAnticipatedFeeRate(_fee);
     }
 
     /**
@@ -114,7 +105,7 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
             RedemptionVaultWithUSYCLibrary.obtainRedemptionLiquidity(
                 usycTeller,
                 depositVault,
-                anticipatedFee,
+                anticipatedFeeRate,
                 tokenOut,
                 missingAmountBase18,
                 tokenOutDecimals

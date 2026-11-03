@@ -26,7 +26,7 @@ contract DepositVaultWithUSYC is DepositVault {
 
     IRedemptionVault public redemptionVault;
 
-    uint256 public anticipatedFee;
+    uint256 public anticipatedFeeRate;
 
     /**
      * @notice Whether USTB deposits are enabled
@@ -57,7 +57,7 @@ contract DepositVaultWithUSYC is DepositVault {
 
     event SetUSYCTeller(address indexed newTeller);
 
-    event SetAnticipatedFee(uint256 _fee);
+    event SetAnticipatedFeeRate(uint256 _feeRate);
 
     /**
      * @notice when USTB token is not supported
@@ -102,7 +102,7 @@ contract DepositVaultWithUSYC is DepositVault {
         DepositVaultInitParams calldata _depositVaultInitParams,
         address _usycTeller,
         address _redemptionVault,
-        uint256 _anticipatedFee
+        uint256 _anticipatedFeeRate
     ) external {
         initialize(_commonVaultInitParams, _depositVaultInitParams);
 
@@ -110,7 +110,7 @@ contract DepositVaultWithUSYC is DepositVault {
 
         usycTeller = IUSYCTeller(_usycTeller);
         redemptionVault = IRedemptionVault(_redemptionVault);
-        anticipatedFee = _anticipatedFee;
+        anticipatedFeeRate = _anticipatedFeeRate;
     }
 
     function setUsycTeller(address _teller) external onlyContractAdmin {
@@ -131,9 +131,9 @@ contract DepositVaultWithUSYC is DepositVault {
         emit SetRedemptionVault(_redemptionVault);
     }
 
-    function setAnticipatedFee(uint256 _fee) external onlyContractAdmin {
-        anticipatedFee = _fee;
-        emit SetAnticipatedFee(_fee);
+    function setAnticipatedFeeRate(uint256 _fee) external onlyContractAdmin {
+        anticipatedFeeRate = _fee;
+        emit SetAnticipatedFeeRate(_fee);
     }
 
     /**
@@ -252,12 +252,11 @@ contract DepositVaultWithUSYC is DepositVault {
             assetAmount = rv.redeemInstant(usdc, amountToken, 0);
         }
 
-        (, uint256 fee, ) = teller.previewDepositData(
-            address(this),
-            assetAmount
+        uint256 tellerFeeRate = teller.subscriptionFeeRate(address(this));
+        require(
+            tellerFeeRate == anticipatedFeeRate,
+            FeeNotMatched(tellerFeeRate)
         );
-
-        require(fee == anticipatedFee, FeeNotMatched(fee));
 
         IERC20(usdc).safeIncreaseAllowance(address(teller), assetAmount);
 

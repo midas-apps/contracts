@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {MathUpgradeable as Math} from "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
@@ -22,7 +23,7 @@ library RedemptionVaultWithUSYCLibrary {
     function obtainRedemptionLiquidity(
         IUSYCTeller teller,
         IDepositVault dv,
-        uint256 anticipatedFee,
+        uint256 anticipatedFeeRate,
         address tokenOut,
         uint256 missingAmountBase18,
         uint256 tokenOutDecimals
@@ -42,9 +43,21 @@ library RedemptionVaultWithUSYCLibrary {
             return 0;
         }
 
+        if (teller.redemptionFeeRate(address(this)) != anticipatedFeeRate) {
+            return 0;
+        }
+
         uint256 assetAmount = missingAmountBase18;
 
         if (isMToken) {
+            if (
+                !ManageableVault(address(dv)).waivedFeeRestriction(
+                    address(this)
+                )
+            ) {
+                return 0;
+            }
+
             (address feed, , , bool isStable) = ManageableVault(address(dv))
                 .tokensConfig(usdc);
 
@@ -65,25 +78,14 @@ library RedemptionVaultWithUSYCLibrary {
         }
 
         uint8 usdcDecimals = IERC20Metadata(usdc).decimals();
+        assetAmount = assetAmount.convertFromBase18(usdcDecimals);
 
-        {
-            uint256 totalAssets = teller.totalAssets();
-            assetAmount = assetAmount.convertFromBase18(usdcDecimals);
-            assetAmount = assetAmount > totalAssets ? totalAssets : assetAmount;
-        }
-
-        (uint256 usycToRedeem, uint256 fee, ) = teller.previewWithdrawData(
+        (uint256 usycToRedeem, , ) = teller.previewWithdrawData(
             address(this),
             assetAmount
         );
 
-        if (fee != anticipatedFee) {
-            return 0;
-        }
-
-        uint256 usycBalance = IERC20(teller.share()).balanceOf(address(this));
-
-        usycToRedeem = usycBalance >= usycToRedeem ? usycToRedeem : usycBalance;
+        usycToRedeem = Math.min(teller.maxRedeem(address(this)), usycToRedeem);
 
         // if nothing to redeem, do nothing
         if (usycToRedeem == 0) {
