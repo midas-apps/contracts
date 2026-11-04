@@ -9,6 +9,7 @@ import "./MGloEuroMidasAccessControlRoles.sol";
  * @notice AggregatorV3 compatible feed for mGLOeuro,
  * where price is submitted manually by feed admins
  * @author RedDuck Software
+ * @dev last initialization version is 3
  */
 contract MGloEuroCustomAggregatorFeed is
     CustomAggregatorV3CompatibleFeed,
@@ -18,42 +19,6 @@ contract MGloEuroCustomAggregatorFeed is
      * @dev leaving a storage gap for futures updates
      */
     uint256[50] private __gap;
-
-    /**
-     * @inheritdoc CustomAggregatorV3CompatibleFeed
-     */
-    function initialize(
-        address _accessControl,
-        int192 _minAnswer,
-        int192 _maxAnswer,
-        uint256 _maxAnswerDeviation,
-        string calldata _description
-    ) public override {
-        super.initialize(
-            _accessControl,
-            _minAnswer,
-            _maxAnswer,
-            _maxAnswerDeviation,
-            _description
-        );
-        // call v3 to increase contract version to 3
-        initializeV3(_minAnswer, _maxAnswer);
-    }
-
-    /**
-     * @notice reinitializes the contract with new min answer and max answer
-     * @param _newMinAnswer new min answer
-     * @param _newMaxAnswer new max answer
-     */
-    function initializeV3(int192 _newMinAnswer, int192 _newMaxAnswer)
-        public
-        reinitializer(3)
-    {
-        require(_newMinAnswer < _newMaxAnswer, "CA: !min/max");
-
-        minAnswer = _newMinAnswer;
-        maxAnswer = _newMaxAnswer;
-    }
 
     /**
      * @inheritdoc CustomAggregatorV3CompatibleFeed
