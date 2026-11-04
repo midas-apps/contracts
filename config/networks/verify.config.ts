@@ -1,3 +1,4 @@
+import { ENV } from '../env';
 import { PartialConfigPerNetwork } from '../types';
 
 type EtherscanVerifyConfig = {
@@ -160,7 +161,8 @@ export const verifyConfig: VerifyConfigPerNetwork = {
   },
   robinhood: {
     type: 'custom',
-    apiUrl: 'https://robinhoodchain.blockscout.com/api',
+    apiUrl: 'https://api.blockscout.com/4663/api',
+    apiKey: ENV.BLOCKSCOUT_API_KEY,
     browserUrl: 'https://robinhoodchain.blockscout.com',
   },
 };

@@ -94,6 +94,7 @@ export enum MTokenNameEnum {
   radUSD = 'radUSD',
   radYC = 'radYC',
   dvUSD = 'dvUSD',
+  sdvUSD = 'sdvUSD',
   liquidDeFi = 'liquidDeFi',
 }
 
@@ -162,6 +163,7 @@ export enum PaymentTokenNameEnum {
   cirbtc = 'cirbtc',
   bgbtc = 'bgbtc',
   radusd = 'radusd',
+  dvusd = 'dvusd',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;

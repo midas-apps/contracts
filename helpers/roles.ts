@@ -100,6 +100,7 @@ export const prefixes: Record<MTokenName, string> = {
   radUSD: 'RAD_USD',
   radYC: 'RAD_YC',
   dvUSD: 'DV_USD',
+  sdvUSD: 'SDV_USD',
   liquidDeFi: 'LIQUID_DEFI',
 };
 
@@ -127,6 +128,8 @@ export const tokenLevelGreenlistTokens: MTokenName[] = [
   'mFTAC',
   'radUSD',
   'radYC',
+  'dvUSD',
+  'sdvUSD',
 ];
 
 /**
@@ -145,10 +148,12 @@ export const sharedGreenlistRoleSource: Partial<
   mArbETH: 'mArb',
   mFTAC: 'mGLOBAL',
   radYC: 'radUSD',
+  sdvUSD: 'dvUSD',
 };
 
 export const customGreenlistRoleNames: Partial<Record<MTokenName, string>> = {
   radUSD: 'RADIAL_GREENLISTED_ROLE',
+  dvUSD: 'DRIVVY_GREENLISTED_ROLE',
 };
 
 const getGreenlistRoleName = (token: MTokenName): string => {

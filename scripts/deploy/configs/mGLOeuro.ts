@@ -9,12 +9,12 @@ export const mGLOeuroDeploymentConfig: DeploymentConfig = {
     customAggregator: {
       maxAnswerDeviation: parseUnits('1', 8),
       description: 'mGLOeuro/EUR',
-      minAnswer: parseUnits('90000', 8),
-      maxAnswer: parseUnits('110000', 8),
+      minAnswer: parseUnits('0.95', 8),
+      maxAnswer: parseUnits('1.1', 8),
     },
     dataFeed: {
-      minAnswer: parseUnits('90000', 8),
-      maxAnswer: parseUnits('110000', 8),
+      minAnswer: parseUnits('0.9', 8),
+      maxAnswer: parseUnits('1.1', 8),
     },
     customAggregatorAdjustedDv: {
       adjustmentPercentage: parseUnits('2', 8),
@@ -108,9 +108,6 @@ export const mGLOeuroDeploymentConfig: DeploymentConfig = {
           tokenManagerAddress: '0x462C735196AF2277deE9f15Ac60B45E7Fe8415AA',
           vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
           oracleManagerAddress: '0xa301F0eD658f72e0520fc47b42888bc985eF600c',
-          minBalanceExemptAddresses: [
-            '0x67887dd84E4778d8372BCD296E00995c59C00e52',
-          ],
         },
         greenlist: {
           depositVaultMorpho: true,

@@ -7,14 +7,14 @@ import { DeploymentConfig } from '../common/types';
 export const mALPHADeploymentConfig: DeploymentConfig = {
   genericConfigs: {
     customAggregator: {
-      minAnswer: parseUnits('1', 8),
-      maxAnswer: parseUnits('1.4', 8),
-      maxAnswerDeviation: parseUnits('1.18', 8),
+      minAnswer: parseUnits('0.1', 8),
+      maxAnswer: parseUnits('1.5', 8),
+      maxAnswerDeviation: parseUnits('25', 8),
       description: 'mALPHA/USD',
     },
     dataFeed: {
-      minAnswer: parseUnits('1', 8),
-      maxAnswer: parseUnits('1.4', 8),
+      minAnswer: parseUnits('0.1', 8),
+      maxAnswer: parseUnits('1.5', 8),
       healthyDiff: 2592000,
     },
   },

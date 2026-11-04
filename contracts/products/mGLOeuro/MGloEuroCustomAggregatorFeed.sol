@@ -9,6 +9,7 @@ import "./MGloEuroMidasAccessControlRoles.sol";
  * @notice AggregatorV3 compatible feed for mGLOeuro,
  * where price is submitted manually by feed admins
  * @author RedDuck Software
+ * @dev last initialization version is 3
  */
 contract MGloEuroCustomAggregatorFeed is
     CustomAggregatorV3CompatibleFeed,

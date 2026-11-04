@@ -1006,7 +1006,6 @@ All the roles for the Midas protocol smart contracts are listed below.
 | **_depositVaultAdmin_**    | `0xbea31e5142f943ef913e5422e0e9a586e9d0303ccd63e0eead6b4189eb11cb27` |
 | **_redemptionVaultAdmin_** | `0x0fada8a7f8ae9df6a95f6bc75af039633867da152deda5fb8ade34998ef95ae8` |
 | **_greenlisted_**          | `0x49a103d47daa98d445728ba0f2e848dccbbd73dea56729c961450eeb09890acc` |
-| **_minBalanceExempt_**     | `0x4c160e777147efaadeec64143e540a0cb03c77322c06777f48cab5184c7a2a03` |
 
 ### mALPHA Roles
 

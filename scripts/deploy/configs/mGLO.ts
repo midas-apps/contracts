@@ -21,12 +21,13 @@ export const mGLODeploymentConfig: DeploymentConfig = {
       maxAnswer: parseUnits('1.1', 8),
       healthyDiff: 60 * 24 * 60 * 60,
     },
+    // ±2% dv/rv holdback (reduced from ±7% for higher Steakhouse LTVs)
     customAggregatorAdjustedDv: {
-      adjustmentPercentage: parseUnits('7', 8),
+      adjustmentPercentage: parseUnits('2', 8),
       underlyingFeed: 'customFeed',
     },
     customAggregatorAdjustedRv: {
-      adjustmentPercentage: parseUnits('-7', 8),
+      adjustmentPercentage: parseUnits('-2', 8),
       underlyingFeed: 'customFeed',
     },
   },

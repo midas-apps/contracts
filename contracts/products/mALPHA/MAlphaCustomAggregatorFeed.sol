@@ -9,6 +9,7 @@ import "./MAlphaMidasAccessControlRoles.sol";
  * @notice AggregatorV3 compatible feed for mALPHA,
  * where price is submitted manually by feed admins
  * @author RedDuck Software
+ * @dev last initialization version is 2
  */
 contract MAlphaCustomAggregatorFeed is
     CustomAggregatorV3CompatibleFeed,

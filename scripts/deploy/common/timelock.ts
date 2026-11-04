@@ -4,7 +4,6 @@ import {
   setBalance,
 } from '@nomicfoundation/hardhat-network-helpers';
 import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
-import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { BigNumber, constants, PopulatedTransaction } from 'ethers';
 import { parseUnits, solidityKeccak256 } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
@@ -209,13 +208,13 @@ const validateSimulateContractUpgrade = async (
   upgradeParams: GetVaultUpgradeTxParams,
   tx: PopulatedTransaction,
 ) => {
-  await increase(days(3));
+  const timelock = await getTimelockContract(hre);
+
+  await increase((await timelock.getMinDelay()).toNumber());
   await mine();
 
   const proxyAdmin = await getProxyAdmin(hre);
   const proxyAdminOwner = await proxyAdmin.owner();
-
-  const timelock = await getTimelockContract(hre);
 
   if (proxyAdminOwner !== timelock.address) {
     const proxyAdminOwnerSigner = await hre.ethers.getSigner(proxyAdminOwner);
@@ -442,6 +441,20 @@ export const executeTimeLockTransferOwnershipTx = async (
   );
 };
 
+export const proposeTimeLockUpdateDelayTx = async (
+  hre: HardhatRuntimeEnvironment,
+  salt: string,
+) => {
+  return await createUpdateDelayTimelockTx(hre, salt, proposeTimelockTx);
+};
+
+export const executeTimeLockUpdateDelayTx = async (
+  hre: HardhatRuntimeEnvironment,
+  salt: string,
+) => {
+  return await createUpdateDelayTimelockTx(hre, salt, executeTimelockTx);
+};
+
 const getUpgradeTx = async (
   hre: HardhatRuntimeEnvironment,
   { newImplementation, proxyAddress, initializerCalldata }: GetUpgradeTxParams,
@@ -654,12 +667,56 @@ const createTransferOwnershipTimelockTx = async (
   );
 };
 
+// Sets the on-chain min delay to the network's configured timelock.minDelay.
+const createUpdateDelayTimelockTx = async (
+  hre: HardhatRuntimeEnvironment,
+  salt: string,
+  populateTx: PopulateTxFn,
+) => {
+  const newDelay =
+    networkDeploymentConfigs[hre.network.config.chainId!]?.timelock?.minDelay;
+
+  if (newDelay === undefined) {
+    throw new Error('Timelock config is not found');
+  }
+
+  const timelockContract = await getTimelockContract(hre);
+
+  return createTimeLockTx(
+    hre,
+    salt,
+    async () => {
+      const currentDelay = await timelockContract.getMinDelay();
+
+      if (currentDelay.eq(newDelay)) {
+        throw new Error(`Timelock min delay is already ${newDelay}`);
+      }
+
+      return {
+        isValid: true,
+        calldata: timelockContract.interface.encodeFunctionData('updateDelay', [
+          newDelay,
+        ]),
+        txComments: {
+          propose: `Propose timelock min delay update from ${currentDelay} to ${newDelay}`,
+          execute: `Execute timelock min delay update from ${currentDelay} to ${newDelay}`,
+        },
+      };
+    },
+    populateTx,
+    undefined,
+    timelockContract.address,
+  );
+};
+
 const createTimeLockTx = async (
   hre: HardhatRuntimeEnvironment,
   salt: string,
   validateParams: ValidateTimelockTxParams,
   populateTx: PopulateTxFn,
   txSendCallback?: (tx: PopulatedTransaction) => Promise<unknown>,
+  // defaults to the ProxyAdmin
+  targetAddress?: string,
 ): Promise<boolean> => {
   const { isValid, calldata, txComments } = await validateParams(hre);
 
@@ -669,6 +726,7 @@ const createTimeLockTx = async (
   }
 
   const admin = await getProxyAdmin(hre);
+  const target = targetAddress ?? admin.address;
 
   const networkAddresses = getCurrentAddresses(hre);
 
@@ -690,7 +748,7 @@ const createTimeLockTx = async (
 
     const { status, err } = await hre.ethers.provider
       .call({
-        to: admin.address,
+        to: target,
         from: timelockContract.address,
         data: calldata,
       })
@@ -708,7 +766,7 @@ const createTimeLockTx = async (
 
   const { operationHash, type, tx, verifyParameters } = await populateTx(
     timelockContract,
-    admin.address,
+    target,
     saltHash,
     calldata,
     !hre.skipValidation,

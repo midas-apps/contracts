@@ -48,6 +48,7 @@ export interface Environment {
   readonly QUICK_NODE_KEY?: string;
   readonly QUICK_NODE_PROJECT?: string;
   readonly ETHERSCAN_API_KEY?: string;
+  readonly BLOCKSCOUT_API_KEY?: string;
   readonly OPTIMIZER: boolean;
   readonly COVERAGE: boolean;
   readonly REPORT_GAS: boolean;
