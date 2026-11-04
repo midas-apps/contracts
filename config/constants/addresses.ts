@@ -1910,6 +1910,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         aggregator: '0xECef79E109e997bCA29c1c0897ec9d7b03647F5E',
         dataFeed: '0x9E41963c5D0A2F8800b046989B8815c01845a55f',
       },
+      liquidusd: {
+        token: '0x08c6F91e2B681FaF5e17227F2a44C307b3C1364C',
+        aggregator: '0xa16AAba5C542694FF2e02D1Ab74Ef999847Cbcc0',
+        dataFeed: '0xbec669bb7eD178E5C9908B0e8D680DCeB753c98c',
+      },
     },
     mRe7ETH: {
       token: '0xE7Ba07519dFA06e60059563F484d6090dedF21B3',

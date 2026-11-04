@@ -68,6 +68,12 @@ export const liquidDeFiDeploymentConfig: DeploymentConfig = {
                   allowance: parseUnits('1000000000', 18),
                   fee: 0,
                 },
+                {
+                  token: 'liquidusd',
+                  allowance: parseUnits('100000000', 18),
+                  fee: 0,
+                  isStable: false,
+                },
               ],
               type: 'depositVault',
             },
