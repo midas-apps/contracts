@@ -1092,6 +1092,13 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
           maxAnswer: parseUnits('1.003', 8),
         },
       },
+      liquidusd: {
+        dataFeed: {
+          healthyDiff: 30 * 24 * 60 * 60,
+          minAnswer: parseUnits('1.185', 18),
+          maxAnswer: parseUnits('1.385', 18),
+        },
+      },
     },
   },
 };

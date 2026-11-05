@@ -164,6 +164,7 @@ export enum PaymentTokenNameEnum {
   bgbtc = 'bgbtc',
   radusd = 'radusd',
   dvusd = 'dvusd',
+  liquidusd = 'liquidusd',
 }
 
 export type PaymentTokenName = keyof typeof PaymentTokenNameEnum;
