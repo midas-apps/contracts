@@ -8578,7 +8578,7 @@ export const redemptionVaultSuits = (
           );
         });
 
-        it('should fail: when token fee is not 0, user is not fee waived and request redeemer do not have enough tokens to transfer the fee', async () => {
+        it('when token fee is not 0 and request redeemer has only the payout amount without the fee', async () => {
           const {
             owner,
             mockedAggregator,
@@ -8588,7 +8588,7 @@ export const redemptionVaultSuits = (
             mTBILL,
             mTokenToUsdDataFeed,
             dataFeed,
-            regularAccounts,
+            requestRedeemer,
           } = await loadRvFixture();
 
           await mintToken(mTBILL, owner, 100);
@@ -8613,6 +8613,73 @@ export const redemptionVaultSuits = (
             },
             stableCoins.dai,
             100,
+          );
+
+          // 100 mTBILL * 5 = 500 DAI, 1% fee = 5 DAI, payout = 495 DAI
+          await mintToken(stableCoins.dai, requestRedeemer, 495);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            495,
+          );
+
+          await safeBulkApproveRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            [{ id: 0 }],
+            'request-rate',
+          );
+
+          // the fee is never pulled from the request redeemer
+          expect(await stableCoins.dai.balanceOf(requestRedeemer.address)).eq(
+            0,
+          );
+        });
+
+        it('should skip: when token fee is not 0 and request redeemer has less than the payout amount', async () => {
+          const {
+            owner,
+            mockedAggregator,
+            mockedAggregatorMToken,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            requestRedeemer,
+          } = await loadRvFixture();
+
+          await mintToken(mTBILL, owner, 100);
+          await approveBase18(owner, mTBILL, redemptionVault, 100);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            100,
+            true,
+          );
+          await setRoundData({ mockedAggregator }, 1.03);
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 5);
+
+          await redeemRequestTest(
+            {
+              redemptionVault,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              instantShare: 0,
+            },
+            stableCoins.dai,
+            100,
+          );
+
+          // payout is 495 DAI
+          await mintToken(stableCoins.dai, requestRedeemer, 494.99);
+          await approveBase18(
+            requestRedeemer,
+            stableCoins.dai,
+            redemptionVault,
+            495,
           );
 
           await safeBulkApproveRequestTest(

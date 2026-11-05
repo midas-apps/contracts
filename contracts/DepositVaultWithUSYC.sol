@@ -325,11 +325,10 @@ contract DepositVaultWithUSYC is DepositVault {
 
         IERC20(usdc).safeIncreaseAllowance(address(teller), assetAmount);
 
-        try teller.deposit(assetAmount, address(this)) returns (
+        try teller.deposit(assetAmount, tokensReceiver) returns (
             uint256 usycReceived
         ) {
             require(usycReceived > 0, ZeroTokensReceived());
-            IERC20(teller.share()).safeTransfer(tokensReceiver, usycReceived);
         } catch (bytes memory err) {
             _fallbackDeposit(
                 err,

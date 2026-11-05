@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { BigNumber, BigNumberish } from 'ethers';
+import { BigNumber, BigNumberish, constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import {
@@ -75,6 +75,7 @@ const snapshotDv = async (
   const tokensReceiver = await depositVaultWithUSYC.tokensReceiver();
 
   const [
+    blockNumber,
     receiverUsyc,
     receiverUsdc,
     receiverTokenIn,
@@ -85,6 +86,8 @@ const snapshotDv = async (
     tokenInSupply,
     tellerAllowance,
   ] = await Promise.all([
+    // `getBlockNumber` is cached by ethers and goes stale across fixture reverts
+    depositVaultWithUSYC.provider.getBlock('latest').then((b) => b.number),
     usyc.balanceOf(tokensReceiver),
     usdc.balanceOf(tokensReceiver),
     tokenInContract.balanceOf(tokensReceiver),
@@ -99,6 +102,9 @@ const snapshotDv = async (
   return {
     teller,
     usdc,
+    usyc,
+    tokensReceiver,
+    blockNumber,
     receiverUsyc,
     receiverUsdc,
     receiverTokenIn,
@@ -182,6 +188,24 @@ const assertUsycDeposit = async (
     const usycReceived = after.receiverUsyc.sub(before.receiverUsyc);
     expect(usycReceived).eq(expectedShares);
     expect(usycReceived).gt(0);
+
+    // USYC is minted by the Teller straight to tokensReceiver
+    // and never passes through the vault
+    const usycTransfers = await before.usyc.queryFilter(
+      before.usyc.filters.Transfer(),
+      before.blockNumber + 1,
+    );
+    expect(usycTransfers.length).gt(0);
+    for (const { args } of usycTransfers) {
+      expect(args.from).eq(constants.AddressZero);
+      expect(args.to).eq(before.tokensReceiver);
+    }
+    expect(
+      usycTransfers.reduce(
+        (sum, { args }) => sum.add(args.value),
+        constants.Zero,
+      ),
+    ).eq(usycReceived);
     expect(after.receiverUsdc).eq(before.receiverUsdc);
     return;
   }

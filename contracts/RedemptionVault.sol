@@ -487,8 +487,9 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
         if (
             (isSafe &&
                 IERC20(request.tokenOut).balanceOf(requestRedeemer) <
-                (calcResult.amountTokenOutWithoutFee + calcResult.feeAmount)
-                    .convertFromBase18(calcResult.tokenOutDecimals))
+                (calcResult.amountTokenOutWithoutFee).convertFromBase18(
+                    calcResult.tokenOutDecimals
+                ))
         ) {
             return;
         }
