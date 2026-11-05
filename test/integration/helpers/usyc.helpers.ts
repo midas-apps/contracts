@@ -6,7 +6,7 @@ import { impersonateAndFundAccount, resetFork } from './fork.helpers';
 
 import { rpcUrls } from '../../../config';
 import {
-  ArcUSDCMock,
+  USDCMock,
   IUSYCTeller,
   IUSYCTeller__factory,
 } from '../../../typechain-types';
@@ -63,18 +63,16 @@ export const resetArcFork = async () => {
   await resetFork(rpcUrls.arc, ARC_FORK_BLOCK);
   await mine(1);
 
-  const usdcImpl = await (
-    await ethers.getContractFactory('ArcUSDCMock')
-  ).deploy();
+  const usdcImpl = await (await ethers.getContractFactory('USDCMock')).deploy();
   await network.provider.send('hardhat_setCode', [
     ARC_ADDRESSES.USDC,
     await ethers.provider.getCode(usdcImpl.address),
   ]);
 
   const usdc = (await ethers.getContractAt(
-    'ArcUSDCMock',
+    'USDCMock',
     ARC_ADDRESSES.USDC,
-  )) as ArcUSDCMock;
+  )) as USDCMock;
   const teller = IUSYCTeller__factory.connect(
     ARC_ADDRESSES.USYC_TELLER,
     ethers.provider,
@@ -109,7 +107,7 @@ export const setUsycEntitlement = async (
  */
 export const setTellerLiquidity = async (
   teller: IUSYCTeller,
-  usdc: ArcUSDCMock,
+  usdc: USDCMock,
   redeemer: string,
   liquidity: BigNumber,
 ) => {

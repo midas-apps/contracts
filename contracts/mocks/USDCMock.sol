@@ -4,12 +4,12 @@ pragma solidity 0.8.34;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /**
- * @notice Arc USDC (0x3600...0000) moves native balances through an Arc-only
- * precompile, which does not exist on a hardhat fork. Fork tests replace its
- * runtime code with this mock so the real Teller/USYC can be exercised.
+ * @notice 6-decimal USDC mock meant to replace a USDC runtime code with
+ * `hardhat_setCode` on forks, e.g. when the real USDC relies on a
+ * chain-specific precompile that hardhat does not have
  * @dev decimals are hardcoded as `hardhat_setCode` does not run the constructor
  */
-contract ArcUSDCMock is ERC20 {
+contract USDCMock is ERC20 {
     constructor() ERC20("USDC", "USDC") {}
 
     function mint(address to, uint256 amount) external {

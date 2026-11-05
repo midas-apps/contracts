@@ -1863,6 +1863,335 @@ export const redemptionVaultSuits = (
               );
             });
 
+            it('when 25% of liquidity on vault and 75% on loan lp: loan lp covers only the missing payout', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mockedAggregatorMToken,
+                mockedAggregator,
+                mTokenLoan,
+                redemptionVaultLoanSwapper,
+              } = await loadRvFixture();
+
+              await mintToken(mTBILL, owner, 100);
+              await mintToken(stableCoins.dai, redemptionVault, 25);
+
+              await mintToken(mTokenLoan, loanLp, 75);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 75);
+              await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 75);
+
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMToken },
+                1,
+              );
+              await setRoundData({ mockedAggregator }, 1);
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              const loanRequestId =
+                await redemptionVault.currentLoanRequestId();
+
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+
+              // 100 DAI total, 1% fee: 99 DAI payout - 25 DAI on vault = 74 DAI
+              // shortfall, LP fee share is 1 * 74 / 99 truncated to 9 decimals
+              const loanRequest = await redemptionVault.loanRequests(
+                loanRequestId,
+              );
+              expect(loanRequest.amountTokenOut).eq(parseUnits('74'));
+              expect(loanRequest.amountFee).eq(parseUnits('0.747474747'));
+              expect(
+                await stableCoins.dai.balanceOf(redemptionVault.address),
+              ).eq(0);
+            });
+
+            it('when vault has the payout but not the payout + fee: loan lp is untouched', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mockedAggregatorMToken,
+                mockedAggregator,
+                mTokenLoan,
+                redemptionVaultLoanSwapper,
+              } = await loadRvFixture();
+
+              await mintToken(mTBILL, owner, 100);
+              // 100 DAI total, 1% fee: the 99 DAI payout is fully on the vault
+              await mintToken(stableCoins.dai, redemptionVault, 99);
+
+              await mintToken(mTokenLoan, loanLp, 100);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 100);
+              await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 100);
+
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMToken },
+                1,
+              );
+              await setRoundData({ mockedAggregator }, 1);
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              const loanRequestId =
+                await redemptionVault.currentLoanRequestId();
+
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+
+              expect(await redemptionVault.currentLoanRequestId()).eq(
+                loanRequestId,
+              );
+              expect(await mTokenLoan.balanceOf(loanLp.address)).eq(
+                parseUnits('100'),
+              );
+              expect(
+                await stableCoins.dai.balanceOf(redemptionVault.address),
+              ).eq(0);
+            });
+
+            it('when 25% of liquidity on vault and 75% on loan lp with instant and token fees: loan lp covers only the missing payout', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mockedAggregatorMToken,
+                mockedAggregator,
+                mTokenLoan,
+                redemptionVaultLoanSwapper,
+              } = await loadRvFixture();
+
+              await mintToken(mTBILL, owner, 100);
+              await mintToken(stableCoins.dai, redemptionVault, 25);
+
+              await mintToken(mTokenLoan, loanLp, 75);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 75);
+              await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 75);
+
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMToken },
+                1,
+              );
+              await setRoundData({ mockedAggregator }, 1);
+
+              // 1% token fee on top of the 1% instant fee
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                100,
+                true,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              const loanRequestId =
+                await redemptionVault.currentLoanRequestId();
+
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+
+              // 100 DAI total, 2% fee: 98 DAI payout - 25 DAI on vault = 73 DAI
+              // shortfall, LP fee share is 2 * 73 / 98 truncated to 9 decimals
+              const loanRequest = await redemptionVault.loanRequests(
+                loanRequestId,
+              );
+              expect(loanRequest.amountTokenOut).eq(parseUnits('73'));
+              expect(loanRequest.amountFee).eq(parseUnits('1.489795918'));
+              expect(
+                await stableCoins.dai.balanceOf(redemptionVault.address),
+              ).eq(0);
+            });
+
+            it('when loan lp holds exactly the grossed up missing payout', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mockedAggregatorMToken,
+                mockedAggregator,
+                mTokenLoan,
+                redemptionVaultLoanSwapper,
+              } = await loadRvFixture();
+
+              await mintToken(mTBILL, owner, 100);
+              await mintToken(stableCoins.dai, redemptionVault, 25);
+
+              // 74 DAI shortfall grossed up by 100 / 99 = 74.747474747474747475
+              const lpMToken = BigNumber.from('74747474747474747475');
+              await mTokenLoan.mint(loanLp.address, lpMToken);
+              await mTokenLoan
+                .connect(loanLp)
+                .approve(redemptionVault.address, lpMToken);
+              await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 75);
+
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMToken },
+                1,
+              );
+              await setRoundData({ mockedAggregator }, 1);
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              const loanRequestId =
+                await redemptionVault.currentLoanRequestId();
+
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+
+              const loanRequest = await redemptionVault.loanRequests(
+                loanRequestId,
+              );
+              expect(loanRequest.amountTokenOut).eq(parseUnits('74'));
+              expect(loanRequest.amountFee).eq(parseUnits('0.747474747'));
+              expect(
+                await stableCoins.dai.balanceOf(redemptionVault.address),
+              ).eq(0);
+            });
+
+            it('when 25% of liquidity on vault and 75% on loan lp with non-round rates and 18 decimals tokenOut', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mockedAggregatorMToken,
+                mockedAggregatorMTokenLoan,
+                mockedAggregator,
+                mTokenLoan,
+                redemptionVaultLoanSwapper,
+              } = await loadRvFixture();
+
+              await mintToken(mTBILL, owner, 100);
+              await mintToken(stableCoins.usdt, redemptionVault, 35);
+
+              await mintToken(mTokenLoan, loanLp, 1000);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 1000);
+              await mintToken(
+                stableCoins.usdt,
+                redemptionVaultLoanSwapper,
+                1000,
+              );
+
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMToken },
+                1.37,
+              );
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMTokenLoan },
+                0.93,
+              );
+              await setRoundData({ mockedAggregator }, 0.97);
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.usdt,
+                dataFeed.address,
+                0,
+                false,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.usdt,
+                dataFeed.address,
+                0,
+                false,
+              );
+
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.usdt,
+                100,
+              );
+
+              // the loan LP delivers at least the missing payout,
+              // only rounding dust may stay on the vault
+              expect(
+                await stableCoins.usdt.balanceOf(redemptionVault.address),
+              ).lt(100);
+            });
+
             it('when enough liquidity on loan lp and on vault but lp liquidity should be untouched', async () => {
               const {
                 owner,
@@ -2286,6 +2615,76 @@ export const redemptionVaultSuits = (
                 stableCoins.dai,
                 100,
               );
+            });
+
+            it('when 25% of liquidity on vault and 75% on loan lp: loan lp is used first and vault covers the rest of the payout', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mockedAggregatorMToken,
+                mockedAggregator,
+                mTokenLoan,
+                redemptionVaultLoanSwapper,
+              } = await loadRvFixture();
+
+              await mintToken(mTBILL, owner, 100);
+              await mintToken(stableCoins.dai, redemptionVault, 25);
+
+              await mintToken(mTokenLoan, loanLp, 75);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 75);
+              await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 75);
+
+              await setRoundData(
+                { mockedAggregator: mockedAggregatorMToken },
+                1,
+              );
+              await setRoundData({ mockedAggregator }, 1);
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              await setPreferLoanLiquidityTest(
+                { redemptionVault, owner },
+                true,
+              );
+
+              const loanRequestId =
+                await redemptionVault.currentLoanRequestId();
+
+              await redeemInstantTest(
+                { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                stableCoins.dai,
+                100,
+              );
+
+              // LP gross 75 incl. 0.75 fee share: 74.25 DAI cash,
+              // vault pays 99 - 74.25 and keeps 0.25 DAI
+              const loanRequest = await redemptionVault.loanRequests(
+                loanRequestId,
+              );
+              expect(loanRequest.amountTokenOut).eq(parseUnits('74.25'));
+              expect(loanRequest.amountFee).eq(parseUnits('0.75'));
+              expect(
+                await stableCoins.dai.balanceOf(redemptionVault.address),
+              ).eq(parseUnits('0.25', 9));
             });
 
             it('when enough liquidity on loan lp and on vault but vault liquidity should be untouched', async () => {

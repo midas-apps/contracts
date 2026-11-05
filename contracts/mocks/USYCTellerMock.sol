@@ -2,108 +2,170 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
-import "./ERC20Mock.sol";
+interface IMintableBurnableToken {
+    function mint(address to, uint256 amount) external;
+
+    function burn(address from, uint256 amount) external;
+}
 
 /**
- * @notice Mock of Circle's USYC Teller mirroring the behaviour verified on Arc:
- * - deposit pulls `asset` and mints shares at `mintPrice` rounding down
- * - redeem burns shares of `account == msg.sender` (no share approval needed)
- *   and pays `asset` at `redeemPrice` rounding down
- * - previewWithdrawData rounds shares up
- * - maxRedeem is capped by the asset liquidity held by the teller
- * - fee rates are reported but not charged (as on Arc), unless `chargeFees`
- *   is enabled to mimic a Teller that charges them (e.g. Ethereum)
+ * @notice Mock of Circle's USYC Teller with its TellerFeeManager.
+ * Share/asset conversions follow the Teller:
+ * - asset and share have the same decimals, prices have `PRICE_DECIMALS`
+ * - deposit: the fee is taken from `assets`,
+ *   shares = (assets - fee) / mintPrice, rounded down
+ * - previewWithdrawData: the fee is added on top of `assets`,
+ *   shares = (assets + fee) / price, rounded up
+ * - redeem: assets = shares * price, rounded down, then the fee is taken from it
+ * - convertToShares, convertToAssets and maxRedeem use `price`, rounded down
+ *
+ * Fees follow the TellerFeeManager: the rate applies to the net amount and only
+ * to the part of the amount over the free tier left for the day, where the daily
+ * volume is the account subscriptions + redemptions. By default the free tier is
+ * unlimited, so the fee rates are reported but no fee is charged
+ *
+ * Simplifications:
+ * - the price feed is replaced with `setPrices`: `price` is the oracle price,
+ *   `mintPrice` is what the Teller uses for deposits (the next oracle price after hours)
+ * - fee rates are the same for all accounts
+ * - the mock holds the redemption liquidity itself, there are no daily limits
+ *   and `redeem` only burns the caller's own shares
+ *
+ * @dev admin functions are gated by the owner, or permissionless when the owner is address(0)
  */
-contract USYCTellerMock {
+contract USYCTellerMock is Ownable {
     using SafeERC20 for IERC20;
 
-    error ZeroAssets();
-    error ZeroShares();
-    error NotPermissioned();
-    error ExceedsMaxRedeem(uint256 shares, uint256 maxShares);
+    uint256 public constant PRICE_DECIMALS = 18;
+    uint256 private constant _PRICE_SCALE = 10**PRICE_DECIMALS;
+    /// @dev fee rates have 18 decimals of a percent: 1e18 = 1%
+    uint256 private constant _HUNDRED_PCT = 100e18;
 
     address public immutable asset;
     address public immutable share;
 
-    uint256 private immutable _assetUnit;
-    uint256 private immutable _shareUnit;
-
-    uint256 public mintPrice = 1e18;
-    uint256 public redeemPrice = 1e18;
+    uint256 public price = _PRICE_SCALE;
+    uint256 private _mintPrice = _PRICE_SCALE;
 
     uint256 private _subscriptionFeeRate;
     uint256 private _redemptionFeeRate;
 
+    uint256 public freeTierThreshold = type(uint256).max;
+
+    mapping(address => mapping(uint256 => uint256)) public subscription;
+
+    mapping(address => mapping(uint256 => uint256)) public redemption;
+
     bool public depositReverts;
     bool public redeemReverts;
     bool public depositReturnsZero;
-    bool public chargeFees;
 
-    constructor(address _asset, address _share) {
+    modifier onlyAdmin() {
+        if (owner() != address(0)) _checkOwner();
+        _;
+    }
+
+    constructor(
+        address _asset,
+        address _share,
+        address _owner
+    ) {
+        require(
+            IERC20Metadata(_asset).decimals() ==
+                IERC20Metadata(_share).decimals(),
+            "USYCTellerMock: bad decimals"
+        );
         asset = _asset;
         share = _share;
-        _assetUnit = 10**IERC20Metadata(_asset).decimals();
-        _shareUnit = 10**IERC20Metadata(_share).decimals();
+        _transferOwnership(_owner);
     }
 
-    /// @dev `price` is the asset value of one whole share, in 18 decimals
-    function _toShares(
-        uint256 assets,
-        uint256 price,
-        Math.Rounding rounding
-    ) private view returns (uint256) {
-        return
-            Math.mulDiv(
-                assets,
-                1e18 * _shareUnit,
-                price * _assetUnit,
-                rounding
-            );
+    function transferOwnership(address newOwner) public override onlyAdmin {
+        _transferOwnership(newOwner);
     }
 
-    function _toAssets(uint256 shares, uint256 price)
-        private
-        view
-        returns (uint256)
-    {
-        return Math.mulDiv(shares, price * _assetUnit, 1e18 * _shareUnit);
-    }
-
-    function setPrices(uint256 _mintPrice, uint256 _redeemPrice) external {
-        mintPrice = _mintPrice;
-        redeemPrice = _redeemPrice;
+    function setPrices(uint256 mintPrice_, uint256 price_) external onlyAdmin {
+        require(mintPrice_ > 0 && price_ > 0, "USYCTellerMock: bad price");
+        _mintPrice = mintPrice_;
+        price = price_;
     }
 
     function setFeeRates(uint256 subscriptionRate, uint256 redemptionRate)
         external
+        onlyAdmin
     {
         _subscriptionFeeRate = subscriptionRate;
         _redemptionFeeRate = redemptionRate;
     }
 
-    function setDepositReverts(bool value) external {
+    function setFreeTierThreshold(uint256 threshold) external onlyAdmin {
+        freeTierThreshold = threshold;
+    }
+
+    function setDepositReverts(bool value) external onlyAdmin {
         depositReverts = value;
     }
 
-    function setRedeemReverts(bool value) external {
+    function setRedeemReverts(bool value) external onlyAdmin {
         redeemReverts = value;
     }
 
-    function setDepositReturnsZero(bool value) external {
+    function setDepositReturnsZero(bool value) external onlyAdmin {
         depositReturnsZero = value;
     }
 
-    function setChargeFees(bool value) external {
-        chargeFees = value;
+    function withdrawLiquidity(address to, uint256 amount) external onlyAdmin {
+        IERC20(asset).safeTransfer(to, amount);
     }
 
-    function withdrawLiquidity(address to, uint256 amount) external {
-        IERC20(asset).safeTransfer(to, amount);
+    function deposit(uint256 assets, address receiver)
+        external
+        returns (uint256 shares)
+    {
+        require(!depositReverts, "USYCTellerMock: deposit reverts");
+
+        uint256 fee;
+        (shares, fee, ) = previewDepositData(msg.sender, assets);
+        require(shares > 0, "USYCTellerMock: zero shares");
+
+        subscription[msg.sender][todayTimestamp()] += assets - fee;
+
+        IERC20(asset).safeTransferFrom(msg.sender, address(this), assets);
+
+        if (depositReturnsZero) return 0;
+
+        IMintableBurnableToken(share).mint(receiver, shares);
+    }
+
+    function redeem(
+        uint256 shares,
+        address receiver,
+        address account
+    ) external returns (uint256 assets) {
+        require(!redeemReverts, "USYCTellerMock: redeem reverts");
+        require(account == msg.sender, "USYCTellerMock: not permissioned");
+        require(
+            shares <= maxRedeem(account),
+            "USYCTellerMock: exceeds max redeem"
+        );
+
+        (assets, , ) = previewRedeemData(account, shares);
+        require(assets > 0, "USYCTellerMock: zero assets");
+
+        redemption[account][todayTimestamp()] += assets;
+
+        IMintableBurnableToken(share).burn(account, shares);
+        IERC20(asset).safeTransfer(receiver, assets);
+    }
+
+    function mintPrice() public view returns (int256) {
+        return int256(_mintPrice);
     }
 
     function subscriptionFeeRate(address) external view returns (uint256) {
@@ -114,125 +176,130 @@ contract USYCTellerMock {
         return _redemptionFeeRate;
     }
 
+    function treasury(address) external view returns (address) {
+        return address(this);
+    }
+
+    function todayTimestamp() public view returns (uint256) {
+        return block.timestamp - (block.timestamp % 1 days);
+    }
+
     function totalAssets() public view returns (uint256) {
         return IERC20(asset).balanceOf(address(this));
     }
 
-    function convertToShares(uint256 assets) public view returns (uint256) {
-        return _toShares(assets, redeemPrice, Math.Rounding.Down);
+    function convertToShares(uint256 assets) external view returns (uint256) {
+        return Math.mulDiv(assets, _PRICE_SCALE, price);
     }
 
-    function convertToAssets(uint256 shares) public view returns (uint256) {
-        return _toAssets(shares, redeemPrice);
+    function convertToAssets(uint256 shares) external view returns (uint256) {
+        return Math.mulDiv(shares, price, _PRICE_SCALE);
     }
 
     function maxRedeem(address account) public view returns (uint256) {
         return
             Math.min(
-                IERC20(share).balanceOf(account),
-                convertToShares(totalAssets())
+                Math.mulDiv(totalAssets(), _PRICE_SCALE, price),
+                IERC20(share).balanceOf(account)
             );
     }
 
-    /// @dev subscription fee is taken from the deposited assets, rounding up
-    function previewDepositData(address, uint256 assets)
+    function previewDepositData(address account, uint256 assets)
         public
         view
         returns (
             uint256 shares,
             uint256 fee,
-            int256 price
+            int256 price_
         )
     {
-        if (chargeFees) {
-            fee = Math.mulDiv(
-                assets,
-                _subscriptionFeeRate,
-                1e18,
-                Math.Rounding.Up
-            );
-        }
-        shares = _toShares(assets - fee, mintPrice, Math.Rounding.Down);
-        price = int256(mintPrice);
+        fee = _feeFromGross(account, assets, _subscriptionFeeRate);
+        price_ = mintPrice();
+        shares = Math.mulDiv(assets - fee, _PRICE_SCALE, _mintPrice);
     }
 
-    /// @dev shares needed so that redeeming them pays at least `assets` net of fee
-    function previewWithdrawData(address, uint256 assets)
+    function previewWithdrawData(address account, uint256 assets)
         external
         view
         returns (
             uint256 shares,
             uint256 fee,
-            int256 price
+            int256 price_
         )
     {
-        uint256 grossAssets = chargeFees
-            ? Math.mulDiv(
-                assets,
-                1e18,
-                1e18 - _redemptionFeeRate,
-                Math.Rounding.Up
-            )
-            : assets;
-        fee = grossAssets - assets;
-        shares = _toShares(grossAssets, redeemPrice, Math.Rounding.Up);
-        price = int256(redeemPrice);
+        fee = _feeOnTop(account, assets, _redemptionFeeRate);
+        price_ = int256(price);
+        shares = Math.mulDiv(
+            assets + fee,
+            _PRICE_SCALE,
+            price,
+            Math.Rounding.Up
+        );
     }
 
-    /// @dev redemption fee is taken from the redeemed assets, rounding up
-    function previewRedeemData(address, uint256 shares)
+    function previewRedeemData(address account, uint256 shares)
         public
         view
         returns (
             uint256 assets,
             uint256 fee,
-            int256 price
+            int256 price_
         )
     {
-        assets = convertToAssets(shares);
-        if (chargeFees) {
+        price_ = int256(price);
+        assets = Math.mulDiv(shares, price, _PRICE_SCALE);
+        fee = _feeFromGross(account, assets, _redemptionFeeRate);
+        assets -= fee;
+    }
+
+    function _feeFromGross(
+        address account,
+        uint256 grossAssets,
+        uint256 rate
+    ) private view returns (uint256 fee) {
+        uint256 amountOverFreeTier = _amountOverFreeTier(account, grossAssets);
+
+        if (rate > 0 && amountOverFreeTier > 0) {
+            fee =
+                amountOverFreeTier -
+                Math.mulDiv(
+                    amountOverFreeTier,
+                    _HUNDRED_PCT,
+                    _HUNDRED_PCT + rate
+                );
+        }
+    }
+
+    function _feeOnTop(
+        address account,
+        uint256 netAssets,
+        uint256 rate
+    ) private view returns (uint256 fee) {
+        uint256 amountOverFreeTier = _amountOverFreeTier(account, netAssets);
+
+        if (rate > 0 && amountOverFreeTier > 0) {
             fee = Math.mulDiv(
-                assets,
-                _redemptionFeeRate,
-                1e18,
+                amountOverFreeTier,
+                rate,
+                _HUNDRED_PCT,
                 Math.Rounding.Up
             );
         }
-        assets -= fee;
-        price = int256(redeemPrice);
     }
 
-    function deposit(uint256 assets, address receiver)
-        external
-        returns (uint256 shares)
+    function _amountOverFreeTier(address account, uint256 assets)
+        private
+        view
+        returns (uint256)
     {
-        require(!depositReverts, "USYCTellerMock: deposit reverts");
+        uint256 today = todayTimestamp();
+        uint256 currentVolume = subscription[account][today] +
+            redemption[account][today];
+        if (currentVolume >= freeTierThreshold) return assets;
 
-        (shares, , ) = previewDepositData(msg.sender, assets);
-        if (shares == 0) revert ZeroShares();
+        uint256 freeTierVolLeft = freeTierThreshold - currentVolume;
+        if (assets >= freeTierVolLeft) return assets - freeTierVolLeft;
 
-        IERC20(asset).safeTransferFrom(msg.sender, address(this), assets);
-
-        if (depositReturnsZero) return 0;
-
-        ERC20Mock(share).mint(receiver, shares);
-    }
-
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address account
-    ) external returns (uint256 assets) {
-        require(!redeemReverts, "USYCTellerMock: redeem reverts");
-        if (account != msg.sender) revert NotPermissioned();
-
-        uint256 maxShares = maxRedeem(account);
-        if (shares > maxShares) revert ExceedsMaxRedeem(shares, maxShares);
-
-        (assets, , ) = previewRedeemData(account, shares);
-        if (assets == 0) revert ZeroAssets();
-
-        ERC20Mock(share).burn(account, shares);
-        IERC20(asset).safeTransfer(receiver, assets);
+        return 0;
     }
 }

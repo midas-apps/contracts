@@ -696,8 +696,10 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             .balanceOf(address(this))
             .convertToBase18(_tokenDecimals(tokenOut));
 
-        uint256 totalAmount = calcResult.amountTokenOutWithoutFee +
-            calcResult.feeAmount;
+        // fee stays in the vault, so only the payout has to be covered in cash
+        uint256 payoutAmount = calcResult.amountTokenOutWithoutFee;
+        // gross amount (payout + fee) used as the basis for the LP loan
+        uint256 totalAmount = payoutAmount + calcResult.feeAmount;
 
         if (preferLoanLiquidity) {
             (usedLpLiquidity, lpFeePortion) = _tryObtainLoanLpLiquidity(
@@ -711,19 +713,19 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
             uint256 newBalance = tokenOutBalanceBase18 + usedLpLiquidity;
 
-            if (newBalance < totalAmount) {
+            if (newBalance < payoutAmount) {
                 _tryObtainVaultLiquidity(
                     tokenOut,
-                    totalAmount - newBalance,
+                    payoutAmount - newBalance,
                     calcResult.tokenOutRate,
                     newBalance,
                     calcResult.tokenOutDecimals
                 );
             }
-        } else if (tokenOutBalanceBase18 < totalAmount) {
+        } else if (tokenOutBalanceBase18 < payoutAmount) {
             uint256 obtainedVaultLiquidity = _tryObtainVaultLiquidity(
                 tokenOut,
-                totalAmount - tokenOutBalanceBase18,
+                payoutAmount - tokenOutBalanceBase18,
                 calcResult.tokenOutRate,
                 tokenOutBalanceBase18,
                 calcResult.tokenOutDecimals
@@ -731,10 +733,17 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
 
             uint256 newBalance = tokenOutBalanceBase18 + obtainedVaultLiquidity;
 
-            if (newBalance < totalAmount) {
+            if (newBalance < payoutAmount) {
+                // gross up so that the LP delivers exactly the missing cash
+                // after its pro-rata fee share is deducted
                 (usedLpLiquidity, lpFeePortion) = _tryObtainLoanLpLiquidity(
                     tokenOut,
-                    totalAmount - newBalance,
+                    Math.mulDiv(
+                        payoutAmount - newBalance,
+                        totalAmount,
+                        payoutAmount,
+                        Math.Rounding.Up
+                    ),
                     totalAmount,
                     calcResult.tokenOutRate,
                     calcResult.feeAmount,
@@ -833,7 +842,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     /**
      * @dev wraps _obtainLoanLpLiquidityExternal with try/catch
      * @param tokenOut tokenOut address
-     * @param missingAmountBase18 amount of tokenOut needed in base 18
+     * @param missingAmountBase18 gross amount of tokenOut to cover by the loan LP in base 18,
+     * including the LP pro-rata fee portion
      * @param totalAmount total amount of tokenOut needed in base 18
      * @param tokenOutRate tokenOut rate
      * @param totalFee total fee of tokenOut
@@ -927,7 +937,8 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @dev Check if contract has enough tokenOut balance for redeem;
      * if not, redeem the missing amount via loan LP liquidity
      * @param tokenOut tokenOut address
-     * @param missingAmountBase18 amount of tokenOut needed in base 18
+     * @param missingAmountBase18 gross amount of tokenOut to cover by the loan LP in base 18,
+     * including the LP pro-rata fee portion
      * @param totalAmount total amount of tokenOut needed in base 18
      * @param tokenOutRate tokenOut rate
      * @param totalFee total fee of tokenOut

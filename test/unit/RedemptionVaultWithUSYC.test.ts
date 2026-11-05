@@ -10,6 +10,7 @@ import {
 } from './suits/redemption-vault.suits';
 
 import {
+  ERC20Mock__factory,
   RedemptionVaultWithUSYC__factory,
   USYCTellerMock__factory,
 } from '../../typechain-types';
@@ -134,7 +135,7 @@ const setupUsycRv = async (
 };
 
 /**
- * Arc-like setup for rounding tests: USDC and USYC both have 6 decimals (so
+ * 6-decimal setup for rounding tests: USDC and USYC both have 6 decimals (so
  * the teller rounding does not over-cover the strategy rounding) and the
  * vault instant fee is 0 (so no fee portion absorbs a shortfall)
  */
@@ -145,14 +146,15 @@ const setupTightUsycRv = async (fixture: DefaultFixture) => {
     depositVaultMTokenLoan,
     stableCoins,
     dataFeed,
-    usycToken,
   } = fixture;
   const { user } = await setupUsycRv(fixture, { usyc: 0 });
 
   const usdc = stableCoins.usdc6;
+  const usycToken = await new ERC20Mock__factory(owner).deploy(6);
   const teller = await new USYCTellerMock__factory(owner).deploy(
     usdc.address,
     usycToken.address,
+    constants.AddressZero,
   );
   await mintToken(usdc, teller, 1_000_000);
   await usycSetterTest(
@@ -560,15 +562,15 @@ redemptionVaultSuits(
           const fixture = await loadFixture(defaultDeploy);
           const { user } = await setupUsycRv(fixture);
           await fixture.usycTeller.setFeeRates(
-            parseUnits('0.04'),
-            parseUnits('0.03'),
+            parseUnits('4'),
+            parseUnits('3'),
           );
           await usycSetterTest(
             { vault: fixture.redemptionVaultWithUSYC, owner: fixture.owner },
             'setAnticipatedFeeRate',
             'SetAnticipatedFeeRate',
             'anticipatedFeeRate',
-            parseUnits('0.03'),
+            parseUnits('3'),
           );
 
           await redeemInstantWithUsycTest(
@@ -582,7 +584,7 @@ redemptionVaultSuits(
         it('should fail: teller redemption fee rate differs from anticipated fee rate', async () => {
           const fixture = await loadFixture(defaultDeploy);
           const { user } = await setupUsycRv(fixture);
-          await fixture.usycTeller.setFeeRates(0, parseUnits('0.03'));
+          await fixture.usycTeller.setFeeRates(0, parseUnits('3'));
 
           await redeemInstantWithUsycTest(
             commonParams(fixture),
@@ -717,7 +719,7 @@ redemptionVaultSuits(
         it('teller redemption fee rate differs from anticipated: nothing is obtained', async () => {
           const fixture = await loadFixture(defaultDeploy);
           await setupUsycRv(fixture);
-          await fixture.usycTeller.setFeeRates(0, parseUnits('0.03'));
+          await fixture.usycTeller.setFeeRates(0, parseUnits('3'));
 
           for (const token of [fixture.stableCoins.usdc, fixture.mTokenLoan]) {
             await checkAndRedeemUsycTest(
@@ -919,8 +921,10 @@ redemptionVaultSuits(
           const { user } = await setupUsycRv(fixture);
           await setupLoanLp(fixture, 100_000);
           await limitTellerLiquidity(fixture, parseUnits('300', 8));
-          const { mTokenLoan, loanLp } = fixture;
+          const { mTokenLoan, loanLp, redemptionVaultWithUSYC } = fixture;
           const lpBefore = await mTokenLoan.balanceOf(loanLp.address);
+          const loanRequestId =
+            await redemptionVaultWithUSYC.currentLoanRequestId();
 
           // 100 mTBILL at 5$ = 500 USDC: ~300 via USYC, the rest via loan LP
           await redeemInstantWithUsycTest(
@@ -937,13 +941,46 @@ redemptionVaultSuits(
               fixture.stableCoins.usdc.address,
             ),
           ).lt(parseUnits('1', 8));
+
+          // 495 USDC payout - 300 USDC from USYC = 195 USDC shortfall,
+          // LP fee share is 5 * 195 / 495 truncated to 8 decimals
+          const loanRequest = await redemptionVaultWithUSYC.loanRequests(
+            loanRequestId,
+          );
+          expect(loanRequest.amountTokenOut).eq(parseUnits('195'));
+          expect(loanRequest.amountFee).eq(parseUnits('1.96969696'));
+        });
+
+        it('preferLoanLiquidity=false: USYC covers only the payout and loan LP is untouched', async () => {
+          const fixture = await loadFixture(defaultDeploy);
+          const { user } = await setupUsycRv(fixture);
+          await setupLoanLp(fixture, 100_000);
+          const { mTokenLoan, loanLp, redemptionVaultWithUSYC } = fixture;
+          const loanRequestId =
+            await redemptionVaultWithUSYC.currentLoanRequestId();
+
+          // 500 USDC total, 1% instant fee: USYC (price 1) covers the 495 USDC payout
+          const result = await redeemInstantWithUsycTest(
+            commonParams(fixture),
+            fixture.stableCoins.usdc,
+            100,
+            { from: user },
+          );
+
+          expect(result!.usycUsed).eq(parseUnits('495', 8));
+          expect(await redemptionVaultWithUSYC.currentLoanRequestId()).eq(
+            loanRequestId,
+          );
+          expect(await mTokenLoan.balanceOf(loanLp.address)).eq(
+            parseUnits('100000'),
+          );
         });
 
         it('fee rate mismatch: USYC is skipped and loan LP covers everything', async () => {
           const fixture = await loadFixture(defaultDeploy);
           const { user } = await setupUsycRv(fixture);
           await setupLoanLp(fixture, 100_000);
-          await fixture.usycTeller.setFeeRates(0, parseUnits('0.03'));
+          await fixture.usycTeller.setFeeRates(0, parseUnits('3'));
           const { mTokenLoan, loanLp } = fixture;
           const lpBefore = await mTokenLoan.balanceOf(loanLp.address);
 
@@ -968,8 +1005,10 @@ redemptionVaultSuits(
             },
             true,
           );
+          const loanRequestId =
+            await fixture.redemptionVaultWithUSYC.currentLoanRequestId();
 
-          await redeemInstantWithUsycTest(
+          const result = await redeemInstantWithUsycTest(
             commonParams(fixture),
             fixture.stableCoins.usdc,
             100,
@@ -980,9 +1019,16 @@ redemptionVaultSuits(
           expect(await fixture.mTokenLoan.balanceOf(fixture.loanLp.address)).lt(
             parseUnits('300'),
           );
+
+          // LP gross 300 incl. 3 fee share: 297 USDC cash, USYC covers 495 - 297
+          const loanRequest =
+            await fixture.redemptionVaultWithUSYC.loanRequests(loanRequestId);
+          expect(loanRequest.amountTokenOut).eq(parseUnits('297'));
+          expect(loanRequest.amountFee).eq(parseUnits('3'));
+          expect(result!.usycUsed).eq(parseUnits('198', 8));
         });
 
-        it('preferLoanLiquidity=true and loan LP covers the payout: USYC only covers the vault fee kept in USDC', async () => {
+        it('preferLoanLiquidity=true and loan LP covers the payout: USYC is not used for the vault fee', async () => {
           const fixture = await loadFixture(defaultDeploy);
           const { user } = await setupUsycRv(fixture);
           await setupLoanLp(fixture, 100_000);
@@ -995,14 +1041,45 @@ redemptionVaultSuits(
           );
 
           // 500 USDC total, 1% instant fee: the loan LP pays the 495 USDC net
-          // and the vault materialises its 5 USDC fee from USYC (price 1)
+          // and the 5 USDC fee is not materialised from USYC
           const result = await redeemInstantWithUsycTest(
-            commonParams(fixture),
+            { ...commonParams(fixture), expectUsycUsed: false },
             fixture.stableCoins.usdc,
             100,
             { from: user },
           );
-          expect(result!.usycUsed).eq(parseUnits('5', 6));
+          expect(result!.usycUsed).eq(0);
+        });
+
+        it('preferLoanLiquidity=false and vault has the payout but not the payout + fee: USYC and loan LP are not used', async () => {
+          const fixture = await loadFixture(defaultDeploy);
+          const { user } = await setupUsycRv(fixture);
+          await setupLoanLp(fixture, 100_000);
+          const { mTokenLoan, loanLp, redemptionVaultWithUSYC, stableCoins } =
+            fixture;
+
+          // 500 USDC total, 1% instant fee: the 495 USDC payout is on the vault
+          await mintToken(stableCoins.usdc, redemptionVaultWithUSYC, 495);
+          const loanRequestId =
+            await redemptionVaultWithUSYC.currentLoanRequestId();
+
+          const result = await redeemInstantWithUsycTest(
+            { ...commonParams(fixture), expectUsycUsed: false },
+            stableCoins.usdc,
+            100,
+            { from: user },
+          );
+
+          expect(result!.usycUsed).eq(0);
+          expect(await redemptionVaultWithUSYC.currentLoanRequestId()).eq(
+            loanRequestId,
+          );
+          expect(await mTokenLoan.balanceOf(loanLp.address)).eq(
+            parseUnits('100000'),
+          );
+          expect(
+            await stableCoins.usdc.balanceOf(redemptionVaultWithUSYC.address),
+          ).eq(0);
         });
 
         it('preferLoanLiquidity=true, loan LP covers everything and 0 fee: USYC is not used', async () => {
@@ -1030,17 +1107,17 @@ redemptionVaultSuits(
         });
       });
 
-      describe('Teller charging fees (non-Arc Teller)', () => {
+      describe('Teller charging fees', () => {
         const setupChargingTeller = async (fixture: DefaultFixture) => {
           const setup = await setupTightUsycRv(fixture);
-          await setup.teller.setFeeRates(0, parseUnits('0.03'));
-          await setup.teller.setChargeFees(true);
+          await setup.teller.setFeeRates(0, parseUnits('3'));
+          await setup.teller.setFreeTierThreshold(0);
           await usycSetterTest(
             { vault: fixture.redemptionVaultWithUSYC, owner: fixture.owner },
             'setAnticipatedFeeRate',
             'SetAnticipatedFeeRate',
             'anticipatedFeeRate',
-            parseUnits('0.03'),
+            parseUnits('3'),
           );
           return setup;
         };
@@ -1093,7 +1170,7 @@ redemptionVaultSuits(
             fn: 'setAnticipatedFeeRate',
             event: 'SetAnticipatedFeeRate',
             getter: 'anticipatedFeeRate',
-            value: () => parseUnits('0.03'),
+            value: () => parseUnits('3'),
           },
           {
             fn: 'setUsycTeller',

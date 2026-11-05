@@ -12,6 +12,7 @@ import {
 import {
   DepositVaultWithUSYC__factory,
   DepositVaultWithUSYCTest__factory,
+  ERC20Mock__factory,
   USYCTellerMock__factory,
 } from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
@@ -121,25 +122,27 @@ const setupUsycDv = async (
 };
 
 /**
- * Arc-like setup: the vault is switched to a new Teller whose asset is a
- * 6-decimal USDC with a non-round USYC price, and the radUSD RV pays that
- * USDC out. The original (8-decimal) Teller stays deployed but unused.
+ * 6-decimal setup: the vault is switched to a new Teller whose asset is a
+ * 6-decimal USDC and share a 6-decimal USYC with a non-round USYC price, and
+ * the radUSD RV pays that USDC out. The original (8-decimal) Teller stays
+ * deployed but unused.
  */
-const setupArcLikeUsycDv = async (fixture: DefaultFixture) => {
+const setupUsdc6UsycDv = async (fixture: DefaultFixture) => {
   const {
     owner,
     depositVaultWithUSYC,
     redemptionVaultLoanSwapper,
     stableCoins,
     dataFeed,
-    usycToken,
   } = fixture;
   await setupUsycDv(fixture);
 
   const usdc = stableCoins.usdc6;
+  const usyc = await new ERC20Mock__factory(owner).deploy(6);
   const teller = await new USYCTellerMock__factory(owner).deploy(
     usdc.address,
-    usycToken.address,
+    usyc.address,
+    constants.AddressZero,
   );
   await teller.setPrices(NOT_ROUND_MINT_PRICE, NOT_ROUND_REDEEM_PRICE);
   await usycSetterTest(
@@ -452,16 +455,13 @@ depositVaultSuits(
               usycTeller,
             } = fixture;
             await setupUsycDv(fixture);
-            await usycTeller.setFeeRates(
-              parseUnits('0.04'),
-              parseUnits('0.03'),
-            );
+            await usycTeller.setFeeRates(parseUnits('4'), parseUnits('3'));
             await usycSetterTest(
               { vault: depositVaultWithUSYC, owner },
               'setAnticipatedFeeRate',
               'SetAnticipatedFeeRate',
               'anticipatedFeeRate',
-              parseUnits('0.04'),
+              parseUnits('4'),
             );
             const user = await fundUser(fixture, stableCoins.usdc, 100);
 
@@ -488,7 +488,7 @@ depositVaultSuits(
               usycTeller,
             } = fixture;
             await setupUsycDv(fixture);
-            await usycTeller.setFeeRates(parseUnits('0.04'), 0);
+            await usycTeller.setFeeRates(parseUnits('4'), 0);
             const user = await fundUser(fixture, stableCoins.usdc, 100);
 
             await depositInstantWithUsycTest(
@@ -521,7 +521,7 @@ depositVaultSuits(
               { depositVaultWithUSYC, owner },
               true,
             );
-            await usycTeller.setFeeRates(parseUnits('0.04'), 0);
+            await usycTeller.setFeeRates(parseUnits('4'), 0);
             const user = await fundUser(fixture, stableCoins.usdc, 100);
 
             await depositInstantWithUsycTest(
@@ -552,7 +552,7 @@ depositVaultSuits(
               { depositVaultWithUSYC, owner },
               true,
             );
-            await usycTeller.setFeeRates(parseUnits('0.04'), 0);
+            await usycTeller.setFeeRates(parseUnits('4'), 0);
             await mintToken(stableCoins.usdc, depositVaultWithUSYC, 1000);
             const user = await fundUser(fixture, stableCoins.usdc, 100);
 
@@ -781,7 +781,7 @@ depositVaultSuits(
           });
         });
 
-        describe('Arc-like 6-decimal USDC through a replaced Teller', () => {
+        describe('6-decimal USDC and USYC through a replaced Teller', () => {
           it('USDC is invested through the new Teller, the previous Teller is not touched', async () => {
             const fixture = await loadFixture(defaultDeploy);
             const {
@@ -791,7 +791,7 @@ depositVaultSuits(
               usycTeller: previousTeller,
               stableCoins,
             } = fixture;
-            const { usdc } = await setupArcLikeUsycDv(fixture);
+            const { usdc } = await setupUsdc6UsycDv(fixture);
             const previousTellerUsdc = await stableCoins.usdc.balanceOf(
               previousTeller.address,
             );
@@ -825,7 +825,7 @@ depositVaultSuits(
                 mTBILL,
                 mockedAggregatorMTokenLoan,
               } = fixture;
-              await setupArcLikeUsycDv(fixture);
+              await setupUsdc6UsycDv(fixture);
               await mockedAggregatorMTokenLoan.setRoundData(
                 parseUnits(
                   '1.0000013',
@@ -858,7 +858,7 @@ depositVaultSuits(
           }
         });
 
-        describe('Teller charging fees (non-Arc Teller)', () => {
+        describe('Teller charging fees', () => {
           it('subscription fee is charged: only the net USYC goes to tokensReceiver', async () => {
             const fixture = await loadFixture(defaultDeploy);
             const {
@@ -869,14 +869,14 @@ depositVaultSuits(
               usycTeller,
             } = fixture;
             await setupUsycDv(fixture);
-            await usycTeller.setFeeRates(parseUnits('0.04'), 0);
-            await usycTeller.setChargeFees(true);
+            await usycTeller.setFeeRates(parseUnits('4'), 0);
+            await usycTeller.setFreeTierThreshold(0);
             await usycSetterTest(
               { vault: depositVaultWithUSYC, owner },
               'setAnticipatedFeeRate',
               'SetAnticipatedFeeRate',
               'anticipatedFeeRate',
-              parseUnits('0.04'),
+              parseUnits('4'),
             );
             const user = await fundUser(fixture, stableCoins.usdc, 100);
 
@@ -884,8 +884,9 @@ depositVaultSuits(
               depositVaultWithUSYC.address,
               parseUnits('100', 8),
             );
-            expect(fee).eq(parseUnits('4', 8));
-            expect(netShares).eq(parseUnits('96', 6));
+            // the 4% rate applies to the net amount: net = floor(100 / 1.04)
+            expect(fee).eq(parseUnits('3.84615385', 8));
+            expect(netShares).eq(parseUnits('96.15384615', 8));
 
             // the helper asserts tokensReceiver got exactly the previewed net shares
             await depositInstantWithUsycTest(
@@ -911,8 +912,8 @@ depositVaultSuits(
               usycTeller,
             } = fixture;
             await setupUsycDv(fixture);
-            await usycTeller.setFeeRates(parseUnits('0.04'), 0);
-            await usycTeller.setChargeFees(true);
+            await usycTeller.setFeeRates(parseUnits('4'), 0);
+            await usycTeller.setFreeTierThreshold(0);
             const user = await fundUser(fixture, stableCoins.usdc, 100);
 
             await depositInstantWithUsycTest(
@@ -1074,7 +1075,7 @@ depositVaultSuits(
             usycTeller,
           } = fixture;
           await setupUsycDv(fixture);
-          await usycTeller.setFeeRates(parseUnits('0.04'), 0);
+          await usycTeller.setFeeRates(parseUnits('4'), 0);
           const user = await fundUser(fixture, stableCoins.usdc, 200);
 
           await depositRequestWithUsycTest(
@@ -1133,7 +1134,7 @@ depositVaultSuits(
             fn: 'setAnticipatedFeeRate',
             event: 'SetAnticipatedFeeRate',
             getter: 'anticipatedFeeRate',
-            value: () => parseUnits('0.04'),
+            value: () => parseUnits('4'),
           },
           {
             fn: 'setUsycTeller',

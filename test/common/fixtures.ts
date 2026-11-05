@@ -584,10 +584,12 @@ export const defaultDeploy = async () => {
 
   /* USYC strategy: mTBILL plays radYC, mTokenLoan plays radUSD */
 
-  const usycToken = await new ERC20Mock__factory(owner).deploy(6);
+  // the Teller requires the share and the asset to have the same decimals
+  const usycToken = await new ERC20Mock__factory(owner).deploy(8);
   const usycTeller = await new USYCTellerMock__factory(owner).deploy(
     stableCoins.usdc.address,
     usycToken.address,
+    constants.AddressZero,
   );
   await stableCoins.usdc.mint(usycTeller.address, parseUnits('1000000', 8));
 
