@@ -130,6 +130,10 @@ export type PostDeployConfig = {
 
 export type DeploymentConfig = {
   genericConfigs: {
+    mToken?: {
+      // TODO: add support
+      maxSupplyCap?: BigNumberish;
+    };
     customAggregator?: DeployCustomAggregatorConfig;
     customAggregatorDv?: DeployCustomAggregatorConfig;
     customAggregatorRv?: DeployCustomAggregatorConfig;

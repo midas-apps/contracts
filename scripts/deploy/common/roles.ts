@@ -18,7 +18,11 @@ import {
   VaultType,
 } from '../../../config/constants/addresses';
 import { getCommonContractNames } from '../../../helpers/contracts';
-import { getAllRoles, getRolesForToken } from '../../../helpers/roles';
+import {
+  getAllRoles,
+  getRoleHashOrEmpty,
+  getRolesForToken,
+} from '../../../helpers/roles';
 import { MidasAccessControl } from '../../../typechain-types';
 import {
   getDeploymentProfileForToken,
@@ -37,7 +41,12 @@ export type GrantAllTokenRolesConfig = {
   // exact product roles for wallets outside the standard manager set
   extraRoles?: {
     address: Address;
-    roles: (keyof ReturnType<typeof getRolesForToken>)[];
+    roles:
+      | (keyof ReturnType<typeof getRolesForToken> | string)[]
+      | {
+          role: keyof ReturnType<typeof getRolesForToken> | string;
+          delay: number;
+        }[];
   }[];
   minBalanceExemptAddresses?: (Address | VaultType)[];
 };
@@ -107,8 +116,12 @@ export const grantAllProductRoles = async (
         roleGrantRedemptionVaultPriority,
       );
 
-  const roleBatch: string[] = [];
+  const roleBatch: (string | { role: string; delay: number })[] = [];
   const addressBatch: string[] = [];
+
+  const parseRole = (r: (typeof roleBatch)[0]) => {
+    return typeof r === 'string' ? { role: r, delay: 0 } : r;
+  };
 
   // Token / vault / oracle managers
   if (managerGrantConfig) {
@@ -142,11 +155,35 @@ export const grantAllProductRoles = async (
 
     for (const { address, roles } of managerGrantConfig.extraRoles ?? []) {
       for (const role of roles) {
-        const roleHash = tokenRoles[role];
+        let roleHash;
+        let roleDelay = 0;
+        let rawRole;
+        if (typeof role === 'string') {
+          roleHash =
+            tokenRoles[role as keyof ReturnType<typeof getRolesForToken>];
+          rawRole = role;
+        } else {
+          roleHash =
+            tokenRoles[role.role as keyof ReturnType<typeof getRolesForToken>];
+          roleDelay = role.delay;
+          rawRole = role.role;
+        }
+
+        // if emty then means that role is not found in default roles
+        // and raw role descriptor passed
+        if (!roleHash) {
+          if (!rawRole.includes('_')) {
+            throw new Error('Invalid role description');
+          }
+
+          roleHash = getRoleHashOrEmpty(rawRole);
+          console.log(`Raw role granting: ${rawRole} (${roleHash})`);
+        }
+
         if (!roleHash) {
           throw new Error(`Role ${role} is not configured for ${token}`);
         }
-        roleBatch.push(roleHash);
+        roleBatch.push({ role: roleHash, delay: roleDelay });
         addressBatch.push(address);
       }
     }
@@ -185,7 +222,9 @@ export const grantAllProductRoles = async (
   }
 
   const present = await Promise.all(
-    roleBatch.map((role, i) => accessControl.hasRole(role, addressBatch[i])),
+    roleBatch.map((role, i) =>
+      accessControl.hasRole(parseRole(role).role, addressBatch[i]),
+    ),
   );
   const rolesToGrant = roleBatch.filter((_, i) => !present[i]);
   const addressesToGrant = addressBatch.filter((_, i) => !present[i]);
@@ -206,9 +245,9 @@ export const grantAllProductRoles = async (
     hre,
     await accessControl.populateTransaction.grantRoleMult(
       rolesToGrant.map((role, index) => ({
-        role,
+        role: parseRole(role).role,
         account: addressesToGrant[index],
-        delay: 0, // TODO: add default delay?
+        delay: parseRole(role).delay,
       })),
     ),
     {

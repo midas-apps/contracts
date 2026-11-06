@@ -1,13 +1,18 @@
 import { constants } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import {
-  getCurrentAddresses,
-  usycOracleContracts,
-} from '../../../../config/constants/addresses';
+import { chainIds } from '../../../../config';
+import { getCurrentAddresses } from '../../../../config/constants/addresses';
 import { ERC20Mock__factory } from '../../../../typechain-types';
 import { DeployFunction } from '../../common/types';
 import { deployAndVerify, getDeployer } from '../../common/utils';
+
+/**
+ * Circle's USYC oracles, used by `USYCTellerMock` on testnets
+ */
+export const usycOracleContracts: Partial<Record<number, string>> = {
+  [chainIds.sepolia]: '0x48c9E02E09d03E448673166d29691ECdEf56526F',
+};
 
 /**
  * Deploys a USYC mock and a USYC Teller mock owned by the deployer.
