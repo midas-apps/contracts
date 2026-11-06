@@ -12,7 +12,11 @@ import { EIP1193Provider, HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeploymentConfig } from './types';
 
 import { MTokenName } from '../../../config';
-import { getCurrentAddresses } from '../../../config/constants/addresses';
+import {
+  getCurrentAddresses,
+  isLibraryName,
+  LibraryName,
+} from '../../../config/constants/addresses';
 import {
   etherscanVerify,
   logDeploy,
@@ -187,6 +191,40 @@ export const getContractAt = async (
   );
 };
 
+/**
+ * Resolves addresses of the external libraries `contractName` has to be
+ * linked against from the `libraries` section of the network addresses
+ */
+export const getLinkedLibraries = async (
+  hre: HardhatRuntimeEnvironment,
+  contractName: string,
+) => {
+  const { linkReferences } = await hre.artifacts.readArtifact(contractName);
+  const deployedLibraries = getCurrentAddresses(hre)?.libraries ?? {};
+
+  const libraries: Partial<Record<LibraryName, string>> = {};
+
+  for (const libraryName of Object.values(linkReferences).flatMap((v) =>
+    Object.keys(v),
+  )) {
+    if (!isLibraryName(libraryName)) {
+      throw new Error(`Library ${libraryName} is not supported`);
+    }
+
+    const libraryAddress = deployedLibraries[libraryName];
+
+    if (!libraryAddress) {
+      throw new Error(
+        `Library ${libraryName} is not deployed, run deploy:library --lib ${libraryName} first`,
+      );
+    }
+
+    libraries[libraryName] = libraryAddress;
+  }
+
+  return libraries;
+};
+
 export const deployProxy = async (
   hre: HardhatRuntimeEnvironment,
   contractName: string,
@@ -196,10 +234,31 @@ export const deployProxy = async (
 ) => {
   deployer ??= await getDeployer(hre);
 
+  const libraries = await getLinkedLibraries(hre, contractName);
+  const hasLibraries = Object.keys(libraries).length > 0;
+
+  if (hasLibraries) {
+    console.log(
+      `WARNING, using external linking libraries for the ${contractName} deployment`,
+      libraries,
+    );
+  }
+
   const deployment = await hre.upgrades.deployProxy(
-    await hre.ethers.getContractFactory(contractName, deployer),
+    await hre.ethers.getContractFactory(contractName, {
+      signer: deployer,
+      libraries,
+    }),
     params,
-    opts,
+    hasLibraries
+      ? {
+          ...opts,
+          unsafeAllow: [
+            ...(opts.unsafeAllow ?? []),
+            'external-library-linking',
+          ],
+        }
+      : opts,
   );
   return deployment;
 };
@@ -262,6 +321,31 @@ export const deployAndVerify = async (
 
   logDeploy(contractName, 'Proxy', deployment.address);
   await etherscanVerify(hre, deployment.address, contractName, ...params);
+
+  return deployment;
+};
+
+export const deployAndVerifyLibrary = async (
+  hre: HardhatRuntimeEnvironment,
+  libraryName: LibraryName,
+  deployer?: Signer,
+) => {
+  deployer ??= await getDeployer(hre);
+
+  const factory = await hre.ethers.getContractFactory(libraryName, deployer);
+
+  const deployment = await factory.deploy();
+
+  if (deployment.deployTransaction) {
+    console.log('Waiting 5 blocks...');
+    await deployment.deployTransaction.wait(5);
+    console.log('Waited.');
+  }
+
+  logDeploy(libraryName, 'Library', deployment.address);
+  await etherscanVerify(hre, deployment.address, libraryName).catch((err) => {
+    console.error('Unable to verify. Error: ', err);
+  });
 
   return deployment;
 };
@@ -359,6 +443,7 @@ const sendAndWaitForCustomTxSignDirect = async (
       | 'set-aave-deposits-enabled'
       | 'set-morpho-vault'
       | 'set-morpho-deposits-enabled'
+      | 'set-usyc-deposits-enabled'
       | 'set-auto-invest-fallback-enabled';
   },
   safeMiddlewareWallet?: string,

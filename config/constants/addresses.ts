@@ -10,14 +10,26 @@ export type RedemptionVaultType =
   | 'redemptionVaultMToken'
   | 'redemptionVaultUstb'
   | 'redemptionVaultAave'
-  | 'redemptionVaultMorpho';
+  | 'redemptionVaultMorpho'
+  | 'redemptionVaultUsyc';
 
 export type DepositVaultType =
   | 'depositVault'
   | 'depositVaultUstb'
   | 'depositVaultAave'
   | 'depositVaultMorpho'
-  | 'depositVaultMToken';
+  | 'depositVaultMToken'
+  | 'depositVaultUsyc';
+
+/**
+ * External libraries that are deployed separately and linked into contracts
+ */
+export const libraryNames = ['RedemptionVaultWithUSYCLibrary'] as const;
+
+export type LibraryName = (typeof libraryNames)[number];
+
+export const isLibraryName = (name: string): name is LibraryName =>
+  libraryNames.includes(name as LibraryName);
 
 export type LayerZeroTokenAddresses = {
   oft?: string;
@@ -92,6 +104,7 @@ export type MidasAddresses = Partial<Record<MTokenName, TokenAddresses>> & {
   timelockController?: string;
   pauseManager?: string;
   paymentTokens?: Partial<Record<PaymentTokenName, DataFeedAddresses>>;
+  libraries?: Partial<Record<LibraryName, string>>;
 };
 
 export const midasAddressesPerNetwork: ConfigPerNetwork<
@@ -1972,6 +1985,10 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
   },
   sepolia: {
+    libraries: {
+      RedemptionVaultWithUSYCLibrary:
+        '0xAb81131Da230848542ddb800453B7aB092735c1d',
+    },
     timelock: '0x74e0a55Ea3Db85F6106FFD69Ef7c9829fd130888',
     pauseManager: '0xbf21e448410BAA6039e73033F530027143c0c280',
     timelockManager: '0xc6Ad27a2446Aa6223512D9FF8A6f3440a20ccd12',
@@ -1982,6 +1999,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         dataFeed: '0x0e0eb6cdad90174f1Db606EC186ddD0B5eD80847',
         aggregator: '0x7811C1Bf5db28630F303267Cc613797EB9A81188',
         token: '0xF55588f2f8CF8E1D9C702D169AF43c15f5c85f12',
+      },
+      radusd: {
+        token: '0xBB882eC4c7358dD59a3267FFB5E5C55fd08c0142',
+        aggregator: '0xdE4536Cc1C6632Fe89920ccC115b4053c4356622',
+        dataFeed: '0x5768d8DD4023Dd94BBBcfff2E15f5C70786d4161',
       },
       usdt: {
         dataFeed: '0x0e0eb6cdad90174f1Db606EC186ddD0B5eD80847',
@@ -2153,6 +2175,20 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVault: '0xD16EEDB93F29543eF5757BF9DDaC127b814C2CBE',
       redemptionVault: '0xb1F6842433E6a1c8EE233f3B68e49a0f3a10Cc79',
     },
+    radUSD: {
+      token: '0xBB882eC4c7358dD59a3267FFB5E5C55fd08c0142',
+      customFeed: '0xdE4536Cc1C6632Fe89920ccC115b4053c4356622',
+      dataFeed: '0x5768d8DD4023Dd94BBBcfff2E15f5C70786d4161',
+      depositVault: '0x9B56de26d503FC7892d662B8DcF7569Cb9a235EF',
+      redemptionVault: '0x122f9B6FAde28156F24B192a0daD2f31A43ab223',
+    },
+    radYC: {
+      token: '0xA7eDb03f998bCF9812490822e4E4497990736B95',
+      customFeed: '0xA460CD61bF3e5d45e3E7954560E8a392aD393198',
+      dataFeed: '0xFb5C0C1d36B4E4a14F8fb0B4F868398B5a4D3f9d',
+      depositVault: '0xc577d51dD5012407521F5cadC8E3aD4F1898930d',
+      redemptionVaultUsyc: '0xB457F528D1D4a050E14231E1382c315E3DF21D22',
+    },
   },
   arbitrumSepolia: {
     paymentTokens: {
@@ -2228,6 +2264,11 @@ export const sanctionListContracts: Partial<Record<number, string>> = {
 
 export const ustbContracts: Partial<Record<number, string>> = {
   [chainIds.main]: '0x43415eB6ff9DB7E26A15b704e7A3eDCe97d31C4e',
+};
+
+export const usycTellerContracts: Partial<Record<number, string>> = {
+  [chainIds.arc]: '0x51A8CE47dC08ba5CD19c7aa84EA6fD6664f60f9b',
+  [chainIds.sepolia]: '0x1B1297255748683a83b72986A86d2F6eAf62Bb0D',
 };
 
 export const getCurrentAddresses = (hre: HardhatRuntimeEnvironment) => {

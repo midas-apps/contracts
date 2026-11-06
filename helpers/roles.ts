@@ -227,7 +227,7 @@ export const getRolesNamesCommon = (): CommonRoles => {
   };
 };
 
-const getRoleHashOrEmpty = (role: string | undefined | null) => {
+export const getRoleHashOrEmpty = (role: string | undefined | null) => {
   return role ? keccak256(role) : '-';
 };
 

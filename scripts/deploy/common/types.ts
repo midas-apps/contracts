@@ -6,6 +6,7 @@ import {
   AddPaymentTokensConfig,
   SetAaveConfigConfig,
   SetMorphoConfigConfig,
+  SetUsycConfigConfig,
 } from './common-vault';
 import {
   DeployCustomAggregatorAdjustedConfig,
@@ -19,6 +20,7 @@ import {
   DeployDvMTokenConfig,
   DeployDvRegularConfig,
   DeployDvUstbConfig,
+  DeployDvUsycConfig,
 } from './dv';
 import type { GreenlistConfig } from './greenlist';
 import {
@@ -31,6 +33,7 @@ import {
   DeployRvMTokenConfig,
   DeployRvRegularConfig,
   DeployRvSwapperConfig,
+  DeployRvUsycConfig,
 } from './rv';
 import { DeployTimelockConfig } from './timelock';
 import { toFunctionSelector } from './utils';
@@ -39,7 +42,6 @@ import { PartialConfigPerNetwork, PaymentTokenName } from '../../../config';
 import { VaultType } from '../../../config/constants/addresses';
 import { RateLimiter } from '../../../typechain-types';
 
-// TODO: fix selectors
 export const VAULT_FUNCTION_SELECTORS = {
   // Deposit vault functions
   depositInstant: toFunctionSelector(
@@ -65,7 +67,30 @@ export const VAULT_FUNCTION_SELECTORS = {
   ),
 } as const;
 
-export type VaultFunctionName = keyof typeof VAULT_FUNCTION_SELECTORS;
+export const VAULT_FUNCTION_SELECTORS_V2 = {
+  // Deposit vault functions
+  depositInstant: VAULT_FUNCTION_SELECTORS.depositInstant,
+  depositInstantWithCustomRecipient:
+    VAULT_FUNCTION_SELECTORS.depositInstantWithCustomRecipient,
+  depositRequest: VAULT_FUNCTION_SELECTORS.depositRequest,
+  depositRequestWithHoldback: toFunctionSelector(
+    'depositRequest(address,uint256,bytes32,address,uint256,uint256,address)',
+  ),
+
+  // Redemption vault functions
+  redeemInstant: VAULT_FUNCTION_SELECTORS.redeemInstant,
+  redeemInstantWithCustomRecipient:
+    VAULT_FUNCTION_SELECTORS.depositInstantWithCustomRecipient,
+  redeemRequest: VAULT_FUNCTION_SELECTORS.depositRequest,
+  redeemRequestWithHoldback: toFunctionSelector(
+    'redeemRequest(address,uint256,address,uint256,uint256,address)',
+  ),
+} as const;
+
+export type VaultFunctionName = VaultFunctionNameV1 | VaultFunctionNameV2;
+
+export type VaultFunctionNameV1 = keyof typeof VAULT_FUNCTION_SELECTORS;
+export type VaultFunctionNameV2 = keyof typeof VAULT_FUNCTION_SELECTORS_V2;
 
 export type PauseFunctionsConfig = {
   [K in VaultType]?: VaultFunctionName[];
@@ -100,10 +125,15 @@ export type PostDeployConfig = {
   axelarIts?: AxelarItsConfig;
   setAaveConfig?: SetAaveConfigConfig;
   setMorphoConfig?: SetMorphoConfigConfig;
+  setUsycConfig?: SetUsycConfigConfig;
 };
 
 export type DeploymentConfig = {
   genericConfigs: {
+    mToken?: {
+      // TODO: add support
+      maxSupplyCap?: BigNumberish;
+    };
     customAggregator?: DeployCustomAggregatorConfig;
     customAggregatorDv?: DeployCustomAggregatorConfig;
     customAggregatorRv?: DeployCustomAggregatorConfig;
@@ -130,11 +160,13 @@ export type DeploymentConfig = {
       dvAave?: DeployDvAaveConfig;
       dvMorpho?: DeployDvMorphoConfig;
       dvMToken?: DeployDvMTokenConfig;
+      dvUsyc?: DeployDvUsycConfig;
       rv?: DeployRvRegularConfig;
       rvSwapper?: DeployRvSwapperConfig;
       rvAave?: DeployRvAaveConfig;
       rvMorpho?: DeployRvMorphoConfig;
       rvMToken?: DeployRvMTokenConfig;
+      rvUsyc?: DeployRvUsycConfig;
       postDeploy?: PostDeployConfig;
     }
   >;

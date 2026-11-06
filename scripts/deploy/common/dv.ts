@@ -8,7 +8,9 @@ import {
   getCurrentAddresses,
   RedemptionVaultType,
   sanctionListContracts,
+  TokenAddresses,
   ustbContracts,
+  usycTellerContracts,
 } from '../../../config/constants/addresses';
 import { getCommonContractNames } from '../../../helpers/contracts';
 import { getAllRoles } from '../../../helpers/roles';
@@ -16,6 +18,7 @@ import {
   DepositVault,
   DepositVaultWithMToken,
   DepositVaultWithUSTB,
+  DepositVaultWithUSYC,
 } from '../../../typechain-types';
 
 export type DeployDvConfigCommonLegacy = {
@@ -61,11 +64,7 @@ type DeployDvConfigCommonNew = DeployVaultConfigCommon & {
   mTokenDataFeed?: 'dataFeed';
 
   minMTokenAmountForFirstDeposit?: BigNumberish;
-  /**
-   * @deprecated Cap now lives on mToken. Kept optional for config compatibility;
-   * not passed to DepositVault.initialize. Set via mToken initialize / setMaxSupplyCap.
-   */
-  maxSupplyCap?: BigNumberish;
+
   maxAmountPerRequest?: BigNumberish;
 };
 
@@ -94,21 +93,65 @@ export type DeployDvMTokenConfig = DeployDvConfigCommon & {
   mTokenDepositVault: string;
 };
 
+export type DeployDvUsycConfig = DeployDvConfigCommon & {
+  type: 'USYC';
+  /**
+   * mToken RedemptionVault used to redeem its mToken into USDC
+   * before subscribing to USYC
+   * @default zero address (only USDC is auto-invested)
+   */
+  redemptionVault?:
+    | `0x${string}`
+    | { mToken: MTokenName; redemptionVaultType: RedemptionVaultType };
+  /**
+   * Subscription fee rate the USYC Teller is expected to charge the vault
+   * @default 0
+   */
+  anticipatedFeeRate?: BigNumberish;
+};
+
 export type DeployDvConfig =
   | DeployDvRegularConfig
   | DeployDvUstbConfig
   | DeployDvAaveConfig
   | DeployDvMorphoConfig
-  | DeployDvMTokenConfig;
+  | DeployDvMTokenConfig
+  | DeployDvUsycConfig;
 
 const isAddress = (value: string): value is `0x${string}` => {
   return value.startsWith('0x');
 };
 
+const resolveUsycRedemptionVault = (
+  networkConfig: DeployDvUsycConfig,
+  addresses: Partial<Record<MTokenName, TokenAddresses>>,
+) => {
+  const { redemptionVault } = networkConfig;
+
+  if (!redemptionVault) {
+    return constants.AddressZero;
+  }
+
+  if (typeof redemptionVault === 'string') {
+    return redemptionVault;
+  }
+
+  const redemptionVaultAddress =
+    addresses[redemptionVault.mToken]?.[redemptionVault.redemptionVaultType];
+
+  if (!redemptionVaultAddress) {
+    throw new Error(
+      `${redemptionVault.mToken} ${redemptionVault.redemptionVaultType} address is not found`,
+    );
+  }
+
+  return redemptionVaultAddress;
+};
+
 export const deployDepositVault = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
-  type: 'dv' | 'dvUstb' | 'dvAave' | 'dvMorpho' | 'dvMToken',
+  type: 'dv' | 'dvUstb' | 'dvAave' | 'dvMorpho' | 'dvMToken' | 'dvUsyc',
 ) => {
   if (token.startsWith('TAC')) {
     throw new Error('TAC tokens are not supported anymore');
@@ -173,10 +216,24 @@ export const deployDepositVault = async (
     extraParams.push(ustbContract);
   } else if (networkConfig.type === 'MTOKEN') {
     extraParams.push(networkConfig.mTokenDepositVault);
+  } else if (networkConfig.type === 'USYC') {
+    const usycTeller = usycTellerContracts[hre.network.config.chainId!];
+
+    if (!usycTeller) {
+      throw new Error('USYC Teller contract is not found');
+    }
+
+    extraParams.push(
+      usycTeller,
+      resolveUsycRedemptionVault(networkConfig, addresses ?? {}),
+      networkConfig.anticipatedFeeRate ?? 0,
+    );
   }
 
   const ustbMTokenInitializer =
     'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(uint256,uint256),address)' as const;
+  const usycInitializer =
+    'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(uint256,uint256),address,address,uint256)' as const;
   const params = [
     {
       variationTolerance: networkConfig.variationTolerance,
@@ -186,7 +243,7 @@ export const deployDepositVault = async (
       sanctionsList,
       mToken: tokenAddresses?.token,
       mTokenDataFeed: dataFeed,
-      tokensReceiver: networkConfig.tokensReceiver ?? deployer.address,
+      tokensReceiver,
       minInstantFee: networkConfig.minInstantFee ?? 0,
       maxInstantFee: networkConfig.maxInstantFee ?? 100_00,
       maxInstantShare: networkConfig.maxInstantShare ?? 100_00,
@@ -205,7 +262,8 @@ export const deployDepositVault = async (
   ] as
     | Parameters<DepositVault['initialize']>
     | Parameters<DepositVaultWithUSTB[typeof ustbMTokenInitializer]>
-    | Parameters<DepositVaultWithMToken[typeof ustbMTokenInitializer]>;
+    | Parameters<DepositVaultWithMToken[typeof ustbMTokenInitializer]>
+    | Parameters<DepositVaultWithUSYC[typeof usycInitializer]>;
 
   const allRoles = getAllRoles();
   const constructorParams = [
@@ -223,6 +281,8 @@ export const deployDepositVault = async (
       initializer:
         networkConfig.type === 'USTB' || networkConfig.type === 'MTOKEN'
           ? ustbMTokenInitializer
+          : networkConfig.type === 'USYC'
+          ? usycInitializer
           : 'initialize',
     },
   );

@@ -849,8 +849,185 @@ redemptionVaultSuits(
           const loanRequest = await redemptionVaultWithAave.loanRequests(
             loanRequestId,
           );
+          // 990 USDC payout - 800 USDC available = 190 USDC shortfall,
+          // the 10 USDC fee is not covered by the LP
           expect(loanRequest.status).eq(0);
-          expect(loanRequest.amountTokenOut).eq(parseUnits('198'));
+          expect(loanRequest.amountTokenOut).eq(parseUnits('190'));
+          expect(loanRequest.amountFee).eq(parseUnits('1.91919191'));
+          expect(
+            await stableCoins.usdc.balanceOf(redemptionVaultWithAave.address),
+          ).eq(0);
+          expect(await aUSDC.balanceOf(redemptionVaultWithAave.address)).eq(0);
+        });
+
+        describe('vault fee is not obtained from the liquidity sources', () => {
+          // 1000 mTBILL at 1$ with 1% instant fee: 990 USDC payout, 10 USDC fee
+          const redeemWithLiquidity = async ({
+            usdc = 0,
+            aTokens = 0,
+            lpMToken = 0,
+            preferLoanLiquidity = false,
+          }: {
+            usdc?: number;
+            aTokens?: number;
+            lpMToken?: number;
+            preferLoanLiquidity?: boolean;
+          }) => {
+            const fixture = await loadFixture(defaultDeploy);
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVaultWithAave,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              aUSDC,
+              loanLp,
+              mTokenLoan,
+              redemptionVaultLoanSwapper,
+            } = fixture;
+
+            await mintToken(stableCoins.usdc, redemptionVaultWithAave, usdc);
+            await aUSDC.mint(
+              redemptionVaultWithAave.address,
+              parseUnits(aTokens.toString(), 8),
+            );
+            await mintToken(mTokenLoan, loanLp, lpMToken);
+            await approveBase18(
+              loanLp,
+              mTokenLoan,
+              redemptionVaultWithAave,
+              lpMToken,
+            );
+            await mintToken(stableCoins.usdc, redemptionVaultLoanSwapper, 1000);
+            await addPaymentTokenTest(
+              { vault: redemptionVaultLoanSwapper, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await mintToken(mTBILL, owner, 1000);
+            await approveBase18(owner, mTBILL, redemptionVaultWithAave, 1000);
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithAave, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithAave, owner },
+              preferLoanLiquidity,
+            );
+
+            const loanRequestId =
+              await redemptionVaultWithAave.currentLoanRequestId();
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithAave,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                additionalLiquidity: async () =>
+                  aUSDC.balanceOf(redemptionVaultWithAave.address),
+              },
+              stableCoins.usdc,
+              1000,
+            );
+
+            expect(
+              await stableCoins.usdc.balanceOf(redemptionVaultWithAave.address),
+            ).eq(0);
+
+            return {
+              ...fixture,
+              loanRequestId,
+              aTokensUsed: parseUnits(aTokens.toString(), 8).sub(
+                await aUSDC.balanceOf(redemptionVaultWithAave.address),
+              ),
+              loanRequest: await redemptionVaultWithAave.loanRequests(
+                loanRequestId,
+              ),
+            };
+          };
+
+          it('preferLoanLiquidity=false: Aave covers only the payout', async () => {
+            const { redemptionVaultWithAave, loanRequestId, aTokensUsed } =
+              await redeemWithLiquidity({ aTokens: 2000, lpMToken: 1000 });
+
+            expect(aTokensUsed).eq(parseUnits('990', 8));
+            expect(await redemptionVaultWithAave.currentLoanRequestId()).eq(
+              loanRequestId,
+            );
+          });
+
+          it('preferLoanLiquidity=false: vault has the payout but not the payout + fee, Aave and loan LP are untouched', async () => {
+            const {
+              redemptionVaultWithAave,
+              loanRequestId,
+              aTokensUsed,
+              mTokenLoan,
+              loanLp,
+            } = await redeemWithLiquidity({
+              usdc: 990,
+              aTokens: 2000,
+              lpMToken: 1000,
+            });
+
+            expect(aTokensUsed).eq(0);
+            expect(await redemptionVaultWithAave.currentLoanRequestId()).eq(
+              loanRequestId,
+            );
+            expect(await mTokenLoan.balanceOf(loanLp.address)).eq(
+              parseUnits('1000'),
+            );
+          });
+
+          it('preferLoanLiquidity=false: Aave is drained and loan LP covers only the missing payout', async () => {
+            const { aTokensUsed, loanRequest } = await redeemWithLiquidity({
+              usdc: 100,
+              aTokens: 700,
+              lpMToken: 1000,
+            });
+
+            // 990 payout - 100 USDC - 700 from Aave = 190 shortfall,
+            // LP fee share is 10 * 190 / 990 truncated to 8 decimals
+            expect(aTokensUsed).eq(parseUnits('700', 8));
+            expect(loanRequest.amountTokenOut).eq(parseUnits('190'));
+            expect(loanRequest.amountFee).eq(parseUnits('1.91919191'));
+          });
+
+          it('preferLoanLiquidity=true: loan LP covers the payout and Aave is untouched', async () => {
+            const { aTokensUsed, loanRequest } = await redeemWithLiquidity({
+              aTokens: 2000,
+              lpMToken: 1000,
+              preferLoanLiquidity: true,
+            });
+
+            expect(aTokensUsed).eq(0);
+            expect(loanRequest.amountTokenOut).eq(parseUnits('990'));
+            expect(loanRequest.amountFee).eq(parseUnits('10'));
+          });
+
+          it('preferLoanLiquidity=true: loan LP is insufficient and Aave covers only the rest of the payout', async () => {
+            const { aTokensUsed, loanRequest } = await redeemWithLiquidity({
+              aTokens: 2000,
+              lpMToken: 500,
+              preferLoanLiquidity: true,
+            });
+
+            // LP gross 500 incl. 5 fee share: 495 cash, Aave covers 990 - 495
+            expect(loanRequest.amountTokenOut).eq(parseUnits('495'));
+            expect(loanRequest.amountFee).eq(parseUnits('5'));
+            expect(aTokensUsed).eq(parseUnits('495', 8));
+          });
         });
 
         it('redeem 1000 mTBILL with different prices (stable 1.03$, mToken 5$) and partial Aave', async () => {

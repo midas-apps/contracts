@@ -5,6 +5,7 @@ import {
   aggregatorTypeParam,
   feedTargetParam,
   keysParam,
+  libParam,
   mTokenParam,
   originalNetworkParam,
   ParseParamFn,
@@ -32,6 +33,7 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   'deploy:ac': [deploy('deploy_AccessControl')],
   'deploy:timelock': [deploy('deploy_TimeLock'), skipValidationParam(true)],
   'deploy:token': [deploy('deploy_Token'), mTokenParam()],
+  'deploy:library': [deploy('deploy_Library'), libParam()],
   'deploy:aggregator': [
     deploy('deploy_CustomAggregator'),
     mTokenParam(),
@@ -66,10 +68,12 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   'deploy:dv:aave': [deploy('deploy_DVAave'), mTokenParam()],
   'deploy:dv:morpho': [deploy('deploy_DVMorpho'), mTokenParam()],
   'deploy:dv:mtoken': [deploy('deploy_DVMToken'), mTokenParam()],
+  'deploy:dv:usyc': [deploy('deploy_DVUsyc'), mTokenParam()],
   'deploy:rv': [deploy('deploy_RV'), mTokenParam()],
   'deploy:rv:aave': [deploy('deploy_RVAave'), mTokenParam()],
   'deploy:rv:morpho': [deploy('deploy_RVMorpho'), mTokenParam()],
   'deploy:rv:mtoken': [deploy('deploy_RVMToken'), mTokenParam()],
+  'deploy:rv:usyc': [deploy('deploy_RVUsyc'), mTokenParam()],
 
   // Misc
   'deploy:acre:adapter': [
@@ -122,6 +126,7 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     deployPost('set_MorphoConfig'),
     mTokenParam(),
   ],
+  'deploy:post:set:usycconfig': [deployPost('set_UsycConfig'), mTokenParam()],
 
   // LayerZero
   'deploy:lz:composer': [

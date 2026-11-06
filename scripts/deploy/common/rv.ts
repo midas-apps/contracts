@@ -6,16 +6,19 @@ import { deployAndVerifyProxy, getDeployer, getNetworkConfig } from './utils';
 
 import { MTokenName } from '../../../config';
 import {
+  DepositVaultType,
   getCurrentAddresses,
   RedemptionVaultType,
   sanctionListContracts,
   TokenAddresses,
+  usycTellerContracts,
 } from '../../../config/constants/addresses';
 import { getCommonContractNames } from '../../../helpers/contracts';
 import { getAllRoles } from '../../../helpers/roles';
 import {
   RedemptionVault,
   RedemptionVaultWithMToken,
+  RedemptionVaultWithUSYC,
 } from '../../../typechain-types';
 import {
   getDeploymentProfileForToken,
@@ -110,12 +113,30 @@ export type DeployRvMTokenConfig = {
   redemptionVault: string;
 } & DeployRvConfigCommon;
 
+export type DeployRvUsycConfig = {
+  type: 'USYC';
+  /**
+   * mToken DepositVault used to convert USDC into its mToken
+   * after redeeming USYC
+   * @default zero address (USYC is only used for USDC redemptions)
+   */
+  depositVault?:
+    | `0x${string}`
+    | { mToken: MTokenName; depositVaultType: DepositVaultType };
+  /**
+   * Redemption fee rate the USYC Teller is expected to charge the vault
+   * @default 0
+   */
+  anticipatedFeeRate?: BigNumberish;
+} & DeployRvConfigCommon;
+
 export type DeployRvConfig =
   | DeployRvRegularConfig
   | DeployRvSwapperConfig
   | DeployRvAaveConfig
   | DeployRvMorphoConfig
-  | DeployRvMTokenConfig;
+  | DeployRvMTokenConfig
+  | DeployRvUsycConfig;
 
 const DUMMY_ADDRESS = '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF';
 
@@ -152,6 +173,32 @@ const resolveLoanAddresses = async (
   };
 };
 
+const resolveUsycDepositVault = (
+  networkConfig: DeployRvUsycConfig,
+  addresses: Partial<Record<MTokenName, TokenAddresses>>,
+) => {
+  const { depositVault } = networkConfig;
+
+  if (!depositVault) {
+    return constants.AddressZero;
+  }
+
+  if (typeof depositVault === 'string') {
+    return depositVault;
+  }
+
+  const depositVaultAddress =
+    addresses[depositVault.mToken]?.[depositVault.depositVaultType];
+
+  if (!depositVaultAddress) {
+    throw new Error(
+      `${depositVault.mToken} ${depositVault.depositVaultType} address is not found`,
+    );
+  }
+
+  return depositVaultAddress;
+};
+
 const resolveRedemptionVaultDataFeed = (
   tokenAddresses: TokenAddresses,
   token: MTokenName,
@@ -172,7 +219,7 @@ const resolveRedemptionVaultDataFeed = (
 export const deployRedemptionVault = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
-  type: 'rv' | 'rvSwapper' | 'rvAave' | 'rvMorpho' | 'rvMToken',
+  type: 'rv' | 'rvSwapper' | 'rvAave' | 'rvMorpho' | 'rvMToken' | 'rvUsyc',
 ) => {
   if (token.startsWith('TAC')) {
     throw new Error('TAC tokens are not supported anymore');
@@ -227,7 +274,24 @@ export const deployRedemptionVault = async (
 
   if (networkConfig.type === 'MTOKEN') {
     extraParams.push(networkConfig.redemptionVault);
+  } else if (networkConfig.type === 'USYC') {
+    const usycTeller = usycTellerContracts[hre.network.config.chainId!];
+
+    if (!usycTeller) {
+      throw new Error('USYC Teller contract is not found');
+    }
+
+    extraParams.push(
+      usycTeller,
+      resolveUsycDepositVault(networkConfig, addresses ?? {}),
+      networkConfig.anticipatedFeeRate ?? 0,
+    );
   }
+
+  const mTokenInitializer =
+    'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(address,address,address,address,uint256),address)' as const;
+  const usycInitializer =
+    'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(address,address,address,address,uint256),address,address,uint256)' as const;
 
   const dataFeed = networkConfig.mTokenDataFeed
     ? tokenAddresses?.[networkConfig.mTokenDataFeed]
@@ -279,9 +343,8 @@ export const deployRedemptionVault = async (
     ...extraParams,
   ] as
     | Parameters<RedemptionVault['initialize']>
-    | Parameters<
-        RedemptionVaultWithMToken['initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(address,address,address,address,uint256),address)']
-      >;
+    | Parameters<RedemptionVaultWithMToken[typeof mTokenInitializer]>
+    | Parameters<RedemptionVaultWithUSYC[typeof usycInitializer]>;
 
   const constructorParams = [
     allRoles.tokenRoles[token].redemptionVaultAdmin,
@@ -297,7 +360,9 @@ export const deployRedemptionVault = async (
       constructorArgs: constructorParams,
       initializer:
         networkConfig.type === 'MTOKEN'
-          ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
+          ? mTokenInitializer
+          : networkConfig.type === 'USYC'
+          ? usycInitializer
           : 'initialize',
     },
   );
