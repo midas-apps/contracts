@@ -155,6 +155,7 @@ const setupTightUsycRv = async (fixture: DefaultFixture) => {
     usdc.address,
     usycToken.address,
     constants.AddressZero,
+    constants.AddressZero,
   );
   await mintToken(usdc, teller, 1_000_000);
   await usycSetterTest(

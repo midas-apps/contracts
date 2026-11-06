@@ -143,6 +143,7 @@ const setupUsdc6UsycDv = async (fixture: DefaultFixture) => {
     usdc.address,
     usyc.address,
     constants.AddressZero,
+    constants.AddressZero,
   );
   await teller.setPrices(NOT_ROUND_MINT_PRICE, NOT_ROUND_REDEEM_PRICE);
   await usycSetterTest(

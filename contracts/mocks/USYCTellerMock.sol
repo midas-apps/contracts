@@ -14,6 +14,24 @@ interface IMintableBurnableToken {
     function burn(address from, uint256 amount) external;
 }
 
+/// @notice subset of Circle's USYC oracle (GenericNextPriceAggregator)
+interface IUSYCOracle {
+    function decimals() external view returns (uint8);
+
+    function nextPrice() external view returns (int256);
+
+    function latestRoundData()
+        external
+        view
+        returns (
+            uint80 roundId,
+            int256 answer,
+            uint256 startedAt,
+            uint256 updatedAt,
+            uint80 answeredInRound
+        );
+}
+
 /**
  * @notice Mock of Circle's USYC Teller with its TellerFeeManager.
  * Share/asset conversions follow the Teller:
@@ -31,8 +49,11 @@ interface IMintableBurnableToken {
  * unlimited, so the fee rates are reported but no fee is charged
  *
  * Simplifications:
- * - the price feed is replaced with `setPrices`: `price` is the oracle price,
- *   `mintPrice` is what the Teller uses for deposits (the next oracle price after hours)
+ * - prices come from the optional `oracle`: `price` is `latestRoundData().answer`,
+ *   `mintPrice` is `nextPrice()` (the Teller switches between the latest and the
+ *   next price depending on the time of day, the mock always uses the next one).
+ *   `setPrices` overrides the oracle until `clearPricesOverride` is called;
+ *   without an oracle the prices set by `setPrices` (1.0 by default) are used
  * - fee rates are the same for all accounts
  * - the mock holds the redemption liquidity itself, there are no daily limits
  *   and `redeem` only burns the caller's own shares
@@ -50,7 +71,10 @@ contract USYCTellerMock is Ownable {
     address public immutable asset;
     address public immutable share;
 
-    uint256 public price = _PRICE_SCALE;
+    address public oracle;
+    bool public pricesOverridden;
+
+    uint256 private _price = _PRICE_SCALE;
     uint256 private _mintPrice = _PRICE_SCALE;
 
     uint256 private _subscriptionFeeRate;
@@ -74,6 +98,7 @@ contract USYCTellerMock is Ownable {
     constructor(
         address _asset,
         address _share,
+        address _oracle,
         address _owner
     ) {
         require(
@@ -83,6 +108,7 @@ contract USYCTellerMock is Ownable {
         );
         asset = _asset;
         share = _share;
+        _setOracle(_oracle);
         _transferOwnership(_owner);
     }
 
@@ -90,10 +116,21 @@ contract USYCTellerMock is Ownable {
         _transferOwnership(newOwner);
     }
 
+    /// @param oracle_ USYC oracle, address(0) to use the prices set by `setPrices`
+    function setOracle(address oracle_) external onlyAdmin {
+        _setOracle(oracle_);
+    }
+
+    /// @notice overrides the oracle prices until `clearPricesOverride` is called
     function setPrices(uint256 mintPrice_, uint256 price_) external onlyAdmin {
         require(mintPrice_ > 0 && price_ > 0, "USYCTellerMock: bad price");
         _mintPrice = mintPrice_;
-        price = price_;
+        _price = price_;
+        pricesOverridden = true;
+    }
+
+    function clearPricesOverride() external onlyAdmin {
+        pricesOverridden = false;
     }
 
     function setFeeRates(uint256 subscriptionRate, uint256 redemptionRate)
@@ -165,7 +202,15 @@ contract USYCTellerMock is Ownable {
     }
 
     function mintPrice() public view returns (int256) {
+        if (_useOracle()) return IUSYCOracle(oracle).nextPrice();
         return int256(_mintPrice);
+    }
+
+    function price() public view returns (uint256) {
+        if (!_useOracle()) return _price;
+
+        (, int256 answer, , , ) = IUSYCOracle(oracle).latestRoundData();
+        return _toPrice(answer);
     }
 
     function subscriptionFeeRate(address) external view returns (uint256) {
@@ -189,17 +234,17 @@ contract USYCTellerMock is Ownable {
     }
 
     function convertToShares(uint256 assets) external view returns (uint256) {
-        return Math.mulDiv(assets, _PRICE_SCALE, price);
+        return Math.mulDiv(assets, _PRICE_SCALE, price());
     }
 
     function convertToAssets(uint256 shares) external view returns (uint256) {
-        return Math.mulDiv(shares, price, _PRICE_SCALE);
+        return Math.mulDiv(shares, price(), _PRICE_SCALE);
     }
 
     function maxRedeem(address account) public view returns (uint256) {
         return
             Math.min(
-                Math.mulDiv(totalAssets(), _PRICE_SCALE, price),
+                Math.mulDiv(totalAssets(), _PRICE_SCALE, price()),
                 IERC20(share).balanceOf(account)
             );
     }
@@ -215,7 +260,7 @@ contract USYCTellerMock is Ownable {
     {
         fee = _feeFromGross(account, assets, _subscriptionFeeRate);
         price_ = mintPrice();
-        shares = Math.mulDiv(assets - fee, _PRICE_SCALE, _mintPrice);
+        shares = Math.mulDiv(assets - fee, _PRICE_SCALE, _toPrice(price_));
     }
 
     function previewWithdrawData(address account, uint256 assets)
@@ -228,11 +273,12 @@ contract USYCTellerMock is Ownable {
         )
     {
         fee = _feeOnTop(account, assets, _redemptionFeeRate);
-        price_ = int256(price);
+        uint256 currentPrice = price();
+        price_ = int256(currentPrice);
         shares = Math.mulDiv(
             assets + fee,
             _PRICE_SCALE,
-            price,
+            currentPrice,
             Math.Rounding.Up
         );
     }
@@ -246,10 +292,29 @@ contract USYCTellerMock is Ownable {
             int256 price_
         )
     {
-        price_ = int256(price);
-        assets = Math.mulDiv(shares, price, _PRICE_SCALE);
+        uint256 currentPrice = price();
+        price_ = int256(currentPrice);
+        assets = Math.mulDiv(shares, currentPrice, _PRICE_SCALE);
         fee = _feeFromGross(account, assets, _redemptionFeeRate);
         assets -= fee;
+    }
+
+    function _setOracle(address oracle_) private {
+        require(
+            oracle_ == address(0) ||
+                IUSYCOracle(oracle_).decimals() == PRICE_DECIMALS,
+            "USYCTellerMock: bad oracle decimals"
+        );
+        oracle = oracle_;
+    }
+
+    function _useOracle() private view returns (bool) {
+        return oracle != address(0) && !pricesOverridden;
+    }
+
+    function _toPrice(int256 answer) private pure returns (uint256) {
+        require(answer > 0, "USYCTellerMock: bad price");
+        return uint256(answer);
     }
 
     function _feeFromGross(

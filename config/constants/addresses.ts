@@ -2247,6 +2247,13 @@ export const usycTellerContracts: Partial<Record<number, string>> = {
   [chainIds.arc]: '0x51A8CE47dC08ba5CD19c7aa84EA6fD6664f60f9b',
 };
 
+/**
+ * Circle's USYC oracles, used by `USYCTellerMock` on testnets
+ */
+export const usycOracleContracts: Partial<Record<number, string>> = {
+  [chainIds.sepolia]: '0x48c9E02E09d03E448673166d29691ECdEf56526F',
+};
+
 export const getCurrentAddresses = (hre: HardhatRuntimeEnvironment) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (midasAddressesPerNetwork as any)[hre.network.name] as

@@ -64,11 +64,7 @@ type DeployDvConfigCommonNew = DeployVaultConfigCommon & {
   mTokenDataFeed?: 'dataFeed';
 
   minMTokenAmountForFirstDeposit?: BigNumberish;
-  /**
-   * @deprecated Cap now lives on mToken. Kept optional for config compatibility;
-   * not passed to DepositVault.initialize. Set via mToken initialize / setMaxSupplyCap.
-   */
-  maxSupplyCap?: BigNumberish;
+
   maxAmountPerRequest?: BigNumberish;
 };
 

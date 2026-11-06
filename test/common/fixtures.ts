@@ -590,6 +590,7 @@ export const defaultDeploy = async () => {
     stableCoins.usdc.address,
     usycToken.address,
     constants.AddressZero,
+    constants.AddressZero,
   );
   await stableCoins.usdc.mint(usycTeller.address, parseUnits('1000000', 8));
 
