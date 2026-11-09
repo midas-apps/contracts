@@ -64,6 +64,7 @@ const defaultRpcUrls: ConfigPerNetwork<RpcUrl> = {
     : `https://optimism-mainnet.infura.io/v3/${INFURA_KEY}`,
   robinhood: 'https://rpc.mainnet.chain.robinhood.com',
   arc: 'https://rpc.mainnet.arc.io',
+  ink: 'https://rpc-gel.inkonchain.com',
 };
 
 export const rpcUrls: ConfigPerNetwork<RpcUrl> = Object.entries(
@@ -107,6 +108,7 @@ export const chainIds: ConfigPerNetwork<number> = {
   optimism: 10,
   robinhood: 4663,
   arc: 5042,
+  ink: 57073,
 };
 
 export const mnemonics: ConfigPerNetwork<string | undefined> = {
@@ -136,6 +138,7 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   optimism: MNEMONIC_PROD,
   robinhood: MNEMONIC_PROD,
   arc: MNEMONIC_PROD,
+  ink: MNEMONIC_PROD,
 };
 
 export const gases: PartialConfigPerNetwork<number | undefined> = {};

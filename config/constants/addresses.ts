@@ -1998,6 +1998,21 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       layerZero: { oft: '0xc7D9168E70fAF282aa6b0ecbEf7Af2c9C5c146F9' },
     },
   },
+  ink: {
+    accessControl: '0xfA7c967f4b5aDB6641512FfB8c437034Ab0FDce4',
+    timelock: '0x644C52F79013b3204a5f9a11E2f08fBb4Df5beBF',
+    paymentTokens: {},
+    mGLOeuro: {
+      token: '0x0aE170b9e97D9b47a82E535124b17e7ecB841a4C',
+      customFeed: '0xEc3B0BedD1EEe4A2f6f1A17843b3B7d9485dD896',
+      customFeedDv: '0x3C5657595FeE1547D4b91375977607D3df1Ebe61',
+      customFeedRv: '0x9EF6a6763c67a548567216a861bfBb08c6EEadd8',
+      dataFeedDv: '0xb6E81E56F031381615879444696c0700455eA540',
+      dataFeedRv: '0xb691EDd5C095c3973945771C902ef065543C7c7E',
+      depositVault: '0x716cF1480D16EB4f295c6659076240DdCd848E83',
+      redemptionVaultSwapper: '0x12d0048865BE13D12921323484dCA27486AC148f',
+    },
+  },
   sepolia: {
     paymentTokens: {
       usdc: {

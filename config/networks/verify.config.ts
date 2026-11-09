@@ -165,4 +165,10 @@ export const verifyConfig: VerifyConfigPerNetwork = {
     apiKey: ENV.BLOCKSCOUT_API_KEY,
     browserUrl: 'https://robinhoodchain.blockscout.com',
   },
+  ink: {
+    type: 'custom',
+    apiUrl: 'https://api.blockscout.com/57073/api',
+    apiKey: ENV.BLOCKSCOUT_API_KEY,
+    browserUrl: 'https://explorer.inkonchain.com',
+  },
 };
