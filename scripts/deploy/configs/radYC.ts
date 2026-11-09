@@ -124,7 +124,7 @@ export const radYCDeploymentConfig: DeploymentConfig = {
       },
     },
     [chainIds.sepolia]: {
-      dv: {
+      dvUsyc: {
         type: 'REGULAR',
         version: 'v2',
         enableSanctionsList: false,
@@ -218,15 +218,18 @@ export const radYCDeploymentConfig: DeploymentConfig = {
         addFeeWaived: [
           {
             fromVault: { mToken: 'radUSD', type: 'depositVault' },
-            toWaive: [{ type: 'depositVault' }],
+            toWaive: [{ type: 'redemptionVaultUsyc' }],
           },
           {
             fromVault: { mToken: 'radUSD', type: 'redemptionVault' },
-            toWaive: [{ type: 'redemptionVaultUsyc' }],
+            toWaive: [{ type: 'depositVaultUsyc' }],
           },
         ],
         greenlist: { depositVault: true, redemptionVault: true },
-        setRoundData: {
+        setRoundDataRv: {
+          data: 113950001,
+        },
+        setRoundDataDv: {
           data: 113950001,
         },
       },
