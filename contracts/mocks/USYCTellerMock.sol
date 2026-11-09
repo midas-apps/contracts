@@ -50,8 +50,9 @@ interface IUSYCOracle {
  *
  * Simplifications:
  * - prices come from the optional `oracle`: `price` is `latestRoundData().answer`,
- *   `mintPrice` is `nextPrice()` (the Teller switches between the latest and the
- *   next price depending on the time of day, the mock always uses the next one).
+ *   `mintPrice` is `latestRoundData().answer` before `mintPriceCutoff` (UTC time
+ *   of day) and `nextPrice()` after it. The Teller switches at 14:00 ET, the mock
+ *   uses a fixed UTC time that has to be moved by an hour on DST changes.
  *   `setPrices` overrides the oracle until `clearPricesOverride` is called;
  *   without an oracle the prices set by `setPrices` (1.0 by default) are used
  * - fee rates are the same for all accounts
@@ -73,6 +74,8 @@ contract USYCTellerMock is Ownable {
 
     address public oracle;
     bool public pricesOverridden;
+    /// @dev UTC time of day from which `mintPrice` is `nextPrice()`, 14:00 EST by default
+    uint256 public mintPriceCutoff = 19 hours;
 
     uint256 private _price = _PRICE_SCALE;
     uint256 private _mintPrice = _PRICE_SCALE;
@@ -131,6 +134,12 @@ contract USYCTellerMock is Ownable {
 
     function clearPricesOverride() external onlyAdmin {
         pricesOverridden = false;
+    }
+
+    /// @param cutoff UTC time of day in seconds, e.g. `18 hours` for 14:00 EDT
+    function setMintPriceCutoff(uint256 cutoff) external onlyAdmin {
+        require(cutoff < 1 days, "USYCTellerMock: bad cutoff");
+        mintPriceCutoff = cutoff;
     }
 
     function setFeeRates(uint256 subscriptionRate, uint256 redemptionRate)
@@ -202,8 +211,13 @@ contract USYCTellerMock is Ownable {
     }
 
     function mintPrice() public view returns (int256) {
-        if (_useOracle()) return IUSYCOracle(oracle).nextPrice();
-        return int256(_mintPrice);
+        if (!_useOracle()) return int256(_mintPrice);
+
+        if (block.timestamp % 1 days >= mintPriceCutoff) {
+            return IUSYCOracle(oracle).nextPrice();
+        }
+        (, int256 answer, , , ) = IUSYCOracle(oracle).latestRoundData();
+        return answer;
     }
 
     function price() public view returns (uint256) {
