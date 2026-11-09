@@ -13,6 +13,7 @@ import {
   DepositVaultWithUSYC__factory,
   DepositVaultWithUSYCTest__factory,
   ERC20Mock__factory,
+  RedemptionVaultWithUSYCLibrary__factory,
   USYCTellerMock__factory,
 } from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
@@ -37,7 +38,7 @@ import {
   setInstantLimitConfigTest,
   setMinAmountTest,
 } from '../common/manageable-vault.helpers';
-import { usycSetterTest } from '../common/usyc-common.helpers';
+import { usycMaxFee, usycSetterTest } from '../common/usyc-common.helpers';
 import {
   initializeDvWithUsyc,
   InitializerParamsDvWithUsyc,
@@ -929,6 +930,189 @@ depositVaultSuits(
               {
                 from: user,
                 revertCustomError: { customErrorName: 'AutoInvestFailed' },
+              },
+            );
+          });
+
+          it('free tier partially used: average fee below the anticipated rate, deposit is invested', async () => {
+            const fixture = await loadFixture(defaultDeploy);
+            const {
+              owner,
+              depositVaultWithUSYC,
+              stableCoins,
+              mTBILL,
+              usycTeller,
+            } = fixture;
+            await setupUsycDv(fixture);
+            await usycTeller.setFeeRates(parseUnits('4'), 0);
+            // half of the deposit is fee-free
+            await usycTeller.setFreeTierThreshold(parseUnits('50', 8));
+            await usycSetterTest(
+              { vault: depositVaultWithUSYC, owner },
+              'setAnticipatedFeeRate',
+              'SetAnticipatedFeeRate',
+              'anticipatedFeeRate',
+              parseUnits('4'),
+            );
+            const user = await fundUser(fixture, stableCoins.usdc, 100);
+
+            const amount = parseUnits('100', 8);
+            const [, fee] = await usycTeller.previewDepositData(
+              depositVaultWithUSYC.address,
+              amount,
+            );
+            // 4% on the net of the 50 USDC over the free tier: 50 - 50 / 1.04
+            expect(fee).eq(parseUnits('1.92307693', 8));
+            expect(fee).lt(usycMaxFee(amount, parseUnits('4')));
+
+            await depositInstantWithUsycTest(
+              {
+                depositVaultWithUSYC,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed: fixture.mTokenToUsdDataFeed,
+              },
+              stableCoins.usdc,
+              100,
+              { from: user },
+            );
+          });
+
+          it('Teller charges a premium over its reported rate: fallback to USDC transfer', async () => {
+            const fixture = await loadFixture(defaultDeploy);
+            const {
+              owner,
+              depositVaultWithUSYC,
+              stableCoins,
+              mTBILL,
+              usycTeller,
+            } = fixture;
+            await setupUsycDv(fixture);
+            await setAutoInvestFallbackEnabledUsycTest(
+              { depositVaultWithUSYC, owner },
+              true,
+            );
+            // reported rate 0 equals the anticipated one, 1% is charged anyway
+            await usycTeller.setFeeRatePremium(parseUnits('1'));
+            await usycTeller.setFreeTierThreshold(0);
+            const user = await fundUser(fixture, stableCoins.usdc, 100);
+
+            const [, fee] = await usycTeller.previewDepositData(
+              depositVaultWithUSYC.address,
+              parseUnits('100', 8),
+            );
+            expect(fee).gt(0);
+
+            await depositInstantWithUsycTest(
+              {
+                depositVaultWithUSYC,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed: fixture.mTokenToUsdDataFeed,
+                expectation: 'fallback',
+              },
+              stableCoins.usdc,
+              100,
+              { from: user },
+            );
+          });
+
+          it('should fail: Teller charges a premium over its reported rate and fallback is disabled', async () => {
+            const fixture = await loadFixture(defaultDeploy);
+            const {
+              owner,
+              depositVaultWithUSYC,
+              stableCoins,
+              mTBILL,
+              usycTeller,
+            } = fixture;
+            await setupUsycDv(fixture);
+            await usycTeller.setFeeRates(parseUnits('4'), 0);
+            await usycTeller.setFeeRatePremium(parseUnits('1'));
+            await usycTeller.setFreeTierThreshold(0);
+            await usycSetterTest(
+              { vault: depositVaultWithUSYC, owner },
+              'setAnticipatedFeeRate',
+              'SetAnticipatedFeeRate',
+              'anticipatedFeeRate',
+              parseUnits('4'),
+            );
+            const user = await fundUser(fixture, stableCoins.usdc, 100);
+
+            const amount = parseUnits('100', 8);
+            const [, fee] = await usycTeller.previewDepositData(
+              depositVaultWithUSYC.address,
+              amount,
+            );
+            const maxFee = usycMaxFee(amount, parseUnits('4'));
+
+            await depositInstantWithUsycTest(
+              {
+                depositVaultWithUSYC,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed: fixture.mTokenToUsdDataFeed,
+              },
+              stableCoins.usdc,
+              100,
+              {
+                from: user,
+                revertCustomError: {
+                  customErrorName: 'AutoInvestFailed',
+                  args: [
+                    depositVaultWithUSYC.interface.encodeErrorResult(
+                      'FeeExceeded',
+                      [fee, maxFee],
+                    ),
+                  ],
+                },
+              },
+            );
+          });
+
+          it('should fail: Teller mints less USYC than previewed', async () => {
+            const fixture = await loadFixture(defaultDeploy);
+            const {
+              owner,
+              depositVaultWithUSYC,
+              stableCoins,
+              mTBILL,
+              usycTeller,
+            } = fixture;
+            await setupUsycDv(fixture);
+            // the shortfall is caught after the deposit, fallback is not applicable
+            await setAutoInvestFallbackEnabledUsycTest(
+              { depositVaultWithUSYC, owner },
+              true,
+            );
+            await usycTeller.setDepositShortfall(1);
+            const user = await fundUser(fixture, stableCoins.usdc, 100);
+
+            const [expectedShares] = await usycTeller.previewDepositData(
+              depositVaultWithUSYC.address,
+              parseUnits('100', 8),
+            );
+
+            await depositInstantWithUsycTest(
+              {
+                depositVaultWithUSYC,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed: fixture.mTokenToUsdDataFeed,
+              },
+              stableCoins.usdc,
+              100,
+              {
+                from: user,
+                revertCustomError: {
+                  customErrorName: 'InsufficientAmountReceived',
+                  // the error is declared by the USYC library
+                  contract: RedemptionVaultWithUSYCLibrary__factory.connect(
+                    depositVaultWithUSYC.address,
+                    owner,
+                  ),
+                  args: [expectedShares.sub(1), expectedShares],
+                },
               },
             );
           });

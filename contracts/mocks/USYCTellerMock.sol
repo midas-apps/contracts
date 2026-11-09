@@ -59,6 +59,11 @@ interface IUSYCOracle {
  * - the mock holds the redemption liquidity itself, there are no daily limits
  *   and `redeem` only burns the caller's own shares
  *
+ * Misbehaviour knobs: `feeRatePremium` is added to the charged fee rates while
+ * the reported `subscriptionFeeRate` / `redemptionFeeRate` stay unchanged,
+ * `depositShortfall` / `redeemShortfall` make `deposit` mint / `redeem` pay
+ * out that much less than previewed
+ *
  * @dev admin functions are gated by the owner, or permissionless when the owner is address(0)
  */
 contract USYCTellerMock is Ownable {
@@ -85,6 +90,9 @@ contract USYCTellerMock is Ownable {
 
     uint256 public freeTierThreshold = type(uint256).max;
 
+    /// @dev added to the charged fee rates, not reported by the fee rate getters
+    uint256 public feeRatePremium;
+
     mapping(address => mapping(uint256 => uint256)) public subscription;
 
     mapping(address => mapping(uint256 => uint256)) public redemption;
@@ -92,6 +100,8 @@ contract USYCTellerMock is Ownable {
     bool public depositReverts;
     bool public redeemReverts;
     bool public depositReturnsZero;
+    uint256 public depositShortfall;
+    uint256 public redeemShortfall;
 
     modifier onlyAdmin() {
         if (owner() != address(0)) _checkOwner();
@@ -154,6 +164,18 @@ contract USYCTellerMock is Ownable {
         freeTierThreshold = threshold;
     }
 
+    function setFeeRatePremium(uint256 premium) external onlyAdmin {
+        feeRatePremium = premium;
+    }
+
+    function setDepositShortfall(uint256 shortfall) external onlyAdmin {
+        depositShortfall = shortfall;
+    }
+
+    function setRedeemShortfall(uint256 shortfall) external onlyAdmin {
+        redeemShortfall = shortfall;
+    }
+
     function setDepositReverts(bool value) external onlyAdmin {
         depositReverts = value;
     }
@@ -186,6 +208,7 @@ contract USYCTellerMock is Ownable {
 
         if (depositReturnsZero) return 0;
 
+        shares -= depositShortfall;
         IMintableBurnableToken(share).mint(receiver, shares);
     }
 
@@ -206,6 +229,7 @@ contract USYCTellerMock is Ownable {
 
         redemption[account][todayTimestamp()] += assets;
 
+        assets -= redeemShortfall;
         IMintableBurnableToken(share).burn(account, shares);
         IERC20(asset).safeTransfer(receiver, assets);
     }
@@ -272,7 +296,11 @@ contract USYCTellerMock is Ownable {
             int256 price_
         )
     {
-        fee = _feeFromGross(account, assets, _subscriptionFeeRate);
+        fee = _feeFromGross(
+            account,
+            assets,
+            _subscriptionFeeRate + feeRatePremium
+        );
         price_ = mintPrice();
         shares = Math.mulDiv(assets - fee, _PRICE_SCALE, _toPrice(price_));
     }
@@ -286,7 +314,7 @@ contract USYCTellerMock is Ownable {
             int256 price_
         )
     {
-        fee = _feeOnTop(account, assets, _redemptionFeeRate);
+        fee = _feeOnTop(account, assets, _redemptionFeeRate + feeRatePremium);
         uint256 currentPrice = price();
         price_ = int256(currentPrice);
         shares = Math.mulDiv(
@@ -309,7 +337,11 @@ contract USYCTellerMock is Ownable {
         uint256 currentPrice = price();
         price_ = int256(currentPrice);
         assets = Math.mulDiv(shares, currentPrice, _PRICE_SCALE);
-        fee = _feeFromGross(account, assets, _redemptionFeeRate);
+        fee = _feeFromGross(
+            account,
+            assets,
+            _redemptionFeeRate + feeRatePremium
+        );
         assets -= fee;
     }
 

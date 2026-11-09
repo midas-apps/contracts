@@ -12,6 +12,7 @@ import {
 import {
   ERC20Mock__factory,
   RedemptionVaultWithUSYC__factory,
+  RedemptionVaultWithUSYCLibrary__factory,
   USYCTellerMock__factory,
 } from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
@@ -40,7 +41,7 @@ import {
   setLoanLpTest,
   setPreferLoanLiquidityTest,
 } from '../common/redemption-vault.helpers';
-import { usycSetterTest } from '../common/usyc-common.helpers';
+import { usycMaxFee, usycSetterTest } from '../common/usyc-common.helpers';
 import {
   deployRvWithUsycTest,
   initializeRvWithUsyc,
@@ -675,6 +676,40 @@ redemptionVaultSuits(
           );
         });
 
+        it('should fail: teller fee exceeds the max fee and there is no other liquidity', async () => {
+          const fixture = await loadFixture(defaultDeploy);
+          const { user } = await setupUsycRv(fixture);
+          // reported rate 0 equals the anticipated one, 1% is charged anyway
+          await fixture.usycTeller.setFeeRatePremium(parseUnits('1'));
+          await fixture.usycTeller.setFreeTierThreshold(0);
+
+          await redeemInstantWithUsycTest(
+            commonParams(fixture),
+            fixture.stableCoins.usdc,
+            100,
+            {
+              from: user,
+              revertMessage: 'ERC20: transfer amount exceeds balance',
+            },
+          );
+        });
+
+        it('should fail: teller pays out less USDC than previewed, strategy reverts and USYC is not used', async () => {
+          const fixture = await loadFixture(defaultDeploy);
+          const { user } = await setupUsycRv(fixture);
+          await fixture.usycTeller.setRedeemShortfall(1);
+
+          await redeemInstantWithUsycTest(
+            commonParams(fixture),
+            fixture.stableCoins.usdc,
+            100,
+            {
+              from: user,
+              revertMessage: 'ERC20: transfer amount exceeds balance',
+            },
+          );
+        });
+
         it('should fail: tokenOut not served by the strategy and the vault lacks it', async () => {
           const fixture = await loadFixture(defaultDeploy);
           const { user } = await setupUsycRv(fixture);
@@ -732,6 +767,57 @@ redemptionVaultSuits(
               parseUnits('100', await token.decimals()),
             );
           }
+        });
+
+        it('teller fee exceeds the max fee: nothing is obtained', async () => {
+          const fixture = await loadFixture(defaultDeploy);
+          await setupUsycRv(fixture);
+          const { usycTeller, redemptionVaultWithUSYC } = fixture;
+          // reported rate 0 equals the anticipated one, 1% is charged anyway
+          await usycTeller.setFeeRatePremium(parseUnits('1'));
+          await usycTeller.setFreeTierThreshold(0);
+
+          for (const token of [fixture.stableCoins.usdc, fixture.mTokenLoan]) {
+            await checkAndRedeemUsycTest(
+              { redemptionVaultWithUSYC, expectation: 'none' },
+              token,
+              parseUnits('100', await token.decimals()),
+            );
+          }
+        });
+
+        it('should fail: teller pays out less USDC than previewed', async () => {
+          const fixture = await loadFixture(defaultDeploy);
+          await setupUsycRv(fixture);
+          const { usycTeller, redemptionVaultWithUSYC, owner } = fixture;
+          await usycTeller.setRedeemShortfall(1);
+
+          const missing = parseUnits('100', 8);
+          const [shares] = await usycTeller.previewWithdrawData(
+            redemptionVaultWithUSYC.address,
+            missing,
+          );
+          const [expectedUsdc] = await usycTeller.previewRedeemData(
+            redemptionVaultWithUSYC.address,
+            shares,
+          );
+
+          await checkAndRedeemUsycTest(
+            { redemptionVaultWithUSYC },
+            fixture.stableCoins.usdc,
+            missing,
+            {
+              revertCustomError: {
+                customErrorName: 'InsufficientAmountReceived',
+                // the error is declared by the linked library
+                contract: RedemptionVaultWithUSYCLibrary__factory.connect(
+                  redemptionVaultWithUSYC.address,
+                  owner,
+                ),
+                args: [expectedUsdc.sub(1), expectedUsdc],
+              },
+            },
+          );
         });
 
         it('depositVault not set and tokenOut is radUSD: nothing is obtained', async () => {
@@ -995,6 +1081,26 @@ redemptionVaultSuits(
           expect(await mTokenLoan.balanceOf(loanLp.address)).lt(lpBefore);
         });
 
+        it('teller fee exceeds the max fee: USYC is skipped and loan LP covers everything', async () => {
+          const fixture = await loadFixture(defaultDeploy);
+          const { user } = await setupUsycRv(fixture);
+          await setupLoanLp(fixture, 100_000);
+          // reported rate 0 equals the anticipated one, 1% is charged anyway
+          await fixture.usycTeller.setFeeRatePremium(parseUnits('1'));
+          await fixture.usycTeller.setFreeTierThreshold(0);
+          const { mTokenLoan, loanLp } = fixture;
+          const lpBefore = await mTokenLoan.balanceOf(loanLp.address);
+
+          await redeemInstantWithUsycTest(
+            { ...commonParams(fixture), expectUsycUsed: false },
+            fixture.stableCoins.usdc,
+            100,
+            { from: user },
+          );
+
+          expect(await mTokenLoan.balanceOf(loanLp.address)).lt(lpBefore);
+        });
+
         it('preferLoanLiquidity=true: loan LP is used first, USYC covers the rest', async () => {
           const fixture = await loadFixture(defaultDeploy);
           const { user } = await setupUsycRv(fixture);
@@ -1122,6 +1228,29 @@ redemptionVaultSuits(
           );
           return setup;
         };
+
+        it('free tier partially used: average fee below the anticipated rate, USYC is redeemed', async () => {
+          const fixture = await loadFixture(defaultDeploy);
+          const { user, usdc, teller } = await setupChargingTeller(fixture);
+          // ~half of the redeemed value is fee-free
+          await teller.setFreeTierThreshold(parseUnits('50', 6));
+
+          const [shares] = await teller.previewWithdrawData(
+            fixture.redemptionVaultWithUSYC.address,
+            parseUnits('100', 6),
+          );
+          const [net, fee] = await teller.previewRedeemData(
+            fixture.redemptionVaultWithUSYC.address,
+            shares,
+          );
+          expect(fee).gt(0);
+          // the average fee is below the 3% anticipated rate
+          expect(fee).lt(usycMaxFee(net.add(fee), parseUnits('3')));
+
+          await redeemInstantWithUsycTest(commonParams(fixture), usdc, 100, {
+            from: user,
+          });
+        });
 
         it('redeem several amounts to USDC and radUSD: redemption fee is covered by redeeming more USYC', async () => {
           const fixture = await loadFixture(defaultDeploy);

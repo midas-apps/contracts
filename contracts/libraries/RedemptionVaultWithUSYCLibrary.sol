@@ -17,12 +17,26 @@ import {RedemptionSwapperHelpersLibrary} from "./RedemptionSwapperHelpersLibrary
 /**
  * @title RedemptionVaultWithUSYCLibrary
  * @notice USYC liquidity strategy of RedemptionVaultWithUSYC, deployed
- * as a linked library to reduce the vault bytecode size
+ * as a linked library to reduce the vault bytecode size, and the Teller
+ * fee math shared with DepositVaultWithUSYC
  * @author RedDuck Software
  */
 library RedemptionVaultWithUSYCLibrary {
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
+
+    /**
+     * @notice 100% in Teller fee rate units: rates have 18 decimals
+     * of a percent, 1e18 = 1%
+     */
+    uint256 private constant _HUNDRED_PCT = 100e18;
+
+    /**
+     * @notice when the Teller returns less than it previewed
+     * @param received amount received from the Teller
+     * @param expected amount previewed by the Teller
+     */
+    error InsufficientAmountReceived(uint256 received, uint256 expected);
 
     /**
      * @notice Redeems USYC held by the calling vault through the Teller
@@ -33,8 +47,10 @@ library RedemptionVaultWithUSYCLibrary {
      * the USDC is deposited into `dv`, every conversion rounding up so that
      * the obtained amount covers `missingAmountBase18`.
      * Returns 0 without redeeming when `tokenOut` is neither, the Teller
-     * redemption fee rate differs from `anticipatedFeeRate`, the vault is not
-     * fee waived on `dv` or `dv` does not accept USDC.
+     * redemption fee rate differs from `anticipatedFeeRate`, the fee previewed
+     * by the Teller exceeds {maxFee}, the vault is not fee waived on `dv` or
+     * `dv` does not accept USDC.
+     * Reverts when the Teller pays out less USDC than previewed.
      *
      * NOTE: redeemed shares are capped by `teller.maxRedeem`, which the
      * Teller derives from `totalAssets()` (the USDC its treasury can pay out
@@ -124,11 +140,16 @@ library RedemptionVaultWithUSYCLibrary {
             return 0;
         }
 
-        uint256 receivedUsdc = teller.redeem(
+        uint256 receivedUsdc = _redeemUsyc(
+            teller,
             usycToRedeem,
-            address(this),
-            address(this)
+            anticipatedFeeRate
         );
+
+        // the Teller fee exceeds the maximum, nothing is redeemed
+        if (receivedUsdc == 0) {
+            return 0;
+        }
 
         uint256 receivedTokenOut;
         if (isMToken) {
@@ -144,6 +165,61 @@ library RedemptionVaultWithUSYCLibrary {
         }
 
         return receivedTokenOut;
+    }
+
+    /**
+     * @notice Maximum fee the Teller can take from `grossAmount` at `feeRate`
+     * @dev Same formula as the TellerFeeManager, where the rate applies to
+     * the net amount: `gross - floor(gross * 100% / (100% + rate))`.
+     * The Teller does not charge fees under its daily free tier, so the
+     * fee it actually takes can be lower
+     * @param grossAmount amount the fee is taken from
+     * @param feeRate Teller fee rate, 1e18 = 1%
+     * @return maximum fee
+     */
+    function maxFee(uint256 grossAmount, uint256 feeRate)
+        internal
+        pure
+        returns (uint256)
+    {
+        return
+            Math.mulDiv(
+                grossAmount,
+                feeRate,
+                _HUNDRED_PCT + feeRate,
+                Math.Rounding.Up
+            );
+    }
+
+    /**
+     * @dev Redeems `usycAmount` USYC through the Teller to this contract.
+     * Returns 0 without redeeming when the fee previewed by the Teller
+     * exceeds {maxFee}. Reverts when the Teller pays out less USDC
+     * than previewed
+     * @param teller USYC Teller
+     * @param usycAmount amount of USYC to redeem
+     * @param feeRate Teller redemption fee rate
+     * @return receivedUsdc amount of USDC received
+     */
+    function _redeemUsyc(
+        IUSYCTeller teller,
+        uint256 usycAmount,
+        uint256 feeRate
+    ) private returns (uint256 receivedUsdc) {
+        (uint256 expectedUsdc, uint256 fee, ) = teller.previewRedeemData(
+            address(this),
+            usycAmount
+        );
+
+        if (fee > maxFee(expectedUsdc + fee, feeRate)) {
+            return 0;
+        }
+
+        receivedUsdc = teller.redeem(usycAmount, address(this), address(this));
+        require(
+            receivedUsdc >= expectedUsdc,
+            InsufficientAmountReceived(receivedUsdc, expectedUsdc)
+        );
     }
 
     /**

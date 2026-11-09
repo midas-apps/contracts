@@ -11,7 +11,7 @@ import {
 } from './common.helpers';
 import { defaultDeploy } from './fixtures';
 import { redeemInstantTest } from './redemption-vault.helpers';
-import { usycSetterTest } from './usyc-common.helpers';
+import { usycMaxFee, usycSetterTest } from './usyc-common.helpers';
 
 import {
   DepositVaultTest__factory,
@@ -47,7 +47,8 @@ export const setUsycDepositVaultTest = (
  * Value of the USYC the vault is able to redeem right now, expressed in
  * `tokenOut` native units. Mirrors the strategy guards, so it is 0 whenever
  * the strategy would not be used (unsupported tokenOut, fee rate mismatch,
- * fees not waived on the deposit vault, USDC not accepted by it)
+ * previewed fee over the anticipated rate, fees not waived on the deposit
+ * vault, USDC not accepted by it)
  */
 export const usycLiquidityInTokenOut = async (
   redemptionVaultWithUSYC: Fixture['redemptionVaultWithUSYC'],
@@ -63,17 +64,22 @@ export const usycLiquidityInTokenOut = async (
   const feeRate = await teller.redemptionFeeRate(
     redemptionVaultWithUSYC.address,
   );
-  if (!feeRate.eq(await redemptionVaultWithUSYC.anticipatedFeeRate())) {
+  const anticipatedFeeRate = await redemptionVaultWithUSYC.anticipatedFeeRate();
+  if (!feeRate.eq(anticipatedFeeRate)) {
     return constants.Zero;
   }
 
   const maxShares = await teller.maxRedeem(redemptionVaultWithUSYC.address);
   if (maxShares.isZero()) return constants.Zero;
 
-  const [usdcValue] = await teller.previewRedeemData(
+  const [usdcValue, tellerFee] = await teller.previewRedeemData(
     redemptionVaultWithUSYC.address,
     maxShares,
   );
+
+  if (tellerFee.gt(usycMaxFee(usdcValue.add(tellerFee), anticipatedFeeRate))) {
+    return constants.Zero;
+  }
 
   if (tokenOut === usdc) return usdcValue;
 

@@ -179,11 +179,12 @@ const assertUsycDeposit = async (
       expect(usdcInvested).eq(expectedUsdcInvested);
     }
 
-    // shares are priced at the state before the deposit, which is unchanged
-    // by the deposit itself, so the preview after matches what was minted
+    // shares are priced at the state before the deposit: the deposit itself
+    // adds to the daily volume the Teller free tier is computed from
     const [expectedShares] = await before.teller.previewDepositData(
       depositVaultWithUSYC.address,
       usdcInvested,
+      { blockTag: before.blockNumber },
     );
     const usycReceived = after.receiverUsyc.sub(before.receiverUsyc);
     expect(usycReceived).eq(expectedShares);

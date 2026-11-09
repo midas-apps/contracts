@@ -10,6 +10,7 @@ import {DepositVaultInitParams} from "./interfaces/IDepositVault.sol";
 import {CommonVaultInitParams} from "./interfaces/IManageableVault.sol";
 import {IRedemptionVault} from "./interfaces/IRedemptionVault.sol";
 import {IUSYCTeller} from "./interfaces/usyc/IUSYCTeller.sol";
+import {RedemptionVaultWithUSYCLibrary} from "./libraries/RedemptionVaultWithUSYCLibrary.sol";
 
 /**
  * @title DepositVaultWithUSYC
@@ -39,7 +40,9 @@ contract DepositVaultWithUSYC is DepositVault {
     /**
      * @notice Subscription fee rate the Teller is expected to charge this vault
      * @dev auto-invest is only performed when it equals
-     * `usycTeller.subscriptionFeeRate(address(this))`
+     * `usycTeller.subscriptionFeeRate(address(this))` and the fee the Teller
+     * actually takes from the deposited USDC does not exceed it. The Teller
+     * charges no fee under its daily free tier, so the actual fee can be lower
      */
     uint256 public anticipatedFeeRate;
 
@@ -101,6 +104,14 @@ contract DepositVaultWithUSYC is DepositVault {
      * @notice when the Teller mints zero USYC
      */
     error ZeroTokensReceived();
+
+    /**
+     * @notice when the fee previewed by the Teller exceeds the maximum fee
+     * at `anticipatedFeeRate`
+     * @param fee fee previewed by the Teller
+     * @param maxFee maximum fee at `anticipatedFeeRate`
+     */
+    error FeeExceeded(uint256 fee, uint256 maxFee);
 
     /**
      * @notice when auto-invest fails
@@ -268,9 +279,7 @@ contract DepositVaultWithUSYC is DepositVault {
     /**
      * @dev Transfers tokens from user to this contract, redeems them to USDC
      * through `redemptionVault` if `tokenIn` is its mToken, and subscribes
-     * to USYC with the USDC. Falls back to sending USDC to `tokensReceiver`
-     * or reverts, based on `autoInvestFallbackEnabled`, when the Teller fee rate
-     * differs from `anticipatedFeeRate` or the Teller deposit fails.
+     * to USYC with the USDC, see {_investUsdc}.
      * Failures of the `redemptionVault` redemption always revert
      * @param tokenIn token address
      * @param amountToken amount of tokens to transfer in base18
@@ -308,19 +317,53 @@ contract DepositVaultWithUSYC is DepositVault {
             assetAmount = rv.redeemInstant(usdc, amountToken, 0);
         }
 
-        uint256 tellerFeeRate = teller.subscriptionFeeRate(address(this));
+        _investUsdc(teller, usdc, assetAmount);
+    }
 
-        bool _autoInvestFallbackEnabled = autoInvestFallbackEnabled;
+    /**
+     * @dev Subscribes to USYC with `assetAmount` of USDC held by this contract,
+     * the USYC is minted to `tokensReceiver`.
+     * Falls back to sending the USDC to `tokensReceiver` or reverts, based on
+     * `autoInvestFallbackEnabled`, when the Teller fee rate differs from
+     * `anticipatedFeeRate`, the fee previewed by the Teller exceeds
+     * {RedemptionVaultWithUSYCLibrary-maxFee} or the Teller deposit fails.
+     * Always reverts when the Teller mints less USYC than previewed
+     * @param teller USYC Teller
+     * @param usdc Teller asset address
+     * @param assetAmount amount of USDC to subscribe with, in USDC decimals
+     */
+    function _investUsdc(
+        IUSYCTeller teller,
+        address usdc,
+        uint256 assetAmount
+    ) private {
+        uint256 feeRate = teller.subscriptionFeeRate(address(this));
+        if (feeRate != anticipatedFeeRate) {
+            return
+                _fallbackDeposit(
+                    abi.encodeWithSelector(FeeNotMatched.selector, feeRate),
+                    teller,
+                    usdc,
+                    assetAmount
+                );
+        }
 
-        if (tellerFeeRate != anticipatedFeeRate) {
-            _fallbackDeposit(
-                abi.encodeWithSelector(FeeNotMatched.selector, tellerFeeRate),
-                teller,
-                usdc,
-                assetAmount,
-                _autoInvestFallbackEnabled
-            );
-            return;
+        (uint256 expectedUsyc, uint256 fee, ) = teller.previewDepositData(
+            address(this),
+            assetAmount
+        );
+        uint256 maxFee = RedemptionVaultWithUSYCLibrary.maxFee(
+            assetAmount,
+            feeRate
+        );
+        if (fee > maxFee) {
+            return
+                _fallbackDeposit(
+                    abi.encodeWithSelector(FeeExceeded.selector, fee, maxFee),
+                    teller,
+                    usdc,
+                    assetAmount
+                );
         }
 
         IERC20(usdc).safeIncreaseAllowance(address(teller), assetAmount);
@@ -329,38 +372,35 @@ contract DepositVaultWithUSYC is DepositVault {
             uint256 usycReceived
         ) {
             require(usycReceived > 0, ZeroTokensReceived());
-        } catch (bytes memory err) {
-            _fallbackDeposit(
-                err,
-                teller,
-                usdc,
-                assetAmount,
-                _autoInvestFallbackEnabled
+            require(
+                usycReceived >= expectedUsyc,
+                RedemptionVaultWithUSYCLibrary.InsufficientAmountReceived(
+                    usycReceived,
+                    expectedUsyc
+                )
             );
+        } catch (bytes memory err) {
+            _fallbackDeposit(err, teller, usdc, assetAmount);
         }
     }
 
     /**
      * @dev Sends `_assetAmount` of USDC to `tokensReceiver` and resets the
-     * Teller allowance if fallback is enabled, otherwise reverts
+     * Teller allowance if `autoInvestFallbackEnabled`, otherwise reverts
      * @param err error bytes of the failed auto-invest
      * @param _teller USYC Teller
      * @param _usdc Teller asset address
      * @param _assetAmount amount of USDC to send, in USDC decimals
-     * @param _autoInvestFallbackEnabled whether fallback is enabled
      */
     function _fallbackDeposit(
         bytes memory err,
         IUSYCTeller _teller,
         address _usdc,
-        uint256 _assetAmount,
-        bool _autoInvestFallbackEnabled
+        uint256 _assetAmount
     ) private {
-        if (_autoInvestFallbackEnabled) {
-            IERC20(_usdc).safeApprove(address(_teller), 0);
-            IERC20(_usdc).safeTransfer(tokensReceiver, _assetAmount);
-        } else {
-            revert AutoInvestFailed(err);
-        }
+        require(autoInvestFallbackEnabled, AutoInvestFailed(err));
+
+        IERC20(_usdc).safeApprove(address(_teller), 0);
+        IERC20(_usdc).safeTransfer(tokensReceiver, _assetAmount);
     }
 }

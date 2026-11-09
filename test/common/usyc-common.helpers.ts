@@ -4,6 +4,20 @@ import { BigNumber, BigNumberish, Contract } from 'ethers';
 
 import { OptionalCommonParams, handleRevert } from './common.helpers';
 
+/** Teller fee rate units: 1e18 = 1% */
+export const USYC_HUNDRED_PCT = BigNumber.from(10).pow(20);
+
+/**
+ * Maximum Teller fee taken from `gross` at `feeRate`, rounded up,
+ * mirrors `RedemptionVaultWithUSYCLibrary.maxFee`
+ */
+export const usycMaxFee = (gross: BigNumber, feeRate: BigNumberish) => {
+  const denominator = USYC_HUNDRED_PCT.add(feeRate);
+  const product = gross.mul(feeRate);
+  const fee = product.div(denominator);
+  return product.mod(denominator).isZero() ? fee : fee.add(1);
+};
+
 /**
  * Generic admin setter test shared by the USYC deposit and redemption vaults:
  * checks access, emitted event and stored value

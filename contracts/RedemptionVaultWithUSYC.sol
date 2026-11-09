@@ -36,7 +36,9 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
     /**
      * @notice Redemption fee rate the Teller is expected to charge this vault
      * @dev USYC is only redeemed when it equals
-     * `usycTeller.redemptionFeeRate(address(this))`
+     * `usycTeller.redemptionFeeRate(address(this))` and the fee the Teller
+     * actually takes from the redeemed USDC does not exceed it. The Teller
+     * charges no fee under its daily free tier, so the actual fee can be lower
      */
     uint256 public anticipatedFeeRate;
 
