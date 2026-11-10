@@ -219,10 +219,66 @@ export const getLinkedLibraries = async (
       );
     }
 
+    await assertLibraryBytecodeMatches(hre, libraryName, libraryAddress);
+
     libraries[libraryName] = libraryAddress;
   }
 
   return libraries;
+};
+
+/**
+ * Ensures that the runtime bytecode of the library deployed at `libraryAddress`
+ * matches the locally compiled library, so contracts are never linked against
+ * an outdated library version
+ */
+const assertLibraryBytecodeMatches = async (
+  hre: HardhatRuntimeEnvironment,
+  libraryName: LibraryName,
+  libraryAddress: string,
+) => {
+  const redeployHint = `deploy the new library version first (deploy:library --lib ${libraryName}) and update the libraries section of the network addresses`;
+
+  const { deployedBytecode, deployedLinkReferences } =
+    await hre.artifacts.readArtifact(libraryName);
+
+  if (Object.keys(deployedLinkReferences).length > 0) {
+    throw new Error(
+      `Library ${libraryName} links against other libraries, bytecode check is not supported`,
+    );
+  }
+
+  // library runtime code starts with PUSH20 <address> (call protection),
+  // the placeholder is filled with the library address during deployment
+  const callProtectionPlaceholder = '0x73' + '00'.repeat(20);
+
+  if (!deployedBytecode.toLowerCase().startsWith(callProtectionPlaceholder)) {
+    throw new Error(
+      `Library ${libraryName} bytecode has unexpected format, unable to verify it`,
+    );
+  }
+
+  const expectedBytecode = (
+    '0x73' +
+    libraryAddress.slice(2) +
+    deployedBytecode.slice(callProtectionPlaceholder.length)
+  ).toLowerCase();
+
+  const onchainBytecode = (
+    await hre.ethers.provider.getCode(libraryAddress)
+  ).toLowerCase();
+
+  if (onchainBytecode === '0x') {
+    throw new Error(
+      `Library ${libraryName} has no code at ${libraryAddress}, ${redeployHint}`,
+    );
+  }
+
+  if (onchainBytecode !== expectedBytecode) {
+    throw new Error(
+      `Library ${libraryName} bytecode at ${libraryAddress} does not match the local bytecode, ${redeployHint}`,
+    );
+  }
 };
 
 export const deployProxy = async (
