@@ -136,7 +136,7 @@ yarn deploy:rv:swapper
 
 #### Libraries
 
-Some contracts are linked against external libraries (for example, `RedemptionVaultWithUSYC` uses `RedemptionVaultWithUSYCLibrary`). A library is deployed once per network:
+Some contracts are linked against external libraries (for example, `RedemptionVaultWithUSYC` uses `VaultsWithUSYCLibrary`). A library is deployed once per network:
 
 ```bash
 yarn hardhat deploy:library --network <network> --lib <library_name>
@@ -147,7 +147,7 @@ Add the deployed address to the `libraries` section of the network addresses ([`
 ```ts
 arc: {
   libraries: {
-    RedemptionVaultWithUSYCLibrary: '0x...',
+    VaultsWithUSYCLibrary: '0x...',
   },
 },
 ```

@@ -10,7 +10,7 @@ import {DepositVaultInitParams} from "./interfaces/IDepositVault.sol";
 import {CommonVaultInitParams} from "./interfaces/IManageableVault.sol";
 import {IRedemptionVault} from "./interfaces/IRedemptionVault.sol";
 import {IUSYCTeller} from "./interfaces/usyc/IUSYCTeller.sol";
-import {RedemptionVaultWithUSYCLibrary} from "./libraries/RedemptionVaultWithUSYCLibrary.sol";
+import {VaultsWithUSYCLibrary} from "./libraries/VaultsWithUSYCLibrary.sol";
 
 /**
  * @title DepositVaultWithUSYC
@@ -326,7 +326,7 @@ contract DepositVaultWithUSYC is DepositVault {
      * Falls back to sending the USDC to `tokensReceiver` or reverts, based on
      * `autoInvestFallbackEnabled`, when the Teller fee rate differs from
      * `anticipatedFeeRate`, the fee previewed by the Teller exceeds
-     * {RedemptionVaultWithUSYCLibrary-maxFee} or the Teller deposit fails.
+     * {VaultsWithUSYCLibrary-maxFee} or the Teller deposit fails.
      * Always reverts when the Teller mints less USYC than previewed
      * @param teller USYC Teller
      * @param usdc Teller asset address
@@ -352,10 +352,7 @@ contract DepositVaultWithUSYC is DepositVault {
             address(this),
             assetAmount
         );
-        uint256 maxFee = RedemptionVaultWithUSYCLibrary.maxFee(
-            assetAmount,
-            feeRate
-        );
+        uint256 maxFee = VaultsWithUSYCLibrary.maxFee(assetAmount, feeRate);
         if (fee > maxFee) {
             return
                 _fallbackDeposit(
@@ -374,7 +371,7 @@ contract DepositVaultWithUSYC is DepositVault {
             require(usycReceived > 0, ZeroTokensReceived());
             require(
                 usycReceived >= expectedUsyc,
-                RedemptionVaultWithUSYCLibrary.InsufficientAmountReceived(
+                VaultsWithUSYCLibrary.InsufficientAmountReceived(
                     usycReceived,
                     expectedUsyc
                 )

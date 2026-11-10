@@ -7,7 +7,7 @@ import {IDepositVault} from "./interfaces/IDepositVault.sol";
 import {CommonVaultInitParams} from "./interfaces/IManageableVault.sol";
 import {IUSYCTeller} from "./interfaces/usyc/IUSYCTeller.sol";
 
-import {RedemptionVaultWithUSYCLibrary} from "./libraries/RedemptionVaultWithUSYCLibrary.sol";
+import {VaultsWithUSYCLibrary} from "./libraries/VaultsWithUSYCLibrary.sol";
 
 /**
  * @title RedemptionVaultWithUSYC
@@ -134,7 +134,7 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
     /**
      * @notice Check if contract has enough tokenOut balance for redeem;
      * if not, redeem USYC through the Teller to cover the missing amount
-     * @dev See {RedemptionVaultWithUSYCLibrary-obtainRedemptionLiquidity}
+     * @dev See {VaultsWithUSYCLibrary-obtainRedemptionLiquidity}
      * @param tokenOut tokenOut address
      * @param missingAmountBase18 amount of tokenOut needed in base 18
      * @param tokenOutDecimals decimals of tokenOut
@@ -155,7 +155,7 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
         )
     {
         return
-            RedemptionVaultWithUSYCLibrary.obtainRedemptionLiquidity(
+            VaultsWithUSYCLibrary.obtainRedemptionLiquidity(
                 usycTeller,
                 depositVault,
                 anticipatedFeeRate,

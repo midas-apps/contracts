@@ -24,7 +24,7 @@ export type DepositVaultType =
 /**
  * External libraries that are deployed separately and linked into contracts
  */
-export const libraryNames = ['RedemptionVaultWithUSYCLibrary'] as const;
+export const libraryNames = ['VaultsWithUSYCLibrary'] as const;
 
 export type LibraryName = (typeof libraryNames)[number];
 
@@ -1986,8 +1986,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   sepolia: {
     libraries: {
-      RedemptionVaultWithUSYCLibrary:
-        '0xAb81131Da230848542ddb800453B7aB092735c1d',
+      VaultsWithUSYCLibrary: '0xAb81131Da230848542ddb800453B7aB092735c1d',
     },
     timelock: '0x74e0a55Ea3Db85F6106FFD69Ef7c9829fd130888',
     pauseManager: '0xbf21e448410BAA6039e73033F530027143c0c280',

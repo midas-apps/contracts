@@ -9,7 +9,7 @@ export const USYC_HUNDRED_PCT = BigNumber.from(10).pow(20);
 
 /**
  * Maximum Teller fee taken from `gross` at `feeRate`, rounded up,
- * mirrors `RedemptionVaultWithUSYCLibrary.maxFee`
+ * mirrors `VaultsWithUSYCLibrary.maxFee`
  */
 export const usycMaxFee = (gross: BigNumber, feeRate: BigNumberish) => {
   const denominator = USYC_HUNDRED_PCT.add(feeRate);

@@ -15,13 +15,13 @@ import {DecimalsCorrectionLibrary} from "./DecimalsCorrectionLibrary.sol";
 import {RedemptionSwapperHelpersLibrary} from "./RedemptionSwapperHelpersLibrary.sol";
 
 /**
- * @title RedemptionVaultWithUSYCLibrary
+ * @title VaultsWithUSYCLibrary
  * @notice USYC liquidity strategy of RedemptionVaultWithUSYC, deployed
  * as a linked library to reduce the vault bytecode size, and the Teller
  * fee math shared with DepositVaultWithUSYC
  * @author RedDuck Software
  */
-library RedemptionVaultWithUSYCLibrary {
+library VaultsWithUSYCLibrary {
     using DecimalsCorrectionLibrary for uint256;
     using SafeERC20 for IERC20;
 

@@ -13,7 +13,7 @@ import {
   DepositVaultWithUSYC__factory,
   DepositVaultWithUSYCTest__factory,
   ERC20Mock__factory,
-  RedemptionVaultWithUSYCLibrary__factory,
+  VaultsWithUSYCLibrary__factory,
   USYCTellerMock__factory,
 } from '../../typechain-types';
 import { acErrors } from '../common/ac.helpers';
@@ -1107,7 +1107,7 @@ depositVaultSuits(
                 revertCustomError: {
                   customErrorName: 'InsufficientAmountReceived',
                   // the error is declared by the USYC library
-                  contract: RedemptionVaultWithUSYCLibrary__factory.connect(
+                  contract: VaultsWithUSYCLibrary__factory.connect(
                     depositVaultWithUSYC.address,
                     owner,
                   ),

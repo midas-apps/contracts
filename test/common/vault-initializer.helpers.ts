@@ -56,7 +56,7 @@ export const RV_USYC_INIT_FN =
   'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(address,address,address,address,uint256),address,address,uint256)';
 
 export const RV_USYC_LIBRARY_KEY =
-  'contracts/libraries/RedemptionVaultWithUSYCLibrary.sol:RedemptionVaultWithUSYCLibrary';
+  'contracts/libraries/VaultsWithUSYCLibrary.sol:VaultsWithUSYCLibrary';
 
 export type InitializerParamsMv = {
   accessControl: AccountOrContract;
@@ -300,12 +300,12 @@ export const getInitializerParamsRvWithUsyc = ({
 
 /**
  * Deploys `RedemptionVaultWithUSYCTest` linked against a freshly deployed
- * `RedemptionVaultWithUSYCLibrary`
+ * `VaultsWithUSYCLibrary`
  */
 export const deployRvWithUsycTest = async (deployer: SignerWithAddress) => {
   // typechain does not emit a factory for the library, deploy it by name
   const library = await (
-    await ethers.getContractFactory('RedemptionVaultWithUSYCLibrary', deployer)
+    await ethers.getContractFactory('VaultsWithUSYCLibrary', deployer)
   ).deploy();
 
   return new RedemptionVaultWithUSYCTest__factory(

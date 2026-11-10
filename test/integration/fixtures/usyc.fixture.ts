@@ -126,7 +126,7 @@ export async function usycArcFixture() {
   /* radYC vaults */
 
   const library = await (
-    await ethers.getContractFactory('RedemptionVaultWithUSYCLibrary')
+    await ethers.getContractFactory('VaultsWithUSYCLibrary')
   ).deploy();
 
   const redemptionVaultWithUSYC =
@@ -143,7 +143,7 @@ export async function usycArcFixture() {
       }),
       RV_USYC_INIT_FN,
       undefined,
-      { RedemptionVaultWithUSYCLibrary: library.address },
+      { VaultsWithUSYCLibrary: library.address },
     );
 
   const depositVaultWithUSYC =
