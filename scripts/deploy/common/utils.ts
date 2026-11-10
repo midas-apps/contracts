@@ -1,9 +1,13 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { DeployProxyOptions } from '@openzeppelin/hardhat-upgrades/dist/utils';
+import {
+  DeployProxyOptions,
+  StandaloneOptions,
+} from '@openzeppelin/hardhat-upgrades/dist/utils';
 import {
   ethers,
   BigNumber,
   constants,
+  ContractFactory,
   PopulatedTransaction,
   Signer,
 } from 'ethers';
@@ -281,6 +285,46 @@ const assertLibraryBytecodeMatches = async (
   }
 };
 
+/**
+ * Creates a contract factory linked against the external libraries of
+ * `contractName` and extends `opts` to allow external library linking
+ * for the upgrades plugin when needed
+ */
+export const getLinkedContractFactory = async <TOpts extends StandaloneOptions>(
+  hre: HardhatRuntimeEnvironment,
+  contractName: string,
+  signer: Signer,
+  opts: TOpts,
+): Promise<{ factory: ContractFactory; opts: TOpts }> => {
+  const libraries = await getLinkedLibraries(hre, contractName);
+  const hasLibraries = Object.keys(libraries).length > 0;
+
+  if (hasLibraries) {
+    console.log(
+      `WARNING, using external linking libraries for ${contractName}`,
+      libraries,
+    );
+  }
+
+  const factory = await hre.ethers.getContractFactory(contractName, {
+    signer,
+    libraries,
+  });
+
+  return {
+    factory,
+    opts: hasLibraries
+      ? {
+          ...opts,
+          unsafeAllow: [
+            ...(opts.unsafeAllow ?? []),
+            'external-library-linking',
+          ],
+        }
+      : opts,
+  };
+};
+
 export const deployProxy = async (
   hre: HardhatRuntimeEnvironment,
   contractName: string,
@@ -290,31 +334,17 @@ export const deployProxy = async (
 ) => {
   deployer ??= await getDeployer(hre);
 
-  const libraries = await getLinkedLibraries(hre, contractName);
-  const hasLibraries = Object.keys(libraries).length > 0;
-
-  if (hasLibraries) {
-    console.log(
-      `WARNING, using external linking libraries for the ${contractName} deployment`,
-      libraries,
-    );
-  }
+  const { factory, opts: linkedOpts } = await getLinkedContractFactory(
+    hre,
+    contractName,
+    deployer,
+    opts,
+  );
 
   const deployment = await hre.upgrades.deployProxy(
-    await hre.ethers.getContractFactory(contractName, {
-      signer: deployer,
-      libraries,
-    }),
+    factory,
     params,
-    hasLibraries
-      ? {
-          ...opts,
-          unsafeAllow: [
-            ...(opts.unsafeAllow ?? []),
-            'external-library-linking',
-          ],
-        }
-      : opts,
+    linkedOpts,
   );
   return deployment;
 };

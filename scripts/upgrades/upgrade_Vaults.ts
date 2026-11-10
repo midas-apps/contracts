@@ -16,7 +16,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const upgradeId = 'q2-testnet-custom-aggregator-upgrade';
 
   const networkAddresses = getCurrentAddresses(hre);
-  const mTokens = ['mTBILL', 'mSL'] as MTokenName[];
+  const mTokens = ['radYC'] as MTokenName[];
 
   const action = getActionOrThrow(hre, upgradeActions);
 
@@ -32,16 +32,16 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       return [
         {
           mToken,
-          proxyAddress: networkAddresses?.[mToken]?.depositVault ?? '',
-          contractType: 'depositVault',
-          contractName: getCommonContractNames().dv,
+          proxyAddress: networkAddresses?.[mToken]?.depositVaultUsyc ?? '',
+          contractType: 'depositVaultUsyc',
+          contractName: getCommonContractNames().dvUsyc,
           constructorArgs: [roles.depositVaultAdmin ?? '', roles.greenlisted],
         },
         {
           mToken,
-          proxyAddress: networkAddresses?.[mToken]?.redemptionVault ?? '',
-          contractType: 'redemptionVault',
-          contractName: getCommonContractNames().rv,
+          proxyAddress: networkAddresses?.[mToken]?.redemptionVaultUsyc ?? '',
+          contractType: 'redemptionVaultUsyc',
+          contractName: getCommonContractNames().rvUsyc,
           constructorArgs: [
             roles.redemptionVaultAdmin ?? '',
             roles.greenlisted,

@@ -125,7 +125,7 @@ export const radYCDeploymentConfig: DeploymentConfig = {
     },
     [chainIds.sepolia]: {
       dvUsyc: {
-        type: 'REGULAR',
+        type: 'USYC',
         version: 'v2',
         enableSanctionsList: false,
         tokensReceiver: 'redemptionVaultUsyc',
