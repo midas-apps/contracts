@@ -816,6 +816,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeedRv: '0xF76653eBc3e47B80e89F0e5b9CF6A5CAaB848946',
       depositVaultMorpho: '0xE0Dcf20b0460e1f9222528F3997F9D71Ad6375C5',
       redemptionVaultMorpho: '0x1E9f04408FF38d1FB70CE939fC87D26D61F6F758',
+      layerZero: {
+        oft: '0x61BA14129CacFA6b872B39A66C445b4dd81eF734',
+      },
     },
     mALPHA: {
       token: '0x25BAC88afe5572F5A7F1670c22FD404BA47a30ad',
@@ -1846,6 +1849,16 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         oft: '0x01859189cf84B01efC545BbF2CA1e130CeE134Ad',
       },
     },
+    mGLO: {
+      token: '0x785175a1Ae5A8bcD3230e01178Ba375F5F2125fE',
+      customFeed: '0x49E7fD970f711419DB03aAfe98EaFc97EBD14CFD',
+      customFeedDv: '0x3aECC6c1d524Fdbf723C09a53cCeDC6A09Ca3ca1',
+      customFeedRv: '0x2679E4D59ce25a00C9b374dC53c725d6218572d7',
+      dataFeedDv: '0x1D243DED16be5C34e95007760feF4e081d18d49e',
+      dataFeedRv: '0x18e9a4400926855bAD9Bff4d8A7BA3Be0A7e7b2C',
+      depositVault: '0x51A3C8F539E1854613A951764Fc6197667B3a136',
+      redemptionVaultSwapper: '0xD52719CdE18EC59193358b4F35C4d512F3500808',
+    },
   },
   injective: {
     accessControl: '0x76f5c631CD6D65B1a5702E382Be5a37859eE326C',
@@ -2011,6 +2024,30 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeedRv: '0xb691EDd5C095c3973945771C902ef065543C7c7E',
       depositVault: '0x716cF1480D16EB4f295c6659076240DdCd848E83',
       redemptionVaultSwapper: '0x12d0048865BE13D12921323484dCA27486AC148f',
+      layerZero: {
+        oft: '0xe1e797ccf7F0Ae64A26a9413e291ef6cCa43C58f',
+      },
+    },
+  },
+  xlayer: {
+    accessControl: '0x4B150a2F57B898C64f6f8D0b3FeFA9Faf22b8994',
+    timelock: '0xA2f07F6CEd862337011C648B375c61234318e7B1',
+    paymentTokens: {
+      usdc: {
+        token: '0xB6CEceAB302E2E4948951eE7843FC24E92933061',
+        aggregator: '0xB8a08c178D96C315FbFB5661ABD208477391BC40',
+        dataFeed: '0x641571e024ec5Edbffe19Ed1B520470F5939a5F2',
+      },
+    },
+    mGLO: {
+      token: '0x45EC1A004142e1874Ceb8f022ee4Bb14eDF37b4A',
+      customFeed: '0x09E9558636874200574C0933E74b448c0362267a',
+      customFeedDv: '0x07D8966679c557319F32F1525884EDa65AecF95B',
+      customFeedRv: '0xfD1e4535054f1aCEdfd21AEF6411506d7d0670F5',
+      dataFeedDv: '0x2917d324EF3EAC972435BfFBeDb1d8c33377a78C',
+      dataFeedRv: '0xD934aF24aafe1Fb898B9ac248cCbA90478b88dA6',
+      depositVault: '0x22dAa3A757CcFAD937c0eA0190Bc72B9F12E9430',
+      redemptionVaultSwapper: '0x2fB165667377869bC28c44aa1FC6335c11b09F8f',
     },
   },
   sepolia: {

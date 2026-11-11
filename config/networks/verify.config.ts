@@ -171,4 +171,9 @@ export const verifyConfig: VerifyConfigPerNetwork = {
     apiKey: ENV.BLOCKSCOUT_API_KEY,
     browserUrl: 'https://explorer.inkonchain.com',
   },
+  xlayer: {
+    type: 'sourcify',
+    overrideApiUrl: 'https://sourcify.dev/server',
+    browserUrl: 'https://repo.sourcify.dev',
+  },
 };

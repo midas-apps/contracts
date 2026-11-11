@@ -1,3 +1,4 @@
+import { hours } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
@@ -135,6 +136,18 @@ export const mGLOeuroDeploymentConfig: DeploymentConfig = {
             vaults: [],
           },
         ],
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          owner: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            overrides: {
+              ink: {
+                limit: parseUnits('1000000'),
+                window: hours(24),
+              },
+            },
+          },
+        },
       },
     },
     [chainIds.ink]: {
@@ -182,6 +195,16 @@ export const mGLOeuroDeploymentConfig: DeploymentConfig = {
         },
         setRoundData: {
           data: parseUnits('1', 8),
+        },
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          owner: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('500000'),
+              window: hours(24),
+            },
+          },
         },
       },
     },

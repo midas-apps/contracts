@@ -31,6 +31,7 @@ export const networks = [
   'robinhood',
   'arc',
   'ink',
+  'xlayer',
 ] as const;
 
 export type Network = (typeof networks)[number];
