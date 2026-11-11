@@ -214,9 +214,12 @@ export const deployAndVerifyProxy = async (
     opts,
   );
 
+  let deploymentBlock: number | undefined;
   if (deployment.deployTransaction) {
     console.log('Waiting 5 blocks...');
-    await deployment.deployTransaction.wait(5);
+    ({ blockNumber: deploymentBlock } = await deployment.deployTransaction.wait(
+      5,
+    ));
     console.log('Waited.');
   }
 
@@ -227,6 +230,7 @@ export const deployAndVerifyProxy = async (
   });
 
   await logDeployProxy(hre, contractName, deployment.address);
+  if (deploymentBlock) logDeploy(contractName, 'Block', `${deploymentBlock}`);
   await tryEtherscanVerifyImplementation(
     hre,
     deployment.address,
@@ -246,13 +250,17 @@ export const deployAndVerify = async (
 
   const deployment = await factory.deploy(...params);
 
+  let deploymentBlock: number | undefined;
   if (deployment.deployTransaction) {
     console.log('Waiting 5 blocks...');
-    await deployment.deployTransaction.wait(5);
+    ({ blockNumber: deploymentBlock } = await deployment.deployTransaction.wait(
+      5,
+    ));
     console.log('Waited.');
   }
 
   logDeploy(contractName, 'Proxy', deployment.address);
+  if (deploymentBlock) logDeploy(contractName, 'Block', `${deploymentBlock}`);
   await etherscanVerify(hre, deployment.address, ...params);
 
   return deployment;
