@@ -5,10 +5,11 @@ import { MTokenName } from '../../../config';
 import {
   getCurrentAddresses,
   TokenAddresses,
-  VaultType,
+  V2VaultType,
 } from '../../../config/constants/addresses';
 import {
   getTokenContractNames,
+  getV2VaultConstructorArgs,
   TokenContractNames,
   vaultTypeToContractName,
 } from '../../../helpers/contracts';
@@ -120,8 +121,8 @@ type MTokenVaultsToUpgrade = {
   mToken: MTokenName;
   addresses: TokenAddresses;
   vaults: {
-    vaultType: VaultType;
-    vaultTypeTo?: VaultType;
+    vaultType: V2VaultType;
+    vaultTypeTo?: V2VaultType;
     overrideImplementation?: string;
     initializer?: string;
     initializerArgs?: unknown[];
@@ -177,15 +178,14 @@ const upgradeAllVaults = async (
     );
   }
 
-  const addresses = getCurrentAddresses(hre);
+  // only v2 vaults (`*V2` keys) can be upgraded from this repo
+  const addresses = getCurrentAddresses(hre, 'v2');
 
   if (!addresses) {
     throw new Error('Addresses not found');
   }
 
-  const allDeployedNetworkMTokens = Object.keys(addresses).filter((v) =>
-    isMTokenName(v),
-  );
+  const allDeployedNetworkMTokens = Object.keys(addresses).filter(isMTokenName);
 
   let mTokenVaultsToUpgrade: MTokenVaultsToUpgrade[] = [];
 
@@ -194,8 +194,8 @@ const upgradeAllVaults = async (
       const mTokenAddresses = addresses[mToken]!;
 
       const vaultTypes = Object.keys(mTokenAddresses).filter(
-        (v) => vaultTypeToContractName(v as VaultType) !== undefined,
-      ) as VaultType[];
+        (v) => vaultTypeToContractName(v as V2VaultType) !== undefined,
+      ) as V2VaultType[];
 
       return {
         mToken,
@@ -228,8 +228,8 @@ const upgradeAllVaults = async (
     if (overrides?.all) {
       overrideVaults = (
         Object.keys(mTokenAddresses).filter(
-          (v) => vaultTypeToContractName(v as VaultType) !== undefined,
-        ) as VaultType[]
+          (v) => vaultTypeToContractName(v as V2VaultType) !== undefined,
+        ) as V2VaultType[]
       ).map((v) => ({
         vaultType: v,
         initializer: config.initializers?.[v]?.initializer,
@@ -242,7 +242,7 @@ const upgradeAllVaults = async (
         const valParsed = typeof val === 'boolean' ? {} : val;
 
         return {
-          vaultType: key as VaultType,
+          vaultType: key as V2VaultType,
           remove: val === false ? true : undefined,
           ...valParsed,
         };
@@ -314,10 +314,11 @@ const upgradeAllVaults = async (
 
   const upgradeContracts: {
     mToken: MTokenName;
-    vaultType: VaultType;
+    vaultType: V2VaultType;
     contractType: string;
     contractName: string;
     proxyAddress: string;
+    constructorArgs: string[];
     overrideImplementation?: string;
     initializer?: string;
     initializerCalldata?: string;
@@ -341,9 +342,15 @@ const upgradeAllVaults = async (
         );
       }
 
+      const proxyAddress = addresses[vaultType];
+
+      if (!proxyAddress) {
+        throw new Error(`${mToken} ${vaultType}V2 address is not configured`);
+      }
+
       const contract = await hre.ethers.getContractAt(
         contractName,
-        addresses[vaultType]!,
+        proxyAddress,
       );
 
       upgradeContracts.push({
@@ -351,7 +358,11 @@ const upgradeAllVaults = async (
         vaultType,
         contractType: vaultTypeTo ?? vaultType,
         contractName,
-        proxyAddress: addresses[vaultType]!,
+        proxyAddress,
+        constructorArgs: getV2VaultConstructorArgs(
+          mToken,
+          vaultTypeTo ?? vaultType,
+        ),
         overrideImplementation,
         initializer,
         initializerCalldata: initializer
@@ -385,12 +396,17 @@ const upgradeAllVaults = async (
       contractType,
       contractName,
       proxyAddress,
+      constructorArgs,
     } = upgradeContract;
 
     if (overrideImplementation) {
       console.log(
         `Using override implementation (${overrideImplementation}) for ${mToken}`,
       );
+      deployments.push({
+        ...upgradeContract,
+        implementationAddress: overrideImplementation,
+      });
       continue;
     }
 
@@ -402,13 +418,19 @@ const upgradeAllVaults = async (
           {
             redeployImplementation: 'onchange',
             getTxResponse: true,
+            constructorArgs,
           },
         ),
       );
 
     if (deployedNew) {
       logDeploy(contractName, contractType, implementationAddress);
-      await etherscanVerify(hre, implementationAddress).catch((e) => {
+      await etherscanVerify(
+        hre,
+        implementationAddress,
+        contractName,
+        ...constructorArgs,
+      ).catch((e) => {
         console.error('Verification failed', e);
       });
     } else {
@@ -425,7 +447,7 @@ const upgradeAllVaults = async (
 
   const failedUpgrades: {
     mToken: MTokenName;
-    vaultType: VaultType;
+    vaultType: V2VaultType;
     error: string;
   }[] = [];
 

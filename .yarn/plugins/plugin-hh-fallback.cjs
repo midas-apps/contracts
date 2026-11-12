@@ -6,7 +6,7 @@
  * `yarn hardhat <name> [...args]`.
  *
  * Many deploy/ops commands used to be plain package.json scripts (e.g.
- * `yarn deploy:generate:contracts`) and are now Hardhat tasks invoked as
+ * `yarn deploy:generate:mproduct`) and are now Hardhat tasks invoked as
  * `yarn hh <task>`. Rather than re-add a delegating script per command (and
  * update every doc), this plugin wraps Yarn's built-in `run` command: when it
  * can't find a matching script/binary, it retries the name as a Hardhat task.

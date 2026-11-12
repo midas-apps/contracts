@@ -1,5 +1,5 @@
 import { BigNumberish, constants } from 'ethers';
-import { parseUnits } from 'ethers/lib/utils';
+import { isAddress, parseUnits } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { deployAndVerifyProxy, getDeployer, getNetworkConfig } from './utils';
@@ -10,8 +10,12 @@ import {
   RedemptionVaultType,
   sanctionListContracts,
   TokenAddresses,
+  toV2VaultKey,
 } from '../../../config/constants/addresses';
-import { getCommonContractNames } from '../../../helpers/contracts';
+import {
+  contractNameToVaultType,
+  getCommonContractNames,
+} from '../../../helpers/contracts';
 import { getAllRoles } from '../../../helpers/roles';
 import {
   RedemptionVault,
@@ -110,8 +114,15 @@ export type DeployRvMTokenConfig = {
   redemptionVault: string;
 } & DeployRvConfigCommon;
 
+export type DeployRvUstbConfig = {
+  type: 'USTB';
+  /** USTB redemption contract (IUSTBRedemption) */
+  ustbRedemption: string;
+} & DeployRvConfigCommon;
+
 export type DeployRvConfig =
   | DeployRvRegularConfig
+  | DeployRvUstbConfig
   | DeployRvSwapperConfig
   | DeployRvAaveConfig
   | DeployRvMorphoConfig
@@ -172,7 +183,7 @@ const resolveRedemptionVaultDataFeed = (
 export const deployRedemptionVault = async (
   hre: HardhatRuntimeEnvironment,
   token: MTokenName,
-  type: 'rv' | 'rvSwapper' | 'rvAave' | 'rvMorpho' | 'rvMToken',
+  type: 'rv' | 'rvUstb' | 'rvAave' | 'rvMorpho' | 'rvMToken',
 ) => {
   if (token.startsWith('TAC')) {
     throw new Error('TAC tokens are not supported anymore');
@@ -199,10 +210,6 @@ export const deployRedemptionVault = async (
     throw new Error('v1 configs are not supported anymore');
   }
 
-  if (networkConfig.type === 'SWAPPER') {
-    throw new Error('Swapper configs are not supported anymore');
-  }
-
   const allRoles = getAllRoles();
   if (profile) {
     for (const [field, value] of [
@@ -227,6 +234,11 @@ export const deployRedemptionVault = async (
 
   if (networkConfig.type === 'MTOKEN') {
     extraParams.push(networkConfig.redemptionVault);
+  } else if (networkConfig.type === 'USTB') {
+    if (!isAddress(networkConfig.ustbRedemption)) {
+      throw new Error('USTB redemption address is not configured');
+    }
+    extraParams.push(networkConfig.ustbRedemption);
   }
 
   const dataFeed = networkConfig.mTokenDataFeed
@@ -249,7 +261,9 @@ export const deployRedemptionVault = async (
     throw new Error('Sanctions list address is not found');
   }
 
-  // FIXME: fix according to new initialize params
+  // RedemptionVaultWithMToken and RedemptionVaultWithUSTB share the signature
+  const extraAddressInitializer =
+    'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(address,address,address,address,uint256),address)' as const;
   const params = [
     {
       variationTolerance: networkConfig.variationTolerance,
@@ -279,16 +293,14 @@ export const deployRedemptionVault = async (
     ...extraParams,
   ] as
     | Parameters<RedemptionVault['initialize']>
-    | Parameters<
-        RedemptionVaultWithMToken['initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(address,address,address,address,uint256),address)']
-      >;
+    | Parameters<RedemptionVaultWithMToken[typeof extraAddressInitializer]>;
 
   const constructorParams = [
     allRoles.tokenRoles[token].redemptionVaultAdmin,
     allRoles.tokenRoles[token].greenlisted,
   ];
 
-  await deployAndVerifyProxy(
+  const deployment = await deployAndVerifyProxy(
     hre,
     getCommonContractNames()[type],
     params,
@@ -296,9 +308,18 @@ export const deployRedemptionVault = async (
     {
       constructorArgs: constructorParams,
       initializer:
-        networkConfig.type === 'MTOKEN'
-          ? 'initialize(address,(address,address),(address,address),(uint256,uint256),address,uint256,uint256,(uint256,uint256,uint256),address,address)'
+        networkConfig.type === 'MTOKEN' || networkConfig.type === 'USTB'
+          ? extraAddressInitializer
           : 'initialize',
     },
   );
+
+  const vaultType = contractNameToVaultType(type);
+  if (vaultType) {
+    console.log(
+      `Add to config/constants/addresses.ts: ${
+        hre.network.name
+      }.${token}.${toV2VaultKey(vaultType)} = '${deployment.address}'`,
+    );
+  }
 };

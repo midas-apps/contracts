@@ -17,6 +17,8 @@ deployTasks.forEach(([name, [scriptPath, ...params]]) => {
   params.forEach((param) => {
     const metadata = param();
 
+    if (metadata.cli === false) return;
+
     if (metadata.isOptional) {
       t.addOptionalParam(
         metadata.name,

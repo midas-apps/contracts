@@ -4,7 +4,7 @@ import { MTokenName } from '../../../config';
 import {
   getCurrentAddresses,
   sanctionListContracts,
-  VaultType,
+  v1VaultTypes,
 } from '../../../config/constants/addresses';
 import { getChainOrThrow } from '../../../helpers/utils';
 import { DeployFunction } from '../common/types';
@@ -29,45 +29,11 @@ const func: DeployFunction = async (
     return;
   }
 
-  const vaultEntries: Array<{ type: VaultType; address?: string }> = [
-    { type: 'depositVault', address: tokenAddresses.depositVault },
-    {
-      type: 'depositVaultUstb',
-      address: tokenAddresses.depositVaultUstb,
-    },
-    {
-      type: 'depositVaultAave',
-      address: tokenAddresses.depositVaultAave,
-    },
-    {
-      type: 'depositVaultMorpho',
-      address: tokenAddresses.depositVaultMorpho,
-    },
-    {
-      type: 'redemptionVault',
-      address: tokenAddresses.redemptionVault,
-    },
-    {
-      type: 'redemptionVaultSwapper',
-      address: tokenAddresses.redemptionVaultSwapper,
-    },
-    {
-      type: 'redemptionVaultUstb',
-      address: tokenAddresses.redemptionVaultUstb,
-    },
-    {
-      type: 'redemptionVaultAave',
-      address: tokenAddresses.redemptionVaultAave,
-    },
-    {
-      type: 'redemptionVaultMorpho',
-      address: tokenAddresses.redemptionVaultMorpho,
-    },
-    {
-      type: 'redemptionVaultMToken',
-      address: tokenAddresses.redemptionVaultMToken,
-    },
-  ];
+  // base keys hold vaults of the selected `--vault-version`
+  const vaultEntries = v1VaultTypes.map((type) => ({
+    type,
+    address: tokenAddresses[type],
+  }));
 
   for (const { type, address } of vaultEntries) {
     if (!address) continue;

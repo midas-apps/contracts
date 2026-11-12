@@ -32,13 +32,16 @@ const func: DeployFunction = async (
   );
 
   const rolesToRevoke = [roles.minter, roles.burner];
+  const account = mTokenAddresses.layerZero.oft!;
 
   const tx = await sendAndWaitForCustomTxSign(
     hre,
-    await contract.populateTransaction.revokeRoleMult(rolesToRevoke, [
-      mTokenAddresses.layerZero.oft!,
-      mTokenAddresses.layerZero.oft!,
-    ]),
+    await contract.populateTransaction.revokeRoleMult(
+      rolesToRevoke.map((role) => ({
+        role,
+        account,
+      })),
+    ),
     {
       action: 'update-ac',
       subAction: 'revoke-token-roles',

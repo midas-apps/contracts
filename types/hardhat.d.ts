@@ -2,6 +2,7 @@ import { TransactionResponse } from '@ethersproject/providers';
 import { BigNumberish } from 'ethers';
 import { EIP1193Provider } from 'hardhat/types';
 
+import type { VaultVersion } from '../config/constants/vaults';
 import {
   MTokenName,
   PaymentTokenName,
@@ -21,6 +22,11 @@ declare module 'hardhat/types/runtime' {
     action?: string;
     deploymentConfig?: DeploymentConfigName;
     skipValidation?: boolean;
+    /**
+     * Selects which vaults `getCurrentAddresses` exposes under base keys.
+     * Set by `--vault-version` or fixed per task for v2-only scripts
+     */
+    vaultVersion?: VaultVersion;
     addressBookKeys?: string[];
     logger: {
       // default: false

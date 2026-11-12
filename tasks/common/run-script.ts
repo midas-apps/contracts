@@ -6,7 +6,12 @@ import {
 
 import path from 'node:path';
 
-import { ParamFnBase, forkingNetworkParam } from './task-params';
+import {
+  ParamFnBase,
+  deploymentConfigParam,
+  forkingNetworkParam,
+  vaultVersionParam,
+} from './task-params';
 
 import { ENV, chainIds, extendWithContext, rpcUrls } from '../../config';
 import { Network } from '../../config';
@@ -18,11 +23,15 @@ import {
 } from '../../scripts/deploy/configs/deployment-profiles';
 
 /** Truly global runner flags attached to every script task. */
-export const globalRunScriptParams = [forkingNetworkParam(true)];
+export const globalRunScriptParams = [
+  forkingNetworkParam(true),
+  deploymentConfigParam(true),
+];
 
 export const withGlobalRunScriptParams = (task: ConfigurableTaskDefinition) => {
   globalRunScriptParams.forEach((paramFn) => {
     const param = paramFn();
+    if (param.cli === false) return;
     if (param.isOptional) {
       task.addOptionalParam(param.name, param.description, param.defaultValue);
     } else {
@@ -124,6 +133,12 @@ export const runScript = async (
   if (keys) {
     hre.addressBookKeys = keys.split(',').map((k: string) => k.trim());
   }
+
+  // ad-hoc `runscript` has no declared params, so vault version is optional
+  const hydrateParams = scriptParams.length
+    ? scriptParams
+    : [vaultVersionParam(true)];
+  hydrateParams.forEach((param) => param().hydrate?.(hre, taskArgs));
 
   const scriptPath = taskArgs.path as string;
   const scriptPathResolved = path.resolve(scriptPath);

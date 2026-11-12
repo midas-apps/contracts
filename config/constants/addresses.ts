@@ -1,23 +1,32 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import {
+  V2VaultKey,
+  VaultType,
+  VaultVersion,
+  selectVaultVersion,
+} from './vaults';
+
 import { chainIds } from '../networks';
 import { ConfigPerNetwork, MTokenName, PaymentTokenName } from '../types';
 
-export type RedemptionVaultType =
-  | 'redemptionVault'
-  | 'redemptionVaultBuidl'
-  | 'redemptionVaultSwapper'
-  | 'redemptionVaultMToken'
-  | 'redemptionVaultUstb'
-  | 'redemptionVaultAave'
-  | 'redemptionVaultMorpho';
-
-export type DepositVaultType =
-  | 'depositVault'
-  | 'depositVaultUstb'
-  | 'depositVaultAave'
-  | 'depositVaultMorpho'
-  | 'depositVaultMToken';
+export type {
+  DepositVaultType,
+  RedemptionVaultType,
+  V2VaultKey,
+  V2VaultType,
+  VaultType,
+  VaultVersion,
+} from './vaults';
+export {
+  getVaultKey,
+  isV2VaultType,
+  isVaultVersion,
+  selectVaultVersion,
+  toV2VaultKey,
+  v1VaultTypes,
+  v2VaultTypes,
+} from './vaults';
 
 export type LayerZeroTokenAddresses = {
   oft?: string;
@@ -43,17 +52,17 @@ export type TokenFeedAddresses = {
   dataFeedRv?: string;
 };
 
-export type AddressProfileTokenAddresses = TokenFeedAddresses &
-  Partial<Record<DepositVaultType | RedemptionVaultType, string>>;
+/** v1 vaults under base keys, v2 vaults under `${VaultType}V2` keys */
+type VaultAddresses = Partial<Record<VaultType | V2VaultKey, string>>;
+
+export type AddressProfileTokenAddresses = TokenFeedAddresses & VaultAddresses;
 
 export type TokenAddresses = TokenFeedAddresses & {
   token?: string;
   layerZero?: LayerZeroTokenAddresses;
   axelar?: AxelarTokenAddresses;
   addressProfiles?: Partial<Record<string, AddressProfileTokenAddresses>>;
-} & Partial<Record<DepositVaultType | RedemptionVaultType, string>>;
-
-export type VaultType = RedemptionVaultType | DepositVaultType;
+} & VaultAddresses;
 
 type DataFeedAddressesCommon = {
   token?: string;
@@ -2150,8 +2159,8 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       token: '0xb850ad6Ef991a9E8e01e0D08616a6Ae6004f1742',
       customFeed: '0x878260Cf16d01bD758FdAEf51148335125Fa7A65',
       dataFeed: '0x4001176D488c5940Dd670884BA08Cf38CE59d659',
-      depositVault: '0xD16EEDB93F29543eF5757BF9DDaC127b814C2CBE',
-      redemptionVault: '0xb1F6842433E6a1c8EE233f3B68e49a0f3a10Cc79',
+      depositVaultV2: '0xD16EEDB93F29543eF5757BF9DDaC127b814C2CBE',
+      redemptionVaultV2: '0xb1F6842433E6a1c8EE233f3B68e49a0f3a10Cc79',
     },
   },
   arbitrumSepolia: {
@@ -2230,9 +2239,45 @@ export const ustbContracts: Partial<Record<number, string>> = {
   [chainIds.main]: '0x43415eB6ff9DB7E26A15b704e7A3eDCe97d31C4e',
 };
 
-export const getCurrentAddresses = (hre: HardhatRuntimeEnvironment) => {
+/**
+ * Raw addresses of the current network: v1 vaults under base keys and v2
+ * vaults under `${VaultType}V2` keys. Prefer `getCurrentAddresses`
+ */
+export const getRawCurrentAddresses = (hre: HardhatRuntimeEnvironment) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (midasAddressesPerNetwork as any)[hre.network.name] as
     | MidasAddresses
     | undefined;
+};
+
+/**
+ * Applies `selectVaultVersion` to every product of the network addresses
+ */
+export const selectNetworkVaultVersion = (
+  addresses: MidasAddresses | undefined,
+  version: VaultVersion | undefined,
+): MidasAddresses | undefined => {
+  if (!addresses) return addresses;
+
+  return Object.fromEntries(
+    Object.entries(addresses).map(([key, value]) => [
+      key,
+      key !== 'paymentTokens' && value && typeof value === 'object'
+        ? selectVaultVersion(value, version)
+        : value,
+    ]),
+  ) as MidasAddresses;
+};
+
+/**
+ * Addresses of the current network with vaults of `hre.vaultVersion` under
+ * the base keys (`depositVault`, `redemptionVault`, ...). Pass
+ * `vaultVersion` explicitly in v2-only code. When the vault version is not
+ * set, vault keys are omitted.
+ */
+export const getCurrentAddresses = (
+  hre: HardhatRuntimeEnvironment,
+  vaultVersion: VaultVersion | undefined = hre.vaultVersion,
+) => {
+  return selectNetworkVaultVersion(getRawCurrentAddresses(hre), vaultVersion);
 };

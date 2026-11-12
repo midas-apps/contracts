@@ -9,8 +9,12 @@ import {
   RedemptionVaultType,
   sanctionListContracts,
   ustbContracts,
+  toV2VaultKey,
 } from '../../../config/constants/addresses';
-import { getCommonContractNames } from '../../../helpers/contracts';
+import {
+  contractNameToVaultType,
+  getCommonContractNames,
+} from '../../../helpers/contracts';
 import { getAllRoles } from '../../../helpers/roles';
 import {
   DepositVault,
@@ -186,7 +190,7 @@ export const deployDepositVault = async (
       sanctionsList,
       mToken: tokenAddresses?.token,
       mTokenDataFeed: dataFeed,
-      tokensReceiver: networkConfig.tokensReceiver ?? deployer.address,
+      tokensReceiver,
       minInstantFee: networkConfig.minInstantFee ?? 0,
       maxInstantFee: networkConfig.maxInstantFee ?? 100_00,
       maxInstantShare: networkConfig.maxInstantShare ?? 100_00,
@@ -213,7 +217,7 @@ export const deployDepositVault = async (
     allRoles.tokenRoles[token].greenlisted,
   ];
 
-  await deployAndVerifyProxy(
+  const deployment = await deployAndVerifyProxy(
     hre,
     getCommonContractNames()[type],
     params,
@@ -226,4 +230,13 @@ export const deployDepositVault = async (
           : 'initialize',
     },
   );
+
+  const vaultType = contractNameToVaultType(type);
+  if (vaultType) {
+    console.log(
+      `Add to config/constants/addresses.ts: ${
+        hre.network.name
+      }.${token}.${toV2VaultKey(vaultType)} = '${deployment.address}'`,
+    );
+  }
 };

@@ -1,0 +1,14 @@
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
+
+import { MTokenName } from '../../../config';
+import { DeployFunction } from '../common/types';
+import { setMTokenVaultConfig } from '../common/v2-post-deploy';
+
+const func: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+) => {
+  await setMTokenVaultConfig(hre, mToken);
+};
+
+export default func;

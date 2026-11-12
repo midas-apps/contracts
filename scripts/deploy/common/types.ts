@@ -31,41 +31,57 @@ import {
   DeployRvMTokenConfig,
   DeployRvRegularConfig,
   DeployRvSwapperConfig,
+  DeployRvUstbConfig,
 } from './rv';
 import { DeployTimelockConfig } from './timelock';
 import { toFunctionSelector } from './utils';
+import type {
+  FreeFromMinAmountConfig,
+  InstantLimitsConfig,
+  MintRateLimitsConfig,
+  PreferLoanLiquidityConfig,
+  SetMTokenVaultConfig,
+  SetUstbVaultConfig,
+  TokenConfig,
+} from './v2-post-deploy';
 
 import { PartialConfigPerNetwork, PaymentTokenName } from '../../../config';
 import { VaultType } from '../../../config/constants/addresses';
 import { RateLimiter } from '../../../typechain-types';
 
-// TODO: fix selectors
-export const VAULT_FUNCTION_SELECTORS = {
+const VAULT_FUNCTION_SIGNATURES = {
   // Deposit vault functions
-  depositInstant: toFunctionSelector(
-    'depositInstant(address,uint256,uint256,bytes32)',
-  ),
-  depositInstantWithCustomRecipient: toFunctionSelector(
+  depositInstant: 'depositInstant(address,uint256,uint256,bytes32)',
+  depositInstantWithCustomRecipient:
     'depositInstant(address,uint256,uint256,bytes32,address)',
-  ),
-  depositRequest: toFunctionSelector('depositRequest(address,uint256,bytes32)'),
-  depositRequestWithCustomRecipient: toFunctionSelector(
-    'depositRequest(address,uint256,bytes32,address)',
-  ),
+  depositRequest: 'depositRequest(address,uint256,bytes32)',
+  depositRequestWithCustomRecipient:
+    'depositRequest(address,uint256,bytes32,address,uint256,uint256,address)',
 
   // Redemption vault functions
-  redeemInstant: toFunctionSelector('redeemInstant(address,uint256,uint256)'),
-  redeemInstantWithCustomRecipient: toFunctionSelector(
+  redeemInstant: 'redeemInstant(address,uint256,uint256)',
+  redeemInstantWithCustomRecipient:
     'redeemInstant(address,uint256,uint256,address)',
-  ),
-  redeemFiatRequest: toFunctionSelector('redeemFiatRequest(uint256)'),
-  redeemRequest: toFunctionSelector('redeemRequest(address,uint256)'),
-  redeemRequestWithCustomRecipient: toFunctionSelector(
-    'redeemRequest(address,uint256,address)',
-  ),
+  redeemRequest: 'redeemRequest(address,uint256)',
+  redeemRequestWithCustomRecipient:
+    'redeemRequest(address,uint256,address,uint256,uint256,address)',
 } as const;
 
-export type VaultFunctionName = keyof typeof VAULT_FUNCTION_SELECTORS;
+/**
+ * Pausable vault functions. `redeemFiatRequest` exists only on v1 vaults and
+ * is kept for config compatibility; it is skipped for v2 vaults
+ */
+export type VaultFunctionName =
+  | keyof typeof VAULT_FUNCTION_SIGNATURES
+  | 'redeemFiatRequest';
+
+/** Pausable v2 vault function selectors */
+export const VAULT_FUNCTION_SELECTORS = Object.fromEntries(
+  Object.entries(VAULT_FUNCTION_SIGNATURES).map(([name, signature]) => [
+    name,
+    toFunctionSelector(signature),
+  ]),
+) as Partial<Record<VaultFunctionName, string>>;
 
 export type PauseFunctionsConfig = {
   [K in VaultType]?: VaultFunctionName[];
@@ -100,6 +116,14 @@ export type PostDeployConfig = {
   axelarIts?: AxelarItsConfig;
   setAaveConfig?: SetAaveConfigConfig;
   setMorphoConfig?: SetMorphoConfigConfig;
+  // v2 only
+  instantLimits?: InstantLimitsConfig;
+  mintRateLimits?: MintRateLimitsConfig;
+  tokenConfig?: TokenConfig;
+  freeFromMinAmount?: FreeFromMinAmountConfig;
+  preferLoanLiquidity?: PreferLoanLiquidityConfig;
+  setMTokenConfig?: SetMTokenVaultConfig;
+  setUstbConfig?: SetUstbVaultConfig;
 };
 
 export type DeploymentConfig = {
@@ -135,6 +159,7 @@ export type DeploymentConfig = {
       rvAave?: DeployRvAaveConfig;
       rvMorpho?: DeployRvMorphoConfig;
       rvMToken?: DeployRvMTokenConfig;
+      rvUstb?: DeployRvUstbConfig;
       postDeploy?: PostDeployConfig;
     }
   >;
@@ -163,11 +188,32 @@ export type PaymentTokenDeploymentConfig = {
   >;
 };
 
+/** `type(uint32).max`: disables the delay (see MidasAuthLibrary.NO_DELAY) */
+export const NO_DELAY = 0xffffffff;
+
+/** `0`: no override, falls back to the role/default delay (see MidasAuthLibrary.NULL_DELAY) */
+export const NULL_DELAY = 0;
+
 export type NetworkDeploymentConfig = Record<
   number,
   {
     grantDefaultAdminRole?: GrantDefaultAdminRoleToAcAdminConfig;
     timelock?: DeployTimelockConfig;
+    accessControl?: {
+      /** default role timelock delay in seconds. 0 for no delay */
+      defaultDelay: number;
+    };
+    pauseManager?: {
+      /**
+       * in seconds, or NO_DELAY.
+       * pause delay is not configurable and is always deployed as NULL_DELAY
+       */
+      unpauseDelay: number;
+    };
+    timelockManager?: {
+      securityCouncil: `0x${string}`[];
+      maxPendingOperationsPerProposer: number;
+    };
   }
 >;
 

@@ -1,5 +1,5 @@
 import { MTokenName } from '../../../config';
-import { VaultType } from '../../../config/constants/addresses';
+import { V2VaultType } from '../../../config/constants/addresses';
 
 export type NetworkConfig = Record<
   number,
@@ -10,13 +10,17 @@ export type NetworkConfig = Record<
   }
 >;
 
+/**
+ * Vault upgrades target v2 vaults only (`*V2` address keys); vault types
+ * in configs are base names (e.g. `depositVault` -> `depositVaultV2`)
+ */
 export type UpgradeConfig = {
   upgrades: Record<
     string,
     {
       initializers?: Partial<
         Record<
-          VaultType,
+          V2VaultType,
           {
             initializer: string;
             defaultInitializerArgs?: unknown[];
@@ -38,9 +42,9 @@ export type UpgradeConfig = {
                   all?: boolean;
                   overrides?: Partial<
                     Record<
-                      VaultType,
+                      V2VaultType,
                       | {
-                          vaultTypeTo?: VaultType;
+                          vaultTypeTo?: V2VaultType;
                           overrideImplementation?: string;
                           initializer?: string;
                           initializerArgs?: unknown[];

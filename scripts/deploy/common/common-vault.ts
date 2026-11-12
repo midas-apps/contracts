@@ -15,6 +15,7 @@ import {
   getCurrentAddresses,
   VaultType,
 } from '../../../config/constants/addresses';
+import { isV2VaultType } from '../../../config/constants/vaults';
 import {
   DepositVaultWithAave,
   DepositVaultWithMorpho,
@@ -189,6 +190,21 @@ export const addPaymentTokens = async (
   );
 };
 
+/**
+ * Swapper and BUIDL vaults have no v2 implementation, so config entries
+ * that reference them can't be applied to v2 vaults
+ */
+const assertVaultTypeSupported = (
+  hre: HardhatRuntimeEnvironment,
+  vaultType: VaultType,
+) => {
+  if (hre.vaultVersion === 'v2' && !isV2VaultType(vaultType)) {
+    throw new Error(
+      `${vaultType} has no v2 implementation, remove it from the config or run with --vault-version v1`,
+    );
+  }
+};
+
 const foreachFeeWaiveAddress = async (
   hre: HardhatRuntimeEnvironment,
   provider: Provider | Signer,
@@ -206,6 +222,8 @@ const foreachFeeWaiveAddress = async (
   const addresses = getCurrentAddresses(hre);
 
   for (const vault of networkConfig) {
+    assertVaultTypeSupported(hre, vault.fromVault.type);
+
     const vaultContract = await getVaultContract(
       hre,
       provider,
@@ -214,6 +232,10 @@ const foreachFeeWaiveAddress = async (
     );
 
     for (const toWaive of vault.toWaive) {
+      if (typeof toWaive !== 'string') {
+        assertVaultTypeSupported(hre, toWaive.type);
+      }
+
       const address =
         typeof toWaive === 'string'
           ? toWaive
@@ -252,6 +274,8 @@ const foreachVaultPaymentToken = async (
   const addresses = getCurrentAddresses(hre);
 
   for (const vault of networkConfig.vaults) {
+    assertVaultTypeSupported(hre, vault.type);
+
     const vaultContract = await getVaultContract(
       hre,
       provider,

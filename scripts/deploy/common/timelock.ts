@@ -5,6 +5,7 @@ import {
 } from '@nomicfoundation/hardhat-network-helpers';
 import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
 import { days } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { BigNumber, constants, PopulatedTransaction } from 'ethers';
 import { parseUnits, solidityKeccak256 } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
@@ -19,11 +20,15 @@ import {
 import { MTokenName } from '../../../config';
 import {
   getCurrentAddresses,
-  VaultType,
+  V2VaultType,
 } from '../../../config/constants/addresses';
 import { getRolesForToken } from '../../../helpers/roles';
 import { logDeploy } from '../../../helpers/utils';
-import { ProxyAdmin, TimelockController } from '../../../typechain-types';
+import {
+  MidasAccessControl,
+  ProxyAdmin,
+  TimelockController,
+} from '../../../typechain-types';
 import {
   assertReinitializerCovered,
   getImplAddress,
@@ -77,7 +82,7 @@ export type GetUpgradeTxParams = {
 };
 
 export type GetVaultUpgradeTxParams = GetUpgradeTxParams & {
-  vaultType: VaultType;
+  vaultType: V2VaultType;
   mToken: MTokenName;
 };
 
@@ -195,9 +200,60 @@ export const validateSimulateTimeLockProposeUpgradeTx = async (
       await impersonateAccount(tx.from!);
       await setBalance(tx.from!, ethers.utils.parseEther('1000'));
       const upgradeSigner = await hre.ethers.getSigner(tx.from!);
-      await upgradeSigner.sendTransaction(tx);
+      await (await upgradeSigner.sendTransaction(tx)).wait();
     },
   );
+};
+
+/**
+ * Fork-only: sends `populatedTx` from `signer`. If the call is timelocked for
+ * the signer, it is scheduled via MidasTimelockManager, time is advanced past
+ * the delay and the operation is executed by the timelock manager admin.
+ */
+export const sendOnForkWithTimelock = async (
+  hre: HardhatRuntimeEnvironment,
+  ac: MidasAccessControl,
+  timelockManagerAdmin: SignerWithAddress,
+  signer: SignerWithAddress,
+  populatedTx: PopulatedTransaction,
+) => {
+  const timelockManagerAddress = await ac
+    .timelockManager()
+    .catch(() => constants.AddressZero);
+
+  const timelockManager =
+    timelockManagerAddress !== constants.AddressZero
+      ? await hre.ethers.getContractAt(
+          'MidasTimelockManager',
+          timelockManagerAddress,
+        )
+      : undefined;
+
+  const targetRole = await timelockManager
+    ?.getTargetRole(populatedTx.to!, populatedTx.data!, signer.address)
+    .catch(() => undefined);
+
+  const delay = targetRole
+    ? (await ac.getRoleTimelockDelay(targetRole[0], targetRole[1]))[0]
+    : 0;
+
+  if (!timelockManager || delay === 0) {
+    return (await signer.sendTransaction(populatedTx)).wait();
+  }
+
+  await timelockManager.connect(signer).scheduleTimelockOperation({
+    target: populatedTx.to!,
+    data: populatedTx.data!,
+  });
+
+  await increase(delay + 1);
+  await mine();
+
+  return (
+    await timelockManager
+      .connect(timelockManagerAdmin)
+      .executeTimelockOperation(populatedTx.to!, populatedTx.data!, true)
+  ).wait();
 };
 
 const bigNumberMax = (bn1: BigNumber, bn2: BigNumber) => {
@@ -226,7 +282,8 @@ const validateSimulateContractUpgrade = async (
       .transferOwnership(timelock.address);
   }
 
-  const addresses = getCurrentAddresses(hre);
+  // simulation runs against v2 vaults only
+  const addresses = getCurrentAddresses(hre, 'v2');
 
   const acContract = await hre.ethers.getContractAt(
     'MidasAccessControl',
@@ -248,7 +305,10 @@ const validateSimulateContractUpgrade = async (
   const upgradeSigner = await hre.ethers.getSigner(tx.from!);
   const acAdminSigner = await hre.ethers.getSigner(acAdminAddress);
 
-  await upgradeSigner.sendTransaction(tx);
+  await (await upgradeSigner.sendTransaction(tx)).wait();
+
+  const send = (signer: SignerWithAddress, populatedTx: PopulatedTransaction) =>
+    sendOnForkWithTimelock(hre, acContract, acAdminSigner, signer, populatedTx);
 
   const mToken = await hre.ethers.getContractAt(
     'IMToken',
@@ -282,30 +342,55 @@ const validateSimulateContractUpgrade = async (
     roles.minter,
     roles.burner,
     roles.customFeedAdmin,
-  ].filter((role) => role !== null);
+  ].filter((role): role is string => role !== null);
 
-  await acContract.connect(acAdminSigner).grantRoleMult(
-    rolesToGrant,
-    rolesToGrant.map(() => testUser.address),
-  );
+  for (const role of rolesToGrant) {
+    if (await acContract.hasRole(role, testUser.address)) continue;
+    await send(
+      acAdminSigner,
+      await acContract.populateTransaction.grantRoleMult([
+        { role, account: testUser.address, delay: 0 },
+      ]),
+    );
+  }
 
   if (roles.customFeedAdmin) {
-    await aggregator.setRoundDataSafe(await aggregator.lastAnswer());
+    await send(
+      testUser,
+      await aggregator.populateTransaction.setRoundDataSafe(
+        await aggregator.lastAnswer(),
+      ),
+    );
   }
 
   if (await manageableVault.greenlistEnabled()) {
-    await manageableVault.setGreenlistEnable(false);
+    await send(
+      testUser,
+      await manageableVault.populateTransaction.setGreenlistEnable(false),
+    );
   }
 
-  await manageableVault.addPaymentToken(
-    newPToken.address,
-    mTokenDataFeed.address,
-    0,
-    constants.MaxUint256,
-    false,
+  await send(
+    testUser,
+    await manageableVault.populateTransaction.addPaymentToken(
+      newPToken.address,
+      mTokenDataFeed.address,
+      0,
+      constants.MaxUint256,
+      false,
+    ),
   );
 
-  await manageableVault.setInstantDailyLimit(constants.MaxUint256);
+  // lift all configured instant limit windows
+  for (const { window } of await manageableVault.getInstantLimitStatuses()) {
+    await send(
+      testUser,
+      await manageableVault.populateTransaction.setInstantLimitConfig(
+        window,
+        constants.MaxUint256,
+      ),
+    );
+  }
 
   const minMTokenAmount = (await manageableVault.minAmount()).mul(2);
 
@@ -316,9 +401,14 @@ const validateSimulateContractUpgrade = async (
       testUser,
     );
 
-    await acContract
-      .connect(acAdminSigner)
-      .grantRole(roles.minter, depositVault.address);
+    if (!(await acContract.hasRole(roles.minter, depositVault.address))) {
+      await send(
+        acAdminSigner,
+        await acContract.populateTransaction.grantRoleMult([
+          { role: roles.minter, account: depositVault.address, delay: 0 },
+        ]),
+      );
+    }
 
     const minForFirstDeposit = (
       await depositVault.minMTokenAmountForFirstDeposit()
@@ -358,11 +448,16 @@ const validateSimulateContractUpgrade = async (
       constants.HashZero,
     );
 
-    // deposit request with custom recipient
-    await depositVault['depositRequest(address,uint256,bytes32,address)'](
+    // deposit request with custom recipients and no instant share
+    await depositVault[
+      'depositRequest(address,uint256,bytes32,address,uint256,uint256,address)'
+    ](
       newPToken.address,
       amountToDeposit,
       constants.HashZero,
+      testUser.address,
+      0,
+      0,
       testUser.address,
     );
   } else if (upgradeParams.vaultType.startsWith('redemptionVault')) {
@@ -372,13 +467,24 @@ const validateSimulateContractUpgrade = async (
       testUser,
     );
 
-    await acContract
-      .connect(acAdminSigner)
-      .grantRole(roles.minter, redemptionVault.address);
+    if (!(await acContract.hasRole(roles.burner, redemptionVault.address))) {
+      await send(
+        acAdminSigner,
+        await acContract.populateTransaction.grantRoleMult([
+          { role: roles.burner, account: redemptionVault.address, delay: 0 },
+        ]),
+      );
+    }
 
     const amountToRedeem = bigNumberMax(minMTokenAmount, parseUnits('10'));
 
-    await mToken.mint(testUser.address, amountToRedeem.mul(4));
+    await send(
+      testUser,
+      await mToken.populateTransaction.mint(
+        testUser.address,
+        amountToRedeem.mul(4),
+      ),
+    );
     await mToken.approve(redemptionVault.address, amountToRedeem.mul(4));
     await newPToken.mint(redemptionVault.address, amountToRedeem.mul(8));
 
@@ -403,10 +509,15 @@ const validateSimulateContractUpgrade = async (
       amountToRedeem,
     );
 
-    // redeem request with custom recipient
-    await redemptionVault['redeemRequest(address,uint256,address)'](
+    // redeem request with custom recipients and no instant share
+    await redemptionVault[
+      'redeemRequest(address,uint256,address,uint256,uint256,address)'
+    ](
       newPToken.address,
       amountToRedeem,
+      testUser.address,
+      0,
+      0,
       testUser.address,
     );
   } else {
@@ -741,7 +852,8 @@ const createTimeLockTx = async (
     );
     console.log('Transaction successfully submitted', res);
   } else {
-    await txSendCallback(tx);
+    // simulations impersonate the actual timelock proposer / executor
+    await txSendCallback({ ...tx, from: caller });
   }
 
   return true;

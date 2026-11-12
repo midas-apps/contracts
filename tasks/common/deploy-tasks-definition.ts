@@ -10,6 +10,8 @@ import {
   ParseParamFn,
   pTokenParam,
   skipValidationParam,
+  v2VaultsOnlyParam,
+  vaultVersionParam,
 } from './task-params';
 
 type DeploymentTask = [string, ...ReturnType<ParseParamFn>[]];
@@ -61,32 +63,78 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     pTokenParam(),
     aggregatorTypeParam(true),
   ],
-  'deploy:dv': [deploy('deploy_DV'), mTokenParam()],
-  'deploy:dv:ustb': [deploy('deploy_DVUstb'), mTokenParam()],
-  'deploy:dv:aave': [deploy('deploy_DVAave'), mTokenParam()],
-  'deploy:dv:morpho': [deploy('deploy_DVMorpho'), mTokenParam()],
-  'deploy:dv:mtoken': [deploy('deploy_DVMToken'), mTokenParam()],
-  'deploy:rv': [deploy('deploy_RV'), mTokenParam()],
-  'deploy:rv:aave': [deploy('deploy_RVAave'), mTokenParam()],
-  'deploy:rv:morpho': [deploy('deploy_RVMorpho'), mTokenParam()],
-  'deploy:rv:mtoken': [deploy('deploy_RVMToken'), mTokenParam()],
+  'deploy:dv': [deploy('deploy_DV'), mTokenParam(), v2VaultsOnlyParam()],
+  'deploy:dv:ustb': [
+    deploy('deploy_DVUstb'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:dv:aave': [
+    deploy('deploy_DVAave'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:dv:morpho': [
+    deploy('deploy_DVMorpho'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:dv:mtoken': [
+    deploy('deploy_DVMToken'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:rv': [deploy('deploy_RV'), mTokenParam(), v2VaultsOnlyParam()],
+  'deploy:rv:aave': [
+    deploy('deploy_RVAave'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:rv:morpho': [
+    deploy('deploy_RVMorpho'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:rv:ustb': [
+    deploy('deploy_RVUstb'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:rv:mtoken': [
+    deploy('deploy_RVMToken'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
 
   // Misc
   'deploy:acre:adapter': [
     path.join('scripts/deploy/misc/acre', 'deploy_AcreAdapter.ts'),
     mTokenParam(),
     pTokenParam(),
+    v2VaultsOnlyParam(),
   ],
 
   // Codegen
-  'deploy:generate:contracts': [deployCodegen('generate_contracts')],
-  'deploy:generate:config': [deployCodegen('generate_config'), mTokenParam()],
+  'deploy:generate:mproduct': [
+    deployCodegen('generate_mproduct'),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:generate:config': [
+    deployCodegen('generate_config'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
 
   // Post-deploy
-  'deploy:post:add:ptokens': [deployPost('add_PaymentTokens'), mTokenParam()],
+  'deploy:post:add:ptokens': [
+    deployPost('add_PaymentTokens'),
+    mTokenParam(),
+    vaultVersionParam(),
+  ],
   'deploy:post:grant:roles': [
     deployPost('grant_AllProductRoles'),
     mTokenParam(),
+    vaultVersionParam(),
   ],
   'deploy:post:grant:admin': [deployPost('grant_DefaultAdminRole')],
   'deploy:post:revoke:roles': [deployPost('revoke_DeployerRoles')],
@@ -105,29 +153,87 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     pTokenParam(true),
     aggregatorTypeParam(true),
   ],
-  'deploy:post:set:waived': [deployPost('add_FeeWaived'), mTokenParam()],
-  'deploy:post:set:greenlist': [deployPost('set_Greenlist'), mTokenParam()],
-  'deploy:post:pause:functions': [deployPost('pause_Functions'), mTokenParam()],
+  'deploy:post:set:waived': [
+    deployPost('add_FeeWaived'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:post:set:greenlist': [
+    deployPost('set_Greenlist'),
+    mTokenParam(),
+    vaultVersionParam(),
+  ],
+  'deploy:post:pause:functions': [
+    deployPost('pause_Functions'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
   'deploy:post:add:addressbook': [
     deployPost('add_ToAddressBook'),
     mTokenParam(),
     keysParam(true),
+    vaultVersionParam(),
   ],
   'deploy:post:set:sanctionsList': [
     deployPost('set_SanctionsList'),
     mTokenParam(),
+    vaultVersionParam(),
   ],
-  'deploy:post:set:aaveconfig': [deployPost('set_AaveConfig'), mTokenParam()],
+  'deploy:post:set:aaveconfig': [
+    deployPost('set_AaveConfig'),
+    mTokenParam(),
+    vaultVersionParam(),
+  ],
   'deploy:post:set:morphoconfig': [
     deployPost('set_MorphoConfig'),
     mTokenParam(),
+    vaultVersionParam(),
   ],
+
+  // v2 only
+  'deploy:post:set:instantlimits': [
+    deployPost('set_InstantLimits'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:post:set:mintratelimits': [
+    deployPost('set_MintRateLimits'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:post:set:tokenconfig': [
+    deployPost('set_TokenConfig'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:post:set:freefromminamount': [
+    deployPost('set_FreeFromMinAmount'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:post:set:preferloanliquidity': [
+    deployPost('set_PreferLoanLiquidity'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:post:set:mtokenconfig': [
+    deployPost('set_MTokenConfig'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:post:set:ustbconfig': [
+    deployPost('set_UstbConfig'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:post:set:userfacingroles': [deployPost('set_UserFacingRoles')],
 
   // LayerZero
   'deploy:lz:composer': [
     deployLz('deploy_Composer'),
     mTokenParam(),
     pTokenParam(),
+    v2VaultsOnlyParam(),
   ],
   'deploy:lz:oft': [
     deployLz('deploy_OFT'),
@@ -167,6 +273,7 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     deployAxelar('deploy_Executable'),
     mTokenParam(),
     pTokenParam(),
+    v2VaultsOnlyParam(),
   ],
   'deploy:axelar:post:wire': [
     deployAxelar('wire_Tokens'),
@@ -195,16 +302,19 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     upgrade('proposeUpgrade_Vaults'),
     actionParam(),
     skipValidationParam(true),
+    v2VaultsOnlyParam(),
   ],
   'timelock:upgrade:vaults:execute': [
     upgrade('executeUpgrade_Vaults'),
     actionParam(),
     skipValidationParam(true),
+    v2VaultsOnlyParam(),
   ],
   'timelock:upgrade:vaults:validate': [
     upgrade('validateUpgrade_Vaults'),
     actionParam(),
     skipValidationParam(true),
+    v2VaultsOnlyParam(),
   ],
   'timelock:admin:transfer:propose': [
     upgrade('proposeTransferOwnership_ProxyAdmin'),
@@ -256,6 +366,7 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   'timelock:upgrade:reinitializers:verify': [
     upgrade('verifyUpgrade_Reinitializers'),
     mTokenParam(),
+    v2VaultsOnlyParam(),
   ],
 
   // Verify

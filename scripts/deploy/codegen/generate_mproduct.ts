@@ -1,11 +1,11 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { generateContracts } from './common';
+import { generateMProduct } from './common';
 
 import { DeployFunction } from '../common/types';
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  await generateContracts(hre);
+  await generateMProduct(hre);
 };
 
 export default func;

@@ -108,10 +108,9 @@ const mappedTokenNames: Partial<Record<MTokenName, string>> = {
 
 /**
  * Products whose vaults use a product-specific (a.k.a. "separated")
- * greenlist role, i.e. they override `Greenlistable.greenlistedRole()` to
- * return `<PREFIX>_GREENLISTED_ROLE` instead of the shared common
- * `GREENLISTED_ROLE`. Keep this in sync with the on-chain
- * `greenlistedRole()` overrides under `contracts/products/*`.
+ * greenlist role `<PREFIX>_GREENLISTED_ROLE` instead of the shared common
+ * `GREENLISTED_ROLE`. v2 vaults receive it as the `greenlistedRole`
+ * constructor arg (see `getRolesNamesForToken().greenlisted`).
  */
 export const tokenLevelGreenlistTokens: MTokenName[] = [
   'mGLOBAL',
@@ -287,4 +286,24 @@ export const getAllRoles = (): AllRoles => {
       ),
     },
   };
+};
+
+/**
+ * Roles that must be marked as user facing on MidasAccessControl: every
+ * product greenlisted role and every min balance exempt role (plus the
+ * common greenlisted role). Derived from the generated role registry, so it
+ * is the same on every network.
+ */
+export const getAllUserFacingRoles = (): string[] => {
+  const { common, tokenRoles } = getAllRoles();
+
+  return [
+    ...new Set([
+      common.greenlisted,
+      ...Object.values(tokenRoles).flatMap((roles) => [
+        roles.greenlisted,
+        roles.minBalanceExempt,
+      ]),
+    ]),
+  ];
 };

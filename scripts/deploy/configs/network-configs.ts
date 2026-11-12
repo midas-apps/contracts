@@ -18,6 +18,23 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
       minDelay: 100,
       proposer: '0x8bcc2DA99a25aE3582E50Aa0680C96D1610b8D73',
     },
+    // values of the deployed sepolia contracts
+    accessControl: {
+      defaultDelay: 0,
+    },
+    pauseManager: {
+      unpauseDelay: 2,
+    },
+    timelockManager: {
+      maxPendingOperationsPerProposer: 100,
+      securityCouncil: [
+        '0xDEdfb3538375420D13c1BD6CB6709eDCfb817d77',
+        '0xdF5A3EaD7920BdAeCe696Beed9E3244CE581aD46',
+        '0x496CF2c4638DE12dd418e44Dd83E59657b72Db84',
+        '0x87803db04a7e3A2Ba443136F59FB63B1C21f35b2',
+        '0xDa7aA5Ba1E5881adf9484b5Cb0DF562986Aa97ef',
+      ],
+    },
   },
   [chainIds.arbitrumSepolia]: {
     grantDefaultAdminRole: {
