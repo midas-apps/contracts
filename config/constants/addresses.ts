@@ -2024,8 +2024,10 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x9393811adDd7F7Ff60D1be11DbD29025A15bf630',
       customFeedGrowth: '0x1E2165801d84865587252155Fb4580381f7A3FC4',
       token: '0xefED40D1eb1577d1073e9C4F277463486D39b084',
-      depositVault: '0x2Abf7B5766Fc75bdb99e7aD76d6B539D08F3f8E1',
-      redemptionVault: '0x4e830D858c253C81ACF225E7101DF820D0e98415',
+      depositVault: '0x1615cBC603192ae8A9FF20E98dd0e40a405d76e4',
+      redemptionVaultBuidl: '0x6B35F2E4C9D4c1da0eDaf7fd7Dc90D9bCa4b0873',
+      depositVaultV2: '0x2Abf7B5766Fc75bdb99e7aD76d6B539D08F3f8E1',
+      redemptionVaultV2: '0x4e830D858c253C81ACF225E7101DF820D0e98415',
       layerZero: {
         oft: '0x0Ca81704F5df52E06205fe427653e661a4b6043c',
         composers: {
@@ -2082,8 +2084,10 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       token: '0x19569a89fEf7276a7f5967b6F6910c0573616f07',
       customFeed: '0xb64C014307622eB15046C66fF71D04258F5963DC',
       dataFeed: '0xffd462e0602Dd9FF3F038fd4e77a533f8c474b65',
-      depositVault: '0x95059CaD850a0531dd9b086F019C7f1ACB15955c',
-      redemptionVault: '0x95AACf1bAD48336B0a62E90C2799fA8623CD9128',
+      depositVault: '0x56814399caaEDCEE4F58D2e55DA058A81DDE744f',
+      redemptionVaultSwapper: '0xFeB770Ae942ef5ed377c6D4BbC50f9d3b25Cf69b',
+      depositVaultV2: '0x95059CaD850a0531dd9b086F019C7f1ACB15955c',
+      redemptionVaultV2: '0x95AACf1bAD48336B0a62E90C2799fA8623CD9128',
     },
     mFONE: {
       token: '0x6Ee5Bcb946499a926332cdE1993986bE76BE58Ea',
