@@ -21,10 +21,6 @@ runScriptTask
   .addOptionalParam('aggregatorType', 'Aggregator Type')
   .addOptionalParam('originalNetwork', 'Original Network')
   .addOptionalParam(
-    'deploymentConfig',
-    'Named deployment config profile (for example: mfone-unloop)',
-  )
-  .addOptionalParam(
     'keys',
     'Comma-separated list of address book keys to include (e.g. layerZero)',
   )

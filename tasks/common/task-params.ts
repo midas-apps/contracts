@@ -196,3 +196,13 @@ export const forkingNetworkParam: ParseParamFn<Network> = (optional) => () => {
     },
   };
 };
+
+// Read and validated by runScript (hre.deploymentConfig)
+export const deploymentConfigParam: ParseParamFn<string> =
+  (optional) => () => ({
+    isOptional: optional ?? true,
+    name: 'deploymentConfig',
+    description: 'Named deployment config profile (for example: mfone-unloop)',
+    defaultValue: undefined,
+    parse: (_, taskArgs) => taskArgs.deploymentConfig as string | undefined,
+  });

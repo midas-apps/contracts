@@ -1090,6 +1090,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
           dataFeed: '0x719ee87e02F9C773d282B34b2d7eEdFDAD47CD40',
           redemptionVaultSwapper: '0xbC4a3a4a0d73c23C9A87F483e5244CD93FC3B84C',
         },
+        mGLO3F: {
+          customFeed: '0x33131F44f2Dda75e1Da6e5C515d1d7996a4461f2',
+          dataFeed: '0xFcbb1E09Bf577688a17214Cc64aBfFcD24ccA643',
+          redemptionVaultSwapper: '0x6779D47aBe68930F2Fd787Bd4c809B4CB80a26e0',
+        },
       },
     },
   },
