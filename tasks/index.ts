@@ -17,6 +17,7 @@ runScriptTask
   .addOptionalParam('mtoken', 'MToken')
   .addOptionalParam('ptoken', 'Payment Token')
   .addOptionalParam('action', 'Timelock Action')
+  .addOptionalParam('upgrade', 'Upgrade id (key of upgradeConfigs.upgrades)')
   .addOptionalParam('skipValidation', 'Skip Validation', 'false')
   .addOptionalParam('aggregatorType', 'Aggregator Type')
   .addOptionalParam('originalNetwork', 'Original Network')

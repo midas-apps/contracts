@@ -2,6 +2,7 @@ import { BigNumberish, constants } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { deployAndVerifyProxy, getDeployer, getNetworkConfig } from './utils';
+import { assertVaultAdminRoleMatchesV1 } from './vault-role-guard';
 
 import { MTokenName } from '../../../config';
 import {
@@ -216,6 +217,13 @@ export const deployDepositVault = async (
     allRoles.tokenRoles[token].depositVaultAdmin,
     allRoles.tokenRoles[token].greenlisted,
   ];
+
+  await assertVaultAdminRoleMatchesV1(
+    hre,
+    token,
+    'depositVault',
+    constructorParams[0]!,
+  );
 
   const deployment = await deployAndVerifyProxy(
     hre,

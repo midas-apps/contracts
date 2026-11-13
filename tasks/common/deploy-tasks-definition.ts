@@ -10,6 +10,7 @@ import {
   ParseParamFn,
   pTokenParam,
   skipValidationParam,
+  upgradeIdParam,
   v2VaultsOnlyParam,
   vaultVersionParam,
 } from './task-params';
@@ -298,6 +299,12 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   ],
 
   // Timelock upgrades
+  'timelock:upgrade:contracts': [
+    upgrade('upgrade_Contracts'),
+    actionParam(),
+    upgradeIdParam(),
+    skipValidationParam(true),
+  ],
   'timelock:upgrade:vaults:propose': [
     upgrade('proposeUpgrade_Vaults'),
     actionParam(),

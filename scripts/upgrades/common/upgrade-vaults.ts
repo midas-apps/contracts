@@ -1,6 +1,8 @@
 import { DeployImplementationResponse } from '@openzeppelin/hardhat-upgrades/dist/deploy-implementation';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { validateRolesOnChain } from './onchain-read';
+
 import { MTokenName } from '../../../config';
 import {
   getCurrentAddresses,
@@ -379,6 +381,30 @@ const upgradeAllVaults = async (
   upgradeContracts.sort((a, b) => {
     return a.mToken.localeCompare(b.mToken, 'en', { sensitivity: 'base' });
   });
+
+  // the upgrade must not change the roles of a vault
+  const roleErrors = await validateRolesOnChain(
+    hre,
+    upgradeContracts.flatMap(
+      ({ mToken, vaultType, proxyAddress, constructorArgs }) =>
+        [
+          { role: 'admin', getter: 'contractAdminRole' },
+          { role: 'greenlisted', getter: 'greenlistedRole' },
+        ].map(({ role, getter }, i) => ({
+          label: `${mToken} ${vaultType} ${role} role`,
+          address: proxyAddress,
+          getters: [getter],
+          expected: constructorArgs[i],
+          required: true,
+        })),
+    ),
+  );
+
+  if (roleErrors.length) {
+    throw new Error(
+      `On-chain vault roles validation failed:\n${roleErrors.join('\n')}`,
+    );
+  }
 
   console.log('upgradeContracts', upgradeContracts);
   console.log('total upgrades', upgradeContracts.length);

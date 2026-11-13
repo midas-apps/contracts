@@ -3,6 +3,7 @@ import { isAddress, parseUnits } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { deployAndVerifyProxy, getDeployer, getNetworkConfig } from './utils';
+import { assertVaultAdminRoleMatchesV1 } from './vault-role-guard';
 
 import { MTokenName } from '../../../config';
 import {
@@ -299,6 +300,13 @@ export const deployRedemptionVault = async (
     allRoles.tokenRoles[token].redemptionVaultAdmin,
     allRoles.tokenRoles[token].greenlisted,
   ];
+
+  await assertVaultAdminRoleMatchesV1(
+    hre,
+    token,
+    'redemptionVault',
+    constructorParams[0]!,
+  );
 
   const deployment = await deployAndVerifyProxy(
     hre,

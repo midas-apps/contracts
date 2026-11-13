@@ -20,6 +20,8 @@ declare module 'hardhat/types/runtime' {
     };
     paymentToken?: PaymentTokenName;
     action?: string;
+    /** `--upgrade`: upgrade id (key of `upgradeConfigs.upgrades`) */
+    upgradeId?: string;
     deploymentConfig?: DeploymentConfigName;
     skipValidation?: boolean;
     /**

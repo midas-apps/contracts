@@ -103,6 +103,17 @@ export type MidasAddresses = Partial<Record<MTokenName, TokenAddresses>> & {
   paymentTokens?: Partial<Record<PaymentTokenName, DataFeedAddresses>>;
 };
 
+/**
+ * Chainlink L2 sequencer uptime feeds. Only the networks that have one are
+ * listed; data feeds on the other networks use the zero address (no check)
+ */
+export const networkUptimeFeeds: Partial<ConfigPerNetwork<string>> = {
+  arbitrum: '0xFdB631F5EE196F0ed6FAa767959853A9F217697D',
+  base: '0xBCF85224fc0756B9Fa45aA7892530B47e10b6433',
+  optimism: '0x371EAD81c9102C9BF4874A9075FFFf170F2Ee389',
+  scroll: '0x45c2b8C204568A03Dc7A2E32B71D67Fe97F908A9',
+};
+
 export const midasAddressesPerNetwork: ConfigPerNetwork<
   MidasAddresses | undefined
 > = {

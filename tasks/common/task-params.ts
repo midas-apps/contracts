@@ -100,6 +100,23 @@ export const actionParam: ParseParamFn<string> = (optional) => () => {
   };
 };
 
+export const upgradeIdParam: ParseParamFn<string> = (optional) => () => {
+  const isOptional = optional ?? false;
+  return {
+    isOptional,
+    name: 'upgrade',
+    description: 'Upgrade id (key of upgradeConfigs.upgrades)',
+    defaultValue: undefined,
+    parse: (hre, _) => {
+      const upgradeId = hre.upgradeId;
+      if (!upgradeId && !isOptional) {
+        throw new Error('Upgrade parameter not found');
+      }
+      return upgradeId;
+    },
+  };
+};
+
 export const aggregatorTypeParam: ParseParamFn<AggregatorType> =
   (optional) => () => {
     const isOptional = optional ?? false;
