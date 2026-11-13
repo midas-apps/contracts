@@ -1,6 +1,5 @@
 import { BigNumberish, constants, utils } from 'ethers';
 
-import { chainIds } from '../../../config';
 import { networkUptimeFeeds } from '../../../config/constants/addresses';
 import { mTokensMetadata } from '../../../helpers/mtokens-metadata';
 import { getAllUserFacingRoles } from '../../../helpers/roles';
@@ -135,21 +134,6 @@ export const upgradeConfigs: UpgradeConfig = {
         //     paymentTokens: { overrides: { usdc: { aggregator: false } } },
         //   },
         // ),
-      },
-    },
-    'mtoken-blacklist-enforcement': {
-      tokens: {
-        [chainIds.robinhood]: ['mGLO'],
-        [chainIds.base]: ['mGLO'],
-        [chainIds.main]: ['mHYPER'],
-        [chainIds.monad]: ['mHYPER'],
-        [chainIds.plasma]: ['mHYPER'],
-        [chainIds.katana]: ['mHYPER'],
-      },
-    },
-    'mwin-upgrade-permissioned-min-balance': {
-      tokens: {
-        [chainIds.main]: ['mWIN'],
       },
     },
   },

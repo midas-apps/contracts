@@ -333,43 +333,6 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     actionParam(),
     skipValidationParam(true),
   ],
-  'timelock:upgrade:token:propose': [
-    upgrade('proposeUpgrade_Token'),
-    mTokenParam(),
-    skipValidationParam(true),
-  ],
-  'timelock:upgrade:token:execute': [
-    upgrade('executeUpgrade_Token'),
-    mTokenParam(),
-    skipValidationParam(true),
-  ],
-  'timelock:upgrade:aggregators:execute': [
-    upgrade('executeUpgrade_Aggregators'),
-    mTokenParam(),
-    skipValidationParam(true),
-  ],
-  'timelock:upgrade:aggregator-deviation:propose': [
-    upgrade('proposeUpgrade_AggregatorDeviation'),
-    mTokenParam(),
-    skipValidationParam(true),
-  ],
-  'timelock:upgrade:aggregator-deviation:execute': [
-    upgrade('executeUpgrade_AggregatorDeviation'),
-    mTokenParam(),
-    skipValidationParam(true),
-  ],
-  'timelock:upgrade:aggregator-timelapsed:propose': [
-    upgrade('proposeUpgrade_AggregatorTimelapsed'),
-    mTokenParam(true),
-    actionParam(true),
-    skipValidationParam(true),
-  ],
-  'timelock:upgrade:aggregator-timelapsed:execute': [
-    upgrade('executeUpgrade_AggregatorTimelapsed'),
-    mTokenParam(true),
-    actionParam(true),
-    skipValidationParam(true),
-  ],
   'timelock:upgrade:reinitializers:verify': [
     upgrade('verifyUpgrade_Reinitializers'),
     mTokenParam(),

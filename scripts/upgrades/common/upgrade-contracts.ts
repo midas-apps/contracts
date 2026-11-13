@@ -34,13 +34,8 @@ import {
 import {
   DataFeedAddressesComposite,
   getCurrentAddresses,
-  TokenAddresses,
 } from '../../../config/constants/addresses';
-import {
-  getCommonContractNames,
-  getTokenContractNames,
-  TokenContractNames,
-} from '../../../helpers/contracts';
+import { getCommonContractNames } from '../../../helpers/contracts';
 import {
   getAllRoles,
   getRolesForToken,
@@ -62,38 +57,9 @@ import { getDeployer } from '../../deploy/common/utils';
 import { paymentTokenDeploymentConfigs } from '../../deploy/configs/payment-tokens';
 import { upgradeConfigs } from '../configs/upgrade-configs';
 
-// TODO: refactor this whole file and make upgrades more generic
-type ContractType =
-  | 'dataFeed'
-  | 'dataFeedComposite'
-  | 'dataFeedMultiply'
-  | 'customAggregator'
-  | 'customAggregatorGrowth'
-  | 'token';
-
-type ContractTypeToUpgrade =
-  | 'dataFeed'
-  | 'customFeed'
-  | 'customFeedGrowth'
-  | 'token';
-
-export type MTokenContractsToUpgrade = {
-  mToken: MTokenName;
-  addresses: TokenAddresses;
-  contracts: {
-    contractType: ContractType;
-    contractTypeTo?: ContractType;
-    overrideImplementation?: string;
-    constructorArgs?: unknown[];
-    initializer?: string;
-    initializerArgs?: unknown[];
-  }[];
-};
-
 type ContractToUpgrade = {
   mToken?: MTokenName;
   contractType: string;
-  contractTypeTo?: string;
   contractName: string;
   proxyAddress: string;
   overrideImplementation?: string;
@@ -118,7 +84,7 @@ type UpgradeAllOptions = {
   failFast?: boolean;
 };
 
-export const proposeUpgradeContractsRaw = async (
+const proposeUpgradeContractsRaw = async (
   hre: HardhatRuntimeEnvironment,
   upgradeId: string,
   contractsToUpgrade: ContractToUpgrade[],
@@ -135,7 +101,7 @@ export const proposeUpgradeContractsRaw = async (
   );
 };
 
-export const executeUpgradeContractsRaw = async (
+const executeUpgradeContractsRaw = async (
   hre: HardhatRuntimeEnvironment,
   upgradeId: string,
   contractsToUpgrade: ContractToUpgrade[],
@@ -905,86 +871,6 @@ export const getConfiguredContractUpgrades = (
   return result;
 };
 
-export const getConfiguredTokenUpgrades = (
-  hre: HardhatRuntimeEnvironment,
-  upgradeId: string,
-): MTokenContractsToUpgrade[] => {
-  const { chainId, networkName } = getChainOrThrow(hre);
-
-  if (chainIds[networkName as Network] !== chainId) {
-    throw new Error(
-      `Network mismatch: ${networkName} is configured for chain ${
-        chainIds[networkName as Network]
-      }, got ${chainId}`,
-    );
-  }
-
-  const mTokens = upgradeConfigs.upgrades[upgradeId]?.tokens?.[chainId];
-
-  if (!mTokens?.length) {
-    throw new Error(
-      `Token upgrade config not found for ${upgradeId} on chain ${chainId}`,
-    );
-  }
-
-  const seen = new Set<string>();
-
-  return mTokens.map((mToken) => {
-    if (seen.has(mToken)) {
-      throw new Error(
-        `Duplicate token upgrade target: ${networkName}.${mToken}`,
-      );
-    }
-    seen.add(mToken);
-
-    const addresses = getCurrentAddresses(hre)?.[mToken];
-
-    if (!addresses?.token) {
-      throw new Error(`Token addresses not found for ${mToken}`);
-    }
-
-    return {
-      mToken,
-      addresses,
-      contracts: [{ contractType: 'token' }],
-    };
-  });
-};
-
-export const proposeUpgradeContracts = async (
-  hre: HardhatRuntimeEnvironment,
-  upgradeId: string,
-  contractType: ContractTypeToUpgrade,
-  mTokenContractsToUpgrade: MTokenContractsToUpgrade[],
-) => {
-  return upgradeAllContracts(
-    hre,
-    upgradeId,
-    contractType,
-    mTokenContractsToUpgrade,
-    async (hre, params, salt) => {
-      return await proposeTimeLockUpgradeTx(hre, params, salt);
-    },
-  );
-};
-
-export const executeUpgradeContracts = async (
-  hre: HardhatRuntimeEnvironment,
-  upgradeId: string,
-  contractType: ContractTypeToUpgrade,
-  mTokenContractsToUpgrade: MTokenContractsToUpgrade[],
-) => {
-  return upgradeAllContracts(
-    hre,
-    upgradeId,
-    contractType,
-    mTokenContractsToUpgrade,
-    async (hre, params, salt) => {
-      return await executeTimeLockUpgradeTx(hre, params, salt);
-    },
-  );
-};
-
 const getImplAddressFromDeployment = async (
   deployment: DeployImplementationResponse,
 ) => {
@@ -1006,66 +892,6 @@ const getImplAddressFromDeployment = async (
   } else {
     return { deployedNew: false, address };
   }
-};
-
-const upgradeAllContracts = async (
-  hre: HardhatRuntimeEnvironment,
-  upgradeId: string,
-  contractTypeToUpgrade: ContractTypeToUpgrade,
-  mTokenContractsToUpgrade: MTokenContractsToUpgrade[],
-  callBack: (
-    hre: HardhatRuntimeEnvironment,
-    params: GetUpgradeTxParams,
-    salt: string,
-  ) => Promise<unknown>,
-) => {
-  const addresses = getCurrentAddresses(hre);
-
-  if (!addresses) {
-    throw new Error('Addresses not found');
-  }
-
-  console.log('mTokensToUpgrade', mTokenContractsToUpgrade);
-
-  const contractsToUpgrade: ContractToUpgrade[] = [];
-
-  for (const { mToken, contracts, addresses } of mTokenContractsToUpgrade) {
-    for (const {
-      contractType,
-      contractTypeTo,
-      overrideImplementation,
-      initializer,
-      initializerArgs,
-      constructorArgs,
-    } of contracts) {
-      const type = contractTypeTo ?? contractType;
-      const contractName =
-        getTokenContractNames(mToken)[type as keyof TokenContractNames];
-
-      if (!contractName) {
-        throw new Error(`Contract name not found for ${mToken} ${type}`);
-      }
-
-      contractsToUpgrade.push({
-        mToken,
-        contractType: type,
-        contractTypeTo,
-        contractName,
-        proxyAddress: addresses[contractTypeToUpgrade]!,
-        overrideImplementation,
-        initializer,
-        initializerArgs: initializerArgs,
-        constructorArgs,
-      });
-    }
-  }
-
-  return await upgradeAllContractsRaw(
-    hre,
-    upgradeId,
-    contractsToUpgrade,
-    callBack,
-  );
 };
 
 // errors of `scripts/deploy/common/timelock.ts` for the already handled upgrades

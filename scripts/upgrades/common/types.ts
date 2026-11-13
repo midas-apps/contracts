@@ -143,7 +143,6 @@ export type UpgradeConfig = {
         >
       >;
       overrideSalt?: string;
-      tokens?: Record<number, MTokenName[]>;
       contracts?: Record<number, ContractsUpgradeConfig>;
       vaults?: Record<
         number,
