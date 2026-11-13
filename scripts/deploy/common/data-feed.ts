@@ -18,11 +18,12 @@ import {
   sendAndWaitForCustomTxSign,
 } from './utils';
 
-import { MTokenName, PaymentTokenName } from '../../../config';
+import { MTokenName, Network, PaymentTokenName } from '../../../config';
 import {
   DataFeedAddresses,
   DataFeedAddressesComposite,
   getCurrentAddresses,
+  networkUptimeFeeds,
   TokenAddresses,
 } from '../../../config/constants/addresses';
 import {
@@ -63,7 +64,8 @@ export type DeployDataFeedConfigRegular = {
   /**
    * Chainlink L2 sequencer uptime feed.
    * Address zero disables the check.
-   * Default: address(0)
+   * Default: feed of the network from `networkUptimeFeeds`, address(0) if
+   * the network has none
    */
   sequencerUptimeAggregator?: string;
 } & DeployDataFeedConfigCommon;
@@ -1071,7 +1073,9 @@ const deployTokenDataFeed = async (
       networkConfig.healthyDiff ?? 2592000,
       networkConfig.minAnswer ?? parseUnits('0.1', 8),
       networkConfig.maxAnswer ?? parseUnits('1000', 8),
-      networkConfig.sequencerUptimeAggregator ?? constants.AddressZero,
+      networkConfig.sequencerUptimeAggregator ??
+        networkUptimeFeeds[hre.network.name as Network] ??
+        constants.AddressZero,
     ],
     undefined,
     {

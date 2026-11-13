@@ -35,7 +35,9 @@ const contractNameToPath = {
   root: ['mToken'],
 };
 
-const getContractPath = (contractName: string) => {
+const getContractPath = (contractName?: string) => {
+  if (!contractName) return undefined;
+
   for (const [key, value] of Object.entries(contractNameToPath)) {
     if (value.includes(contractName)) {
       const path = `contracts/${
@@ -168,7 +170,8 @@ export const logDeploy = (
 export const etherscanVerify = async (
   hre: HardhatRuntimeEnvironment,
   contractAddress: string,
-  contractName: string,
+  // when omitted, the explorer plugin infers the contract from bytecode
+  contractName?: string,
   ...constructorArguments: unknown[]
 ) => {
   const network = hre.network.name;
@@ -179,7 +182,7 @@ export const etherscanVerify = async (
 export const etherscanVerifyImplementation = async (
   hre: HardhatRuntimeEnvironment,
   proxyAddress: string,
-  contractName: string,
+  contractName?: string,
   ...constructorArguments: unknown[]
 ) => {
   const contractAddress = await getImplAddressFromProxy(hre, proxyAddress);
@@ -212,7 +215,7 @@ export const logDeployProxy = async (
 export const tryEtherscanVerifyImplementation = async (
   hre: HardhatRuntimeEnvironment,
   proxyAddress: string,
-  contractName: string,
+  contractName?: string,
   ...constructorArguments: unknown[]
 ) => {
   return await etherscanVerifyImplementation(
@@ -233,7 +236,7 @@ export const tryEtherscanVerifyImplementation = async (
 export const verify = async (
   hre: HardhatRuntimeEnvironment,
   contractAddress: string,
-  contractName: string,
+  contractName?: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ...constructorArguments: any[]
 ) => {

@@ -21,30 +21,11 @@ import fs from 'fs/promises';
 import path from 'path';
 
 import {
-  getCustomAggregatorContractFromTemplate,
-  getCustomAggregatorGrowthContractFromTemplate,
-  getDataFeedContractFromTemplate,
-  getDvAaveContractFromTemplate,
-  getDvContractFromTemplate,
-  getDvMorphoContractFromTemplate,
-  getDvMTokenContractFromTemplate,
-  getRvAaveContractFromTemplate,
-  getRvContractFromTemplate,
-  getRvMorphoContractFromTemplate,
-  getRvMTokenContractFromTemplate,
-  getRvSwapperContractFromTemplate,
-  getRvUstbContractFromTemplate,
-  getTokenContractFromTemplate,
-  getTokenRolesContractFromTemplate,
-} from './templates';
-import {
   configsPerNetworkConfig,
   getDeploymentConfigFromUser,
 } from './ui/deployment-config';
 import {
   getConfigFromUser,
-  getContractsToGenerateFromUser,
-  getGenerationModeFromUser,
   getGreenlistRoleSourceFromUser,
   getShouldUseTokenLevelGreenListFromUser,
   getShouldUseTokenMinBalanceFromUser,
@@ -56,53 +37,17 @@ import { MTokenName } from '../../../../config';
 import {
   contractNamesPrefixes,
   contractNameToVaultType,
-  getTokenContractNames,
-  TokenContractNames,
 } from '../../../../helpers/contracts';
 import { mTokensMetadata } from '../../../../helpers/mtokens-metadata';
-import { prefixes as rolesPrefixes } from '../../../../helpers/roles';
+import {
+  prefixes as rolesPrefixes,
+  tokenLevelGreenlistTokens,
+} from '../../../../helpers/roles';
 import { PostDeployConfig } from '../../common/types';
 import { getDeploymentProfileForToken } from '../../configs/deployment-profiles';
 
 export const EXPR = Symbol('expr');
 export type CodeExpr = { [EXPR]: string };
-
-const generatorPerContract: Partial<
-  Record<
-    keyof TokenContractNames | 'layerZeroMinterBurner',
-    (
-      mToken: MTokenName,
-      optionalParams?: Record<string, unknown>,
-    ) =>
-      | Promise<
-          | {
-              name: string;
-              content: string;
-            }
-          | undefined
-        >
-      | {
-          name: string;
-          content: string;
-        }
-      | undefined
-  >
-> = {
-  token: getTokenContractFromTemplate,
-  dv: getDvContractFromTemplate,
-  dvAave: getDvAaveContractFromTemplate,
-  dvMorpho: getDvMorphoContractFromTemplate,
-  dvMToken: getDvMTokenContractFromTemplate,
-  rv: getRvContractFromTemplate,
-  rvSwapper: getRvSwapperContractFromTemplate,
-  rvMToken: getRvMTokenContractFromTemplate,
-  rvUstb: getRvUstbContractFromTemplate,
-  rvAave: getRvAaveContractFromTemplate,
-  rvMorpho: getRvMorphoContractFromTemplate,
-  dataFeed: getDataFeedContractFromTemplate,
-  customAggregator: getCustomAggregatorContractFromTemplate,
-  customAggregatorGrowth: getCustomAggregatorGrowthContractFromTemplate,
-};
 
 export const updateConfigFiles = (
   hre: HardhatRuntimeEnvironment,
@@ -200,8 +145,7 @@ export const updateConfigFiles = (
   }
 
   // Register the token in the separated-greenlist registry so the off-chain
-  // role helper, codegen templates and tests all agree with the on-chain
-  // greenlistedRole() override.
+  // role helper and tests agree on the product greenlisted role.
   if (useTokenLevelGreenList) {
     const arrLiteral = greenlistTokensVar
       .getInitializerOrThrow()
@@ -283,20 +227,6 @@ const lintAndFormatTs = (path: string) => {
   try {
     execSync(
       `yarn prettier "${path}" --write > /dev/null && yarn exec eslint "${path}" --fix > /dev/null`,
-      {
-        stdio: 'inherit',
-      },
-    );
-  } catch (error) {
-    cancel('Failed to run lint&format fix for generated contracts');
-    process.exit(1);
-  }
-};
-
-const lintAndFormatSol = (folder: string) => {
-  try {
-    execSync(
-      `yarn solhint "${folder}/**/*.sol" --quiet --fix > /dev/null && yarn prettier "${folder}/**/*.sol" --write > /dev/null`,
       {
         stdio: 'inherit',
       },
@@ -802,38 +732,18 @@ import { constants } from 'ethers';
   ]);
 };
 
-export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
+/**
+ * Registers a product in the off-chain registries (`MTokenNameEnum`, contract
+ * name prefixes, role prefixes, greenlist registries and mToken metadata).
+ *
+ * Per-product contracts are not generated anymore: v2 deploys the base
+ * contracts (`mToken`, `DepositVault`, `RedemptionVault`, ...) with the
+ * product roles passed as constructor args.
+ */
+export const generateMProduct = async (hre: HardhatRuntimeEnvironment) => {
   const mToken = (await getTokenContractNameFromUser()) as MTokenName;
 
-  const folder = path.join(
-    hre.config.paths.root,
-    'contracts/products',
-    `${mToken}`,
-  );
-
-  const folderExists = await fs
-    .access(folder)
-    .then(() => true)
-    .catch(() => false);
   const isRegistered = !!contractNamesPrefixes[mToken];
-
-  let mode: 'create' | 'add' | 'regenerate' = 'create';
-
-  if (folderExists || isRegistered) {
-    mode = await getGenerationModeFromUser(mToken);
-
-    if (mode === 'regenerate') {
-      const confirmed = await confirm({
-        message: `This will DELETE contracts/products/${mToken} and regenerate it. Continue?`,
-        initialValue: false,
-      }).then(requireNotCancelled);
-
-      if (!confirmed) {
-        cancel('Operation cancelled.');
-        process.exit(0);
-      }
-    }
-  }
 
   let config: {
     tokenContractName: string;
@@ -842,11 +752,13 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
     contractNamePrefix: string;
     rolesPrefix: string;
   };
-  let isPermissionedFromMetadata = false;
-  let isMinBalanceFromMetadata = false;
+  let shouldUseTokenPermissioned = false;
+  let shouldUseTokenMinBalance = false;
 
-  if (mode === 'create') {
+  if (!isRegistered) {
     config = await getConfigFromUser(mToken);
+    shouldUseTokenPermissioned = await getShouldUseTokenPermissionedFromUser();
+    shouldUseTokenMinBalance = await getShouldUseTokenMinBalanceFromUser();
   } else {
     const metadata = mTokensMetadata[mToken];
     const contractNamePrefix = contractNamesPrefixes[mToken];
@@ -861,6 +773,10 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
       return;
     }
 
+    await stream.info(
+      `${mToken} is already registered, only greenlist registration can be updated`,
+    );
+
     config = {
       tokenContractName: mToken,
       tokenName: metadata.name,
@@ -868,46 +784,17 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
       contractNamePrefix,
       rolesPrefix,
     };
-    isPermissionedFromMetadata = !!metadata.isPermissioned;
-    isMinBalanceFromMetadata = !!metadata.isMinBalance;
   }
 
-  const contractsToGenerate = await getContractsToGenerateFromUser();
+  const shouldUseTokenLevelGreenList =
+    await getShouldUseTokenLevelGreenListFromUser(
+      tokenLevelGreenlistTokens.includes(mToken),
+    );
 
-  let shouldUseTokenLevelGreenList = false;
-  let shouldUseTokenPermissioned = isPermissionedFromMetadata;
-  let shouldUseTokenMinBalance = isMinBalanceFromMetadata;
-  let greenlistRoleSource: string | undefined;
-
-  if (
-    contractsToGenerate.find((v) => v.startsWith('dv') || v.startsWith('rv'))
-  ) {
-    let greenlistDefault = false;
-
-    if (mode !== 'create' && folderExists) {
-      const files = await fs.readdir(folder);
-      for (const file of files.filter((f) => f.endsWith('.sol'))) {
-        const content = await fs.readFile(path.join(folder, file), 'utf-8');
-        if (content.includes('function greenlistedRole()')) {
-          greenlistDefault = true;
-          break;
-        }
-      }
-    }
-
-    shouldUseTokenLevelGreenList =
-      await getShouldUseTokenLevelGreenListFromUser(greenlistDefault);
-
-    if (shouldUseTokenLevelGreenList) {
-      // Optionally reuse another product's greenlist role (e.g. mGLO -> mGLOBAL).
-      greenlistRoleSource = await getGreenlistRoleSourceFromUser(mToken);
-    }
-  }
-
-  if (contractsToGenerate.includes('token') && mode === 'create') {
-    shouldUseTokenPermissioned = await getShouldUseTokenPermissionedFromUser();
-    shouldUseTokenMinBalance = await getShouldUseTokenMinBalanceFromUser();
-  }
+  // Optionally reuse another product's greenlist role (e.g. mGLO -> mGLOBAL).
+  const greenlistRoleSource = shouldUseTokenLevelGreenList
+    ? await getGreenlistRoleSourceFromUser(mToken)
+    : undefined;
 
   await tasks([
     {
@@ -928,97 +815,13 @@ export const generateContracts = async (hre: HardhatRuntimeEnvironment) => {
     },
   ]);
 
-  if (folderExists && mode === 'regenerate') {
-    await fs.rm(folder, { recursive: true });
-  }
-
-  await fs.mkdir(folder, { recursive: true });
-
-  const rolesFileExists =
-    mode === 'add' &&
-    (await fs
-      .access(path.join(folder, `${getTokenContractNames(mToken).roles}.sol`))
-      .then(() => true)
-      .catch(() => false));
-
-  const generators = [
-    ...(rolesFileExists
-      ? []
-      : [{ name: 'roles', generator: getTokenRolesContractFromTemplate }]),
-    ...contractsToGenerate.flatMap((contract) => {
-      const generator = generatorPerContract[contract];
-      return generator ? [{ name: contract, generator }] : [];
-    }),
-  ];
-
-  const generatedContracts = await Promise.all(
-    generators.map(({ generator }) =>
-      generator(mToken, {
-        vaultUseTokenLevelGreenList: shouldUseTokenLevelGreenList,
-        isPermissionedMToken: shouldUseTokenPermissioned,
-        isMinBalanceMToken: shouldUseTokenMinBalance,
-      }),
-    ),
-  );
-
-  for (const [index, contract] of generatedContracts.entries()) {
-    if (!contract) {
-      cancel(
-        `Contract ${generators[index].name} is not available for a provided mToken`,
-      );
-      process.exit(0);
-      return;
-    }
-
-    const filePath = path.join(folder, `${contract.name}.sol`);
-
-    if (mode === 'add') {
-      const fileExists = await fs
-        .access(filePath)
-        .then(() => true)
-        .catch(() => false);
-
-      if (fileExists) {
-        const overwrite = await confirm({
-          message: `${contract.name}.sol already exists. Overwrite?`,
-          initialValue: false,
-        }).then(requireNotCancelled);
-
-        if (!overwrite) {
-          await stream.warn(`Skipping ${contract.name}.sol...`);
-          continue;
-        }
-      }
-    }
-
-    await fs.writeFile(filePath, contract.content, 'utf-8');
-  }
-
-  await tasks([
-    {
-      title: 'Linting and formatting',
-      task: async () => {
-        lintAndFormatSol(folder);
-      },
-    },
-  ]);
-
   if (shouldUseTokenLevelGreenList) {
-    if (greenlistRoleSource) {
-      await stream.info(
-        `${mToken} reuses ${greenlistRoleSource}'s greenlist role. ` +
-          `Registered in helpers/roles.ts (tokenLevelGreenlistTokens + ` +
-          `sharedGreenlistRoleSource), so getRolesNamesForToken('${mToken}')` +
-          `.greenlisted, the generated greenlistedRole() override and the ` +
-          `token tests all resolve to ${greenlistRoleSource}'s ` +
-          `GREENLISTED_ROLE. Review the generated vaults to confirm.`,
-      );
-    } else {
-      await stream.info(
-        `${mToken} uses its own token-level greenlist role. Registered in ` +
-          `helpers/roles.ts (tokenLevelGreenlistTokens). To instead share an ` +
-          `existing product's role, add an entry to sharedGreenlistRoleSource.`,
-      );
-    }
+    await stream.info(
+      greenlistRoleSource
+        ? `${mToken} reuses ${greenlistRoleSource}'s greenlist role ` +
+            `(helpers/roles.ts: tokenLevelGreenlistTokens + sharedGreenlistRoleSource).`
+        : `${mToken} uses its own token-level greenlist role ` +
+            `(helpers/roles.ts: tokenLevelGreenlistTokens).`,
+    );
   }
 };

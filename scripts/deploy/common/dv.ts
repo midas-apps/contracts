@@ -2,6 +2,7 @@ import { BigNumberish, constants } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { deployAndVerifyProxy, getDeployer, getNetworkConfig } from './utils';
+import { assertVaultAdminRoleMatchesV1 } from './vault-role-guard';
 
 import { MTokenName } from '../../../config';
 import {
@@ -10,9 +11,13 @@ import {
   sanctionListContracts,
   TokenAddresses,
   ustbContracts,
+  toV2VaultKey,
   usycTellerContracts,
 } from '../../../config/constants/addresses';
-import { getCommonContractNames } from '../../../helpers/contracts';
+import {
+  contractNameToVaultType,
+  getCommonContractNames,
+} from '../../../helpers/contracts';
 import { getAllRoles } from '../../../helpers/roles';
 import {
   DepositVault,
@@ -271,7 +276,14 @@ export const deployDepositVault = async (
     allRoles.tokenRoles[token].greenlisted,
   ];
 
-  await deployAndVerifyProxy(
+  await assertVaultAdminRoleMatchesV1(
+    hre,
+    token,
+    'depositVault',
+    constructorParams[0]!,
+  );
+
+  const deployment = await deployAndVerifyProxy(
     hre,
     getCommonContractNames()[type],
     params,
@@ -286,4 +298,13 @@ export const deployDepositVault = async (
           : 'initialize',
     },
   );
+
+  const vaultType = contractNameToVaultType(type);
+  if (vaultType) {
+    console.log(
+      `Add to config/constants/addresses.ts: ${
+        hre.network.name
+      }.${token}.${toV2VaultKey(vaultType)} = '${deployment.address}'`,
+    );
+  }
 };

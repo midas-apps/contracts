@@ -1,5 +1,11 @@
+import { getRolesForToken } from './roles';
+
 import { MTokenName } from '../config';
-import { VaultType } from '../config/constants/addresses';
+import {
+  V2VaultType,
+  VaultType,
+  isV2VaultType,
+} from '../config/constants/vaults';
 
 export type TokenContractNames = {
   dv: string;
@@ -9,7 +15,6 @@ export type TokenContractNames = {
   dvMToken: string;
   dvUsyc: string;
   rv: string;
-  rvSwapper: string;
   rvMToken: string;
   rvUstb: string;
   rvAave: string;
@@ -38,9 +43,12 @@ type CommonContractNames = TokenContractNames & {
   };
 };
 
-const vaultTypeToContractNameMap: Record<VaultType, string> = {
+/** Only v2 vaults have sources (and artifacts) in this repo */
+const vaultTypeToContractNameMap: Record<
+  V2VaultType,
+  keyof TokenContractNames
+> = {
   redemptionVault: 'rv',
-  redemptionVaultSwapper: 'rvSwapper',
   redemptionVaultMToken: 'rvMToken',
   redemptionVaultUstb: 'rvUstb',
   depositVault: 'dv',
@@ -51,22 +59,44 @@ const vaultTypeToContractNameMap: Record<VaultType, string> = {
   depositVaultUsyc: 'dvUsyc',
   redemptionVaultAave: 'rvAave',
   redemptionVaultMorpho: 'rvMorpho',
-  redemptionVaultBuidl: 'rvBuidl',
   redemptionVaultUsyc: 'rvUsyc',
 };
 
+/**
+ * Short contract name key of a v2 vault type.
+ * Returns undefined for v1-only vault types (Swapper, BUIDL)
+ */
 export const vaultTypeToContractName = (
   vaultType: VaultType,
-): string | undefined => {
-  return vaultTypeToContractNameMap[vaultType];
+): keyof TokenContractNames | undefined => {
+  return isV2VaultType(vaultType)
+    ? vaultTypeToContractNameMap[vaultType]
+    : undefined;
 };
 
 export const contractNameToVaultType = (
   contractName: string,
-): VaultType | undefined => {
+): V2VaultType | undefined => {
   return Object.entries(vaultTypeToContractNameMap).find(
     ([, value]) => value === contractName,
-  )?.[0] as VaultType | undefined;
+  )?.[0] as V2VaultType | undefined;
+};
+
+/** v2 vault constructor args: (contract admin role, greenlisted role) */
+export const getV2VaultConstructorArgs = (
+  mToken: MTokenName,
+  vaultType: V2VaultType,
+): string[] => {
+  const roles = getRolesForToken(mToken);
+  const adminRole = vaultType.startsWith('depositVault')
+    ? roles.depositVaultAdmin
+    : roles.redemptionVaultAdmin;
+
+  if (!adminRole) {
+    throw new Error(`Vault admin role is not found for ${mToken}`);
+  }
+
+  return [adminRole, roles.greenlisted];
 };
 
 export const contractNamesPrefixes: Record<MTokenName, string> = {
@@ -182,7 +212,6 @@ export const getCommonContractNames = (): CommonContractNames => {
     dvMToken: 'DepositVaultWithMToken',
     dvUsyc: 'DepositVaultWithUSYC',
     rv: 'RedemptionVault',
-    rvSwapper: 'RedemptionVaultWithSwapper',
     rvMToken: 'RedemptionVaultWithMToken',
     rvUstb: 'RedemptionVaultWithUSTB',
     rvAave: 'RedemptionVaultWithAave',

@@ -1,25 +1,33 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import {
+  V2VaultKey,
+  VaultType,
+  VaultVersion,
+  selectVaultVersion,
+} from './vaults';
+
 import { chainIds } from '../networks';
 import { ConfigPerNetwork, MTokenName, PaymentTokenName } from '../types';
 
-export type RedemptionVaultType =
-  | 'redemptionVault'
-  | 'redemptionVaultBuidl'
-  | 'redemptionVaultSwapper'
-  | 'redemptionVaultMToken'
-  | 'redemptionVaultUstb'
-  | 'redemptionVaultAave'
-  | 'redemptionVaultMorpho'
-  | 'redemptionVaultUsyc';
-
-export type DepositVaultType =
-  | 'depositVault'
-  | 'depositVaultUstb'
-  | 'depositVaultAave'
-  | 'depositVaultMorpho'
-  | 'depositVaultMToken'
-  | 'depositVaultUsyc';
+export type {
+  DepositVaultType,
+  RedemptionVaultType,
+  V2VaultKey,
+  V2VaultType,
+  VaultType,
+  VaultVersion,
+} from './vaults';
+export {
+  getVaultKey,
+  isV2VaultType,
+  isVaultVersion,
+  selectVaultVersion,
+  toV2VaultKey,
+  allVaultTypes,
+  v1VaultTypes,
+  v2VaultTypes,
+} from './vaults';
 
 /**
  * External libraries that are deployed separately and linked into contracts
@@ -55,17 +63,17 @@ export type TokenFeedAddresses = {
   dataFeedRv?: string;
 };
 
-export type AddressProfileTokenAddresses = TokenFeedAddresses &
-  Partial<Record<DepositVaultType | RedemptionVaultType, string>>;
+/** v1 vaults under base keys, v2 vaults under `${VaultType}V2` keys */
+type VaultAddresses = Partial<Record<VaultType | V2VaultKey, string>>;
+
+export type AddressProfileTokenAddresses = TokenFeedAddresses & VaultAddresses;
 
 export type TokenAddresses = TokenFeedAddresses & {
   token?: string;
   layerZero?: LayerZeroTokenAddresses;
   axelar?: AxelarTokenAddresses;
   addressProfiles?: Partial<Record<string, AddressProfileTokenAddresses>>;
-} & Partial<Record<DepositVaultType | RedemptionVaultType, string>>;
-
-export type VaultType = RedemptionVaultType | DepositVaultType;
+} & VaultAddresses;
 
 type DataFeedAddressesCommon = {
   token?: string;
@@ -105,6 +113,17 @@ export type MidasAddresses = Partial<Record<MTokenName, TokenAddresses>> & {
   pauseManager?: string;
   paymentTokens?: Partial<Record<PaymentTokenName, DataFeedAddresses>>;
   libraries?: Partial<Record<LibraryName, string>>;
+};
+
+/**
+ * Chainlink L2 sequencer uptime feeds. Only the networks that have one are
+ * listed; data feeds on the other networks use the zero address (no check)
+ */
+export const networkUptimeFeeds: Partial<ConfigPerNetwork<string>> = {
+  arbitrum: '0xFdB631F5EE196F0ed6FAa767959853A9F217697D',
+  base: '0xBCF85224fc0756B9Fa45aA7892530B47e10b6433',
+  optimism: '0x371EAD81c9102C9BF4874A9075FFFf170F2Ee389',
+  scroll: '0x45c2b8C204568A03Dc7A2E32B71D67Fe97F908A9',
 };
 
 export const midasAddressesPerNetwork: ConfigPerNetwork<
@@ -2036,8 +2055,10 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x9393811adDd7F7Ff60D1be11DbD29025A15bf630',
       customFeedGrowth: '0x1E2165801d84865587252155Fb4580381f7A3FC4',
       token: '0xefED40D1eb1577d1073e9C4F277463486D39b084',
-      depositVault: '0x2Abf7B5766Fc75bdb99e7aD76d6B539D08F3f8E1',
-      redemptionVault: '0x4e830D858c253C81ACF225E7101DF820D0e98415',
+      depositVault: '0x1615cBC603192ae8A9FF20E98dd0e40a405d76e4',
+      redemptionVaultBuidl: '0x6B35F2E4C9D4c1da0eDaf7fd7Dc90D9bCa4b0873',
+      depositVaultV2: '0x2Abf7B5766Fc75bdb99e7aD76d6B539D08F3f8E1',
+      redemptionVaultV2: '0x4e830D858c253C81ACF225E7101DF820D0e98415',
       layerZero: {
         oft: '0x0Ca81704F5df52E06205fe427653e661a4b6043c',
         composers: {
@@ -2094,8 +2115,10 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       token: '0x19569a89fEf7276a7f5967b6F6910c0573616f07',
       customFeed: '0xb64C014307622eB15046C66fF71D04258F5963DC',
       dataFeed: '0xffd462e0602Dd9FF3F038fd4e77a533f8c474b65',
-      depositVault: '0x95059CaD850a0531dd9b086F019C7f1ACB15955c',
-      redemptionVault: '0x95AACf1bAD48336B0a62E90C2799fA8623CD9128',
+      depositVault: '0x56814399caaEDCEE4F58D2e55DA058A81DDE744f',
+      redemptionVaultSwapper: '0xFeB770Ae942ef5ed377c6D4BbC50f9d3b25Cf69b',
+      depositVaultV2: '0x95059CaD850a0531dd9b086F019C7f1ACB15955c',
+      redemptionVaultV2: '0x95AACf1bAD48336B0a62E90C2799fA8623CD9128',
     },
     mFONE: {
       token: '0x6Ee5Bcb946499a926332cdE1993986bE76BE58Ea',
@@ -2171,15 +2194,15 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       token: '0xb850ad6Ef991a9E8e01e0D08616a6Ae6004f1742',
       customFeed: '0x878260Cf16d01bD758FdAEf51148335125Fa7A65',
       dataFeed: '0x4001176D488c5940Dd670884BA08Cf38CE59d659',
-      depositVault: '0xD16EEDB93F29543eF5757BF9DDaC127b814C2CBE',
-      redemptionVault: '0xb1F6842433E6a1c8EE233f3B68e49a0f3a10Cc79',
+      depositVaultV2: '0xD16EEDB93F29543eF5757BF9DDaC127b814C2CBE',
+      redemptionVaultV2: '0xb1F6842433E6a1c8EE233f3B68e49a0f3a10Cc79',
     },
     radUSD: {
       token: '0xBB882eC4c7358dD59a3267FFB5E5C55fd08c0142',
       customFeed: '0xdE4536Cc1C6632Fe89920ccC115b4053c4356622',
       dataFeed: '0x5768d8DD4023Dd94BBBcfff2E15f5C70786d4161',
-      depositVault: '0x9B56de26d503FC7892d662B8DcF7569Cb9a235EF',
-      redemptionVault: '0x122f9B6FAde28156F24B192a0daD2f31A43ab223',
+      depositVaultV2: '0x9B56de26d503FC7892d662B8DcF7569Cb9a235EF',
+      redemptionVaultV2: '0x122f9B6FAde28156F24B192a0daD2f31A43ab223',
     },
     radYC: {
       token: '0xA7eDb03f998bCF9812490822e4E4497990736B95',
@@ -2187,8 +2210,8 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       customFeedRv: '0xA460CD61bF3e5d45e3E7954560E8a392aD393198',
       dataFeedDv: '0xBb2D70fD5c8389AA2fD2feaFd111211355fF3bA7',
       dataFeedRv: '0xFb5C0C1d36B4E4a14F8fb0B4F868398B5a4D3f9d',
-      depositVaultUsyc: '0xc577d51dD5012407521F5cadC8E3aD4F1898930d',
-      redemptionVaultUsyc: '0xB457F528D1D4a050E14231E1382c315E3DF21D22',
+      depositVaultUsycV2: '0xc577d51dD5012407521F5cadC8E3aD4F1898930d',
+      redemptionVaultUsycV2: '0xB457F528D1D4a050E14231E1382c315E3DF21D22',
     },
   },
   arbitrumSepolia: {
@@ -2272,9 +2295,45 @@ export const usycTellerContracts: Partial<Record<number, string>> = {
   [chainIds.sepolia]: '0x1B1297255748683a83b72986A86d2F6eAf62Bb0D',
 };
 
-export const getCurrentAddresses = (hre: HardhatRuntimeEnvironment) => {
+/**
+ * Raw addresses of the current network: v1 vaults under base keys and v2
+ * vaults under `${VaultType}V2` keys. Prefer `getCurrentAddresses`
+ */
+export const getRawCurrentAddresses = (hre: HardhatRuntimeEnvironment) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (midasAddressesPerNetwork as any)[hre.network.name] as
     | MidasAddresses
     | undefined;
+};
+
+/**
+ * Applies `selectVaultVersion` to every product of the network addresses
+ */
+export const selectNetworkVaultVersion = (
+  addresses: MidasAddresses | undefined,
+  version: VaultVersion | undefined,
+): MidasAddresses | undefined => {
+  if (!addresses) return addresses;
+
+  return Object.fromEntries(
+    Object.entries(addresses).map(([key, value]) => [
+      key,
+      key !== 'paymentTokens' && value && typeof value === 'object'
+        ? selectVaultVersion(value, version)
+        : value,
+    ]),
+  ) as MidasAddresses;
+};
+
+/**
+ * Addresses of the current network with vaults of `hre.vaultVersion` under
+ * the base keys (`depositVault`, `redemptionVault`, ...). Pass
+ * `vaultVersion` explicitly in v2-only code. When the vault version is not
+ * set, vault keys are omitted.
+ */
+export const getCurrentAddresses = (
+  hre: HardhatRuntimeEnvironment,
+  vaultVersion: VaultVersion | undefined = hre.vaultVersion,
+) => {
+  return selectNetworkVaultVersion(getRawCurrentAddresses(hre), vaultVersion);
 };

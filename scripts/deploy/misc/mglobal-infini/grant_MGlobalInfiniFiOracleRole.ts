@@ -36,10 +36,9 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   await sendAndWaitForCustomTxSign(
     hre,
-    await accessControl.populateTransaction.grantRole(
-      role,
-      INFINIFI_MG_ORACLE_ADMIN,
-    ),
+    await accessControl.populateTransaction.grantRoleMult([
+      { role, account: INFINIFI_MG_ORACLE_ADMIN, delay: 0 },
+    ]),
     {
       action: 'update-ac',
       subAction: 'grant-token-roles',

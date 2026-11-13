@@ -15,11 +15,10 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { expr, requireNotCancelled } from '..';
 import { MTokenName } from '../../../../../config';
 import {
-  getCurrentAddresses,
   sanctionListContracts,
   VaultType,
 } from '../../../../../config/constants/addresses';
-import { isMTokenName, isPaymentTokenName } from '../../../../../helpers/utils';
+import { isPaymentTokenName } from '../../../../../helpers/utils';
 import { PostDeployConfig, VaultFunctionName } from '../../../common/types';
 
 export const configsPerNetworkConfig = {
@@ -28,8 +27,8 @@ export const configsPerNetworkConfig = {
   dvMorpho: getDvMorphoConfigFromUser,
   dvMToken: getDvMTokenConfigFromUser,
   rv: getRvConfigFromUser,
-  rvSwapper: getRvSwapperConfigFromUser,
   rvMToken: getRvMTokenConfigFromUser,
+  rvUstb: getRvUstbConfigFromUser,
   rvAave: getRvAaveConfigFromUser,
   rvMorpho: getRvMorphoConfigFromUser,
   genericConfig: getGenericConfigFromUser,
@@ -221,23 +220,10 @@ async function getGenericConfigFromUser(mToken: MTokenName) {
 async function getDvConfigFromUser(hre: HardhatRuntimeEnvironment) {
   const config = await group({
     intro: () => Promise.resolve(intro('Deposit Vault')).then(() => undefined),
-    feeReceiver: () =>
-      text({ message: 'Fee Receiver', validate: validateAddress })
-        .then(requireNotCancelled)
-        .then(requireAddress),
     tokensReceiver: () =>
       text({ message: 'Tokens Receiver', validate: validateAddress })
         .then(requireNotCancelled)
         .then(requireAddress),
-    instantDailyLimit: () =>
-      text({
-        message: 'Instant Daily Limit',
-        defaultValue: 'Infinite',
-        placeholder: 'Infinite',
-        validate: validateBase18OrInfinite,
-      })
-        .then(requireNotCancelled)
-        .then(requireBase18OrInfinite),
     instantFee: () =>
       text({
         message: 'Instant Fee',
@@ -272,19 +258,11 @@ async function getDvConfigFromUser(hre: HardhatRuntimeEnvironment) {
       })
         .then(requireNotCancelled)
         .then(requireBase18),
-    maxSupplyCap: () =>
-      text({
-        message: 'Max Supply Cap',
-        defaultValue: 'Infinite',
-        placeholder: 'Infinite',
-        validate: validateBase18OrInfinite,
-      })
-        .then(requireNotCancelled)
-        .then(requireBase18OrInfinite),
     outro: () => Promise.resolve(outro('Done...')).then(() => undefined),
   }).then(clearIntroOutro);
 
   return {
+    version: 'v2' as const,
     type: 'REGULAR',
     enableSanctionsList: shouldEnableSanctionsList(hre),
     ...config,
@@ -295,23 +273,10 @@ async function getDvAaveConfigFromUser(hre: HardhatRuntimeEnvironment) {
   const config = await group({
     intro: () =>
       Promise.resolve(intro('Deposit Vault With Aave')).then(() => undefined),
-    feeReceiver: () =>
-      text({ message: 'Fee Receiver', validate: validateAddress })
-        .then(requireNotCancelled)
-        .then(requireAddress),
     tokensReceiver: () =>
       text({ message: 'Tokens Receiver', validate: validateAddress })
         .then(requireNotCancelled)
         .then(requireAddress),
-    instantDailyLimit: () =>
-      text({
-        message: 'Instant Daily Limit',
-        defaultValue: 'Infinite',
-        placeholder: 'Infinite',
-        validate: validateBase18OrInfinite,
-      })
-        .then(requireNotCancelled)
-        .then(requireBase18OrInfinite),
     instantFee: () =>
       text({
         message: 'Instant Fee',
@@ -346,19 +311,11 @@ async function getDvAaveConfigFromUser(hre: HardhatRuntimeEnvironment) {
       })
         .then(requireNotCancelled)
         .then(requireBase18),
-    maxSupplyCap: () =>
-      text({
-        message: 'Max Supply Cap',
-        defaultValue: 'Infinite',
-        placeholder: 'Infinite',
-        validate: validateBase18OrInfinite,
-      })
-        .then(requireNotCancelled)
-        .then(requireBase18OrInfinite),
     outro: () => Promise.resolve(outro('Done...')).then(() => undefined),
   }).then(clearIntroOutro);
 
   return {
+    version: 'v2' as const,
     type: 'AAVE' as const,
     enableSanctionsList: shouldEnableSanctionsList(hre),
     ...config,
@@ -369,23 +326,10 @@ async function getDvMorphoConfigFromUser(hre: HardhatRuntimeEnvironment) {
   const config = await group({
     intro: () =>
       Promise.resolve(intro('Deposit Vault With Morpho')).then(() => undefined),
-    feeReceiver: () =>
-      text({ message: 'Fee Receiver', validate: validateAddress })
-        .then(requireNotCancelled)
-        .then(requireAddress),
     tokensReceiver: () =>
       text({ message: 'Tokens Receiver', validate: validateAddress })
         .then(requireNotCancelled)
         .then(requireAddress),
-    instantDailyLimit: () =>
-      text({
-        message: 'Instant Daily Limit',
-        defaultValue: 'Infinite',
-        placeholder: 'Infinite',
-        validate: validateBase18OrInfinite,
-      })
-        .then(requireNotCancelled)
-        .then(requireBase18OrInfinite),
     instantFee: () =>
       text({
         message: 'Instant Fee',
@@ -420,19 +364,11 @@ async function getDvMorphoConfigFromUser(hre: HardhatRuntimeEnvironment) {
       })
         .then(requireNotCancelled)
         .then(requireBase18),
-    maxSupplyCap: () =>
-      text({
-        message: 'Max Supply Cap',
-        defaultValue: 'Infinite',
-        placeholder: 'Infinite',
-        validate: validateBase18OrInfinite,
-      })
-        .then(requireNotCancelled)
-        .then(requireBase18OrInfinite),
     outro: () => Promise.resolve(outro('Done...')).then(() => undefined),
   }).then(clearIntroOutro);
 
   return {
+    version: 'v2' as const,
     type: 'MORPHO' as const,
     enableSanctionsList: shouldEnableSanctionsList(hre),
     ...config,
@@ -443,10 +379,6 @@ async function getDvMTokenConfigFromUser(hre: HardhatRuntimeEnvironment) {
   const config = await group({
     intro: () =>
       Promise.resolve(intro('Deposit Vault With MToken')).then(() => undefined),
-    feeReceiver: () =>
-      text({ message: 'Fee Receiver', validate: validateAddress })
-        .then(requireNotCancelled)
-        .then(requireAddress),
     tokensReceiver: () =>
       text({ message: 'Tokens Receiver', validate: validateAddress })
         .then(requireNotCancelled)
@@ -458,15 +390,6 @@ async function getDvMTokenConfigFromUser(hre: HardhatRuntimeEnvironment) {
       })
         .then(requireNotCancelled)
         .then(requireAddress),
-    instantDailyLimit: () =>
-      text({
-        message: 'Instant Daily Limit',
-        defaultValue: 'Infinite',
-        placeholder: 'Infinite',
-        validate: validateBase18OrInfinite,
-      })
-        .then(requireNotCancelled)
-        .then(requireBase18OrInfinite),
     instantFee: () =>
       text({
         message: 'Instant Fee',
@@ -501,19 +424,11 @@ async function getDvMTokenConfigFromUser(hre: HardhatRuntimeEnvironment) {
       })
         .then(requireNotCancelled)
         .then(requireBase18),
-    maxSupplyCap: () =>
-      text({
-        message: 'Max Supply Cap',
-        defaultValue: 'Infinite',
-        placeholder: 'Infinite',
-        validate: validateBase18OrInfinite,
-      })
-        .then(requireNotCancelled)
-        .then(requireBase18OrInfinite),
     outro: () => Promise.resolve(outro('Done...')).then(() => undefined),
   }).then(clearIntroOutro);
 
   return {
+    version: 'v2' as const,
     type: 'MTOKEN' as const,
     enableSanctionsList: shouldEnableSanctionsList(hre),
     ...config,
@@ -530,10 +445,6 @@ async function getRvConfigFromUser<T>(
       Promise.resolve(intro(introText ?? 'Redemption Vault')).then(
         () => undefined,
       ),
-    feeReceiver: () =>
-      text({ message: 'Fee Receiver', validate: validateAddress })
-        .then(requireNotCancelled)
-        .then(requireAddress),
     tokensReceiver: () =>
       text({ message: 'Tokens Receiver', validate: validateAddress })
         .then(requireNotCancelled)
@@ -542,15 +453,6 @@ async function getRvConfigFromUser<T>(
       text({ message: 'Request Redeemer', validate: validateAddress })
         .then(requireNotCancelled)
         .then(requireAddress),
-    instantDailyLimit: () =>
-      text({
-        message: 'Instant Daily Limit',
-        defaultValue: 'Infinite',
-        placeholder: 'Infinite',
-        validate: validateBase18OrInfinite,
-      })
-        .then(requireNotCancelled)
-        .then(requireBase18OrInfinite),
     instantFee: () =>
       text({
         message: 'Instant Fee',
@@ -576,38 +478,12 @@ async function getRvConfigFromUser<T>(
       })
         .then(requireNotCancelled)
         .then(requireBase18),
-    fiatFlatFee: () =>
-      text({
-        message: 'Fiat flat fee',
-        defaultValue: '30',
-        initialValue: '30',
-        validate: validateBase18,
-      })
-        .then(requireNotCancelled)
-        .then(requireBase18),
-    fiatAdditionalFee: () =>
-      text({
-        message: 'Fiat additional fee in percent',
-        defaultValue: '0.1',
-        initialValue: '0.1',
-        validate: (value) => validateFloat(value, 2),
-      })
-        .then(requireNotCancelled)
-        .then((value) => requireFloatToBigNumberish(value, 2)),
-    minFiatRedeemAmount: () =>
-      text({
-        message: 'Minimum fiat redeem amount',
-        defaultValue: '1000',
-        initialValue: '1000',
-        validate: validateBase18,
-      })
-        .then(requireNotCancelled)
-        .then(requireBase18),
     ...(extendGroup ?? {}),
     outro: () => Promise.resolve(outro(`Done...`)).then(() => undefined),
   }).then(clearIntroOutro);
 
   return {
+    version: 'v2' as const,
     type: 'REGULAR',
     ...(config as typeof config & T),
     enableSanctionsList: shouldEnableSanctionsList(hre),
@@ -661,78 +537,24 @@ async function getRvMTokenConfigFromUser(hre: HardhatRuntimeEnvironment) {
   };
 }
 
-const getVaultForSwapper = (
-  hre: HardhatRuntimeEnvironment,
-  mToken: MTokenName,
-) => {
-  const addresses = getCurrentAddresses(hre);
-  if (addresses?.[mToken]?.redemptionVaultMToken) {
-    return 'redemptionVaultMToken';
-  } else if (addresses?.[mToken]?.redemptionVaultSwapper) {
-    return 'redemptionVaultSwapper';
-  } else if (addresses?.[mToken]?.redemptionVaultUstb) {
-    return 'redemptionVaultUstb';
-  } else if (addresses?.[mToken]?.redemptionVaultBuidl) {
-    return 'redemptionVaultBuidl';
-  } else if (addresses?.[mToken]?.redemptionVaultAave) {
-    return 'redemptionVaultAave';
-  } else if (addresses?.[mToken]?.redemptionVaultMorpho) {
-    return 'redemptionVaultMorpho';
-  } else if (addresses?.[mToken]?.redemptionVault) {
-    return 'redemptionVault';
-  }
-  return undefined;
-};
-
-async function getRvSwapperConfigFromUser(hre: HardhatRuntimeEnvironment) {
+async function getRvUstbConfigFromUser(hre: HardhatRuntimeEnvironment) {
   const config = await getRvConfigFromUser(
     hre,
     {
-      liquidityProvider: () =>
+      ustbRedemption: () =>
         text({
-          message: 'Liquidity Provider',
-          defaultValue: 'dummy',
-          placeholder: 'dummy',
-          validate: (value) =>
-            value === 'dummy' ? undefined : validateAddress(value),
+          message: 'USTB Redemption Contract Address',
+          validate: validateAddress,
         })
           .then(requireNotCancelled)
-          .then((value) => (value === 'dummy' ? value : requireAddress(value))),
-      swapperMToken: ({ results: { liquidityProvider } }) =>
-        liquidityProvider === 'dummy'
-          ? Promise.resolve('dummy')
-          : text({
-              message: 'Swapper mProduct',
-              placeholder: 'mTBILL',
-              validate: (value) => {
-                if (value !== 'dummy' && !isMTokenName(value)) {
-                  return 'Invalid mProduct';
-                }
-                if (!getVaultForSwapper(hre, value as MTokenName)) {
-                  return 'mProduct does not have a redemption vault';
-                }
-              },
-            }).then(requireNotCancelled),
+          .then(requireAddress),
     },
-    'Redemption Vault Swapper',
+    'Redemption Vault With USTB',
   );
-
-  const swapperMToken = config.swapperMToken as MTokenName | 'dummy';
-
-  const swapperVault =
-    swapperMToken === 'dummy'
-      ? 'dummy'
-      : {
-          mToken: swapperMToken,
-          redemptionVaultType: getVaultForSwapper(hre, swapperMToken),
-        };
-
-  delete config.swapperMToken;
 
   return {
     ...config,
-    type: 'SWAPPER',
-    swapperVault,
+    type: 'USTB' as const,
   };
 }
 
@@ -871,7 +693,7 @@ async function getPostDeployAddPaymentTokensConfigFromUser(
         }
       }
 
-      configs[vault].paymentTokens.push(config);
+      configs[vault]!.paymentTokens.push(config);
 
       addMore = await confirm({
         message: 'Add another payment token?',
@@ -1195,14 +1017,14 @@ const allVaultConfigOptions = [
     hint: 'Redemption Vault contract',
   },
   {
-    value: 'rvSwapper' as const,
-    label: 'Redemption Vault With Swapper',
-    hint: 'Redemption Vault With Swapper contract',
-  },
-  {
     value: 'rvMToken' as const,
     label: 'Redemption Vault With MToken',
     hint: 'Redemption Vault With MToken liquid strategy contract',
+  },
+  {
+    value: 'rvUstb' as const,
+    label: 'Redemption Vault With USTB',
+    hint: 'Redemption Vault With USTB contract',
   },
   {
     value: 'rvAave' as const,
@@ -1243,7 +1065,7 @@ export async function getDeploymentConfigFromUser(
             initialValues:
               networkConfigMode === 'add'
                 ? []
-                : (['dv', 'rvSwapper'] as VaultConfigKey[]),
+                : (['dv', 'rv'] as VaultConfigKey[]),
             required: true,
           }).then(requireNotCancelled),
     includePostDeploy: () =>
@@ -1362,13 +1184,6 @@ const requireBase18OrNull = (value: string) => {
 const normalizePaymentTokenAllowance = (value: string, namedProfile: boolean) =>
   namedProfile ? requireBase18(value) : requireBase18OrNull(value);
 
-const requireBase18OrInfinite = (value: string) => {
-  if (isInfinite(value)) {
-    return expr('constants.MaxUint256');
-  }
-  return requireBase18(value);
-};
-
 const requireFloatToBigNumberish = (value: string, maxDecimals = 2) => {
   const error = validateFloat(value, maxDecimals);
   if (error) {
@@ -1399,11 +1214,6 @@ const validateBase18 = (value: string) => {
   }
 };
 
-const validateBase18OrInfinite = (value: string) => {
-  if (isInfinite(value)) return undefined;
-  return validateBase18(value);
-};
-
 const validateFloat = (value: string, maxDecimals = 2) => {
   try {
     parseUnits(value, maxDecimals);
@@ -1419,8 +1229,4 @@ const validateUnsignedInteger = (value: string) => {
 
 const requirePercentageToBigNumberish = (value: string) => {
   return requireFloatToBigNumberish(value, 2);
-};
-
-const isInfinite = (value: string) => {
-  return value.trim().toLowerCase() === 'infinite';
 };

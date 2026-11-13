@@ -34,13 +34,17 @@ const func: DeployFunction = async (
   );
 
   const rolesToGrant = [roles.minter, roles.burner];
+  const account = mTokenAddresses.layerZero.oft!;
 
   const tx = await sendAndWaitForCustomTxSign(
     hre,
-    await contract.populateTransaction.grantRoleMult(rolesToGrant, [
-      mTokenAddresses.layerZero.oft!,
-      mTokenAddresses.layerZero.oft!,
-    ]),
+    await contract.populateTransaction.grantRoleMult(
+      rolesToGrant.map((role) => ({
+        role,
+        account,
+        delay: 0,
+      })),
+    ),
     {
       action: 'update-ac',
       subAction: 'grant-token-roles',

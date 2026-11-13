@@ -1,14 +1,17 @@
 import { DeployImplementationResponse } from '@openzeppelin/hardhat-upgrades/dist/deploy-implementation';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { validateRolesOnChain } from './onchain-read';
+
 import { MTokenName } from '../../../config';
 import {
   getCurrentAddresses,
   TokenAddresses,
-  VaultType,
+  V2VaultType,
 } from '../../../config/constants/addresses';
 import {
   getTokenContractNames,
+  getV2VaultConstructorArgs,
   TokenContractNames,
   vaultTypeToContractName,
 } from '../../../helpers/contracts';
@@ -123,8 +126,8 @@ type MTokenVaultsToUpgrade = {
   mToken: MTokenName;
   addresses: TokenAddresses;
   vaults: {
-    vaultType: VaultType;
-    vaultTypeTo?: VaultType;
+    vaultType: V2VaultType;
+    vaultTypeTo?: V2VaultType;
     overrideImplementation?: string;
     initializer?: string;
     initializerArgs?: unknown[];
@@ -180,15 +183,14 @@ const upgradeAllVaults = async (
     );
   }
 
-  const addresses = getCurrentAddresses(hre);
+  // only v2 vaults (`*V2` keys) can be upgraded from this repo
+  const addresses = getCurrentAddresses(hre, 'v2');
 
   if (!addresses) {
     throw new Error('Addresses not found');
   }
 
-  const allDeployedNetworkMTokens = Object.keys(addresses).filter((v) =>
-    isMTokenName(v),
-  );
+  const allDeployedNetworkMTokens = Object.keys(addresses).filter(isMTokenName);
 
   let mTokenVaultsToUpgrade: MTokenVaultsToUpgrade[] = [];
 
@@ -197,8 +199,8 @@ const upgradeAllVaults = async (
       const mTokenAddresses = addresses[mToken]!;
 
       const vaultTypes = Object.keys(mTokenAddresses).filter(
-        (v) => vaultTypeToContractName(v as VaultType) !== undefined,
-      ) as VaultType[];
+        (v) => vaultTypeToContractName(v as V2VaultType) !== undefined,
+      ) as V2VaultType[];
 
       return {
         mToken,
@@ -231,8 +233,8 @@ const upgradeAllVaults = async (
     if (overrides?.all) {
       overrideVaults = (
         Object.keys(mTokenAddresses).filter(
-          (v) => vaultTypeToContractName(v as VaultType) !== undefined,
-        ) as VaultType[]
+          (v) => vaultTypeToContractName(v as V2VaultType) !== undefined,
+        ) as V2VaultType[]
       ).map((v) => ({
         vaultType: v,
         initializer: config.initializers?.[v]?.initializer,
@@ -245,7 +247,7 @@ const upgradeAllVaults = async (
         const valParsed = typeof val === 'boolean' ? {} : val;
 
         return {
-          vaultType: key as VaultType,
+          vaultType: key as V2VaultType,
           remove: val === false ? true : undefined,
           ...valParsed,
         };
@@ -317,10 +319,11 @@ const upgradeAllVaults = async (
 
   const upgradeContracts: {
     mToken: MTokenName;
-    vaultType: VaultType;
+    vaultType: V2VaultType;
     contractType: string;
     contractName: string;
     proxyAddress: string;
+    constructorArgs: string[];
     overrideImplementation?: string;
     initializer?: string;
     initializerCalldata?: string;
@@ -344,9 +347,15 @@ const upgradeAllVaults = async (
         );
       }
 
+      const proxyAddress = addresses[vaultType];
+
+      if (!proxyAddress) {
+        throw new Error(`${mToken} ${vaultType}V2 address is not configured`);
+      }
+
       const contract = await hre.ethers.getContractAt(
         contractName,
-        addresses[vaultType]!,
+        proxyAddress,
       );
 
       upgradeContracts.push({
@@ -354,7 +363,11 @@ const upgradeAllVaults = async (
         vaultType,
         contractType: vaultTypeTo ?? vaultType,
         contractName,
-        proxyAddress: addresses[vaultType]!,
+        proxyAddress,
+        constructorArgs: getV2VaultConstructorArgs(
+          mToken,
+          vaultTypeTo ?? vaultType,
+        ),
         overrideImplementation,
         initializer,
         initializerCalldata: initializer
@@ -372,6 +385,30 @@ const upgradeAllVaults = async (
     return a.mToken.localeCompare(b.mToken, 'en', { sensitivity: 'base' });
   });
 
+  // the upgrade must not change the roles of a vault
+  const roleErrors = await validateRolesOnChain(
+    hre,
+    upgradeContracts.flatMap(
+      ({ mToken, vaultType, proxyAddress, constructorArgs }) =>
+        [
+          { role: 'admin', getter: 'contractAdminRole' },
+          { role: 'greenlisted', getter: 'greenlistedRole' },
+        ].map(({ role, getter }, i) => ({
+          label: `${mToken} ${vaultType} ${role} role`,
+          address: proxyAddress,
+          getters: [getter],
+          expected: constructorArgs[i],
+          required: true,
+        })),
+    ),
+  );
+
+  if (roleErrors.length) {
+    throw new Error(
+      `On-chain vault roles validation failed:\n${roleErrors.join('\n')}`,
+    );
+  }
+
   console.log('upgradeContracts', upgradeContracts);
   console.log('total upgrades', upgradeContracts.length);
 
@@ -388,12 +425,17 @@ const upgradeAllVaults = async (
       contractType,
       contractName,
       proxyAddress,
+      constructorArgs,
     } = upgradeContract;
 
     if (overrideImplementation) {
       console.log(
         `Using override implementation (${overrideImplementation}) for ${mToken}`,
       );
+      deployments.push({
+        ...upgradeContract,
+        implementationAddress: overrideImplementation,
+      });
       continue;
     }
 
@@ -404,6 +446,7 @@ const upgradeAllVaults = async (
       {
         redeployImplementation: 'onchange',
         getTxResponse: true,
+        constructorArgs,
       },
     );
 
@@ -414,7 +457,12 @@ const upgradeAllVaults = async (
 
     if (deployedNew) {
       logDeploy(contractName, contractType, implementationAddress);
-      await etherscanVerify(hre, implementationAddress).catch((e) => {
+      await etherscanVerify(
+        hre,
+        implementationAddress,
+        contractName,
+        ...constructorArgs,
+      ).catch((e) => {
         console.error('Verification failed', e);
       });
     } else {
@@ -431,7 +479,7 @@ const upgradeAllVaults = async (
 
   const failedUpgrades: {
     mToken: MTokenName;
-    vaultType: VaultType;
+    vaultType: V2VaultType;
     error: string;
   }[] = [];
 

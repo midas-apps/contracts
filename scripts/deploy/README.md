@@ -36,14 +36,16 @@ The flow is:
 Run:
 
 ```bash
-yarn deploy:generate:contracts
+yarn deploy:generate:mproduct
 ```
 
 Follow the interactive prompts (token name, symbol, contract prefix, roles prefix, etc.).
 
+This only registers the product in the off-chain registries (`config/types/tokens.ts`, `helpers/contracts.ts`, `helpers/roles.ts`, `helpers/mtokens-metadata.ts`). No per-product contracts are generated: v2 deploys the base contracts with the product roles passed as constructor args.
+
 After generation:
 
-- Review the git diff and ensure the generated contracts/config look correct.
+- Review the git diff and ensure the registries look correct.
 
 ### Step 2 — Prepare deployment config
 
@@ -88,6 +90,17 @@ Also confirm verification settings in `.env` are correct if you expect automatic
 - `--mtoken <mToken_name>`: required for product deployment scripts
 - `--ptoken <pToken_name>`: required for payment-token specific scripts
 - `--lib <library_name>`: required for library deployment script
+- `--vault-version <v1|v2>`: required for scripts that work with both vault versions (see below)
+
+### Vault versions
+
+`config/constants/addresses.ts` stores v1 vaults under the base keys (`depositVault`, `redemptionVaultSwapper`, ...) and v2 vaults under `V2`-postfixed keys (`depositVaultV2`, `redemptionVaultV2`, ...).
+
+- Vault deployment, vault upgrades, codegen and the v2-only post-deploy commands always work with v2 vaults and take no version flag. New vault addresses go under the `V2` keys (the deploy script prints the exact key).
+- Scripts that support both versions require `--vault-version`: `deploy:post:add:ptokens`, `deploy:post:grant:roles`, `deploy:post:set:greenlist`, `deploy:post:set:sanctionsList`, `deploy:post:set:aaveconfig`, `deploy:post:set:morphoconfig`, `deploy:post:add:addressbook`.
+- Swapper and BUIDL redemption vaults exist only in v1. With `--vault-version v2` (and in v2-only commands) config entries that reference them fail with an error.
+- With ad-hoc `yarn hardhat runscript`, `--vault-version` is optional; without it `getCurrentAddresses` returns no vault addresses.
+- v1 vault upgrades are done from the `main` branch.
 
 ### Important: persist deployed addresses
 
@@ -98,6 +111,8 @@ Add new addresses to the repo configuration before proceeding to the next step. 
 ### Deployment order
 
 #### A If deploying to a brand new network
+
+Add `accessControl`, `pauseManager` and `timelockManager` entries for the network to `scripts/deploy/configs/network-configs.ts` (default delay, unpause delay, security council, max pending operations). The deploy scripts fail if they are missing.
 
 Deploy access control:
 
@@ -131,8 +146,16 @@ yarn deploy:dv:ustb
 # Redemption vault (pick the one that matches your vault type)
 yarn deploy:rv
 # or
-yarn deploy:rv:swapper
+yarn deploy:rv:ustb
+# or
+yarn deploy:rv:aave
+# or
+yarn deploy:rv:morpho
+# or
+yarn deploy:rv:mtoken
 ```
+
+Add each deployed vault address under its `V2` key in `config/constants/addresses.ts`.
 
 #### Libraries
 
@@ -160,9 +183,9 @@ The USYC Teller address is taken from `usycTellerContracts`. Deploy the library 
 
 ```bash
 yarn hardhat deploy:rv:usyc --network <network> --mtoken <mToken>
-# add `redemptionVaultUsyc` to the addresses file
+# add `redemptionVaultUsycV2` to the addresses file
 yarn hardhat deploy:dv:usyc --network <network> --mtoken <mToken>
-# add `depositVaultUsyc` to the addresses file
+# add `depositVaultUsycV2` to the addresses file
 ```
 
 Config keys are `rvUsyc` (`type: 'USYC'`, optional `depositVault`, `anticipatedFeeRate`) and `dvUsyc` (`type: 'USYC'`, optional `redemptionVault`, `anticipatedFeeRate`). `depositVault` and `redemptionVault` take either an address or a `{ mToken, depositVaultType | redemptionVaultType }` reference.
@@ -189,15 +212,37 @@ yarn deploy:feed:ptoken --network <network> --ptoken <ptoken>
 ### Standard commands for new mProducts
 
 ```bash
-yarn deploy:post:grant:roles --network <network_name> --mtoken <mToken>
+yarn deploy:post:grant:roles --network <network_name> --mtoken <mToken> --vault-version v2
 yarn deploy:post:set:price --network <network_name> --mtoken <mToken>
-yarn deploy:post:add:ptokens --network <network_name> --mtoken <mToken>
+yarn deploy:post:add:ptokens --network <network_name> --mtoken <mToken> --vault-version v2
 ```
 
 ### Optional post-deployment (only if explicitly required)
 
-- Waive vault fee for an address
-- Pause selected functions on vaults
+Each command reads its section of the product `postDeploy` config. Include `--network` and `--mtoken`.
+
+Both vault versions (add `--vault-version <v1|v2>`):
+
+- `yarn deploy:post:set:greenlist`: enable/disable vault greenlist
+- `yarn deploy:post:set:sanctionsList`: set the network sanctions list on vaults
+- `yarn deploy:post:set:aaveconfig` / `yarn deploy:post:set:morphoconfig`: Aave / Morpho vault settings
+- `yarn deploy:post:add:addressbook`: add product addresses to the address book
+
+v2 vaults only:
+
+- `yarn deploy:post:set:waived`: waive vault fee for an address (`addFeeWaived`)
+- `yarn deploy:post:pause:functions`: pause selected vault functions via the pause manager (`pauseFunctions`)
+- `yarn deploy:post:set:instantlimits`: instant operation rate limit windows (`instantLimits`)
+- `yarn deploy:post:set:mintratelimits`: mToken mint rate limit buckets and wallet buckets (`mintRateLimits`)
+- `yarn deploy:post:set:tokenconfig`: mToken max supply cap and clawback receiver (`tokenConfig`)
+- `yarn deploy:post:set:freefromminamount`: exempt accounts from vault min amount (`freeFromMinAmount`)
+- `yarn deploy:post:set:preferloanliquidity`: redemption vault loan liquidity preference (`preferLoanLiquidity`)
+- `yarn deploy:post:set:mtokenconfig`: `depositVaultMToken` auto-invest settings (`setMTokenConfig`)
+- `yarn deploy:post:set:ustbconfig`: `depositVaultUstb` auto-invest settings (`setUstbConfig`)
+
+Network level (no `--mtoken`):
+
+- `yarn deploy:post:set:userfacingroles`: mark all greenlisted and min balance exempt roles as user facing on access control
 
 ## Troubleshooting
 

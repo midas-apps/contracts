@@ -514,6 +514,7 @@ const sendAndWaitForCustomTxSignDirect = async (
       | 'update-lz-oapp-config'
       | 'axelar-wire-tokens'
       | 'axelar-update-config'
+      | 'update-token'
       | 'deployer';
     subAction?:
       | 'add-payment-token'
@@ -530,7 +531,17 @@ const sendAndWaitForCustomTxSignDirect = async (
       | 'set-morpho-vault'
       | 'set-morpho-deposits-enabled'
       | 'set-usyc-deposits-enabled'
-      | 'set-auto-invest-fallback-enabled';
+      | 'set-auto-invest-fallback-enabled'
+      | 'set-instant-limit'
+      | 'set-mint-rate-limit'
+      | 'set-wallet-bucket'
+      | 'set-max-supply-cap'
+      | 'set-clawback-receiver'
+      | 'free-from-min-amount'
+      | 'set-prefer-loan-liquidity'
+      | 'set-mtoken-deposits-enabled'
+      | 'set-ustb-deposits-enabled'
+      | 'set-user-facing-roles';
   },
   safeMiddlewareWallet?: string,
   confirmations = 2,

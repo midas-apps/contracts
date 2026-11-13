@@ -3,7 +3,17 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from './deploy/common/types';
 
 import { MTokenName, Network } from '../config';
-import { midasAddressesPerNetwork } from '../config/constants/addresses';
+import {
+  midasAddressesPerNetwork,
+  selectNetworkVaultVersion,
+  V2VaultType,
+  VaultType,
+} from '../config/constants/addresses';
+import {
+  getCommonContractNames,
+  getV2VaultConstructorArgs,
+  vaultTypeToContractName,
+} from '../helpers/contracts';
 import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
@@ -54,7 +64,11 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     return;
   }
 
-  const networkAddresses = midasAddressesPerNetwork[network];
+  // v1 vault sources are not in this repo, so only v2 vaults are verified
+  const networkAddresses = selectNetworkVaultVersion(
+    midasAddressesPerNetwork[network],
+    'v2',
+  );
   if (!networkAddresses) {
     throw new Error(`No addresses found for network "${network}".`);
   }
@@ -79,8 +93,17 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       console.log(`\n--- ${productName}.${label} @ ${address} ---`);
       await logDeployProxy(hre, `${productName}.${label}`, address);
 
-      // 1) Verify the implementation contract behind the proxy.
-      const implVerified = await tryEtherscanVerifyImplementation(hre, address);
+      // 1) Verify the implementation contract behind the proxy. Vaults have
+      //    immutable role constructor args, so pass them explicitly.
+      const vaultContractKey = vaultTypeToContractName(label as VaultType);
+      const implVerified = vaultContractKey
+        ? await tryEtherscanVerifyImplementation(
+            hre,
+            address,
+            getCommonContractNames()[vaultContractKey] as string,
+            ...getV2VaultConstructorArgs(productName, label as V2VaultType),
+          )
+        : await tryEtherscanVerifyImplementation(hre, address);
       if (!implVerified) {
         failures.push(`${productName}.${label} (impl) @ ${address}`);
       }

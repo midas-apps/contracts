@@ -42,7 +42,7 @@ function canonicalSignature(fn: any): string {
 /**
  * Reinitializers declared on an (already flattened) contract ABI. Detected by
  * the `initializeV{N}` naming convention, where `N` equals the `reinitializer(N)`
- * version (enforced by scripts/upgrades/generate_deviationReinitializer.ts).
+ * version.
  */
 export function getReinitializers(abi: any[]): Reinitializer[] {
   const out: Reinitializer[] = [];

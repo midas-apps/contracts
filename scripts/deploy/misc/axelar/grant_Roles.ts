@@ -32,13 +32,17 @@ const func: DeployFunction = async (
   );
 
   const rolesToGrant = [roles.minter, roles.burner];
+  const account = mTokenAddresses.axelar.manager!;
 
   await sendAndWaitForCustomTxSign(
     hre,
-    await contract.populateTransaction.grantRoleMult(rolesToGrant, [
-      mTokenAddresses.axelar.manager!,
-      mTokenAddresses.axelar.manager!,
-    ]),
+    await contract.populateTransaction.grantRoleMult(
+      rolesToGrant.map((role) => ({
+        role,
+        account,
+        delay: 0,
+      })),
+    ),
     {
       action: 'update-ac',
       comment: `grant required ${mToken} axelar roles`,

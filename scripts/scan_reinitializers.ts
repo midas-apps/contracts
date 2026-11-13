@@ -20,7 +20,7 @@ import {
 } from './upgrades/common/reinitializer';
 
 import { ENV, Network, verifyConfig } from '../config';
-import { getCurrentAddresses } from '../config/constants/addresses';
+import { getRawCurrentAddresses } from '../config/constants/addresses';
 import { delay } from '../helpers/utils';
 
 const ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
@@ -799,7 +799,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   log(`== scan_reinitializers start ==`);
   log(`network=${network} chainId=${chainId}`);
 
-  const addresses = getCurrentAddresses(hre);
+  // raw addresses: scans both v1 (base keys) and v2 (`*V2` keys) vaults
+  const addresses = getRawCurrentAddresses(hre);
   if (!addresses) {
     throw new Error(`No addresses configured for network ${network}`);
   }

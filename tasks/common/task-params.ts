@@ -6,6 +6,11 @@ import {
   LibraryName,
   libraryNames,
 } from '../../config/constants/addresses';
+import {
+  VaultVersion,
+  isVaultVersion,
+  vaultVersions,
+} from '../../config/constants/vaults';
 import { isMTokenName, isPaymentTokenName } from '../../helpers/utils';
 import type {
   AggregatorType,
@@ -22,6 +27,16 @@ export type ParamFnBase<TReturn = unknown> = () => {
     hre: HardhatRuntimeEnvironment,
     taskArgs: Record<string, unknown>,
   ) => TReturn;
+  /**
+   * When false, the param is not registered as a CLI flag
+   * (used for values fixed per task). Default: true
+   */
+  cli?: boolean;
+  /** Called by runScript before the script is loaded */
+  hydrate?: (
+    hre: HardhatRuntimeEnvironment,
+    taskArgs: Record<string, unknown>,
+  ) => void;
 };
 
 type ValueOrUndefined<T> = T | undefined;
@@ -115,6 +130,23 @@ export const actionParam: ParseParamFn<string> = (optional) => () => {
         throw new Error('Action parameter not found');
       }
       return action;
+    },
+  };
+};
+
+export const upgradeIdParam: ParseParamFn<string> = (optional) => () => {
+  const isOptional = optional ?? false;
+  return {
+    isOptional,
+    name: 'upgrade',
+    description: 'Upgrade id (key of upgradeConfigs.upgrades)',
+    defaultValue: undefined,
+    parse: (hre, _) => {
+      const upgradeId = hre.upgradeId;
+      if (!upgradeId && !isOptional) {
+        throw new Error('Upgrade parameter not found');
+      }
+      return upgradeId;
     },
   };
 };
@@ -218,6 +250,16 @@ export const skipValidationParam: ParseParamFn<boolean> = (optional) => () => {
   };
 };
 
+export const deploymentConfigParam: ParseParamFn<string> =
+  (optional) => () => ({
+    isOptional: optional ?? true,
+    name: 'deploymentConfig',
+    description: 'Named deployment config profile (for example: mfone-unloop)',
+    defaultValue: undefined,
+    // validated and hydrated on hre by runScript
+    parse: (hre, _) => hre.deploymentConfig,
+  });
+
 export const forkingNetworkParam: ParseParamFn<Network> = (optional) => () => {
   const isOptional = optional ?? true;
   return {
@@ -230,3 +272,58 @@ export const forkingNetworkParam: ParseParamFn<Network> = (optional) => () => {
     },
   };
 };
+
+const hydrateVaultVersion = (
+  hre: HardhatRuntimeEnvironment,
+  value: unknown,
+  isOptional: boolean,
+) => {
+  if (value === undefined) {
+    if (!isOptional) throw new Error('vaultVersion parameter not found');
+    return;
+  }
+
+  if (!isVaultVersion(value)) {
+    throw new Error(
+      `Invalid vaultVersion "${value}". Expected one of: ${vaultVersions.join(
+        ', ',
+      )}`,
+    );
+  }
+
+  hre.vaultVersion = value;
+};
+
+/**
+ * `--vault-version v1|v2`: selects which vaults the script works with.
+ * Used by scripts that support both v1 and v2 vaults
+ */
+export const vaultVersionParam: ParseParamFn<VaultVersion> =
+  (optional) => () => {
+    const isOptional = optional ?? false;
+    return {
+      isOptional,
+      name: 'vaultVersion',
+      description: `Vault version (${vaultVersions.join(' | ')})`,
+      defaultValue: undefined,
+      hydrate: (hre, taskArgs) =>
+        hydrateVaultVersion(hre, taskArgs.vaultVersion, isOptional),
+      parse: (hre, _) => hre.vaultVersion,
+    };
+  };
+
+/**
+ * Fixes the vault version for scripts that only support v2 vaults
+ * (not exposed as a CLI flag)
+ */
+export const v2VaultsOnlyParam: ParseParamFn<VaultVersion> = () => () => ({
+  isOptional: true,
+  cli: false,
+  name: 'vaultVersion',
+  description: 'Vault version (fixed to v2)',
+  defaultValue: undefined,
+  hydrate: (hre) => {
+    hre.vaultVersion = 'v2';
+  },
+  parse: (hre, _) => hre.vaultVersion,
+});
