@@ -1,3 +1,4 @@
+import { hours } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
@@ -135,6 +136,76 @@ export const mGLOeuroDeploymentConfig: DeploymentConfig = {
             vaults: [],
           },
         ],
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          owner: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            overrides: {
+              ink: {
+                limit: parseUnits('1000000'),
+                window: hours(24),
+              },
+            },
+          },
+        },
+      },
+    },
+    [chainIds.ink]: {
+      dv: {
+        type: 'REGULAR',
+        enableSanctionsList: false,
+        feeReceiver: '0xC903840d5E314caA407C6Bc5792746b5282BBFa7',
+        tokensReceiver: '0x67887dd84E4778d8372BCD296E00995c59C00e52',
+        instantDailyLimit: parseUnits('10000000', 18),
+        instantFee: parseUnits('0', 2),
+        variationTolerance: parseUnits('2', 2),
+        minAmount: parseUnits('0', 18),
+        minMTokenAmountForFirstDeposit: parseUnits('0', 18),
+        maxSupplyCap: constants.MaxUint256,
+      },
+      rvSwapper: {
+        type: 'SWAPPER',
+        enableSanctionsList: false,
+        feeReceiver: '0x67887dd84E4778d8372BCD296E00995c59C00e52',
+        tokensReceiver: '0x67887dd84E4778d8372BCD296E00995c59C00e52',
+        requestRedeemer: '0x7Ec5C012d2f140BE7f55c43777B399442ec8AF51',
+        instantDailyLimit: parseUnits('500000', 18),
+        instantFee: parseUnits('0.5', 2),
+        variationTolerance: parseUnits('2', 2),
+        minAmount: parseUnits('1', 18),
+        fiatFlatFee: parseUnits('30', 18),
+        fiatAdditionalFee: parseUnits('0.1', 2),
+        minFiatRedeemAmount: parseUnits('1000', 18),
+        liquidityProvider: 'dummy',
+        swapperVault: 'dummy',
+      },
+      postDeploy: {
+        grantRoles: {
+          tokenManagerAddress: '0x462C735196AF2277deE9f15Ac60B45E7Fe8415AA',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0xa301F0eD658f72e0520fc47b42888bc985eF600c',
+        },
+        greenlist: {
+          depositVault: true,
+          redemptionVaultSwapper: true,
+        },
+        pauseFunctions: {
+          depositVault: ['depositRequest', 'depositRequestWithCustomRecipient'],
+          redemptionVaultSwapper: ['redeemFiatRequest'],
+        },
+        setRoundData: {
+          data: parseUnits('1', 8),
+        },
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          owner: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('500000'),
+              window: hours(24),
+            },
+          },
+        },
       },
     },
   },

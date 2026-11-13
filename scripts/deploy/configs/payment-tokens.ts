@@ -1027,6 +1027,15 @@ export const paymentTokenDeploymentConfigs: PaymentTokenDeploymentConfig = {
         },
       },
     },
+    [chainIds.xlayer]: {
+      usdc: {
+        dataFeed: {
+          healthyDiff: 25 * 60 * 60,
+          minAnswer: parseUnits('0.997', 8),
+          maxAnswer: parseUnits('1.003', 8),
+        },
+      },
+    },
     [chainIds.optimism]: {
       weth: {
         customAggregator: {

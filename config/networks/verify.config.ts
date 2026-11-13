@@ -165,4 +165,18 @@ export const verifyConfig: VerifyConfigPerNetwork = {
     apiKey: ENV.BLOCKSCOUT_API_KEY,
     browserUrl: 'https://robinhoodchain.blockscout.com',
   },
+  ink: {
+    type: 'custom',
+    apiUrl: 'https://api.blockscout.com/57073/api',
+    apiKey: ENV.BLOCKSCOUT_API_KEY,
+    browserUrl: 'https://explorer.inkonchain.com',
+  },
+  xlayer: [
+    {
+      type: 'custom',
+      apiUrl:
+        'https://www.oklink.com/api/v5/explorer/contract/verify-source-code-plugin/XLAYER',
+      browserUrl: 'https://www.oklink.com/xlayer',
+    },
+  ],
 };

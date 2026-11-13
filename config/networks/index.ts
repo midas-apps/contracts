@@ -64,6 +64,8 @@ const defaultRpcUrls: ConfigPerNetwork<RpcUrl> = {
     : `https://optimism-mainnet.infura.io/v3/${INFURA_KEY}`,
   robinhood: 'https://rpc.mainnet.chain.robinhood.com',
   arc: 'https://rpc.mainnet.arc.io',
+  ink: 'https://rpc-gel.inkonchain.com',
+  xlayer: 'https://rpc.xlayer.tech',
 };
 
 export const rpcUrls: ConfigPerNetwork<RpcUrl> = Object.entries(
@@ -107,6 +109,8 @@ export const chainIds: ConfigPerNetwork<number> = {
   optimism: 10,
   robinhood: 4663,
   arc: 5042,
+  ink: 57073,
+  xlayer: 196,
 };
 
 export const mnemonics: ConfigPerNetwork<string | undefined> = {
@@ -136,6 +140,8 @@ export const mnemonics: ConfigPerNetwork<string | undefined> = {
   optimism: MNEMONIC_PROD,
   robinhood: MNEMONIC_PROD,
   arc: MNEMONIC_PROD,
+  ink: MNEMONIC_PROD,
+  xlayer: MNEMONIC_PROD,
 };
 
 export const gases: PartialConfigPerNetwork<number | undefined> = {};
@@ -167,6 +173,7 @@ export const layerZeroBlockFinality: PartialConfigPerNetwork<number> = {
   zerog: 6000,
   base: 600,
   robinhood: 3600,
+  ink: 900,
 };
 
 export const axelarChainNames: PartialConfigPerNetwork<string> = {
@@ -197,6 +204,7 @@ export const layerZeroEids: PartialConfigPerNetwork<EndpointId> = {
   monad: EndpointId.MONAD_V2_MAINNET,
   optimism: EndpointId.OPTIMISM_V2_MAINNET,
   robinhood: EndpointId.ROBINHOOD_V2_MAINNET,
+  ink: EndpointId.INK_V2_MAINNET,
 };
 
 export const layerZeroEidToNetwork = Object.fromEntries(

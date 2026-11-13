@@ -1,12 +1,19 @@
+import { Etherscan } from '@nomicfoundation/hardhat-verify/etherscan';
+import { NetworkRequestError } from '@nomicfoundation/hardhat-verify/internal/errors';
 import { LibraryToAddress } from '@nomicfoundation/hardhat-verify/internal/solc/artifacts';
+import { ContractStatus } from '@nomicfoundation/hardhat-verify/internal/sourcify.types';
 import {
   resolveConstructorArguments,
   resolveLibraries,
 } from '@nomicfoundation/hardhat-verify/internal/utilities';
-import { task } from 'hardhat/config';
+import { Sourcify } from '@nomicfoundation/hardhat-verify/sourcify';
+import { subtask, task } from 'hardhat/config';
+import { HardhatPluginError } from 'hardhat/plugins';
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { chainIds, ENV, Network, verifyConfig } from '../config';
 import {
+  delay,
   etherscanVerify,
   etherscanVerifyImplementation,
 } from '../helpers/utils';
@@ -92,6 +99,229 @@ task('verify').setAction(
   },
 );
 
+const sourcifyRequest = async (url: string, body?: unknown) => {
+  const res = await fetch(
+    url,
+    body
+      ? {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        }
+      : undefined,
+  ).catch((e) => {
+    throw new NetworkRequestError(e);
+  });
+  if (res.status === 429 || res.status >= 500) {
+    throw new NetworkRequestError(new Error(`${url}: HTTP ${res.status}`));
+  }
+  return { status: res.status, json: await res.json() };
+};
+
+Sourcify.prototype.isVerified = async function (address) {
+  const { json } = await sourcifyRequest(
+    `${this.apiUrl}/v2/contract/${this.chainId}/${address}`,
+  );
+  if (json.match === 'exact_match') return ContractStatus.PERFECT;
+  if (json.match === 'match') return ContractStatus.PARTIAL;
+  return false;
+};
+
+subtask('verify:sourcify-attempt-verification').setAction(
+  async (
+    { address, contractInformation, verificationInterface: sourcify },
+    hre,
+  ) => {
+    const { sourceName, contractName } = contractInformation;
+    const stdJsonInput = await hre.run('verify:etherscan-get-minimal-input', {
+      sourceName,
+    });
+    stdJsonInput.settings.libraries = contractInformation.libraries;
+
+    const api = `${sourcify.apiUrl}/v2/verify`;
+    const { json: submitted } = await sourcifyRequest(
+      `${api}/${sourcify.chainId}/${address}`,
+      {
+        stdJsonInput,
+        compilerVersion: contractInformation.solcLongVersion,
+        contractIdentifier: `${sourceName}:${contractName}`,
+      },
+    );
+    if (!submitted.verificationId) {
+      return { success: false, message: JSON.stringify(submitted) };
+    }
+
+    for (let i = 0; i < 100; i++) {
+      await delay(3_000);
+      const { json: job } = await sourcifyRequest(
+        `${api}/${submitted.verificationId}`,
+      );
+      if (!job.isJobCompleted) continue;
+      if (!job.contract?.match) {
+        return {
+          success: false,
+          message: job.error?.message ?? JSON.stringify(job),
+        };
+      }
+      console.log(
+        `Successfully verified contract ${contractName} on Sourcify (${job.contract.match}).\n`,
+      );
+      return {
+        success: true,
+        message: 'Contract successfully verified on Sourcify',
+      };
+    }
+    throw new NetworkRequestError(
+      new Error(`Sourcify job ${submitted.verificationId} is still running`),
+    );
+  },
+);
+
+const isOklink = (etherscan: Etherscan) =>
+  etherscan.apiUrl.includes('oklink.com');
+
+const isVerifiedOnOklink = async (etherscan: Etherscan, address: string) => {
+  const chain = etherscan.apiUrl.split('/').pop();
+  const url = `https://www.oklink.com/api/v5/explorer/contract/verify-contract-info?chainShortName=${chain}&contractAddress=${address}`;
+  const res = await fetch(url).catch((e) => {
+    throw new NetworkRequestError(e);
+  });
+  if (!res.ok) {
+    throw new NetworkRequestError(new Error(`${url}: HTTP ${res.status}`));
+  }
+  const json = await res.json();
+  return json.data?.length > 0;
+};
+
+const oklinkStatus = (verified: boolean) =>
+  ({
+    status: verified ? 1 : 0,
+    message: verified ? 'Pass - Verified' : 'Fail - Unable to verify',
+    isPending: () => false,
+    isFailure: () => !verified,
+    isSuccess: () => verified,
+    isBytecodeMissingInNetworkError: () => false,
+    isAlreadyVerified: () => false,
+    isOk: () => verified,
+  } as Awaited<ReturnType<Etherscan['getVerificationStatus']>>);
+
+const { isVerified, verify, getVerificationStatus } = Etherscan.prototype;
+
+Etherscan.prototype.isVerified = async function (address) {
+  return isOklink(this)
+    ? isVerifiedOnOklink(this, address)
+    : isVerified.call(this, address);
+};
+
+Etherscan.prototype.verify = async function (address, ...rest) {
+  const response = await verify.call(this, address, ...rest);
+  return isOklink(this)
+    ? ({ ...response, message: address } as typeof response)
+    : response;
+};
+
+Etherscan.prototype.getVerificationStatus = async function (guid) {
+  if (!isOklink(this)) return getVerificationStatus.call(this, guid);
+  for (let i = 0; i < 24; i++) {
+    await delay(5_000);
+    if (await isVerifiedOnOklink(this, guid).catch(() => false)) {
+      return oklinkStatus(true);
+    }
+  }
+  return oklinkStatus(false);
+};
+
+const VERIFY_ATTEMPTS = 5;
+const VERIFY_RETRY_DELAY_MS = 5_000;
+
+const INCONCLUSIVE_ERRORS = [
+  'NetworkRequestError',
+  'ContractStatusPollingResponseNotOkError',
+  'ContractStatusPollingInvalidStatusCodeError',
+  'ContractVerificationInvalidStatusCodeError',
+  'ContractVerificationMissingBytecodeError',
+];
+
+const isInconclusive = (e: Error) =>
+  INCONCLUSIVE_ERRORS.includes(e.name) || /rate limit/i.test(e.message);
+
+const verifyUntilVerdict = async (
+  run: () => Promise<unknown>,
+  explorer: string,
+) => {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await run();
+      return;
+    } catch (e) {
+      if (!(e instanceof Error)) throw e;
+      if (e.name === 'ContractAlreadyVerifiedError') return;
+      if (!isInconclusive(e) || attempt === VERIFY_ATTEMPTS) throw e;
+      const wait = VERIFY_RETRY_DELAY_MS * (1 + Math.random());
+      console.warn(
+        `${explorer}: ${e.message}\n` +
+          `No verdict yet, checking again in ${Math.round(
+            wait / 1000,
+          )}s (attempt ${attempt + 1}/${VERIFY_ATTEMPTS})...\n`,
+      );
+      await delay(wait);
+    }
+  }
+};
+
+const stripMetadata = (hex: string) =>
+  hex.slice(0, hex.length - (parseInt(hex.slice(-4), 16) + 2) * 2);
+
+const matchesIgnoringImmutables = (reference: string, deployed: string) => {
+  if (!reference.length || reference.length !== deployed.length) return false;
+  for (let i = 0; i < reference.length; i++) {
+    if (reference[i] !== deployed[i] && reference[i] !== '0') return false;
+  }
+  return true;
+};
+
+const resolveContractFqn = async (
+  hre: HardhatRuntimeEnvironment,
+  address: string,
+) => {
+  const code = await hre.ethers.provider.getCode(address);
+  if (code === '0x') return undefined;
+
+  const deployed = code.slice(2);
+  const candidates: { fqn: string; bytecode: string }[] = [];
+  for (const fqn of await hre.artifacts.getAllFullyQualifiedNames()) {
+    const bytecode = (
+      await hre.artifacts.readArtifact(fqn)
+    ).deployedBytecode.slice(2);
+    if (
+      matchesIgnoringImmutables(
+        stripMetadata(bytecode),
+        stripMetadata(deployed),
+      )
+    ) {
+      candidates.push({ fqn, bytecode });
+    }
+  }
+
+  const exact = candidates.filter(({ bytecode }) =>
+    matchesIgnoringImmutables(bytecode, deployed),
+  );
+  const matches = (exact.length ? exact : candidates).map(({ fqn }) => fqn);
+
+  if (matches.length !== 1) {
+    throw new Error(
+      matches.length
+        ? `Bytecode at ${address} matches several contracts, pass one as --contract:\n${matches.join(
+            '\n',
+          )}`
+        : `No compiled contract matches the bytecode at ${address} on ${hre.network.name}. ` +
+          `Compile the commit it was deployed from.`,
+    );
+  }
+
+  return matches[0];
+};
+
 // override hardhat verify:verify task
 task('verify:verify').setAction(
   async (
@@ -123,6 +353,12 @@ task('verify:verify').setAction(
         .map((config) => config.browserUrl)
         .join(', ')}\n`,
     );
+
+    const contract =
+      args.contract ??
+      (args.address ? await resolveContractFqn(hre, args.address) : undefined);
+    const results: string[] = [];
+    let failed = false;
 
     for (const config of configs) {
       // reset verify configs
@@ -188,9 +424,27 @@ task('verify:verify').setAction(
         throw new Error(`Unknown verify config type`);
       }
 
-      await runSuper(args);
+      try {
+        await verifyUntilVerdict(
+          () => runSuper({ ...args, contract }),
+          config.browserUrl,
+        );
+        results.push(`${config.browserUrl}: verified`);
+      } catch (e) {
+        failed = true;
+        results.push(
+          `${config.browserUrl}: FAILED\n${
+            e instanceof Error ? e.message : String(e)
+          }`,
+        );
+      }
     }
 
-    console.log('Verification completed');
+    const summary = `Verification of ${args.address}:\n${results.join('\n')}`;
+    if (failed) {
+      throw new HardhatPluginError('verify', summary);
+    }
+
+    console.log(summary);
   },
 );
