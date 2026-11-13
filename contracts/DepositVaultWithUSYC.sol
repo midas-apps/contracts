@@ -397,7 +397,7 @@ contract DepositVaultWithUSYC is DepositVault {
     ) private {
         require(autoInvestFallbackEnabled, AutoInvestFailed(err));
 
-        IERC20(_usdc).safeApprove(address(_teller), 0);
+        IERC20(_usdc).forceApprove(address(_teller), 0);
         IERC20(_usdc).safeTransfer(tokensReceiver, _assetAmount);
     }
 }

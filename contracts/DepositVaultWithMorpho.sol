@@ -229,7 +229,7 @@ contract DepositVaultWithMorpho is DepositVault {
             require(shares > 0, ZeroShares(shares));
         } catch (bytes memory err) {
             if (autoInvestFallbackEnabled) {
-                IERC20(tokenIn).safeApprove(address(vault), 0);
+                IERC20(tokenIn).forceApprove(address(vault), 0);
                 IERC20(tokenIn).safeTransfer(tokensReceiver, transferredAmount);
             } else {
                 revert AutoInvestFailed(err);
