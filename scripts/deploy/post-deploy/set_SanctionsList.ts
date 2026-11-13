@@ -4,7 +4,7 @@ import { MTokenName } from '../../../config';
 import {
   getCurrentAddresses,
   sanctionListContracts,
-  v1VaultTypes,
+  allVaultTypes,
 } from '../../../config/constants/addresses';
 import { getChainOrThrow } from '../../../helpers/utils';
 import { DeployFunction } from '../common/types';
@@ -30,7 +30,7 @@ const func: DeployFunction = async (
   }
 
   // base keys hold vaults of the selected `--vault-version`
-  const vaultEntries = v1VaultTypes.map((type) => ({
+  const vaultEntries = allVaultTypes.map((type) => ({
     type,
     address: tokenAddresses[type],
   }));

@@ -881,6 +881,180 @@ redemptionVaultSuits(
           expect(sharesAfter).to.be.lt(sharesBefore);
         });
 
+        describe('vault fee is not obtained from the liquidity sources', () => {
+          // 1000 mTBILL at 1$ with 1% instant fee: 990 USDC payout, 10 USDC fee
+          const redeemWithLiquidity = async ({
+            usdc = 0,
+            shares = 0,
+            lpMToken = 0,
+            preferLoanLiquidity = false,
+          }: {
+            usdc?: number;
+            shares?: number;
+            lpMToken?: number;
+            preferLoanLiquidity?: boolean;
+          }) => {
+            const fixture = await loadFixture(defaultDeploy);
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVaultWithMorpho,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              morphoVaultMock,
+              loanLp,
+              mTokenLoan,
+              redemptionVaultLoanSwapper,
+            } = fixture;
+
+            await mintToken(stableCoins.usdc, redemptionVaultWithMorpho, usdc);
+            await morphoVaultMock.mint(
+              redemptionVaultWithMorpho.address,
+              parseUnits(shares.toString(), 8),
+            );
+            await mintToken(mTokenLoan, loanLp, lpMToken);
+            await approveBase18(
+              loanLp,
+              mTokenLoan,
+              redemptionVaultWithMorpho,
+              lpMToken,
+            );
+            await mintToken(stableCoins.usdc, redemptionVaultLoanSwapper, 1000);
+            await addPaymentTokenTest(
+              { vault: redemptionVaultLoanSwapper, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await mintToken(mTBILL, owner, 1000);
+            await approveBase18(owner, mTBILL, redemptionVaultWithMorpho, 1000);
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithMorpho, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithMorpho, owner },
+              preferLoanLiquidity,
+            );
+
+            const loanRequestId =
+              await redemptionVaultWithMorpho.currentLoanRequestId();
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithMorpho,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                additionalLiquidity: async () =>
+                  morphoVaultMock.balanceOf(redemptionVaultWithMorpho.address),
+              },
+              stableCoins.usdc,
+              1000,
+            );
+
+            expect(
+              await stableCoins.usdc.balanceOf(
+                redemptionVaultWithMorpho.address,
+              ),
+            ).eq(0);
+
+            return {
+              ...fixture,
+              loanRequestId,
+              sharesUsed: parseUnits(shares.toString(), 8).sub(
+                await morphoVaultMock.balanceOf(
+                  redemptionVaultWithMorpho.address,
+                ),
+              ),
+              loanRequest: await redemptionVaultWithMorpho.loanRequests(
+                loanRequestId,
+              ),
+            };
+          };
+
+          it('preferLoanLiquidity=false: Morpho covers only the payout', async () => {
+            const { redemptionVaultWithMorpho, loanRequestId, sharesUsed } =
+              await redeemWithLiquidity({ shares: 2000, lpMToken: 1000 });
+
+            expect(sharesUsed).eq(parseUnits('990', 8));
+            expect(await redemptionVaultWithMorpho.currentLoanRequestId()).eq(
+              loanRequestId,
+            );
+          });
+
+          it('preferLoanLiquidity=false: vault has the payout but not the payout + fee, Morpho and loan LP are untouched', async () => {
+            const {
+              redemptionVaultWithMorpho,
+              loanRequestId,
+              sharesUsed,
+              mTokenLoan,
+              loanLp,
+            } = await redeemWithLiquidity({
+              usdc: 990,
+              shares: 2000,
+              lpMToken: 1000,
+            });
+
+            expect(sharesUsed).eq(0);
+            expect(await redemptionVaultWithMorpho.currentLoanRequestId()).eq(
+              loanRequestId,
+            );
+            expect(await mTokenLoan.balanceOf(loanLp.address)).eq(
+              parseUnits('1000'),
+            );
+          });
+
+          it('preferLoanLiquidity=false: Morpho is drained and loan LP covers only the missing payout', async () => {
+            const { sharesUsed, loanRequest } = await redeemWithLiquidity({
+              usdc: 100,
+              shares: 700,
+              lpMToken: 1000,
+            });
+
+            // 990 payout - 100 USDC - 700 from Morpho = 190 shortfall,
+            // LP fee share is 10 * 190 / 990 truncated to 8 decimals
+            expect(sharesUsed).eq(parseUnits('700', 8));
+            expect(loanRequest.amountTokenOut).eq(parseUnits('190'));
+            expect(loanRequest.amountFee).eq(parseUnits('1.91919191'));
+          });
+
+          it('preferLoanLiquidity=true: loan LP covers the payout and Morpho is untouched', async () => {
+            const { sharesUsed, loanRequest } = await redeemWithLiquidity({
+              shares: 2000,
+              lpMToken: 1000,
+              preferLoanLiquidity: true,
+            });
+
+            expect(sharesUsed).eq(0);
+            expect(loanRequest.amountTokenOut).eq(parseUnits('990'));
+            expect(loanRequest.amountFee).eq(parseUnits('10'));
+          });
+
+          it('preferLoanLiquidity=true: loan LP is insufficient and Morpho covers only the rest of the payout', async () => {
+            const { sharesUsed, loanRequest } = await redeemWithLiquidity({
+              shares: 2000,
+              lpMToken: 500,
+              preferLoanLiquidity: true,
+            });
+
+            // LP gross 500 incl. 5 fee share: 495 cash, Morpho covers 990 - 495
+            expect(loanRequest.amountTokenOut).eq(parseUnits('495'));
+            expect(loanRequest.amountFee).eq(parseUnits('5'));
+            expect(sharesUsed).eq(parseUnits('495', 8));
+          });
+        });
+
         it('redeem 1000 mTBILL when vault has 100 USDC and sufficient shares (partial Morpho)', async () => {
           const {
             owner,

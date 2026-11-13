@@ -23,31 +23,37 @@ import {
   initializeDvWithMToken,
   initializeDvWithMorpho,
   initializeDvWithUstb,
+  initializeDvWithUsyc,
   initializeMv,
   initializeRv,
   initializeRvWithAave,
   initializeRvWithMToken,
   initializeRvWithMorpho,
   initializeRvWithUstb,
+  initializeRvWithUsyc,
 } from './vault-initializer.helpers';
 
 export {
   getInitializerParamsDv,
   getInitializerParamsDvWithMToken,
   getInitializerParamsDvWithUstb,
+  getInitializerParamsDvWithUsyc,
   getInitializerParamsMv,
   getInitializerParamsRv,
   getInitializerParamsRvWithMToken,
   getInitializerParamsRvWithUstb,
+  getInitializerParamsRvWithUsyc,
 } from './vault-initializer.helpers';
 export type {
   InitializerParamsDv,
   InitializerParamsDvWithMToken,
   InitializerParamsDvWithUstb,
+  InitializerParamsDvWithUsyc,
   InitializerParamsMv,
   InitializerParamsRv,
   InitializerParamsRvWithMToken,
   InitializerParamsRvWithUstb,
+  InitializerParamsRvWithUsyc,
 } from './vault-initializer.helpers';
 
 import { mTokensMetadata } from '../../helpers/mtokens-metadata';
@@ -71,6 +77,7 @@ import {
   MorphoVaultMock__factory,
   CustomAggregatorV3CompatibleFeedAdjustedTester__factory,
   USTBMock__factory,
+  USYCTellerMock__factory,
   CustomAggregatorV3CompatibleFeedGrowthTester__factory,
   AcreAdapter__factory,
   CompositeDataFeedTest__factory,
@@ -575,6 +582,81 @@ export const defaultDeploy = async () => {
     redemptionVaultWithMToken.address,
   );
 
+  /* USYC strategy: mTBILL plays radYC, mTokenLoan plays radUSD */
+
+  // the Teller requires the share and the asset to have the same decimals
+  const usycToken = await new ERC20Mock__factory(owner).deploy(8);
+  const usycTeller = await new USYCTellerMock__factory(owner).deploy(
+    stableCoins.usdc.address,
+    usycToken.address,
+    constants.AddressZero,
+    constants.AddressZero,
+  );
+  await stableCoins.usdc.mint(usycTeller.address, parseUnits('1000000', 8));
+
+  // radUSD deposit vault: USDC -> mTokenLoan
+  const depositVaultMTokenLoan = await initializeDv(
+    {
+      accessControl,
+      mockedSanctionsList,
+      mTBILL: mTokenLoan,
+      mTokenToUsdDataFeed: mTokenLoanToUsdDataFeed,
+      tokensReceiver,
+      minAmount: 0,
+      instantFee: 0,
+    },
+    undefined,
+    { from: owner },
+  );
+  await accessControl['grantRole(bytes32,address)'](
+    mTokenLoan.minterRole(),
+    depositVaultMTokenLoan.address,
+  );
+
+  const depositVaultWithUSYC = await initializeDvWithUsyc(
+    {
+      ...commonVaultParams,
+      usycTeller,
+      usycRedemptionVault: redemptionVaultLoanSwapper,
+    },
+    undefined,
+    { from: owner },
+  );
+  await accessControl['grantRole(bytes32,address)'](
+    mTBILL.minterRole(),
+    depositVaultWithUSYC.address,
+  );
+  await redemptionVaultLoanSwapper.setWaivedFeeAccount(
+    depositVaultWithUSYC.address,
+    true,
+  );
+
+  const redemptionVaultWithUSYC = await initializeRvWithUsyc(
+    {
+      ...commonVaultParams,
+      requestRedeemer,
+      loanLp,
+      loanRepaymentAddress,
+      redemptionVaultLoanSwapper,
+      usycTeller,
+      usycDepositVault: depositVaultMTokenLoan,
+    },
+    undefined,
+    { from: owner },
+  );
+  await accessControl['grantRole(bytes32,address)'](
+    mTBILL.burnerRole(),
+    redemptionVaultWithUSYC.address,
+  );
+  await redemptionVaultLoanSwapper.setWaivedFeeAccount(
+    redemptionVaultWithUSYC.address,
+    true,
+  );
+  await depositVaultMTokenLoan.setWaivedFeeAccount(
+    redemptionVaultWithUSYC.address,
+    true,
+  );
+
   const customFeed = await new CustomAggregatorV3CompatibleFeedTester__factory(
     owner,
   ).deploy();
@@ -767,6 +849,11 @@ export const defaultDeploy = async () => {
     depositVaultWithAave,
     depositVaultWithMorpho,
     depositVaultWithMToken,
+    usycToken,
+    usycTeller,
+    depositVaultMTokenLoan,
+    depositVaultWithUSYC,
+    redemptionVaultWithUSYC,
     dataFeedGrowth,
     compositeDataFeed,
     loanLp,

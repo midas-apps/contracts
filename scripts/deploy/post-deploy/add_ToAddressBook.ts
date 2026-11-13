@@ -39,6 +39,7 @@ const ADDRESS_BOOK_MAPPING: Partial<
   depositVaultAave: { contractName: 'Minter Vault (Aave)' },
   depositVaultMorpho: { contractName: 'Minter Vault (Morpho)' },
   depositVaultMToken: { contractName: 'Minter Vault (MToken)' },
+  depositVaultUsyc: { contractName: 'Minter Vault (USYC)' },
 
   redemptionVault: { contractName: 'Redemption Vault' },
   redemptionVaultBuidl: { contractName: 'Redemption Vault (BUIDL)' },
@@ -47,6 +48,7 @@ const ADDRESS_BOOK_MAPPING: Partial<
   redemptionVaultUstb: { contractName: 'Redemption Vault (USTB)' },
   redemptionVaultAave: { contractName: 'Redemption Vault (Aave)' },
   redemptionVaultMorpho: { contractName: 'Redemption Vault (Morpho)' },
+  redemptionVaultUsyc: { contractName: 'Redemption Vault (USYC)' },
 
   layerZero: {
     contractName: (mToken, network) =>

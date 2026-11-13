@@ -5,11 +5,13 @@ import {
   aggregatorTypeParam,
   feedTargetParam,
   keysParam,
+  libParam,
   mTokenParam,
   originalNetworkParam,
   ParseParamFn,
   pTokenParam,
   skipValidationParam,
+  upgradeIdParam,
   v2VaultsOnlyParam,
   vaultVersionParam,
 } from './task-params';
@@ -34,6 +36,7 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   'deploy:ac': [deploy('deploy_AccessControl')],
   'deploy:timelock': [deploy('deploy_TimeLock'), skipValidationParam(true)],
   'deploy:token': [deploy('deploy_Token'), mTokenParam()],
+  'deploy:library': [deploy('deploy_Library'), libParam()],
   'deploy:aggregator': [
     deploy('deploy_CustomAggregator'),
     mTokenParam(),
@@ -84,6 +87,11 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     mTokenParam(),
     v2VaultsOnlyParam(),
   ],
+  'deploy:dv:usyc': [
+    deploy('deploy_DVUsyc'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
   'deploy:rv': [deploy('deploy_RV'), mTokenParam(), v2VaultsOnlyParam()],
   'deploy:rv:aave': [
     deploy('deploy_RVAave'),
@@ -102,6 +110,11 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   ],
   'deploy:rv:mtoken': [
     deploy('deploy_RVMToken'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:rv:usyc': [
+    deploy('deploy_RVUsyc'),
     mTokenParam(),
     v2VaultsOnlyParam(),
   ],
@@ -188,6 +201,11 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     deployPost('set_MorphoConfig'),
     mTokenParam(),
     vaultVersionParam(),
+  ],
+  'deploy:post:set:usycconfig': [
+    deployPost('set_UsycConfig'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
   ],
 
   // v2 only
@@ -298,6 +316,12 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   ],
 
   // Timelock upgrades
+  'timelock:upgrade:contracts': [
+    upgrade('upgrade_Contracts'),
+    actionParam(),
+    upgradeIdParam(),
+    skipValidationParam(true),
+  ],
   'timelock:upgrade:vaults:propose': [
     upgrade('proposeUpgrade_Vaults'),
     actionParam(),
@@ -324,43 +348,6 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   'timelock:admin:transfer:execute': [
     upgrade('executeTransferOwnership_ProxyAdmin'),
     actionParam(),
-    skipValidationParam(true),
-  ],
-  'timelock:upgrade:token:propose': [
-    upgrade('proposeUpgrade_Token'),
-    mTokenParam(),
-    skipValidationParam(true),
-  ],
-  'timelock:upgrade:token:execute': [
-    upgrade('executeUpgrade_Token'),
-    mTokenParam(),
-    skipValidationParam(true),
-  ],
-  'timelock:upgrade:aggregators:execute': [
-    upgrade('executeUpgrade_Aggregators'),
-    mTokenParam(),
-    skipValidationParam(true),
-  ],
-  'timelock:upgrade:aggregator-deviation:propose': [
-    upgrade('proposeUpgrade_AggregatorDeviation'),
-    mTokenParam(),
-    skipValidationParam(true),
-  ],
-  'timelock:upgrade:aggregator-deviation:execute': [
-    upgrade('executeUpgrade_AggregatorDeviation'),
-    mTokenParam(),
-    skipValidationParam(true),
-  ],
-  'timelock:upgrade:aggregator-timelapsed:propose': [
-    upgrade('proposeUpgrade_AggregatorTimelapsed'),
-    mTokenParam(true),
-    actionParam(true),
-    skipValidationParam(true),
-  ],
-  'timelock:upgrade:aggregator-timelapsed:execute': [
-    upgrade('executeUpgrade_AggregatorTimelapsed'),
-    mTokenParam(true),
-    actionParam(true),
     skipValidationParam(true),
   ],
   'timelock:upgrade:reinitializers:verify': [

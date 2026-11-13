@@ -2,6 +2,11 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { MTokenName, Network, PaymentTokenName } from '../../config';
 import {
+  isLibraryName,
+  LibraryName,
+  libraryNames,
+} from '../../config/constants/addresses';
+import {
   VaultVersion,
   isVaultVersion,
   vaultVersions,
@@ -83,6 +88,35 @@ export const pTokenParam: ParseParamFn<PaymentTokenName> = (optional) => () => {
   };
 };
 
+export const libParam: ParseParamFn<LibraryName> = (optional) => () => {
+  const isOptional = optional ?? false;
+  return {
+    isOptional,
+    name: 'lib',
+    description: `Library (${libraryNames.join(' | ')})`,
+    defaultValue: undefined,
+    parse: (_, taskArgs) => {
+      const library = taskArgs.lib as string | undefined;
+      if (!library) {
+        if (!isOptional) {
+          throw new Error('lib parameter not found');
+        }
+        return undefined;
+      }
+
+      if (!isLibraryName(library)) {
+        throw new Error(
+          `Invalid lib parameter, available libraries: ${libraryNames.join(
+            ', ',
+          )}`,
+        );
+      }
+
+      return library;
+    },
+  };
+};
+
 export const actionParam: ParseParamFn<string> = (optional) => () => {
   const isOptional = optional ?? false;
   return {
@@ -96,6 +130,23 @@ export const actionParam: ParseParamFn<string> = (optional) => () => {
         throw new Error('Action parameter not found');
       }
       return action;
+    },
+  };
+};
+
+export const upgradeIdParam: ParseParamFn<string> = (optional) => () => {
+  const isOptional = optional ?? false;
+  return {
+    isOptional,
+    name: 'upgrade',
+    description: 'Upgrade id (key of upgradeConfigs.upgrades)',
+    defaultValue: undefined,
+    parse: (hre, _) => {
+      const upgradeId = hre.upgradeId;
+      if (!upgradeId && !isOptional) {
+        throw new Error('Upgrade parameter not found');
+      }
+      return upgradeId;
     },
   };
 };

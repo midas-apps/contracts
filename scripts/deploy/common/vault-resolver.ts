@@ -10,6 +10,7 @@ export const defaultDepositVaultPriority: DepositVaultType[] = [
   'depositVaultAave',
   'depositVaultMorpho',
   'depositVaultMToken',
+  'depositVaultUsyc',
 ];
 
 export const routingRedemptionVaultPriority: RedemptionVaultType[] = [
@@ -18,6 +19,7 @@ export const routingRedemptionVaultPriority: RedemptionVaultType[] = [
   'redemptionVaultUstb',
   'redemptionVaultAave',
   'redemptionVaultMorpho',
+  'redemptionVaultUsyc',
   'redemptionVault',
 ];
 
@@ -27,6 +29,7 @@ export const roleGrantRedemptionVaultPriority: RedemptionVaultType[] = [
   'redemptionVaultUstb',
   'redemptionVaultAave',
   'redemptionVaultMorpho',
+  'redemptionVaultUsyc',
   'redemptionVault',
 ];
 

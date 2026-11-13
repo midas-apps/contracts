@@ -85,6 +85,7 @@ export const runScript = async (
   hre.skipValidation = (skipValidation ?? 'false') === 'true';
 
   hre.action = action;
+  hre.upgradeId = taskArgs.upgrade as string | undefined;
 
   if (action) {
     extendWithContext(hre, `${action}-${new Date().toISOString()}`);

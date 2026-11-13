@@ -21,6 +21,8 @@ import {
   DepositVaultWithMTokenTest__factory,
   DepositVaultWithUSTBTest,
   DepositVaultWithUSTBTest__factory,
+  DepositVaultWithUSYCTest,
+  DepositVaultWithUSYCTest__factory,
   ManageableVaultTester,
   ManageableVaultTester__factory,
   RedemptionVaultTest,
@@ -33,6 +35,8 @@ import {
   RedemptionVaultWithMTokenTest__factory,
   RedemptionVaultWithUSTBTest,
   RedemptionVaultWithUSTBTest__factory,
+  RedemptionVaultWithUSYCTest,
+  RedemptionVaultWithUSYCTest__factory,
 } from '../../typechain-types';
 
 export const DV_USTB_INIT_FN =
@@ -44,6 +48,15 @@ export const RV_USTB_INIT_FN =
   'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(address,address,address,address,uint256),address)';
 
 export const RV_MTOKEN_INIT_FN = RV_USTB_INIT_FN;
+
+export const DV_USYC_INIT_FN =
+  'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(uint256,uint256),address,address,uint256)';
+
+export const RV_USYC_INIT_FN =
+  'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(address,address,address,address,uint256),address,address,uint256)';
+
+export const RV_USYC_LIBRARY_KEY =
+  'contracts/libraries/VaultsWithUSYCLibrary.sol:VaultsWithUSYCLibrary';
 
 export type InitializerParamsMv = {
   accessControl: AccountOrContract;
@@ -88,6 +101,18 @@ export type InitializerParamsRvWithMToken = {
 
 export type InitializerParamsRvWithUstb = {
   ustbRedemption: AccountOrContract;
+} & InitializerParamsRv;
+
+export type InitializerParamsDvWithUsyc = {
+  usycTeller: AccountOrContract;
+  usycRedemptionVault?: AccountOrContract;
+  anticipatedFeeRate?: BigNumberish;
+} & InitializerParamsDv;
+
+export type InitializerParamsRvWithUsyc = {
+  usycTeller: AccountOrContract;
+  usycDepositVault?: AccountOrContract;
+  anticipatedFeeRate?: BigNumberish;
 } & InitializerParamsRv;
 
 const resolveDeployer = async (opt?: OptionalCommonParams) => {
@@ -245,6 +270,50 @@ export const getInitializerParamsDvWithMToken = ({
   ] as const;
 };
 
+export const getInitializerParamsDvWithUsyc = ({
+  usycTeller,
+  usycRedemptionVault,
+  anticipatedFeeRate,
+  ...commonParams
+}: InitializerParamsDvWithUsyc) => {
+  return [
+    ...getInitializerParamsDv(commonParams),
+    getAccount(usycTeller),
+    getAccount(usycRedemptionVault ?? constants.AddressZero),
+    anticipatedFeeRate ?? 0,
+  ] as const;
+};
+
+export const getInitializerParamsRvWithUsyc = ({
+  usycTeller,
+  usycDepositVault,
+  anticipatedFeeRate,
+  ...commonParams
+}: InitializerParamsRvWithUsyc) => {
+  return [
+    ...getInitializerParamsRv(commonParams),
+    getAccount(usycTeller),
+    getAccount(usycDepositVault ?? constants.AddressZero),
+    anticipatedFeeRate ?? 0,
+  ] as const;
+};
+
+/**
+ * Deploys `RedemptionVaultWithUSYCTest` linked against a freshly deployed
+ * `VaultsWithUSYCLibrary`
+ */
+export const deployRvWithUsycTest = async (deployer: SignerWithAddress) => {
+  // typechain does not emit a factory for the library, deploy it by name
+  const library = await (
+    await ethers.getContractFactory('VaultsWithUSYCLibrary', deployer)
+  ).deploy();
+
+  return new RedemptionVaultWithUSYCTest__factory(
+    { [RV_USYC_LIBRARY_KEY]: library.address },
+    deployer,
+  ).deploy();
+};
+
 export const initializeMv = async (
   params: InitializerParamsMv,
   contract?: ManageableVaultTester,
@@ -367,6 +436,26 @@ export const initializeDvWithMToken = async (
   );
 };
 
+export const initializeDvWithUsyc = async (
+  params: InitializerParamsDvWithUsyc,
+  contract?: DepositVaultWithUSYCTest,
+  opt?: OptionalCommonParams,
+): Promise<DepositVaultWithUSYCTest> => {
+  const { contract: vault, deployer } = await deployIfNeeded(
+    contract,
+    (deployer) => new DepositVaultWithUSYCTest__factory(deployer).deploy(),
+    opt,
+  );
+  const from = opt?.from ?? deployer;
+  const initParams = getInitializerParamsDvWithUsyc(params);
+
+  return initializeContract(
+    vault,
+    () => vault.connect(from)[DV_USYC_INIT_FN](...initParams),
+    opt,
+  );
+};
+
 const initializeStandardRv = async <
   TContract extends
     | RedemptionVaultTest
@@ -445,6 +534,26 @@ export const initializeRvWithUstb = async (
   return initializeContract(
     vault,
     () => vault.connect(from)[RV_USTB_INIT_FN](...initParams),
+    opt,
+  );
+};
+
+export const initializeRvWithUsyc = async (
+  params: InitializerParamsRvWithUsyc,
+  contract?: RedemptionVaultWithUSYCTest,
+  opt?: OptionalCommonParams,
+): Promise<RedemptionVaultWithUSYCTest> => {
+  const { contract: vault, deployer } = await deployIfNeeded(
+    contract,
+    deployRvWithUsycTest,
+    opt,
+  );
+  const from = opt?.from ?? deployer;
+  const initParams = getInitializerParamsRvWithUsyc(params);
+
+  return initializeContract(
+    vault,
+    () => vault.connect(from)[RV_USYC_INIT_FN](...initParams),
     opt,
   );
 };

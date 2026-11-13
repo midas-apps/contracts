@@ -13,11 +13,13 @@ export type TokenContractNames = {
   dvAave: string;
   dvMorpho: string;
   dvMToken: string;
+  dvUsyc: string;
   rv: string;
   rvMToken: string;
   rvUstb: string;
   rvAave: string;
   rvMorpho: string;
+  rvUsyc: string;
   dataFeed: string;
   dataFeedComposite: string;
   dataFeedMultiply: string;
@@ -54,8 +56,10 @@ const vaultTypeToContractNameMap: Record<
   depositVaultAave: 'dvAave',
   depositVaultMorpho: 'dvMorpho',
   depositVaultMToken: 'dvMToken',
+  depositVaultUsyc: 'dvUsyc',
   redemptionVaultAave: 'rvAave',
   redemptionVaultMorpho: 'rvMorpho',
+  redemptionVaultUsyc: 'rvUsyc',
 };
 
 /**
@@ -206,11 +210,13 @@ export const getCommonContractNames = (): CommonContractNames => {
     dvAave: 'DepositVaultWithAave',
     dvMorpho: 'DepositVaultWithMorpho',
     dvMToken: 'DepositVaultWithMToken',
+    dvUsyc: 'DepositVaultWithUSYC',
     rv: 'RedemptionVault',
     rvMToken: 'RedemptionVaultWithMToken',
     rvUstb: 'RedemptionVaultWithUSTB',
     rvAave: 'RedemptionVaultWithAave',
     rvMorpho: 'RedemptionVaultWithMorpho',
+    rvUsyc: 'RedemptionVaultWithUSYC',
     dataFeed: 'DataFeed',
     customAggregator: 'CustomAggregatorV3CompatibleFeed',
     customAggregatorGrowth: 'CustomAggregatorV3CompatibleFeedGrowth',

@@ -1,6 +1,8 @@
 import { DeployImplementationResponse } from '@openzeppelin/hardhat-upgrades/dist/deploy-implementation';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { validateRolesOnChain } from './onchain-read';
+
 import { MTokenName } from '../../../config';
 import {
   getCurrentAddresses,
@@ -28,7 +30,10 @@ import {
   validateSimulateTimeLockProposeUpgradeTx,
   validateSimulateTimeLockUpgradeTx,
 } from '../../deploy/common/timelock';
-import { getDeployer } from '../../deploy/common/utils';
+import {
+  getDeployer,
+  getLinkedContractFactory,
+} from '../../deploy/common/utils';
 import { networkConfigs } from '../configs/network-configs';
 import { upgradeConfigs } from '../configs/upgrade-configs';
 
@@ -380,6 +385,30 @@ const upgradeAllVaults = async (
     return a.mToken.localeCompare(b.mToken, 'en', { sensitivity: 'base' });
   });
 
+  // the upgrade must not change the roles of a vault
+  const roleErrors = await validateRolesOnChain(
+    hre,
+    upgradeContracts.flatMap(
+      ({ mToken, vaultType, proxyAddress, constructorArgs }) =>
+        [
+          { role: 'admin', getter: 'contractAdminRole' },
+          { role: 'greenlisted', getter: 'greenlistedRole' },
+        ].map(({ role, getter }, i) => ({
+          label: `${mToken} ${vaultType} ${role} role`,
+          address: proxyAddress,
+          getters: [getter],
+          expected: constructorArgs[i],
+          required: true,
+        })),
+    ),
+  );
+
+  if (roleErrors.length) {
+    throw new Error(
+      `On-chain vault roles validation failed:\n${roleErrors.join('\n')}`,
+    );
+  }
+
   console.log('upgradeContracts', upgradeContracts);
   console.log('total upgrades', upgradeContracts.length);
 
@@ -410,17 +439,20 @@ const upgradeAllVaults = async (
       continue;
     }
 
+    const { factory, opts } = await getLinkedContractFactory(
+      hre,
+      contractName,
+      deployer,
+      {
+        redeployImplementation: 'onchange',
+        getTxResponse: true,
+        constructorArgs,
+      },
+    );
+
     const { deployedNew, address: implementationAddress } =
       await getImplAddressFromDeployment(
-        await hre.upgrades.prepareUpgrade(
-          proxyAddress,
-          await hre.ethers.getContractFactory(contractName, deployer),
-          {
-            redeployImplementation: 'onchange',
-            getTxResponse: true,
-            constructorArgs,
-          },
-        ),
+        await hre.upgrades.prepareUpgrade(proxyAddress, factory, opts),
       );
 
     if (deployedNew) {

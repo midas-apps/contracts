@@ -79,7 +79,14 @@ export type GetUpgradeTxParams = {
   initializer?: string;
   initializerCalldata?: string;
   contractName: string;
+  // overrides the artifact ABI lookup by `contractName` (e.g. for external contracts)
+  abi?: unknown[];
 };
+
+const getUpgradeAbi = async (
+  hre: HardhatRuntimeEnvironment,
+  params: GetUpgradeTxParams,
+) => params.abi ?? (await hre.artifacts.readArtifact(params.contractName)).abi;
 
 export type GetVaultUpgradeTxParams = GetUpgradeTxParams & {
   vaultType: V2VaultType;
@@ -144,11 +151,10 @@ const verifyReinitializersAfterUpgrade = async (
     );
     return;
   }
-  const { abi } = await hre.artifacts.readArtifact(params.contractName);
   await verifyReinitializersConsumed({
     provider,
     proxyAddress: params.proxyAddress,
-    abi,
+    abi: await getUpgradeAbi(hre, params),
   });
   console.log(`Reinitializer verify passed for ${params.proxyAddress}`);
 };
@@ -689,13 +695,11 @@ const createUpgradeTimelockTx = async (
       }
 
       // Runs even under skipValidation — this is the incident-preventing check.
-      const { abi } = await hre.artifacts.readArtifact(params.contractName);
-
       await assertReinitializerCovered({
         provider: hre.ethers.provider,
         proxyAddress: params.proxyAddress,
         newImplementation: params.newImplementation,
-        abi,
+        abi: await getUpgradeAbi(hre, params),
         initializerCalldata: params.initializerCalldata,
       });
 
