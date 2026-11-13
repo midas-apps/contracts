@@ -299,12 +299,14 @@ contract DepositVaultWithUSYC is DepositVault {
 
         require(tokenIn == usdc || isMToken, UnsupportedToken(tokenIn));
 
-        uint256 assetAmount = _tokenTransferFromUser(
+        uint256 transferredAmount = _tokenTransferFromUser(
             tokenIn,
             address(this),
             amountToken,
             tokensDecimals
         );
+
+        uint256 usdcAmount;
 
         if (isMToken) {
             require(
@@ -314,10 +316,12 @@ contract DepositVaultWithUSYC is DepositVault {
                 FeesNotWaivedOnTarget()
             );
 
-            assetAmount = rv.redeemInstant(usdc, amountToken, 0);
+            usdcAmount = rv.redeemInstant(usdc, amountToken, 0);
+        } else {
+            usdcAmount = transferredAmount;
         }
 
-        _investUsdc(teller, usdc, assetAmount);
+        _investUsdc(teller, usdc, usdcAmount);
     }
 
     /**
