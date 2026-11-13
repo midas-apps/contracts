@@ -458,11 +458,20 @@ redemptionVaultSuits(
           }
         });
 
-        it('redeem several amounts to radUSD when the radUSD DV prices USDC with a non-stable feed (0.9998$)', async () => {
+        it('should fail: radUSD DV mints less radUSD than the USDC is worth to the vault (USDC priced at 0.9998$ by the radUSD DV), USYC is not used', async () => {
           const fixture = await loadFixture(defaultDeploy);
-          const { user, usdc } = await setupTightUsycRv(fixture);
-          const { owner, depositVaultMTokenLoan, dataFeed, mockedAggregator } =
-            fixture;
+          const { user, usdc, teller } = await setupTightUsycRv(fixture);
+          const {
+            owner,
+            depositVaultMTokenLoan,
+            redemptionVaultWithUSYC,
+            dataFeed,
+            mockedAggregator,
+          } = fixture;
+          const usycToken = ERC20Mock__factory.connect(
+            await teller.share(),
+            owner,
+          );
           await removePaymentTokenTest(
             { vault: depositVaultMTokenLoan, owner },
             usdc,
@@ -478,24 +487,87 @@ redemptionVaultSuits(
             parseUnits('0.9998', await mockedAggregator.decimals()),
           );
 
-          for (const amount of [1.333333, 17.777777, 99.999999]) {
-            await redeemInstantWithUsycTest(
-              commonParams(fixture),
-              fixture.mTokenLoan,
-              amount,
-              { from: user },
-            );
-          }
+          const usycBefore = await usycToken.balanceOf(
+            redemptionVaultWithUSYC.address,
+          );
 
-          const result = await checkAndRedeemUsycTest(
-            { redemptionVaultWithUSYC: fixture.redemptionVaultWithUSYC },
+          // the strategy failure is swallowed by the vault
+          await redeemInstantWithUsycTest(
+            commonParams(fixture),
+            fixture.mTokenLoan,
+            17.777777,
+            {
+              from: user,
+              revertMessage: 'ERC20: transfer amount exceeds balance',
+            },
+          );
+
+          // the strategy itself reverts on the radUSD DV slippage check
+          await checkAndRedeemUsycTest(
+            { redemptionVaultWithUSYC },
             fixture.mTokenLoan,
             parseUnits('17.777777777777777777'),
+            {
+              revertCustomError: {
+                customErrorName: 'SlippageExceeded',
+                contract: depositVaultMTokenLoan,
+              },
+            },
           );
-          const { obtained, missingBase18 } = result!;
-          expect(obtained).gte(missingBase18);
-          // USDC at 0.9998$ is worth less radUSD, so the excess shrinks
-          expect(obtained.sub(missingBase18)).lte(MAX_COVERING_EXCESS_USDC6);
+
+          expect(await usycToken.balanceOf(redemptionVaultWithUSYC.address)).eq(
+            usycBefore,
+          );
+        });
+
+        it('should fail: radUSD DV prices radUSD higher than the vault does, USYC is not used', async () => {
+          const fixture = await loadFixture(defaultDeploy);
+          const { user } = await setupUsycRv(fixture);
+          const {
+            owner,
+            depositVaultMTokenLoan,
+            redemptionVaultWithUSYC,
+            mTokenLoan,
+            mTokenLoanToUsdDataFeed,
+            mockedAggregatorMTokenLoan,
+          } = fixture;
+          // radUSD is stable (1$) on the vault while the radUSD DV mints it at 1.01$
+          await removePaymentTokenTest(
+            { vault: redemptionVaultWithUSYC, owner },
+            mTokenLoan,
+          );
+          await addPaymentTokenTest(
+            { vault: redemptionVaultWithUSYC, owner },
+            mTokenLoan,
+            mTokenLoanToUsdDataFeed.address,
+            0,
+            true,
+          );
+          await mockedAggregatorMTokenLoan.setRoundData(
+            parseUnits('1.01', await mockedAggregatorMTokenLoan.decimals()),
+          );
+
+          await redeemInstantWithUsycTest(
+            commonParams(fixture),
+            mTokenLoan,
+            100,
+            {
+              from: user,
+              revertMessage: 'ERC20: transfer amount exceeds balance',
+            },
+          );
+
+          await checkAndRedeemUsycTest(
+            { redemptionVaultWithUSYC },
+            mTokenLoan,
+            parseUnits('100'),
+            {
+              revertCustomError: {
+                customErrorName: 'SlippageExceeded',
+                contract: depositVaultMTokenLoan,
+              },
+            },
+          );
         });
 
         it('should fail: depositVault not set and tokenOut is radUSD', async () => {

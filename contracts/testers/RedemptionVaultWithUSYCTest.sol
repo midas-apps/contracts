@@ -43,11 +43,21 @@ contract RedemptionVaultWithUSYCTest is
             ? amountBase18 - balance
             : 0;
 
+        // an unconfigured token has no rate, 0 is passed for it. The mToken
+        // path divides by the rate, so it must be configured
+        bool isConfigured = tokensConfig[token].dataFeed != address(0);
+        require(
+            isConfigured ||
+                address(depositVault) == address(0) ||
+                address(depositVault.mToken()) != token,
+            "RVTest: mToken not configured"
+        );
+
         return
             _obtainVaultLiquidity(
                 token,
                 missingAmount,
-                0,
+                isConfigured ? _getPTokenRate(token) : 0,
                 balance,
                 tokenDecimals
             );

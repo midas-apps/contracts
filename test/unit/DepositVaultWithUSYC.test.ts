@@ -34,6 +34,7 @@ import {
 import { DefaultFixture, defaultDeploy } from '../common/fixtures';
 import {
   addPaymentTokenTest,
+  removePaymentTokenTest,
   setInstantFeeTest,
   setInstantLimitConfigTest,
   setMinAmountTest,
@@ -407,6 +408,45 @@ depositVaultSuits(
             {
               from: user,
               revertCustomError: { customErrorName: 'FeesNotWaivedOnTarget' },
+            },
+          );
+        });
+
+        it('should fail: radUSD deposit when the radUSD redemption vault pays out less USDC than the vault values radUSD at', async () => {
+          const fixture = await loadFixture(defaultDeploy);
+          const {
+            owner,
+            depositVaultWithUSYC,
+            mTokenLoan,
+            mTBILL,
+            redemptionVaultLoanSwapper,
+            mockedAggregatorMTokenLoan,
+          } = fixture;
+          await setupUsycDv(fixture);
+          // radUSD is stable on the USYC vault, so it is still valued at 1$,
+          // while the radUSD RV redeems it at 0.9997$
+          await mockedAggregatorMTokenLoan.setRoundData(
+            parseUnits('0.9997', await mockedAggregatorMTokenLoan.decimals()),
+          );
+          const user = await fundUser(fixture, mTokenLoan, 100);
+
+          await depositInstantWithUsycTest(
+            {
+              depositVaultWithUSYC,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed: fixture.mTokenToUsdDataFeed,
+            },
+            mTokenLoan,
+            100,
+            {
+              from: user,
+              revertCustomError: {
+                customErrorName: 'SlippageExceeded',
+                // the error is thrown by the radUSD RV
+                contract: redemptionVaultLoanSwapper,
+                args: [parseUnits('100'), parseUnits('99.97')],
+              },
             },
           );
         });
@@ -857,6 +897,58 @@ depositVaultSuits(
                 { from: user },
               );
             });
+
+            it(`radUSD deposit of ${amount} when radUSD is non-stable at 0.9999999$ on both vaults`, async () => {
+              const fixture = await loadFixture(defaultDeploy);
+              const {
+                owner,
+                depositVaultWithUSYC,
+                mTokenLoan,
+                mTBILL,
+                mTokenLoanToUsdDataFeed,
+                mockedAggregatorMTokenLoan,
+              } = fixture;
+              await setupUsdc6UsycDv(fixture);
+              // the vault prices radUSD with the same feed as the radUSD RV,
+              // so the RV payout equals the vault min receive amount exactly
+              await removePaymentTokenTest(
+                { vault: depositVaultWithUSYC, owner },
+                mTokenLoan,
+              );
+              await addPaymentTokenTest(
+                { vault: depositVaultWithUSYC, owner },
+                mTokenLoan,
+                mTokenLoanToUsdDataFeed.address,
+                0,
+                false,
+              );
+              await mockedAggregatorMTokenLoan.setRoundData(
+                parseUnits(
+                  '0.9999999',
+                  await mockedAggregatorMTokenLoan.decimals(),
+                ),
+              );
+              const user = await fundUser(fixture, mTokenLoan, amount + 1);
+
+              // radUSD RV pays floor(amount * 0.9999999) in 6-decimal USDC
+              const expectedUsdc = toDepositAmountBase18(amount)
+                .mul(parseUnits('0.9999999'))
+                .div(parseUnits('1'))
+                .div(parseUnits('1', 12));
+
+              await depositInstantWithUsycTest(
+                {
+                  depositVaultWithUSYC,
+                  owner,
+                  mTBILL,
+                  mTokenToUsdDataFeed: fixture.mTokenToUsdDataFeed,
+                  expectedUsdcInvested: expectedUsdc,
+                },
+                mTokenLoan,
+                amount,
+                { from: user },
+              );
+            });
           }
         });
 
@@ -1214,6 +1306,42 @@ depositVaultSuits(
             mTokenLoan,
             100,
             { from: user },
+          );
+        });
+
+        it('should fail: radUSD request when the radUSD redemption vault pays out less USDC than the vault values radUSD at', async () => {
+          const fixture = await loadFixture(defaultDeploy);
+          const {
+            owner,
+            depositVaultWithUSYC,
+            mTokenLoan,
+            mTBILL,
+            redemptionVaultLoanSwapper,
+            mockedAggregatorMTokenLoan,
+          } = fixture;
+          await setupUsycDv(fixture);
+          await mockedAggregatorMTokenLoan.setRoundData(
+            parseUnits('0.9997', await mockedAggregatorMTokenLoan.decimals()),
+          );
+          const user = await fundUser(fixture, mTokenLoan, 100);
+
+          await depositRequestWithUsycTest(
+            {
+              depositVaultWithUSYC,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed: fixture.mTokenToUsdDataFeed,
+            },
+            mTokenLoan,
+            100,
+            {
+              from: user,
+              revertCustomError: {
+                customErrorName: 'SlippageExceeded',
+                contract: redemptionVaultLoanSwapper,
+                args: [parseUnits('100'), parseUnits('99.97')],
+              },
+            },
           );
         });
 

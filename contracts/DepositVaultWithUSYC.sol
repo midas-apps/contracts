@@ -280,6 +280,9 @@ contract DepositVaultWithUSYC is DepositVault {
      * @dev Transfers tokens from user to this contract, redeems them to USDC
      * through `redemptionVault` if `tokenIn` is its mToken, and subscribes
      * to USYC with the USDC, see {_investUsdc}.
+     * The redemption must pay out at least the value of the redeemed mToken
+     * at this vault's own rate for it, with USDC valued at par, so that
+     * the minted amount is never backed by less USDC than it was priced with.
      * Failures of the `redemptionVault` redemption always revert
      * @param tokenIn token address
      * @param amountToken amount of tokens to transfer in base18
@@ -316,7 +319,17 @@ contract DepositVaultWithUSYC is DepositVault {
                 FeesNotWaivedOnTarget()
             );
 
-            usdcAmount = rv.redeemInstant(usdc, amountToken, 0);
+            // the deposit USD value is already fixed at this vault's `tokenIn`
+            // rate (the mint amount is derived from it, now or at approval),
+            // so `redemptionVault` must pay out at least the same value
+            usdcAmount = rv.redeemInstant(
+                usdc,
+                amountToken,
+                _truncate(
+                    (amountToken * _getPTokenRate(tokenIn)) / 1e18,
+                    _tokenDecimals(usdc)
+                )
+            );
         } else {
             usdcAmount = transferredAmount;
         }

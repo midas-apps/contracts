@@ -45,7 +45,11 @@ library VaultsWithUSYCLibrary {
      * If `tokenOut` is the Teller asset (USDC), USYC is redeemed to it directly.
      * If `tokenOut` is the mToken of `dv`, USYC is redeemed to USDC and
      * the USDC is deposited into `dv`, every conversion rounding up so that
-     * the obtained amount covers `missingAmountBase18`.
+     * the obtained amount covers `missingAmountBase18`. The deposit must mint
+     * at least the value of the deposited USDC at `tokenOutRate`, the rate
+     * the calling vault prices `tokenOut` with, with USDC valued at par,
+     * otherwise the call reverts, so that no more USYC is sold than the
+     * obtained `tokenOut` is worth to the calling vault.
      * Returns 0 without redeeming when `tokenOut` is neither, the Teller
      * redemption fee rate differs from `anticipatedFeeRate`, the fee previewed
      * by the Teller exceeds {maxFee}, the vault is not fee waived on `dv` or
@@ -62,6 +66,7 @@ library VaultsWithUSYCLibrary {
      * @param anticipatedFeeRate anticipated Teller redemption fee rate
      * @param tokenOut tokenOut address
      * @param missingAmountBase18 amount of tokenOut needed in base 18
+     * @param tokenOutRate rate of tokenOut in the calling vault in base 18
      * @param tokenOutDecimals decimals of tokenOut
      * @return obtained amount of tokenOut in base 18
      */
@@ -71,6 +76,7 @@ library VaultsWithUSYCLibrary {
         uint256 anticipatedFeeRate,
         address tokenOut,
         uint256 missingAmountBase18,
+        uint256 tokenOutRate,
         uint256 tokenOutDecimals
     )
         public
@@ -151,20 +157,18 @@ library VaultsWithUSYCLibrary {
             return 0;
         }
 
-        uint256 receivedTokenOut;
         if (isMToken) {
-            IERC20(usdc).safeIncreaseAllowance(address(dv), receivedUsdc);
-            receivedTokenOut = dv.depositInstant(
-                usdc,
-                receivedUsdc.convertToBase18(usdcDecimals),
-                0,
-                bytes32(0)
-            );
-        } else {
-            receivedTokenOut = receivedUsdc.convertToBase18(tokenOutDecimals);
+            return
+                _depositUsdc(
+                    dv,
+                    usdc,
+                    receivedUsdc,
+                    usdcDecimals,
+                    tokenOutRate
+                );
         }
 
-        return receivedTokenOut;
+        return receivedUsdc.convertToBase18(tokenOutDecimals);
     }
 
     /**
@@ -220,6 +224,37 @@ library VaultsWithUSYCLibrary {
             receivedUsdc >= expectedUsdc,
             InsufficientAmountReceived(receivedUsdc, expectedUsdc)
         );
+    }
+
+    /**
+     * @dev Deposits `usdcAmount` of USDC held by this contract into `dv`.
+     * Reverts when `dv` mints less mToken than the USDC is worth at
+     * `mTokenRate`, with USDC valued at par
+     * @param dv mToken DepositVault
+     * @param usdc USDC address
+     * @param usdcAmount amount of USDC to deposit, in USDC decimals
+     * @param usdcDecimals decimals of USDC
+     * @param mTokenRate rate the calling vault prices the mToken with
+     * @return amount of mToken received in base 18
+     */
+    function _depositUsdc(
+        IDepositVault dv,
+        address usdc,
+        uint256 usdcAmount,
+        uint256 usdcDecimals,
+        uint256 mTokenRate
+    ) private returns (uint256) {
+        uint256 usdcAmountBase18 = usdcAmount.convertToBase18(usdcDecimals);
+
+        IERC20(usdc).safeIncreaseAllowance(address(dv), usdcAmount);
+
+        return
+            dv.depositInstant(
+                usdc,
+                usdcAmountBase18,
+                Math.mulDiv(usdcAmountBase18, 1e18, mTokenRate),
+                bytes32(0)
+            );
     }
 
     /**

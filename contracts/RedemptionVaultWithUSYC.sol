@@ -137,13 +137,14 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
      * @dev See {VaultsWithUSYCLibrary-obtainRedemptionLiquidity}
      * @param tokenOut tokenOut address
      * @param missingAmountBase18 amount of tokenOut needed in base 18
+     * @param tokenOutRate tokenOut rate
      * @param tokenOutDecimals decimals of tokenOut
      * @return obtained amount of tokenOut in base 18
      */
     function _obtainVaultLiquidity(
         address tokenOut,
         uint256 missingAmountBase18,
-        uint256, /* tokenOutRate */
+        uint256 tokenOutRate,
         uint256, /* currentTokenOutBalanceBase18 */
         uint256 tokenOutDecimals
     )
@@ -161,6 +162,7 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
                 anticipatedFeeRate,
                 tokenOut,
                 missingAmountBase18,
+                tokenOutRate,
                 tokenOutDecimals
             );
     }
