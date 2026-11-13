@@ -1,3 +1,4 @@
+import { Etherscan } from '@nomicfoundation/hardhat-verify/etherscan';
 import { NetworkRequestError } from '@nomicfoundation/hardhat-verify/internal/errors';
 import { LibraryToAddress } from '@nomicfoundation/hardhat-verify/internal/solc/artifacts';
 import { ContractStatus } from '@nomicfoundation/hardhat-verify/internal/sourcify.types';
@@ -175,6 +176,60 @@ subtask('verify:sourcify-attempt-verification').setAction(
     );
   },
 );
+
+const isOklink = (etherscan: Etherscan) =>
+  etherscan.apiUrl.includes('oklink.com');
+
+const isVerifiedOnOklink = async (etherscan: Etherscan, address: string) => {
+  const chain = etherscan.apiUrl.split('/').pop();
+  const url = `https://www.oklink.com/api/v5/explorer/contract/verify-contract-info?chainShortName=${chain}&contractAddress=${address}`;
+  const res = await fetch(url).catch((e) => {
+    throw new NetworkRequestError(e);
+  });
+  if (!res.ok) {
+    throw new NetworkRequestError(new Error(`${url}: HTTP ${res.status}`));
+  }
+  const json = await res.json();
+  return json.data?.length > 0;
+};
+
+const oklinkStatus = (verified: boolean) =>
+  ({
+    status: verified ? 1 : 0,
+    message: verified ? 'Pass - Verified' : 'Fail - Unable to verify',
+    isPending: () => false,
+    isFailure: () => !verified,
+    isSuccess: () => verified,
+    isBytecodeMissingInNetworkError: () => false,
+    isAlreadyVerified: () => false,
+    isOk: () => verified,
+  } as Awaited<ReturnType<Etherscan['getVerificationStatus']>>);
+
+const { isVerified, verify, getVerificationStatus } = Etherscan.prototype;
+
+Etherscan.prototype.isVerified = async function (address) {
+  return isOklink(this)
+    ? isVerifiedOnOklink(this, address)
+    : isVerified.call(this, address);
+};
+
+Etherscan.prototype.verify = async function (address, ...rest) {
+  const response = await verify.call(this, address, ...rest);
+  return isOklink(this)
+    ? ({ ...response, message: address } as typeof response)
+    : response;
+};
+
+Etherscan.prototype.getVerificationStatus = async function (guid) {
+  if (!isOklink(this)) return getVerificationStatus.call(this, guid);
+  for (let i = 0; i < 24; i++) {
+    await delay(5_000);
+    if (await isVerifiedOnOklink(this, guid).catch(() => false)) {
+      return oklinkStatus(true);
+    }
+  }
+  return oklinkStatus(false);
+};
 
 const VERIFY_ATTEMPTS = 5;
 const VERIFY_RETRY_DELAY_MS = 5_000;
