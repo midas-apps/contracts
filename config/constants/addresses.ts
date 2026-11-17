@@ -1863,6 +1863,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeedRv: '0x18e9a4400926855bAD9Bff4d8A7BA3Be0A7e7b2C',
       depositVault: '0x51A3C8F539E1854613A951764Fc6197667B3a136',
       redemptionVaultSwapper: '0xD52719CdE18EC59193358b4F35C4d512F3500808',
+      layerZero: {
+        oft: '0xA69BfCc664e808176484Fa427fB2BFcB096531eF',
+      },
     },
   },
   injective: {
@@ -2053,6 +2056,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeedRv: '0xD934aF24aafe1Fb898B9ac248cCbA90478b88dA6',
       depositVault: '0x22dAa3A757CcFAD937c0eA0190Bc72B9F12E9430',
       redemptionVaultSwapper: '0x2fB165667377869bC28c44aa1FC6335c11b09F8f',
+      layerZero: {
+        oft: '0xBE9207Ba066042caEAB7a5F957a61BCB357f2CbC',
+      },
     },
   },
   sepolia: {

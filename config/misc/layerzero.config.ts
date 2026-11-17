@@ -130,11 +130,13 @@ export const lzConfigsPerMToken: PartialConfigPerNetwork<
       ],
     },
     mGLO: {
-      // Mainnet <-> Base, Robinhood and Optimism only.
+      // Mainnet <-> Base, Robinhood, Optimism, Monad and X Layer only.
       pathways: 'direct-only',
-      linkedNetworks: ['base', 'robinhood', 'optimism'],
+      linkedNetworks: ['base', 'robinhood', 'optimism', 'monad', 'xlayer'],
       dvnsByLinkedNetwork: {
         robinhood: [DVN.LayerZeroLabs, DVN.P2P, DVN.Canary, DVN.Nethermind],
+        monad: [DVN.LayerZeroLabs, DVN.DeutscheTelekom, DVN.Canary, DVN.Frax],
+        xlayer: [DVN.LayerZeroLabs, DVN.DeutscheTelekom, DVN.Canary, DVN.Frax],
       },
     },
     mGLOeuro: {

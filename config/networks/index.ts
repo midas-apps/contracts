@@ -174,6 +174,7 @@ export const layerZeroBlockFinality: PartialConfigPerNetwork<number> = {
   base: 600,
   robinhood: 3600,
   ink: 900,
+  xlayer: 900,
 };
 
 export const axelarChainNames: PartialConfigPerNetwork<string> = {
@@ -205,6 +206,7 @@ export const layerZeroEids: PartialConfigPerNetwork<EndpointId> = {
   optimism: EndpointId.OPTIMISM_V2_MAINNET,
   robinhood: EndpointId.ROBINHOOD_V2_MAINNET,
   ink: EndpointId.INK_V2_MAINNET,
+  xlayer: EndpointId.XLAYER_V2_MAINNET,
 };
 
 export const layerZeroEidToNetwork = Object.fromEntries(
