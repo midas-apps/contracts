@@ -8,7 +8,7 @@ export const mFONEDeploymentConfig: DeploymentConfig = {
   genericConfigs: {
     customAggregator: {
       minAnswer: parseUnits('0.1', 8),
-      maxAnswer: parseUnits('1000', 8),
+      maxAnswer: parseUnits('10', 8),
       maxAnswerDeviation: parseUnits('0.4', 8),
       description: 'mF-ONE/USD',
     },
@@ -17,8 +17,8 @@ export const mFONEDeploymentConfig: DeploymentConfig = {
       underlyingFeed: 'customFeed',
     },
     dataFeed: {
-      minAnswer: parseUnits('0.1', 8),
-      maxAnswer: parseUnits('1000', 8),
+      minAnswer: parseUnits('0.9', 8),
+      maxAnswer: parseUnits('1.23', 8),
       healthyDiff: 2592000,
     },
   },
@@ -108,6 +108,79 @@ export const mFONEDeploymentConfig: DeploymentConfig = {
               ],
             },
           ],
+        },
+      },
+    },
+    [chainIds.robinhood]: {
+      dv: {
+        type: 'REGULAR',
+        enableSanctionsList: false,
+        feeReceiver: '0x0ff15C0555Add64e53E8c738176D896D489F1F6D',
+        tokensReceiver: '0x86B16681E21E857A9a71a8FDfC33AB1eB8213b74',
+        instantDailyLimit: constants.MaxUint256,
+        instantFee: parseUnits('0', 2),
+        variationTolerance: parseUnits('0.6', 2),
+        minAmount: parseUnits('0', 18),
+        minMTokenAmountForFirstDeposit: parseUnits('0', 18),
+        maxSupplyCap: constants.MaxUint256,
+      },
+      rvSwapper: {
+        type: 'SWAPPER',
+        enableSanctionsList: false,
+        feeReceiver: '0xCFf64455647f8ED9107BaB2B5e752797582f9d96',
+        tokensReceiver: '0x86B16681E21E857A9a71a8FDfC33AB1eB8213b74',
+        requestRedeemer: '0x82FB69DD7f31eD9FF8A44579D674e5032A4adc9C',
+        instantDailyLimit: parseUnits('200000', 18),
+        instantFee: parseUnits('1', 2),
+        variationTolerance: parseUnits('0.6', 2),
+        minAmount: parseUnits('1', 18),
+        fiatFlatFee: parseUnits('30', 18),
+        fiatAdditionalFee: parseUnits('0.1', 2),
+        liquidityProvider: 'dummy',
+        swapperVault: 'dummy',
+      },
+      postDeploy: {
+        addPaymentTokens: {
+          vaults: [
+            {
+              type: 'depositVault',
+              paymentTokens: [
+                {
+                  token: 'usdg',
+                  fee: 0,
+                  isStable: true,
+                  allowance: parseUnits('1000000000', 18),
+                },
+              ],
+            },
+            {
+              type: 'redemptionVaultSwapper',
+              paymentTokens: [
+                {
+                  token: 'usdg',
+                  fee: 0,
+                  isStable: true,
+                  allowance: parseUnits('1000000000', 18),
+                },
+              ],
+            },
+          ],
+        },
+        grantRoles: {
+          tokenManagerAddress: '0x4f75307888fD06B16594cC93ED478625AD65EEea',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0x85A56E098b6159d2560aA2BA4F70e8Ef3aE7E5e9',
+        },
+        greenlist: {
+          depositVault: true,
+          redemptionVaultSwapper: true,
+        },
+        pauseFunctions: {
+          depositVault: ['depositRequest', 'depositRequestWithCustomRecipient'],
+          redemptionVaultSwapper: ['redeemFiatRequest'],
+        },
+        setRoundData: {
+          data: parseUnits('1.13728753', 8),
         },
       },
     },

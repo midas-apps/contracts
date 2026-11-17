@@ -2018,6 +2018,13 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       redemptionVaultSwapper: '0x89db0aA579F0b136A295C427e8C0D35A3dcD0a2e',
       layerZero: { oft: '0xc7D9168E70fAF282aa6b0ecbEf7Af2c9C5c146F9' },
     },
+    mFONE: {
+      token: '0x8639dEE23bb8a5153B150e55b2Bdb40827D1AFC8',
+      customFeed: '0xFd552f228a23505D82c90b9300B4cf63429639c6',
+      dataFeed: '0x37c917127357c5f686306B7143AB9cA9008971e1',
+      depositVault: '0x293A8fd4e85CA038f494651dD203b2c27079f69d',
+      redemptionVaultSwapper: '0xdBaf85259147bB48CF113D08abea380637886134',
+    },
   },
   ink: {
     accessControl: '0xfA7c967f4b5aDB6641512FfB8c437034Ab0FDce4',
