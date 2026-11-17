@@ -1,6 +1,10 @@
 import { BigNumberish, constants, utils } from 'ethers';
 
-import { networkUptimeFeeds } from '../../../config/constants/addresses';
+import { chainIds } from '../../../config';
+import {
+  midasAddressesPerNetwork,
+  networkUptimeFeeds,
+} from '../../../config/constants/addresses';
 import { mTokensMetadata } from '../../../helpers/mtokens-metadata';
 import { getAllUserFacingRoles } from '../../../helpers/roles';
 import { networkDeploymentConfigs } from '../../deploy/configs/network-configs';
@@ -124,6 +128,40 @@ export const v2CoreUpgrade = (
  */
 export const upgradeConfigs: UpgradeConfig = {
   upgrades: {
+    'radyc-upgrade': {
+      vaults: {
+        [chainIds.sepolia]: {
+          overrides: {
+            radUSD: {
+              overrides: {
+                redemptionVault: true,
+              },
+            },
+            radYC: {
+              all: true,
+            },
+          },
+        },
+      },
+    },
+    'radusd-upgrade': {
+      vaults: {
+        [chainIds.sepolia]: {
+          overrides: {
+            radUSD: {
+              overrides: {
+                redemptionVault: {
+                  initializer: 'initializeV2',
+                  initializerArgs: [
+                    midasAddressesPerNetwork.sepolia!.radUSD!.dataFeedRv,
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     'v2-core-upgrade': {
       contracts: {
         // [chainIds.sepolia]: v2CoreUpgrade(

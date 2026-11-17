@@ -2005,7 +2005,7 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   },
   sepolia: {
     libraries: {
-      VaultsWithUSYCLibrary: '0x0703B2001E853Bc9Fbcc456beBFAF2476884d1Cf',
+      VaultsWithUSYCLibrary: '0xD655F7f7c73782f4C4cDB86EC7851571E16fA1E2',
     },
     timelock: '0x74e0a55Ea3Db85F6106FFD69Ef7c9829fd130888',
     pauseManager: '0xbf21e448410BAA6039e73033F530027143c0c280',
@@ -2020,8 +2020,8 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       },
       radusd: {
         token: '0xBB882eC4c7358dD59a3267FFB5E5C55fd08c0142',
-        aggregator: '0xdE4536Cc1C6632Fe89920ccC115b4053c4356622',
-        dataFeed: '0x5768d8DD4023Dd94BBBcfff2E15f5C70786d4161',
+        aggregator: '0xf50Da9720f1362400EcC01Ab65DEAE0c4c99d897',
+        dataFeed: '0xf7fcC3E43c2381c0E461d44361b1eE5245604c9B',
       },
       usdt: {
         dataFeed: '0x0e0eb6cdad90174f1Db606EC186ddD0B5eD80847',
@@ -2199,8 +2199,10 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
     radUSD: {
       token: '0xBB882eC4c7358dD59a3267FFB5E5C55fd08c0142',
-      customFeed: '0xdE4536Cc1C6632Fe89920ccC115b4053c4356622',
-      dataFeed: '0x5768d8DD4023Dd94BBBcfff2E15f5C70786d4161',
+      customFeedDv: '0xdE4536Cc1C6632Fe89920ccC115b4053c4356622',
+      dataFeedDv: '0x5768d8DD4023Dd94BBBcfff2E15f5C70786d4161',
+      customFeedRv: '0xf50Da9720f1362400EcC01Ab65DEAE0c4c99d897',
+      dataFeedRv: '0xEC6B5Efb014ecAC37Cec9e70E50216cD68eD6423',
       depositVaultV2: '0x9B56de26d503FC7892d662B8DcF7569Cb9a235EF',
       redemptionVaultV2: '0x122f9B6FAde28156F24B192a0daD2f31A43ab223',
     },
