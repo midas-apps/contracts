@@ -24,6 +24,7 @@ import type { GreenlistConfig } from './greenlist';
 import {
   GrantAllTokenRolesConfig,
   GrantDefaultAdminRoleToAcAdminConfig,
+  GrantTimelockRolesConfig,
 } from './roles';
 import {
   DeployRvAaveConfig,
@@ -204,6 +205,8 @@ export type NetworkDeploymentConfig = Record<
   number,
   {
     grantDefaultAdminRole?: GrantDefaultAdminRoleToAcAdminConfig;
+    /** timelock manager challengers and executors */
+    grantTimelockRoles?: GrantTimelockRolesConfig;
     timelock?: DeployTimelockConfig;
     accessControl?: {
       /** default role timelock delay in seconds. 0 for no delay */

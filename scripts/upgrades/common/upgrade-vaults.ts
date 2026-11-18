@@ -1,6 +1,6 @@
-import { DeployImplementationResponse } from '@openzeppelin/hardhat-upgrades/dist/deploy-implementation';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { getImplAddressFromDeployment } from './implementation-deployment';
 import { validateRolesOnChain } from './onchain-read';
 
 import { MTokenName } from '../../../config';
@@ -94,29 +94,6 @@ export const executeTransferOwnershipProxyAdmin = async (
       return await executeTimeLockTransferOwnershipTx(hre, params, salt);
     },
   );
-};
-
-const getImplAddressFromDeployment = async (
-  deployment: DeployImplementationResponse,
-) => {
-  if (typeof deployment === 'string') {
-    throw new Error(
-      'Deployment is a string (getTxResponse should set to true)',
-    );
-  }
-  const tx = await deployment.wait(5);
-  const address =
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tx.contractAddress ?? tx.to ?? ((tx as any).creates as string);
-
-  if (tx.confirmations <= 20) {
-    return {
-      deployedNew: true,
-      address,
-    };
-  } else {
-    return { deployedNew: false, address };
-  }
 };
 
 type MTokenVaultsToUpgrade = {
@@ -436,21 +413,37 @@ const upgradeAllVaults = async (
       continue;
     }
 
-    const { deployedNew, address: implementationAddress } =
-      await getImplAddressFromDeployment(
-        await hre.upgrades.prepareUpgrade(
-          proxyAddress,
-          await hre.ethers.getContractFactory(contractName, deployer),
-          {
-            redeployImplementation: 'onchange',
-            getTxResponse: true,
-            constructorArgs,
-          },
-        ),
-      );
+    // implementation reused from the manifest is deployed at or before it
+    const startBlock = await hre.ethers.provider.getBlockNumber();
+
+    const {
+      deployedNew,
+      isFirstUse,
+      address: implementationAddress,
+    } = await getImplAddressFromDeployment(
+      await hre.upgrades.prepareUpgrade(
+        proxyAddress,
+        await hre.ethers.getContractFactory(contractName, deployer),
+        {
+          redeployImplementation: 'onchange',
+          getTxResponse: true,
+          constructorArgs,
+        },
+      ),
+      startBlock,
+    );
 
     if (deployedNew) {
       logDeploy(contractName, contractType, implementationAddress);
+    } else {
+      console.log(
+        `Implementation (${implementationAddress}) already deployed for ${contractName}`,
+      );
+    }
+
+    // reused implementations are verified too (no-op if already verified):
+    // the ones of an interrupted run or replayed by the signer are not yet
+    if (isFirstUse) {
       await etherscanVerify(
         hre,
         implementationAddress,
@@ -459,10 +452,6 @@ const upgradeAllVaults = async (
       ).catch((e) => {
         console.error('Verification failed', e);
       });
-    } else {
-      console.log(
-        `Implementation (${implementationAddress}) already deployed for ${contractName}`,
-      );
     }
 
     deployments.push({

@@ -74,33 +74,26 @@ export const mXRPDeploymentConfig: DeploymentConfig = {
     },
     [chainIds.bsc]: {
       dv: {
+        version: 'v2',
         type: 'REGULAR',
         enableSanctionsList: false,
-        feeReceiver: '0x878e651b8410bf742D75Cb23e87B496B7E9b816f',
         tokensReceiver: '0x6FD868DCDb4A7e74718c6f09FCf0678710A693CE',
-        instantDailyLimit: constants.MaxUint256,
         instantFee: parseUnits('0', 2),
         variationTolerance: parseUnits('0.3', 2),
+        minAmount: parseUnits('1'),
         minMTokenAmountForFirstDeposit: parseUnits('0', 18),
-        maxSupplyCap: parseUnits('10000000', 18),
       },
-      rvSwapper: {
-        type: 'SWAPPER',
-        feeReceiver: '0x8fee409f8F772667ADD2a2ccfB8C5182a7349cE9',
+      rv: {
+        version: 'v2',
+        type: 'REGULAR',
         tokensReceiver: '0x6FD868DCDb4A7e74718c6f09FCf0678710A693CE',
         requestRedeemer: '0x33541b80AF7779F5D53C9872c0135B0aFA6bC14d',
-        instantDailyLimit: constants.MaxUint256,
         instantFee: parseUnits('0.3', 2),
         variationTolerance: parseUnits('0.3', 2),
-        liquidityProvider: 'dummy',
+        minAmount: parseUnits('1'),
         enableSanctionsList: false,
-        swapperVault: 'dummy',
       },
       postDeploy: {
-        axelarIts: {
-          operator: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
-          flowLimit: parseUnits('1250', 18),
-        },
         addPaymentTokens: {
           vaults: [
             {
@@ -119,7 +112,7 @@ export const mXRPDeploymentConfig: DeploymentConfig = {
                   allowance: parseUnits('1000000000', 18),
                 },
               ],
-              type: 'redemptionVaultSwapper',
+              type: 'redemptionVault',
             },
           ],
         },

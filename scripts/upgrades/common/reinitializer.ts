@@ -302,6 +302,16 @@ export interface GuardInput {
   initializerCalldata?: string;
   /** Test seam; production resolves via loadManifestForChain. */
   getManifest?: (chainId: number) => any;
+  /**
+   * runtime code of a not deployed implementation (dry runs): reinitializers
+   * are looked up in it instead of the code at `newImplementation`
+   */
+  newImplementationCode?: string;
+  /**
+   * implementation whose manifest layout resolves the `_initialized` slot,
+   * defaults to `newImplementation` (dry runs: the current implementation)
+   */
+  layoutImplementation?: string;
 }
 
 /**
@@ -318,13 +328,19 @@ export async function assertReinitializerCovered(
     newImplementation,
     abi,
     initializerCalldata,
+    newImplementationCode,
+    layoutImplementation = newImplementation,
   } = input;
   const reinits = getReinitializers(abi);
   if (reinits.length === 0) return;
 
   const implVersionsPresent: number[] = [];
   for (const r of reinits) {
-    if (await implHasSelector(provider, newImplementation, r.selector)) {
+    const hasSelector =
+      newImplementationCode !== undefined
+        ? newImplementationCode.toLowerCase().includes(r.selector.slice(2))
+        : await implHasSelector(provider, newImplementation, r.selector);
+    if (hasSelector) {
       implVersionsPresent.push(r.version);
     }
   }
@@ -334,12 +350,12 @@ export async function assertReinitializerCovered(
   const getManifest = input.getManifest ?? loadManifestForChain;
   const ref = initializedSlotFromManifest(
     getManifest(chainId),
-    newImplementation,
+    layoutImplementation,
   );
   if (!ref) {
     throw new Error(
       `Reinitializer guard: cannot resolve the _initialized storage slot for ` +
-        `implementation ${newImplementation} (chain ${chainId}); expected its ` +
+        `implementation ${layoutImplementation} (chain ${chainId}); expected its ` +
         `layout in .openzeppelin/${manifestFileForChain(chainId)}. Refusing ` +
         `to guess a slot — re-run the upgrade so prepareUpgrade records the ` +
         `implementation in the manifest, and commit that file.`,

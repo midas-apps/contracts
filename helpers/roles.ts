@@ -149,7 +149,15 @@ export const customGreenlistRoleNames: Partial<Record<MTokenName, string>> = {
   radUSD: 'RADIAL_GREENLISTED_ROLE',
 };
 
+/**
+ * Greenlist role of a product: the common `GREENLISTED_ROLE` unless the
+ * product is listed in `tokenLevelGreenlistTokens`
+ */
 const getGreenlistRoleName = (token: MTokenName): string => {
+  if (!tokenLevelGreenlistTokens.includes(token)) {
+    return getRolesNamesCommon().greenlisted;
+  }
+
   const greenlistToken = sharedGreenlistRoleSource[token] ?? token;
   if (customGreenlistRoleNames[greenlistToken]) {
     return customGreenlistRoleNames[greenlistToken]!;
@@ -289,10 +297,10 @@ export const getAllRoles = (): AllRoles => {
 };
 
 /**
- * Roles that must be marked as user facing on MidasAccessControl: every
- * product greenlisted role and every min balance exempt role (plus the
- * common greenlisted role). Derived from the generated role registry, so it
- * is the same on every network.
+ * Roles that must be marked as user facing on MidasAccessControl: the common
+ * greenlisted role, the greenlisted roles of the `tokenLevelGreenlistTokens`
+ * products and every min balance exempt role. Derived from the generated role
+ * registry, so it is the same on every network.
  */
 export const getAllUserFacingRoles = (): string[] => {
   const { common, tokenRoles } = getAllRoles();

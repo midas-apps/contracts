@@ -145,6 +145,10 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
     grantDefaultAdminRole: {
       acAdminAddress: '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227',
     },
+    grantTimelockRoles: {
+      challengers: ['0xa5cbC5Edf329388e22b4293E04Af20dD1fdD6f73'],
+      executors: ['0x1eAbd59E6c857AEe66d3DE3Cd5d90dbA7679fEfD'],
+    },
     timelock: {
       minDelay: 2 * DAY,
       proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',

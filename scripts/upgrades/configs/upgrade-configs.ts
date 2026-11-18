@@ -1,5 +1,6 @@
 import { BigNumberish, constants, utils } from 'ethers';
 
+import { chainIds, MTokenName } from '../../../config';
 import { networkUptimeFeeds } from '../../../config/constants/addresses';
 import { mTokensMetadata } from '../../../helpers/mtokens-metadata';
 import { getAllUserFacingRoles } from '../../../helpers/roles';
@@ -7,16 +8,28 @@ import { DEFAULT_CLAWBACK_RECEIVER } from '../../deploy/common/types';
 import { networkDeploymentConfigs } from '../../deploy/configs/network-configs';
 import { ContractsUpgradeConfig, UpgradeConfig } from '../common/types';
 
+type MTokensUpgradeConfig = NonNullable<ContractsUpgradeConfig['mTokens']>;
+type PaymentTokensUpgradeConfig = NonNullable<
+  ContractsUpgradeConfig['paymentTokens']
+>;
+
 /**
- * mToken `initializeV3` values shared by every mToken of the network. To use
- * different values for an mToken set `initializerArgs` of its `token` override
+ * mToken `initializeV3` values of the network. To use completely different
+ * args for an mToken set `initializerArgs` of its `token` override
  */
 export type V2CoreUpgradeParams = {
-  /** defaults to `DEFAULT_CLAWBACK_RECEIVER` */
+  /** shared by every mToken, defaults to `DEFAULT_CLAWBACK_RECEIVER` */
   clawbackReceiver?: string;
-  /** `constants.MaxUint256` for unlimited */
-  maxSupplyCap: BigNumberish;
+  /**
+   * per mToken, required for every mToken whose token is upgraded.
+   * `constants.MaxUint256` for unlimited
+   */
+  maxSupplyCap: Partial<Record<MTokenName, BigNumberish>>;
 };
+
+/** `true` entries of the overrides turn them into an allowlist */
+const hasSelectedEntries = (overrides: Record<string, unknown> | undefined) =>
+  Object.values(overrides ?? {}).some((v) => v === true);
 
 /**
  * v2 core upgrade of a network: access control and every mToken / payment
@@ -29,12 +42,17 @@ export type V2CoreUpgradeParams = {
  * proxies that have already consumed them:
  * - MidasAccessControl `initializeV2`
  * - mToken `initializeV3`: clawback receiver (`DEFAULT_CLAWBACK_RECEIVER` by
- *   default) and max supply cap are passed explicitly, permissioned/min balance flags are taken from the mToken
- *   metadata and are checked against the deployed v1 token
+ *   default) and the max supply cap of the mToken are passed explicitly,
+ *   permissioned/min balance flags are taken from the mToken metadata and are
+ *   checked against the deployed v1 token
  * - DataFeed `initializeV2`: sequencer uptime feed of the network from
  *   `networkUptimeFeeds`, zero address if the network has none
  *
- * Entries of `overrides` are merged on top of these defaults
+ * Entries of `overrides` are merged on top of these defaults. If any
+ * `mTokens.overrides` (`paymentTokens.overrides`) entry is `true`, only the
+ * listed mTokens (payment tokens) are upgraded:
+ * `mTokens: { overrides: { mXRP: true } }` upgrades all the mXRP contracts
+ * and none of the other mTokens
  */
 export const v2CoreUpgrade = (
   chainId: number,
@@ -51,9 +69,37 @@ export const v2CoreUpgrade = (
     throw new Error(`Invalid clawbackReceiver for chain ${chainId}`);
   }
 
-  if (maxSupplyCap === undefined || maxSupplyCap === null) {
-    throw new Error(`maxSupplyCap is not set for chain ${chainId}`);
-  }
+  const isMTokensAllowlist = hasSelectedEntries(overrides?.mTokens?.overrides);
+  const isPaymentTokensAllowlist = hasSelectedEntries(
+    overrides?.paymentTokens?.overrides,
+  );
+
+  const mTokensAll: MTokensUpgradeConfig['all'] = isMTokensAllowlist
+    ? overrides?.mTokens?.all
+    : {
+        token: true,
+        customFeed: true,
+        customFeedDv: true,
+        customFeedRv: true,
+        customFeedGrowth: true,
+        dataFeed: true,
+        dataFeedDv: true,
+        dataFeedRv: true,
+        ...overrides?.mTokens?.all,
+      };
+
+  const paymentTokensAll: PaymentTokensUpgradeConfig['all'] =
+    isPaymentTokensAllowlist
+      ? overrides?.paymentTokens?.all
+      : {
+          dataFeed: true,
+          aggregator: true,
+          numeratorDataFeed: true,
+          numeratorAggregator: true,
+          denominatorDataFeed: true,
+          denominatorAggregator: true,
+          ...overrides?.paymentTokens?.all,
+        };
 
   return {
     accessControl: true,
@@ -73,9 +119,15 @@ export const v2CoreUpgrade = (
           if (!mToken) throw new Error('mToken is required for initializeV3');
           const metadata = mTokensMetadata[mToken];
           if (!metadata) throw new Error(`${mToken} metadata is not found`);
+          const mTokenMaxSupplyCap = maxSupplyCap[mToken];
+          if (mTokenMaxSupplyCap === undefined || mTokenMaxSupplyCap === null) {
+            throw new Error(
+              `maxSupplyCap is not set for ${mToken} on chain ${chainId}`,
+            );
+          }
           return [
             clawbackReceiver,
-            maxSupplyCap,
+            mTokenMaxSupplyCap,
             !!metadata.isPermissioned,
             !!metadata.isMinBalance,
           ];
@@ -93,29 +145,11 @@ export const v2CoreUpgrade = (
     },
     mTokens: {
       ...overrides?.mTokens,
-      all: {
-        token: true,
-        customFeed: true,
-        customFeedDv: true,
-        customFeedRv: true,
-        customFeedGrowth: true,
-        dataFeed: true,
-        dataFeedDv: true,
-        dataFeedRv: true,
-        ...overrides?.mTokens?.all,
-      },
+      all: mTokensAll,
     },
     paymentTokens: {
       ...overrides?.paymentTokens,
-      all: {
-        dataFeed: true,
-        aggregator: true,
-        numeratorDataFeed: true,
-        numeratorAggregator: true,
-        denominatorDataFeed: true,
-        denominatorAggregator: true,
-        ...overrides?.paymentTokens?.all,
-      },
+      all: paymentTokensAll,
     },
   };
 };
@@ -131,14 +165,13 @@ export const upgradeConfigs: UpgradeConfig = {
   upgrades: {
     'v2-core-upgrade': {
       contracts: {
-        // [chainIds.sepolia]: v2CoreUpgrade(
-        //   chainIds.sepolia,
-        //   { maxSupplyCap: constants.MaxUint256 },
-        //   {
-        //     mTokens: { overrides: { mTBILL: false } },
-        //     paymentTokens: { overrides: { usdc: { aggregator: false } } },
-        //   },
-        // ),
+        [chainIds.bsc]: v2CoreUpgrade(
+          chainIds.bsc,
+          { maxSupplyCap: { mXRP: constants.MaxUint256 } },
+          {
+            mTokens: { overrides: { mXRP: true } },
+          },
+        ),
       },
     },
   },

@@ -1,9 +1,11 @@
-import { DeployImplementationResponse } from '@openzeppelin/hardhat-upgrades/dist/deploy-implementation';
-import { utils } from 'ethers';
+import { ContractFactory, utils } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { getImplAddressFromDeployment } from './implementation-deployment';
 import {
   batchStaticCalls,
+  describeRpcError,
+  isRevertError,
   mapLimit,
   RoleCheck,
   RPC_CONCURRENCY,
@@ -11,6 +13,7 @@ import {
   withRpcRetry,
 } from './onchain-read';
 import {
+  assertReinitializerCovered,
   getImplAddress,
   initializedSlotFromManifest,
   loadManifestForChain,
@@ -155,6 +158,381 @@ export const executeUpgradeConfiguredContracts = async (
   );
 
   return executeUpgradeContractsRaw(hre, salt, contracts);
+};
+
+// placeholder address the new implementation code is put at in the simulations
+const DRY_RUN_IMPL_ADDRESS = utils.getAddress(
+  '0x' + utils.id('midas.upgrades.dry-run.implementation').slice(-40),
+);
+
+// revert data of a raw `eth_call` error (top level or the node error)
+const getRevertData = (err: unknown): string | undefined => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const e = err as any;
+  for (const candidate of [e?.data, e?.error?.data, e?.error?.error?.data]) {
+    if (typeof candidate === 'string') return candidate;
+    if (typeof candidate?.data === 'string') return candidate.data;
+  }
+  return undefined;
+};
+
+/**
+ * non-revert RPC errors that mean the node rejected the state override
+ * param itself (as opposed to transient failures: timeouts, rate limits)
+ */
+const STATE_OVERRIDE_UNSUPPORTED =
+  /override|not supported|unsupported|method not found|invalid params|invalid argument|too many arguments/i;
+
+// revert of the proxy when the node silently dropped the state override
+const OVERRIDE_IGNORED_REVERT = /new implementation is not a contract/i;
+
+const decodeRevert = (err: unknown, ifaces: utils.Interface[]) => {
+  const data = getRevertData(err);
+  if (!data || data === '0x') return describeRpcError(err);
+  try {
+    // 0x08c379a0 = Error(string), 0x4e487b71 = Panic(uint256)
+    if (data.startsWith('0x08c379a0')) {
+      return utils.defaultAbiCoder.decode(['string'], '0x' + data.slice(10))[0];
+    }
+    if (data.startsWith('0x4e487b71')) {
+      const [code] = utils.defaultAbiCoder.decode(
+        ['uint256'],
+        '0x' + data.slice(10),
+      );
+      return `Panic code: ${code.toString()}`;
+    }
+  } catch {
+    // fall through to the raw data
+  }
+  for (const iface of ifaces) {
+    try {
+      const parsed = iface.parseError(data);
+      return `${parsed.name}(${parsed.args.map(String).join(', ')})`;
+    } catch {
+      // not an error of this interface
+    }
+  }
+  return data;
+};
+
+/**
+ * raw `eth_call` (ethers masks every failure as a revert), transient RPC
+ * failures are retried
+ */
+const rawEthCall = async (
+  hre: HardhatRuntimeEnvironment,
+  tx: { from?: string; to?: string; data: string },
+  stateOverrides?: Record<string, { code: string }>,
+) => {
+  const params: unknown[] = [tx, 'latest'];
+  if (stateOverrides) params.push(stateOverrides);
+  return withRpcRetry(
+    async () => (await hre.ethers.provider.send('eth_call', params)) as string,
+  );
+};
+
+type DryRunResult = {
+  label: string;
+  proxyAddress: string;
+  status: 'ok' | 'not-simulated' | 'already-upgraded' | 'failed';
+  initializer?: string;
+  notes: string[];
+  error?: string;
+};
+
+/**
+ * Runs the checks of the `propose` flow for every configured contract
+ * without deploying or sending anything (read-only, works on the real network):
+ * - config resolution and the on-chain type / role validation
+ * - storage layout and upgrade safety against the current implementation
+ *   (`upgrades.validateUpgrade`, uses the `.openzeppelin` manifest)
+ * - initializer resolution and args encoding
+ * - reinitializer guard
+ * - `ProxyAdmin.upgrade(AndCall)` from the timelock simulated with an
+ *   `eth_call` state override that puts the new implementation code at a
+ *   placeholder address (skipped if the RPC does not support state overrides)
+ *
+ * Throws after the report if any of the contracts failed
+ */
+export const dryRunUpgradeConfiguredContracts = async (
+  hre: HardhatRuntimeEnvironment,
+  upgradeId: string,
+) => {
+  const { contracts } = await getValidatedConfiguredUpgrade(hre, upgradeId);
+  sortUpgradeContracts(contracts);
+
+  const provider = hre.ethers.provider;
+  const admin = (await hre.upgrades.admin.getInstance()).connect(provider);
+  const timelock = getCurrentAddresses(hre)?.timelock;
+  const adminOwner: string = await admin.owner();
+
+  const globalNotes: string[] = [];
+  if (!timelock) {
+    globalNotes.push('timelock address is not configured');
+  } else if (adminOwner.toLowerCase() !== timelock.toLowerCase()) {
+    globalNotes.push(
+      `ProxyAdmin owner ${adminOwner} is not the timelock ${timelock}: propose will fail, simulating from the owner`,
+    );
+  }
+  const simulationCaller = adminOwner;
+
+  const results: DryRunResult[] = [];
+  let stateOverridesSupported = true;
+
+  // implementation code / abi are the same for the proxies of a contract
+  // name with the same constructor args (e.g. payment token feeds)
+  const newImplCodeCache = new Map<string, Promise<string>>();
+  const abiCache = new Map<string, Promise<unknown[]>>();
+
+  const getAbi = (contractName: string) => {
+    if (!abiCache.has(contractName)) {
+      abiCache.set(
+        contractName,
+        hre.artifacts.readArtifact(contractName).then(({ abi }) => abi),
+      );
+    }
+    return abiCache.get(contractName)!;
+  };
+
+  const getNewImplCode = (
+    contractName: string,
+    factory: ContractFactory,
+    constructorArgs: unknown[] | undefined,
+  ) => {
+    const key = `${contractName}:${JSON.stringify(constructorArgs ?? [])}`;
+    if (!newImplCodeCache.has(key)) {
+      const deployData = factory.getDeployTransaction(
+        ...(constructorArgs ?? []),
+      ).data;
+      newImplCodeCache.set(
+        key,
+        deployData
+          ? rawEthCall(hre, { data: utils.hexlify(deployData) }).catch((e) => {
+              throw new Error(
+                `constructor simulation failed: ${decodeRevert(e, [
+                  factory.interface,
+                ])}`,
+              );
+            })
+          : Promise.reject(new Error('empty deploy data')),
+      );
+    }
+    return newImplCodeCache.get(key)!;
+  };
+
+  for (const c of contracts) {
+    const result: DryRunResult = {
+      label: c.contractType,
+      proxyAddress: c.proxyAddress,
+      status: 'ok',
+      notes: [],
+    };
+    results.push(result);
+
+    console.log(`\nDry run: ${c.contractType} (${c.proxyAddress})`);
+
+    try {
+      const factory = await hre.ethers.getContractFactory(c.contractName);
+      const currentImpl = await getImplAddress(provider, c.proxyAddress);
+
+      if (!currentImpl) throw new Error('implementation slot is empty');
+
+      let newImpl: string;
+      let newImplCode: string;
+
+      if (c.overrideImplementation) {
+        newImpl = c.overrideImplementation;
+        newImplCode = await provider.getCode(newImpl);
+        if (newImplCode === '0x') {
+          throw new Error(`no code at override implementation ${newImpl}`);
+        }
+        result.notes.push(`override implementation ${newImpl}`);
+      } else {
+        // `constructorArgs` is read at runtime (deploy data encoding) but
+        // missing in the `ValidationOptions` type
+        await hre.upgrades.validateUpgrade(c.proxyAddress, factory, {
+          constructorArgs: c.constructorArgs,
+        } as Parameters<typeof hre.upgrades.validateUpgrade>[2]);
+        result.notes.push('storage layout / upgrade safety: ok');
+
+        newImpl = DRY_RUN_IMPL_ADDRESS;
+        newImplCode = await getNewImplCode(
+          c.contractName,
+          factory,
+          c.constructorArgs,
+        );
+        if (newImplCode === '0x') {
+          throw new Error('constructor simulation returned empty code');
+        }
+      }
+
+      const currentImplCode = await provider.getCode(currentImpl);
+      if (currentImplCode.toLowerCase() === newImplCode.toLowerCase()) {
+        result.status = 'already-upgraded';
+        result.notes.push(`current implementation ${currentImpl} is the same`);
+        continue;
+      }
+
+      // the layout that resolves the `_initialized` slot: same as propose
+      // for override implementations, the current implementation otherwise
+      // (the new one is not in the manifest yet, the slot does not move in a
+      // layout compatible upgrade)
+      const layoutImpl = c.overrideImplementation ?? currentImpl;
+
+      const initializer = (await isInitializerConsumed(hre, {
+        ...c,
+        implementationAddress: layoutImpl,
+      }))
+        ? undefined
+        : c.initializer;
+      result.initializer = initializer;
+
+      const initializerCalldata = initializer
+        ? factory.interface.encodeFunctionData(
+            initializer,
+            c.initializerArgs ?? [],
+          )
+        : undefined;
+
+      if (initializer) {
+        result.notes.push(
+          `${initializer}(${(c.initializerArgs ?? []).map(String).join(', ')})`,
+        );
+      }
+
+      await assertReinitializerCovered({
+        provider,
+        proxyAddress: c.proxyAddress,
+        newImplementation: newImpl,
+        newImplementationCode: newImplCode,
+        layoutImplementation: layoutImpl,
+        abi: await getAbi(c.contractName),
+        initializerCalldata,
+      });
+      result.notes.push('reinitializer guard: ok');
+
+      const needsStateOverride = !c.overrideImplementation;
+
+      if (needsStateOverride && !stateOverridesSupported) {
+        result.status = 'not-simulated';
+        result.notes.push(
+          'upgrade simulation: skipped (RPC does not support state overrides)',
+        );
+        continue;
+      }
+
+      const upgradeCalldata = initializerCalldata
+        ? admin.interface.encodeFunctionData('upgradeAndCall', [
+            c.proxyAddress,
+            newImpl,
+            initializerCalldata,
+          ])
+        : admin.interface.encodeFunctionData('upgrade', [
+            c.proxyAddress,
+            newImpl,
+          ]);
+
+      try {
+        await rawEthCall(
+          hre,
+          { from: simulationCaller, to: admin.address, data: upgradeCalldata },
+          needsStateOverride ? { [newImpl]: { code: newImplCode } } : undefined,
+        );
+        result.notes.push('upgrade simulation: ok');
+      } catch (e) {
+        const reason = decodeRevert(e, [factory.interface, admin.interface]);
+        const isRevert = isRevertError(e);
+
+        // the new code is never empty here, so this revert means the node
+        // dropped the state override param without an error
+        const isOverrideIgnored =
+          needsStateOverride &&
+          isRevert &&
+          OVERRIDE_IGNORED_REVERT.test(reason);
+        const isOverrideRejected =
+          needsStateOverride &&
+          !isRevert &&
+          STATE_OVERRIDE_UNSUPPORTED.test(describeRpcError(e));
+
+        if (isOverrideIgnored || isOverrideRejected) {
+          stateOverridesSupported = false;
+          result.status = 'not-simulated';
+          result.notes.push(
+            `upgrade simulation: skipped, RPC does not support state overrides (${reason})`,
+          );
+        } else if (isRevert) {
+          throw new Error(`upgrade simulation reverted: ${reason}`);
+        } else {
+          // transient RPC failure that outlived the retries: not a result
+          throw new Error(`upgrade simulation RPC error: ${reason}`);
+        }
+      }
+    } catch (e) {
+      result.status = 'failed';
+      result.error = e instanceof Error ? e.message : String(e);
+    } finally {
+      for (const note of result.notes) console.log(`  - ${note}`);
+      if (result.error) console.error(`  FAILED: ${result.error}`);
+    }
+  }
+
+  const countOf = (status: DryRunResult['status']) =>
+    results.filter((r) => r.status === status).length;
+  const failed = results.filter((r) => r.status === 'failed');
+
+  console.log('\n===== Dry run summary =====');
+  for (const note of globalNotes) console.warn(`WARNING: ${note}`);
+  if (countOf('not-simulated')) {
+    console.warn(
+      'WARNING: the RPC does not support eth_call state overrides, the upgrade (and initializer) calls of the not-simulated contracts are not checked. Use an RPC that supports them for a full dry run',
+    );
+  }
+  console.table(
+    results.map(({ label, proxyAddress, status, initializer, error }) => ({
+      contract: label,
+      proxy: proxyAddress,
+      status,
+      initializer: initializer ?? '',
+      error: error ?? '',
+    })),
+  );
+  console.log(
+    `ok: ${countOf('ok')}, not simulated: ${countOf('not-simulated')}, ` +
+      `already upgraded: ${countOf('already-upgraded')}, failed: ${
+        failed.length
+      }`,
+  );
+
+  if (failed.length) {
+    throw new Error(
+      `Dry run failed for ${failed.length} contract(s):\n${failed
+        .map((f) => `${f.label}: ${f.error}`)
+        .join('\n')}`,
+    );
+  }
+
+  return results;
+};
+
+// access control goes first as other contracts depend on it
+const sortUpgradeContracts = (upgradeContracts: ContractToUpgrade[]) => {
+  const acContractName = getCommonContractNames().ac;
+
+  return upgradeContracts.sort((a, b) => {
+    const acOrder =
+      Number(b.contractName === acContractName) -
+      Number(a.contractName === acContractName);
+
+    if (acOrder !== 0) return acOrder;
+
+    return (a.mToken ?? a.contractName).localeCompare(
+      b.mToken ?? b.contractName,
+      'en',
+      {
+        sensitivity: 'base',
+      },
+    );
+  });
 };
 
 /**
@@ -530,13 +908,32 @@ const paymentTokenKeyContractTypes: Record<
 
 /**
  * `all` entries (only for the keys that have an address) with the override
- * entries merged on top; `false` override excludes the key
+ * entries merged on top; `false` override excludes the key. `true` overrides
+ * select every upgrade key that has an address (with the `all` entry config
+ * if it has one, keys excluded with `false` in `all` stay excluded); resolved
+ * as from `all`, so non-proxies are skipped
  */
 const mergeUpgradeEntries = <K extends string>(
   all: Partial<Record<K, ContractUpgradeEntry>> | undefined,
-  overrides: Partial<Record<K, ContractUpgradeEntry>> | undefined,
+  overrides: Partial<Record<K, ContractUpgradeEntry>> | true | undefined,
   keyAddresses: Partial<Record<K, string | undefined>>,
+  upgradeKeys: K[],
 ) => {
+  if (overrides === true) {
+    return upgradeKeys
+      .filter((key) => keyAddresses[key] && all?.[key] !== false)
+      .map((key) => {
+        const allEntry = all?.[key];
+        return {
+          key,
+          entry: (typeof allEntry === 'object'
+            ? allEntry
+            : true) as ContractUpgradeEntry,
+          isFromAll: true,
+        };
+      });
+  }
+
   const allEntries = Object.fromEntries(
     Object.entries(all ?? {}).filter(([key]) => keyAddresses[key as K]),
   ) as Partial<Record<K, ContractUpgradeEntry>>;
@@ -783,6 +1180,7 @@ export const getConfiguredContractUpgrades = (
       all,
       mTokenOverrides,
       tokenAddresses,
+      Object.keys(mTokenKeyContractTypes) as MTokenUpgradeKey[],
     )) {
       add({
         label: `${mToken}.${key}`,
@@ -845,6 +1243,7 @@ export const getConfiguredContractUpgrades = (
       ptAll,
       paymentTokenOverrides,
       proxyAddresses,
+      Object.keys(paymentTokenKeyContractTypes) as PaymentTokenUpgradeKey[],
     )) {
       const isCompositeFeed = key === 'dataFeed' && isComposite;
 
@@ -869,29 +1268,6 @@ export const getConfiguredContractUpgrades = (
   }
 
   return result;
-};
-
-const getImplAddressFromDeployment = async (
-  deployment: DeployImplementationResponse,
-) => {
-  if (typeof deployment === 'string') {
-    throw new Error(
-      'Deployment is a string (getTxResponse should set to true)',
-    );
-  }
-  const tx = await deployment.wait(5);
-  const address =
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tx.contractAddress ?? tx.to ?? ((tx as any).creates as string);
-
-  if (tx.confirmations <= 7) {
-    return {
-      deployedNew: true,
-      address,
-    };
-  } else {
-    return { deployedNew: false, address };
-  }
 };
 
 // errors of `scripts/deploy/common/timelock.ts` for the already handled upgrades
@@ -953,24 +1329,7 @@ const upgradeAllContractsRaw = async (
   ) => Promise<unknown>,
   { failFast }: UpgradeAllOptions = {},
 ) => {
-  const acContractName = getCommonContractNames().ac;
-
-  upgradeContracts.sort((a, b) => {
-    // access control goes first as other contracts depend on it
-    const acOrder =
-      Number(b.contractName === acContractName) -
-      Number(a.contractName === acContractName);
-
-    if (acOrder !== 0) return acOrder;
-
-    return (a.mToken ?? a.contractName).localeCompare(
-      b.mToken ?? b.contractName,
-      'en',
-      {
-        sensitivity: 'base',
-      },
-    );
-  });
+  sortUpgradeContracts(upgradeContracts);
 
   console.log('upgradeContracts', upgradeContracts);
 
@@ -1003,21 +1362,37 @@ const upgradeAllContractsRaw = async (
       continue;
     }
 
-    const { deployedNew, address: implementationAddress } =
-      await getImplAddressFromDeployment(
-        await hre.upgrades.prepareUpgrade(
-          proxyAddress,
-          await hre.ethers.getContractFactory(contractName, deployer),
-          {
-            redeployImplementation: 'onchange',
-            getTxResponse: true,
-            constructorArgs,
-          },
-        ),
-      );
+    // implementation reused from the manifest is deployed at or before it
+    const startBlock = await hre.ethers.provider.getBlockNumber();
+
+    const {
+      deployedNew,
+      isFirstUse,
+      address: implementationAddress,
+    } = await getImplAddressFromDeployment(
+      await hre.upgrades.prepareUpgrade(
+        proxyAddress,
+        await hre.ethers.getContractFactory(contractName, deployer),
+        {
+          redeployImplementation: 'onchange',
+          getTxResponse: true,
+          constructorArgs,
+        },
+      ),
+      startBlock,
+    );
 
     if (deployedNew) {
       logDeploy(contractName, contractType, implementationAddress);
+    } else {
+      console.log(
+        `Implementation (${implementationAddress}) already deployed for ${contractName}`,
+      );
+    }
+
+    // reused implementations are verified too (no-op if already verified):
+    // the ones of an interrupted run or replayed by the signer are not yet
+    if (isFirstUse) {
       await etherscanVerify(
         hre,
         implementationAddress,
@@ -1026,10 +1401,6 @@ const upgradeAllContractsRaw = async (
       ).catch((e) => {
         console.error('Verification failed', e);
       });
-    } else {
-      console.log(
-        `Implementation (${implementationAddress}) already deployed for ${contractName}`,
-      );
     }
 
     deployments.push({

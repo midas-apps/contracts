@@ -41,8 +41,13 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const timelockManagerWired =
     (await timelockManager.timelock()) !== ethers.constants.AddressZero;
 
+  // the v1 access control has no `timelockManager()`: the call reverts there,
+  // which means that it is not wired yet
   const accessControlWired =
-    (await accessControl.timelockManager()) !== ethers.constants.AddressZero;
+    (await accessControl.timelockManager().catch((e) => {
+      if (e?.code !== 'CALL_EXCEPTION') throw e;
+      return ethers.constants.AddressZero;
+    })) !== ethers.constants.AddressZero;
 
   if (!timelockManagerWired) {
     const tx = await timelockManager.populateTransaction.initializeTimelock(
