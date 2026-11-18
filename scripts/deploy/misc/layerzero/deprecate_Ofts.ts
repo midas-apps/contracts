@@ -35,15 +35,16 @@ import { sendAndWaitForCustomTxSign } from '../../common/utils';
  * reports (read-only) the token/vault pause state, since pausing is handled
  * by the existing tooling (deploy:post:pause:functions) and backoffice.
  *
- * All txs go through the regular Fordefi flow (sendAndWaitForCustomTxSign)
- * and are approved there one by one; this script only submits them in the
- * correct order (role revocations first, peer removal second).
+ * All txs go through the regular signing flow (sendAndWaitForCustomTxSign),
+ * Safe-owned ones as Safe proposals, and are approved one by one; this script
+ * only submits them in the correct order (role revocations first, peer
+ * removal second).
  *
  * Usage:
  *   # dry run (default) - verify everything, print the report and the tx plan
  *   yarn deploy:lz:deprecate --network scroll
  *
- *   # submit the required txs to Fordefi
+ *   # submit the required txs for approval
  *   DRY_RUN=false yarn deploy:lz:deprecate --network scroll
  *
  * The --network flag only bootstraps hardhat; the script itself always
@@ -333,7 +334,7 @@ const func: DeployFunction = async () => {
   }
 
   console.log(
-    `\nAll ${orderedTxs.length} transactions submitted, approve them in Fordefi in the listed order`,
+    `\nAll ${orderedTxs.length} transactions submitted, approve them in the listed order`,
   );
 };
 
