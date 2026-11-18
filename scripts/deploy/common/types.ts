@@ -34,6 +34,7 @@ import {
   DeployRvUstbConfig,
 } from './rv';
 import { DeployTimelockConfig } from './timelock';
+import type { DeployTokenConfig } from './token';
 import { toFunctionSelector } from './utils';
 import type {
   FreeFromMinAmountConfig,
@@ -160,6 +161,7 @@ export type DeploymentConfig = {
       rvMorpho?: DeployRvMorphoConfig;
       rvMToken?: DeployRvMTokenConfig;
       rvUstb?: DeployRvUstbConfig;
+      token?: DeployTokenConfig;
       postDeploy?: PostDeployConfig;
     }
   >;
@@ -187,6 +189,10 @@ export type PaymentTokenDeploymentConfig = {
     >
   >;
 };
+
+/** Default mToken clawback receiver, shared by all mTokens on all networks */
+export const DEFAULT_CLAWBACK_RECEIVER =
+  '0xD0cc216d848dbFC1b083031A7486d0CAdaf4EcDa' as const;
 
 /** `type(uint32).max`: disables the delay (see MidasAuthLibrary.NO_DELAY) */
 export const NO_DELAY = 0xffffffff;

@@ -3,15 +3,17 @@ import { BigNumberish, constants, utils } from 'ethers';
 import { networkUptimeFeeds } from '../../../config/constants/addresses';
 import { mTokensMetadata } from '../../../helpers/mtokens-metadata';
 import { getAllUserFacingRoles } from '../../../helpers/roles';
+import { DEFAULT_CLAWBACK_RECEIVER } from '../../deploy/common/types';
 import { networkDeploymentConfigs } from '../../deploy/configs/network-configs';
 import { ContractsUpgradeConfig, UpgradeConfig } from '../common/types';
 
 /**
- * mToken `initializeV3` values, there are no defaults. To use different
- * values for an mToken set `initializerArgs` of its `token` override
+ * mToken `initializeV3` values shared by every mToken of the network. To use
+ * different values for an mToken set `initializerArgs` of its `token` override
  */
 export type V2CoreUpgradeParams = {
-  clawbackReceiver: string;
+  /** defaults to `DEFAULT_CLAWBACK_RECEIVER` */
+  clawbackReceiver?: string;
   /** `constants.MaxUint256` for unlimited */
   maxSupplyCap: BigNumberish;
 };
@@ -26,8 +28,8 @@ export type V2CoreUpgradeParams = {
  * Reinitializers are called together with the upgrade and are skipped for the
  * proxies that have already consumed them:
  * - MidasAccessControl `initializeV2`
- * - mToken `initializeV3`: clawback receiver and max supply cap are passed
- *   explicitly, permissioned/min balance flags are taken from the mToken
+ * - mToken `initializeV3`: clawback receiver (`DEFAULT_CLAWBACK_RECEIVER` by
+ *   default) and max supply cap are passed explicitly, permissioned/min balance flags are taken from the mToken
  *   metadata and are checked against the deployed v1 token
  * - DataFeed `initializeV2`: sequencer uptime feed of the network from
  *   `networkUptimeFeeds`, zero address if the network has none
@@ -36,7 +38,10 @@ export type V2CoreUpgradeParams = {
  */
 export const v2CoreUpgrade = (
   chainId: number,
-  { clawbackReceiver, maxSupplyCap }: V2CoreUpgradeParams,
+  {
+    clawbackReceiver = DEFAULT_CLAWBACK_RECEIVER,
+    maxSupplyCap,
+  }: V2CoreUpgradeParams,
   overrides?: ContractsUpgradeConfig,
 ): ContractsUpgradeConfig => {
   if (
@@ -128,7 +133,7 @@ export const upgradeConfigs: UpgradeConfig = {
       contracts: {
         // [chainIds.sepolia]: v2CoreUpgrade(
         //   chainIds.sepolia,
-        //   { clawbackReceiver: '0x...', maxSupplyCap: constants.MaxUint256 },
+        //   { maxSupplyCap: constants.MaxUint256 },
         //   {
         //     mTokens: { overrides: { mTBILL: false } },
         //     paymentTokens: { overrides: { usdc: { aggregator: false } } },
