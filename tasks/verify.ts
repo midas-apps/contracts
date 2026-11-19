@@ -177,8 +177,10 @@ subtask('verify:sourcify-attempt-verification').setAction(
   },
 );
 
-const isOklink = (etherscan: Etherscan) =>
-  etherscan.apiUrl.includes('oklink.com');
+const isOklink = (etherscan: Etherscan) => {
+  const host = new URL(etherscan.apiUrl).hostname;
+  return host === 'oklink.com' || host.endsWith('.oklink.com');
+};
 
 const isVerifiedOnOklink = async (etherscan: Etherscan, address: string) => {
   const chain = etherscan.apiUrl.split('/').pop();
