@@ -53,46 +53,46 @@ library RedemptionSwapperHelpersLibrary {
     }
 
     /**
-     * @notice Convert a token out amount to an mToken amount
-     * @dev using ceiling division to avoid rounding errors
-     * @param _tokenOutAmount The amount of token out to convert
-     * @param _tokenOutRate The rate of the token out
-     * @param _mTokenRate The rate of the mToken
-     * @return The amount of mToken
+     * @notice Convert an amount of one token to another through their USD rates
+     * @dev using ceiling division on both steps
+     * @param _amount The amount of the source token to convert
+     * @param _fromRate The USD rate of the source token
+     * @param _toRate The USD rate of the target token
+     * @return The amount of the target token
      */
-    function tokenOutAmountToMTokenAmount(
-        uint256 _tokenOutAmount,
-        uint256 _tokenOutRate,
-        uint256 _mTokenRate
+    function convertTokenAmountRoundingUp(
+        uint256 _amount,
+        uint256 _fromRate,
+        uint256 _toRate
     ) internal pure returns (uint256) {
         uint256 amountUsd = Math.mulDiv(
-            _tokenOutAmount,
-            _tokenOutRate,
+            _amount,
+            _fromRate,
             1e18,
             Math.Rounding.Up
         );
-        return Math.mulDiv(amountUsd, 1e18, _mTokenRate, Math.Rounding.Up);
+        return Math.mulDiv(amountUsd, 1e18, _toRate, Math.Rounding.Up);
     }
 
     /**
-     * @notice Convert an mToken amount to a token out amount
-     * @dev using floor division to avoid rounding errors
-     * @param _mTokenAmount The amount of mToken to convert
-     * @param _mTokenRate The rate of the mToken
-     * @param _tokenOutRate The rate of the token out
-     * @return The amount of token out
+     * @notice Convert an amount of one token to another through their USD rates
+     * @dev using floor division on both steps
+     * @param _amount The amount of the source token to convert
+     * @param _fromRate The USD rate of the source token
+     * @param _toRate The USD rate of the target token
+     * @return The amount of the target token
      */
-    function mTokenAmountToTokenOutAmount(
-        uint256 _mTokenAmount,
-        uint256 _mTokenRate,
-        uint256 _tokenOutRate
+    function convertTokenAmountRoundingDown(
+        uint256 _amount,
+        uint256 _fromRate,
+        uint256 _toRate
     ) internal pure returns (uint256) {
         uint256 amountUsd = Math.mulDiv(
-            _mTokenAmount,
-            _mTokenRate,
+            _amount,
+            _fromRate,
             1e18,
             Math.Rounding.Down
         );
-        return Math.mulDiv(amountUsd, 1e18, _tokenOutRate, Math.Rounding.Down);
+        return Math.mulDiv(amountUsd, 1e18, _toRate, Math.Rounding.Down);
     }
 }

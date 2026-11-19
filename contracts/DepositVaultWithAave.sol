@@ -217,7 +217,7 @@ contract DepositVaultWithAave is DepositVault {
             pool.supply(tokenIn, transferredAmount, tokensReceiver, 0)
         {} catch (bytes memory error) {
             if (autoInvestFallbackEnabled) {
-                IERC20(tokenIn).safeApprove(address(pool), 0);
+                IERC20(tokenIn).forceApprove(address(pool), 0);
                 IERC20(tokenIn).safeTransfer(tokensReceiver, transferredAmount);
             } else {
                 revert AutoInvestFailed(error);

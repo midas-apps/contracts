@@ -19,6 +19,7 @@ import { isV2VaultType } from '../../../config/constants/vaults';
 import {
   DepositVaultWithAave,
   DepositVaultWithMorpho,
+  DepositVaultWithUSYC,
   ManageableVault,
   RedemptionVaultWithAave,
   RedemptionVaultWithMorpho,
@@ -597,5 +598,89 @@ export const setMorphoConfig = async (
         `autoInvestFallbackEnabled already correct for ${mToken} depositVaultMorpho`,
       );
     }
+  }
+};
+
+export type SetUsycConfigConfig = {
+  /**
+   * Applies to depositVaultUsyc.
+   * @default false
+   */
+  depositsEnabled?: boolean;
+  /**
+   * Applies to depositVaultUsyc.
+   * @default false
+   */
+  autoInvestFallbackEnabled?: boolean;
+};
+
+export const setUsycConfig = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+) => {
+  const { setUsycConfig: networkConfig } = getNetworkConfig(
+    hre,
+    mToken,
+    'postDeploy',
+  );
+
+  if (!networkConfig) {
+    throw new Error('Network config is not found');
+  }
+
+  const addresses = getCurrentAddresses(hre);
+  const vaultAddress = addresses?.[mToken]?.depositVaultUsyc;
+
+  if (!vaultAddress) {
+    throw new Error(`depositVaultUsyc address is not found for ${mToken}`);
+  }
+
+  const dv = (await getContractAt(
+    hre,
+    'DepositVaultWithUSYC',
+    vaultAddress,
+  )) as DepositVaultWithUSYC;
+
+  const targetDepositsEnabled = networkConfig.depositsEnabled ?? false;
+  const depositsEnabled = await dv.usycDepositsEnabled();
+  if (depositsEnabled !== targetDepositsEnabled) {
+    const tx = await dv.populateTransaction.setUsycDepositsEnabled(
+      targetDepositsEnabled,
+    );
+    await sendAndWaitForCustomTxSign(hre, tx, {
+      action: 'update-vault',
+      subAction: 'set-usyc-deposits-enabled',
+      comment: `Set usycDepositsEnabled=${targetDepositsEnabled} for ${mToken} depositVaultUsyc`,
+      mToken,
+    });
+    console.log(
+      `Set usycDepositsEnabled=${targetDepositsEnabled} for ${mToken} depositVaultUsyc`,
+    );
+  } else {
+    console.log(
+      `usycDepositsEnabled already correct for ${mToken} depositVaultUsyc`,
+    );
+  }
+
+  const targetFallbackEnabled =
+    networkConfig.autoInvestFallbackEnabled ?? false;
+  const fallbackEnabled = await dv.autoInvestFallbackEnabled();
+  if (fallbackEnabled !== targetFallbackEnabled) {
+    const tx = await dv.populateTransaction.setAutoInvestFallbackEnabled(
+      targetFallbackEnabled,
+    );
+    await sendAndWaitForCustomTxSign(hre, tx, {
+      action: 'update-vault',
+      subAction: 'set-auto-invest-fallback-enabled',
+      comment: `Set autoInvestFallbackEnabled=${targetFallbackEnabled} for ${mToken} depositVaultUsyc`,
+      mToken,
+    });
+    console.log(
+      `Set autoInvestFallbackEnabled=${targetFallbackEnabled} for ${mToken} depositVaultUsyc`,
+    );
+  } else {
+    console.log(
+      `autoInvestFallbackEnabled already correct for ${mToken} depositVaultUsyc`,
+    );
   }
 };

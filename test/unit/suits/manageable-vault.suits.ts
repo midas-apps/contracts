@@ -169,11 +169,13 @@ export const manageableVaultSuits = (
       | 'depositVaultWithMToken'
       | 'depositVaultWithAave'
       | 'depositVaultWithMorpho'
+      | 'depositVaultWithUSYC'
       | 'redemptionVault'
       | 'redemptionVaultWithAave'
       | 'redemptionVaultWithMToken'
       | 'redemptionVaultWithUSTB'
-      | 'redemptionVaultWithMorpho';
+      | 'redemptionVaultWithMorpho'
+      | 'redemptionVaultWithUSYC';
   },
   deploymentAdditionalChecks: (
     fixtureRes: DefaultFixture,

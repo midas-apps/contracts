@@ -118,7 +118,7 @@ contract RedemptionVaultWithMToken is RedemptionVault {
             );
 
         uint256 mTokenAAmount = RedemptionSwapperHelpersLibrary
-            .tokenOutAmountToMTokenAmount(
+            .convertTokenAmountRoundingUp(
                 missingAmountBase18,
                 tokenOutRate,
                 mTokenARate

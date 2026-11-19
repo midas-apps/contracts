@@ -728,6 +728,13 @@ describe('DataFeed', function () {
       await ethers.provider.send('evm_mine', []);
     };
 
+    // after a fixture revert hardhat's next block catches up with the wall
+    // clock, so mine one block first to absorb that jump
+    const getNow = async () => {
+      await ethers.provider.send('evm_mine', []);
+      return (await ethers.provider.getBlock('latest')).timestamp + 100;
+    };
+
     const setSequencerRound = async (
       sequencer: Awaited<ReturnType<AggregatorV3Mock__factory['deploy']>>,
       answer: number,
@@ -752,7 +759,7 @@ describe('DataFeed', function () {
 
     it('returns the price when the sequencer is up and the grace period has passed', async () => {
       const { dataFeed, owner } = await loadFixture(defaultDeploy);
-      const now = (await ethers.provider.getBlock('latest')).timestamp + 100;
+      const now = await getNow();
       const gracePeriod = (
         await dataFeed.SEQUENCER_UPTIME_AGGREGATOR_GRACE_PERIOD()
       ).toNumber();
@@ -767,7 +774,7 @@ describe('DataFeed', function () {
       const { dataFeed, owner, mockedAggregator } = await loadFixture(
         defaultDeploy,
       );
-      const now = (await ethers.provider.getBlock('latest')).timestamp + 100;
+      const now = await getNow();
       const gracePeriod = (
         await dataFeed.SEQUENCER_UPTIME_AGGREGATOR_GRACE_PERIOD()
       ).toNumber();
@@ -788,7 +795,7 @@ describe('DataFeed', function () {
       const { dataFeed, owner, mockedAggregator } = await loadFixture(
         defaultDeploy,
       );
-      const now = (await ethers.provider.getBlock('latest')).timestamp + 100;
+      const now = await getNow();
       const startedAt = now - 2 * 60 * 60;
 
       await attachSequencer(dataFeed, owner, 0, startedAt, now);
@@ -804,7 +811,7 @@ describe('DataFeed', function () {
 
     it('should fail: when sequencer is down', async () => {
       const { dataFeed, owner } = await loadFixture(defaultDeploy);
-      const now = (await ethers.provider.getBlock('latest')).timestamp + 100;
+      const now = await getNow();
 
       await attachSequencer(dataFeed, owner, 1, now - 2 * 60 * 60);
       await mineAt(now);
@@ -816,7 +823,7 @@ describe('DataFeed', function () {
 
     it('should fail: when sequencer answer is not up or down', async () => {
       const { dataFeed, owner } = await loadFixture(defaultDeploy);
-      const now = (await ethers.provider.getBlock('latest')).timestamp + 100;
+      const now = await getNow();
       const sequencer = await attachSequencer(
         dataFeed,
         owner,
@@ -847,7 +854,7 @@ describe('DataFeed', function () {
 
     it('should fail: when the grace period has not passed', async () => {
       const { dataFeed, owner } = await loadFixture(defaultDeploy);
-      const now = (await ethers.provider.getBlock('latest')).timestamp + 100;
+      const now = await getNow();
       const gracePeriod = (
         await dataFeed.SEQUENCER_UPTIME_AGGREGATOR_GRACE_PERIOD()
       ).toNumber();
@@ -875,7 +882,7 @@ describe('DataFeed', function () {
 
     it('passes on the first second after the grace period', async () => {
       const { dataFeed, owner } = await loadFixture(defaultDeploy);
-      const now = (await ethers.provider.getBlock('latest')).timestamp + 100;
+      const now = await getNow();
       const gracePeriod = (
         await dataFeed.SEQUENCER_UPTIME_AGGREGATOR_GRACE_PERIOD()
       ).toNumber();
@@ -888,7 +895,7 @@ describe('DataFeed', function () {
 
     it('should fail: when startedAt is in the future', async () => {
       const { dataFeed, owner } = await loadFixture(defaultDeploy);
-      const now = (await ethers.provider.getBlock('latest')).timestamp + 100;
+      const now = await getNow();
 
       await attachSequencer(dataFeed, owner, 0, now + 10);
       await mineAt(now);
@@ -898,7 +905,7 @@ describe('DataFeed', function () {
 
     it('should fail: when sequencer is down even if startedAt is in the future', async () => {
       const { dataFeed, owner } = await loadFixture(defaultDeploy);
-      const now = (await ethers.provider.getBlock('latest')).timestamp + 100;
+      const now = await getNow();
 
       await attachSequencer(dataFeed, owner, 1, now + 10);
       await mineAt(now);
@@ -912,7 +919,7 @@ describe('DataFeed', function () {
       const { dataFeed, owner, mockedAggregator } = await loadFixture(
         defaultDeploy,
       );
-      const now = (await ethers.provider.getBlock('latest')).timestamp + 100;
+      const now = await getNow();
       const startedAt = now - 2 * 60 * 60;
 
       await attachSequencer(dataFeed, owner, 0, startedAt);
@@ -932,7 +939,7 @@ describe('DataFeed', function () {
       const { dataFeed, owner, mockedAggregator } = await loadFixture(
         defaultDeploy,
       );
-      const now = (await ethers.provider.getBlock('latest')).timestamp + 100;
+      const now = await getNow();
       const healthyDiff = (await dataFeed.healthyDiff()).toNumber();
       const startedAt = now - healthyDiff - 10;
 
@@ -966,7 +973,7 @@ describe('DataFeed', function () {
       const { dataFeed, owner, mockedAggregator } = await loadFixture(
         defaultDeploy,
       );
-      const now = (await ethers.provider.getBlock('latest')).timestamp + 100;
+      const now = await getNow();
 
       await attachSequencer(dataFeed, owner, 1, now - 2 * 60 * 60);
       await mockedAggregator.setRoundData(-1);
@@ -1005,7 +1012,7 @@ describe('DataFeed', function () {
 
     it('disabling the feed allows reads while the sequencer is down', async () => {
       const { dataFeed, owner } = await loadFixture(defaultDeploy);
-      const now = (await ethers.provider.getBlock('latest')).timestamp + 100;
+      const now = await getNow();
 
       await attachSequencer(dataFeed, owner, 1, now - 2 * 60 * 60);
       await mineAt(now);
@@ -1022,7 +1029,7 @@ describe('DataFeed', function () {
 
     it('enabling the feed rejects reads while the sequencer is down', async () => {
       const { dataFeed, owner } = await loadFixture(defaultDeploy);
-      const now = (await ethers.provider.getBlock('latest')).timestamp + 100;
+      const now = await getNow();
 
       expect(await dataFeed.getDataInBase18()).eq(parseUnits('1.02'));
 
@@ -1036,7 +1043,7 @@ describe('DataFeed', function () {
 
     it('replacing a down feed with an up feed allows reads', async () => {
       const { dataFeed, owner } = await loadFixture(defaultDeploy);
-      const now = (await ethers.provider.getBlock('latest')).timestamp + 100;
+      const now = await getNow();
 
       await attachSequencer(dataFeed, owner, 1, now - 2 * 60 * 60);
       await mineAt(now);
@@ -1058,7 +1065,7 @@ describe('DataFeed', function () {
       } = await loadFixture(defaultDeploy);
       const dataFeedNew = await new DataFeedTest__factory(owner).deploy();
       const sequencer = await new AggregatorV3Mock__factory(owner).deploy();
-      const now = (await ethers.provider.getBlock('latest')).timestamp + 100;
+      const now = await getNow();
 
       await setSequencerRound(sequencer, 1, now - 2 * 60 * 60);
       await dataFeedNew.initialize(

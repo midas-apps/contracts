@@ -30,7 +30,10 @@ import {
   validateSimulateTimeLockProposeUpgradeTx,
   validateSimulateTimeLockUpgradeTx,
 } from '../../deploy/common/timelock';
-import { getDeployer } from '../../deploy/common/utils';
+import {
+  getDeployer,
+  getLinkedContractFactory,
+} from '../../deploy/common/utils';
 import { networkConfigs } from '../configs/network-configs';
 import { upgradeConfigs } from '../configs/upgrade-configs';
 
@@ -436,17 +439,20 @@ const upgradeAllVaults = async (
       continue;
     }
 
+    const { factory, opts } = await getLinkedContractFactory(
+      hre,
+      contractName,
+      deployer,
+      {
+        redeployImplementation: 'onchange',
+        getTxResponse: true,
+        constructorArgs,
+      },
+    );
+
     const { deployedNew, address: implementationAddress } =
       await getImplAddressFromDeployment(
-        await hre.upgrades.prepareUpgrade(
-          proxyAddress,
-          await hre.ethers.getContractFactory(contractName, deployer),
-          {
-            redeployImplementation: 'onchange',
-            getTxResponse: true,
-            constructorArgs,
-          },
-        ),
+        await hre.upgrades.prepareUpgrade(proxyAddress, factory, opts),
       );
 
     if (deployedNew) {

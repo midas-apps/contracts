@@ -224,7 +224,7 @@ contract DepositVaultWithMToken is DepositVault {
             targetMToken.safeTransfer(tokensReceiver, mTokenReceived);
         } catch (bytes memory err) {
             if (autoInvestFallbackEnabled) {
-                IERC20(tokenIn).safeApprove(address(mTokenDepositVault), 0);
+                IERC20(tokenIn).forceApprove(address(mTokenDepositVault), 0);
                 IERC20(tokenIn).safeTransfer(tokensReceiver, transferredAmount);
             } else {
                 revert AutoInvestFailed(err);

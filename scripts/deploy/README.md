@@ -89,6 +89,7 @@ Also confirm verification settings in `.env` are correct if you expect automatic
 - `--network <network_name>`: required for all scripts
 - `--mtoken <mToken_name>`: required for product deployment scripts
 - `--ptoken <pToken_name>`: required for payment-token specific scripts
+- `--lib <library_name>`: required for library deployment script
 - `--vault-version <v1|v2>`: required for scripts that work with both vault versions (see below)
 
 ### Vault versions
@@ -155,6 +156,45 @@ yarn deploy:rv:mtoken
 ```
 
 Add each deployed vault address under its `V2` key in `config/constants/addresses.ts`.
+
+#### Libraries
+
+Some contracts are linked against external libraries (for example, `RedemptionVaultWithUSYC` uses `VaultsWithUSYCLibrary`). A library is deployed once per network:
+
+```bash
+yarn hardhat deploy:library --network <network> --lib <library_name>
+```
+
+Add the deployed address to the `libraries` section of the network addresses ([`config/constants/addresses.ts`](../../config/constants/addresses.ts)):
+
+```ts
+arc: {
+  libraries: {
+    VaultsWithUSYCLibrary: '0x...',
+  },
+},
+```
+
+Proxy deployments detect the libraries a contract links against from its artifact and link them automatically. If a required library address is missing, the script fails before deploying.
+
+#### USYC vaults
+
+The USYC Teller address is taken from `usycTellerContracts`. Deploy the library first (see [Libraries](#libraries)), then the redemption vault, so the deposit vault can use it as `tokensReceiver`:
+
+```bash
+yarn hardhat deploy:rv:usyc --network <network> --mtoken <mToken>
+# add `redemptionVaultUsycV2` to the addresses file
+yarn hardhat deploy:dv:usyc --network <network> --mtoken <mToken>
+# add `depositVaultUsycV2` to the addresses file
+```
+
+Config keys are `rvUsyc` (`type: 'USYC'`, optional `depositVault`, `anticipatedFeeRate`) and `dvUsyc` (`type: 'USYC'`, optional `redemptionVault`, `anticipatedFeeRate`). `depositVault` and `redemptionVault` take either an address or a `{ mToken, depositVaultType | redemptionVaultType }` reference.
+
+USYC auto-invest deposits are disabled after deployment. To enable them, set `postDeploy.setUsycConfig` and run:
+
+```bash
+yarn hardhat deploy:post:set:usycconfig --network <network> --mtoken <mToken>
+```
 
 #### If new payment token is introduced
 

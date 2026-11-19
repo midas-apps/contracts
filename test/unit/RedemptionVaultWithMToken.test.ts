@@ -903,6 +903,188 @@ redemptionVaultSuits(
           });
         });
 
+        describe('vault fee is not obtained from the liquidity sources', () => {
+          // 1000 mTBILL at 1$ with 1% instant fee: 990 DAI payout, 10 DAI fee.
+          // the mToken sleeve is mTBILL redeemed through `redemptionVault`,
+          // so it does not mix with the loan LP mTokenLoan
+          const redeemWithLiquidity = async ({
+            dai = 0,
+            sleeve = 0,
+            lpMToken = 0,
+            preferLoanLiquidity = false,
+          }: {
+            dai?: number;
+            sleeve?: number;
+            lpMToken?: number;
+            preferLoanLiquidity?: boolean;
+          }) => {
+            const fixture = await loadFixture(defaultDeploy);
+            const {
+              owner,
+              redemptionVaultWithMToken,
+              redemptionVault,
+              stableCoins,
+              mTokenLoan,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              dataFeed,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVaultLoanSwapper,
+              loanLp,
+            } = fixture;
+
+            await mintToken(stableCoins.dai, redemptionVaultWithMToken, dai);
+            await mintToken(mTBILL, redemptionVaultWithMToken, sleeve);
+            await mintToken(stableCoins.dai, redemptionVault, sleeve);
+            await mintToken(mTokenLoan, loanLp, lpMToken);
+            await approveBase18(
+              loanLp,
+              mTokenLoan,
+              redemptionVaultWithMToken,
+              lpMToken,
+            );
+            await mintToken(stableCoins.dai, redemptionVaultLoanSwapper, 1000);
+
+            for (const vault of [
+              redemptionVaultWithMToken,
+              redemptionVault,
+              redemptionVaultLoanSwapper,
+            ]) {
+              await addPaymentTokenTest(
+                { vault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+            }
+            await redemptionVaultWithMToken.setRedemptionVault(
+              redemptionVault.address,
+            );
+            await redemptionVault.setWaivedFeeAccount(
+              redemptionVaultWithMToken.address,
+              true,
+            );
+
+            await mintToken(mTBILL, owner, 1000);
+            await approveBase18(owner, mTBILL, redemptionVaultWithMToken, 1000);
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithMToken, owner },
+              preferLoanLiquidity,
+            );
+
+            const loanRequestId =
+              await redemptionVaultWithMToken.currentLoanRequestId();
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithMToken,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                checkSupply: false,
+                additionalLiquidity: async () =>
+                  (
+                    await mTBILL.balanceOf(redemptionVaultWithMToken.address)
+                  ).div(10 ** (await stableCoins.dai.decimals())),
+              },
+              stableCoins.dai,
+              1000,
+            );
+
+            expect(
+              await stableCoins.dai.balanceOf(
+                redemptionVaultWithMToken.address,
+              ),
+            ).eq(0);
+
+            return {
+              ...fixture,
+              loanRequestId,
+              sleeveUsed: parseUnits(sleeve.toString()).sub(
+                await mTBILL.balanceOf(redemptionVaultWithMToken.address),
+              ),
+              loanRequest: await redemptionVaultWithMToken.loanRequests(
+                loanRequestId,
+              ),
+            };
+          };
+
+          it('preferLoanLiquidity=false: mToken sleeve covers only the payout', async () => {
+            const { redemptionVaultWithMToken, loanRequestId, sleeveUsed } =
+              await redeemWithLiquidity({ sleeve: 2000, lpMToken: 1000 });
+
+            expect(sleeveUsed).eq(parseUnits('990'));
+            expect(await redemptionVaultWithMToken.currentLoanRequestId()).eq(
+              loanRequestId,
+            );
+          });
+
+          it('preferLoanLiquidity=false: vault has the payout but not the payout + fee, mToken sleeve and loan LP are untouched', async () => {
+            const {
+              redemptionVaultWithMToken,
+              loanRequestId,
+              sleeveUsed,
+              mTokenLoan,
+              loanLp,
+            } = await redeemWithLiquidity({
+              dai: 990,
+              sleeve: 2000,
+              lpMToken: 1000,
+            });
+
+            expect(sleeveUsed).eq(0);
+            expect(await redemptionVaultWithMToken.currentLoanRequestId()).eq(
+              loanRequestId,
+            );
+            expect(await mTokenLoan.balanceOf(loanLp.address)).eq(
+              parseUnits('1000'),
+            );
+          });
+
+          it('preferLoanLiquidity=false: mToken sleeve is drained and loan LP covers only the missing payout', async () => {
+            const { sleeveUsed, loanRequest } = await redeemWithLiquidity({
+              dai: 100,
+              sleeve: 700,
+              lpMToken: 1000,
+            });
+
+            // 990 payout - 100 DAI - 700 from the sleeve = 190 shortfall,
+            // LP fee share is 10 * 190 / 990 truncated to 9 decimals
+            expect(sleeveUsed).eq(parseUnits('700'));
+            expect(loanRequest.amountTokenOut).eq(parseUnits('190'));
+            expect(loanRequest.amountFee).eq(parseUnits('1.919191919'));
+          });
+
+          it('preferLoanLiquidity=true: loan LP covers the payout and mToken sleeve is untouched', async () => {
+            const { sleeveUsed, loanRequest } = await redeemWithLiquidity({
+              sleeve: 2000,
+              lpMToken: 1000,
+              preferLoanLiquidity: true,
+            });
+
+            expect(sleeveUsed).eq(0);
+            expect(loanRequest.amountTokenOut).eq(parseUnits('990'));
+            expect(loanRequest.amountFee).eq(parseUnits('10'));
+          });
+
+          it('preferLoanLiquidity=true: loan LP is insufficient and mToken sleeve covers only the rest of the payout', async () => {
+            const { sleeveUsed, loanRequest } = await redeemWithLiquidity({
+              sleeve: 2000,
+              lpMToken: 500,
+              preferLoanLiquidity: true,
+            });
+
+            // LP gross 500 incl. 5 fee share: 495 cash, sleeve covers 990 - 495
+            expect(loanRequest.amountTokenOut).eq(parseUnits('495'));
+            expect(loanRequest.amountFee).eq(parseUnits('5'));
+            expect(sleeveUsed).eq(parseUnits('495'));
+          });
+        });
+
         it('should fail: when inner vault fee is not waived', async () => {
           const {
             owner,

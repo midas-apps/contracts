@@ -6,6 +6,7 @@ import { ethers } from 'hardhat';
  * @param contractName - The contract name as in artifacts
  * @param initializer - The initializer function name (default: 'initialize')
  * @param initParams - The initializer arguments
+ * @param libraries - Linked library addresses, keyed by library name
  */
 export const deployProxyContract = async <
   TContract extends Contract = Contract,
@@ -14,8 +15,11 @@ export const deployProxyContract = async <
   initParams?: unknown[] | readonly unknown[],
   initializer = 'initialize',
   constructorParams?: unknown[],
+  libraries?: Record<string, string>,
 ): Promise<TContract> => {
-  const factory = await ethers.getContractFactory(contractName);
+  const factory = await ethers.getContractFactory(contractName, {
+    libraries,
+  });
   const impl = await factory.deploy(...(constructorParams ?? []));
   await impl.deployed();
 

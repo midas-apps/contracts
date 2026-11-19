@@ -22,6 +22,7 @@ import {
   DepositVaultWithAaveTest,
   DepositVaultWithMTokenTest,
   DepositVaultWithUSTBTest,
+  DepositVaultWithUSYCTest,
   DepositVaultWithMorphoTest,
 } from '../../../typechain-types';
 import {
@@ -148,13 +149,15 @@ export const depositVaultSuits = (
       | DepositVaultWithMTokenTest
       | DepositVaultWithUSTBTest
       | DepositVaultWithMorphoTest
+      | DepositVaultWithUSYCTest
     >;
     key:
       | 'depositVault'
       | 'depositVaultWithUSTB'
       | 'depositVaultWithMToken'
       | 'depositVaultWithAave'
-      | 'depositVaultWithMorpho';
+      | 'depositVaultWithMorpho'
+      | 'depositVaultWithUSYC';
   },
   deploymentAdditionalChecks: (fixtureRes: DefaultFixture) => Promise<void>,
   initConfig: DepositVaultInitConfig,

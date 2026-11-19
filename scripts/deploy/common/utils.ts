@@ -1,9 +1,13 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { DeployProxyOptions } from '@openzeppelin/hardhat-upgrades/dist/utils';
+import {
+  DeployProxyOptions,
+  StandaloneOptions,
+} from '@openzeppelin/hardhat-upgrades/dist/utils';
 import {
   ethers,
   BigNumber,
   constants,
+  ContractFactory,
   PopulatedTransaction,
   Signer,
 } from 'ethers';
@@ -12,7 +16,11 @@ import { EIP1193Provider, HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeploymentConfig } from './types';
 
 import { MTokenName } from '../../../config';
-import { getCurrentAddresses } from '../../../config/constants/addresses';
+import {
+  getCurrentAddresses,
+  isLibraryName,
+  LibraryName,
+} from '../../../config/constants/addresses';
 import {
   etherscanVerify,
   logDeploy,
@@ -187,6 +195,136 @@ export const getContractAt = async (
   );
 };
 
+/**
+ * Resolves addresses of the external libraries `contractName` has to be
+ * linked against from the `libraries` section of the network addresses
+ */
+export const getLinkedLibraries = async (
+  hre: HardhatRuntimeEnvironment,
+  contractName: string,
+) => {
+  const { linkReferences } = await hre.artifacts.readArtifact(contractName);
+  const deployedLibraries = getCurrentAddresses(hre)?.libraries ?? {};
+
+  const libraries: Partial<Record<LibraryName, string>> = {};
+
+  for (const libraryName of Object.values(linkReferences).flatMap((v) =>
+    Object.keys(v),
+  )) {
+    if (!isLibraryName(libraryName)) {
+      throw new Error(`Library ${libraryName} is not supported`);
+    }
+
+    const libraryAddress = deployedLibraries[libraryName];
+
+    if (!libraryAddress) {
+      throw new Error(
+        `Library ${libraryName} is not deployed, run deploy:library --lib ${libraryName} first`,
+      );
+    }
+
+    await assertLibraryBytecodeMatches(hre, libraryName, libraryAddress);
+
+    libraries[libraryName] = libraryAddress;
+  }
+
+  return libraries;
+};
+
+/**
+ * Ensures that the runtime bytecode of the library deployed at `libraryAddress`
+ * matches the locally compiled library, so contracts are never linked against
+ * an outdated library version
+ */
+const assertLibraryBytecodeMatches = async (
+  hre: HardhatRuntimeEnvironment,
+  libraryName: LibraryName,
+  libraryAddress: string,
+) => {
+  const redeployHint = `deploy the new library version first (deploy:library --lib ${libraryName}) and update the libraries section of the network addresses`;
+
+  const { deployedBytecode, deployedLinkReferences } =
+    await hre.artifacts.readArtifact(libraryName);
+
+  if (Object.keys(deployedLinkReferences).length > 0) {
+    throw new Error(
+      `Library ${libraryName} links against other libraries, bytecode check is not supported`,
+    );
+  }
+
+  // library runtime code starts with PUSH20 <address> (call protection),
+  // the placeholder is filled with the library address during deployment
+  const callProtectionPlaceholder = '0x73' + '00'.repeat(20);
+
+  if (!deployedBytecode.toLowerCase().startsWith(callProtectionPlaceholder)) {
+    throw new Error(
+      `Library ${libraryName} bytecode has unexpected format, unable to verify it`,
+    );
+  }
+
+  const expectedBytecode = (
+    '0x73' +
+    libraryAddress.slice(2) +
+    deployedBytecode.slice(callProtectionPlaceholder.length)
+  ).toLowerCase();
+
+  const onchainBytecode = (
+    await hre.ethers.provider.getCode(libraryAddress)
+  ).toLowerCase();
+
+  if (onchainBytecode === '0x') {
+    throw new Error(
+      `Library ${libraryName} has no code at ${libraryAddress}, ${redeployHint}`,
+    );
+  }
+
+  if (onchainBytecode !== expectedBytecode) {
+    throw new Error(
+      `Library ${libraryName} bytecode at ${libraryAddress} does not match the local bytecode, ${redeployHint}`,
+    );
+  }
+};
+
+/**
+ * Creates a contract factory linked against the external libraries of
+ * `contractName` and extends `opts` to allow external library linking
+ * for the upgrades plugin when needed
+ */
+export const getLinkedContractFactory = async <TOpts extends StandaloneOptions>(
+  hre: HardhatRuntimeEnvironment,
+  contractName: string,
+  signer: Signer,
+  opts: TOpts,
+): Promise<{ factory: ContractFactory; opts: TOpts }> => {
+  const libraries = await getLinkedLibraries(hre, contractName);
+  const hasLibraries = Object.keys(libraries).length > 0;
+
+  if (hasLibraries) {
+    console.log(
+      `WARNING, using external linking libraries for ${contractName}`,
+      libraries,
+    );
+  }
+
+  const factory = await hre.ethers.getContractFactory(contractName, {
+    signer,
+    libraries,
+  });
+
+  return {
+    factory,
+    opts: hasLibraries
+      ? {
+          ...opts,
+          unsafeAllow: [
+            ...(opts.unsafeAllow ?? []),
+            'external-library-linking',
+          ],
+        }
+      : opts,
+  };
+};
+
 export const deployProxy = async (
   hre: HardhatRuntimeEnvironment,
   contractName: string,
@@ -196,10 +334,17 @@ export const deployProxy = async (
 ) => {
   deployer ??= await getDeployer(hre);
 
-  const deployment = await hre.upgrades.deployProxy(
-    await hre.ethers.getContractFactory(contractName, deployer),
-    params,
+  const { factory, opts: linkedOpts } = await getLinkedContractFactory(
+    hre,
+    contractName,
+    deployer,
     opts,
+  );
+
+  const deployment = await hre.upgrades.deployProxy(
+    factory,
+    params,
+    linkedOpts,
   );
   return deployment;
 };
@@ -262,6 +407,31 @@ export const deployAndVerify = async (
 
   logDeploy(contractName, 'Proxy', deployment.address);
   await etherscanVerify(hre, deployment.address, contractName, ...params);
+
+  return deployment;
+};
+
+export const deployAndVerifyLibrary = async (
+  hre: HardhatRuntimeEnvironment,
+  libraryName: LibraryName,
+  deployer?: Signer,
+) => {
+  deployer ??= await getDeployer(hre);
+
+  const factory = await hre.ethers.getContractFactory(libraryName, deployer);
+
+  const deployment = await factory.deploy();
+
+  if (deployment.deployTransaction) {
+    console.log('Waiting 5 blocks...');
+    await deployment.deployTransaction.wait(5);
+    console.log('Waited.');
+  }
+
+  logDeploy(libraryName, 'Library', deployment.address);
+  await etherscanVerify(hre, deployment.address, libraryName).catch((err) => {
+    console.error('Unable to verify. Error: ', err);
+  });
 
   return deployment;
 };
@@ -360,6 +530,7 @@ const sendAndWaitForCustomTxSignDirect = async (
       | 'set-aave-deposits-enabled'
       | 'set-morpho-vault'
       | 'set-morpho-deposits-enabled'
+      | 'set-usyc-deposits-enabled'
       | 'set-auto-invest-fallback-enabled'
       | 'set-instant-limit'
       | 'set-mint-rate-limit'

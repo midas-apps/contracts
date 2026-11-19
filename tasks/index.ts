@@ -16,6 +16,7 @@ runScriptTask
   .addPositionalParam('path', 'Path to the script')
   .addOptionalParam('mtoken', 'MToken')
   .addOptionalParam('ptoken', 'Payment Token')
+  .addOptionalParam('lib', 'Library')
   .addOptionalParam('action', 'Timelock Action')
   .addOptionalParam('upgrade', 'Upgrade id (key of upgradeConfigs.upgrades)')
   .addOptionalParam('skipValidation', 'Skip Validation', 'false')
