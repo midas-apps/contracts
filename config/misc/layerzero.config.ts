@@ -24,7 +24,8 @@ export enum DVN {
   DeutscheTelekom = 'Deutsche Telekom',
   Canary = 'Canary',
   BCWGroup = 'BCW Group',
-  Nethermind = 'Nethermind',
+  // Formerly "Nethermind" in LZ metadata; same DVN addresses, renamed by LayerZero
+  Twinstake = 'Twinstake',
   BitGo = 'BitGo',
   P2P = 'P2P',
   Frax = 'Frax',
@@ -54,7 +55,7 @@ const defaultDVNs = [
   DVN.LayerZeroLabs,
   DVN.DeutscheTelekom,
   DVN.Canary,
-  DVN.Nethermind,
+  DVN.Twinstake,
 ];
 
 export const getRateLimitNetworks = (
@@ -122,19 +123,14 @@ export const lzConfigsPerMToken: PartialConfigPerNetwork<
     mROX: {
       pathways: 'direct-only',
       linkedNetworks: ['monad'],
-      dvns: [
-        DVN.LayerZeroLabs,
-        DVN.DeutscheTelekom,
-        DVN.Canary,
-        DVN.Nethermind,
-      ],
+      dvns: [DVN.LayerZeroLabs, DVN.DeutscheTelekom, DVN.Canary, DVN.Twinstake],
     },
     mGLO: {
       // Mainnet <-> Base, Robinhood, Optimism, Monad and X Layer only.
       pathways: 'direct-only',
       linkedNetworks: ['base', 'robinhood', 'optimism', 'monad', 'xlayer'],
       dvnsByLinkedNetwork: {
-        robinhood: [DVN.LayerZeroLabs, DVN.P2P, DVN.Canary, DVN.Nethermind],
+        robinhood: [DVN.LayerZeroLabs, DVN.P2P, DVN.Canary, DVN.Twinstake],
         monad: [DVN.LayerZeroLabs, DVN.DeutscheTelekom, DVN.Canary, DVN.Frax],
         xlayer: [DVN.LayerZeroLabs, DVN.DeutscheTelekom, DVN.Canary, DVN.Frax],
       },
