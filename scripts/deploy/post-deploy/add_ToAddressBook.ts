@@ -14,7 +14,7 @@ import {
 } from '../configs/deployment-profiles';
 
 type AddressBookEntryConfig = {
-  contractName: string | ((mToken: string, network: string) => string);
+  contractName: string | ((mToken: string) => string);
   contractTag?: string;
   extractAddress?: (value: unknown) => string | undefined;
 };
@@ -49,12 +49,7 @@ const ADDRESS_BOOK_MAPPING: Partial<
   redemptionVaultMorpho: { contractName: 'Redemption Vault (Morpho)' },
 
   layerZero: {
-    contractName: (mToken, network) =>
-      `${mToken} OFT Adapter - ${
-        network === 'main'
-          ? 'Ethereum'
-          : network.charAt(0).toUpperCase() + network.slice(1)
-      }`,
+    contractName: 'OFT Adapter',
     extractAddress: (v) => (v as LayerZeroTokenAddresses)?.oft,
   },
 };
@@ -119,7 +114,7 @@ const func: DeployFunction = async (
 
     const contractName =
       typeof config.contractName === 'function'
-        ? config.contractName(mToken, hre.network.name)
+        ? config.contractName(mToken)
         : config.contractName;
 
     const customSigner = await hre.getCustomSigner();

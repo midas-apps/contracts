@@ -136,6 +136,7 @@ const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
             chainId,
             rpcUrl,
             action,
+            idempotenceId: hre.deploymentConfig,
           });
         },
       };

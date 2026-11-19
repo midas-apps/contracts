@@ -184,7 +184,7 @@ export const deploymentProfiles: Record<
   },
   'mglo-3f': {
     token: 'mGLO',
-    chainIds: [chainIds.main],
+    chainIds: [chainIds.main, chainIds.base],
     addressProfileKey: 'mGLO3F',
     configExport: 'mGLO3FDeploymentConfig',
     feedReferences: {

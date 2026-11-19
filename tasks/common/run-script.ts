@@ -6,7 +6,11 @@ import {
 
 import path from 'node:path';
 
-import { ParamFnBase, forkingNetworkParam } from './task-params';
+import {
+  ParamFnBase,
+  deploymentConfigParam,
+  forkingNetworkParam,
+} from './task-params';
 
 import { ENV, chainIds, extendWithContext, rpcUrls } from '../../config';
 import { Network } from '../../config';
@@ -18,7 +22,10 @@ import {
 } from '../../scripts/deploy/configs/deployment-profiles';
 
 /** Truly global runner flags attached to every script task. */
-export const globalRunScriptParams = [forkingNetworkParam(true)];
+export const globalRunScriptParams = [
+  forkingNetworkParam(true),
+  deploymentConfigParam(true),
+];
 
 export const withGlobalRunScriptParams = (task: ConfigurableTaskDefinition) => {
   globalRunScriptParams.forEach((paramFn) => {

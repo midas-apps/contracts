@@ -53,6 +53,9 @@ const func: DeployFunction = async (
     await contract.populateTransaction.transferOwnership(newOwner),
     {
       action: 'deployer',
+      comment: `transfer ${
+        selected.mToken ?? selected.paymentToken
+      } layerzero oft ownership to ${newOwner}`,
     },
     await contract.owner(),
   );
