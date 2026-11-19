@@ -66,6 +66,15 @@ const rvWithUsycInitializeParamCases: InitializeParamCase<InitializerParamsRvWit
         args: [constants.AddressZero],
       },
     },
+    {
+      title: 'usycTeller is the vault itself',
+      contract: (fixture) => deployRvWithUsycTest(fixture.owner),
+      params: (_, contract) => ({ usycTeller: contract!.address }),
+      revertCustomError: {
+        customErrorName: 'InvalidAddress',
+        args: (_, contract) => [contract!.address],
+      },
+    },
   ];
 
 const NOT_ROUND_REDEEM_PRICE = parseUnits('1.142315458569453803');
@@ -1436,6 +1445,24 @@ redemptionVaultSuits(
               revertCustomError: {
                 customErrorName: 'InvalidAddress',
                 args: [constants.AddressZero],
+              },
+            },
+          );
+        });
+
+        it('should fail: setUsycTeller to the vault itself', async () => {
+          const fixture = await loadFixture(defaultDeploy);
+          const { redemptionVaultWithUSYC, owner } = fixture;
+          await usycSetterTest(
+            { vault: redemptionVaultWithUSYC, owner },
+            'setUsycTeller',
+            'SetUsycTeller',
+            'usycTeller',
+            redemptionVaultWithUSYC.address,
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidAddress',
+                args: [redemptionVaultWithUSYC.address],
               },
             },
           );

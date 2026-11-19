@@ -66,6 +66,16 @@ const dvWithUsycInitializeParamCases: InitializeParamCase<InitializerParamsDvWit
         args: [constants.AddressZero],
       },
     },
+    {
+      title: 'usycTeller is the vault itself',
+      contract: (fixture) =>
+        new DepositVaultWithUSYCTest__factory(fixture.owner).deploy(),
+      params: (_, contract) => ({ usycTeller: contract!.address }),
+      revertCustomError: {
+        customErrorName: 'InvalidAddress',
+        args: (_, contract) => [contract!.address],
+      },
+    },
   ];
 
 /**
@@ -1505,6 +1515,24 @@ depositVaultSuits(
               revertCustomError: {
                 customErrorName: 'InvalidAddress',
                 args: [constants.AddressZero],
+              },
+            },
+          );
+        });
+
+        it('should fail: setUsycTeller to the vault itself', async () => {
+          const fixture = await loadFixture(defaultDeploy);
+          const { depositVaultWithUSYC, owner } = fixture;
+          await usycSetterTest(
+            { vault: depositVaultWithUSYC, owner },
+            'setUsycTeller',
+            'SetUsycTeller',
+            'usycTeller',
+            depositVaultWithUSYC.address,
+            {
+              revertCustomError: {
+                customErrorName: 'InvalidAddress',
+                args: [depositVaultWithUSYC.address],
               },
             },
           );

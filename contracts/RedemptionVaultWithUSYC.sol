@@ -91,7 +91,7 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
         uint256 _anticipatedFeeRate
     ) external {
         initialize(_commonVaultInitParams, _redemptionInitParams);
-        _validateAddress(_usycTeller, false);
+        _validateAddress(_usycTeller, true);
 
         usycTeller = IUSYCTeller(_usycTeller);
         depositVault = IDepositVault(_depositVault);
@@ -114,7 +114,7 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
      * @param _usycTeller new USYC Teller address
      */
     function setUsycTeller(address _usycTeller) external onlyContractAdmin {
-        _validateAddress(_usycTeller, false);
+        _validateAddress(_usycTeller, true);
         usycTeller = IUSYCTeller(_usycTeller);
         emit SetUsycTeller(_usycTeller);
     }

@@ -157,7 +157,7 @@ contract DepositVaultWithUSYC is DepositVault {
     ) external {
         initialize(_commonVaultInitParams, _depositVaultInitParams);
 
-        _validateAddress(_usycTeller, false);
+        _validateAddress(_usycTeller, true);
 
         usycTeller = IUSYCTeller(_usycTeller);
         redemptionVault = IRedemptionVault(_redemptionVault);
@@ -169,7 +169,7 @@ contract DepositVaultWithUSYC is DepositVault {
      * @param _usycTeller new USYC Teller address
      */
     function setUsycTeller(address _usycTeller) external onlyContractAdmin {
-        _validateAddress(_usycTeller, false);
+        _validateAddress(_usycTeller, true);
         usycTeller = IUSYCTeller(_usycTeller);
         emit SetUsycTeller(_usycTeller);
     }
