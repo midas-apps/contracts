@@ -241,9 +241,11 @@ export const getWalletAddressForAction = async (
   return await customSigner.getWalletAddress(action, mtoken, chainId);
 };
 
+type SafeInnerTransaction = { data: string; to: string; value?: BigNumberish };
+
 const proposeSafeTransaction = async (
   hre: HardhatRuntimeEnvironment,
-  transaction: { data: string; to: string; value?: BigNumberish },
+  transaction: SafeInnerTransaction,
   metadata: { safe: string; comment?: string },
 ) => {
   const scriptPath = ENV.CUSTOM_SIGNER_SCRIPT_PATH;
@@ -269,6 +271,36 @@ const proposeSafeTransaction = async (
     }),
   };
 };
+
+const safeInterface = new ethers.utils.Interface([
+  'function execTransaction(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, bytes signatures)',
+]);
+
+// pre-validated signature (v = 1) is accepted when the owner itself sends the tx,
+// so a 1-of-1 Safe executes immediately
+const execThroughSafe = (
+  safe: string,
+  owner: string,
+  transaction: SafeInnerTransaction,
+) => ({
+  to: safe,
+  data: safeInterface.encodeFunctionData('execTransaction', [
+    transaction.to,
+    transaction.value ?? 0,
+    transaction.data,
+    0,
+    0,
+    0,
+    0,
+    constants.AddressZero,
+    constants.AddressZero,
+    ethers.utils.hexConcat([
+      ethers.utils.hexZeroPad(owner, 32),
+      constants.HashZero,
+      '0x01',
+    ]),
+  ]),
+});
 
 const sendAndWaitForCustomTxSignDirect = async (
   hre: HardhatRuntimeEnvironment,
@@ -315,19 +347,9 @@ const sendAndWaitForCustomTxSignDirect = async (
       | 'set-ustb-deposits-enabled'
       | 'set-user-facing-roles';
   },
-  safeMiddlewareWallet?: string,
+  safe?: string,
   confirmations = 2,
 ) => {
-  const safe =
-    safeMiddlewareWallet &&
-    (await hre.ethers.provider.getCode(safeMiddlewareWallet)) !== '0x'
-      ? safeMiddlewareWallet
-      : undefined;
-
-  if (safeMiddlewareWallet && !safe) {
-    console.warn('Safe wallet is passed but caller is not a contract');
-  }
-
   const hreNetwork: HardhatRuntimeEnvironment = hre;
 
   const networkCustomSigner = await hreNetwork.getCustomSigner();
@@ -338,16 +360,27 @@ const sendAndWaitForCustomTxSignDirect = async (
     value: populatedTx.value,
   };
 
-  const res = safe
-    ? await proposeSafeTransaction(hre, transaction, {
-        safe,
-        comment: txSignMetadata?.comment,
-      })
-    : await networkCustomSigner.sendTransaction(transaction, {
-        ...(txSignMetadata ?? {}),
-        chainId: hreNetwork.network.config.chainId,
-        idempotenceId: txSignMetadata?.idempotenceId ?? hreNetwork.contextId,
-      });
+  const res =
+    safe && networkCustomSigner.type === 'customSigner'
+      ? await proposeSafeTransaction(hre, transaction, {
+          safe,
+          comment: txSignMetadata?.comment,
+        })
+      : await networkCustomSigner.sendTransaction(
+          safe
+            ? execThroughSafe(
+                safe,
+                await networkCustomSigner.getWalletAddress(),
+                transaction,
+              )
+            : transaction,
+          {
+            ...(txSignMetadata ?? {}),
+            chainId: hreNetwork.network.config.chainId,
+            idempotenceId:
+              txSignMetadata?.idempotenceId ?? hreNetwork.contextId,
+          },
+        );
 
   let resToReturn: unknown;
 
@@ -366,7 +399,7 @@ const sendAndWaitForCustomTxSignDirect = async (
   }
 
   logDeploy(
-    'Tx' + networkCustomSigner.type === 'customSigner' ? '' : ' Submitted',
+    'Tx' + (networkCustomSigner.type === 'customSigner' ? '' : ' Submitted'),
     hreNetwork.network.name,
     typeof resToReturn === 'object'
       ? JSON.stringify(resToReturn)
@@ -437,6 +470,10 @@ export const sendAndWaitForCustomTxSign = async (
       ? safeMiddlewareWallet
       : undefined;
 
+  if (safeMiddlewareWallet && !safeCaller) {
+    console.warn('Safe wallet is passed but caller is not a contract');
+  }
+
   const proposer =
     safeCaller ??
     (await getWalletAddressForAction(
@@ -448,7 +485,13 @@ export const sendAndWaitForCustomTxSign = async (
   const timelock = await getTimelockRequirement(hre, populatedTx, proposer);
 
   if (!timelock) {
-    return sendAndWaitForCustomTxSignDirect(...args);
+    return sendAndWaitForCustomTxSignDirect(
+      hre,
+      populatedTx,
+      txSignMetadata,
+      safeCaller,
+      confirmations,
+    );
   }
 
   if (populatedTx.value && !BigNumber.from(populatedTx.value).isZero()) {
@@ -479,7 +522,7 @@ export const sendAndWaitForCustomTxSign = async (
       ...txSignMetadata,
       comment: `[timelock schedule] ${txSignMetadata?.comment ?? ''}`,
     },
-    safeMiddlewareWallet,
+    safeCaller,
     confirmations,
   );
 
