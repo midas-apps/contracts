@@ -3,15 +3,18 @@ import { DeployProxyOptions } from '@openzeppelin/hardhat-upgrades/dist/utils';
 import {
   ethers,
   BigNumber,
+  BigNumberish,
   constants,
   PopulatedTransaction,
   Signer,
 } from 'ethers';
 import { EIP1193Provider, HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import path from 'path';
+
 import { DeploymentConfig } from './types';
 
-import { MTokenName } from '../../../config';
+import { ENV, MTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import {
   etherscanVerify,
@@ -21,95 +24,6 @@ import {
 } from '../../../helpers/utils';
 import { verifyReinitializersConsumed } from '../../upgrades/common/reinitializer';
 import { getDeploymentConfigForToken } from '../configs';
-
-const safeAbi = [
-  {
-    inputs: [],
-    name: 'domainSeparator',
-    outputs: [{ internalType: 'bytes32', name: '', type: 'bytes32' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { internalType: 'address', name: 'to', type: 'address' },
-      { internalType: 'uint256', name: 'value', type: 'uint256' },
-      { internalType: 'bytes', name: 'data', type: 'bytes' },
-      { internalType: 'enum Enum.Operation', name: 'operation', type: 'uint8' },
-      { internalType: 'uint256', name: 'safeTxGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'baseGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'gasPrice', type: 'uint256' },
-      { internalType: 'address', name: 'gasToken', type: 'address' },
-      { internalType: 'address', name: 'refundReceiver', type: 'address' },
-      { internalType: 'uint256', name: '_nonce', type: 'uint256' },
-    ],
-    name: 'encodeTransactionData',
-    outputs: [{ internalType: 'bytes', name: '', type: 'bytes' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { internalType: 'address', name: 'to', type: 'address' },
-      { internalType: 'uint256', name: 'value', type: 'uint256' },
-      { internalType: 'bytes', name: 'data', type: 'bytes' },
-      { internalType: 'enum Enum.Operation', name: 'operation', type: 'uint8' },
-      { internalType: 'uint256', name: 'safeTxGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'baseGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'gasPrice', type: 'uint256' },
-      { internalType: 'address', name: 'gasToken', type: 'address' },
-      {
-        internalType: 'address payable',
-        name: 'refundReceiver',
-        type: 'address',
-      },
-      { internalType: 'bytes', name: 'signatures', type: 'bytes' },
-    ],
-    name: 'execTransaction',
-    outputs: [{ internalType: 'bool', name: 'success', type: 'bool' }],
-    stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { internalType: 'address', name: 'to', type: 'address' },
-      { internalType: 'uint256', name: 'value', type: 'uint256' },
-      { internalType: 'bytes', name: 'data', type: 'bytes' },
-      { internalType: 'enum Enum.Operation', name: 'operation', type: 'uint8' },
-      { internalType: 'uint256', name: 'safeTxGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'baseGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'gasPrice', type: 'uint256' },
-      { internalType: 'address', name: 'gasToken', type: 'address' },
-      { internalType: 'address', name: 'refundReceiver', type: 'address' },
-      { internalType: 'uint256', name: '_nonce', type: 'uint256' },
-    ],
-    name: 'getTransactionHash',
-    outputs: [{ internalType: 'bytes32', name: '', type: 'bytes32' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [{ internalType: 'address', name: 'owner', type: 'address' }],
-    name: 'isOwner',
-    outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'nonce',
-    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'getOwners',
-    outputs: [{ internalType: 'address[]', name: '', type: 'address[]' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-];
 
 export const executeFuncAsync = async <T>(
   hre: HardhatRuntimeEnvironment,
@@ -327,6 +241,67 @@ export const getWalletAddressForAction = async (
   return await customSigner.getWalletAddress(action, mtoken, chainId);
 };
 
+type SafeInnerTransaction = { data: string; to: string; value?: BigNumberish };
+
+const proposeSafeTransaction = async (
+  hre: HardhatRuntimeEnvironment,
+  transaction: SafeInnerTransaction,
+  metadata: { safe: string; comment?: string },
+) => {
+  const scriptPath = ENV.CUSTOM_SIGNER_SCRIPT_PATH;
+
+  if (!scriptPath) {
+    throw new Error(
+      'Safe transactions require the custom signer, set CUSTOM_SIGNER_SCRIPT_PATH',
+    );
+  }
+
+  const { proposeEVMSafeTransaction } = await import(path.resolve(scriptPath));
+
+  if (!proposeEVMSafeTransaction) {
+    throw new Error(
+      'Custom signer checkout is outdated: proposeEVMSafeTransaction export is missing',
+    );
+  }
+
+  return {
+    payload: await proposeEVMSafeTransaction(transaction, {
+      ...metadata,
+      chainId: hre.network.config.chainId,
+    }),
+  };
+};
+
+const safeInterface = new ethers.utils.Interface([
+  'function execTransaction(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, bytes signatures)',
+]);
+
+// pre-validated signature (v = 1) is accepted when the owner itself sends the tx,
+// so a 1-of-1 Safe executes immediately
+const execThroughSafe = (
+  safe: string,
+  owner: string,
+  transaction: SafeInnerTransaction,
+) => ({
+  to: safe,
+  data: safeInterface.encodeFunctionData('execTransaction', [
+    transaction.to,
+    transaction.value ?? 0,
+    transaction.data,
+    0,
+    0,
+    0,
+    0,
+    constants.AddressZero,
+    constants.AddressZero,
+    ethers.utils.hexConcat([
+      ethers.utils.hexZeroPad(owner, 32),
+      constants.HashZero,
+      '0x01',
+    ]),
+  ]),
+});
+
 const sendAndWaitForCustomTxSignDirect = async (
   hre: HardhatRuntimeEnvironment,
   populatedTx: PopulatedTransaction,
@@ -372,84 +347,40 @@ const sendAndWaitForCustomTxSignDirect = async (
       | 'set-ustb-deposits-enabled'
       | 'set-user-facing-roles';
   },
-  safeMiddlewareWallet?: string,
+  safe?: string,
   confirmations = 2,
 ) => {
-  if (safeMiddlewareWallet) {
-    const callerCode = await hre.ethers.provider.getCode(safeMiddlewareWallet);
-
-    const isCallerContract = callerCode !== '0x';
-
-    if (isCallerContract) {
-      console.log(
-        'Caller is a contract, assuming it is a safe contract to execute tx',
-      );
-
-      // we assume that the owner contract is a safe contract
-      const safeContract = await getContractAt(
-        hre,
-        safeAbi,
-        safeMiddlewareWallet,
-      );
-
-      const owners: string[] = await safeContract.getOwners();
-
-      const ownerForSignature = await getWalletAddressForAction(
-        hre,
-        txSignMetadata?.action ?? '',
-      );
-
-      if (
-        !owners.find((v) => v.toLowerCase() === ownerForSignature.toLowerCase())
-      ) {
-        throw new Error(
-          `Owner ${ownerForSignature} is not found in the safe contract, allowed callers: [${owners.join(
-            ', ',
-          )}]`,
-        );
-      }
-
-      populatedTx = await safeContract.populateTransaction.execTransaction(
-        populatedTx.to,
-        populatedTx.value ?? 0,
-        populatedTx.data,
-        0,
-        0,
-        0,
-        0,
-        constants.AddressZero,
-        constants.AddressZero,
-        // FIXME: for some reason, encode of 1 is required to be padded, so abi coder does not produce
-        // the required result with encode(['address', 'uint256'], [ownerForSignature, 1])
-        hre.ethers.utils.defaultAbiCoder.encode(
-          ['address'],
-          [ownerForSignature],
-        ) +
-          '000000000000000000000000000000000000000000000000000000000000000001',
-      );
-    } else {
-      console.warn('Safe wallet is passed but caller is not a contract');
-    }
-  }
-
   const hreNetwork: HardhatRuntimeEnvironment = hre;
 
   const networkCustomSigner = await hreNetwork.getCustomSigner();
 
-  const sendResult = networkCustomSigner.sendTransaction(
-    {
-      data: populatedTx.data!,
-      to: populatedTx.to!,
-      value: populatedTx.value,
-    },
-    {
-      ...(txSignMetadata ?? {}),
-      chainId: hreNetwork.network.config.chainId,
-      idempotenceId: txSignMetadata?.idempotenceId ?? hreNetwork.contextId,
-    },
-  );
+  const transaction = {
+    data: populatedTx.data!,
+    to: populatedTx.to!,
+    value: populatedTx.value,
+  };
 
-  const res = await sendResult;
+  const res =
+    safe && networkCustomSigner.type === 'customSigner'
+      ? await proposeSafeTransaction(hre, transaction, {
+          safe,
+          comment: txSignMetadata?.comment,
+        })
+      : await networkCustomSigner.sendTransaction(
+          safe
+            ? execThroughSafe(
+                safe,
+                await networkCustomSigner.getWalletAddress(),
+                transaction,
+              )
+            : transaction,
+          {
+            ...(txSignMetadata ?? {}),
+            chainId: hreNetwork.network.config.chainId,
+            idempotenceId:
+              txSignMetadata?.idempotenceId ?? hreNetwork.contextId,
+          },
+        );
 
   let resToReturn: unknown;
 
@@ -468,7 +399,7 @@ const sendAndWaitForCustomTxSignDirect = async (
   }
 
   logDeploy(
-    'Tx' + networkCustomSigner.type === 'customSigner' ? '' : ' Submitted',
+    'Tx' + (networkCustomSigner.type === 'customSigner' ? '' : ' Submitted'),
     hreNetwork.network.name,
     typeof resToReturn === 'object'
       ? JSON.stringify(resToReturn)
@@ -539,6 +470,10 @@ export const sendAndWaitForCustomTxSign = async (
       ? safeMiddlewareWallet
       : undefined;
 
+  if (safeMiddlewareWallet && !safeCaller) {
+    console.warn('Safe wallet is passed but caller is not a contract');
+  }
+
   const proposer =
     safeCaller ??
     (await getWalletAddressForAction(
@@ -550,7 +485,13 @@ export const sendAndWaitForCustomTxSign = async (
   const timelock = await getTimelockRequirement(hre, populatedTx, proposer);
 
   if (!timelock) {
-    return sendAndWaitForCustomTxSignDirect(...args);
+    return sendAndWaitForCustomTxSignDirect(
+      hre,
+      populatedTx,
+      txSignMetadata,
+      safeCaller,
+      confirmations,
+    );
   }
 
   if (populatedTx.value && !BigNumber.from(populatedTx.value).isZero()) {
@@ -581,7 +522,7 @@ export const sendAndWaitForCustomTxSign = async (
       ...txSignMetadata,
       comment: `[timelock schedule] ${txSignMetadata?.comment ?? ''}`,
     },
-    safeMiddlewareWallet,
+    safeCaller,
     confirmations,
   );
 
