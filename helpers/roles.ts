@@ -297,21 +297,23 @@ export const getAllRoles = (): AllRoles => {
 };
 
 /**
- * Roles that must be marked as user facing on MidasAccessControl: the common
- * greenlisted role, the greenlisted roles of the `tokenLevelGreenlistTokens`
- * products and every min balance exempt role. Derived from the generated role
- * registry, so it is the same on every network.
+ * Roles that must be marked as user facing on MidasAccessControl on top of the
+ * ones `initializeV2` always sets (common GREENLISTED_ROLE and BLACKLISTED_ROLE):
+ * the greenlisted roles of the `tokenLevelGreenlistTokens` products and every
+ * min balance exempt role. Derived from the generated role registry, so it is
+ * the same on every network.
  */
 export const getAllUserFacingRoles = (): string[] => {
   const { common, tokenRoles } = getAllRoles();
 
+  const setByInitializer = new Set([common.greenlisted, common.blacklisted]);
+
   return [
-    ...new Set([
-      common.greenlisted,
-      ...Object.values(tokenRoles).flatMap((roles) => [
+    ...new Set(
+      Object.values(tokenRoles).flatMap((roles) => [
         roles.greenlisted,
         roles.minBalanceExempt,
       ]),
-    ]),
-  ];
+    ),
+  ].filter((role) => !setByInitializer.has(role));
 };
