@@ -1,4 +1,5 @@
 import { BigNumberish, constants, utils } from 'ethers';
+import { parseUnits } from 'ethers/lib/utils';
 
 import { chainIds, MTokenName } from '../../../config';
 import { networkUptimeFeeds } from '../../../config/constants/addresses';
@@ -170,6 +171,18 @@ export const upgradeConfigs: UpgradeConfig = {
           { maxSupplyCap: { mXRP: constants.MaxUint256 } },
           {
             mTokens: { overrides: { mXRP: true } },
+          },
+        ),
+        [chainIds.arc]: v2CoreUpgrade(
+          chainIds.arc,
+          {
+            maxSupplyCap: {
+              radUSD: parseUnits('50000'),
+              radYC: parseUnits('50000'),
+            },
+          },
+          {
+            mTokens: { overrides: { radUSD: true, radYC: true } },
           },
         ),
       },

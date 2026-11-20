@@ -184,6 +184,10 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     keysParam(true),
     vaultVersionParam(),
   ],
+  'deploy:post:add:addressbook:network': [
+    deployPost('add_NetworkToAddressBook'),
+    keysParam(true),
+  ],
   'deploy:post:set:sanctionsList': [
     deployPost('set_SanctionsList'),
     mTokenParam(),

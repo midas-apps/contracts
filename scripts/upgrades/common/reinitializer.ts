@@ -162,8 +162,20 @@ export function initializedSlotFromManifest(
   impl: string,
 ): StorageSlotRef | undefined {
   const impls = manifest?.impls ?? {};
+  const target = impl.toLowerCase();
   for (const key of Object.keys(impls)) {
-    if (impls[key]?.address?.toLowerCase() !== impl.toLowerCase()) continue;
+    // `allAddresses` holds every deployment of the same bytecode (the entry
+    // is keyed by its hash), so the layout is the same for each of them
+    const addresses: unknown[] = [
+      impls[key]?.address,
+      ...(Array.isArray(impls[key]?.allAddresses)
+        ? impls[key].allAddresses
+        : []),
+    ];
+    const matches = addresses.some(
+      (a) => typeof a === 'string' && a.toLowerCase() === target,
+    );
+    if (!matches) continue;
     const found = (impls[key]?.layout?.storage ?? []).find(
       (s: any) => s.label === '_initialized',
     );

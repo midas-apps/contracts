@@ -199,6 +199,7 @@ Both vault versions (add `--vault-version <v1|v2>`):
 - `yarn deploy:post:set:sanctionsList`: set the network sanctions list on vaults
 - `yarn deploy:post:set:aaveconfig` / `yarn deploy:post:set:morphoconfig`: Aave / Morpho vault settings
 - `yarn deploy:post:add:addressbook`: add product addresses to the address book
+- `yarn deploy:post:add:addressbook:network`: add the network level contracts (access control, pause manager, AC timelock manager, AC timelock controller) to the address book as `<Contract> - <Network>`, restricted to the network chain. No `--mtoken` / `--vault-version`; `--keys accessControl,pauseManager,timelockManager,timelockController` limits it to the listed contracts. An existing record of the same address with another name or chains gets an update proposal (name and chain restriction; groups can only be changed in the Fordefi console)
 
 v2 vaults only:
 

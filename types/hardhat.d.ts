@@ -49,6 +49,11 @@ declare module 'hardhat/types/runtime' {
         address: string;
         contractName: string;
         contractTag?: string;
+        /**
+         * propose an update of the name / chains of an existing record of
+         * the address if they differ, instead of skipping it
+         */
+        updateExisting?: boolean;
       }) => Promise<{ payload: unknown }>;
       sendTransaction: (
         transaction: {

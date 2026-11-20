@@ -120,6 +120,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   arc: {
     accessControl: '0xD0e01E127cf111AAB7CA56204D5A24532F86461c',
     timelock: '0x450F76E9eC5bB13C4945092c2055cB39789E1A69',
+    pauseManager: '0xEcB4DEaAd31e5091B79CCE12a00C578f401d7761',
+    timelockManager: '0x223101852Ae5693653C6EaedB5F2726e82625652',
+    timelockController: '0xD80f03adE782109cfa2D97b97a9A94bfC5180d36',
     paymentTokens: {
       usdc: {
         // ERC-20 interface: 6 decimals; native USDC gas balances use 18.
