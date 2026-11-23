@@ -148,6 +148,10 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     deployPost('revoke_V1VaultRoles'),
     mTokenParam(),
   ],
+  'deploy:post:revoke:legacy-roles': [
+    deployPost('revoke_LegacyRoles'),
+    mTokenParam(),
+  ],
   'deploy:post:transfer:proxyadmin': [
     deployPost('transfer_ProxyAdminToTimelock'),
   ],

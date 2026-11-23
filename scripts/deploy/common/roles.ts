@@ -24,7 +24,11 @@ import {
   v2VaultTypes,
 } from '../../../config/constants/vaults';
 import { getCommonContractNames } from '../../../helpers/contracts';
-import { getAllRoles, getRolesForToken } from '../../../helpers/roles';
+import {
+  getAllRoles,
+  getLegacyRolesForToken,
+  getRolesForToken,
+} from '../../../helpers/roles';
 import {
   MidasAccessControl,
   MidasTimelockManager__factory,
@@ -556,6 +560,76 @@ export const revokeV1VaultMintBurnRoles = async (
       },
     );
   }
+};
+
+/**
+ * Revokes the legacy (v1) roles of the mToken that have no use after the v2
+ * deployment. For now it is only the legacy pauser role, which is revoked
+ * from `postDeploy.grantRoles.tokenManagerAddress` of the mToken deployment
+ * config: in v2 it is replaced by the token manager role.
+ * Works only with the v2 access control
+ */
+export const revokeLegacyTokenRoles = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+) => {
+  // never falls back to all the mTokens of the network
+  if (!mToken) {
+    throw new Error('mToken is required');
+  }
+
+  const tokenManagerAddress = getDeploymentConfigForToken(
+    mToken,
+    hre.deploymentConfig,
+  )?.networkConfigs?.[hre.network.config.chainId!]?.postDeploy?.grantRoles
+    ?.tokenManagerAddress;
+
+  if (!tokenManagerAddress) {
+    throw new Error(
+      `${mToken}: grantRoles.tokenManagerAddress is not set in the deployment config`,
+    );
+  }
+
+  const deployer = await getDeployer(hre);
+  const accessControl = await getAcContract(hre, deployer);
+
+  const legacyRoles = getLegacyRolesForToken(mToken);
+  const tokenRoles = getRolesForToken(mToken);
+
+  const [hasLegacyPauser, hasTokenManager] = await Promise.all([
+    accessControl.hasRole(legacyRoles.pauser, tokenManagerAddress),
+    accessControl.hasRole(tokenRoles.tokenManager, tokenManagerAddress),
+  ]);
+
+  if (!hasLegacyPauser) {
+    console.log(
+      `${mToken}: token manager (${tokenManagerAddress}) holds no legacy pauser role — skip`,
+    );
+    return;
+  }
+
+  // the legacy role is revoked only once its v2 replacement is in place
+  if (!hasTokenManager) {
+    throw new Error(
+      `${mToken}: token manager (${tokenManagerAddress}) does not hold the token manager role yet, grant it first`,
+    );
+  }
+
+  console.log(
+    `Revoking legacy pauser role from ${mToken} token manager (${tokenManagerAddress})`,
+  );
+
+  await sendAndWaitForCustomTxSign(
+    hre,
+    await accessControl.populateTransaction.revokeRoleMult([
+      { role: legacyRoles.pauser, account: tokenManagerAddress },
+    ]),
+    {
+      action: 'update-ac',
+      subAction: 'revoke-token-roles',
+      comment: `revoke legacy pauser role from ${mToken} token manager`,
+    },
+  );
 };
 
 // bulk role functions of the v1 access control

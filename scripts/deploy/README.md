@@ -138,6 +138,12 @@ To revoke the minter / burner roles from the v1 vaults of an mToken (`--mtoken` 
 yarn deploy:post:revoke:v1-vault-roles --network <network> --mtoken <mtoken>
 ```
 
+To revoke the legacy (v1) roles of an mToken that are replaced in v2 (`--mtoken` is required, v2 access control only). For now it revokes the legacy pauser role (`<PREFIX>_PAUSE_OPERATOR_ROLE`) from `postDeploy.grantRoles.tokenManagerAddress` of the mToken deployment config, once that address holds the token manager role:
+
+```bash
+yarn deploy:post:revoke:legacy-roles --network <network> --mtoken <mtoken>
+```
+
 #### If deploying to an existing network
 
 For each command below, include `--network` and `--mtoken`:

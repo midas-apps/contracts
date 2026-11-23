@@ -258,6 +258,27 @@ export const getRolesForToken = (token: MTokenName): TokenRoles => {
   return getRolesHashes(rolesNames) as TokenRoles;
 };
 
+/**
+ * v1 product roles that have no use in v2. Kept out of `TokenRoles` so they
+ * are never granted, dumped or passed to the contracts
+ */
+type LegacyTokenRoles = {
+  /** replaced by the token manager role */
+  pauser: string;
+};
+
+export const getLegacyRolesNamesForToken = (
+  token: MTokenName,
+): LegacyTokenRoles => {
+  return {
+    pauser: `${prefixes[token]}_PAUSE_OPERATOR_ROLE`,
+  };
+};
+
+export const getLegacyRolesForToken = (token: MTokenName): LegacyTokenRoles => {
+  return getRolesHashes(getLegacyRolesNamesForToken(token)) as LegacyTokenRoles;
+};
+
 export const getRolesNamesIntegration = (): IntegrationRoles => {
   return {
     infinifiMGCustomFeedAdmin: 'INFINIFI_MG_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE',
