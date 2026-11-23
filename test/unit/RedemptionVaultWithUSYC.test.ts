@@ -34,6 +34,7 @@ import {
 import {
   checkAndRedeemUsycTest,
   redeemInstantWithUsycTest,
+  setUsycDepositVaultPairedTest,
   setUsycDepositVaultTest,
   usycLiquidityInTokenOut,
 } from '../common/redemption-vault-usyc.helpers';
@@ -41,7 +42,11 @@ import {
   setLoanLpTest,
   setPreferLoanLiquidityTest,
 } from '../common/redemption-vault.helpers';
-import { usycMaxFee, usycSetterTest } from '../common/usyc-common.helpers';
+import {
+  setUsycAnticipatedFeeRatesTest,
+  usycMaxFee,
+  usycSetterTest,
+} from '../common/usyc-common.helpers';
 import {
   deployRvWithUsycTest,
   initializeRvWithUsyc,
@@ -273,6 +278,9 @@ redemptionVaultSuits(
     expect(await redemptionVaultWithUSYC.depositVault()).eq(
       depositVaultMTokenLoan.address,
     );
+    expect(await redemptionVaultWithUSYC.depositVaultPaired()).eq(
+      fixture.depositVaultWithUSYC.address,
+    );
     expect(await redemptionVaultWithUSYC.anticipatedFeeRate()).eq(0);
     await validateImplementation(RedemptionVaultWithUSYC__factory);
   },
@@ -289,6 +297,35 @@ redemptionVaultSuits(
   },
   async (defaultDeploy) => {
     describe('RedemptionVaultWithUSYC', function () {
+      describe('initialize()', () => {
+        it('stores the mToken and the paired deposit vaults and the anticipated fee rate', async () => {
+          const fixture = await loadFixture(defaultDeploy);
+          const vault = await initializeRvWithUsyc({
+            ...baseInitParamsRvWithUsyc(fixture),
+            usycDepositVault: fixture.depositVaultMTokenLoan,
+            usycDepositVaultPaired: fixture.depositVaultWithUSYC,
+            anticipatedFeeRate: parseUnits('3'),
+          });
+
+          expect(await vault.depositVault()).eq(
+            fixture.depositVaultMTokenLoan.address,
+          );
+          expect(await vault.depositVaultPaired()).eq(
+            fixture.depositVaultWithUSYC.address,
+          );
+          expect(await vault.anticipatedFeeRate()).eq(parseUnits('3'));
+        });
+
+        it('paired deposit vault is optional', async () => {
+          const fixture = await loadFixture(defaultDeploy);
+          const vault = await initializeRvWithUsyc(
+            baseInitParamsRvWithUsyc(fixture),
+          );
+
+          expect(await vault.depositVaultPaired()).eq(constants.AddressZero);
+        });
+      });
+
       describe('redeemInstant() to USDC', () => {
         it('redeem 100 mTBILL when vault has enough USDC: USYC is not used', async () => {
           const fixture = await loadFixture(defaultDeploy);
@@ -648,11 +685,9 @@ redemptionVaultSuits(
             parseUnits('4'),
             parseUnits('3'),
           );
-          await usycSetterTest(
-            { vault: fixture.redemptionVaultWithUSYC, owner: fixture.owner },
-            'setAnticipatedFeeRate',
-            'SetAnticipatedFeeRate',
-            'anticipatedFeeRate',
+          await setUsycAnticipatedFeeRatesTest(
+            fixture,
+            parseUnits('4'),
             parseUnits('3'),
           );
 
@@ -677,6 +712,72 @@ redemptionVaultSuits(
               from: user,
               revertMessage: 'ERC20: transfer amount exceeds balance',
             },
+          );
+        });
+
+        it('should fail: teller subscription fee rate differs from anticipated fee rate', async () => {
+          const fixture = await loadFixture(defaultDeploy);
+          const { user } = await setupUsycRv(fixture);
+          await fixture.usycTeller.setFeeRates(parseUnits('4'), 0);
+
+          await redeemInstantWithUsycTest(
+            commonParams(fixture),
+            fixture.stableCoins.usdc,
+            100,
+            {
+              from: user,
+              revertMessage: 'ERC20: transfer amount exceeds balance',
+            },
+          );
+        });
+
+        it('Teller subscription fee rate changes: USYC is not used until the anticipated fee rates are updated', async () => {
+          const fixture = await loadFixture(defaultDeploy);
+          const { user } = await setupUsycRv(fixture);
+          await fixture.usycTeller.setFeeRates(
+            parseUnits('4'),
+            parseUnits('3'),
+          );
+          await setUsycAnticipatedFeeRatesTest(
+            fixture,
+            parseUnits('4'),
+            parseUnits('3'),
+          );
+
+          await redeemInstantWithUsycTest(
+            commonParams(fixture),
+            fixture.stableCoins.usdc,
+            100,
+            { from: user },
+          );
+
+          // only the fee the vault itself is never charged changes
+          await fixture.usycTeller.setFeeRates(
+            parseUnits('5'),
+            parseUnits('3'),
+          );
+
+          await redeemInstantWithUsycTest(
+            commonParams(fixture),
+            fixture.stableCoins.usdc,
+            100,
+            {
+              from: user,
+              revertMessage: 'ERC20: transfer amount exceeds balance',
+            },
+          );
+
+          await setUsycAnticipatedFeeRatesTest(
+            fixture,
+            parseUnits('5'),
+            parseUnits('3'),
+          );
+
+          await redeemInstantWithUsycTest(
+            commonParams(fixture),
+            fixture.stableCoins.usdc,
+            100,
+            { from: user },
           );
         });
 
@@ -833,17 +934,60 @@ redemptionVaultSuits(
           );
         });
 
-        it('teller redemption fee rate differs from anticipated: nothing is obtained', async () => {
+        // anticipated rates are 4% / 3%, the Teller default rates differ
+        const mismatchCases = [
+          { title: 'redemption fee rate', rates: ['4', '2'] },
+          { title: 'subscription fee rate', rates: ['5', '3'] },
+          { title: 'both fee rates', rates: ['5', '2'] },
+          { title: 'zero subscription fee rate', rates: ['0', '3'] },
+        ] as const;
+
+        for (const { title, rates } of mismatchCases) {
+          it(`teller ${title} differs from anticipated: nothing is obtained`, async () => {
+            const fixture = await loadFixture(defaultDeploy);
+            await setupUsycRv(fixture);
+            await setUsycAnticipatedFeeRatesTest(
+              fixture,
+              parseUnits('4'),
+              parseUnits('3'),
+            );
+            await fixture.usycTeller.setFeeRates(
+              parseUnits(rates[0]),
+              parseUnits(rates[1]),
+            );
+
+            for (const token of [
+              fixture.stableCoins.usdc,
+              fixture.mTokenLoan,
+            ]) {
+              await checkAndRedeemUsycTest(
+                {
+                  redemptionVaultWithUSYC: fixture.redemptionVaultWithUSYC,
+                  expectation: 'none',
+                },
+                token,
+                parseUnits('100', await token.decimals()),
+              );
+            }
+          });
+        }
+
+        it('teller fee rates equal non-zero anticipated fee rates: USYC is redeemed', async () => {
           const fixture = await loadFixture(defaultDeploy);
           await setupUsycRv(fixture);
-          await fixture.usycTeller.setFeeRates(0, parseUnits('3'));
+          await fixture.usycTeller.setFeeRates(
+            parseUnits('4'),
+            parseUnits('3'),
+          );
+          await setUsycAnticipatedFeeRatesTest(
+            fixture,
+            parseUnits('4'),
+            parseUnits('3'),
+          );
 
           for (const token of [fixture.stableCoins.usdc, fixture.mTokenLoan]) {
             await checkAndRedeemUsycTest(
-              {
-                redemptionVaultWithUSYC: fixture.redemptionVaultWithUSYC,
-                expectation: 'none',
-              },
+              { redemptionVaultWithUSYC: fixture.redemptionVaultWithUSYC },
               token,
               parseUnits('100', await token.decimals()),
             );
@@ -1300,13 +1444,7 @@ redemptionVaultSuits(
           const setup = await setupTightUsycRv(fixture);
           await setup.teller.setFeeRates(0, parseUnits('3'));
           await setup.teller.setFreeTierThreshold(0);
-          await usycSetterTest(
-            { vault: fixture.redemptionVaultWithUSYC, owner: fixture.owner },
-            'setAnticipatedFeeRate',
-            'SetAnticipatedFeeRate',
-            'anticipatedFeeRate',
-            parseUnits('3'),
-          );
+          await setUsycAnticipatedFeeRatesTest(fixture, 0, parseUnits('3'));
           return setup;
         };
 
@@ -1373,16 +1511,460 @@ redemptionVaultSuits(
             expect(obtained.sub(missingBase18)).lte(MAX_COVERING_EXCESS_USDC6);
           }
         });
+
+        describe('redemption fee rate overridden for the vault', () => {
+          /**
+           * Teller default rates are 4% / 3%, the vault itself is charged
+           * the overridden redemption fee rate and anticipates
+           * `anticipatedRate`. The paired deposit vault anticipates the
+           * default subscription fee rate
+           */
+          const setupOverride = async (
+            fixture: DefaultFixture,
+            overrideRate: string,
+            anticipatedRate: string,
+          ) => {
+            const { redemptionVaultWithUSYC } = fixture;
+            const setup = await setupTightUsycRv(fixture);
+            const { teller } = setup;
+            await teller.setFeeRates(parseUnits('4'), parseUnits('3'));
+            await teller.setFreeTierThreshold(0);
+            await setUsycAnticipatedFeeRatesTest(
+              fixture,
+              parseUnits('4'),
+              parseUnits(anticipatedRate),
+            );
+            // the subscription fee rate of the vault is never charged
+            await teller.setFeeRatesOverride(
+              redemptionVaultWithUSYC.address,
+              parseUnits('9'),
+              parseUnits(overrideRate),
+            );
+
+            // the default rate is not affected by the override
+            expect(await teller.redemptionFeeRate(constants.AddressZero)).eq(
+              parseUnits('3'),
+            );
+            expect(
+              await teller.redemptionFeeRate(redemptionVaultWithUSYC.address),
+            ).eq(parseUnits(overrideRate));
+
+            return setup;
+          };
+
+          /** fee the Teller takes when 100 USDC is missing */
+          const previewFee = async (
+            fixture: DefaultFixture,
+            teller: Awaited<ReturnType<typeof setupTightUsycRv>>['teller'],
+          ) => {
+            const [shares] = await teller.previewWithdrawData(
+              fixture.redemptionVaultWithUSYC.address,
+              parseUnits('100', 6),
+            );
+            const [net, fee] = await teller.previewRedeemData(
+              fixture.redemptionVaultWithUSYC.address,
+              shares,
+            );
+            return { shares, fee, gross: net.add(fee) };
+          };
+
+          it('override is 0 and is anticipated: no fee is charged, USYC is redeemed', async () => {
+            const fixture = await loadFixture(defaultDeploy);
+            const { user, usdc, teller } = await setupOverride(
+              fixture,
+              '0',
+              '0',
+            );
+
+            const { shares, fee } = await previewFee(fixture, teller);
+            expect(fee).eq(0);
+
+            const result = await checkAndRedeemUsycTest(
+              { redemptionVaultWithUSYC: fixture.redemptionVaultWithUSYC },
+              usdc,
+              parseUnits('100', 6),
+            );
+            expect(result!.usycUsed).eq(shares);
+
+            await redeemInstantWithUsycTest(commonParams(fixture), usdc, 100, {
+              from: user,
+            });
+          });
+
+          it('override is lower than the default rate and is anticipated: lower fee is charged, USYC is redeemed', async () => {
+            const fixture = await loadFixture(defaultDeploy);
+            const { user, usdc, teller } = await setupOverride(
+              fixture,
+              '1',
+              '1',
+            );
+
+            const { shares, fee, gross } = await previewFee(fixture, teller);
+            expect(fee).gt(0);
+            expect(fee).lte(usycMaxFee(gross, parseUnits('1')));
+            expect(fee).lt(usycMaxFee(gross, parseUnits('3')));
+
+            const result = await checkAndRedeemUsycTest(
+              { redemptionVaultWithUSYC: fixture.redemptionVaultWithUSYC },
+              usdc,
+              parseUnits('100', 6),
+            );
+            expect(result!.usycUsed).eq(shares);
+
+            await redeemInstantWithUsycTest(commonParams(fixture), usdc, 100, {
+              from: user,
+            });
+          });
+
+          it('override is higher than the default rate and is anticipated: higher fee is charged, USYC is redeemed', async () => {
+            const fixture = await loadFixture(defaultDeploy);
+            const { user, usdc, teller } = await setupOverride(
+              fixture,
+              '5',
+              '5',
+            );
+
+            const { shares, fee, gross } = await previewFee(fixture, teller);
+            expect(fee).gt(usycMaxFee(gross, parseUnits('3')));
+            expect(fee).lte(usycMaxFee(gross, parseUnits('5')));
+
+            const result = await checkAndRedeemUsycTest(
+              { redemptionVaultWithUSYC: fixture.redemptionVaultWithUSYC },
+              usdc,
+              parseUnits('100', 6),
+            );
+            expect(result!.usycUsed).eq(shares);
+
+            await redeemInstantWithUsycTest(commonParams(fixture), usdc, 100, {
+              from: user,
+            });
+          });
+
+          for (const overrideRate of ['0', '1', '5']) {
+            it(`override is ${overrideRate}% but the default rate is anticipated: nothing is obtained`, async () => {
+              const fixture = await loadFixture(defaultDeploy);
+              const { usdc } = await setupOverride(fixture, overrideRate, '3');
+
+              for (const token of [usdc, fixture.mTokenLoan]) {
+                await checkAndRedeemUsycTest(
+                  {
+                    redemptionVaultWithUSYC: fixture.redemptionVaultWithUSYC,
+                    expectation: 'none',
+                  },
+                  token,
+                  parseUnits('100', await token.decimals()),
+                );
+              }
+            });
+          }
+        });
+      });
+
+      describe('Teller fee rates validation', () => {
+        /**
+         * The vault anticipates a 3% redemption fee rate and its paired
+         * deposit vault a 4% subscription fee rate, every scenario is run
+         * with each source of liquidity the vault can pay the redemption from
+         */
+        type FeeScenario = {
+          title: string;
+          /** Teller default subscription / redemption rates, in % */
+          tellerRates: readonly [string, string];
+          /** rates overridden for the vault, in % */
+          override?: readonly [string, string];
+          /** rates overridden for the paired deposit vault, in % */
+          pairedOverride?: readonly [string, string];
+          /** subscription fee rate the paired vault anticipates, in % */
+          pairedAnticipatedRate?: string;
+          /** the vault has no paired deposit vault */
+          unpaired?: boolean;
+          /** added to the rates the Teller charges but not reports, in % */
+          premium?: string;
+          /** free tier is exhausted, so the Teller charges its fees */
+          chargeFees?: boolean;
+          /** whether the USYC strategy can be used */
+          usycUsable: boolean;
+        };
+
+        const feeScenarios: FeeScenario[] = [
+          {
+            title: 'Teller fee rates equal the anticipated ones',
+            tellerRates: ['4', '3'],
+            chargeFees: true,
+            usycUsable: true,
+          },
+          {
+            title: 'Teller redemption fee rate differs',
+            tellerRates: ['4', '2'],
+            usycUsable: false,
+          },
+          {
+            title: 'Teller subscription fee rate differs',
+            tellerRates: ['5', '3'],
+            usycUsable: false,
+          },
+          {
+            title: 'both Teller fee rates differ',
+            tellerRates: ['5', '2'],
+            usycUsable: false,
+          },
+          {
+            title: 'Teller subscription fee rate is 0',
+            tellerRates: ['0', '3'],
+            usycUsable: false,
+          },
+          {
+            title: 'vault redemption fee rate override is 0',
+            tellerRates: ['4', '3'],
+            override: ['4', '0'],
+            chargeFees: true,
+            usycUsable: false,
+          },
+          {
+            title:
+              'vault redemption fee rate override is lower than the anticipated rate and the redemption is under the free tier',
+            tellerRates: ['4', '3'],
+            override: ['4', '1'],
+            usycUsable: false,
+          },
+          {
+            title:
+              'vault redemption fee rate override is higher than the anticipated rate',
+            tellerRates: ['4', '3'],
+            override: ['4', '5'],
+            chargeFees: true,
+            usycUsable: false,
+          },
+          {
+            title:
+              'vault redemption fee rate override equals the anticipated rate but the default rate differs',
+            tellerRates: ['4', '5'],
+            override: ['4', '3'],
+            chargeFees: true,
+            usycUsable: true,
+          },
+          {
+            title: 'only the vault subscription fee rate override differs',
+            tellerRates: ['4', '3'],
+            override: ['9', '3'],
+            chargeFees: true,
+            usycUsable: true,
+          },
+          {
+            title:
+              'paired vault subscription fee rate override differs from its anticipated rate',
+            tellerRates: ['4', '3'],
+            pairedOverride: ['5', '3'],
+            usycUsable: false,
+          },
+          {
+            title:
+              'paired vault subscription fee rate override equals its anticipated rate but the default rate differs',
+            tellerRates: ['5', '3'],
+            pairedOverride: ['4', '3'],
+            chargeFees: true,
+            usycUsable: true,
+          },
+          {
+            title: 'only the paired vault redemption fee rate override differs',
+            tellerRates: ['4', '3'],
+            pairedOverride: ['4', '9'],
+            chargeFees: true,
+            usycUsable: true,
+          },
+          {
+            title: 'paired vault anticipates another subscription fee rate',
+            tellerRates: ['4', '3'],
+            pairedAnticipatedRate: '5',
+            usycUsable: false,
+          },
+          {
+            title:
+              'Teller subscription fee rate differs but the vault is not paired',
+            tellerRates: ['5', '3'],
+            unpaired: true,
+            chargeFees: true,
+            usycUsable: true,
+          },
+          {
+            title:
+              'Teller charges more than the redemption fee rate it reports',
+            tellerRates: ['4', '3'],
+            premium: '1',
+            chargeFees: true,
+            usycUsable: false,
+          },
+        ];
+
+        const liquidityModes = [
+          'vault holds enough USDC',
+          'USYC is the only liquidity',
+          'loan LP is available',
+        ] as const;
+
+        for (const scenario of feeScenarios) {
+          for (const mode of liquidityModes) {
+            const shouldFail =
+              mode === 'USYC is the only liquidity' && !scenario.usycUsable;
+            const usycUsed =
+              mode !== 'vault holds enough USDC' && scenario.usycUsable;
+            const outcome =
+              mode === 'vault holds enough USDC'
+                ? 'USYC is not needed, fee rates are not checked'
+                : usycUsed
+                ? 'USYC is redeemed'
+                : 'USYC is skipped and loan LP covers everything';
+
+            it(`${shouldFail ? 'should fail: ' : ''}${scenario.title}, ${mode}${
+              shouldFail ? '' : `: ${outcome}`
+            }`, async () => {
+              const fixture = await loadFixture(defaultDeploy);
+              const {
+                owner,
+                depositVaultWithUSYC,
+                redemptionVaultWithUSYC,
+                usycTeller,
+                stableCoins,
+                mTokenLoan,
+                loanLp,
+              } = fixture;
+              const { user } = await setupUsycRv(fixture);
+              if (mode === 'vault holds enough USDC') {
+                await mintToken(
+                  stableCoins.usdc,
+                  redemptionVaultWithUSYC,
+                  100_000,
+                );
+              }
+              if (mode === 'loan LP is available') {
+                await setupLoanLp(fixture, 100_000);
+              }
+              if (scenario.unpaired) {
+                await setUsycDepositVaultPairedTest(
+                  { redemptionVaultWithUSYC, owner },
+                  constants.AddressZero,
+                );
+              }
+              await setUsycAnticipatedFeeRatesTest(
+                fixture,
+                parseUnits(scenario.pairedAnticipatedRate ?? '4'),
+                parseUnits('3'),
+              );
+
+              await usycTeller.setFeeRates(
+                parseUnits(scenario.tellerRates[0]),
+                parseUnits(scenario.tellerRates[1]),
+              );
+              if (scenario.chargeFees) {
+                await usycTeller.setFreeTierThreshold(0);
+              }
+              if (scenario.premium) {
+                await usycTeller.setFeeRatePremium(
+                  parseUnits(scenario.premium),
+                );
+              }
+              if (scenario.override) {
+                await usycTeller.setFeeRatesOverride(
+                  redemptionVaultWithUSYC.address,
+                  parseUnits(scenario.override[0]),
+                  parseUnits(scenario.override[1]),
+                );
+              }
+              if (scenario.pairedOverride) {
+                await usycTeller.setFeeRatesOverride(
+                  depositVaultWithUSYC.address,
+                  parseUnits(scenario.pairedOverride[0]),
+                  parseUnits(scenario.pairedOverride[1]),
+                );
+              }
+
+              // the rates the Teller reports for each vault are the
+              // overridden ones, or the default ones without an override
+              expect(
+                await usycTeller.redemptionFeeRate(
+                  redemptionVaultWithUSYC.address,
+                ),
+              ).eq(
+                parseUnits(scenario.override?.[1] ?? scenario.tellerRates[1]),
+              );
+              expect(
+                await usycTeller.subscriptionFeeRate(
+                  depositVaultWithUSYC.address,
+                ),
+              ).eq(
+                parseUnits(
+                  scenario.pairedOverride?.[0] ?? scenario.tellerRates[0],
+                ),
+              );
+
+              const lpBefore = await mTokenLoan.balanceOf(loanLp.address);
+
+              await redeemInstantWithUsycTest(
+                { ...commonParams(fixture), expectUsycUsed: usycUsed },
+                stableCoins.usdc,
+                100,
+                {
+                  from: user,
+                  ...(shouldFail && {
+                    revertMessage: 'ERC20: transfer amount exceeds balance',
+                  }),
+                },
+              );
+
+              const lpAfter = await mTokenLoan.balanceOf(loanLp.address);
+              if (mode === 'loan LP is available' && !scenario.usycUsable) {
+                expect(lpAfter).lt(lpBefore);
+              } else {
+                expect(lpAfter).eq(lpBefore);
+              }
+            });
+          }
+        }
+
+        describe('paired vault does not report an anticipated fee rate', () => {
+          const setupNotUsycPairedVault = async (fixture: DefaultFixture) => {
+            const { owner, redemptionVaultWithUSYC, depositVaultMTokenLoan } =
+              fixture;
+            const setup = await setupUsycRv(fixture);
+            // the mToken deposit vault is not a USYC vault
+            await setUsycDepositVaultPairedTest(
+              { redemptionVaultWithUSYC, owner },
+              depositVaultMTokenLoan.address,
+            );
+            return setup;
+          };
+
+          it('should fail: direct strategy call reverts', async () => {
+            const fixture = await loadFixture(defaultDeploy);
+            await setupNotUsycPairedVault(fixture);
+
+            await expect(
+              fixture.redemptionVaultWithUSYC.checkAndRedeemUSYC(
+                fixture.stableCoins.usdc.address,
+                parseUnits('100', 8),
+              ),
+            ).to.be.revertedWithoutReason();
+          });
+
+          it('should fail: USYC is the only liquidity, the strategy failure is caught and USYC is not used', async () => {
+            const fixture = await loadFixture(defaultDeploy);
+            const { user } = await setupNotUsycPairedVault(fixture);
+
+            await redeemInstantWithUsycTest(
+              commonParams(fixture),
+              fixture.stableCoins.usdc,
+              100,
+              {
+                from: user,
+                revertMessage: 'ERC20: transfer amount exceeds balance',
+              },
+            );
+          });
+        });
       });
 
       describe('admin setters', () => {
         const setterCases = [
-          {
-            fn: 'setAnticipatedFeeRate',
-            event: 'SetAnticipatedFeeRate',
-            getter: 'anticipatedFeeRate',
-            value: () => parseUnits('3'),
-          },
           {
             fn: 'setUsycTeller',
             event: 'SetUsycTeller',
@@ -1395,7 +1977,48 @@ redemptionVaultSuits(
             getter: 'depositVault',
             value: (f: DefaultFixture) => f.regularAccounts[5].address,
           },
+          {
+            fn: 'setDepositVaultPaired',
+            event: 'SetDepositVaultPaired',
+            getter: 'depositVaultPaired',
+            value: (f: DefaultFixture) => f.regularAccounts[5].address,
+          },
+          {
+            fn: 'setAnticipatedFeeRate',
+            event: 'SetAnticipatedFeeRate',
+            getter: 'anticipatedFeeRate',
+            value: () => parseUnits('3'),
+          },
         ] as const;
+
+        it('anticipated fee rate and paired vault can be set back to 0', async () => {
+          const fixture = await loadFixture(defaultDeploy);
+          const vault = {
+            vault: fixture.redemptionVaultWithUSYC,
+            owner: fixture.owner,
+          };
+          await usycSetterTest(
+            vault,
+            'setAnticipatedFeeRate',
+            'SetAnticipatedFeeRate',
+            'anticipatedFeeRate',
+            parseUnits('3'),
+          );
+          await usycSetterTest(
+            vault,
+            'setAnticipatedFeeRate',
+            'SetAnticipatedFeeRate',
+            'anticipatedFeeRate',
+            0,
+          );
+          await setUsycDepositVaultPairedTest(
+            {
+              redemptionVaultWithUSYC: fixture.redemptionVaultWithUSYC,
+              owner: fixture.owner,
+            },
+            constants.AddressZero,
+          );
+        });
 
         for (const { fn, event, getter, value } of setterCases) {
           describe(`${fn}()`, () => {

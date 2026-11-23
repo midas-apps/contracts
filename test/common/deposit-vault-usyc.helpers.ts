@@ -225,6 +225,25 @@ const assertUsycDeposit = async (
   }
 };
 
+/**
+ * Whether `tokenIn` itself ends up on tokensReceiver, as in the regular
+ * deposit flow: auto-invest is disabled, or USDC was deposited and fell back
+ */
+const tokenInGoesToTokensReceiver = async (
+  depositVaultWithUSYC: Fixture['depositVaultWithUSYC'],
+  tokenIn: string,
+  expectation: UsycDepositExpectation,
+) => {
+  if (expectation === 'disabled') return true;
+  if (expectation !== 'fallback') return false;
+
+  const teller = IUSYCTeller__factory.connect(
+    await depositVaultWithUSYC.usycTeller(),
+    depositVaultWithUSYC.signer,
+  );
+  return (await teller.asset()) === tokenIn;
+};
+
 type DepositWithUsycParams = CommonParamsUsycDv &
   Pick<Fixture, 'mTBILL' | 'mTokenToUsdDataFeed'> & {
     expectation?: UsycDepositExpectation;
@@ -262,7 +281,11 @@ export const depositInstantWithUsycTest = async (
     waivedFee,
     minAmount,
     customRecipient,
-    checkTokensReceiver: expectation === 'disabled',
+    checkTokensReceiver: await tokenInGoesToTokensReceiver(
+      depositVaultWithUSYC,
+      tokenIn,
+      expectation,
+    ),
   };
 
   if (shouldRevert(opt)) {
@@ -309,7 +332,11 @@ export const depositRequestWithUsycTest = async (
     waivedFee,
     customRecipient,
     instantShare,
-    checkTokensReceiver: expectation === 'disabled',
+    checkTokensReceiver: await tokenInGoesToTokensReceiver(
+      depositVaultWithUSYC,
+      tokenIn,
+      expectation,
+    ),
   };
 
   if (shouldRevert(opt)) {

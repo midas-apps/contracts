@@ -640,6 +640,7 @@ export const defaultDeploy = async () => {
       redemptionVaultLoanSwapper,
       usycTeller,
       usycDepositVault: depositVaultMTokenLoan,
+      usycDepositVaultPaired: depositVaultWithUSYC,
     },
     undefined,
     { from: owner },
@@ -655,6 +656,11 @@ export const defaultDeploy = async () => {
   await depositVaultMTokenLoan.setWaivedFeeAccount(
     redemptionVaultWithUSYC.address,
     true,
+  );
+  // the USYC vaults are paired: each one validates the Teller fee rate
+  // of the other, the deposit vault is deployed first so it is paired here
+  await depositVaultWithUSYC.setRedemptionVaultPaired(
+    redemptionVaultWithUSYC.address,
   );
 
   const customFeed = await new CustomAggregatorV3CompatibleFeedTester__factory(

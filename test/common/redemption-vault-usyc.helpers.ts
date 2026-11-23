@@ -20,6 +20,7 @@ import {
   IDataFeed__factory,
   IERC20,
   IUSYCTeller__factory,
+  IVaultWithUSYC__factory,
 } from '../../typechain-types';
 
 type Fixture = Awaited<ReturnType<typeof defaultDeploy>>;
@@ -28,6 +29,20 @@ type CommonParamsUsycRv = {
   redemptionVaultWithUSYC: Fixture['redemptionVaultWithUSYC'];
   owner: Fixture['owner'];
 };
+
+export const setUsycDepositVaultPairedTest = (
+  { redemptionVaultWithUSYC, owner }: CommonParamsUsycRv,
+  depositVaultPaired: string,
+  opt?: OptionalCommonParams,
+) =>
+  usycSetterTest(
+    { vault: redemptionVaultWithUSYC, owner },
+    'setDepositVaultPaired',
+    'SetDepositVaultPaired',
+    'depositVaultPaired',
+    depositVaultPaired,
+    opt,
+  );
 
 export const setUsycDepositVaultTest = (
   { redemptionVaultWithUSYC, owner }: CommonParamsUsycRv,
@@ -46,7 +61,7 @@ export const setUsycDepositVaultTest = (
 /**
  * Value of the USYC the vault is able to redeem right now, expressed in
  * `tokenOut` native units. Mirrors the strategy guards, so it is 0 whenever
- * the strategy would not be used (unsupported tokenOut, fee rate mismatch,
+ * the strategy would not be used (unsupported tokenOut, fee rates mismatch,
  * previewed fee over the anticipated rate, fees not waived on the deposit
  * vault, USDC not accepted by it)
  */
@@ -61,12 +76,27 @@ export const usycLiquidityInTokenOut = async (
   );
   const usdc = await teller.asset();
 
-  const feeRate = await teller.redemptionFeeRate(
+  // the redemption fee rate the Teller charges the vault has to match
+  // its anticipated rate
+  const anticipatedFeeRate = await redemptionVaultWithUSYC.anticipatedFeeRate();
+  const redemptionFeeRate = await teller.redemptionFeeRate(
     redemptionVaultWithUSYC.address,
   );
-  const anticipatedFeeRate = await redemptionVaultWithUSYC.anticipatedFeeRate();
-  if (!feeRate.eq(anticipatedFeeRate)) {
+  if (!redemptionFeeRate.eq(anticipatedFeeRate)) {
     return constants.Zero;
+  }
+
+  // and the subscription fee rate the Teller charges the paired deposit
+  // vault has to match the rate anticipated by that vault
+  const dvPairedAddress = await redemptionVaultWithUSYC.depositVaultPaired();
+  if (dvPairedAddress !== constants.AddressZero) {
+    const subscriptionFeeRate = await teller.subscriptionFeeRate(
+      dvPairedAddress,
+    );
+    const dvPaired = IVaultWithUSYC__factory.connect(dvPairedAddress, signer);
+    if (!subscriptionFeeRate.eq(await dvPaired.anticipatedFeeRate())) {
+      return constants.Zero;
+    }
   }
 
   const maxShares = await teller.maxRedeem(redemptionVaultWithUSYC.address);

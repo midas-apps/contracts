@@ -158,6 +158,48 @@ describe('RedemptionVaultWithUSYC - Arc Fork Integration Tests (real USYC Teller
     ).to.be.revertedWith('ERC20: transfer amount exceeds balance');
   });
 
+  for (const leg of ['subscription', 'redemption'] as const) {
+    it(`should fail: anticipated ${leg} fee rate does not match the rate the real Teller charges the ${
+      leg === 'redemption' ? 'vault' : 'paired radYC DV'
+    }, USYC is not used`, async () => {
+      const f = await loadFixture(usycArcFixture);
+      const {
+        radUSD,
+        radYC,
+        teller,
+        testUser,
+        depositVaultWithUSYC,
+        redemptionVaultWithUSYC,
+        owner,
+      } = f;
+
+      await mintRadYc(f, parseUnits('1000'));
+
+      // the redemption leg is anticipated by the vault itself,
+      // the subscription leg by its paired radYC DV
+      if (leg === 'redemption') {
+        const rate = await teller.redemptionFeeRate(
+          redemptionVaultWithUSYC.address,
+        );
+        await redemptionVaultWithUSYC
+          .connect(owner)
+          .setAnticipatedFeeRate(rate.add(1));
+      } else {
+        const rate = await teller.subscriptionFeeRate(
+          depositVaultWithUSYC.address,
+        );
+        await depositVaultWithUSYC
+          .connect(owner)
+          .setAnticipatedFeeRate(rate.add(1));
+      }
+
+      const toRedeem = (await radYC.balanceOf(testUser.address)).div(2);
+      await expect(
+        redeemInstant(f, testUser, radUSD.address, toRedeem),
+      ).to.be.revertedWith('ERC20: transfer amount exceeds balance');
+    });
+  }
+
   it('should fail: radYC RV is not entitled by Circle', async () => {
     const f = await loadFixture(usycArcFixture);
     const { radUSD, radYC, entitlements, testUser, redemptionVaultWithUSYC } =

@@ -50,10 +50,10 @@ export const RV_USTB_INIT_FN =
 export const RV_MTOKEN_INIT_FN = RV_USTB_INIT_FN;
 
 export const DV_USYC_INIT_FN =
-  'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(uint256,uint256),address,address,uint256)';
+  'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(uint256,uint256),address,address,address,uint256)';
 
 export const RV_USYC_INIT_FN =
-  'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(address,address,address,address,uint256),address,address,uint256)';
+  'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(address,address,address,address,uint256),address,address,address,uint256)';
 
 export const RV_USYC_LIBRARY_KEY =
   'contracts/libraries/VaultsWithUSYCLibrary.sol:VaultsWithUSYCLibrary';
@@ -105,13 +105,19 @@ export type InitializerParamsRvWithUstb = {
 
 export type InitializerParamsDvWithUsyc = {
   usycTeller: AccountOrContract;
+  /** mToken RedemptionVault the vault redeems its mToken payment token with */
   usycRedemptionVault?: AccountOrContract;
+  /** RedemptionVaultWithUSYC paired with the vault */
+  usycRedemptionVaultPaired?: AccountOrContract;
   anticipatedFeeRate?: BigNumberish;
 } & InitializerParamsDv;
 
 export type InitializerParamsRvWithUsyc = {
   usycTeller: AccountOrContract;
+  /** mToken DepositVault the vault converts USDC into its mToken with */
   usycDepositVault?: AccountOrContract;
+  /** DepositVaultWithUSYC paired with the vault */
+  usycDepositVaultPaired?: AccountOrContract;
   anticipatedFeeRate?: BigNumberish;
 } & InitializerParamsRv;
 
@@ -273,6 +279,7 @@ export const getInitializerParamsDvWithMToken = ({
 export const getInitializerParamsDvWithUsyc = ({
   usycTeller,
   usycRedemptionVault,
+  usycRedemptionVaultPaired,
   anticipatedFeeRate,
   ...commonParams
 }: InitializerParamsDvWithUsyc) => {
@@ -280,6 +287,7 @@ export const getInitializerParamsDvWithUsyc = ({
     ...getInitializerParamsDv(commonParams),
     getAccount(usycTeller),
     getAccount(usycRedemptionVault ?? constants.AddressZero),
+    getAccount(usycRedemptionVaultPaired ?? constants.AddressZero),
     anticipatedFeeRate ?? 0,
   ] as const;
 };
@@ -287,6 +295,7 @@ export const getInitializerParamsDvWithUsyc = ({
 export const getInitializerParamsRvWithUsyc = ({
   usycTeller,
   usycDepositVault,
+  usycDepositVaultPaired,
   anticipatedFeeRate,
   ...commonParams
 }: InitializerParamsRvWithUsyc) => {
@@ -294,6 +303,7 @@ export const getInitializerParamsRvWithUsyc = ({
     ...getInitializerParamsRv(commonParams),
     getAccount(usycTeller),
     getAccount(usycDepositVault ?? constants.AddressZero),
+    getAccount(usycDepositVaultPaired ?? constants.AddressZero),
     anticipatedFeeRate ?? 0,
   ] as const;
 };

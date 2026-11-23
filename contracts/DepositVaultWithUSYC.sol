@@ -10,6 +10,7 @@ import {DepositVaultInitParams} from "./interfaces/IDepositVault.sol";
 import {CommonVaultInitParams} from "./interfaces/IManageableVault.sol";
 import {IRedemptionVault} from "./interfaces/IRedemptionVault.sol";
 import {IUSYCTeller} from "./interfaces/usyc/IUSYCTeller.sol";
+import {IVaultWithUSYC} from "./interfaces/usyc/IVaultWithUSYC.sol";
 import {VaultsWithUSYCLibrary} from "./libraries/VaultsWithUSYCLibrary.sol";
 
 /**
@@ -22,7 +23,7 @@ import {VaultsWithUSYCLibrary} from "./libraries/VaultsWithUSYCLibrary.sol";
  * If `usycDepositsEnabled` is false, regular deposit flow is used
  * @author RedDuck Software
  */
-contract DepositVaultWithUSYC is DepositVault {
+contract DepositVaultWithUSYC is DepositVault, IVaultWithUSYC {
     using SafeERC20 for IERC20;
 
     /**
@@ -42,7 +43,8 @@ contract DepositVaultWithUSYC is DepositVault {
      * @dev auto-invest is only performed when it equals
      * `usycTeller.subscriptionFeeRate(address(this))` and the fee the Teller
      * actually takes from the deposited USDC does not exceed it. The Teller
-     * charges no fee under its daily free tier, so the actual fee can be lower
+     * charges no fee under its daily free tier, so the actual fee can be lower.
+     * `redemptionVaultPaired` validates the same rate before redeeming USYC
      */
     uint256 public anticipatedFeeRate;
 
@@ -57,6 +59,19 @@ contract DepositVaultWithUSYC is DepositVault {
      * @dev if false, the transaction will revert when auto-invest fails
      */
     bool public autoInvestFallbackEnabled;
+
+    /**
+     * @notice RedemptionVaultWithUSYC paired with this vault, the vault that
+     * redeems the USYC this vault subscribes to
+     * @dev if set, auto-invest is only performed when its `anticipatedFeeRate`
+     * equals `usycTeller.redemptionFeeRate(address(redemptionVaultPaired))`,
+     * so that USYC is not acquired when it cannot be redeemed at the
+     * anticipated rate. If not set, only the subscription fee rate of this
+     * vault is validated.
+     * Packed into the storage slot of the flags above, so the storage gap
+     * is not reduced
+     */
+    IVaultWithUSYC public redemptionVaultPaired;
 
     /**
      * @dev leaving a storage gap for futures updates
@@ -74,6 +89,12 @@ contract DepositVaultWithUSYC is DepositVault {
      * @param newVault new mToken RedemptionVault address
      */
     event SetRedemptionVault(address indexed newVault);
+
+    /**
+     * @notice Emitted when the paired RedemptionVaultWithUSYC address is updated
+     * @param newVault new paired RedemptionVaultWithUSYC address
+     */
+    event SetRedemptionVaultPaired(address indexed newVault);
 
     /**
      * @notice Emitted when `anticipatedFeeRate` is updated
@@ -120,10 +141,11 @@ contract DepositVaultWithUSYC is DepositVault {
     error AutoInvestFailed(bytes err);
 
     /**
-     * @notice when the Teller subscription fee rate differs from `anticipatedFeeRate`
-     * @param tellerFeeRate subscription fee rate reported by the Teller
+     * @notice when the Teller subscription fee rate of this vault differs
+     * from `anticipatedFeeRate`, or the Teller redemption fee rate of
+     * `redemptionVaultPaired` differs from its `anticipatedFeeRate`
      */
-    error FeeNotMatched(uint256 tellerFeeRate);
+    error FeesNotMatched();
 
     /**
      * @notice when this vault is not fee waived on `redemptionVault`
@@ -146,6 +168,8 @@ contract DepositVaultWithUSYC is DepositVault {
      * @param _depositVaultInitParams init params for deposit vault
      * @param _usycTeller USYC Teller address
      * @param _redemptionVault mToken RedemptionVault address, can be zero
+     * @param _redemptionVaultPaired paired RedemptionVaultWithUSYC address,
+     * can be zero
      * @param _anticipatedFeeRate anticipated Teller subscription fee rate
      */
     function initialize(
@@ -153,6 +177,7 @@ contract DepositVaultWithUSYC is DepositVault {
         DepositVaultInitParams calldata _depositVaultInitParams,
         address _usycTeller,
         address _redemptionVault,
+        address _redemptionVaultPaired,
         uint256 _anticipatedFeeRate
     ) external {
         initialize(_commonVaultInitParams, _depositVaultInitParams);
@@ -161,6 +186,7 @@ contract DepositVaultWithUSYC is DepositVault {
 
         usycTeller = IUSYCTeller(_usycTeller);
         redemptionVault = IRedemptionVault(_redemptionVault);
+        redemptionVaultPaired = IVaultWithUSYC(_redemptionVaultPaired);
         anticipatedFeeRate = _anticipatedFeeRate;
     }
 
@@ -185,6 +211,20 @@ contract DepositVaultWithUSYC is DepositVault {
     {
         redemptionVault = IRedemptionVault(_redemptionVault);
         emit SetRedemptionVault(_redemptionVault);
+    }
+
+    /**
+     * @notice Sets the paired RedemptionVaultWithUSYC address
+     * @dev zero address disables the validation of the paired vault
+     * redemption fee rate on auto-invest
+     * @param _redemptionVaultPaired new paired RedemptionVaultWithUSYC address
+     */
+    function setRedemptionVaultPaired(address _redemptionVaultPaired)
+        external
+        onlyContractAdmin
+    {
+        redemptionVaultPaired = IVaultWithUSYC(_redemptionVaultPaired);
+        emit SetRedemptionVaultPaired(_redemptionVaultPaired);
     }
 
     /**
@@ -341,9 +381,10 @@ contract DepositVaultWithUSYC is DepositVault {
      * @dev Subscribes to USYC with `assetAmount` of USDC held by this contract,
      * the USYC is minted to `tokensReceiver`.
      * Falls back to sending the USDC to `tokensReceiver` or reverts, based on
-     * `autoInvestFallbackEnabled`, when the Teller fee rate differs from
-     * `anticipatedFeeRate`, the fee previewed by the Teller exceeds
-     * {VaultsWithUSYCLibrary-maxFee} or the Teller deposit fails.
+     * `autoInvestFallbackEnabled`, when the Teller fee rates differ from
+     * the anticipated ones, see {VaultsWithUSYCLibrary-validateTellerFees},
+     * the fee previewed by the Teller exceeds {VaultsWithUSYCLibrary-maxFee}
+     * or the Teller deposit fails.
      * Always reverts when the Teller mints less USYC than previewed
      * @param teller USYC Teller
      * @param usdc Teller asset address
@@ -354,11 +395,18 @@ contract DepositVaultWithUSYC is DepositVault {
         address usdc,
         uint256 assetAmount
     ) private {
-        uint256 feeRate = teller.subscriptionFeeRate(address(this));
-        if (feeRate != anticipatedFeeRate) {
+        uint256 feeRate = anticipatedFeeRate;
+        if (
+            !VaultsWithUSYCLibrary.validateTellerFees(
+                teller,
+                redemptionVaultPaired,
+                feeRate,
+                true
+            )
+        ) {
             return
                 _fallbackDeposit(
-                    abi.encodeWithSelector(FeeNotMatched.selector, feeRate),
+                    abi.encodeWithSelector(FeesNotMatched.selector),
                     teller,
                     usdc,
                     assetAmount

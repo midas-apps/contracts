@@ -531,6 +531,7 @@ const sendAndWaitForCustomTxSignDirect = async (
       | 'set-morpho-vault'
       | 'set-morpho-deposits-enabled'
       | 'set-usyc-deposits-enabled'
+      | 'set-usyc-paired-vault'
       | 'set-auto-invest-fallback-enabled'
       | 'set-instant-limit'
       | 'set-mint-rate-limit'

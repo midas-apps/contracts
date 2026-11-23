@@ -2,6 +2,7 @@ import { BigNumberish, constants } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { deployAndVerifyProxy, getDeployer, getNetworkConfig } from './utils';
+import { findUsycVault } from './vault-resolver';
 import { assertVaultAdminRoleMatchesV1 } from './vault-role-guard';
 
 import { MTokenName } from '../../../config';
@@ -228,9 +229,19 @@ export const deployDepositVault = async (
       throw new Error('USYC Teller contract is not found');
     }
 
+    // the redemptionVaultUsyc of the same mToken is used as the paired vault
+    // if it is already deployed, otherwise the vault is left unpaired and
+    // can be paired later with `deploy:post:set:usycpairedvaults`
+    const redemptionVaultPaired =
+      findUsycVault(tokenAddresses, token, 'redemptionVaultUsyc') ??
+      constants.AddressZero;
+
+    console.log('redemptionVaultPaired', redemptionVaultPaired);
+
     extraParams.push(
       usycTeller,
       resolveUsycRedemptionVault(networkConfig, addresses ?? {}),
+      redemptionVaultPaired,
       networkConfig.anticipatedFeeRate ?? 0,
     );
   }
@@ -238,7 +249,7 @@ export const deployDepositVault = async (
   const ustbMTokenInitializer =
     'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(uint256,uint256),address)' as const;
   const usycInitializer =
-    'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(uint256,uint256),address,address,uint256)' as const;
+    'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(uint256,uint256),address,address,address,uint256)' as const;
   const params = [
     {
       variationTolerance: networkConfig.variationTolerance,

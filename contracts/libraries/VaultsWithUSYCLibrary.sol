@@ -10,6 +10,7 @@ import {IDepositVault} from "../interfaces/IDepositVault.sol";
 import {IUSYCTeller} from "../interfaces/usyc/IUSYCTeller.sol";
 import {ManageableVault} from "../abstract/ManageableVault.sol";
 import {IDataFeed} from "../interfaces/IDataFeed.sol";
+import {IVaultWithUSYC} from "../interfaces/usyc/IVaultWithUSYC.sol";
 
 import {DecimalsCorrectionLibrary} from "./DecimalsCorrectionLibrary.sol";
 import {RedemptionSwapperHelpersLibrary} from "./RedemptionSwapperHelpersLibrary.sol";
@@ -51,9 +52,9 @@ library VaultsWithUSYCLibrary {
      * otherwise the call reverts, so that no more USYC is sold than the
      * obtained `tokenOut` is worth to the calling vault.
      * Returns 0 without redeeming when `tokenOut` is neither, the Teller
-     * redemption fee rate differs from `anticipatedFeeRate`, the fee previewed
-     * by the Teller exceeds {maxFee}, the vault is not fee waived on `dv` or
-     * `dv` does not accept USDC.
+     * fee rates differ from the anticipated ones, see {validateTellerFees},
+     * the fee previewed by the Teller exceeds {maxFee}, the vault is not
+     * fee waived on `dv` or `dv` does not accept USDC.
      * Reverts when the Teller pays out less USDC than previewed.
      *
      * NOTE: redeemed shares are capped by `teller.maxRedeem`, which the
@@ -63,7 +64,10 @@ library VaultsWithUSYCLibrary {
      * obtained and the vault falls back to its other liquidity sources
      * @param teller USYC Teller
      * @param dv mToken DepositVault, can be zero
-     * @param anticipatedFeeRate anticipated Teller redemption fee rate
+     * @param dvPaired DepositVaultWithUSYC paired with the calling vault,
+     * can be zero
+     * @param anticipatedRedemptionFeeRate redemption fee rate the Teller
+     * is expected to charge the calling vault
      * @param tokenOut tokenOut address
      * @param missingAmountBase18 amount of tokenOut needed in base 18
      * @param tokenOutRate rate of tokenOut in the calling vault in base 18
@@ -73,7 +77,8 @@ library VaultsWithUSYCLibrary {
     function obtainRedemptionLiquidity(
         IUSYCTeller teller,
         IDepositVault dv,
-        uint256 anticipatedFeeRate,
+        IVaultWithUSYC dvPaired,
+        uint256 anticipatedRedemptionFeeRate,
         address tokenOut,
         uint256 missingAmountBase18,
         uint256 tokenOutRate,
@@ -94,7 +99,14 @@ library VaultsWithUSYCLibrary {
             return 0;
         }
 
-        if (teller.redemptionFeeRate(address(this)) != anticipatedFeeRate) {
+        if (
+            !validateTellerFees(
+                teller,
+                dvPaired,
+                anticipatedRedemptionFeeRate,
+                false
+            )
+        ) {
             return 0;
         }
 
@@ -149,7 +161,7 @@ library VaultsWithUSYCLibrary {
         uint256 receivedUsdc = _redeemUsyc(
             teller,
             usycToRedeem,
-            anticipatedFeeRate
+            anticipatedRedemptionFeeRate
         );
 
         // the Teller fee exceeds the maximum, nothing is redeemed
@@ -255,6 +267,55 @@ library VaultsWithUSYCLibrary {
                 Math.mulDiv(usdcAmountBase18, 1e18, mTokenRate),
                 bytes32(0)
             );
+    }
+
+    /**
+     * @notice Checks that the fee rates the Teller charges the calling vault
+     * and its paired vault match the anticipated ones
+     * @dev Executed in the context of the calling vault. A deposit vault
+     * (`isSubscription` is true) is charged the Teller subscription fee rate
+     * and its paired redemption vault the redemption fee rate, a redemption
+     * vault is charged the redemption fee rate and its paired deposit vault
+     * the subscription fee rate. The rate of the calling vault is compared
+     * with `anticipatedFeeRate`, the rate of `pairedVault` with the
+     * `anticipatedFeeRate` it reports, so both vaults stop using USYC as
+     * soon as either leg is charged an unexpected rate.
+     * The paired vault leg is skipped when `pairedVault` is not set.
+     * Reverts when `pairedVault` is set to an address that does not
+     * implement {IVaultWithUSYC}
+     * @param teller USYC Teller
+     * @param pairedVault vault paired with the calling vault, can be zero
+     * @param anticipatedFeeRate fee rate the Teller is expected to charge
+     * the calling vault
+     * @param isSubscription true if the calling vault subscribes to USYC,
+     * false if it redeems USYC
+     * @return true if the fee rates match the anticipated ones
+     */
+    function validateTellerFees(
+        IUSYCTeller teller,
+        IVaultWithUSYC pairedVault,
+        uint256 anticipatedFeeRate,
+        bool isSubscription
+    )
+        internal
+        view
+        returns (
+            bool /* isValid */
+        )
+    {
+        uint256 ownRate = isSubscription
+            ? teller.subscriptionFeeRate(address(this))
+            : teller.redemptionFeeRate(address(this));
+
+        if (ownRate != anticipatedFeeRate) return false;
+
+        if (address(pairedVault) == address(0)) return true;
+
+        uint256 pairedRate = isSubscription
+            ? teller.redemptionFeeRate(address(pairedVault))
+            : teller.subscriptionFeeRate(address(pairedVault));
+
+        return pairedRate == pairedVault.anticipatedFeeRate();
     }
 
     /**

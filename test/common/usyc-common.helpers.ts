@@ -49,3 +49,36 @@ export const usycSetterTest = async <TValue extends BigNumberish | boolean>(
     expect(stored).eq(BigNumber.from(value));
   }
 };
+
+type UsycVaultsPair = {
+  depositVaultWithUSYC: Contract;
+  redemptionVaultWithUSYC: Contract;
+  owner: SignerWithAddress;
+};
+
+/**
+ * Sets `anticipatedFeeRate` of both paired USYC vaults: the subscription fee
+ * rate on the deposit vault and the redemption fee rate on the redemption
+ * vault. Each vault validates its own rate and the rate of its paired vault,
+ * so USYC is only used when both match the Teller
+ */
+export const setUsycAnticipatedFeeRatesTest = async (
+  { depositVaultWithUSYC, redemptionVaultWithUSYC, owner }: UsycVaultsPair,
+  subscriptionFeeRate: BigNumberish,
+  redemptionFeeRate: BigNumberish,
+) => {
+  await usycSetterTest(
+    { vault: depositVaultWithUSYC, owner },
+    'setAnticipatedFeeRate',
+    'SetAnticipatedFeeRate',
+    'anticipatedFeeRate',
+    subscriptionFeeRate,
+  );
+  await usycSetterTest(
+    { vault: redemptionVaultWithUSYC, owner },
+    'setAnticipatedFeeRate',
+    'SetAnticipatedFeeRate',
+    'anticipatedFeeRate',
+    redemptionFeeRate,
+  );
+};

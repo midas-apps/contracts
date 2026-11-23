@@ -6,7 +6,7 @@ import {RedemptionVaultInitParams} from "./interfaces/IRedemptionVault.sol";
 import {IDepositVault} from "./interfaces/IDepositVault.sol";
 import {CommonVaultInitParams} from "./interfaces/IManageableVault.sol";
 import {IUSYCTeller} from "./interfaces/usyc/IUSYCTeller.sol";
-
+import {IVaultWithUSYC} from "./interfaces/usyc/IVaultWithUSYC.sol";
 import {VaultsWithUSYCLibrary} from "./libraries/VaultsWithUSYCLibrary.sol";
 
 /**
@@ -18,7 +18,7 @@ import {VaultsWithUSYCLibrary} from "./libraries/VaultsWithUSYCLibrary.sol";
  * deposited there and the minted mToken is used instead
  * @author RedDuck Software
  */
-contract RedemptionVaultWithUSYC is RedemptionVault {
+contract RedemptionVaultWithUSYC is RedemptionVault, IVaultWithUSYC {
     /**
      * @notice Circle USYC Teller used to redeem USYC
      * @dev `asset()` is the token USYC is redeemed to (USDC),
@@ -38,14 +38,24 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
      * @dev USYC is only redeemed when it equals
      * `usycTeller.redemptionFeeRate(address(this))` and the fee the Teller
      * actually takes from the redeemed USDC does not exceed it. The Teller
-     * charges no fee under its daily free tier, so the actual fee can be lower
+     * charges no fee under its daily free tier, so the actual fee can be lower.
+     * `depositVaultPaired` validates the same rate before subscribing to USYC
      */
     uint256 public anticipatedFeeRate;
 
     /**
+     * @notice DepositVaultWithUSYC paired with this vault, the vault that
+     * subscribes to the USYC this vault redeems
+     * @dev if set, USYC is only redeemed when its `anticipatedFeeRate`
+     * equals `usycTeller.subscriptionFeeRate(address(depositVaultPaired))`.
+     * If not set, only the redemption fee rate of this vault is validated
+     */
+    IVaultWithUSYC public depositVaultPaired;
+
+    /**
      * @dev leaving a storage gap for futures updates
      */
-    uint256[50] private __gap;
+    uint256[49] private __gap;
 
     /**
      * @notice Emitted when the USYC Teller address is updated
@@ -58,6 +68,12 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
      * @param newVault new mToken DepositVault address
      */
     event SetDepositVault(address indexed newVault);
+
+    /**
+     * @notice Emitted when the paired DepositVaultWithUSYC address is updated
+     * @param newVault new paired DepositVaultWithUSYC address
+     */
+    event SetDepositVaultPaired(address indexed newVault);
 
     /**
      * @notice Emitted when `anticipatedFeeRate` is updated
@@ -81,6 +97,8 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
      * @param _redemptionInitParams init params for redemption vault state values
      * @param _usycTeller USYC Teller address
      * @param _depositVault mToken DepositVault address, can be zero
+     * @param _depositVaultPaired paired DepositVaultWithUSYC address,
+     * can be zero
      * @param _anticipatedFeeRate anticipated Teller redemption fee rate
      */
     function initialize(
@@ -88,6 +106,7 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
         RedemptionVaultInitParams calldata _redemptionInitParams,
         address _usycTeller,
         address _depositVault,
+        address _depositVaultPaired,
         uint256 _anticipatedFeeRate
     ) external {
         initialize(_commonVaultInitParams, _redemptionInitParams);
@@ -95,6 +114,7 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
 
         usycTeller = IUSYCTeller(_usycTeller);
         depositVault = IDepositVault(_depositVault);
+        depositVaultPaired = IVaultWithUSYC(_depositVaultPaired);
 
         anticipatedFeeRate = _anticipatedFeeRate;
     }
@@ -107,6 +127,20 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
     function setDepositVault(address _depositVault) external onlyContractAdmin {
         depositVault = IDepositVault(_depositVault);
         emit SetDepositVault(_depositVault);
+    }
+
+    /**
+     * @notice Sets the paired DepositVaultWithUSYC address
+     * @dev zero address disables the validation of the paired vault
+     * subscription fee rate when redeeming USYC
+     * @param _depositVaultPaired new paired DepositVaultWithUSYC address
+     */
+    function setDepositVaultPaired(address _depositVaultPaired)
+        external
+        onlyContractAdmin
+    {
+        depositVaultPaired = IVaultWithUSYC(_depositVaultPaired);
+        emit SetDepositVaultPaired(_depositVaultPaired);
     }
 
     /**
@@ -159,6 +193,7 @@ contract RedemptionVaultWithUSYC is RedemptionVault {
             VaultsWithUSYCLibrary.obtainRedemptionLiquidity(
                 usycTeller,
                 depositVault,
+                depositVaultPaired,
                 anticipatedFeeRate,
                 tokenOut,
                 missingAmountBase18,

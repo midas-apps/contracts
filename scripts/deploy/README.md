@@ -179,7 +179,7 @@ Proxy deployments detect the libraries a contract links against from its artifac
 
 #### USYC vaults
 
-The USYC Teller address is taken from `usycTellerContracts`. Deploy the library first (see [Libraries](#libraries)), then the redemption vault, so the deposit vault can use it as `tokensReceiver`:
+The USYC Teller address is taken from `usycTellerContracts`. Deploy the library first (see [Libraries](#libraries)), then the redemption vault, so the deposit vault can use it as `tokensReceiver` and as its paired vault:
 
 ```bash
 yarn hardhat deploy:rv:usyc --network <network> --mtoken <mToken>
@@ -188,7 +188,17 @@ yarn hardhat deploy:dv:usyc --network <network> --mtoken <mToken>
 # add `depositVaultUsycV2` to the addresses file
 ```
 
-Config keys are `rvUsyc` (`type: 'USYC'`, optional `depositVault`, `anticipatedFeeRate`) and `dvUsyc` (`type: 'USYC'`, optional `redemptionVault`, `anticipatedFeeRate`). `depositVault` and `redemptionVault` take either an address or a `{ mToken, depositVaultType | redemptionVaultType }` reference.
+Config keys are `rvUsyc` (`type: 'USYC'`, optional `depositVault`, `anticipatedFeeRate`) and `dvUsyc` (`type: 'USYC'`, optional `redemptionVault`, `anticipatedFeeRate`). `depositVault` / `redemptionVault` are the mToken vaults used to convert USDC to and from the mToken, they take either an address or a `{ mToken, depositVaultType | redemptionVaultType }` reference.
+
+`anticipatedFeeRate` is the fee rate the Teller is expected to charge the vault itself (1e18 = 1%): `subscriptionFeeRate(depositVaultUsyc)` for the deposit vault, `redemptionFeeRate(redemptionVaultUsyc)` for the redemption vault. A vault only uses USYC when its own rate matches and, if a paired vault is set, the rate the Teller charges the paired vault matches the `anticipatedFeeRate` of that vault. Without a paired vault only the vault's own rate is validated.
+
+The paired vault is the other USYC vault of the same mToken and is not configured: a deployment looks it up in the addresses file (`redemptionVaultUsycV2` for the deposit vault, `depositVaultUsycV2` for the redemption vault, address profiles included). If it is not deployed yet, the vault is deployed unpaired; if more than one is found, the deployment fails. The vaults reference each other, so the vault deployed first is always unpaired. Once both addresses are in the addresses file, pair them:
+
+```bash
+yarn hardhat deploy:post:set:usycpairedvaults --network <network> --mtoken <mToken>
+```
+
+It sends `setRedemptionVaultPaired` / `setDepositVaultPaired` only to the vaults that are not paired with their counterpart yet.
 
 USYC auto-invest deposits are disabled after deployment. To enable them, set `postDeploy.setUsycConfig` and run:
 
@@ -239,6 +249,7 @@ v2 vaults only:
 - `yarn deploy:post:set:preferloanliquidity`: redemption vault loan liquidity preference (`preferLoanLiquidity`)
 - `yarn deploy:post:set:mtokenconfig`: `depositVaultMToken` auto-invest settings (`setMTokenConfig`)
 - `yarn deploy:post:set:ustbconfig`: `depositVaultUstb` auto-invest settings (`setUstbConfig`)
+- `yarn deploy:post:set:usycpairedvaults`: pair `depositVaultUsyc` and `redemptionVaultUsyc` of an mToken with each other
 
 Network level (no `--mtoken`):
 

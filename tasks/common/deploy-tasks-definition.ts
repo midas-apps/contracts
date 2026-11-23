@@ -207,6 +207,11 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     mTokenParam(),
     v2VaultsOnlyParam(),
   ],
+  'deploy:post:set:usycpairedvaults': [
+    deployPost('set_UsycPairedVaults'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
 
   // v2 only
   'deploy:post:set:instantlimits': [

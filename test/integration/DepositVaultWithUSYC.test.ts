@@ -1,6 +1,6 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
-import { BigNumber } from 'ethers';
+import { BigNumber, constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
@@ -135,28 +135,113 @@ describe('DepositVaultWithUSYC - Arc Fork Integration Tests (real USYC Teller)',
       .withArgs(NOT_PERMISSIONED_SELECTOR);
   });
 
-  it('should fail: anticipated fee rate does not match the real Teller subscription fee rate', async () => {
-    const f = await loadFixture(usycArcFixture);
-    const { radUSD, testUser, depositVaultWithUSYC, teller, owner } = f;
-    const amount = parseUnits('100');
+  it('real Teller reports its default fee rates for address(0), the vaults have no override', async () => {
+    const { teller, depositVaultWithUSYC, redemptionVaultWithUSYC } =
+      await loadFixture(usycArcFixture);
 
-    const actualRate = await teller.subscriptionFeeRate(
+    // 1e18 = 1%: 0.04% subscription and 0.03% redemption at the fork block
+    const subscriptionRate = parseUnits('0.04');
+    const redemptionRate = parseUnits('0.03');
+
+    for (const account of [
+      constants.AddressZero,
+      depositVaultWithUSYC.address,
+      redemptionVaultWithUSYC.address,
+    ]) {
+      expect(await teller.subscriptionFeeRate(account)).eq(subscriptionRate);
+      expect(await teller.redemptionFeeRate(account)).eq(redemptionRate);
+    }
+
+    // each vault anticipates its own leg and is paired with the other one
+    expect(await depositVaultWithUSYC.anticipatedFeeRate()).eq(
+      subscriptionRate,
+    );
+    expect(await redemptionVaultWithUSYC.anticipatedFeeRate()).eq(
+      redemptionRate,
+    );
+    expect(await depositVaultWithUSYC.redemptionVaultPaired()).eq(
+      redemptionVaultWithUSYC.address,
+    );
+    expect(await redemptionVaultWithUSYC.depositVaultPaired()).eq(
       depositVaultWithUSYC.address,
     );
+  });
+
+  for (const leg of ['subscription', 'redemption'] as const) {
+    it(`should fail: anticipated ${leg} fee rate does not match the rate the real Teller charges the ${
+      leg === 'subscription' ? 'vault' : 'paired radYC RV'
+    }`, async () => {
+      const f = await loadFixture(usycArcFixture);
+      const {
+        radUSD,
+        testUser,
+        depositVaultWithUSYC,
+        redemptionVaultWithUSYC,
+        teller,
+        owner,
+      } = f;
+      const amount = parseUnits('100');
+
+      // the subscription leg is anticipated by the vault itself,
+      // the redemption leg by its paired radYC RV
+      if (leg === 'subscription') {
+        const rate = await teller.subscriptionFeeRate(
+          depositVaultWithUSYC.address,
+        );
+        await depositVaultWithUSYC
+          .connect(owner)
+          .setAnticipatedFeeRate(rate.add(1));
+      } else {
+        const rate = await teller.redemptionFeeRate(
+          redemptionVaultWithUSYC.address,
+        );
+        await redemptionVaultWithUSYC
+          .connect(owner)
+          .setAnticipatedFeeRate(rate.add(1));
+      }
+      await radUSD
+        .connect(testUser)
+        .approve(depositVaultWithUSYC.address, amount);
+
+      await expect(depositInstant(f, testUser, radUSD.address, amount))
+        .to.be.revertedWithCustomError(depositVaultWithUSYC, 'AutoInvestFailed')
+        .withArgs(
+          depositVaultWithUSYC.interface.encodeErrorResult('FeesNotMatched'),
+        );
+    });
+  }
+
+  it('paired radYC RV anticipates another redemption fee rate but the vault is not paired: USYC is acquired', async () => {
+    const f = await loadFixture(usycArcFixture);
+    const {
+      radUSD,
+      usyc,
+      testUser,
+      depositVaultWithUSYC,
+      redemptionVaultWithUSYC,
+      teller,
+      owner,
+    } = f;
+    const amount = parseUnits('100');
+
+    const rate = await teller.redemptionFeeRate(
+      redemptionVaultWithUSYC.address,
+    );
+    await redemptionVaultWithUSYC
+      .connect(owner)
+      .setAnticipatedFeeRate(rate.add(1));
     await depositVaultWithUSYC
       .connect(owner)
-      .setAnticipatedFeeRate(actualRate.add(1));
+      .setRedemptionVaultPaired(constants.AddressZero);
     await radUSD
       .connect(testUser)
       .approve(depositVaultWithUSYC.address, amount);
 
-    await expect(depositInstant(f, testUser, radUSD.address, amount))
-      .to.be.revertedWithCustomError(depositVaultWithUSYC, 'AutoInvestFailed')
-      .withArgs(
-        depositVaultWithUSYC.interface.encodeErrorResult('FeeNotMatched', [
-          actualRate,
-        ]),
-      );
+    const usycBefore = await usyc.balanceOf(redemptionVaultWithUSYC.address);
+    await depositInstant(f, testUser, radUSD.address, amount);
+    expect(await usyc.balanceOf(redemptionVaultWithUSYC.address)).gt(
+      usycBefore,
+    );
   });
 
   it('fallback enabled: when the Teller rejects the DV, USDC (not radUSD) goes to the radYC RV', async () => {

@@ -55,7 +55,8 @@ interface IUSYCOracle {
  *   uses a fixed UTC time that has to be moved by an hour on DST changes.
  *   `setPrices` overrides the oracle until `clearPricesOverride` is called;
  *   without an oracle the prices set by `setPrices` (1.0 by default) are used
- * - fee rates are the same for all accounts
+ * - fee rates are the same for all accounts unless overridden for an account
+ *   with `setFeeRatesOverride`, an overridden rate can be zero
  * - the mock holds the redemption liquidity itself, there are no daily limits
  *   and `redeem` only burns the caller's own shares
  *
@@ -92,6 +93,15 @@ contract USYCTellerMock is Ownable {
 
     /// @dev added to the charged fee rates, not reported by the fee rate getters
     uint256 public feeRatePremium;
+
+    struct FeeRatesOverride {
+        bool enabled;
+        uint256 subscriptionRate;
+        uint256 redemptionRate;
+    }
+
+    /// @dev fee rates of an account that replace the default ones
+    mapping(address => FeeRatesOverride) public feeRatesOverride;
 
     mapping(address => mapping(uint256 => uint256)) public subscription;
 
@@ -158,6 +168,24 @@ contract USYCTellerMock is Ownable {
     {
         _subscriptionFeeRate = subscriptionRate;
         _redemptionFeeRate = redemptionRate;
+    }
+
+    /// @notice overrides the fee rates of `account`, zero rates are respected
+    function setFeeRatesOverride(
+        address account,
+        uint256 subscriptionRate,
+        uint256 redemptionRate
+    ) external onlyAdmin {
+        feeRatesOverride[account] = FeeRatesOverride(
+            true,
+            subscriptionRate,
+            redemptionRate
+        );
+    }
+
+    /// @notice makes `account` use the default fee rates again
+    function clearFeeRatesOverride(address account) external onlyAdmin {
+        delete feeRatesOverride[account];
     }
 
     function setFreeTierThreshold(uint256 threshold) external onlyAdmin {
@@ -251,12 +279,18 @@ contract USYCTellerMock is Ownable {
         return _toPrice(answer);
     }
 
-    function subscriptionFeeRate(address) external view returns (uint256) {
-        return _subscriptionFeeRate;
+    function subscriptionFeeRate(address account)
+        public
+        view
+        returns (uint256)
+    {
+        FeeRatesOverride storage rates = feeRatesOverride[account];
+        return rates.enabled ? rates.subscriptionRate : _subscriptionFeeRate;
     }
 
-    function redemptionFeeRate(address) external view returns (uint256) {
-        return _redemptionFeeRate;
+    function redemptionFeeRate(address account) public view returns (uint256) {
+        FeeRatesOverride storage rates = feeRatesOverride[account];
+        return rates.enabled ? rates.redemptionRate : _redemptionFeeRate;
     }
 
     function treasury(address) external view returns (address) {
@@ -299,7 +333,7 @@ contract USYCTellerMock is Ownable {
         fee = _feeFromGross(
             account,
             assets,
-            _subscriptionFeeRate + feeRatePremium
+            subscriptionFeeRate(account) + feeRatePremium
         );
         price_ = mintPrice();
         shares = Math.mulDiv(assets - fee, _PRICE_SCALE, _toPrice(price_));
@@ -314,7 +348,11 @@ contract USYCTellerMock is Ownable {
             int256 price_
         )
     {
-        fee = _feeOnTop(account, assets, _redemptionFeeRate + feeRatePremium);
+        fee = _feeOnTop(
+            account,
+            assets,
+            redemptionFeeRate(account) + feeRatePremium
+        );
         uint256 currentPrice = price();
         price_ = int256(currentPrice);
         shares = Math.mulDiv(
@@ -340,7 +378,7 @@ contract USYCTellerMock is Ownable {
         fee = _feeFromGross(
             account,
             assets,
-            _redemptionFeeRate + feeRatePremium
+            redemptionFeeRate(account) + feeRatePremium
         );
         assets -= fee;
     }

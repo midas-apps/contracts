@@ -157,11 +157,20 @@ export async function usycArcFixture() {
         tokensReceiver: redemptionVaultWithUSYC.address,
         usycTeller: teller.address,
         usycRedemptionVault: radUsdRedemptionVault.address,
+        usycRedemptionVaultPaired: redemptionVaultWithUSYC.address,
       }),
       DV_USYC_INIT_FN,
     );
 
-  // the vaults compare against the rates the Teller reports for themselves
+  // the vaults are paired: the radYC RV is deployed first, so it gets
+  // its paired deposit vault here
+  await redemptionVaultWithUSYC
+    .connect(owner)
+    .setDepositVaultPaired(depositVaultWithUSYC.address);
+
+  // each vault anticipates the rate the Teller reports for itself and
+  // validates the rate of its paired vault against the rate that vault
+  // anticipates
   await redemptionVaultWithUSYC
     .connect(owner)
     .setAnticipatedFeeRate(

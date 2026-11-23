@@ -3,6 +3,7 @@ import { isAddress, parseUnits } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { deployAndVerifyProxy, getDeployer, getNetworkConfig } from './utils';
+import { findUsycVault } from './vault-resolver';
 import { assertVaultAdminRoleMatchesV1 } from './vault-role-guard';
 
 import { MTokenName } from '../../../config';
@@ -294,15 +295,25 @@ export const deployRedemptionVault = async (
       throw new Error('USYC Teller contract is not found');
     }
 
+    // the depositVaultUsyc of the same mToken is used as the paired vault
+    // if it is already deployed, otherwise the vault is left unpaired and
+    // can be paired later with `deploy:post:set:usycpairedvaults`
+    const depositVaultPaired =
+      findUsycVault(defaultTokenAddresses, token, 'depositVaultUsyc') ??
+      constants.AddressZero;
+
+    console.log('depositVaultPaired', depositVaultPaired);
+
     extraParams.push(
       usycTeller,
       resolveUsycDepositVault(networkConfig, addresses ?? {}),
+      depositVaultPaired,
       networkConfig.anticipatedFeeRate ?? 0,
     );
   }
 
   const usycInitializer =
-    'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(address,address,address,address,uint256),address,address,uint256)' as const;
+    'initialize((uint256,uint256,uint256,address,address,address,address,address,uint256,uint256,uint256,uint256,bool),(address,address,address,address,uint256),address,address,address,uint256)' as const;
 
   const dataFeed = networkConfig.mTokenDataFeed
     ? tokenAddresses?.[networkConfig.mTokenDataFeed]
