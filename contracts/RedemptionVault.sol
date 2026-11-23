@@ -1082,6 +1082,11 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             uint256 tokenOutRate
         ) = _convertMTokenToTokenOut(amountMTokenIn, 0, tokenOut, 0);
 
+        require(
+            _truncate(approximateAmountOut, _tokenDecimals(tokenOut)) > 0,
+            InvalidAmount()
+        );
+
         _tokenTransferFromUser(
             address(mToken),
             address(requestRedeemer),

@@ -4952,6 +4952,49 @@ export const redemptionVaultSuits = (
             );
           });
 
+          it('should fail: when holdback part amount out truncates to zero in tokenOut decimals', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.usdc6, redemptionVault, 100000);
+            await mintToken(mTBILL, regularAccounts[0], 1);
+            await approveBase18(regularAccounts[0], mTBILL, redemptionVault, 1);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.usdc6,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            // holdback part is 0.01% of 0.001 mToken = 0.0000001 mToken,
+            // 0.0000001 mToken * 5 = 0.0000005 usdc6, which is below 1 unit
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 99_99,
+              },
+              stableCoins.usdc6,
+              0.001,
+              {
+                from: regularAccounts[0],
+                revertCustomError: {
+                  customErrorName: 'InvalidAmount',
+                },
+              },
+            );
+          });
+
           it('should fail: when instant share exceeds max instant share', async () => {
             const {
               owner,
@@ -5048,6 +5091,77 @@ export const redemptionVaultSuits = (
               revertCustomError: {
                 customErrorName: 'AmountLessThanMin',
               },
+            },
+          );
+        });
+
+        it('should fail: when amount out truncates to zero in tokenOut decimals', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            mockedAggregatorMToken,
+            regularAccounts,
+          } = await loadRvFixture();
+
+          await mintToken(mTBILL, regularAccounts[0], 1);
+          await approveBase18(regularAccounts[0], mTBILL, redemptionVault, 1);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.usdc6,
+            dataFeed.address,
+            0,
+            true,
+          );
+          // 0.000001 mToken * 0.5 = 0.0000005 usdc6, which is below 1 unit
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 0.5);
+
+          await redeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.usdc6,
+            0.000001,
+            {
+              from: regularAccounts[0],
+              revertCustomError: {
+                customErrorName: 'InvalidAmount',
+              },
+            },
+          );
+        });
+
+        it('redeem request when amount out is exactly 1 unit of tokenOut', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            mockedAggregatorMToken,
+            regularAccounts,
+          } = await loadRvFixture();
+
+          await mintToken(mTBILL, regularAccounts[0], 1);
+          await approveBase18(regularAccounts[0], mTBILL, redemptionVault, 1);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.usdc6,
+            dataFeed.address,
+            0,
+            true,
+          );
+          // 0.000001 mToken * 1 = 0.000001 usdc6, which is exactly 1 unit
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+          await redeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.usdc6,
+            0.000001,
+            {
+              from: regularAccounts[0],
             },
           );
         });
