@@ -144,7 +144,7 @@ The protocol is built around a few simple ideas:
 
 1. User initiates the redemption
 2. Vault calculates exchange rate and fees. For exchange rates vault calls data feeds for both payment token and mToken
-3. Vault transfers fees from user to the fee recipient and burns the remaining of mTokens
+3. Vault burns the full amount of mTokens, the fee is deducted from the payout and retained in payment tokens
 4. For instant redemptions (sync): Payment tokens are transferred to user immediately
 5. For request redemptions (async): Admin fulfills the request after off-chain processing
 
@@ -312,7 +312,7 @@ There are 2 types of vaults - Deposit vaults and Redemption vaults. Also each ty
 - Chainalysis sanction list integration
 - Minimal mToken amount for instant/request operations
 - Daily limits for instant operations
-- Vault Allowance - limits the total amount of mTokens that a vault can mint or redeem. It is a risk-control mechanism managed by the vault admin and is independent from token supply caps.
+- Vault Allowance - limits the total amount of each payment token that a vault can accept on mint or pay out on redeem. It is a risk-control mechanism managed by the vault admin and is independent from token supply caps.
 
 #### Instant vs Request-Based Operations
 

@@ -55,8 +55,10 @@ contract DepositVaultWithUSYC is DepositVault, IVaultWithUSYC {
     bool public usycDepositsEnabled;
 
     /**
-     * @notice Whether to fall back to raw token transfer on auto-invest failure
-     * @dev if false, the transaction will revert when auto-invest fails
+     * @notice Whether to fall back to raw token transfer on Teller fee
+     * mismatch, exceeded max fee or Teller deposit revert
+     * @dev if false, the transaction will revert in these cases.
+     * Any other auto-invest failure always reverts
      */
     bool public autoInvestFallbackEnabled;
 
@@ -250,7 +252,7 @@ contract DepositVaultWithUSYC is DepositVault, IVaultWithUSYC {
 
     /**
      * @notice Updates `autoInvestFallbackEnabled` value
-     * @param enabled whether fallback to raw transfer is enabled on auto-invest failure
+     * @param enabled whether fallback to raw transfer is enabled, see {autoInvestFallbackEnabled}
      */
     function setAutoInvestFallbackEnabled(bool enabled)
         external

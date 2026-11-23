@@ -350,7 +350,7 @@ interface IRedemptionVault is IManageableVault {
 
     /**
      * @notice repaying loan requests from the `requestIds` array
-     * Transfers tokenOut to loan repayment address
+     * Transfers tokenOut from loan repayment address to loan LP
      * Sets request flags to Processed.
      * @param requestIds request ids array
      */
