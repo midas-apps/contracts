@@ -118,7 +118,7 @@ export const mFONEDeploymentConfig: DeploymentConfig = {
         feeReceiver: '0x0ff15C0555Add64e53E8c738176D896D489F1F6D',
         tokensReceiver: '0x86B16681E21E857A9a71a8FDfC33AB1eB8213b74',
         instantDailyLimit: constants.MaxUint256,
-        instantFee: parseUnits('0', 2),
+        instantFee: parseUnits('0.1', 2),
         variationTolerance: parseUnits('0.6', 2),
         minAmount: parseUnits('0', 18),
         minMTokenAmountForFirstDeposit: parseUnits('0', 18),
@@ -158,7 +158,7 @@ export const mFONEDeploymentConfig: DeploymentConfig = {
               paymentTokens: [
                 {
                   token: 'usdg',
-                  fee: 0,
+                  fee: 5,
                   isStable: true,
                   allowance: parseUnits('1000000000', 18),
                 },
@@ -178,6 +178,10 @@ export const mFONEDeploymentConfig: DeploymentConfig = {
         pauseFunctions: {
           depositVault: ['depositRequest', 'depositRequestWithCustomRecipient'],
           redemptionVaultSwapper: ['redeemFiatRequest'],
+        },
+        setFees: {
+          depositVault: { instantFee: parseUnits('0.1', 2) },
+          redemptionVaultSwapper: { tokenFees: { usdg: 5 } },
         },
         setRoundData: {
           data: parseUnits('1.13728753', 8),

@@ -113,6 +113,7 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   'deploy:post:set:waived': [deployPost('add_FeeWaived'), mTokenParam()],
   'deploy:post:set:greenlist': [deployPost('set_Greenlist'), mTokenParam()],
   'deploy:post:pause:functions': [deployPost('pause_Functions'), mTokenParam()],
+  'deploy:post:set:fees': [deployPost('set_Fees'), mTokenParam()],
   'deploy:post:add:addressbook': [
     deployPost('add_ToAddressBook'),
     mTokenParam(),

@@ -71,6 +71,14 @@ export type PauseFunctionsConfig = {
   [K in VaultType]?: VaultFunctionName[];
 };
 
+// fees in basis points (100 = 1%)
+export type SetFeesConfig = {
+  [K in VaultType]?: {
+    instantFee?: BigNumberish;
+    tokenFees?: Partial<Record<PaymentTokenName, BigNumberish>>;
+  };
+};
+
 export type LayerZeroConfig = {
   delegate: string;
   owner?: string;
@@ -96,6 +104,7 @@ export type PostDeployConfig = {
   addFeeWaived?: AddFeeWaivedConfig;
   greenlist?: GreenlistConfig;
   pauseFunctions?: PauseFunctionsConfig;
+  setFees?: SetFeesConfig;
   layerZero?: LayerZeroConfig;
   axelarIts?: AxelarItsConfig;
   setAaveConfig?: SetAaveConfigConfig;
