@@ -1,3 +1,4 @@
+import { constants, utils } from 'ethers';
 import { extendEnvironment } from 'hardhat/config';
 import { EIP1193Provider, HardhatRuntimeEnvironment } from 'hardhat/types';
 
@@ -51,6 +52,10 @@ const extendDeployment = (hre: HardhatRuntimeEnvironment) => {
   };
 };
 
+const safeInterface = new utils.Interface([
+  'function execTransaction(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, bytes signatures)',
+]);
+
 const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
   const customSignerScript = ENV.CUSTOM_SIGNER_SCRIPT_PATH;
 
@@ -80,6 +85,30 @@ const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
             type: 'hardhatSigner',
           };
         },
+        // pre-validated signature (v = 1) is accepted when the owner itself
+        // sends the tx, so a 1-of-1 Safe executes immediately
+        proposeSafeTransaction: async (transaction, { safe }) => ({
+          type: 'hardhatSigner',
+          tx: await deployerSigner.sendTransaction({
+            to: safe,
+            data: safeInterface.encodeFunctionData('execTransaction', [
+              transaction.to,
+              transaction.value ?? 0,
+              transaction.data,
+              0,
+              0,
+              0,
+              0,
+              constants.AddressZero,
+              constants.AddressZero,
+              utils.hexConcat([
+                utils.hexZeroPad(deployer, 32),
+                constants.HashZero,
+                '0x01',
+              ]),
+            ]),
+          }),
+        }),
         getWeb3Provider: async () => {
           return deployerSigner as unknown as EIP1193Provider;
         },
@@ -94,6 +123,7 @@ const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
         createEVMAddressBookContract,
         getEVMWalletAddressForAction,
         getEVMProvider,
+        proposeEVMSafeTransaction,
       } = await import(scriptPathResolved);
 
       return {
@@ -126,6 +156,21 @@ const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
               mToken: hre.mtoken,
               idempotenceId: txSignMetadata?.idempotenceId,
               ...txSignMetadata,
+            }),
+          };
+        },
+        proposeSafeTransaction: async (transaction, metadata) => {
+          if (!proposeEVMSafeTransaction) {
+            throw new Error(
+              'Custom signer checkout is outdated: proposeEVMSafeTransaction export is missing',
+            );
+          }
+
+          return {
+            type: 'customSigner',
+            payload: await proposeEVMSafeTransaction(transaction, {
+              ...metadata,
+              chainId: hre.network.config.chainId,
             }),
           };
         },

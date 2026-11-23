@@ -3,18 +3,15 @@ import { DeployProxyOptions } from '@openzeppelin/hardhat-upgrades/dist/utils';
 import {
   ethers,
   BigNumber,
-  BigNumberish,
   constants,
   PopulatedTransaction,
   Signer,
 } from 'ethers';
 import { EIP1193Provider, HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import path from 'path';
-
 import { DeploymentConfig } from './types';
 
-import { ENV, MTokenName } from '../../../config';
+import { MTokenName } from '../../../config';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import {
   etherscanVerify,
@@ -241,67 +238,6 @@ export const getWalletAddressForAction = async (
   return await customSigner.getWalletAddress(action, mtoken, chainId);
 };
 
-type SafeInnerTransaction = { data: string; to: string; value?: BigNumberish };
-
-const proposeSafeTransaction = async (
-  hre: HardhatRuntimeEnvironment,
-  transaction: SafeInnerTransaction,
-  metadata: { safe: string; comment?: string },
-) => {
-  const scriptPath = ENV.CUSTOM_SIGNER_SCRIPT_PATH;
-
-  if (!scriptPath) {
-    throw new Error(
-      'Safe transactions require the custom signer, set CUSTOM_SIGNER_SCRIPT_PATH',
-    );
-  }
-
-  const { proposeEVMSafeTransaction } = await import(path.resolve(scriptPath));
-
-  if (!proposeEVMSafeTransaction) {
-    throw new Error(
-      'Custom signer checkout is outdated: proposeEVMSafeTransaction export is missing',
-    );
-  }
-
-  return {
-    payload: await proposeEVMSafeTransaction(transaction, {
-      ...metadata,
-      chainId: hre.network.config.chainId,
-    }),
-  };
-};
-
-const safeInterface = new ethers.utils.Interface([
-  'function execTransaction(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, bytes signatures)',
-]);
-
-// pre-validated signature (v = 1) is accepted when the owner itself sends the tx,
-// so a 1-of-1 Safe executes immediately
-const execThroughSafe = (
-  safe: string,
-  owner: string,
-  transaction: SafeInnerTransaction,
-) => ({
-  to: safe,
-  data: safeInterface.encodeFunctionData('execTransaction', [
-    transaction.to,
-    transaction.value ?? 0,
-    transaction.data,
-    0,
-    0,
-    0,
-    0,
-    constants.AddressZero,
-    constants.AddressZero,
-    ethers.utils.hexConcat([
-      ethers.utils.hexZeroPad(owner, 32),
-      constants.HashZero,
-      '0x01',
-    ]),
-  ]),
-});
-
 const sendAndWaitForCustomTxSignDirect = async (
   hre: HardhatRuntimeEnvironment,
   populatedTx: PopulatedTransaction,
@@ -360,27 +296,16 @@ const sendAndWaitForCustomTxSignDirect = async (
     value: populatedTx.value,
   };
 
-  const res =
-    safe && networkCustomSigner.type === 'customSigner'
-      ? await proposeSafeTransaction(hre, transaction, {
-          safe,
-          comment: txSignMetadata?.comment,
-        })
-      : await networkCustomSigner.sendTransaction(
-          safe
-            ? execThroughSafe(
-                safe,
-                await networkCustomSigner.getWalletAddress(),
-                transaction,
-              )
-            : transaction,
-          {
-            ...(txSignMetadata ?? {}),
-            chainId: hreNetwork.network.config.chainId,
-            idempotenceId:
-              txSignMetadata?.idempotenceId ?? hreNetwork.contextId,
-          },
-        );
+  const res = safe
+    ? await networkCustomSigner.proposeSafeTransaction(transaction, {
+        safe,
+        comment: txSignMetadata?.comment,
+      })
+    : await networkCustomSigner.sendTransaction(transaction, {
+        ...(txSignMetadata ?? {}),
+        chainId: hreNetwork.network.config.chainId,
+        idempotenceId: txSignMetadata?.idempotenceId ?? hreNetwork.contextId,
+      });
 
   let resToReturn: unknown;
 
