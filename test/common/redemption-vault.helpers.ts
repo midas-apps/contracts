@@ -181,6 +181,12 @@ export const redeemInstantTest = async (
   const supplyBeforeLoanLp = loanSwapperVaultMToken
     ? await loanSwapperVaultMToken.totalSupply()
     : constants.Zero;
+  const allowanceBeforeLoanSwapperVault = loanSwapperVaultMToken
+    ? await loanSwapperVaultMToken.allowance(
+        redemptionVault.address,
+        loanSwapperVault,
+      )
+    : constants.Zero;
   const balanceBeforeVault = (
     await tokenContract.balanceOf(redemptionVault.address)
   ).add((await additionalLiquidity?.()) ?? constants.Zero);
@@ -280,6 +286,12 @@ export const redeemInstantTest = async (
   const supplyAfterLoanLp = loanSwapperVaultMToken
     ? await loanSwapperVaultMToken.totalSupply()
     : constants.Zero;
+  const allowanceAfterLoanSwapperVault = loanSwapperVaultMToken
+    ? await loanSwapperVaultMToken.allowance(
+        redemptionVault.address,
+        loanSwapperVault,
+      )
+    : constants.Zero;
 
   const balanceAfterTokenOutRecipient = await tokenContract.balanceOf(
     recipient,
@@ -339,6 +351,10 @@ export const redeemInstantTest = async (
   } else {
     expect(lastLoanRequestIdAfter).eq(lastLoanRequestIdBefore);
   }
+
+  // loan swapper vault burns the loan mToken directly from the vault,
+  // so the vault should never grant it any allowance
+  expect(allowanceAfterLoanSwapperVault).eq(allowanceBeforeLoanSwapperVault);
 
   for (const [index, limit] of instantLimitsBefore.entries()) {
     expectEqWithOneWeiTolerance(

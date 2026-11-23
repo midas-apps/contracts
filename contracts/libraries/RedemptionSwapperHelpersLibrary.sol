@@ -44,8 +44,6 @@ library RedemptionSwapperHelpersLibrary {
             );
         }
 
-        _mTokenA.safeIncreaseAllowance(address(_swapperVault), _mTokenAAmount);
-
         return
             _swapperVault
                 .redeemInstant(_tokenOut, _mTokenAAmount, 0)

@@ -1863,6 +1863,88 @@ export const redemptionVaultSuits = (
               );
             });
 
+            it('should not grant loan mToken allowance to loan swapper vault after redemptions through loan lp', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mTokenLoan,
+                redemptionVaultLoanSwapper,
+              } = await loadRvFixture();
+
+              await mintToken(mTBILL, owner, 200);
+              await mintToken(mTokenLoan, loanLp, 1000);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 1000);
+              await mintToken(
+                stableCoins.dai,
+                redemptionVaultLoanSwapper,
+                1000,
+              );
+
+              await withdrawTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                await stableCoins.dai.balanceOf(redemptionVault.address),
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              const vaultMTokenLoanBalanceBefore = await mTokenLoan.balanceOf(
+                redemptionVault.address,
+              );
+              const loanLpMTokenLoanBalanceBefore = await mTokenLoan.balanceOf(
+                loanLp.address,
+              );
+
+              // redeem twice to make sure that allowance does not accumulate
+              for (let i = 0; i < 2; i++) {
+                const loanRequestId =
+                  await redemptionVault.currentLoanRequestId();
+
+                await redeemInstantTest(
+                  { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                  stableCoins.dai,
+                  100,
+                );
+
+                expect(await redemptionVault.currentLoanRequestId()).eq(
+                  loanRequestId.add(1),
+                );
+                expect(
+                  await mTokenLoan.allowance(
+                    redemptionVault.address,
+                    redemptionVaultLoanSwapper.address,
+                  ),
+                ).eq(0);
+              }
+
+              // loan mToken was pulled from loan lp and fully burned by the swapper vault
+              expect(await mTokenLoan.balanceOf(loanLp.address)).lt(
+                loanLpMTokenLoanBalanceBefore,
+              );
+              expect(await mTokenLoan.balanceOf(redemptionVault.address)).eq(
+                vaultMTokenLoanBalanceBefore,
+              );
+            });
+
             it('when 25% of liquidity on vault and 75% on loan lp: loan lp covers only the missing payout', async () => {
               const {
                 owner,
