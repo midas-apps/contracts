@@ -208,7 +208,7 @@ contract DepositVaultWithMToken is DepositVault {
             tokensDecimals
         );
 
-        IERC20(tokenIn).safeIncreaseAllowance(
+        IERC20(tokenIn).forceApprove(
             address(mTokenDepositVault),
             transferredAmount
         );

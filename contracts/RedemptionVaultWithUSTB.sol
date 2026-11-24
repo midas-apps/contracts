@@ -111,7 +111,7 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
             return 0;
         }
 
-        ustb.safeIncreaseAllowance(address(_ustbRedemption), ustbToRedeem);
+        ustb.forceApprove(address(_ustbRedemption), ustbToRedeem);
         _ustbRedemption.redeem(ustbToRedeem);
 
         return

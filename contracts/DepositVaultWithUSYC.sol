@@ -430,7 +430,7 @@ contract DepositVaultWithUSYC is DepositVault, IVaultWithUSYC {
                 );
         }
 
-        IERC20(usdc).safeIncreaseAllowance(address(teller), assetAmount);
+        IERC20(usdc).forceApprove(address(teller), assetAmount);
 
         try teller.deposit(assetAmount, tokensReceiver) returns (
             uint256 usycReceived

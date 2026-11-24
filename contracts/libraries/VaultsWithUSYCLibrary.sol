@@ -258,7 +258,7 @@ library VaultsWithUSYCLibrary {
     ) private returns (uint256) {
         uint256 usdcAmountBase18 = usdcAmount.convertToBase18(usdcDecimals);
 
-        IERC20(usdc).safeIncreaseAllowance(address(dv), usdcAmount);
+        IERC20(usdc).forceApprove(address(dv), usdcAmount);
 
         return
             dv.depositInstant(
