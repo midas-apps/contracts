@@ -56,6 +56,15 @@ export type GrantAllTokenRolesConfig = {
 };
 
 const acAdminAddress = '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227';
+// v2 network roles, the same for all the networks
+// `PAUSE_ADMIN_ROLE` of MidasPauseManager
+const pauseAdminAddress = '0xDe8BAf1687000330F81c7E426aFbbFE7e77Eca83';
+// can pause (challenge) the pending timelock operations:
+// `TIMELOCK_OPERATION_PAUSER_ROLE` of MidasTimelockManager
+const timelockChallengerAddress = '0xa5cbC5Edf329388e22b4293E04Af20dD1fdD6f73';
+// can execute the timelock operations: function permission for
+// `MidasTimelockManager.executeTimelockOperation`
+const timelockExecutorAddress = '0x1eAbd59E6c857AEe66d3DE3Cd5d90dbA7679fEfD';
 
 export const grantAllProductRoles = async (
   hre: HardhatRuntimeEnvironment,
@@ -302,75 +311,56 @@ export const grantDefaultAdminRoleToAcAdmin = async (
   );
 };
 
-export type GrantTimelockRolesConfig = {
-  /**
-   * accounts that can pause (challenge) the pending timelock operations:
-   * `TIMELOCK_OPERATION_PAUSER_ROLE` of MidasTimelockManager
-   */
-  challengers?: Address[];
-  /**
-   * accounts that can execute the timelock operations: function permission
-   * for `MidasTimelockManager.executeTimelockOperation`
-   */
-  executors?: Address[];
-};
-
 /**
- * Grants the timelock manager roles configured for the network: challengers
- * and executors. Already granted roles are skipped.
- * Challengers are compatible with the v1 access control; executors are
- * function permissions, which exist only in the v2 one
+ * Grants the v2 network roles to the default accounts, which are the same
+ * for all the networks: pause admin, timelock challenger and timelock
+ * executor. Already granted roles are skipped.
+ * The challenger and the pause admin are compatible with the v1 access
+ * control; the executor is a function permission, which exists only in the
+ * v2 one
  */
-export const grantTimelockRoles = async (hre: HardhatRuntimeEnvironment) => {
-  const networkConfig =
-    networkDeploymentConfigs[hre.network.config.chainId!]?.grantTimelockRoles;
-
-  if (!networkConfig) {
-    throw new Error('Network config is not found');
-  }
-
-  const { challengers = [], executors = [] } = networkConfig;
-
-  if (challengers.length === 0 && executors.length === 0) {
-    throw new Error('No challengers or executors are configured');
-  }
-
+export const grantV2NetworkRoles = async (hre: HardhatRuntimeEnvironment) => {
   const allRoles = getAllRoles();
   const deployer = await getDeployer(hre);
 
   const accessControl = await getAcContract(hre, deployer);
 
-  const hasRole = await Promise.all(
-    challengers.map((account) =>
-      accessControl.hasRole(allRoles.common.timelockOperationPauser, account),
-    ),
-  );
-  const challengersToGrant = challengers.filter((_, i) => !hasRole[i]);
+  const plainRoles = [
+    {
+      name: 'challenger',
+      role: allRoles.common.timelockOperationPauser,
+      account: timelockChallengerAddress,
+    },
+    {
+      name: 'pause admin',
+      role: allRoles.common.pauseAdmin,
+      account: pauseAdminAddress,
+    },
+  ];
 
-  if (challengers.length > 0 && challengersToGrant.length === 0) {
-    console.log('Challenger roles are already granted — skip');
-  }
+  for (const { name, role, account } of plainRoles) {
+    if (await accessControl.hasRole(role, account)) {
+      console.log(`${name} role is already granted — skip`);
+      continue;
+    }
 
-  // one `grantRole(bytes32,address)` per account instead of `grantRoleMult`:
-  // it has the same signature in the v1 access control, so the roles can be
-  // granted before the access control is upgraded
-  for (const account of challengersToGrant) {
-    console.log(`Granting challenger role to ${account}`);
+    console.log(`Granting ${name} role to ${account}`);
 
+    // `grantRole(bytes32,address)` instead of `grantRoleMult`: it has the
+    // same signature in the v1 access control, so the roles can be granted
+    // before the access control is upgraded
     await sendAndWaitForCustomTxSign(
       hre,
       await accessControl.populateTransaction['grantRole(bytes32,address)'](
-        allRoles.common.timelockOperationPauser,
+        role,
         account,
       ),
       {
         action: 'update-ac',
-        comment: `grant challenger role to ${account}`,
+        comment: `grant ${name} role to ${account}`,
       },
     );
   }
-
-  if (executors.length === 0) return;
 
   // v2 access control only: the tx fails if it is not upgraded yet
   const timelockManagerAddress = getCurrentAddresses(hre)?.timelockManager;
@@ -391,47 +381,40 @@ export const grantTimelockRoles = async (hre: HardhatRuntimeEnvironment) => {
 
   // the v1 access control has no function permissions: the call reverts
   // there, which means that the permission is not granted
-  const hasPermission = await Promise.all(
-    executors.map((account) =>
-      accessControl['hasFunctionPermission(bytes32,address,bytes4,address)'](
-        masterRole,
-        timelockManagerAddress,
-        functionSelector,
-        account,
-      ).catch((e) => {
-        if (e?.code !== 'CALL_EXCEPTION') throw e;
-        return false;
-      }),
-    ),
-  );
-  const executorsToGrant = executors.filter((_, i) => !hasPermission[i]);
+  const hasPermission = await accessControl[
+    'hasFunctionPermission(bytes32,address,bytes4,address)'
+  ](
+    masterRole,
+    timelockManagerAddress,
+    functionSelector,
+    timelockExecutorAddress,
+  ).catch((e) => {
+    if (e?.code !== 'CALL_EXCEPTION') throw e;
+    return false;
+  });
 
-  if (executorsToGrant.length === 0) {
-    console.log('Executor permissions are already granted — skip');
+  if (hasPermission) {
+    console.log('executor permission is already granted — skip');
     return;
   }
 
-  for (const account of executorsToGrant) {
-    console.log(`Granting executor permission to ${account}`);
-  }
+  console.log(`Granting executor permission to ${timelockExecutorAddress}`);
 
   await sendAndWaitForCustomTxSign(
     hre,
     await accessControl.populateTransaction[
       'setPermissionRoleMult(bytes32,address,(bytes4,address,uint32,bool)[])'
-    ](
-      masterRole,
-      timelockManagerAddress,
-      executorsToGrant.map((account) => ({
+    ](masterRole, timelockManagerAddress, [
+      {
         functionSelector,
-        account,
+        account: timelockExecutorAddress,
         delay: 0, // no delay override
         enabled: true,
-      })),
-    ),
+      },
+    ]),
     {
       action: 'update-ac',
-      comment: 'grant timelock executor permissions',
+      comment: `grant timelock executor permission to ${timelockExecutorAddress}`,
     },
   );
 };

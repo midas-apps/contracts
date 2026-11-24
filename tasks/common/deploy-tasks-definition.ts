@@ -142,7 +142,7 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     vaultVersionParam(),
   ],
   'deploy:post:grant:admin': [deployPost('grant_DefaultAdminRole')],
-  'deploy:post:grant:timelock-roles': [deployPost('grant_TimelockRoles')],
+  'deploy:post:grant:v2-network-roles': [deployPost('grant_V2NetworkRoles')],
   'deploy:post:revoke:roles': [deployPost('revoke_DeployerRoles')],
   'deploy:post:revoke:v1-vault-roles': [
     deployPost('revoke_V1VaultRoles'),

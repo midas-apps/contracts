@@ -126,10 +126,10 @@ yarn deploy:post:grant:admin --network <network>
 yarn deploy:post:revoke:roles --network <network>
 ```
 
-To grant the timelock manager roles listed under `grantTimelockRoles` of the network config: `challengers` (can pause pending timelock operations) and `executors` (can execute timelock operations):
+To grant the v2 network roles to the default accounts (the same for all the networks, hardcoded in `scripts/deploy/common/roles.ts`): pause admin (`PAUSE_ADMIN_ROLE` of the pause manager), timelock challenger (can pause pending timelock operations) and timelock executor (can execute timelock operations):
 
 ```bash
-yarn deploy:post:grant:timelock-roles --network <network>
+yarn deploy:post:grant:v2-network-roles --network <network>
 ```
 
 To revoke the minter / burner roles from the v1 vaults of an mToken (`--mtoken` is required):
