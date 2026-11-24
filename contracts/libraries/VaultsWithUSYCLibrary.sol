@@ -55,7 +55,7 @@ library VaultsWithUSYCLibrary {
      * fee rates differ from the anticipated ones, see {validateTellerFees},
      * the fee previewed by the Teller exceeds {maxFee}, the vault is not
      * fee waived on `dv` or `dv` does not accept USDC.
-     * Reverts when the Teller pays out less USDC than previewed.
+     * Reverts when the Teller reports less USDC than previewed.
      *
      * NOTE: redeemed shares are capped by `teller.maxRedeem`, which the
      * Teller derives from `totalAssets()` (the USDC its treasury can pay out
@@ -210,7 +210,7 @@ library VaultsWithUSYCLibrary {
     /**
      * @dev Redeems `usycAmount` USYC through the Teller to this contract.
      * Returns 0 without redeeming when the fee previewed by the Teller
-     * exceeds {maxFee}. Reverts when the Teller pays out less USDC
+     * exceeds {maxFee}. Reverts when the Teller reports less USDC
      * than previewed
      * @param teller USYC Teller
      * @param usycAmount amount of USYC to redeem

@@ -387,7 +387,7 @@ contract DepositVaultWithUSYC is DepositVault, IVaultWithUSYC {
      * the anticipated ones, see {VaultsWithUSYCLibrary-validateTellerFees},
      * the fee previewed by the Teller exceeds {VaultsWithUSYCLibrary-maxFee}
      * or the Teller deposit fails.
-     * Always reverts when the Teller mints less USYC than previewed
+     * Always reverts when the Teller reports less USYC than previewed
      * @param teller USYC Teller
      * @param usdc Teller asset address
      * @param assetAmount amount of USDC to subscribe with, in USDC decimals
