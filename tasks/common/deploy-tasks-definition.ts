@@ -131,6 +131,7 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
 
   // Post-deploy
   'deploy:post:wire:ac': [deployPost('wire_AccessControl')],
+  'deploy:post:set:pause-delays': [deployPost('set_PauseDelays')],
   'deploy:post:add:ptokens': [
     deployPost('add_PaymentTokens'),
     mTokenParam(),

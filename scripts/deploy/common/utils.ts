@@ -345,7 +345,8 @@ const sendAndWaitForCustomTxSignDirect = async (
       | 'axelar-wire-tokens'
       | 'axelar-update-config'
       | 'update-token'
-      | 'deployer';
+      | 'deployer'
+      | 'update-pause-manager';
     subAction?:
       | 'add-payment-token'
       | 'grant-token-roles'

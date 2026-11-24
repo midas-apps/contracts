@@ -132,6 +132,12 @@ To grant the v2 network roles to the default accounts (the same for all the netw
 yarn deploy:post:grant:v2-network-roles --network <network>
 ```
 
+To set the delays of an already deployed pause manager: the pause delay to the fixed `PAUSE_DELAY` (not configurable, the same for all the networks) and the unpause delay to the `pauseManager.unpauseDelay` value of the network config. The sender needs `PAUSE_ADMIN_ROLE`; both setters have a fixed 2 days timelock, so the txs are scheduled via the timelock manager and have to be executed after the delay:
+
+```bash
+yarn deploy:post:set:pause-delays --network <network>
+```
+
 To revoke the minter / burner roles from the v1 vaults of an mToken (`--mtoken` is required):
 
 ```bash

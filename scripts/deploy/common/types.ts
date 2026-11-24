@@ -200,6 +200,9 @@ export const NO_DELAY = 0xffffffff;
 /** `0`: no override, falls back to the role/default delay (see MidasAuthLibrary.NULL_DELAY) */
 export const NULL_DELAY = 0;
 
+/** pause delay of MidasPauseManager, the same for all the networks: pausing is instant */
+export const PAUSE_DELAY = NO_DELAY;
+
 export type NetworkDeploymentConfig = Record<
   number,
   {
@@ -212,7 +215,7 @@ export type NetworkDeploymentConfig = Record<
     pauseManager?: {
       /**
        * in seconds, or NO_DELAY.
-       * pause delay is not configurable and is always deployed as NULL_DELAY
+       * pause delay is not configurable and is always PAUSE_DELAY
        */
       unpauseDelay: number;
     };
