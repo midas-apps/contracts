@@ -356,6 +356,7 @@ const sendAndWaitForCustomTxSignDirect = async (
       | 'set-round-data'
       | 'timelock-call-upgrade'
       | 'pause-function'
+      | 'pause-contract'
       | 'set-greenlist-enabled'
       | 'set-lz-rate-limit-configs'
       | 'set-aave-pool'

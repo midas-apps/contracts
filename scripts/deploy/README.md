@@ -217,6 +217,7 @@ v2 vaults only:
 
 - `yarn deploy:post:set:waived`: waive vault fee for an address (`addFeeWaived`)
 - `yarn deploy:post:pause:functions`: pause selected vault functions via the pause manager (`pauseFunctions`)
+- `yarn deploy:post:pause:contracts`: pause whole vaults via the pause manager (`pauseContracts`)
 - `yarn deploy:post:set:instantlimits`: instant operation rate limit windows (`instantLimits`)
 - `yarn deploy:post:set:mintratelimits`: mToken mint rate limit buckets and wallet buckets (`mintRateLimits`)
 - `yarn deploy:post:set:tokenconfig`: mToken max supply cap and clawback receiver (`tokenConfig`)

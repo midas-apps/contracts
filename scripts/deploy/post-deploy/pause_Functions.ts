@@ -110,7 +110,7 @@ const func: DeployFunction = async (
     const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
       mToken,
       comment: `Pause ${names} in ${mToken} ${vaultType}`,
-      action: 'update-vault',
+      action: 'update-pause-manager',
       subAction: 'pause-function',
     });
 

@@ -183,6 +183,11 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     mTokenParam(),
     v2VaultsOnlyParam(),
   ],
+  'deploy:post:pause:contracts': [
+    deployPost('pause_Contracts'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
   'deploy:post:add:addressbook': [
     deployPost('add_ToAddressBook'),
     mTokenParam(),

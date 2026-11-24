@@ -578,9 +578,9 @@ const updateExpectedAnswers = async (
   const newMin = BigNumber.from(networkConfig.minAnswer);
   const newMax = BigNumber.from(networkConfig.maxAnswer);
 
-  if (!newMax.gt(newMin)) {
+  if (newMax.lt(newMin)) {
     throw new Error(
-      `maxAnswer (${newMax.toString()}) must be greater than minAnswer (${newMin.toString()})`,
+      `maxAnswer (${newMax.toString()}) must be greater than or equal to minAnswer (${newMin.toString()})`,
     );
   }
 

@@ -47,7 +47,7 @@ import type {
 } from './v2-post-deploy';
 
 import { PartialConfigPerNetwork, PaymentTokenName } from '../../../config';
-import { VaultType } from '../../../config/constants/addresses';
+import { V2VaultType, VaultType } from '../../../config/constants/addresses';
 import { RateLimiter } from '../../../typechain-types';
 
 const VAULT_FUNCTION_SIGNATURES = {
@@ -113,6 +113,8 @@ export type PostDeployConfig = {
   addFeeWaived?: AddFeeWaivedConfig;
   greenlist?: GreenlistConfig;
   pauseFunctions?: PauseFunctionsConfig;
+  /** v2 vaults to pause as a whole (all functions) */
+  pauseContracts?: V2VaultType[];
   layerZero?: LayerZeroConfig;
   axelarIts?: AxelarItsConfig;
   setAaveConfig?: SetAaveConfigConfig;
